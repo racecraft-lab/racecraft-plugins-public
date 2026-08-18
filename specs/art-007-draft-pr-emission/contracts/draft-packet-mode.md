@@ -317,6 +317,31 @@ through the release-readiness title check and refuses to create the pull request
 on failure, reporting through the fail-open stop-report path rather than
 proceeding with a title that would need a human edit.
 
+**Which check, named — amended 2026-08-18.** "The release-readiness title check"
+is the release gate's **`validate-pr-title`** operation, at
+`speckit-pro/speckit_pro_runner/gates/release.py:1242-1245`:
+
+```
+^(feat|fix|chore|docs|test|refactor)\([a-z0-9-]+\): .+
+```
+
+It is **not** `validate-pr-workflow-contract`, even though that is what the
+shipped `## PR Creation Protocol` uses for the implementation pull request's own
+title. Using it here would make draft emission **structurally impossible** on four
+spec families. Its `title.spec_scope` rule
+(`read_only.py:2269-2287`) derives an expected scope from the changed spec paths
+through `spec_scope_from_changed_path` (`read_only.py:2310-2327`), which
+upper-cases the slug for `prsg-`, `spec-`, `doc-`, and `xplat-` prefixes. On a
+`spec-006-…` feature the draft pull request's changed files include
+`specs/spec-006-…/artifacts/`, so that rule would demand the scope `SPEC-006`
+while this section demands lowercase. No title satisfies both, and every such run
+would refuse to create.
+
+ART-007's own slug matches none of those four prefixes, so the helper returns an
+empty scope and the conflict does not arise for this feature's own pull request.
+That is exactly why the wrong choice would have shipped undetected: the spec that
+introduces the rule is not one of the specs the rule breaks.
+
 ---
 
 ## 6. Test obligations

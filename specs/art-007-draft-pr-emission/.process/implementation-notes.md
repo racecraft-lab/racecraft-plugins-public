@@ -418,3 +418,126 @@ The em dash was verified to survive packaging — bytes identical in both
 than assuming for any non-ASCII character in a shipped file.
 
 No generic `workflow_scalar_row` abstraction was introduced.
+
+### Orchestrator verification after the T014-T016 commit (not a task, recorded as evidence)
+
+The task list's own acceptance bar for the producer work is the round trip, so
+the orchestrator ran it independently of the implementing agent rather than
+accepting the agent's report. Emit a draft packet through `pr-packet-output`,
+then feed the emitted packet straight back through
+`validate-pr-packet-read-only`:
+
+```
+EMIT: ok exit 0
+  mode              : draft
+  title             : feat(speckit-autopilot): Open a draft pull request at the plan boundary
+  required_headings : ['Artifacts', 'Resume']
+  editable_fields   : []
+  uat               : {'how_to_uat': '', 'uat_runbook_heading': '', 'uat_source': 'packet-input'}
+  elided_fields     : []
+  split_slice absent: True
+  body verbatim, byte-for-byte: True
+ROUND TRIP -> status: passed | pr_blocked: False | mode: draft | failures: []
+           writes_state: False
+```
+
+All six sites emit their draft values and the packet validates clean, so there is
+no seventh hardcoded reviewer-packet constant that the six-site enumeration
+missed. The byte-for-byte body result is also the direct evidence for FR-008's
+claim that `build_packet_body` is never reached in draft mode — the emitted body
+is the supplied string, unmodified.
+
+The scratch packet was removed afterward and the worktree left clean.
+
+**Two facts learned here that later tasks depend on.**
+
+`pr-packet-output` in apply mode **refuses a dirty worktree**, returning
+`dirty_worktree` at exit 1. The post-implementation protocol's instruction to
+checkpoint the packet artifacts before validating is therefore enforced by the
+helper, not merely advised — T053 must commit before it can emit.
+
+The canonical body path is `<feature>/.process/pr-packets/<packet-id>/body.md`,
+inside a per-packet directory, not a sibling `<packet-id>.md`. The helper rejects
+any other value for `body_file`.
+
+### T018-T024
+
+**Deviations/Edge cases/Surprises:** Seven subsections, 265 lines, inserted
+between the existing stage-boundary-commit subsection and `### Phase 7`.
+`git diff --numstat` reads `265 0` — zero deletions, so no pre-existing heading
+or paragraph moved, was renamed, or was reflowed. Full suite held at 7433/7433
+and `test-implementation-notes-record` stayed 83/83.
+
+**The most valuable finding on this feature so far: the obvious title check is
+the wrong one, and choosing it would have made draft emission structurally
+impossible on four spec families.**
+
+The contract said "the release-readiness title check" without naming an
+operation. The natural reading is `validate-pr-workflow-contract`, because that
+is what the shipped `## PR Creation Protocol` already uses to check a title. It
+is the wrong choice. Its `title.spec_scope` rule
+(`read_only.py:2269-2287`) derives the expected scope from the changed spec paths
+via `spec_scope_from_changed_path` (`read_only.py:2310-2327`), which **upper-cases**
+the slug for the `prsg-`, `spec-`, `doc-`, and `xplat-` prefixes. A draft pull
+request on a `spec-006-…` feature has `specs/spec-006-…/artifacts/` among its
+changed files, so that rule demands scope `SPEC-006` while draft-packet-mode §5
+demands lowercase. No title satisfies both; every such run would refuse to create.
+
+The right check is the release gate's `validate-pr-title`
+(`gates/release.py:1242-1245`), whose regex is
+`^(feat|fix|chore|docs|test|refactor)\([a-z0-9-]+\): .+` and which permits
+lowercase only. Research D4 already identified it; the contract simply did not
+carry the operation name. Verified independently by the orchestrator against both
+source sites before amending.
+
+**Why this one would have shipped undetected.** ART-007's own slug is `art-007-…`,
+which matches none of the four prefixes, so the helper returns an empty scope and
+the conflict never arises for this feature's own pull request. The spec that
+introduces the rule is not among the specs the rule breaks. Contract §5 now names
+the operation, quotes the regex, and records the trap.
+
+**Two more findings, both closed in the requirement rather than in prose.**
+
+The leave-alone rule was under-enumerated by one discrepancy class.
+`draft-pr-row.md` §4 named `pr_closed` and `pr_missing`; the landed
+`workflow-file-protocol.md` said "closed or unobservable". FR-011 requires the row
+be left as found under `identity_mismatch` too, so both documents read as
+licensing a rewrite in the third case. Both amended to cover all three.
+
+FR-007 had a genuine gap: an **absent** row combined with a live query that could
+not answer. Neither positive fires, so the literal reading is "create" — but a
+failed query is not evidence that nothing exists, and creating there risks a
+duplicate pull request. FR-011 already resolves the mirror case in the other
+direction, where a `skipped` corroboration is never grounds for creation. The
+executor resolved it conservatively in prose and flagged it as its own judgement
+rather than the spec's; the rule is now written into FR-007 itself, so both
+existence tests fail closed the same way.
+
+**A near-miss worth recording.** The executor's first edit used the repository
+root path instead of the worktree path and landed in the **main checkout, on
+branch `main`**. It caught this immediately and recovered: all three copies of
+the file were byte-identical beforehand, so it copied the edited file into the
+worktree and restored main from `git show HEAD:<path>`. The orchestrator verified
+independently — main is on `main`, `phase-execution.md` is unmodified against
+HEAD there, and the only untracked entries are two pre-existing spec directories
+this run never touched. No content was lost or mixed. The absolute-path slip is
+easy to repeat in a worktree session and is exactly why every dispatch pins the
+worktree path.
+
+**Deliberately left thin for later tasks**, so this does not have to be rewritten:
+step 1 says only "generate the artifacts" (T032 expands it into the
+`artifact-author` dispatch and manifest routing); discrepancies are described as
+"the recorded and live identities disagree" rather than by status name (T041 owns
+that vocabulary); and the stop-report list carries no count word, because T041
+appends the sixth shape and writing "five" would force a rewrite.
+
+**One structural detail the prose now states because it looked contradictory
+without it.** Generation precedes the boundary commit, and the pages land under
+`specs/<feature>/artifacts/` — already inside the boundary commit's existing
+`specs/` path. That is why FR-013's order works with the staged path set
+byte-identical. Unstated, "the staged path set is unchanged" and "the artifacts
+are committed" read as conflicting requirements.
+
+No `FR-xxx` reference appears in the added prose: lines 425 and 428 of that file
+already carry `FR-004` and `FR-005` belonging to a **different** feature, so
+ART-007 FR numbers would be ambiguous on the shipped surface.

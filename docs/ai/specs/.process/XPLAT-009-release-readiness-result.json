@@ -740,11 +740,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 62891,
+              "byte_count": 76564,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/phase-execution.md",
               "required": true,
-              "sha256": "0e1440d471bfe268b531aa2c0c4849a39fd6531eb8faa8ab434ba16876716cb0",
+              "sha256": "9e69b98dced1b4ea236fd3a9b5e43c5847c172b70d6e4c007b2f4eb90271e8e0",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
               "transform": "none"
             },
@@ -803,11 +803,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 12520,
+              "byte_count": 12629,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/workflow-file-protocol.md",
               "required": true,
-              "sha256": "27a3928a19134a04d8510625fcd9de03e854cca9a0218f688f0b686ea16d3cbe",
+              "sha256": "3f11229a8d98bf1fc70967cf3d2cdbe9f2a2a62c0ab73c494987cea5863aedec",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md",
               "transform": "none"
             },
@@ -1786,11 +1786,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 62891,
+              "byte_count": 76564,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/phase-execution.md",
               "required": true,
-              "sha256": "0e1440d471bfe268b531aa2c0c4849a39fd6531eb8faa8ab434ba16876716cb0",
+              "sha256": "9e69b98dced1b4ea236fd3a9b5e43c5847c172b70d6e4c007b2f4eb90271e8e0",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
               "transform": "none"
             },
@@ -1849,11 +1849,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 12520,
+              "byte_count": 12629,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/workflow-file-protocol.md",
               "required": true,
-              "sha256": "27a3928a19134a04d8510625fcd9de03e854cca9a0218f688f0b686ea16d3cbe",
+              "sha256": "3f11229a8d98bf1fc70967cf3d2cdbe9f2a2a62c0ab73c494987cea5863aedec",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md",
               "transform": "none"
             },
@@ -2318,7 +2318,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "b469d65346cbf54898087d4205af2f50172b5595c60e7ebb2c0d4198954eec25",
+          "file_tree_hash": "9ddecb63522ec79b1dc1ab2c012d6c9b626d1a75a009394635a82ee6ee670ff6",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
@@ -2898,11 +2898,11 @@
               "transform": "path_normalization"
             },
             {
-              "byte_count": 62891,
+              "byte_count": 76564,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/phase-execution.md",
               "required": true,
-              "sha256": "0e1440d471bfe268b531aa2c0c4849a39fd6531eb8faa8ab434ba16876716cb0",
+              "sha256": "9e69b98dced1b4ea236fd3a9b5e43c5847c172b70d6e4c007b2f4eb90271e8e0",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
               "transform": "none"
             },
@@ -2997,11 +2997,11 @@
               "transform": "path_normalization"
             },
             {
-              "byte_count": 12520,
+              "byte_count": 12629,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/workflow-file-protocol.md",
               "required": true,
-              "sha256": "27a3928a19134a04d8510625fcd9de03e854cca9a0218f688f0b686ea16d3cbe",
+              "sha256": "3f11229a8d98bf1fc70967cf3d2cdbe9f2a2a62c0ab73c494987cea5863aedec",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md",
               "transform": "none"
             },
@@ -4097,11 +4097,11 @@
               "transform": "path_normalization"
             },
             {
-              "byte_count": 62891,
+              "byte_count": 76564,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/phase-execution.md",
               "required": true,
-              "sha256": "0e1440d471bfe268b531aa2c0c4849a39fd6531eb8faa8ab434ba16876716cb0",
+              "sha256": "9e69b98dced1b4ea236fd3a9b5e43c5847c172b70d6e4c007b2f4eb90271e8e0",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
               "transform": "none"
             },
@@ -4196,11 +4196,11 @@
               "transform": "path_normalization"
             },
             {
-              "byte_count": 12520,
+              "byte_count": 12629,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/workflow-file-protocol.md",
               "required": true,
-              "sha256": "27a3928a19134a04d8510625fcd9de03e854cca9a0218f688f0b686ea16d3cbe",
+              "sha256": "3f11229a8d98bf1fc70967cf3d2cdbe9f2a2a62c0ab73c494987cea5863aedec",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md",
               "transform": "none"
             },
@@ -4728,7 +4728,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "34572350f41ddd445a5fb56558504befb42a5b9ce8fdfe4be3de995518a5ab1b",
+          "file_tree_hash": "0c15a4613b0b444628ba4a56216ff29041d56c80e96c5ca46c1252fc0250a460",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],

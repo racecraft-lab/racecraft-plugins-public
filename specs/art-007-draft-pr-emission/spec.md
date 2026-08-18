@@ -266,6 +266,15 @@ value is the one used.
   self-validation, the system MUST NOT create the pull request and MUST report
   through FR-010's could-not-be-opened path, rather than creating a pull request
   whose title a human would have to repair.
+  When the record is absent **and** the live query could not answer — the tool is
+  missing, unauthenticated, rate-limited, or its output did not parse — the
+  system MUST NOT create. Neither positive fired, but a query that failed is not
+  evidence that nothing exists, so "creation runs only when no open pull request
+  exists" is unverifiable in that state and creating risks a duplicate. Report
+  through FR-010's could-not-be-opened path and let the operator re-run. This
+  mirrors FR-011's rule that an unreachable corroboration is never grounds for
+  creation: the two tests fail closed the same way, so a tool outage cannot
+  produce a second pull request through either path.
 - **FR-008**: The draft pull request's description MUST contain exactly two
   blocks: an artifacts index table listing each artifact with its purpose and a
   copy-paste command to open it locally, and a resume/status block. It MUST NOT

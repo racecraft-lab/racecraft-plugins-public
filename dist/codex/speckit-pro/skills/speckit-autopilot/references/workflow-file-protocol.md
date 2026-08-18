@@ -99,7 +99,7 @@ evidence.
 | which commit | the separate bookkeeping commit, never the stage-boundary commit |
 | repair | when a pull request exists but the row is missing or wrong, write or repair it |
 | whole value | every write rewrites the whole cell from the current run's outcome, so a stale gap note never survives a refresh that no longer fell short |
-| leave alone | under a closed or unobservable recorded pull request, leave the row exactly as found |
+| leave alone | whenever the recorded and live identities disagree — the recorded pull request is closed, is unobservable, or a different pull request is open on the branch — leave the row exactly as found |
 | sole store | this row is the only place the identity is stored — there is **no state-file mirror** |
 
 That last rule is deliberate, and it is why this entry reads differently from
