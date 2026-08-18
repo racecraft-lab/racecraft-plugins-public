@@ -147,6 +147,42 @@ The advisory runner's HTML classifier remains `production: 0`, `projected: 0`
 as recorded in `plan.md`; it does not count these HTML implementation lines, so
 the measured component result above controls this checkpoint.
 
+## Slice 2 Pre-Generation Reviewability Measurement
+
+Slice base: `383950113c7aef4c41c566b07d5a5b79df473434` (the exact Slice 1
+closeout head from which the Slice 2 branch was created).
+
+The working-tree measurement used an explicit pathspec for exactly the seven
+implementation-authored paths. The new template was marked intent-to-add so
+`git diff --numstat` included its uncommitted content; the cumulative UAT JSON
+and runbook are unchanged at this checkpoint.
+
+| Authored path | Added | Deleted | Reviewable component LOC |
+|---|---:|---:|---:|
+| `speckit-pro/artifact-gallery/manifest.json` | 1 | 1 | 0 |
+| `speckit-pro/artifact-gallery/templates/concept-explainer.html` | 891 | 0 | 433 |
+| `.process/uat-results.json` | 0 | 0 | 0 |
+| `.process/uat-results.md` | 36 | 0 | 0 |
+| `.process/uat-runbook.md` | 0 | 0 | 0 |
+| `tests/speckit-pro/unit/test-artifact-fill-regions.py` | 4 | 0 | 4 |
+| `tests/speckit-pro/unit/test-artifact-gallery.py` | 97 | 0 | 97 |
+
+Physical seven-path result after this record: `1029` additions and 1
+deletion. The raw ledger counts byte-identical canonical and evidence-carrier
+lines; it is reported rather than presented as reviewable implementation LOC.
+
+The plan-approved component method excludes the 458 byte-identical canonical
+block lines and the manifest/UAT carrier lines, then counts the 433
+non-canonical template lines plus 101 incremental test lines.
+
+- Actual reviewable implementation LOC: **534**
+- Remaining declared implementation LOC: **0**
+- Final projected reviewable implementation LOC: **534**
+- Slice 2 component ceiling: **535** (1 LOC headroom)
+- Mandatory block threshold: **800** (266 LOC headroom)
+- Verdict: **WARN / PASS** — above the 400 warning, below both the declared
+  ceiling and mandatory block; proceed to generated refresh.
+
 ## Slice 1 Final Boundary Ledger (T023)
 
 Remote refs were refreshed immediately before this measurement. `origin/main`

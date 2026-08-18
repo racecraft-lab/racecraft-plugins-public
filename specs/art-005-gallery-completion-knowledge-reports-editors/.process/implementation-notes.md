@@ -127,3 +127,27 @@
 ### T027
 
 **Deviations/Edge cases/Surprises:** Formal RED passed for the intended reason. The gallery module reported 488/489 with only the `planned` manifest status and missing `templates/concept-explainer.html`; the fill module reported 56/57 with the exact floor/list literals active and only the missing template/inventory assertion failing. Generic fill checks remain correctly gated until the manifest row ships.
+
+### T028
+
+**Deviations/Edge cases/Surprises:** The standalone reader embeds both canonical regions byte-for-byte, carries all four fills with two anchored scenarios, preserves deterministic consistent-hashing ownership, exposes bounded add/remove/reset plus slider controls, reports counts and boundaries through a polite status, and keeps simulation state session-only. `check_m1` now reports only the T029-owned `planned` status and fill checks pass 57/57. The first draft is 1,079 physical lines, 621 non-canonical lines; with 101 test lines the current 722 reviewable LOC remains below the 800 stop but exceeds the 535 slice ceiling by 187, so T031 has mandatory reduction work before generation.
+
+### T029
+
+**Deviations/Edge cases/Surprises:** The first manifest patch matched the wrong nearby `planned` row and briefly flipped `uat-walkthrough`; exact `git diff` inspection caught it immediately and it was corrected before testing. The final manifest diff changes only `concept-explainer.status` from `planned` to `shipped`; its pinned source, reader role, `exports: []`, and every other row value remain unchanged.
+
+### T030
+
+**Deviations/Edge cases/Surprises:** The Slice 2 reader contract (`check_m1`) and all Slice 1 assertions (`check_l1`) are green, and fill checks pass 57/57 after placing both anchored scenarios directly inside the declared list container. The complete gallery module reports 485/489 only because F1-F4 require T033's not-yet-regenerated Claude/Codex template and manifest mirrors; no source assertion is failing.
+
+### T031
+
+**Deviations/Edge cases/Surprises:** The refactor reduced the reader from 1,079 to 891 physical lines while preserving the 458 byte-identical canonical lines, all required hooks, deterministic/session-only simulation, bounded feedback, responsive behavior, focus, and reduced-motion handling. The final component count is 433 non-canonical template lines plus 101 incremental test lines = 534 reviewable LOC, one below the 535 ceiling and 266 below the mandatory 800 stop. `git diff --check` and fill checks remain green; gallery retains only the four T033-generated parity failures.
+
+### T032
+
+**Deviations/Edge cases/Surprises:** None. The explicit seven-path ledger reports 1,029 physical additions and one deletion: 891 template lines, 101 incremental test lines, one manifest status line, and 36 current evidence-carrier lines. The component method excludes 458 byte-identical canonical lines plus manifest/UAT carriers, yielding 534 final reviewable LOC with one line of declared-ceiling headroom and 266 lines below the mandatory stop.
+
+### T033
+
+**Deviations/Edge cases/Surprises:** None. Authoritative release regeneration produced the Claude/Codex dist mirrors, both installed-cache mirrors, and refreshed proof fixtures; docs `reference:generate` regenerated seven pages byte-identically. The source, two dist, and two installed-cache templates all have SHA-256 `320000b3dc8e775623b93f51432c9e42500fc941ebe64ed983bcf66fe836ab0d`; all five manifests share `5b7d050a5a376b83c069daa0594a8dc5f854f9d512acedac690c0d6e32f4c14f`. Gallery parity is now green at 489/489 and fill checks pass 57/57.
