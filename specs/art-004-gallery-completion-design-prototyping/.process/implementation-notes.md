@@ -199,3 +199,15 @@
 ### T049
 
 **Deviations/Edge cases/Surprises:** Chromium passed the complete offline accessibility matrix at 360 px. Safari 26.6.1 used Option-Tab and passed both ports, including native ArrowRight snippet scrolling from 0 to 29. Headless WebKit did not synthesize the generic scroller's default key action, so that single native-engine path is supported by the real Safari result rather than inferred from the headless runner.
+
+### T050
+
+**Deviations/Edge cases/Surprises:** Authoritative regeneration added both decision templates to the Claude and Codex payloads and installed-cache fixtures, then refreshed the manifest copies and proof-chain records. No generated surface was hand-edited.
+
+### T051
+
+**Deviations/Edge cases/Surprises:** Reference generation completed for all seven pages. The generated pages were already byte-current, so no docs reference diff remained.
+
+### T052
+
+**Deviations/Edge cases/Surprises:** Focused gallery and fill suites passed 567/567 and 70/70. The full suite passed 7496/7496. After checkpoint `0a8228a8c`, release-artifact and docs-reference checks both passed on a clean tree.

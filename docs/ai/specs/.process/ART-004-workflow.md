@@ -772,7 +772,7 @@ Final verification:
 |---|---|---|---|
 | 1 - Keyboard-scroll guard and repair | `T001-T022` | `T001-T022` | Chromium and Safari 26.6.1 file:// UAT passed 11/11 regions after correcting module-map grid sizing; Safari used Tab and Enter for the five source disclosures; suite `7418/7418`, release-artifact `--check`, and docs reference check pass after checkpoint `e15e3a6cc` |
 | 2 - Read-only ports | `T023-T037` | `T023-T037` | Complete — checkpoint `01e97ad65`; four ports and exact manifest flips shipped, Chromium/Safari UAT passed, suite `7450/7450`, and release/reference consistency checks passed |
-| 3 - Decision ports | `T038-T052` | `T038-T049` | Both decision ports and the exact two manifest flips are implemented; focused tests and Chromium/WebKit/Safari `file://` UAT pass; T050 payload regeneration is next |
+| 3 - Decision ports | `T038-T052` | `T038-T052` | Complete — checkpoint `0a8228a8c`; both decision ports, exact manifest flips, generated payloads, Chromium/WebKit/Safari UAT, suite `7496/7496`, and release/reference consistency checks passed |
 | 4 - Shared integration and UAT | | | |
 
 ---

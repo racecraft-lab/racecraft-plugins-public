@@ -128,9 +128,9 @@
 - [x] T047 [US3] VERIFY run focused gallery and fill-region tests for decision ports in `tests/speckit-pro/unit/test-artifact-gallery.py` and `tests/speckit-pro/unit/test-artifact-fill-regions.py`
 - [x] T048 [US3] VERIFY complete `file://` UAT for valid prompt copy, valid Markdown copy, missing-choice validation, missing-rationale validation, whitespace-only rationale validation, unavailable Clipboard API, non-callable `writeText`, synchronous exception, rejected write promise, denied permission, local-file security restriction, focused fallback textarea, stale fallback clearing, and stale-copy-settle behavior in `specs/art-004-gallery-completion-design-prototyping/quickstart.md`
 - [x] T049 [US3] VERIFY complete `file://` UAT for decision-port offline readability, keyboard-only operation, visible focus, logical source order, Safari Tab or Option-Tab path, names/roles/states/values, visible labels or instructions, both-theme contrast, non-color meaning, typeface fallback, and reduced-motion behavior in `specs/art-004-gallery-completion-design-prototyping/quickstart.md`
-- [ ] T050 [US3] VERIFY regenerate derived payloads and installed-cache proof files from source with `python3 scripts/refresh-release-artifacts.py`
-- [ ] T051 [US3] VERIFY regenerate generated reference pages affected by tracked source/test changes with `pnpm --dir docs-site reference:generate` for `docs-site/src/content/docs/reference/tests.md` and `docs-site/src/content/docs/reference/source-vs-dist.md`
-- [ ] T052 [US3] VERIFY run `python3 tests/speckit-pro/run-all.py`, `python3 scripts/refresh-release-artifacts.py --check`, and `pnpm --dir docs-site reference:check` against `tests/speckit-pro/run-all.py`
+- [x] T050 [US3] VERIFY regenerate derived payloads and installed-cache proof files from source with `python3 scripts/refresh-release-artifacts.py`
+- [x] T051 [US3] VERIFY regenerate generated reference pages affected by tracked source/test changes with `pnpm --dir docs-site reference:generate` for `docs-site/src/content/docs/reference/tests.md` and `docs-site/src/content/docs/reference/source-vs-dist.md`
+- [x] T052 [US3] VERIFY run `python3 tests/speckit-pro/run-all.py`, `python3 scripts/refresh-release-artifacts.py --check`, and `pnpm --dir docs-site reference:check` against `tests/speckit-pro/run-all.py`
 
 **Checkpoint**: User Story 3 is complete when both decision ports ship, export payloads derive from live state, clipboard refusal uses the exact fallback path, and all generated outputs agree with source.
 

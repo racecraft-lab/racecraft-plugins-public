@@ -416,7 +416,7 @@
     },
     "implement": {
       "status": "in_progress",
-      "completed_tasks": ["T001", "T002", "T003", "T004", "T005", "T006", "T007", "T008", "T009", "T010", "T011", "T012", "T013", "T014", "T015", "T016", "T017", "T018", "T019", "T020", "T021", "T022", "T023", "T024", "T025", "T026", "T027", "T028", "T029", "T030", "T031", "T032", "T033", "T034", "T035", "T036", "T037", "T038", "T039", "T040", "T041", "T042", "T043", "T044", "T045", "T046", "T047", "T048", "T049"],
+      "completed_tasks": ["T001", "T002", "T003", "T004", "T005", "T006", "T007", "T008", "T009", "T010", "T011", "T012", "T013", "T014", "T015", "T016", "T017", "T018", "T019", "T020", "T021", "T022", "T023", "T024", "T025", "T026", "T027", "T028", "T029", "T030", "T031", "T032", "T033", "T034", "T035", "T036", "T037", "T038", "T039", "T040", "T041", "T042", "T043", "T044", "T045", "T046", "T047", "T048", "T049", "T050", "T051", "T052"],
       "pending_browser_tasks": [],
       "browser_attempt": "Playwright/Chromium completed T018 and Slices 2-3 offline UAT; Playwright/WebKit completed the Slice 3 semantic matrix; Safari 26.6.1 WebDriver completed T019 and the Slice 2-3 Option-Tab matrices after the operator enabled remote automation",
       "browser_evidence": {
@@ -501,6 +501,14 @@
           "checks": "six visual and fifteen component controls reached in logical order; controls operated with ArrowRight, Space, and Enter; component snippet scrolled 0 to 29"
         },
         "runner_note": "The installed Playwright MCP profile was already in use, so the skill-approved isolated Playwright fallback preserved the active browser session; real Safari supplied the native generic-scroller ArrowRight evidence that headless WebKit could not synthesize"
+      },
+      "slice_3_automated_evidence": {
+        "checkpoint": "0a8228a8c",
+        "full_suite": "7496/7496 passed",
+        "gallery": "567/567 passed",
+        "fill_regions": "70/70 passed",
+        "release_check": "generated release artifacts match the source tree after the checkpoint",
+        "reference_check": "generated reference pages are current"
       },
       "implementation_notes": "specs/art-004-gallery-completion-design-prototyping/.process/implementation-notes.md"
     }
