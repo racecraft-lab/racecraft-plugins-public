@@ -9742,6 +9742,165 @@ class IncidentReportReaderTests(unittest.TestCase):
         self.assertEqual(check_t1(GALLERY_ROOT), [])
 
 
+# ---------------------------------------------------------------------------
+# Group U - ART-005 triage-board producer contract (FR-003, FR-007,
+# FR-009-FR-014, FR-019-FR-023)
+# ---------------------------------------------------------------------------
+
+TRIAGE_BOARD_ID = "triage-board"
+TRIAGE_BOARD_SOURCE_FILE = "18-editor-triage-board.html"
+TRIAGE_BOARD_LABEL = f"{TEMPLATES_DIR}/{TRIAGE_BOARD_ID}.html"
+_TRIAGE_COLUMNS = ("now", "next", "later", "cut")
+_TRIAGE_FIELDS = ("id", "title", "tag", "estimate", "owner")
+_ISSUE_FIELDS = (
+    "code", "artifactId", "entityType", "entityId", "field",
+    "occurrenceIndex", "relatedOccurrenceIndex", "rawValue",
+    "normalizedValue", "message",
+)
+
+
+def _javascript_array(text: str, name: str) -> tuple[str, ...] | None:
+    match = re.search(rf"const\s+{name}\s*=\s*(\[[^;]+\]);", text, re.DOTALL)
+    if match is None:
+        return None
+    try:
+        value = json.loads(match.group(1))
+    except json.JSONDecodeError:
+        return None
+    return tuple(value) if isinstance(value, list) and all(isinstance(item, str) for item in value) else None
+
+
+def check_u1(gallery_root: Path) -> list[str]:
+    """U1 - manifest identity, memory-only editing, and accessibility agree."""
+    matches = [
+        entry for entry in (_entries(gallery_root) or [])
+        if isinstance(entry, dict) and entry.get("id") == TRIAGE_BOARD_ID
+    ]
+    if len(matches) != 1:
+        return [f"{MANIFEST_FILE}: expected one '{TRIAGE_BOARD_ID}' entry, found {len(matches)}"]
+    entry = matches[0]
+    source = entry.get("source")
+    failures: list[str] = []
+    if entry.get("status") != SHIPPED:
+        failures.append(f"{MANIFEST_FILE}: '{TRIAGE_BOARD_ID}' must be shipped, found {entry.get('status')!r}")
+    if entry.get("exports") != ["markdown"]:
+        failures.append(f"{MANIFEST_FILE}: '{TRIAGE_BOARD_ID}' must export only markdown")
+    if not isinstance(source, dict) or source.get("origin") != UPSTREAM or source.get("file") != TRIAGE_BOARD_SOURCE_FILE:
+        failures.append(f"{MANIFEST_FILE}: '{TRIAGE_BOARD_ID}' must remain sourced from {TRIAGE_BOARD_SOURCE_FILE}")
+
+    artifact = _artifact_path(gallery_root, TRIAGE_BOARD_ID)
+    if artifact is None or not artifact.is_file():
+        failures.append(f"{TRIAGE_BOARD_LABEL}: missing producer artifact")
+        return failures
+    text = _document_text(artifact)
+    authored = text
+    for block in CANONICAL_FILES:
+        if not _embeds(text, block):
+            failures.append(f"{TRIAGE_BOARD_LABEL}: missing canonical {block} block")
+        elif (expected := _canonical_region(gallery_root, block)) is None or _region(text, block) != expected:
+            failures.append(f"{TRIAGE_BOARD_LABEL}: canonical {block} bytes drifted")
+        else:
+            authored = authored.replace(_region(text, block), "")
+    header = _attribution_header(text)
+    if header is None or any(not _carried(header, element) for element in ATTRIBUTION_ELEMENTS):
+        failures.append(f"{TRIAGE_BOARD_LABEL}: incomplete upstream attribution header")
+    elif _labelled_value(header, UPSTREAM_FILE_LABEL) != TRIAGE_BOARD_SOURCE_FILE:
+        failures.append(f"{TRIAGE_BOARD_LABEL}: attribution must name {TRIAGE_BOARD_SOURCE_FILE}")
+
+    elements = _elements(text)
+    attributes = [dict(element.attributes) for element in elements]
+    by_id = {attrs.get("id"): (element.tag, attrs) for element, attrs in zip(elements, attributes) if attrs.get("id")}
+    required_ids = ("board", "tag-filter", "clear-filter", "reset-board", "copy-markdown", "copy-status", "copy-fallback")
+    failures.extend(f"{TRIAGE_BOARD_LABEL}: missing named control or region #{item}" for item in required_ids if item not in by_id)
+    board = by_id.get("board", (None, {}))[1]
+    if board.get("role") != "group" or not (board.get("aria-label") or board.get("aria-labelledby")):
+        failures.append(f"{TRIAGE_BOARD_LABEL}: board must be a named group")
+    for column in _TRIAGE_COLUMNS:
+        attrs = by_id.get(f"column-{column}", (None, {}))[1]
+        if attrs.get("data-column") != column or not attrs.get("aria-labelledby"):
+            failures.append(f"{TRIAGE_BOARD_LABEL}: column {column!r} must expose its key and name")
+    tickets = [attrs for attrs in attributes if attrs.get("data-ticket-id") is not None]
+    if len(tickets) < 4 or any(attrs.get("tabindex") != "0" or not attrs.get("aria-label") for attrs in tickets):
+        failures.append(f"{TRIAGE_BOARD_LABEL}: expected at least four named keyboard-focusable tickets")
+    for token in ("keydown", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "moveTicket", "reorderTicket", ".focus()"):
+        if token not in text:
+            failures.append(f"{TRIAGE_BOARD_LABEL}: missing keyboard movement hook {token!r}")
+    for literal in ("No tickets in this column.", "No tickets match this filter.", 'role="status"', 'aria-live="polite"'):
+        if literal not in text:
+            failures.append(f"{TRIAGE_BOARD_LABEL}: missing visible state/status contract {literal!r}")
+    if text.count(">Copy as Markdown<") != 1:
+        failures.append(f"{TRIAGE_BOARD_LABEL}: expected exactly one control labeled Copy as Markdown")
+    for token in ("sessionstorage", "indexeddb", "urlsearchparams", "execcommand(", "download="):
+        if token in authored.casefold():
+            failures.append(f"{TRIAGE_BOARD_LABEL}: producer uses prohibited state/export token {token!r}")
+    widths = [int(value) for value in re.findall(r"@media[^{}]*max-width\s*:\s*(\d+)px", text, re.IGNORECASE)]
+    if not any(width >= 360 for width in widths) or "prefers-reduced-motion" not in text or ":focus-visible" not in text:
+        failures.append(f"{TRIAGE_BOARD_LABEL}: responsive, reduced-motion, or visible-focus handling is missing")
+    return failures
+
+
+def check_u2(gallery_root: Path) -> list[str]:
+    """U2 - one live snapshot serializes deterministic board and issue order."""
+    artifact = _artifact_path(gallery_root, TRIAGE_BOARD_ID)
+    if artifact is None or not artifact.is_file():
+        return [f"{TRIAGE_BOARD_LABEL}: missing producer artifact"]
+    text = _document_text(artifact)
+    failures: list[str] = []
+    for name, expected in (("COLUMN_ORDER", _TRIAGE_COLUMNS), ("TICKET_FIELDS", _TRIAGE_FIELDS), ("ISSUE_FIELDS", _ISSUE_FIELDS)):
+        if _javascript_array(text, name) != expected:
+            failures.append(f"{TRIAGE_BOARD_LABEL}: {name} must declare exact deterministic order {expected!r}")
+    required = (
+        "captureSnapshot", "serializeBoard", "escapeMarkdown", "issueScalar",
+        "# Triage Board Export", "Artifact: triage-board", "Export kind: markdown",
+        "## Now", "## Next", "## Later", "## Cut", "- _No tickets._",
+        "## Issues", "- _No issues._", "duplicate_identifier",
+        "Identifier duplicates the first visible occurrence.",
+        "const snapshot = captureSnapshot();", "const markdown = serializeBoard(snapshot);",
+    )
+    failures.extend(f"{TRIAGE_BOARD_LABEL}: missing serializer contract {token!r}" for token in required if token not in text)
+    if "cachedMarkdown" in text or text.count("serializeBoard(snapshot)") != 1:
+        failures.append(f"{TRIAGE_BOARD_LABEL}: export must serialize one fresh snapshot exactly once per invocation")
+    if 'split("\\n")' not in text or 'JSON.stringify(value)' not in text:
+        failures.append(f"{TRIAGE_BOARD_LABEL}: multiline Markdown or JSON-scalar issue escaping is not explicit")
+    return failures
+
+
+def check_u3(gallery_root: Path) -> list[str]:
+    """U3 - clipboard recovery is current-invocation and zero/one-attempt."""
+    artifact = _artifact_path(gallery_root, TRIAGE_BOARD_ID)
+    if artifact is None or not artifact.is_file():
+        return [f"{TRIAGE_BOARD_LABEL}: missing producer artifact"]
+    text = _document_text(artifact)
+    failures: list[str] = []
+    required = (
+        "let copyAttempt = 0;", "const attempt = ++copyAttempt;", "clearCopyState();",
+        "const clipboard = navigator.clipboard;", 'typeof clipboard.writeText !== "function"',
+        "await clipboard.writeText(markdown);", "showFallback(markdown);",
+        "Copied. Markdown is on the clipboard.",
+        "Copy failed. The Markdown export is available below for manual copy.",
+        "fallback.hidden = false;", "fallback.value = markdown;", "fallback.focus();", "fallback.select();",
+    )
+    failures.extend(f"{TRIAGE_BOARD_LABEL}: missing clipboard state hook {token!r}" for token in required if token not in text)
+    if text.count("clipboard.writeText(markdown)") != 1:
+        failures.append(f"{TRIAGE_BOARD_LABEL}: current invocation must call writeText at most once")
+    if text.count("attempt !== copyAttempt") < 2:
+        failures.append(f"{TRIAGE_BOARD_LABEL}: both superseded settlement directions need currency guards")
+    if text.casefold().count("execcommand(") or "download=" in text.casefold():
+        failures.append(f"{TRIAGE_BOARD_LABEL}: hidden copying and download recovery are prohibited")
+    return failures
+
+
+class TriageBoardProducerTests(unittest.TestCase):
+    def test_triage_board_editing_contract_passes_against_the_shipped_gallery(self) -> None:
+        self.assertEqual(check_u1(GALLERY_ROOT), [])
+
+    def test_triage_board_serializer_contract_passes_against_the_shipped_gallery(self) -> None:
+        self.assertEqual(check_u2(GALLERY_ROOT), [])
+
+    def test_triage_board_clipboard_contract_passes_against_the_shipped_gallery(self) -> None:
+        self.assertEqual(check_u3(GALLERY_ROOT), [])
+
+
 class CheckSignatureTests(unittest.TestCase):
     """Enforce the rule the rest of this module depends on.
 
@@ -9808,6 +9967,7 @@ CHECK_GROUPS: tuple[type[unittest.TestCase], ...] = (
     ConceptExplainerReaderTests,
     StatusReportReaderTests,
     IncidentReportReaderTests,
+    TriageBoardProducerTests,
     KeyboardScrollGuardTests,
     KeyboardScrollGuardFixtureTests,
     ReadOnlyPortContractTests,

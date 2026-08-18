@@ -271,3 +271,23 @@
 ### T063
 
 **Deviations/Edge cases/Surprises:** None. After PR #448 opened and Slice 4 closeout reached `4c9f4fe521994ba43150532572f8ee7e5a442401`, Slice 5 was created from that exact head as `art-005-gallery-completion-knowledge-reports-editors-slice-5`. The plan and topology contract agree on exactly seven implementation-authored paths and a 785 reviewable-LOC ceiling (240 markup/content, 145 CSS, 230 behavior JS, and 170 incremental tests), leaving 15 LOC below the mandatory 800-LOC stop. `triage-board` remains `planned` with pinned source `18-editor-triage-board.html` and `exports: ["markdown"]` before RED.
+
+### T064
+
+**Deviations/Edge cases/Surprises:** None. Group P1 pins the shipped producer identity, exact Markdown export kind and control label, canonical bytes, attribution, named board/columns/tickets/filter/reset/fallback surfaces, keyboard column movement and within-column reordering, explicit empty/filter messages, persistent status semantics, memory-only behavior, responsive handling, reduced motion, and visible focus.
+
+### T065
+
+**Deviations/Edge cases/Surprises:** None. Group P2 parses the declared column, ticket-field, and issue-field arrays instead of accepting unordered token presence. It also pins a fresh live snapshot, exactly one serialization call, fixed headings and empty states, duplicate preservation/reporting, deterministic issue text, JSON-scalar issue values, and multiline Markdown escaping.
+
+### T066
+
+**Deviations/Edge cases/Surprises:** None. Group P3 pins invocation ordinals, fresh clipboard capability reads, zero attempts for absent/non-callable methods, one write for callable methods, normalized success/failure messages, exact selectable focused fallback, and two settlement-currency guards covering both superseded directions. Runtime sequencing and exception classes remain mandatory UAT rows.
+
+### T067
+
+**Deviations/Edge cases/Surprises:** None. The fill contract now pins `triage-items` and `column-labels`, treats triage-items as a repeated list slot, and requires a non-vacuous shipped inventory template with at least two anchored list items.
+
+### T068
+
+**Deviations/Edge cases/Surprises:** Formal RED passed for the intended reason. Gallery reported 491/494; direct P1-P3 evidence names only the planned manifest status and missing triage-board producer. Fill-region reported 62/63 with only the new missing triage-board fill-inventory template failing. Existing Slice 1-4 checks remained green.
