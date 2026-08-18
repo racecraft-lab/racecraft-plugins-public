@@ -14,8 +14,8 @@ JSON path: `specs/art-005-gallery-completion-knowledge-reports-editors/.process/
 
 T019 created the active UAT carriers. T077 re-executed the complete cumulative
 Slice 1-5 row set against source checkpoint
-`9b0fdb9e6d1af9266dd7e27616091df3e9ebaa49` on 2026-08-18. A fresh connected
-browser selection for the exact triage-board file returned `No browser is available`, and the
+`69f803d37523499f80120d246400a7fbda30c6fa` on 2026-08-18. The current session's
+connected-browser selection returned `No browser is available`, and the
 prescribed inventory was empty, so the operator-authorized Playwright MCP
 fallback supplied browser interaction and observation while the contract driver
 remained `manual`.
@@ -689,8 +689,8 @@ not-applicable route required when no actual user-scroll element exists.
 
 ### TB-UAT-025 Special-character round trip
 
-1. Enter multiline Unicode plus quotes, backticks, pipe, slash, backslash, tab, and newline.
-2. Export and confirm raw meaning is preserved with deterministic Markdown escaping and continuation indentation.
+1. Type multiline Unicode plus quotes, backticks, pipe, slash, backslash, tab, and a real line break into the visible ticket contenteditable.
+2. Export and confirm the browser-created line break and raw meaning are preserved with deterministic Markdown escaping and continuation indentation.
 
 ### TB-UAT-026 Multiple issue order
 

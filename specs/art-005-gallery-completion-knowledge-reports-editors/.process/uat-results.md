@@ -12,26 +12,26 @@ Runbook path: `specs/art-005-gallery-completion-knowledge-reports-editors/.proce
 JSON path: `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json`
 Driver: `manual`
 Status: T077 complete; all 180 cumulative Slice 1-5 rows are bound to source
-checkpoint `9b0fdb9e6d1af9266dd7e27616091df3e9ebaa49`.
+checkpoint `69f803d37523499f80120d246400a7fbda30c6fa`.
 
 ## Source Checkpoint vs Evidence Commit
 
 The source checkpoint is
-`9b0fdb9e6d1af9266dd7e27616091df3e9ebaa49`. It contains all five source
+`69f803d37523499f80120d246400a7fbda30c6fa`. It contains all five source
 templates, the manifest, cumulative tests, generated outputs, and the
 pre-execution evidence carriers that were tested. The later evidence commit
 records these results without changing the tested source bytes. The JSON names
 the source checkpoint rather than the evidence commit.
 
-A fresh connected-browser selection for the exact triage-board URL returned
-`No browser is available`, and the prescribed inventory was empty. Per the
-operator's fallback instruction, Playwright MCP then supplied browser
-interaction and observation. No repository browser
-harness was committed, so the contract driver remains `manual`.
+The current session's connected-browser selection returned `No browser is
+available`, and the prescribed inventory was empty. Per the operator's fallback
+instruction, Playwright MCP then supplied browser interaction and observation.
+No repository browser harness was committed, so the contract driver remains
+`manual`.
 
 ## Execution Environment
 
-- Executed at: `2026-08-18T22:04:09Z`
+- Executed at: `2026-08-18T23:42:26Z`
 - OS: macOS 26.6.2, Build 25G82, arm64
 - Browser: Google Chrome 151.0.7922.138
 - Scheme: direct `file://`
@@ -178,7 +178,7 @@ Every executable row passed; no result is omitted from the normalized JSON.
 | TB-UAT-022 | Pass | Moved and filtered ticket order matched the current visible DOM order. |
 | TB-UAT-023 | Pass | Column, ticket-field, empty-column, and Issues order matched the contract. |
 | TB-UAT-024 | Pass | Cross-column RC-421 duplicate was preserved and linked occurrence 3→1. |
-| TB-UAT-025 | Pass | Unicode, quotes, backticks, pipe, slash, backslash, tab, and newline round-tripped. |
+| TB-UAT-025 | Pass | A real contenteditable line break plus Unicode, quotes, backticks, pipe, slash, backslash, and tab round-tripped. |
 | TB-UAT-026 | Pass | Duplicate plus empty estimate/owner issues followed declared deterministic order. |
 | TB-UAT-027 | Pass | Every clipboard/fallback path equaled the exact invocation export bytes. |
 | TB-UAT-028 | Pass | Both older settlements were suppressed without stale status/fallback/focus mutation. |
@@ -857,15 +857,15 @@ The seven implementation-authored paths remain the declared Slice 5 ledger:
 
 | Component | Physical additions | Canonical/excluded | Reviewable LOC |
 |---|---:|---:|---:|
-| `triage-board.html` | 949 | 458 byte-identical canonical lines | 491 |
-| `test-artifact-gallery.py` | 160 | 0 | 160 |
+| `triage-board.html` | 973 | 458 byte-identical canonical lines | 515 |
+| `test-artifact-gallery.py` | 162 | 0 | 162 |
 | `test-artifact-fill-regions.py` | 4 | 0 | 4 |
 | Manifest status flip | 1 | 1 metadata line | 0 |
 | UAT carriers | pending cumulative evidence refresh | evidence-only | 0 |
-| **Total** | — | — | **655** |
+| **Total** | — | — | **681** |
 
-- Slice 5 component ceiling: **785** (130 LOC headroom)
-- Mandatory authored stop: **800** (145 LOC headroom)
+- Slice 5 component ceiling: **785** (104 LOC headroom)
+- Mandatory authored stop: **800** (119 LOC headroom)
 - Production templates: **1**
 - Primary surfaces: **1**
 - Pre-generation verdict: **WARN / CONTINUE**
@@ -880,11 +880,11 @@ workflow/control-plane evidence.
 
 ## Slice 5 Cumulative UAT (T077)
 
-Fresh connected-browser selection for the exact triage-board file returned
-`No browser is available`. The prescribed connection inventory was empty, so
-the operator-authorized Playwright MCP fallback re-executed all 180 cumulative
-rows against source checkpoint
-`9b0fdb9e6d1af9266dd7e27616091df3e9ebaa49`.
+The current session's connected-browser selection returned `No browser is
+available`. The prescribed connection inventory was empty, so the
+operator-authorized Playwright MCP fallback re-executed all 180 cumulative rows
+against repaired source checkpoint
+`69f803d37523499f80120d246400a7fbda30c6fa`.
 
 - Browser: Google Chrome 151.0.7922.138 on macOS 26.6.2, Build 25G82, arm64
 - Viewports: 360 and 1280 CSS px by 900 CSS px
@@ -895,7 +895,8 @@ rows against source checkpoint
   focused stage stayed on Slide 1 for 31.008 seconds; temporary tabindex removed
 - Triage traversal: 41 forward stops with 3px/3px visible focus and reverse parity
 - Export: exact column/ticket/issue order; OLD→NEW freshness; duplicate 3→1;
-  empty/all-empty; Unicode, quotes, backticks, pipe, slash, backslash, tab, newline
+  empty/all-empty; Unicode, quotes, backticks, pipe, slash, backslash, tab, and a
+  real browser-created contenteditable line break all round-tripped
 - Clipboard: genuine one-write success; zero-write absent/non-callable; permission,
   generic, and synchronous failures; failure→success→failure; both races; reset invalidation
 - Offline: all five local files reloaded and remained usable; remote probes
@@ -903,7 +904,7 @@ rows against source checkpoint
 - Motion: 0.01ms transition/animation durations and zero running animations
 - Layout: zero page overflow and zero clipped reviewed nodes at both widths
 - Console/page errors: **0** across final-load observations
-- Screenshots: `art-005-slice-5-{slide-deck,concept-explainer,status-report,incident-report,triage-board}-{360,1280}.png`
+- Screenshots: `art-005-slice-5-repair-{slide-deck,concept-explainer,status-report,incident-report,triage-board}-{360,1280}.png`
 
 The tested template, manifest, focused tests, payload mirrors, installed-cache
 mirrors, and generated proofs remain byte-identical to the source checkpoint.
@@ -916,7 +917,7 @@ Remote refs were refreshed immediately before this measurement. Slice 4 PR
 [#448](https://github.com/racecraft-lab/racecraft-plugins-public/pull/448) is
 open and clean at `4c9f4fe521994ba43150532572f8ee7e5a442401`; the Slice 5 branch
 and its merge base use that exact head. The Slice 5 source checkpoint is
-`9b0fdb9e6d1af9266dd7e27616091df3e9ebaa49`, and cumulative UAT evidence
+`69f803d37523499f80120d246400a7fbda30c6fa`, and cumulative UAT evidence
 is recorded at `31fa1655a71680596435bd30b7e8864341f6d94c`.
 
 The source template, manifest, focused tests, payload mirrors, installed-cache
@@ -963,9 +964,9 @@ The complete Slice 5 diff against its exact Slice 4 base contains 33 Git paths:
   - `specs/art-005-gallery-completion-knowledge-reports-editors/.process/implementation-notes.md`
   - `specs/art-005-gallery-completion-knowledge-reports-editors/tasks.md`
 
-The final component method still counts 491 non-canonical template lines plus
-164 incremental test lines = **655 reviewable LOC**, 130 below the 785 ceiling
-and 145 below the mandatory 800 stop. The 33-path total exceeds the 25-file
+The final component method counts 515 non-canonical template lines plus
+166 incremental test lines = **681 reviewable LOC**, 104 below the 785 ceiling
+and 119 below the mandatory 800 stop. The 33-path total exceeds the 25-file
 threshold by eight, but every excess path is required generated or
 workflow/control-plane evidence. With one production template, exactly seven
 implementation-authored paths, stable tested source bytes, and no correctness
