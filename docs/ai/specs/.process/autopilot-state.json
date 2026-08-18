@@ -3,7 +3,7 @@
   "spec_id": "ART-007",
   "feature_dir": "specs/art-007-draft-pr-emission",
   "branch": "art-007-draft-pr-emission",
-  "status": "completed",
+  "status": "completed_archived",
   "stage": "implement",
   "active_step": null,
   "prior_run_note": "completed_archived",
@@ -242,5 +242,50 @@
   "layer_plan": {
     "status": "skipped",
     "reason": "route one-navigable-PR, not split-PR"
+  },
+  "archive": {
+    "archived_at": "2026-08-18",
+    "cleanup_applied": true,
+    "cleanup_branch": "art-007-post-merge-hygiene",
+    "cleanup_gate_7_note": "Gate 7 names main as the normal cleanup branch. This archive ran on art-007-post-merge-hygiene, cut from main at 1d58e5cb, because this repository forbids committing directly to main and lands every change through a pull request. Same shape as PR #442 for ART-003, PR #441 for ART-011, PR #438 for ART-014, PR #431 for ART-002 and ART-012, and PR #424 for ART-006.",
+    "spec_id": "ART-007",
+    "pull_request": 445,
+    "merge_commit": "1d58e5cbb47ce8c79b92e1cd793d6fdb2b29d8c9",
+    "merged_at": "2026-08-18T21:06:52Z",
+    "merged_by": "fgabelmannjr",
+    "base_branch": "main",
+    "source_spec_path_removed": "specs/art-007-draft-pr-emission",
+    "reviewability": {
+      "projected_at_roadmap_loc": 217,
+      "declared_at_scaffold_loc": 287,
+      "measured_loc": null,
+      "measured_loc_note": "No measured reviewable-LOC figure exists. The estimator scores a Markdown-and-Python repository 0 by construction, so the diff gate was decided on committed evidence rather than a number.",
+      "production_files": {
+        "declared": 11,
+        "measured": 11
+      },
+      "total_files": {
+        "declared": 16,
+        "measured": 16
+      },
+      "measured_file_split": "34 authored, 56 generated",
+      "split_decision": "ratified no-split; atomicity route one-navigable-PR"
+    },
+    "process_evidence_preserved": [
+      "docs/ai/specs/.process/ART-007-design-concept.md",
+      "docs/ai/specs/.process/ART-007-workflow.md",
+      "docs/ai/specs/.process/ART-007-manual-uat.md"
+    ],
+    "uat_record_relocation_note": "specs/art-007-draft-pr-emission/.process/manual-uat.md was moved to docs/ai/specs/.process/ART-007-manual-uat.md rather than deleted. Three surviving citations pointed at it and would have dangled: the preserved ART-007 workflow file, and two in the HRNS-015 entry of the harness-engineering-uplift roadmap, which names it as Key Files evidence for two defects that spec must still repair. All three were repointed.",
+    "report": ".specify/memory/archive-reports/2026-08-18-art-007-post-merge-hygiene.md",
+    "retrospective_note": "No ART-007 retrospective exists. The retrospective extension guards on a numeric branch pattern and this branch is namespaced, so it never ran. The durable record is the preserved workflow file and the relocated UAT record. This archive does not invent one.",
+    "acceptance_note": "Manual UAT was executed against the branch tree and is preserved at docs/ai/specs/.process/ART-007-manual-uat.md. Quickstart scenarios 1 through 4 pass; nine mode-conditional packets and twenty corroboration probes reproduce every settled contract decision. The live emission boundary was not exercised: a plan-stage run is structurally blocked until a release refreshes the installed plugin, and the bare gh pr create --draft path is operator-gated on a fork.",
+    "open_followups": [
+      "T052 never ran and is recorded [~] rather than complete. Quickstart scenarios 5 through 7 need an installed plugin carrying this feature, which only exists after a release cuts from this merge.",
+      "generate-spec-index walks the filesystem rather than the git index, so git-ignored artifacts become committed backlinks. Routed to HRNS-015 as scope bullet 7.",
+      "No gate runs the spec index against the real repository tree; the Layer 1 test uses a fixture root. ART-007's own SPEC-MOC.md sat with three empty generated zones through a full green run. Routed to HRNS-015 as scope bullet 8.",
+      "generate-uat-skeleton and final-reviewability-backstop are both registered deferred in the runner registry, so two post-implementation steps were decided on committed evidence rather than helper output.",
+      "ART-009 still owns Layer 6 corpus membership for artifact-author, which ART-007 shipped ungoverned by design."
+    ]
   }
 }
