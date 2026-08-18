@@ -139,3 +139,15 @@
 ### T034
 
 **Deviations/Edge cases/Surprises:** Chromium UAT found one real 360px overflow in the interaction port. Zero-minimum grid/content tracks plus wrapping for the pinned source note restored document-width parity without changing desktop layout. Chromium then passed the full offline matrix. Safari 26.6.1 required Option-Tab for native controls in the active browser setting; isolated `file://` runs passed all four ports, including focus exit, keyboard interactions, reset/cleanup, theme toggle, and ArrowRight scrolling. A bounded page-load wait prevented the optional remote font stylesheet from blocking the offline Safari harness.
+
+### T035
+
+**Deviations/Edge cases/Surprises:** None
+
+### T036
+
+**Deviations/Edge cases/Surprises:** None
+
+### T037
+
+**Deviations/Edge cases/Surprises:** The full suite passed 7450/7450. The release `--check` intentionally rejects any generated-path Git status, even when regeneration is correct, so it was rerun after Slice 2 checkpoint `01e97ad65`; the isolated regeneration comparison and docs reference check then passed on a clean tree.

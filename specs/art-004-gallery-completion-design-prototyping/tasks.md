@@ -97,9 +97,9 @@
 - [x] T032 [US2] REFACTOR tighten fill-region and list-slot coverage for the four read-only ports in `tests/speckit-pro/unit/test-artifact-fill-regions.py`
 - [x] T033 [US2] VERIFY run focused gallery and fill-region tests for read-only ports in `tests/speckit-pro/unit/test-artifact-gallery.py` and `tests/speckit-pro/unit/test-artifact-fill-regions.py`
 - [x] T034 [US2] VERIFY complete offline `file://` UAT for the four read-only ports, including keyboard-only controls, visible state, reset or cleanup outcome, Safari keyboard path, brand font fallback readability, both-theme contrast, non-color meaning, and reduced motion in `specs/art-004-gallery-completion-design-prototyping/quickstart.md`
-- [ ] T035 [US2] VERIFY regenerate derived payloads and installed-cache proof files from source with `python3 scripts/refresh-release-artifacts.py`
-- [ ] T036 [US2] VERIFY regenerate generated reference pages affected by tracked source/test changes with `pnpm --dir docs-site reference:generate` for `docs-site/src/content/docs/reference/tests.md` and `docs-site/src/content/docs/reference/source-vs-dist.md`
-- [ ] T037 [US2] VERIFY run `python3 tests/speckit-pro/run-all.py`, `python3 scripts/refresh-release-artifacts.py --check`, and `pnpm --dir docs-site reference:check` against `tests/speckit-pro/run-all.py`
+- [x] T035 [US2] VERIFY regenerate derived payloads and installed-cache proof files from source with `python3 scripts/refresh-release-artifacts.py`
+- [x] T036 [US2] VERIFY regenerate generated reference pages affected by tracked source/test changes with `pnpm --dir docs-site reference:generate` for `docs-site/src/content/docs/reference/tests.md` and `docs-site/src/content/docs/reference/source-vs-dist.md`
+- [x] T037 [US2] VERIFY run `python3 tests/speckit-pro/run-all.py`, `python3 scripts/refresh-release-artifacts.py --check`, and `pnpm --dir docs-site reference:check` against `tests/speckit-pro/run-all.py`
 
 **Checkpoint**: User Story 2 read-only scope is complete when the four slice-2 ports are shipped, read-only behavior is enforced, and generated outputs match authoritative source.
 
