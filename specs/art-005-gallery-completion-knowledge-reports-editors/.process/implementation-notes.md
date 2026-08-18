@@ -151,3 +151,11 @@
 ### T033
 
 **Deviations/Edge cases/Surprises:** None. Authoritative release regeneration produced the Claude/Codex dist mirrors, both installed-cache mirrors, and refreshed proof fixtures; docs `reference:generate` regenerated seven pages byte-identically. The source, two dist, and two installed-cache templates all have SHA-256 `320000b3dc8e775623b93f51432c9e42500fc941ebe64ed983bcf66fe836ab0d`; all five manifests share `5b7d050a5a376b83c069daa0594a8dc5f854f9d512acedac690c0d6e32f4c14f`. Gallery parity is now green at 489/489 and fill checks pass 57/57.
+
+### T034
+
+**Deviations/Edge cases/Surprises:** Focused checks passed 489/489 and 57/57, Layer 1 passed 1,448/1,448, Layer 4 passed 5,772/5,772, and the default suite passed 7,406/7,406. The first read-only spec-index run reported ART-005 stale only because the ignored local Slice 1 PR-packet directory was visible to the filesystem scanner; moving that directory aside made both mutation dry-run (`stale_map_count: 0`) and read-only check pass, after which it was restored unchanged. Source checkpoint `7c636c361c7593f3a4a5b9f007100af4a4084179` is clean, and its post-commit generated-artifact check plus packet-excluded spec-index check pass.
+
+### T035
+
+**Deviations/Edge cases/Surprises:** Connected browser selection returned `No browser is available`; the prescribed diagnostic listed zero instances, activating the operator-authorized Playwright MCP fallback. Google Chrome 151.0.7922.138 on macOS 26.6.2 completed all 72 cumulative rows at source checkpoint `7c636c361c7593f3a4a5b9f007100af4a4084179`: 36 pass, 36 evidence-backed `not_applicable`, zero fail. Coverage re-executed all Slice 1 deck behavior, including two 30-second no-autorotation observations, and all Slice 2 direct-file, fills, deterministic/session-only ring, control/boundary/reset, keyboard/focus, offline, theme, reduced-motion, color-independent, manifest, and 360/1280 layout routes. The first in-memory JSON composition had a syntax error and made no file change; splitting it into validated chunks produced 72 unique, schema-complete rows. Source and generated gallery paths remain unchanged after the checkpoint.

@@ -1,16 +1,16 @@
 {
   "featureId": "ART-005",
-  "sourceCommit": "660bfe9ce8365afbe6d98af28dd26eccf46a2c9e",
-  "executedAt": "2026-08-18T17:07:11Z",
+  "sourceCommit": "7c636c361c7593f3a4a5b9f007100af4a4084179",
+  "executedAt": "2026-08-18T18:28:26Z",
   "environment": {
     "operatingSystem": "macOS 26.6.2 (Build 25G82; arm64)",
     "browserNameAndVersion": "Google Chrome 151.0.7922.138 via Playwright MCP fallback",
     "scheme": "file://",
-    "networkCondition": "Online baseline plus Playwright context offline reload; a remote probe failed with net::ERR_INTERNET_DISCONNECTED while the local deck remained usable.",
-    "themeCondition": "Light and dark modes exercised; the dark override persisted across reload and the deck returned to light after the test.",
-    "reducedMotionCondition": "No-preference baseline plus prefers-reduced-motion: reduce emulation; representative transition and animation durations were 0.01ms with zero running animations.",
-    "colorModeCondition": "Light and dark color schemes plus text-and-shape Ready, Watch, and Stop cues.",
-    "notes": "The connected browser was unavailable, so the operator-authorized Playwright MCP fallback executed the manual UAT at 360 and 1280 CSS px. The driver remains manual because no repository harness was committed."
+    "networkCondition": "Online baseline plus Playwright context offline reload for both readers; separate remote probes failed with net::ERR_INTERNET_DISCONNECTED while each local artifact remained usable.",
+    "themeCondition": "Light and dark modes exercised for both readers; dark overrides persisted across reload and both readers returned to light after the tests.",
+    "reducedMotionCondition": "No-preference baseline plus prefers-reduced-motion: reduce emulation; transition and animation durations were 0.01ms with zero running animations after settle.",
+    "colorModeCondition": "Light and dark color schemes plus text-and-shape cues: Ready/Watch/Stop for slide-deck and labeled node circles, square keys, and scenario text for concept-explainer.",
+    "notes": "Connected browser discovery returned no instances, so the operator-authorized Playwright MCP fallback executed the cumulative manual UAT at 360 and 1280 CSS px. The driver remains manual because no repository browser harness was committed."
   },
   "driver": "manual",
   "runbookPath": "specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-runbook.md",
@@ -540,7 +540,7 @@
             "speckit-pro/artifact-gallery/templates/slide-deck.html:486-492 html/body overflow-x:hidden",
             "source search found no overflow-x:auto or overflow-x:scroll"
           ],
-          "actualScrollElementDisposition": "T022 runtime review at 360 and 1280 CSS px found no actual user-scroll element; the source-backed not_applicable route remains correct."
+          "actualScrollElementDisposition": "T035 runtime review at 360 and 1280 CSS px found no actual user-scroll element; the source-backed not_applicable route remains correct."
         }
       },
       "verdict": "not_applicable",
@@ -932,6 +932,863 @@
             "speckit-pro/artifact-gallery/templates/slide-deck.html:885-889 no copy/export action"
           ],
           "reason": "No stale clipboard recovery mutation can occur for slide-deck."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-001 direct_file_open",
+      "claim": "The concept-explainer reader opens directly over file:// with its expected title and no server dependency or visible error state.",
+      "observedResult": "Opened the exact repository-relative template over file://. The document title was Concept Explainer - Consistent Hashing, the visible h1 was Consistent hashing, in one ring, the page rendered without a server, and the final online load reported zero console errors.",
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-002 complete_representative_fills",
+      "claim": "The concept-title, principles, worked-example, and simulation-scenarios fills contain complete representative reader content.",
+      "observedResult": "All four fill marker pairs were present. The reader exposed three principles (Wrap the hash space, Walk clockwise, Move one arc), both Modulo hashing and Consistent hashing comparison cards, and two anchored scenarios: #simulation-scenarios-node-loss and #simulation-scenarios-scale-out.",
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-003 named_simulation_controls_and_status",
+      "claim": "The transient simulation exposes named sliders, named buttons, a named control group, and a polite status region.",
+      "observedResult": "The accessibility snapshot exposed the group Consistent hashing simulation controls; sliders named Nodes and Keys; buttons named Remove a node, Add a node, and Reset simulation; an image named by ring-title and ring-description; and #simulation-status as role=status with aria-live=polite.",
+      "accessibilityObservation": {
+        "statusRegions": [
+          {
+            "selector": "#simulation-status",
+            "role": "status; aria-live=polite",
+            "exposedMessageText": "Reset complete. 4 nodes, 32 keys, 0 moved on this change.",
+            "coveredMessageKinds": [
+              "initial/reset state",
+              "node changes",
+              "key changes",
+              "moved-key count",
+              "minimum and maximum feedback"
+            ]
+          }
+        ]
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-004 deterministic_ring_rendering",
+      "claim": "The ring renders deterministic node/key ownership with visible labels and restores the same default drawing after reload.",
+      "observedResult": "The initial and reloaded #ring-drawing markup matched byte-for-byte. Both renders contained four labeled node circles (N1-N4), 32 square key markers, the same ownership geometry, and the accessible ring title and description.",
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-005 add_remove_node_controls",
+      "claim": "Add and Remove update the visible count, drawing, moved-key status, and focus without exceeding the bounded node range.",
+      "observedResult": "Add changed 4 to 5 nodes, rendered five node markers, reported One node added with 1 moved key, and retained focus on #add-node. Remove from five changed back to four, rendered four markers, reported One node removed with 1 moved key, and retained focus on #remove-node.",
+      "accessibilityObservation": {
+        "focusOrder": [
+          {
+            "selector": "#add-node",
+            "role": "button",
+            "name": "Add a node",
+            "visibleFocusIndicator": "Focus remained on the enabled invoked control after the change."
+          },
+          {
+            "selector": "#remove-node",
+            "role": "button",
+            "name": "Remove a node",
+            "visibleFocusIndicator": "Focus remained on the enabled invoked control after the change."
+          }
+        ],
+        "statusRegions": [
+          {
+            "selector": "#simulation-status",
+            "role": "status; aria-live=polite",
+            "exposedMessageText": "One node added. 5 nodes, 32 keys, 1 moved on this change.; One node removed. 4 nodes, 32 keys, 1 moved on this change.",
+            "coveredMessageKinds": [
+              "add",
+              "remove",
+              "visible count",
+              "moved-key feedback"
+            ]
+          }
+        ]
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-006 visible_minimum_and_maximum_feedback",
+      "claim": "Node and key sliders enforce their declared ranges and expose exact visible feedback at every minimum and maximum.",
+      "observedResult": "Nodes at 2 displayed 2, disabled Remove, and announced Minimum 2 nodes reached; nodes at 8 displayed 8, disabled Add, and announced Maximum 8 nodes reached. Keys at 10 rendered 10 markers and announced Minimum 10 keys reached; keys at 60 rendered 60 markers and announced Maximum 60 keys reached.",
+      "boundaryStateObservation": {
+        "stateKind": "limit",
+        "artifactState": "node-count=2 and 8; key-count=10 and 60",
+        "visibleFeedback": "Minimum 2 nodes reached; Maximum 8 nodes reached; Minimum 10 keys reached; Maximum 60 keys reached",
+        "statusRegionFeedback": "#simulation-status exposed each exact boundary message while the matching output and disabled control state remained visible."
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-007 reset_simulation",
+      "claim": "Reset restores the complete deterministic default state after node and key changes.",
+      "observedResult": "After exercising all limits, Reset restored node input/output and node markers to 4, key input/output and key markers to 32, cleared the moved count to 0, announced Reset complete, and retained focus on #reset-simulation.",
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-008 session_only_reload",
+      "claim": "Simulation changes remain session-only and a reload restores the documented default state.",
+      "observedResult": "The simulation was changed to 6 nodes and 50 keys; reload restored 4 nodes and 32 keys. Before and after reload no simulation key existed in localStorage; the only permitted persistent key was the canonical gallery theme override when theme testing was active.",
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-009 offline_reload",
+      "claim": "The local concept reader and transient controls remain usable when the browser context is offline.",
+      "observedResult": "With the Playwright context offline, the exact file:// page reloaded, retained its title, heading, theme control, and ring, and Add changed the node count from 4 to 5. A separate remote probe failed with net::ERR_INTERNET_DISCONNECTED as expected.",
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-010 complete_keyboard_traversal",
+      "claim": "All interactive controls are reachable in stable forward and backward keyboard order with accessible names.",
+      "observedResult": "Forward Tab order was Dark theme, Nodes, Keys, Remove a node, Add a node, Reset simulation; reverse traversal returned through the same controls. No unnamed or hidden control entered the sequence.",
+      "accessibilityObservation": {
+        "focusOrder": [
+          {
+            "selector": ".rc-theme-toggle",
+            "role": "button",
+            "name": "Dark theme",
+            "visibleFocusIndicator": "2px solid canonical focus outline."
+          },
+          {
+            "selector": "#node-count",
+            "role": "slider",
+            "name": "Nodes",
+            "visibleFocusIndicator": "3px solid outline."
+          },
+          {
+            "selector": "#key-count",
+            "role": "slider",
+            "name": "Keys",
+            "visibleFocusIndicator": "3px solid outline."
+          },
+          {
+            "selector": "#remove-node",
+            "role": "button",
+            "name": "Remove a node",
+            "visibleFocusIndicator": "3px solid outline."
+          },
+          {
+            "selector": "#add-node",
+            "role": "button",
+            "name": "Add a node",
+            "visibleFocusIndicator": "3px solid outline."
+          },
+          {
+            "selector": "#reset-simulation",
+            "role": "button",
+            "name": "Reset simulation",
+            "visibleFocusIndicator": "3px solid outline."
+          }
+        ]
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-011 visible_focus",
+      "claim": "Every keyboard-focusable simulation control has a visible focus indicator in the reviewed theme.",
+      "observedResult": "Keyboard focus produced a solid 3px outline on both sliders and all three simulation buttons; the canonical theme control exposed its solid 2px focus outline. The outline color remained distinct in light and dark modes.",
+      "accessibilityObservation": {
+        "focusOrder": [
+          {
+            "selector": ".rc-theme-toggle",
+            "role": "button",
+            "name": "Dark theme",
+            "visibleFocusIndicator": "2px solid rgb(42, 106, 153)."
+          },
+          {
+            "selector": "#node-count",
+            "role": "slider",
+            "name": "Nodes",
+            "visibleFocusIndicator": "3px solid rgb(42, 106, 153)."
+          },
+          {
+            "selector": "#key-count",
+            "role": "slider",
+            "name": "Keys",
+            "visibleFocusIndicator": "3px solid rgb(42, 106, 153)."
+          },
+          {
+            "selector": "#remove-node, #add-node, #reset-simulation",
+            "role": "buttons",
+            "name": "Remove a node; Add a node; Reset simulation",
+            "visibleFocusIndicator": "Each exposed a 3px solid rgb(42, 106, 153) outline."
+          }
+        ]
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-012 light_dark_parity",
+      "claim": "Light and dark themes preserve the same content, controls, status, focus treatment, and deterministic state.",
+      "observedResult": "The reader started in light, switched to dark with aria-pressed=true and color-scheme=dark, retained the same heading and default simulation status, persisted dark across reload, then returned to light with the canonical theme override set to light.",
+      "accessibilityObservation": {
+        "contrastEvidence": {
+          "themes": [
+            {
+              "theme": "light",
+              "content": "complete",
+              "controls": "complete",
+              "focusIndicator": "canonical link token"
+            },
+            {
+              "theme": "dark",
+              "content": "complete",
+              "controls": "complete",
+              "focusIndicator": "canonical dark focus token"
+            }
+          ],
+          "auditedTokenSource": "Canonical embedded gallery theme and brand tokens."
+        }
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-013 reduced_motion",
+      "claim": "Reduced-motion mode preserves complete simulation behavior without requiring animation to understand state.",
+      "observedResult": "With prefers-reduced-motion: reduce matched, transition and animation durations computed to 1e-05s (0.01ms), zero animations remained running after settle, and Add still changed the visible count to 5 with the complete status message.",
+      "accessibilityObservation": {
+        "focusOrder": [
+          {
+            "selector": "#add-node",
+            "role": "button",
+            "name": "Add a node",
+            "visibleFocusIndicator": "Control remained operable and visibly focused with zero running animations."
+          }
+        ]
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-014 color_independent_meaning",
+      "claim": "Ring ownership and operational scenarios remain understandable without relying on hue.",
+      "observedResult": "Node markers carried visible N1-N4 text, key markers were distinct squares, the legend named labeled circle: node and square: key, and both Node loss and Scale out scenarios used explicit headings plus Watch text.",
+      "accessibilityObservation": {
+        "contrastEvidence": {
+          "nodeLabels": [
+            "N1",
+            "N2",
+            "N3",
+            "N4"
+          ],
+          "shapeLegend": [
+            "labeled circle: node",
+            "square: key"
+          ],
+          "scenarioText": [
+            "Node loss",
+            "Scale out",
+            "Watch:"
+          ],
+          "colorOnlyDependency": false
+        }
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-015 horizontal_scroll_actual_element_check",
+      "claim": "The reader follows the no-horizontal-scroll-region route when source and runtime expose no meaningful horizontal scroll element.",
+      "observedResult": "Source inspection found no overflow-x:auto or overflow-x:scroll and only html/body overflow-x:hidden. At 360 CSS px, document clientWidth and scrollWidth were both 345; at 1280 CSS px both were 1265. Runtime inspection found no actual element with horizontal overflow.",
+      "accessibilityObservation": {
+        "scrollRegions": [
+          {
+            "selector": "html",
+            "role": "document root",
+            "name": "not_applicable",
+            "tabindex": "not_applicable",
+            "horizontalOverflowEvidence": "360 CSS px: clientWidth=scrollWidth=345; 1280 CSS px: clientWidth=scrollWidth=1265.",
+            "actualScrollElement": "none"
+          },
+          {
+            "selector": "body",
+            "role": "document body",
+            "name": "not_applicable",
+            "tabindex": "not_applicable",
+            "horizontalOverflowEvidence": "No descendant with overflow-x auto/scroll also had scrollWidth greater than clientWidth.",
+            "actualScrollElement": "none"
+          }
+        ]
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-016 responsive_layout_360_css_px",
+      "claim": "The complete concept reader remains usable at exactly 360 CSS px without horizontal overflow, clipping, or lost controls.",
+      "observedResult": "At viewport 360x800, document clientWidth equaled scrollWidth at 345 CSS px. The heading, principle/comparison/scenario grids, ring, control panel, both sliders, and all buttons stayed within the viewport; no actual horizontal scroller or clipped reviewed element was found. A full-page screenshot recorded the layout.",
+      "responsiveLayoutObservation": {
+        "viewportWidthCssPx": 360,
+        "pageHorizontalOverflow": false,
+        "clippedOrOverlappingText": false,
+        "namedScrollExceptions": []
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-017 responsive_layout_1280_css_px",
+      "claim": "The complete concept reader remains usable at a desktop width of at least 1280 CSS px without horizontal overflow, clipping, or lost controls.",
+      "observedResult": "At viewport 1280x900, document clientWidth equaled scrollWidth at 1265 CSS px. The heading, three-column principles, comparison, ring, controls, and scenarios stayed within the viewport with no actual horizontal scroller or clipped reviewed element. A full-page screenshot recorded the layout.",
+      "responsiveLayoutObservation": {
+        "viewportWidthCssPx": 1280,
+        "pageHorizontalOverflow": false,
+        "clippedOrOverlappingText": false,
+        "namedScrollExceptions": []
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-018 manifest_parity",
+      "claim": "The concept-explainer manifest entry matches the exhaustive ART-005 ID, title, source, role, status, and export classification.",
+      "observedResult": "The checkpoint manifest row has id concept-explainer, title Concept Explainer, source origin upstream, source file 15-research-concept-explainer.html, status shipped, and exports []. The ART-005 plan and spec classify it as a reader with the same pinned source and no durable export.",
+      "dataIntegrityObservation": {
+        "caseId": "manifest_parity",
+        "inputs": [
+          {
+            "selector": "speckit-pro/artifact-gallery/manifest.json:181-189",
+            "field": "id",
+            "rawValue": "concept-explainer"
+          },
+          {
+            "selector": "speckit-pro/artifact-gallery/manifest.json:181-189",
+            "field": "title",
+            "rawValue": "Concept Explainer"
+          },
+          {
+            "selector": "speckit-pro/artifact-gallery/manifest.json:181-189",
+            "field": "source",
+            "rawValue": "upstream/15-research-concept-explainer.html"
+          },
+          {
+            "selector": "speckit-pro/artifact-gallery/manifest.json:181-189",
+            "field": "status",
+            "rawValue": "shipped"
+          },
+          {
+            "selector": "speckit-pro/artifact-gallery/manifest.json:181-189",
+            "field": "exports",
+            "rawValue": "[]"
+          }
+        ],
+        "expectedOrder": [
+          "id=concept-explainer",
+          "title=Concept Explainer",
+          "source=upstream/15-research-concept-explainer.html",
+          "role=reader",
+          "status=shipped",
+          "exports=[]"
+        ],
+        "observedOrder": [
+          "id=concept-explainer",
+          "title=Concept Explainer",
+          "source=upstream/15-research-concept-explainer.html",
+          "role=reader",
+          "status=shipped",
+          "exports=[]"
+        ]
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-019 horizontal_scroll_region_not_applicable_source_check",
+      "claim": "No named keyboard-focusable horizontal scroll region is required when the source contains no meaningful horizontal overflow region.",
+      "observedResult": "Checkpoint source and runtime classification: the template contains no overflow-x:auto or overflow-x:scroll declaration, html/body use overflow-x:hidden, both reviewed widths had equal document clientWidth and scrollWidth, and no meaningful horizontal scroll element appeared.",
+      "accessibilityObservation": {
+        "scrollRegions": [
+          {
+            "selector": "html",
+            "role": "document root",
+            "name": "not_applicable",
+            "tabindex": "not_applicable",
+            "horizontalOverflowEvidence": "Source CSS sets overflow-x:hidden; this is not a named interactive scroll region.",
+            "actualScrollElement": "not_applicable_no_user_scroll_region"
+          },
+          {
+            "selector": "body",
+            "role": "document body",
+            "name": "not_applicable",
+            "tabindex": "not_applicable",
+            "horizontalOverflowEvidence": "Source CSS sets overflow-x:hidden; no overflow-x:auto or overflow-x:scroll declaration exists in the template.",
+            "actualScrollElement": "not_applicable_no_user_scroll_region"
+          }
+        ],
+        "notApplicableReason": {
+          "caseId": "horizontal_scroll_region",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/templates/concept-explainer.html:481 html/body overflow-x:hidden",
+            "source search found no overflow-x:auto or overflow-x:scroll"
+          ],
+          "actualScrollElementDisposition": "T035 runtime review at 360 and 1280 CSS px found no actual user-scroll element; the source-backed not_applicable route remains correct.",
+          "artifactRole": "reader",
+          "manifestExports": []
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-020 producer_only_live_export_freshness_not_applicable",
+      "claim": "Live export freshness is producer-only and does not apply to the concept-explainer reader.",
+      "observedResult": "Source-backed classification only: manifest exports is an empty array and the template has no export control or generated export payload.",
+      "dataIntegrityObservation": {
+        "caseId": "live_export_freshness",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "live export freshness",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:181-189 exports []",
+            "speckit-pro/artifact-gallery/templates/concept-explainer.html:650-885 static reader content and transient simulation controls only"
+          ],
+          "reason": "No producer-owned export state exists for concept-explainer."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-021 producer_only_empty_values_not_applicable",
+      "claim": "Empty-value serialization is producer-only and does not apply to the concept-explainer reader.",
+      "observedResult": "Source-backed classification only: concept-explainer has no editable fields, no structured export, and no issue-producing serialization path.",
+      "dataIntegrityObservation": {
+        "caseId": "empty_values",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "empty values",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:181-189 exports []",
+            "speckit-pro/artifact-gallery/templates/concept-explainer.html:650-885 static reader content and transient simulation controls only"
+          ],
+          "reason": "No producer-owned empty field or empty collection is serialized by concept-explainer."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-022 producer_only_invalid_raw_value_not_applicable",
+      "claim": "Invalid raw value handling is producer-only and does not apply to the concept-explainer reader.",
+      "observedResult": "Source-backed classification only: the template has no user-entered raw values and no export issue schema.",
+      "dataIntegrityObservation": {
+        "caseId": "invalid_raw_value",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "invalid raw value",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:181-189 exports []",
+            "speckit-pro/artifact-gallery/templates/concept-explainer.html:650-885 static reader content and transient simulation controls only"
+          ],
+          "reason": "No raw producer input is parsed or serialized by concept-explainer."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-023 producer_only_unavailable_normalized_value_not_applicable",
+      "claim": "Unavailable normalized value handling is producer-only and does not apply to the concept-explainer reader.",
+      "observedResult": "Source-backed classification only: the template has no normalization path and no exported issue record.",
+      "dataIntegrityObservation": {
+        "caseId": "unavailable_normalized_value",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "unavailable normalized value",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:181-189 exports []",
+            "speckit-pro/artifact-gallery/templates/concept-explainer.html:650-885 static reader content and transient simulation controls only"
+          ],
+          "reason": "No normalized producer value exists for concept-explainer."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-024 producer_only_duplicate_identifiers_not_applicable",
+      "claim": "Duplicate identifier preservation and issue reporting are producer-only and do not apply to the concept-explainer reader.",
+      "observedResult": "Source-backed classification only: the reader has anchored slides for navigation but no exported producer entity collection.",
+      "dataIntegrityObservation": {
+        "caseId": "duplicate_identifiers",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "duplicate identifiers",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:181-189 exports []",
+            "speckit-pro/artifact-gallery/templates/concept-explainer.html:650-885 static reader content and transient simulation controls only"
+          ],
+          "reason": "No producer-owned exported identifiers or issue records exist."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-025 producer_only_special_character_round_trip_not_applicable",
+      "claim": "Special-character round trip is producer-only and does not apply to the concept-explainer reader.",
+      "observedResult": "Source-backed classification only: no structured JSON or Markdown export is generated from reader-entered values.",
+      "dataIntegrityObservation": {
+        "caseId": "special_character_round_trip",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "special character round trip",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:181-189 exports []",
+            "speckit-pro/artifact-gallery/templates/concept-explainer.html:650-885 static reader content and transient simulation controls only"
+          ],
+          "reason": "No serialized producer text can round-trip through an export."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-026 producer_only_multiple_issue_order_not_applicable",
+      "claim": "Multiple issue ordering is producer-only and does not apply to the concept-explainer reader.",
+      "observedResult": "Source-backed classification only: the reader has no issue list, editor export contract, or validation output.",
+      "dataIntegrityObservation": {
+        "caseId": "multiple_issue_order",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "multiple issue order",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:181-189 exports []",
+            "speckit-pro/artifact-gallery/templates/concept-explainer.html:650-885 static reader content and transient simulation controls only"
+          ],
+          "reason": "No ordered producer issues are emitted by concept-explainer."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-027 producer_only_clipboard_exact_equality_not_applicable",
+      "claim": "Clipboard/fallback exact equality is producer-only and does not apply to the concept-explainer reader.",
+      "observedResult": "Source-backed classification only: no attempted export string, clipboard write, or fallback export text exists.",
+      "dataIntegrityObservation": {
+        "caseId": "clipboard_exact_equality",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "clipboard exact equality",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:181-189 exports []",
+            "speckit-pro/artifact-gallery/templates/concept-explainer.html:650-885 static reader content and transient simulation controls only"
+          ],
+          "reason": "No clipboard or fallback export text is generated."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-028 producer_only_superseded_copy_attempt_not_applicable",
+      "claim": "Superseded copy-attempt data integrity is producer-only and does not apply to the concept-explainer reader.",
+      "observedResult": "Source-backed classification only: no copy attempts can race because the reader exposes no copy/export action.",
+      "dataIntegrityObservation": {
+        "caseId": "superseded_copy_attempt",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "superseded copy attempt",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:181-189 exports []",
+            "speckit-pro/artifact-gallery/templates/concept-explainer.html:650-885 static reader content and transient simulation controls only"
+          ],
+          "reason": "No producer copy operation or stale export mutation path exists."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-029 producer_only_clipboard_genuine_success_not_applicable",
+      "claim": "Genuine clipboard success recovery evidence is producer-only and does not apply to the concept-explainer reader.",
+      "observedResult": "Source-backed classification only: the reader has no clipboard write action.",
+      "errorHandlingObservation": {
+        "caseId": "genuine_success",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "genuine clipboard success",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:181-189 exports []",
+            "speckit-pro/artifact-gallery/templates/concept-explainer.html:650-885 static reader content and transient simulation controls only"
+          ],
+          "reason": "No successful clipboard path is implemented or required for concept-explainer."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-030 producer_only_clipboard_absent_not_applicable",
+      "claim": "Unavailable clipboard fallback evidence is producer-only and does not apply to the concept-explainer reader.",
+      "observedResult": "Source-backed classification only: no clipboard method is invoked and no fallback export region exists.",
+      "errorHandlingObservation": {
+        "caseId": "clipboard_absent",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "clipboard absent",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:181-189 exports []",
+            "speckit-pro/artifact-gallery/templates/concept-explainer.html:650-885 static reader content and transient simulation controls only"
+          ],
+          "reason": "No clipboard fallback branch exists for this reader."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-031 producer_only_method_non_callable_not_applicable",
+      "claim": "Non-callable clipboard method fallback evidence is producer-only and does not apply to the concept-explainer reader.",
+      "observedResult": "Source-backed classification only: no clipboard method is called by the reader.",
+      "errorHandlingObservation": {
+        "caseId": "method_non_callable",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "method non-callable",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:181-189 exports []",
+            "speckit-pro/artifact-gallery/templates/concept-explainer.html:650-885 static reader content and transient simulation controls only"
+          ],
+          "reason": "No clipboard API dependency exists for concept-explainer."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-032 producer_only_permission_denied_not_applicable",
+      "claim": "Permission-denied clipboard fallback evidence is producer-only and does not apply to the concept-explainer reader.",
+      "observedResult": "Source-backed classification only: no clipboard permission request or rejection branch exists.",
+      "errorHandlingObservation": {
+        "caseId": "permission_denied",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "permission denied",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:181-189 exports []",
+            "speckit-pro/artifact-gallery/templates/concept-explainer.html:650-885 static reader content and transient simulation controls only"
+          ],
+          "reason": "No permission-denied clipboard state can be triggered by concept-explainer."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-033 producer_only_generic_rejection_not_applicable",
+      "claim": "Generic rejected-promise clipboard fallback evidence is producer-only and does not apply to the concept-explainer reader.",
+      "observedResult": "Source-backed classification only: the reader has no asynchronous clipboard write path.",
+      "errorHandlingObservation": {
+        "caseId": "generic_rejection",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "generic rejection",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:181-189 exports []",
+            "speckit-pro/artifact-gallery/templates/concept-explainer.html:650-885 static reader content and transient simulation controls only"
+          ],
+          "reason": "No rejected clipboard promise can occur for concept-explainer."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-034 producer_only_synchronous_throw_not_applicable",
+      "claim": "Synchronous clipboard throw fallback evidence is producer-only and does not apply to the concept-explainer reader.",
+      "observedResult": "Source-backed classification only: the reader has no synchronous clipboard call.",
+      "errorHandlingObservation": {
+        "caseId": "synchronous_throw",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "synchronous throw",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:181-189 exports []",
+            "speckit-pro/artifact-gallery/templates/concept-explainer.html:650-885 static reader content and transient simulation controls only"
+          ],
+          "reason": "No synchronous copy attempt is implemented for concept-explainer."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-035 producer_only_sequential_transition_not_applicable",
+      "claim": "Failure-success-failure sequential transition evidence is producer-only and does not apply to the concept-explainer reader.",
+      "observedResult": "Source-backed classification only: the reader has no clipboard status transition sequence.",
+      "errorHandlingObservation": {
+        "caseId": "sequential_transition",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "sequential transition",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:181-189 exports []",
+            "speckit-pro/artifact-gallery/templates/concept-explainer.html:650-885 static reader content and transient simulation controls only"
+          ],
+          "reason": "No producer clipboard recovery status sequence exists for concept-explainer."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "concept-explainer",
+      "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
+      "step": "CE-UAT-036 producer_only_superseded_attempt_not_applicable",
+      "claim": "Superseded clipboard attempt recovery evidence is producer-only and does not apply to the concept-explainer reader.",
+      "observedResult": "Source-backed classification only: the reader exposes no overlapping clipboard attempts.",
+      "errorHandlingObservation": {
+        "caseId": "superseded_attempt",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "superseded attempt",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:181-189 exports []",
+            "speckit-pro/artifact-gallery/templates/concept-explainer.html:650-885 static reader content and transient simulation controls only"
+          ],
+          "reason": "No stale clipboard recovery mutation can occur for concept-explainer."
         }
       },
       "verdict": "not_applicable",

@@ -1,31 +1,33 @@
 # ART-005 UAT Runbook
 
 Feature: ART-005 gallery completion knowledge reports/editors
-Artifact: `slide-deck`
+Artifacts: `slide-deck`, `concept-explainer`
 Driver: `manual`
-Template path: `speckit-pro/artifact-gallery/templates/slide-deck.html`
+Template paths:
+- `speckit-pro/artifact-gallery/templates/slide-deck.html`
+- `speckit-pro/artifact-gallery/templates/concept-explainer.html`
 Results path: `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.md`
 JSON path: `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json`
 
-T019 created the active UAT carriers. T022 executed the Slice 1 row set against
-source checkpoint `660bfe9ce8365afbe6d98af28dd26eccf46a2c9e` on
-2026-08-18. The connected browser was unavailable, so the operator-authorized
-Playwright MCP fallback supplied browser interaction and observation while the
-contract driver remained `manual`.
+T019 created the active UAT carriers. T035 re-executed the complete cumulative
+Slice 1-2 row set against source checkpoint
+`7c636c361c7593f3a4a5b9f007100af4a4084179` on 2026-08-18. Connected browser
+discovery returned no instances, so the operator-authorized Playwright MCP
+fallback supplied browser interaction and observation while the contract driver
+remained `manual`.
 
 ## Manual Setup
 
-1. Check out the source checkpoint commit produced for T022.
-2. From the repository root, resolve the template URL as
-   `file://<repo-root>/speckit-pro/artifact-gallery/templates/slide-deck.html`.
-3. Open that exact `file://` URL in the selected browser.
+1. Check out the source checkpoint named above.
+2. From the repository root, resolve each listed template path as a direct
+   `file://<repo-root>/<template-path>` URL.
+3. Open each exact `file://` URL in the selected browser.
 4. Record the operating system, browser name/version, network condition, theme
    condition, reduced-motion condition, color-mode condition, and viewport width.
 5. Record executable rows in
    `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.md`.
-6. Record only executable rows with real `pass` or `fail` evidence in the JSON
-   after T022. Keep source-backed `not_applicable` rows distinct from browser
-   observations.
+6. Record only executable rows with real `pass` or `fail` evidence in the JSON.
+   Keep source-backed `not_applicable` rows distinct from browser observations.
 
 ## Slice 1 Executable Rows
 
@@ -210,18 +212,149 @@ checkpoints; the normalized observations are in `uat-results.json`.
 5. Confirm `status` is `shipped`.
 6. Confirm `exports` is an empty array because `slide-deck` is a reader.
 
+## Slice 2 Executable Rows
+
+CE-UAT-001 through CE-UAT-018 passed at the Slice 2 source checkpoint. These
+steps are the reusable cumulative procedure for later checkpoints.
+
+### CE-UAT-001 Direct file open
+
+1. Open `file://<repo-root>/speckit-pro/artifact-gallery/templates/concept-explainer.html`.
+2. Confirm the document title is `Concept Explainer - Consistent Hashing`.
+3. Confirm the visible h1 is `Consistent hashing, in one ring`.
+4. Confirm the page renders without a server or visible error state.
+
+### CE-UAT-002 Complete representative fills
+
+1. Confirm `concept-title`, `principles`, `worked-example`, and
+   `simulation-scenarios` content is present.
+2. Confirm the three principle headings are complete.
+3. Confirm both modulo and consistent-hashing comparison cards are complete.
+4. Confirm the anchored Node loss and Scale out scenarios both include visible
+   `Watch:` guidance.
+
+### CE-UAT-003 Named simulation controls and status
+
+1. Confirm the control group is named `Consistent hashing simulation controls`.
+2. Confirm the sliders are named `Nodes` and `Keys`.
+3. Confirm buttons are named `Remove a node`, `Add a node`, and
+   `Reset simulation`.
+4. Confirm `#simulation-status` exposes role `status`, `aria-live="polite"`, and
+   the visible current counts.
+
+### CE-UAT-004 Deterministic ring rendering
+
+1. Record the default ring drawing, four node labels, and 32 square key markers.
+2. Reload the file without changing a control.
+3. Confirm the drawing and ownership markup is identical after reload.
+
+### CE-UAT-005 Add and remove nodes
+
+1. Activate Add and confirm the visible node count and markers change 4 to 5.
+2. Confirm the status reports the add and moved-key count.
+3. Activate Remove from five nodes and confirm the count returns to 4.
+4. Confirm enabled invoked controls retain focus after each change.
+
+### CE-UAT-006 Visible minimum and maximum feedback
+
+1. Set Nodes to 2; confirm Remove is disabled and the status says
+   `Minimum 2 nodes reached.`
+2. Set Nodes to 8; confirm Add is disabled and the status says
+   `Maximum 8 nodes reached.`
+3. Set Keys to 10 and then 60; confirm the outputs/markers match and the status
+   says `Minimum 10 keys reached.` and `Maximum 60 keys reached.` respectively.
+
+### CE-UAT-007 Reset simulation
+
+1. Change both sliders and node count.
+2. Activate Reset.
+3. Confirm 4 nodes, 32 keys, matching markers, zero moved keys, and the visible
+   `Reset complete.` message.
+
+### CE-UAT-008 Session-only reload
+
+1. Change the simulation to 6 nodes and 50 keys.
+2. Reload the exact file URL.
+3. Confirm the simulation returns to 4 nodes and 32 keys.
+4. Confirm no simulation-state local-storage key exists; only the canonical
+   gallery theme key may persist.
+
+### CE-UAT-009 Offline reload
+
+1. Open the reader once online, then put the browser context offline.
+2. Reload the exact local file and activate Add.
+3. Confirm local content, theme, ring, status, and controls remain usable.
+4. Confirm a separate remote probe fails because the context is offline.
+
+### CE-UAT-010 Complete keyboard traversal
+
+1. Reload the reader and start at the browser viewport.
+2. Record forward Tab order through Dark theme, Nodes, Keys, Remove a node, Add
+   a node, and Reset simulation.
+3. Traverse backward with Shift+Tab and confirm the reverse order.
+
+### CE-UAT-011 Focus visibility
+
+1. Keyboard-focus the theme control, both sliders, and all three simulation
+   buttons.
+2. Confirm every stop has a visible solid focus outline in light and dark modes.
+
+### CE-UAT-012 Light/dark parity
+
+1. Record complete content and controls in light mode.
+2. Toggle Dark theme and confirm content, controls, status, and focus remain.
+3. Reload and confirm dark persists, then return the reader to light.
+
+### CE-UAT-013 Reduced motion
+
+1. Enable `prefers-reduced-motion: reduce` and reload.
+2. Confirm transition and animation duration is effectively removed.
+3. Activate Add and confirm all visible state and status behavior still works.
+
+### CE-UAT-014 Color-independent meaning
+
+1. Confirm nodes carry visible `N1`-style labels and keys use square markers.
+2. Confirm the legend names both shapes.
+3. Confirm Node loss and Scale out use headings and visible `Watch:` text.
+
+### CE-UAT-015 Horizontal scroll actual-element check
+
+1. Confirm source has no `overflow-x:auto` or `overflow-x:scroll` declaration.
+2. At both review widths, compare document client and scroll widths.
+3. Confirm no actual user-scroll element has horizontal overflow.
+
+### CE-UAT-016 360 CSS px layout
+
+1. Set the viewport to exactly 360x800 CSS px and reload.
+2. Confirm the heading, grids, ring, sliders, buttons, status, and scenarios stay
+   inside the viewport without clipping or overlap.
+3. Confirm there is no page-level horizontal overflow.
+
+### CE-UAT-017 >=1280 CSS px layout
+
+1. Set the viewport to at least 1280x900 CSS px and reload.
+2. Confirm the heading, grids, ring, controls, status, and scenarios stay inside
+   the viewport without clipping or overlap.
+3. Confirm there is no page-level horizontal overflow.
+
+### CE-UAT-018 Manifest parity
+
+1. Confirm `id` is `concept-explainer` and title is `Concept Explainer`.
+2. Confirm the pinned upstream source is `15-research-concept-explainer.html`.
+3. Confirm role is reader, status is `shipped`, and `exports` is `[]`.
+
 ## Source-Backed Not Applicable Rows
 
 The cumulative JSON retains rows that honestly carry
 `verdict: not_applicable` after source and browser execution.
 
-1. SD-UAT-019 records the horizontal-scroll N/A route from source and runtime
-   evidence: there is no `overflow-x: auto` or `overflow-x: scroll`; `html` and
-   `body` use `overflow-x: hidden`; 360 and 1280 CSS px observations found no
-   actual user-scroll element.
-2. SD-UAT-020 through SD-UAT-028 record producer-only data-integrity/export
-   cases that do not apply to the reader because the manifest declares
-   `exports: []` and the template has no export surface.
-3. SD-UAT-029 through SD-UAT-036 record producer-only clipboard/recovery/race
-   cases that do not apply to the reader because the template has only slide
-   navigation and theme controls.
+1. SD-UAT-019 and CE-UAT-019 record the horizontal-scroll N/A route from source
+   and runtime evidence: there is no `overflow-x: auto` or `overflow-x: scroll`;
+   `html` and `body` use `overflow-x: hidden`; 360 and 1280 CSS px observations
+   found no actual user-scroll element.
+2. SD-UAT-020 through SD-UAT-028 and CE-UAT-020 through CE-UAT-028 record
+   producer-only data-integrity/export cases that do not apply because both
+   manifests declare `exports: []` and neither template has an export surface.
+3. SD-UAT-029 through SD-UAT-036 and CE-UAT-029 through CE-UAT-036 record
+   producer-only clipboard/recovery/race cases that do not apply because both
+   artifacts are readers with no clipboard action.
