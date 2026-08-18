@@ -21,9 +21,7 @@ input.
 **Spec ID prefix:** `ART-###`
 **Status:** Active; dependency graph approved 2026-07-28; ART-001, ART-002,
 ART-003, ART-006, ART-007, ART-011, ART-012 and ART-014 are complete and archived;
-ART-002 shipped in PRs #425, #427 and #430, which unblocked ART-007; ART-012
-shipped in PR
-#426; ART-014 shipped in PR #433 and archived 2026-08-13, which unblocks ART-017;
+ART-002 shipped in PRs #425, #427 and #430, which unblocked ART-007; ART-012 shipped in PR #426; ART-014 shipped in PR #433 and archived 2026-08-13, which unblocks ART-017;
 ART-011 shipped in PR #434 and archived 2026-08-13, and ART-019 supersedes its
 FR-022; ART-003 shipped as three stacked slices in PRs #435, #436 and #439 and was
 archived 2026-08-14, and its acceptance evidence and harness are preserved under
