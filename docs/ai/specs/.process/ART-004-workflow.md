@@ -71,8 +71,8 @@ Projected reviewable LOC: 865
 | Phase | Command | Status | Notes |
 |---|---|---|---|
 | Specify | /speckit-specify | ✅ Complete | 14 requirements, 3 stories, 0 unresolved markers; G1 passed |
-| Clarify | /speckit-clarify | 🔄 In Progress | Session 1: source structure and fill regions |
-| Plan | /speckit-plan | ⏳ Pending | Mandatory reviewability decision |
+| Clarify | /speckit-clarify | ✅ Complete | 3 sessions, 15 accepted answers, 0 markers, no consensus fan-out; G2 passed |
+| Plan | /speckit-plan | 🔄 In Progress | Mandatory declared-file reviewability decision |
 | Checklist | /speckit-checklist | ⏳ Pending | UX, accessibility, error handling |
 | Tasks | /speckit-tasks | ⏳ Pending | Only after a non-blocking plan |
 | Analyze | /speckit-analyze | ⏳ Pending | Cross-check against the design concept |
@@ -353,9 +353,12 @@ temporary spec ID.
 
 | Session | Focus | Questions | Key outcomes |
 |---|---|---|---|
-| 1 | Source and fills | | |
-| 2 | Exports | | |
-| 3 | Keyboard guard | | |
+| 1 | Source and fills | 5 | Locked fill/source inventory, compaction boundary, list/state slots, load-bearing selectors, and per-port fidelity evidence; no unresolved consensus items |
+| 2 | Exports | 5 | Locked shared field order, format-specific lead lines, persistent live-state selection, accessible validation, focused fallback, and stale-invocation guard; no unresolved consensus items |
+| 3 | Keyboard guard | 5 | Locked self-declared scrollers, focus/role/name contract, synthetic RED fixture, ART-003 browser-procedure reuse, and manifest-wide/non-vacuous coverage; no unresolved consensus items |
+
+**G2 gate:** ✅ PASS — zero `[NEEDS CLARIFICATION]` markers remain and
+all three sessions are recorded in `spec.md`.
 
 ---
 
