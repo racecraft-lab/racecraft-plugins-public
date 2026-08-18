@@ -359,3 +359,31 @@
 ### T084
 
 **Deviations/Edge cases/Surprises:** Formal RED passed for the intended reason. Gallery reported 494/497 with all three new Q contracts failing only on the planned manifest state and missing feature-flags producer; fill-region reported 64/65 with only the missing feature-flags inventory template failing. Existing Slice 1-5 assertions remained green.
+
+### T085
+
+**Deviations/Edge cases/Surprises:** The derivative keeps the pinned production flag-editor identity while exposing four programmatically named ordered groups, six named checkbox flags, editable group/flag fields, an intentional empty group, dependency and invalid-rollout text, persistent live status, reset, and memory-only behavior. Two stable flag groups anchor the repeated fill region and the environment note explains the no-persistence boundary.
+
+### T086
+
+**Deviations/Edge cases/Surprises:** One fresh DOM snapshot emits the exact root/group/flag field order inside a single pretty-printed JSON fence. Empty strings/arrays and optional nulls retain their types; group and global flag duplicates stay ordered; invalid rollout and dependency text remains exact in deterministic issues; multiline, Unicode, and special characters pass directly through JSON serialization.
+
+### T087
+
+**Deviations/Edge cases/Surprises:** The copy handler clears stale state, increments an invocation ordinal, reads clipboard capability afresh, attempts callable `writeText` once, makes zero attempts for absent/non-callable capability, and applies exact success or focused fallback state only for the current settlement. Reset also invalidates a pending attempt.
+
+### T088
+
+**Deviations/Edge cases/Surprises:** None. The manifest diff changes only `feature-flags.status` from `planned` to `shipped`; pinned source `19-editor-feature-flags.html`, `exports: ["markdown"]`, and every other row remain unchanged.
+
+### T089
+
+**Deviations/Edge cases/Surprises:** Slice 6 Q1-Q3 return no failures and fill-region checks pass 65/65. The complete gallery reports 493/497 only because F1-F4 require T092 regeneration of the Claude/Codex payload copies; no source producer assertion is failing.
+
+### T090
+
+**Deviations/Edge cases/Surprises:** No further refactor was warranted. The editor already separates typed parsing, ordered issue collection, immutable snapshot capture, serialization, feedback, and clipboard recovery into flat named functions; `git diff --check` passes and the measured implementation retains 23 lines of mandatory-stop headroom.
+
+### T091
+
+**Deviations/Edge cases/Surprises:** The explicit seven-path ledger reports 1,093 physical template lines, including 458 byte-identical canonical lines, leaving 635 non-canonical template lines. With 142 incremental focused-test lines, final reviewable implementation is 777 LOC: three below the 780 ceiling and 23 below the mandatory 800 stop. One production template and exactly seven declared authored paths remain in scope, so regeneration may proceed.

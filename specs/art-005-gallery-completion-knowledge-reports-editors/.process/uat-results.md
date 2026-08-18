@@ -993,3 +993,42 @@ Verification remains bound to the source checkpoint:
 - Generated release artifact check: **pass**
 - Packet-excluded spec-index dry-run/read-only checks: **pass**
 - Cumulative browser UAT: **107 pass, 73 evidence-backed N/A, 0 fail**
+
+## Slice 6 Pre-Generation Reviewability Measurement
+
+Slice base: `3473cf84c56302be7df6f3c27316ef898f3b0454`, the exact Slice 5
+closeout head from which `art-005-gallery-completion-knowledge-reports-editors-slice-6`
+was created after PR #452 opened.
+
+The seven implementation-authored paths remain the declared Slice 6 ledger:
+
+1. `speckit-pro/artifact-gallery/templates/feature-flags.html`
+2. `speckit-pro/artifact-gallery/manifest.json`
+3. `tests/speckit-pro/unit/test-artifact-gallery.py`
+4. `tests/speckit-pro/unit/test-artifact-fill-regions.py`
+5. `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-runbook.md`
+6. `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.md`
+7. `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json`
+
+| Component | Physical additions | Canonical/excluded | Reviewable LOC |
+|---|---:|---:|---:|
+| `feature-flags.html` | 1,093 | 458 byte-identical canonical lines | 635 |
+| `test-artifact-gallery.py` | 138 | 0 | 138 |
+| `test-artifact-fill-regions.py` | 4 | 0 | 4 |
+| Manifest status flip | 1 | 1 metadata line | 0 |
+| UAT carriers | pending cumulative evidence refresh | evidence-only | 0 |
+| **Total** | — | — | **777** |
+
+- Slice 6 component ceiling: **780** (3 LOC headroom)
+- Mandatory authored stop: **800** (23 LOC headroom)
+- Production templates: **1**
+- Primary surfaces: **1**
+- Pre-generation verdict: **WARN / CONTINUE**
+
+The producer adds no persistence, import-back, download, hidden-copy path,
+network dependency, shared gallery runtime, or page-level horizontal scroller.
+All Slice 1-6 source contracts pass, fill-region checks pass 65/65, and the only
+four focused-gallery failures are the T092-owned source/dist payload set-and-byte
+parity checks. The declared maximum physical boundary remains 33 paths; any
+final total-file block may continue only if every excess path is generated or
+workflow/control-plane evidence.
