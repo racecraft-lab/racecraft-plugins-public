@@ -255,3 +255,7 @@
 ### T059
 
 **Deviations/Edge cases/Surprises:** Authoritative regeneration completed normally after one silent running window, producing the Claude/Codex dist templates, both installed-cache templates, manifest mirrors, and refreshed proof/XPLAT fixtures; docs `reference:generate` regenerated seven pages byte-identically. All five template copies share SHA-256 `6e7d2afd7af50df884830ae51c1a0f8c5490eda81c144470ad6cb262d0a9adeb`; all five manifests share `7e59af11441cfae9159f0e3adc40e1a20bb9aeb01f0bd6f172f1a604b02e8e71`. Focused gallery and fill checks are green at 491/491 and 61/61.
+
+### T060
+
+**Deviations/Edge cases/Surprises:** Focused checks passed 491/491 and 61/61, Layer 1 passed 1,448/1,448, isolated Layer 4 passed 5,778/5,778, and the isolated default suite passed 7,412/7,412. Source checkpoint `f27b7833e3d3e05772c7ebc44d4640f2b9d129ea` is clean; its post-commit generated-artifact check passes, and packet-excluded spec-index mutation dry-run/read-only checks report zero stale maps/current index. The ignored packet directory was restored byte-identically.
