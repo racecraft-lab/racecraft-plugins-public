@@ -3,10 +3,10 @@
   "spec_id": "ART-004",
   "feature_dir": "specs/art-004-gallery-completion-design-prototyping",
   "branch": "art-004-gallery-completion-design-prototyping",
-  "status": "in_progress",
+  "status": "complete",
   "stage": "implement",
-  "active_step": "Post: Retrospective",
-  "updated_at": "2026-08-18T21:47:04Z",
+  "active_step": "complete",
+  "updated_at": "2026-08-18T21:54:07Z",
   "reclaimed_from": "docs/ai/specs/.process/ART-003-slice-3-workflow.md",
   "settings": {
     "consensus_mode": "moderate",
@@ -201,7 +201,7 @@
     {"step": "Post: PR Body Generation", "status": "completed"},
     {"step": "Post: PR Creation", "status": "completed"},
     {"step": "Post: Review Remediation", "status": "completed"},
-    {"step": "Post: Retrospective", "status": "in_progress"}
+    {"step": "Post: Retrospective", "status": "completed"}
   ],
   "gates": {
     "G0": {
@@ -528,7 +528,7 @@
       "implementation_notes": "specs/art-004-gallery-completion-design-prototyping/.process/implementation-notes.md"
     },
     "post_implementation": {
-      "status": "in_progress",
+      "status": "completed",
       "items": [
         {"step": "Post: Doctor Extension Check", "status": "completed"},
         {"step": "Post: Verify Implementation", "status": "completed"},
@@ -543,7 +543,7 @@
         {"step": "Post: PR Body Generation", "status": "completed"},
         {"step": "Post: PR Creation", "status": "completed"},
         {"step": "Post: Review Remediation", "status": "completed"},
-        {"step": "Post: Retrospective", "status": "in_progress"}
+        {"step": "Post: Retrospective", "status": "completed"}
       ],
       "doctor": {"status": "completed", "passed": 4, "warnings": 1, "warning": "unrelated BRAND-001 planning directory is incomplete"},
       "verify": {"status": "completed", "findings": 0},
@@ -589,7 +589,22 @@
         "reference_pages": "current",
         "resolved_threads": 2,
         "remaining_actionable_feedback": 0,
-        "ci_status_at_audit": "running"
+        "unresolved_threads": 0,
+        "review_comments": 0,
+        "mergeable": "MERGEABLE",
+        "ci_status_at_audit": "passed at 1861414c3"
+      },
+      "retrospective": {
+        "status": "completed",
+        "report": "specs/art-004-gallery-completion-design-prototyping/retrospective.md",
+        "tasks": "60/60",
+        "functional_requirements": "17/17",
+        "success_criteria": "9/9",
+        "spec_adherence": "100%",
+        "critical_findings": 0,
+        "significant_findings": 0,
+        "minor_findings": 1,
+        "proposed_spec_changes": 0
       }
     }
   }
