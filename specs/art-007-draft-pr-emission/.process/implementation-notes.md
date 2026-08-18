@@ -993,3 +993,24 @@ when the plan stage ends` satisfies both gates: the release-readiness
 not fire at all here — `spec_scope_from_changed_path` returns nothing for an
 `art-` slug, so the changed-file set derives no expected scope. Checked by
 running the derivation over the real 90-file list rather than reasoning about it.
+
+### T049
+
+**Deviations/Edge cases/Surprises:** The generated docs-site reference **did**
+drift, and not only where earlier checks looked. Two pages moved:
+
+- `reference/agents.md` — record count 12 to 13, gaining the Artifact Author
+  entry with its purpose, classification, both platform sources, and the
+  runtime-difference note.
+- `reference/tests.md` — minor updates from the test-tree changes.
+
+Worth recording because two earlier tasks checked `tests.md` for staleness,
+found none, and correctly reported that. Neither of them checked `agents.md`,
+because the rule they were following is scoped to the **test** tree and the
+agent-definition change is what stales the agents page. The generator emits
+seven pages from several source trees, so "did my change stale the docs site"
+has to be answered by running the generator and diffing, not by reasoning about
+which rule applies to the file you happened to touch.
+
+Total drift: 30 insertions, 4 deletions across the two pages, every changed line
+attributable to the new agent or the test-file edits. Nothing hand-edited.
