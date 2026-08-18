@@ -179,3 +179,27 @@
 ### T040
 
 **Deviations/Edge cases/Surprises:** Formal RED passed for the intended reason. Gallery reported 489/490; direct `check_n1` evidence names only the planned manifest status and missing reader template. Fill-region reported 58/59 with only the new missing status-report fill-inventory template failing. Existing Slice 1-2 checks remained green.
+
+### T041
+
+**Deviations/Edge cases/Surprises:** The new static reader embeds both canonical regions byte-for-byte, fills all five declared slots, places two stable anchors inside each repeated-list container, uses one semantic main plus labelled sections, and exposes status, owner, due, recovery, and next-step meaning in text. It adds no authored script, export, persistence, network dependency, or horizontal scroller. Before the manifest flip, its own contract had only the expected planned-status failure and fill inventory passed.
+
+### T042
+
+**Deviations/Edge cases/Surprises:** None. The manifest diff changes only `status-report.status` from `planned` to `shipped`; pinned source `11-status-report.html`, `exports: []`, and all other rows remain unchanged.
+
+### T043
+
+**Deviations/Edge cases/Surprises:** The Slice 1 `check_l1`, Slice 2 `check_m1`, and Slice 3 `check_n1` contracts all return no failures, and fill-region checks pass 59/59. The complete gallery module reports 486/490 only because F1-F4 require T046 regeneration of the Claude/Codex payload copies; no source-reader assertion is failing.
+
+### T044
+
+**Deviations/Edge cases/Surprises:** No further refactor was warranted. The reader is already static, uses semantic list markup with grouping containers outside replaceable regions, carries only audited gallery tokens, and has no template-specific behavior. `git diff --check` remains clean.
+
+### T045
+
+**Deviations/Edge cases/Surprises:** None. The 730-line physical template contains 458 byte-identical canonical lines, leaving 272 non-canonical template lines. With 105 incremental test lines, final reviewable implementation is 377 LOC: 183 below the 560 ceiling and 423 below the mandatory 800 stop. One production template and the seven declared authored paths remain in scope, so regeneration may proceed.
+
+### T046
+
+**Deviations/Edge cases/Surprises:** The first tool window treated the still-running silent generator as a failure; monitoring showed it completed normally, and the intentional second invocation reported that outputs were already consistent. Authoritative regeneration produced the Claude/Codex dist templates, both installed-cache templates, manifest mirrors, and refreshed proof/XPLAT fixtures; docs `reference:generate` regenerated seven pages byte-identically. All five template copies share SHA-256 `fc7059c6ae26a6556b564862e628dc59fb39344c72de7508cb512dc240a09d3f`; all five manifests share `f13e42ff6252f33595008ee2b65df0d4f09181385a27d0c9d594e71dffe56c48`. Focused gallery and fill checks are now green at 490/490 and 59/59.

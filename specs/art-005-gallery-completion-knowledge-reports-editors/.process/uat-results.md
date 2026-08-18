@@ -415,3 +415,41 @@ with the size-only continuation stated in the body.
 - Generated release artifact check: **pass**
 - Python-authoritative spec-index check: **pass**
 - Source changed after UAT checkpoint: **no**
+
+## Slice 3 Pre-Generation Reviewability Measurement
+
+Slice base: `beb3727533133a4a3d7b6ac1f2a241e5a8039a1c`, the exact Slice 2
+closeout head from which `art-005-gallery-completion-knowledge-reports-editors-slice-3`
+was created after PR #446 opened.
+
+The seven implementation-authored paths remain the declared Slice 3 ledger:
+
+1. `speckit-pro/artifact-gallery/templates/status-report.html`
+2. `speckit-pro/artifact-gallery/manifest.json`
+3. `tests/speckit-pro/unit/test-artifact-gallery.py`
+4. `tests/speckit-pro/unit/test-artifact-fill-regions.py`
+5. `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-runbook.md`
+6. `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.md`
+7. `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json`
+
+| Component | Physical additions | Canonical/excluded | Reviewable LOC |
+|---|---:|---:|---:|
+| `status-report.html` | 730 | 458 byte-identical canonical lines | 272 |
+| `test-artifact-gallery.py` | 101 | 0 | 101 |
+| `test-artifact-fill-regions.py` | 4 | 0 | 4 |
+| Manifest status flip | 1 | 1 metadata line | 0 |
+| UAT carriers | pending cumulative evidence refresh | evidence-only | 0 |
+| **Total** | — | — | **377** |
+
+- Slice 3 component ceiling: **560** (183 LOC headroom)
+- Mandatory authored stop: **800** (423 LOC headroom)
+- Production templates: **1**
+- Primary surfaces: **1**
+- Pre-generation verdict: **WARN / CONTINUE**
+
+The static reader adds no template-specific script, export surface, persistence,
+network dependency, or shared gallery runtime. All Slice 1-3 reader checks pass,
+fill-region checks pass 59/59, and the only four focused-gallery failures are the
+T046-owned source/dist payload set-and-byte parity checks. The declared maximum
+physical boundary remains 33 paths; any final total-file block may continue only
+if every excess path is generated or workflow/control-plane evidence.

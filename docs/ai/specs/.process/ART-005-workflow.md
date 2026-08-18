@@ -55,7 +55,7 @@ for four artifacts is now an explicit Open Question.
 | Tasks | `/speckit-tasks` | ✅ Complete | 119 ordered tasks; G5 and phantom-completion checks pass |
 | Analyze | `/speckit-analyze` | ✅ Complete | Six findings remediated; G6 passes with 0 CRITICAL/HIGH findings |
 | Confidence Gate | G6.5 | ✅ Complete | Advisory PASS at 0.98 against the 0.90 threshold |
-| Implement | `/speckit-implement` | 🔄 In Progress | Slices 1-2 complete in PRs #444 and #446; Slice 3 status-report T041 GREEN active |
+| Implement | `/speckit-implement` | 🔄 In Progress | Slices 1-2 complete in PRs #444 and #446; Slice 3 status-report T047 checkpoint active |
 | Post | Post-Implementation | ⏳ Pending | Canonical closeout plus tracked `file://` UAT results |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -922,7 +922,7 @@ For every behavior:
 | 1 - Shared baseline and contracts | Complete | 10 | Pinned digests match; G4 passes; L1 1448/1448, L4 5766/5766, full 7400/7400 |
 | 2 - Slice 1 | Complete | 13 | PR #444 open; source checkpoint `660bfe9ce`; 18 pass, 18 evidence-backed N/A, zero fail; final gates green |
 | 3 - Slice 2 | Complete | 13 | PR #446 open; source checkpoint `7c636c361`; cumulative UAT 36 pass, 36 evidence-backed N/A, zero fail; final gates green |
-| 4 - Slice 3 | In Progress | 4 | Formal RED: gallery 489/490 and fill 58/59, only intended status-report failures; T041 active |
+| 4 - Slice 3 | In Progress | 10 | Generated parity green; 377/560 reviewable LOC; T047 checkpoint active |
 | 5 - Slice 4 | Pending | 0 | incident-report plus incremental integration and UAT |
 | 6 - Slice 5 | Pending | 0 | triage-board plus incremental integration and UAT |
 | 7 - Slice 6 | Pending | 0 | feature-flags plus incremental integration and UAT |

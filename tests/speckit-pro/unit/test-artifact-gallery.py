@@ -9607,7 +9607,7 @@ def check_s1(gallery_root: Path) -> list[str]:
         if by_id.get(heading_id, (None,))[0] not in {"h2", "h3"}:
             failures.append(f"{STATUS_REPORT_LABEL}: '{slot}' needs a stable semantic heading")
     for slot in _STATUS_REPORT_LIST_SLOTS:
-        pattern = rf"FILL:{re.escape(slot)}:START.*?<ul\b.*?</ul>.*?FILL:{re.escape(slot)}:END"
+        pattern = rf"<ul\b.*?FILL:{re.escape(slot)}:START.*?<li\b.*?FILL:{re.escape(slot)}:END.*?</ul>"
         if not re.search(pattern, text, re.IGNORECASE | re.DOTALL):
             failures.append(f"{STATUS_REPORT_LABEL}: '{slot}' must be represented by a semantic list")
 
