@@ -524,11 +524,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 39433,
+              "byte_count": 39333,
               "kind": "docs",
               "path": "artifact-gallery/templates/visual-designs.html",
               "required": true,
-              "sha256": "438ed5b8738a35149d12a47975cf7e9740fa7d572b1e4df3a5670635d7737c14",
+              "sha256": "46ba8a8e538ecf70c1ff5ebf6b08da1a4a31c689dbcc8f7ea9b4afe2a16fc4e9",
               "source_path": "speckit-pro/artifact-gallery/templates/visual-designs.html",
               "transform": "none"
             },
@@ -1633,11 +1633,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 39433,
+              "byte_count": 39333,
               "kind": "docs",
               "path": "artifact-gallery/templates/visual-designs.html",
               "required": true,
-              "sha256": "438ed5b8738a35149d12a47975cf7e9740fa7d572b1e4df3a5670635d7737c14",
+              "sha256": "46ba8a8e538ecf70c1ff5ebf6b08da1a4a31c689dbcc8f7ea9b4afe2a16fc4e9",
               "source_path": "speckit-pro/artifact-gallery/templates/visual-designs.html",
               "transform": "none"
             },
@@ -2444,7 +2444,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "b7bbdb0b3948105e1d16e6e2dea552fc470a477ad1df7c43ff315fbd6536b233",
+          "file_tree_hash": "7d3c9a193baa871291c0e735bc1291ac2312ddc061e74123637f2f737f34d9a1",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
@@ -2646,11 +2646,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 39433,
+              "byte_count": 39333,
               "kind": "docs",
               "path": "artifact-gallery/templates/visual-designs.html",
               "required": true,
-              "sha256": "438ed5b8738a35149d12a47975cf7e9740fa7d572b1e4df3a5670635d7737c14",
+              "sha256": "46ba8a8e538ecf70c1ff5ebf6b08da1a4a31c689dbcc8f7ea9b4afe2a16fc4e9",
               "source_path": "speckit-pro/artifact-gallery/templates/visual-designs.html",
               "transform": "none"
             },
@@ -3908,11 +3908,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 39433,
+              "byte_count": 39333,
               "kind": "docs",
               "path": "artifact-gallery/templates/visual-designs.html",
               "required": true,
-              "sha256": "438ed5b8738a35149d12a47975cf7e9740fa7d572b1e4df3a5670635d7737c14",
+              "sha256": "46ba8a8e538ecf70c1ff5ebf6b08da1a4a31c689dbcc8f7ea9b4afe2a16fc4e9",
               "source_path": "speckit-pro/artifact-gallery/templates/visual-designs.html",
               "transform": "none"
             },
@@ -4980,7 +4980,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "627f0db071be9d5ad5f4a335bc66fad80e0b2fc994ad7cb9300841292f53e7fe",
+          "file_tree_hash": "a01518ca9fefce8c581ab41845da3ced723b65a46c5899b059f85235fb4c8e74",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
