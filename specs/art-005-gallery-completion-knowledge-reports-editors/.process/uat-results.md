@@ -918,7 +918,7 @@ Remote refs were refreshed immediately before this measurement. Slice 4 PR
 open and clean at `4c9f4fe521994ba43150532572f8ee7e5a442401`; the Slice 5 branch
 and its merge base use that exact head. The Slice 5 source checkpoint is
 `69f803d37523499f80120d246400a7fbda30c6fa`, and cumulative UAT evidence
-is recorded at `31fa1655a71680596435bd30b7e8864341f6d94c`.
+is recorded at `a82b76962580c60f16d4accba0773b9ef6cacc01`.
 
 The source template, manifest, focused tests, payload mirrors, installed-cache
 mirrors, and generated proofs remain byte-identical after the tested source
