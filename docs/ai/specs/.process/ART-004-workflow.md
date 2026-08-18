@@ -92,8 +92,8 @@ not authority for any individual approved slice.
 | Tasks | /speckit-tasks | ✅ Complete | 60 tasks, 17/17 requirements, 3/3 stories, 9 safe parallel tasks; G5 passed |
 | Analyze | /speckit-analyze | ✅ Complete | Executor clean, G6 passed, and required clean-pass confidence synthesis completed |
 | Confidence Gate | G6.5 | ✅ Complete | Advisory gate passed at 1.00 against the 0.90 threshold |
-| Implement | /speckit-implement | 🔄 In Progress | Explicit `--stage implement`; setup and foundational gates active |
-| Post | Post-Implementation | ⏳ Pending | Starts after Phase 7 and G7 pass |
+| Implement | /speckit-implement | ✅ Complete | T001-T060 complete; suite 7496/7496 and all release/reference/title gates pass |
+| Post | Post-Implementation | 🔄 In Progress | Required audit chain is now running after G7 implementation completion |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
@@ -773,7 +773,81 @@ Final verification:
 | 1 - Keyboard-scroll guard and repair | `T001-T022` | `T001-T022` | Chromium and Safari 26.6.1 file:// UAT passed 11/11 regions after correcting module-map grid sizing; Safari used Tab and Enter for the five source disclosures; suite `7418/7418`, release-artifact `--check`, and docs reference check pass after checkpoint `e15e3a6cc` |
 | 2 - Read-only ports | `T023-T037` | `T023-T037` | Complete — checkpoint `01e97ad65`; four ports and exact manifest flips shipped, Chromium/Safari UAT passed, suite `7450/7450`, and release/reference consistency checks passed |
 | 3 - Decision ports | `T038-T052` | `T038-T052` | Complete — checkpoint `0a8228a8c`; both decision ports, exact manifest flips, generated payloads, Chromium/WebKit/Safari UAT, suite `7496/7496`, and release/reference consistency checks passed |
-| 4 - Shared integration and UAT | | | |
+| 4 - Shared integration and UAT | `T053-T060` | `T053-T060` | Complete — six status-only manifest flips, nine-target guard, fill inventory, full native-engine UAT matrix, review packet, ART-020 disposition, suite `7496/7496`, release/reference consistency, and exact PR title all pass |
+
+---
+
+## Final PR Review Evidence
+
+### What changed and why
+
+- Repaired keyboard reachability for 11 horizontal regions across
+  `code-approaches`, `implementation-plan`, and `module-map`, with a global
+  declaration, name, role, focus-order, and overflow-route guard.
+- Ported the six remaining design/prototyping artifacts as self-contained
+  offline HTML: four read-only ports and two live-state decision-export ports.
+- Flipped exactly those six manifest rows to `shipped`, then regenerated Claude,
+  Codex, installed-cache, proof, and release-readiness outputs from source.
+- This completes ART-004 and discharges the ART-020 accessibility defect under
+  the ownership decision recorded during planning.
+
+### Non-goals
+
+- No shared gallery runtime, framework, external asset dependency, persistence,
+  network export, or new manifest vocabulary.
+- No export-looking controls in read-only ports and no capabilities beyond the
+  pinned upstream inventories and approved compaction boundaries.
+- No unrelated roadmap, plugin-version, marketplace, or docs-site content work.
+
+### Review order
+
+1. Read the two source contracts in `test-artifact-gallery.py` and
+   `test-artifact-fill-regions.py`.
+2. Review the three repaired templates, then the four read-only ports, then the
+   two decision ports.
+3. Confirm the source manifest's six status-only changes.
+4. Treat `dist/**`, installed-cache fixtures, and XPLAT proof records as
+   generated mirrors; verify them with `refresh-release-artifacts.py --check`
+   rather than reviewing copied HTML line by line.
+5. Review this workflow, implementation notes, tasks, and final UAT evidence.
+
+### Scope budget and traceability
+
+- Human-approved Slice 1 gate: 160 reviewable LOC, 3 production files, `pass`.
+- Human-approved Slice 2 gate: 590 reviewable LOC, 4 production files, `warn`.
+- Human-approved Slice 3 gate: 520 reviewable LOC, 2 production files, `warn`.
+- Realized baseline diff: 72 files, including 10 gallery source paths, 2 test
+  files, and 54 generated payload/proof paths. Review checkpoints are
+  `e15e3a6cc`, `01e97ad65`, and `0a8228a8c`; their bookkeeping checkpoints are
+  `be5c90c25`, `caa920d1d`, and `c28eb805d`.
+- Tasks T001-T060 trace to all 17 functional requirements, 9 success criteria,
+  and the six-row Functional Fidelity Inventory; T053 separately proves the
+  final manifest delta against `d67742f10`.
+
+### Verification and known gaps
+
+- Focused gallery: 567/567; fill regions: 70/70; complete suite: 7496/7496.
+- Release payload and docs reference checks pass on checkpoint `0a8228a8c`.
+- The Python-authoritative release-readiness `validate-pr-title` operation passed
+  the exact prospective title
+  `feat(speckit-pro): complete design gallery artifacts` with exit code 0 and
+  `blocking=false`.
+- Chromium and Safari passed the repaired-region and read-only matrices;
+  Chromium, WebKit, and Safari passed the decision matrix. Safari 26.6.1 used
+  Option-Tab and moved the component snippet from `scrollLeft=0` to 29.
+- No functional gap remains. The installed Playwright MCP profile was already
+  in use, so isolated Playwright preserved that session. Headless WebKit did
+  not synthesize a generic scroller's browser-default ArrowRight action; real
+  Safari supplied the native-engine result for that path.
+
+### Rollback and feature flags
+
+There is no feature flag or data migration: these are static gallery documents
+selected by manifest status. Roll back the three feature checkpoints in reverse
+order, then rerun `python3 scripts/refresh-release-artifacts.py` and the docs
+reference generator. A narrower rollback may set an affected source manifest
+row back to `planned`, remove its authored template, and regenerate all mirrors;
+generated files must never be hand-reverted independently.
 
 ---
 

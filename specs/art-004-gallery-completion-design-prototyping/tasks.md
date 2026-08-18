@@ -140,14 +140,14 @@
 
 **Purpose**: Final serial evidence, review packet readiness, roadmap disposition, and release-readiness checks.
 
-- [ ] T053 VERIFY compare `speckit-pro/artifact-gallery/manifest.json` before and after implementation and prove exactly six status values changed from `planned` to `shipped` with no identifier, category, title, stage, trigger, source, `when_to_use`, signal vocabulary, or `exports` drift
-- [ ] T054 VERIFY prove the nine ART-004 and repaired artifact IDs are swept by the global guard in `tests/speckit-pro/unit/test-artifact-gallery.py`
-- [ ] T055 VERIFY prove all required fill regions and list slots from the Functional Fidelity Inventory are covered in `tests/speckit-pro/unit/test-artifact-fill-regions.py`
-- [ ] T056 VERIFY run the complete manual `file://` UAT matrix for the six new ports and three repaired artifacts in `specs/art-004-gallery-completion-design-prototyping/quickstart.md`
-- [ ] T057 VERIFY record PR review evidence for what changed, why, non-goals, review order, scope budget, traceability, verification, known gaps, and rollback or feature-flag notes in `docs/ai/specs/.process/ART-004-workflow.md`
-- [ ] T058 GREEN mark ART-020 superseded by ART-004 without changing unrelated roadmap rows in `docs/ai/specs/html-artifacts-technical-roadmap.md`
-- [ ] T059 VERIFY run `python3 tests/speckit-pro/run-all.py`, `python3 scripts/refresh-release-artifacts.py --check`, `pnpm --dir docs-site reference:check`, and `git diff --check` against `tests/speckit-pro/run-all.py`
-- [ ] T060 VERIFY validate the exact prospective PR title `feat(speckit-pro): complete design gallery artifacts` against the repository release-readiness gate and record the result in `docs/ai/specs/.process/ART-004-workflow.md`
+- [x] T053 VERIFY compare `speckit-pro/artifact-gallery/manifest.json` before and after implementation and prove exactly six status values changed from `planned` to `shipped` with no identifier, category, title, stage, trigger, source, `when_to_use`, signal vocabulary, or `exports` drift
+- [x] T054 VERIFY prove the nine ART-004 and repaired artifact IDs are swept by the global guard in `tests/speckit-pro/unit/test-artifact-gallery.py`
+- [x] T055 VERIFY prove all required fill regions and list slots from the Functional Fidelity Inventory are covered in `tests/speckit-pro/unit/test-artifact-fill-regions.py`
+- [x] T056 VERIFY run the complete manual `file://` UAT matrix for the six new ports and three repaired artifacts in `specs/art-004-gallery-completion-design-prototyping/quickstart.md`
+- [x] T057 VERIFY record PR review evidence for what changed, why, non-goals, review order, scope budget, traceability, verification, known gaps, and rollback or feature-flag notes in `docs/ai/specs/.process/ART-004-workflow.md`
+- [x] T058 GREEN mark ART-020 superseded by ART-004 without changing unrelated roadmap rows in `docs/ai/specs/html-artifacts-technical-roadmap.md`
+- [x] T059 VERIFY run `python3 tests/speckit-pro/run-all.py`, `python3 scripts/refresh-release-artifacts.py --check`, `pnpm --dir docs-site reference:check`, and `git diff --check` against `tests/speckit-pro/run-all.py`
+- [x] T060 VERIFY validate the exact prospective PR title `feat(speckit-pro): complete design gallery artifacts` against the repository release-readiness gate and record the result in `docs/ai/specs/.process/ART-004-workflow.md`
 
 ---
 

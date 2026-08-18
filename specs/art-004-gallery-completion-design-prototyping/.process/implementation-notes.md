@@ -211,3 +211,35 @@
 ### T052
 
 **Deviations/Edge cases/Surprises:** Focused gallery and fill suites passed 567/567 and 70/70. The full suite passed 7496/7496. After checkpoint `0a8228a8c`, release-artifact and docs-reference checks both passed on a clean tree.
+
+### T053
+
+**Deviations/Edge cases/Surprises:** Semantic comparison against pre-implementation checkpoint `d67742f10` found exactly six `planned` to `shipped` changes in manifest order. Every non-status field, top-level signal, and export vocabulary remained unchanged.
+
+### T054
+
+**Deviations/Edge cases/Surprises:** The global target literal contains exactly the six new ports plus the three repaired artifacts. The shipped-target/collector equality and all five Group L tests passed.
+
+### T055
+
+**Deviations/Edge cases/Surprises:** The six Functional Fidelity Inventory rows account for 26 required fill regions. The only list slots are `visual-designs.directions`, `component-variants.variants`, and `interaction-prototype.views`, with the approved 2/2/3 minima. Both shipped-gallery fill tests passed.
+
+### T056
+
+**Deviations/Edge cases/Surprises:** The final matrix consolidates the already-completed native-engine evidence for all nine artifacts: three repaired, four read-only, and two decision ports. Optional font failure changed only typeface rendering; no functional gap remains.
+
+### T057
+
+**Deviations/Edge cases/Surprises:** The review packet records the three approved scope gates, separates the 54 generated/proof paths from authored review order, and names the isolated Playwright and headless-WebKit limitations alongside the real Safari evidence that closes them.
+
+### T058
+
+**Deviations/Edge cases/Surprises:** No roadmap edit was required. The pre-implementation baseline already marks ART-020 `Superseded` by ART-004 with the complete repair, guard, fixture, UAT, and generation disposition, and no unrelated roadmap row changed during implementation.
+
+### T059
+
+**Deviations/Edge cases/Surprises:** The final serial gate passed 7496/7496. The release-artifact isolated comparison, docs reference check, and `git diff --check` all passed against the completed implementation and review evidence.
+
+### T060
+
+**Deviations/Edge cases/Surprises:** The Python-authoritative `release-readiness` runner operation `validate-pr-title` accepted the exact title `feat(speckit-pro): complete design gallery artifacts` with `gate_status=pass`, `blocking=false`, and exit code 0.

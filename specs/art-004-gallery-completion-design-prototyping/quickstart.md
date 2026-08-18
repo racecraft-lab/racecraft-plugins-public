@@ -221,6 +221,23 @@ Safari result above is the native-engine evidence for that path.
 | Non-color meaning | Inspect selected, active, invalid, disabled/loading, drag insertion, SVG/palette, and theme/background states | Each state has text, shape, icon, border, pattern, position, control state, or other non-color cue in addition to color. | Removing color distinction does not remove the state meaning needed for review. |
 | Reduced motion | Review artifacts with reduced motion requested | Template-added animation, transitions, smooth scrolling, and motion-like feedback are removed or replaced while current state, reset outcome, and control meaning remain visible. | Restoring normal motion does not change saved in-page state or export payload content. |
 
+### Final Nine-Artifact UAT Result
+
+Result: **Pass** on 2026-08-18. The complete matrix above was exercised against
+the authored `file://` source bytes with network resources unavailable.
+
+| Scope | Artifacts | Native-engine evidence | Result |
+|---|---|---|---|
+| Repaired horizontal regions | `code-approaches`, `implementation-plan`, `module-map` | Chromium and Safari reached all 11 declared regions in source order, showed visible focus, moved each active scroller with ArrowRight, and released focus without a trap | Pass |
+| Read-only ports | `design-system`, `animation-prototype`, `interaction-prototype`, `svg-illustrations` | Chromium and Safari passed offline readability, no-export, theme, sequential keyboard, interaction/reset or read-only, non-color, reduced-motion, and intentional-scroll checks | Pass |
+| Decision ports | `visual-designs`, `component-variants` | Chromium, WebKit, and Safari passed live-state selection/reset, validation, exact prompt/Markdown payloads, refusal fallback, stale-state protection, semantics, contrast, reduced motion, and the component snippet scroll route | Pass |
+
+The optional canonical remote font was unavailable in the offline runs and
+changed only typeface rendering. No required content, control, state, status,
+or export field depended on that resource. The installed Playwright MCP profile
+was already in use, so isolated Playwright preserved the active session; real
+Safari 26.6.1 supplied the native Option-Tab and generic-scroller evidence.
+
 ## Common Completion Gates
 
 After each implementation slice, run:
