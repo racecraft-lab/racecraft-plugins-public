@@ -140,7 +140,7 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-004 | Gallery Completion: Design & Prototyping | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
 | ART-005 | Gallery Completion: Knowledge, Reports & Editors | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
 | ART-006 | Autopilot Staging | ✅ Complete / Archived | [.process/ART-006-workflow.md](.process/ART-006-workflow.md) | PR #422; archived 2026-08-09; re-audited and re-grilled 2026-08-03. Declared budget 382 reviewable LOC, one slice. `gh` corroboration deferred to ART-007 (see Scope). **Prerequisite discharged** — PRs #416/#417 shipped in speckit-pro 2.22.0, so durable stage state now has a reliable store; ready for autopilot from Phase 1 |
-| ART-007 | Draft-PR Emission | ⏳ Ready | - | Both dependencies satisfied: ART-002 by PRs #425/#427/#430, ART-006 by PR #422 |
+| ART-007 | Draft-PR Emission | 🔄 In Progress | [.process/ART-007-workflow.md](.process/ART-007-workflow.md) | Scaffolded 2026-08-17; both dependencies satisfied: ART-002 by PRs #425/#427/#430, ART-006 by PR #422. Scoping absorbed the ART-006 `gh` corroboration limb, resolved OQ-1 (the draft becomes the first slice PR), and recorded the corpus deferral to ART-009 (see both Scope amendments) |
 | ART-008 | Feedback Sweep | ⏳ Pending | - | Blocked by ART-007 |
 | ART-009 | UAT Walkthrough Replacement | ⏳ Ready | - | ART-006 dependency satisfied by PR #422 |
 | ART-010 | Final-PR Writeup, Companions & Ready Flip | ⏳ Pending | - | Blocked by ART-007 alone; ART-003 dependency satisfied by PRs #435/#436/#439, ART-012 by PR #426 |
@@ -533,10 +533,12 @@ workflow state; explicit flags override. Alternatives: mandatory flag
 draft PR whose body indexes the artifacts, then stop for human review.
 
 **Reviewability Budget:** Primary surface: harness/adapter |
-Projected reviewable LOC: 217 (estimator: ok, modify-weighted) |
-Production files: ~6 |
-Total files: ~10 |
-Budget result: within budget
+Projected reviewable LOC: 217 at roadmap authoring → ~287 declared at scaffold
+(estimator 335 at 13 FRs) → 355 at the plan phase's 11-file count (estimator:
+ok at every step, modify-weighted, one slice throughout) |
+Production files: ~6 at roadmap authoring → 11 at plan |
+Total files: ~10 at roadmap authoring → 16 at plan |
+Budget result: within budget (see the scaffold amendment below for what moved)
 
 **Scope:**
 - One vertical slice — artifact generation → commit → draft PR → stop report.
@@ -551,9 +553,22 @@ Budget result: within budget
 - Plan-stage stop report: draft-PR URL, artifact index, resume instructions.
 - Resolution of OQ-1 (draft PR vs marker-split multi-PR emission) during this
   spec's clarify phase.
+- **Amended 2026-08-17 during scaffold (see the Design Concept Q&A log):**
+  (1) OQ-1 is resolved — on a later marker-split the draft PR becomes the
+  first slice PR of the stack; the clarify phase encodes this settled decision
+  rather than re-opening it. (2) The `gh` corroboration limb ART-006 deferred
+  here is absorbed into scope: stage auto-detect reads the workflow file's new
+  draft-PR row, corroborates via `gh`, logs discrepancies, and the workflow
+  file wins (the inherited OQ-4 contract). The projected budget moves to ~287
+  reviewable LOC / ~10 production files / ~14 total files
+  (`estimate-spec-size`: 327 LOC, ok, one slice). (3) `artifact-author` ships
+  outside the Layer 6 governed corpus; membership is a tracked deferral to
+  ART-009 (see that entry's amendment).
 
 **Out of Scope:**
 - Reading feedback (ART-008); flipping to ready (ART-010).
+- Layer 6 corpus membership for `artifact-author` (tracked deferral to
+  ART-009).
 
 **Verification:** Layer 4 golden fixtures for the draft-mode packet path
 (including the fail-open artifact-generation branch); Layer 5 agent
@@ -665,6 +680,14 @@ Budget result: within budget
   task list and task-list-canonical reference updated.
 - Markdown runbook path retired from post-implementation; fail-open preserved
   (artifact failure logs and never blocks the PR).
+- **Amended 2026-08-17 during ART-007 scaffold:** ART-009 also owns Layer 6
+  corpus membership for `artifact-author`. ART-007 ships it ungoverned by
+  decision — an honest new-role entry needs an acceptance oracle, an authored
+  fixture, and an independent review that only a spec opening the corpus can
+  produce — and ART-009 already performs corpus surgery for the
+  `uat-runbook-author` → `uat-artifact-author` rename, so both roles' entries
+  land in one governed-corpus change. Re-derive this entry's reviewability
+  budget at its own scaffold time to price the corpus work in.
 
 **Out of Scope:**
 - PR-writeup generation and the ready flip (ART-010).

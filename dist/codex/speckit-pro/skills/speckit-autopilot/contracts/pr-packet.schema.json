@@ -32,7 +32,7 @@
     },
     "mode": {
       "type": "string",
-      "enum": ["single", "split"]
+      "enum": ["single", "split", "draft"]
     },
     "target": {
       "$ref": "#/$defs/pr_target"
@@ -50,22 +50,14 @@
     },
     "required_headings": {
       "type": "array",
-      "prefixItems": [
-        { "const": "Summary" },
-        { "const": "What Changed" },
-        { "const": "Why It Matters" },
-        { "const": "How To Review" },
-        { "const": "How To UAT" },
-        { "const": "Verification" },
-        { "const": "Scope" },
-        { "const": "Known Gaps" }
-      ],
-      "minItems": 8,
-      "maxItems": 8
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
     },
     "verification_evidence": {
       "type": "array",
-      "minItems": 1,
+      "minItems": 0,
       "items": {
         "$ref": "#/$defs/evidence"
       }
@@ -93,7 +85,7 @@
         },
         "changed_files": {
           "type": "array",
-          "minItems": 1,
+          "minItems": 0,
           "items": {
             "type": "string",
             "pattern": "^(?!.*(^|/)\\.\\.(?:/|$))[A-Za-z0-9._-][A-Za-z0-9._/-]*$"
@@ -116,10 +108,10 @@
       "properties": {
         "how_to_uat": {
           "type": "string",
-          "minLength": 1
+          "minLength": 0
         },
         "uat_runbook_heading": {
-          "const": "## UAT Runbook"
+          "type": "string"
         },
         "uat_source": {
           "type": "string",
@@ -171,9 +163,7 @@
             { "properties": { "field_id": { "const": "why_it_matters" } } }
           ]
         }
-      ],
-      "minItems": 3,
-      "maxItems": 3
+      ]
     },
     "protected_body_fingerprint": {
       "$ref": "#/$defs/protected_body_fingerprint"
@@ -224,6 +214,68 @@
       "else": {
         "not": {
           "required": ["split_slice"]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "mode": { "const": "draft" } },
+        "required": ["mode"]
+      },
+      "then": {
+        "properties": {
+          "required_headings": {
+            "prefixItems": [
+              { "const": "Artifacts" },
+              { "const": "Resume" }
+            ],
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "editable_fields": {
+            "maxItems": 0
+          },
+          "uat": {
+            "properties": {
+              "uat_runbook_heading": { "const": "" }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "verification_evidence": {
+            "minItems": 1
+          },
+          "scope_evidence": {
+            "properties": {
+              "changed_files": { "minItems": 1 }
+            }
+          },
+          "uat": {
+            "properties": {
+              "how_to_uat": { "minLength": 1 },
+              "uat_runbook_heading": { "const": "## UAT Runbook" }
+            }
+          },
+          "required_headings": {
+            "prefixItems": [
+              { "const": "Summary" },
+              { "const": "What Changed" },
+              { "const": "Why It Matters" },
+              { "const": "How To Review" },
+              { "const": "How To UAT" },
+              { "const": "Verification" },
+              { "const": "Scope" },
+              { "const": "Known Gaps" }
+            ],
+            "minItems": 8,
+            "maxItems": 8
+          },
+          "editable_fields": {
+            "minItems": 3,
+            "maxItems": 3
+          }
         }
       }
     }
@@ -441,7 +493,7 @@
         },
         "mode": {
           "type": ["string", "null"],
-          "enum": ["single", "split", null]
+          "enum": ["single", "split", "draft", null]
         },
         "target": {
           "oneOf": [

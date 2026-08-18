@@ -31,6 +31,7 @@ MINIMUM_PYTHON = (3, 11, 0)
 REQUIRED_CODEX_AGENT_NAMES = frozenset(
     {
         "analyze-executor.toml",
+        "artifact-author.toml",
         "autopilot-fast-helper.toml",
         "checklist-executor.toml",
         "clarify-executor.toml",

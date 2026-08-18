@@ -369,6 +369,59 @@ Run the pre-flight sequence before any phase work. STOP on failure.
    **reported, never blocking**. The stage bounds which phases this
    run may start: see
    [Phase Execution §Stage-Bounded Phase Selection](./references/phase-execution.md#stage-bounded-phase-selection).
+   - **Corroborate the recorded draft pull request — one read-only observation
+     per run, taken only when the workflow file's `Draft PR` row is present.**
+     Read the row first. When it is absent, take no observation at all and send
+     no `pr_observation`. When it is present, take exactly one observation,
+     scoped to the feature's head branch:
+
+     ```text
+     gh pr list --head <branch> --state all --json number,url,state,isDraft,headRefName
+     ```
+
+     `--state all` is load-bearing: returning pull requests in every state is
+     what makes a closed one distinguishable from an absent one.
+   - **The trigger is the row's presence, not the stage.** Any invocation
+     carrying a `Draft PR` row takes this observation — including one whose
+     stage came from an explicit `--stage` argument, and one that resolves a
+     stage other than `plan`. A run with no emission terminal step still reports
+     the status and still records a discrepancy durably.
+   - **Pass the result to `resolve-autopilot-stage` as `inputs.pr_observation`,
+     and let the helper classify it.** Set `ok` to the JSON literal `true` —
+     never `1`, never `"true"` — only when the query exited zero *and* its output
+     parsed, and carry the parsed array in `pull_requests`. Otherwise send
+     `ok: false` with a short `reason`. **You take the observation; the helper
+     never does.** It never runs the tool and never touches the network, which
+     is what keeps classification deterministic and offline-testable. Anything
+     short of `ok: true` with a parseable array yields `skipped`, because a tool
+     that was absent, unauthenticated, rate-limited, or unparseable is not
+     evidence that a recorded pull request is gone.
+   - **Print one line beside the `Stage:` line this step already prints, on
+     every run**, naming `corroboration.status` from the envelope. The object is
+     always present, so all six statuses print — `match`, `no_record`,
+     `skipped`, `pr_closed`, `pr_missing`, `identity_mismatch` — and a run that
+     could not check stays distinguishable from one that checked and agreed:
+
+     ```text
+     Stage: plan (argv) — explicit --stage plan
+     Draft PR: match — #438 recorded, #438 observed
+     ```
+
+     ```text
+     Draft PR: skipped — gh not authenticated
+     Draft PR: pr_closed — #438 recorded, closed (merged: false)
+     ```
+   - **Record that same line durably in this step's workflow-file record for the
+     three discrepancy statuses only** — `pr_closed`, `pr_missing`, and
+     `identity_mismatch`. Write it in the **same edit turn as the `Stage` row**
+     so it lands in the same commit, the write cadence `Stage` already follows.
+     `match`, `no_record`, and `skipped` write nothing durable, and the scaffold
+     workflow template ships no placeholder line.
+   - **Corroboration reports; it never decides.** It never changes the resolved
+     stage, never blocks stage resolution, and never stops the run. It is
+     computed after the stage is decided and only ever appended to the envelope.
+     Every consequence of a discrepancy belongs to the terminal step, in
+     [Phase Execution](./references/phase-execution.md).
 6d. **Reclaim the state slot if it names another workflow** — `autopilot-state.json`
    holds exactly one run. When this invocation targets a workflow file the state
    file does not currently name, **re-initialise the slot from the target

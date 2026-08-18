@@ -317,7 +317,7 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(stderr_records, [])
             self.assert_response(response, "ok", 0)
             self.assertEqual(response["data"]["mutation"]["mutation_status"], "planned")
-            self.assertEqual(len(response["data"]["mutation"]["planned_operations"]), 10)
+            self.assertEqual(len(response["data"]["mutation"]["planned_operations"]), 11)
             self.assertEqual(stale.read_text(encoding="utf-8"), "stale\n")
 
             completed, response, stderr_records = run_runner(
@@ -345,7 +345,7 @@ class MutationHelperTests(unittest.TestCase):
             mutation = response["data"]["mutation"]
             self.assertEqual(mutation["mutation_status"], "no_op")
             self.assertEqual(mutation["planned_operations"], [])
-            self.assertEqual(len(mutation["no_op_operations"]), 10)
+            self.assertEqual(len(mutation["no_op_operations"]), 11)
             self.assertFalse(response["data"]["restart_required"])
 
     def test_install_codex_agents_defaults_to_fake_user_home_without_touching_real_home(self) -> None:
@@ -2026,6 +2026,156 @@ class MutationHelperTests(unittest.TestCase):
                 self.assertEqual(completed.returncode, 2)
                 self.assert_response(response, "input_error", 2)
                 self.assertEqual([diag["code"] for diag in stderr_records], ["invalid_input"])
+
+    def test_pr_packet_output_draft_mode_emits_two_block_packet_that_passes_read_only_validation(self) -> None:
+        from speckit_pro_runner.helpers.read_only import protected_body_sha256
+
+        title = "feat(prsg-998): Open a draft pull request at the plan boundary"
+        draft_body = "\n".join(
+            [
+                f"# {title}",
+                "",
+                "## Artifacts",
+                "",
+                "| Artifact | Purpose | Open |",
+                "| --- | --- | --- |",
+                "| Implementation Plan | Lay out the phases of a planned change so a reviewer can see the shape before any code exists. | `open specs/prsg-998-draft/artifacts/implementation-plan.html` |",
+                "| Spec Explainer | Explain what the feature does and why it is worth building, in plain English. | `open specs/prsg-998-draft/artifacts/spec-explainer.html` |",
+                "",
+                "## Resume",
+                "",
+                "Stage: plan. Stopped at the plan-stage boundary for review.",
+                "Resume with: `/speckit-pro:speckit-autopilot <workflow-file> --stage implement`",
+                "",
+            ]
+        )
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            inputs = {
+                "packet_path": "specs/prsg-998-draft/.process/pr-packets/prsg-998.json",
+                "body_file": "specs/prsg-998-draft/.process/pr-packets/prsg-998/body.md",
+                "validation_result_path": "specs/prsg-998-draft/.process/pr-packets/prsg-998/validation.json",
+                "source_feature_dir": "specs/prsg-998-draft",
+                "target": {"base_branch": "main", "head_branch": "agent/prsg-998-draft"},
+                "mode": "draft",
+                "title_type": "feat",
+                "title_scope": "prsg-998",
+                "title_description": "Open a draft pull request at the plan boundary",
+                "body": draft_body,
+                "verification_evidence": [],
+                "scope_evidence": {
+                    "reviewable_loc": 0,
+                    "production_files": 0,
+                    "total_files": 0,
+                    "budget_result": "within_budget",
+                    "changed_files": [],
+                    "non_goals": [
+                        "Implementation evidence is not produced at the plan-stage boundary.",
+                        "Flipping the draft pull request to ready is out of scope for this packet.",
+                    ],
+                },
+            }
+
+            completed, response, stderr_records = run_runner(
+                helper_request("pr-packet-output", mode="apply", inputs=inputs),
+                cwd=git_root,
+            )
+            self.assertEqual(stderr_records, [])
+            self.assertEqual(completed.returncode, 0)
+            self.assert_response(response, "ok", 0)
+            mutation = response["data"]["mutation"]
+            self.assertEqual(mutation["mutation_status"], "applied")
+            self.assertEqual(
+                mutation["touched_paths"],
+                [inputs["body_file"], inputs["packet_path"]],
+            )
+
+            body_path = git_root / inputs["body_file"]
+            packet_path = git_root / inputs["packet_path"]
+            self.assertTrue(body_path.is_file())
+            self.assertTrue(packet_path.is_file())
+            self.assertFalse((git_root / inputs["validation_result_path"]).exists())
+            # The orchestrator composes the draft body, so it is used verbatim and the
+            # reviewer-packet build_packet_body fallback is never reached.
+            self.assertEqual(body_path.read_text(encoding="utf-8"), draft_body)
+
+            packet = json.loads(packet_path.read_text(encoding="utf-8"))
+            self.assertEqual(packet["mode"], "draft")
+            self.assertEqual(packet["packet_id"], "prsg-998")
+            self.assertEqual(packet["generated_title"]["value"], title)
+            self.assertEqual(packet["required_headings"], ["Artifacts", "Resume"])
+            self.assertEqual(packet["editable_fields"], [])
+            self.assertEqual(packet["verification_evidence"], [])
+            self.assertEqual(packet["scope_evidence"], inputs["scope_evidence"])
+            self.assertEqual(
+                packet["uat"],
+                {"how_to_uat": "", "uat_runbook_heading": "", "uat_source": "packet-input"},
+            )
+            self.assertEqual(packet["protected_body_fingerprint"]["elided_fields"], [])
+            self.assertEqual(
+                packet["protected_body_fingerprint"]["value"],
+                protected_body_sha256(draft_body),
+            )
+            self.assertNotIn("split_slice", packet)
+
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "validate-pr-packet-read-only",
+                    mode="read_only",
+                    inputs={"packet_path": inputs["packet_path"]},
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(stderr_records, [])
+            self.assertEqual(completed.returncode, 0)
+            self.assert_response(response, "ok", 0)
+            validation_result = response["data"]["stdout_json"]
+            self.assertEqual(validation_result["failures"], [])
+            self.assertEqual(validation_result["status"], "passed")
+            self.assertIs(validation_result["pr_blocked"], False)
+            self.assertEqual(validation_result["mode"], "draft")
+
+    def test_pr_packet_output_rejects_unknown_mode_and_names_the_mode_field(self) -> None:
+        inputs = {
+            "packet_path": "specs/prsg-998-draft/.process/pr-packets/prsg-998.json",
+            "source_feature_dir": "specs/prsg-998-draft",
+            "target": {"base_branch": "main", "head_branch": "agent/prsg-998-draft"},
+            "title_type": "feat",
+            "title_scope": "prsg-998",
+            "title_description": "Generate reviewer packet",
+            "changed_files": ["specs/prsg-998-draft/spec.md"],
+            "verification": ["mutation helper unit tests passed"],
+            "mode": "drafts",
+        }
+        completed, response, stderr_records = run_runner(
+            helper_request("pr-packet-output", inputs=inputs)
+        )
+        self.assertEqual(completed.returncode, 2)
+        self.assert_response(response, "input_error", 2)
+        self.assertEqual([diag["code"] for diag in stderr_records], ["invalid_input"])
+        self.assertEqual(stderr_records[0]["details"]["field"], "mode")
+        self.assertEqual(
+            stderr_records[0]["message"],
+            "mode must be single, split, or draft when provided",
+        )
+
+    def test_required_headings_returns_draft_blocks_and_preserves_reviewer_headings(self) -> None:
+        from speckit_pro_runner.helpers.pr_emission import required_headings
+
+        reviewer_headings = [
+            "Summary",
+            "What Changed",
+            "Why It Matters",
+            "How To Review",
+            "How To UAT",
+            "Verification",
+            "Scope",
+            "Known Gaps",
+        ]
+        self.assertEqual(required_headings(mode="draft"), ["Artifacts", "Resume"])
+        self.assertEqual(required_headings(mode="single"), reviewer_headings)
+        self.assertEqual(required_headings(mode="split"), reviewer_headings)
 
     def test_validate_pr_packet_write_ignores_fabricated_validation_and_requires_current_packet_pass(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
