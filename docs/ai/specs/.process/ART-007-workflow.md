@@ -952,8 +952,8 @@ behaviour be unchanged. The empirical proof above is the audit trail.
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
 | 1 - Setup | T001-T003 | 3/3 | Suite green at 7399/7399, matching the G0 baseline exactly (no drift); docs-site deps already installed; merge driver already defined |
-| 2 - Foundational | T004-T011 | | |
-| 3 - User Story 1 | T012-T027 | | |
+| 2 - Foundational | T004-T011 | 8/8 | Draft mode validates. Full suite 7407/7407 (+8 over baseline). SC-008 machine-diffed: all 9 pre-existing packet fixtures reproduce their exact failure rule sets |
+| 3 - User Story 1 | T012-T027 | 1/16 | T017 landed early — protocol prose with no Phase 2 dependency |
 | 4 - User Story 2 | T028-T034 | | |
 | 5 - User Story 3 | T035-T043 | | |
 | 6 - Polish | T044-T054 | | |

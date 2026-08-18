@@ -258,6 +258,76 @@ RECORDED_STAGE_CASES = (
     ("no Stage row at all", "", None),
 )
 
+# --- The `Draft PR` row (FR-009) -----------------------------------------
+# The pull-request identity lives in the same `### Basic Information` table as
+# `Stage`, never in `## Workflow Overview`, whose rows are phase status records.
+# The number and the URL are one linked reference, not two columns: readers take
+# the number from the link text and the URL from the link target
+# (contracts/draft-pr-row.md:14-40). The record types are pinned by
+# data-model.md:105-109 — `number` is an integer, `url` a string, `gap_note` a
+# string or null.
+DRAFT_PR_URL = "https://github.com/owner/repo/pull/438"
+DRAFT_PR_PRESENT_ROW = f"| **Draft PR** | [#438]({DRAFT_PR_URL}) |\n"
+DRAFT_PR_IDENTITY = {"number": 438, "url": DRAFT_PR_URL, "gap_note": None}
+
+# (label, `### Basic Information` row, expected record)
+DRAFT_PR_ROW_CASES = (
+    ("bold field name", DRAFT_PR_PRESENT_ROW, DRAFT_PR_IDENTITY),
+    ("plain field name", f"| Draft PR | [#438]({DRAFT_PR_URL}) |\n", DRAFT_PR_IDENTITY),
+    ("backticked field name", f"| `Draft PR` | [#438]({DRAFT_PR_URL}) |\n", DRAFT_PR_IDENTITY),
+    # The key is compared case-insensitively after stripping `*`, backticks, and
+    # spaces — the same normalization the shipped `Stage` row already uses.
+    ("lowercased field name", f"| draft pr | [#438]({DRAFT_PR_URL}) |\n", DRAFT_PR_IDENTITY),
+    ("uppercased field name", f"| **DRAFT PR** | [#438]({DRAFT_PR_URL}) |\n", DRAFT_PR_IDENTITY),
+    (
+        "a shortfall note follows the link",
+        f"| **Draft PR** | [#438]({DRAFT_PR_URL}) — 2 of 4 artifacts missing |\n",
+        {"number": 438, "url": DRAFT_PR_URL, "gap_note": "2 of 4 artifacts missing"},
+    ),
+    # Nothing in the grammar bounds the width of the number.
+    (
+        "a wider number",
+        "| **Draft PR** | [#1024](https://github.com/owner/repo/pull/1024) |\n",
+        {"number": 1024, "url": "https://github.com/owner/repo/pull/1024", "gap_note": None},
+    ),
+)
+
+# (label, prose written after the link, expected `gap_note`)
+# The grammar template is `[#<number>](<url>) — <gap note>`, which places the
+# separator outside the placeholder: the note is the prose, not the dash.
+DRAFT_PR_GAP_NOTE_CASES = (
+    ("a plain shortfall note", "— 2 of 4 artifacts missing", "2 of 4 artifacts missing"),
+    # A note carrying its own parentheses. A greedy link-target capture would
+    # swallow the rest of the cell into `url` and lose the identity entirely,
+    # which is the failure FR-011 corroboration would then blame on GitHub.
+    (
+        "a note containing parentheses",
+        "— selection failed (no pages chosen)",
+        "selection failed (no pages chosen)",
+    ),
+    # A note carrying a second Markdown link, for the same reason.
+    (
+        "a note containing another link",
+        "— see [the index](docs/ai/specs/.process/ART-007-index.md)",
+        "see [the index](docs/ai/specs/.process/ART-007-index.md)",
+    ),
+)
+
+# (label, the `Draft PR` value cell as written)
+# None of these is one `[#<number>](<url>)` link. The reader reports absence
+# rather than raising: a workflow file is operator-edited prose, and a traceback
+# there would stop a run over a typo (contracts/draft-pr-row.md:117).
+MALFORMED_DRAFT_PR_VALUES = (
+    ("an empty value", ""),
+    ("a bare number with no link", "#438"),
+    ("a bare URL with no link", DRAFT_PR_URL),
+    ("link text missing the `#`", f"[438]({DRAFT_PR_URL})"),
+    ("non-numeric link text", f"[#pending]({DRAFT_PR_URL})"),
+    ("a link with no target", "[#438]"),
+    ("a link with an empty target", "[#438]()"),
+    ("prose instead of a link", "not opened yet"),
+)
+
 # --- Recorded confidence-gate verdict (FR-010a) --------------------------
 # The gate record written under `## Phase 6.5: Confidence Gate` is prose, and it
 # is not a verdict source. Real workflow files spell the record three different
@@ -448,14 +518,42 @@ def overview_table(rows: tuple[tuple[str, str], ...]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def workflow_document(rows: tuple[tuple[str, str], ...], stage_row: str = "") -> str:
+def workflow_document(
+    rows: tuple[tuple[str, str], ...], stage_row: str = "", draft_pr_row: str = ""
+) -> str:
     return (
         "# Test Workflow\n\n"
         + overview_table(rows)
         + "\n### Basic Information\n\n| Field | Value |\n|-------|-------|\n"
         + "| **Branch** | `test-branch` |\n"
         + stage_row
+        + draft_pr_row
     )
+
+
+def draft_pr_document(draft_pr_row: str) -> str:
+    """A workflow file whose `### Basic Information` also carries `Stage`.
+
+    The sibling row is deliberate: the reader has to select by key, not by
+    position, in a table that always holds more than one row.
+    """
+    return workflow_document(
+        PLANNING_ROWS_TERMINAL + (GATE_TERMINAL,),
+        stage_row="| **Stage** | implement |\n",
+        draft_pr_row=draft_pr_row,
+    )
+
+
+def read_draft_pr_row(text: str) -> dict[str, object] | None:
+    """Read the `Draft PR` row through the preprocessing every consumer applies.
+
+    `workflow_stage_signals` blanks HTML comment spans before it splits, so a
+    commented-out example can never become evidence. `workflow_draft_pr_row`
+    takes those same `lines` and inherits the obligation rather than re-deriving
+    it, which is what keeps it a near-duplicate of `workflow_recorded_stage`
+    instead of a second parser (contracts/draft-pr-row.md:80-90).
+    """
+    return read_only.workflow_draft_pr_row(read_only.HTML_COMMENT_RE.sub("", text).splitlines())
 
 
 def distribution_argv(
@@ -691,6 +789,70 @@ class WorkflowStageSignalTests(unittest.TestCase):
         # different question from whether planning finished.
         self.assertIn("Confidence Gate", module.WORKFLOW_ADVISORY_PHASES)
         self.assertIn("Confidence Gate", read_only.AUTOPILOT_PLANNING_PREDICATE_PHASES)
+
+
+class DraftPrRowTests(unittest.TestCase):
+    """T012 — the `Draft PR` row of `### Basic Information` (FR-009).
+
+    The row is the sole store of the pull-request identity: there is no
+    state-file mirror, so whatever this reader gets wrong is wrong everywhere.
+    """
+
+    def test_present_row_parses_number_url_and_gap_note(self) -> None:
+        for label, row, expected in DRAFT_PR_ROW_CASES:
+            with self.subTest(case=label):
+                self.assertEqual(read_draft_pr_row(draft_pr_document(row)), expected)
+
+    def test_absent_row_returns_none_and_is_not_an_error(self) -> None:
+        # Absence means no pull request has been opened for this feature. That
+        # is information, never a fault — the same shape `Stage` already uses
+        # for "no run yet" (contracts/draft-pr-row.md:44-52). The scaffold
+        # template ships no placeholder row, so this is the common state.
+        for label, text in (
+            ("a Basic Information table carrying only Branch and Stage", draft_pr_document("")),
+            ("no Basic Information table at all", overview_table(PLANNING_ROWS_TERMINAL)),
+            ("an empty document", ""),
+        ):
+            with self.subTest(case=label):
+                self.assertIsNone(read_draft_pr_row(text))
+
+    def test_commented_out_row_is_not_read_as_present(self) -> None:
+        # Comment spans are blanked before the table is parsed, which is why a
+        # commented-out example row in the scaffold template would not help:
+        # it could never be read as evidence (contracts/draft-pr-row.md:54-58).
+        # `test_commented_out_table_is_not_read_as_evidence` above proves the
+        # same property for the `## Workflow Overview` table.
+        self.assertEqual(
+            read_draft_pr_row(draft_pr_document(DRAFT_PR_PRESENT_ROW)), DRAFT_PR_IDENTITY
+        )
+        for label, row in (
+            ("the row alone is commented out", f"<!-- {DRAFT_PR_PRESENT_ROW.rstrip()} -->\n"),
+            ("the row sits inside a multi-line comment", f"<!--\n{DRAFT_PR_PRESENT_ROW}-->\n"),
+        ):
+            with self.subTest(case=label):
+                self.assertIsNone(read_draft_pr_row(draft_pr_document(row)))
+
+    def test_gap_note_after_the_link_still_parses_the_identity(self) -> None:
+        # FR-004 makes a shortfall visible in this row, so the note is ordinary
+        # rather than exceptional. The identity has to survive it intact: a
+        # number or URL corrupted by the prose beside it would send FR-011
+        # corroboration at the wrong pull request.
+        for label, note, expected_note in DRAFT_PR_GAP_NOTE_CASES:
+            with self.subTest(case=label):
+                record = read_draft_pr_row(
+                    draft_pr_document(f"| **Draft PR** | [#438]({DRAFT_PR_URL}) {note} |\n")
+                )
+                self.assertEqual(
+                    record, {"number": 438, "url": DRAFT_PR_URL, "gap_note": expected_note}
+                )
+
+    def test_malformed_value_yields_none_rather_than_a_traceback(self) -> None:
+        # A raised exception fails these subTests as errors, which is exactly
+        # the outcome the contract forbids (contracts/draft-pr-row.md:117).
+        for label, value in MALFORMED_DRAFT_PR_VALUES:
+            with self.subTest(case=label):
+                text = draft_pr_document(f"| **Draft PR** | {value} |\n")
+                self.assertIsNone(read_draft_pr_row(text))
 
 
 class ConfidenceGateVerdictTests(unittest.TestCase):
@@ -975,6 +1137,7 @@ def build_suite() -> unittest.TestSuite:
         StageVocabularyAndArgvTests,
         RequestLayerDiagnosticTests,
         WorkflowStageSignalTests,
+        DraftPrRowTests,
         ConfidenceGateVerdictTests,
         AutoDetectionTests,
         PlanningStageCanonicalListTests,

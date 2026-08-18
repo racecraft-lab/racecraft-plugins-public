@@ -39,6 +39,20 @@ that treats those rows as phase records.
 The number and the URL are one linked reference, not two columns. Readers take
 the number from the link text and the URL from the link target.
 
+**The separator is excluded from the note.** In the second form the ` — ` between
+the link and the note is grammar, not content: a gap note of
+`2 of 4 artifacts missing` renders as `— 2 of 4 artifacts missing` and parses
+back without the em dash. Only the em dash form is specified. A hyphen, an en
+dash, or prose following the link with no separator at all is **undefined** —
+readers may treat it however they like, and writers must not emit it.
+
+**The link target admits no whitespace and no parentheses**, which is what keeps
+a gap note's own punctuation out of the URL. A note may itself contain
+parentheses or a second Markdown link — `— selection failed (no pages chosen)` is
+legal — so a reader that captures the target greedily swallows the note and
+corrupts the identity rather than merely losing the note. An empty target,
+`[#438]()`, is malformed.
+
 ---
 
 ## 3. States
@@ -81,13 +95,41 @@ guard and the tree-wide CI gate already fail on.
 
 A new `workflow_draft_pr_row(lines)` sits beside the shipped
 `workflow_recorded_stage(lines)` and reuses `workflow_table_rows` and
-`AUTOPILOT_BASIC_INFO_HEADING` unchanged. It returns the parsed
-`{number, url, gap_note}` or `None` when the row is absent.
+`AUTOPILOT_BASIC_INFO_HEADING` unchanged.
 
-The two readers differ only in the key they match. That is three near-duplicate
-lines rather than a premature generic `workflow_scalar_row(lines, key)`
-abstraction, which is the trade the constitution's KISS and YAGNI principle asks
-for until a third caller exists.
+**Signature and return shape**, stated here because §2's grammar alone does not
+fix the types:
+
+```python
+def workflow_draft_pr_row(lines: list[str]) -> dict[str, Any] | None
+```
+
+| Case | Returns |
+| --- | --- |
+| row present | `{"number": int, "url": str, "gap_note": str | None}` — all three keys always present |
+| row present, no note | the same, with `gap_note` as `None` |
+| row absent | `None` |
+| value malformed | `None`, never a raise |
+
+`number` is an **integer**, matching the `Draft PR Record` entity in
+`data-model.md`. This is load-bearing rather than cosmetic: FR-011's
+corroboration compares the recorded number against the number a `--json` query
+returns, and a string would silently never match, producing a permanent
+`identity_mismatch` on a healthy pull request.
+
+**The reader takes lines that are already comment-blanked.** Callers apply
+`HTML_COMMENT_RE` before calling, exactly as `workflow_stage_signals` already
+does for the `Stage` row. The reader must not blank again — that is what
+"reuses `workflow_table_rows` unchanged" means, and it is why a commented-out row
+is not read as present.
+
+The two readers differ only in the key they match and in parsing a linked value
+rather than a bare scalar. Keep them as siblings rather than introducing a
+generic `workflow_scalar_row(lines, key)`, which is the trade the constitution's
+KISS and YAGNI principle asks for until a third caller exists. That is an
+anti-abstraction instruction, not a line budget: the linked value needs a match
+and a record build, so this reader is legitimately longer than
+`workflow_recorded_stage`.
 
 ---
 

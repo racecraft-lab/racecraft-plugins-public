@@ -207,6 +207,45 @@ carries.
 Draft mode adds no new required sub-object, so the `mode == "split"` branch that
 demands `split_slice` gains no sibling. Nothing extra is attached to the packet.
 
+### 2.4 The producer surface is six sites and an ordering fix
+
+Amended at implementation time, 2026-08-18. §2.1 and §2.2 named two producer
+edits. There are **six**, and the two this section originally omitted are the
+ones that fire first — a draft packet dies in input normalisation before the mode
+gate at §2.1 is ever reached. Demonstrated by the T013 RED run, whose emission
+test fails at `scope_evidence.changed_files must be a non-empty string array`.
+
+| # | Site | Today | Draft behaviour |
+| --- | --- | --- | --- |
+| 1 | mode gate, `pr_emission.py:298-301` | rejects anything but `single`/`split` | accepts `draft`; unknown values still rejected with `field="mode"` |
+| 2 | `required_headings()`, ~427 | returns the eight reviewer headings | takes `mode`; draft returns `["Artifacts", "Resume"]` |
+| 3 | `editable_fields()`, ~729 | returns the three reviewer fields | takes `mode`; draft returns `[]` |
+| 4 | `uat` assembly, ~305-308 | hardcodes `uat_runbook_heading` **and** a `how_to_uat` fallback string | draft emits `""` for both; `uat_source` keeps its default |
+| 5 | `normalize_scope_evidence()`, ~586-625 | rejects an empty `changed_files` in **both** the dict and the non-dict branch | draft permits `changed_files: []`; `non_goals` stays non-empty in every mode |
+| 6 | `normalize_evidence_list()`, ~629-641 | `isinstance(raw, list) and raw` is false for `[]`, so it falls through to "must contain at least one item" | draft permits `verification_evidence: []` |
+
+Site 4 is worth calling out: the heading is not the only hardcode in that object.
+`how_to_uat` carries fallback prose (`"No manual UAT runbook was provided; …"`)
+that a draft packet must not emit, because §1.2.2's `then` arm permits an empty
+string but the schema still forbids a draft body from carrying a UAT section for
+the prose to describe.
+
+**The ordering fix.** `mode` is read at line 298, *after* `normalize_scope_evidence`
+(281) and `normalize_evidence_list` (285) have already run and returned their
+diagnostics. Neither receives `mode`, so sites 5 and 6 cannot become mode-aware
+where they stand. Hoist the mode resolution above both calls, then thread the
+resolved `mode` into them. Hoisting is safe: nothing between the target check and
+line 298 consults `mode`, and none of `normalize_generated_title`,
+`normalize_scope_evidence`, `normalize_evidence_list`, or
+`normalize_source_markers` takes it today.
+
+Skipping any one of the six ships a producer whose output its own schema rejects
+— the same failure §3 warns about, one layer up. The acceptance test is the
+round trip: emit a draft packet, feed it straight back through
+`validate-pr-packet-read-only`, and require `status=passed` with
+`pr_blocked=false`. A heading spot-check passes while the packet is still
+unusable.
+
 ---
 
 ## 3. Validator edits (`read_only.py`)

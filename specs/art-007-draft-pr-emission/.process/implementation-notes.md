@@ -201,3 +201,109 @@ effort diagnosing before correctly attributing it. A concurrent edit to shipped
 source is invisible to an agent measuring the suite, and surfaces only as an
 opaque `AssertionError: 1 != 0` in the gate tests. Future overlapping work should
 either stay off `speckit-pro/` or tell the agent which failures to expect.
+
+### T012
+
+**Deviations/Edge cases/Surprises:** Five test methods, 22 counted units (the
+suite's `run_counted` counts subTests individually). All 22 error on one cause,
+`AttributeError: module 'speckit_pro_runner.helpers.read_only' has no attribute
+'workflow_draft_pr_row'` — zero assertion failures and exactly one distinct
+exception type, which is the evidence the RED is the missing reader rather than
+a defect in the test code.
+
+**The executor found four real ambiguities in `contracts/draft-pr-row.md`, all
+now closed in the contract rather than left to T016's judgement:**
+
+1. **§5 gave no types.** It named `{number, url, gap_note}` and stopped, so an
+   implementer reading only the contract could reasonably ship `number` as a
+   string. `data-model.md` settles it as an integer, and the consequence of
+   getting it wrong is not cosmetic: FR-011 compares the recorded number against
+   what a `--json` query returns, so a string would silently never match and
+   produce a permanent `identity_mismatch` on a perfectly healthy pull request.
+   §5 now states the signature, the per-case return shape, and that reasoning.
+2. **The em dash separator was never stated as excluded** from the gap note. It
+   was only inferable from where the template puts the placeholder boundary. §2
+   now says it outright, and says that hyphen, en dash, and no-separator forms
+   are undefined rather than tacitly accepted.
+3. **The link target's character class is load-bearing** and was unstated. A gap
+   note may legally contain parentheses or a second Markdown link, so a reader
+   capturing the target greedily swallows the note and **corrupts the identity**
+   rather than merely losing the note. That is the bug class most likely to reach
+   production here, so §2 now states the constraint and names the failure.
+4. **§5's "three near-duplicate lines"** is not literally achievable —
+   `workflow_recorded_stage` is four lines and does no regex, while this reader
+   needs a match plus a record build. It now reads explicitly as an
+   anti-abstraction instruction rather than a line budget, so T016 does not
+   contort to hit a number.
+
+**One obligation is pinned by prose rather than by a failing test, and that is
+recorded rather than hidden.** Contract §7's "a commented-out row is not read as
+present" is a property of the call path: the reader receives lines the caller has
+already blanked with `HTML_COMMENT_RE`. A redundant second blanking inside the
+reader is undetectable, because blanking blanked text is a no-op. The test locks
+in the shipped constant by calling `read_only.HTML_COMMENT_RE` rather than
+re-deriving it, which is as far as a test can reach.
+
+**One malformed case was added beyond the contract's list:** an empty link
+target, `[#438]()`, which a naive lazy capture accepts and reports as
+`url == ""`. Kept, and §2 now names it malformed.
+
+**A dispatch error, twice now.** The dispatch told this executor the file does
+not use `run_counted`. It does, from `tests/speckit-pro/lib/test_result.py`. The
+orchestrator had generalised from a sibling test file that genuinely does not.
+Both executors correctly followed the file over the prompt. `run_counted` also
+prints no tracebacks — it writes to a throwaway sink and emits only a count — so
+verbatim RED evidence needs a verbose runner invoked outside the repository.
+
+### T013
+
+**Deviations/Edge cases/Surprises:** Three tests, all failing inside the
+producer: two assertion failures and one `TypeError` on the not-yet-existing
+`mode` parameter of `required_headings()`. The `TypeError` is legitimate RED — it
+names the exact producer function T015 must change.
+
+**The headline finding: contract §2 named two producer edits and there are six.**
+The two it omitted are the ones that fire *first*, so a draft packet dies in
+input normalisation before the mode gate is ever reached. This is demonstrated
+rather than reasoned: the emission test fails at
+`scope_evidence.changed_files must be a non-empty string array`, which is
+`normalize_scope_evidence`, not the gate.
+
+- `normalize_scope_evidence` (~586-625) rejects an empty `changed_files` in
+  **both** its dict and non-dict branches.
+- `normalize_evidence_list` (~629-641) rejects `[]` because
+  `isinstance(raw, list) and raw` is false for an empty list, so it falls through
+  to the "at least one item" error.
+- The `uat` object (~305-308) hardcodes fallback prose for `how_to_uat` as well
+  as the heading. A draft must emit `""` for both.
+
+**And an ordering defect the contract never mentioned.** `mode` is read at line
+298, *after* `normalize_scope_evidence` (281) and `normalize_evidence_list` (285)
+have already run and returned their diagnostics. Neither receives `mode`, so
+sites 5 and 6 cannot become mode-aware where they stand. Verified independently
+by the orchestrator against the source before amending: nothing between the
+target check and line 298 consults `mode`, and none of the four normalizers in
+that span takes it, so hoisting the mode resolution above both calls is safe and
+minimal. Contract §2.4 added; T014 and T015 amended.
+
+**The unknown-mode test would have passed silently** had it asserted only the
+diagnostic code rather than §2.1's exact message string. Asserting the literal is
+what makes it RED, and it means a differently-worded message in T015 is a real
+contract deviation the test will catch rather than absorb.
+
+**Before writing a line of test code the executor probed a hand-built draft
+packet through `validate-pr-packet-read-only`** and confirmed it passes with
+`status=passed`, `pr_blocked=false`, `failures=[]`. That is what establishes the
+target shape is reachable, so the RED that follows is about the producer and not
+about an impossible contract.
+
+**Cross-check between the two parallel RED agents.** Each independently measured
+layer 4 at 5774/5799 with 25 failures and each attributed exactly its own share —
+22 for T012, 3 for T013 — with the *passed* count holding at 5774 in both runs.
+Two independent agents agreeing on the split, and on nothing having regressed, is
+better evidence than either one alone.
+
+**The docs-site test reference did not stale.** Both tasks modified existing
+`.py` files and added none, and the generated page lists files by path, so the
+inventory is unchanged. Confirmed by running `reference:generate` and observing
+an empty diff rather than by assuming it.
