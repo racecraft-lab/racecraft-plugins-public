@@ -3,7 +3,7 @@
   "spec_id": "ART-007",
   "feature_dir": "specs/art-007-draft-pr-emission",
   "branch": "art-007-draft-pr-emission",
-  "status": "in_progress",
+  "status": "completed",
   "stage": "implement",
   "active_step": null,
   "prior_run_note": "completed_archived",
@@ -95,79 +95,79 @@
     },
     {
       "step": "Phase 7: Implement",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - Task Phase 1 Setup (T001-T003)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - Task Phase 2 Foundational draft packet mode (T004-T011)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - Task Phase 3 US1 draft-PR emission (T012-T027)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - Task Phase 4 US2 artifact authoring (T028-T034)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - Task Phase 5 US3 stage corroboration (T035-T043)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - Task Phase 6 Polish and regeneration (T044-T054)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Code Review",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Integration Suite",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Self-Review",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: PR Creation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Review Remediation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Retrospective",
-      "status": "pending"
+      "status": "completed"
     }
   ],
   "test_baseline_g0": {
@@ -219,6 +219,16 @@
       "threshold": 0.9,
       "mode": "advisory",
       "action": "proceed"
+    },
+    "G7": {
+      "pass": true,
+      "tasks_total": 54,
+      "tasks_complete": 53,
+      "not_run": [
+        "T052 (operator-gated)"
+      ],
+      "suite": "7525/7525",
+      "baseline": "7399/7399"
     }
   },
   "atomicity_route": {

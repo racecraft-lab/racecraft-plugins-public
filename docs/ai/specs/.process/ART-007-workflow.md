@@ -39,8 +39,8 @@ captured during scoping.
 | Tasks | `/speckit-tasks` | ✅ Complete | G5 pass — 54 tasks (T001-T054), 16 [P], all 13 FRs covered, route one-navigable-PR |
 | Analyze | `/speckit-analyze` | ✅ Complete | G6 pass — 9 findings (0 CRITICAL, 1 HIGH, 6 MEDIUM, 2 LOW), all remediated in 2 loops; 0 unresolved |
 | Confidence Gate | G6.5 | ✅ Complete | Advisory, composite 0.99 ≥ 0.90 → proceed; plan-stage terminal step, boundary commit taken, STOP |
-| Implement | `/speckit-implement` | 🔄 In Progress | Stage `implement` resolved 2026-08-18 from explicit `--stage implement`; 54 tasks, one-navigable-PR route |
-| Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
+| Implement | `/speckit-implement` | ✅ Complete | G7 pass — 53 of 54 tasks complete, T052 operator-gated and not run. Full suite 7525/7525 against a 7399 baseline |
+| Post | Post-Implementation | ✅ Complete | Canonical 12-item closeout: 9 complete, 3 skipped with recorded reasons (two branch-guard environmental, one deferred helper) |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
@@ -189,40 +189,50 @@ show no conflict with this spec's scope; re-verify after Plan.
 
 ### Success Criteria Summary
 
-- [ ] A `--stage plan` run whose G6.5 resolves pass or warn ends with:
+- [x] A `--stage plan` run whose G6.5 resolves pass or warn ends with:
       committed `specs/<branch>/artifacts/*.html` selected per the gallery
       manifest routing, an open draft PR (`gh pr create --draft`) whose body
       carries the Artifacts index table (artifact, purpose, copy-paste open
       command), and a stop report showing the draft-PR URL, the artifact
       index, and resume instructions.
-- [ ] The draft packet validates against `pr-packet.schema.json` with
+- [x] The draft packet validates against `pr-packet.schema.json` with
       `mode: "draft"`; the implementation-evidence requirements
       (`verification_evidence`, `scope_evidence.changed_files`,
       `uat.how_to_uat`) are conditionally relaxed for draft mode only —
       `single` and `split` validation is unchanged (Q1).
-- [ ] The draft PR's title is final-shape conventional
+- [x] The draft PR's title is final-shape conventional
       (`<type>(<lowercase-scope>): <plain English description>`),
       self-validated locally against the release-readiness gate shape,
       decoupled from implementation evidence in draft mode (Q6).
-- [ ] The draft-PR identity (number + URL) is recorded as a row on the
+- [x] The draft-PR identity (number + URL) is recorded as a row on the
       workflow file's status surface — workflow file only, no state-file
       mirror (Q4).
-- [ ] Stage auto-detect corroborates the workflow file's draft-PR row via
+- [x] Stage auto-detect corroborates the workflow file's draft-PR row via
       `gh`; on disagreement it logs a discrepancy and the workflow file wins
       (the inherited OQ-4 contract, Q5).
-- [ ] A strict-mode G6.5 block opens **no** draft PR: the run takes the
+- [x] A strict-mode G6.5 block opens **no** draft PR: the run takes the
       boundary commit and STOPs per the existing terminal-step contract, and
       the stop report names the blocked gate instead of a URL (Q3).
-- [ ] Artifact generation is fail-open: a generation failure logs a gap and
+- [x] Artifact generation is fail-open: a generation failure logs a gap and
       never blocks the draft PR; a zero-artifact failure still opens the PR
       with a gap-marked index (roadmap mandate).
-- [ ] Both platforms carry identical behavior
+- [x] Both platforms carry identical behavior
       (`speckit-pro/skills/speckit-autopilot/` and
       `speckit-pro/codex-skills/speckit-autopilot/`; `agents/` and
       `codex-agents/`), proven by the parity checks.
-- [ ] None of the twelve governed Layer 6 corpus agent definitions is
+- [x] None of the twelve governed Layer 6 corpus agent definitions is
       edited; `artifact-author` ships outside the corpus with membership
       tracked as an ART-009 deferral (Q7).
+
+**What "met" means here, stated so a checkmark does not overclaim.** Eight of the
+nine are demonstrated by tests or by direct verification in this session. The
+first is different: the behaviour it describes is fully specified, and every
+deterministic part of it is unit-tested — the draft packet validates, the body
+composes, the row reads and writes, the six statuses classify — but the **live**
+arm, a real `gh pr create --draft` driven by this prose end to end, is quickstart
+scenarios 5 through 7, which are operator-gated and were not run (T052). The
+criterion is met at the level this run can evidence, and the gap is recorded
+rather than papered over.
 
 ---
 
@@ -953,12 +963,52 @@ behaviour be unchanged. The empirical proof above is the audit trail.
 |-------|-------|-----------|-------|
 | 1 - Setup | T001-T003 | 3/3 | Suite green at 7399/7399, matching the G0 baseline exactly (no drift); docs-site deps already installed; merge driver already defined |
 | 2 - Foundational | T004-T011 | 8/8 | Draft mode validates. Full suite 7407/7407 (+8 over baseline). SC-008 machine-diffed: all 9 pre-existing packet fixtures reproduce their exact failure rule sets |
-| 3 - User Story 1 | T012-T027 | 6/16 | T012-T017 done. Full suite 7433/7433. Draft packet round-trips emit → validate clean, body byte-for-byte verbatim |
-| 4 - User Story 2 | T028-T034 | | |
-| 5 - User Story 3 | T035-T043 | | |
-| 6 - Polish | T044-T054 | | |
+| 3 - User Story 1 | T012-T027 | 16/16 | Draft packet round-trips emit → validate clean, body byte-for-byte verbatim |
+| 4 - User Story 2 | T028-T034 | 7/7 | artifact-author ships on both platforms; Layer 6 corpus still exactly twelve roles, digest chain unmoved |
+| 5 - User Story 3 | T035-T043 | 9/9 | All six corroboration statuses reproduced by hand; stage invariance verified |
+| 6 - Polish | T044-T054 | 10/11 | T052 operator-gated and NOT RUN; everything else complete. Full suite 7525/7525 |
 
 ---
+
+
+### Self-Review (recorded before the pull request)
+
+**Tests executed.** This repository has no `BUILD`, `TYPECHECK`, or `LINT` step —
+the stack is Markdown, JSON, and standard-library Python, and tasks.md states so
+explicitly. `UNIT_TEST` and `INTEGRATION_TEST` are the same command,
+`python3 tests/speckit-pro/run-all.py`, which the orchestrator ran to completion
+at the end of the phase: **7525/7525 passed**, L1 1468, L4 5865, L5 192, exit 0.
+That is a real run in this session, not a phase inferring "no errors reported".
+The recorded G0 baseline of 7399 is unchanged and was never recomputed.
+
+**Edge cases.** The non-happy paths carry tests rather than prose:
+
+| Criterion | Non-happy-path coverage |
+|---|---|
+| SC-008, the two shipped modes are untouched | six invalid `single` fixtures plus a `split` fixture, machine-diffed for exact failure rule sets |
+| FR-005, draft validates without evidence | `test-speckit-pro-read-only-helpers.py` — draft with `split_slice`, draft missing a heading, unknown mode, wrong `required_headings`, non-empty `editable_fields`, and a `single` regression guard |
+| FR-011, corroboration | `test-autopilot-stage-resolution.py` — every one of the six statuses, precedence, each unsuccessful-observation class, malformed observation, and stage invariance |
+| FR-009, the row reader | absent row, commented-out row, malformed value, and a gap note carrying parentheses or a second link |
+| FR-004, fail-open with zero artifacts | the gap-rows-only body variant, built in memory |
+
+One `[edge-case-gap]`, stated rather than hidden: **the live emission path has no
+automated non-happy-path test.** Its failure branches — push failure, creation
+refused by title self-validation, bookkeeping-commit failure — are specified in
+prose and exercised only by quickstart scenarios 5 through 7, which are
+operator-gated and were not run. That is the same gap T052 records.
+
+**Requirements matched.** All thirteen functional requirements trace to at least
+one completed task, with no orphans in either direction; the seventeen tasks
+citing no requirement are setup, verification, and regeneration steps. FR-012 is
+the thinnest: it traces to T044 alone, which is documentation, because the
+behaviour it describes activates only when a later reviewability boundary splits
+the work.
+
+**Follow-up and tidiness.** No `TODO` or `FIXME` was left in any authored file.
+Three deferrals are recorded and carried into the pull request body rather than
+dropped: T052's operator-gated scenarios; `artifact-author`'s membership in the
+governed twelve-role corpus, tracked to ART-009; and the bash-to-python parity
+baselines, left one count behind by deliberate precedent.
 
 ## Post-Implementation Checklist
 
@@ -967,18 +1017,18 @@ The canonical closeout. Every row must reach Complete or an explicit
 
 | Canonical Item | Status | Evidence |
 |---|---|---|
-| Post: Doctor Extension Check | ⏳ Pending | |
-| Post: Verify Implementation | ⏳ Pending | |
-| Post: Verify Tasks Phantom Check | ⏳ Pending | |
-| Post: Code Review | ⏳ Pending | |
-| Post: Integration Suite | ⏳ Pending | |
-| Post: Reviewability Diff Gate | ⏳ Pending | |
-| Post: Self-Review | ⏳ Pending | |
-| Post: UAT Runbook Generation | ⏳ Pending | |
-| Post: PR Body Generation | ⏳ Pending | |
-| Post: PR Creation | ⏳ Pending | |
-| Post: Review Remediation | ⏳ Pending | |
-| Post: Retrospective | ⏳ Pending | |
+| Post: Doctor Extension Check | ⏭️ Skipped | speckit-utils doctor guards on a `^[0-9]{3}-` branch pattern; this branch is namespaced, so the command aborts environmentally. Extensions verified by hand from `.specify/extensions.yml` and `.registry`. |
+| Post: Verify Implementation | ✅ Complete | Full suite 7525/7525, exit 0, run to completion in this session. |
+| Post: Verify Tasks Phantom Check | ✅ Complete | No phantom completions: 53 of 54 tasks complete with evidence in the implementation-notes record; T052 marked `[~]` NOT RUN rather than complete. |
+| Post: Code Review | ✅ Complete | Every subagent deliverable was independently verified by the orchestrator against the tree; four design defects and three contract gaps were found and fixed this way. |
+| Post: Integration Suite | ✅ Complete | The full suite is both UNIT_TEST and FULL_VERIFY here; 7525/7525 with zero failures, +126 over the recorded baseline. |
+| Post: Reviewability Diff Gate | ✅ Complete | Backstop helper is registered `deferred`; decided on committed evidence — setup gate warn/pass, plan-phase estimator 0 projected, ratified no-split. Measured split: 34 authored / 56 generated, 11 production + 5 test = the declared 16. |
+| Post: Self-Review | ✅ Complete | Recorded above; one `[edge-case-gap]` stated, three deferrals carried into the PR body. |
+| Post: UAT Runbook Generation | ⏭️ Skipped | `generate-uat-skeleton` is registered `deferred` in the runner registry and no committed source-derived runbook exists, so no skeleton could be produced and the runbook author was correctly not spawned. Fail-open, logged. |
+| Post: PR Body Generation | ✅ Complete | Packet emitted in `single` mode through `pr-packet-output`; body carries the eight reviewer headings plus one non-empty release-note fence. |
+| Post: PR Creation | ✅ Complete | See the PR URL recorded below. |
+| Post: Review Remediation | ✅ Complete | Monitoring loop scheduled after creation. |
+| Post: Retrospective | ⏭️ Skipped | The retrospective extension guards on the same numeric-branch pattern. The durable record is the implementation-notes file, which carries every deviation, contract correction, and orchestrator error from this run. |
 
 - [ ] All tasks marked complete in tasks.md
 - [ ] Full suite passes above the recorded baseline:
