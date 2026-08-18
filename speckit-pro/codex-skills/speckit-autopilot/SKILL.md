@@ -592,6 +592,55 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
   before Phase 0 with that one-line message — the same fail-fast shape
   0.6b uses. **Print the resolved stage and its basis before any phase
   work begins.**
+  - **Corroborate the recorded draft pull request.** Take **one** read-only
+    observation per run, and only when the workflow file's `Draft PR` row is
+    present. Read the row first; when it is absent, take no observation and send
+    no `pr_observation` at all. When it is present, take exactly one, scoped to
+    the feature's head branch:
+
+    ```text
+    gh pr list --head <branch> --state all --json number,url,state,isDraft,headRefName
+    ```
+
+    `--state all` is load-bearing: returning pull requests in every state is
+    what makes a closed one distinguishable from an absent one. The trigger is
+    the **row's presence, not the stage** — an explicit `--stage` argument and a
+    resolved stage other than `plan` each take it, and a run with no emission
+    terminal step still reports the status and still records a discrepancy.
+  - **Pass it as `inputs.pr_observation`; the helper classifies it.** Set `ok`
+    to the JSON literal `true` — never `1`, never `"true"` — only when the query
+    exited zero *and* its output parsed, carrying the parsed array in
+    `pull_requests`; otherwise send `ok: false` with a short `reason`. **You take
+    the observation; the helper never does** — it never runs the tool and never
+    touches the network, which keeps classification deterministic and
+    offline-testable. Anything short of `ok: true` with a parseable array yields
+    `skipped`, because a query that was absent, unauthenticated, rate-limited, or
+    unparseable is not evidence that a recorded pull request is gone.
+  - **Print one line beside the `Stage:` line, on every run**, naming
+    `corroboration.status` from the envelope. The object is always present, so
+    all six statuses print — `match`, `no_record`, `skipped`, `pr_closed`,
+    `pr_missing`, `identity_mismatch` — and a run that could not check stays
+    distinguishable from one that checked and agreed:
+
+    ```text
+    Stage: plan (argv) — explicit --stage plan
+    Draft PR: match — #438 recorded, #438 observed
+    ```
+
+    ```text
+    Draft PR: skipped — gh not authenticated
+    Draft PR: pr_closed — #438 recorded, closed (merged: false)
+    ```
+  - **Record that same line durably in this step's workflow-file record for the
+    three discrepancy statuses only** — `pr_closed`, `pr_missing`, and
+    `identity_mismatch` — in the **same edit turn as the `Stage` row**, so it
+    lands in the same commit. `match`, `no_record`, and `skipped` write nothing
+    durable, and the scaffold workflow template ships no placeholder line.
+  - **Corroboration reports; it never decides.** It never changes the resolved
+    stage, never blocks stage resolution, and never stops the run. It is computed
+    after the stage is decided and only ever appended to the envelope. Every
+    consequence of a discrepancy belongs to the terminal step, in
+    [phase-execution-codex.md](./references/phase-execution-codex.md).
 - **Step 0.8: Capability Coverage Check** — informational research/context advisory (agents have fallbacks)
 - **Step 0.8b: Capability Enumeration, Grounding & Feed-down** — you are the only component that discovers openly. Enumerate the tools and installed skills this session actually exposes and select best-fit per the capability-discovery directive (speckit-pro/skills/speckit-autopilot/references/capability-discovery.md); assume no fixed set — the user may have installed anything. Subagents inherit the operator's full installed surface and follow the same directive — read-only roles select only read/research capabilities (their mutation built-ins are denied). Still pass the discovered evidence a subagent needs directly in each prompt: shared context beats re-discovery. Ground your OWN output (gate decisions, consensus synthesis, PR bodies) per the grounding contract (speckit-pro/skills/speckit-autopilot/references/grounding.md): cite a real tool/skill/file result for every external fact, and abstain when none grounds it.
 - **Step 0.9: Constitution Validation** — principle checks against current codebase

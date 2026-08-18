@@ -842,6 +842,70 @@ a re-run of an already-resolved stage does not repeat that advance. Treating the
 resulting empty stage as a failure would strand the operator re-run that is the
 only recovery path.
 
+#### Artifact generation: the `artifact-author` dispatch
+
+Step 1 is one dispatch of the `speckit-pro:artifact-author` subagent. The
+orchestrator hands it the feature's planning record and the shipped gallery, and
+it returns one outcome per page it wrote or could not write:
+
+```text
+Agent(
+  subagent_type: "speckit-pro:artifact-author",
+  description: "SPEC-XXX draft artifact generation",
+  prompt: """
+    Author this feature's draft-stage gallery pages and write them into
+    specs/<feature>/artifacts/.
+
+    Inputs, all read-only:
+    - Specification: specs/<feature>/spec.md
+    - Plan: specs/<feature>/plan.md
+    - Tasks: specs/<feature>/tasks.md
+    - Design concept: docs/ai/specs/.process/<SPEC-ID>-design-concept.md
+    - Gallery manifest: speckit-pro/artifact-gallery/manifest.json
+    - Templates: speckit-pro/artifact-gallery/templates/<entry-id>.html
+
+    Select, fill, and report per your agent instructions. Return one outcome
+    per selected page.
+  """
+)
+```
+
+**Selection lives inside the agent and is driven by the manifest.** The
+orchestrator names no page list of its own. The agent reads
+`speckit-pro/artifact-gallery/manifest.json`, keeps the entries whose `stage` is
+`draft-pr`, and applies each surviving entry's `trigger`: `{"always": true}`
+selects on every run, and `{"any_of": [...]}` selects only when the feature
+carries at least one signal the entry names.
+
+As the manifest stands, that routing selects the implementation-plan and
+spec-explainer pages on every run, the code-approaches page only on the
+`competing_approaches` signal, and the module-map page only on the
+`brownfield_change` signal. **The manifest is read at run time and wins over
+that sentence.** It is the routing's source of truth and it grows, so a page
+list memorized from this paragraph goes stale, and a draft-stage entry shipped
+later must route from the manifest alone with no edit here.
+
+**The gallery is input, never output.** `speckit-pro/artifact-gallery/` holds
+the shipped manifest and the shipped templates, and writing anything into that
+directory is a defect. Finished pages are written to
+`specs/<feature>/artifacts/`, one per selected entry, keeping the manifest
+entry's `id` as the filename stem.
+
+**Each outcome is `generated` or `gap`**, one per selected page, and a gap names
+what is missing and why. **A page with any unfilled slot is a gap for that page,
+not a partial success** — a half-filled page is never reported as generated.
+Feed the outcome list to the three sinks under fail-open below. That subsection
+owns where each outcome is written and which runs reach it; this step owes it
+nothing but the outcomes themselves.
+
+**A dispatch that cannot report is a whole-set gap, not a failed step.** An
+agent that errors, returns nothing, or returns something that cannot be read as
+an outcome list leaves the run with zero generated pages and one whole-set gap
+naming that reason. The precondition rule above binds the steps that stop the
+sequence; generation is not one of them, because fail-open below turns every
+shortfall this step can produce into an outcome. The sequence continues to
+step 2 either way.
+
 #### Strict-mode block: the return happens before generation
 
 On a strict-mode block the run never enters the sequence above. The blocked-stop

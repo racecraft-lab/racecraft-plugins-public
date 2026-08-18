@@ -956,3 +956,40 @@ non-empty release-note fence — and pass it as `inputs.body` at emission time.
 **Never** hand-edit `body.md` afterwards: editing outside the editable markers
 invalidates the fingerprint and blocks the packet, and that is the failure mode
 this note exists to avoid.
+
+### Scope evidence — the declared file count held exactly
+
+Measured against `origin/main...HEAD`, not projected: **90 changed files, of which
+56 are generated and 34 authored.**
+
+Of the 34 authored, the split matches plan.md's declaration precisely:
+
+| Group | Count | Files |
+|---|---|---|
+| Shipped plugin (`speckit-pro/`) | **11** | both `artifact-author` definitions; both `phase-execution` references; both `SKILL.md` files; `pr-packet.schema.json`; `workflow-file-protocol.md`; `install.py`; `pr_emission.py`; `read_only.py` |
+| Repository tests (`tests/speckit-pro/`) | **5** | the paired draft fixture, and the three existing test files |
+| **Declared total** | **16** | matches plan.md's 16 declared file operations exactly |
+
+The remaining authored files are the specification and process artifacts the SDD
+phases produce — spec, plan, research, data model, quickstart, tasks, four
+contracts, three checklists, the SPEC-MOC, the workflow file, the design concept,
+the state file, and the roadmap entries. Those are the record of the work rather
+than the work, and the reviewability budget never counted them.
+
+This is the check T004 deliberately did **not** recompute at the start of the
+phase, and it is worth recording now that the phase is nearly done: the plan's
+hand count of 16 was accurate, the split decision of **no split** stands, and
+task generation and implementation together added no file beyond the sixteen the
+plan declared. The 56 generated files are `dist/` payloads for both platforms,
+the runner trust manifest and checksum, the installed-cache proofs and their
+mirrored sources, the three XPLAT-009 evidence records, and the docs-site test
+reference — every one of them a pure function of the authored tree, produced by
+`scripts/refresh-release-artifacts.py` and hand-edited nowhere.
+
+**Title pre-validation.** `feat(speckit-autopilot): open a draft pull request
+when the plan stage ends` satisfies both gates: the release-readiness
+`validate-pr-title` regex, which permits a lowercase scope only, and
+`validate-pr-workflow-contract`'s conventional-format rule. The scope rule does
+not fire at all here — `spec_scope_from_changed_path` returns nothing for an
+`art-` slug, so the changed-file set derives no expected scope. Checked by
+running the derivation over the real 90-file list rather than reasoning about it.
