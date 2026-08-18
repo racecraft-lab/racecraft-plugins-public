@@ -1,55 +1,57 @@
 # ART-005 UAT Results
 
 Feature: ART-005 gallery completion knowledge reports/editors
-Artifacts: `slide-deck`, `concept-explainer`, `status-report`
+Artifacts: `slide-deck`, `concept-explainer`, `status-report`, `incident-report`
 Template paths:
 - `speckit-pro/artifact-gallery/templates/slide-deck.html`
 - `speckit-pro/artifact-gallery/templates/concept-explainer.html`
 - `speckit-pro/artifact-gallery/templates/status-report.html`
+- `speckit-pro/artifact-gallery/templates/incident-report.html`
 Runbook path: `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-runbook.md`
 JSON path: `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json`
 Driver: `manual`
-Status: T048 complete; all 108 cumulative Slice 1-3 rows are bound to source
-checkpoint `36ef824dee02292e13704473292084173acb2f91`.
+Status: T061 complete; all 144 cumulative Slice 1-4 rows are bound to source
+checkpoint `f27b7833e3d3e05772c7ebc44d4640f2b9d129ea`.
 
 ## Source Checkpoint vs Evidence Commit
 
 The source checkpoint is
-`36ef824dee02292e13704473292084173acb2f91`. It contains all three source
+`f27b7833e3d3e05772c7ebc44d4640f2b9d129ea`. It contains all four source
 templates, the manifest, cumulative tests, generated outputs, and the
 pre-execution evidence carriers that were tested. The later evidence commit
 records these results without changing the tested source bytes. The JSON names
 the source checkpoint rather than the evidence commit.
 
-A fresh connected-browser selection for the exact status-report URL returned
+A fresh connected-browser selection for the exact incident-report URL returned
 `No browser is available`. Per the operator's fallback instruction, Playwright
 MCP then supplied browser interaction and observation. No repository browser
 harness was committed, so the contract driver remains `manual`.
 
 ## Execution Environment
 
-- Executed at: `2026-08-18T19:51:16Z`
+- Executed at: `2026-08-18T20:44:34Z`
 - OS: macOS 26.6.2, Build 25G82, arm64
 - Browser: Google Chrome 151.0.7922.138
 - Scheme: direct `file://`
 - Viewports: 360 and 1280 CSS px widths, using a 900 CSS px observation height
-- Network: online baseline plus context-offline reload for all three readers;
+- Network: online baseline plus context-offline reload for all four readers;
   a disposable remote probe failed with `net::ERR_INTERNET_DISCONNECTED`
 - Themes: light and dark, including persisted-dark reload
 - Motion: no-preference plus `prefers-reduced-motion: reduce`
 - Color-independent review: Ready/Watch/Stop text plus circle/square/block;
   labeled node circles, square keys, scenario headings, and `Watch:` text;
-  eight explicit status/next-action cues in the status report
+  eight explicit status/next-action cues in the status report; text-backed
+  severity/status, numbered timeline events, and owned follow-ups in the incident report
 
 ## Row Totals
 
-- Total cumulative Slice 1-3 rows: 108
-- Executed pass rows: 54
-- Evidence-backed N/A rows in JSON: 54
-- JSON rows currently recorded: 108
-- Pass verdicts: 54
+- Total cumulative Slice 1-4 rows: 144
+- Executed pass rows: 72
+- Evidence-backed N/A rows in JSON: 72
+- JSON rows currently recorded: 144
+- Pass verdicts: 72
 - Fail verdicts: 0
-- Not-applicable verdicts: 54
+- Not-applicable verdicts: 72
 
 Every executable row passed; no result is omitted from the normalized JSON.
 
@@ -122,6 +124,29 @@ Every executable row passed; no result is omitted from the normalized JSON.
 | SR-UAT-017 | Pass | Complete report passed at 1280 CSS px with no page overflow or clipped reviewed node. |
 | SR-UAT-018 | Pass | Manifest matched ID, title, pinned source, reader role, shipped status, and `exports: []`. |
 
+## Incident-Report Executed Matrix
+
+| Row | Verdict | Evidence summary |
+|---|---|---|
+| IR-UAT-001 | Pass | Exact repository-relative template opened over `file://`; expected title/h1 rendered; zero console or page errors. |
+| IR-UAT-002 | Pass | All five fills were complete with seven timeline anchors and four follow-up anchors. |
+| IR-UAT-003 | Pass | Named navigation exposed five links whose live hashes targeted the matching visible sections. |
+| IR-UAT-004 | Pass | Summary exposed incident ID, SEV-2, Resolved, 47 min, detection time, owner, mitigation, and no data loss. |
+| IR-UAT-005 | Pass | Seven ordered anchors covered rollout, impact, alert, diagnosis, mitigation, and resolution. |
+| IR-UAT-006 | Pass | Impact exposed failed requests, peak rate, workspaces, data loss, SLA, and recovery. |
+| IR-UAT-007 | Pass | Three ordered cause items stated the 8/64 mismatch, missing magnitude lint, and diagnosis delay. |
+| IR-UAT-008 | Pass | Four anchored follow-ups exposed explicit Status, Owner, and Due text. |
+| IR-UAT-009 | Pass | Offline reload preserved all local content/navigation; remote probe failed with `net::ERR_INTERNET_DISCONNECTED`. |
+| IR-UAT-010 | Pass | Forward and reverse traversal covered theme plus the five report navigation links. |
+| IR-UAT-011 | Pass | Theme focus measured 2px/2px; report links measured 3px/3px solid focus. |
+| IR-UAT-012 | Pass | Light/dark content matched, dark persisted, and the reader returned to light. |
+| IR-UAT-013 | Pass | Reduce mode computed 0.01ms durations and zero running animations after settle. |
+| IR-UAT-014 | Pass | Text, ordered positions, and explicit labels carried severity, state, sequence, and ownership without hue. |
+| IR-UAT-015 | Pass | Source and runtime found no meaningful horizontal-scroll element at either width. |
+| IR-UAT-016 | Pass | Complete report passed at 360 CSS px with no page overflow or clipped reviewed node. |
+| IR-UAT-017 | Pass | Complete report passed at 1280 CSS px with no page overflow or clipped reviewed node. |
+| IR-UAT-018 | Pass | Manifest matched ID, title, pinned source, reader role, shipped status, and `exports: []`. |
+
 ## Slide-Deck Evidence-Backed N/A Matrix
 
 | Row | Case | JSON treatment | Evidence basis |
@@ -191,10 +216,33 @@ Every executable row passed; no result is omitted from the normalized JSON.
 | SR-UAT-035 | `sequential_transition` | `not_applicable` with `errorHandlingObservation.notApplicableReason` | No clipboard recovery sequence exists. |
 | SR-UAT-036 | `superseded_attempt` | `not_applicable` with `errorHandlingObservation.notApplicableReason` | No overlapping clipboard attempts exist. |
 
-## Source and Browser Evidence Used For T048
+## Incident-Report Evidence-Backed N/A Matrix
+
+| Row | Case | JSON treatment | Evidence basis |
+|---|---|---|---|
+| IR-UAT-019 | `horizontal_scroll_region` | `not_applicable` with `accessibilityObservation.notApplicableReason` | Source/runtime found no actual horizontal scroll element at either width. |
+| IR-UAT-020 | `live_export_freshness` | `not_applicable` with `dataIntegrityObservation.notApplicableReason` | Reader manifest declares `exports: []`; no export control exists. |
+| IR-UAT-021 | `empty_values` | `not_applicable` with `dataIntegrityObservation.notApplicableReason` | No producer-owned serialized fields or payload exist. |
+| IR-UAT-022 | `invalid_raw_value` | `not_applicable` with `dataIntegrityObservation.notApplicableReason` | No producer-owned raw input parsing exists. |
+| IR-UAT-023 | `unavailable_normalized_value` | `not_applicable` with `dataIntegrityObservation.notApplicableReason` | No producer-owned normalization exists. |
+| IR-UAT-024 | `duplicate_identifiers` | `not_applicable` with `dataIntegrityObservation.notApplicableReason` | No producer-owned entity collection is exported. |
+| IR-UAT-025 | `special_character_round_trip` | `not_applicable` with `dataIntegrityObservation.notApplicableReason` | No structured export round trip exists. |
+| IR-UAT-026 | `multiple_issue_order` | `not_applicable` with `dataIntegrityObservation.notApplicableReason` | No editor issue list exists. |
+| IR-UAT-027 | `clipboard_exact_equality` | `not_applicable` with `dataIntegrityObservation.notApplicableReason` | No clipboard/fallback export is attempted. |
+| IR-UAT-028 | `superseded_copy_attempt` | `not_applicable` with `dataIntegrityObservation.notApplicableReason` | No copy attempt or stale export race exists. |
+| IR-UAT-029 | `genuine_success` | `not_applicable` with `errorHandlingObservation.notApplicableReason` | No clipboard success path exists. |
+| IR-UAT-030 | `clipboard_absent` | `not_applicable` with `errorHandlingObservation.notApplicableReason` | No clipboard fallback path exists. |
+| IR-UAT-031 | `method_non_callable` | `not_applicable` with `errorHandlingObservation.notApplicableReason` | No clipboard method is called. |
+| IR-UAT-032 | `permission_denied` | `not_applicable` with `errorHandlingObservation.notApplicableReason` | No clipboard permission branch exists. |
+| IR-UAT-033 | `generic_rejection` | `not_applicable` with `errorHandlingObservation.notApplicableReason` | No rejected clipboard promise exists. |
+| IR-UAT-034 | `synchronous_throw` | `not_applicable` with `errorHandlingObservation.notApplicableReason` | No synchronous clipboard call exists. |
+| IR-UAT-035 | `sequential_transition` | `not_applicable` with `errorHandlingObservation.notApplicableReason` | No clipboard recovery sequence exists. |
+| IR-UAT-036 | `superseded_attempt` | `not_applicable` with `errorHandlingObservation.notApplicableReason` | No overlapping clipboard attempts exist. |
+
+## Source and Browser Evidence Used For T061
 
 - `specs/art-005-gallery-completion-knowledge-reports-editors/contracts/uat-evidence-contract.md` defines the active paths, JSON schema, row schema, required matrix, and reader `not_applicable` rules.
-- `specs/art-005-gallery-completion-knowledge-reports-editors/plan.md` defines the cumulative Slice 1-3 UAT increments and active carriers.
+- `specs/art-005-gallery-completion-knowledge-reports-editors/plan.md` defines the cumulative Slice 1-4 UAT increments and active carriers.
 - `speckit-pro/artifact-gallery/manifest.json:170-178` declares `slide-deck`, source `09-slide-deck.html`, status `shipped`, and `exports: []`.
 - `speckit-pro/artifact-gallery/templates/slide-deck.html:805-889` shows the reader content, three slide articles, speaker notes, and navigation controls.
 - `speckit-pro/artifact-gallery/templates/slide-deck.html:486-492` sets `overflow-x:hidden` on `html` and `body`; source search found no `overflow-x:auto` or `overflow-x:scroll`.
@@ -204,13 +252,16 @@ Every executable row passed; no result is omitted from the normalized JSON.
 - `speckit-pro/artifact-gallery/manifest.json:192-200` declares `status-report`, source `11-status-report.html`, status `shipped`, and `exports: []`.
 - `speckit-pro/artifact-gallery/templates/status-report.html:611-724` contains the complete summary plus Landed, In flight, Blocked, and Next actions sections with eight anchored items.
 - `speckit-pro/artifact-gallery/templates/status-report.html:482` sets `overflow-x:hidden` on `html` and `body`; source search found no `overflow-x:auto` or `overflow-x:scroll`.
+- `speckit-pro/artifact-gallery/manifest.json:203-211` declares `incident-report`, source `12-incident-report.html`, status `shipped`, and `exports: []`.
+- `speckit-pro/artifact-gallery/templates/incident-report.html:606-768` contains complete incident summary, navigation, seven timeline anchors, impact, causal chain, and four follow-ups; source search found no `overflow-x:auto` or `overflow-x:scroll`.
 - Playwright accessibility snapshots and runtime state checks covered navigation
   naming, focus order, hidden/inert state, live position text, responsive
   geometry, reduced motion, theme parity, deterministic/session-only behavior,
   exact boundary feedback, semantic report sections, eight text-backed status
-  cues, and zero final-load console errors for all three readers.
+  cues, named incident navigation, timeline/follow-up anchors, and zero final-load
+  console errors for all four readers.
 - Playwright context offline mode produced `net::ERR_INTERNET_DISCONNECTED`
-  in a disposable remote-probe tab while all three local readers reloaded and
+  in a disposable remote-probe tab while all four local readers reloaded and
   remained usable.
 
 ## Slice 1 Pre-Generation Reviewability Measurement
@@ -627,3 +678,32 @@ focused-gallery failures are the T059-owned source/dist payload set-and-byte
 parity checks. The declared maximum physical boundary remains 33 paths; any
 final total-file block may continue only if every excess path is generated or
 workflow/control-plane evidence.
+
+## Slice 4 Cumulative UAT (T061)
+
+Fresh connected-browser selection for the exact incident-report file returned
+`No browser is available`. After the Browser skill's prescribed discovery check
+confirmed an empty connected-browser list, the operator-authorized Playwright
+MCP fallback re-executed all 144 cumulative rows against source checkpoint
+`f27b7833e3d3e05772c7ebc44d4640f2b9d129ea`.
+
+- Browser: Google Chrome 151.0.7922.138 on macOS 26.6.2, Build 25G82, arm64
+- Viewports: 360 and 1280 CSS px by 900 CSS px
+- Verdicts: **72 pass, 72 structured `not_applicable`, 0 fail**
+- Per artifact: **36 rows each** for slide-deck, concept-explainer,
+  status-report, and incident-report
+- Slide-deck no-autorotation: BODY stayed on Slide 1 for 31.009 seconds;
+  focused stage stayed on Slide 1 for 31.003 seconds; temporary tabindex values
+  were removed
+- Offline: all four local files reloaded and remained usable; disposable remote
+  probe failed with `net::ERR_INTERNET_DISCONNECTED`
+- Motion: 0.01ms maximum transition/animation durations and zero running
+  animations after settle
+- Layout: zero page overflow and zero clipped reviewed nodes at both widths
+- Console/page errors: **0** across the final-load observations
+- Screenshots: `art-005-slice-4-{slide-deck,concept-explainer,status-report,incident-report}-{360,1280}.png`
+
+The tested template, manifest, focused tests, payload mirrors, installed-cache
+mirrors, and generated proofs remain byte-identical to the source checkpoint.
+Only the three UAT carriers and workflow/control-plane bookkeeping changed after
+that checkpoint.
