@@ -3,10 +3,10 @@
   "spec_id": "ART-004",
   "feature_dir": "specs/art-004-gallery-completion-design-prototyping",
   "branch": "art-004-gallery-completion-design-prototyping",
-  "status": "in_progress",
+  "status": "awaiting_review",
   "stage": "plan",
-  "active_step": "Phase 3: Plan",
-  "updated_at": "2026-08-17T23:55:52Z",
+  "active_step": "Phase 3: Plan - blocked for human-approved split",
+  "updated_at": "2026-08-18T00:57:47Z",
   "reclaimed_from": "docs/ai/specs/.process/ART-003-slice-3-workflow.md",
   "settings": {
     "consensus_mode": "moderate",
@@ -87,6 +87,27 @@
       "reviewable_loc": 865,
       "block_threshold": 800,
       "authority": "risk evidence only until Phase 3 declares actual file operations"
+    },
+    "plan_gate": {
+      "status": "block",
+      "pass": false,
+      "reviewable_loc": 865,
+      "production_files": 9,
+      "total_files": 11,
+      "exception_honored": false,
+      "blockers": [
+        "reviewable LOC 865 exceeds block threshold 800",
+        "production files 9 exceeds block threshold 8"
+      ],
+      "decision": "Stop and split",
+      "next_action": "human-approved split required before Checklist or Tasks"
+    },
+    "plan_estimator": {
+      "status": "pass",
+      "projected": 0,
+      "production_files": 0,
+      "declared_total_entries": 11,
+      "disposition": "non-authoritative for ART-004 because the current classifier omits the declared HTML/Python review surface"
     }
   },
   "plan": [
@@ -99,7 +120,7 @@
     {"step": "Phase 2: Clarify - Decision exports Consensus", "status": "skipped: executor reported zero unresolved items"},
     {"step": "Phase 2: Clarify - Global keyboard-scroll guard", "status": "completed"},
     {"step": "Phase 2: Clarify - Global keyboard-scroll guard Consensus", "status": "skipped: executor reported zero unresolved items"},
-    {"step": "Phase 3: Plan", "status": "in_progress"},
+    {"step": "Phase 3: Plan", "status": "blocked: reviewability gate requires human-approved split"},
     {"step": "Phase 4: Checklist - ux", "status": "pending"},
     {"step": "Phase 4: Checklist - ux Consensus", "status": "pending"},
     {"step": "Phase 4: Checklist - accessibility", "status": "pending"},
@@ -142,6 +163,12 @@
       "pass": true,
       "markers": 0,
       "reason": "0 [NEEDS CLARIFICATION] markers"
+    },
+    "G3": {
+      "pass": false,
+      "markers": 0,
+      "reason": "reviewability gate blocked at 865 LOC and 9 production files",
+      "decision": "Stop and split"
     }
   },
   "phase_results": {
@@ -173,6 +200,26 @@
       "remaining_markers": 0,
       "unresolved_for_consensus": 0,
       "consensus": "skipped: executor reported zero unresolved items"
+    },
+    "plan": {
+      "status": "blocked",
+      "artifacts": [
+        "plan.md",
+        "research.md",
+        "data-model.md",
+        "quickstart.md",
+        "contracts/gallery-artifact-contract.md",
+        "contracts/decision-export-contract.md",
+        "contracts/keyboard-scroll-guard-contract.md"
+      ],
+      "markers": 0,
+      "declared_authored_files": 11,
+      "declared_generated_paths": 58,
+      "reviewable_loc": 865,
+      "production_files": 9,
+      "gate": "G3 blocked",
+      "decision": "Stop and split",
+      "downstream": "Checklist and Tasks not started"
     }
   }
 }

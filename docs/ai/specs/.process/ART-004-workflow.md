@@ -72,7 +72,7 @@ Projected reviewable LOC: 865
 |---|---|---|---|
 | Specify | /speckit-specify | ✅ Complete | 14 requirements, 3 stories, 0 unresolved markers; G1 passed |
 | Clarify | /speckit-clarify | ✅ Complete | 3 sessions, 15 accepted answers, 0 markers, no consensus fan-out; G2 passed |
-| Plan | /speckit-plan | 🔄 In Progress | Mandatory declared-file reviewability decision |
+| Plan | /speckit-plan | ⚠️ Blocked | G3 blocked at 865 reviewable LOC and 9 production files; awaiting a human-approved split |
 | Checklist | /speckit-checklist | ⏳ Pending | UX, accessibility, error handling |
 | Tasks | /speckit-tasks | ⏳ Pending | Only after a non-blocking plan |
 | Analyze | /speckit-analyze | ⏳ Pending | Cross-check against the design concept |
@@ -432,11 +432,25 @@ answers in the design rationale: "Functional fidelity", "Pin one commit",
 
 | Artifact | Status | Notes |
 |---|---|---|
-| plan.md | ⏳ | Must contain a gate verdict |
-| research.md | ⏳ | Pinned-source and pattern evidence |
-| data-model.md | ⏭️ likely skipped | DOM state only; justify |
-| contracts/ | ⏳ | Export payload and gallery contract mapping if useful |
-| quickstart.md | ⏳ | Direct file:// and verification instructions |
+| plan.md | ⚠️ Blocked | Complete plan records the binding `Stop and split` verdict |
+| research.md | ✅ Complete | Pinned-source and shipped-pattern evidence |
+| data-model.md | ✅ Complete | DOM state, manifest state, and keyboard-scroll declaration model |
+| contracts/ | ✅ Complete | Gallery, decision-export, and keyboard-scroll guard contracts |
+| quickstart.md | ✅ Complete | Direct `file://`, suite, UAT, and regeneration instructions |
+
+Plan-phase evidence:
+
+- Structure validation found `plan.md` with zero unresolved markers.
+- The advisory estimator returned `status=pass`, `projected=0`, and
+  `production=0` for 11 declared authored operations. Its current classifier
+  does not recognize this feature's HTML/Python review surface, so that result
+  does not override the declared plan inputs.
+- The authoritative setup-mode reviewability helper, targeted at `plan.md`,
+  returned `status=block`, `pass=false`, `reviewable_loc=865`,
+  `production_files=9`, and `total_files=11`, with no honored exception.
+- Blockers: reviewable LOC exceeds 800 and production files exceed 8.
+- **G3 verdict: BLOCKED.** Per the recorded `Stop and split` answer, the run
+  stops before Checklist and Tasks and awaits a new human-approved split.
 
 ---
 
