@@ -24,9 +24,9 @@ stop_reason: "natural"
 - Port all seven ART-005 templates as branded, standalone gallery artifacts:
   `slide-deck`, `concept-explainer`, `status-report`, `incident-report`,
   `triage-board`, `feature-flags`, and `prompt-tuner`.
-- Deliver the seven ports as **one combined review and merge slice** (Q1),
-  preserving the roadmap's existing one-slice topology despite both the roadmap
-  and fresh estimator recommending two slices.
+- Deliver the seven ports as **seven sequential stacked review slices**, one
+  template per slice, under one ART-005 specification and workflow. This
+  supersedes the initial combined-slice answer after Plan measured a block.
 - Resolve one immutable commit from `anthropics/html-effectiveness` during Plan
   research and use that same revision for all seven derivatives (Q3).
 - Verify whether the four templates currently declared with `exports: []` are
@@ -88,16 +88,17 @@ Result:
 ```
 
 This corroborates the roadmap's earlier 560-LOC warning rather than replacing
-it (`html-artifacts-technical-roadmap.md:419-425`). The user nevertheless chose
-one combined slice in Q1. Plan must therefore measure the pinned upstream files
-and project the complete reviewable surface before implementation begins.
+it (`html-artifacts-technical-roadmap.md:419-425`). The user initially chose one
+combined slice in Q1, so Plan measured the pinned upstream files and projected
+the complete reviewable surface before implementation began.
 
 That check is material: ART-002 declared 530 LOC per slice and realized 1494
 and 2027, while ART-003's one-template slices landed at 735, 724, and 408 after
 re-estimation (`.specify/memory/archive-reports/2026-08-14-art-003-post-merge-hygiene.md:88-103`).
-If the combined plan crosses the final reviewability block, planning must stop
-and surface the conflict rather than silently overriding either the user's
-one-slice decision or the repository gate.
+The combined plan did cross the final reviewability block: the seven pinned
+sources measured 4,042 lines and 120,618 bytes, with a conservative projection
+of 2,856 reviewable LOC. Planning stopped, and on 2026-08-17 the operator
+resolved the conflict by selecting seven independently measured slices.
 
 The roadmap's approximate file count covers authored surfaces, not the generated
 footprint. Plan must separately declare the regenerated Claude and Codex payload
@@ -127,9 +128,21 @@ generated mirrors remain excluded from hand-authored reviewable LOC.
 
 **User's answer:** One combined slice.
 
-**Consequence:** ART-005 remains one spec, one implementation branch, and one
-review/merge unit. The plan-time reviewability measurement is a hard decision
-checkpoint, not permission to split automatically.
+**Historical consequence (superseded):** ART-005 would remain one spec, one
+implementation branch, and one review/merge unit. The plan-time reviewability
+measurement was a hard decision checkpoint, not permission to split
+automatically.
+
+**Superseding operator decision (2026-08-17):** Seven slices.
+
+**Revised consequence:** ART-005 remains one spec and one workflow, but delivery
+uses seven sequential stacked PR slices in manifest order: `slide-deck`,
+`concept-explainer`, `status-report`, `incident-report`, `triage-board`,
+`feature-flags`, and `prompt-tuner`. Slice 1 uses the current branch; each later
+slice is cut from its predecessor after the predecessor PR is open. Each slice
+contains one template and its incremental shared integration changes. Planning
+must measure every slice independently and stop a blocked slice without
+splitting its template or inventing an exception.
 
 ---
 
@@ -168,7 +181,7 @@ Markdown organized by board column; its exact headings are a Plan detail.
 > The manifest identifies seven upstream filenames but carries no immutable
 > revision (`manifest.json:170-244`), and none of those upstream HTML files is
 > vendored locally. Resolving one commit during research makes the derivative
-> inputs repeatable and keeps every port in the combined review on the same
+> inputs repeatable and keeps every port in the seven-slice stack on the same
 > source baseline.
 
 **Alternatives offered:**
@@ -418,6 +431,10 @@ need another interview turn.
   Checklist, Tasks, or Implementation. It records the projection and waits for
   an explicit operator topology decision; the prior one-slice answer is not an
   exception and no automatic split is authorized.
+  **Resolved by operator on 2026-08-17:** The combined conservative projection
+  was 2,856 reviewable LOC, above the 800-LOC block. The operator selected seven
+  sequential slices, one template per slice. Plan now evaluates each slice
+  independently under the same ART-005 spec and workflow.
 
 ## Recommended Next Step
 

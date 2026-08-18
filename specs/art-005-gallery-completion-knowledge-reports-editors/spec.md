@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: User description: "Port seven planned knowledge, report, and editor gallery templates into complete standalone Racecraft artifacts, preserving the accepted one combined slice, resolving semantic export obligations from pinned upstream evidence, and delivering file:// UAT evidence."
+**Input**: User description: "Port seven planned knowledge, report, and editor gallery templates into complete standalone Racecraft artifacts, delivering them as seven independently reviewable stacked slices, resolving semantic export obligations from pinned upstream evidence, and delivering file:// UAT evidence."
 
 ## Clarifications
 
@@ -244,12 +244,30 @@ The required fill-region floors are:
   `not_applicable` with the observed layout. The three editors additionally
   receive live-state serialization, genuine clipboard success, and all three
   forced-fallback checks.
-- **Reviewability response:** If any final plan-time projection reaches a block
-  threshold, stop with: `STOP: ART-005 combined-slice reviewability block. The
-  operator selected one combined slice, and no ratified exception exists. Do not
-  split automatically and do not continue to Checklist, Tasks, or Implementation.
-  Record the measured projection and wait for an explicit operator topology
-  decision.`
+- **Reviewability response:** The combined plan-time projection reached the
+  800-LOC block and stopped before Checklist, Tasks, or Implementation. The
+  operator resolved that stop by selecting seven slices. Planning now measures
+  every slice independently and stops only the affected slice if its final
+  projection reaches a block threshold without a ratified exception.
+
+### Session 2026-08-17 - Review Topology Resolution
+
+- **Operator decision:** Deliver ART-005 as seven sequential review slices, one
+  template per slice, while retaining one specification and one workflow.
+- **Slice order:** (1) `slide-deck`, (2) `concept-explainer`, (3)
+  `status-report`, (4) `incident-report`, (5) `triage-board`, (6)
+  `feature-flags`, and (7) `prompt-tuner`.
+- **Stacking model:** Slice 1 uses the current feature branch. Each later slice
+  is cut from its predecessor after the predecessor's PR is open. Planning does
+  not create those branches or merge any slice.
+- **Atomic slice boundary:** Each slice contains its one template, that
+  template's own manifest status flip, its incremental Layer 4 and fill-region
+  coverage, authoritative payload and reference regeneration, and slice-specific
+  UAT evidence. Shared manifest, test, generated, and evidence files are changed
+  serially in stack order.
+- **Per-slice gate:** Planning MUST project each slice independently. A measured
+  block stops only that slice for an explicit operator decision; this topology
+  does not authorize splitting a template or inventing a reviewability exception.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -331,15 +349,17 @@ An operator edits a Triage Board, Feature Flag configuration, or Prompt Tuner se
 - **FR-014**: New horizontal scroll regions MUST be keyboard-focusable and named; all controls MUST have visible focus and accessible names; status MUST be announced as text; reduced motion MUST be respected; color MUST never be the sole carrier of meaning.
 - **FR-015**: The feature MUST preserve the tracked plain-English `file://` UAT runbook, Markdown result summary, and normalized per-check JSON record at the active-feature and archival paths, with the mandatory metadata, row fields, verdicts, and seven-artifact coverage recorded in Clarifications.
 - **FR-016**: Planning MUST include a file-by-file measurement of the pinned upstream sources and declared operations before implementation starts.
-- **FR-017**: If the final projection crosses a reviewability block threshold and no ratified exception exists, planning MUST stop for an operator topology decision instead of splitting automatically or inventing an exception.
-- **FR-018**: The feature MUST stay within the selected single combined slice unless an explicit later operator decision changes that topology.
+- **FR-017**: If any slice's final projection crosses a reviewability block threshold and no ratified exception exists, planning MUST stop that slice for an operator topology decision instead of splitting the template automatically or inventing an exception.
+- **FR-018**: The feature MUST use the selected seven-slice topology, one template per sequential stacked review slice in the recorded order, unless an explicit later operator decision changes that topology.
 - **FR-019**: The feature MUST NOT add workflow-stage routing, JSON export kinds, automatic downloads, import-back, persistent editor content, shareable URL state, server storage, shared gallery foundation changes, or repairs to already-shipped templates.
 - **FR-020**: Each artifact MUST implement the exact fill-slot inventory and minimum anchored sample-content floors recorded in Clarifications; list slots MAY exceed their floor only when the template markers and Layer 4 inventory remain in agreement.
 
 ### Reviewability Notes *(if applicable)*
 
 - No ratified reviewability exception exists for this feature.
-- The operator selected one combined slice after being shown that both estimates warned and suggested two slices.
+- The operator initially selected one combined slice after being shown that both
+  estimates warned and suggested two slices. The measured combined projection
+  later blocked, and the operator superseded that answer with seven slices.
 - Generated templates, generated zones, process files, PR bodies, and code fences are not valid provenance for a typed reviewability exception.
 
 ### Reviewability Budget *(mandatory)*
@@ -350,8 +370,14 @@ An operator edits a Triage Board, Feature Flag configuration, or Prompt Tuner se
 - **Projected reviewable LOC**: Roadmap estimate 560 LOC; scaffold estimate 555 LOC. Both estimates warn and suggest two slices because they exceed the 400 reviewable LOC warning threshold and remain below the 800 reviewable LOC block threshold.
 - **Projected production files**: 7 net-new artifact files, which exceeds the preset warning threshold of 6 production files and remains below the block threshold of 8 production files.
 - **Projected total files**: Approximately 9 authored files before generated mirrors, below the total-file warning threshold of 15.
-- **Budget result**: Warning accepted by operator for one combined slice; no block is established from current estimates.
-- **Split decision**: The feature remains one combined ART-005 spec because the operator selected that topology. Planning must measure pinned source files and declared operations file by file; if the final projection crosses any block threshold, the workflow must stop for an operator topology decision rather than split automatically or invent an exception.
+- **Measured combined result**: Seven pinned sources total 4,042 lines and
+  120,618 bytes. The conservative combined projection is 2,856 reviewable LOC,
+  and the ART-003-average projection is 4,356; both exceed the 800-LOC block.
+- **Split decision**: The feature remains one ART-005 spec and workflow but is
+  delivered as seven sequential stacked slices, one template per slice, in the
+  order recorded above. Planning must measure each slice's declared operations
+  independently; a blocked slice stops for an operator decision rather than
+  splitting its template automatically or inventing an exception.
 
 ### PR Review Packet Requirements *(mandatory)*
 
@@ -380,7 +406,7 @@ An operator edits a Triage Board, Feature Flag configuration, or Prompt Tuner se
 - **SC-005**: Keyboard-only UAT covers all seven artifacts and verifies reachable named scroll regions where present, visible focus on controls, and no color-only status or priority meaning.
 - **SC-006**: Reduced-motion UAT verifies that all seven artifacts remain usable without required animation, transition, or smooth-scroll behavior.
 - **SC-007**: The tracked UAT result record contains a `pass`, `fail`, or evidence-backed `not_applicable` row for every required check across all seven artifacts, including genuine clipboard success and unavailable, rejected, and synchronous-failure fallback paths for each editor.
-- **SC-008**: The plan-time reviewability record includes both warned estimates, a file-by-file pinned-source measurement, declared operations, and either a non-blocking projection or an explicit operator topology decision.
+- **SC-008**: The plan-time reviewability record preserves both warned estimates and the measured combined block, records the explicit seven-slice operator decision, and provides file-by-file declared operations plus an independently evaluated projection for every slice.
 
 ## Assumptions
 

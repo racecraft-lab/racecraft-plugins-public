@@ -14,9 +14,9 @@
    truth for human-approved scoping decisions.
 3. Run the phases through `$speckit-autopilot` with this workflow file. Scaffold
    does not run planning or implementation itself.
-4. Keep ART-005 as one combined review/merge unit unless the plan-time
-   reviewability gate blocks. A block requires an explicit operator decision;
-   it does not authorize an automatic split.
+4. Keep one ART-005 spec and workflow, but deliver seven sequential stacked
+   review slices in manifest order, one template per slice. The operator chose
+   this topology after the combined plan-time reviewability gate blocked.
 5. Update the status tables and evidence links as each phase completes.
 
 ---
@@ -50,12 +50,12 @@ for four artifacts is now an explicit Open Question.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 3 stories, 20 current FRs, 8 scenarios, and 8 success criteria; the intentional marker was resolved in Clarify |
 | Clarify | `/speckit-clarify` | ✅ Complete | Three sessions resolved source/fidelity/fill, editor exports, UAT evidence, and block routing; no consensus needed |
-| Plan | `/speckit-plan` | ⚠️ Blocked | 4,042 upstream LOC; conservative projection 2,856 reviewable LOC exceeds the 800 block; awaiting explicit topology decision |
+| Plan | `/speckit-plan` | ✅ Complete | Seven independently measured slices project 520-790 reviewable LOC; all warn and none block |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Accessibility, UX, data-integrity, and error-handling |
 | Tasks | `/speckit-tasks` | ⏳ Pending | TDD ordering across seven templates and shared integration surfaces |
 | Analyze | `/speckit-analyze` | ⏳ Pending | Check all artifacts against the design concept |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
-| Implement | `/speckit-implement` | ⏳ Pending | One combined branch and review unit |
+| Implement | `/speckit-implement` | ⏳ Pending | Seven sequential stacked review slices, one template each |
 | Post | Post-Implementation | ⏳ Pending | Canonical closeout plus tracked `file://` UAT results |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -70,7 +70,7 @@ G6.5 is advisory by default. Record its verdict in Phase 6.5 when it runs.
 | G2 | After Clarify | Pinned-source policy, semantic read-only classification, fill slots, export schemas, UAT record, and reviewability uncertainty have an explicit disposition |
 | G3 | After Plan | Constitution gates pass; the immutable upstream revision is recorded; declared file operations and a measured reviewability projection exist |
 | G4 | After Checklist | Every `[Gap]` from the four selected domains is fixed or explicitly deferred to a named owner |
-| G5 | After Tasks | Requirements map to ordered TDD tasks; the combined-slice checkpoint is explicit |
+| G5 | After Tasks | Requirements map to ordered TDD tasks; all seven atomic slice boundaries and per-slice reviewability checkpoints are explicit |
 | G6 | After Analyze | No CRITICAL issue remains; HIGH/WARNING findings are resolved or accepted with evidence |
 | G6.5 | Before Implement | Composite confidence meets the autonomous implementation threshold |
 | G7 | After Each Implementation Phase | Focused tests pass, no shared-contract drift appears, and the completed templates work over `file://` |
@@ -120,7 +120,7 @@ Before starting any workflow phase, verify alignment with
 | **Enables** | Gallery completeness |
 | **Priority** | P2 |
 | **Roadmap** | `docs/ai/specs/html-artifacts-technical-roadmap.md` § ART-005 |
-| **Reviewability** | Fresh estimate: 555 LOC, warn, suggested two slices; user chose one combined slice |
+| **Reviewability** | Combined projection blocked at 2,856 LOC; operator selected seven independently measured slices |
 | **Blind-spot pass** | Ran remedially: 5 findings surfaced, 1 set aside; one new Open Question |
 
 ### Success Criteria Summary
@@ -189,11 +189,12 @@ ports, atomic file/status delivery, and every contract-required export loop.
    then copies deterministic Markdown derived from current session state and
    can recover the same text manually when clipboard access fails.
 
-Make each story independently testable while keeping implementation in the
-single combined slice selected by the operator.
+Make each story independently testable while keeping one ART-005 spec and
+workflow across seven sequential stacked slices, one template per slice.
 
 ### Human-Validated Decisions — Do Not Re-litigate
-- Q1: "One combined slice."
+- Q1: "One combined slice" was the initial answer; after the measured block,
+  the operator superseded it with "Seven slices."
 - Q2: "Fenced JSON in Markdown (Recommended)."
 - Q3: "Pin one commit (Recommended)."
 - Q4: "Session only (Recommended)."
@@ -226,10 +227,10 @@ single combined slice selected by the operator.
 
 ### Reviewability Budget
 Record both estimates: roadmap 560 LOC and fresh estimator 555 LOC, each warn
-with two slices suggested. The operator deliberately selected one combined
-slice. Require a plan-time file-by-file measurement of the pinned sources and
-declared operations. If the final projection blocks, stop for an operator
-topology decision; do not silently split or invent an exception.
+with two slices suggested. Preserve the later combined measurement and its
+2,856-LOC block. The operator resolved that block with seven slices. Require a
+file-by-file projection for every slice and stop any individually blocked slice
+for an operator decision; do not split a template or invent an exception.
 
 ### Out of Scope
 - Workflow-stage routing.
@@ -248,7 +249,7 @@ topology decision; do not silently split or invent an exception.
 | Functional Requirements | 20 current after Clarify |
 | User Stories | 3 |
 | Acceptance Criteria | 8 scenarios |
-| Reviewability result | 555/560 LOC warn; operator-selected one combined slice retained with a plan-time block stop |
+| Reviewability result | Initial 555/560 LOC warning; combined projection later blocked at 2,856 LOC; operator selected seven slices |
 
 ### Files Generated
 
@@ -342,6 +343,10 @@ for operator review, not permission to split automatically.
 | 2 | Editor state and exports | 5 | Three complete Markdown contracts, stable ordering and edge rules, and one visible focused fallback behavior; no consensus needed |
 | 3 | UAT evidence and reviewability | 5 | Active and archival evidence paths; mandatory run/row fields; genuine clipboard success plus three forced failures; seven-artifact matrix; explicit stop on block; no consensus needed |
 
+After Plan triggered Session 3's stop, the operator selected seven sequential
+stacked slices, one template each. That later decision supersedes the historical
+one-combined-slice text inside the Session 3 prompt.
+
 **G2 result:** ✅ Pass — zero `[NEEDS CLARIFICATION]` markers remain and all
 three Clarify sessions have an explicit disposition.
 
@@ -393,8 +398,11 @@ shipped templates, and the ART-003 post-merge hygiene report.
   records; do not invent a new evidence hierarchy without need.
 
 ## Constraints and Chosen Answers
-- Q1 says "One combined slice." Plan one spec, one branch, one implementation
-  review. Do not create child specs or branches.
+- Q1's initial "One combined slice" answer was superseded after its measured
+  block. The operator selected seven sequential stacked review slices, one
+  template per slice, while retaining one ART-005 spec and workflow. Slice 1
+  uses the current branch; each later branch is cut from its predecessor after
+  the predecessor PR is open. Plan the stack, but do not create branches or PRs.
 - Q2 says "Fenced JSON in Markdown (Recommended)." Define exact deterministic
   Markdown contracts without changing manifest exports.
 - Q3 says "Pin one commit (Recommended)." No floating upstream main.
@@ -407,11 +415,16 @@ shipped templates, and the ART-003 post-merge hygiene report.
   focus, status, color-only, and reduced-motion gaps.
 
 ## Required Architecture and File Operations
-- Declare each of the seven NEW template paths individually.
-- Declare manifest.json and every modified Layer 4 test file individually. The
-  seven template files and their seven `planned` → `shipped` status flips are
-  one atomic gallery-contract operation.
-- Declare the chosen UAT runbook and result-record paths.
+- Declare each of the seven NEW template paths individually and assign exactly
+  one to each slice in this order: `slide-deck`, `concept-explainer`,
+  `status-report`, `incident-report`, `triage-board`, `feature-flags`, and
+  `prompt-tuner`.
+- For each slice, declare its incremental `manifest.json` status flip and every
+  incremental Layer 4 and fill-region test change individually. Each template,
+  its own `planned` → `shipped` flip, its tests, generated outputs, and its UAT
+  evidence form one atomic slice.
+- Declare the chosen UAT runbook and result-record paths, including how shared
+  records grow serially across the seven slices.
 - Identify both Claude and Codex payload copies plus reference/proof files as
   generated operations, never hand-edited sources of truth.
 - Keep all template implementations independent. Shared integration changes are
@@ -422,11 +435,14 @@ shipped templates, and the ART-003 post-merge hygiene report.
 
 ## Reviewability Gate Before Design Completion
 The setup estimator returned 555 LOC, warn, suggested two slices; the roadmap
-declares 560, warn, suggested two. Measure the pinned upstream files and project
-the complete reviewable surface using the plan's declared operations. Compare
-against realized ART-002/ART-003 port data. If the combined plan reaches block,
-stop and request the operator's topology decision. No typed exception currently
-applies, and the one-slice interview answer cannot be silently overwritten.
+declares 560, warn, suggested two. Preserve the measured combined result: seven
+pinned sources total 4,042 lines and 120,618 bytes, and the conservative combined
+projection of 2,856 reviewable LOC exceeds the 800 block. The operator resolved
+that stop by selecting seven slices. Project each slice independently from its
+pinned source and declared incremental operations, compare it with realized
+ART-002/ART-003 port data, and record a verdict per slice. If any slice reaches
+block, stop that slice for an operator decision. Do not split a template or
+invent a typed exception.
 
 ## Verification Design
 - Write or extend focused Layer 4 assertions before each implementation group.
@@ -446,13 +462,13 @@ applies, and the one-slice interview answer cannot be silently overwritten.
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⚠️ Blocked | STOP record: seven pinned sources measure 4,042 LOC / 120,618 bytes; conservative projection 2,856 reviewable LOC exceeds the 800 block |
-| `research.md` | ⏭️ Not created | Reviewability checkpoint stopped Phase 0/Phase 1 design completion |
-| `data-model.md` | ⏭️ Not created | Reviewability checkpoint stopped Phase 0/Phase 1 design completion |
-| `contracts/` | ⏭️ Not created | Reviewability checkpoint stopped Phase 0/Phase 1 design completion |
-| `quickstart.md` | ⏭️ Not created | Reviewability checkpoint stopped Phase 0/Phase 1 design completion |
+| `plan.md` | ✅ Complete | Seven-slice stack, component ceilings, exact authored/generated operations, and per-slice stop rules |
+| `research.md` | ✅ Complete | Pinned upstream, semantic roles, exports, state, gallery grammar, UAT, and topology decisions |
+| `data-model.md` | ✅ Complete | Gallery, source, fill, editor/export, UAT, and `ReviewSlice` entities |
+| `contracts/` | ✅ Complete | Slice topology, gallery template, editor export, and UAT evidence contracts |
+| `quickstart.md` | ✅ Complete | Per-slice validation, regeneration, and `file://` acceptance route |
 
-### Plan Reviewability Stop
+### Prior Combined Plan Reviewability Stop
 
 - Pinned-source measurement: 7 files, 4,042 lines, 120,618 bytes; every digest
   reverified against the official upstream bytes.
@@ -462,12 +478,39 @@ applies, and the one-slice interview answer cannot be silently overwritten.
   but returned `production: 0`, `projected: 0`, `pass` because the seven net-new
   production files do not yet exist. This advisory blind spot does not override
   the explicit measured checkpoint.
-- Runner G3 syntax diagnostic: pass because `plan.md` exists with zero unresolved
-  markers. Workflow G3 is **not cleared**: design outputs are intentionally absent
-  and the human-approved reviewability rule is blocked.
-- Required disposition: record the measured projection and wait. Do not continue
-  to Checklist, Tasks, Analyze, Confidence Gate, or Implementation; do not split
-  automatically and do not treat the earlier one-slice selection as an exception.
+- At the stop, the runner G3 syntax diagnostic passed only because `plan.md`
+  existed with zero unresolved markers; workflow G3 correctly remained blocked
+  because design outputs were absent and the reviewability rule had stopped.
+- Operator resolution (2026-08-17): seven sequential stacked slices, one
+  template per slice, under the same ART-005 spec and workflow. Replan with an
+  independent projection and verdict for every slice. No combined-slice
+  exception was granted.
+
+### Seven-Slice Plan Completion
+
+| Slice | Artifact | Component ceiling | Authored paths | Maximum physical paths | Verdict |
+|---:|---|---:|---:|---:|---|
+| 1 | `slide-deck` | 640 LOC | 7 | 32 | Warn; no block |
+| 2 | `concept-explainer` | 520 LOC | 7 | 32 | Warn; no block |
+| 3 | `status-report` | 560 LOC | 7 | 32 | Warn; no block |
+| 4 | `incident-report` | 620 LOC | 7 | 32 | Warn; no block |
+| 5 | `triage-board` | 740 LOC | 7 | 32 | Warn; no block |
+| 6 | `feature-flags` | 780 LOC | 7 | 32 | Warn; no block |
+| 7 | `prompt-tuner` | 790 LOC | 7 | 32 | Warn; no block; 10 LOC headroom |
+
+- Every component ceiling is the sum of authored markup/content, CSS, behavior
+  JavaScript, and incremental test LOC. Canonical copied blocks and generated
+  mirrors are excluded; the 32-path physical ledger remains explicit.
+- The parser-facing ledger reports 10 NEW and 3 MODIFIED paths. The advisory
+  estimator still returns `production: 0`, `projected: 0`, `pass` because it
+  does not classify these net-new HTML gallery files as production. The measured
+  per-slice component ceilings control the reviewability decision.
+- Implementation measures each slice after scaffolding, after focused tests,
+  before generated refresh, and before PR open. Reaching 800 LOC stops that
+  slice for an operator decision.
+- Current G3: ✅ Pass. `plan.md`, `research.md`, `data-model.md`, four contracts,
+  and `quickstart.md` exist; the constitution re-check passes; zero unresolved
+  markers remain; the runner reports `plan.md exists with 0 unresolved markers`.
 
 ---
 
@@ -576,8 +619,9 @@ intentional deferral. No unresolved gap reaches Tasks.
 
 Read spec.md, plan.md, research.md, contracts/, quickstart.md, and
 docs/ai/specs/.process/ART-005-design-concept.md. The design concept is the
-source of truth for the one-slice decision, the eight human-approved answers,
-and the six Open Questions including semantic reader/producer classification.
+source of truth for the eight human-approved answers, the later seven-slice
+operator resolution, and the six Open Questions including semantic
+reader/producer classification.
 
 ## Task Structure
 - Use strict RED → GREEN → REFACTOR ordering for every behavior.
@@ -585,25 +629,23 @@ and the six Open Questions including semantic reader/producer classification.
 - Different standalone template files may be [P] only after their failing tests
   and source contracts exist. Never mark shared manifest, shared test literals,
   generated artifacts, or final integration commands parallel.
-- Add a pre-implementation reviewability checkpoint using the Plan measurement.
-  Stop if the combined slice blocks; do not create slices automatically.
+- Organize work into seven sequential slice groups in the recorded order. Add a
+  pre-implementation reviewability checkpoint for each slice using the Plan
+  measurement. Stop an individually blocked slice; do not split its template.
 
 ## Implementation Phases
-1. Baseline and contracts: record pinned upstream evidence, finalize fill/export
-   contracts, add failing Layer 4 assertions, and confirm the combined budget.
-2. Provisionally read-only knowledge artifacts: after Clarify confirms their
-   semantic classification, implement slide-deck and concept-explainer and prove
-   each independently over file:// against its resolved export contract.
-3. Provisionally read-only reports: after Clarify confirms their semantic
-   classification, implement status-report and incident-report and prove each
-   independently over file:// against its resolved export contract.
-4. Interactive editors: triage-board, feature-flags, and prompt-tuner, each with
-   live-state Markdown, clipboard success, forced fallback, keyboard, and edge tests.
-5. Serialized integration: flip only the seven status values, complete shared
-   fill/gallery coverage, regenerate payloads and docs references, run focused and
-   full suites, execute UAT, and commit the durable result record.
-6. Review packet and closeout: trace every FR/SC to files and evidence, document
-   review order, known gaps, rollback, and the accepted one-slice warning.
+1. Shared baseline and contracts: record pinned upstream evidence and finalize
+   fill, export, generated-artifact, and UAT contracts before Slice 1.
+2. Slice 1 - `slide-deck`: RED tests, template, one status flip, incremental
+   shared integration/regeneration, focused/full verification, and UAT evidence.
+3. Slice 2 - `concept-explainer`: repeat the atomic slice pattern on its branch.
+4. Slice 3 - `status-report`: repeat the atomic slice pattern on its branch.
+5. Slice 4 - `incident-report`: repeat the atomic slice pattern on its branch.
+6. Slice 5 - `triage-board`: include live Markdown, clipboard success, all
+   forced fallback paths, keyboard checks, and edge tests.
+7. Slice 6 - `feature-flags`: repeat the editor slice pattern with fenced JSON.
+8. Slice 7 - `prompt-tuner`: repeat the editor slice pattern with fenced JSON,
+   then complete stack-wide traceability and closeout evidence.
 
 ## Non-goal Guardrails
 - No workflow routing, JSON export kind, download, persistent content, import,
@@ -622,9 +664,9 @@ and the six Open Questions including semantic reader/producer classification.
   prevention rule.
 - Layer 1, Layer 4, full suite, payload consistency, and generated docs reference
   checks pass on final bytes.
-- Manual file:// UAT covers all seven templates and both clipboard outcomes for
-  each confirmed state-producing artifact, with a tracked runbook and
-  tested-commit result record.
+- Manual file:// UAT grows incrementally in each slice and covers its template;
+  editor slices include genuine clipboard success plus unavailable, rejected,
+  and synchronous-throw recovery. Each slice records its tested commit.
 ```
 
 ### Tasks Results
@@ -632,7 +674,7 @@ and the six Open Questions including semantic reader/producer classification.
 | Metric | Value |
 |--------|-------|
 | **Total Tasks** | Pending |
-| **Phases** | Target: 6 |
+| **Phases** | Target: shared baseline plus 7 slice groups |
 | **Parallel Opportunities** | Template-local work only; pending classifier |
 | **User Stories Covered** | Target: US1-US3 |
 
@@ -646,8 +688,8 @@ After Tasks/G5, run the read-only classifier against:
 runner helper atomicity-route specs/art-005-gallery-completion-knowledge-reports-editors
 ```
 
-The classifier informs review navigation but does not override Q1. Record its
-machine-readable decision here:
+The classifier validates the operator-selected seven-slice navigation. It does
+not authorize a different topology. Record its machine-readable decision here:
 
 | Field | Value | Meaning |
 |-------|-------|---------|
@@ -680,8 +722,9 @@ Focus on:
 4. Whether the pinned source evidence, fill inventories, export examples, and
    declared file operations are concrete and mutually consistent.
 5. Whether Tasks preserve RED → GREEN → REFACTOR and serialize all shared files.
-6. Whether the combined-slice budget is honestly measured. Treat a block without
-   an operator topology decision as CRITICAL.
+6. Whether the prior combined block and operator-selected seven-slice topology
+   are preserved, and every slice has an honest independent projection. Treat an
+   unhandled per-slice block or topology drift as CRITICAL.
 7. Whether generated surfaces are regenerated from source rather than hand-edited.
 8. Whether the runbook and result record prove real file:// behavior, genuine
    clipboard success, and forced recovery.
@@ -726,7 +769,7 @@ and executable file:// UAT procedure.
 
 ## Phase 7: Implement
 
-**When to run:** Only after G6/G6.5 and the combined-slice checkpoint pass.
+**When to run:** Only after G6/G6.5 and all seven per-slice checkpoints pass.
 
 ### Implement Prompt
 
@@ -748,19 +791,20 @@ For every behavior:
 ## Pre-Implementation Setup
 1. Confirm the repository root is the ART-005 worktree and the branch is
    art-005-gallery-completion-knowledge-reports-editors.
-2. Confirm git status is clean and the workflow/spec/plan/tasks identify the same
-   branch and one-slice topology.
+2. Confirm git status is clean and the workflow/spec/plan/tasks identify the
+   same seven-slice stack, with the current branch as Slice 1.
 3. Confirm the pinned upstream commit and all seven file digests are recorded and
    retrievable; keep upstream bytes outside the worktree.
 4. Confirm Clarify reconciled the four provisional `exports: []` declarations
    against the pinned source interactions; stop if any conflict remains open.
 5. Run the relevant Layer 1/Layer 4 baseline and record it.
-6. Run the plan reviewability gate. Stop on block unless the operator has supplied
-   a valid topology decision; do not invent a typed exception.
+6. Run the applicable slice's reviewability gate. Stop that slice on block
+   unless the operator supplies a valid new topology decision or typed
+   exception; do not infer either.
 
 ## Implementation Guidance
-- Create exactly seven standalone template files and change exactly the seven
-  corresponding manifest status values.
+- In each stacked slice, create exactly its one standalone template and change
+  exactly its one corresponding manifest status value.
 - Embed canonical blocks verbatim. Do not edit shared foundation files or existing
   shipped templates and do not create a common runtime abstraction.
 - Preserve representative content and each source's core mechanism while applying
@@ -775,7 +819,8 @@ For every behavior:
   text revealed in a labeled focused fallback field.
 - Apply named keyboard scroll regions, visible focus, semantic live status,
   color-independent meaning, dark/light parity, and reduced-motion behavior.
-- Serialize shared manifest/test/generated work after template-local changes.
+- Serialize shared manifest/test/generated work inside every slice after its
+  template-local changes.
 - Regenerate both Claude and Codex payload copies plus proofs with python3
   scripts/refresh-release-artifacts.py.
 - Because tests/speckit-pro files change, run pnpm --dir docs-site
@@ -792,12 +837,14 @@ For every behavior:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - Baseline and contracts | Pending | 0 | Pinned source, failing tests, budget checkpoint |
-| 2 - Knowledge artifacts | Pending | 0 | slide-deck, concept-explainer |
-| 3 - Reports | Pending | 0 | status-report, incident-report |
-| 4 - Editors | Pending | 0 | triage-board, feature-flags, prompt-tuner |
-| 5 - Integration and UAT | Pending | 0 | Shared files, regeneration, full evidence |
-| 6 - Review packet | Pending | 0 | Traceability and closeout |
+| 1 - Shared baseline and contracts | Pending | 0 | Pinned source and cross-slice contracts |
+| 2 - Slice 1 | Pending | 0 | slide-deck plus incremental integration and UAT |
+| 3 - Slice 2 | Pending | 0 | concept-explainer plus incremental integration and UAT |
+| 4 - Slice 3 | Pending | 0 | status-report plus incremental integration and UAT |
+| 5 - Slice 4 | Pending | 0 | incident-report plus incremental integration and UAT |
+| 6 - Slice 5 | Pending | 0 | triage-board plus incremental integration and UAT |
+| 7 - Slice 6 | Pending | 0 | feature-flags plus incremental integration and UAT |
+| 8 - Slice 7 | Pending | 0 | prompt-tuner plus incremental integration and closeout |
 
 ---
 
@@ -812,7 +859,7 @@ Every canonical row must reach Complete or an explicit Skipped disposition.
 | Post: Verify Tasks Phantom Check | ⏳ Pending | |
 | Post: Code Review | ⏳ Pending | |
 | Post: Integration Suite | ⏳ Pending | Layer 1, Layer 4, full suite, generated artifacts |
-| Post: Reviewability Diff Gate | ⏳ Pending | Combined-slice measured verdict |
+| Post: Reviewability Diff Gate | ⏳ Pending | Per-slice measured verdicts |
 | Post: Self-Review | ⏳ Pending | |
 | Post: UAT Runbook Generation | ⏳ Pending | Tracked seven-template file:// runbook |
 | Post: PR Body Generation | ⏳ Pending | Review order, scope, traceability, evidence, gaps, rollback |

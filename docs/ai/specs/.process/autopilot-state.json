@@ -4,8 +4,8 @@
   "feature_dir": "specs/art-005-gallery-completion-knowledge-reports-editors",
   "branch": "art-005-gallery-completion-knowledge-reports-editors",
   "stage": "plan",
-  "updated_at": "2026-08-18T01:03:01Z",
-  "active_step": "Phase 3: Plan - blocked pending explicit operator topology decision",
+  "updated_at": "2026-08-18T02:36:28Z",
+  "active_step": "Phase 3: Plan complete - next Phase 4 checklist accessibility",
   "settings": {
     "consensus_mode": "moderate",
     "gate_failure": "stop",
@@ -91,7 +91,8 @@
     "scaffold_estimate_reviewable_loc": 555,
     "roadmap_estimate_reviewable_loc": 560,
     "scaffold_verdict": "warn",
-    "operator_decision": "one combined slice"
+    "initial_operator_decision": "one combined slice",
+    "operator_decision": "seven sequential stacked slices, one template per slice"
   },
   "test_baseline_g0": {
     "passed": 7400,
@@ -107,7 +108,7 @@
     "specify": {
       "status": "completed",
       "user_stories": 3,
-      "functional_requirements": 19,
+      "functional_requirements": 20,
       "acceptance_scenarios": 8,
       "success_criteria": 8,
       "needs_clarification_markers": 1,
@@ -159,35 +160,119 @@
       }
     },
     "plan": {
-      "status": "blocked",
-      "reason": "combined-slice reviewability projection exceeds the 800 LOC block",
+      "status": "completed",
+      "reason": "all seven independently measured slices warn and remain below the 800 LOC block",
       "plan_file": "specs/art-005-gallery-completion-knowledge-reports-editors/plan.md",
-      "upstream_measurement": {
-        "files": 7,
-        "lines": 4042,
-        "bytes": 120618,
-        "digests_reverified": true
-      },
-      "projections": {
-        "conservative_reviewable_loc": 2856,
-        "art_003_average_reviewable_loc": 4356,
-        "block_threshold": 800
-      },
+      "artifacts": [
+        "plan.md",
+        "research.md",
+        "data-model.md",
+        "quickstart.md",
+        "contracts/slice-topology-contract.md",
+        "contracts/gallery-template-contract.md",
+        "contracts/editor-export-contract.md",
+        "contracts/uat-evidence-contract.md"
+      ],
+      "slice_order": [
+        "slide-deck",
+        "concept-explainer",
+        "status-report",
+        "incident-report",
+        "triage-board",
+        "feature-flags",
+        "prompt-tuner"
+      ],
+      "stacking_model": "slice 1 uses the current branch; each later branch is cut from its predecessor after the predecessor PR is open",
+      "per_slice_gate": "project every slice independently and stop only an individually blocked slice for operator review",
+      "per_slice_projections": [
+        {
+          "slice": 1,
+          "artifact": "slide-deck",
+          "projected_reviewable_loc": 640,
+          "authored_paths": 7,
+          "maximum_physical_paths": 32,
+          "verdict": "warn"
+        },
+        {
+          "slice": 2,
+          "artifact": "concept-explainer",
+          "projected_reviewable_loc": 520,
+          "authored_paths": 7,
+          "maximum_physical_paths": 32,
+          "verdict": "warn"
+        },
+        {
+          "slice": 3,
+          "artifact": "status-report",
+          "projected_reviewable_loc": 560,
+          "authored_paths": 7,
+          "maximum_physical_paths": 32,
+          "verdict": "warn"
+        },
+        {
+          "slice": 4,
+          "artifact": "incident-report",
+          "projected_reviewable_loc": 620,
+          "authored_paths": 7,
+          "maximum_physical_paths": 32,
+          "verdict": "warn"
+        },
+        {
+          "slice": 5,
+          "artifact": "triage-board",
+          "projected_reviewable_loc": 740,
+          "authored_paths": 7,
+          "maximum_physical_paths": 32,
+          "verdict": "warn"
+        },
+        {
+          "slice": 6,
+          "artifact": "feature-flags",
+          "projected_reviewable_loc": 780,
+          "authored_paths": 7,
+          "maximum_physical_paths": 32,
+          "verdict": "warn"
+        },
+        {
+          "slice": 7,
+          "artifact": "prompt-tuner",
+          "projected_reviewable_loc": 790,
+          "authored_paths": 7,
+          "maximum_physical_paths": 32,
+          "verdict": "warn"
+        }
+      ],
       "runner_estimator": {
         "status": "pass",
         "projected": 0,
         "declared_new": 10,
         "declared_modified": 3,
         "production": 0,
-        "disposition": "advisory blind spot for absent net-new production files; explicit measured checkpoint controls"
+        "disposition": "advisory HTML classification blind spot; explicit per-slice component ceilings control"
       },
-      "outputs_not_created": [
-        "research.md",
-        "data-model.md",
-        "contracts/",
-        "quickstart.md"
-      ],
-      "required_operator_decision": "choose a new topology or ratify a valid combined-slice exception"
+      "prior_combined_block": {
+        "status": "resolved_by_operator_topology_decision",
+        "upstream_measurement": {
+          "files": 7,
+          "lines": 4042,
+          "bytes": 120618,
+          "digests_reverified": true
+        },
+        "projections": {
+          "conservative_reviewable_loc": 2856,
+          "art_003_average_reviewable_loc": 4356,
+          "block_threshold": 800
+        },
+        "runner_estimator": {
+          "status": "pass",
+          "projected": 0,
+          "declared_new": 10,
+          "declared_modified": 3,
+          "production": 0,
+          "disposition": "advisory blind spot for absent net-new production files; explicit measured checkpoint controls"
+        },
+        "operator_resolution": "seven sequential stacked slices, one template per slice"
+      }
     }
   },
   "gates": {
@@ -206,17 +291,30 @@
       "consensus": "skipped for all sessions: zero unresolved items"
     },
     "G3": {
-      "pass": false,
-      "reason": "workflow reviewability checkpoint blocked before design completion",
+      "pass": true,
+      "reason": "complete seven-slice design artifacts, constitution re-check, and zero unresolved markers",
       "runner_syntax_diagnostic": {
         "pass": true,
         "markers": 0,
         "reason": "plan.md exists with 0 unresolved markers"
       },
-      "reviewability_block": {
+      "required_outputs": {
+        "plan.md": "present",
+        "research.md": "present",
+        "data-model.md": "present",
+        "contracts": 4,
+        "quickstart.md": "present"
+      },
+      "prior_runner_syntax_diagnostic": {
+        "pass": true,
+        "markers": 0,
+        "reason": "the prior STOP-only plan.md existed with 0 unresolved markers"
+      },
+      "prior_reviewability_block": {
         "conservative_projection": 2856,
         "threshold": 800,
-        "operator_decision_required": true
+        "operator_decision_required": false,
+        "operator_resolution": "seven sequential stacked slices, one template per slice"
       }
     }
   },
@@ -267,7 +365,7 @@
     },
     {
       "step": "Phase 3: Plan",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - accessibility",

@@ -6,118 +6,468 @@
 
 ## Summary
 
-STOP: ART-005 combined-slice reviewability block. The operator selected one combined slice, and no ratified exception exists. Do not split automatically and do not continue to Checklist, Tasks, or Implementation. Record the measured projection and wait for an explicit operator topology decision.
+ART-005 ports seven planned knowledge, report, and editor gallery templates as
+complete standalone Racecraft artifacts. The old combined-slice stop is resolved
+by the operator's seven-slice topology: one ART-005 specification and workflow,
+seven sequential stacked PR slices, exactly one template per slice in manifest
+order.
 
-Planning stopped at the reviewability checkpoint before Phase 0/Phase 1 design completion. No `research.md`, `data-model.md`, `contracts/`, `quickstart.md`, UAT runbook/results, task list, implementation code, generated payloads, or catalog/test changes were created by this phase.
+Planning reverified the pinned upstream bytes from
+`anthropics/html-effectiveness@58c305be97f47b26b678f2c07dec01d4242268ec` and
+projects every slice independently. All seven individual slices warn on
+reviewable LOC and pass the 800-LOC block threshold, so Phase 0 and Phase 1
+design artifacts are complete.
 
 ## Technical Context
 
-**Language/Version**: Standalone HTML5, CSS, and vanilla browser JavaScript for the seven planned artifacts; Python 3.11+ standard-library tests and repository helpers for validation.
+**Language/Version**: Standalone HTML5, CSS, and vanilla browser JavaScript in
+one file per gallery artifact; Python 3.11+ standard-library repository tests
+and scripts for validation.
 
-**Primary Dependencies**: None for artifact runtime; existing repository validation and payload-generation scripts only.
+**Primary Dependencies**: None for runtime. Existing repository validation,
+payload refresh, and docs reference tooling only.
 
-**Storage**: In-memory page session for editor working state; existing theme preference remains owned by the canonical gallery head block.
+**Storage**: Editor working state is memory-only per page session. Existing
+theme preference remains owned by the canonical gallery head block.
 
-**Testing**: Planned Python Layer 4 assertions, Layer 1 validation, full repository suite, generated-artifact consistency, and manual `file://` UAT.
+**Testing**: Layer 4 gallery/fill-region assertions, Layer 1 structural
+validation, full `python3 tests/speckit-pro/run-all.py`, payload consistency
+through `python3 scripts/refresh-release-artifacts.py --check`, docs reference
+generation after test changes, and tracked manual `file://` UAT.
 
-**Target Platform**: Local filesystem browser execution over `file://`; no server, bundler, preprocessor, or install step.
+**Target Platform**: Browser opening local files over `file://`, with no server,
+bundler, package install, sibling asset, or network dependency for content or
+controls.
 
-**Project Type**: Public plugin gallery artifact port.
+**Project Type**: Public plugin gallery artifact ports.
 
-**Performance Goals**: Each artifact remains readable and interactive directly from disk with network unavailable; no server/runtime setup.
+**Performance Goals**: Each artifact remains readable and responsive directly
+from disk with network unavailable; keyboard and clipboard recovery paths do not
+depend on asynchronous external services.
 
-**Constraints**: One combined slice selected; no child specs or branches; no edits to shared foundation files, export vocabulary, or workflow-stage routing; generated payload copies must be regenerated from source, not hand edited.
+**Constraints**: Seven sequential stacked PR slices; no shared gallery
+foundation edits; no workflow-stage routing; no export-vocabulary change; no
+JSON export kind; no download/import/persistence/URL/server behavior; no repair
+to existing shipped templates; source-derived payloads and proofs are regenerated
+from source rather than hand edited.
 
-**Scale/Scope**: Seven net-new gallery artifacts plus atomic manifest/test/UAT/generated operations.
-
-**Reviewability Budget**: Primary surface `docs/process` / shipped gallery artifacts; measured combined projection blocks on LOC before design completion.
+**Scale/Scope**: Seven net-new artifact files, seven manifest `planned` to
+`shipped` flips, incremental Layer 4 gallery and fill-region coverage, generated
+Claude/Codex payload mirrors, installed-cache fixture/proof refresh, docs test
+reference refresh, and cumulative UAT evidence.
 
 ## Reviewability Checkpoint
 
-### Pinned Upstream Measurement
+### Preserved Combined Stop History
 
-Repository: `anthropics/html-effectiveness`  
-Commit: `58c305be97f47b26b678f2c07dec01d4242268ec`  
-Commit timestamp: `2026-05-15T16:09:53Z`  
-Retrieval date: `2026-08-17`  
-Retrieved bytes: outside the repository at `/private/tmp/art-005-upstream-58c305be97f47b26b678f2c07dec01d4242268ec/`
+The prior combined plan measured the seven pinned upstream sources at 4,042
+lines and 120,618 bytes. The conservative combined projection was 2,856
+reviewable LOC, and the ART-003-average projection was 4,356 reviewable LOC.
+Both exceed the 800-LOC block threshold. The runner's `0` LOC diagnostic remains
+an advisory blind spot for net-new files and does not override the measured
+evidence.
 
-| Upstream source | Lines | Bytes | SHA-256 | Preserved mechanism |
-|---|---:|---:|---|---|
-| `09-slide-deck.html` | 592 | 16,527 | `e191d49c28569e5f2ae09ed3bc4dc3f8ef25f90f1c842b1458f7b43ef5153291` | Reader: paged slide deck with arrow/down/up/space navigation, scroll snapping, slide counter, and observer-tracked current slide. |
-| `11-status-report.html` | 528 | 16,382 | `6468f720bab1d016657a9ed25c1049ec42f1810b230f486a5f3130427614bc7c` | Reader: static status report with summary metrics, shipped-work table, velocity panel, carryover/blocker status, and ownership labels. |
-| `12-incident-report.html` | 596 | 15,491 | `e787d6a64eca1ccd77fd9fa18849400356895ed2717ceb26dad2638fcc3261a9` | Reader: static incident report with anchored table of contents, severity/resolution metadata, timeline, root cause, impact, and action items. |
-| `15-research-concept-explainer.html` | 368 | 13,558 | `5dd7d3a3866d123fdea1199a3e20d3a31d6305916013b4a2a4a83018765384b3` | Reader: transient consistent-hashing explainer with sliders, add/remove/reset simulation, readout, and glossary highlighting; no durable user-authored output. |
-| `18-editor-triage-board.html` | 573 | 18,577 | `a2a4ba2691c2532dbe67da5bbeb183bbdee5e9027c7006fba6dce18de7347988` | Producer: in-memory issue triage board with columns, ticket drag/drop, tag filtering, reset, and Markdown copy behavior. |
-| `19-editor-feature-flags.html` | 663 | 18,908 | `8fd1aa16175614bea196672cd8f9b119b4ddb5b4768bf0bcb4bb05d6588787ab` | Producer: checkbox-driven feature-flag editor with grouped flags, prerequisite warnings, diff/full JSON copy controls, reset, and live derived state. |
-| `20-editor-prompt-tuner.html` | 722 | 21,175 | `b2e1e46643bb908cb01e73600f40a5506a175869a65ad446992f22eacd0b0877` | Producer: prompt template editor with contenteditable text, slot highlighting, live sample previews, plain-text paste/Enter handling, reset, and copy behavior. |
+The operator resolved that stop by selecting seven sequential slices. This is a
+topology decision, not a reviewability exception.
 
-Measured upstream total: 4,042 source lines and 120,618 bytes.
+### Reverified Upstream Measurement
 
-### Projection
+Local reverify source: `/private/tmp/art-005-upstream-58c305be97f47b26b678f2c07dec01d4242268ec/`
 
-The roadmap projection was 560 reviewable LOC, warn. The setup estimator projection was 555 reviewable LOC, warn. Both suggested two slices and both were below the block threshold only as forward estimates.
+| Slice | Artifact | Upstream source | Lines | Bytes | SHA-256 | Role |
+|---:|---|---|---:|---:|---|---|
+| 1 | `slide-deck` | `09-slide-deck.html` | 592 | 16,527 | `e191d49c28569e5f2ae09ed3bc4dc3f8ef25f90f1c842b1458f7b43ef5153291` | Reader |
+| 2 | `concept-explainer` | `15-research-concept-explainer.html` | 368 | 13,558 | `5dd7d3a3866d123fdea1199a3e20d3a31d6305916013b4a2a4a83018765384b3` | Reader |
+| 3 | `status-report` | `11-status-report.html` | 528 | 16,382 | `6468f720bab1d016657a9ed25c1049ec42f1810b230f486a5f3130427614bc7c` | Reader |
+| 4 | `incident-report` | `12-incident-report.html` | 596 | 15,491 | `e787d6a64eca1ccd77fd9fa18849400356895ed2717ceb26dad2638fcc3261a9` | Reader |
+| 5 | `triage-board` | `18-editor-triage-board.html` | 573 | 18,577 | `a2a4ba2691c2532dbe67da5bbeb183bbdee5e9027c7006fba6dce18de7347988` | Producer |
+| 6 | `feature-flags` | `19-editor-feature-flags.html` | 663 | 18,908 | `8fd1aa16175614bea196672cd8f9b119b4ddb5b4768bf0bcb4bb05d6588787ab` | Producer |
+| 7 | `prompt-tuner` | `20-editor-prompt-tuner.html` | 722 | 21,175 | `b2e1e46643bb908cb01e73600f40a5506a175869a65ad446992f22eacd0b0877` | Producer |
 
-Closest realized evidence blocks the combined seven-template slice:
+### Projection Method
 
-| Evidence | Realized reviewable LOC | Projection applied to seven ART-005 templates |
-|---|---:|---:|
-| ART-003 lowest one-template slice | 408 | 2,856 |
-| ART-003 average one-template slice (`735`, `724`, `408`) | 622.33 | 4,356 |
-| ART-002 two-template slice 1 | 1,494 | 5,229 equivalent for seven |
-| ART-002 two-template slice 2 | 2,027 | 7,095 equivalent for seven |
+Assumptions:
 
-The conservative lower-bound projection is 2,856 reviewable LOC before manifest, Layer 4 test, UAT, and generated-artifact operations. This exceeds the 800 reviewable LOC block threshold. No ratified exception exists, and the user's one-combined-slice answer is not a typed exception.
+- Reviewable LOC counts authored artifact implementation and incremental test
+  source, excluding byte-identical canonical block copies and generated mirrors.
+- The seven reviewability-counted authored paths in every slice are the new
+  template, the source manifest row flip, the two focused test modules, and the
+  three active UAT evidence files. Generated paths are a larger physical
+  footprint but are source-derived and excluded from reviewable authored counts.
+- ART-003 is the closest realized evidence: one-template slices landed under
+  their declared ceilings at 735/758, 724/750, and 408/460 reviewable LOC, all
+  warn and none block.
+- Readers with no export path use the ART-003 `flowchart` reader as the lower
+  local analogue, adjusted for source size and interaction complexity.
+- Producers use the ART-003 exporting-template range, with extra budget for the
+  ART-005 live-state/fallback schemas while removing upstream `execCommand`,
+  extra copy buttons, and undeclared download/import paths.
+- Manifest, fill-region literal, docs reference, payload, proof, and UAT files
+  are shared or generated surfaces and are serialized in stack order. Their
+  existence affects file-count discipline but does not justify parallel edits.
+- Projection components below are implementation ceilings. Canonical
+  byte-identical gallery blocks, generated payload mirrors, installed-cache
+  mirrors, proof/evidence JSON, and docs reference output are excluded. The
+  manifest status flip and active `.process` UAT evidence contribute to total
+  file count; implementation LOC measurement must separately report whether the
+  local reviewability tool counts any of those lines.
 
-The repository `estimate-reviewable-loc` helper recognized 10 NEW and 3
-MODIFIED declarations but reported `production: 0`, `projected: 0`, and `pass`
-because all seven production templates are net-new and absent at plan time.
-That advisory diagnostic cannot displace the file-by-file pinned-source
-measurement and realized ART-002/ART-003 evidence above. The workflow-specific
-reviewability checkpoint therefore remains blocked.
+| Slice | Artifact | Markup/content | CSS | Behavior JS | Incremental tests | Projected reviewable LOC | Production files | Authored file count | Verdict |
+|---:|---|---:|---:|---:|---:|---:|---:|---:|---|
+| 1 | `slide-deck` | 245 | 155 | 95 | 145 | 640 | 1 | 7 | Warn: LOC above 400; no block |
+| 2 | `concept-explainer` | 205 | 120 | 95 | 100 | 520 | 1 | 7 | Warn: LOC above 400; no block |
+| 3 | `status-report` | 255 | 140 | 20 | 145 | 560 | 1 | 7 | Warn: LOC above 400; no block |
+| 4 | `incident-report` | 285 | 150 | 45 | 140 | 620 | 1 | 7 | Warn: LOC above 400; no block |
+| 5 | `triage-board` | 225 | 145 | 215 | 155 | 740 | 1 | 7 | Warn: LOC above 400; no block |
+| 6 | `feature-flags` | 230 | 150 | 245 | 155 | 780 | 1 | 7 | Warn: LOC above 400; no block |
+| 7 | `prompt-tuner` | 235 | 145 | 255 | 155 | 790 | 1 | 7 | Warn: LOC above 400; no block, 10 LOC headroom |
+
+File thresholds: each slice stays at one production file and below the 6-file
+production warning. Each slice has exactly seven reviewability-counted authored
+changed paths: one template, one manifest row, two test modules, and three
+active UAT evidence files. Slice 1 creates the UAT files; later slices modify
+the same three files, so the authored total remains seven rather than growing a
+new evidence hierarchy per slice.
+
+Early measurement rule: implementation must measure a slice after template
+scaffolding, after focused tests are added, before generated refresh, and again
+before PR open. If actual authored LOC plus remaining declared component budget
+would reach 800 or more, or if the measured final slice reaches 800 or more,
+that slice stops for operator topology review before any branch/PR continuation.
+No template is split automatically, and the seven-slice decision is not a size
+exception.
+
+No individual slice reaches a block threshold.
+
+## Slice Stack And Branch Plan
+
+Planning only records branch topology; it creates no branch or PR.
+
+| Slice | Branch | Base when created | Template |
+|---:|---|---|---|
+| 1 | `art-005-gallery-completion-knowledge-reports-editors` | current branch | `slide-deck` |
+| 2 | `art-005-gallery-completion-knowledge-reports-editors-slice-2` | slice 1 branch after PR 1 is open | `concept-explainer` |
+| 3 | `art-005-gallery-completion-knowledge-reports-editors-slice-3` | slice 2 branch after PR 2 is open | `status-report` |
+| 4 | `art-005-gallery-completion-knowledge-reports-editors-slice-4` | slice 3 branch after PR 3 is open | `incident-report` |
+| 5 | `art-005-gallery-completion-knowledge-reports-editors-slice-5` | slice 4 branch after PR 4 is open | `triage-board` |
+| 6 | `art-005-gallery-completion-knowledge-reports-editors-slice-6` | slice 5 branch after PR 5 is open | `feature-flags` |
+| 7 | `art-005-gallery-completion-knowledge-reports-editors-slice-7` | slice 6 branch after PR 6 is open | `prompt-tuner` |
+
+Shared files are owned serially in stack order:
+
+- `speckit-pro/artifact-gallery/manifest.json`
+- `tests/speckit-pro/unit/test-artifact-gallery.py`
+- `tests/speckit-pro/unit/test-artifact-fill-regions.py`
+- `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-runbook.md`
+- `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.md`
+- `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json`
+- generated payload, installed-cache, proof, evidence, and docs-reference files
 
 ## Declared File Operations
 
-The following operations are recorded only so the repository estimator can
-evaluate the blocked combined topology. Their presence does not authorize
-implementation while the STOP above remains unresolved.
+The following bare entries are the canonical parser-facing ledger for the
+complete seven-slice stack. Detailed per-slice ownership and generated
+operations follow below.
 
-Authored implementation operations that would be required if topology is later approved:
+- NEW speckit-pro/artifact-gallery/templates/slide-deck.html
+- NEW speckit-pro/artifact-gallery/templates/concept-explainer.html
+- NEW speckit-pro/artifact-gallery/templates/status-report.html
+- NEW speckit-pro/artifact-gallery/templates/incident-report.html
+- NEW speckit-pro/artifact-gallery/templates/triage-board.html
+- NEW speckit-pro/artifact-gallery/templates/feature-flags.html
+- NEW speckit-pro/artifact-gallery/templates/prompt-tuner.html
+- MODIFIED speckit-pro/artifact-gallery/manifest.json
+- MODIFIED tests/speckit-pro/unit/test-artifact-gallery.py
+- MODIFIED tests/speckit-pro/unit/test-artifact-fill-regions.py
+- NEW specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-runbook.md
+- NEW specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.md
+- NEW specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json
 
-- NEW `speckit-pro/artifact-gallery/templates/slide-deck.html`
-- NEW `speckit-pro/artifact-gallery/templates/concept-explainer.html`
-- NEW `speckit-pro/artifact-gallery/templates/status-report.html`
-- NEW `speckit-pro/artifact-gallery/templates/incident-report.html`
-- NEW `speckit-pro/artifact-gallery/templates/triage-board.html`
-- NEW `speckit-pro/artifact-gallery/templates/feature-flags.html`
-- NEW `speckit-pro/artifact-gallery/templates/prompt-tuner.html`
-- MODIFIED `speckit-pro/artifact-gallery/manifest.json`
-- MODIFIED `tests/speckit-pro/unit/test-artifact-gallery.py`
-- MODIFIED `tests/speckit-pro/unit/test-artifact-fill-regions.py`
-- NEW `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-runbook.md`
-- NEW `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.md`
-- NEW `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json`
+Generated operations are source-derived and must be produced by
+`python3 scripts/refresh-release-artifacts.py` and
+`pnpm --dir docs-site reference:generate`; they are never hand-edited. These are
+declared generated/check operations: an idempotent run can leave an output
+byte-identical, and a byte-identical output should not be claimed as changed.
 
-Generated operations would include regenerated Claude and Codex payload copies, installed-cache proof/copy updates, and docs test reference output. These are source-derived and must not be hand edited.
+The generated-path exclusion follows the repository generated-artifact rule in
+`.gitattributes`, which marks `dist/**`, docs reference output, installed-cache
+mirrors, proof fixtures, and XPLAT evidence with `merge=generated`, and the
+`AGENTS.md` precedent that generated artifacts are a pure function of source and
+must be regenerated rather than hand-resolved.
+
+For every slice, the expected generated/check disposition is:
+
+- `python3 scripts/refresh-release-artifacts.py`: rebuild/check the Claude and
+  Codex payloads and installed-cache mirrors. Expected ART-005 Git-path deltas,
+  if content changes, are:
+  - `dist/claude/speckit-pro/artifact-gallery/manifest.json`
+  - `dist/claude/speckit-pro/artifact-gallery/templates/<artifact>.html`
+  - `dist/codex/speckit-pro/artifact-gallery/manifest.json`
+  - `dist/codex/speckit-pro/artifact-gallery/templates/<artifact>.html`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/manifest.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/templates/<artifact>.html`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/manifest.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/templates/<artifact>.html`
+- `python3 scripts/refresh-release-artifacts.py`: refresh all current
+  installed-cache proof fixtures matched by
+  `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof*.json`:
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-file-root.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-mutable.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-source-root.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-mutable.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-partial-root.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-root-mismatch.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-same-root.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-single-product.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-source-mismatch.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-stale-hash.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-traversal-root.json`
+- `python3 scripts/refresh-release-artifacts.py`: regenerate XPLAT-009 evidence
+  as applicable:
+  - `docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json`
+  - `docs/ai/specs/.process/XPLAT-009-payload-completeness-result.json`
+  - `docs/ai/specs/.process/XPLAT-009-zero-bash-guard-result.json`
+  - `docs/ai/specs/.process/XPLAT-009-release-readiness-result.json`
+- `pnpm --dir docs-site reference:generate`: regenerate:
+  - `docs-site/src/content/docs/reference/tests.md`
+
+Maximum expected physical Git-path footprint per slice is 32 paths: seven
+authored paths plus up to 25 generated/check output paths listed above. The
+payload builder physically rewrites payload directories while rebuilding, but
+ART-005 expects tracked content deltas only on the gallery manifest/template
+mirrors plus proof/evidence/docs outputs. Any additional generated content diff
+must be explained before the slice proceeds.
+
+### Slice 1 - `slide-deck`
+
+Authored operations:
+
+- **NEW** `speckit-pro/artifact-gallery/templates/slide-deck.html`
+- MODIFIED `speckit-pro/artifact-gallery/manifest.json`: flip only `slide-deck.status` from `planned` to `shipped`; keep `exports: []`
+- MODIFIED `tests/speckit-pro/unit/test-artifact-gallery.py`: add `slide-deck` reader/static contract coverage and any generic ART-005 scanner helpers needed for later slices
+- MODIFIED `tests/speckit-pro/unit/test-artifact-fill-regions.py`: add `FLOOR["slide-deck"] = ("deck-title", "slides", "speaker-notes")` and `LIST_SLOTS["slide-deck"] = ("slides",)`
+- **NEW** `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-runbook.md`
+- **NEW** `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.md`
+- **NEW** `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json`
+
+Generated operations: replace `<artifact>` with `slide-deck` in the common
+generated path list above.
+
+UAT increment: direct `file://` open, slide navigation by keyboard and scroll,
+representative content for `deck-title`, at least two anchored `slides`, speaker
+notes, offline reload, complete keyboard traversal, focus visibility,
+light/dark parity, reduced motion, and color-independent meaning. Horizontal
+scroll region checks are recorded as present or evidence-backed not applicable.
+
+### Slice 2 - `concept-explainer`
+
+Authored operations:
+
+- **NEW** `speckit-pro/artifact-gallery/templates/concept-explainer.html`
+- MODIFIED `speckit-pro/artifact-gallery/manifest.json`: flip only `concept-explainer.status` from `planned` to `shipped`; keep `exports: []`
+- MODIFIED `tests/speckit-pro/unit/test-artifact-gallery.py`: add `concept-explainer` reader coverage and transient simulation control checks
+- MODIFIED `tests/speckit-pro/unit/test-artifact-fill-regions.py`: add `FLOOR["concept-explainer"] = ("concept-title", "principles", "worked-example", "simulation-scenarios")` and `LIST_SLOTS["concept-explainer"] = ("simulation-scenarios",)`
+- MODIFIED `.process/uat-runbook.md`, `.process/uat-results.md`, and `.process/uat-results.json` under the ART-005 feature directory
+
+Generated operations: replace `<artifact>` with `concept-explainer` in the
+common generated path list above.
+
+UAT increment: direct `file://` open, transient add/remove/reset and slider
+simulation behavior, representative content for all fill slots with at least
+two anchored simulation scenarios, offline reload, keyboard traversal, focus,
+theme parity, reduced motion, color-independent meaning, and scroll-region
+disposition.
+
+### Slice 3 - `status-report`
+
+Authored operations:
+
+- **NEW** `speckit-pro/artifact-gallery/templates/status-report.html`
+- MODIFIED `speckit-pro/artifact-gallery/manifest.json`: flip only `status-report.status` from `planned` to `shipped`; keep `exports: []`
+- MODIFIED `tests/speckit-pro/unit/test-artifact-gallery.py`: add `status-report` reader coverage and static report no-export checks
+- MODIFIED `tests/speckit-pro/unit/test-artifact-fill-regions.py`: add `FLOOR["status-report"] = ("summary", "landed", "in-flight", "blocked", "next-actions")` and `LIST_SLOTS["status-report"] = ("landed", "in-flight", "blocked", "next-actions")`
+- MODIFIED `.process/uat-runbook.md`, `.process/uat-results.md`, and `.process/uat-results.json` under the ART-005 feature directory
+
+Generated operations: replace `<artifact>` with `status-report` in the common
+generated path list above.
+
+UAT increment: direct `file://` open, complete static report content, at least
+two anchored items in each list slot, offline reload, keyboard traversal, focus,
+theme parity, reduced motion, color-independent meaning, and scroll-region
+disposition.
+
+### Slice 4 - `incident-report`
+
+Authored operations:
+
+- **NEW** `speckit-pro/artifact-gallery/templates/incident-report.html`
+- MODIFIED `speckit-pro/artifact-gallery/manifest.json`: flip only `incident-report.status` from `planned` to `shipped`; keep `exports: []`
+- MODIFIED `tests/speckit-pro/unit/test-artifact-gallery.py`: add `incident-report` reader coverage and anchored report navigation checks
+- MODIFIED `tests/speckit-pro/unit/test-artifact-fill-regions.py`: add `FLOOR["incident-report"] = ("summary", "timeline", "impact", "root-cause", "follow-ups")` and `LIST_SLOTS["incident-report"] = ("timeline", "follow-ups")`
+- MODIFIED `.process/uat-runbook.md`, `.process/uat-results.md`, and `.process/uat-results.json` under the ART-005 feature directory
+
+Generated operations: replace `<artifact>` with `incident-report` in the common
+generated path list above.
+
+UAT increment: direct `file://` open, timeline/report navigation, complete
+impact/root-cause/follow-up content, at least two anchored timeline and
+follow-up items, offline reload, keyboard traversal, focus, theme parity,
+reduced motion, color-independent meaning, and scroll-region disposition.
+
+### Slice 5 - `triage-board`
+
+Authored operations:
+
+- **NEW** `speckit-pro/artifact-gallery/templates/triage-board.html`
+- MODIFIED `speckit-pro/artifact-gallery/manifest.json`: flip only `triage-board.status` from `planned` to `shipped`; keep `exports: ["markdown"]`
+- MODIFIED `tests/speckit-pro/unit/test-artifact-gallery.py`: add `triage-board` producer coverage for exact label `Copy as Markdown`, absence of hidden copy/download paths, live-state export generation hooks, visible fallback field, semantic status, and keyboard-accessible board controls
+- MODIFIED `tests/speckit-pro/unit/test-artifact-fill-regions.py`: add `FLOOR["triage-board"] = ("triage-items", "column-labels")` and `LIST_SLOTS["triage-board"] = ("triage-items",)`
+- MODIFIED `.process/uat-runbook.md`, `.process/uat-results.md`, and `.process/uat-results.json` under the ART-005 feature directory
+
+Generated operations: replace `<artifact>` with `triage-board` in the common
+generated path list above.
+
+UAT increment: direct `file://` open, memory-only board editing, visible ticket
+ordering by `now`, `next`, `later`, `cut`, deterministic Markdown export, real
+clipboard success with read-back or paste equality, unavailable clipboard,
+rejected promise, synchronous throw, exact focused fallback text, reset on
+reload, keyboard traversal, focus, theme parity, reduced motion, color-independent
+meaning, and scroll-region disposition.
+
+### Slice 6 - `feature-flags`
+
+Authored operations:
+
+- **NEW** `speckit-pro/artifact-gallery/templates/feature-flags.html`
+- MODIFIED `speckit-pro/artifact-gallery/manifest.json`: flip only `feature-flags.status` from `planned` to `shipped`; keep `exports: ["markdown"]`
+- MODIFIED `tests/speckit-pro/unit/test-artifact-gallery.py`: add `feature-flags` producer coverage for exact label `Copy as Markdown`, single fenced JSON block in Markdown, field/order/schema expectations, issue recording, visible fallback field, semantic status, and no hidden copy/download paths
+- MODIFIED `tests/speckit-pro/unit/test-artifact-fill-regions.py`: add `FLOOR["feature-flags"] = ("flags", "environment-notes")` and `LIST_SLOTS["feature-flags"] = ("flags",)`
+- MODIFIED `.process/uat-runbook.md`, `.process/uat-results.md`, and `.process/uat-results.json` under the ART-005 feature directory
+
+Generated operations: replace `<artifact>` with `feature-flags` in the common
+generated path list above.
+
+UAT increment: direct `file://` open, memory-only flag toggles and dependency
+warnings, deterministic Markdown wrapper with one JSON block, null/empty/invalid
+edge representation, real clipboard success, unavailable/rejected/throw fallback
+paths, reset on reload, keyboard traversal, focus, theme parity, reduced motion,
+color-independent meaning, and scroll-region disposition.
+
+### Slice 7 - `prompt-tuner`
+
+Authored operations:
+
+- **NEW** `speckit-pro/artifact-gallery/templates/prompt-tuner.html`
+- MODIFIED `speckit-pro/artifact-gallery/manifest.json`: flip only `prompt-tuner.status` from `planned` to `shipped`; keep `exports: ["markdown"]`
+- MODIFIED `tests/speckit-pro/unit/test-artifact-gallery.py`: add `prompt-tuner` producer coverage for exact label `Copy as Markdown`, single fenced JSON block in Markdown, template/slot/sample/preview order, visible fallback field, semantic status, and no hidden copy/download paths
+- MODIFIED `tests/speckit-pro/unit/test-artifact-fill-regions.py`: add `FLOOR["prompt-tuner"] = ("prompt-variants", "evaluation-notes")` and `LIST_SLOTS["prompt-tuner"] = ("prompt-variants",)`
+- MODIFIED `.process/uat-runbook.md`, `.process/uat-results.md`, and `.process/uat-results.json` under the ART-005 feature directory
+
+Generated operations: replace `<artifact>` with `prompt-tuner` in the common
+generated path list above.
+
+UAT increment: direct `file://` open, memory-only prompt editing and derived
+previews, deterministic Markdown wrapper with one JSON block, slot/sample/order
+preservation, multiline and Unicode values, real clipboard success,
+unavailable/rejected/throw fallback paths, reset on reload, keyboard traversal,
+focus, theme parity, reduced motion, color-independent meaning, scroll-region
+disposition, and stack-wide closeout totals.
+
+### Archival Evidence Contract
+
+Active UAT files grow serially during the seven implementation slices:
+
+- `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-runbook.md`
+- `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.md`
+- `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json`
+
+Post-merge archival preserves the same evidence under:
+
+- `docs/ai/specs/.process/ART-005-uat-runbook.md`
+- `docs/ai/specs/.process/ART-005-uat-results.md`
+- `docs/ai/specs/.process/ART-005-uat-results.json`
+- `docs/ai/specs/.process/ART-005-uat-harness/` if an implementation harness is committed
 
 ## Constitution Check
 
-**I. Plugin Structure Compliance**: Blocked before implementation. Planned repository-only tests would stay under `tests/speckit-pro/`; no plugin structure change is authorized.
+**I. Plugin Structure Compliance**: Pass. Gallery source remains under
+`speckit-pro/artifact-gallery/`; repository-only tests remain under
+`tests/speckit-pro/`. Slice verification includes Layer 1 structural validation.
 
-**II. Cross-Platform Runtime & Script Safety**: Blocked before implementation. Planned validation and any UAT harness would stay Python 3.11+ standard library; artifact runtime remains standalone browser JavaScript.
+**II. Cross-Platform Runtime & Script Safety**: Pass. Runtime artifacts use
+single-file browser HTML/CSS/JS only. Repository tooling remains Python 3.11+
+standard library; any optional UAT harness must use standard-library Python and
+no active Bash or `jq`.
 
-**III. Semantic Versioning**: Not applicable during the stopped plan phase; no manifest/version edits made.
+**III. Semantic Versioning**: Pass for planning. No plugin version edit is
+planned in ART-005.
 
-**IV. Test Coverage Before Merge**: Blocked before implementation. Layer 4/Layer 1/full-suite checks are designed but not generated because reviewability stopped design completion.
+**IV. Test Coverage Before Merge**: Pass. Every slice adds or extends focused
+Layer 4 gallery and fill-region coverage before implementation, then runs Layer
+1, Layer 4, the default suite, generated-artifact checks, docs reference
+generation after test edits, and slice-specific UAT evidence.
 
-**V. Conventional Commits**: Not applicable; no commit made.
+**V. Conventional Commits**: Pass for planning. No commit is made in this phase.
+Implementation PR titles must pass the repository release-readiness title gate.
 
-**VI. KISS, Simplicity & YAGNI**: Violated if continued as one combined slice without a ratified exception. The workflow stops rather than silently creating an oversized review.
+**VI. KISS, Simplicity & YAGNI**: Pass. The design keeps each artifact
+standalone and explicit, adds no shared runtime abstraction, and rejects
+speculative storage, import, routing, or export changes.
 
-## Phase Outputs
+Post-design re-check: Pass. The Phase 0/Phase 1 design artifacts preserve the
+same constraints and introduce no constitution violation.
 
-- `plan.md`: STOP record only.
-- `research.md`: not created.
-- `data-model.md`: not created.
-- `contracts/`: not created.
-- `quickstart.md`: not created.
+## Project Structure
+
+### Documentation (this feature)
+
+```text
+specs/art-005-gallery-completion-knowledge-reports-editors/
+├── plan.md
+├── research.md
+├── data-model.md
+├── quickstart.md
+├── contracts/
+│   ├── editor-export-contract.md
+│   ├── gallery-template-contract.md
+│   ├── slice-topology-contract.md
+│   └── uat-evidence-contract.md
+└── tasks.md
+```
+
+### Source Code (repository root)
+
+```text
+speckit-pro/artifact-gallery/
+├── SPA-CONTRACT.md
+├── brand-kit.css
+├── manifest.json
+├── theme-toggle.html
+└── templates/
+    ├── slide-deck.html
+    ├── concept-explainer.html
+    ├── status-report.html
+    ├── incident-report.html
+    ├── triage-board.html
+    ├── feature-flags.html
+    └── prompt-tuner.html
+
+tests/speckit-pro/unit/
+├── test-artifact-gallery.py
+└── test-artifact-fill-regions.py
+
+dist/
+├── claude/speckit-pro/artifact-gallery/
+└── codex/speckit-pro/artifact-gallery/
+```
+
+**Structure Decision**: Use the existing gallery layout. Each port is one
+template file plus one manifest value flip; shared tests, generated payloads,
+docs references, and UAT records are serialized by slice.
+
+## Complexity Tracking
+
+| Violation | Why Needed | Simpler Alternative Rejected Because |
+|-----------|------------|-------------------------------------|
+| None | N/A | N/A |
