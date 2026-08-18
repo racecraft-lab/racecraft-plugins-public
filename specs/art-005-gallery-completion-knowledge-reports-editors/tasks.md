@@ -170,7 +170,7 @@ column Markdown and complete visible clipboard recovery.
 current-order Markdown plus issue appendix, and execute the complete clipboard,
 boundary, accessibility, data-integrity, and race matrix.
 
-- [ ] T063 [US3] After PR 4 opens, create `art-005-gallery-completion-knowledge-reports-editors-slice-5` from Slice 4 and confirm the seven-path ledger plus 785-LOC ceiling in `specs/art-005-gallery-completion-knowledge-reports-editors/plan.md`; stop if recalculation reaches 800 [FR-016-FR-018, SC-008]
+- [x] T063 [US3] After PR 4 opens, create `art-005-gallery-completion-knowledge-reports-editors-slice-5` from Slice 4 and confirm the seven-path ledger plus 785-LOC ceiling in `specs/art-005-gallery-completion-knowledge-reports-editors/plan.md`; stop if recalculation reaches 800 [FR-016-FR-018, SC-008]
 - [ ] T064 [US3] RED: add `triage-board` producer, exact control label, session reset, named board/columns/tickets/filters, keyboard move/reorder, visible empty/filter states, semantic status, responsive, and prohibited-path assertions to `tests/speckit-pro/unit/test-artifact-gallery.py` [FR-003, FR-007, FR-012-FR-014, FR-019, FR-021-FR-022; US3]
 - [ ] T065 [US3] RED: add deterministic `now/next/later/cut` and ticket-field order, empty-column text, Markdown escaping, duplicate-ticket issue appendix, live-snapshot, stale-cache, and exact-message assertions to `tests/speckit-pro/unit/test-artifact-gallery.py` [FR-009-FR-011, FR-023; US3]
 - [ ] T066 [US3] RED: add zero/one-attempt clipboard capability, absent/non-callable, permission-denied, generic rejection, synchronous throw, failure-success-failure, and both superseded-settlement guard assertions to `tests/speckit-pro/unit/test-artifact-gallery.py` [FR-010-FR-011, SC-003-SC-004, SC-007; US3]
