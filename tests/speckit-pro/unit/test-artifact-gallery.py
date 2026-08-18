@@ -9442,6 +9442,102 @@ class DecisionAccessibilityContractTests(unittest.TestCase):
                 self.assertEqual(check(GALLERY_ROOT), [])
 
 
+# ---------------------------------------------------------------------------
+# Group R - ART-005 concept-explainer reader contract (FR-003, FR-005,
+# FR-006, FR-012-FR-014, FR-021-FR-022)
+# ---------------------------------------------------------------------------
+
+CONCEPT_EXPLAINER_ID = "concept-explainer"
+CONCEPT_EXPLAINER_SOURCE_FILE = "15-research-concept-explainer.html"
+CONCEPT_EXPLAINER_LABEL = f"{TEMPLATES_DIR}/{CONCEPT_EXPLAINER_ID}.html"
+
+
+def check_r1(gallery_root: Path) -> list[str]:
+    """R1 - the concept reader and bounded transient simulation agree."""
+    matches = [
+        entry for entry in (_entries(gallery_root) or [])
+        if isinstance(entry, dict) and entry.get("id") == CONCEPT_EXPLAINER_ID
+    ]
+    if len(matches) != 1:
+        return [f"{MANIFEST_FILE}: expected one '{CONCEPT_EXPLAINER_ID}' entry, found {len(matches)}"]
+    entry = matches[0]
+    source = entry.get("source")
+    failures: list[str] = []
+    if entry.get("status") != SHIPPED:
+        failures.append(f"{MANIFEST_FILE}: '{CONCEPT_EXPLAINER_ID}' must be shipped, found {entry.get('status')!r}")
+    if entry.get("exports") != []:
+        failures.append(f"{MANIFEST_FILE}: '{CONCEPT_EXPLAINER_ID}' is a reader and must keep exports: []")
+    if not isinstance(source, dict) or source.get("origin") != UPSTREAM or source.get("file") != CONCEPT_EXPLAINER_SOURCE_FILE:
+        failures.append(f"{MANIFEST_FILE}: '{CONCEPT_EXPLAINER_ID}' must remain sourced from {CONCEPT_EXPLAINER_SOURCE_FILE}")
+    artifact = _artifact_path(gallery_root, CONCEPT_EXPLAINER_ID)
+    if artifact is None or not artifact.is_file():
+        failures.append(f"{CONCEPT_EXPLAINER_LABEL}: missing reader artifact")
+        return failures
+
+    text = _document_text(artifact)
+    lowered = text.casefold()
+    elements = _elements(text)
+    attributes = [dict(element.attributes) for element in elements]
+    authored = text
+    for block in CANONICAL_FILES:
+        if not _embeds(text, block):
+            failures.append(f"{CONCEPT_EXPLAINER_LABEL}: missing canonical {block} block")
+        elif (expected := _canonical_region(gallery_root, block)) is None or _region(text, block) != expected:
+            failures.append(f"{CONCEPT_EXPLAINER_LABEL}: canonical {block} bytes drifted")
+        else:
+            authored = authored.replace(_region(text, block), "")
+    header = _attribution_header(text)
+    if header is None or any(not _carried(header, element) for element in ATTRIBUTION_ELEMENTS):
+        failures.append(f"{CONCEPT_EXPLAINER_LABEL}: incomplete upstream attribution header")
+    elif _labelled_value(header, UPSTREAM_FILE_LABEL) != CONCEPT_EXPLAINER_SOURCE_FILE:
+        failures.append(f"{CONCEPT_EXPLAINER_LABEL}: attribution must name {CONCEPT_EXPLAINER_SOURCE_FILE}")
+
+    for token in ("copy as", "navigator.clipboard", "execcommand(", "download="):
+        if token in lowered:
+            failures.append(f"{CONCEPT_EXPLAINER_LABEL}: reader exposes export token {token!r}")
+    for token in ("localstorage", "sessionstorage", "indexeddb", "math.random", "date.now"):
+        if token in authored.casefold():
+            failures.append(f"{CONCEPT_EXPLAINER_LABEL}: simulation must be transient and deterministic, found {token!r}")
+
+    by_id = {attrs.get("id"): attrs for attrs in attributes if attrs.get("id")}
+    for control, kind in (("node-count", "range"), ("key-count", "range")):
+        attrs = by_id.get(control, {})
+        if attrs.get("type") != kind or not attrs.get("min") or not attrs.get("max"):
+            failures.append(f"{CONCEPT_EXPLAINER_LABEL}: '{control}' must expose explicit range bounds")
+        if f'for="{control}"' not in text and f"for='{control}'" not in text:
+            failures.append(f"{CONCEPT_EXPLAINER_LABEL}: '{control}' has no explicit label")
+    for control in ("remove-node", "add-node", "reset-simulation"):
+        if by_id.get(control, {}).get("aria-label", "").strip() == "":
+            failures.append(f"{CONCEPT_EXPLAINER_LABEL}: '{control}' must be a named control")
+    required = (
+        'id="node-count-value"', 'id="key-count-value"', 'id="simulation-status"',
+        'role="status"', 'aria-live="polite"', "Minimum 2 nodes", "Maximum 8 nodes",
+        "Minimum 10 keys", "Maximum 60 keys", ".disabled", "resetSimulation",
+    )
+    failures.extend(f"{CONCEPT_EXPLAINER_LABEL}: missing bounded-state hook {token!r}" for token in required if token not in text)
+    if ":focus-visible" not in text or "prefers-reduced-motion" not in text:
+        failures.append(f"{CONCEPT_EXPLAINER_LABEL}: visible-focus or reduced-motion handling is missing")
+    widths = [int(value) for value in re.findall(r"@media[^{}]*max-width\s*:\s*(\d+)px", text, re.IGNORECASE)]
+    if not any(width >= 360 for width in widths):
+        failures.append(f"{CONCEPT_EXPLAINER_LABEL}: no responsive rule covers 360 CSS px")
+    for element, attrs in zip(elements, attributes):
+        value = attrs.get("tabindex", "")
+        if value.lstrip("-").isdigit() and int(value) > 0:
+            failures.append(f"{CONCEPT_EXPLAINER_LABEL}: <{element.tag}> uses positive tabindex={value!r}")
+    for selector, declarations in _RULE_RE.findall(text):
+        if _HORIZONTAL_OVERFLOW_RE.search(declarations):
+            classes = re.findall(r"\.([A-Za-z_-][\w-]*)", selector)
+            matched = [attrs for attrs in attributes if any(name in attrs.get("class", "").split() for name in classes)]
+            if not matched or any(attrs.get("tabindex") != "0" or attrs.get("role") != "group" or not (attrs.get("aria-label", "").strip() or attrs.get("aria-labelledby", "").strip()) for attrs in matched):
+                failures.append(f"{CONCEPT_EXPLAINER_LABEL}: actual horizontal scroll element must be named, grouped, and keyboard reachable")
+    return failures
+
+
+class ConceptExplainerReaderTests(unittest.TestCase):
+    def test_concept_explainer_contract_passes_against_the_shipped_gallery(self) -> None:
+        self.assertEqual(check_r1(GALLERY_ROOT), [])
+
+
 class CheckSignatureTests(unittest.TestCase):
     """Enforce the rule the rest of this module depends on.
 
@@ -9505,6 +9601,7 @@ CHECK_GROUPS: tuple[type[unittest.TestCase], ...] = (
     CanonicalBlockAgreementTests,
     CanonicalBlockAgreementFixtureTests,
     SlideDeckReaderTests,
+    ConceptExplainerReaderTests,
     KeyboardScrollGuardTests,
     KeyboardScrollGuardFixtureTests,
     ReadOnlyPortContractTests,

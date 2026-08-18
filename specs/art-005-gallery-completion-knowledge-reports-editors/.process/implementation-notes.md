@@ -115,3 +115,15 @@
 ### T024
 
 **Deviations/Edge cases/Surprises:** None. After PR #444 opened and the Slice 1 closeout reached `383950113c7aef4c41c566b07d5a5b79df473434`, Slice 2 was created from that exact head as `art-005-gallery-completion-knowledge-reports-editors-slice-2`. The plan and topology contract agree on exactly seven implementation-authored paths and a 535 reviewable-LOC ceiling (205 markup/content, 120 CSS, 105 behavior JS, and 105 incremental tests), leaving 265 LOC below the mandatory 800-LOC stop. `concept-explainer` remains `planned` with its pinned `15-research-concept-explainer.html` source and `exports: []` before RED.
+
+### T025
+
+**Deviations/Edge cases/Surprises:** None. The gallery contract adds 97 lines covering the reader manifest/source identity, canonical bytes, no-export classification, deterministic session-only controls/reset, visible counts and min/max feedback, accessible naming/focus, reduced motion, responsive behavior, and conditional ART-020 scroll semantics.
+
+### T026
+
+**Deviations/Edge cases/Surprises:** None. Four added lines pin the exact four-slot floor, the repeated `simulation-scenarios` list slot, and a non-vacuity assertion; together with T025 the incremental test scope is 101/105 lines.
+
+### T027
+
+**Deviations/Edge cases/Surprises:** Formal RED passed for the intended reason. The gallery module reported 488/489 with only the `planned` manifest status and missing `templates/concept-explainer.html`; the fill module reported 56/57 with the exact floor/list literals active and only the missing template/inventory assertion failing. Generic fill checks remain correctly gated until the manifest row ships.

@@ -110,6 +110,7 @@ FLOOR: dict[str, tuple[str, ...]] = {
     "annotated-diff": ("hunks",),
     "flowchart": ("flow-diagram",),
     "slide-deck": ("deck-title", "slides", "speaker-notes"),
+    "concept-explainer": ("concept-title", "principles", "worked-example", "simulation-scenarios"),
     **READ_ONLY_PORT_FLOOR,
     **DECISION_PORT_FLOOR,
 }
@@ -129,6 +130,7 @@ LIST_SLOTS: dict[str, tuple[str, ...]] = {
     "annotated-diff": ("hunks",),
     "flowchart": ("nodes",),
     "slide-deck": ("slides",),
+    "concept-explainer": ("simulation-scenarios",),
     "interaction-prototype": ("views",),
     "visual-designs": ("directions",),
     "component-variants": ("variants",),
@@ -955,6 +957,9 @@ class FillRegionTests(unittest.TestCase):
                     template,
                     f"{relative}: missing {slot!r} fill-inventory slot",
                 )
+
+    def test_concept_explainer_fill_inventory_template_exists(self) -> None:
+        self.assertTrue((path := GALLERY_ROOT / _template_path("concept-explainer")).is_file() and all(f"Slot: {slot} |" in path.read_text(encoding="utf-8") for slot in FLOOR["concept-explainer"]), f"{_template_path('concept-explainer')}: missing concept-explainer fill-inventory template")
 
 
 # ---------------------------------------------------------------------------

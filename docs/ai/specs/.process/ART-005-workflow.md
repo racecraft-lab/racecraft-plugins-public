@@ -55,7 +55,7 @@ for four artifacts is now an explicit Open Question.
 | Tasks | `/speckit-tasks` | ✅ Complete | 119 ordered tasks; G5 and phantom-completion checks pass |
 | Analyze | `/speckit-analyze` | ✅ Complete | Six findings remediated; G6 passes with 0 CRITICAL/HIGH findings |
 | Confidence Gate | G6.5 | ✅ Complete | Advisory PASS at 0.98 against the 0.90 threshold |
-| Implement | `/speckit-implement` | 🔄 In Progress | Slice 1 complete in PR #444; Slice 2 concept-explainer T025-T036 active |
+| Implement | `/speckit-implement` | 🔄 In Progress | Slice 1 complete in PR #444; Slice 2 concept-explainer T028-T036 active |
 | Post | Post-Implementation | ⏳ Pending | Canonical closeout plus tracked `file://` UAT results |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -921,7 +921,7 @@ For every behavior:
 |-------|-------|-----------|-------|
 | 1 - Shared baseline and contracts | Complete | 10 | Pinned digests match; G4 passes; L1 1448/1448, L4 5766/5766, full 7400/7400 |
 | 2 - Slice 1 | Complete | 13 | PR #444 open; source checkpoint `660bfe9ce`; 18 pass, 18 evidence-backed N/A, zero fail; final gates green |
-| 3 - Slice 2 | In Progress | 1 | T024 complete from Slice 1 head `383950113`; T025 RED gallery coverage next |
+| 3 - Slice 2 | In Progress | 4 | T025-T027 RED at 488/489 and 56/57 for planned status/missing template; T028 GREEN next |
 | 4 - Slice 3 | Pending | 0 | status-report plus incremental integration and UAT |
 | 5 - Slice 4 | Pending | 0 | incident-report plus incremental integration and UAT |
 | 6 - Slice 5 | Pending | 0 | triage-board plus incremental integration and UAT |
