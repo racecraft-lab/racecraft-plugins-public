@@ -1067,13 +1067,37 @@ artifacts, partial generation, re-entry with an open pull request, re-entry with
 a closed one, creation refused by title self-validation, and the two
 sequence-failure branches.
 
-The task's own text settles what an autonomous run must do here: *"An autonomous
-implement run without `gh` credentials must report this task as not run rather
-than marking it complete."* This run has `gh` credentials — `gh auth status`
-resolves the active account to `fgabelmannjr` — but credentials are not the
-gating condition. The gate is that these scenarios **open and close real pull
-requests**, which is an outward-facing side effect on a live repository, and
-nothing in this invocation authorises that.
+**The blocker is structural, not permissional, and that is worth stating
+precisely because the first draft of this note got the emphasis wrong.**
+
+The task's own text names credentials: *"An autonomous implement run without `gh`
+credentials must report this task as not run rather than marking it complete."*
+This run **has** credentials — `gh auth status` resolves to `fgabelmannjr`. So
+that clause does not decide it.
+
+What decides it is that **the feature is not installed**. Scenario 5's
+instruction is "run the plan stage to completion", and the component that runs a
+plan stage is the *installed plugin*, not this worktree. Measured directly:
+
+| | `mode` enum | `Draft-PR emission` prose |
+|---|---|---|
+| installed cache 2.25.0 | `["single", "split"]` | absent |
+| this worktree | `["single", "split", "draft"]` | present |
+
+Running a plan stage today therefore executes pre-ART-007 code, which opens no
+draft pull request **by construction**. Scenarios 5 through 7 would fail for a
+reason unrelated to this implementation, and passing them is impossible until the
+plugin ships.
+
+This is the same self-reference the workflow file recorded at the plan stage:
+ART-007 *builds* plan-stage draft-PR emission, so ART-007's own run cannot use
+it. That note anticipated the plan stage ending the pre-ART-007 way; T052 is
+where the same fact lands at the other end of the feature.
+
+A secondary constraint stands behind it: the task asks for a **fork** the
+operator is willing to open and close real pull requests on, which is an
+outward-facing side effect this invocation does not authorise. But that
+constraint never gets a chance to bind, because the structural one comes first.
 
 **What is and is not covered as a result.** Everything deterministic is verified:
 the packet contract, the producer, the row reader, the corroboration classifier
@@ -1083,9 +1107,12 @@ prose, produces the pull request the specification describes. That is a genuine
 gap in this run's evidence, not a formality, and it is why User Story 1's
 independent test names scenario 5 as its live arm.
 
-**To close it**, an operator runs scenarios 5 through 7 from
-`specs/art-007-draft-pr-emission/quickstart.md` against a fork, and records the
-outcome here.
+**To close it**, in this order: merge this pull request, let the release cut a
+new plugin version, refresh the installed cache (`claude plugin marketplace
+update` then `claude plugin update`), then run a plan stage on **any other**
+spec — not this one — against a fork, and record the outcome here. Only after the
+cache carries the new version can scenarios 5 through 7 exercise the behaviour
+they describe.
 
 ### T041, T042, T044, T045, T046, T048, T050
 
