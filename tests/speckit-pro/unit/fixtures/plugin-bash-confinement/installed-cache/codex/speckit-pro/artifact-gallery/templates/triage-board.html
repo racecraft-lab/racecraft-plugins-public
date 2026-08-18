@@ -675,9 +675,33 @@ h1 { margin: 0; font: 700 clamp(2rem, 6vw, 3.7rem)/1 var(--rc-font-display); }
     status.textContent = message;
   }
 
+  function editableText(node) {
+    let value = "";
+    function append(current) {
+      if (current.nodeType === Node.TEXT_NODE) {
+        value += current.nodeValue;
+        return;
+      }
+      if (current.nodeName === "BR") {
+        value += "\n";
+        return;
+      }
+      const block = current !== node && /^(DIV|P|LI)$/.test(current.nodeName);
+      if (block && value && !value.endsWith("\n")) {
+        value += "\n";
+      }
+      Array.from(current.childNodes).forEach(append);
+      if (block && value && !value.endsWith("\n")) {
+        value += "\n";
+      }
+    }
+    append(node);
+    return value.endsWith("\n") ? value.slice(0, -1) : value;
+  }
+
   function ticketValue(ticket, field) {
     const node = ticket.querySelector('[data-field="' + field + '"]');
-    return node ? node.textContent : "";
+    return node ? editableText(node) : "";
   }
 
   function visibleTickets(column) {

@@ -9851,6 +9851,8 @@ def check_u2(gallery_root: Path) -> list[str]:
             failures.append(f"{TRIAGE_BOARD_LABEL}: {name} must declare exact deterministic order {expected!r}")
     required = (
         "captureSnapshot", "serializeBoard", "escapeMarkdown", "issueScalar",
+        "editableText", "Node.TEXT_NODE", 'current.nodeName === "BR"',
+        "return node ? editableText(node) : \"\";",
         "# Triage Board Export", "Artifact: triage-board", "Export kind: markdown",
         "## Now", "## Next", "## Later", "## Cut", "- _No tickets._",
         "## Issues", "- _No issues._", "duplicate_identifier",
