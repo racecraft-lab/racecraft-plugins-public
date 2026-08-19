@@ -747,12 +747,199 @@ not-applicable route required when no actual user-scroll element exists.
 1. Resolve an older success after a newer failure, then reject an older failure after a newer success.
 2. Confirm the newer state wins in both directions; also reset during a pending success and confirm its later settlement is ignored.
 
+## Slice 6 Executable Rows
+
+FF-UAT-001 through FF-UAT-018 and FF-UAT-020 through FF-UAT-036 passed at
+the Slice 6 source checkpoint. FF-UAT-019 is the evidence-backed
+horizontal-scroll not-applicable route required when no actual user-scroll
+element exists.
+
+### FF-UAT-001 Direct file open
+
+1. Open the exact feature-flags.html file URL.
+2. Confirm title Feature Flag Editor — Production, h1 Feature flag configuration, and no visible error.
+
+### FF-UAT-002 Complete representative fills
+
+1. Confirm four ordered groups, six named flags, and the intentional empty Internal group.
+2. Confirm every group and flag exposes its complete labeled field set.
+
+### FF-UAT-003 Named controls and status
+
+1. Confirm the named reset and Copy as Markdown controls, ordered-groups label, summary, and polite status region.
+2. Confirm all 41 controls have accessible names.
+
+### FF-UAT-004 Live group and flag editing
+
+1. Edit group IDs/labels and flag key/description/enabled/requires/rollout controls.
+2. Confirm the status reports in-memory updates and later exports use current visible values.
+
+### FF-UAT-005 Typed rollout feedback
+
+1. Enter valid numeric, empty, and invalid rollout values.
+2. Confirm numbers remain numbers, empty/invalid export as null, and invalid feedback is visible.
+
+### FF-UAT-006 Dependency feedback
+
+1. Exercise valid, invalid, unavailable, and disabled-prerequisite dependencies.
+2. Confirm normalized values and visible text distinguish all four states.
+
+### FF-UAT-007 Empty-group feedback
+
+1. Inspect the fourth representative group with no flags.
+2. Confirm No flags in this group. is visible and the group remains in export order.
+
+### FF-UAT-008 Reset and session-only state
+
+1. Reset after group/flag edits and confirm the representative seed returns.
+2. Edit a description, reload, and confirm the seed returns with no persisted editor state.
+
+### FF-UAT-009 Offline reload
+
+1. Set the browser context offline and reload the exact local file.
+2. Confirm editing and fallback export remain usable while a disposable remote probe fails.
+
+### FF-UAT-010 Complete keyboard traversal
+
+1. Tab through the editor, then traverse in reverse with Shift+Tab.
+2. Confirm 41 unique ordered stops and exact forward/reverse parity.
+
+### FF-UAT-011 Focus visibility
+
+1. Keyboard-focus representative controls and the failure fallback.
+2. Confirm a 3px solid outline with 3px offset and focused selectable fallback.
+
+### FF-UAT-012 Light/dark parity
+
+1. Exercise light, dark, persisted-dark reload, and return-to-light.
+2. Confirm identical fields, state meaning, feedback, and focus visibility.
+
+### FF-UAT-013 Reduced motion
+
+1. Emulate prefers-reduced-motion: reduce and reload.
+2. Confirm durations do not exceed 0.01ms, no animation remains running, and controls still work.
+
+### FF-UAT-014 Color-independent meaning
+
+1. Review enabled controls, dependency/rollout feedback, empty state, status, and fallback.
+2. Confirm each state is named in text rather than depending on hue.
+
+### FF-UAT-015 Horizontal-scroll actual-element check
+
+1. At 360 and 1280 CSS px compare document clientWidth and scrollWidth.
+2. Confirm no actual horizontal user-scroll region exists.
+
+### FF-UAT-016 360 CSS px layout
+
+1. Set the viewport to 360 by 900 CSS px and reload.
+2. Confirm every group, flag, control, message, and fallback remains unclipped and capture a full-page screenshot.
+
+### FF-UAT-017 1280 CSS px layout
+
+1. Set the viewport to 1280 by 900 CSS px and reload.
+2. Confirm every reviewed node remains unclipped and capture a full-page screenshot.
+
+### FF-UAT-018 Manifest parity
+
+1. Read the feature-flags manifest row.
+2. Confirm id/title/source, producer role, shipped status, and exports=[markdown].
+
+### FF-UAT-019 Horizontal-scroll N/A classification
+
+1. Confirm source has no overflow-x:auto or overflow-x:scroll path.
+2. Record not_applicable with source and runtime evidence because no meaningful horizontal scroll element exists.
+
+### FF-UAT-020 Live export freshness
+
+1. Export after setting one description to OLD snapshot, then change it to NEW snapshot and export again.
+2. Require different bytes, the new sentinel present, and the old sentinel absent.
+
+### FF-UAT-021 Empty values and collections
+
+1. Empty group id/label and flag key/description while leaving requires/rollout empty.
+2. Confirm empty strings, null optionals, the empty group, and ordered empty_required_value issues.
+
+### FF-UAT-022 Current group and flag order
+
+1. Export the representative state.
+2. Confirm onboarding, sync, billing, internal order and the six exact visible flag keys in DOM order.
+
+### FF-UAT-023 Deterministic schema and field order
+
+1. Extract the single fenced JSON value and reserialize with JSON.stringify(value, null, 2).
+2. Confirm byte equality and exact root, group, flag, and issue field order.
+
+### FF-UAT-024 Duplicate identifiers
+
+1. Duplicate one group ID and one flag key.
+2. Confirm both values remain and ordered duplicate_identifier issues point to their first visible occurrence.
+
+### FF-UAT-025 Special-character round trip
+
+1. Enter multiline Unicode, emoji, backticks, pipe, slash, backslash, and tab in visible controls.
+2. Confirm JSON parsing reproduces every value exactly.
+
+### FF-UAT-026 Multiple issue order
+
+1. Combine invalid requires/rollout and unavailable dependencies with the representative seed issue.
+2. Confirm deterministic entity, field, and condition order and all ten issue fields.
+
+### FF-UAT-027 Clipboard/fallback exact equality
+
+1. Capture the exact current Markdown on success and every fallback class.
+2. Require byte equality between the invocation export and clipboard or fallback text.
+
+### FF-UAT-028 Superseded-attempt data integrity
+
+1. Run both older/newer settlement directions with distinct visible data.
+2. Confirm stale status, fallback content/visibility, and focus never return.
+
+### FF-UAT-029 Genuine clipboard success
+
+1. Install a callable resolving writeText capability and invoke Copy as Markdown.
+2. Confirm exactly one exact write, normalized success status, hidden fallback, and copy-button focus.
+
+### FF-UAT-030 Clipboard absent
+
+1. Remove clipboard capability and invoke copy.
+2. Confirm zero writes and exact labeled, focused, selectable fallback.
+
+### FF-UAT-031 Method non-callable
+
+1. Expose a non-callable writeText value and invoke copy.
+2. Confirm zero writes and the same exact fallback recovery.
+
+### FF-UAT-032 Permission denied
+
+1. Reject one write with NotAllowedError.
+2. Confirm one attempt, normalized failure text, no exception leak, and exact focused fallback.
+
+### FF-UAT-033 Generic rejection
+
+1. Reject one write with a generic Error.
+2. Confirm one attempt, normalized failure text, no exception leak, and exact focused fallback.
+
+### FF-UAT-034 Synchronous throw
+
+1. Throw synchronously from one writeText call.
+2. Confirm one attempt, normalized failure text, no exception leak, and exact focused fallback.
+
+### FF-UAT-035 Failure-success-failure sequence
+
+1. Invoke failure, success, then failure over current visible state.
+2. Confirm success clears fallback and the final failure contains only the newest export.
+
+### FF-UAT-036 Both superseded races and reset invalidation
+
+1. Resolve older success after newer failure, then reject older failure after newer success.
+2. Confirm the newer state wins in both directions; reset during pending success and confirm later settlement is ignored.
+
 ## Source-Backed Not Applicable Rows
 
 The cumulative JSON retains rows that honestly carry
 `verdict: not_applicable` after source and browser execution.
 
-1. SD-UAT-019, CE-UAT-019, SR-UAT-019, IR-UAT-019, and TB-UAT-019 record the horizontal-scroll N/A route from source
+1. SD-UAT-019, CE-UAT-019, SR-UAT-019, IR-UAT-019, TB-UAT-019, and FF-UAT-019 record the horizontal-scroll N/A route from source
    and runtime evidence: there is no `overflow-x: auto` or `overflow-x: scroll`;
    `html` and `body` use `overflow-x: hidden`; 360 and 1280 CSS px observations
    found no actual user-scroll element.
@@ -764,4 +951,4 @@ The cumulative JSON retains rows that honestly carry
 3. SD-UAT-029 through SD-UAT-036, CE-UAT-029 through CE-UAT-036,
    SR-UAT-029 through SR-UAT-036, and IR-UAT-029 through IR-UAT-036 record
    producer-only clipboard/recovery/race cases that do not apply because all
-   four reader artifacts have no clipboard action; triage-board executes the producer rows.
+   four reader artifacts have no clipboard action; triage-board and feature-flags execute the producer rows.

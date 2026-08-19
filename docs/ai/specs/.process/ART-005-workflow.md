@@ -925,7 +925,7 @@ For every behavior:
 | 4 - Slice 3 | Complete | 13 | PR #447 open; source checkpoint `36ef824de`; cumulative UAT 54 pass, 54 evidence-backed N/A, zero fail; final gates green |
 | 5 - Slice 4 | Complete | 13 | PR #448 open; source checkpoint `f27b7833e`; cumulative UAT 72 pass, 72 evidence-backed N/A, zero fail; final gates green |
 | 6 - Slice 5 | Complete | 16 | PR #452 open; repaired source checkpoint `69f803d37`; cumulative UAT 107 pass, 73 evidence-backed N/A, zero fail; final gates green |
-| 7 - Slice 6 | In Progress | 14 | Source checkpoint `c0ca43b62`; focused 497/497 and 65/65, full 7422/7422; T093 active |
+| 7 - Slice 6 | In Progress | 15 | Restacked source checkpoint `8b1e67587`; cumulative UAT 142 pass, 74 evidence-backed N/A, zero fail; T094 active |
 | 8 - Slice 7 | Pending | 0 | prompt-tuner plus incremental integration and closeout |
 
 ### Slice PR Stack
