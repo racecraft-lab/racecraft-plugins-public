@@ -829,8 +829,14 @@ h1 { margin: 0; font: 700 clamp(2rem, 6vw, 3.7rem)/1 var(--rc-font-display); }
 
   function valueWithin(root, selector) { return root.querySelector(selector)?.value || ""; }
 
+  function orderedRecord(fields, values) {
+    const record = {};
+    fields.forEach(function (field) { record[field] = values[field]; });
+    return record;
+  }
+
   function issue(code, entityType, entityId, field, occurrenceIndex, relatedOccurrenceIndex, rawValue, normalizedValue) {
-    return {
+    return orderedRecord(ISSUE_FIELDS, {
       code: code,
       artifactId: "feature-flags",
       entityType: entityType,
@@ -841,7 +847,7 @@ h1 { margin: 0; font: 700 clamp(2rem, 6vw, 3.7rem)/1 var(--rc-font-display); }
       rawValue: rawValue,
       normalizedValue: normalizedValue,
       message: ISSUE_MESSAGES[code]
-    };
+    });
   }
 
   function parseRollout(rawValue) {
@@ -930,22 +936,26 @@ h1 { margin: 0; font: 700 clamp(2rem, 6vw, 3.7rem)/1 var(--rc-font-display); }
     const issues = collectIssues(rawGroups, flagKeys);
     const groups = rawGroups.map(function (group) {
       const flags = group.flags.map(function (flag) {
-        return Object.freeze({
+        return Object.freeze(orderedRecord(FLAG_FIELDS, {
           key: flag.key,
           description: flag.description,
           enabled: flag.enabled,
           requires: flag.requiresResult.value,
           rollout: flag.rolloutResult.value
-        });
+        }));
       });
-      return Object.freeze({ id: group.id, label: group.label, flags: Object.freeze(flags) });
+      return Object.freeze(orderedRecord(GROUP_FIELDS, {
+        id: group.id,
+        label: group.label,
+        flags: Object.freeze(flags)
+      }));
     });
-    return Object.freeze({
+    return Object.freeze(orderedRecord(ROOT_FIELDS, {
       schemaVersion: "artifact-gallery.feature-flags.export.v1",
       artifactId: "feature-flags",
       groups: Object.freeze(groups),
       issues: Object.freeze(issues.map(Object.freeze))
-    });
+    }));
   }
 
   function serializeFlags(snapshot) {
