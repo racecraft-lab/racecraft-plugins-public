@@ -1072,3 +1072,68 @@ Verification bound to the Slice 6 source checkpoint:
 - Generated release artifact check: **pass**
 - Packet-excluded spec-index dry-run/read-only checks: **pass**
 - Cumulative browser UAT: **142 pass, 74 evidence-backed N/A, 0 fail**
+
+## Slice 6 Final Boundary
+
+Remote refs were refreshed immediately before measurement. Slice 5 PR
+[#452](https://github.com/racecraft-lab/racecraft-plugins-public/pull/452)
+is open and clean at exact head
+`e023d51b30b5fd583e3351a377b35615f1bf0981`; the Slice 6 merge base uses that
+exact repaired closeout. The Slice 6 source checkpoint is
+`8b1e67587d24b01258df5856e8888588734a22de`, and cumulative UAT evidence is
+recorded at `f6db36f7d1c66dde3faa17e4e89d0a524668ca46`.
+
+The source template, manifest, focused tests, payload mirrors, installed-cache
+mirrors, and generated proofs remain byte-identical after the tested source
+checkpoint. All later changes are cumulative UAT and workflow/control-plane
+evidence.
+
+The complete Slice 6 diff against its exact repaired Slice 5 base contains 33
+Git paths:
+
+- Seven implementation-authored paths:
+  - `speckit-pro/artifact-gallery/manifest.json`
+  - `speckit-pro/artifact-gallery/templates/feature-flags.html`
+  - `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json`
+  - `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.md`
+  - `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-runbook.md`
+  - `tests/speckit-pro/unit/test-artifact-fill-regions.py`
+  - `tests/speckit-pro/unit/test-artifact-gallery.py`
+- Twenty-two source-derived generated paths:
+  - `dist/claude/speckit-pro/artifact-gallery/manifest.json`
+  - `dist/claude/speckit-pro/artifact-gallery/templates/feature-flags.html`
+  - `dist/codex/speckit-pro/artifact-gallery/manifest.json`
+  - `dist/codex/speckit-pro/artifact-gallery/templates/feature-flags.html`
+  - `docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json`
+  - `docs/ai/specs/.process/XPLAT-009-payload-completeness-result.json`
+  - `docs/ai/specs/.process/XPLAT-009-release-readiness-result.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-file-root.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-mutable.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-source-root.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-mutable.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-root-mismatch.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-same-root.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-single-product.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-source-mismatch.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-stale-hash.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-traversal-root.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/manifest.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/templates/feature-flags.html`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/manifest.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/templates/feature-flags.html`
+- Four required workflow/control-plane paths:
+  - `docs/ai/specs/.process/ART-005-workflow.md`
+  - `docs/ai/specs/.process/autopilot-state.json`
+  - `specs/art-005-gallery-completion-knowledge-reports-editors/.process/implementation-notes.md`
+  - `specs/art-005-gallery-completion-knowledge-reports-editors/tasks.md`
+
+The final component method counts 635 non-canonical template lines plus 142
+incremental test lines = **777 reviewable LOC**, three below the 780 ceiling
+and 23 below the mandatory 800 stop. The 33-path total exceeds the 25-file
+threshold by eight, but every excess path is required generated or
+workflow/control-plane evidence. With one production template, exactly seven
+implementation-authored paths, stable tested source bytes, and no correctness
+or non-size blocker, the disposition is **SIZE-ONLY BLOCK / CONTINUE** under
+the operator-ratified seven-branch topology. No typed reviewability exception
+is claimed.
