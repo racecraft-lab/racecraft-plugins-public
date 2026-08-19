@@ -2,6 +2,57 @@
 
 from __future__ import annotations
 
+import json
+from collections.abc import Iterator
+from pathlib import Path
+
+
+# Keywords whose value is itself a schema, a list of schemas, or a mapping of
+# names to schemas. Walking only these avoids mistaking a ``const`` payload or a
+# property named after a keyword for a schema node.
+_SCHEMA_MAP_KEYWORDS = ("properties", "$defs", "patternProperties")
+_SCHEMA_KEYWORDS = ("items", "not", "if", "then", "else", "additionalProperties", "propertyNames", "contains")
+_SCHEMA_LIST_KEYWORDS = ("allOf", "anyOf", "oneOf", "prefixItems")
+
+
+def load_json(path: Path) -> dict[str, object]:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def iter_subschemas(schema: object) -> Iterator[dict[str, object]]:
+    """Yield every schema node in a JSON Schema document, the root included."""
+    stack: list[object] = [schema]
+    while stack:
+        node = stack.pop()
+        if not isinstance(node, dict):
+            continue
+        yield node
+        for keyword in _SCHEMA_MAP_KEYWORDS:
+            container = node.get(keyword)
+            if isinstance(container, dict):
+                stack.extend(container.values())
+        for keyword in _SCHEMA_KEYWORDS:
+            stack.append(node.get(keyword))
+        for keyword in _SCHEMA_LIST_KEYWORDS:
+            branch = node.get(keyword)
+            if isinstance(branch, list):
+                stack.extend(branch)
+
+
+def open_object_nodes(schema: object) -> list[list[str]]:
+    """Member lists of every object node that fails to close its member set."""
+    return [
+        sorted(node.get("properties", {}))
+        for node in iter_subschemas(schema)
+        if node.get("type") == "object" and node.get("additionalProperties") is not False
+    ]
+
+
+def declared_refs(schema: object) -> list[str]:
+    return sorted({
+        node["$ref"] for node in iter_subschemas(schema) if isinstance(node.get("$ref"), str)
+    })
+
 
 def field_exists(data: object, dotted: str) -> bool:
     """Walk ``a.b.c`` keys without raising."""
