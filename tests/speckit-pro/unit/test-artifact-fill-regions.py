@@ -942,8 +942,19 @@ class FillRegionTests(unittest.TestCase):
         for identifier in sorted(FLOOR):
             with self.subTest(msg=identifier):
                 self.assertIn(identifier, identifiers or set())
+
     def test_slide_deck_fill_inventory_template_exists(self) -> None:
-        self.assertTrue((path := GALLERY_ROOT / _template_path("slide-deck")).is_file() and all(f"Slot: {slot} |" in path.read_text(encoding="utf-8") for slot in FLOOR["slide-deck"]), f"{_template_path('slide-deck')}: missing slide-deck fill-inventory template")
+        relative = _template_path("slide-deck")
+        path = GALLERY_ROOT / relative
+        self.assertTrue(path.is_file(), f"{relative}: missing slide-deck fill-inventory template")
+        template = path.read_text(encoding="utf-8")
+        for slot in FLOOR["slide-deck"]:
+            with self.subTest(msg=slot):
+                self.assertIn(
+                    f"Slot: {slot} |",
+                    template,
+                    f"{relative}: missing {slot!r} fill-inventory slot",
+                )
 
 
 # ---------------------------------------------------------------------------
