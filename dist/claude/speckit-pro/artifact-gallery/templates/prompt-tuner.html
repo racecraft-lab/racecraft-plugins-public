@@ -740,8 +740,16 @@ Tone: {{tone}}</textarea>
   });
   let copyAttempt = 0;
 
+  function orderedRecord(fieldOrder, values) {
+    const record = {};
+    fieldOrder.forEach(function (field) {
+      record[field] = values[field];
+    });
+    return record;
+  }
+
   function issue(code, entityType, entityId, field, occurrenceIndex, relatedOccurrenceIndex, rawValue, normalizedValue) {
-    return {
+    return orderedRecord(ISSUE_FIELDS, {
       code: code,
       artifactId: "prompt-tuner",
       entityType: entityType,
@@ -752,7 +760,7 @@ Tone: {{tone}}</textarea>
       rawValue: rawValue,
       normalizedValue: normalizedValue,
       message: ISSUE_MESSAGES[code]
-    };
+    });
   }
 
   function normalizeSlot(rawValue) {
@@ -850,22 +858,22 @@ Tone: {{tone}}</textarea>
     });
     const issues = collectIssues(template, rawSlots, rawSamples);
     const samples = rawSamples.map(function (sample) {
-      return Object.freeze({
+      return Object.freeze(orderedRecord(SAMPLE_FIELDS, {
         id: sample.id,
         label: sample.label,
         planClass: sample.planClass,
         fields: Object.freeze(sample.fields),
         preview: sample.preview
-      });
+      }));
     });
-    return Object.freeze({
+    return Object.freeze(orderedRecord(ROOT_FIELDS, {
       schemaVersion: "artifact-gallery.prompt-tuner.export.v1",
       artifactId: "prompt-tuner",
       template: template,
       slots: Object.freeze(rawSlots),
       samples: Object.freeze(samples),
       issues: Object.freeze(issues.map(Object.freeze))
-    });
+    }));
   }
 
   function serializePrompt(snapshot) {
