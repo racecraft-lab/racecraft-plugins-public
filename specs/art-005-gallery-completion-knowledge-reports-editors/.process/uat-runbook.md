@@ -934,12 +934,200 @@ element exists.
 1. Resolve older success after newer failure, then reject older failure after newer success.
 2. Confirm the newer state wins in both directions; reset during pending success and confirm later settlement is ignored.
 
+## Slice 7 Executable Rows
+
+PT-UAT-001 through PT-UAT-018 and PT-UAT-020 through PT-UAT-036 passed at
+the Slice 7 source checkpoint. PT-UAT-019 is the evidence-backed
+horizontal-scroll not-applicable route required when no actual user-scroll
+element exists.
+
+### PT-UAT-001 Direct file open
+
+1. Open the exact prompt-tuner.html file URL.
+2. Confirm title Prompt Tuner — Support Reply, h1 Support reply prompt tuner, three previews, and no page error.
+
+### PT-UAT-002 Complete representative fills
+
+1. Confirm the prompt template, five ordered slots, three anchored samples, fifteen sample fields, and three derived previews.
+2. Confirm the prompt-variants and evaluation-notes fills are complete.
+
+### PT-UAT-003 Named controls and status
+
+1. Confirm every input, textarea, and button has a visible or programmatic name.
+2. Confirm the copy and preview status regions expose their messages.
+
+### PT-UAT-004 Live template and sample editing
+
+1. Edit the template and sample fields.
+2. Confirm each named preview updates immediately from current visible values.
+
+### PT-UAT-005 Slot ordering and first occurrence
+
+1. Confirm customer_name, plan_tier, ticket_subject, ticket_body, and tone remain in visible order.
+2. Duplicate a valid slot and confirm only its first occurrence becomes an exported field key.
+
+### PT-UAT-006 Invalid-slot feedback
+
+1. Enter raw invalid slot text.
+2. Confirm the raw text remains visible, the unresolved token remains in preview, and invalid/unavailable feedback is exposed.
+
+### PT-UAT-007 Empty-state feedback
+
+1. Empty the prompt template and a sample value, then remove all slot/sample rows in the disposable page state.
+2. Confirm explicit empty template, preview, collections, and ordered issue output.
+
+### PT-UAT-008 Reset and session-only state
+
+1. Reset after edits and confirm the representative seed returns.
+2. Edit the template, reload, and confirm no editor state persists.
+
+### PT-UAT-009 Offline reload
+
+1. Set the browser context offline and reload the exact local file.
+2. Confirm controls, previews, reset, and copy fallback remain usable while a disposable remote probe fails.
+
+### PT-UAT-010 Complete keyboard traversal
+
+1. Tab through the complete editor and record every stop.
+2. Confirm all 33 unique stops in forward order and the exact reverse order with Shift+Tab.
+
+### PT-UAT-011 Focus visibility
+
+1. Keyboard-focus representative shared and editor controls plus the failure fallback.
+2. Confirm solid visible focus with at least 2px width/offset and exact focused fallback selection.
+
+### PT-UAT-012 Light/dark parity
+
+1. Exercise light, dark, persisted-dark reload, and return-to-light.
+2. Confirm identical prompt, controls, previews, status meaning, and focus behavior.
+
+### PT-UAT-013 Reduced motion
+
+1. Emulate prefers-reduced-motion: reduce and reload.
+2. Confirm 0.01ms transition/animation durations, zero running animations, and usable controls.
+
+### PT-UAT-014 Color-independent meaning
+
+1. Review valid/invalid slot, derived preview, empty, issue, copy, and reset states.
+2. Confirm every state is named by visible text and does not depend on hue.
+
+### PT-UAT-015 Horizontal-scroll actual-element check
+
+1. At 360 and 1280 CSS px compare document clientWidth and scrollWidth.
+2. Confirm no actual horizontal user-scroll region exists.
+
+### PT-UAT-016 360 CSS px layout
+
+1. Set the viewport to exactly 360 by 900 CSS px and reload.
+2. Confirm every prompt, slot, sample, preview, control, and fallback remains unclipped and capture a full-page screenshot.
+
+### PT-UAT-017 1280 CSS px layout
+
+1. Set the viewport to 1280 by 900 CSS px and reload.
+2. Confirm every reviewed node remains unclipped and capture a full-page screenshot.
+
+### PT-UAT-018 Manifest parity
+
+1. Read the prompt-tuner manifest row.
+2. Confirm id/title/source, producer exports, shipped status, and exports=[markdown].
+
+### PT-UAT-019 Horizontal-scroll N/A classification
+
+1. Confirm source has no overflow-x:auto or overflow-x:scroll path.
+2. Record not_applicable with source and runtime evidence because no meaningful horizontal scroll element exists.
+
+### PT-UAT-020 Live export freshness
+
+1. Export with FRESHNESS-OLD-prompt-tuner, then change the visible template to FRESHNESS-NEW-prompt-tuner and export again.
+2. Require different bytes, the new sentinel present, and the old sentinel absent.
+
+### PT-UAT-021 Empty values and collections
+
+1. Empty the template and representative fields, then exercise empty slots, samples, and previews.
+2. Confirm empty strings/arrays remain explicit and ordered empty_required_value issues are preserved.
+
+### PT-UAT-022 Current slot and sample order
+
+1. Export the representative state.
+2. Confirm the five exact slots and three exact sample IDs follow current visible DOM order.
+
+### PT-UAT-023 Deterministic schema and field order
+
+1. Extract the single fenced JSON value and reserialize with JSON.stringify(value, null, 2).
+2. Confirm byte equality and exact root, sample, field-key, and issue-field order.
+
+### PT-UAT-024 Duplicate identifiers
+
+1. Duplicate one slot and one sample ID.
+2. Confirm both raw values remain and ordered duplicate_identifier issues point to their first occurrence.
+
+### PT-UAT-025 Special-character round trip
+
+1. Enter multiline Unicode, emoji, quotes, backticks, pipe, slash, backslash, and tab in the template and sample fields.
+2. Confirm JSON parsing reproduces template, fields, and derived preview exactly.
+
+### PT-UAT-026 Multiple issue order
+
+1. Combine invalid/duplicate slots with empty and duplicate sample fields.
+2. Confirm deterministic entity, field, and condition order and all ten issue fields.
+
+### PT-UAT-027 Clipboard/fallback exact equality
+
+1. Capture the exact current Markdown on success and every fallback class.
+2. Require byte equality between the invocation export and clipboard or fallback text.
+
+### PT-UAT-028 Superseded-attempt data integrity
+
+1. Run both older/newer settlement directions with distinct visible data.
+2. Confirm stale status, fallback content/visibility, and focus never return.
+
+### PT-UAT-029 Genuine clipboard success
+
+1. Install a callable resolving writeText capability and invoke Copy as Markdown.
+2. Confirm exactly one exact write, normalized success status, hidden fallback, and copy-button focus.
+
+### PT-UAT-030 Clipboard absent
+
+1. Remove clipboard capability and invoke copy.
+2. Confirm zero writes and exact labeled, focused, selectable fallback.
+
+### PT-UAT-031 Method non-callable
+
+1. Expose a non-callable writeText value and invoke copy.
+2. Confirm zero writes and the same exact fallback recovery.
+
+### PT-UAT-032 Permission denied
+
+1. Reject one write with NotAllowedError.
+2. Confirm one attempt, normalized failure text, no exception leak, and exact focused fallback.
+
+### PT-UAT-033 Generic rejection
+
+1. Reject one write with a generic Error.
+2. Confirm one attempt, normalized failure text, no exception leak, and exact focused fallback.
+
+### PT-UAT-034 Synchronous throw
+
+1. Throw synchronously from one writeText call.
+2. Confirm one attempt, normalized failure text, no exception leak, and exact focused fallback.
+
+### PT-UAT-035 Failure-success-failure sequence
+
+1. Invoke failure, success, then failure over three distinct visible template values.
+2. Confirm success clears fallback and the final failure contains only the newest export.
+
+### PT-UAT-036 Both superseded races and reset invalidation
+
+1. Resolve older success after newer failure, then reject older failure after newer success.
+2. Confirm the newer state wins in both directions; reset during pending success and confirm later settlement is ignored.
+
 ## Source-Backed Not Applicable Rows
 
 The cumulative JSON retains rows that honestly carry
 `verdict: not_applicable` after source and browser execution.
 
-1. SD-UAT-019, CE-UAT-019, SR-UAT-019, IR-UAT-019, TB-UAT-019, and FF-UAT-019 record the horizontal-scroll N/A route from source
+1. SD-UAT-019, CE-UAT-019, SR-UAT-019, IR-UAT-019, TB-UAT-019,
+   FF-UAT-019, and PT-UAT-019 record the horizontal-scroll N/A route from source
    and runtime evidence: there is no `overflow-x: auto` or `overflow-x: scroll`;
    `html` and `body` use `overflow-x: hidden`; 360 and 1280 CSS px observations
    found no actual user-scroll element.
@@ -951,4 +1139,5 @@ The cumulative JSON retains rows that honestly carry
 3. SD-UAT-029 through SD-UAT-036, CE-UAT-029 through CE-UAT-036,
    SR-UAT-029 through SR-UAT-036, and IR-UAT-029 through IR-UAT-036 record
    producer-only clipboard/recovery/race cases that do not apply because all
-   four reader artifacts have no clipboard action; triage-board and feature-flags execute the producer rows.
+   four reader artifacts have no clipboard action; triage-board, feature-flags,
+   and prompt-tuner execute the producer rows.

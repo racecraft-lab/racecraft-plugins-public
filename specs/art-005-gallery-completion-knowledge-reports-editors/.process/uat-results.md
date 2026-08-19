@@ -1,23 +1,26 @@
 # ART-005 UAT Results
 
 Feature: ART-005 gallery completion knowledge reports/editors
-Artifacts: `slide-deck`, `concept-explainer`, `status-report`, `incident-report`, `triage-board`
+Artifacts: `slide-deck`, `concept-explainer`, `status-report`, `incident-report`,
+`triage-board`, `feature-flags`, `prompt-tuner`
 Template paths:
 - `speckit-pro/artifact-gallery/templates/slide-deck.html`
 - `speckit-pro/artifact-gallery/templates/concept-explainer.html`
 - `speckit-pro/artifact-gallery/templates/status-report.html`
 - `speckit-pro/artifact-gallery/templates/incident-report.html`
 - `speckit-pro/artifact-gallery/templates/triage-board.html`
+- `speckit-pro/artifact-gallery/templates/feature-flags.html`
+- `speckit-pro/artifact-gallery/templates/prompt-tuner.html`
 Runbook path: `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-runbook.md`
 JSON path: `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json`
 Driver: `manual`
-Status: T077 complete; all 180 cumulative Slice 1-5 rows are bound to source
-checkpoint `69f803d37523499f80120d246400a7fbda30c6fa`.
+Status: T109 complete; all 252 cumulative Slice 1-7 rows are bound to source
+checkpoint `4b9bb0f256507a43551a725bd8502283e2e5e1cb`.
 
 ## Source Checkpoint vs Evidence Commit
 
 The source checkpoint is
-`69f803d37523499f80120d246400a7fbda30c6fa`. It contains all five source
+`4b9bb0f256507a43551a725bd8502283e2e5e1cb`. It contains all seven source
 templates, the manifest, cumulative tests, generated outputs, and the
 pre-execution evidence carriers that were tested. The later evidence commit
 records these results without changing the tested source bytes. The JSON names
@@ -31,12 +34,12 @@ No repository browser harness was committed, so the contract driver remains
 
 ## Execution Environment
 
-- Executed at: `2026-08-18T23:42:26Z`
+- Executed at: `2026-08-19T01:50:06Z`
 - OS: macOS 26.6.2, Build 25G82, arm64
 - Browser: Google Chrome 151.0.7922.138
 - Scheme: direct `file://`
 - Viewports: 360 and 1280 CSS px widths, using a 900 CSS px observation height
-- Network: online baseline plus context-offline reload for all five artifacts;
+- Network: online baseline plus context-offline reload for all seven artifacts;
   disposable remote probes failed with `net::ERR_INTERNET_DISCONNECTED`
 - Themes: light and dark, including persisted-dark reload
 - Motion: no-preference plus `prefers-reduced-motion: reduce`
@@ -44,17 +47,21 @@ No repository browser harness was committed, so the contract driver remains
   labeled node circles, square keys, scenario headings, and `Watch:` text;
   eight explicit status/next-action cues in the status report; text-backed
   severity/status, numbered timeline events, and owned follow-ups in the incident report;
-  named columns/ticket fields plus explicit empty, filter, boundary, and copy text in triage-board
+  named columns/ticket fields plus explicit empty, filter, boundary, and copy
+  text in triage-board; labeled enabled, dependency, rollout, issue, empty,
+  status, and fallback states in feature-flags; and labeled valid/invalid slots,
+  derived previews, empty states, issues, copy outcomes, and reset feedback in
+  prompt-tuner
 
 ## Row Totals
 
-- Total cumulative Slice 1-5 rows: 180
-- Executed pass rows: 107
-- Evidence-backed N/A rows in JSON: 73
-- JSON rows currently recorded: 180
-- Pass verdicts: 107
+- Total cumulative Slice 1-7 rows: 252
+- Executed pass rows: 177
+- Evidence-backed N/A rows in JSON: 75
+- JSON rows currently recorded: 252
+- Pass verdicts: 177
 - Fail verdicts: 0
-- Not-applicable verdicts: 73
+- Not-applicable verdicts: 75
 
 Every executable row passed; no result is omitted from the normalized JSON.
 
@@ -1187,3 +1194,92 @@ remain intentionally RED until authoritative T108 regeneration. The declared
 maximum physical boundary remains 33 paths; any final total-file block may
 continue only when every excess path is generated or workflow/control-plane
 evidence.
+
+## Prompt-Tuner Executed Matrix
+
+| Row | Verdict | Evidence summary |
+|---|---|---|
+| PT-UAT-001 | Pass | Exact `file://` template opened with expected title/h1, three previews, and zero page errors. |
+| PT-UAT-002 | Pass | Prompt, five slots, three samples, fifteen fields, three previews, and both declared fills were complete. |
+| PT-UAT-003 | Pass | Every control was named and copy/preview status semantics were exposed. |
+| PT-UAT-004 | Pass | Current template and field edits updated derived previews immediately. |
+| PT-UAT-005 | Pass | Five raw slots stayed ordered and only the first valid occurrence created a field key. |
+| PT-UAT-006 | Pass | Invalid raw slot text stayed exact with ordered invalid/unavailable feedback and unresolved preview token. |
+| PT-UAT-007 | Pass | Empty template, field, slot, sample, and preview states remained explicit. |
+| PT-UAT-008 | Pass | Reset and reload restored the representative seed without editor persistence. |
+| PT-UAT-009 | Pass | Offline local reload preserved the editor while the disposable remote probe failed. |
+| PT-UAT-010 | Pass | Forward/reverse traversal covered all 33 unique controls in exact opposite order. |
+| PT-UAT-011 | Pass | Shared/editor controls showed solid focus and the full exact fallback was focused and selected. |
+| PT-UAT-012 | Pass | Light/dark content matched, dark persisted, and the editor returned to light. |
+| PT-UAT-013 | Pass | Reduce mode computed 0.01ms durations with zero running animations after settle. |
+| PT-UAT-014 | Pass | Validation, preview, empty, issue, copy, and reset meaning remained text-backed. |
+| PT-UAT-015 | Pass | Runtime found no actual horizontal scroll element at either width. |
+| PT-UAT-016 | Pass | Complete editor passed at 360 CSS px with no page overflow or clipped reviewed control. |
+| PT-UAT-017 | Pass | Complete editor passed at 1280 CSS px with no page overflow or clipped reviewed control. |
+| PT-UAT-018 | Pass | Manifest matched id/title/source, shipped state, and producer `exports=[markdown]`. |
+| PT-UAT-019 | N/A | No meaningful horizontal user-scroll element exists; structured source/runtime reason recorded. |
+| PT-UAT-020 | Pass | Exact OLD→NEW prompt sentinels produced distinct current exports. |
+| PT-UAT-021 | Pass | Empty strings and collections stayed explicit with ordered empty-value issues. |
+| PT-UAT-022 | Pass | Five slots and three samples matched current visible DOM order. |
+| PT-UAT-023 | Pass | One JSON fence round-tripped byte-for-byte with exact root/sample/issue field order. |
+| PT-UAT-024 | Pass | Duplicate slot and sample ID values remained and linked to first occurrences. |
+| PT-UAT-025 | Pass | Multiline Unicode and every required special character round-tripped through template, fields, and preview. |
+| PT-UAT-026 | Pass | Combined invalid, unavailable, duplicate, and empty issues retained deterministic order and ten fields. |
+| PT-UAT-027 | Pass | Success and all five recovery capabilities received exact invocation bytes. |
+| PT-UAT-028 | Pass | Both older settlements failed to restore stale status, fallback, or focus. |
+| PT-UAT-029 | Pass | Callable clipboard made one exact write, hid fallback, normalized status, and focused copy. |
+| PT-UAT-030 | Pass | Absent clipboard made zero writes and exposed exact focused selectable fallback. |
+| PT-UAT-031 | Pass | Non-callable method made zero writes and exposed the same exact recovery. |
+| PT-UAT-032 | Pass | Permission denial made one attempt and exposed normalized exact recovery without leaking detail. |
+| PT-UAT-033 | Pass | Generic rejection made one attempt and exposed normalized exact recovery without leaking detail. |
+| PT-UAT-034 | Pass | Synchronous throw made one attempt and exposed normalized exact recovery without leaking detail. |
+| PT-UAT-035 | Pass | Failure-success-failure used only the current visible template at every transition. |
+| PT-UAT-036 | Pass | Both stale-settlement directions and pending-success reset invalidation preserved newest state. |
+
+## Slice 7 Source and Browser Evidence
+
+The Slice 7 source checkpoint is
+`4b9bb0f256507a43551a725bd8502283e2e5e1cb`. The first six templates are
+byte-identical to the repaired Slice 6 source, and the prompt-tuner source,
+manifest, focused tests, generated mirrors, and proof fixtures were stable
+before browser execution.
+
+A fresh connected-browser attempt returned an empty browser inventory and
+`getForUrl` was unavailable. The operator-authorized Playwright MCP fallback
+then exercised the seven exact `file://` templates. The cumulative record
+contains **252 rows**: **177 pass**, **75 evidence-backed `not_applicable`**,
+and **0 fail**, with exactly 36 rows per artifact.
+
+Prompt-tuner coverage included five ordered raw slots, three ordered samples,
+fifteen sample fields, live derived previews, first-occurrence field keys,
+duplicate slot/sample evidence, raw invalid/unavailable slots, explicit empty
+template/slot/sample/field/preview states, exact root/sample/issue field order,
+one fenced JSON value, byte-equal pretty-print round-trip, deterministic issue
+order, multiline Unicode and special characters, live freshness, exact
+clipboard/fallback equality, five recovery capability states, the
+failure-success-failure sequence, both superseded races, and reset
+invalidation. Keyboard traversal covered 33 unique forward/reverse stops;
+theme persistence, reduced motion, offline/session-only reload, and unclipped
+360/1280 layouts passed. Evidence captures are named
+`art-005-slice-7-prompt-tuner-360.png`,
+`art-005-slice-7-prompt-tuner-1280.png`, and
+`art-005-slice-7-prompt-tuner-accessibility.md`.
+
+The carried triage-board producer also received a fresh 36/36 deep pass,
+including its repaired real contenteditable line break and exact 935-byte seed
+Markdown. Initial browser-probe mismatches across the cumulative run were
+harness assumptions about computed duration formatting, finished animation
+objects, hidden text selection, repeated accessible labels, representative
+seed issues, and manifest role inference. Corrected targeted probes passed the
+actual contracts without product changes.
+
+Verification already bound to the Slice 7 source checkpoint:
+
+- Focused gallery module: **500/500**
+- Focused fill module: **67/67**
+- Layer 1: **1448/1448**
+- Isolated Layer 4: **5793/5793**
+- Isolated full suite: **7427/7427**
+- Generated release artifact check: **pass**
+- Packet-excluded spec-index dry-run/read-only checks: **pass**
+- Cumulative browser UAT: **177 pass, 75 evidence-backed N/A, 0 fail**

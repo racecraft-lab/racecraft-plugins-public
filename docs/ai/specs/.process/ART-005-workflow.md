@@ -55,7 +55,7 @@ for four artifacts is now an explicit Open Question.
 | Tasks | `/speckit-tasks` | ✅ Complete | 119 ordered tasks; G5 and phantom-completion checks pass |
 | Analyze | `/speckit-analyze` | ✅ Complete | Six findings remediated; G6 passes with 0 CRITICAL/HIGH findings |
 | Confidence Gate | G6.5 | ✅ Complete | Advisory PASS at 0.98 against the 0.90 threshold |
-| Implement | `/speckit-implement` | 🔄 In Progress | Slices 1-6 complete in PRs #444, #446, #447, #448, #452, and #454; Slice 7 T095 active |
+| Implement | `/speckit-implement` | 🔄 In Progress | Slices 1-6 complete in PRs #444, #446, #447, #448, #452, and #454; Slice 7 T110 active |
 | Post | Post-Implementation | ⏳ Pending | Canonical closeout plus tracked `file://` UAT results |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -926,7 +926,7 @@ For every behavior:
 | 5 - Slice 4 | Complete | 13 | PR #448 open; source checkpoint `f27b7833e`; cumulative UAT 72 pass, 72 evidence-backed N/A, zero fail; final gates green |
 | 6 - Slice 5 | Complete | 16 | PR #452 open; repaired source checkpoint `69f803d37`; cumulative UAT 107 pass, 73 evidence-backed N/A, zero fail; final gates green |
 | 7 - Slice 6 | Complete | 16 | PR #454 open; source checkpoint `8b1e67587`; cumulative UAT 142 pass, 74 evidence-backed N/A, zero fail; final gates green |
-| 8 - Slice 7 | In Progress | 14 | Regenerated source gates green; source checkpoint sealing; T109 next |
+| 8 - Slice 7 | In Progress | 15 | Cumulative browser UAT 177 pass, 75 evidence-backed N/A, zero fail; T110 next |
 
 ### Slice PR Stack
 
