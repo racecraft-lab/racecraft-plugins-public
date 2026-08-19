@@ -1,7 +1,7 @@
 {
   "featureId": "ART-005",
-  "sourceCommit": "4b9bb0f256507a43551a725bd8502283e2e5e1cb",
-  "executedAt": "2026-08-19T01:50:06Z",
+  "sourceCommit": "f85ed14c89a5f71bb041e49930647dbc93ec8560",
+  "executedAt": "2026-08-19T03:57:37Z",
   "environment": {
     "operatingSystem": "macOS 26.6.2 (Build 25G82; arm64)",
     "browserNameAndVersion": "Google Chrome 151.0.7922.138 via Playwright MCP fallback",
@@ -10,7 +10,7 @@
     "themeCondition": "Light and dark modes exercised for all seven artifacts; dark overrides persisted across reload and every artifact returned to light after the tests.",
     "reducedMotionCondition": "No-preference baseline plus prefers-reduced-motion: reduce emulation; transition and animation durations were 0.01ms with zero running animations after settle.",
     "colorModeCondition": "Light and dark color schemes plus text-and-shape cues: Ready/Watch/Stop for slide-deck, labeled node circles and square keys for concept-explainer, explicit status/next-action labels for status-report, text-backed severity/status plus numbered timeline and owned follow-ups for incident-report, named columns and ticket metadata for triage-board, labeled enabled/dependency/rollout/issue states for feature-flags, and labeled valid/invalid slots, derived previews, empty states, issues, copy outcomes, and reset feedback for prompt-tuner.",
-    "notes": "A fresh connected-browser attempt returned an empty browser inventory and getForUrl was unavailable. The operator-authorized Playwright MCP fallback re-executed the complete cumulative seven-artifact row set at the exact Slice 7 source checkpoint, including the repaired triage-board contenteditable line break and all prompt-tuner producer cases. Prompt-tuner passed 36/36 browser probes with zero page errors; all transient harness expectation mismatches were corrected against observed browser semantics without product changes. No repository browser harness was committed."
+    "notes": "A fresh connected-browser attempt returned an empty browser inventory and getForUrl was unavailable. At exact post-review checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560, the first four reader templates were byte-identical to the prior cumulative checkpoint and their rows were rebound by exact source-hash validation. The operator-authorized Playwright MCP fallback re-executed triage-board, feature-flags, and prompt-tuner at 36/36 each, plus targeted probes for filtered reorder, backtick-safe ticket IDs, strict rollout syntax, required-field status feedback, and the __proto__ prompt slot. No repository browser harness was committed."
   },
   "driver": "manual",
   "runbookPath": "specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-runbook.md",
@@ -1265,7 +1265,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-019 horizontal_scroll_region_not_applicable_source_check",
       "claim": "No named keyboard-focusable horizontal scroll region is required when the source contains no meaningful horizontal overflow region.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Checkpoint source and runtime classification: the template contains no overflow-x:auto or overflow-x:scroll declaration, html/body use overflow-x:hidden, both reviewed widths had equal document clientWidth and scrollWidth, and no meaningful horizontal scroll element appeared on any slide.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Checkpoint source and runtime classification: the template contains no overflow-x:auto or overflow-x:scroll declaration, html/body use overflow-x:hidden, both reviewed widths had equal document clientWidth and scrollWidth, and no meaningful horizontal scroll element appeared on any slide.",
       "accessibilityObservation": {
         "scrollRegions": [
           {
@@ -1303,7 +1303,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-020 producer_only_live_export_freshness_not_applicable",
       "claim": "Live export freshness is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: manifest exports is an empty array and the template has no export control or generated export payload.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: manifest exports is an empty array and the template has no export control or generated export payload.",
       "dataIntegrityObservation": {
         "caseId": "live_export_freshness",
         "notApplicableReason": {
@@ -1326,7 +1326,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-021 producer_only_empty_values_not_applicable",
       "claim": "Empty-value serialization is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: slide-deck has no editable fields, no structured export, and no issue-producing serialization path.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: slide-deck has no editable fields, no structured export, and no issue-producing serialization path.",
       "dataIntegrityObservation": {
         "caseId": "empty_values",
         "notApplicableReason": {
@@ -1349,7 +1349,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-022 producer_only_invalid_raw_value_not_applicable",
       "claim": "Invalid raw value handling is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the template has no user-entered raw values and no export issue schema.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the template has no user-entered raw values and no export issue schema.",
       "dataIntegrityObservation": {
         "caseId": "invalid_raw_value",
         "notApplicableReason": {
@@ -1372,7 +1372,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-023 producer_only_unavailable_normalized_value_not_applicable",
       "claim": "Unavailable normalized value handling is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the template has no normalization path and no exported issue record.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the template has no normalization path and no exported issue record.",
       "dataIntegrityObservation": {
         "caseId": "unavailable_normalized_value",
         "notApplicableReason": {
@@ -1395,7 +1395,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-024 producer_only_duplicate_identifiers_not_applicable",
       "claim": "Duplicate identifier preservation and issue reporting are producer-only and do not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the reader has anchored slides for navigation but no exported producer entity collection.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the reader has anchored slides for navigation but no exported producer entity collection.",
       "dataIntegrityObservation": {
         "caseId": "duplicate_identifiers",
         "notApplicableReason": {
@@ -1418,7 +1418,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-025 producer_only_special_character_round_trip_not_applicable",
       "claim": "Special-character round trip is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: no structured JSON or Markdown export is generated from reader-entered values.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: no structured JSON or Markdown export is generated from reader-entered values.",
       "dataIntegrityObservation": {
         "caseId": "special_character_round_trip",
         "notApplicableReason": {
@@ -1441,7 +1441,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-026 producer_only_multiple_issue_order_not_applicable",
       "claim": "Multiple issue ordering is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the reader has no issue list, editor export contract, or validation output.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the reader has no issue list, editor export contract, or validation output.",
       "dataIntegrityObservation": {
         "caseId": "multiple_issue_order",
         "notApplicableReason": {
@@ -1464,7 +1464,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-027 producer_only_clipboard_exact_equality_not_applicable",
       "claim": "Clipboard/fallback exact equality is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: no attempted export string, clipboard write, or fallback export text exists.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: no attempted export string, clipboard write, or fallback export text exists.",
       "dataIntegrityObservation": {
         "caseId": "clipboard_exact_equality",
         "notApplicableReason": {
@@ -1487,7 +1487,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-028 producer_only_superseded_copy_attempt_not_applicable",
       "claim": "Superseded copy-attempt data integrity is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: no copy attempts can race because the reader exposes no copy/export action.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: no copy attempts can race because the reader exposes no copy/export action.",
       "dataIntegrityObservation": {
         "caseId": "superseded_copy_attempt",
         "notApplicableReason": {
@@ -1510,7 +1510,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-029 producer_only_clipboard_genuine_success_not_applicable",
       "claim": "Genuine clipboard success recovery evidence is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the reader has no clipboard write action.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the reader has no clipboard write action.",
       "errorHandlingObservation": {
         "caseId": "genuine_success",
         "notApplicableReason": {
@@ -1533,7 +1533,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-030 producer_only_clipboard_absent_not_applicable",
       "claim": "Unavailable clipboard fallback evidence is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: no clipboard method is invoked and no fallback export region exists.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: no clipboard method is invoked and no fallback export region exists.",
       "errorHandlingObservation": {
         "caseId": "clipboard_absent",
         "notApplicableReason": {
@@ -1556,7 +1556,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-031 producer_only_method_non_callable_not_applicable",
       "claim": "Non-callable clipboard method fallback evidence is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: no clipboard method is called by the reader.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: no clipboard method is called by the reader.",
       "errorHandlingObservation": {
         "caseId": "method_non_callable",
         "notApplicableReason": {
@@ -1579,7 +1579,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-032 producer_only_permission_denied_not_applicable",
       "claim": "Permission-denied clipboard fallback evidence is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: no clipboard permission request or rejection branch exists.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: no clipboard permission request or rejection branch exists.",
       "errorHandlingObservation": {
         "caseId": "permission_denied",
         "notApplicableReason": {
@@ -1602,7 +1602,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-033 producer_only_generic_rejection_not_applicable",
       "claim": "Generic rejected-promise clipboard fallback evidence is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the reader has no asynchronous clipboard write path.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the reader has no asynchronous clipboard write path.",
       "errorHandlingObservation": {
         "caseId": "generic_rejection",
         "notApplicableReason": {
@@ -1625,7 +1625,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-034 producer_only_synchronous_throw_not_applicable",
       "claim": "Synchronous clipboard throw fallback evidence is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the reader has no synchronous clipboard call.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the reader has no synchronous clipboard call.",
       "errorHandlingObservation": {
         "caseId": "synchronous_throw",
         "notApplicableReason": {
@@ -1648,7 +1648,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-035 producer_only_sequential_transition_not_applicable",
       "claim": "Failure-success-failure sequential transition evidence is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the reader has no clipboard status transition sequence.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the reader has no clipboard status transition sequence.",
       "errorHandlingObservation": {
         "caseId": "sequential_transition",
         "notApplicableReason": {
@@ -1671,7 +1671,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-036 producer_only_superseded_attempt_not_applicable",
       "claim": "Superseded clipboard attempt recovery evidence is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the reader exposes no overlapping clipboard attempts.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the reader exposes no overlapping clipboard attempts.",
       "errorHandlingObservation": {
         "caseId": "superseded_attempt",
         "notApplicableReason": {
@@ -1694,7 +1694,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-019 horizontal_scroll_region_not_applicable_source_check",
       "claim": "No named keyboard-focusable horizontal scroll region is required when the source contains no meaningful horizontal overflow region.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Checkpoint source and runtime classification: the template contains no overflow-x:auto or overflow-x:scroll declaration, html/body use overflow-x:hidden, both reviewed widths had equal document clientWidth and scrollWidth, and no meaningful horizontal scroll element appeared.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Checkpoint source and runtime classification: the template contains no overflow-x:auto or overflow-x:scroll declaration, html/body use overflow-x:hidden, both reviewed widths had equal document clientWidth and scrollWidth, and no meaningful horizontal scroll element appeared.",
       "accessibilityObservation": {
         "scrollRegions": [
           {
@@ -1734,7 +1734,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-020 producer_only_live_export_freshness_not_applicable",
       "claim": "Live export freshness is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: manifest exports is an empty array and the template has no export control or generated export payload.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: manifest exports is an empty array and the template has no export control or generated export payload.",
       "dataIntegrityObservation": {
         "caseId": "live_export_freshness",
         "notApplicableReason": {
@@ -1757,7 +1757,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-021 producer_only_empty_values_not_applicable",
       "claim": "Empty-value serialization is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: concept-explainer has no editable fields, no structured export, and no issue-producing serialization path.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: concept-explainer has no editable fields, no structured export, and no issue-producing serialization path.",
       "dataIntegrityObservation": {
         "caseId": "empty_values",
         "notApplicableReason": {
@@ -1780,7 +1780,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-022 producer_only_invalid_raw_value_not_applicable",
       "claim": "Invalid raw value handling is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the template has no user-entered raw values and no export issue schema.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the template has no user-entered raw values and no export issue schema.",
       "dataIntegrityObservation": {
         "caseId": "invalid_raw_value",
         "notApplicableReason": {
@@ -1803,7 +1803,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-023 producer_only_unavailable_normalized_value_not_applicable",
       "claim": "Unavailable normalized value handling is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the template has no normalization path and no exported issue record.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the template has no normalization path and no exported issue record.",
       "dataIntegrityObservation": {
         "caseId": "unavailable_normalized_value",
         "notApplicableReason": {
@@ -1826,7 +1826,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-024 producer_only_duplicate_identifiers_not_applicable",
       "claim": "Duplicate identifier preservation and issue reporting are producer-only and do not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the reader has anchored slides for navigation but no exported producer entity collection.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the reader has anchored slides for navigation but no exported producer entity collection.",
       "dataIntegrityObservation": {
         "caseId": "duplicate_identifiers",
         "notApplicableReason": {
@@ -1849,7 +1849,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-025 producer_only_special_character_round_trip_not_applicable",
       "claim": "Special-character round trip is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: no structured JSON or Markdown export is generated from reader-entered values.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: no structured JSON or Markdown export is generated from reader-entered values.",
       "dataIntegrityObservation": {
         "caseId": "special_character_round_trip",
         "notApplicableReason": {
@@ -1872,7 +1872,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-026 producer_only_multiple_issue_order_not_applicable",
       "claim": "Multiple issue ordering is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the reader has no issue list, editor export contract, or validation output.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the reader has no issue list, editor export contract, or validation output.",
       "dataIntegrityObservation": {
         "caseId": "multiple_issue_order",
         "notApplicableReason": {
@@ -1895,7 +1895,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-027 producer_only_clipboard_exact_equality_not_applicable",
       "claim": "Clipboard/fallback exact equality is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: no attempted export string, clipboard write, or fallback export text exists.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: no attempted export string, clipboard write, or fallback export text exists.",
       "dataIntegrityObservation": {
         "caseId": "clipboard_exact_equality",
         "notApplicableReason": {
@@ -1918,7 +1918,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-028 producer_only_superseded_copy_attempt_not_applicable",
       "claim": "Superseded copy-attempt data integrity is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: no copy attempts can race because the reader exposes no copy/export action.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: no copy attempts can race because the reader exposes no copy/export action.",
       "dataIntegrityObservation": {
         "caseId": "superseded_copy_attempt",
         "notApplicableReason": {
@@ -1941,7 +1941,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-029 producer_only_clipboard_genuine_success_not_applicable",
       "claim": "Genuine clipboard success recovery evidence is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the reader has no clipboard write action.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the reader has no clipboard write action.",
       "errorHandlingObservation": {
         "caseId": "genuine_success",
         "notApplicableReason": {
@@ -1964,7 +1964,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-030 producer_only_clipboard_absent_not_applicable",
       "claim": "Unavailable clipboard fallback evidence is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: no clipboard method is invoked and no fallback export region exists.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: no clipboard method is invoked and no fallback export region exists.",
       "errorHandlingObservation": {
         "caseId": "clipboard_absent",
         "notApplicableReason": {
@@ -1987,7 +1987,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-031 producer_only_method_non_callable_not_applicable",
       "claim": "Non-callable clipboard method fallback evidence is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: no clipboard method is called by the reader.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: no clipboard method is called by the reader.",
       "errorHandlingObservation": {
         "caseId": "method_non_callable",
         "notApplicableReason": {
@@ -2010,7 +2010,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-032 producer_only_permission_denied_not_applicable",
       "claim": "Permission-denied clipboard fallback evidence is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: no clipboard permission request or rejection branch exists.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: no clipboard permission request or rejection branch exists.",
       "errorHandlingObservation": {
         "caseId": "permission_denied",
         "notApplicableReason": {
@@ -2033,7 +2033,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-033 producer_only_generic_rejection_not_applicable",
       "claim": "Generic rejected-promise clipboard fallback evidence is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the reader has no asynchronous clipboard write path.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the reader has no asynchronous clipboard write path.",
       "errorHandlingObservation": {
         "caseId": "generic_rejection",
         "notApplicableReason": {
@@ -2056,7 +2056,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-034 producer_only_synchronous_throw_not_applicable",
       "claim": "Synchronous clipboard throw fallback evidence is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the reader has no synchronous clipboard call.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the reader has no synchronous clipboard call.",
       "errorHandlingObservation": {
         "caseId": "synchronous_throw",
         "notApplicableReason": {
@@ -2079,7 +2079,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-035 producer_only_sequential_transition_not_applicable",
       "claim": "Failure-success-failure sequential transition evidence is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the reader has no clipboard status transition sequence.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the reader has no clipboard status transition sequence.",
       "errorHandlingObservation": {
         "caseId": "sequential_transition",
         "notApplicableReason": {
@@ -2102,7 +2102,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-036 producer_only_superseded_attempt_not_applicable",
       "claim": "Superseded clipboard attempt recovery evidence is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the reader exposes no overlapping clipboard attempts.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the reader exposes no overlapping clipboard attempts.",
       "errorHandlingObservation": {
         "caseId": "superseded_attempt",
         "notApplicableReason": {
@@ -2125,7 +2125,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-019 horizontal_scroll_region_not_applicable_source_check",
       "claim": "No named keyboard-focusable horizontal scroll region is required when the source contains no meaningful horizontal overflow region.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: source has no overflow-x:auto or overflow-x:scroll, html/body use overflow-x:hidden, 360 and 1280 CSS px measurements had equal scroll/client widths, and no actual horizontal user-scroll element appeared.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: source has no overflow-x:auto or overflow-x:scroll, html/body use overflow-x:hidden, 360 and 1280 CSS px measurements had equal scroll/client widths, and no actual horizontal user-scroll element appeared.",
       "accessibilityObservation": {
         "scrollRegions": [
           {
@@ -2165,7 +2165,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-020 producer_only_live_export_freshness_not_applicable",
       "claim": "Live export freshness is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: manifest exports is an empty array and the template has no export control or generated export payload.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: manifest exports is an empty array and the template has no export control or generated export payload.",
       "dataIntegrityObservation": {
         "caseId": "live_export_freshness",
         "notApplicableReason": {
@@ -2188,7 +2188,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-021 producer_only_empty_values_not_applicable",
       "claim": "Empty-value serialization is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: status-report has no editable fields, no structured export, and no issue-producing serialization path.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: status-report has no editable fields, no structured export, and no issue-producing serialization path.",
       "dataIntegrityObservation": {
         "caseId": "empty_values",
         "notApplicableReason": {
@@ -2211,7 +2211,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-022 producer_only_invalid_raw_value_not_applicable",
       "claim": "Invalid raw value handling is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the template has no user-entered raw values and no export issue schema.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the template has no user-entered raw values and no export issue schema.",
       "dataIntegrityObservation": {
         "caseId": "invalid_raw_value",
         "notApplicableReason": {
@@ -2234,7 +2234,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-023 producer_only_unavailable_normalized_value_not_applicable",
       "claim": "Unavailable normalized value handling is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the template has no normalization path and no exported issue record.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the template has no normalization path and no exported issue record.",
       "dataIntegrityObservation": {
         "caseId": "unavailable_normalized_value",
         "notApplicableReason": {
@@ -2257,7 +2257,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-024 producer_only_duplicate_identifiers_not_applicable",
       "claim": "Duplicate identifier preservation and issue reporting are producer-only and do not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the reader has anchored report items for reading but no exported producer entity collection.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the reader has anchored report items for reading but no exported producer entity collection.",
       "dataIntegrityObservation": {
         "caseId": "duplicate_identifiers",
         "notApplicableReason": {
@@ -2280,7 +2280,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-025 producer_only_special_character_round_trip_not_applicable",
       "claim": "Special-character round trip is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: no structured JSON or Markdown export is generated from reader-entered values.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: no structured JSON or Markdown export is generated from reader-entered values.",
       "dataIntegrityObservation": {
         "caseId": "special_character_round_trip",
         "notApplicableReason": {
@@ -2303,7 +2303,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-026 producer_only_multiple_issue_order_not_applicable",
       "claim": "Multiple issue ordering is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the reader has no issue list, editor export contract, or validation output.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the reader has no issue list, editor export contract, or validation output.",
       "dataIntegrityObservation": {
         "caseId": "multiple_issue_order",
         "notApplicableReason": {
@@ -2326,7 +2326,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-027 producer_only_clipboard_exact_equality_not_applicable",
       "claim": "Clipboard/fallback exact equality is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: no attempted export string, clipboard write, or fallback export text exists.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: no attempted export string, clipboard write, or fallback export text exists.",
       "dataIntegrityObservation": {
         "caseId": "clipboard_exact_equality",
         "notApplicableReason": {
@@ -2349,7 +2349,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-028 producer_only_superseded_copy_attempt_not_applicable",
       "claim": "Superseded copy-attempt data integrity is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: no copy attempts can race because the reader exposes no copy/export action.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: no copy attempts can race because the reader exposes no copy/export action.",
       "dataIntegrityObservation": {
         "caseId": "superseded_copy_attempt",
         "notApplicableReason": {
@@ -2372,7 +2372,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-029 producer_only_clipboard_genuine_success_not_applicable",
       "claim": "Genuine clipboard success recovery evidence is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the reader has no clipboard write action.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the reader has no clipboard write action.",
       "errorHandlingObservation": {
         "caseId": "genuine_success",
         "notApplicableReason": {
@@ -2395,7 +2395,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-030 producer_only_clipboard_absent_not_applicable",
       "claim": "Unavailable clipboard fallback evidence is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: no clipboard method is invoked and no fallback export region exists.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: no clipboard method is invoked and no fallback export region exists.",
       "errorHandlingObservation": {
         "caseId": "clipboard_absent",
         "notApplicableReason": {
@@ -2418,7 +2418,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-031 producer_only_method_non_callable_not_applicable",
       "claim": "Non-callable clipboard method fallback evidence is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: no clipboard method is called by the reader.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: no clipboard method is called by the reader.",
       "errorHandlingObservation": {
         "caseId": "method_non_callable",
         "notApplicableReason": {
@@ -2441,7 +2441,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-032 producer_only_permission_denied_not_applicable",
       "claim": "Permission-denied clipboard fallback evidence is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: no clipboard permission request or rejection branch exists.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: no clipboard permission request or rejection branch exists.",
       "errorHandlingObservation": {
         "caseId": "permission_denied",
         "notApplicableReason": {
@@ -2464,7 +2464,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-033 producer_only_generic_rejection_not_applicable",
       "claim": "Generic rejected-promise clipboard fallback evidence is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the reader has no asynchronous clipboard write path.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the reader has no asynchronous clipboard write path.",
       "errorHandlingObservation": {
         "caseId": "generic_rejection",
         "notApplicableReason": {
@@ -2487,7 +2487,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-034 producer_only_synchronous_throw_not_applicable",
       "claim": "Synchronous clipboard throw fallback evidence is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the reader has no synchronous clipboard call.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the reader has no synchronous clipboard call.",
       "errorHandlingObservation": {
         "caseId": "synchronous_throw",
         "notApplicableReason": {
@@ -2510,7 +2510,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-035 producer_only_sequential_transition_not_applicable",
       "claim": "Failure-success-failure sequential transition evidence is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the reader has no clipboard status transition sequence.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the reader has no clipboard status transition sequence.",
       "errorHandlingObservation": {
         "caseId": "sequential_transition",
         "notApplicableReason": {
@@ -2533,7 +2533,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-036 producer_only_superseded_attempt_not_applicable",
       "claim": "Superseded clipboard attempt recovery evidence is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the reader exposes no overlapping clipboard attempts.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the reader exposes no overlapping clipboard attempts.",
       "errorHandlingObservation": {
         "caseId": "superseded_attempt",
         "notApplicableReason": {
@@ -2823,7 +2823,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-019 horizontal_scroll_region_not_applicable_source_check",
       "claim": "No named keyboard-focusable horizontal scroll region is required when the source contains no meaningful horizontal overflow region.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: source has no overflow-x:auto or overflow-x:scroll declaration, 360 and 1280 CSS px measurements had equal scroll/client widths, and no actual horizontal user-scroll element appeared.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: source has no overflow-x:auto or overflow-x:scroll declaration, 360 and 1280 CSS px measurements had equal scroll/client widths, and no actual horizontal user-scroll element appeared.",
       "accessibilityObservation": {
         "scrollRegions": [
           {
@@ -2863,7 +2863,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-020 producer_only_live_export_freshness_not_applicable",
       "claim": "Live export freshness is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: manifest exports is an empty array and the template has no export control or generated export payload.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: manifest exports is an empty array and the template has no export control or generated export payload.",
       "dataIntegrityObservation": {
         "caseId": "live_export_freshness",
         "notApplicableReason": {
@@ -2886,7 +2886,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-021 producer_only_empty_values_not_applicable",
       "claim": "Empty-value serialization is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: incident-report has no editable fields, no structured export, and no issue-producing serialization path.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: incident-report has no editable fields, no structured export, and no issue-producing serialization path.",
       "dataIntegrityObservation": {
         "caseId": "empty_values",
         "notApplicableReason": {
@@ -2909,7 +2909,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-022 producer_only_invalid_raw_value_not_applicable",
       "claim": "Invalid raw value handling is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the template has no user-entered raw values and no export issue schema.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the template has no user-entered raw values and no export issue schema.",
       "dataIntegrityObservation": {
         "caseId": "invalid_raw_value",
         "notApplicableReason": {
@@ -2932,7 +2932,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-023 producer_only_unavailable_normalized_value_not_applicable",
       "claim": "Unavailable normalized value handling is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the template has no normalization path and no exported issue record.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the template has no normalization path and no exported issue record.",
       "dataIntegrityObservation": {
         "caseId": "unavailable_normalized_value",
         "notApplicableReason": {
@@ -2955,7 +2955,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-024 producer_only_duplicate_identifiers_not_applicable",
       "claim": "Duplicate identifier preservation and issue reporting are producer-only and do not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the reader has anchored report items for reading but no exported producer entity collection.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the reader has anchored report items for reading but no exported producer entity collection.",
       "dataIntegrityObservation": {
         "caseId": "duplicate_identifiers",
         "notApplicableReason": {
@@ -2978,7 +2978,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-025 producer_only_special_character_round_trip_not_applicable",
       "claim": "Special-character round trip is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: no structured JSON or Markdown export is generated from reader-entered values.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: no structured JSON or Markdown export is generated from reader-entered values.",
       "dataIntegrityObservation": {
         "caseId": "special_character_round_trip",
         "notApplicableReason": {
@@ -3001,7 +3001,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-026 producer_only_multiple_issue_order_not_applicable",
       "claim": "Multiple issue ordering is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the reader has no issue list, editor export contract, or validation output.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the reader has no issue list, editor export contract, or validation output.",
       "dataIntegrityObservation": {
         "caseId": "multiple_issue_order",
         "notApplicableReason": {
@@ -3024,7 +3024,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-027 producer_only_clipboard_exact_equality_not_applicable",
       "claim": "Clipboard/fallback exact equality is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: no attempted export string, clipboard write, or fallback export text exists.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: no attempted export string, clipboard write, or fallback export text exists.",
       "dataIntegrityObservation": {
         "caseId": "clipboard_exact_equality",
         "notApplicableReason": {
@@ -3047,7 +3047,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-028 producer_only_superseded_copy_attempt_not_applicable",
       "claim": "Superseded copy-attempt data integrity is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: no copy attempts can race because the reader exposes no copy/export action.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: no copy attempts can race because the reader exposes no copy/export action.",
       "dataIntegrityObservation": {
         "caseId": "superseded_copy_attempt",
         "notApplicableReason": {
@@ -3070,7 +3070,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-029 producer_only_clipboard_genuine_success_not_applicable",
       "claim": "Genuine clipboard success recovery evidence is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the reader has no clipboard write action.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the reader has no clipboard write action.",
       "errorHandlingObservation": {
         "caseId": "genuine_success",
         "notApplicableReason": {
@@ -3093,7 +3093,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-030 producer_only_clipboard_absent_not_applicable",
       "claim": "Unavailable clipboard fallback evidence is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: no clipboard method is invoked and no fallback export region exists.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: no clipboard method is invoked and no fallback export region exists.",
       "errorHandlingObservation": {
         "caseId": "clipboard_absent",
         "notApplicableReason": {
@@ -3116,7 +3116,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-031 producer_only_method_non_callable_not_applicable",
       "claim": "Non-callable clipboard method fallback evidence is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: no clipboard method is called by the reader.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: no clipboard method is called by the reader.",
       "errorHandlingObservation": {
         "caseId": "method_non_callable",
         "notApplicableReason": {
@@ -3139,7 +3139,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-032 producer_only_permission_denied_not_applicable",
       "claim": "Permission-denied clipboard fallback evidence is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: no clipboard permission request or rejection branch exists.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: no clipboard permission request or rejection branch exists.",
       "errorHandlingObservation": {
         "caseId": "permission_denied",
         "notApplicableReason": {
@@ -3162,7 +3162,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-033 producer_only_generic_rejection_not_applicable",
       "claim": "Generic rejected-promise clipboard fallback evidence is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the reader has no asynchronous clipboard write path.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the reader has no asynchronous clipboard write path.",
       "errorHandlingObservation": {
         "caseId": "generic_rejection",
         "notApplicableReason": {
@@ -3185,7 +3185,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-034 producer_only_synchronous_throw_not_applicable",
       "claim": "Synchronous clipboard throw fallback evidence is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the reader has no synchronous clipboard call.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the reader has no synchronous clipboard call.",
       "errorHandlingObservation": {
         "caseId": "synchronous_throw",
         "notApplicableReason": {
@@ -3208,7 +3208,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-035 producer_only_sequential_transition_not_applicable",
       "claim": "Failure-success-failure sequential transition evidence is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the reader has no clipboard status transition sequence.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the reader has no clipboard status transition sequence.",
       "errorHandlingObservation": {
         "caseId": "sequential_transition",
         "notApplicableReason": {
@@ -3231,7 +3231,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-036 producer_only_superseded_attempt_not_applicable",
       "claim": "Superseded clipboard attempt recovery evidence is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 7 source checkpoint 8b1e67587d24b01258df5856e8888588734a22de: Source-backed classification only: the reader exposes no overlapping clipboard attempts.",
+      "observedResult": "Revalidated at Slice 7 source checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560: Source-backed classification only: the reader exposes no overlapping clipboard attempts.",
       "errorHandlingObservation": {
         "caseId": "superseded_attempt",
         "notApplicableReason": {

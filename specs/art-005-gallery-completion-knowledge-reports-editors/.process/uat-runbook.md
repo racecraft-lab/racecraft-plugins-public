@@ -1,7 +1,7 @@
 # ART-005 UAT Runbook
 
 Feature: ART-005 gallery completion knowledge reports/editors
-Artifacts: `slide-deck`, `concept-explainer`, `status-report`, `incident-report`, `triage-board`
+Artifacts: `slide-deck`, `concept-explainer`, `status-report`, `incident-report`, `triage-board`, `feature-flags`, `prompt-tuner`
 Driver: `manual`
 Template paths:
 - `speckit-pro/artifact-gallery/templates/slide-deck.html`
@@ -9,16 +9,19 @@ Template paths:
 - `speckit-pro/artifact-gallery/templates/status-report.html`
 - `speckit-pro/artifact-gallery/templates/incident-report.html`
 - `speckit-pro/artifact-gallery/templates/triage-board.html`
+- `speckit-pro/artifact-gallery/templates/feature-flags.html`
+- `speckit-pro/artifact-gallery/templates/prompt-tuner.html`
 Results path: `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.md`
 JSON path: `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json`
 
-T019 created the active UAT carriers. T077 re-executed the complete cumulative
-Slice 1-5 row set against source checkpoint
-`69f803d37523499f80120d246400a7fbda30c6fa` on 2026-08-18. The current session's
-connected-browser selection returned `No browser is available`, and the
-prescribed inventory was empty, so the operator-authorized Playwright MCP
-fallback supplied browser interaction and observation while the contract driver
-remained `manual`.
+T019 created the active UAT carriers. T109 re-executed the complete cumulative
+Slice 1-7 row set against source checkpoint
+`f85ed14c89a5f71bb041e49930647dbc93ec8560` on 2026-08-18. The first four
+reader templates were rebound by exact source-hash identity and the three editor
+harnesses were rerun at 36/36 each. The current session's
+fresh connected-browser inventory was empty and `getForUrl` was unavailable, so
+the operator-authorized Playwright MCP fallback supplied browser interaction and
+observation while the contract driver remained `manual`.
 
 ## Manual Setup
 

@@ -15,12 +15,12 @@ Runbook path: `specs/art-005-gallery-completion-knowledge-reports-editors/.proce
 JSON path: `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json`
 Driver: `manual`
 Status: T109 complete; all 252 cumulative Slice 1-7 rows are bound to source
-checkpoint `4b9bb0f256507a43551a725bd8502283e2e5e1cb`.
+checkpoint `f85ed14c89a5f71bb041e49930647dbc93ec8560`.
 
 ## Source Checkpoint vs Evidence Commit
 
 The source checkpoint is
-`4b9bb0f256507a43551a725bd8502283e2e5e1cb`. It contains all seven source
+`f85ed14c89a5f71bb041e49930647dbc93ec8560`. It contains all seven source
 templates, the manifest, cumulative tests, generated outputs, and the
 pre-execution evidence carriers that were tested. The later evidence commit
 records these results without changing the tested source bytes. The JSON names
@@ -34,7 +34,7 @@ No repository browser harness was committed, so the contract driver remains
 
 ## Execution Environment
 
-- Executed at: `2026-08-19T01:50:06Z`
+- Executed at: `2026-08-19T03:57:37Z`
 - OS: macOS 26.6.2, Build 25G82, arm64
 - Browser: Google Chrome 151.0.7922.138
 - Scheme: direct `file://`
@@ -52,6 +52,16 @@ No repository browser harness was committed, so the contract driver remains
   status, and fallback states in feature-flags; and labeled valid/invalid slots,
   derived previews, empty states, issues, copy outcomes, and reset feedback in
   prompt-tuner
+
+## Post-Review Revalidation
+
+The first four reader templates are byte-identical between the prior cumulative
+checkpoint and `f85ed14c89a5f71bb041e49930647dbc93ec8560`; their 144 rows were
+rebound by exact source-hash validation. Playwright MCP reran the three editor
+harnesses at 36/36 each. Targeted probes also passed filtered triage reorder,
+backtick-safe ticket identifiers, strict feature-flag rollout syntax, required
+field status feedback, and the prompt-tuner `__proto__` slot. No repository
+browser harness was committed.
 
 ## Row Totals
 
@@ -1239,16 +1249,17 @@ evidence.
 ## Slice 7 Source and Browser Evidence
 
 The Slice 7 source checkpoint is
-`4b9bb0f256507a43551a725bd8502283e2e5e1cb`. The first six templates are
-byte-identical to the repaired Slice 6 source, and the prompt-tuner source,
-manifest, focused tests, generated mirrors, and proof fixtures were stable
-before browser execution.
+`f85ed14c89a5f71bb041e49930647dbc93ec8560`. The first four reader templates
+are byte-identical to the prior cumulative checkpoint. The three editor sources,
+focused tests, generated mirrors, and proof fixtures include the independent
+review remediations and were stable before browser revalidation.
 
 A fresh connected-browser attempt returned an empty browser inventory and
 `getForUrl` was unavailable. The operator-authorized Playwright MCP fallback
-then exercised the seven exact `file://` templates. The cumulative record
-contains **252 rows**: **177 pass**, **75 evidence-backed `not_applicable`**,
-and **0 fail**, with exactly 36 rows per artifact.
+then exercised the three exact editor `file://` templates at 36/36 each; exact
+hash comparison rebound the four unchanged reader row sets. The cumulative
+record contains **252 rows**: **177 pass**, **75 evidence-backed
+`not_applicable`**, and **0 fail**, with exactly 36 rows per artifact.
 
 Prompt-tuner coverage included five ordered raw slots, three ordered samples,
 fifteen sample fields, live derived previews, first-occurrence field keys,
@@ -1265,9 +1276,16 @@ theme persistence, reduced motion, offline/session-only reload, and unclipped
 `art-005-slice-7-prompt-tuner-1280.png`, and
 `art-005-slice-7-prompt-tuner-accessibility.md`.
 
+A targeted prompt-tuner probe additionally verified that `__proto__` remains
+an own exported field, resolves in every derived preview, and creates no slot
+issue.
+
 The carried triage-board producer also received a fresh 36/36 deep pass,
 including its repaired real contenteditable line break and exact 935-byte seed
-Markdown. Initial browser-probe mismatches across the cumulative run were
+Markdown. Targeted probes also verified filtered reorder across a hidden ticket
+and a content-sized Markdown code fence for a ticket ID containing a backtick.
+Feature-flags received a fresh 36/36 pass plus targeted strict-decimal and
+required-field status probes. Initial browser-probe mismatches across the run were
 harness assumptions about computed duration formatting, finished animation
 objects, hidden text selection, repeated accessible labels, representative
 seed issues, and manifest role inference. Corrected targeted probes passed the
@@ -1287,8 +1305,9 @@ Verification already bound to the Slice 7 source checkpoint:
 ## Slice 7 Final Boundary
 
 The Slice 7 source checkpoint is
-`4b9bb0f256507a43551a725bd8502283e2e5e1cb`, and cumulative UAT evidence is
-recorded at `d83f64c95`. A direct post-UAT diff proved the source template,
+`f85ed14c89a5f71bb041e49930647dbc93ec8560`. The earlier cumulative evidence
+was recorded at `d83f64c95`; this report records the post-review revalidation.
+A direct post-UAT diff proved the source template,
 manifest, focused tests, payload mirrors, and generated manifest bytes did not
 change after the tested source checkpoint.
 
@@ -1393,7 +1412,7 @@ Final stack-head verification is green:
 - Docs reference generation/check: **7 deterministic pages; current; no diff**
 
 The structured UAT contract audit is bound to source checkpoint
-`4b9bb0f256507a43551a725bd8502283e2e5e1cb`. It verifies 252 rows, exactly 36
+`f85ed14c89a5f71bb041e49930647dbc93ec8560`. It verifies 252 rows, exactly 36
 per artifact, with 177 pass, 75 evidence-backed `not_applicable`, zero fail,
 all required typed observation classes, and no tested source/generated drift
 after the checkpoint.
@@ -1406,9 +1425,9 @@ after the checkpoint.
 | 2 | concept-explainer | 33 | 7 | 22 | 4 control | 534 | 535 | 266 below | SIZE-ONLY BLOCK / CONTINUE |
 | 3 | status-report | 33 | 7 | 22 | 4 control | 377 | 560 | 423 below | SIZE-ONLY BLOCK / CONTINUE |
 | 4 | incident-report | 33 | 7 | 22 | 4 control | 420 | 620 | 380 below | SIZE-ONLY BLOCK / CONTINUE |
-| 5 | triage-board | 33 | 7 | 22 | 4 control | 681 | 785 | 119 below | SIZE-ONLY BLOCK / CONTINUE |
-| 6 | feature-flags | 33 | 7 | 22 | 4 control | 777 | 780 | 23 below | SIZE-ONLY BLOCK / CONTINUE |
-| 7 | prompt-tuner | 33 | 7 | 22 | 4 control | 695 | 790 | 105 below | SIZE-ONLY BLOCK / CONTINUE |
+| 5 | triage-board | 33 | 7 | 22 | 4 control | 695 | 785 | 105 below | SIZE-ONLY BLOCK / CONTINUE |
+| 6 | feature-flags | 33 | 7 | 22 | 4 control | 779 | 780 | 21 below | SIZE-ONLY BLOCK / CONTINUE |
+| 7 | prompt-tuner | 33 | 7 | 22 | 4 control | 692 | 790 | 108 below | SIZE-ONLY BLOCK / CONTINUE |
 
 The detailed Final Boundary section for each slice records every authored,
 generated, prerequisite, and workflow/control-plane path. A recomputation
