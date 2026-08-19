@@ -9822,7 +9822,11 @@ def check_u1(gallery_root: Path) -> list[str]:
     tickets = [attrs for attrs in attributes if attrs.get("data-ticket-id") is not None]
     if len(tickets) < 4 or any(attrs.get("tabindex") != "0" or not attrs.get("aria-label") for attrs in tickets):
         failures.append(f"{TRIAGE_BOARD_LABEL}: expected at least four named keyboard-focusable tickets")
-    for token in ("keydown", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "moveTicket", "reorderTicket", ".focus()"):
+    for token in (
+        "keydown", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown",
+        "moveTicket", "reorderTicket", ".focus()",
+        'const tickets = visibleTickets(ticket.closest(".column"));',
+    ):
         if token not in text:
             failures.append(f"{TRIAGE_BOARD_LABEL}: missing keyboard movement hook {token!r}")
     for literal in ("No tickets in this column.", "No tickets match this filter.", 'role="status"', 'aria-live="polite"'):
@@ -9850,7 +9854,7 @@ def check_u2(gallery_root: Path) -> list[str]:
         if _javascript_array(text, name) != expected:
             failures.append(f"{TRIAGE_BOARD_LABEL}: {name} must declare exact deterministic order {expected!r}")
     required = (
-        "captureSnapshot", "serializeBoard", "escapeMarkdown", "issueScalar",
+        "captureSnapshot", "serializeBoard", "escapeMarkdown", "markdownCodeSpan", "issueScalar",
         "editableText", "Node.TEXT_NODE", 'current.nodeName === "BR"',
         "return node ? editableText(node) : \"\";",
         "# Triage Board Export", "Artifact: triage-board", "Export kind: markdown",
@@ -9858,6 +9862,7 @@ def check_u2(gallery_root: Path) -> list[str]:
         "## Issues", "- _No issues._", "duplicate_identifier",
         "Identifier duplicates the first visible occurrence.",
         "const snapshot = captureSnapshot();", "const markdown = serializeBoard(snapshot);",
+        'lines.push("- " + markdownCodeSpan(ticket.id));',
     )
     failures.extend(f"{TRIAGE_BOARD_LABEL}: missing serializer contract {token!r}" for token in required if token not in text)
     if "cachedMarkdown" in text or text.count("const markdown = serializeBoard(snapshot);") != 1:

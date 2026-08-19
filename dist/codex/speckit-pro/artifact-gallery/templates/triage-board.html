@@ -745,7 +745,7 @@ h1 { margin: 0; font: 700 clamp(2rem, 6vw, 3.7rem)/1 var(--rc-font-display); }
 
   function reorderTicket(ticket, direction) {
     const list = ticket.parentElement;
-    const tickets = Array.from(list.querySelectorAll(".ticket"));
+    const tickets = visibleTickets(ticket.closest(".column"));
     const index = tickets.indexOf(ticket);
     const targetIndex = index + direction;
     if (targetIndex < 0 || targetIndex >= tickets.length) {
@@ -831,6 +831,20 @@ h1 { margin: 0; font: 700 clamp(2rem, 6vw, 3.7rem)/1 var(--rc-font-display); }
     }).join("\n    ");
   }
 
+  function markdownCodeSpan(value) {
+    const mark = String.fromCharCode(96);
+    const normalized = String(value).replace(/\r\n?/g, "\n").replace(/\n/g, " ");
+    const runs = normalized.match(new RegExp(mark + "+", "g")) || [];
+    const fenceLength = runs.reduce(function (length, run) {
+      return Math.max(length, run.length + 1);
+    }, 1);
+    const fence = mark.repeat(fenceLength);
+    const needsPadding = normalized.startsWith(mark) || normalized.endsWith(mark) ||
+      (normalized.startsWith(" ") && normalized.endsWith(" ") && normalized.trim() !== "");
+    const padding = needsPadding ? " " : "";
+    return fence + padding + normalized + padding + fence;
+  }
+
   function issueScalar(value) {
     return JSON.stringify(value);
   }
@@ -874,7 +888,6 @@ h1 { margin: 0; font: 700 clamp(2rem, 6vw, 3.7rem)/1 var(--rc-font-display); }
 
   function serializeBoard(snapshot) {
     const lines = ["# Triage Board Export", "Artifact: triage-board", "Export kind: markdown", ""];
-    const codeTick = String.fromCharCode(96);
     snapshot.columns.forEach(function (column, columnIndex) {
       lines.push(COLUMN_HEADINGS[columnIndex], "Rationale: " + escapeMarkdown(column.rationale));
       if (!column.tickets.length) {
@@ -882,7 +895,7 @@ h1 { margin: 0; font: 700 clamp(2rem, 6vw, 3.7rem)/1 var(--rc-font-display); }
         return;
       }
       column.tickets.forEach(function (ticket) {
-        lines.push("- " + codeTick + escapeMarkdown(ticket.id) + codeTick);
+        lines.push("- " + markdownCodeSpan(ticket.id));
         lines.push("  - Title: " + escapeMarkdown(ticket.title));
         lines.push("  - Tag: " + escapeMarkdown(ticket.tag));
         lines.push("  - Estimate: " + escapeMarkdown(ticket.estimate));
