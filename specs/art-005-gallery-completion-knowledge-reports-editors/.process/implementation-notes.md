@@ -505,3 +505,11 @@
 ### T119
 
 **Deviations/Edge cases/Surprises:** Live GitHub read-back confirms all seven PRs are open with the exact contracted bases, heads, and packet-owned titles. PRs #446, #447, #448, #452, and #454 are clean with no failed or pending checks. PR #455 has no failed checks and one heavy preflight still running. PR #444 has no failed or pending checks but reports `DIRTY` after `main` advanced beyond the stack's original base; this external restack/remediation item is carried explicitly into Post and does not alter the validated seven-slice topology. No archival path was created or modified. Runner G7 passes with all 119 tasks complete and zero remaining task markers.
+
+### Post implementation code-review remediation (Slice 7 and stack)
+
+**Deviations/Edge cases/Surprises:** Slice 7 merged updated Slice 6 head `83b13dd52`, preserving the append-only history in the sole authored merge conflict. Independent review's five findings were fixed on their owning slices and merged forward: filtered triage reorder, backtick-safe ticket identifiers, strict feature-flag rollout syntax, visible required-field status feedback, and prompt-tuner special-slot preservation. Prompt fields now use a null-prototype map, so valid slot `__proto__` remains an own exported field and resolves in previews instead of disappearing through the legacy prototype setter.
+
+**Verification:** Exact source checkpoint `f85ed14c89a5f71bb041e49930647dbc93ec8560` passed focused gallery 500/500, fill regions 67/67, Layer 1 1,448/1,448, Layer 4 5,793/5,793, the default suite 7,427/7,427, generated release parity, and docs reference check. Playwright MCP passed triage-board, feature-flags, and prompt-tuner at 36/36 each plus all five targeted review regressions; the four reader templates were byte-identical to the prior cumulative checkpoint. Evidence commit `d22636043` binds 252 rows to the repaired source: 177 pass, 75 structured `not_applicable`, zero fail, and exactly 36 rows per artifact.
+
+**Current ledgers:** Slice 5 is 695/785 reviewable LOC, Slice 6 is 779/780, and Slice 7 is 692/790; all remain below the mandatory 800 stop. The unchanged Slices 1-4 remain 666/670, 534/535, 377/560, and 420/620.

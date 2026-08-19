@@ -1306,7 +1306,8 @@ Verification already bound to the Slice 7 source checkpoint:
 
 The Slice 7 source checkpoint is
 `f85ed14c89a5f71bb041e49930647dbc93ec8560`. The earlier cumulative evidence
-was recorded at `d83f64c95`; this report records the post-review revalidation.
+was recorded at `d83f64c95`; post-review revalidation is recorded at
+`d22636043`.
 A direct post-UAT diff proved the source template,
 manifest, focused tests, payload mirrors, and generated manifest bytes did not
 change after the tested source checkpoint.
