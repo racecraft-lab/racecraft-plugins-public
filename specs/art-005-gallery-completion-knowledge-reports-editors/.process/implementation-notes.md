@@ -457,3 +457,7 @@
 ### T107
 
 **Deviations/Edge cases/Surprises:** The explicit seven-path measurement reports 1,011 physical template lines, including 458 byte-identical canonical marker-block lines, leaving 553 non-canonical template lines. With 142 incremental focused-test lines, final reviewable implementation is 695 LOC: 95 below the 790 ceiling and 105 below the mandatory 800 stop. One production template and exactly seven declared authored paths remain in scope, so regeneration may proceed.
+
+### T108
+
+**Deviations/Edge cases/Surprises:** Authoritative release regeneration and docs `reference:generate` completed. Focused gallery and fill checks pass 500/500 and 67/67, Layer 1 passes 1,448/1,448, isolated Layer 4 passes 5,793/5,793, and the isolated default suite passes 7,427/7,427. With ignored PR-packet files moved outside scanner scope, spec-index mutation dry-run reports `no_op`, 10 rendered maps, and zero stale maps; the read-only check reports every in-scope map current. The generated-artifact check intentionally saw the regenerated outputs as uncommitted drift; this task's source-checkpoint commit seals those bytes, after which the clean-worktree check is rerun before T109 browser UAT.
