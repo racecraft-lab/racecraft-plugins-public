@@ -8123,7 +8123,9 @@ GROUP_Q_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (("Q1", ch
 
 class SlideDeckReaderTests(unittest.TestCase):
     def test_slide_deck_reader_contract_passes_against_the_shipped_gallery(self) -> None:
-        self.assertEqual(check_q1(GALLERY_ROOT), [])
+        for name, check in GROUP_Q_CHECKS:
+            with self.subTest(msg=name):
+                self.assertEqual(check(GALLERY_ROOT), [])
 
     def test_horizontal_scroll_rule_can_bind_an_id_selected_element(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
