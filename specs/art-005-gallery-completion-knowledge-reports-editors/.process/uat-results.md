@@ -63,6 +63,42 @@ backtick-safe ticket identifiers, strict feature-flag rollout syntax, required
 field status feedback, and the prompt-tuner `__proto__` slot. No repository
 browser harness was committed.
 
+## Stack PR Exact-Head Revalidation (2026-08-19)
+
+At `2026-08-19T18:28:03Z`, every stacked PR was revalidated from an isolated
+`git archive` export of its exact GitHub head. The connected-browser inventory
+was empty, so the operator-authorized Playwright MCP fallback exercised the
+local files in Chrome 151 over `file://`. Each owning artifact was tested at
+360 and 1280 CSS px, online and context-offline, in light and dark themes, with
+reduced motion, keyboard focus, exact manifest read-back, and console/page-error
+capture. Fourteen responsive screenshots were captured for the session.
+
+| PR | Artifact | Exact tested head | Result |
+|---:|---|---|---|
+| #444 | `slide-deck` | `7045f5a15b8b6eb71099130b72175bd04370e208` | 18 pass / 18 evidence-backed N/A |
+| #446 | `concept-explainer` | `848eeeaaa6f23a5de5ddb2559efed8c3f234f9e2` | 18 pass / 18 evidence-backed N/A |
+| #447 | `status-report` | `373d7c3fb73092ff4d749d2050e2f585dae93fb7` | 18 pass / 18 evidence-backed N/A |
+| #448 | `incident-report` | `4d5e4cfc0241e256c63b1c692b12fe199492cc7b` | 18 pass / 18 evidence-backed N/A |
+| #452 | `triage-board` | `9250987f3043f43b52b292cc06eca4c3869456b1` | 35 pass / 1 evidence-backed N/A |
+| #454 | `feature-flags` | `2902decdd7f02cb404aeac601e415616073379dd` | 35 pass / 1 evidence-backed N/A |
+| #455 | `prompt-tuner` | `58efc3cd6345a4bf8bfa23918d972bdbfe361ff0` | 35 pass / 1 evidence-backed N/A |
+
+The deck also completed both declared 30-second no-autorotation observations.
+The producer revalidation covered fresh snapshots, empty and duplicate data,
+deterministic order, special characters, exact clipboard/fallback bytes, absent
+and non-callable clipboard capability, permission/generic/synchronous failures,
+failure-success-failure transitions, pending-snapshot stability, superseded
+attempts, and reset invalidation. Targeted regression probes passed filtered
+triage reorder, backtick-fenced ticket IDs, whitespace/hex/exponent rollout
+rejection, linked required-field feedback, and `__proto__` prompt preview plus
+JSON export.
+
+All apparent intermediate failures were corrected UAT-harness assumptions
+(transition settle time, 0.01ms reduced-motion semantics, case-sensitive title
+matching, test fixture setup, browser sequential-focus state, or asynchronous
+clipboard observation). Synchronized reruns passed. No product defect, source
+change, manifest change, or stacked-PR restack was required.
+
 ## Row Totals
 
 - Total cumulative Slice 1-7 rows: 252
