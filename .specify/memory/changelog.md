@@ -2722,3 +2722,43 @@ carrying this feature, which exists only after a release cuts from this merge.
 The emission path has therefore never run end to end. Everything at the decision
 layer is confirmed from its own input, but no draft pull request has been opened
 by this code.
+
+---
+
+## 2026-08-18 — ART-004 Design and Prototyping Gallery archived
+
+ART-004 shipped in one pull request and was archived after merge.
+
+| PR | Title | Merged at | Merge commit |
+|---|---|---|---|
+| [#450](https://github.com/racecraft-lab/racecraft-plugins-public/pull/450) | `feat(art-004): complete design gallery artifacts` | `2026-08-18T23:35:40Z` | `97b255d39828425120a96a5d9e313d574ebbf8a9` |
+
+Final-head CI reports 19 pass, 2 expected skips, and 0 failures. Both review
+threads represented one generated manifestation of an unused source declaration;
+the source was fixed, mirrors regenerated, and both threads resolved before
+merge. No actionable review finding remained.
+
+### What shipped
+
+Six branded standalone artifacts completed the design/prototyping gallery:
+four read-only ports and two decision/export ports. ART-020's accessibility scope
+shipped with them: keyboard-reachable, named horizontal scroll regions across
+three existing templates plus a manifest-driven global guard and negative
+fixture. Exactly six manifest statuses changed from `planned` to `shipped`.
+
+The initial combined plan correctly failed closed. The user approved three
+slices, measured at 160/pass, 590/warn, and 520/warn, and implementation preserved
+that topology.
+
+### Acceptance and archive
+
+All 60 tasks, 17 requirements, and 9 success criteria completed. The final suite
+passed 7628/7628. Manual `file://` UAT across Chromium, WebKit, and Safari found
+two layout defects, both repaired before merge, and then passed for all three
+repaired artifacts and all six new ports.
+
+The cleanup moved the UAT matrix, retrospective, and verify-tasks report to
+durable `docs/ai/specs/.process/ART-004-*` paths, updated roadmap and process
+state, regenerated the SpecKit index, and removed only the completed active spec
+folder. Recovery and the complete verification record live in
+`.specify/memory/archive-reports/2026-08-18-art-004-post-merge-hygiene.md`.

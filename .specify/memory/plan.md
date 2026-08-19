@@ -2310,3 +2310,54 @@ and this cleanup is the second time it has been hit.
 Two things remain owed and are not closed by this cleanup: T052 never ran and
 needs an installed plugin carrying this feature, and the emission path has still
 never run end to end.
+
+---
+
+## ART-004 Gallery Completion: Design and Prototyping
+
+[Source: specs/art-004-gallery-completion-design-prototyping] — archived
+2026-08-18 after PR #450 merged at `97b255d3`. Revision reason: merged-spec
+archival into project memory.
+
+### Dependencies and Topology
+
+ART-001 was the sole dependency. ART-004 absorbed and superseded ART-020, so no
+second repair path remains. The authoritative combined Plan gate blocked at 865
+reviewable LOC, nine production files, and eleven total files. The operator then
+approved three serialized slices:
+
+1. Keyboard foundation — 160 LOC, pass.
+2. Four read-only ports — 590 LOC, warn.
+3. Two decision/export ports — 520 LOC, warn.
+
+All three were non-blocking and the approved topology stayed intact.
+
+### Shipped Surfaces
+
+| Surface | Files |
+|---|---|
+| Six new ports | `design-system.html`, `animation-prototype.html`, `interaction-prototype.html`, `svg-illustrations.html`, `visual-designs.html`, `component-variants.html` |
+| Existing-region repair | `code-approaches.html`, `implementation-plan.html`, `module-map.html` |
+| Routing | `speckit-pro/artifact-gallery/manifest.json` |
+| Durable contracts | `tests/speckit-pro/unit/test-artifact-gallery.py`, `test-artifact-fill-regions.py` |
+| Generated consumers | `dist/**`, installed-cache proofs, gallery payloads, docs references |
+
+The implementation remains standard-library repository tooling plus standalone
+HTML/CSS/JavaScript. No build, typecheck, lint, manifest-version, or new runtime
+dependency was introduced.
+
+### Verification and Cleanup
+
+Focused gallery and fill-region suites, release payload consistency, generated
+reference checks, privacy checks, and the full 7628-test repository suite passed
+before merge. Manual `file://` acceptance ran across Chromium, WebKit, and Safari
+and is preserved at `docs/ai/specs/.process/ART-004-manual-uat.md`.
+
+Post-merge cleanup preserves the workflow, design concept, UAT matrix,
+retrospective, and verify-tasks report under `docs/ai/specs/.process/`; records
+the merged state in `autopilot-state.json`; removes only the completed ART-004
+active folder; and regenerates the roadmap index. No release-payload refresh is
+required because no `speckit-pro/` source or payload input changes.
+
+ART-005 remains Ready and untouched. BRAND-001 remains an active incomplete
+planning package and is not an archive candidate.

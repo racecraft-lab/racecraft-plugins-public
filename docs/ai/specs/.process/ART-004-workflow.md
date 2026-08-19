@@ -460,7 +460,7 @@ historical evidence, then record the user's 2026-08-17 recovery decision:
 | research.md | ✅ Complete | Pinned-source and shipped-pattern evidence |
 | data-model.md | ✅ Complete | DOM state, manifest state, and keyboard-scroll declaration model |
 | contracts/ | ✅ Complete | Gallery, decision-export, keyboard-scroll, and three durable slice-gate contracts |
-| quickstart.md | ✅ Complete | Ordered slice execution, direct `file://`, suite, UAT, and regeneration instructions |
+| `docs/ai/specs/.process/ART-004-manual-uat.md` | ✅ Complete | Ordered slice execution, direct `file://`, suite, UAT, and regeneration instructions |
 
 Plan-phase evidence:
 
@@ -551,7 +551,7 @@ Pay special attention to behavior under file:// security restrictions.
 
 | Checklist | Items | Gaps | Spec references |
 |---|---|---|---|
-| ux | 36 | 0 remaining (3 fixed) | `spec.md`, `plan.md`, `research.md`, `data-model.md`, `quickstart.md`, gallery contract |
+| ux | 36 | 0 remaining (3 fixed) | `spec.md`, `plan.md`, `research.md`, `data-model.md`, `docs/ai/specs/.process/ART-004-manual-uat.md`, gallery contract |
 | accessibility | 37 | 0 remaining (9 fixed) | keyboard/focus, Safari traversal, semantics/live status, reduced motion, non-color meaning, contrast, UAT evidence |
 | error-handling | 38 | 0 remaining (4 fixed) | file:// refusal, stale fallback, font fallback, blocking drift categories |
 | **Total** | **111** | **0 remaining (16 fixed)** | All three consensus steps skipped: executors reported zero unresolved items |
@@ -687,7 +687,7 @@ Focus on:
 | ID | Severity | Issue | Resolution |
 |---|---|---|---|
 | A-001 | HIGH | `spec.md` still treated the combined reviewability block as pending | Reframed it as history and made the three approved slice gates current authority |
-| A-002 | MEDIUM | Plan and quickstart referenced a sibling-worktree runner | Replaced with the repository-local Python runner invocation |
+| A-002 | MEDIUM | Plan and the historical quickstart referenced a sibling-worktree runner | Replaced with the repository-local Python runner invocation; the relocated source is recoverable from merge history |
 | A-003 | MEDIUM | T002 omitted the deferred tasks-mode reviewability fallback | Added G0, per-slice G3, and human-approval fallback evidence |
 
 - Rerun result: zero CRITICAL, HIGH, MEDIUM, or LOW findings.
@@ -859,18 +859,18 @@ generated files must never be hand-reverted independently.
 |---|---|---|
 | Post: Doctor Extension Check | ✅ Complete | 4 checks passed; one unrelated warning remains for the incomplete `brand-001-racecraft-identity-system` planning directory |
 | Post: Verify Implementation | ✅ Complete | Verify extension found no implementation defect |
-| Post: Verify Tasks Phantom Check | ✅ Complete | 60/60 tasks verified with zero flagged verdicts; privacy-safe report at `specs/art-004-gallery-completion-design-prototyping/verify-tasks-report.md` |
+| Post: Verify Tasks Phantom Check | ✅ Complete | 60/60 tasks verified with zero flagged verdicts; privacy-safe report preserved at `docs/ai/specs/.process/ART-004-verify-tasks-report.md` |
 | Post: Code Review | ✅ Complete | Independent review findings were repaired with RED/GREEN contracts; final re-review found no blocking or minor issue |
 | Post: Integration Suite | ✅ Complete | Post-merge 7628/7628 passed: L1 1468/1468, L4 5968/5968, L5 192/192; privacy 10/10 |
 | Post: Reviewability Diff Gate | ✅ Complete | Current committed three-slice evidence remains non-blocking at 160/pass, 590/warn, and 520/warn; review remediation did not change the approved topology |
 | Post: Self-Review | ✅ Complete | Mandatory four-question audit below records tests, nine acceptance scenarios, FR/task traceability, and tidiness; no gaps found |
-| Post: UAT Runbook Generation | ⏭️ Skipped | `generate-uat-skeleton` is deferred, no committed feature-local skeleton exists, and no UAT validator is registered; `quickstart.md` remains the executable source-derived matrix |
+| Post: UAT Runbook Generation | ⏭️ Skipped | `generate-uat-skeleton` is deferred, no committed feature-local skeleton exists, and no UAT validator is registered; `ART-004-manual-uat.md` remains the executable source-derived matrix |
 | Post: Final Reviewability Backstop | ✅ Complete | Deferred helper was not invoked; proceeded on current committed slice evidence and clean reviewed checkpoint `d65345e65` |
 | Post: PR Packet/Body Generation | ✅ Complete | `pr-packet-output` dry-run/apply emitted the current feature-local packet and body; read-only validation passed with `pr_blocked=false` and `writes_state=false`; clean-tree validation was persisted; both title gates pass |
 | Post: PR Body Generation | ✅ Complete | Refined only the sanctioned What Changed and Why It Matters regions, including the required consumer-facing `release-note` fence; protected packet sections and fingerprint remain valid |
 | Post: PR Creation | ✅ Complete | Draft PR [#450](https://github.com/racecraft-lab/racecraft-plugins-public/pull/450) opened from the packet-owned base, head, title, and body at head `c7237e9e8` |
 | Post: Review Remediation | ✅ Complete | GitHub code quality reported one unused source declaration through two generated-payload threads; removed at source in `37fcc4d4f`, regenerated mirrors/proofs, passed focused and consistency checks, replied with evidence, and resolved both threads; no other live feedback remains, and CI passed at audited head `1861414c3` |
-| Post: Retrospective | ✅ Complete | Privacy-safe report at `specs/art-004-gallery-completion-design-prototyping/retrospective.md`: 60/60 tasks, 17/17 requirements, 9/9 success criteria, 100% spec adherence, and no proposed spec changes |
+| Post: Retrospective | ✅ Complete | Privacy-safe report preserved at `docs/ai/specs/.process/ART-004-retrospective.md`: 60/60 tasks, 17/17 requirements, 9/9 success criteria, 100% spec adherence, and no proposed spec changes |
 
 ### Self-Review — 2026-08-18T21:08:19Z
 
@@ -883,8 +883,9 @@ generated files must never be hand-reverted independently.
    docs reference, privacy, and diff checks pass.
 2. **Edge cases?** All nine acceptance scenarios have non-happy-path evidence.
    Repaired-region focus and scrolling are covered at
-   `test-artifact-gallery.py:7447` and `quickstart.md:47`; new-region coverage
-   is at `test-artifact-gallery.py:7479` and `quickstart.md:108`; the missing
+   `test-artifact-gallery.py:7447` and `ART-004-manual-uat.md:47`; new-region
+   coverage is at `test-artifact-gallery.py:7479` and
+   `ART-004-manual-uat.md:108`; the missing
    keyboard-route negative is at `test-artifact-gallery.py:7555`. Offline and
    missing-resource failures are covered at `test-artifact-gallery.py:8348`,
    `:8357`, and `:8561`; fidelity and fill replacement are covered by the
@@ -893,7 +894,7 @@ generated files must never be hand-reverted independently.
    Both decision payloads and incomplete-input paths are covered by Group O at
    `test-artifact-gallery.py:8799` and its fixtures beginning at `:8860`;
    clipboard refusal, fallback parity, and stale settlement are exercised in
-   `quickstart.md:168` and statically guarded by Group O. No
+   `ART-004-manual-uat.md:168` and statically guarded by Group O. No
    `[edge-case-gap]` remains.
 3. **Requirements matched?** The `tasks.md` traceability matrix maps FR-001
    through FR-017 and SC-001 through SC-009 to checked tasks. Verify-Tasks
@@ -906,7 +907,7 @@ generated files must never be hand-reverted independently.
    messages, and the changed source found no `[TODO]`, `[DEFERRED]`,
    `[OUT-OF-SCOPE]`, debug logging, breakpoints, commented-out implementations,
    or temporary fixtures. The deferred UAT-skeleton helper is explicitly
-   dispositioned above, while the committed quickstart carries the real UAT
+   dispositioned above, while the preserved manual UAT record carries the real
    evidence. No silent deferral or leftover scaffolding remains.
 
 - [x] All tasks complete.
