@@ -606,7 +606,7 @@ h1 { margin: 0; font: 700 clamp(2rem, 6vw, 3.7rem)/1 var(--rc-font-display); }
     <span class="spacer"></span>
     <button type="button" class="primary" id="copy-markdown">Copy as Markdown</button>
   </div>
-  <p class="summary" id="dependency-summary">All dependencies and typed values are valid.</p>
+  <p class="summary" id="dependency-summary" role="status" aria-live="polite">All dependencies and typed values are valid.</p>
   <p class="status" id="copy-status" role="status" aria-live="polite"></p>
 
   <div class="groups" id="flag-groups" aria-label="Ordered feature flag groups">
@@ -815,6 +815,8 @@ h1 { margin: 0; font: 700 clamp(2rem, 6vw, 3.7rem)/1 var(--rc-font-display); }
     unavailable_value: "A normalized value is unavailable.",
     duplicate_identifier: "Identifier duplicates the first visible occurrence."
   };
+  const DECIMAL_ROLLOUT = /^(?:0|[1-9]\d*)(?:\.\d+)?$/;
+  const REQUIRED_SELECTOR = '[data-group-field="id"], [data-group-field="label"], [data-flag-field="key"], [data-flag-field="description"]';
   const groupsRoot = document.getElementById("flag-groups");
   const summary = document.getElementById("dependency-summary");
   const status = document.getElementById("copy-status");
@@ -825,10 +827,7 @@ h1 { margin: 0; font: 700 clamp(2rem, 6vw, 3.7rem)/1 var(--rc-font-display); }
   const initialGroups = groupsRoot.innerHTML;
   let copyAttempt = 0;
 
-  function valueWithin(root, selector) {
-    const control = root.querySelector(selector);
-    return control ? control.value : "";
-  }
+  function valueWithin(root, selector) { return root.querySelector(selector)?.value || ""; }
 
   function issue(code, entityType, entityId, field, occurrenceIndex, relatedOccurrenceIndex, rawValue, normalizedValue) {
     return {
@@ -846,22 +845,17 @@ h1 { margin: 0; font: 700 clamp(2rem, 6vw, 3.7rem)/1 var(--rc-font-display); }
   }
 
   function parseRollout(rawValue) {
-    if (rawValue === "") {
-      return { value: null, code: null };
-    }
-    const number = Number(rawValue);
+    if (rawValue === "") return { value: null, code: null };
+    if (!DECIMAL_ROLLOUT.test(rawValue)) return { value: null, code: "invalid_value" };
+    const number = Number.parseFloat(rawValue);
     return Number.isFinite(number) && number >= 0 && number <= 100
       ? { value: number, code: null }
       : { value: null, code: "invalid_value" };
   }
 
   function parseRequires(rawValue, flagKeys) {
-    if (rawValue === "") {
-      return { value: null, code: null };
-    }
-    if (!/^[a-z0-9]+(?:[._-][a-z0-9]+)*$/.test(rawValue)) {
-      return { value: null, code: "invalid_value" };
-    }
+    if (rawValue === "") return { value: null, code: null };
+    if (!/^[a-z0-9]+(?:[._-][a-z0-9]+)*$/.test(rawValue)) return { value: null, code: "invalid_value" };
     return flagKeys.has(rawValue)
       ? { value: rawValue, code: null }
       : { value: null, code: "unavailable_value" };
@@ -967,9 +961,7 @@ h1 { margin: 0; font: 700 clamp(2rem, 6vw, 3.7rem)/1 var(--rc-font-display); }
     ].join("\n");
   }
 
-  function announce(message) {
-    status.textContent = message;
-  }
+  function announce(message) { status.textContent = message; }
 
   function refreshFeedback(reportChange) {
     const rows = Array.from(groupsRoot.querySelectorAll(".flag"));
@@ -983,6 +975,12 @@ h1 { margin: 0; font: 700 clamp(2rem, 6vw, 3.7rem)/1 var(--rc-font-display); }
       row.dataset.flagKey = key;
     });
     let visibleIssues = 0;
+    Array.from(groupsRoot.querySelectorAll(REQUIRED_SELECTOR)).forEach(function (control) {
+      const empty = control.value === "";
+      control.setAttribute("aria-invalid", empty ? "true" : "false");
+      control.setAttribute("aria-errormessage", "dependency-summary");
+      visibleIssues += empty ? 1 : 0;
+    });
     rows.forEach(function (row) {
       const requiresRaw = valueWithin(row, '[data-flag-field="requires"]');
       const rolloutRaw = valueWithin(row, '[data-flag-field="rollout"]');
@@ -1016,8 +1014,7 @@ h1 { margin: 0; font: 700 clamp(2rem, 6vw, 3.7rem)/1 var(--rc-font-display); }
     });
     document.getElementById("no-groups").hidden = Boolean(groupsRoot.querySelector(".flag-group"));
     summary.textContent = visibleIssues
-      ? visibleIssues + " visible dependency or validation issue" + (visibleIssues === 1 ? "." : "s.")
-      : "All dependencies and typed values are valid.";
+      ? visibleIssues + " visible required, dependency, or validation issue" + (visibleIssues === 1 ? "." : "s.") : "All dependencies and typed values are valid.";
     if (reportChange) {
       announce("Feature flag state updated in memory.");
     }

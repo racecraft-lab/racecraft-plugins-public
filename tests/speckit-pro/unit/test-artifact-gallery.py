@@ -9967,7 +9967,13 @@ def check_v1(gallery_root: Path) -> list[str]:
         failures.append(f"{FEATURE_FLAGS_LABEL}: expected at least three named flag groups")
     if len(flags) < 6 or len(checkboxes) < 6 or any(not attrs.get("aria-label") for attrs in checkboxes):
         failures.append(f"{FEATURE_FLAGS_LABEL}: expected at least six named checkbox flags")
-    for literal in ("No flags in this group.", "Dependency unavailable.", "Invalid rollout; export uses null.", 'role="status"', 'aria-live="polite"'):
+    for literal in (
+        "No flags in this group.", "Dependency unavailable.", "Invalid rollout; export uses null.",
+        'id="dependency-summary" role="status" aria-live="polite"',
+        "visible required, dependency, or validation issue", "aria-errormessage",
+        'control.setAttribute("aria-invalid", empty ? "true" : "false");',
+        'role="status"', 'aria-live="polite"',
+    ):
         if literal not in text:
             failures.append(f"{FEATURE_FLAGS_LABEL}: missing visible state/status contract {literal!r}")
     if text.count(">Copy as Markdown<") != 1:
@@ -9999,6 +10005,7 @@ def check_v2(gallery_root: Path) -> list[str]:
         "duplicate_identifier", "invalid_value", "unavailable_value", "rawValue", "normalizedValue",
         "Required value is empty.", "Value is invalid and was not normalized.",
         "A normalized value is unavailable.", "Identifier duplicates the first visible occurrence.",
+        "DECIMAL_ROLLOUT.test(rawValue)", "Number.parseFloat(rawValue)",
         "const snapshot = captureSnapshot();", "const markdown = serializeFlags(snapshot);",
     )
     failures.extend(f"{FEATURE_FLAGS_LABEL}: missing serializer contract {token!r}" for token in required if token not in text)
@@ -10006,6 +10013,8 @@ def check_v2(gallery_root: Path) -> list[str]:
         failures.append(f"{FEATURE_FLAGS_LABEL}: export must serialize one fresh snapshot exactly once per invocation")
     if 'String.fromCharCode(96).repeat(3)' not in text or 'FENCE + "json"' not in text:
         failures.append(f"{FEATURE_FLAGS_LABEL}: export must contain exactly one explicit JSON fence")
+    if "Number(rawValue)" in text:
+        failures.append(f"{FEATURE_FLAGS_LABEL}: rollout parsing must not use coercive Number(rawValue)")
     return failures
 
 
