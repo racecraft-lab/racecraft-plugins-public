@@ -7309,12 +7309,14 @@ def check_q1(gallery_root: Path) -> list[str]:
         if not _ART005_HORIZONTAL_OVERFLOW_RE.search(declarations):
             continue
         classes = re.findall(r"\.([A-Za-z_-][\w-]*)", selector)
+        identifiers = re.findall(r"#([A-Za-z_-][\w-]*)", selector)
         matched = [
             attrs
             for attrs in attributes
-            if any(name in attrs.get("class", "").split() for name in classes)
+            if attrs.get("id") in identifiers
+            or any(name in attrs.get("class", "").split() for name in classes)
         ]
-        if not classes or not matched:
+        if not matched:
             failures.append(f"{SLIDE_DECK_LABEL}: horizontal scroll rule has no bound actual element")
             continue
         for attrs in matched:
@@ -8122,6 +8124,27 @@ GROUP_Q_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (("Q1", ch
 class SlideDeckReaderTests(unittest.TestCase):
     def test_slide_deck_reader_contract_passes_against_the_shipped_gallery(self) -> None:
         self.assertEqual(check_q1(GALLERY_ROOT), [])
+
+    def test_horizontal_scroll_rule_can_bind_an_id_selected_element(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            gallery = Path(raw) / "artifact-gallery"
+            shutil.copytree(GALLERY_ROOT, gallery)
+            artifact = gallery / TEMPLATES_DIR / f"{SLIDE_DECK_ID}.html"
+            text = artifact.read_text()
+            text = text.replace(
+                "</head>",
+                '<style>#review-scroll-region { overflow-x: auto; }</style>\n</head>',
+                1,
+            )
+            text = text.replace(
+                "</body>",
+                '<section id="review-scroll-region" tabindex="0" role="group" '
+                'aria-label="Slide comparison strip"></section>\n</body>',
+                1,
+            )
+            artifact.write_text(text)
+
+            self.assertEqual(check_q1(gallery), [])
 
 
 def check_m5(gallery_root: Path) -> list[str]:
