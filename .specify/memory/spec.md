@@ -2963,3 +2963,62 @@ than assumed safe: pointing them at a nonexistent directory still validates
 **One gap leaves with this archive rather than closing.** T052 never ran, so the
 task ledger merged at 53 of 54 with `[~]` recorded honestly rather than
 back-filled.
+
+---
+
+## ART-004 Gallery Completion: Design and Prototyping
+
+[Source: specs/art-004-gallery-completion-design-prototyping] — archived
+2026-08-18 after PR #450 merged at `97b255d3`. Revision reason: merged-spec
+archival into project memory.
+
+### User Outcomes
+
+- Six design and prototyping artifacts are available as branded, offline-capable
+  standalone gallery pages.
+- Keyboard users can reach, identify, focus, and horizontally scroll every
+  intentional code/data overflow region repaired or introduced by this feature.
+- The two decision artifacts export the selected decision plus rationale as an
+  exact prompt or Markdown payload, with deterministic validation and clipboard
+  fallback behavior. The other four ports remain read-only.
+
+### Shipped Behaviour
+
+The gallery gained `design-system`, `animation-prototype`,
+`interaction-prototype`, `svg-illustrations`, `visual-designs`, and
+`component-variants`. Exactly six manifest rows moved from `planned` to
+`shipped`; their non-status fields did not change.
+
+ART-020 was absorbed and delivered in the same merge. Eleven real horizontal
+scroll regions across `code-approaches`, `implementation-plan`, and `module-map`
+now expose the shared focusable-region contract, and a manifest-driven Layer 4
+guard sweeps every shipped target with a negative fixture and non-vacuity floors.
+Fill-region contracts preserve the pinned upstream capability inventory for all
+six new ports.
+
+The original combined plan blocked at 865 reviewable LOC and nine production
+files. The operator approved three slices: keyboard foundation at 160/pass,
+read-only ports at 590/warn, and decision ports at 520/warn. That topology stayed
+unchanged through merge.
+
+### Acceptance Result
+
+All 60 tasks, 17 functional requirements, and 9 success criteria are complete;
+the retrospective records 100% adherence, no critical or significant findings,
+and one minor finding resolved before merge. Final automation passed 7628/7628.
+
+Manual `file://` UAT covered the three repaired artifacts and all six new ports
+in Chromium, WebKit, and Safari. It found and drove two real fixes: a zero-minimum
+grid track for module-map code overflow, and narrow-screen track/wrapping repair
+for interaction-prototype. The complete matrix is preserved at
+`docs/ai/specs/.process/ART-004-manual-uat.md`.
+
+### Cleanup Note
+
+The manual UAT matrix, retrospective, and verify-tasks report were relocated to
+durable `docs/ai/specs/.process/ART-004-*` paths and their live citations were
+repointed. Planning documents, checklists, contracts, implementation notes, and
+PR-packet exhaust were removed with the active folder; every tracked byte remains
+recoverable from merge commit `97b255d39828425120a96a5d9e313d574ebbf8a9`.
+Canonical templates, manifest, tests, generated payloads/proofs, workflow, and
+design concept remain outside `specs/**`.

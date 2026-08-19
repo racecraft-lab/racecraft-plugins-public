@@ -3,10 +3,11 @@
   "spec_id": "ART-004",
   "feature_dir": "specs/art-004-gallery-completion-design-prototyping",
   "branch": "art-004-gallery-completion-design-prototyping",
-  "status": "complete",
+  "status": "completed_archived",
   "stage": "implement",
-  "active_step": "complete",
-  "updated_at": "2026-08-18T21:54:07Z",
+  "active_step": null,
+  "updated_at": "2026-08-18T23:42:55Z",
+  "prior_run_note": "completed_archived",
   "reclaimed_from": "docs/ai/specs/.process/ART-003-slice-3-workflow.md",
   "settings": {
     "consensus_mode": "moderate",
@@ -44,23 +45,66 @@
     "l5": 186
   },
   "archive_sweep": {
-    "status": "no_candidates",
+    "status": "completed",
     "execution_path": "extension_contract",
     "invocation_available": true,
     "prerequisite_available": true,
     "prerequisite_mode": "codex_native_worktree_binding",
     "archive_extension_installed": true,
-    "eligible_previous_specs": [],
+    "eligible_previous_specs": [
+      {
+        "spec": "specs/art-004-gallery-completion-design-prototyping",
+        "pull_request": 450,
+        "merge_commit": "97b255d39828425120a96a5d9e313d574ebbf8a9",
+        "disposition": "archived"
+      }
+    ],
     "ineligible_active_specs": [
       {
         "spec": "specs/brand-001-racecraft-identity-system",
         "reason": "PR #432 merged the planning package, but the roadmap records all seven feature phases as pending"
       }
     ],
-    "excluded_current_spec": "specs/art-004-gallery-completion-design-prototyping",
-    "cleanup_mode": "report_only",
-    "cleanup_applied": false,
-    "safeToApplyCleanup": false
+    "excluded_current_spec": null,
+    "cleanup_mode": "apply",
+    "cleanup_applied": true,
+    "safeToApplyCleanup": true
+  },
+  "archive": {
+    "archived_at": "2026-08-18",
+    "cleanup_applied": true,
+    "cleanup_branch": "art-004-post-merge-hygiene",
+    "cleanup_gate_7_note": "Gate 7 names main as the normal cleanup branch. This archive ran on art-004-post-merge-hygiene, cut from origin/main at merge commit 97b255d3, because this repository forbids committing directly to main and lands every change through a pull request. The branch contains only ART-004 post-merge hygiene.",
+    "spec_id": "ART-004",
+    "pull_request": 450,
+    "merge_commit": "97b255d39828425120a96a5d9e313d574ebbf8a9",
+    "merged_at": "2026-08-18T23:35:40Z",
+    "merged_by": "fgabelmannjr",
+    "base_branch": "main",
+    "source_spec_path_removed": "specs/art-004-gallery-completion-design-prototyping",
+    "reviewability": {
+      "combined_plan_reviewable_loc": 865,
+      "combined_plan_production_files": 9,
+      "combined_plan_total_files": 11,
+      "combined_plan_result": "block",
+      "human_approved_slices": [
+        {"slice": "keyboard foundation", "reviewable_loc": 160, "result": "pass"},
+        {"slice": "read-only ports", "reviewable_loc": 590, "result": "warn"},
+        {"slice": "decision ports", "reviewable_loc": 520, "result": "warn"}
+      ],
+      "split_decision": "operator-approved three-slice recovery; topology preserved through merge"
+    },
+    "process_evidence_preserved": [
+      "docs/ai/specs/.process/ART-004-design-concept.md",
+      "docs/ai/specs/.process/ART-004-workflow.md",
+      "docs/ai/specs/.process/ART-004-manual-uat.md",
+      "docs/ai/specs/.process/ART-004-retrospective.md",
+      "docs/ai/specs/.process/ART-004-verify-tasks-report.md"
+    ],
+    "evidence_relocation_note": "The completed quickstart/UAT matrix, retrospective, and verify-tasks report were moved from the active spec folder to durable ART-004 process paths and all live citations were repointed. Planning documents, contracts, checklists, implementation notes, and PR-packet exhaust remain recoverable at the merge commit.",
+    "report": ".specify/memory/archive-reports/2026-08-18-art-004-post-merge-hygiene.md",
+    "acceptance_note": "Manual file:// UAT passed for all three repaired artifacts and six new ports across Chromium, WebKit, and Safari. Two runtime findings were remediated before merge: module-map's grid track sizing and interaction-prototype's narrow-screen overflow/wrapping.",
+    "open_followups": []
   },
   "agent_runtime_check": {
     "destination": "~/.codex/agents",
@@ -70,8 +114,8 @@
     "pass": true
   },
   "relocation_suggestion": {
-    "status": "suppressed",
-    "reason": "ART-004 is the active feature and SPEC-MOC.md already declares structureVersion 1"
+    "status": "completed",
+    "reason": "durable ART-004 UAT, retrospective, and verify-tasks evidence was relocated during archive; the active spec folder was removed"
   },
   "capability_coverage": {
     "codebase_context": "local repository reads plus codebase-analyst",
@@ -522,7 +566,7 @@
         "uat": "all three repaired artifacts and all six new ports passed the consolidated file:// matrix",
         "review_packet": "workflow records change rationale, non-goals, review order, scope gates, traceability, verification, known gaps, and rollback",
         "art_020": "pre-implementation roadmap baseline already records Superseded by ART-004; no implementation-time roadmap drift",
-        "pr_title": "release-readiness validate-pr-title passed feat(speckit-pro): complete design gallery artifacts with exit 0 and blocking=false",
+        "pr_title": "release-readiness validate-pr-title passed feat(art-004): complete design gallery artifacts with exit 0 and blocking=false",
         "final_gate": "post-merge 7628/7628 passed; release artifacts match source after current-main integration; reference pages current; privacy 10/10; git diff check clean"
       },
       "implementation_notes": "specs/art-004-gallery-completion-design-prototyping/.process/implementation-notes.md"
@@ -547,7 +591,7 @@
       ],
       "doctor": {"status": "completed", "passed": 4, "warnings": 1, "warning": "unrelated BRAND-001 planning directory is incomplete"},
       "verify": {"status": "completed", "findings": 0},
-      "verify_tasks": {"status": "completed", "verified": 60, "total": 60, "flagged": 0, "report": "specs/art-004-gallery-completion-design-prototyping/verify-tasks-report.md"},
+      "verify_tasks": {"status": "completed", "verified": 60, "total": 60, "flagged": 0, "report": "docs/ai/specs/.process/ART-004-verify-tasks-report.md"},
       "code_review": {"status": "completed", "remediation_checkpoint": "d65345e65", "final_findings": 0},
       "integration": {"status": "completed", "full_suite": "7628/7628", "layer_1": "1468/1468", "layer_4": "5968/5968", "layer_5": "192/192", "privacy": "10/10"},
       "reviewability_diff_gate": {"status": "completed", "slice_results": ["160/pass", "590/warn", "520/warn"], "topology_changed": false},
@@ -571,12 +615,14 @@
         "status": "completed",
         "number": 450,
         "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/450",
-        "is_draft": true,
-        "state": "OPEN",
+        "is_draft": false,
+        "state": "MERGED",
         "base_branch": "main",
         "head_branch": "art-004-gallery-completion-design-prototyping",
-        "head_oid": "c7237e9e89fbb04e6dfe3eb3d0013d6358847355",
-        "mergeable": "MERGEABLE"
+        "head_oid": "ecabf297dce87ee5652e876ed0e60f0ff5996b43",
+        "merge_commit": "97b255d39828425120a96a5d9e313d574ebbf8a9",
+        "merged_at": "2026-08-18T23:35:40Z",
+        "mergeable": "UNKNOWN"
       },
       "review_remediation": {
         "status": "completed",
@@ -596,7 +642,7 @@
       },
       "retrospective": {
         "status": "completed",
-        "report": "specs/art-004-gallery-completion-design-prototyping/retrospective.md",
+        "report": "docs/ai/specs/.process/ART-004-retrospective.md",
         "tasks": "60/60",
         "functional_requirements": "17/17",
         "success_criteria": "9/9",
