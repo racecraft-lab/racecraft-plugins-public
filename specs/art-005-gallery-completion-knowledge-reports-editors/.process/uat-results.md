@@ -1367,3 +1367,10 @@ release readiness, and release-note policy. The validated title is
 `8246be97a0597cc04cb9d6fe0fd7a92b904796a0d43f9d56d3a43306e9c2c9b2`
 and body SHA-256 is
 `86fc89b8af05c1a23217a9728a1a6556dee3203c3f954bc9e3b9a9fb59057b92`.
+
+The branch was pushed at exact emission head
+`86de32f32c5a0e7a28f0bbfed574f301d1fc683d`, and PR
+[#455](https://github.com/racecraft-lab/racecraft-plugins-public/pull/455)
+opened against `art-005-gallery-completion-knowledge-reports-editors-slice-6`
+with the validated title. GitHub confirmed the exact head, base, and title;
+initial `UNSTABLE` status reflected newly queued checks only.
