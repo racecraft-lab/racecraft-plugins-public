@@ -926,9 +926,9 @@ For every behavior:
 | 3 - Slice 2 | Complete | 13 | PR #446 open; source checkpoint `7c636c361`; cumulative UAT 36 pass, 36 evidence-backed N/A, zero fail; final gates green |
 | 4 - Slice 3 | Complete | 13 | PR #447 open; source checkpoint `36ef824de`; cumulative UAT 54 pass, 54 evidence-backed N/A, zero fail; final gates green |
 | 5 - Slice 4 | Complete | 13 | PR #448 open; source checkpoint `f27b7833e`; cumulative UAT 72 pass, 72 evidence-backed N/A, zero fail; final gates green |
-| 6 - Slice 5 | Complete | 16 | PR #452 open; repaired source checkpoint `69f803d37`; cumulative UAT 107 pass, 73 evidence-backed N/A, zero fail; final gates green |
-| 7 - Slice 6 | Complete | 16 | PR #454 open; source checkpoint `8b1e67587`; cumulative UAT 142 pass, 74 evidence-backed N/A, zero fail; final gates green |
-| 8 - Slice 7 | Complete | 17 | PR #455 open; source checkpoint `4b9bb0f25`; cumulative UAT 177 pass, 75 evidence-backed N/A, zero fail; final gates green |
+| 6 - Slice 5 | Complete | 16 | PR #452 open; repaired source checkpoint `34175fa6f`; cumulative UAT 107 pass, 73 evidence-backed N/A, zero fail; final gates green |
+| 7 - Slice 6 | Complete | 16 | PR #454 open; repaired source checkpoint `eb20daf24`; cumulative UAT 142 pass, 74 evidence-backed N/A, zero fail; final gates green |
+| 8 - Slice 7 | Complete | 17 | PR #455 open; repaired source checkpoint `f85ed14c8`; cumulative UAT 177 pass, 75 evidence-backed N/A, zero fail; final gates green |
 
 ### Slice PR Stack
 
@@ -950,18 +950,52 @@ Every canonical row must reach Complete or an explicit Skipped disposition.
 
 | Canonical Item | Status | Evidence |
 |---|---|---|
-| Post: Doctor Extension Check | ⏳ Pending | |
-| Post: Verify Implementation | ⏳ Pending | Seven template and manifest contracts |
-| Post: Verify Tasks Phantom Check | ⏳ Pending | |
-| Post: Code Review | ⏳ Pending | |
-| Post: Integration Suite | ⏳ Pending | Layer 1, Layer 4, full suite, generated artifacts |
-| Post: Reviewability Diff Gate | ⏳ Pending | Per-slice measured verdicts |
-| Post: Self-Review | ⏳ Pending | |
-| Post: UAT Runbook Generation | ⏳ Pending | Tracked seven-template file:// runbook |
+| Post: Doctor Extension Check | ✅ Complete | Doctor passed all five required template checks; missing optional constitution recorded as a warning |
+| Post: Verify Implementation | ✅ Complete | 24/24 functional requirements and 119/119 completed tasks have implementation evidence |
+| Post: Verify Tasks Phantom Check | ✅ Complete | 119 verified; zero partial, weak, missing, skipped, or phantom completions |
+| Post: Code Review | ✅ Complete | Five blocking findings fixed on Slices 5-7 and merged forward |
+| Post: Integration Suite | ✅ Complete | Gallery 500/500; fill 67/67; L1 1,448; L4 5,793; full 7,427; generated/docs checks current |
+| Post: Reviewability Diff Gate | ✅ Complete | Slices 1-7: 666/670, 534/535, 377/560, 420/620, 695/785, 779/780, 692/790; all below 800 |
+| Post: Self-Review | ✅ Complete | Four-question review below; no edge-case, orphan-requirement, silent-deferral, or tidiness finding |
+| Post: UAT Runbook Generation | ✅ Complete | Plain-English seven-template file:// runbook committed; no registered UAT validator is available, so validator execution is explicitly skipped |
+| Post: Final Reviewability Backstop | 🔄 In progress | Restack onto current `origin/main`, then remeasure each committed slice before PR updates |
+| Post: PR Packet/Body Generation | ⏳ Pending | Refresh and validate seven packet-owned bodies |
 | Post: PR Body Generation | ⏳ Pending | Review order, scope, traceability, evidence, gaps, rollback |
 | Post: PR Creation | ⏳ Pending | |
 | Post: Review Remediation | ⏳ Pending | |
 | Post: Retrospective | ⏳ Pending | |
+
+### Self-Review
+
+1. **Tests executed?** `BUILD`, `TYPECHECK`, `LINT`, and
+   `INTEGRATION_TEST` are explicitly `N/A` for this repository. The applicable
+   `UNIT_TEST`/`FULL_VERIFY` commands actually ran on repaired source checkpoint
+   `f85ed14c89a5f71bb041e49930647dbc93ec8560`: gallery 500/500, fill 67/67,
+   Layer 1 1,448/1,448, Layer 4 5,793/5,793, and the default suite
+   7,427/7,427. Generated release parity and docs reference checks also passed;
+   the latest timestamped closeout record is `2026-08-19T03:57:37Z` in
+   `.process/uat-results.json`.
+2. **Edge cases?** No `[edge-case-gap]` was found. Reader acceptance scenarios
+   and their missing-artifact, manifest, reader-only, responsive, focus, and
+   reduced-motion failure checks are covered by
+   `tests/speckit-pro/unit/test-artifact-gallery.py:7334`, `:7430`, `:7530`,
+   and `:7634`. Editor current-state, deterministic serializer, invalid/empty/
+   duplicate/special-value, and clipboard recovery/race contracts are covered
+   at `:7794`, `:7797`, `:7800`, `:7940`, `:7943`, `:7946`, `:8078`, `:8081`,
+   and `:8084`. The executed `file://` runbook adds offline reload, keyboard,
+   theme, reduced-motion, 360/1280 px, exact fallback, and superseded-attempt
+   observations for every applicable artifact.
+3. **Requirements matched?** No orphan exists in either direction. Every
+   FR-001-FR-024 appears in at least one checked task; all 119 checked tasks are
+   covered by the seven source/evidence checkpoints and the passing focused,
+   integration, generated-parity, and UAT records. The Verify Tasks report
+   independently records 119 verified and zero flagged items.
+4. **Follow-up and tidiness?** No `[TODO]`, `[DEFERRED]`, or
+   `[OUT-OF-SCOPE]` marker appears in `spec.md`, `plan.md`, `tasks.md`, or the
+   implementation commit subjects. The implementation diff contains no debug
+   logging, debugger statements, stray prints, commented-out implementation,
+   or temporary fixture. The only external follow-up is the explicitly tracked
+   PR #444 restack after `main` advanced; no `[tidiness]` finding remains.
 
 - [x] All tasks are complete in `tasks.md`.
 - [x] `python3 tests/speckit-pro/run-all.py --layer 1` passes.
