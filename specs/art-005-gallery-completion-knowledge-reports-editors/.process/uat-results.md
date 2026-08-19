@@ -1146,3 +1146,44 @@ emission head `5da88f99f9f042ae02b62ce3535869462cb159f7`, and PR
 [#454](https://github.com/racecraft-lab/racecraft-plugins-public/pull/454)
 opened against `art-005-gallery-completion-knowledge-reports-editors-slice-5`
 before Slice 7.
+
+## Slice 7 Pre-Generation Reviewability Measurement
+
+Slice base: `742f89d5aa0218c1a7ae674d1791b91b6900c4e4`, the exact Slice 6
+closeout head from which
+`art-005-gallery-completion-knowledge-reports-editors-slice-7` was created
+after PR #454 opened.
+
+The seven implementation-authored paths remain the declared Slice 7 ledger:
+
+1. `speckit-pro/artifact-gallery/templates/prompt-tuner.html`
+2. `speckit-pro/artifact-gallery/manifest.json`
+3. `tests/speckit-pro/unit/test-artifact-gallery.py`
+4. `tests/speckit-pro/unit/test-artifact-fill-regions.py`
+5. `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-runbook.md`
+6. `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.md`
+7. `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json`
+
+| Component | Physical additions | Canonical/excluded | Reviewable LOC |
+|---|---:|---:|---:|
+| `prompt-tuner.html` | 1,011 | 458 byte-identical canonical lines | 553 |
+| `test-artifact-gallery.py` | 138 | 0 | 138 |
+| `test-artifact-fill-regions.py` | 4 | 0 | 4 |
+| Manifest status flip | 1 | 1 metadata line | 0 |
+| UAT carriers | pending cumulative evidence refresh | evidence-only | 0 |
+| **Total** | — | — | **695** |
+
+- Slice 7 component ceiling: **790** (95 LOC headroom)
+- Mandatory authored stop: **800** (105 LOC headroom)
+- Production templates: **1**
+- Primary surfaces: **1**
+- Pre-generation verdict: **WARN / CONTINUE**
+
+Direct R1-R3 source checks pass, the fill-region module passes 67/67, and
+Playwright fallback sanity confirms live previews, ordered export keys, exact
+focused fallback, reset restoration, and no page errors over direct `file://`.
+The complete gallery count is 496/500 only because its four payload-copy checks
+remain intentionally RED until authoritative T108 regeneration. The declared
+maximum physical boundary remains 33 paths; any final total-file block may
+continue only when every excess path is generated or workflow/control-plane
+evidence.

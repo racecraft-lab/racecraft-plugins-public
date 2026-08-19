@@ -429,3 +429,31 @@
 ### T100
 
 **Deviations/Edge cases/Surprises:** The gallery runner uses an explicit class registry; the first run correctly exposed that Group R was unreachable, so `PromptTunerProducerTests` was registered before accepting evidence. Formal RED then reported 497/500 with all three R contracts failing on the planned manifest state and missing prompt-tuner producer; fill-region reported 66/67 with only the missing prompt-tuner inventory template failing. Existing Slice 1-6 assertions remained green.
+
+### T101
+
+**Deviations/Edge cases/Surprises:** The derivative preserves the pinned support-reply tuning model with one labeled prompt textarea, five editable ordered slot controls, three named editable sample cards, fifteen labeled field controls, live derived previews, visible empty/invalid/duplicate cues, reset, and memory-only behavior. Three stable sample anchors satisfy the repeated prompt-variants fill contract; the evaluation note states the review modes and no-persistence boundary.
+
+### T102
+
+**Deviations/Edge cases/Surprises:** One fresh DOM snapshot emits the exact root and sample field order inside a single pretty-printed JSON fence. Raw slots remain ordered; only each valid slot's first occurrence becomes a field key; duplicates remain in `slots` and receive deterministic issues; invalid raw slot text receives ordered invalid/unavailable evidence with `null` normalization. Previews derive from the same template and first-occurrence fields, while empty, multiline, Unicode, and special-character strings flow unchanged through JSON serialization.
+
+### T103
+
+**Deviations/Edge cases/Surprises:** The copy handler clears stale state, increments an invocation ordinal, reads clipboard capability afresh, attempts callable `writeText` once, makes zero attempts for absent/non-callable capability, and applies exact success or focused fallback state only for the current settlement. Reset invalidates pending attempts. Playwright fallback sanity over direct `file://` confirmed live preview changes, ordered schema keys, one JSON fence, exact fallback focus/value, reset restoration, and zero page errors before checkpointing.
+
+### T104
+
+**Deviations/Edge cases/Surprises:** None. The manifest diff changes only `prompt-tuner.status` from `planned` to `shipped`; pinned source `20-editor-prompt-tuner.html`, `exports: ["markdown"]`, and every other row remain unchanged.
+
+### T105
+
+**Deviations/Edge cases/Surprises:** Slice 7 R1-R3 return no failures and fill-region checks pass 67/67. The complete gallery reports 496/500 only because F1-F4 require T108 regeneration of the Claude/Codex payload copies; no source producer assertion is failing.
+
+### T106
+
+**Deviations/Edge cases/Surprises:** No further refactor was warranted. The editor already separates slot normalization, first-occurrence field construction, derived previews, ordered issue collection, immutable snapshot capture, serialization, feedback, and clipboard recovery into flat named functions; browser sanity and `git diff --check` pass.
+
+### T107
+
+**Deviations/Edge cases/Surprises:** The explicit seven-path measurement reports 1,011 physical template lines, including 458 byte-identical canonical marker-block lines, leaving 553 non-canonical template lines. With 142 incremental focused-test lines, final reviewable implementation is 695 LOC: 95 below the 790 ceiling and 105 below the mandatory 800 stop. One production template and exactly seven declared authored paths remain in scope, so regeneration may proceed.
