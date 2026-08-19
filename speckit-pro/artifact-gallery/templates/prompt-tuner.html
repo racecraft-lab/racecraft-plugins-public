@@ -779,7 +779,7 @@ Tone: {{tone}}</textarea>
 
   function promptFields(sample, rawSlots) {
     const values = Array.from(sample.querySelectorAll("[data-sample-value]"));
-    const fields = {};
+    const fields = Object.create(null);
     const distinctSlots = new Set();
     rawSlots.forEach(function (rawSlot, index) {
       const result = normalizeSlot(rawSlot);

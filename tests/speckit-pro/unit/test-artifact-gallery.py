@@ -10146,6 +10146,7 @@ def check_w2(gallery_root: Path) -> list[str]:
         "A normalized value is unavailable.", "Identifier duplicates the first visible occurrence.",
         "const snapshot = captureSnapshot();", "const markdown = serializePrompt(snapshot);",
         "firstSlotOccurrence", "firstSampleOccurrence", "distinctSlots", "preview",
+        "const fields = Object.create(null);",
     )
     failures.extend(f"{PROMPT_TUNER_LABEL}: missing serializer contract {token!r}" for token in required if token not in text)
     if "cachedMarkdown" in text or text.count("const markdown = serializePrompt(snapshot);") != 1:
