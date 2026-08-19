@@ -1374,3 +1374,57 @@ The branch was pushed at exact emission head
 opened against `art-005-gallery-completion-knowledge-reports-editors-slice-6`
 with the validated title. GitHub confirmed the exact head, base, and title;
 initial `UNSTABLE` status reflected newly queued checks only.
+
+## Stack-Wide Closeout Evidence
+
+All seven exact ART-005 manifest rows are `shipped`. The four readers retain no
+exports, the three producers retain only `markdown`, and all seven source
+templates exist. The manifest diff from the scaffold base changes only those
+seven status values.
+
+Final stack-head verification is green:
+
+- Focused gallery module: **500/500**
+- Focused fill-region module: **67/67**
+- Layer 1: **1,448/1,448**
+- Isolated Layer 4: **5,793/5,793**
+- Isolated default suite: **7,427/7,427**
+- Generated release artifact parity: **pass**
+- Docs reference generation/check: **7 deterministic pages; current; no diff**
+
+The structured UAT contract audit is bound to source checkpoint
+`4b9bb0f256507a43551a725bd8502283e2e5e1cb`. It verifies 252 rows, exactly 36
+per artifact, with 177 pass, 75 evidence-backed `not_applicable`, zero fail,
+all required typed observation classes, and no tested source/generated drift
+after the checkpoint.
+
+### Final Per-Slice Ledgers
+
+| Slice | Artifact | Physical paths | Authored | Generated | Foundation/control | Reviewable LOC | Ceiling | 800 stop | Verdict |
+|---:|---|---:|---:|---:|---:|---:|---:|---:|---|
+| 1 | slide-deck | 57 | 7 | 28 | 22 foundation/prerequisite | 666 | 670 | 134 below | SIZE-ONLY BLOCK / CONTINUE |
+| 2 | concept-explainer | 33 | 7 | 22 | 4 control | 534 | 535 | 266 below | SIZE-ONLY BLOCK / CONTINUE |
+| 3 | status-report | 33 | 7 | 22 | 4 control | 377 | 560 | 423 below | SIZE-ONLY BLOCK / CONTINUE |
+| 4 | incident-report | 33 | 7 | 22 | 4 control | 420 | 620 | 380 below | SIZE-ONLY BLOCK / CONTINUE |
+| 5 | triage-board | 33 | 7 | 22 | 4 control | 681 | 785 | 119 below | SIZE-ONLY BLOCK / CONTINUE |
+| 6 | feature-flags | 33 | 7 | 22 | 4 control | 777 | 780 | 23 below | SIZE-ONLY BLOCK / CONTINUE |
+| 7 | prompt-tuner | 33 | 7 | 22 | 4 control | 695 | 790 | 105 below | SIZE-ONLY BLOCK / CONTINUE |
+
+The detailed Final Boundary section for each slice records every authored,
+generated, prerequisite, and workflow/control-plane path. A recomputation
+against each exact predecessor found no missing or extra path and no non-size
+blocker.
+
+Shared `SPA-CONTRACT.md`, `brand-kit.css`, `theme-toggle.html`, already-shipped
+templates, autopilot routing, plugin/version manifests, and export vocabulary
+outside the seven declared rows are unchanged. All seven emitted PR packets
+pass read-only validation and their declared changed files exactly match their
+branch diffs; each body includes the tested checkpoint, verification, measured
+size-only finding, known gaps, and rollback guidance.
+
+Live topology read-back confirms exact PR bases, branch heads, and packet-owned
+titles for PRs #444, #446, #447, #448, #452, #454, and #455. At closeout,
+#446-#454 were clean, #455 had one heavy preflight pending with no failed check,
+and #444 reported `DIRTY` only after `main` advanced beyond the original stack
+base. That external restack/remediation condition is retained for Post review
+remediation; no branch was merged and no ART-005 archival path was modified.

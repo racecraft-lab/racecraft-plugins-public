@@ -473,3 +473,35 @@
 ### T111
 
 **Deviations/Edge cases/Surprises:** Refreshed parent PR #454 was open, clean, fully green, and at exact Slice 7 base `742f89d5aa0218c1a7ae674d1791b91b6900c4e4`. Packet `art-005-slice-7-prompt-tuner` passed dry-run/apply emission, read-only validation with `pr_blocked=false`, persisted current-fingerprint validation, workflow-contract validation, exact-title release readiness, and release-note policy. Exact emission head `86de32f32c5a0e7a28f0bbfed574f301d1fc683d` was pushed, and PR [#455](https://github.com/racecraft-lab/racecraft-plugins-public/pull/455) opened against the Slice 6 branch with title `feat(artifact-gallery): Add prompt tuner`. GitHub confirmed the exact head/base/title; `UNSTABLE` reflected newly queued checks only.
+
+### T112
+
+**Deviations/Edge cases/Surprises:** None. All seven exact manifest rows are `shipped`; `slide-deck`, `concept-explainer`, `status-report`, and `incident-report` retain `exports: []`; `triage-board`, `feature-flags`, and `prompt-tuner` retain `exports: ["markdown"]`; and every declared source template exists.
+
+### T113
+
+**Deviations/Edge cases/Surprises:** Final isolated stack-head verification passed: focused gallery 500/500, focused fill regions 67/67, Layer 1 1,448/1,448, Layer 4 5,793/5,793, and the default suite 7,427/7,427 with zero failures.
+
+### T114
+
+**Deviations/Edge cases/Surprises:** `refresh-release-artifacts.py --check` reports exact source/dist/installed-cache/proof parity. Docs `reference:generate` regenerated seven pages deterministically, `reference:check` reports current, and `docs-site/src/content/docs/reference/tests.md` stayed byte-identical.
+
+### T115
+
+**Deviations/Edge cases/Surprises:** The contract audit found 25 carried/current rows whose prose evidence was complete but whose typed observation object was missing. The existing browser observations were folded into the JSON as accessibility, responsive, boundary, or data-integrity objects without changing any verdict. The repaired cumulative record passes the contract audit at exact source checkpoint `4b9bb0f256507a43551a725bd8502283e2e5e1cb`: 252 rows, exactly 36 per artifact, 177 pass, 75 structured `not_applicable`, zero fail, and no tested-surface drift after the checkpoint.
+
+### T116
+
+**Deviations/Edge cases/Surprises:** All seven independent ledgers pass. Slice 1 contains its one-time 57-path scaffold/foundation boundary (7 authored, 28 generated, 22 prerequisite/foundation) and 666 reviewable LOC against ceiling 670. Slices 2-7 each contain exactly 33 paths (7 authored, 22 generated, 4 workflow/control-plane) with reviewable LOC 534/377/420/681/777/695 against ceilings 535/560/620/785/780/790. Every slice remains below the mandatory 800 stop; every physical-file block is generated/control-plane or prerequisite-only, so all seven retain the recorded **SIZE-ONLY BLOCK / CONTINUE** disposition with no non-size blocker.
+
+### T117
+
+**Deviations/Edge cases/Surprises:** No shared gallery contract, brand kit, theme toggle, previously shipped template, autopilot routing, plugin/version manifest, or undeclared export vocabulary changed. The source manifest diff is exactly seven `planned` to `shipped` status flips; all other row fields are byte-identical.
+
+### T118
+
+**Deviations/Edge cases/Surprises:** All seven current PR packets pass `validate-pr-packet-read-only` with `pr_blocked=false`. Packet changed-file ledgers exactly equal their branch diffs (57 paths for Slice 1; 33 for Slices 2-7), and every packet/body retains its exact base/head/title, source checkpoint, eight verification records, size-only finding, known gaps, rollback guidance, and tracked UAT source.
+
+### T119
+
+**Deviations/Edge cases/Surprises:** Live GitHub read-back confirms all seven PRs are open with the exact contracted bases, heads, and packet-owned titles. PRs #446, #447, #448, #452, and #454 are clean with no failed or pending checks. PR #455 has no failed checks and one heavy preflight still running. PR #444 has no failed or pending checks but reports `DIRTY` after `main` advanced beyond the stack's original base; this external restack/remediation item is carried explicitly into Post and does not alter the validated seven-slice topology. No archival path was created or modified. Runner G7 passes with all 119 tasks complete and zero remaining task markers.

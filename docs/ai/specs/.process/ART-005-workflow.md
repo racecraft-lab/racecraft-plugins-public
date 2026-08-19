@@ -55,12 +55,14 @@ for four artifacts is now an explicit Open Question.
 | Tasks | `/speckit-tasks` | ✅ Complete | 119 ordered tasks; G5 and phantom-completion checks pass |
 | Analyze | `/speckit-analyze` | ✅ Complete | Six findings remediated; G6 passes with 0 CRITICAL/HIGH findings |
 | Confidence Gate | G6.5 | ✅ Complete | Advisory PASS at 0.98 against the 0.90 threshold |
-| Implement | `/speckit-implement` | 🔄 In Progress | All seven slices complete in PRs #444, #446, #447, #448, #452, #454, and #455; stack-wide T112 active |
-| Post | Post-Implementation | ⏳ Pending | Canonical closeout plus tracked `file://` UAT results |
+| Implement | `/speckit-implement` | ✅ Complete | All 119 tasks complete; final stack gates pass at 500/67 focused, L1 1,448, L4 5,793, and default 7,427 |
+| Post | Post-Implementation | 🔄 In Progress | Canonical closeout, independent review, PR reconciliation, and tracked `file://` UAT results |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
 G6.5 ran in advisory mode and passed at 0.98 against the 0.90 threshold.
+G7 passed with all 119 implementation tasks complete and zero remaining task
+markers.
 
 ### Phase Gates
 
@@ -98,7 +100,7 @@ Before starting any workflow phase, verify alignment with
 ### Worktree and Bootstrap Record
 
 - Required worktree: `.worktrees/art-005-gallery-completion-knowledge-reports-editors`
-- Active branch: `art-005-gallery-completion-knowledge-reports-editors-slice-3`
+- Active branch: `art-005-gallery-completion-knowledge-reports-editors-slice-7`
 - Stack root: `art-005-gallery-completion-knowledge-reports-editors`
 - Base at scaffold: `origin/main` at `1cf86bddecbca620234657f6e59a48991eabbc88`
 - Docs dependency bootstrap completed: `pnpm --dir docs-site install --frozen-lockfile`
@@ -961,18 +963,18 @@ Every canonical row must reach Complete or an explicit Skipped disposition.
 | Post: Review Remediation | ⏳ Pending | |
 | Post: Retrospective | ⏳ Pending | |
 
-- [ ] All tasks are complete in `tasks.md`.
-- [ ] `python3 tests/speckit-pro/run-all.py --layer 1` passes.
-- [ ] `python3 tests/speckit-pro/run-all.py --layer 4` passes.
-- [ ] `python3 tests/speckit-pro/run-all.py` passes with zero failures.
-- [ ] `python3 scripts/refresh-release-artifacts.py` has regenerated payloads and
+- [x] All tasks are complete in `tasks.md`.
+- [x] `python3 tests/speckit-pro/run-all.py --layer 1` passes.
+- [x] `python3 tests/speckit-pro/run-all.py --layer 4` passes.
+- [x] `python3 tests/speckit-pro/run-all.py` passes with zero failures.
+- [x] `python3 scripts/refresh-release-artifacts.py` has regenerated payloads and
   proofs, followed by consistency verification.
-- [ ] `pnpm --dir docs-site reference:generate` has regenerated test references
+- [x] `pnpm --dir docs-site reference:generate` has regenerated test references
   after test-tree changes, and the generated diff is reviewed.
-- [ ] Manual file:// verification is complete for all seven templates.
-- [ ] The tracked UAT result identifies the tested commit and records every step.
-- [ ] Final PR title passes the repository release-readiness title gate.
-- [ ] No generated artifact was hand-edited.
+- [x] Manual file:// verification is complete for all seven templates.
+- [x] The tracked UAT result identifies the tested commit and records every step.
+- [x] Final PR title passes the repository release-readiness title gate.
+- [x] No generated artifact was hand-edited.
 
 ---
 
