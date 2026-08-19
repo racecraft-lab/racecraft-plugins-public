@@ -977,7 +977,7 @@ h1 {
             <p>The delay lives directly inside the component that owns the draft field.</p>
           </header>
 
-          <div class="code"><pre><span class="kw">export function</span> <span class="fn">DraftEditor</span>() {
+          <div class="code" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" aria-label="Code example for the inline timer approach"><pre><span class="kw">export function</span> <span class="fn">DraftEditor</span>() {
   <span class="kw">const</span> [draft, setDraft] = <span class="fn">useState</span>(<span class="str">''</span>);
   <span class="kw">const</span> [settled, setSettled] = <span class="fn">useState</span>(<span class="str">''</span>);
 
@@ -1035,7 +1035,7 @@ h1 {
             <p>The timer moves into one hook under <code>src/hooks/</code> that every draft surface imports.</p>
           </header>
 
-          <div class="code"><pre><span class="cm">// src/hooks/useDebounce.ts</span>
+          <div class="code" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" aria-label="Code example for the shared debounce hook approach"><pre><span class="cm">// src/hooks/useDebounce.ts</span>
 <span class="kw">export function</span> <span class="fn">useDebounce</span>&lt;T&gt;(value: T, ms = <span class="str">300</span>): T {
   <span class="kw">const</span> [settled, setSettled] = <span class="fn">useState</span>(value);
   <span class="fn">useEffect</span>(() <span class="kw">=&gt;</span> {
@@ -1088,7 +1088,7 @@ h1 {
             <p>Adopt <code>use-debounce</code> for both the value and the save callback.</p>
           </header>
 
-          <div class="code"><pre><span class="kw">import</span> { useDebouncedCallback }
+          <div class="code" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" aria-label="Code example for the third-party debounce library approach"><pre><span class="kw">import</span> { useDebouncedCallback }
   <span class="kw">from</span> <span class="str">'use-debounce'</span>;
 
 <span class="kw">export function</span> <span class="fn">DraftEditor</span>() {

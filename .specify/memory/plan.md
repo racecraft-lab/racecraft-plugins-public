@@ -2241,3 +2241,123 @@ because nothing under `speckit-pro/` changes in this archive.
 Three things remain owed and are not closed by this cleanup: no acceptance
 record was merged, the three workflow files still record runbook generation as
 pending, and slices 2 and 3 merged with every task box unchecked.
+
+---
+
+## ART-007 Draft-PR Emission
+
+### Dependencies
+
+ART-002 (draft-PR templates), satisfied by PRs #425, #427 and #430, and ART-006
+(autopilot staging), satisfied by PR #422. Both were complete and archived before
+this run began. ART-007 also absorbed the `gh` corroboration limb that ART-006
+deferred to it, because ART-007 is the spec that creates the pull request the
+limb corroborates.
+
+### Shipped Surface
+
+| Surface | File |
+|---|---|
+| Draft packet mode | `speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json`, `helpers/pr_emission.py` |
+| `Draft PR` row and corroboration | `helpers/read_only.py`, `references/workflow-file-protocol.md` |
+| Emission protocol prose | `references/phase-execution.md` and its Codex mirror, ten subsections each |
+| The new agent | `speckit-pro/agents/artifact-author.md`, `speckit-pro/codex-agents/artifact-author.toml` |
+| Bundle registration | `helpers/install.py`, eleventh required Codex agent |
+
+### Testing
+
+The repository suite is both UNIT_TEST and FULL_VERIFY here, and moved from 7399
+to 7525. No build, typecheck or lint step exists; the stack is Markdown, JSON and
+standard-library Python.
+
+Two runner helpers relevant to the post-implementation sequence are registered
+`deferred` — `generate-uat-skeleton` and `final-reviewability-backstop` — so two
+steps were decided on committed evidence rather than helper output. No UAT
+skeleton could be produced, and the runbook author was correctly never spawned.
+
+Reviewability landed exactly on its declaration at 11 production and 16 total
+files, against a scaffold declaration of ~287 reviewable LOC re-derived from the
+roadmap's original 217. **No measured LOC figure exists**: the estimator scores a
+Markdown-and-Python repository 0 by construction, so the diff gate was decided on
+committed evidence. The atomicity route was `one-navigable-PR` and no split was
+required.
+
+### Downstream
+
+- **ART-008** — was blocked by ART-007 alone. Now Ready.
+- **ART-010** — was blocked by ART-007 alone, its ART-003 dependency satisfied by
+  PRs #435/#436/#439 and its ART-012 dependency by PR #426. **Every dependency is
+  now satisfied.**
+- **ART-009** — still owns Layer 6 corpus membership for `artifact-author`, which
+  ART-007 shipped ungoverned by design. The corpus holds exactly twelve roles and
+  the new agent is outside it, so no digest chain restaled.
+
+### Testing and Cleanup
+
+The cleanup removes the merged ART-007 active spec folder, relocates the manual
+UAT record to `docs/ai/specs/.process/ART-007-manual-uat.md` and repoints its
+three citations, marks the process state archived, regenerates and checks the
+SpecKit index and the roadmap map of content, updates the technical roadmap to
+Complete / Archived while moving ART-008 and ART-010 to Ready, and runs the full
+deterministic suite. No `refresh-release-artifacts.py` run is required, because
+nothing under `speckit-pro/` changes in this archive.
+
+The index had to be regenerated with the git-ignored `.process/pr-packets/`
+directory moved aside, because `generate-spec-index` walks the filesystem rather
+than the git index. That is one of the two defects this run routed to HRNS-015,
+and this cleanup is the second time it has been hit.
+
+Two things remain owed and are not closed by this cleanup: T052 never ran and
+needs an installed plugin carrying this feature, and the emission path has still
+never run end to end.
+
+---
+
+## ART-004 Gallery Completion: Design and Prototyping
+
+[Source: specs/art-004-gallery-completion-design-prototyping] — archived
+2026-08-18 after PR #450 merged at `97b255d3`. Revision reason: merged-spec
+archival into project memory.
+
+### Dependencies and Topology
+
+ART-001 was the sole dependency. ART-004 absorbed and superseded ART-020, so no
+second repair path remains. The authoritative combined Plan gate blocked at 865
+reviewable LOC, nine production files, and eleven total files. The operator then
+approved three serialized slices:
+
+1. Keyboard foundation — 160 LOC, pass.
+2. Four read-only ports — 590 LOC, warn.
+3. Two decision/export ports — 520 LOC, warn.
+
+All three were non-blocking and the approved topology stayed intact.
+
+### Shipped Surfaces
+
+| Surface | Files |
+|---|---|
+| Six new ports | `design-system.html`, `animation-prototype.html`, `interaction-prototype.html`, `svg-illustrations.html`, `visual-designs.html`, `component-variants.html` |
+| Existing-region repair | `code-approaches.html`, `implementation-plan.html`, `module-map.html` |
+| Routing | `speckit-pro/artifact-gallery/manifest.json` |
+| Durable contracts | `tests/speckit-pro/unit/test-artifact-gallery.py`, `test-artifact-fill-regions.py` |
+| Generated consumers | `dist/**`, installed-cache proofs, gallery payloads, docs references |
+
+The implementation remains standard-library repository tooling plus standalone
+HTML/CSS/JavaScript. No build, typecheck, lint, manifest-version, or new runtime
+dependency was introduced.
+
+### Verification and Cleanup
+
+Focused gallery and fill-region suites, release payload consistency, generated
+reference checks, privacy checks, and the full 7628-test repository suite passed
+before merge. Manual `file://` acceptance ran across Chromium, WebKit, and Safari
+and is preserved at `docs/ai/specs/.process/ART-004-manual-uat.md`.
+
+Post-merge cleanup preserves the workflow, design concept, UAT matrix,
+retrospective, and verify-tasks report under `docs/ai/specs/.process/`; records
+the merged state in `autopilot-state.json`; removes only the completed ART-004
+active folder; and regenerates the roadmap index. No release-payload refresh is
+required because no `speckit-pro/` source or payload input changes.
+
+ART-005 remains Ready and untouched. BRAND-001 remains an active incomplete
+planning package and is not an archive candidate.

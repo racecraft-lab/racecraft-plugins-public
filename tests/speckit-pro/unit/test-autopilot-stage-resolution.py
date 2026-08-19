@@ -258,6 +258,76 @@ RECORDED_STAGE_CASES = (
     ("no Stage row at all", "", None),
 )
 
+# --- The `Draft PR` row (FR-009) -----------------------------------------
+# The pull-request identity lives in the same `### Basic Information` table as
+# `Stage`, never in `## Workflow Overview`, whose rows are phase status records.
+# The number and the URL are one linked reference, not two columns: readers take
+# the number from the link text and the URL from the link target
+# (contracts/draft-pr-row.md:14-40). The record types are pinned by
+# data-model.md:105-109 — `number` is an integer, `url` a string, `gap_note` a
+# string or null.
+DRAFT_PR_URL = "https://github.com/owner/repo/pull/438"
+DRAFT_PR_PRESENT_ROW = f"| **Draft PR** | [#438]({DRAFT_PR_URL}) |\n"
+DRAFT_PR_IDENTITY = {"number": 438, "url": DRAFT_PR_URL, "gap_note": None}
+
+# (label, `### Basic Information` row, expected record)
+DRAFT_PR_ROW_CASES = (
+    ("bold field name", DRAFT_PR_PRESENT_ROW, DRAFT_PR_IDENTITY),
+    ("plain field name", f"| Draft PR | [#438]({DRAFT_PR_URL}) |\n", DRAFT_PR_IDENTITY),
+    ("backticked field name", f"| `Draft PR` | [#438]({DRAFT_PR_URL}) |\n", DRAFT_PR_IDENTITY),
+    # The key is compared case-insensitively after stripping `*`, backticks, and
+    # spaces — the same normalization the shipped `Stage` row already uses.
+    ("lowercased field name", f"| draft pr | [#438]({DRAFT_PR_URL}) |\n", DRAFT_PR_IDENTITY),
+    ("uppercased field name", f"| **DRAFT PR** | [#438]({DRAFT_PR_URL}) |\n", DRAFT_PR_IDENTITY),
+    (
+        "a shortfall note follows the link",
+        f"| **Draft PR** | [#438]({DRAFT_PR_URL}) — 2 of 4 artifacts missing |\n",
+        {"number": 438, "url": DRAFT_PR_URL, "gap_note": "2 of 4 artifacts missing"},
+    ),
+    # Nothing in the grammar bounds the width of the number.
+    (
+        "a wider number",
+        "| **Draft PR** | [#1024](https://github.com/owner/repo/pull/1024) |\n",
+        {"number": 1024, "url": "https://github.com/owner/repo/pull/1024", "gap_note": None},
+    ),
+)
+
+# (label, prose written after the link, expected `gap_note`)
+# The grammar template is `[#<number>](<url>) — <gap note>`, which places the
+# separator outside the placeholder: the note is the prose, not the dash.
+DRAFT_PR_GAP_NOTE_CASES = (
+    ("a plain shortfall note", "— 2 of 4 artifacts missing", "2 of 4 artifacts missing"),
+    # A note carrying its own parentheses. A greedy link-target capture would
+    # swallow the rest of the cell into `url` and lose the identity entirely,
+    # which is the failure FR-011 corroboration would then blame on GitHub.
+    (
+        "a note containing parentheses",
+        "— selection failed (no pages chosen)",
+        "selection failed (no pages chosen)",
+    ),
+    # A note carrying a second Markdown link, for the same reason.
+    (
+        "a note containing another link",
+        "— see [the index](docs/ai/specs/.process/ART-007-index.md)",
+        "see [the index](docs/ai/specs/.process/ART-007-index.md)",
+    ),
+)
+
+# (label, the `Draft PR` value cell as written)
+# None of these is one `[#<number>](<url>)` link. The reader reports absence
+# rather than raising: a workflow file is operator-edited prose, and a traceback
+# there would stop a run over a typo (contracts/draft-pr-row.md:117).
+MALFORMED_DRAFT_PR_VALUES = (
+    ("an empty value", ""),
+    ("a bare number with no link", "#438"),
+    ("a bare URL with no link", DRAFT_PR_URL),
+    ("link text missing the `#`", f"[438]({DRAFT_PR_URL})"),
+    ("non-numeric link text", f"[#pending]({DRAFT_PR_URL})"),
+    ("a link with no target", "[#438]"),
+    ("a link with an empty target", "[#438]()"),
+    ("prose instead of a link", "not opened yet"),
+)
+
 # --- Recorded confidence-gate verdict (FR-010a) --------------------------
 # The gate record written under `## Phase 6.5: Confidence Gate` is prose, and it
 # is not a verdict source. Real workflow files spell the record three different
@@ -437,6 +507,397 @@ TASK_LIST_OUT_OF_STAGE_RULES = (
 )
 
 
+# --- Draft PR corroboration (FR-011) -------------------------------------
+# The orchestrator takes ONE read-only `gh pr list --head <branch> --state all
+# --json number,url,state,isDraft,headRefName` observation and passes it in as
+# JSON; this operation parses the `Draft PR` row, classifies, and reports. No
+# helper in the runner shells out to `gh`, and this contract preserves that,
+# which is what leaves the classification deterministic and offline-testable
+# (contracts/stage-corroboration.md:11-19).
+CORROBORATION_STATUSES = (
+    "match",
+    "no_record",
+    "skipped",
+    "pr_closed",
+    "pr_missing",
+    "identity_mismatch",
+)
+# The last three are discrepancies; the first three are not
+# (contracts/stage-corroboration.md:141-145).
+CORROBORATION_DISCREPANCIES = ("pr_closed", "pr_missing", "identity_mismatch")
+
+# The eight keys that predate this contract, in the order the envelope writes
+# them. `corroboration` is added as a ninth and never displaces one of these
+# (contracts/stage-corroboration.md:91-114).
+PRE_EXISTING_ENVELOPE_KEYS = (
+    "tool",
+    "stage",
+    "source",
+    "basis",
+    "recorded_stage",
+    "planning_complete",
+    "confidence_gate_status",
+    "from_phase",
+)
+ENVELOPE_KEYS = PRE_EXISTING_ENVELOPE_KEYS + ("corroboration",)
+
+# Separates "the request carried no `pr_observation` key at all" from "it
+# carried one" in the tables below. In the operation's own input that
+# distinction is the JSON key's presence (contracts/stage-corroboration.md:77).
+OBSERVATION_ABSENT = object()
+
+# `recorded` is the identity pair the `Draft PR` row stores, and only that pair:
+# the row's `gap_note` is FR-004 shortfall prose about the run, never part of the
+# pull request's identity (contracts/stage-corroboration.md:105).
+RECORDED_IDENTITY = {"number": 438, "url": DRAFT_PR_URL}
+# A repository transfer moves a pull request without changing its number, so the
+# live URL of the recorded number can differ from the recorded URL — rule 2.
+TRANSFERRED_URL = "https://github.com/owner/renamed-repo/pull/438"
+SECOND_PR_URL = "https://github.com/owner/repo/pull/512"
+
+# `--json number,url,state,isDraft,headRefName` entries, on the head branch the
+# `### Basic Information` table names. `gh` spells the three live states `OPEN`,
+# `CLOSED`, and `MERGED`; the query returns no `merged` field of its own, so
+# `merged` is read off `state` (contracts/stage-corroboration.md:28-34).
+OPEN_438 = {
+    "number": 438,
+    "url": DRAFT_PR_URL,
+    "state": "OPEN",
+    "isDraft": True,
+    "headRefName": "test-branch",
+}
+CLOSED_438 = {**OPEN_438, "state": "CLOSED", "isDraft": False}
+MERGED_438 = {**OPEN_438, "state": "MERGED", "isDraft": False}
+TRANSFERRED_438 = {**OPEN_438, "url": TRANSFERRED_URL}
+OPEN_512 = {
+    "number": 512,
+    "url": SECOND_PR_URL,
+    "state": "OPEN",
+    "isDraft": True,
+    "headRefName": "test-branch",
+}
+CLOSED_512 = {**OPEN_512, "state": "CLOSED", "isDraft": False}
+
+# `observed` carries the three fields the classification actually reads. The
+# query's `isDraft` and `headRefName` decide nothing — the query is already
+# scoped to the head branch — so neither is echoed
+# (contracts/stage-corroboration.md:106).
+OBSERVED_438_OPEN = {"number": 438, "url": DRAFT_PR_URL, "state": "OPEN"}
+OBSERVED_438_CLOSED = {"number": 438, "url": DRAFT_PR_URL, "state": "CLOSED"}
+OBSERVED_438_MERGED = {"number": 438, "url": DRAFT_PR_URL, "state": "MERGED"}
+OBSERVED_438_TRANSFERRED = {"number": 438, "url": TRANSFERRED_URL, "state": "OPEN"}
+OBSERVED_512_OPEN = {"number": 512, "url": SECOND_PR_URL, "state": "OPEN"}
+
+# CONTRACT GAP — these two strings are this file's pin, not the contract's.
+# §5.1 says an absent or unsuccessful observation yields `skipped` "with a
+# `reason`", and §6 shows one being printed, but neither names a reason for the
+# two cases where the request supplies none: the key was absent, or it was
+# present and unusable. Both wordings below are chosen to read correctly in §6's
+# run-report line (`Draft PR: skipped — no observation supplied`). If T036-T038
+# choose different wording, change it HERE — every fixture in this section reads
+# these two constants, and nothing else pins them. An `ok: false` observation
+# that DOES carry a reason echoes that reason verbatim instead
+# (contracts/stage-corroboration.md:80, :122-124, :169-172).
+NO_OBSERVATION_REASON = "no observation supplied"
+UNUSABLE_OBSERVATION_REASON = "observation unusable"
+
+# `corroboration` carries the same five keys for every status; the ones a status
+# has nothing to say about are null rather than absent, so every consumer reads
+# one shape (contracts/stage-corroboration.md:103-109).
+CORROBORATION_MATCH = {
+    "status": "match",
+    "recorded": RECORDED_IDENTITY,
+    "observed": OBSERVED_438_OPEN,
+    "merged": None,
+    "reason": None,
+}
+# No row means no recorded identity to carry, and no observation was taken.
+CORROBORATION_NO_RECORD = {
+    "status": "no_record",
+    "recorded": None,
+    "observed": None,
+    "merged": None,
+    "reason": None,
+}
+# The row IS present on a `skipped` run, and §7 needs its identity: the terminal
+# step refreshes that pull request once the tool can be reached again.
+CORROBORATION_SKIPPED_NO_OBSERVATION = {
+    "status": "skipped",
+    "recorded": RECORDED_IDENTITY,
+    "observed": None,
+    "merged": None,
+    "reason": NO_OBSERVATION_REASON,
+}
+CORROBORATION_SKIPPED_UNUSABLE = {
+    **CORROBORATION_SKIPPED_NO_OBSERVATION,
+    "reason": UNUSABLE_OBSERVATION_REASON,
+}
+CORROBORATION_PR_CLOSED = {
+    "status": "pr_closed",
+    "recorded": RECORDED_IDENTITY,
+    "observed": OBSERVED_438_CLOSED,
+    "merged": False,
+    "reason": None,
+}
+CORROBORATION_PR_MERGED = {
+    **CORROBORATION_PR_CLOSED,
+    "observed": OBSERVED_438_MERGED,
+    "merged": True,
+}
+CORROBORATION_PR_MISSING = {
+    "status": "pr_missing",
+    "recorded": RECORDED_IDENTITY,
+    "observed": None,
+    "merged": None,
+    "reason": None,
+}
+CORROBORATION_IDENTITY_MISMATCH_SECOND_PR = {
+    "status": "identity_mismatch",
+    "recorded": RECORDED_IDENTITY,
+    "observed": OBSERVED_512_OPEN,
+    "merged": None,
+    "reason": None,
+}
+CORROBORATION_IDENTITY_MISMATCH_URL = {
+    **CORROBORATION_IDENTITY_MISMATCH_SECOND_PR,
+    "observed": OBSERVED_438_TRANSFERRED,
+}
+
+# One witness per status, in the §5.3 order, so the closed vocabulary is proved
+# by construction rather than by inspection.
+# (label, status, `Draft PR` row, observation, expected corroboration object)
+STATUS_WITNESS_CASES = (
+    (
+        "the recorded pull request is open at the recorded URL",
+        "match",
+        DRAFT_PR_PRESENT_ROW,
+        {"ok": True, "pull_requests": [OPEN_438]},
+        CORROBORATION_MATCH,
+    ),
+    (
+        "no `Draft PR` row has been written yet",
+        "no_record",
+        "",
+        OBSERVATION_ABSENT,
+        CORROBORATION_NO_RECORD,
+    ),
+    (
+        "the row is present but no observation reached the operation",
+        "skipped",
+        DRAFT_PR_PRESENT_ROW,
+        OBSERVATION_ABSENT,
+        CORROBORATION_SKIPPED_NO_OBSERVATION,
+    ),
+    (
+        "the recorded number is closed without having been merged",
+        "pr_closed",
+        DRAFT_PR_PRESENT_ROW,
+        {"ok": True, "pull_requests": [CLOSED_438]},
+        CORROBORATION_PR_CLOSED,
+    ),
+    (
+        "the branch carries no pull request at all",
+        "pr_missing",
+        DRAFT_PR_PRESENT_ROW,
+        {"ok": True, "pull_requests": []},
+        CORROBORATION_PR_MISSING,
+    ),
+    (
+        "the only open pull request is not the recorded one",
+        "identity_mismatch",
+        DRAFT_PR_PRESENT_ROW,
+        {"ok": True, "pull_requests": [OPEN_512]},
+        CORROBORATION_IDENTITY_MISMATCH_SECOND_PR,
+    ),
+)
+
+# The rest of §5.2, against a `Draft PR` row that is always present.
+# (label, observation, expected corroboration object)
+SUCCESSFUL_OBSERVATION_CASES = (
+    (
+        # `isDraft` and `headRefName` decide nothing, so an entry without them
+        # is complete rather than malformed. Requiring them would make the
+        # operation reject an observation it can classify perfectly well.
+        "an entry carries only the three fields the classification reads",
+        {"ok": True, "pull_requests": [OBSERVED_438_OPEN]},
+        CORROBORATION_MATCH,
+    ),
+    (
+        # Rule 1 names an OPEN pull request. A closed one with another number is
+        # this branch's own history, not a competing identity.
+        "a closed pull request with another number is not a competing identity",
+        {"ok": True, "pull_requests": [OPEN_438, CLOSED_512]},
+        CORROBORATION_MATCH,
+    ),
+    (
+        "the recorded number was merged",
+        {"ok": True, "pull_requests": [MERGED_438]},
+        CORROBORATION_PR_MERGED,
+    ),
+    (
+        # Rule 4, reached because rule 1 found nothing open to conflict with.
+        "the branch carries only a closed pull request with another number",
+        {"ok": True, "pull_requests": [CLOSED_512]},
+        CORROBORATION_PR_MISSING,
+    ),
+    (
+        "the recorded number is open beside a second open pull request",
+        {"ok": True, "pull_requests": [OPEN_438, OPEN_512]},
+        CORROBORATION_IDENTITY_MISMATCH_SECOND_PR,
+    ),
+    (
+        # `gh` orders its array by recency, which is not a fact about identity.
+        "the second open pull request is listed first",
+        {"ok": True, "pull_requests": [OPEN_512, OPEN_438]},
+        CORROBORATION_IDENTITY_MISMATCH_SECOND_PR,
+    ),
+    (
+        # Rule 2: the number still resolves, but not to the recorded URL.
+        "the recorded number is open at a transferred URL",
+        {"ok": True, "pull_requests": [TRANSFERRED_438]},
+        CORROBORATION_IDENTITY_MISMATCH_URL,
+    ),
+)
+
+# Rule 1 runs before rules 2, 3, and 4, and the order is load-bearing: a branch
+# that grew a second pull request must report the conflict rather than the
+# absence, the closure, or the moved URL. Every observation below satisfies a
+# later rule too, so a resolver that evaluated them in any other order would
+# report a different status (contracts/stage-corroboration.md:128-140).
+# (label, observation, the rule an extra open pull request outranks)
+PRECEDENCE_CASES = (
+    (
+        "an extra open pull request outranks a missing recorded number",
+        {"ok": True, "pull_requests": [OPEN_512]},
+        "rule 4",
+    ),
+    (
+        "an extra open pull request outranks a closed recorded number",
+        {"ok": True, "pull_requests": [CLOSED_438, OPEN_512]},
+        "rule 3",
+    ),
+    (
+        "an extra open pull request outranks a transferred recorded URL",
+        {"ok": True, "pull_requests": [TRANSFERRED_438, OPEN_512]},
+        "rule 2",
+    ),
+)
+
+# Fail-closed on evidence, fail-open on outcome. The tool being absent,
+# unauthenticated, cancelled, rate-limited, or emitting unparseable output are
+# all the same class, and none of them is evidence that a recorded pull request
+# is gone (contracts/stage-corroboration.md:82-85).
+# (label, the reason the orchestrator reports)
+UNSUCCESSFUL_OBSERVATION_REASONS = (
+    ("the tool is not installed", "gh: command not found"),
+    ("the tool is not authenticated", "gh not authenticated"),
+    ("the operator cancelled the query", "cancelled by the operator"),
+    ("the API rate limit was reached", "API rate limit exceeded"),
+    ("the output did not parse as JSON", "gh output did not parse as JSON"),
+)
+
+# An absent row is decided before any observation is looked at, so a supplied
+# observation is never read — `observed` stays null even when the array would
+# otherwise classify as a discrepancy (contracts/stage-corroboration.md:120-126).
+# (label, observation)
+NO_RECORD_OBSERVATIONS = (
+    ("no observation was supplied", OBSERVATION_ABSENT),
+    ("an observation that would otherwise match", {"ok": True, "pull_requests": [OPEN_438]}),
+    (
+        "an observation naming a competing open pull request",
+        {"ok": True, "pull_requests": [OPEN_512]},
+    ),
+    ("an unsuccessful query", {"ok": False, "reason": "gh not authenticated"}),
+)
+
+# Anything that is not `ok: true` with a parseable array. Every entry is a
+# single-element array so each case pins one malformed shape rather than also
+# deciding what a good entry beside a junk sibling means, which the contract
+# does not address. (label, observation)
+MALFORMED_OBSERVATIONS = (
+    ("the observation is a string", "ok"),
+    ("the observation is an array", []),
+    ("the observation is a number", 0),
+    ("the observation is an empty object", {}),
+    ("`ok` is absent", {"pull_requests": [OPEN_438]}),
+    ('`ok` is the string "true"', {"ok": "true", "pull_requests": [OPEN_438]}),
+    (
+        # JSON `1` is not JSON `true`, and Python's `1 == True` makes a
+        # truthiness check accept it silently. §3 admits `ok: true` and nothing
+        # else, which is what forbids the loose check.
+        "`ok` is 1 rather than true",
+        {"ok": 1, "pull_requests": [OPEN_438]},
+    ),
+    ("`pull_requests` is absent", {"ok": True}),
+    ("`pull_requests` is an object", {"ok": True, "pull_requests": {"number": 438}}),
+    ("`pull_requests` is a string", {"ok": True, "pull_requests": "[]"}),
+    ("an entry is a string", {"ok": True, "pull_requests": ["#438"]}),
+    ("an entry is null", {"ok": True, "pull_requests": [None]}),
+    (
+        "an entry carries no `number`",
+        {"ok": True, "pull_requests": [{"url": DRAFT_PR_URL, "state": "OPEN"}]},
+    ),
+    (
+        "an entry carries no `url`",
+        {"ok": True, "pull_requests": [{"number": 438, "state": "OPEN"}]},
+    ),
+    (
+        "an entry carries no `state`",
+        {"ok": True, "pull_requests": [{"number": 438, "url": DRAFT_PR_URL}]},
+    ),
+    (
+        # The recorded number is an int precisely so it can be compared against
+        # the number a `--json` query returns. A string here would never equal
+        # it, and `pr_missing` drawn from that would be the false negative the
+        # fail-closed rule exists to prevent
+        # (speckit_pro_runner/helpers/read_only.py:1276-1277).
+        "an entry's `number` is a string",
+        {
+            "ok": True,
+            "pull_requests": [{"number": "438", "url": DRAFT_PR_URL, "state": "OPEN"}],
+        },
+    ),
+)
+
+# The workflow states whose resolved stages differ, so stage invariance is
+# asserted across auto-detection and argv alike rather than one happy path.
+# (label, overview rows, argv)
+CORROBORATION_STAGE_CASES = (
+    ("auto-detected plan", PLANNING_INCOMPLETE, []),
+    ("auto-detected implement", PLANNING_COMPLETE, []),
+    ("an explicitly named stage", PLANNING_INCOMPLETE, ["--stage", "full"]),
+)
+
+# One observation per outcome class: agreement, a discrepancy that would stop
+# the terminal step, a discrepancy of a different shape, and a query that could
+# not answer. (label, observation)
+STAGE_INVARIANCE_OBSERVATIONS = (
+    ("a corroborated identity", {"ok": True, "pull_requests": [OPEN_438]}),
+    ("a closed recorded number", {"ok": True, "pull_requests": [CLOSED_438]}),
+    ("a competing open pull request", {"ok": True, "pull_requests": [OPEN_512]}),
+    ("an unsuccessful query", {"ok": False, "reason": "gh not authenticated"}),
+)
+
+# (label, `Draft PR` row, observation)
+ENVELOPE_KEY_CASES = (
+    ("a corroborated run", DRAFT_PR_PRESENT_ROW, {"ok": True, "pull_requests": [OPEN_438]}),
+    ("a run with no row to corroborate", "", OBSERVATION_ABSENT),
+    ("a run that could not check", DRAFT_PR_PRESENT_ROW, OBSERVATION_ABSENT),
+)
+
+# The row's presence is the trigger, not the stage: a run carrying the row
+# corroborates even when its stage came from an explicit `--stage`, and even
+# when it resolves a stage with no emission terminal step at all
+# (contracts/stage-corroboration.md:44-46, :204-207).
+# (argv, the stage it resolves against a planning-complete workflow file)
+CORROBORATION_TRIGGER_CASES = (
+    ([], "implement"),
+    (["--stage", "plan"], "plan"),
+    (["--stage", "implement"], "implement"),
+    (["--stage", "full"], "full"),
+)
+
+
 def overview_table(rows: tuple[tuple[str, str], ...]) -> str:
     lines = [
         "## Workflow Overview",
@@ -448,14 +909,42 @@ def overview_table(rows: tuple[tuple[str, str], ...]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def workflow_document(rows: tuple[tuple[str, str], ...], stage_row: str = "") -> str:
+def workflow_document(
+    rows: tuple[tuple[str, str], ...], stage_row: str = "", draft_pr_row: str = ""
+) -> str:
     return (
         "# Test Workflow\n\n"
         + overview_table(rows)
         + "\n### Basic Information\n\n| Field | Value |\n|-------|-------|\n"
         + "| **Branch** | `test-branch` |\n"
         + stage_row
+        + draft_pr_row
     )
+
+
+def draft_pr_document(draft_pr_row: str) -> str:
+    """A workflow file whose `### Basic Information` also carries `Stage`.
+
+    The sibling row is deliberate: the reader has to select by key, not by
+    position, in a table that always holds more than one row.
+    """
+    return workflow_document(
+        PLANNING_ROWS_TERMINAL + (GATE_TERMINAL,),
+        stage_row="| **Stage** | implement |\n",
+        draft_pr_row=draft_pr_row,
+    )
+
+
+def read_draft_pr_row(text: str) -> dict[str, object] | None:
+    """Read the `Draft PR` row through the preprocessing every consumer applies.
+
+    `workflow_stage_signals` blanks HTML comment spans before it splits, so a
+    commented-out example can never become evidence. `workflow_draft_pr_row`
+    takes those same `lines` and inherits the obligation rather than re-deriving
+    it, which is what keeps it a near-duplicate of `workflow_recorded_stage`
+    instead of a second parser (contracts/draft-pr-row.md:80-90).
+    """
+    return read_only.workflow_draft_pr_row(read_only.HTML_COMMENT_RE.sub("", text).splitlines())
 
 
 def distribution_argv(
@@ -486,25 +975,44 @@ def distribution_argv(
     raise ValueError(f"unknown distribution: {distribution!r}")
 
 
-def resolve_stage(text: str, args: list[str] | None = None) -> dict[str, object]:
+def resolve_stage(
+    text: str,
+    args: list[str] | None = None,
+    *,
+    observation: object = OBSERVATION_ABSENT,
+) -> dict[str, object]:
     """Run the operation against a workflow file written under its own root.
 
     The root is resolved because the descriptor-guarded reader resolves the repo
     root but not the target, so an unresolved symlinked temp path (macOS `/var`
     -> `/private/var`) would fail the containment check on its own.
+
+    `observation` is the optional `inputs.pr_observation` FR-011 corroboration
+    reads. The sentinel default leaves the key out of the request entirely,
+    which is the state every invocation predating that contract is in, and the
+    state the operation must still resolve a stage from
+    (contracts/stage-corroboration.md:52-81).
     """
     with tempfile.TemporaryDirectory() as root:
         repo_root = Path(root).resolve()
         (repo_root / "stage-workflow.md").write_text(text, encoding="utf-8")
-        return read_only.resolve_autopilot_stage(
-            {"workflow_file": "stage-workflow.md", "autopilot_args": args or []},
-            repo_root,
-        )
+        inputs: dict[str, object] = {
+            "workflow_file": "stage-workflow.md",
+            "autopilot_args": args or [],
+        }
+        if observation is not OBSERVATION_ABSENT:
+            inputs["pr_observation"] = observation
+        return read_only.resolve_autopilot_stage(inputs, repo_root)
 
 
-def resolve_envelope(text: str, args: list[str] | None = None) -> dict[str, object]:
+def resolve_envelope(
+    text: str,
+    args: list[str] | None = None,
+    *,
+    observation: object = OBSERVATION_ABSENT,
+) -> dict[str, object]:
     """The exit-0 JSON envelope of a resolution, asserted to have succeeded."""
-    result = resolve_stage(text, args)
+    result = resolve_stage(text, args, observation=observation)
     if result["exit_code"] != 0:
         raise AssertionError(f"expected exit 0, got {result['exit_code']}: {result['stderr']}")
     return json.loads(result["stdout"])
@@ -691,6 +1199,269 @@ class WorkflowStageSignalTests(unittest.TestCase):
         # different question from whether planning finished.
         self.assertIn("Confidence Gate", module.WORKFLOW_ADVISORY_PHASES)
         self.assertIn("Confidence Gate", read_only.AUTOPILOT_PLANNING_PREDICATE_PHASES)
+
+
+class DraftPrRowTests(unittest.TestCase):
+    """T012 — the `Draft PR` row of `### Basic Information` (FR-009).
+
+    The row is the sole store of the pull-request identity: there is no
+    state-file mirror, so whatever this reader gets wrong is wrong everywhere.
+    """
+
+    def test_present_row_parses_number_url_and_gap_note(self) -> None:
+        for label, row, expected in DRAFT_PR_ROW_CASES:
+            with self.subTest(case=label):
+                self.assertEqual(read_draft_pr_row(draft_pr_document(row)), expected)
+
+    def test_absent_row_returns_none_and_is_not_an_error(self) -> None:
+        # Absence means no pull request has been opened for this feature. That
+        # is information, never a fault — the same shape `Stage` already uses
+        # for "no run yet" (contracts/draft-pr-row.md:44-52). The scaffold
+        # template ships no placeholder row, so this is the common state.
+        for label, text in (
+            ("a Basic Information table carrying only Branch and Stage", draft_pr_document("")),
+            ("no Basic Information table at all", overview_table(PLANNING_ROWS_TERMINAL)),
+            ("an empty document", ""),
+        ):
+            with self.subTest(case=label):
+                self.assertIsNone(read_draft_pr_row(text))
+
+    def test_commented_out_row_is_not_read_as_present(self) -> None:
+        # Comment spans are blanked before the table is parsed, which is why a
+        # commented-out example row in the scaffold template would not help:
+        # it could never be read as evidence (contracts/draft-pr-row.md:54-58).
+        # `test_commented_out_table_is_not_read_as_evidence` above proves the
+        # same property for the `## Workflow Overview` table.
+        self.assertEqual(
+            read_draft_pr_row(draft_pr_document(DRAFT_PR_PRESENT_ROW)), DRAFT_PR_IDENTITY
+        )
+        for label, row in (
+            ("the row alone is commented out", f"<!-- {DRAFT_PR_PRESENT_ROW.rstrip()} -->\n"),
+            ("the row sits inside a multi-line comment", f"<!--\n{DRAFT_PR_PRESENT_ROW}-->\n"),
+        ):
+            with self.subTest(case=label):
+                self.assertIsNone(read_draft_pr_row(draft_pr_document(row)))
+
+    def test_gap_note_after_the_link_still_parses_the_identity(self) -> None:
+        # FR-004 makes a shortfall visible in this row, so the note is ordinary
+        # rather than exceptional. The identity has to survive it intact: a
+        # number or URL corrupted by the prose beside it would send FR-011
+        # corroboration at the wrong pull request.
+        for label, note, expected_note in DRAFT_PR_GAP_NOTE_CASES:
+            with self.subTest(case=label):
+                record = read_draft_pr_row(
+                    draft_pr_document(f"| **Draft PR** | [#438]({DRAFT_PR_URL}) {note} |\n")
+                )
+                self.assertEqual(
+                    record, {"number": 438, "url": DRAFT_PR_URL, "gap_note": expected_note}
+                )
+
+    def test_malformed_value_yields_none_rather_than_a_traceback(self) -> None:
+        # A raised exception fails these subTests as errors, which is exactly
+        # the outcome the contract forbids (contracts/draft-pr-row.md:117).
+        for label, value in MALFORMED_DRAFT_PR_VALUES:
+            with self.subTest(case=label):
+                text = draft_pr_document(f"| **Draft PR** | {value} |\n")
+                self.assertIsNone(read_draft_pr_row(text))
+
+
+class DraftPrCorroborationTests(unittest.TestCase):
+    """T035 — FR-011: corroborating the recorded identity against one observation.
+
+    The orchestrator takes the observation; this operation only classifies it.
+    Corroboration never changes the resolved stage, never blocks resolution, and
+    never stops the run — a discrepancy is reported here and acted on at the
+    terminal step, which is the only place a pull request is ever written
+    (contracts/stage-corroboration.md:176-210).
+    """
+
+    def corroboration(
+        self,
+        text: str,
+        args: list[str] | None = None,
+        *,
+        observation: object = OBSERVATION_ABSENT,
+    ) -> object:
+        """The `corroboration` object of an exit-0 envelope, or None when absent.
+
+        `.get` rather than `[...]`: until the object exists the key is simply
+        not there, and `None != {...}` reports the missing surface far more
+        legibly than a KeyError traceback, which reads like a broken fixture.
+        """
+        return resolve_envelope(text, args, observation=observation).get("corroboration")
+
+    def test_the_status_vocabulary_is_closed_to_six_lowercase_tokens(self) -> None:
+        # Named on the module, the way the stage vocabulary is: a set collected
+        # from whatever the fixtures happen to produce could never prove that a
+        # seventh status does not exist (contracts/stage-corroboration.md:141-145).
+        self.assertEqual(read_only.AUTOPILOT_CORROBORATION_STATUSES, CORROBORATION_STATUSES)
+        self.assertEqual(
+            tuple(status for _label, status, *_rest in STATUS_WITNESS_CASES),
+            CORROBORATION_STATUSES,
+            "every status in the closed vocabulary needs its own witness input",
+        )
+
+    def test_each_status_is_produced_by_its_own_input(self) -> None:
+        for label, _status, row, observation, expected in STATUS_WITNESS_CASES:
+            with self.subTest(case=label):
+                self.assertEqual(
+                    self.corroboration(draft_pr_document(row), observation=observation),
+                    expected,
+                )
+
+    def test_a_successful_observation_is_classified_against_the_recorded_identity(self) -> None:
+        for label, observation, expected in SUCCESSFUL_OBSERVATION_CASES:
+            with self.subTest(case=label):
+                self.assertEqual(
+                    self.corroboration(
+                        draft_pr_document(DRAFT_PR_PRESENT_ROW), observation=observation
+                    ),
+                    expected,
+                )
+
+    def test_an_extra_open_pull_request_outranks_every_later_rule(self) -> None:
+        # Each observation below also satisfies the later rule its label names,
+        # so a resolver evaluating the rules in any other order reports a
+        # different status here rather than passing by luck.
+        for label, observation, outranked in PRECEDENCE_CASES:
+            with self.subTest(case=label):
+                self.assertEqual(
+                    self.corroboration(
+                        draft_pr_document(DRAFT_PR_PRESENT_ROW), observation=observation
+                    ),
+                    CORROBORATION_IDENTITY_MISMATCH_SECOND_PR,
+                    f"rule 1 must be evaluated before {outranked}",
+                )
+
+    def test_an_unsuccessful_observation_is_skipped_and_never_a_discrepancy(self) -> None:
+        for label, reason in UNSUCCESSFUL_OBSERVATION_REASONS:
+            with self.subTest(case=label):
+                record = self.corroboration(
+                    draft_pr_document(DRAFT_PR_PRESENT_ROW),
+                    observation={"ok": False, "reason": reason},
+                )
+                # The supplied reason is echoed verbatim: §6 prints it, and the
+                # operator acts on which failure it was, not on the fact of one.
+                self.assertEqual(
+                    record, {**CORROBORATION_SKIPPED_NO_OBSERVATION, "reason": reason}
+                )
+                # None of these is evidence the recorded pull request is gone,
+                # which is precisely what a discrepancy status would assert.
+                self.assertNotIn(record["status"], CORROBORATION_DISCREPANCIES)
+
+    def test_an_absent_observation_is_skipped_with_the_recorded_identity_intact(self) -> None:
+        # A `skipped` run still knows which pull request it failed to reach, and
+        # §7 needs that: the terminal step refreshes the recorded one when the
+        # tool can be reached, and never treats `skipped` as grounds to create a
+        # second (contracts/stage-corroboration.md:182).
+        for label, observation in (
+            ("the request carries no `pr_observation` key", OBSERVATION_ABSENT),
+            # An explicit JSON null supplies no observation either, and the two
+            # are indistinguishable to any reader that asks for the key's value.
+            ("the request carries an explicit null", None),
+        ):
+            with self.subTest(case=label):
+                self.assertEqual(
+                    self.corroboration(
+                        draft_pr_document(DRAFT_PR_PRESENT_ROW), observation=observation
+                    ),
+                    CORROBORATION_SKIPPED_NO_OBSERVATION,
+                )
+
+    def test_an_absent_draft_pr_row_yields_no_record_and_reads_no_observation(self) -> None:
+        # The row's presence is what triggers the observation, so a run without
+        # one has nothing to corroborate and falls through to FR-007's separate
+        # emission-time existence test instead (…:25-27, :36-41).
+        for label, observation in NO_RECORD_OBSERVATIONS:
+            with self.subTest(case=label):
+                self.assertEqual(
+                    self.corroboration(draft_pr_document(""), observation=observation),
+                    CORROBORATION_NO_RECORD,
+                )
+
+    def test_a_malformed_observation_is_skipped_rather_than_a_traceback(self) -> None:
+        # A raised exception fails these subTests as errors, which is exactly
+        # the outcome the fail-closed rule forbids: the operation must survive
+        # whatever the orchestrator hands it, because a traceback here would
+        # stop a run over a shape `gh` changed (…:82-85).
+        for label, observation in MALFORMED_OBSERVATIONS:
+            with self.subTest(case=label):
+                self.assertEqual(
+                    self.corroboration(
+                        draft_pr_document(DRAFT_PR_PRESENT_ROW), observation=observation
+                    ),
+                    CORROBORATION_SKIPPED_UNUSABLE,
+                )
+
+    def test_the_resolved_stage_is_identical_with_and_without_the_observation(self) -> None:
+        # Corroboration reports; it never decides. The eight pre-existing keys
+        # are compared whole, so a stage, source, or basis perturbed by the
+        # observation fails here rather than surfacing later as a run that
+        # started the wrong phase (…:206-210).
+        for label, rows, argv in CORROBORATION_STAGE_CASES:
+            text = workflow_document(rows, draft_pr_row=DRAFT_PR_PRESENT_ROW)
+            baseline = resolve_envelope(text, argv)
+            for observation_label, observation in STAGE_INVARIANCE_OBSERVATIONS:
+                with self.subTest(case=f"{label} / {observation_label}"):
+                    envelope = resolve_envelope(text, argv, observation=observation)
+                    # Both runs corroborate; only their verdicts may differ.
+                    self.assertIn("corroboration", baseline)
+                    self.assertIn("corroboration", envelope)
+                    self.assertEqual(
+                        {key: envelope[key] for key in PRE_EXISTING_ENVELOPE_KEYS},
+                        {key: baseline[key] for key in PRE_EXISTING_ENVELOPE_KEYS},
+                    )
+
+    def test_the_envelope_adds_corroboration_as_a_ninth_key(self) -> None:
+        # The object is ALWAYS present, so a run that could not check stays
+        # distinguishable from one that checked and agreed (…:112-114).
+        # Asserted on the operation's own stdout, which writes the keys in
+        # source order; the runner re-serializes its envelope with sorted keys,
+        # so key order is not a property to assert over there.
+        for label, row, observation in ENVELOPE_KEY_CASES:
+            with self.subTest(case=label):
+                envelope = resolve_envelope(draft_pr_document(row), observation=observation)
+                self.assertEqual(tuple(envelope), ENVELOPE_KEYS)
+
+    def test_the_row_and_not_the_stage_triggers_corroboration(self) -> None:
+        # Four different resolved stages, one verdict: `plan` is the only stage
+        # with an emission terminal step, and corroboration is reported on the
+        # other three all the same (…:44-46, :204-207).
+        for argv, stage in CORROBORATION_TRIGGER_CASES:
+            with self.subTest(argv=argv):
+                envelope = resolve_envelope(
+                    draft_pr_document(DRAFT_PR_PRESENT_ROW),
+                    argv,
+                    observation={"ok": True, "pull_requests": [OPEN_438]},
+                )
+                self.assertEqual(envelope["stage"], stage)
+                self.assertEqual(envelope.get("corroboration"), CORROBORATION_MATCH)
+
+    def test_the_registered_operation_carries_the_observation_through_the_runner(self) -> None:
+        # The new input is one optional key on the same stdin request; argv
+        # stays reserved for `--help` and `--version` (…:52-55). The real runner
+        # has to hand it through untouched and carry the ninth key back. The
+        # ART-006 workflow file predates the `Draft PR` row, so `no_record` is
+        # the honest verdict for it — and that premise is asserted, not assumed,
+        # so a row added there later fails loudly instead of mysteriously.
+        observation = {"ok": True, "pull_requests": [OPEN_438]}
+        self.assertIsNone(
+            read_draft_pr_row((REPO_ROOT / WORKFLOW_FILE).read_text(encoding="utf-8"))
+        )
+        response = run_runner(
+            {
+                "workflow_file": WORKFLOW_FILE,
+                "autopilot_args": ["--stage", "plan"],
+                "pr_observation": observation,
+            }
+        )
+        self.assertEqual(response["status"], "ok")
+        self.assertEqual(
+            response["data"]["stdin_request"]["inputs"]["pr_observation"], observation
+        )
+        self.assertEqual(
+            response["data"]["stdout_json"].get("corroboration"), CORROBORATION_NO_RECORD
+        )
 
 
 class ConfidenceGateVerdictTests(unittest.TestCase):
@@ -975,6 +1746,8 @@ def build_suite() -> unittest.TestSuite:
         StageVocabularyAndArgvTests,
         RequestLayerDiagnosticTests,
         WorkflowStageSignalTests,
+        DraftPrRowTests,
+        DraftPrCorroborationTests,
         ConfidenceGateVerdictTests,
         AutoDetectionTests,
         PlanningStageCanonicalListTests,

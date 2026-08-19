@@ -785,6 +785,404 @@ Three properties, each load-bearing:
 trigger a release-please version bump, the same reasoning the spec-MOC
 regeneration commit below uses for its `docs:` subject.
 
+#### Draft-PR emission: the terminal-step sequence (plan stage only)
+
+Once the final gate resolves **pass or warn**, the plan stage's terminal step
+does not end at the boundary commit above. It runs this sequence, in this order:
+
+```text
+1. Generate the artifacts into specs/<feature>/artifacts/.
+2. Take the stage-boundary commit above.
+3. Push the branch.
+4. Create or refresh the draft pull request.
+5. Write the `Draft PR` record to the workflow file.
+6. Take a separate bookkeeping commit carrying that record, and push it.
+```
+
+**Generation runs first** because the pages land under
+`specs/<feature>/artifacts/`, which the boundary commit's existing `specs/` path
+already stages. The order is what lets that commit carry the artifacts with its
+staged path set unchanged.
+
+**Step 2 is the boundary commit above, not a second one.** Its message
+(`chore(SPEC-XXX): close the plan stage boundary`), its staged path set, and its
+non-emptiness are exactly as that subsection states them. The `Draft PR` record
+is never folded into it — the record does not exist yet at step 2, and writing it
+there would put a pull-request identity in the commit that closes the boundary
+rather than in the commit that records the hand-off.
+
+**The push at step 3 is load-bearing.** No earlier plan-stage step pushes the
+branch, so without it creation has no remote head to open against and fails on
+every run. Detect the remote name rather than assuming it, the same way the PR
+Creation Protocol below does.
+
+**The bookkeeping commit at step 6 stages the workflow file** — the only file
+this step writes. Never the workflow *directory*, which also holds untracked run
+byproducts that a directory-wide add would sweep in. Its message follows the
+repository's conventional-commit shape, and `chore:` for the same reason the
+boundary commit uses it: recording an identity ships no runtime change.
+
+```text
+git add <workflow-file-path> \
+  && git commit -m "chore(SPEC-XXX): record the draft pull request"
+```
+
+**Each step is a precondition for the next, and no step is retried
+automatically.** The operator re-run is the recovery path, and the two-way
+existence test below is what makes that re-run safe. A failed step stops the
+sequence where it failed and reports through the stop-report shape for that step.
+
+**A re-run reaching a step whose content is already committed has nothing left to
+stage there.** Such a commit is a no-op, not a failed step: the sequence
+continues past the nothing-to-commit condition rather than reading it as a
+failure, and it needs no empty-commit escape hatch. This does not weaken the
+boundary commit's non-emptiness above, which describes what a first pass
+produces — that pass's `Confidence Gate` row advances off its pending state, and
+a re-run of an already-resolved stage does not repeat that advance. Treating the
+resulting empty stage as a failure would strand the operator re-run that is the
+only recovery path.
+
+#### Artifact generation: the `artifact-author` dispatch
+
+Step 1 is one dispatch of the `speckit-pro:artifact-author` subagent. The
+orchestrator hands it the feature's planning record and the shipped gallery, and
+it returns one outcome per page it wrote or could not write:
+
+```text
+Agent(
+  subagent_type: "speckit-pro:artifact-author",
+  description: "SPEC-XXX draft artifact generation",
+  prompt: """
+    Author this feature's draft-stage gallery pages and write them into
+    specs/<feature>/artifacts/.
+
+    Inputs, all read-only:
+    - Specification: specs/<feature>/spec.md
+    - Plan: specs/<feature>/plan.md
+    - Tasks: specs/<feature>/tasks.md
+    - Design concept: docs/ai/specs/.process/<SPEC-ID>-design-concept.md
+    - Gallery manifest: speckit-pro/artifact-gallery/manifest.json
+    - Templates: speckit-pro/artifact-gallery/templates/<entry-id>.html
+
+    Select, fill, and report per your agent instructions. Return one outcome
+    per selected page.
+  """
+)
+```
+
+**Selection lives inside the agent and is driven by the manifest.** The
+orchestrator names no page list of its own. The agent reads
+`speckit-pro/artifact-gallery/manifest.json`, keeps the entries whose `stage` is
+`draft-pr`, and applies each surviving entry's `trigger`: `{"always": true}`
+selects on every run, and `{"any_of": [...]}` selects only when the feature
+carries at least one signal the entry names.
+
+As the manifest stands, that routing selects the implementation-plan and
+spec-explainer pages on every run, the code-approaches page only on the
+`competing_approaches` signal, and the module-map page only on the
+`brownfield_change` signal. **The manifest is read at run time and wins over
+that sentence.** It is the routing's source of truth and it grows, so a page
+list memorized from this paragraph goes stale, and a draft-stage entry shipped
+later must route from the manifest alone with no edit here.
+
+**The gallery is input, never output.** `speckit-pro/artifact-gallery/` holds
+the shipped manifest and the shipped templates, and writing anything into that
+directory is a defect. Finished pages are written to
+`specs/<feature>/artifacts/`, one per selected entry, keeping the manifest
+entry's `id` as the filename stem.
+
+**Each outcome is `generated` or `gap`**, one per selected page, and a gap names
+what is missing and why. **A page with any unfilled slot is a gap for that page,
+not a partial success** — a half-filled page is never reported as generated.
+Feed the outcome list to the three sinks under fail-open below. That subsection
+owns where each outcome is written and which runs reach it; this step owes it
+nothing but the outcomes themselves.
+
+**A dispatch that cannot report is a whole-set gap, not a failed step.** An
+agent that errors, returns nothing, or returns something that cannot be read as
+an outcome list leaves the run with zero generated pages and one whole-set gap
+naming that reason. The precondition rule above binds the steps that stop the
+sequence; generation is not one of them, because fail-open below turns every
+shortfall this step can produce into an outcome. The sequence continues to
+step 2 either way.
+
+#### Strict-mode block: the return happens before generation
+
+On a strict-mode block the run never enters the sequence above. The blocked-stop
+contract from the two subsections above is preserved exactly: the boundary
+commit is still taken, the `Confidence Gate` row is written to a **non-terminal**
+blocked status, and the stage STOPs. That commit belongs to the blocked-stop
+contract in its own right; it is the rest of the sequence — generation, push,
+create-or-refresh, the record, the bookkeeping commit — that does not run.
+
+**The return is placed before generation, not around it.** A blocked stage
+therefore generates no artifact pages at all, pushes nothing, opens no pull
+request, and writes no `Draft PR` row. Emission is not something the blocked path
+fails open through; it is something the blocked path never reaches. The re-run
+that resolves pass or warn is the run that emits.
+
+#### Create or refresh: the two-way existence test
+
+Exactly one draft pull request exists per feature branch. Before creating one,
+test for an existing one **two ways**:
+
+| Test | Source |
+| --- | --- |
+| the recorded identity | the workflow file's `Draft PR` row |
+| the live identity | one read-only query for an **open** pull request on the head branch |
+
+**Either positive proves one exists.** Neither test alone is sufficient, because
+the record is written only after creation succeeds: a run interrupted between the
+two leaves a pull request with no record, which the record test alone would read
+as "none exists" and answer by opening a second one.
+
+Take the live test as one read-only query that returns structured output, and
+read the fields with a structured parser:
+
+```text
+gh pr list --head <branch> --state open --json number,url,title
+```
+
+**When either positive fires, the run refreshes rather than creates.** Refresh
+the pull request's description; refresh its title as well when the title changed;
+write or repair the workflow file's `Draft PR` row; and report that existing URL
+as the emission outcome. Never open a second pull request for the branch.
+
+```text
+gh pr edit <number> --body-file <packet.body_file> [--title <packet.generated_title.value>]
+```
+
+**Create only when neither positive fires**, and create in draft state:
+
+```text
+gh pr create --draft --base <packet.target.base_branch> --head <packet.target.head_branch> \
+  --title <packet.generated_title.value> --body-file <packet.body_file>
+```
+
+A recorded pull request that is closed or merged is a discrepancy, not grounds to
+open a second one.
+
+**A live query that cannot answer is not proof that nothing exists.** When the
+query tool is absent, unauthenticated, rate-limited, or returns output that
+cannot be parsed, and no `Draft PR` row is recorded either, the run has no basis
+for creation. It refuses to create and reports through the could-not-be-opened
+shape below, rather than risking a duplicate pull request on a branch it could
+not observe.
+
+**Self-validate the title before creation.** The title is final-shape at
+creation and is not re-derived at the later ready flip:
+
+`<type>(<lowercase-scope>): <plain English description>`
+
+`type` is one of `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, and the
+scope is **lowercase**. Validate the exact string through the release-readiness
+gate's `validate-pr-title` operation before creating. The packet schema alone
+would also accept an uppercase ticket-style scope; the release-readiness shape
+would not, so the lowercase form is the binding one. Draft-mode title validation
+checks the conventional shape only — it does not ask the description to reference
+verification or evidence a draft has not produced.
+
+**On a title that fails its self-validation, do not create the pull request.**
+Report through the could-not-be-opened shape below rather than opening one whose
+title a human would have to repair.
+
+#### The draft description: exactly two blocks
+
+The description carries exactly two blocks and nothing else:
+
+```text
+## Artifacts
+
+| Artifact | Purpose | Open |
+| --- | --- | --- |
+| Implementation Plan | Lay out the phases of the planned change | `open specs/<feature>/artifacts/implementation-plan.html` |
+| Spec Explainer | Explain what the feature does and why | `open specs/<feature>/artifacts/spec-explainer.html` |
+
+## Resume
+
+Stage: plan — stopped at the plan-stage boundary for review.
+Resume with: `/speckit-pro:speckit-autopilot <workflow-file> --stage implement`
+```
+
+- **The artifacts index** is a table of three columns: the artifact, its purpose
+  in one line, and a copy-paste command that opens it locally.
+- **The resume/status block** names the stage the run stopped at and the exact
+  command that resumes it.
+
+**Forbidden in a draft description**: a release-note fence, any verification
+section, any scope or UAT section, and any placeholder final-writeup content. The
+pull request sits in draft state, so the repository's PR checks do not run
+against it — no release-note fence is needed or wanted, and a placeholder section
+would read as evidence that does not exist.
+
+**The orchestrator composes both blocks itself.** Emit the packet with
+`runner helper pr-packet-output` in `draft` mode and pass the finished Markdown
+as `inputs.body`; the producer uses that string verbatim. The `build_packet_body`
+fallback stays single/split-shaped and is never reached in draft mode.
+
+#### Fail-open: three sinks, and the runs that reach them
+
+Artifact generation fails open. A generation failure of any size — one page,
+several, or the whole set — still opens the pull request. Emission is the review
+hand-off, and no generation shortfall may withhold it.
+
+The shortfall is recorded in three sinks, so the same fact is legible wherever a
+reader looks:
+
+| Sink | What it carries |
+| --- | --- |
+| the artifacts index in the description | a gap-marked row in place of the artifact row |
+| the plan-stage stop report | a note naming the shortfall |
+| the workflow file's `Draft PR` row | the gap note that follows the link in the same cell |
+
+**Every gap-marked row names what is missing and why** — the individual page when
+a page failed, or the whole set as a single row when selection itself could not
+run. A page whose marked fill regions are not all populated is a gap for that
+page rather than a partial success.
+
+**A run that produced zero artifacts still opens the pull request.** Its index
+table is present under its heading and carries only gap rows. The table is never
+omitted, and never left as a heading with no rows under it.
+
+**The sink-reachability rule.** Each sink binds only the runs that reach it. A
+run that stops at create-or-refresh because the recorded and live identities
+disagree, or stops before creation because a step of the sequence failed, writes
+no pull-request description and no `Draft PR` row — its shortfall reaches the
+stop report alone. A run whose bookkeeping commit failed after creation has
+written the description but not the record. In each case the unwritten sinks are
+a consequence of the run not getting there, and are **not** a fail-open
+violation. The stop report is the one sink every such run reaches, so it carries
+the shortfall on all of them.
+
+#### The plan-stage stop report
+
+The stop report is what an operator reads to decide what to do next, so every
+failure shape names the step that failed, the state it left behind, and the
+resume path — one line of substance each, in the style Step 0.6c already uses, so
+the report alone is enough to hand off.
+
+- **Emission ran.** Carry the pull request URL, the artifact index, and the
+  resume instructions.
+- **The gate blocked.** Name the blocked gate in place of a URL, and say that no
+  pull request was opened.
+- **The pull request could not be opened.** Say so and name the step that
+  refused — title self-validation, an existence query that could not answer, or
+  creation itself. Note that the artifacts and the boundary commit are already
+  committed on the branch, so no planning work is lost, and name the resume path.
+- **The branch push failed.** Name the failed push, state that no pull request
+  was opened and no `Draft PR` row was written, and name the resume path. The
+  artifacts and the boundary commit sit on the local branch and nothing reached
+  the remote.
+- **The bookkeeping commit or its push failed after create-or-refresh.** Carry
+  the pull request URL, say the `Draft PR` record did not reach the remote, and
+  name the resume path. The pull request is neither closed nor recreated and the
+  record is not discarded: the re-run finds the open pull request through the
+  two-way existence test and repairs the record instead of opening a second one.
+- **The recorded and live identities disagree.** Name which disagreement it is —
+  the recorded pull request is closed or merged, it could not be found at all, or
+  a different pull request is open on the branch. State that nothing was created,
+  refreshed, or recorded and that the row was left exactly as found, and name the
+  manual resume path for that case: reopen it yourself and re-run, or correct or
+  clear the row and re-run. Carry both identities when they differ. The artifacts
+  and the boundary commit are already committed and pushed, so no planning work
+  is lost.
+
+That is six shapes, and the set is closed. Every one of them names the step that
+failed, the state it left behind, and the resume path, so an operator can act on
+the report without reading the run's logs.
+
+#### The `Draft PR` row
+
+The pull request's identity is recorded as one scalar row keyed `Draft PR` in the
+workflow file's `### Basic Information` table. Its placement, grammar, and legal
+states are in
+[workflow-file-protocol.md §The Draft PR Entry](./workflow-file-protocol.md#the-draft-pr-entry).
+What the emission sequence owes it:
+
+- **Written only after creation or refresh succeeds.** Before that there is
+  nothing to record. An absent row is information — it means no pull request has
+  been opened for this feature — and is never reported as an error.
+- **Carried by the bookkeeping commit**, never folded into the stage-boundary
+  commit.
+- **Repaired, not skipped.** When a pull request exists but the row is missing or
+  wrong, write or repair it. That is what a run interrupted between creation and
+  the record leaves behind for the next run to fix.
+- **Rewritten whole from the current run's outcome, every time.** A refresh whose
+  shortfall differs from the recorded one replaces the note; a refresh that
+  generated every selected page leaves the cell carrying the link alone. A note
+  describing an earlier run's shortfall never survives a later refresh that no
+  longer fell short.
+- **Left exactly as found** when the run stops at create-or-refresh because the
+  recorded and live identities disagree. A run that creates nothing and refreshes
+  nothing records nothing.
+
+**The workflow file is the only place this identity is stored — there is no
+state-file mirror.** That is why this row behaves differently from the `Stage`
+row that shares its table. `Stage` has a mirror, and therefore a write cadence
+and a same-edit-turn rule to keep the two in step. Writing the `Draft PR` row
+neither counts against nor re-triggers that cadence, and needs no state-file
+write at all: the two rows are matched by key, so neither writer disturbs the
+other's value, and this identity has no mirror to keep in step. A second sink
+would introduce exactly the status-versus-evidence drift the Step 1.1 coverage
+guard and the tree-wide CI gate already fail on.
+
+#### What each corroboration status means at the terminal step
+
+Step 0.6c classifies the recorded `Draft PR` row against one live observation and
+reports one of six statuses. Three of them are ordinary and three are
+discrepancies. This is what each one means here, at create-or-refresh:
+
+| Status | Terminal-step behaviour |
+| --- | --- |
+| `match` | refresh the recorded pull request's description, and its title if the title changed; report that URL |
+| `no_record` | fall through to the live by-branch existence test above, then create or refresh |
+| `skipped` | **never create.** The present row is already a positive under the two-way existence test, so a run that merely could not reach the tool has not learned that no pull request exists. Refresh the recorded pull request when the tool can be reached; when it cannot, report through the could-not-be-opened path |
+| `pr_closed` | do not reopen it, do not open a second one, and leave the row exactly as found. The stop report names the number, the URL, that **the operator** may reopen it with `gh pr reopen <number>`, and that a re-run then proceeds normally |
+| `pr_missing` | do not create, do not rewrite the row. The stop report names the recorded identity and says to correct or clear the row, then re-run |
+| `identity_mismatch` | do not create. The stop report names **both** identities — the one recorded and the one observed — and the manual resume path |
+
+**`gh pr reopen` is the operator's own step and never automation's.** It appears
+in this reference only as prose inside a resume path. Nothing in this sequence
+runs it, and nothing infers permission to run it from the fact that the stop
+report mentions it.
+
+**No second pull request is opened in any discrepancy class.** That is the single
+invariant the three discrepancy rows share, and it is why each of them stops
+rather than falling through to creation.
+
+**All three discrepancies end the attempt at create-or-refresh** — after
+generation, after the stage-boundary commit, and after the push. Never earlier.
+Ending earlier would strand the durable discrepancy line: that line is written at
+stage resolution, and it reaches version history only inside a commit this stage
+goes on to take. A run that stopped before its own boundary commit would discard
+the very record of why it stopped.
+
+**This is fail-open.** A discrepancy does not invoke the strict-mode blocked-stop
+contract, does not mark the gate blocked, and does not change the resolved stage.
+The stage did everything it could and reports what it found.
+
+**The two reads are separate, and the later one is the current evidence.** The
+observation Step 0.6c takes at resolution and the existence query the terminal
+step takes before creating are two different reads, with the whole stage running
+between them. Do not treat the resolution-time observation as current at the
+terminal step: a pull request can be opened, closed, or replaced while the stage
+runs, and the emission-time query is the one that governs.
+
+#### When reviewability later splits the work
+
+A draft pull request opened here is **not** a throwaway. When the final
+reviewability boundary later determines the work must land as more than one pull
+request, this draft becomes the **first slice** of that stack. It is never
+closed, superseded, or recreated to make room for the split.
+
+The reason is the review thread. By the time a split is decided, the draft may
+already carry review comments, and closing it to open replacements would discard
+that conversation and ask reviewers to repeat themselves. The packet identity is
+stable across the transition, and that stability is what preserves the thread.
+
+Nothing in this sequence closes, supersedes, or recreates the draft pull request.
+Refresh is the only mutation it ever performs on an existing one.
+
 ### Phase 7: Implement (Task-Level Dispatch)
 
 Phase 7 uses **task-level dispatch**: the orchestrator parses

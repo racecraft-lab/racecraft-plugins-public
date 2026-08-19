@@ -20,15 +20,18 @@ input.
 **Roadmap MOC:** [html-artifacts-roadmap-MOC.md](html-artifacts-roadmap-MOC.md)
 **Spec ID prefix:** `ART-###`
 **Status:** Active; dependency graph approved 2026-07-28; ART-001, ART-002,
-ART-003, ART-006, ART-011, ART-012 and ART-014 are complete and archived; ART-002
-shipped in PRs #425, #427 and #430, which unblocks ART-007; ART-012 shipped in PR
-#426; ART-014 shipped in PR #433 and archived 2026-08-13, which unblocks ART-017;
+ART-003, ART-004, ART-006, ART-007, ART-011, ART-012 and ART-014 are complete and archived;
+ART-002 shipped in PRs #425, #427 and #430, which unblocked ART-007; ART-012 shipped in PR #426; ART-014 shipped in PR #433 and archived 2026-08-13, which unblocks ART-017;
 ART-011 shipped in PR #434 and archived 2026-08-13, and ART-019 supersedes its
 FR-022; ART-003 shipped as three stacked slices in PRs #435, #436 and #439 and was
-archived 2026-08-14, leaving ART-010 blocked only by ART-007, and its acceptance
-evidence and harness are preserved under `.process/`; ART-020 was opened
-2026-08-14 from a gallery accessibility gap ART-003 recorded and nobody owned;
-ART-005 is in progress; ART-004, ART-007 and ART-009 are ready;
+archived 2026-08-14, and its acceptance evidence and harness are preserved under
+`.process/`; ART-007 shipped in PR #445 and was archived 2026-08-18, which
+unblocks both ART-008 and ART-010 and leaves ART-010 with every dependency
+satisfied, and its acceptance evidence is preserved at
+`.process/ART-007-manual-uat.md`; ART-004 shipped in PR #450 and was archived
+2026-08-18 after delivering six design/prototyping ports plus ART-020's gallery
+accessibility repair and guard; ART-020 remains superseded by ART-004;
+ART-005 is in progress; ART-008, ART-009 and ART-010 are ready;
 ART-015 was opened from ART-006 findings and is ready with no dependencies;
 ART-016, ART-017 and ART-018 were opened from ART-014 findings on 2026-08-12 and
 are ready; ART-019 was opened on 2026-08-13 and is ready with no dependencies
@@ -137,13 +140,13 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-001 | Artifact Brand Kit & Gallery Foundation | ✅ Complete / Archived | [.process/ART-001-workflow.md](.process/ART-001-workflow.md) | PR #407 merged with follow-up fix PR #409; the brand kit, gallery manifest, SPA contract, and validator live outside `specs/**`. T026 and T027 ran on 2026-07-29, 12 of 12 manual scenarios passed; the harness is preserved at [.process/ART-001-acceptance-harness.html](.process/ART-001-acceptance-harness.html) |
 | ART-002 | Draft-PR Template Set | ✅ Complete / Archived | [.process/ART-002-workflow.md](.process/ART-002-workflow.md) | Shipped as two stacked slices — PR #425 (`implementation-plan`, `spec-explainer`) and PR #427 (`code-approaches`, `module-map`) — then PR #430 recorded the acceptance result; archived 2026-08-12. All four templates and the manifest live outside `specs/**`. The runbook ran against `4ecb1b4b` with every executed step passing and 15 of its 61 steps recorded as *not executed*; it is preserved at [.process/ART-002-uat-runbook.md](.process/ART-002-uat-runbook.md) |
 | ART-003 | Final-PR Template Set | ✅ Complete / Archived | [.process/ART-003-workflow.md](.process/ART-003-workflow.md) | Shipped as three stacked slices — PR #435 (`pr-writeup`), PR #436 (`annotated-diff`), PR #439 (`flowchart`) — and archived 2026-08-14. All three templates and the manifest live outside `specs/**`. Re-sliced at scaffold on ART-002's realized measurement rather than the original 285 estimate, and **every slice landed under its own declaration** (735/758, 724/750, 408/460) — the first ART spec where none overran. Manual acceptance ran in full against the shipped bytes: 176 checks, all passing. Procedure at [.process/ART-003-uat-runbook.md](.process/ART-003-uat-runbook.md), verdicts and scope limits at [.process/ART-003-uat-results.md](.process/ART-003-uat-results.md), and the CDP harness that executed them at [.process/ART-003-uat-harness/](.process/ART-003-uat-harness/), re-run against `main` before it was committed |
-| ART-004 | Gallery Completion: Design & Prototyping | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
-| ART-005 | Gallery Completion: Knowledge, Reports & Editors | 🔄 In Progress | [.process/ART-005-workflow.md](.process/ART-005-workflow.md) | Scaffolded 2026-08-17 for staged autopilot planning; the design concept records the accepted one-combined-slice warning and the plan-time measurement checkpoint |
+| ART-004 | Gallery Completion: Design & Prototyping | ✅ Complete / Archived | [.process/ART-004-workflow.md](.process/ART-004-workflow.md) | PR #450; archived 2026-08-18. Six design/prototyping templates shipped, three existing templates received keyboard-reachable scroll regions, and the manifest-driven global guard landed. Manual file:// UAT passed across Chromium, WebKit, and Safari; evidence is preserved at [.process/ART-004-manual-uat.md](.process/ART-004-manual-uat.md) |
+| ART-005 | Gallery Completion: Knowledge, Reports & Editors | 🔄 In Progress | [.process/ART-005-workflow.md](.process/ART-005-workflow.md) | Scaffolded 2026-08-17; implementation is proceeding as seven sequential stacked slices with one template per slice |
 | ART-006 | Autopilot Staging | ✅ Complete / Archived | [.process/ART-006-workflow.md](.process/ART-006-workflow.md) | PR #422; archived 2026-08-09; re-audited and re-grilled 2026-08-03. Declared budget 382 reviewable LOC, one slice. `gh` corroboration deferred to ART-007 (see Scope). **Prerequisite discharged** — PRs #416/#417 shipped in speckit-pro 2.22.0, so durable stage state now has a reliable store; ready for autopilot from Phase 1 |
-| ART-007 | Draft-PR Emission | ⏳ Ready | - | Both dependencies satisfied: ART-002 by PRs #425/#427/#430, ART-006 by PR #422 |
-| ART-008 | Feedback Sweep | ⏳ Pending | - | Blocked by ART-007 |
+| ART-007 | Draft-PR Emission | ✅ Complete / Archived | [.process/ART-007-workflow.md](.process/ART-007-workflow.md) | PR #445; archived 2026-08-18. Scoping absorbed the ART-006 `gh` corroboration limb, resolved OQ-1 (the draft becomes the first slice PR), and recorded the corpus deferral to ART-009 (see both Scope amendments). Acceptance evidence preserved at `.process/ART-007-manual-uat.md` |
+| ART-008 | Feedback Sweep | ⏳ Ready | - | ART-007 dependency satisfied by PR #445 |
 | ART-009 | UAT Walkthrough Replacement | ⏳ Ready | - | ART-006 dependency satisfied by PR #422 |
-| ART-010 | Final-PR Writeup, Companions & Ready Flip | ⏳ Pending | - | Blocked by ART-007 alone; ART-003 dependency satisfied by PRs #435/#436/#439, ART-012 by PR #426 |
+| ART-010 | Final-PR Writeup, Companions & Ready Flip | ⏳ Ready | - | All three dependencies satisfied: ART-003 by PRs #435/#436/#439, ART-007 by PR #445, ART-012 by PR #426 |
 | ART-011 | Scaffold Integration | ✅ Complete / Archived | [.process/ART-011-workflow.md](.process/ART-011-workflow.md) | PR #434; archived 2026-08-13. The blind-spot pass and the planning hand-off live on both platforms outside `specs/**`. Shipped inverted from its design: scaffold cannot invoke the autopilot, which carries `disable-model-invocation: true`, so it prints the command instead — nine requirements amended, five superseded. Declared 162 reviewable LOC and estimated 322 at the final 31 FRs; shipped 1160 production changed lines across the two scaffold `SKILL.md` variants, a second data point for ART-015. Layer 2 trigger evaluation is still owed, and the 984-line result is what ART-019 slice D exists to repair |
 | ART-012 | Implementation-Notes Capture | ✅ Complete / Archived | [.process/ART-012-workflow.md](.process/ART-012-workflow.md) | PR #426; archived 2026-08-12. The record contract and the executor reporting field live on both platforms outside `specs/**`. Budget re-estimated at every amendment (115 at scaffold → 155 → 162 → 190 once the operator restored the literal per-task guarantee), and the final six production files matched the declaration exactly |
 | ART-013 | Documentation | ⏳ Pending | - | Blocked by all |
@@ -153,9 +156,9 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-017 | Arm The Accidentally-Advisory State Bookkeeping Checks | ⏳ Ready | - | ART-014 dependency satisfied by PR #433, which added the classification record these verdicts live in. Opened from ART-014's advisory audit; the defect was reproduced by execution |
 | ART-018 | Repair The Silently-Clean Governance Matchers | ⏳ Ready | - | No dependencies; opened from ART-014's retrospective. Three helpers report clean on input they should catch, each hit live during that run |
 | ART-019 | Documented Best-Practice Alignment | ⏳ Ready | - | No dependencies; opened 2026-08-13 from a seven-surface audit against the live official docs. Zero documented rules broken; the gap is that the repo's gates are blind to the documented metrics. Ships as ordered child slices |
-| ART-020 | Keyboard-Reachable Scroll Containers In The Shipped Gallery | ⏳ Ready | - | No dependencies; opened 2026-08-14 from a gap ART-003 slice 2 recorded and nobody owned. Five `overflow-x: auto` containers across `code-approaches`, `implementation-plan` and `module-map` carry no `tabindex`, so a keyboard-only Safari reader cannot reach their clipped content. ART-003's own two templates already ship the fix; this repairs the rest and adds the Layer 4 assertion that stops ART-004 and ART-005 repeating it |
+| ART-020 | Keyboard-Reachable Scroll Containers In The Shipped Gallery | ⏭️ Superseded / Shipped | [.process/ART-004-workflow.md](.process/ART-004-workflow.md) | Superseded by ART-004 on 2026-08-17; its five existing-container fixes, accessible names, global Layer 4 assertion, negative fixture, keyboard UAT, and generated-artifact updates shipped in PR #450 |
 
-**Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
+**Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Superseded | ⚠️ Blocked
 
 ---
 
@@ -358,20 +361,23 @@ annotated diff + flowchart conditional — chosen in the PRD interview.
 
 **Priority:** P2 | **Depends On:** ART-001 | **Enables:** gallery completeness
 
+**Status:** Complete / Archived — shipped in PR #450 on 2026-08-18.
+
 **Goal:** Port the six design/prototyping templates so the full upstream
 gallery is leverageable ad hoc.
 
 **Reviewability Budget:** Primary surface: docs/process (shipped templates) |
-Projected reviewable LOC: 480 (estimator: warn, suggested 2 slices) |
-Production files: 6 (net-new) |
-Total files: ~8 |
-Budget result: warning accepted — net-new only, under the 1.5× greenfield
-warn threshold (600); optional 3+3 split available if plan-time evidence
-exceeds the estimate
+Projected reviewable LOC: 865 (estimator: warn, suggested 3 slices) |
+Production files: 6 net-new templates + 3 modified templates |
+Total authored files/surfaces: ~12 |
+Budget result: the combined 865-LOC / 9-production-file plan blocked. The
+operator approved three slices, which closed non-blocking at 160/pass,
+590/warn, and 520/warn without changing the ratified topology.
 
 **Scope:**
-- One vertical slice of six sibling ports — no cross-file logic, each template
-  independent (INVEST: Independent; greenfield allowance covers the batch).
+- Three human-approved slices: ART-020's keyboard foundation; four read-only
+  ports; and two decision/export ports. Shared integration remained serialized
+  in that order.
 - Branded derivatives of upstream 02 (visual-design directions), 05 (design
   system swatches/tokens), 06 (component variants sheet), 07 (animation
   prototype with parameter sliders), 08 (interaction prototype: linked
@@ -385,18 +391,38 @@ exceeds the estimate
   `animation-prototype`, `interaction-prototype`, `svg-illustrations` — are declared
   read-only (`[]`) and must carry none.
 - Manifest rows: all `ad-hoc` with when-to-use guidance.
+- Add keyboard reachability and an accessible name to ART-020's five affected
+  horizontal scroll containers across `code-approaches`, `implementation-plan`,
+  and `module-map`.
+- Extend the Layer 4 gallery test with a global keyboard-scroll assertion and
+  its negative fixture so all six new ports inherit the fixed pattern.
 
 **Out of Scope:**
 - Workflow-stage routing (none of these are stage-emitted).
 
 **Verification:** gallery scanner + manifest-row coverage for all six
-templates (Layer 4); Layer 1 + payload regeneration; interactive behavior
-(sliders, linked screens) verified manually over `file://` as UAT evidence.
+templates (Layer 4); the keyboard-scroll assertion failing on its negative
+fixture and passing for every shipped template; Layer 1 + payload regeneration;
+interactive behavior (selections, exports, sliders, linked screens) and
+keyboard scrolling verified manually over `file://` as UAT evidence.
 
 **Key Decisions:**
-**Keep as one spec with recorded warn (2026-07-28):** interview decision — the
-1.5× greenfield allowance covers 480; the per-spec reviewability gate forces a
-split later only if reality outgrows the estimate.
+**Fail-closed Plan gate produced three approved slices (2026-08-17):** the
+scaffold interview initially retained one combined slice, but the authoritative
+865-LOC / 9-production-file Plan result blocked. The operator approved the
+three-slice recovery, preserving full fidelity and ART-020 ownership.
+
+**Functional fidelity at one pinned revision (2026-08-17):** preserve every
+distinct section and interaction while compacting repeated sample data. All six
+ports use upstream commit
+`58c305be97f47b26b678f2c07dec01d4242268ec`. `visual-designs` exports one
+direction plus rationale; `component-variants` exports one base variant plus
+rationale while displaying all required states.
+
+**ART-020 absorbed (2026-08-17):** all of its repair, assertion, fixture, UAT,
+and generated-artifact obligations move here. ART-020 is superseded so no
+second execution path remains. Full rationale and Q&A:
+[.process/ART-004-design-concept.md](.process/ART-004-design-concept.md).
 
 **Key Files:**
 - `speckit-pro/artifact-gallery/templates/visual-designs.html`
@@ -405,6 +431,11 @@ split later only if reality outgrows the estimate.
 - `speckit-pro/artifact-gallery/templates/animation-prototype.html`
 - `speckit-pro/artifact-gallery/templates/interaction-prototype.html`
 - `speckit-pro/artifact-gallery/templates/svg-illustrations.html`
+- `speckit-pro/artifact-gallery/templates/code-approaches.html`
+- `speckit-pro/artifact-gallery/templates/implementation-plan.html`
+- `speckit-pro/artifact-gallery/templates/module-map.html`
+- `speckit-pro/artifact-gallery/manifest.json`
+- `tests/speckit-pro/unit/test-artifact-gallery.py`
 
 ---
 
@@ -533,10 +564,12 @@ workflow state; explicit flags override. Alternatives: mandatory flag
 draft PR whose body indexes the artifacts, then stop for human review.
 
 **Reviewability Budget:** Primary surface: harness/adapter |
-Projected reviewable LOC: 217 (estimator: ok, modify-weighted) |
-Production files: ~6 |
-Total files: ~10 |
-Budget result: within budget
+Projected reviewable LOC: 217 at roadmap authoring → ~287 declared at scaffold
+(estimator 335 at 13 FRs) → 355 at the plan phase's 11-file count (estimator:
+ok at every step, modify-weighted, one slice throughout) |
+Production files: ~6 at roadmap authoring → 11 at plan |
+Total files: ~10 at roadmap authoring → 16 at plan |
+Budget result: within budget (see the scaffold amendment below for what moved)
 
 **Scope:**
 - One vertical slice — artifact generation → commit → draft PR → stop report.
@@ -551,9 +584,22 @@ Budget result: within budget
 - Plan-stage stop report: draft-PR URL, artifact index, resume instructions.
 - Resolution of OQ-1 (draft PR vs marker-split multi-PR emission) during this
   spec's clarify phase.
+- **Amended 2026-08-17 during scaffold (see the Design Concept Q&A log):**
+  (1) OQ-1 is resolved — on a later marker-split the draft PR becomes the
+  first slice PR of the stack; the clarify phase encodes this settled decision
+  rather than re-opening it. (2) The `gh` corroboration limb ART-006 deferred
+  here is absorbed into scope: stage auto-detect reads the workflow file's new
+  draft-PR row, corroborates via `gh`, logs discrepancies, and the workflow
+  file wins (the inherited OQ-4 contract). The projected budget moves to ~287
+  reviewable LOC / ~10 production files / ~14 total files
+  (`estimate-spec-size`: 327 LOC, ok, one slice). (3) `artifact-author` ships
+  outside the Layer 6 governed corpus; membership is a tracked deferral to
+  ART-009 (see that entry's amendment).
 
 **Out of Scope:**
 - Reading feedback (ART-008); flipping to ready (ART-010).
+- Layer 6 corpus membership for `artifact-author` (tracked deferral to
+  ART-009).
 
 **Verification:** Layer 4 golden fixtures for the draft-mode packet path
 (including the fail-open artifact-generation branch); Layer 5 agent
@@ -665,6 +711,14 @@ Budget result: within budget
   task list and task-list-canonical reference updated.
 - Markdown runbook path retired from post-implementation; fail-open preserved
   (artifact failure logs and never blocks the PR).
+- **Amended 2026-08-17 during ART-007 scaffold:** ART-009 also owns Layer 6
+  corpus membership for `artifact-author`. ART-007 ships it ungoverned by
+  decision — an honest new-role entry needs an acceptance oracle, an authored
+  fixture, and an independent review that only a spec opening the corpus can
+  produce — and ART-009 already performs corpus surgery for the
+  `uat-runbook-author` → `uat-artifact-author` rename, so both roles' entries
+  land in one governed-corpus change. Re-derive this entry's reviewability
+  budget at its own scaffold time to price the corpus work in.
 
 **Out of Scope:**
 - PR-writeup generation and the ready flip (ART-010).
@@ -1356,7 +1410,15 @@ correctness, not compliance repair.
 
 ### ART-020: Keyboard-Reachable Scroll Containers In The Shipped Gallery
 
-**Priority:** P3 | **Depends On:** none | **Enables:** ART-004 and ART-005 inheriting a fixed pattern rather than the broken one
+**Priority:** P3 | **Depends On:** none | **Enables:** ART-005 inheriting the
+guard ART-004 now owns
+
+**Status:** Superseded by ART-004 on 2026-08-17; shipped in PR #450 on
+2026-08-18.
+
+**Disposition:** ART-004 delivered this entry's complete scope, verification,
+and generated-artifact obligations. This section remains as the defect record
+and source evidence; it is not an independent execution target.
 
 **Goal:** Give every horizontally scrolling region in the shipped gallery a
 keyboard route to its own scrollbar, and add the assertion that keeps the next
@@ -1413,6 +1475,11 @@ already performs exactly this check (`COINED-SCROLL-KEYBOARD`, in
 pointing an existing driver at three more artifacts.
 
 **Key Decisions:**
+**Superseded during ART-004 scaffold (2026-08-17).** The operator explicitly
+chose to absorb this work into ART-004 and mark this entry superseded. ART-004's
+workflow must land the repair and global guard before it can call its six new
+ports complete.
+
 **Recorded during ART-003 slice 2 (2026-08-14), filed 2026-08-14.** Slice 2 found
 the defect while fixing its own container and wrote it down at
 `.process/ART-003-slice-2-workflow.md:622-624` — "the other five are a recorded

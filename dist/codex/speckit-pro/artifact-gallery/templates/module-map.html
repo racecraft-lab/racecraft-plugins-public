@@ -692,7 +692,7 @@ h1 {
 
 .module {
   display: grid;
-  grid-template-columns: 2.75rem 1fr;
+  grid-template-columns: 2.75rem minmax(0, 1fr);
   gap: 1.125rem;
   padding: 1.375rem 0;
   border-bottom: 1px solid var(--rc-border-strong);
@@ -954,7 +954,7 @@ pre.code .dim {
     <h2 id="sec-module-graph">Request path</h2>
     <p class="section-intro">The modules a change touches, the calls between them, and which run the change turns on.</p>
 <!-- FILL:module-graph:START -->
-    <figure class="diagram">
+    <figure class="diagram" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" aria-label="Offline draft sync module request path diagram">
       <!-- Named through its own title element rather than marked as a single
            image. Upstream marks the drawing so assistive technology reads it as
            one picture, which hides every label inside it; that marking does not
@@ -1022,7 +1022,7 @@ pre.code .dim {
           <p class="what">The editor never talks to the network. On a keystroke pause it hands the document body and the version it was loaded at to <code>draftStore.write</code>, and it renders whatever that call reports back. Everything a reader sees about sync state comes from the store, so there is no second copy of the rules here.</p>
           <details class="snippet">
             <summary>Show source</summary>
-<pre class="code"><span class="dim">// apps/editor/DraftEditor.tsx</span>
+<pre class="code" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" aria-label="Draft editor source example"><span class="dim">// apps/editor/DraftEditor.tsx</span>
 const stop = whenIdle(250, () =&gt; {
   draftStore.write(docId, editor.value, version);
 });</pre>
@@ -1037,7 +1037,7 @@ const stop = whenIdle(250, () =&gt; {
           <p class="what">The only module that writes to on-device storage. Every write records the draft and appends one outbox entry stamped with a monotonic device sequence, which is what lets replay run in write order later. Nothing is ever deleted here until a push is acknowledged.</p>
           <details class="snippet">
             <summary>Show source</summary>
-<pre class="code"><span class="dim">// packages/storage/draftStore.ts</span>
+<pre class="code" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" aria-label="Local draft store source example"><span class="dim">// packages/storage/draftStore.ts</span>
 export async function write(id, body, version) {
   await table.put({ id, body, version, queued: true });
   return outbox.append({ id, seq: nextSeq() });
@@ -1053,7 +1053,7 @@ export async function write(id, body, version) {
           <p class="what">This is where the ordering decision lives. Replay walks the outbox in sequence order and stops advancing when a push is refused, so a failed entry stays queued rather than being dropped and no later edit overtakes an earlier one. A refusal that names a version clash goes to the conflict worker instead.</p>
           <details class="snippet">
             <summary>Show source</summary>
-<pre class="code"><span class="dim">// packages/sync/pushDrafts.ts</span>
+<pre class="code" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" aria-label="Push and replay source example"><span class="dim">// packages/sync/pushDrafts.ts</span>
 export async function pushDrafts() {
   for (const entry of outbox.inOrder()) {
     const result = await api.upsertDraft(entry);
@@ -1075,7 +1075,7 @@ export async function pushDrafts() {
           <p class="what">One row per draft, keyed on the identifier the device generated, with the version column the upsert compares against. The covering index on the author is what makes "everything I have not sent" a single read when a device comes back after a long stretch offline.</p>
           <details class="snippet">
             <summary>Show source</summary>
-<pre class="code"><span class="dim">-- packages/db/migrations/0071_drafts.sql</span>
+<pre class="code" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" aria-label="Drafts table migration source example"><span class="dim">-- packages/db/migrations/0071_drafts.sql</span>
 create table drafts (
   id          text primary key,
   author_id   uuid not null references users(id),
@@ -1095,7 +1095,7 @@ create index drafts_author_id_idx on drafts(author_id);</pre>
           <p class="what">Existing service, off the changed run and reached only when a version clash is enqueued. It keeps both copies and asks the author which one wins; it never chooses on their behalf, which is why a long offline stretch produces prompts rather than silent losses.</p>
           <details class="snippet">
             <summary>Show source</summary>
-<pre class="code"><span class="dim">// services/conflict/worker.ts</span>
+<pre class="code" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" aria-label="Conflict worker source example"><span class="dim">// services/conflict/worker.ts</span>
 export async function resolve(entry) {
   const server = await drafts.read(entry.id);
   if (server.version === entry.version) {

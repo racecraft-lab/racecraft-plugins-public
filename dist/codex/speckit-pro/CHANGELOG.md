@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.26.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.25.0...speckit-pro-v2.26.0) (2026-08-19)
+
+
+### Features
+
+* **art-004:** complete design gallery artifacts ([#450](https://github.com/racecraft-lab/racecraft-plugins-public/issues/450)) ([97b255d](https://github.com/racecraft-lab/racecraft-plugins-public/commit/97b255d39828425120a96a5d9e313d574ebbf8a9))
+* **speckit-autopilot:** Open a draft pull request when the plan stage ends ([#445](https://github.com/racecraft-lab/racecraft-plugins-public/issues/445)) ([1d58e5c](https://github.com/racecraft-lab/racecraft-plugins-public/commit/1d58e5cbb47ce8c79b92e1cd793d6fdb2b29d8c9))
+
 ## [2.25.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.24.0...speckit-pro-v2.25.0) (2026-08-14)
 
 

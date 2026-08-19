@@ -2885,3 +2885,140 @@ was merged, so the 176 verdicts live only in the dated archive report. All three
 workflow files still read `Post: UAT Runbook Generation | ⏳ Pending` while
 slice 1's runbook exists and slices 2 and 3 have none. And slices 2 and 3 merged
 with every task box unchecked, 0 of 41 and 0 of 36, against slice 1's 40 of 40.
+
+---
+
+## ART-007 Draft-PR Emission
+
+Merged as a single pull request on 2026-08-18 and archived the same day: #445 at
+`1d58e5cb`.
+
+### User Stories
+
+Three, one per surface the feature touches:
+
+1. **End the plan stage in the open** (P1) — a plan-stage run that passes its
+   confidence gate ends at an open draft pull request whose body indexes the
+   committed artifact pages, so review can begin before implementation does.
+2. **Author the artifact pages** (P2) — an `artifact-author` agent reads the
+   planning record, selects pages by the gallery manifest's `draft-pr` routing,
+   and writes them; it fails open, so a page it cannot fill is a gap rather than
+   a blocked pull request.
+3. **Corroborate the recorded pull request** (P2) — stage resolution compares the
+   workflow file's `Draft PR` row against one read-only observation and reports a
+   status, without ever changing the resolved stage.
+
+13 functional requirements, 8 success criteria, 54 tasks.
+
+### Shipped Behaviour
+
+The packet schema gained a third `mode`, `draft`, through a conditional branch
+whose `then` arm constrains the draft shape to exactly two headings, no editable
+fields and an empty UAT heading, and whose `else` arm carries the evidence
+requirements the two shipped modes always had. The producer became mode-aware at
+six sites. The workflow file gained a `Draft PR` row in `Basic Information` with
+a strict grammar: a link whose target admits neither whitespace nor parentheses,
+so an optional gap note cannot be swallowed into the URL and corrupt the identity.
+Corroboration classifies one `gh` observation into six statuses — `match`,
+`no_record`, `skipped`, `pr_closed`, `pr_missing`, `identity_mismatch` — of which
+only the last three are discrepancies, and none of which can change the stage.
+
+### Acceptance Result
+
+Manual UAT was executed against the branch tree and is preserved at
+`docs/ai/specs/.process/ART-007-manual-uat.md`. Quickstart scenarios 1 through 4
+pass; nine mode-conditional packets and twenty corroboration probes reproduce
+every settled contract decision from its own input, two of them fed live
+read-only `gh` output.
+
+Three results matter beyond the pass. The relaxation did not leak: a `single`
+packet stripped of verification evidence fails on both the schema arm and the
+validator's hand-written assertion. `ok: 1` yields `skipped` rather than a
+discrepancy, which a truthiness test would have got wrong because Python treats
+`1 == True`. And both state allowlists read symmetrically, so an unrecognised
+state never produces a stop on no evidence.
+
+The live emission boundary was **not** exercised. A plan-stage run is
+structurally blocked until a release refreshes the installed plugin, and the bare
+`gh pr create --draft` path is operator-gated on a fork.
+
+### Cleanup Note
+
+`specs/art-007-draft-pr-emission/.process/manual-uat.md` was **relocated** to
+`docs/ai/specs/.process/ART-007-manual-uat.md` rather than deleted. Unlike
+ART-003, the citation reason is the decisive one: three references in two
+surviving files pointed at it, including two in the HRNS-015 entry of the
+harness-engineering-uplift roadmap, which names it as Key Files evidence for two
+defects that Ready spec must still repair. All three were repointed.
+
+`.process/implementation-notes.md` was **not** relocated, matching the ART-012
+precedent: no surviving file cites this feature's instance by path, and every
+live mention elsewhere is ART-012's generic `specs/<branch>/…` contract pattern.
+
+The packet fixtures under `tests/speckit-pro/unit/fixtures/pr-packet/` carry five
+path-shaped strings into the removed folder. They were **proved inert** rather
+than assumed safe: pointing them at a nonexistent directory still validates
+`passed`, so the validator never resolves a spec-folder path.
+
+**One gap leaves with this archive rather than closing.** T052 never ran, so the
+task ledger merged at 53 of 54 with `[~]` recorded honestly rather than
+back-filled.
+
+---
+
+## ART-004 Gallery Completion: Design and Prototyping
+
+[Source: specs/art-004-gallery-completion-design-prototyping] — archived
+2026-08-18 after PR #450 merged at `97b255d3`. Revision reason: merged-spec
+archival into project memory.
+
+### User Outcomes
+
+- Six design and prototyping artifacts are available as branded, offline-capable
+  standalone gallery pages.
+- Keyboard users can reach, identify, focus, and horizontally scroll every
+  intentional code/data overflow region repaired or introduced by this feature.
+- The two decision artifacts export the selected decision plus rationale as an
+  exact prompt or Markdown payload, with deterministic validation and clipboard
+  fallback behavior. The other four ports remain read-only.
+
+### Shipped Behaviour
+
+The gallery gained `design-system`, `animation-prototype`,
+`interaction-prototype`, `svg-illustrations`, `visual-designs`, and
+`component-variants`. Exactly six manifest rows moved from `planned` to
+`shipped`; their non-status fields did not change.
+
+ART-020 was absorbed and delivered in the same merge. Eleven real horizontal
+scroll regions across `code-approaches`, `implementation-plan`, and `module-map`
+now expose the shared focusable-region contract, and a manifest-driven Layer 4
+guard sweeps every shipped target with a negative fixture and non-vacuity floors.
+Fill-region contracts preserve the pinned upstream capability inventory for all
+six new ports.
+
+The original combined plan blocked at 865 reviewable LOC and nine production
+files. The operator approved three slices: keyboard foundation at 160/pass,
+read-only ports at 590/warn, and decision ports at 520/warn. That topology stayed
+unchanged through merge.
+
+### Acceptance Result
+
+All 60 tasks, 17 functional requirements, and 9 success criteria are complete;
+the retrospective records 100% adherence, no critical or significant findings,
+and one minor finding resolved before merge. Final automation passed 7628/7628.
+
+Manual `file://` UAT covered the three repaired artifacts and all six new ports
+in Chromium, WebKit, and Safari. It found and drove two real fixes: a zero-minimum
+grid track for module-map code overflow, and narrow-screen track/wrapping repair
+for interaction-prototype. The complete matrix is preserved at
+`docs/ai/specs/.process/ART-004-manual-uat.md`.
+
+### Cleanup Note
+
+The manual UAT matrix, retrospective, and verify-tasks report were relocated to
+durable `docs/ai/specs/.process/ART-004-*` paths and their live citations were
+repointed. Planning documents, checklists, contracts, implementation notes, and
+PR-packet exhaust were removed with the active folder; every tracked byte remains
+recoverable from merge commit `97b255d39828425120a96a5d9e313d574ebbf8a9`.
+Canonical templates, manifest, tests, generated payloads/proofs, workflow, and
+design concept remain outside `specs/**`.

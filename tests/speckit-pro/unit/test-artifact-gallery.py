@@ -7186,7 +7186,7 @@ class CanonicalBlockAgreementFixtureTests(CanonicalBlockAgreementFixtureCase):
 
 
 # ---------------------------------------------------------------------------
-# Group L - ART-005 slide-deck reader contract (FR-003, FR-005, FR-006,
+# Group Q - ART-005 slide-deck reader contract (FR-003, FR-005, FR-006,
 # FR-013, FR-014, FR-022)
 # ---------------------------------------------------------------------------
 
@@ -7194,11 +7194,11 @@ SLIDE_DECK_ID = "slide-deck"
 SLIDE_DECK_SOURCE_FILE = "09-slide-deck.html"
 SLIDE_DECK_LABEL = f"{TEMPLATES_DIR}/{SLIDE_DECK_ID}.html"
 _SLIDE_POSITION_RE = re.compile(r"\bSlide\s+\d+\s+of\s+\d+\b", re.IGNORECASE)
-_HORIZONTAL_OVERFLOW_RE = re.compile(r"overflow-x\s*:\s*(?:auto|scroll)\b", re.IGNORECASE)
+_ART005_HORIZONTAL_OVERFLOW_RE = re.compile(r"overflow-x\s*:\s*(?:auto|scroll)\b", re.IGNORECASE)
 
 
-def check_l1(gallery_root: Path) -> list[str]:
-    """L1 - the slide-deck row, reader markup, and interaction contract agree."""
+def check_q1(gallery_root: Path) -> list[str]:
+    """Q1 - the slide-deck row, reader markup, and interaction contract agree."""
     entries = _entries(gallery_root)
     matches = [
         entry
@@ -7306,7 +7306,7 @@ def check_l1(gallery_root: Path) -> list[str]:
             failures.append(f"{SLIDE_DECK_LABEL}: <{element.tag}> uses positive tabindex={value!r}")
 
     for selector, declarations in _RULE_RE.findall(text):
-        if not _HORIZONTAL_OVERFLOW_RE.search(declarations):
+        if not _ART005_HORIZONTAL_OVERFLOW_RE.search(declarations):
             continue
         classes = re.findall(r"\.([A-Za-z_-][\w-]*)", selector)
         matched = [
@@ -7327,12 +7327,2094 @@ def check_l1(gallery_root: Path) -> list[str]:
     return failures
 
 
-GROUP_L_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (("L1", check_l1),)
+# Group L — horizontal keyboard-scroll regions (FR-022, FR-023)
+# ---------------------------------------------------------------------------
+
+KEYBOARD_SCROLL_ATTRIBUTE = "data-rc-keyboard-scroll"
+KEYBOARD_SCROLL_VALUE = "horizontal"
+KEYBOARD_SCROLL_TARGET_IDS: frozenset[str] = frozenset(
+    {
+        "animation-prototype",
+        "code-approaches",
+        "component-variants",
+        "design-system",
+        "implementation-plan",
+        "interaction-prototype",
+        "module-map",
+        "svg-illustrations",
+        "visual-designs",
+    }
+)
+PREDECLARATION_KEYBOARD_SCROLL_ROUTE_IDS: frozenset[str] = frozenset(
+    {"annotated-diff", "flowchart"}
+)
+REPAIRED_KEYBOARD_SCROLL_REGION_MINIMUMS: dict[str, int] = {
+    "code-approaches": 3,
+    "implementation-plan": 2,
+    "module-map": 6,
+}
+REPAIRED_KEYBOARD_SCROLL_TARGET_IDS: frozenset[str] = frozenset(
+    REPAIRED_KEYBOARD_SCROLL_REGION_MINIMUMS
+)
+READ_ONLY_KEYBOARD_SCROLL_REGION_MINIMUMS: dict[str, int] = {
+    "design-system": 1,
+    "animation-prototype": 1,
+    "svg-illustrations": 1,
+}
+DECISION_KEYBOARD_SCROLL_REGION_MINIMUMS: dict[str, int] = {
+    "component-variants": 1,
+}
+
+# This is deliberately a bounded raw-source check rather than a CSS parser. It
+# catches the two values the gallery uses to opt into horizontal scrolling and
+# does not try to map selectors back to elements. The declaration in markup is
+# the source of truth for that relationship.
+_HORIZONTAL_OVERFLOW_RE = re.compile(r"(?i)\boverflow-x\s*:\s*(?:auto|scroll)\b")
+_GENERIC_SCROLL_LABELS: frozenset[str] = frozenset(
+    {
+        "horizontal scroll area",
+        "horizontal scroll container",
+        "horizontal scroll region",
+        "scroll area",
+        "scroll container",
+        "scroll region",
+        "scrollable area",
+        "scrollable container",
+        "scrollable region",
+    }
+)
+
+
+class _KeyboardScrollDocument(NamedTuple):
+    """One manifest-shipped artifact and its parsed element positions."""
+
+    artifact_id: str
+    label: str
+    text: str
+    elements: tuple[_Element, ...]
+
+
+class _KeyboardScrollRegion(NamedTuple):
+    """One declared horizontal region, in declaration order within its artifact."""
+
+    artifact_id: str
+    source_order: int
+    accessible_name: str
+    element: _Element
+
+
+def _attribute_values(element: _Element, name: str) -> list[str]:
+    return [value for attribute, value in element.attributes if attribute == name]
+
+
+def _declares_horizontal_keyboard_scroll(element: _Element) -> bool:
+    return _attribute_values(element, KEYBOARD_SCROLL_ATTRIBUTE) == [KEYBOARD_SCROLL_VALUE]
+
+
+def _specific_scroll_label(value: str) -> bool:
+    normalized = " ".join(value.split()).casefold()
+    return bool(normalized) and normalized not in _GENERIC_SCROLL_LABELS
+
+
+def _shipped_keyboard_scroll_documents(gallery_root: Path) -> list[_KeyboardScrollDocument]:
+    """Manifest-shipped artifacts, parsed once each in manifest order."""
+    documents: list[_KeyboardScrollDocument] = []
+    resolved, _ = _derived_artifacts(gallery_root, SHIPPED)
+    for _, identifier, path in resolved:
+        if not path.is_file():
+            continue  # D1 owns a shipped entry whose derived artifact is absent
+        text = _document_text(path)
+        documents.append(
+            _KeyboardScrollDocument(
+                artifact_id=identifier,
+                label=_artifact_label(identifier),
+                text=text,
+                elements=tuple(_elements(text)),
+            )
+        )
+    return documents
+
+
+def _shipped_keyboard_scroll_target_ids(gallery_root: Path) -> set[str]:
+    """Target IDs marked shipped, held independently from the document sweep."""
+    entries = _entries(gallery_root)
+    if entries is None:
+        return set()
+    targets: set[str] = set()
+    for entry in entries:
+        if not isinstance(entry, dict) or entry.get("status") != SHIPPED:
+            continue
+        identifier = entry.get("id")
+        if isinstance(identifier, str) and identifier in KEYBOARD_SCROLL_TARGET_IDS:
+            targets.add(identifier)
+    return targets
+
+
+def _keyboard_scroll_regions(gallery_root: Path) -> list[_KeyboardScrollRegion]:
+    """Declared regions with artifact ID, declaration order, and accessible name."""
+    regions: list[_KeyboardScrollRegion] = []
+    for document in _shipped_keyboard_scroll_documents(gallery_root):
+        source_order = 0
+        for element in document.elements:
+            if not _declares_horizontal_keyboard_scroll(element):
+                continue
+            source_order += 1
+            labels = _attribute_values(element, "aria-label")
+            accessible_name = labels[0].strip() if len(labels) == 1 else ""
+            regions.append(
+                _KeyboardScrollRegion(
+                    artifact_id=document.artifact_id,
+                    source_order=source_order,
+                    accessible_name=accessible_name,
+                    element=element,
+                )
+            )
+    return regions
+
+
+def _keyboard_scroll_region_label(region: _KeyboardScrollRegion) -> str:
+    return (
+        f"{_artifact_label(region.artifact_id)}: declared keyboard-scroll region "
+        f"source-order {region.source_order}"
+    )
+
+
+def _document_has_keyboard_scroll_route(document: _KeyboardScrollDocument) -> bool:
+    """Whether a document declares a route or carries the complete legacy route.
+
+    ``annotated-diff`` and ``flowchart`` shipped the complete keyboard route
+    before the explicit data declaration existed. Treating their focusable,
+    grouped, specifically named regions as routes keeps this guard focused on
+    the five still-unreachable source declarations while every new or repaired
+    region adopts the explicit marker.
+    """
+    if any(_declares_horizontal_keyboard_scroll(element) for element in document.elements):
+        return True
+    if document.artifact_id not in PREDECLARATION_KEYBOARD_SCROLL_ROUTE_IDS:
+        return False
+    for element in document.elements:
+        if _attribute_values(element, "tabindex") != ["0"]:
+            continue
+        if _attribute_values(element, "role") != ["group"]:
+            continue
+        labels = _attribute_values(element, "aria-label")
+        if len(labels) == 1 and _specific_scroll_label(labels[0]):
+            return True
+    return False
+
+
+def check_l1(gallery_root: Path) -> list[str]:
+    """L1 — every declared horizontal region has exactly ``tabindex=\"0\"``."""
+    return [
+        f"{_keyboard_scroll_region_label(region)}: expected exactly tabindex=\"0\", "
+        f"found {_attribute_values(region.element, 'tabindex')!r}"
+        for region in _keyboard_scroll_regions(gallery_root)
+        if _attribute_values(region.element, "tabindex") != ["0"]
+    ]
+
+
+def check_l2(gallery_root: Path) -> list[str]:
+    """L2 — every declared horizontal region has exactly ``role=\"group\"``."""
+    return [
+        f"{_keyboard_scroll_region_label(region)}: expected exactly role=\"group\", "
+        f"found {_attribute_values(region.element, 'role')!r}"
+        for region in _keyboard_scroll_regions(gallery_root)
+        if _attribute_values(region.element, "role") != ["group"]
+    ]
+
+
+def check_l3(gallery_root: Path) -> list[str]:
+    """L3 — every declared horizontal region has one specific ``aria-label``."""
+    failures: list[str] = []
+    for region in _keyboard_scroll_regions(gallery_root):
+        labels = _attribute_values(region.element, "aria-label")
+        prefix = _keyboard_scroll_region_label(region)
+        if len(labels) != 1:
+            failures.append(f"{prefix}: expected exactly one specific aria-label, found {labels!r}")
+        elif not labels[0].strip():
+            failures.append(f"{prefix}: aria-label is empty after trimming")
+        elif not _specific_scroll_label(labels[0]):
+            failures.append(f"{prefix}: aria-label {labels[0].strip()!r} is generic")
+    return failures
+
+
+def check_l4(gallery_root: Path) -> list[str]:
+    """L4 — no manifest-shipped artifact uses a positive ``tabindex``."""
+    failures: list[str] = []
+    for document in _shipped_keyboard_scroll_documents(gallery_root):
+        for element in document.elements:
+            for value in _attribute_values(element, "tabindex"):
+                try:
+                    positive = int(value.strip()) > 0
+                except ValueError:
+                    positive = False
+                if positive:
+                    failures.append(
+                        f"{document.label}: element source-order {element.order + 1}: "
+                        f"positive tabindex {value!r} replaces the document's sequential focus order"
+                    )
+    return failures
+
+
+def check_l5(gallery_root: Path) -> list[str]:
+    """L5 — raw horizontal-overflow declarations have a keyboard route."""
+    failures: list[str] = []
+    for document in _shipped_keyboard_scroll_documents(gallery_root):
+        matches = list(_HORIZONTAL_OVERFLOW_RE.finditer(document.text))
+        if not matches or _document_has_keyboard_scroll_route(document):
+            continue
+        for match in matches:
+            line = document.text.count("\n", 0, match.start()) + 1
+            declaration = " ".join(match.group(0).split())
+            failures.append(
+                f"{document.label}: line {line}: horizontal overflow styling {declaration!r} has no "
+                f"{KEYBOARD_SCROLL_ATTRIBUTE}=\"{KEYBOARD_SCROLL_VALUE}\" declaration"
+            )
+    return failures
+
+
+GROUP_L_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (
+    ("L1", check_l1),
+    ("L2", check_l2),
+    ("L3", check_l3),
+    ("L4", check_l4),
+    ("L5", check_l5),
+)
+
+
+class KeyboardScrollGuardTests(unittest.TestCase):
+    """Group L against the shipped gallery."""
+
+    def test_group_l_passes_against_the_shipped_gallery(self) -> None:
+        self.maxDiff = None
+        for name, check in GROUP_L_CHECKS:
+            with self.subTest(msg=name):
+                self.assertEqual(check(GALLERY_ROOT), [])
+
+    def test_keyboard_scroll_target_artifacts_are_swept_when_shipped(self) -> None:
+        shipped_targets = _shipped_keyboard_scroll_target_ids(GALLERY_ROOT)
+        swept = {document.artifact_id for document in _shipped_keyboard_scroll_documents(GALLERY_ROOT)}
+
+        self.assertEqual(
+            shipped_targets,
+            swept.intersection(KEYBOARD_SCROLL_TARGET_IDS),
+            "a shipped keyboard-scroll target artifact is outside the collector sweep",
+        )
+
+    def test_repaired_keyboard_scroll_regions_are_declared_for_manual_review(self) -> None:
+        regions = [
+            region
+            for region in _keyboard_scroll_regions(GALLERY_ROOT)
+            if region.artifact_id in REPAIRED_KEYBOARD_SCROLL_TARGET_IDS
+        ]
+
+        for artifact_id, minimum in REPAIRED_KEYBOARD_SCROLL_REGION_MINIMUMS.items():
+            with self.subTest(msg=artifact_id):
+                declared = sum(region.artifact_id == artifact_id for region in regions)
+                self.assertGreaterEqual(
+                    declared,
+                    minimum,
+                    f"{artifact_id}: expected at least {minimum} declared region(s) for keyboard focus-order review",
+                )
+
+    def test_read_only_keyboard_scroll_regions_are_declared_for_manual_review(self) -> None:
+        regions = _keyboard_scroll_regions(GALLERY_ROOT)
+
+        for artifact_id, minimum in READ_ONLY_KEYBOARD_SCROLL_REGION_MINIMUMS.items():
+            with self.subTest(msg=artifact_id):
+                declared = sum(region.artifact_id == artifact_id for region in regions)
+                self.assertGreaterEqual(
+                    declared,
+                    minimum,
+                    f"{artifact_id}: expected at least {minimum} intentional horizontal-scroll region(s); "
+                    "the read-only port is not shipped or its keyboard-scroll declaration is missing",
+                )
+
+    def test_decision_keyboard_scroll_regions_are_declared_for_manual_review(self) -> None:
+        regions = _keyboard_scroll_regions(GALLERY_ROOT)
+
+        for artifact_id, minimum in DECISION_KEYBOARD_SCROLL_REGION_MINIMUMS.items():
+            with self.subTest(msg=artifact_id):
+                declared = sum(region.artifact_id == artifact_id for region in regions)
+                self.assertGreaterEqual(
+                    declared,
+                    minimum,
+                    f"{artifact_id}: expected at least {minimum} intentional horizontal-scroll region(s); "
+                    "the decision port is not shipped or its keyboard-scroll declaration is missing",
+                )
+
+
+class KeyboardScrollGuardFixtureTests(GalleryFixtureCase):
+    """Group L against synthetic shipped artifacts built in a temporary directory."""
+
+    def write_scroll_artifact(
+        self,
+        body: str,
+        *,
+        identifier: str = "keyboard-scroll-sample",
+        status: str = SHIPPED,
+    ) -> None:
+        self.write(MANIFEST_FILE, json.dumps({"templates": [{"id": identifier, "status": status}]}, indent=2))
+        self.write(
+            f"{TEMPLATES_DIR}/{identifier}.html",
+            "<!doctype html>\n"
+            "<html lang=\"en\">\n"
+            "<head><title>Keyboard Scroll Fixture</title></head>\n"
+            f"<body>\n{body}\n</body>\n"
+            "</html>\n",
+        )
+
+    def assertKeyboardScrollReports(self, failures: list[str], *fragments: str) -> None:
+        self.assertReports(failures, "keyboard-scroll-sample", *fragments)
+
+    def test_accepts_a_declared_scroll_region_with_keyboard_route(self) -> None:
+        self.write_scroll_artifact(
+            '<section data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" '
+            'aria-label="Keyboard scroll fixture comparison table"></section>'
+        )
+
+        self.assertEqual([failure for _, check in GROUP_L_CHECKS for failure in check(self.gallery)], [])
+
+    def test_collects_declared_regions_for_manual_focus_order_review(self) -> None:
+        self.write_scroll_artifact(
+            '<section data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" '
+            'aria-label="First comparison strip"></section>\n'
+            '<div><section data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" '
+            'aria-label="Second comparison strip"></section></div>'
+        )
+
+        regions = _keyboard_scroll_regions(self.gallery)
+
+        self.assertEqual(
+            [
+                ("keyboard-scroll-sample", 1, "First comparison strip"),
+                ("keyboard-scroll-sample", 2, "Second comparison strip"),
+            ],
+            [(region.artifact_id, region.source_order, region.accessible_name) for region in regions],
+        )
+
+    def test_rejects_declared_scroll_region_without_keyboard_route(self) -> None:
+        self.write_scroll_artifact(
+            '<section data-rc-keyboard-scroll="horizontal" role="group" '
+            'aria-label="Keyboard scroll fixture comparison table"></section>'
+        )
+
+        self.assertKeyboardScrollReports(check_l1(self.gallery), "source-order 1", 'tabindex="0"')
+
+    def test_rejects_declared_scroll_region_without_group_role(self) -> None:
+        self.write_scroll_artifact(
+            '<section data-rc-keyboard-scroll="horizontal" tabindex="0" '
+            'aria-label="Keyboard scroll fixture comparison table"></section>'
+        )
+
+        self.assertKeyboardScrollReports(check_l2(self.gallery), "source-order 1", 'role="group"')
+
+    def test_rejects_declared_scroll_region_without_accessible_name(self) -> None:
+        self.write_scroll_artifact(
+            '<section data-rc-keyboard-scroll="horizontal" tabindex="0" role="group"></section>'
+        )
+
+        self.assertKeyboardScrollReports(check_l3(self.gallery), "source-order 1", "aria-label")
+
+    def test_rejects_declared_scroll_region_with_empty_accessible_name(self) -> None:
+        self.write_scroll_artifact(
+            '<section data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" '
+            'aria-label="   "></section>'
+        )
+
+        self.assertKeyboardScrollReports(check_l3(self.gallery), "source-order 1", "aria-label")
+
+    def test_rejects_declared_scroll_region_with_generic_accessible_name(self) -> None:
+        self.write_scroll_artifact(
+            '<section data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" '
+            'aria-label="scroll area"></section>'
+        )
+
+        self.assertKeyboardScrollReports(check_l3(self.gallery), "source-order 1", "scroll area", "generic")
+
+    def test_rejects_positive_tabindex_anywhere_in_a_shipped_artifact(self) -> None:
+        self.write_scroll_artifact(
+            '<section data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" '
+            'aria-label="Keyboard scroll fixture comparison table"></section>\n'
+            '<button tabindex="2">Jump ahead</button>'
+        )
+
+        self.assertKeyboardScrollReports(check_l4(self.gallery), "tabindex", "2")
+
+    def test_rejects_horizontal_overflow_styling_without_a_declared_region(self) -> None:
+        self.write_scroll_artifact(
+            "<style>.wide-region { overflow-x: auto; }</style>\n"
+            '<div class="wide-region"><table><tr><td>wide</td></tr></table></div>'
+        )
+
+        self.assertKeyboardScrollReports(
+            check_l5(self.gallery),
+            "overflow-x: auto",
+            'data-rc-keyboard-scroll="horizontal"',
+        )
+
+    def test_accepts_horizontal_overflow_styling_when_a_region_is_declared(self) -> None:
+        self.write_scroll_artifact(
+            "<style>.wide-region { overflow-x: auto; }</style>\n"
+            '<section class="wide-region" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" '
+            'aria-label="Keyboard scroll fixture comparison table"></section>'
+        )
+
+        self.assertEqual(check_l5(self.gallery), [])
+
+
+# ---------------------------------------------------------------------------
+# Group M — read-only gallery ports
+# ---------------------------------------------------------------------------
+
+PINNED_UPSTREAM_COMMIT = "58c305be97f47b26b678f2c07dec01d4242268ec"
+PORT_DERIVATIVE_NOTICE = (
+    "yes — re-skinned with Racecraft brand tokens; not the upstream original"
+)
+READ_ONLY_PORT_MANIFEST_BASELINE: dict[str, dict[str, object]] = {
+    "design-system": {
+        "id": "design-system",
+        "category": "design",
+        "title": "Design System",
+        "when_to_use": (
+            "Document the tokens, type scale, and components a surface is built from, each rendered as "
+            "itself. Reach for it when contributors need one place to check what a color or a spacing "
+            "step is called."
+        ),
+        "stage": "ad-hoc",
+        "trigger": {"always": True},
+        "source": {"origin": UPSTREAM, "file": "05-design-system.html"},
+        "status": PLANNED,
+        "exports": [],
+    },
+    "animation-prototype": {
+        "id": "animation-prototype",
+        "category": "prototyping",
+        "title": "Animation Prototype",
+        "when_to_use": (
+            "Play a motion design at real speed so timing and easing can be judged rather than described. "
+            "Reach for it when a still image cannot settle the question."
+        ),
+        "stage": "ad-hoc",
+        "trigger": {"always": True},
+        "source": {"origin": UPSTREAM, "file": "07-prototype-animation.html"},
+        "status": PLANNED,
+        "exports": [],
+    },
+    "interaction-prototype": {
+        "id": "interaction-prototype",
+        "category": "prototyping",
+        "title": "Interaction Prototype",
+        "when_to_use": (
+            "Make a flow clickable so a reader can walk it themselves. Reach for it when the open question "
+            "is how a sequence of steps behaves, not how one screen looks."
+        ),
+        "stage": "ad-hoc",
+        "trigger": {"always": True},
+        "source": {"origin": UPSTREAM, "file": "08-prototype-interaction.html"},
+        "status": PLANNED,
+        "exports": [],
+    },
+    "svg-illustrations": {
+        "id": "svg-illustrations",
+        "category": "diagrams",
+        "title": "SVG Illustrations",
+        "when_to_use": (
+            "Draw a diagram or illustration as vector markup that stays sharp at any size and loads no image "
+            "file. Reach for it when the picture carries the explanation."
+        ),
+        "stage": "ad-hoc",
+        "trigger": {"always": True},
+        "source": {"origin": UPSTREAM, "file": "10-svg-illustrations.html"},
+        "status": PLANNED,
+        "exports": [],
+    },
+}
+DESIGN_SYSTEM_SECTION_IDS: tuple[str, ...] = ("color", "typography", "spacing", "shape", "components")
+ANIMATION_EASING_CHOICES: tuple[str, ...] = (
+    "linear",
+    "cubic-bezier(0.16, 1, 0.3, 1)",
+    "cubic-bezier(0.34, 1.56, 0.64, 1)",
+)
+ANIMATION_KEYFRAME_PHASES: tuple[tuple[str, str], ...] = (
+    ("Fill", "0ms"), ("Check", "80ms"), ("Strike", "120ms"), ("Confetti", "200ms"), ("Collapse", "600ms"),
+)
+INTERACTION_MINIMUM_RETAINED_VIEWS = 3
+INTERACTION_NOTE_CONCEPTS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("nearest-gap drop indicator", ("drop indicator", "nearest gap")), ("in-place dragged row", ("dragged row", "stays in place")),
+    ("whole-row grip affordance", ("grip dots", "whole row")), ("omitted edge motion", ("auto-scroll", "drop animation")),
+)
+INTERACTION_QUESTION_CONCEPTS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("pinned Trash and Archive", ("trash", "archive", "pinned", "reordering")), ("slide versus instant snap", ("slide", "instant snap")),
+    ("Alt+Arrow keyboard path", ("keyboard", "alt", "arrow")),
+)
+SVG_ILLUSTRATION_IDS: tuple[str, ...] = ("ill-queue", "ill-retry", "ill-fanout")
+SVG_PALETTE_CONCEPTS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("non-color stroke emphasis", ("stroke", "outline", "without color")), ("written state labels", ("labels", "text")),
+    ("monochrome pattern meaning", ("pattern", "monochrome")),
+)
+INTERACTION_BEHAVIOR_TOKENS: tuple[str, ...] = (
+    ".item.dragging", ".indicator.on",
+    "addEventListener('dragstart'", "addEventListener('dragover'", "addEventListener('drop'", "addEventListener('dragend'",
+    "classList.add('dragging')", "classList.remove('dragging')", "classList.add('on')", "classList.remove('on')",
+    "initialOrder", "reset.addEventListener('click'", "insertBefore",
+)
+_EXPORT_AFFORDANCE_RE = re.compile(r"(?i)\b(?:copy|download|export|markdown|prompt)\b")
+_CONTROL_TAGS: frozenset[str] = frozenset(
+    {"a", "area", "button", "input", "select", "textarea"}
+)
+_CONTROL_ROLES: frozenset[str] = frozenset(
+    {"button", "link", "menuitem", "menuitemcheckbox", "menuitemradio"}
+)
+
+
+class _ControlCollector(HTMLParser):
+    """Interactive elements with their attributes and nested visible text."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.controls: list[dict[str, object]] = []
+        self._stack: list[tuple[str, int | None]] = []
+        self._active: list[int] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        values = tuple((name.lower(), value or "") for name, value in attrs)
+        roles = [value.casefold() for name, value in values if name == "role"]
+        control = tag in _CONTROL_TAGS or any(role in _CONTROL_ROLES for role in roles)
+        index: int | None = None
+        if control:
+            index = len(self.controls)
+            self.controls.append({"tag": tag, "attributes": values, "text": []})
+            self._active.append(index)
+        if tag not in VOID_ELEMENTS:
+            self._stack.append((tag, index))
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.handle_starttag(tag, attrs)
+        if self._stack and self._stack[-1][0] == tag:
+            self.handle_endtag(tag)
+
+    def handle_endtag(self, tag: str) -> None:
+        while self._stack:
+            opened, index = self._stack.pop()
+            if index is not None and index in self._active:
+                self._active.remove(index)
+            if opened == tag:
+                break
+
+    def handle_data(self, data: str) -> None:
+        for index in self._active:
+            text = self.controls[index]["text"]
+            if isinstance(text, list):
+                text.append(data)
+
+
+def _interactive_controls(text: str) -> list[dict[str, object]]:
+    controls: list[dict[str, object]] = []
+    for markup in (text, *_script_markup_literals(text)):
+        collector = _ControlCollector()
+        collector.feed(markup)
+        collector.close()
+        controls.extend(collector.controls)
+    return controls
+
+
+def _port_path(gallery_root: Path, artifact_id: str) -> Path:
+    return gallery_root / TEMPLATES_DIR / f"{artifact_id}.html"
+
+
+def _port_texts(
+    gallery_root: Path,
+    baselines: dict[str, dict[str, object]],
+) -> list[tuple[str, Path, str]]:
+    documents: list[tuple[str, Path, str]] = []
+    for artifact_id in baselines:
+        path = _port_path(gallery_root, artifact_id)
+        if path.is_file():
+            documents.append((artifact_id, path, _document_text(path)))
+    return documents
+
+
+def _read_only_fill_region(text: str, slot: str) -> str:
+    block = f"FILL:{slot}"
+    return _region(text, block) if _embeds(text, block) else ""
+
+
+def _element_has_class(element: _Element, class_name: str) -> bool:
+    return any(class_name in value.split() for value in _attribute_values(element, "class"))
+
+
+def _element_ids(elements: list[_Element], *, tag: str | None = None) -> set[str]:
+    return {value for element in elements if tag is None or element.tag == tag
+            for value in _attribute_values(element, "id")}
+
+
+def _missing_concepts(visible_text: str, concepts: tuple[tuple[str, tuple[str, ...]], ...]) -> list[str]:
+    return [name for name, terms in concepts if not all(term.casefold() in visible_text for term in terms)]
+
+
+def _missing_ordered_phases(markup: str) -> list[str]:
+    missing: list[str] = []
+    cursor = 0
+    for name, time in ANIMATION_KEYFRAME_PHASES:
+        for token in (name, time):
+            position = markup.find(token, cursor)
+            if position < 0:
+                missing.append(f"{name} {time}")
+                break
+            cursor = position + len(token)
+    return missing
+
+
+def _canonical_optional_typeface_references(gallery_root: Path) -> frozenset[str]:
+    """Canonical font references after the same HTML normalization as artifacts."""
+    canonical_head = _canonical_region(gallery_root, HEAD_BLOCK) or ""
+    label = f"{CANONICAL_FILES[HEAD_BLOCK]}: canonical {HEAD_BLOCK} region"
+    references, _ = _element_references(label, _elements(canonical_head))
+    typefaces: set[str] = set()
+    for reference in references:
+        parsed = _parsed(reference.value)
+        host = (parsed.hostname or "").casefold() if parsed is not None else ""
+        if reference.kind == RESOURCE and host in ALLOWED_HOSTS:
+            typefaces.add(reference.value)
+    return frozenset(typefaces)
+
+
+def _status_only_port_failures(
+    gallery_root: Path,
+    baselines: dict[str, dict[str, object]],
+    port_kind: str,
+) -> list[str]:
+    entries = _entries(gallery_root)
+    if entries is None:
+        return [f"{MANIFEST_FILE}: {port_kind} port rows cannot be checked"]
+
+    failures: list[str] = []
+    for artifact_id, baseline in baselines.items():
+        matches = [entry for entry in entries if isinstance(entry, dict) and entry.get("id") == artifact_id]
+        if len(matches) != 1:
+            failures.append(
+                f"{MANIFEST_FILE}: {port_kind} port '{artifact_id}' appears {len(matches)} times rather than once"
+            )
+            continue
+        entry = matches[0]
+        for field, expected in baseline.items():
+            if field != "status" and entry.get(field) != expected:
+                failures.append(
+                    f"{MANIFEST_FILE}: {port_kind} port '{artifact_id}': field '{field}' drifted from "
+                    f"the pinned baseline at {UPSTREAM_REPOSITORY}@{PINNED_UPSTREAM_COMMIT}"
+                )
+        if set(entry) != set(baseline):
+            failures.append(f"{MANIFEST_FILE}: {port_kind} port '{artifact_id}': keys changed from the pinned baseline")
+        if entry.get("status") != SHIPPED:
+            failures.append(
+                f"{MANIFEST_FILE}: {port_kind} port '{artifact_id}': status must be '{SHIPPED}' after the "
+                f"only permitted transition, found {entry.get('status')!r}"
+            )
+    return failures
+
+
+def _attribution_and_canonical_failures(
+    gallery_root: Path,
+    baselines: dict[str, dict[str, object]],
+) -> list[str]:
+    failures: list[str] = []
+    canonical = {block: _canonical_region(gallery_root, block) for block in CANONICAL_FILES}
+    for artifact_id, _path, text in _port_texts(gallery_root, baselines):
+        label = _artifact_label(artifact_id)
+        source = baselines[artifact_id].get("source")
+        source_file = source.get("file") if isinstance(source, dict) else None
+        header = _attribution_header(text)
+        if header is None:
+            failures.append(f"{label}: exact upstream attribution header is missing")
+        else:
+            expected_values = {
+                REPOSITORY_LABEL: UPSTREAM_REPOSITORY,
+                UPSTREAM_FILE_LABEL: source_file,
+                LICENSE_LABEL: UPSTREAM_LICENSE_ID,
+                LICENSE_TEXT_LABEL: UPSTREAM_LICENSE_REFERENCE,
+                DERIVATIVE_LABEL: PORT_DERIVATIVE_NOTICE,
+            }
+            for attribution_label, expected in expected_values.items():
+                if header.count(attribution_label) != 1 or _labelled_value(header, attribution_label) != expected:
+                    failures.append(
+                        f"{label}: attribution field '{attribution_label}' does not equal {expected!r}"
+                    )
+            if header.count(UPSTREAM_COPYRIGHT) != 1:
+                failures.append(f"{label}: attribution header does not carry the exact upstream copyright")
+
+        for block, expected_region in canonical.items():
+            if not _embeds(text, block):
+                failures.append(f"{label}: canonical block {block} is missing or malformed")
+            elif expected_region is None or _region(text, block) != expected_region:
+                failures.append(f"{label}: canonical block {block} differs from its source region")
+    return failures
+
+
+def _offline_port_failures(
+    gallery_root: Path,
+    baselines: dict[str, dict[str, object]],
+    port_kind: str,
+) -> list[str]:
+    labels = {_artifact_label(artifact_id) for artifact_id in baselines}
+    canonical_typefaces = _canonical_optional_typeface_references(gallery_root)
+    references, unrecognized = _references(gallery_root)
+    failures = [failure for failure in unrecognized if failure.split(":", 1)[0] in labels]
+    for reference in references:
+        if reference.label not in labels or reference.kind != RESOURCE:
+            continue
+        if (
+            _embedded_asset(reference.value)
+            or reference.value.startswith("#")
+            or reference.value in canonical_typefaces
+        ):
+            continue
+        failures.append(
+            _named(reference, f"requires a sibling or network resource, so the {port_kind} port is not offline")
+        )
+    return failures
+
+
+def check_m1(gallery_root: Path) -> list[str]:
+    """M1 — read-only rows retain their exact baseline and flip only status."""
+    return _status_only_port_failures(gallery_root, READ_ONLY_PORT_MANIFEST_BASELINE, "read-only")
+
+
+def check_m2(gallery_root: Path) -> list[str]:
+    """M2 — every declared read-only port has its directly openable file."""
+    return [
+        f"{_artifact_label(artifact_id)}: read-only port file is missing"
+        for artifact_id in READ_ONLY_PORT_MANIFEST_BASELINE
+        if not _port_path(gallery_root, artifact_id).is_file()
+    ]
+
+
+def check_m3(gallery_root: Path) -> list[str]:
+    """M3 — each read-only file carries exact attribution and canonical blocks."""
+    return _attribution_and_canonical_failures(gallery_root, READ_ONLY_PORT_MANIFEST_BASELINE)
+
+
+def check_m4(gallery_root: Path) -> list[str]:
+    """M4 — read-only ports expose no export-looking control, even disabled."""
+    failures: list[str] = []
+    for artifact_id, _path, text in _port_texts(gallery_root, READ_ONLY_PORT_MANIFEST_BASELINE):
+        label = _artifact_label(artifact_id)
+        for order, control in enumerate(_interactive_controls(text), start=1):
+            attributes = control["attributes"]
+            nested_text = control["text"]
+            if not isinstance(attributes, tuple) or not isinstance(nested_text, list):
+                continue
+            evidence = " ".join(
+                [*(f"{name} {value}" for name, value in attributes), *(str(value) for value in nested_text)]
+            )
+            carries_download = any(name == "download" for name, _ in attributes)
+            if carries_download or _EXPORT_AFFORDANCE_RE.search(evidence):
+                failures.append(
+                    f"{label}: interactive element source-order {order}: read-only port exposes an "
+                    "export-looking control"
+                )
+    return failures
+
+
+GROUP_Q_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (("Q1", check_q1),)
 
 
 class SlideDeckReaderTests(unittest.TestCase):
     def test_slide_deck_reader_contract_passes_against_the_shipped_gallery(self) -> None:
-        self.assertEqual(check_l1(GALLERY_ROOT), [])
+        self.assertEqual(check_q1(GALLERY_ROOT), [])
+
+
+def check_m5(gallery_root: Path) -> list[str]:
+    """M5 — read-only ports require no sibling or network resource offline."""
+    return _offline_port_failures(gallery_root, READ_ONLY_PORT_MANIFEST_BASELINE, "read-only")
+
+
+def check_m6(gallery_root: Path) -> list[str]:
+    """M6 — pinned read-only concepts survive only the approved compactions."""
+    failures: list[str] = []
+    for artifact_id, _path, text in _port_texts(gallery_root, READ_ONLY_PORT_MANIFEST_BASELINE):
+        label = _artifact_label(artifact_id)
+        elements = _elements(text)
+        issues: list[str] = []
+
+        if artifact_id == "design-system":
+            section_ids = _element_ids(elements, tag="section")
+            missing = [section_id for section_id in DESIGN_SYSTEM_SECTION_IDS if section_id not in section_ids]
+            if missing:
+                issues.append("section concepts " + ", ".join(f"#{section_id}" for section_id in missing))
+
+        elif artifact_id == "animation-prototype":
+            if "task" not in _element_ids(elements):
+                issues.append("completion selector #task")
+
+            easing_controls = [
+                element
+                for element in elements
+                if element.tag == "button" and _element_has_class(element, "ease-btn")
+            ]
+            easing_values = tuple(
+                values[0]
+                for element in easing_controls
+                if len(values := _attribute_values(element, "data-ease")) == 1
+            )
+            if easing_values != ANIMATION_EASING_CHOICES:
+                issues.append("all three .ease-btn[data-ease] choices in source order")
+            if sum(_element_has_class(element, "active") for element in easing_controls) != 1:
+                issues.append("exactly one .ease-btn.active state")
+
+            missing_phases = _missing_ordered_phases(_read_only_fill_region(text, "keyframes"))
+            if missing_phases:
+                issues.append("ordered keyframe phases " + ", ".join(missing_phases))
+
+            snippet_markup = _read_only_fill_region(text, "css-snippet")
+            snippet_elements = _elements(snippet_markup)
+            if not any(element.tag == "pre" for element in snippet_elements):
+                issues.append("visible preformatted CSS snippet")
+            missing_snippet_selectors = [token for token in (".task.done", "--ease") if token not in snippet_markup]
+            if missing_snippet_selectors:
+                issues.append("snippet selectors " + ", ".join(missing_snippet_selectors))
+            snippet_ids = _element_ids(snippet_elements)
+            missing_snippet_ids = [
+                identifier
+                for identifier in ("snippet-easing-name", "snippet-easing-value")
+                if identifier not in snippet_ids
+            ]
+            if missing_snippet_ids:
+                issues.append("live easing snippet selectors " + ", ".join(f"#{value}" for value in missing_snippet_ids))
+            script_text = "\n".join(_script_bodies(text))
+            missing_easing_bindings = [
+                token
+                for token in (
+                    "snippetEasingName.textContent = selected.getAttribute('data-name')",
+                    "snippetEasingValue.textContent = selected.getAttribute('data-ease')",
+                )
+                if token not in script_text
+            ]
+            if missing_easing_bindings:
+                issues.append("live easing snippet bindings " + ", ".join(missing_easing_bindings))
+
+        elif artifact_id == "interaction-prototype":
+            ids = _element_ids(elements)
+            missing_ids = [element_id for element_id in ("list", "indicator", "reset-order") if element_id not in ids]
+            if missing_ids:
+                issues.append("interaction selectors " + ", ".join(f"#{element_id}" for element_id in missing_ids))
+
+            retained_views = [
+                element
+                for element in elements
+                if element.tag == "li"
+                and _element_has_class(element, "item")
+                and _attribute_values(element, "draggable") == ["true"]
+                and any(value.startswith("views-") for value in _attribute_values(element, "id"))
+            ]
+            if len(retained_views) < INTERACTION_MINIMUM_RETAINED_VIEWS:
+                issues.append(
+                    f"at least {INTERACTION_MINIMUM_RETAINED_VIEWS} .item[draggable=\"true\"] view anchors "
+                    f"(found {len(retained_views)})"
+                )
+
+            missing_behavior = [token for token in INTERACTION_BEHAVIOR_TOKENS if token not in text]
+            if missing_behavior:
+                issues.append("reorder/indicator/reset tokens " + ", ".join(missing_behavior))
+
+            notes = _read_only_fill_region(text, "interaction-notes").casefold()
+            missing_notes = _missing_concepts(notes, INTERACTION_NOTE_CONCEPTS)
+            if missing_notes:
+                issues.append("interaction notes " + ", ".join(missing_notes))
+
+            questions = _read_only_fill_region(text, "open-questions").casefold()
+            missing_questions = _missing_concepts(questions, INTERACTION_QUESTION_CONCEPTS)
+            if missing_questions:
+                issues.append("open questions " + ", ".join(missing_questions))
+
+        elif artifact_id == "svg-illustrations":
+            illustration_markup = _read_only_fill_region(text, "illustrations")
+            illustration_elements = _elements(illustration_markup)
+            svg_ids = _element_ids(illustration_elements, tag="svg")
+            missing_ids = [svg_id for svg_id in SVG_ILLUSTRATION_IDS if svg_id not in svg_ids]
+            if missing_ids:
+                issues.append("SVG selectors " + ", ".join(f"#{svg_id}" for svg_id in missing_ids))
+            caption_count = sum(element.tag == "figcaption" for element in illustration_elements)
+            if caption_count < len(SVG_ILLUSTRATION_IDS):
+                issues.append(f"three illustration captions (found {caption_count})")
+
+            palette = _read_only_fill_region(text, "palette-rules").casefold()
+            missing_palette = _missing_concepts(palette, SVG_PALETTE_CONCEPTS)
+            if missing_palette:
+                issues.append("palette meaning " + ", ".join(missing_palette))
+
+            has_download_attribute = any(
+                name == "download" for element in elements for name, _value in element.attributes
+            )
+            has_download_script = re.search(
+                r"(?i)\burl\s*\.\s*createobjecturl\s*\(|\.download\b",
+                "\n".join(_script_bodies(text)),
+            )
+            if has_download_attribute or has_download_script:
+                issues.append("download implementation")
+
+        if issues:
+            failures.append(f"{label}: pinned source inventory or compaction boundary failed: {'; '.join(issues)}")
+
+    return failures
+
+
+GROUP_M_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (
+    ("M1", check_m1),
+    ("M2", check_m2),
+    ("M3", check_m3),
+    ("M4", check_m4),
+    ("M5", check_m5),
+    ("M6", check_m6),
+)
+
+
+class ReadOnlyPortContractTests(unittest.TestCase):
+    """Group M against the four manifest-declared read-only ports."""
+
+    def test_group_m_passes_against_the_gallery(self) -> None:
+        self.maxDiff = None
+        for name, check in GROUP_M_CHECKS:
+            with self.subTest(msg=name):
+                self.assertEqual(check(GALLERY_ROOT), [])
+
+
+class _PortContractFixtureCase(GalleryFixtureCase):
+    """Shared exact-baseline, attribution, and canonical fixture setup."""
+
+    PORT_BASELINES: dict[str, dict[str, object]] = {}
+
+    def manifest(self) -> dict:
+        entries = json.loads(json.dumps(list(self.PORT_BASELINES.values())))
+        for entry in entries:
+            entry["status"] = SHIPPED
+        return {"templates": entries}
+
+    def attribution_header(self, artifact_id: str, *, upstream_file: str | None = None) -> str:
+        source = self.PORT_BASELINES[artifact_id]["source"]
+        declared_file = source["file"] if isinstance(source, dict) else ""
+        return (
+            "<!--\n"
+            f"  {REPOSITORY_LABEL} {UPSTREAM_REPOSITORY}\n"
+            f"  {UPSTREAM_FILE_LABEL} {upstream_file or declared_file}\n"
+            f"  {LICENSE_LABEL} {UPSTREAM_LICENSE_ID}\n"
+            f"  {LICENSE_TEXT_LABEL} {UPSTREAM_LICENSE_REFERENCE}\n"
+            f"  {DERIVATIVE_LABEL} {PORT_DERIVATIVE_NOTICE}\n"
+            f"  {UPSTREAM_COPYRIGHT}\n"
+            "-->"
+        )
+
+    def write_canonical_files(self, *, head_body: str = FIXTURE_HEAD_BODY) -> None:
+        self.write(CANONICAL_FILES[BRAND_BLOCK], _marked(BRAND_BLOCK, FIXTURE_BRAND_BODY))
+        self.write(CANONICAL_FILES[HEAD_BLOCK], _marked(HEAD_BLOCK, head_body))
+
+
+class ReadOnlyPortContractFixtureTests(_PortContractFixtureCase):
+    """Group M against complete synthetic read-only ports."""
+
+    PORT_BASELINES = READ_ONLY_PORT_MANIFEST_BASELINE
+
+    def capability_body(self, artifact_id: str) -> str:
+        bodies = {
+            "design-system": "<main>" + "".join(
+                f'<section id="{section_id}">{section_id}</section>'
+                for section_id in DESIGN_SYSTEM_SECTION_IDS
+            ) + "</main>",
+            "animation-prototype": (
+                '<main><button id="task" class="task" type="button">Task</button>'
+                '<button class="ease-btn" data-ease="linear">Linear</button>'
+                '<button class="ease-btn" data-ease="cubic-bezier(0.16, 1, 0.3, 1)">Ease-out</button>'
+                '<button class="ease-btn active" data-ease="cubic-bezier(0.34, 1.56, 0.64, 1)">Spring</button>'
+                '<!-- FILL:keyframes:START --><ol><li>Fill 0ms</li><li>Check 80ms</li>'
+                '<li>Strike 120ms</li><li>Confetti 200ms</li><li>Collapse 600ms</li></ol>'
+                '<!-- FILL:keyframes:END --><!-- FILL:css-snippet:START -->'
+                '<pre>.task.done { transition: all 200ms var(--ease); }'
+                '<span id="snippet-easing-name">Spring</span>'
+                '<span id="snippet-easing-value">cubic-bezier(.34,1.56,.64,1)</span></pre>'
+                '<!-- FILL:css-snippet:END -->'
+                "<script>var snippetEasingName; var snippetEasingValue; function selectEasing(selected) {"
+                "snippetEasingName.textContent = selected.getAttribute('data-name');"
+                "snippetEasingValue.textContent = selected.getAttribute('data-ease');}</script></main>"
+            ),
+            "interaction-prototype": (
+                "<main><style>.item.dragging {} .indicator.on {}</style>"
+                '<ul id="list"><li class="item" id="views-a" draggable="true">A</li>'
+                '<li class="item" id="views-b" draggable="true">B</li><li class="item" id="views-c" draggable="true">C</li>'
+                '<li class="indicator" id="indicator">Insert here</li>'
+                '</ul><button id="reset-order" type="button">Reset order</button>'
+                '<!-- FILL:interaction-notes:START --><p>Drop indicator snaps to the nearest gap. Dragged row stays in place. '
+                'Grip dots identify the whole row. No auto-scroll and no drop animation.</p><!-- FILL:interaction-notes:END -->'
+                '<!-- FILL:open-questions:START --><p>Should Trash and Archive be pinned and excluded from reordering? '
+                'Should rows slide or use an instant snap? Is the keyboard Alt plus Arrow path enough?</p><!-- FILL:open-questions:END -->'
+                "<script>var initialOrder=[];list.addEventListener('dragstart',noop);list.addEventListener('dragover',noop);"
+                "list.addEventListener('drop',noop);document.addEventListener('dragend',noop);"
+                "item.classList.add('dragging'); item.classList.remove('dragging');"
+                "indicator.classList.add('on'); indicator.classList.remove('on');"
+                "reset.addEventListener('click',function(){list.insertBefore(item,indicator);});"
+                "</script></main>"
+            ),
+            "svg-illustrations": (
+                '<main><!-- FILL:illustrations:START -->'
+                '<figure><svg id="ill-queue"></svg><figcaption>Queue</figcaption></figure>'
+                '<figure><svg id="ill-retry"></svg><figcaption>Retry</figcaption></figure>'
+                '<figure><svg id="ill-fanout"></svg><figcaption>Fanout</figcaption></figure>'
+                '<!-- FILL:illustrations:END --><!-- FILL:palette-rules:START -->'
+                '<p>Stroke and outline preserve emphasis without color. Labels write every state as text. '
+                'Pattern distinguishes repeated states in monochrome.</p><!-- FILL:palette-rules:END --></main>'
+            ),
+        }
+        return bodies[artifact_id]
+
+    def write_read_only_artifact(
+        self,
+        artifact_id: str,
+        *,
+        body: str | None = None,
+        upstream_file: str | None = None,
+        include_brand: bool = True,
+        include_head: bool = True,
+        head_body: str = FIXTURE_HEAD_BODY,
+    ) -> None:
+        body = self.capability_body(artifact_id) if body is None else body
+        brand = _marked(BRAND_BLOCK, FIXTURE_BRAND_BODY) if include_brand else ""
+        head = _marked(HEAD_BLOCK, head_body) if include_head else ""
+        self.write(
+            f"{TEMPLATES_DIR}/{artifact_id}.html",
+            "<!doctype html>\n"
+            f"{self.attribution_header(artifact_id, upstream_file=upstream_file)}\n"
+            "<html lang=\"en\">\n"
+            f"<head><style>\n{brand}\n</style>\n{head}\n</head>\n"
+            f"<body>{body}</body>\n"
+            "</html>\n",
+        )
+
+    def write_conforming_gallery(
+        self, *, omit: frozenset[str] = frozenset(), head_body: str = FIXTURE_HEAD_BODY
+    ) -> None:
+        self.write_canonical_files(head_body=head_body)
+        self.write(MANIFEST_FILE, json.dumps(self.manifest(), indent=2))
+        for artifact_id in READ_ONLY_PORT_MANIFEST_BASELINE:
+            if artifact_id not in omit:
+                self.write_read_only_artifact(artifact_id, head_body=head_body)
+
+    def test_accepts_complete_read_only_ports(self) -> None:
+        self.write_conforming_gallery()
+
+        self.assertEqual([failure for _, check in GROUP_M_CHECKS for failure in check(self.gallery)], [])
+
+    def test_accepts_entity_normalized_canonical_typeface_reference(self) -> None:
+        canonical_head = (
+            '<link rel="stylesheet" '
+            'href="https://fonts.googleapis.com/css2?family=Geist&amp;display=swap">'
+        )
+        self.write_conforming_gallery(head_body=canonical_head)
+
+        self.assertEqual(check_m5(self.gallery), [])
+
+    def test_rejects_pinned_inventory_or_compaction_drift(self) -> None:
+        cases = (
+            ("design section", "design-system", 'id="components"', 'id="component-samples"', ("#components",)),
+            (
+                "easing choice",
+                "animation-prototype",
+                'data-ease="linear"',
+                'data-timing="linear"',
+                ("all three .ease-btn[data-ease]",),
+            ),
+            (
+                "live easing snippet",
+                "animation-prototype",
+                'id="snippet-easing-value"',
+                'id="stale-easing-value"',
+                ("#snippet-easing-value",),
+            ),
+            (
+                "retained views",
+                "interaction-prototype",
+                'id="views-c"',
+                'id="compacted-c"',
+                ("at least 3 .item", "found 2"),
+            ),
+            (
+                "illustration selector",
+                "svg-illustrations",
+                'id="ill-fanout"',
+                'id="ill-branch"',
+                ("#ill-fanout",),
+            ),
+        )
+        for name, artifact_id, old, new, fragments in cases:
+            with self.subTest(msg=name):
+                self.write_conforming_gallery()
+                relative = f"{TEMPLATES_DIR}/{artifact_id}.html"
+                text = _document_text(self.gallery / relative)
+                self.assertEqual(text.count(old), 1, f"fixture mutation is not uniquely targeted: {old}")
+                self.write(relative, text.replace(old, new, 1))
+                self.assertReports(check_m6(self.gallery), *fragments)
+
+    def test_rejects_a_read_only_row_that_has_not_shipped(self) -> None:
+        self.write_conforming_gallery()
+        manifest = self.manifest()
+        manifest["templates"][0]["status"] = PLANNED
+        self.write(MANIFEST_FILE, json.dumps(manifest, indent=2))
+
+        self.assertReports(check_m1(self.gallery), "design-system", "status", PLANNED)
+
+    def test_rejects_non_status_manifest_drift(self) -> None:
+        self.write_conforming_gallery()
+        manifest = self.manifest()
+        manifest["templates"][0]["title"] = "Drifted title"
+        self.write(MANIFEST_FILE, json.dumps(manifest, indent=2))
+
+        self.assertReports(check_m1(self.gallery), "design-system", "title", "drifted")
+
+    def test_rejects_a_missing_read_only_port_file(self) -> None:
+        self.write_conforming_gallery(omit=frozenset({"svg-illustrations"}))
+
+        self.assertReports(check_m2(self.gallery), "svg-illustrations.html", "missing")
+
+    def test_rejects_attribution_for_a_different_pinned_source(self) -> None:
+        self.write_conforming_gallery()
+        self.write_read_only_artifact("animation-prototype", upstream_file="08-neighbour.html")
+
+        self.assertReports(check_m3(self.gallery), "animation-prototype.html", UPSTREAM_FILE_LABEL)
+
+    def test_rejects_a_missing_canonical_block(self) -> None:
+        self.write_conforming_gallery()
+        self.write_read_only_artifact("interaction-prototype", include_head=False)
+
+        self.assertReports(check_m3(self.gallery), "interaction-prototype.html", HEAD_BLOCK)
+
+    def test_rejects_a_disabled_export_looking_control(self) -> None:
+        self.write_conforming_gallery()
+        self.write_read_only_artifact(
+            "svg-illustrations",
+            body="<main><button type=\"button\" disabled>Download SVG</button></main>",
+        )
+
+        self.assertReports(check_m4(self.gallery), "svg-illustrations.html", "export-looking")
+
+    def test_rejects_a_sibling_resource_required_offline(self) -> None:
+        self.write_conforming_gallery()
+        self.write_read_only_artifact(
+            "design-system",
+            body='<main><img src="tokens.png" alt="Token preview"></main>',
+        )
+
+        self.assertReports(check_m5(self.gallery), "design-system.html", "tokens.png", "offline")
+
+    def test_rejects_a_noncanonical_network_resource(self) -> None:
+        self.write_conforming_gallery()
+        self.write_read_only_artifact(
+            "design-system",
+            body='<main><img src="https://fonts.gstatic.com/not-a-typeface.png" alt="Token preview"></main>',
+        )
+
+        self.assertReports(check_m5(self.gallery), "design-system.html", "fonts.gstatic.com", "offline")
+
+
+# ---------------------------------------------------------------------------
+# Group N — decision/export gallery ports
+# ---------------------------------------------------------------------------
+
+DECISION_PORT_MANIFEST_BASELINE: dict[str, dict[str, object]] = {
+    "visual-designs": {
+        "id": "visual-designs",
+        "category": "exploration-planning",
+        "title": "Visual Design Options",
+        "when_to_use": (
+            "Show several visual directions for the same screen so a reader can choose one. "
+            "Reach for it before any of them is built."
+        ),
+        "stage": "ad-hoc",
+        "trigger": {"always": True},
+        "source": {"origin": UPSTREAM, "file": "02-exploration-visual-designs.html"},
+        "status": PLANNED,
+        "exports": ["prompt", "markdown"],
+    },
+    "component-variants": {
+        "id": "component-variants",
+        "category": "design",
+        "title": "Component Variants",
+        "when_to_use": (
+            "Render every state of one component on a single page: default, hover, focus, disabled, "
+            "error, and loading. Reach for it when a state is easy to miss and expensive to get wrong."
+        ),
+        "stage": "ad-hoc",
+        "trigger": {"always": True},
+        "source": {"origin": UPSTREAM, "file": "06-component-variants.html"},
+        "status": PLANNED,
+        "exports": ["prompt", "markdown"],
+    },
+}
+DECISION_EXPORT_CONTROL_LABELS: tuple[str, ...] = ("Copy as prompt", "Copy as Markdown")
+
+
+def check_n1(gallery_root: Path) -> list[str]:
+    """N1 — decision rows retain their exact baseline and flip only status."""
+    return _status_only_port_failures(gallery_root, DECISION_PORT_MANIFEST_BASELINE, "decision")
+
+
+def check_n2(gallery_root: Path) -> list[str]:
+    """N2 — every declared decision port has its directly openable file."""
+    return [
+        f"{_artifact_label(artifact_id)}: decision port file is missing"
+        for artifact_id in DECISION_PORT_MANIFEST_BASELINE
+        if not _port_path(gallery_root, artifact_id).is_file()
+    ]
+
+
+def check_n3(gallery_root: Path) -> list[str]:
+    """N3 — each decision file carries exact attribution and canonical blocks."""
+    return _attribution_and_canonical_failures(gallery_root, DECISION_PORT_MANIFEST_BASELINE)
+
+
+def check_n4(gallery_root: Path) -> list[str]:
+    """N4 — both exact, enabled decision-export controls are visible once."""
+    failures: list[str] = []
+    for artifact_id, _path, text in _port_texts(gallery_root, DECISION_PORT_MANIFEST_BASELINE):
+        label = _artifact_label(artifact_id)
+        controls = _interactive_controls(text)
+        for expected in DECISION_EXPORT_CONTROL_LABELS:
+            matches: list[dict[str, object]] = []
+            for control in controls:
+                nested_text = control["text"]
+                visible_text = (
+                    " ".join(" ".join(str(value) for value in nested_text).split())
+                    if isinstance(nested_text, list)
+                    else ""
+                )
+                if visible_text == expected:
+                    matches.append(control)
+            if len(matches) != 1:
+                failures.append(
+                    f"{label}: visible export control {expected!r} appears {len(matches)} times rather than once"
+                )
+                continue
+            attributes = matches[0]["attributes"]
+            disabled = isinstance(attributes, tuple) and any(
+                name == "disabled" or (name == "aria-disabled" and value.casefold() == "true")
+                for name, value in attributes
+            )
+            if matches[0]["tag"] != "button" or disabled:
+                failures.append(f"{label}: visible export control {expected!r} is not an enabled button")
+    return failures
+
+
+def check_n5(gallery_root: Path) -> list[str]:
+    """N5 — decision ports require no sibling or network resource offline."""
+    return _offline_port_failures(gallery_root, DECISION_PORT_MANIFEST_BASELINE, "decision")
+
+
+GROUP_N_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (
+    ("N1", check_n1),
+    ("N2", check_n2),
+    ("N3", check_n3),
+    ("N4", check_n4),
+    ("N5", check_n5),
+)
+
+
+class DecisionPortContractTests(unittest.TestCase):
+    """Group N against the two manifest-declared decision ports."""
+
+    def test_group_n_passes_against_the_gallery(self) -> None:
+        self.maxDiff = None
+        for name, check in GROUP_N_CHECKS:
+            with self.subTest(msg=name):
+                self.assertEqual(check(GALLERY_ROOT), [])
+
+
+class DecisionPortContractFixtureTests(_PortContractFixtureCase):
+    """Group N against complete synthetic decision ports."""
+
+    PORT_BASELINES = DECISION_PORT_MANIFEST_BASELINE
+
+    def export_controls(self) -> str:
+        return "".join(f'<button type="button">{label}</button>' for label in DECISION_EXPORT_CONTROL_LABELS)
+
+    def write_decision_artifact(
+        self,
+        artifact_id: str,
+        *,
+        body: str | None = None,
+        upstream_file: str | None = None,
+        include_brand: bool = True,
+        include_head: bool = True,
+    ) -> None:
+        brand = _marked(BRAND_BLOCK, FIXTURE_BRAND_BODY) if include_brand else ""
+        head = _marked(HEAD_BLOCK, FIXTURE_HEAD_BODY) if include_head else ""
+        self.write(
+            f"{TEMPLATES_DIR}/{artifact_id}.html",
+            "<!doctype html>\n"
+            f"{self.attribution_header(artifact_id, upstream_file=upstream_file)}\n"
+            '<html lang="en"><head><style>\n'
+            f'{brand}\n</style>\n{head}\n<meta name="viewport" content="width=device-width, initial-scale=1">\n</head>\n'
+            f"<body><main>{self.export_controls() if body is None else body}</main></body></html>\n",
+        )
+
+    def write_conforming_gallery(self, *, omit: frozenset[str] = frozenset()) -> None:
+        self.write_canonical_files()
+        self.write(MANIFEST_FILE, json.dumps(self.manifest(), indent=2))
+        for artifact_id in DECISION_PORT_MANIFEST_BASELINE:
+            if artifact_id not in omit:
+                self.write_decision_artifact(artifact_id)
+
+    def test_accepts_complete_decision_ports(self) -> None:
+        self.write_conforming_gallery()
+
+        self.assertEqual([failure for _, check in GROUP_N_CHECKS for failure in check(self.gallery)], [])
+
+    def test_rejects_a_decision_row_that_has_not_shipped(self) -> None:
+        self.write_conforming_gallery()
+        manifest = self.manifest()
+        manifest["templates"][0]["status"] = PLANNED
+        self.write(MANIFEST_FILE, json.dumps(manifest, indent=2))
+
+        self.assertReports(check_n1(self.gallery), "visual-designs", "status", PLANNED)
+
+    def test_rejects_non_status_decision_manifest_drift(self) -> None:
+        self.write_conforming_gallery()
+        manifest = self.manifest()
+        manifest["templates"][1]["title"] = "Drifted title"
+        self.write(MANIFEST_FILE, json.dumps(manifest, indent=2))
+
+        self.assertReports(check_n1(self.gallery), "component-variants", "title", "drifted")
+
+    def test_rejects_a_missing_decision_port_file(self) -> None:
+        self.write_conforming_gallery(omit=frozenset({"component-variants"}))
+
+        self.assertReports(check_n2(self.gallery), "component-variants.html", "missing")
+
+    def test_rejects_attribution_for_a_different_decision_source(self) -> None:
+        self.write_conforming_gallery()
+        self.write_decision_artifact("visual-designs", upstream_file="03-neighbour.html")
+
+        self.assertReports(check_n3(self.gallery), "visual-designs.html", UPSTREAM_FILE_LABEL)
+
+    def test_rejects_a_missing_decision_canonical_block(self) -> None:
+        self.write_conforming_gallery()
+        self.write_decision_artifact("component-variants", include_head=False)
+
+        self.assertReports(check_n3(self.gallery), "component-variants.html", HEAD_BLOCK)
+
+    def test_rejects_a_missing_required_export_control(self) -> None:
+        self.write_conforming_gallery()
+        self.write_decision_artifact(
+            "visual-designs",
+            body='<button type="button">Copy as prompt</button>',
+        )
+
+        self.assertReports(check_n4(self.gallery), "visual-designs.html", "Copy as Markdown", "0 times")
+
+    def test_rejects_a_decision_port_sibling_resource(self) -> None:
+        self.write_conforming_gallery()
+        self.write_decision_artifact(
+            "component-variants",
+            body=self.export_controls() + '<img src="preview.png" alt="Variant preview">',
+        )
+
+        self.assertReports(check_n5(self.gallery), "component-variants.html", "preview.png", "offline")
+
+
+# ---------------------------------------------------------------------------
+# Group O — decision export behavior contract
+# ---------------------------------------------------------------------------
+
+DECISION_EXPORT_CONTRACTS: dict[str, dict[str, object]] = {
+    "visual-designs": {
+        "radio_name": "chosen-direction",
+        "slot": "Direction",
+        "prompt_lead": (
+            "Implement the visual direction named below and no other. "
+            "The value in parentheses is the anchor of the direction it names."
+        ),
+        "markdown_lead": "Visual direction chosen while reviewing these options.",
+        "choice_message": "Choose one visual direction before copying.",
+        "context": ("Background:", "Direction note:"),
+    },
+    "component-variants": {
+        "radio_name": "chosen-base-variant",
+        "slot": "Base variant",
+        "prompt_lead": (
+            "Implement the base component variant named below and no other. "
+            "The value in parentheses is the anchor of the variant it names."
+        ),
+        "markdown_lead": "Base component variant chosen while reviewing these states.",
+        "choice_message": "Choose one base variant before copying.",
+        "context": (
+            "Variant note:",
+            "States displayed: default, hover, focus, disabled, error, loading",
+            "Padding:",
+            "Border:",
+            "Shadow:",
+            "Snippet:",
+        ),
+    },
+}
+DECISION_BOTH_MISSING_MESSAGE = "Choose one option and enter a rationale before copying."
+DECISION_RATIONALE_MISSING_MESSAGE = "Enter a rationale before copying."
+DECISION_REFUSAL_MESSAGE = (
+    "Copy failed. The text is in the field below. Select it and copy it by hand."
+)
+
+
+def _attrs(element: _Element) -> dict[str, str]:
+    return dict(element.attributes)
+
+
+def _id_matches(elements: list[_Element], identifier: str) -> list[_Element]:
+    return [element for element in elements if _attrs(element).get("id") == identifier]
+
+
+def _has_explicit_label(elements: list[_Element], identifier: str) -> bool:
+    return any(
+        element.tag == "label" and _attrs(element).get("for") == identifier
+        for element in elements
+    )
+
+
+def check_o1(gallery_root: Path) -> list[str]:
+    """O1 — persistent decisions and export feedback have stable semantics."""
+    failures: list[str] = []
+    for artifact_id, contract in DECISION_EXPORT_CONTRACTS.items():
+        path = _port_path(gallery_root, artifact_id)
+        label = _artifact_label(artifact_id)
+        if not path.is_file():
+            failures.append(f"{label}: decision export contract cannot be checked because the file is missing")
+            continue
+        text = _document_text(path)
+        elements = _elements(text)
+        radio_name = str(contract["radio_name"])
+        if "preserve #feature-id and #feature-name for live exports" not in text:
+            failures.append(
+                f"{label}: feature-header fill instruction does not preserve #feature-id and #feature-name for live exports"
+            )
+        radios = [
+            element
+            for element in elements
+            if element.tag == "input"
+            and _attrs(element).get("type", "").casefold() == "radio"
+            and _attrs(element).get("name") == radio_name
+        ]
+        if not radios or any("value" not in _attrs(radio) for radio in radios):
+            failures.append(f"{label}: input[name={radio_name!r}] is not a persistent valued radio group")
+
+        required_ids = {
+            "feature-id": "",
+            "feature-name": "",
+            "rationale-field": "textarea",
+            "export-status": "",
+            "fallback": "",
+            "fallback-field": "textarea",
+            "copy-prompt": "button",
+            "copy-markdown": "button",
+        }
+        for identifier, expected_tag in required_ids.items():
+            matches = _id_matches(elements, identifier)
+            if len(matches) != 1 or (expected_tag and matches[0].tag != expected_tag):
+                failures.append(f"{label}: #{identifier} does not appear exactly once with the required element type")
+        if len(_id_matches(elements, "rationale-field")) == 1 and not _has_explicit_label(elements, "rationale-field"):
+            failures.append(f"{label}: #rationale-field has no explicit label")
+        if len(_id_matches(elements, "fallback-field")) == 1 and not _has_explicit_label(elements, "fallback-field"):
+            failures.append(f"{label}: #fallback-field has no explicit label")
+
+        statuses = _id_matches(elements, "export-status")
+        if len(statuses) == 1:
+            attrs = _attrs(statuses[0])
+            if not (
+                attrs.get("role") == "status"
+                and attrs.get("aria-live") == "polite"
+                and attrs.get("aria-atomic") == "true"
+            ):
+                failures.append(f"{label}: #export-status is not a polite atomic status region")
+        fallbacks = _id_matches(elements, "fallback")
+        if len(fallbacks) == 1 and "hidden" not in _attrs(fallbacks[0]):
+            failures.append(f"{label}: #fallback is not initially hidden")
+    return failures
+
+
+def check_o2(gallery_root: Path) -> list[str]:
+    """O2 — source pins exact live payload and validation behavior."""
+    failures: list[str] = []
+    for artifact_id, _path, text in _port_texts(gallery_root, DECISION_PORT_MANIFEST_BASELINE):
+        label = _artifact_label(artifact_id)
+        contract = DECISION_EXPORT_CONTRACTS[artifact_id]
+        expected_literals = (
+            "Artifact:",
+            "Feature:",
+            str(contract["prompt_lead"]),
+            str(contract["markdown_lead"]),
+            f'{contract["slot"]} /',
+            *(str(value) for value in contract["context"]),
+            "Rationale:",
+            DECISION_BOTH_MISSING_MESSAGE,
+            str(contract["choice_message"]),
+            DECISION_RATIONALE_MISSING_MESSAGE,
+        )
+        missing = [literal for literal in expected_literals if literal not in text]
+        if missing:
+            failures.append(f"{label}: decision payload/validation literals are missing: {missing!r}")
+        source_tokens = (
+            f'input[name="{contract["radio_name"]}"]:checked',
+            ".value.trim()",
+            "aria-invalid",
+            ".focus()",
+            "function featureLine()",
+            "textOf(FEATURE_ID_ID)",
+            "textOf(FEATURE_NAME_ID)",
+        )
+        absent_tokens = [token for token in source_tokens if token not in text]
+        if absent_tokens:
+            failures.append(f"{label}: live decision validation source is missing: {absent_tokens!r}")
+        if text.count("featureLine()") != 2 or "Feature: ART-004 Gallery Completion Design Prototyping" in text:
+            failures.append(
+                f"{label}: decision payload feature line is not derived once per export from the live feature header"
+            )
+        artifact_position = text.find("Artifact:")
+        order = [
+            artifact_position,
+            text.find("featureLine()", artifact_position),
+            text.find(f'{contract["slot"]} /', artifact_position),
+            text.find("Rationale:", artifact_position),
+        ]
+        if any(position < 0 for position in order) or order != sorted(order):
+            failures.append(f"{label}: common decision payload fields are not declared in contract order")
+    return failures
+
+
+def check_o3(gallery_root: Path) -> list[str]:
+    """O3 — every refusal, invalidation, and delayed settle uses one current path."""
+    failures: list[str] = []
+    for artifact_id, _path, text in _port_texts(gallery_root, DECISION_PORT_MANIFEST_BASELINE):
+        label = _artifact_label(artifact_id)
+        required_tokens = (
+            DECISION_REFUSAL_MESSAGE,
+            "var invocation = 0",
+            "invocation += 1",
+            "token !== invocation",
+            "function invalidateFallback(",
+            "fallback.hidden = true",
+            "fallbackField.value = ''",
+            "function refuseCopy(",
+            "fallback.hidden = false",
+            "fallbackField.value = text",
+            "fallbackField.focus()",
+            "fallbackField.select()",
+            "typeof clipboard.writeText",
+            ".then(",
+            "catch",
+            ".addEventListener('input'",
+            ".addEventListener('change'",
+        )
+        missing = [token for token in required_tokens if token not in text]
+        if missing:
+            failures.append(f"{label}: refusal/currentness source is missing: {missing!r}")
+        if text.count(DECISION_REFUSAL_MESSAGE) != 1:
+            failures.append(
+                f"{label}: exact clipboard-refusal message must have one shared source, found "
+                f"{text.count(DECISION_REFUSAL_MESSAGE)}"
+            )
+        if text.count(".writeText(") != 1:
+            failures.append(f"{label}: clipboard writeText must have one call site, found {text.count('.writeText(')}")
+        if text.count("refuseCopy(") != 4:
+            failures.append(
+                f"{label}: unavailable, synchronous, and rejected writes must share exactly three calls "
+                f"to one refuseCopy definition, found {text.count('refuseCopy(')} sites"
+            )
+        if text.count("token !== invocation") != 2:
+            failures.append(
+                f"{label}: success and refusal must each suppress stale settlement, found "
+                f"{text.count('token !== invocation')} current-token checks"
+            )
+        for token in ("fallbackField.focus()", "fallbackField.select()"):
+            if text.count(token) != 1:
+                failures.append(f"{label}: shared refusal path must contain {token} exactly once")
+        if artifact_id == "component-variants" and ".addEventListener('click'" not in text:
+            failures.append(f"{label}: reset does not invalidate stale fallback state")
+    return failures
+
+
+GROUP_O_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (
+    ("O1", check_o1),
+    ("O2", check_o2),
+    ("O3", check_o3),
+)
+
+
+class DecisionExportContractTests(unittest.TestCase):
+    """Group O against the two decision artifacts."""
+
+    def test_group_o_passes_against_the_gallery(self) -> None:
+        self.maxDiff = None
+        for name, check in GROUP_O_CHECKS:
+            with self.subTest(msg=name):
+                self.assertEqual(check(GALLERY_ROOT), [])
+
+
+class DecisionExportContractFixtureTests(DecisionPortContractFixtureTests):
+    """Focused non-vacuity fixtures for Group O."""
+
+    def export_body(self, artifact_id: str, *, source: str | None = None) -> str:
+        contract = DECISION_EXPORT_CONTRACTS[artifact_id]
+        context = "\n".join(str(value) for value in contract["context"])
+        script = source or (
+            "var FEATURE_ID_ID = 'feature-id'; var FEATURE_NAME_ID = 'feature-name';\n"
+            "var invocation = 0;\n"
+            "var rationale = document.getElementById('rationale-field');\n"
+            "var fallback = document.getElementById('fallback');\n"
+            "var fallbackField = document.getElementById('fallback-field');\n"
+            "function invalidateFallback() { fallback.hidden = true; fallbackField.value = ''; }\n"
+            "function textOf(identifier) { var element = document.getElementById(identifier); return element ? element.textContent.replace(/\\s+/g, ' ').trim() : ''; }\n"
+            "function featureLine() { var identifier = textOf(FEATURE_ID_ID); var name = textOf(FEATURE_NAME_ID); if (!identifier && !name) return 'Feature: not named in this document'; return 'Feature: ' + (identifier ? identifier + ' ' + name : name).trim(); }\n"
+            f"var chosen = document.querySelector('input[name=\"{contract['radio_name']}\"]:checked');\n"
+            "var rationaleValue = rationale.value.trim(); rationale.setAttribute('aria-invalid', 'true'); rationale.focus();\n"
+            f"var lines = ['Artifact: title', featureLine(), '', 'lead', '', '{contract['slot']} / label  (#anchor)',\n"
+            f"'{context}', 'Rationale: ' + rationaleValue];\n"
+            f"var promptLead = {str(contract['prompt_lead'])!r};\n"
+            f"var markdownLead = {str(contract['markdown_lead'])!r};\n"
+            f"var bothMissing = {DECISION_BOTH_MISSING_MESSAGE!r};\n"
+            f"var choiceMissing = {str(contract['choice_message'])!r};\n"
+            f"var rationaleMissing = {DECISION_RATIONALE_MISSING_MESSAGE!r};\n"
+            f"var refusal = {DECISION_REFUSAL_MESSAGE!r};\n"
+            "function refuseCopy(text, token) { if (token !== invocation) return; fallback.hidden = false; fallbackField.value = text; fallbackField.focus(); fallbackField.select(); }\n"
+            "function copy(text) { invocation += 1; var token = invocation; invalidateFallback(); var clipboard = window.navigator.clipboard; if (!clipboard || typeof clipboard.writeText !== 'function') { refuseCopy(text, token); return; } try { clipboard.writeText(text).then(function () { if (token !== invocation) return; }, function () { refuseCopy(text, token); }); } catch (error) { refuseCopy(text, token); } }\n"
+            "rationale.addEventListener('input', invalidateFallback);\n"
+            "document.addEventListener('change', invalidateFallback);\n"
+            "document.addEventListener('click', invalidateFallback);\n"
+        )
+        return (
+            '<!-- Slot: feature-header | Fills: feature identity; preserve #feature-id and #feature-name for live exports | Source: spec.md -->'
+            '<p id="feature-id">ID</p><h1 id="feature-name">Name</h1>'
+            f'<fieldset><legend>Decision</legend><label><input type="radio" name="{contract["radio_name"]}" value="anchor">Option</label></fieldset>'
+            '<label for="rationale-field">Rationale</label><textarea id="rationale-field"></textarea>'
+            '<button id="copy-prompt" type="button">Copy as prompt</button>'
+            '<button id="copy-markdown" type="button">Copy as Markdown</button>'
+            '<p id="export-status" role="status" aria-live="polite" aria-atomic="true"></p>'
+            '<div id="fallback" hidden><label for="fallback-field">Manual copy</label>'
+            '<textarea id="fallback-field"></textarea></div>'
+            f"<script>{script}</script>"
+        )
+
+    def write_export_gallery(self) -> None:
+        self.write_canonical_files()
+        self.write(MANIFEST_FILE, json.dumps(self.manifest(), indent=2))
+        for artifact_id in DECISION_EXPORT_CONTRACTS:
+            self.write_decision_artifact(artifact_id, body=self.export_body(artifact_id))
+
+    def test_accepts_complete_decision_export_contract(self) -> None:
+        self.write_export_gallery()
+        self.assertEqual([failure for _, check in GROUP_O_CHECKS for failure in check(self.gallery)], [])
+
+    def test_rejects_non_atomic_export_status(self) -> None:
+        self.write_export_gallery()
+        body = self.export_body("visual-designs").replace(' aria-atomic="true"', "")
+        self.write_decision_artifact("visual-designs", body=body)
+        self.assertReports(check_o1(self.gallery), "visual-designs.html", "atomic")
+
+    def test_rejects_a_fill_instruction_that_drops_live_feature_selectors(self) -> None:
+        self.write_export_gallery()
+        body = self.export_body("visual-designs").replace(
+            "; preserve #feature-id and #feature-name for live exports",
+            "",
+        )
+        self.write_decision_artifact("visual-designs", body=body)
+        self.assertReports(check_o1(self.gallery), "visual-designs.html", "fill instruction", "#feature-id")
+
+    def test_rejects_a_replacement_feature_header_without_live_ids(self) -> None:
+        self.write_export_gallery()
+        body = self.export_body("component-variants").replace(' id="feature-id"', "", 1)
+        self.write_decision_artifact("component-variants", body=body)
+        self.assertReports(check_o1(self.gallery), "component-variants.html", "#feature-id", "exactly once")
+
+    def test_rejects_missing_exact_validation_message(self) -> None:
+        self.write_export_gallery()
+        body = self.export_body("component-variants").replace(DECISION_BOTH_MISSING_MESSAGE, "Choose inputs.")
+        self.write_decision_artifact("component-variants", body=body)
+        self.assertReports(check_o2(self.gallery), "component-variants.html", "payload/validation")
+
+    def test_rejects_a_feature_line_hard_coded_to_the_template_sample(self) -> None:
+        self.write_export_gallery()
+        body = self.export_body("visual-designs").replace(
+            "featureLine(),",
+            "'Feature: ART-004 Gallery Completion Design Prototyping',",
+            1,
+        )
+        self.write_decision_artifact("visual-designs", body=body)
+        self.assertReports(check_o2(self.gallery), "visual-designs.html", "live feature header")
+
+    def test_rejects_multiple_clipboard_write_sites(self) -> None:
+        self.write_export_gallery()
+        body = self.export_body("visual-designs").replace("</script>", "navigator.clipboard.writeText('retry');</script>")
+        self.write_decision_artifact("visual-designs", body=body)
+        self.assertReports(check_o3(self.gallery), "visual-designs.html", "one call site", "found 2")
+
+    def test_rejects_a_success_path_without_stale_settle_suppression(self) -> None:
+        self.write_export_gallery()
+        body = self.export_body("component-variants").replace(
+            "then(function () { if (token !== invocation) return; },",
+            "then(function () { return; },",
+        )
+        self.write_decision_artifact("component-variants", body=body)
+        self.assertReports(check_o3(self.gallery), "component-variants.html", "success and refusal", "1 current-token")
+
+    def accessibility_body(self, artifact_id: str) -> str:
+        choice_count = DECISION_ACCESSIBILITY_CONTRACTS[artifact_id]["choice_count"]
+        if not isinstance(choice_count, int):
+            raise AssertionError("fixture choice count must be an integer")
+        radio_name = str(DECISION_EXPORT_CONTRACTS[artifact_id]["radio_name"])
+        body = self.export_body(artifact_id)
+        extra_choices = "".join(
+            f'<label><input type="radio" name="{radio_name}" value="choice-{index}">Choice {index}</label>'
+            for index in range(2, choice_count + 1)
+        )
+        body = body.replace("</fieldset>", extra_choices + "</fieldset>", 1)
+
+        if artifact_id == "visual-designs":
+            controls = (
+                '<fieldset id="bg-seg"><legend>Background</legend>'
+                '<label><input type="radio" name="bg" value="light" checked>Light</label>'
+                '<label><input type="radio" name="bg" value="dark">Dark</label></fieldset>'
+                '<span class="stage-copy"><strong>Title</strong><span>Description</span>'
+                '<span class="float-stack"></span></span>'
+            )
+        else:
+            states = "".join(
+                f'<article data-state="{state}">{state}</article>'
+                for state in COMPONENT_VARIANT_STATE_VALUES
+            )
+            controls = (
+                '<label for="ctl-pad">Padding</label>'
+                '<input id="ctl-pad" type="range" min="12" max="32" step="2" value="20">'
+                '<output id="pad-out" for="ctl-pad">20px</output>'
+                '<fieldset><legend>Border</legend>'
+                '<label><input type="radio" name="border" value="none">None</label>'
+                '<label><input type="radio" name="border" value="hairline" checked>Hairline</label>'
+                '<label><input type="radio" name="border" value="solid">Solid</label></fieldset>'
+                '<label><input id="ctl-shadow" type="checkbox" checked>Show shadow</label>'
+                '<button id="reset-controls" type="button">Reset controls</button>'
+                '<button type="button" disabled>Disabled state</button>'
+                '<span aria-busy="true">Loading state</span>'
+                f"{states}"
+            )
+
+        visual_layout_styles = (
+            ".stage-copy { display: block; }\n"
+            ".stage-copy > strong { display: block; }\n"
+            ".stage-copy > strong + span { display: block; }\n"
+            ".float-stack { display: block; }\n"
+            if artifact_id == "visual-designs"
+            else ""
+        )
+        styles = (
+            "<style>\n"
+            ".decision-motion { color: var(--rc-text); transition: border-color 120ms ease; }\n"
+            f"{visual_layout_styles}"
+            "input:checked { outline: 2px solid var(--rc-focus); }\n"
+            "input:focus-visible, button:focus-visible, textarea:focus-visible { "
+            "outline: 2px solid var(--rc-focus); }\n"
+            "@media (prefers-reduced-motion: reduce) {\n"
+            "  .decision-motion { animation: none !important; transition: none !important; }\n"
+            "}\n"
+            "</style>"
+        )
+        return styles + controls + body
+
+    def write_accessibility_gallery(self) -> None:
+        self.write_canonical_files()
+        self.write(MANIFEST_FILE, json.dumps(self.manifest(), indent=2))
+        for artifact_id in DECISION_ACCESSIBILITY_CONTRACTS:
+            self.write_decision_artifact(artifact_id, body=self.accessibility_body(artifact_id))
+
+    def test_group_p_accepts_accessible_decision_controls(self) -> None:
+        self.write_accessibility_gallery()
+        self.assertEqual([failure for _, check in GROUP_P_CHECKS for failure in check(self.gallery)], [])
+
+    def test_group_p_rejects_an_unlabelled_live_control(self) -> None:
+        self.write_accessibility_gallery()
+        body = self.accessibility_body("component-variants").replace(
+            '<label for="ctl-pad">Padding</label>', "<span>Padding</span>"
+        )
+        self.write_decision_artifact("component-variants", body=body)
+        self.assertReports(check_p1(self.gallery), "component-variants.html", "#ctl-pad", "label")
+
+    def test_group_p_rejects_positive_tabindex_before_manifest_shipping(self) -> None:
+        self.write_accessibility_gallery()
+        body = self.accessibility_body("visual-designs").replace(
+            '<textarea id="rationale-field">', '<textarea id="rationale-field" tabindex="3">'
+        )
+        self.write_decision_artifact("visual-designs", body=body)
+        self.assertReports(check_p2(self.gallery), "visual-designs.html", "positive tabindex", "3")
+
+    def test_group_p_rejects_missing_local_reduced_motion_override(self) -> None:
+        self.write_accessibility_gallery()
+        body = self.accessibility_body("visual-designs").replace(
+            "@media (prefers-reduced-motion: reduce)", "@media (min-width: 1px)"
+        )
+        self.write_decision_artifact("visual-designs", body=body)
+        self.assertReports(check_p3(self.gallery), "visual-designs.html", "reduced-motion")
+
+    def test_group_p_rejects_a_missing_mobile_viewport_contract(self) -> None:
+        self.write_accessibility_gallery()
+        relative = f"{TEMPLATES_DIR}/component-variants.html"
+        text = _document_text(self.gallery / relative).replace(
+            '<meta name="viewport" content="width=device-width, initial-scale=1">',
+            "",
+            1,
+        )
+        self.write(relative, text)
+        self.assertReports(check_p3(self.gallery), "component-variants.html", "viewport")
+
+    def test_group_p_rejects_an_inline_playful_preview_wrapper(self) -> None:
+        self.write_accessibility_gallery()
+        relative = f"{TEMPLATES_DIR}/visual-designs.html"
+        text = _document_text(self.gallery / relative).replace(
+            ".float-stack { display: block; }",
+            ".float-stack { color: inherit; }",
+            1,
+        )
+        self.write(relative, text)
+        self.assertReports(check_p3(self.gallery), "visual-designs.html", ".float-stack", "display:block")
+
+    def test_group_p_rejects_unaudited_authored_color_literal(self) -> None:
+        self.write_accessibility_gallery()
+        body = self.accessibility_body("component-variants").replace(
+            "color: var(--rc-text)", "color: #777777", 1
+        )
+        self.write_decision_artifact("component-variants", body=body)
+        self.assertReports(check_p3(self.gallery), "component-variants.html", "unaudited color")
+
+
+# ---------------------------------------------------------------------------
+# Group P — decision-port accessibility contract
+# ---------------------------------------------------------------------------
+
+COMPONENT_VARIANT_STATE_VALUES: tuple[str, ...] = (
+    "default",
+    "hover",
+    "focus",
+    "disabled",
+    "error",
+    "loading",
+)
+DECISION_ACCESSIBILITY_CONTRACTS: dict[str, dict[str, object]] = {
+    "visual-designs": {
+        "choice_count": 4,
+        "radio_counts": {"bg": 2, "chosen-direction": 4},
+        "defaulted_radios": ("bg",),
+    },
+    "component-variants": {
+        "choice_count": 6,
+        "radio_counts": {"border": 3, "chosen-base-variant": 6},
+        "defaulted_radios": ("border",),
+    },
+}
+_STYLE_BLOCK_RE = re.compile(r"(?is)<style\b[^>]*>(.*?)</style>")
+_HIDDEN_INPUT_RULE_RE = re.compile(r"(?is)\binput\b[^{}]*\{[^{}]*\bdisplay\s*:\s*none\b")
+_UNAUDITED_COLOR_RE = re.compile(
+    r"(?i)(?:^|[;{])\s*(?:color|background(?:-color)?|border(?:-(?:top|right|bottom|left))?-color|"
+    r"outline-color|fill|stroke)\s*:\s*(?:#[0-9a-f]{3,8}\b|rgba?\(|hsla?\()"
+)
+
+
+def _control_is_labelled(element: _Element, elements: list[_Element]) -> bool:
+    attrs = _attrs(element)
+    if attrs.get("aria-label", "").strip():
+        return True
+    labelledby = attrs.get("aria-labelledby", "").split()
+    if labelledby and all(identifier in _element_ids(elements) for identifier in labelledby):
+        return True
+    if element.parent == "label":
+        return True
+    return bool(attrs.get("id") and _has_explicit_label(elements, attrs["id"]))
+
+
+def _decision_authored_styles(text: str) -> str:
+    scrubbed = text
+    if _embeds(text, BRAND_BLOCK):
+        scrubbed = scrubbed.replace(_region(text, BRAND_BLOCK), "", 1)
+    return "\n".join(_STYLE_BLOCK_RE.findall(scrubbed))
+
+
+def check_p1(gallery_root: Path) -> list[str]:
+    """P1 — decision values use labelled native controls and stable state."""
+    failures: list[str] = []
+    for artifact_id, contract in DECISION_ACCESSIBILITY_CONTRACTS.items():
+        path = _port_path(gallery_root, artifact_id)
+        label = _artifact_label(artifact_id)
+        if not path.is_file():
+            failures.append(f"{label}: decision accessibility cannot be checked because the file is missing")
+            continue
+        elements = _elements(_document_text(path))
+        if sum(element.tag == "fieldset" for element in elements) < 2 or sum(
+            element.tag == "legend" for element in elements
+        ) < 2:
+            failures.append(f"{label}: radio choices do not expose two native named groups")
+
+        radio_counts = contract["radio_counts"]
+        if not isinstance(radio_counts, dict):
+            raise AssertionError("decision radio contract must be a mapping")
+        for name, expected_count in radio_counts.items():
+            radios = [
+                element
+                for element in elements
+                if element.tag == "input"
+                and _attrs(element).get("type", "").casefold() == "radio"
+                and _attrs(element).get("name") == name
+            ]
+            if len(radios) != expected_count:
+                failures.append(
+                    f"{label}: input[name={name!r}] has {len(radios)} choices rather than {expected_count}"
+                )
+                continue
+            if any(not _attrs(radio).get("value", "").strip() for radio in radios):
+                failures.append(f"{label}: input[name={name!r}] has a choice without a value")
+            if any(not _control_is_labelled(radio, elements) for radio in radios):
+                failures.append(f"{label}: input[name={name!r}] has a choice without a visible or programmatic label")
+            checked = sum("checked" in _attrs(radio) for radio in radios)
+            expected_checked = 1 if name in contract["defaulted_radios"] else 0
+            if checked != expected_checked:
+                failures.append(
+                    f"{label}: input[name={name!r}] has {checked} authored checked choices rather than "
+                    f"{expected_checked}"
+                )
+
+        if artifact_id == "visual-designs":
+            background_groups = _id_matches(elements, "bg-seg")
+            if len(background_groups) != 1 or background_groups[0].tag != "fieldset":
+                failures.append(f"{label}: #bg-seg is not exactly one native fieldset")
+        else:
+            required_inputs = {"ctl-pad": "range", "ctl-shadow": "checkbox"}
+            for identifier, input_type in required_inputs.items():
+                matches = _id_matches(elements, identifier)
+                if (
+                    len(matches) != 1
+                    or matches[0].tag != "input"
+                    or _attrs(matches[0]).get("type", "").casefold() != input_type
+                ):
+                    failures.append(f"{label}: #{identifier} is not exactly one native {input_type} input")
+                elif not _control_is_labelled(matches[0], elements):
+                    failures.append(f"{label}: #{identifier} has no visible or programmatic label")
+
+            pads = _id_matches(elements, "ctl-pad")
+            if len(pads) == 1 and any(
+                _attrs(pads[0]).get(name) != value
+                for name, value in {"min": "12", "max": "32", "step": "2", "value": "20"}.items()
+            ):
+                failures.append(f"{label}: #ctl-pad does not expose its authored min/max/step/value")
+            outputs = _id_matches(elements, "pad-out")
+            if len(outputs) != 1 or outputs[0].tag != "output" or _attrs(outputs[0]).get("for") != "ctl-pad":
+                failures.append(f"{label}: #pad-out is not an output associated with #ctl-pad")
+            resets = _id_matches(elements, "reset-controls")
+            if len(resets) != 1 or resets[0].tag != "button":
+                failures.append(f"{label}: #reset-controls is not exactly one native button")
+    return failures
+
+
+def check_p2(gallery_root: Path) -> list[str]:
+    """P2 — planned decision files preserve native keyboard focus order."""
+    failures: list[str] = []
+    for artifact_id, _path, text in _port_texts(gallery_root, DECISION_PORT_MANIFEST_BASELINE):
+        label = _artifact_label(artifact_id)
+        elements = _elements(text)
+        for element in elements:
+            for value in _attribute_values(element, "tabindex"):
+                try:
+                    positive = int(value.strip()) > 0
+                except ValueError:
+                    positive = False
+                if positive:
+                    failures.append(f"{label}: positive tabindex {value!r} replaces logical source order")
+        if _HIDDEN_INPUT_RULE_RE.search(text):
+            failures.append(f"{label}: CSS display:none removes native inputs from keyboard operation")
+        if re.search(r"(?i)\boutline\s*:\s*none\b", text):
+            failures.append(f"{label}: outline:none suppresses visible keyboard focus")
+        if ":focus-visible" not in text:
+            failures.append(f"{label}: no focus-visible treatment is present")
+        custom_roles = [
+            element
+            for element in elements
+            if element.tag not in _CONTROL_TAGS
+            and any(value.casefold() in _CONTROL_ROLES for value in _attribute_values(element, "role"))
+        ]
+        if custom_roles:
+            failures.append(f"{label}: action controls use custom roles instead of native controls")
+    return failures
+
+
+def check_p3(gallery_root: Path) -> list[str]:
+    """P3 — theme, non-color state, and reduced-motion contracts stay explicit."""
+    failures: list[str] = []
+    for artifact_id, _path, text in _port_texts(gallery_root, DECISION_PORT_MANIFEST_BASELINE):
+        label = _artifact_label(artifact_id)
+        elements = _elements(text)
+        styles = _decision_authored_styles(text)
+        viewports = [
+            element
+            for element in elements
+            if element.tag == "meta" and _attrs(element).get("name", "").casefold() == "viewport"
+        ]
+        if len(viewports) != 1 or _attrs(viewports[0]).get("content") != "width=device-width, initial-scale=1":
+            failures.append(f"{label}: mobile viewport metadata is missing or non-canonical")
+        if _UNAUDITED_COLOR_RE.search(styles):
+            failures.append(f"{label}: port-authored CSS introduces an unaudited color literal")
+        if not _REDUCED_MOTION_RE.search(styles) or not re.search(
+            r"(?i)\banimation\s*:\s*none\b", styles
+        ) or not re.search(r"(?i)\btransition\s*:\s*none\b", styles):
+            failures.append(f"{label}: local reduced-motion override does not remove animation and transition")
+        if re.search(r"(?i)\bscroll-behavior\s*:\s*smooth\b", styles):
+            failures.append(f"{label}: authored smooth scrolling is not reduced-motion safe")
+
+        if artifact_id == "visual-designs":
+            required_layout_rules = {
+                ".stage-copy": r"(?is)\.stage-copy\s*\{[^}]*\bdisplay\s*:\s*block\b",
+                ".stage-copy > strong": r"(?is)\.stage-copy\s*>\s*strong\s*\{[^}]*\bdisplay\s*:\s*block\b",
+                ".stage-copy > strong + span": r"(?is)\.stage-copy\s*>\s*strong\s*\+\s*span\s*\{[^}]*\bdisplay\s*:\s*block\b",
+                ".float-stack": r"(?is)\.float-stack\s*\{[^}]*\bdisplay\s*:\s*block\b",
+            }
+            missing_layout_rules = [
+                selector for selector, pattern in required_layout_rules.items() if re.search(pattern, styles) is None
+            ]
+            if missing_layout_rules:
+                failures.append(
+                    f"{label}: inline preview wrappers lack display:block layout for {missing_layout_rules!r}"
+                )
+            if re.search(r"(?i)\.stage-copy\s+(?:h3|p)\b", styles):
+                failures.append(f"{label}: preview styles target absent h3/p children instead of shipped inline markup")
+
+        if artifact_id == "component-variants":
+            states = tuple(
+                values[0]
+                for element in elements
+                if len(values := _attribute_values(element, "data-state")) == 1
+            )
+            if states != COMPONENT_VARIANT_STATE_VALUES:
+                failures.append(
+                    f"{label}: visible non-color state markers are {states!r} rather than "
+                    f"{COMPONENT_VARIANT_STATE_VALUES!r}"
+                )
+            if not any("disabled" in _attrs(element) for element in elements):
+                failures.append(f"{label}: disabled state has no native disabled marker")
+            if not any(_attrs(element).get("aria-busy") == "true" for element in elements):
+                failures.append(f"{label}: loading state has no aria-busy marker")
+    return failures
+
+
+GROUP_P_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (
+    ("P1", check_p1),
+    ("P2", check_p2),
+    ("P3", check_p3),
+)
+
+
+class DecisionAccessibilityContractTests(unittest.TestCase):
+    """Group P against the two decision artifacts."""
+
+    def test_group_p_passes_against_the_gallery(self) -> None:
+        self.maxDiff = None
+        for name, check in GROUP_P_CHECKS:
+            with self.subTest(msg=name):
+                self.assertEqual(check(GALLERY_ROOT), [])
 
 
 class CheckSignatureTests(unittest.TestCase):
@@ -7398,6 +9480,15 @@ CHECK_GROUPS: tuple[type[unittest.TestCase], ...] = (
     CanonicalBlockAgreementTests,
     CanonicalBlockAgreementFixtureTests,
     SlideDeckReaderTests,
+    KeyboardScrollGuardTests,
+    KeyboardScrollGuardFixtureTests,
+    ReadOnlyPortContractTests,
+    ReadOnlyPortContractFixtureTests,
+    DecisionPortContractTests,
+    DecisionPortContractFixtureTests,
+    DecisionExportContractTests,
+    DecisionExportContractFixtureTests,
+    DecisionAccessibilityContractTests,
 )
 
 
