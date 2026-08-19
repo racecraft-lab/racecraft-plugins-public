@@ -57,6 +57,14 @@ except ImportError:
     claude_capabilities = None  # type: ignore[assignment]
 
 
+def _require_validator(test_case: unittest.TestCase):
+    test_case.assertIsNotNone(
+        claude_trace_schema,
+        "claude_trace_schema validator module not importable (T005)",
+    )
+    return claude_trace_schema
+
+
 RESEARCH_ROOT = REPO_ROOT / "docs" / "ai" / "research"
 SCHEMA_PATH = RESEARCH_ROOT / "claude-trace-contract.schema.json"
 MANIFEST_PATH = RESEARCH_ROOT / "claude-agent-route-candidate-manifest.json"
@@ -1900,12 +1908,7 @@ class CommittedRuntimeCapabilitySnapshotTests(unittest.TestCase):
     vacuous characterization pass.
     """
 
-    def require_validator(self):
-        self.assertIsNotNone(
-            claude_trace_schema,
-            "claude_trace_schema validator module not importable (T005)",
-        )
-        return claude_trace_schema
+    require_validator = _require_validator
 
     def load_committed_snapshot(self) -> dict:
         # Loaded fresh per call so a test may mutate its copy without leaking.
@@ -2245,12 +2248,7 @@ class CommittedTelemetryProfileTests(unittest.TestCase):
     not ``derived``). Every check is teeth-verified against a corrupted copy.
     """
 
-    def require_validator(self):
-        self.assertIsNotNone(
-            claude_trace_schema,
-            "claude_trace_schema validator module not importable (T005)",
-        )
-        return claude_trace_schema
+    require_validator = _require_validator
 
     def load_committed_profile(self) -> dict:
         self.assertTrue(
@@ -2368,12 +2366,7 @@ class RouteResolutionFixtureTests(unittest.TestCase):
     without re-probing. Every check is teeth-verified against a corrupted copy.
     """
 
-    def require_validator(self):
-        self.assertIsNotNone(
-            claude_trace_schema,
-            "claude_trace_schema validator module not importable (T005)",
-        )
-        return claude_trace_schema
+    require_validator = _require_validator
 
     def load_fixture(self) -> dict:
         self.assertTrue(
@@ -2746,11 +2739,7 @@ class RecordClassFixtureTests(unittest.TestCase):
     class<->scorable pairing, the class->status mapping, and each class's semantic rule.
     Every check is teeth-verified against a deliberately-corrupted copy."""
 
-    def require_validator(self):
-        self.assertIsNotNone(
-            claude_trace_schema, "claude_trace_schema validator module not importable (T005)"
-        )
-        return claude_trace_schema
+    require_validator = _require_validator
 
     def load_fixture(self, record_class: str) -> dict:
         path = RECORD_CLASS_FIXTURE_PATHS[record_class]
