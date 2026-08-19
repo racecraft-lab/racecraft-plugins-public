@@ -556,7 +556,7 @@ h1 { margin: 0; font: 700 clamp(2rem, 6vw, 3.7rem)/1 var(--rc-font-display); }
 .message {
   margin: 8px 0 0;
   padding: 8px 10px;
-  border-left: 4px solid var(--rc-warning);
+  border-left: 4px solid var(--rc-brand-red);
   background: var(--rc-surface-muted);
   color: var(--rc-text);
   font-weight: 600;
@@ -573,7 +573,7 @@ h1 { margin: 0; font: 700 clamp(2rem, 6vw, 3.7rem)/1 var(--rc-font-display); }
 .manual-copy textarea { width: 100%; min-height: 240px; padding: 10px; font-family: var(--rc-font-mono); }
 [hidden] { display: none !important; }
 @media (max-width: 720px) {
-  .shell { width: min(100% - 20px, 1080px); padding-top: 20px; }
+  .shell { width: min(calc(100% - 20px), 1080px); padding-top: 20px; }
   .page-header { display: block; }
   .brand-mark { margin-bottom: 12px; }
   .group-header, .flag-grid, .flag-options { grid-template-columns: minmax(0, 1fr); }
