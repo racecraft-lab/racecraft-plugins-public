@@ -115,6 +115,7 @@ FLOOR: dict[str, tuple[str, ...]] = {
     "incident-report": ("summary", "timeline", "impact", "root-cause", "follow-ups"),
     "triage-board": ("triage-items", "column-labels"),
     "feature-flags": ("flags", "environment-notes"),
+    "prompt-tuner": ("prompt-variants", "evaluation-notes"),
     **READ_ONLY_PORT_FLOOR,
     **DECISION_PORT_FLOOR,
 }
@@ -139,6 +140,7 @@ LIST_SLOTS: dict[str, tuple[str, ...]] = {
     "incident-report": ("timeline", "follow-ups"),
     "triage-board": ("triage-items",),
     "feature-flags": ("flags",),
+    "prompt-tuner": ("prompt-variants",),
     "interaction-prototype": ("views",),
     "visual-designs": ("directions",),
     "component-variants": ("variants",),
@@ -976,6 +978,8 @@ class FillRegionTests(unittest.TestCase):
         self.assertTrue((path := GALLERY_ROOT / _template_path("triage-board")).is_file() and all(f"Slot: {slot} |" in path.read_text(encoding="utf-8") for slot in FLOOR["triage-board"]), f"{_template_path('triage-board')}: missing triage-board fill-inventory template")
     def test_feature_flags_fill_inventory_template_exists(self) -> None:
         self.assertTrue((path := GALLERY_ROOT / _template_path("feature-flags")).is_file() and all(f"Slot: {slot} |" in path.read_text(encoding="utf-8") for slot in FLOOR["feature-flags"]), f"{_template_path('feature-flags')}: missing feature-flags fill-inventory template")
+    def test_prompt_tuner_fill_inventory_template_exists(self) -> None:
+        self.assertTrue((path := GALLERY_ROOT / _template_path("prompt-tuner")).is_file() and all(f"Slot: {slot} |" in path.read_text(encoding="utf-8") for slot in FLOOR["prompt-tuner"]), f"{_template_path('prompt-tuner')}: missing prompt-tuner fill-inventory template")
 
 
 # ---------------------------------------------------------------------------

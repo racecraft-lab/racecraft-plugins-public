@@ -409,3 +409,23 @@
 ### T095
 
 **Deviations/Edge cases/Surprises:** None. After PR #454 opened and Slice 6 closeout reached `742f89d5aa0218c1a7ae674d1791b91b6900c4e4`, Slice 7 was created from that exact head as `art-005-gallery-completion-knowledge-reports-editors-slice-7`. The plan and topology contract agree on exactly seven implementation-authored paths and a 790 reviewable-LOC ceiling (235 markup/content, 145 CSS, 255 behavior JS, and 155 incremental tests), leaving 10 LOC below the mandatory 800-LOC stop. `prompt-tuner` remains `planned` with pinned source `20-editor-prompt-tuner.html` and `exports: ["markdown"]` before RED. A fresh connected-browser inventory was empty and `getForUrl` was unavailable, so Playwright MCP is the active browser fallback for Slice 7.
+
+### T096
+
+**Deviations/Edge cases/Surprises:** None. Group R1 pins the prompt-tuner producer identity, canonical bytes, exact export label, named template/slot/sample/preview/reset/fallback surfaces, three named sample previews, empty and invalid visible feedback, persistent status semantics, memory-only behavior, responsive handling, reduced motion, visible focus, and prohibited persistence/export paths.
+
+### T097
+
+**Deviations/Edge cases/Surprises:** None. Group R2 pins the exact root, sample, and issue field arrays; schema version; one fenced JSON block; raw ordered slots; first-occurrence valid field keys; live derived previews; duplicate slot/sample and raw-invalid issue evidence; fresh pretty-printed serialization; and all four stable issue messages.
+
+### T098
+
+**Deviations/Edge cases/Surprises:** None. Group R3 carries the same invocation-ordinal, fresh-capability, zero/one-attempt, exact fallback, normalized-message, sequential-transition, and two-direction stale-settlement contract proven for the other editors.
+
+### T099
+
+**Deviations/Edge cases/Surprises:** None. The fill contract now pins `prompt-variants` and `evaluation-notes`, treats prompt-variants as a repeated list slot, and requires a non-vacuous shipped inventory template with at least two stable variant anchors.
+
+### T100
+
+**Deviations/Edge cases/Surprises:** The gallery runner uses an explicit class registry; the first run correctly exposed that Group R was unreachable, so `PromptTunerProducerTests` was registered before accepting evidence. Formal RED then reported 497/500 with all three R contracts failing on the planned manifest state and missing prompt-tuner producer; fill-region reported 66/67 with only the missing prompt-tuner inventory template failing. Existing Slice 1-6 assertions remained green.
