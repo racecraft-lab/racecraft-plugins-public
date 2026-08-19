@@ -942,6 +942,13 @@ For every behavior:
 | 6 | `art-005-gallery-completion-knowledge-reports-editors-slice-6` | `art-005-gallery-completion-knowledge-reports-editors-slice-5` | [#454](https://github.com/racecraft-lab/racecraft-plugins-public/pull/454) | Open |
 | 7 | `art-005-gallery-completion-knowledge-reports-editors-slice-7` | `art-005-gallery-completion-knowledge-reports-editors-slice-6` | [#455](https://github.com/racecraft-lab/racecraft-plugins-public/pull/455) | Open |
 
+The installed `github/gh-stack` extension v0.0.8 owns the live stack. After
+restacking every branch onto current `origin/main`, `gh stack init` adopted the
+seven existing branches and `gh stack submit --auto --open --remote origin`
+atomically synced their exact heads without replacing any PR. GitHub created
+stack `#457`; `gh stack view --json` and live PR read-back agree on all seven
+heads and bases, with no local layer marked as needing rebase.
+
 ---
 
 ## Post-Implementation Checklist
@@ -954,12 +961,12 @@ Every canonical row must reach Complete or an explicit Skipped disposition.
 | Post: Verify Implementation | ✅ Complete | 24/24 functional requirements and 119/119 completed tasks have implementation evidence |
 | Post: Verify Tasks Phantom Check | ✅ Complete | 119 verified; zero partial, weak, missing, skipped, or phantom completions |
 | Post: Code Review | ✅ Complete | Five blocking findings fixed on Slices 5-7 and merged forward |
-| Post: Integration Suite | ✅ Complete | Gallery 500/500; fill 67/67; L1 1,448; L4 5,793; full 7,427; generated/docs checks current |
+| Post: Integration Suite | ✅ Complete | Restacked head `7797bc367`: gallery 586/586; fill 84/84; L1 1,469; L4 5,995; full 7,656; generated/docs checks current |
 | Post: Reviewability Diff Gate | ✅ Complete | Slices 1-7: 666/670, 534/535, 377/560, 420/620, 695/785, 779/780, 692/790; all below 800 |
 | Post: Self-Review | ✅ Complete | Four-question review below; no edge-case, orphan-requirement, silent-deferral, or tidiness finding |
 | Post: UAT Runbook Generation | ✅ Complete | Plain-English seven-template file:// runbook committed; no registered UAT validator is available, so validator execution is explicitly skipped |
-| Post: Final Reviewability Backstop | 🔄 In progress | Restack onto current `origin/main`, then remeasure each committed slice before PR updates |
-| Post: PR Packet/Body Generation | ⏳ Pending | Refresh and validate seven packet-owned bodies |
+| Post: Final Reviewability Backstop | ✅ Complete | Current restacked ledgers: 57 paths for Slice 1, 33 for Slices 2-7; component LOC remains 666/534/377/420/695/779/692, all below 800; mechanical test-group renames add no component LOC |
+| Post: PR Packet/Body Generation | 🔄 In progress | Refresh and validate seven packet-owned bodies against the exact gh-stack heads |
 | Post: PR Body Generation | ⏳ Pending | Review order, scope, traceability, evidence, gaps, rollback |
 | Post: PR Creation | ⏳ Pending | |
 | Post: Review Remediation | ⏳ Pending | |
