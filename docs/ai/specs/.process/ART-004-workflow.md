@@ -460,7 +460,7 @@ historical evidence, then record the user's 2026-08-17 recovery decision:
 | research.md | ✅ Complete | Pinned-source and shipped-pattern evidence |
 | data-model.md | ✅ Complete | DOM state, manifest state, and keyboard-scroll declaration model |
 | contracts/ | ✅ Complete | Gallery, decision-export, keyboard-scroll, and three durable slice-gate contracts |
-| quickstart.md | ✅ Complete | Ordered slice execution, direct `file://`, suite, UAT, and regeneration instructions |
+| `docs/ai/specs/.process/ART-004-manual-uat.md` | ✅ Complete | Ordered slice execution, direct `file://`, suite, UAT, and regeneration instructions |
 
 Plan-phase evidence:
 
@@ -551,7 +551,7 @@ Pay special attention to behavior under file:// security restrictions.
 
 | Checklist | Items | Gaps | Spec references |
 |---|---|---|---|
-| ux | 36 | 0 remaining (3 fixed) | `spec.md`, `plan.md`, `research.md`, `data-model.md`, `quickstart.md`, gallery contract |
+| ux | 36 | 0 remaining (3 fixed) | `spec.md`, `plan.md`, `research.md`, `data-model.md`, `docs/ai/specs/.process/ART-004-manual-uat.md`, gallery contract |
 | accessibility | 37 | 0 remaining (9 fixed) | keyboard/focus, Safari traversal, semantics/live status, reduced motion, non-color meaning, contrast, UAT evidence |
 | error-handling | 38 | 0 remaining (4 fixed) | file:// refusal, stale fallback, font fallback, blocking drift categories |
 | **Total** | **111** | **0 remaining (16 fixed)** | All three consensus steps skipped: executors reported zero unresolved items |
@@ -687,7 +687,7 @@ Focus on:
 | ID | Severity | Issue | Resolution |
 |---|---|---|---|
 | A-001 | HIGH | `spec.md` still treated the combined reviewability block as pending | Reframed it as history and made the three approved slice gates current authority |
-| A-002 | MEDIUM | Plan and quickstart referenced a sibling-worktree runner | Replaced with the repository-local Python runner invocation |
+| A-002 | MEDIUM | Plan and the historical quickstart referenced a sibling-worktree runner | Replaced with the repository-local Python runner invocation; the relocated source is recoverable from merge history |
 | A-003 | MEDIUM | T002 omitted the deferred tasks-mode reviewability fallback | Added G0, per-slice G3, and human-approval fallback evidence |
 
 - Rerun result: zero CRITICAL, HIGH, MEDIUM, or LOW findings.
