@@ -926,7 +926,7 @@ For every behavior:
 | 5 - Slice 4 | Complete | 13 | PR #448 open; source checkpoint `f27b7833e`; cumulative UAT 72 pass, 72 evidence-backed N/A, zero fail; final gates green |
 | 6 - Slice 5 | Complete | 16 | PR #452 open; repaired source checkpoint `69f803d37`; cumulative UAT 107 pass, 73 evidence-backed N/A, zero fail; final gates green |
 | 7 - Slice 6 | Complete | 16 | PR #454 open; source checkpoint `8b1e67587`; cumulative UAT 142 pass, 74 evidence-backed N/A, zero fail; final gates green |
-| 8 - Slice 7 | Pending | 0 | prompt-tuner plus incremental integration and closeout |
+| 8 - Slice 7 | In Progress | 1 | Branch created from Slice 6 closeout; prompt-tuner 790-LOC ceiling confirmed; T096 active |
 
 ### Slice PR Stack
 
@@ -938,6 +938,7 @@ For every behavior:
 | 4 | `art-005-gallery-completion-knowledge-reports-editors-slice-4` | `art-005-gallery-completion-knowledge-reports-editors-slice-3` | [#448](https://github.com/racecraft-lab/racecraft-plugins-public/pull/448) | Open |
 | 5 | `art-005-gallery-completion-knowledge-reports-editors-slice-5` | `art-005-gallery-completion-knowledge-reports-editors-slice-4` | [#452](https://github.com/racecraft-lab/racecraft-plugins-public/pull/452) | Open |
 | 6 | `art-005-gallery-completion-knowledge-reports-editors-slice-6` | `art-005-gallery-completion-knowledge-reports-editors-slice-5` | [#454](https://github.com/racecraft-lab/racecraft-plugins-public/pull/454) | Open |
+| 7 | `art-005-gallery-completion-knowledge-reports-editors-slice-7` | `art-005-gallery-completion-knowledge-reports-editors-slice-6` | Pending | Active |
 
 ---
 
