@@ -1,5 +1,28 @@
 # Changelog
 
+## [2.27.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.26.0...speckit-pro-v2.27.0) (2026-08-20)
+
+
+### Features
+
+* **artifact-gallery:** add concept explainer ([5cba9d4](https://github.com/racecraft-lab/racecraft-plugins-public/commit/5cba9d4b123b5386d50dfcf12de1f2883cceabe0))
+* **artifact-gallery:** Add concept explainer ([7ff4c94](https://github.com/racecraft-lab/racecraft-plugins-public/commit/7ff4c94cbdadf1bef8136336410015c59d83dd1a))
+* **artifact-gallery:** Add feature flags ([#454](https://github.com/racecraft-lab/racecraft-plugins-public/issues/454)) ([16a3488](https://github.com/racecraft-lab/racecraft-plugins-public/commit/16a34888d44f756377ba1205dadaf0ecc45d93d6))
+* **artifact-gallery:** add incident report ([dbb7361](https://github.com/racecraft-lab/racecraft-plugins-public/commit/dbb7361d91bb7f18596e3c1adea0c91934e159a8))
+* **artifact-gallery:** Add incident report ([abc9e82](https://github.com/racecraft-lab/racecraft-plugins-public/commit/abc9e8245626838d014c81a25ed39db570488460))
+* **artifact-gallery:** Add prompt tuner ([c133211](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c133211f630c3c2214d05ed22f5185e0e3202424))
+* **artifact-gallery:** Add slide deck reader ([#444](https://github.com/racecraft-lab/racecraft-plugins-public/issues/444)) ([75651a9](https://github.com/racecraft-lab/racecraft-plugins-public/commit/75651a99e6efe0cb8d37608eda14e86674b97920))
+* **artifact-gallery:** add status report ([24ee215](https://github.com/racecraft-lab/racecraft-plugins-public/commit/24ee2156f30eb23aa9bbea9f92dc6a9977535a28))
+* **artifact-gallery:** Add status report ([29c9af9](https://github.com/racecraft-lab/racecraft-plugins-public/commit/29c9af9533f2ba6f76574089db7a3f55a4f4ee76))
+* **artifact-gallery:** add triage board ([55b4ee2](https://github.com/racecraft-lab/racecraft-plugins-public/commit/55b4ee20b5fa799ef77410906c2052fc99ffb379))
+* **artifact-gallery:** Add triage board ([8f8052a](https://github.com/racecraft-lab/racecraft-plugins-public/commit/8f8052a85a745241dbd43a670cf0cb352dde207f))
+
+
+### Bug Fixes
+
+* **artifact-gallery:** harden triage ordering and export ([9c2c191](https://github.com/racecraft-lab/racecraft-plugins-public/commit/9c2c19157de8a3f87acdc1e0814245dbb1fe6419))
+* **artifact-gallery:** Preserve triage line breaks ([3186f3e](https://github.com/racecraft-lab/racecraft-plugins-public/commit/3186f3e18f09bc0e79db4a9a0d398a48ff5aff4e))
+
 ## [2.26.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.25.0...speckit-pro-v2.26.0) (2026-08-19)
 
 
