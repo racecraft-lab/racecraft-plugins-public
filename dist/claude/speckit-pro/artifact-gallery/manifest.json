@@ -196,7 +196,7 @@
       "stage": "ad-hoc",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "11-status-report.html" },
-      "status": "planned",
+      "status": "shipped",
       "exports": []
     },
     {
