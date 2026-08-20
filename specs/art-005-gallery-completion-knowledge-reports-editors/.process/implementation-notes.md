@@ -163,3 +163,55 @@
 ### T036
 
 **Deviations/Edge cases/Surprises:** None. The source and generated gallery paths remained byte-identical after source checkpoint `7c636c361c7593f3a4a5b9f007100af4a4084179`; evidence checkpoint `c22b72566adaef0100aed42ceccf6868a64d5051` retained 534 reviewable LOC, one production template, and zero correctness blockers. The final 33-path boundary comprises seven authored paths, 22 generated paths, and four workflow/control-plane paths. Its total-file block is recorded as **SIZE-ONLY BLOCK / CONTINUE** under the operator-selected seven-slice topology, with no typed exception. Packet `art-005-slice-2-concept-explainer` passed emission dry-run/apply, read-only validation with `pr_blocked=false`, persisted fingerprint validation, workflow-contract validation, exact-title release readiness, and release-note policy. The exact tested head was pushed and PR [#446](https://github.com/racecraft-lab/racecraft-plugins-public/pull/446) opened against `art-005-gallery-completion-knowledge-reports-editors` before Slice 3.
+
+### T037
+
+**Deviations/Edge cases/Surprises:** None. After PR #446 opened and Slice 2 closeout reached `beb3727533133a4a3d7b6ac1f2a241e5a8039a1c`, Slice 3 was created from that exact head as `art-005-gallery-completion-knowledge-reports-editors-slice-3`. The plan and topology contract agree on exactly seven implementation-authored paths and a 560 reviewable-LOC ceiling (255 markup/content, 140 CSS, 20 behavior JS, and 145 incremental tests), leaving 240 LOC below the mandatory 800-LOC stop. `status-report` remains `planned` with pinned source `11-status-report.html` and `exports: []` before RED.
+
+### T038
+
+**Deviations/Edge cases/Surprises:** None. Group N adds a static-reader contract for the pinned manifest/source identity, canonical blocks, complete attribution, no export or authored behavior, one semantic main and report heading structure, list-backed repeated sections, text-backed status meaning, mobile viewport, 360px responsive coverage, focus/reduced-motion behavior, positive-tabindex prohibition, and conditional horizontal-scroll semantics.
+
+### T039
+
+**Deviations/Edge cases/Surprises:** None. The fill contract now pins `summary`, `landed`, `in-flight`, `blocked`, and `next-actions`, marks the latter four as repeated list slots, and adds a non-vacuity check requiring the status-report inventory template.
+
+### T040
+
+**Deviations/Edge cases/Surprises:** Formal RED passed for the intended reason. Gallery reported 489/490; direct `check_n1` evidence names only the planned manifest status and missing reader template. Fill-region reported 58/59 with only the new missing status-report fill-inventory template failing. Existing Slice 1-2 checks remained green.
+
+### T041
+
+**Deviations/Edge cases/Surprises:** The new static reader embeds both canonical regions byte-for-byte, fills all five declared slots, places two stable anchors inside each repeated-list container, uses one semantic main plus labelled sections, and exposes status, owner, due, recovery, and next-step meaning in text. It adds no authored script, export, persistence, network dependency, or horizontal scroller. Before the manifest flip, its own contract had only the expected planned-status failure and fill inventory passed.
+
+### T042
+
+**Deviations/Edge cases/Surprises:** None. The manifest diff changes only `status-report.status` from `planned` to `shipped`; pinned source `11-status-report.html`, `exports: []`, and all other rows remain unchanged.
+
+### T043
+
+**Deviations/Edge cases/Surprises:** The Slice 1 `check_l1`, Slice 2 `check_m1`, and Slice 3 `check_n1` contracts all return no failures, and fill-region checks pass 59/59. The complete gallery module reports 486/490 only because F1-F4 require T046 regeneration of the Claude/Codex payload copies; no source-reader assertion is failing.
+
+### T044
+
+**Deviations/Edge cases/Surprises:** No further refactor was warranted. The reader is already static, uses semantic list markup with grouping containers outside replaceable regions, carries only audited gallery tokens, and has no template-specific behavior. `git diff --check` remains clean.
+
+### T045
+
+**Deviations/Edge cases/Surprises:** None. The 730-line physical template contains 458 byte-identical canonical lines, leaving 272 non-canonical template lines. With 105 incremental test lines, final reviewable implementation is 377 LOC: 183 below the 560 ceiling and 423 below the mandatory 800 stop. One production template and the seven declared authored paths remain in scope, so regeneration may proceed.
+
+### T046
+
+**Deviations/Edge cases/Surprises:** The first tool window treated the still-running silent generator as a failure; monitoring showed it completed normally, and the intentional second invocation reported that outputs were already consistent. Authoritative regeneration produced the Claude/Codex dist templates, both installed-cache templates, manifest mirrors, and refreshed proof/XPLAT fixtures; docs `reference:generate` regenerated seven pages byte-identically. All five template copies share SHA-256 `fc7059c6ae26a6556b564862e628dc59fb39344c72de7508cb512dc240a09d3f`; all five manifests share `f13e42ff6252f33595008ee2b65df0d4f09181385a27d0c9d594e71dffe56c48`. Focused gallery and fill checks are now green at 490/490 and 59/59.
+
+### T047
+
+**Deviations/Edge cases/Surprises:** Focused checks passed 490/490 and 59/59, Layer 1 passed 1,448/1,448, isolated Layer 4 passed 5,775/5,775, and the isolated default suite passed 7,409/7,409. Running Layer 4 and the full suite concurrently first caused shared policy-control interference (different 1- and 2-failure results); the isolated policy module passed 730/730 and both authoritative sequential reruns passed, so the concurrent results were discarded. Source checkpoint `36ef824dee02292e13704473292084173acb2f91` is clean; its post-commit generated-artifact check passes, and packet-excluded spec-index dry-run/read-only checks report zero stale maps/current index. The ignored packet directory was restored unchanged.
+
+### T048
+
+**Deviations/Edge cases/Surprises:** Fresh connected-browser selection for the exact status-report file returned `No browser is available`, activating the operator-authorized Playwright MCP fallback. Google Chrome 151.0.7922.138 on macOS 26.6.2 re-executed all 108 cumulative rows at source checkpoint `36ef824dee02292e13704473292084173acb2f91`: 54 pass, 54 evidence-backed `not_applicable`, zero fail. Coverage included the complete Slice 1 deck with two independent 31-second no-autorotation observations, the complete Slice 2 deterministic/session-only simulation and boundary routes, and the Slice 3 semantic report with five sections, eight anchored items, offline/theme/reduced-motion/focus behavior, and 360/1280 CSS px layouts. The first disposable offline-probe attempt raced Chrome's internal error navigation; isolating that probe in its own tab removed the race without changing an artifact. All tested source, manifest, test, and generated bytes remain unchanged after the checkpoint.
+
+### T049
+
+**Deviations/Edge cases/Surprises:** Refreshed PR #446 was open and clean at exact Slice 3 base `beb3727533133a4a3d7b6ac1f2a241e5a8039a1c`. The final boundary is 33 paths: seven implementation-authored, 22 generated, and four workflow/control-plane, with 377 reviewable LOC, one production template, and no correctness or non-size blocker; the total-file result is **SIZE-ONLY BLOCK / CONTINUE**. Packet `art-005-slice-3-status-report` passed dry-run/apply emission, read-only validation with `pr_blocked=false`, persisted current-fingerprint validation, workflow-contract validation, exact-title release readiness, and release-note policy. The exact emission head `e0d7c6009d48bf0f425242b9be14ae327720194e` was pushed and PR [#447](https://github.com/racecraft-lab/racecraft-plugins-public/pull/447) opened against the Slice 2 branch. GitHub reported `UNSTABLE` immediately after creation while checks started; this is not a packet or PR-creation blocker.
