@@ -49,4 +49,6 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [.process/uat-results.md](.process/uat-results.md)
 - [.process/uat-runbook.md](.process/uat-runbook.md)
 - [quickstart.md](quickstart.md)
+- [retrospective.md](retrospective.md)
+- [verify-tasks-report.md](verify-tasks-report.md)
 <!-- GENERATED:BACKLINKS:END -->

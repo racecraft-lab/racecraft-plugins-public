@@ -1,23 +1,26 @@
 # ART-005 UAT Results
 
 Feature: ART-005 gallery completion knowledge reports/editors
-Artifacts: `slide-deck`, `concept-explainer`, `status-report`, `incident-report`, `triage-board`
+Artifacts: `slide-deck`, `concept-explainer`, `status-report`, `incident-report`,
+`triage-board`, `feature-flags`, `prompt-tuner`
 Template paths:
 - `speckit-pro/artifact-gallery/templates/slide-deck.html`
 - `speckit-pro/artifact-gallery/templates/concept-explainer.html`
 - `speckit-pro/artifact-gallery/templates/status-report.html`
 - `speckit-pro/artifact-gallery/templates/incident-report.html`
 - `speckit-pro/artifact-gallery/templates/triage-board.html`
+- `speckit-pro/artifact-gallery/templates/feature-flags.html`
+- `speckit-pro/artifact-gallery/templates/prompt-tuner.html`
 Runbook path: `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-runbook.md`
 JSON path: `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json`
 Driver: `manual`
-Status: T077 complete; all 180 cumulative Slice 1-5 rows are bound to source
-checkpoint `69f803d37523499f80120d246400a7fbda30c6fa`.
+Status: T109 complete; all 252 cumulative Slice 1-7 rows are bound to source
+checkpoint `f85ed14c89a5f71bb041e49930647dbc93ec8560`.
 
 ## Source Checkpoint vs Evidence Commit
 
 The source checkpoint is
-`69f803d37523499f80120d246400a7fbda30c6fa`. It contains all five source
+`f85ed14c89a5f71bb041e49930647dbc93ec8560`. It contains all seven source
 templates, the manifest, cumulative tests, generated outputs, and the
 pre-execution evidence carriers that were tested. The later evidence commit
 records these results without changing the tested source bytes. The JSON names
@@ -31,12 +34,12 @@ No repository browser harness was committed, so the contract driver remains
 
 ## Execution Environment
 
-- Executed at: `2026-08-18T23:42:26Z`
+- Executed at: `2026-08-19T03:57:37Z`
 - OS: macOS 26.6.2, Build 25G82, arm64
 - Browser: Google Chrome 151.0.7922.138
 - Scheme: direct `file://`
 - Viewports: 360 and 1280 CSS px widths, using a 900 CSS px observation height
-- Network: online baseline plus context-offline reload for all five artifacts;
+- Network: online baseline plus context-offline reload for all seven artifacts;
   disposable remote probes failed with `net::ERR_INTERNET_DISCONNECTED`
 - Themes: light and dark, including persisted-dark reload
 - Motion: no-preference plus `prefers-reduced-motion: reduce`
@@ -44,17 +47,67 @@ No repository browser harness was committed, so the contract driver remains
   labeled node circles, square keys, scenario headings, and `Watch:` text;
   eight explicit status/next-action cues in the status report; text-backed
   severity/status, numbered timeline events, and owned follow-ups in the incident report;
-  named columns/ticket fields plus explicit empty, filter, boundary, and copy text in triage-board
+  named columns/ticket fields plus explicit empty, filter, boundary, and copy
+  text in triage-board; labeled enabled, dependency, rollout, issue, empty,
+  status, and fallback states in feature-flags; and labeled valid/invalid slots,
+  derived previews, empty states, issues, copy outcomes, and reset feedback in
+  prompt-tuner
+
+## Post-Review Revalidation
+
+The first four reader templates are byte-identical between the prior cumulative
+checkpoint and `f85ed14c89a5f71bb041e49930647dbc93ec8560`; their 144 rows were
+rebound by exact source-hash validation. Playwright MCP reran the three editor
+harnesses at 36/36 each. Targeted probes also passed filtered triage reorder,
+backtick-safe ticket identifiers, strict feature-flag rollout syntax, required
+field status feedback, and the prompt-tuner `__proto__` slot. No repository
+browser harness was committed.
+
+## Stack PR Exact-Head Revalidation (2026-08-19)
+
+At `2026-08-19T18:28:03Z`, every stacked PR was revalidated from an isolated
+`git archive` export of its exact GitHub head. The connected-browser inventory
+was empty, so the operator-authorized Playwright MCP fallback exercised the
+local files in Chrome 151 over `file://`. Each owning artifact was tested at
+360 and 1280 CSS px, online and context-offline, in light and dark themes, with
+reduced motion, keyboard focus, exact manifest read-back, and console/page-error
+capture. Fourteen responsive screenshots were captured for the session.
+
+| PR | Artifact | Exact tested head | Result |
+|---:|---|---|---|
+| #444 | `slide-deck` | `7045f5a15b8b6eb71099130b72175bd04370e208` | 18 pass / 18 evidence-backed N/A |
+| #446 | `concept-explainer` | `848eeeaaa6f23a5de5ddb2559efed8c3f234f9e2` | 18 pass / 18 evidence-backed N/A |
+| #447 | `status-report` | `373d7c3fb73092ff4d749d2050e2f585dae93fb7` | 18 pass / 18 evidence-backed N/A |
+| #448 | `incident-report` | `4d5e4cfc0241e256c63b1c692b12fe199492cc7b` | 18 pass / 18 evidence-backed N/A |
+| #452 | `triage-board` | `9250987f3043f43b52b292cc06eca4c3869456b1` | 35 pass / 1 evidence-backed N/A |
+| #454 | `feature-flags` | `2902decdd7f02cb404aeac601e415616073379dd` | 35 pass / 1 evidence-backed N/A |
+| #455 | `prompt-tuner` | `58efc3cd6345a4bf8bfa23918d972bdbfe361ff0` | 35 pass / 1 evidence-backed N/A |
+
+The deck also completed both declared 30-second no-autorotation observations.
+The producer revalidation covered fresh snapshots, empty and duplicate data,
+deterministic order, special characters, exact clipboard/fallback bytes, absent
+and non-callable clipboard capability, permission/generic/synchronous failures,
+failure-success-failure transitions, pending-snapshot stability, superseded
+attempts, and reset invalidation. Targeted regression probes passed filtered
+triage reorder, backtick-fenced ticket IDs, whitespace/hex/exponent rollout
+rejection, linked required-field feedback, and `__proto__` prompt preview plus
+JSON export.
+
+All apparent intermediate failures were corrected UAT-harness assumptions
+(transition settle time, 0.01ms reduced-motion semantics, case-sensitive title
+matching, test fixture setup, browser sequential-focus state, or asynchronous
+clipboard observation). Synchronized reruns passed. No product defect, source
+change, manifest change, or stacked-PR restack was required.
 
 ## Row Totals
 
-- Total cumulative Slice 1-5 rows: 180
-- Executed pass rows: 107
-- Evidence-backed N/A rows in JSON: 73
-- JSON rows currently recorded: 180
-- Pass verdicts: 107
+- Total cumulative Slice 1-7 rows: 252
+- Executed pass rows: 177
+- Evidence-backed N/A rows in JSON: 75
+- JSON rows currently recorded: 252
+- Pass verdicts: 177
 - Fail verdicts: 0
-- Not-applicable verdicts: 73
+- Not-applicable verdicts: 75
 
 Every executable row passed; no result is omitted from the normalized JSON.
 
@@ -1146,3 +1199,288 @@ emission head `5da88f99f9f042ae02b62ce3535869462cb159f7`, and PR
 [#454](https://github.com/racecraft-lab/racecraft-plugins-public/pull/454)
 opened against `art-005-gallery-completion-knowledge-reports-editors-slice-5`
 before Slice 7.
+
+## Slice 7 Pre-Generation Reviewability Measurement
+
+Slice base: `742f89d5aa0218c1a7ae674d1791b91b6900c4e4`, the exact Slice 6
+closeout head from which
+`art-005-gallery-completion-knowledge-reports-editors-slice-7` was created
+after PR #454 opened.
+
+The seven implementation-authored paths remain the declared Slice 7 ledger:
+
+1. `speckit-pro/artifact-gallery/templates/prompt-tuner.html`
+2. `speckit-pro/artifact-gallery/manifest.json`
+3. `tests/speckit-pro/unit/test-artifact-gallery.py`
+4. `tests/speckit-pro/unit/test-artifact-fill-regions.py`
+5. `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-runbook.md`
+6. `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.md`
+7. `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json`
+
+| Component | Physical additions | Canonical/excluded | Reviewable LOC |
+|---|---:|---:|---:|
+| `prompt-tuner.html` | 1,011 | 458 byte-identical canonical lines | 553 |
+| `test-artifact-gallery.py` | 138 | 0 | 138 |
+| `test-artifact-fill-regions.py` | 4 | 0 | 4 |
+| Manifest status flip | 1 | 1 metadata line | 0 |
+| UAT carriers | pending cumulative evidence refresh | evidence-only | 0 |
+| **Total** | — | — | **695** |
+
+- Slice 7 component ceiling: **790** (95 LOC headroom)
+- Mandatory authored stop: **800** (105 LOC headroom)
+- Production templates: **1**
+- Primary surfaces: **1**
+- Pre-generation verdict: **WARN / CONTINUE**
+
+Direct R1-R3 source checks pass, the fill-region module passes 67/67, and
+Playwright fallback sanity confirms live previews, ordered export keys, exact
+focused fallback, reset restoration, and no page errors over direct `file://`.
+The complete gallery count is 496/500 only because its four payload-copy checks
+remain intentionally RED until authoritative T108 regeneration. The declared
+maximum physical boundary remains 33 paths; any final total-file block may
+continue only when every excess path is generated or workflow/control-plane
+evidence.
+
+## Prompt-Tuner Executed Matrix
+
+| Row | Verdict | Evidence summary |
+|---|---|---|
+| PT-UAT-001 | Pass | Exact `file://` template opened with expected title/h1, three previews, and zero page errors. |
+| PT-UAT-002 | Pass | Prompt, five slots, three samples, fifteen fields, three previews, and both declared fills were complete. |
+| PT-UAT-003 | Pass | Every control was named and copy/preview status semantics were exposed. |
+| PT-UAT-004 | Pass | Current template and field edits updated derived previews immediately. |
+| PT-UAT-005 | Pass | Five raw slots stayed ordered and only the first valid occurrence created a field key. |
+| PT-UAT-006 | Pass | Invalid raw slot text stayed exact with ordered invalid/unavailable feedback and unresolved preview token. |
+| PT-UAT-007 | Pass | Empty template, field, slot, sample, and preview states remained explicit. |
+| PT-UAT-008 | Pass | Reset and reload restored the representative seed without editor persistence. |
+| PT-UAT-009 | Pass | Offline local reload preserved the editor while the disposable remote probe failed. |
+| PT-UAT-010 | Pass | Forward/reverse traversal covered all 33 unique controls in exact opposite order. |
+| PT-UAT-011 | Pass | Shared/editor controls showed solid focus and the full exact fallback was focused and selected. |
+| PT-UAT-012 | Pass | Light/dark content matched, dark persisted, and the editor returned to light. |
+| PT-UAT-013 | Pass | Reduce mode computed 0.01ms durations with zero running animations after settle. |
+| PT-UAT-014 | Pass | Validation, preview, empty, issue, copy, and reset meaning remained text-backed. |
+| PT-UAT-015 | Pass | Runtime found no actual horizontal scroll element at either width. |
+| PT-UAT-016 | Pass | Complete editor passed at 360 CSS px with no page overflow or clipped reviewed control. |
+| PT-UAT-017 | Pass | Complete editor passed at 1280 CSS px with no page overflow or clipped reviewed control. |
+| PT-UAT-018 | Pass | Manifest matched id/title/source, shipped state, and producer `exports=[markdown]`. |
+| PT-UAT-019 | N/A | No meaningful horizontal user-scroll element exists; structured source/runtime reason recorded. |
+| PT-UAT-020 | Pass | Exact OLD→NEW prompt sentinels produced distinct current exports. |
+| PT-UAT-021 | Pass | Empty strings and collections stayed explicit with ordered empty-value issues. |
+| PT-UAT-022 | Pass | Five slots and three samples matched current visible DOM order. |
+| PT-UAT-023 | Pass | One JSON fence round-tripped byte-for-byte with exact root/sample/issue field order. |
+| PT-UAT-024 | Pass | Duplicate slot and sample ID values remained and linked to first occurrences. |
+| PT-UAT-025 | Pass | Multiline Unicode and every required special character round-tripped through template, fields, and preview. |
+| PT-UAT-026 | Pass | Combined invalid, unavailable, duplicate, and empty issues retained deterministic order and ten fields. |
+| PT-UAT-027 | Pass | Success and all five recovery capabilities received exact invocation bytes. |
+| PT-UAT-028 | Pass | Both older settlements failed to restore stale status, fallback, or focus. |
+| PT-UAT-029 | Pass | Callable clipboard made one exact write, hid fallback, normalized status, and focused copy. |
+| PT-UAT-030 | Pass | Absent clipboard made zero writes and exposed exact focused selectable fallback. |
+| PT-UAT-031 | Pass | Non-callable method made zero writes and exposed the same exact recovery. |
+| PT-UAT-032 | Pass | Permission denial made one attempt and exposed normalized exact recovery without leaking detail. |
+| PT-UAT-033 | Pass | Generic rejection made one attempt and exposed normalized exact recovery without leaking detail. |
+| PT-UAT-034 | Pass | Synchronous throw made one attempt and exposed normalized exact recovery without leaking detail. |
+| PT-UAT-035 | Pass | Failure-success-failure used only the current visible template at every transition. |
+| PT-UAT-036 | Pass | Both stale-settlement directions and pending-success reset invalidation preserved newest state. |
+
+## Slice 7 Source and Browser Evidence
+
+The Slice 7 source checkpoint is
+`f85ed14c89a5f71bb041e49930647dbc93ec8560`. The first four reader templates
+are byte-identical to the prior cumulative checkpoint. The three editor sources,
+focused tests, generated mirrors, and proof fixtures include the independent
+review remediations and were stable before browser revalidation.
+
+A fresh connected-browser attempt returned an empty browser inventory and
+`getForUrl` was unavailable. The operator-authorized Playwright MCP fallback
+then exercised the three exact editor `file://` templates at 36/36 each; exact
+hash comparison rebound the four unchanged reader row sets. The cumulative
+record contains **252 rows**: **177 pass**, **75 evidence-backed
+`not_applicable`**, and **0 fail**, with exactly 36 rows per artifact.
+
+Prompt-tuner coverage included five ordered raw slots, three ordered samples,
+fifteen sample fields, live derived previews, first-occurrence field keys,
+duplicate slot/sample evidence, raw invalid/unavailable slots, explicit empty
+template/slot/sample/field/preview states, exact root/sample/issue field order,
+one fenced JSON value, byte-equal pretty-print round-trip, deterministic issue
+order, multiline Unicode and special characters, live freshness, exact
+clipboard/fallback equality, five recovery capability states, the
+failure-success-failure sequence, both superseded races, and reset
+invalidation. Keyboard traversal covered 33 unique forward/reverse stops;
+theme persistence, reduced motion, offline/session-only reload, and unclipped
+360/1280 layouts passed. Evidence captures are named
+`art-005-slice-7-prompt-tuner-360.png`,
+`art-005-slice-7-prompt-tuner-1280.png`, and
+`art-005-slice-7-prompt-tuner-accessibility.md`.
+
+A targeted prompt-tuner probe additionally verified that `__proto__` remains
+an own exported field, resolves in every derived preview, and creates no slot
+issue.
+
+The carried triage-board producer also received a fresh 36/36 deep pass,
+including its repaired real contenteditable line break and exact 935-byte seed
+Markdown. Targeted probes also verified filtered reorder across a hidden ticket
+and a content-sized Markdown code fence for a ticket ID containing a backtick.
+Feature-flags received a fresh 36/36 pass plus targeted strict-decimal and
+required-field status probes. Initial browser-probe mismatches across the run were
+harness assumptions about computed duration formatting, finished animation
+objects, hidden text selection, repeated accessible labels, representative
+seed issues, and manifest role inference. Corrected targeted probes passed the
+actual contracts without product changes.
+
+Verification already bound to the Slice 7 source checkpoint:
+
+- Focused gallery module: **500/500**
+- Focused fill module: **67/67**
+- Layer 1: **1448/1448**
+- Isolated Layer 4: **5793/5793**
+- Isolated full suite: **7427/7427**
+- Generated release artifact check: **pass**
+- Packet-excluded spec-index dry-run/read-only checks: **pass**
+- Cumulative browser UAT: **177 pass, 75 evidence-backed N/A, 0 fail**
+
+## Slice 7 Final Boundary
+
+The Slice 7 source checkpoint is
+`f85ed14c89a5f71bb041e49930647dbc93ec8560`. The earlier cumulative evidence
+was recorded at `d83f64c95`; post-review revalidation is recorded at
+`d22636043`.
+A direct post-UAT diff proved the source template,
+manifest, focused tests, payload mirrors, and generated manifest bytes did not
+change after the tested source checkpoint.
+
+Final Slice 7 verification passed:
+
+- Focused gallery module: **500/500**
+- Focused fill module: **67/67**
+- Isolated default suite: **7427/7427**
+  - Layer 1: **1448/1448**
+  - Layer 4: **5793/5793**
+  - Layer 5: **186/186**
+- Generated release artifact check: **pass**
+- Packet-excluded spec-index mutation dry-run: **`no_op`**, 10 rendered maps,
+  0 stale maps
+- Packet-excluded read-only spec-index check: **all in-scope maps current**
+
+The complete Slice 7 diff against exact Slice 6 closeout base
+`742f89d5aa0218c1a7ae674d1791b91b6900c4e4` contains 33 Git paths:
+
+- Seven implementation-authored paths:
+  - `speckit-pro/artifact-gallery/manifest.json`
+  - `speckit-pro/artifact-gallery/templates/prompt-tuner.html`
+  - `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json`
+  - `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.md`
+  - `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-runbook.md`
+  - `tests/speckit-pro/unit/test-artifact-fill-regions.py`
+  - `tests/speckit-pro/unit/test-artifact-gallery.py`
+- Twenty-two source-derived generated paths:
+  - `dist/claude/speckit-pro/artifact-gallery/manifest.json`
+  - `dist/claude/speckit-pro/artifact-gallery/templates/prompt-tuner.html`
+  - `dist/codex/speckit-pro/artifact-gallery/manifest.json`
+  - `dist/codex/speckit-pro/artifact-gallery/templates/prompt-tuner.html`
+  - `docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json`
+  - `docs/ai/specs/.process/XPLAT-009-payload-completeness-result.json`
+  - `docs/ai/specs/.process/XPLAT-009-release-readiness-result.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-file-root.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-mutable.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-source-root.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-mutable.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-root-mismatch.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-same-root.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-single-product.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-source-mismatch.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-stale-hash.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-traversal-root.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/manifest.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/templates/prompt-tuner.html`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/manifest.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/templates/prompt-tuner.html`
+- Four required workflow/control-plane paths:
+  - `docs/ai/specs/.process/ART-005-workflow.md`
+  - `docs/ai/specs/.process/autopilot-state.json`
+  - `specs/art-005-gallery-completion-knowledge-reports-editors/.process/implementation-notes.md`
+  - `specs/art-005-gallery-completion-knowledge-reports-editors/tasks.md`
+
+The component method counts 553 non-canonical template lines plus 142
+incremental focused-test lines = **695 reviewable LOC**, 95 below the 790
+ceiling and 105 below the mandatory 800 stop. The 33-path total exceeds the
+25-file threshold by eight, but every excess path is required generated or
+workflow/control-plane evidence. With one production template, exactly seven
+authored paths, stable tested source bytes, and no correctness or non-size
+blocker, the disposition is **SIZE-ONLY BLOCK / CONTINUE** under the
+operator-ratified seven-branch topology. No typed reviewability exception is
+claimed.
+
+Immediately before packet emission, refreshed live evidence showed parent PR
+[#454](https://github.com/racecraft-lab/racecraft-plugins-public/pull/454)
+open and clean at exact Slice 6 head
+`742f89d5aa0218c1a7ae674d1791b91b6900c4e4`, with all completed checks green.
+Runner-emitted packet `art-005-slice-7-prompt-tuner` passed emission dry-run
+and apply, read-only validation with `pr_blocked=false`, persisted
+current-fingerprint validation, workflow-contract validation, exact-title
+release readiness, and release-note policy. The validated title is
+`feat(artifact-gallery): Add prompt tuner`; packet SHA-256 is
+`8246be97a0597cc04cb9d6fe0fd7a92b904796a0d43f9d56d3a43306e9c2c9b2`
+and body SHA-256 is
+`86fc89b8af05c1a23217a9728a1a6556dee3203c3f954bc9e3b9a9fb59057b92`.
+
+The branch was pushed at exact emission head
+`86de32f32c5a0e7a28f0bbfed574f301d1fc683d`, and PR
+[#455](https://github.com/racecraft-lab/racecraft-plugins-public/pull/455)
+opened against `art-005-gallery-completion-knowledge-reports-editors-slice-6`
+with the validated title. GitHub confirmed the exact head, base, and title;
+initial `UNSTABLE` status reflected newly queued checks only.
+
+## Stack-Wide Closeout Evidence
+
+All seven exact ART-005 manifest rows are `shipped`. The four readers retain no
+exports, the three producers retain only `markdown`, and all seven source
+templates exist. The manifest diff from the scaffold base changes only those
+seven status values.
+
+Final stack-head verification is green:
+
+- Focused gallery module: **500/500**
+- Focused fill-region module: **67/67**
+- Layer 1: **1,448/1,448**
+- Isolated Layer 4: **5,793/5,793**
+- Isolated default suite: **7,427/7,427**
+- Generated release artifact parity: **pass**
+- Docs reference generation/check: **7 deterministic pages; current; no diff**
+
+The structured UAT contract audit is bound to source checkpoint
+`f85ed14c89a5f71bb041e49930647dbc93ec8560`. It verifies 252 rows, exactly 36
+per artifact, with 177 pass, 75 evidence-backed `not_applicable`, zero fail,
+all required typed observation classes, and no tested source/generated drift
+after the checkpoint.
+
+### Final Per-Slice Ledgers
+
+| Slice | Artifact | Physical paths | Authored | Generated | Foundation/control | Reviewable LOC | Ceiling | 800 stop | Verdict |
+|---:|---|---:|---:|---:|---:|---:|---:|---:|---|
+| 1 | slide-deck | 57 | 7 | 28 | 22 foundation/prerequisite | 666 | 670 | 134 below | SIZE-ONLY BLOCK / CONTINUE |
+| 2 | concept-explainer | 33 | 7 | 22 | 4 control | 534 | 535 | 266 below | SIZE-ONLY BLOCK / CONTINUE |
+| 3 | status-report | 33 | 7 | 22 | 4 control | 377 | 560 | 423 below | SIZE-ONLY BLOCK / CONTINUE |
+| 4 | incident-report | 33 | 7 | 22 | 4 control | 420 | 620 | 380 below | SIZE-ONLY BLOCK / CONTINUE |
+| 5 | triage-board | 33 | 7 | 22 | 4 control | 695 | 785 | 105 below | SIZE-ONLY BLOCK / CONTINUE |
+| 6 | feature-flags | 33 | 7 | 22 | 4 control | 779 | 780 | 21 below | SIZE-ONLY BLOCK / CONTINUE |
+| 7 | prompt-tuner | 33 | 7 | 22 | 4 control | 692 | 790 | 108 below | SIZE-ONLY BLOCK / CONTINUE |
+
+The detailed Final Boundary section for each slice records every authored,
+generated, prerequisite, and workflow/control-plane path. A recomputation
+against each exact predecessor found no missing or extra path and no non-size
+blocker.
+
+Shared `SPA-CONTRACT.md`, `brand-kit.css`, `theme-toggle.html`, already-shipped
+templates, autopilot routing, plugin/version manifests, and export vocabulary
+outside the seven declared rows are unchanged. All seven emitted PR packets
+pass read-only validation and their declared changed files exactly match their
+branch diffs; each body includes the tested checkpoint, verification, measured
+size-only finding, known gaps, and rollback guidance.
+
+Live topology read-back confirms exact PR bases, branch heads, and packet-owned
+titles for PRs #444, #446, #447, #448, #452, #454, and #455. At closeout,
+#446-#454 were clean, #455 had one heavy preflight pending with no failed check,
+and #444 reported `DIRTY` only after `main` advanced beyond the original stack
+base. That external restack/remediation condition is retained for Post review
+remediation; no branch was merged and no ART-005 archival path was modified.

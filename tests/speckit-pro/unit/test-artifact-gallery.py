@@ -10054,6 +10054,144 @@ class FeatureFlagsProducerTests(unittest.TestCase):
         self.assertEqual(check_v3(GALLERY_ROOT), [])
 
 
+# ---------------------------------------------------------------------------
+# Group W - ART-005 prompt-tuner producer contract (FR-003, FR-007-FR-014,
+# FR-019-FR-023)
+# ---------------------------------------------------------------------------
+
+PROMPT_TUNER_ID = "prompt-tuner"
+PROMPT_TUNER_SOURCE_FILE = "20-editor-prompt-tuner.html"
+PROMPT_TUNER_LABEL = f"{TEMPLATES_DIR}/{PROMPT_TUNER_ID}.html"
+_PROMPT_ROOT_FIELDS = ("schemaVersion", "artifactId", "template", "slots", "samples", "issues")
+_PROMPT_SAMPLE_FIELDS = ("id", "label", "planClass", "fields", "preview")
+
+
+def check_w1(gallery_root: Path) -> list[str]:
+    """W1 - manifest, accessible live editor, feedback, and memory-only state agree."""
+    matches = [entry for entry in (_entries(gallery_root) or []) if isinstance(entry, dict) and entry.get("id") == PROMPT_TUNER_ID]
+    if len(matches) != 1:
+        return [f"{MANIFEST_FILE}: expected one '{PROMPT_TUNER_ID}' entry, found {len(matches)}"]
+    entry = matches[0]
+    source = entry.get("source")
+    failures: list[str] = []
+    if entry.get("status") != SHIPPED:
+        failures.append(f"{MANIFEST_FILE}: '{PROMPT_TUNER_ID}' must be shipped, found {entry.get('status')!r}")
+    if entry.get("exports") != ["markdown"]:
+        failures.append(f"{MANIFEST_FILE}: '{PROMPT_TUNER_ID}' must export only markdown")
+    if not isinstance(source, dict) or source.get("origin") != UPSTREAM or source.get("file") != PROMPT_TUNER_SOURCE_FILE:
+        failures.append(f"{MANIFEST_FILE}: '{PROMPT_TUNER_ID}' must remain sourced from {PROMPT_TUNER_SOURCE_FILE}")
+
+    artifact = _artifact_path(gallery_root, PROMPT_TUNER_ID)
+    if artifact is None or not artifact.is_file():
+        failures.append(f"{PROMPT_TUNER_LABEL}: missing producer artifact")
+        return failures
+    text = _document_text(artifact)
+    authored = text
+    for block in CANONICAL_FILES:
+        if not _embeds(text, block):
+            failures.append(f"{PROMPT_TUNER_LABEL}: missing canonical {block} block")
+        elif (expected := _canonical_region(gallery_root, block)) is None or _region(text, block) != expected:
+            failures.append(f"{PROMPT_TUNER_LABEL}: canonical {block} bytes drifted")
+        else:
+            authored = authored.replace(_region(text, block), "")
+    header = _attribution_header(text)
+    if header is None or any(not _carried(header, element) for element in ATTRIBUTION_ELEMENTS):
+        failures.append(f"{PROMPT_TUNER_LABEL}: incomplete upstream attribution header")
+    elif _labelled_value(header, UPSTREAM_FILE_LABEL) != PROMPT_TUNER_SOURCE_FILE:
+        failures.append(f"{PROMPT_TUNER_LABEL}: attribution must name {PROMPT_TUNER_SOURCE_FILE}")
+
+    elements = _elements(text)
+    attributes = [dict(element.attributes) for element in elements]
+    by_id = {attrs.get("id"): (element.tag, attrs) for element, attrs in zip(elements, attributes) if attrs.get("id")}
+    required_ids = ("prompt-template", "prompt-slots", "prompt-samples", "preview-status", "reset-prompt", "copy-markdown", "copy-status", "copy-fallback")
+    failures.extend(f"{PROMPT_TUNER_LABEL}: missing named control or region #{item}" for item in required_ids if item not in by_id)
+    slot_controls = [attrs for attrs in attributes if attrs.get("data-slot-field") == "name"]
+    samples = [attrs for attrs in attributes if attrs.get("data-sample-id") is not None]
+    previews = [attrs for attrs in attributes if attrs.get("data-preview") is not None]
+    if len(slot_controls) < 5 or any(not attrs.get("aria-label") for attrs in slot_controls):
+        failures.append(f"{PROMPT_TUNER_LABEL}: expected at least five labeled slot controls")
+    if len(samples) < 3 or len(previews) < 3 or any(not attrs.get("aria-labelledby") for attrs in samples):
+        failures.append(f"{PROMPT_TUNER_LABEL}: expected three named sample and preview regions")
+    for literal in ("No prompt template text.", "No prompt slots.", "No prompt samples.", "Invalid slot; preview keeps the unresolved token.", "Duplicate slot identifier.", 'role="status"', 'aria-live="polite"'):
+        if literal not in text:
+            failures.append(f"{PROMPT_TUNER_LABEL}: missing visible state/status contract {literal!r}")
+    if text.count(">Copy as Markdown<") != 1:
+        failures.append(f"{PROMPT_TUNER_LABEL}: expected exactly one control labeled Copy as Markdown")
+    for token in ("sessionstorage", "indexeddb", "urlsearchparams", "execcommand(", "download="):
+        if token in authored.casefold():
+            failures.append(f"{PROMPT_TUNER_LABEL}: producer uses prohibited state/export token {token!r}")
+    widths = [int(value) for value in re.findall(r"@media[^{}]*max-width\s*:\s*(\d+)px", text, re.IGNORECASE)]
+    if not any(width >= 360 for width in widths) or "prefers-reduced-motion" not in text or ":focus-visible" not in text:
+        failures.append(f"{PROMPT_TUNER_LABEL}: responsive, reduced-motion, or visible-focus handling is missing")
+    return failures
+
+
+def check_w2(gallery_root: Path) -> list[str]:
+    """W2 - one fresh snapshot emits the exact ordered prompt schema."""
+    artifact = _artifact_path(gallery_root, PROMPT_TUNER_ID)
+    if artifact is None or not artifact.is_file():
+        return [f"{PROMPT_TUNER_LABEL}: missing producer artifact"]
+    text = _document_text(artifact)
+    failures: list[str] = []
+    for name, expected in (("ROOT_FIELDS", _PROMPT_ROOT_FIELDS), ("SAMPLE_FIELDS", _PROMPT_SAMPLE_FIELDS), ("ISSUE_FIELDS", _ISSUE_FIELDS)):
+        if _javascript_array(text, name) != expected:
+            failures.append(f"{PROMPT_TUNER_LABEL}: {name} must declare exact deterministic order {expected!r}")
+    required = (
+        "captureSnapshot", "serializePrompt", "normalizeSlot", "renderPreviews", "collectIssues",
+        "# Prompt Tuner Export", "Artifact: prompt-tuner", "Export kind: markdown",
+        "artifact-gallery.prompt-tuner.export.v1", 'JSON.stringify(snapshot, null, 2)',
+        'schemaVersion: "artifact-gallery.prompt-tuner.export.v1"', 'artifactId: "prompt-tuner"',
+        "duplicate_identifier", "invalid_value", "unavailable_value", "rawValue", "normalizedValue",
+        "Required value is empty.", "Value is invalid and was not normalized.",
+        "A normalized value is unavailable.", "Identifier duplicates the first visible occurrence.",
+        "const snapshot = captureSnapshot();", "const markdown = serializePrompt(snapshot);",
+        "firstSlotOccurrence", "firstSampleOccurrence", "distinctSlots", "preview",
+        "const fields = Object.create(null);",
+    )
+    failures.extend(f"{PROMPT_TUNER_LABEL}: missing serializer contract {token!r}" for token in required if token not in text)
+    if "cachedMarkdown" in text or text.count("const markdown = serializePrompt(snapshot);") != 1:
+        failures.append(f"{PROMPT_TUNER_LABEL}: export must serialize one fresh snapshot exactly once per invocation")
+    if 'String.fromCharCode(96).repeat(3)' not in text or 'FENCE + "json"' not in text:
+        failures.append(f"{PROMPT_TUNER_LABEL}: export must contain exactly one explicit JSON fence")
+    return failures
+
+
+def check_w3(gallery_root: Path) -> list[str]:
+    """W3 - clipboard recovery is current-invocation and zero/one-attempt."""
+    artifact = _artifact_path(gallery_root, PROMPT_TUNER_ID)
+    if artifact is None or not artifact.is_file():
+        return [f"{PROMPT_TUNER_LABEL}: missing producer artifact"]
+    text = _document_text(artifact)
+    failures: list[str] = []
+    required = (
+        "let copyAttempt = 0;", "const attempt = ++copyAttempt;", "clearCopyState();",
+        "const clipboard = navigator.clipboard;", 'typeof clipboard.writeText !== "function"',
+        "await clipboard.writeText(markdown);", "showFallback(markdown);",
+        "Copied. Markdown is on the clipboard.",
+        "Copy failed. The Markdown export is available below for manual copy.",
+        "fallback.hidden = false;", "fallback.value = markdown;", "fallback.focus();", "fallback.select();",
+    )
+    failures.extend(f"{PROMPT_TUNER_LABEL}: missing clipboard state hook {token!r}" for token in required if token not in text)
+    if text.count("clipboard.writeText(markdown)") != 1:
+        failures.append(f"{PROMPT_TUNER_LABEL}: current invocation must call writeText at most once")
+    if text.count("attempt !== copyAttempt") < 2:
+        failures.append(f"{PROMPT_TUNER_LABEL}: both superseded settlement directions need currency guards")
+    if text.casefold().count("execcommand(") or "download=" in text.casefold():
+        failures.append(f"{PROMPT_TUNER_LABEL}: hidden copying and download recovery are prohibited")
+    return failures
+
+
+class PromptTunerProducerTests(unittest.TestCase):
+    def test_prompt_tuner_editing_contract_passes_against_the_shipped_gallery(self) -> None:
+        self.assertEqual(check_w1(GALLERY_ROOT), [])
+
+    def test_prompt_tuner_serializer_contract_passes_against_the_shipped_gallery(self) -> None:
+        self.assertEqual(check_w2(GALLERY_ROOT), [])
+
+    def test_prompt_tuner_clipboard_contract_passes_against_the_shipped_gallery(self) -> None:
+        self.assertEqual(check_w3(GALLERY_ROOT), [])
+
+
 class CheckSignatureTests(unittest.TestCase):
     """Enforce the rule the rest of this module depends on.
 
@@ -10122,6 +10260,7 @@ CHECK_GROUPS: tuple[type[unittest.TestCase], ...] = (
     IncidentReportReaderTests,
     TriageBoardProducerTests,
     FeatureFlagsProducerTests,
+    PromptTunerProducerTests,
     KeyboardScrollGuardTests,
     KeyboardScrollGuardFixtureTests,
     ReadOnlyPortContractTests,

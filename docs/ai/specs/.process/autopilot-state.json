@@ -2,10 +2,10 @@
   "workflow_file": "docs/ai/specs/.process/ART-005-workflow.md",
   "spec_id": "ART-005",
   "feature_dir": "specs/art-005-gallery-completion-knowledge-reports-editors",
-  "branch": "art-005-gallery-completion-knowledge-reports-editors-slice-6",
+  "branch": "art-005-gallery-completion-knowledge-reports-editors-slice-7",
   "stage": "implement",
-  "updated_at": "2026-08-19T00:28:56Z",
-  "active_step": "Phase 8: Implement - Slice 7 prompt-tuner T095-T111",
+  "updated_at": "2026-08-19T17:23:36Z",
+  "active_step": null,
   "settings": {
     "consensus_mode": "moderate",
     "gate_failure": "stop",
@@ -406,16 +406,17 @@
       }
     },
     "implement": {
-      "status": "in_progress",
-      "active_group": "Slice 7 prompt-tuner T095-T111",
-      "active_task": "T095",
-      "completed_tasks": 94,
+      "status": "completed",
+      "active_group": null,
+      "active_task": null,
+      "completed_tasks": 119,
       "total_tasks": 119,
-      "active_branch": "art-005-gallery-completion-knowledge-reports-editors-slice-6",
-      "active_slice_base": "e023d51b30b5fd583e3351a377b35615f1bf0981",
+      "active_branch": "art-005-gallery-completion-knowledge-reports-editors-slice-7",
+      "active_slice_base": "2902decdd7f02cb404aeac601e415616073379dd",
       "active_slice_budget": {
         "artifact": "prompt-tuner",
         "authored_paths": 7,
+        "reviewable_loc": 692,
         "reviewable_loc_ceiling": 790,
         "mandatory_stop": 800,
         "verdict": "warn"
@@ -430,7 +431,8 @@
           "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/444",
           "status": "open",
           "source_checkpoint": "660bfe9ce8365afbe6d98af28dd26eccf46a2c9e",
-          "evidence_checkpoint": "373881395f40115dd80953c4b8892dc79346ce22"
+          "evidence_checkpoint": "373881395f40115dd80953c4b8892dc79346ce22",
+          "restacked_head": "7045f5a15b8b6eb71099130b72175bd04370e208"
         },
         {
           "slice": 2,
@@ -441,7 +443,8 @@
           "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/446",
           "status": "open",
           "source_checkpoint": "7c636c361c7593f3a4a5b9f007100af4a4084179",
-          "evidence_checkpoint": "c22b72566adaef0100aed42ceccf6868a64d5051"
+          "evidence_checkpoint": "c22b72566adaef0100aed42ceccf6868a64d5051",
+          "restacked_head": "848eeeaaa6f23a5de5ddb2559efed8c3f234f9e2"
         },
         {
           "slice": 3,
@@ -452,7 +455,8 @@
           "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/447",
           "status": "open",
           "source_checkpoint": "36ef824dee02292e13704473292084173acb2f91",
-          "evidence_checkpoint": "1d46c5aec04c70e4f67523a301e053d9725fd7e7"
+          "evidence_checkpoint": "1d46c5aec04c70e4f67523a301e053d9725fd7e7",
+          "restacked_head": "373d7c3fb73092ff4d749d2050e2f585dae93fb7"
         },
         {
           "slice": 4,
@@ -463,7 +467,8 @@
           "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/448",
           "status": "open",
           "source_checkpoint": "f27b7833e3d3e05772c7ebc44d4640f2b9d129ea",
-          "evidence_checkpoint": "50511c8e0512760e823a75b03f8f67e681a7c6a7"
+          "evidence_checkpoint": "50511c8e0512760e823a75b03f8f67e681a7c6a7",
+          "restacked_head": "4d5e4cfc0241e256c63b1c692b12fe199492cc7b"
         },
         {
           "slice": 5,
@@ -473,8 +478,9 @@
           "number": 452,
           "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/452",
           "status": "open",
-          "source_checkpoint": "69f803d37523499f80120d246400a7fbda30c6fa",
-          "evidence_checkpoint": "a82b76962580c60f16d4accba0773b9ef6cacc01"
+          "source_checkpoint": "34175fa6f2035d56ddb3e2d759a0bf4f4ef44d62",
+          "evidence_checkpoint": "afe1da8d1",
+          "restacked_head": "9250987f3043f43b52b292cc06eca4c3869456b1"
         },
         {
           "slice": 6,
@@ -484,10 +490,53 @@
           "number": 454,
           "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/454",
           "status": "open",
-          "source_checkpoint": "8b1e67587d24b01258df5856e8888588734a22de",
-          "evidence_checkpoint": "f6db36f7d1c66dde3faa17e4e89d0a524668ca46"
+          "source_checkpoint": "eb20daf245a159612146e060488959e5fd46de93",
+          "evidence_checkpoint": "83b13dd52",
+          "restacked_head": "2902decdd7f02cb404aeac601e415616073379dd"
+        },
+        {
+          "slice": 7,
+          "artifact": "prompt-tuner",
+          "branch": "art-005-gallery-completion-knowledge-reports-editors-slice-7",
+          "base": "art-005-gallery-completion-knowledge-reports-editors-slice-6",
+          "number": 455,
+          "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/455",
+          "status": "open",
+          "source_checkpoint": "f85ed14c89a5f71bb041e49930647dbc93ec8560",
+          "evidence_checkpoint": "d22636043",
+          "restacked_head": "7797bc367bce7e483f84284a38d81b5c085182ab"
         }
       ],
+      "stack_closeout": {
+        "status": "completed",
+        "tested_source_checkpoint": "7797bc367bce7e483f84284a38d81b5c085182ab",
+        "focused_gallery": "586/586",
+        "focused_fill_regions": "84/84",
+        "layer_1": "1469/1469",
+        "layer_4": "5995/5995",
+        "default_suite": "7656/7656",
+        "generated_artifacts": "current",
+        "docs_reference": "current",
+        "uat": {
+          "rows": 252,
+          "pass": 177,
+          "not_applicable": 75,
+          "fail": 0,
+          "structured_contract": "passed"
+        },
+        "slice_ledgers": "passed",
+        "packet_validation": "7/7 passed after restack: read-only, write, workflow-contract, title, and release-readiness gates",
+        "topology_validation": "gh-stack #457: 7/7 exact local and remote heads/bases",
+        "g7": "passed: all 119 tasks complete",
+        "external_follow_up": "resolved: restacked onto current origin/main and synced with gh-stack",
+        "gh_stack": {
+          "extension": "github/gh-stack v0.0.8",
+          "stack_number": 457,
+          "submit_command": "gh stack submit --auto --open --remote origin",
+          "pull_requests": [444, 446, 447, 448, 452, 454, 455],
+          "verified": "exact local and remote heads/bases; no layer needs rebase"
+        }
+      },
       "baseline": {
         "layer_1": "1448/1448",
         "layer_4": "5766/5766",
@@ -504,6 +553,26 @@
         "triage-board",
         "feature-flags",
         "prompt-tuner"
+      ]
+    },
+    "post": {
+      "status": "completed",
+      "active_item": null,
+      "completed_items": 14,
+      "total_items": 14,
+      "completed_at": "2026-08-19T17:23:36Z",
+      "packet_validation": "7/7 passed",
+      "live_body_validation": "7/7 exact API body strings match validated packets",
+      "pr_delivery": "existing PRs #444/#446/#447/#448/#452/#454/#455 adopted in place as gh-stack #457",
+      "review_remediation": "five blocking findings fixed; all required checks pass on all seven exact remote code heads",
+      "final_reviewability": {
+        "physical_paths": [57, 33, 33, 33, 33, 33, 36],
+        "component_loc": [666, 534, 377, 420, 695, 779, 692],
+        "all_component_loc_below_800": true
+      },
+      "reports": [
+        "specs/art-005-gallery-completion-knowledge-reports-editors/verify-tasks-report.md",
+        "specs/art-005-gallery-completion-knowledge-reports-editors/retrospective.md"
       ]
     }
   },
@@ -759,71 +828,71 @@
     },
     {
       "step": "Phase 7: Implement - Slice 6 feature-flags T079-T094",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - Slice 7 prompt-tuner T095-T111",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - Stack-wide closeout T112-T119",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Code Review",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Integration Suite",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Self-Review",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Final Reviewability Backstop",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: PR Packet/Body Generation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: PR Creation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Review Remediation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Retrospective",
-      "status": "pending"
+      "status": "completed"
     }
   ]
 }

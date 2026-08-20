@@ -55,12 +55,14 @@ for four artifacts is now an explicit Open Question.
 | Tasks | `/speckit-tasks` | ✅ Complete | 119 ordered tasks; G5 and phantom-completion checks pass |
 | Analyze | `/speckit-analyze` | ✅ Complete | Six findings remediated; G6 passes with 0 CRITICAL/HIGH findings |
 | Confidence Gate | G6.5 | ✅ Complete | Advisory PASS at 0.98 against the 0.90 threshold |
-| Implement | `/speckit-implement` | 🔄 In Progress | Slices 1-6 complete in PRs #444, #446, #447, #448, #452, and #454; Slice 7 T095 active |
-| Post | Post-Implementation | ⏳ Pending | Canonical closeout plus tracked `file://` UAT results |
+| Implement | `/speckit-implement` | ✅ Complete | All 119 tasks complete; restacked gates pass at 586/84 focused, L1 1,469, L4 5,995, and default 7,656 |
+| Post | Post-Implementation | ✅ Complete | Canonical closeout, independent review, gh-stack reconciliation, validated PR bodies, and tracked `file://` UAT results |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
 G6.5 ran in advisory mode and passed at 0.98 against the 0.90 threshold.
+G7 passed with all 119 implementation tasks complete and zero remaining task
+markers.
 
 ### Phase Gates
 
@@ -98,7 +100,7 @@ Before starting any workflow phase, verify alignment with
 ### Worktree and Bootstrap Record
 
 - Required worktree: `.worktrees/art-005-gallery-completion-knowledge-reports-editors`
-- Active branch: `art-005-gallery-completion-knowledge-reports-editors-slice-3`
+- Active branch: `art-005-gallery-completion-knowledge-reports-editors-slice-7`
 - Stack root: `art-005-gallery-completion-knowledge-reports-editors`
 - Base at scaffold: `origin/main` at `1cf86bddecbca620234657f6e59a48991eabbc88`
 - Docs dependency bootstrap completed: `pnpm --dir docs-site install --frozen-lockfile`
@@ -924,9 +926,9 @@ For every behavior:
 | 3 - Slice 2 | Complete | 13 | PR #446 open; source checkpoint `7c636c361`; cumulative UAT 36 pass, 36 evidence-backed N/A, zero fail; final gates green |
 | 4 - Slice 3 | Complete | 13 | PR #447 open; source checkpoint `36ef824de`; cumulative UAT 54 pass, 54 evidence-backed N/A, zero fail; final gates green |
 | 5 - Slice 4 | Complete | 13 | PR #448 open; source checkpoint `f27b7833e`; cumulative UAT 72 pass, 72 evidence-backed N/A, zero fail; final gates green |
-| 6 - Slice 5 | Complete | 16 | PR #452 open; repaired source checkpoint `69f803d37`; cumulative UAT 107 pass, 73 evidence-backed N/A, zero fail; final gates green |
-| 7 - Slice 6 | Complete | 16 | PR #454 open; source checkpoint `8b1e67587`; cumulative UAT 142 pass, 74 evidence-backed N/A, zero fail; final gates green |
-| 8 - Slice 7 | Pending | 0 | prompt-tuner plus incremental integration and closeout |
+| 6 - Slice 5 | Complete | 16 | PR #452 open; repaired source checkpoint `34175fa6f`; cumulative UAT 107 pass, 73 evidence-backed N/A, zero fail; final gates green |
+| 7 - Slice 6 | Complete | 16 | PR #454 open; repaired source checkpoint `eb20daf24`; cumulative UAT 142 pass, 74 evidence-backed N/A, zero fail; final gates green |
+| 8 - Slice 7 | Complete | 17 | PR #455 open; repaired source checkpoint `f85ed14c8`; cumulative UAT 177 pass, 75 evidence-backed N/A, zero fail; final gates green |
 
 ### Slice PR Stack
 
@@ -938,6 +940,14 @@ For every behavior:
 | 4 | `art-005-gallery-completion-knowledge-reports-editors-slice-4` | `art-005-gallery-completion-knowledge-reports-editors-slice-3` | [#448](https://github.com/racecraft-lab/racecraft-plugins-public/pull/448) | Open |
 | 5 | `art-005-gallery-completion-knowledge-reports-editors-slice-5` | `art-005-gallery-completion-knowledge-reports-editors-slice-4` | [#452](https://github.com/racecraft-lab/racecraft-plugins-public/pull/452) | Open |
 | 6 | `art-005-gallery-completion-knowledge-reports-editors-slice-6` | `art-005-gallery-completion-knowledge-reports-editors-slice-5` | [#454](https://github.com/racecraft-lab/racecraft-plugins-public/pull/454) | Open |
+| 7 | `art-005-gallery-completion-knowledge-reports-editors-slice-7` | `art-005-gallery-completion-knowledge-reports-editors-slice-6` | [#455](https://github.com/racecraft-lab/racecraft-plugins-public/pull/455) | Open |
+
+The installed `github/gh-stack` extension v0.0.8 owns the live stack. After
+restacking every branch onto current `origin/main`, `gh stack init` adopted the
+seven existing branches and `gh stack submit --auto --open --remote origin`
+atomically synced their exact heads without replacing any PR. GitHub created
+stack `#457`; `gh stack view --json` and live PR read-back agree on all seven
+heads and bases, with no local layer marked as needing rebase.
 
 ---
 
@@ -947,31 +957,65 @@ Every canonical row must reach Complete or an explicit Skipped disposition.
 
 | Canonical Item | Status | Evidence |
 |---|---|---|
-| Post: Doctor Extension Check | ⏳ Pending | |
-| Post: Verify Implementation | ⏳ Pending | Seven template and manifest contracts |
-| Post: Verify Tasks Phantom Check | ⏳ Pending | |
-| Post: Code Review | ⏳ Pending | |
-| Post: Integration Suite | ⏳ Pending | Layer 1, Layer 4, full suite, generated artifacts |
-| Post: Reviewability Diff Gate | ⏳ Pending | Per-slice measured verdicts |
-| Post: Self-Review | ⏳ Pending | |
-| Post: UAT Runbook Generation | ⏳ Pending | Tracked seven-template file:// runbook |
-| Post: PR Body Generation | ⏳ Pending | Review order, scope, traceability, evidence, gaps, rollback |
-| Post: PR Creation | ⏳ Pending | |
-| Post: Review Remediation | ⏳ Pending | |
-| Post: Retrospective | ⏳ Pending | |
+| Post: Doctor Extension Check | ✅ Complete | Doctor passed all five required template checks; missing optional constitution recorded as a warning |
+| Post: Verify Implementation | ✅ Complete | 24/24 functional requirements and 119/119 completed tasks have implementation evidence |
+| Post: Verify Tasks Phantom Check | ✅ Complete | 119 verified; zero partial, weak, missing, skipped, or phantom completions |
+| Post: Code Review | ✅ Complete | Five blocking findings fixed on Slices 5-7 and merged forward |
+| Post: Integration Suite | ✅ Complete | Restacked head `7797bc367`: gallery 586/586; fill 84/84; L1 1,469; L4 5,995; full 7,656; generated/docs checks current |
+| Post: Reviewability Diff Gate | ✅ Complete | Slices 1-7: 666/670, 534/535, 377/560, 420/620, 695/785, 779/780, 692/790; all below 800 |
+| Post: Self-Review | ✅ Complete | Four-question review below; no edge-case, orphan-requirement, silent-deferral, or tidiness finding |
+| Post: UAT Runbook Generation | ✅ Complete | Plain-English seven-template file:// runbook committed; no registered UAT validator is available, so validator execution is explicitly skipped |
+| Post: Final Reviewability Backstop | ✅ Complete | Current restacked ledgers: 57 paths for Slice 1, 33 for Slices 2-6, and 36 for Slice 7 after the two Post reports and regenerated `SPEC-MOC.md`; component LOC remains 666/534/377/420/695/779/692, all below 800; mechanical test-group renames and seven Slice 7 workflow/control paths add no component LOC |
+| Post: PR Packet/Body Generation | ✅ Complete | Seven packet-owned bodies refreshed; read-only, write, workflow-contract, title, and release-readiness validation passed 7/7 |
+| Post: PR Body Generation | ✅ Complete | All seven live API body strings exactly match their validated packets, including review order, scope, traceability, evidence, gaps, and rollback |
+| Post: PR Creation | ✅ Complete | Existing PRs #444/#446/#447/#448/#452/#454/#455 adopted in place as `gh-stack` stack #457; numbers, titles, bodies, order, and bases preserved |
+| Post: Review Remediation | ✅ Complete | Five blocking code-review findings fixed and merged forward; all required checks pass on all seven exact remote code heads, with only the expected Windows ARM64 advisory job skipped |
+| Post: Retrospective | ✅ Complete | Final report: `specs/art-005-gallery-completion-knowledge-reports-editors/retrospective.md` |
 
-- [ ] All tasks are complete in `tasks.md`.
-- [ ] `python3 tests/speckit-pro/run-all.py --layer 1` passes.
-- [ ] `python3 tests/speckit-pro/run-all.py --layer 4` passes.
-- [ ] `python3 tests/speckit-pro/run-all.py` passes with zero failures.
-- [ ] `python3 scripts/refresh-release-artifacts.py` has regenerated payloads and
+### Self-Review
+
+1. **Tests executed?** `BUILD`, `TYPECHECK`, `LINT`, and
+   `INTEGRATION_TEST` are explicitly `N/A` for this repository. The applicable
+   `UNIT_TEST`/`FULL_VERIFY` commands actually ran on restacked integration head
+   `7797bc367bce7e483f84284a38d81b5c085182ab`: gallery 586/586, fill 84/84,
+   Layer 1 1,469/1,469, Layer 4 5,995/5,995, and the default suite
+   7,656/7,656. Generated release parity and docs reference checks also passed;
+   `.process/uat-results.json` records the 252-row browser closeout.
+2. **Edge cases?** No `[edge-case-gap]` was found. Reader acceptance scenarios
+   and their missing-artifact, manifest, reader-only, responsive, focus, and
+   reduced-motion failure checks are covered by
+   `tests/speckit-pro/unit/test-artifact-gallery.py:7334`, `:7430`, `:7530`,
+   and `:7634`. Editor current-state, deterministic serializer, invalid/empty/
+   duplicate/special-value, and clipboard recovery/race contracts are covered
+   at `:7794`, `:7797`, `:7800`, `:7940`, `:7943`, `:7946`, `:8078`, `:8081`,
+   and `:8084`. The executed `file://` runbook adds offline reload, keyboard,
+   theme, reduced-motion, 360/1280 px, exact fallback, and superseded-attempt
+   observations for every applicable artifact.
+3. **Requirements matched?** No orphan exists in either direction. Every
+   FR-001-FR-024 appears in at least one checked task; all 119 checked tasks are
+   covered by the seven source/evidence checkpoints and the passing focused,
+   integration, generated-parity, and UAT records. The Verify Tasks report
+   independently records 119 verified and zero flagged items.
+4. **Follow-up and tidiness?** No `[TODO]`, `[DEFERRED]`, or
+   `[OUT-OF-SCOPE]` marker appears in `spec.md`, `plan.md`, `tasks.md`, or the
+   implementation commit subjects. The implementation diff contains no debug
+   logging, debugger statements, stray prints, commented-out implementation,
+   or temporary fixture. The only external follow-up is the explicitly tracked
+   gh-stack adoption and the required restack after `main` advanced are both
+   complete; no `[tidiness]` finding remains.
+
+- [x] All tasks are complete in `tasks.md`.
+- [x] `python3 tests/speckit-pro/run-all.py --layer 1` passes.
+- [x] `python3 tests/speckit-pro/run-all.py --layer 4` passes.
+- [x] `python3 tests/speckit-pro/run-all.py` passes with zero failures.
+- [x] `python3 scripts/refresh-release-artifacts.py` has regenerated payloads and
   proofs, followed by consistency verification.
-- [ ] `pnpm --dir docs-site reference:generate` has regenerated test references
+- [x] `pnpm --dir docs-site reference:generate` has regenerated test references
   after test-tree changes, and the generated diff is reviewed.
-- [ ] Manual file:// verification is complete for all seven templates.
-- [ ] The tracked UAT result identifies the tested commit and records every step.
-- [ ] Final PR title passes the repository release-readiness title gate.
-- [ ] No generated artifact was hand-edited.
+- [x] Manual file:// verification is complete for all seven templates.
+- [x] The tracked UAT result identifies the tested commit and records every step.
+- [x] Final PR title passes the repository release-readiness title gate.
+- [x] No generated artifact was hand-edited.
 
 ---
 
@@ -979,15 +1023,28 @@ Every canonical row must reach Complete or an explicit Skipped disposition.
 
 ### What Worked Well
 
-- Pending implementation evidence.
+- Seven independently measured slices kept every authored component below its
+  reviewability ceiling while the generated/control-plane footprint remained
+  explicit.
+- Typed UAT evidence and Playwright MCP fallback produced 252 auditable rows
+  without conflating browser-tool availability with product behavior.
 
 ### Challenges Encountered
 
-- Pending implementation evidence.
+- The initial PR publication used plain `gh` before the installed `gh-stack`
+  requirement was surfaced. The existing PRs were adopted in place as stack
+  #457, so no review history or PR identity was lost.
+- `main` advanced during implementation. Restacking exposed artifact-gallery
+  test-group collisions with ART-004; the final namespace uses groups Q-W and
+  generated artifacts were regenerated from source.
 
 ### Patterns to Reuse
 
-- Pending implementation evidence.
+- Detect and initialize `gh-stack` before creating the first PR whenever the
+  CLI is installed and the repository supports stacked delivery.
+- Re-run the complete per-layer path/LOC ledger after Post reports are added;
+  those reports change physical scope but not authored component LOC.
+- Regenerate generated surfaces after a restack instead of hand-resolving them.
 
 ---
 
@@ -1022,7 +1079,9 @@ specs/art-005-gallery-completion-knowledge-reports-editors/
 ├── data-model.md
 ├── contracts/
 ├── quickstart.md
-└── tasks.md
+├── tasks.md
+├── verify-tasks-report.md
+└── retrospective.md
 ```
 
 ---

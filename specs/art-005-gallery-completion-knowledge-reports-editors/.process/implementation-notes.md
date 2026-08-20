@@ -405,3 +405,111 @@
 **Deviations/Edge cases/Surprises:** Slice 6 first merged updated Slice 5 head `afe1da8d1dfc82fff31b984db0b57e0298934418`, preserving both append-only implementation histories in the sole authored merge conflict. Independent review then found that rollout parsing accepted whitespace, hexadecimal, and exponent text through `Number()`, and that empty required group id/label and flag key/description values appeared only in export issues without visible status feedback. Checkpoint `eb20daf245a159612146e060488959e5fd46de93` now accepts only plain decimal syntax before parsing, marks all required controls with `aria-invalid`, links them to a polite live validation status with `aria-errormessage`, and includes required values in its visible issue count. The compact repair measures 632 non-canonical template lines plus 147 incremental test lines = 779 reviewable LOC, one below the Slice 6 ceiling and 21 below the mandatory stop.
 
 **Verification:** Focused gallery checks passed 497/497, fill checks 65/65, Layer 1 1,448/1,448, Layer 4 5,788/5,788, and the default suite 7,422/7,422; generated release artifacts and docs references are current, and all five feature-flags template copies share SHA-256 `d3f65622f470fe25955dfb7234f24bff6dd8760993d6a1efaf9da3b054761399`. The operator-authorized Playwright MCP fallback rechecked the exact checkpoint over `file://`: whitespace, hexadecimal, and exponent rollout values produced `invalid_value` with null normalized values; `10.5` remained numeric; all four required field types exposed linked invalid state; the live summary reported the issues; horizontal overflow was absent; and no page error occurred.
+
+### T095
+
+**Deviations/Edge cases/Surprises:** None. After PR #454 opened and Slice 6 closeout reached `742f89d5aa0218c1a7ae674d1791b91b6900c4e4`, Slice 7 was created from that exact head as `art-005-gallery-completion-knowledge-reports-editors-slice-7`. The plan and topology contract agree on exactly seven implementation-authored paths and a 790 reviewable-LOC ceiling (235 markup/content, 145 CSS, 255 behavior JS, and 155 incremental tests), leaving 10 LOC below the mandatory 800-LOC stop. `prompt-tuner` remains `planned` with pinned source `20-editor-prompt-tuner.html` and `exports: ["markdown"]` before RED. A fresh connected-browser inventory was empty and `getForUrl` was unavailable, so Playwright MCP is the active browser fallback for Slice 7.
+
+### T096
+
+**Deviations/Edge cases/Surprises:** None. Group R1 pins the prompt-tuner producer identity, canonical bytes, exact export label, named template/slot/sample/preview/reset/fallback surfaces, three named sample previews, empty and invalid visible feedback, persistent status semantics, memory-only behavior, responsive handling, reduced motion, visible focus, and prohibited persistence/export paths.
+
+### T097
+
+**Deviations/Edge cases/Surprises:** None. Group R2 pins the exact root, sample, and issue field arrays; schema version; one fenced JSON block; raw ordered slots; first-occurrence valid field keys; live derived previews; duplicate slot/sample and raw-invalid issue evidence; fresh pretty-printed serialization; and all four stable issue messages.
+
+### T098
+
+**Deviations/Edge cases/Surprises:** None. Group R3 carries the same invocation-ordinal, fresh-capability, zero/one-attempt, exact fallback, normalized-message, sequential-transition, and two-direction stale-settlement contract proven for the other editors.
+
+### T099
+
+**Deviations/Edge cases/Surprises:** None. The fill contract now pins `prompt-variants` and `evaluation-notes`, treats prompt-variants as a repeated list slot, and requires a non-vacuous shipped inventory template with at least two stable variant anchors.
+
+### T100
+
+**Deviations/Edge cases/Surprises:** The gallery runner uses an explicit class registry; the first run correctly exposed that Group R was unreachable, so `PromptTunerProducerTests` was registered before accepting evidence. Formal RED then reported 497/500 with all three R contracts failing on the planned manifest state and missing prompt-tuner producer; fill-region reported 66/67 with only the missing prompt-tuner inventory template failing. Existing Slice 1-6 assertions remained green.
+
+### T101
+
+**Deviations/Edge cases/Surprises:** The derivative preserves the pinned support-reply tuning model with one labeled prompt textarea, five editable ordered slot controls, three named editable sample cards, fifteen labeled field controls, live derived previews, visible empty/invalid/duplicate cues, reset, and memory-only behavior. Three stable sample anchors satisfy the repeated prompt-variants fill contract; the evaluation note states the review modes and no-persistence boundary.
+
+### T102
+
+**Deviations/Edge cases/Surprises:** One fresh DOM snapshot emits the exact root and sample field order inside a single pretty-printed JSON fence. Raw slots remain ordered; only each valid slot's first occurrence becomes a field key; duplicates remain in `slots` and receive deterministic issues; invalid raw slot text receives ordered invalid/unavailable evidence with `null` normalization. Previews derive from the same template and first-occurrence fields, while empty, multiline, Unicode, and special-character strings flow unchanged through JSON serialization.
+
+### T103
+
+**Deviations/Edge cases/Surprises:** The copy handler clears stale state, increments an invocation ordinal, reads clipboard capability afresh, attempts callable `writeText` once, makes zero attempts for absent/non-callable capability, and applies exact success or focused fallback state only for the current settlement. Reset invalidates pending attempts. Playwright fallback sanity over direct `file://` confirmed live preview changes, ordered schema keys, one JSON fence, exact fallback focus/value, reset restoration, and zero page errors before checkpointing.
+
+### T104
+
+**Deviations/Edge cases/Surprises:** None. The manifest diff changes only `prompt-tuner.status` from `planned` to `shipped`; pinned source `20-editor-prompt-tuner.html`, `exports: ["markdown"]`, and every other row remain unchanged.
+
+### T105
+
+**Deviations/Edge cases/Surprises:** Slice 7 R1-R3 return no failures and fill-region checks pass 67/67. The complete gallery reports 496/500 only because F1-F4 require T108 regeneration of the Claude/Codex payload copies; no source producer assertion is failing.
+
+### T106
+
+**Deviations/Edge cases/Surprises:** No further refactor was warranted. The editor already separates slot normalization, first-occurrence field construction, derived previews, ordered issue collection, immutable snapshot capture, serialization, feedback, and clipboard recovery into flat named functions; browser sanity and `git diff --check` pass.
+
+### T107
+
+**Deviations/Edge cases/Surprises:** The explicit seven-path measurement reports 1,011 physical template lines, including 458 byte-identical canonical marker-block lines, leaving 553 non-canonical template lines. With 142 incremental focused-test lines, final reviewable implementation is 695 LOC: 95 below the 790 ceiling and 105 below the mandatory 800 stop. One production template and exactly seven declared authored paths remain in scope, so regeneration may proceed.
+
+### T108
+
+**Deviations/Edge cases/Surprises:** Authoritative release regeneration and docs `reference:generate` completed. Focused gallery and fill checks pass 500/500 and 67/67, Layer 1 passes 1,448/1,448, isolated Layer 4 passes 5,793/5,793, and the isolated default suite passes 7,427/7,427. With ignored PR-packet files moved outside scanner scope, spec-index mutation dry-run reports `no_op`, 10 rendered maps, and zero stale maps; the read-only check reports every in-scope map current. The generated-artifact check intentionally saw the regenerated outputs as uncommitted drift; this task's source-checkpoint commit seals those bytes, after which the clean-worktree check is rerun before T109 browser UAT.
+
+### T109
+
+**Deviations/Edge cases/Surprises:** A fresh connected-browser attempt returned an empty inventory and `getForUrl` was unavailable, activating the operator-authorized Playwright MCP fallback. The exact Slice 7 source checkpoint `4b9bb0f256507a43551a725bd8502283e2e5e1cb` now binds 252 freshly re-executed manual rows, exactly 36 per artifact: 177 pass, 75 evidence-backed `not_applicable`, and zero fail. Prompt-tuner passed all 36 deep probes with zero page errors, covering slot/sample order, first-occurrence field keys, duplicate slots/sample IDs, raw invalid/unavailable slots, empty template/slots/samples/fields/previews, one fenced pretty JSON value, byte-equal round-trip, deterministic issues, multiline Unicode and special characters, freshness, every clipboard capability, failure-success-failure, both stale-settlement directions, reset invalidation, 33-stop keyboard parity, focus, theme, reduced motion, offline/session-only reload, and 360/1280 layouts. Triage-board also passed a fresh 36/36 deep run including its repaired real contenteditable line break and exact 935-byte seed Markdown. Initial probe mismatches were harness assumptions about computed duration formatting, finished animation objects, hidden text selection, repeated labels, representative seed issues, and manifest role inference; corrected targeted assertions passed without product changes. No browser harness was committed.
+
+### T110
+
+**Deviations/Edge cases/Surprises:** A direct diff from source checkpoint `4b9bb0f256507a43551a725bd8502283e2e5e1cb` proved the prompt source, manifest, focused tests, Claude/Codex payload copies, and generated manifest bytes unchanged after cumulative UAT. Final focused checks pass 500/500 and 67/67; the isolated default suite passes 7,427/7,427 (L1 1,448, L4 5,793, L5 186); generated release parity passes; packet-excluded spec-index dry-run reports `no_op`, 10 rendered maps, zero stale maps; and read-only spec-index reports every map current. The final diff against exact Slice 6 closeout `742f89d5aa0218c1a7ae674d1791b91b6900c4e4` contains 33 paths: seven implementation-authored, 22 generated, and four workflow/control-plane. Reviewable implementation remains 695 LOC, so the only total-file finding is **SIZE-ONLY BLOCK / CONTINUE** with no correctness or non-size blocker.
+
+### T111
+
+**Deviations/Edge cases/Surprises:** Refreshed parent PR #454 was open, clean, fully green, and at exact Slice 7 base `742f89d5aa0218c1a7ae674d1791b91b6900c4e4`. Packet `art-005-slice-7-prompt-tuner` passed dry-run/apply emission, read-only validation with `pr_blocked=false`, persisted current-fingerprint validation, workflow-contract validation, exact-title release readiness, and release-note policy. Exact emission head `86de32f32c5a0e7a28f0bbfed574f301d1fc683d` was pushed, and PR [#455](https://github.com/racecraft-lab/racecraft-plugins-public/pull/455) opened against the Slice 6 branch with title `feat(artifact-gallery): Add prompt tuner`. GitHub confirmed the exact head/base/title; `UNSTABLE` reflected newly queued checks only.
+
+### T112
+
+**Deviations/Edge cases/Surprises:** None. All seven exact manifest rows are `shipped`; `slide-deck`, `concept-explainer`, `status-report`, and `incident-report` retain `exports: []`; `triage-board`, `feature-flags`, and `prompt-tuner` retain `exports: ["markdown"]`; and every declared source template exists.
+
+### T113
+
+**Deviations/Edge cases/Surprises:** Final isolated stack-head verification passed: focused gallery 500/500, focused fill regions 67/67, Layer 1 1,448/1,448, Layer 4 5,793/5,793, and the default suite 7,427/7,427 with zero failures.
+
+### T114
+
+**Deviations/Edge cases/Surprises:** `refresh-release-artifacts.py --check` reports exact source/dist/installed-cache/proof parity. Docs `reference:generate` regenerated seven pages deterministically, `reference:check` reports current, and `docs-site/src/content/docs/reference/tests.md` stayed byte-identical.
+
+### T115
+
+**Deviations/Edge cases/Surprises:** The contract audit found 25 carried/current rows whose prose evidence was complete but whose typed observation object was missing. The existing browser observations were folded into the JSON as accessibility, responsive, boundary, or data-integrity objects without changing any verdict. The repaired cumulative record passes the contract audit at exact source checkpoint `4b9bb0f256507a43551a725bd8502283e2e5e1cb`: 252 rows, exactly 36 per artifact, 177 pass, 75 structured `not_applicable`, zero fail, and no tested-surface drift after the checkpoint.
+
+### T116
+
+**Deviations/Edge cases/Surprises:** All seven independent ledgers pass. Slice 1 contains its one-time 57-path scaffold/foundation boundary (7 authored, 28 generated, 22 prerequisite/foundation) and 666 reviewable LOC against ceiling 670. Slices 2-7 each contain exactly 33 paths (7 authored, 22 generated, 4 workflow/control-plane) with reviewable LOC 534/377/420/681/777/695 against ceilings 535/560/620/785/780/790. Every slice remains below the mandatory 800 stop; every physical-file block is generated/control-plane or prerequisite-only, so all seven retain the recorded **SIZE-ONLY BLOCK / CONTINUE** disposition with no non-size blocker.
+
+### T117
+
+**Deviations/Edge cases/Surprises:** No shared gallery contract, brand kit, theme toggle, previously shipped template, autopilot routing, plugin/version manifest, or undeclared export vocabulary changed. The source manifest diff is exactly seven `planned` to `shipped` status flips; all other row fields are byte-identical.
+
+### T118
+
+**Deviations/Edge cases/Surprises:** All seven current PR packets pass `validate-pr-packet-read-only` with `pr_blocked=false`. Packet changed-file ledgers exactly equal their branch diffs (57 paths for Slice 1; 33 for Slices 2-7), and every packet/body retains its exact base/head/title, source checkpoint, eight verification records, size-only finding, known gaps, rollback guidance, and tracked UAT source.
+
+### T119
+
+**Deviations/Edge cases/Surprises:** Live GitHub read-back confirms all seven PRs are open with the exact contracted bases, heads, and packet-owned titles. PRs #446, #447, #448, #452, and #454 are clean with no failed or pending checks. PR #455 has no failed checks and one heavy preflight still running. PR #444 has no failed or pending checks but reports `DIRTY` after `main` advanced beyond the stack's original base; this external restack/remediation item is carried explicitly into Post and does not alter the validated seven-slice topology. No archival path was created or modified. Runner G7 passes with all 119 tasks complete and zero remaining task markers.
+
+### Post implementation code-review remediation (Slice 7 and stack)
+
+**Deviations/Edge cases/Surprises:** Slice 7 merged updated Slice 6 head `83b13dd52`, preserving the append-only history in the sole authored merge conflict. Independent review's five findings were fixed on their owning slices and merged forward: filtered triage reorder, backtick-safe ticket identifiers, strict feature-flag rollout syntax, visible required-field status feedback, and prompt-tuner special-slot preservation. Prompt fields now use a null-prototype map, so valid slot `__proto__` remains an own exported field and resolves in previews instead of disappearing through the legacy prototype setter.
+
+**Verification:** Exact source checkpoint `f85ed14c89a5f71bb041e49930647dbc93ec8560` passed focused gallery 500/500, fill regions 67/67, Layer 1 1,448/1,448, Layer 4 5,793/5,793, the default suite 7,427/7,427, generated release parity, and docs reference check. Playwright MCP passed triage-board, feature-flags, and prompt-tuner at 36/36 each plus all five targeted review regressions; the four reader templates were byte-identical to the prior cumulative checkpoint. Evidence commit `d22636043` binds 252 rows to the repaired source: 177 pass, 75 structured `not_applicable`, zero fail, and exactly 36 rows per artifact.
+
+**Current ledgers:** Slice 5 is 695/785 reviewable LOC, Slice 6 is 779/780, and Slice 7 is 692/790; all remain below the mandatory 800 stop. The unchanged Slices 1-4 remain 666/670, 534/535, 377/560, and 420/620.
