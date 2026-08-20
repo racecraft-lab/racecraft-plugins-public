@@ -636,14 +636,16 @@ def synthetic_registry(frozen_at: str = FROZEN_AT) -> dict[str, object]:
     })
 
 
-class RegistryIdentityAndClosureTests(unittest.TestCase):
-    """FR-001, FR-002, FR-030a: one preimage rule, three controls, one identity."""
-
+class _ControlContractFixture:
     def setUp(self) -> None:
         self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
         self.module = claude_policy_controls
         self.error = self.module.ControlContractError
         self.registry = synthetic_registry()
+
+
+class RegistryIdentityAndClosureTests(_ControlContractFixture, unittest.TestCase):
+    """FR-001, FR-002, FR-030a: one preimage rule, three controls, one identity."""
 
     def controls_by_kind(self, kind: str) -> dict[str, object]:
         return next(c for c in self.registry["controls"] if c["control_kind"] == kind)
@@ -4697,14 +4699,8 @@ def parallel_unit(*, parent_wall_time_ms: int | None = 50000,
     return rows
 
 
-class DemonstrationStateTests(unittest.TestCase):
+class DemonstrationStateTests(_ControlContractFixture, unittest.TestCase):
     """FR-031a: 'real' is decidable from evidence, or it is not demonstrated."""
-
-    def setUp(self) -> None:
-        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
-        self.module = claude_policy_controls
-        self.error = self.module.ControlContractError
-        self.registry = synthetic_registry()
 
     def record_for(self, kind: str, **overrides: object) -> dict[str, object]:
         control = control_of_kind(self.registry, kind)
@@ -5272,19 +5268,13 @@ class SmokeRecordCacheIsolationReadingTests(_UnpinnedControlFixture, unittest.Te
             self.read([isolation_pair("other-arm"), isolation_pair("other-arm")])
 
 
-class ReaderTotalityTests(unittest.TestCase):
+class ReaderTotalityTests(_ControlContractFixture, unittest.TestCase):
     """Fail-closed means this module's own error, never a bare builtin one.
 
     Callers route every entrypoint through ``except ControlContractError``. A
     reader raising ``KeyError`` or ``TypeError`` escapes that handler, so a
     malformed record surfaces as a traceback instead of a contract refusal.
     """
-
-    def setUp(self) -> None:
-        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
-        self.module = claude_policy_controls
-        self.error = self.module.ControlContractError
-        self.registry = synthetic_registry()
 
     def test_an_attempt_missing_a_counter_is_a_contract_error(self) -> None:
         control = control_of_kind(self.registry, "adaptive")
