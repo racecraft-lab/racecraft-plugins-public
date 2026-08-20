@@ -3,8 +3,8 @@
 Feature: ART-005 gallery completion knowledge reports/editors
 Artifacts: `slide-deck`, `concept-explainer`, `status-report`, `incident-report`, `triage-board`, `feature-flags`, `prompt-tuner`
 Driver: manual browser review
-Results path: `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.md`
-JSON path: `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json`
+Results path: `docs/ai/specs/.process/ART-005-uat-results.md`
+JSON path: `docs/ai/specs/.process/ART-005-uat-results.json`
 
 Use this runbook to confirm that the seven new gallery artifacts work as local
 HTML files, present complete sample content, and keep editor exports safe when

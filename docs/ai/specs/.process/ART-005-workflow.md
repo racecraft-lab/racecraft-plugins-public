@@ -922,25 +922,25 @@ For every behavior:
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
 | 1 - Shared baseline and contracts | Complete | 10 | Pinned digests match; G4 passes; L1 1448/1448, L4 5766/5766, full 7400/7400 |
-| 2 - Slice 1 | Complete | 13 | PR #444 open; source checkpoint `660bfe9ce`; 18 pass, 18 evidence-backed N/A, zero fail; final gates green |
-| 3 - Slice 2 | Complete | 13 | PR #446 open; source checkpoint `7c636c361`; cumulative UAT 36 pass, 36 evidence-backed N/A, zero fail; final gates green |
-| 4 - Slice 3 | Complete | 13 | PR #447 open; source checkpoint `36ef824de`; cumulative UAT 54 pass, 54 evidence-backed N/A, zero fail; final gates green |
-| 5 - Slice 4 | Complete | 13 | PR #448 open; source checkpoint `f27b7833e`; cumulative UAT 72 pass, 72 evidence-backed N/A, zero fail; final gates green |
-| 6 - Slice 5 | Complete | 16 | PR #452 open; repaired source checkpoint `34175fa6f`; cumulative UAT 107 pass, 73 evidence-backed N/A, zero fail; final gates green |
-| 7 - Slice 6 | Complete | 16 | PR #454 open; repaired source checkpoint `eb20daf24`; cumulative UAT 142 pass, 74 evidence-backed N/A, zero fail; final gates green |
-| 8 - Slice 7 | Complete | 17 | PR #455 open; repaired source checkpoint `f85ed14c8`; cumulative UAT 177 pass, 75 evidence-backed N/A, zero fail; final gates green |
+| 2 - Slice 1 | Complete | 13 | PR #444 merged; source checkpoint `660bfe9ce`; 18 pass, 18 evidence-backed N/A, zero fail; final gates green |
+| 3 - Slice 2 | Complete | 13 | PR #446 merged; source checkpoint `7c636c361`; cumulative UAT 36 pass, 36 evidence-backed N/A, zero fail; final gates green |
+| 4 - Slice 3 | Complete | 13 | PR #447 merged; source checkpoint `36ef824de`; cumulative UAT 54 pass, 54 evidence-backed N/A, zero fail; final gates green |
+| 5 - Slice 4 | Complete | 13 | PR #448 merged; source checkpoint `f27b7833e`; cumulative UAT 72 pass, 72 evidence-backed N/A, zero fail; final gates green |
+| 6 - Slice 5 | Complete | 16 | PR #452 merged; repaired source checkpoint `34175fa6f`; cumulative UAT 107 pass, 73 evidence-backed N/A, zero fail; final gates green |
+| 7 - Slice 6 | Complete | 16 | PR #454 merged; repaired source checkpoint `eb20daf24`; cumulative UAT 142 pass, 74 evidence-backed N/A, zero fail; final gates green |
+| 8 - Slice 7 | Complete | 17 | PR #455 merged; repaired source checkpoint `f85ed14c8`; cumulative UAT 177 pass, 75 evidence-backed N/A, zero fail; final gates green |
 
 ### Slice PR Stack
 
 | Slice | Branch | Base | Pull request | Status |
 |---:|---|---|---|---|
-| 1 | `art-005-gallery-completion-knowledge-reports-editors` | `main` | [#444](https://github.com/racecraft-lab/racecraft-plugins-public/pull/444) | Open |
-| 2 | `art-005-gallery-completion-knowledge-reports-editors-slice-2` | `art-005-gallery-completion-knowledge-reports-editors` | [#446](https://github.com/racecraft-lab/racecraft-plugins-public/pull/446) | Open |
-| 3 | `art-005-gallery-completion-knowledge-reports-editors-slice-3` | `art-005-gallery-completion-knowledge-reports-editors-slice-2` | [#447](https://github.com/racecraft-lab/racecraft-plugins-public/pull/447) | Open |
-| 4 | `art-005-gallery-completion-knowledge-reports-editors-slice-4` | `art-005-gallery-completion-knowledge-reports-editors-slice-3` | [#448](https://github.com/racecraft-lab/racecraft-plugins-public/pull/448) | Open |
-| 5 | `art-005-gallery-completion-knowledge-reports-editors-slice-5` | `art-005-gallery-completion-knowledge-reports-editors-slice-4` | [#452](https://github.com/racecraft-lab/racecraft-plugins-public/pull/452) | Open |
-| 6 | `art-005-gallery-completion-knowledge-reports-editors-slice-6` | `art-005-gallery-completion-knowledge-reports-editors-slice-5` | [#454](https://github.com/racecraft-lab/racecraft-plugins-public/pull/454) | Open |
-| 7 | `art-005-gallery-completion-knowledge-reports-editors-slice-7` | `art-005-gallery-completion-knowledge-reports-editors-slice-6` | [#455](https://github.com/racecraft-lab/racecraft-plugins-public/pull/455) | Open |
+| 1 | `art-005-gallery-completion-knowledge-reports-editors` | `main` | [#444](https://github.com/racecraft-lab/racecraft-plugins-public/pull/444) | Merged |
+| 2 | `art-005-gallery-completion-knowledge-reports-editors-slice-2` | `art-005-gallery-completion-knowledge-reports-editors` | [#446](https://github.com/racecraft-lab/racecraft-plugins-public/pull/446) | Merged |
+| 3 | `art-005-gallery-completion-knowledge-reports-editors-slice-3` | `art-005-gallery-completion-knowledge-reports-editors-slice-2` | [#447](https://github.com/racecraft-lab/racecraft-plugins-public/pull/447) | Merged |
+| 4 | `art-005-gallery-completion-knowledge-reports-editors-slice-4` | `art-005-gallery-completion-knowledge-reports-editors-slice-3` | [#448](https://github.com/racecraft-lab/racecraft-plugins-public/pull/448) | Merged |
+| 5 | `art-005-gallery-completion-knowledge-reports-editors-slice-5` | `art-005-gallery-completion-knowledge-reports-editors-slice-4` | [#452](https://github.com/racecraft-lab/racecraft-plugins-public/pull/452) | Merged |
+| 6 | `art-005-gallery-completion-knowledge-reports-editors-slice-6` | `art-005-gallery-completion-knowledge-reports-editors-slice-5` | [#454](https://github.com/racecraft-lab/racecraft-plugins-public/pull/454) | Merged |
+| 7 | `art-005-gallery-completion-knowledge-reports-editors-slice-7` | `art-005-gallery-completion-knowledge-reports-editors-slice-6` | [#455](https://github.com/racecraft-lab/racecraft-plugins-public/pull/455) | Merged |
 
 The installed `github/gh-stack` extension v0.0.8 owns the live stack. After
 restacking every branch onto current `origin/main`, `gh stack init` adopted the
@@ -948,6 +948,10 @@ seven existing branches and `gh stack submit --auto --open --remote origin`
 atomically synced their exact heads without replacing any PR. GitHub created
 stack `#457`; `gh stack view --json` and live PR read-back agree on all seven
 heads and bases, with no local layer marked as needing rebase.
+
+All seven pull requests merged into `main` on 2026-08-20, ending with #455 at
+merge commit `c133211f630c3c2214d05ed22f5185e0e3202424`. That final merge is the
+recovery boundary for the complete cumulative spec and shipped source tree.
 
 ---
 
@@ -970,7 +974,7 @@ Every canonical row must reach Complete or an explicit Skipped disposition.
 | Post: PR Body Generation | ✅ Complete | All seven live API body strings exactly match their validated packets, including review order, scope, traceability, evidence, gaps, and rollback |
 | Post: PR Creation | ✅ Complete | Existing PRs #444/#446/#447/#448/#452/#454/#455 adopted in place as `gh-stack` stack #457; numbers, titles, bodies, order, and bases preserved |
 | Post: Review Remediation | ✅ Complete | Five blocking code-review findings fixed and merged forward; all required checks pass on all seven exact remote code heads, with only the expected Windows ARM64 advisory job skipped |
-| Post: Retrospective | ✅ Complete | Final report: `specs/art-005-gallery-completion-knowledge-reports-editors/retrospective.md` |
+| Post: Retrospective | ✅ Complete | Final report preserved at `docs/ai/specs/.process/ART-005-retrospective.md` |
 
 ### Self-Review
 
@@ -980,7 +984,8 @@ Every canonical row must reach Complete or an explicit Skipped disposition.
    `7797bc367bce7e483f84284a38d81b5c085182ab`: gallery 586/586, fill 84/84,
    Layer 1 1,469/1,469, Layer 4 5,995/5,995, and the default suite
    7,656/7,656. Generated release parity and docs reference checks also passed;
-   `.process/uat-results.json` records the 252-row browser closeout.
+   `docs/ai/specs/.process/ART-005-uat-results.json` records the 252-row browser
+   closeout.
 2. **Edge cases?** No `[edge-case-gap]` was found. Reader acceptance scenarios
    and their missing-artifact, manifest, reader-only, responsive, focus, and
    reduced-motion failure checks are covered by
@@ -1069,20 +1074,16 @@ tests/speckit-pro/unit/
 
 docs/ai/specs/.process/
 ├── ART-005-design-concept.md
-└── ART-005-workflow.md
-
-specs/art-005-gallery-completion-knowledge-reports-editors/
-├── SPEC-MOC.md
-├── spec.md
-├── plan.md
-├── research.md
-├── data-model.md
-├── contracts/
-├── quickstart.md
-├── tasks.md
-├── verify-tasks-report.md
-└── retrospective.md
+├── ART-005-workflow.md
+├── ART-005-uat-runbook.md
+├── ART-005-uat-results.md
+├── ART-005-uat-results.json
+├── ART-005-verify-tasks-report.md
+└── ART-005-retrospective.md
 ```
+
+The completed feature-local planning package was removed during post-merge
+archive cleanup and remains recoverable from merge commit `c133211f630c3c2214d05ed22f5185e0e3202424`.
 
 ---
 

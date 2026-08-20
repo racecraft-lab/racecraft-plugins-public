@@ -2361,3 +2361,59 @@ required because no `speckit-pro/` source or payload input changes.
 
 ART-005 remains Ready and untouched. BRAND-001 remains an active incomplete
 planning package and is not an archive candidate.
+
+---
+
+## ART-005 Gallery Completion: Knowledge, Reports and Editors
+
+[Source: specs/art-005-gallery-completion-knowledge-reports-editors] — archived
+2026-08-20 after the seven-PR stack merged. Revision reason: merged-spec
+archival into project memory.
+
+### Dependencies and Topology
+
+ART-001 was the sole dependency. The user ratified seven sequential stacked
+slices, one template per slice, under one ART-005 spec and workflow:
+
+1. `slide-deck` — 666 reviewable LOC.
+2. `concept-explainer` — 534.
+3. `status-report` — 377.
+4. `incident-report` — 420.
+5. `triage-board` — 695.
+6. `feature-flags` — 779.
+7. `prompt-tuner` — 692.
+
+Every slice stayed below the mandatory 800 stop. The existing pull requests
+were adopted as `gh-stack` stack #457, restacked in order and merged without
+replacing their identities or review history.
+
+### Shipped Surfaces
+
+| Surface | Files |
+|---|---|
+| Read-only ports | `slide-deck.html`, `concept-explainer.html`, `status-report.html`, `incident-report.html` |
+| Editor ports | `triage-board.html`, `feature-flags.html`, `prompt-tuner.html` |
+| Routing | `speckit-pro/artifact-gallery/manifest.json` |
+| Durable contracts | `tests/speckit-pro/unit/test-artifact-gallery.py`, `test-artifact-fill-regions.py` |
+| Generated consumers | `dist/**`, installed-cache mirrors/proofs and docs references |
+
+The implementation remains standalone HTML/CSS/JavaScript plus existing
+Python-standard-library repository tooling. No new runtime dependency, build,
+typecheck, lint, manifest-version or export-vocabulary change was introduced.
+
+### Verification and Cleanup
+
+Focused gallery and fill-region suites, Layer 1, Layer 4, the full repository
+suite, release artifact parity and docs reference checks passed before merge.
+The direct `file://` record covers 252 rows with zero failures and is preserved
+at `docs/ai/specs/.process/ART-005-uat-results.md` and its normalized JSON peer.
+
+Post-merge cleanup preserves the workflow, design concept, UAT carriers,
+retrospective and verify-tasks report under `docs/ai/specs/.process/`; records
+the merged state in `autopilot-state.json`; removes only the completed ART-005
+active folder; and regenerates the roadmap index. No release-payload refresh is
+required because no `speckit-pro/` source or payload input changes.
+
+BRAND-001 remains an incomplete active planning package and is not an archive
+candidate. ART-013 remains pending because other roadmap dependencies are still
+incomplete.

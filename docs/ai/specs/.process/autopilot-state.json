@@ -3,9 +3,11 @@
   "spec_id": "ART-005",
   "feature_dir": "specs/art-005-gallery-completion-knowledge-reports-editors",
   "branch": "art-005-gallery-completion-knowledge-reports-editors-slice-7",
+  "status": "completed_archived",
   "stage": "implement",
-  "updated_at": "2026-08-19T17:23:36Z",
+  "updated_at": "2026-08-20T19:51:26Z",
   "active_step": null,
+  "prior_run_note": "completed_archived",
   "settings": {
     "consensus_mode": "moderate",
     "gate_failure": "stop",
@@ -21,22 +23,62 @@
     "from_phase": null
   },
   "archive_sweep": {
-    "status": "no_candidates",
+    "status": "completed",
     "execution_path": "extension_contract",
     "invocation_available": true,
     "prerequisite_available": true,
     "prerequisite_mode": "codex_native_worktree_binding",
     "archive_extension_installed": true,
-    "cleanup_mode": "feature_branch_sweep",
-    "eligible_previous_specs": [],
-    "excluded_current_spec": "specs/art-005-gallery-completion-knowledge-reports-editors",
+    "cleanup_mode": "apply",
+    "cleanup_applied": true,
+    "eligible_previous_specs": [
+      {
+        "spec": "specs/art-005-gallery-completion-knowledge-reports-editors",
+        "pull_requests": [444, 446, 447, 448, 452, 454, 455],
+        "merge_commit": "c133211f630c3c2214d05ed22f5185e0e3202424",
+        "disposition": "archived"
+      }
+    ],
+    "excluded_current_spec": null,
     "retained_non_candidates": [
       {
         "path": "specs/brand-001-racecraft-identity-system",
         "reason": "still-pending scaffold; not proven merged"
       }
     ],
-    "safeToApplyCleanup": false
+    "safeToApplyCleanup": true
+  },
+  "archive": {
+    "archived_at": "2026-08-20",
+    "cleanup_applied": true,
+    "cleanup_branch": "codex/art-005-post-merge-hygiene",
+    "cleanup_gate_7_note": "Gate 7 names main as the normal cleanup branch. This archive ran on codex/art-005-post-merge-hygiene, cut from current main at 8aed3ac4, because repository changes land through pull requests. The branch contains only ART-005 post-merge hygiene.",
+    "spec_id": "ART-005",
+    "pull_requests": [444, 446, 447, 448, 452, 454, 455],
+    "final_merge_commit": "c133211f630c3c2214d05ed22f5185e0e3202424",
+    "final_merged_at": "2026-08-20T14:02:04Z",
+    "base_branch": "main",
+    "source_spec_path_removed": "specs/art-005-gallery-completion-knowledge-reports-editors",
+    "reviewability": {
+      "operator_topology": "seven sequential stacked slices, one template per slice",
+      "component_loc": [666, 534, 377, 420, 695, 779, 692],
+      "block_threshold": 800,
+      "all_slices_below_block_threshold": true,
+      "split_decision": "operator-approved seven-slice topology preserved through merge"
+    },
+    "process_evidence_preserved": [
+      "docs/ai/specs/.process/ART-005-design-concept.md",
+      "docs/ai/specs/.process/ART-005-workflow.md",
+      "docs/ai/specs/.process/ART-005-uat-runbook.md",
+      "docs/ai/specs/.process/ART-005-uat-results.md",
+      "docs/ai/specs/.process/ART-005-uat-results.json",
+      "docs/ai/specs/.process/ART-005-retrospective.md",
+      "docs/ai/specs/.process/ART-005-verify-tasks-report.md"
+    ],
+    "evidence_relocation_note": "The runbook, narrative and normalized UAT results, retrospective, and verify-tasks report were moved from the active spec folder to durable ART-005 process paths. Planning documents, contracts, checklists, and implementation notes remain recoverable at the final cumulative merge commit.",
+    "report": ".specify/memory/archive-reports/2026-08-20-art-005-post-merge-hygiene.md",
+    "acceptance_note": "Direct file:// UAT recorded 252 rows: 177 pass, 75 evidence-backed not applicable, and zero fail. The connected browser was unavailable and the operator-authorized Playwright MCP fallback supplied browser interaction in Chrome 151.",
+    "open_followups": []
   },
   "prerequisites": {
     "all_pass": true,
@@ -151,9 +193,9 @@
           "unresolved_items": 0,
           "consensus": "skipped: zero unresolved items",
           "active_evidence": [
-            ".process/uat-runbook.md",
-            ".process/uat-results.md",
-            ".process/uat-results.json"
+            "docs/ai/specs/.process/ART-005-uat-runbook.md",
+            "docs/ai/specs/.process/ART-005-uat-results.md",
+            "docs/ai/specs/.process/ART-005-uat-results.json"
           ],
           "reviewability_block_route": "stop for explicit operator topology decision"
         }
@@ -429,7 +471,10 @@
           "base": "main",
           "number": 444,
           "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/444",
-          "status": "open",
+          "status": "merged",
+          "merged_head": "cbb3f2f60cba00b58f08129436519dfbccff32b1",
+          "merge_commit": "75651a99e6efe0cb8d37608eda14e86674b97920",
+          "merged_at": "2026-08-20T01:40:03Z",
           "source_checkpoint": "660bfe9ce8365afbe6d98af28dd26eccf46a2c9e",
           "evidence_checkpoint": "373881395f40115dd80953c4b8892dc79346ce22",
           "restacked_head": "7045f5a15b8b6eb71099130b72175bd04370e208"
@@ -441,7 +486,10 @@
           "base": "art-005-gallery-completion-knowledge-reports-editors",
           "number": 446,
           "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/446",
-          "status": "open",
+          "status": "merged",
+          "merged_head": "a03d5fdb670cb3908033bb00d7cd6471123e2875",
+          "merge_commit": "7ff4c94cbdadf1bef8136336410015c59d83dd1a",
+          "merged_at": "2026-08-20T02:38:39Z",
           "source_checkpoint": "7c636c361c7593f3a4a5b9f007100af4a4084179",
           "evidence_checkpoint": "c22b72566adaef0100aed42ceccf6868a64d5051",
           "restacked_head": "848eeeaaa6f23a5de5ddb2559efed8c3f234f9e2"
@@ -453,7 +501,10 @@
           "base": "art-005-gallery-completion-knowledge-reports-editors-slice-2",
           "number": 447,
           "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/447",
-          "status": "open",
+          "status": "merged",
+          "merged_head": "d4028b76df9542ddf335f98d81cccc4ab3bfc488",
+          "merge_commit": "29c9af9533f2ba6f76574089db7a3f55a4f4ee76",
+          "merged_at": "2026-08-20T02:54:59Z",
           "source_checkpoint": "36ef824dee02292e13704473292084173acb2f91",
           "evidence_checkpoint": "1d46c5aec04c70e4f67523a301e053d9725fd7e7",
           "restacked_head": "373d7c3fb73092ff4d749d2050e2f585dae93fb7"
@@ -465,7 +516,10 @@
           "base": "art-005-gallery-completion-knowledge-reports-editors-slice-3",
           "number": 448,
           "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/448",
-          "status": "open",
+          "status": "merged",
+          "merged_head": "543d6cae446a1f5fed6596b0e4f59b5cc484e26f",
+          "merge_commit": "abc9e8245626838d014c81a25ed39db570488460",
+          "merged_at": "2026-08-20T03:04:49Z",
           "source_checkpoint": "f27b7833e3d3e05772c7ebc44d4640f2b9d129ea",
           "evidence_checkpoint": "50511c8e0512760e823a75b03f8f67e681a7c6a7",
           "restacked_head": "4d5e4cfc0241e256c63b1c692b12fe199492cc7b"
@@ -477,7 +531,10 @@
           "base": "art-005-gallery-completion-knowledge-reports-editors-slice-4",
           "number": 452,
           "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/452",
-          "status": "open",
+          "status": "merged",
+          "merged_head": "5d09b2f1750e916bb1934a297e3639303bfae059",
+          "merge_commit": "8f8052a85a745241dbd43a670cf0cb352dde207f",
+          "merged_at": "2026-08-20T03:56:42Z",
           "source_checkpoint": "34175fa6f2035d56ddb3e2d759a0bf4f4ef44d62",
           "evidence_checkpoint": "afe1da8d1",
           "restacked_head": "9250987f3043f43b52b292cc06eca4c3869456b1"
@@ -489,7 +546,10 @@
           "base": "art-005-gallery-completion-knowledge-reports-editors-slice-5",
           "number": 454,
           "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/454",
-          "status": "open",
+          "status": "merged",
+          "merged_head": "70f46e8595306db62d296608345c4562e3f62520",
+          "merge_commit": "16a34888d44f756377ba1205dadaf0ecc45d93d6",
+          "merged_at": "2026-08-20T12:40:52Z",
           "source_checkpoint": "eb20daf245a159612146e060488959e5fd46de93",
           "evidence_checkpoint": "83b13dd52",
           "restacked_head": "2902decdd7f02cb404aeac601e415616073379dd"
@@ -501,7 +561,10 @@
           "base": "art-005-gallery-completion-knowledge-reports-editors-slice-6",
           "number": 455,
           "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/455",
-          "status": "open",
+          "status": "merged",
+          "merged_head": "edb68964ad0838604c13ea3a6398833b9e66a8e2",
+          "merge_commit": "c133211f630c3c2214d05ed22f5185e0e3202424",
+          "merged_at": "2026-08-20T14:02:04Z",
           "source_checkpoint": "f85ed14c89a5f71bb041e49930647dbc93ec8560",
           "evidence_checkpoint": "d22636043",
           "restacked_head": "7797bc367bce7e483f84284a38d81b5c085182ab"
@@ -571,8 +634,8 @@
         "all_component_loc_below_800": true
       },
       "reports": [
-        "specs/art-005-gallery-completion-knowledge-reports-editors/verify-tasks-report.md",
-        "specs/art-005-gallery-completion-knowledge-reports-editors/retrospective.md"
+        "docs/ai/specs/.process/ART-005-verify-tasks-report.md",
+        "docs/ai/specs/.process/ART-005-retrospective.md"
       ]
     }
   },

@@ -11,8 +11,8 @@ Template paths:
 - `speckit-pro/artifact-gallery/templates/triage-board.html`
 - `speckit-pro/artifact-gallery/templates/feature-flags.html`
 - `speckit-pro/artifact-gallery/templates/prompt-tuner.html`
-Runbook path: `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-runbook.md`
-JSON path: `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json`
+Runbook path: `docs/ai/specs/.process/ART-005-uat-runbook.md`
+JSON path: `docs/ai/specs/.process/ART-005-uat-results.json`
 Driver: `manual`
 Status: T109 complete; all 252 cumulative Slice 1-7 rows are bound to source
 checkpoint `f85ed14c89a5f71bb041e49930647dbc93ec8560`.

@@ -3022,3 +3022,58 @@ PR-packet exhaust were removed with the active folder; every tracked byte remain
 recoverable from merge commit `97b255d39828425120a96a5d9e313d574ebbf8a9`.
 Canonical templates, manifest, tests, generated payloads/proofs, workflow, and
 design concept remain outside `specs/**`.
+
+---
+
+## ART-005 Gallery Completion: Knowledge, Reports and Editors
+
+[Source: specs/art-005-gallery-completion-knowledge-reports-editors] — archived
+2026-08-20 after PRs #444, #446, #447, #448, #452, #454 and #455 merged.
+Revision reason: merged-spec archival into project memory.
+
+### User Outcomes
+
+- Four branded read-only artifacts now present slide, concept, status and
+  incident information as offline-capable standalone gallery pages.
+- Three branded editors now preserve in-memory current state and produce
+  deterministic, lossless Markdown or fenced-JSON exports with clipboard
+  failure fallback and stale-attempt protection.
+- Every artifact remains usable over direct `file://`, at narrow and wide
+  viewports, in light and dark themes, with reduced motion and keyboard access.
+
+### Shipped Behaviour
+
+The gallery gained `slide-deck`, `concept-explainer`, `status-report`,
+`incident-report`, `triage-board`, `feature-flags` and `prompt-tuner`. Exactly
+those seven manifest rows moved to `shipped`; the first four remain read-only
+and the three editors retain their declared `markdown` export capability.
+
+The operator selected seven sequential stacked slices, one template per slice.
+Final reviewable LOC was 666, 534, 377, 420, 695, 779 and 692, so every slice
+remained below the mandatory 800 stop. `gh-stack` stack #457 preserved the seven
+existing PR identities and order through restack and merge.
+
+### Acceptance Result
+
+All 119 tasks, 24 functional requirements and 12 success criteria completed;
+the retrospective records 100% adherence and no critical or significant
+finding. Direct `file://` UAT recorded 252 rows: 177 pass, 75 evidence-backed
+not applicable and 0 fail. When the connected browser was unavailable, the
+operator-authorized Playwright MCP fallback supplied Chrome 151 interaction.
+
+The final implementation suite before merge passed 7656/7656, with gallery
+586/586, fill regions 84/84, Layer 1 1469/1469 and Layer 4 5995/5995. Generated
+release parity and docs reference checks were current, and every required check
+passed on all seven final PR code heads; only the expected Windows ARM64
+advisory job was skipped.
+
+### Cleanup Note
+
+The UAT runbook, narrative and normalized results, retrospective and
+verify-tasks report were relocated to durable
+`docs/ai/specs/.process/ART-005-*` paths. Planning documents, checklists,
+contracts and implementation notes were removed with the active folder; every
+tracked byte remains recoverable from the final cumulative merge commit
+`c133211f630c3c2214d05ed22f5185e0e3202424`. Canonical templates, manifest,
+tests, generated payloads/proofs, workflow and design concept remain outside
+`specs/**`.
