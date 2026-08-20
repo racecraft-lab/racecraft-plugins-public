@@ -2762,3 +2762,50 @@ durable `docs/ai/specs/.process/ART-004-*` paths, updated roadmap and process
 state, regenerated the SpecKit index, and removed only the completed active spec
 folder. Recovery and the complete verification record live in
 `.specify/memory/archive-reports/2026-08-18-art-004-post-merge-hygiene.md`.
+
+---
+
+## 2026-08-20 — ART-005 Knowledge, Reports and Editors Gallery archived
+
+ART-005 shipped as seven stacked pull requests and was archived after the final
+cumulative merge.
+
+| PR | Title | Merged at | Merge commit |
+|---|---|---|---|
+| [#444](https://github.com/racecraft-lab/racecraft-plugins-public/pull/444) | `feat(artifact-gallery): Add slide deck reader` | `2026-08-20T01:40:03Z` | `75651a99e6efe0cb8d37608eda14e86674b97920` |
+| [#446](https://github.com/racecraft-lab/racecraft-plugins-public/pull/446) | `feat(artifact-gallery): Add concept explainer` | `2026-08-20T02:38:39Z` | `7ff4c94cbdadf1bef8136336410015c59d83dd1a` |
+| [#447](https://github.com/racecraft-lab/racecraft-plugins-public/pull/447) | `feat(artifact-gallery): Add status report` | `2026-08-20T02:54:59Z` | `29c9af9533f2ba6f76574089db7a3f55a4f4ee76` |
+| [#448](https://github.com/racecraft-lab/racecraft-plugins-public/pull/448) | `feat(artifact-gallery): Add incident report` | `2026-08-20T03:04:49Z` | `abc9e8245626838d014c81a25ed39db570488460` |
+| [#452](https://github.com/racecraft-lab/racecraft-plugins-public/pull/452) | `feat(artifact-gallery): Add triage board` | `2026-08-20T03:56:42Z` | `8f8052a85a745241dbd43a670cf0cb352dde207f` |
+| [#454](https://github.com/racecraft-lab/racecraft-plugins-public/pull/454) | `feat(artifact-gallery): Add feature flags` | `2026-08-20T12:40:52Z` | `16a34888d44f756377ba1205dadaf0ecc45d93d6` |
+| [#455](https://github.com/racecraft-lab/racecraft-plugins-public/pull/455) | `feat(artifact-gallery): Add prompt tuner` | `2026-08-20T14:02:04Z` | `c133211f630c3c2214d05ed22f5185e0e3202424` |
+
+All required exact-head checks passed across the stack; only the expected
+Windows ARM64 advisory job was skipped. Five blocking review findings on the
+last three slices were repaired at source, merged forward and resolved before
+the stack landed.
+
+### What shipped
+
+Four read-only artifacts and three stateful editors completed the planned
+knowledge/report/editor gallery segment. The three editors produce deterministic
+current-state exports with explicit empty/invalid/duplicate issue ordering,
+clipboard fallback and asynchronous stale-attempt protection. Exactly seven
+manifest rows are shipped.
+
+The user-selected seven-slice topology stayed intact. Final reviewable LOC was
+666, 534, 377, 420, 695, 779 and 692, all below the mandatory 800 stop. The
+existing pull requests were adopted and managed as `gh-stack` stack #457.
+
+### Acceptance and archive
+
+All 119 tasks, 24 requirements and 12 success criteria completed. Manual direct
+`file://` acceptance recorded 252 rows: 177 pass, 75 evidence-backed not
+applicable and 0 fail. The connected browser was unavailable, so the
+operator-authorized Playwright MCP fallback supplied Chrome 151 interaction.
+
+The cleanup moved the UAT runbook, narrative/JSON results, retrospective and
+verify-tasks report to durable `docs/ai/specs/.process/ART-005-*` paths, updated
+roadmap and process state, regenerated the SpecKit index, and removed only the
+completed active spec folder. Recovery and the complete validation record live
+in `.specify/memory/archive-reports/2026-08-20-art-005-post-merge-hygiene.md`.

@@ -13,7 +13,7 @@
     "notes": "A fresh connected-browser attempt returned an empty browser inventory and getForUrl was unavailable. At exact post-review checkpoint f85ed14c89a5f71bb041e49930647dbc93ec8560, the first four reader templates were byte-identical to the prior cumulative checkpoint and their rows were rebound by exact source-hash validation. The operator-authorized Playwright MCP fallback re-executed triage-board, feature-flags, and prompt-tuner at 36/36 each, plus targeted probes for filtered reorder, backtick-safe ticket IDs, strict rollout syntax, required-field status feedback, and the __proto__ prompt slot. No repository browser harness was committed."
   },
   "driver": "manual",
-  "runbookPath": "specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-runbook.md",
+  "runbookPath": "docs/ai/specs/.process/ART-005-uat-runbook.md",
   "rows": [
     {
       "artifactId": "slide-deck",
