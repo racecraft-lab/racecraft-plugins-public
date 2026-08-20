@@ -207,7 +207,7 @@
       "stage": "ad-hoc",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "12-incident-report.html" },
-      "status": "planned",
+      "status": "shipped",
       "exports": []
     },
     {
