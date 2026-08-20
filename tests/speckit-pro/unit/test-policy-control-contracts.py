@@ -2701,15 +2701,17 @@ class CodexRawCaptureExclusionTests(unittest.TestCase):
                     self.sanitize(self.governed_summary(**seeded))
 
 
-class UnpinnedControlTests(unittest.TestCase):
-    """FR-006 and FR-007: one arm, riding the pinned parent, re-frozen on a re-pin."""
-
+class _UnpinnedControlFixture:
     def setUp(self) -> None:
         self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
         self.module = claude_policy_controls
         self.error = self.module.ControlContractError
         self.registry = synthetic_registry()
         self.control = control_of_kind(self.registry, "unpinned")
+
+
+class UnpinnedControlTests(_UnpinnedControlFixture, unittest.TestCase):
+    """FR-006 and FR-007: one arm, riding the pinned parent, re-frozen on a re-pin."""
 
     def test_the_unpinned_control_freezes_exactly_one_arm(self) -> None:
         self.assertEqual(self.control["unpinned"]["arm_count"], 1)
@@ -4487,15 +4489,8 @@ def smoke_attempts(count: int) -> list[dict[str, object]]:
     return [smoke_attempt(objective) for objective in objectives[:count]]
 
 
-class SmokeRecordBoundTests(unittest.TestCase):
+class SmokeRecordBoundTests(_UnpinnedControlFixture, unittest.TestCase):
     """FR-030 and FR-030b: four bounds, one unit, one elapsed reading."""
-
-    def setUp(self) -> None:
-        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
-        self.module = claude_policy_controls
-        self.error = self.module.ControlContractError
-        self.registry = synthetic_registry()
-        self.control = control_of_kind(self.registry, "unpinned")
 
     def validate(self, **overrides: object) -> dict[str, object]:
         return self.module.validate_smoke_record(
@@ -5237,15 +5232,8 @@ class BindingDriftOnProductionPathsTests(unittest.TestCase):
             smoke_driver.build_plan("adaptive")
 
 
-class SmokeRecordCacheIsolationReadingTests(unittest.TestCase):
+class SmokeRecordCacheIsolationReadingTests(_UnpinnedControlFixture, unittest.TestCase):
     """FR-032: the required member is read, so the requirement is a requirement."""
-
-    def setUp(self) -> None:
-        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
-        self.module = claude_policy_controls
-        self.error = self.module.ControlContractError
-        self.registry = synthetic_registry()
-        self.control = control_of_kind(self.registry, "unpinned")
 
     def read(self, pairs: object) -> dict[str, object]:
         return self.module.validate_smoke_record(
