@@ -1,20 +1,52 @@
 {
-  "workflow_file": "docs/ai/specs/.process/ART-004-workflow.md",
-  "spec_id": "ART-004",
-  "feature_dir": "specs/art-004-gallery-completion-design-prototyping",
-  "branch": "art-004-gallery-completion-design-prototyping",
-  "status": "completed_archived",
+  "workflow_file": "docs/ai/specs/.process/ART-005-workflow.md",
+  "spec_id": "ART-005",
+  "feature_dir": "specs/art-005-gallery-completion-knowledge-reports-editors",
+  "branch": "art-005-gallery-completion-knowledge-reports-editors",
   "stage": "implement",
-  "active_step": null,
-  "updated_at": "2026-08-18T23:42:55Z",
-  "prior_run_note": "completed_archived",
-  "reclaimed_from": "docs/ai/specs/.process/ART-003-slice-3-workflow.md",
+  "updated_at": "2026-08-18T17:43:11Z",
+  "active_step": "Phase 7: Implement - Slice 2 concept-explainer T024-T036",
   "settings": {
     "consensus_mode": "moderate",
     "gate_failure": "stop",
     "auto_commit": "per-phase",
-    "confidence_gate_mode": "advisory",
-    "confidence_threshold": 0.9
+    "confidence_gate_mode": "advisory"
+  },
+  "stage_resolution": {
+    "source": "argv",
+    "basis": "explicit --stage implement",
+    "recorded_stage": "plan",
+    "planning_complete": true,
+    "confidence_gate_status": "✅ Complete",
+    "from_phase": null
+  },
+  "archive_sweep": {
+    "status": "no_candidates",
+    "execution_path": "extension_contract",
+    "invocation_available": true,
+    "prerequisite_available": true,
+    "prerequisite_mode": "codex_native_worktree_binding",
+    "archive_extension_installed": true,
+    "cleanup_mode": "feature_branch_sweep",
+    "eligible_previous_specs": [],
+    "excluded_current_spec": "specs/art-005-gallery-completion-knowledge-reports-editors",
+    "retained_non_candidates": [
+      {
+        "path": "specs/brand-001-racecraft-identity-system",
+        "reason": "still-pending scaffold; not proven merged"
+      }
+    ],
+    "safeToApplyCleanup": false
+  },
+  "prerequisites": {
+    "all_pass": true,
+    "python": "3.11.0",
+    "speckit_cli": "specify 0.11.8",
+    "is_worktree": true,
+    "workflow_branch_match": true,
+    "runner_on_feature_branch_heuristic": false,
+    "codex_agents": "no_op",
+    "project_implementation_agent": "implement-executor"
   },
   "project_commands": {
     "BUILD": "N/A",
@@ -30,628 +62,704 @@
   "preset_conventions": {
     "name": "speckit-pro-reviewability",
     "version": "1.0.0",
-    "enforces": [
-      "reviewability budget in spec, plan, and tasks",
-      "declared file operations in plan.md",
-      "requirements traceability and TDD ordering"
-    ]
-  },
-  "implementation_agent": "implement-executor",
-  "test_baseline_g0": {
-    "passed": 7399,
-    "total": 7399,
-    "l1": 1447,
-    "l4": 5766,
-    "l5": 186
-  },
-  "archive_sweep": {
-    "status": "completed",
-    "execution_path": "extension_contract",
-    "invocation_available": true,
-    "prerequisite_available": true,
-    "prerequisite_mode": "codex_native_worktree_binding",
-    "archive_extension_installed": true,
-    "eligible_previous_specs": [
-      {
-        "spec": "specs/art-004-gallery-completion-design-prototyping",
-        "pull_request": 450,
-        "merge_commit": "97b255d39828425120a96a5d9e313d574ebbf8a9",
-        "disposition": "archived"
-      }
-    ],
-    "ineligible_active_specs": [
-      {
-        "spec": "specs/brand-001-racecraft-identity-system",
-        "reason": "PR #432 merged the planning package, but the roadmap records all seven feature phases as pending"
-      }
-    ],
-    "excluded_current_spec": null,
-    "cleanup_mode": "apply",
-    "cleanup_applied": true,
-    "safeToApplyCleanup": true
-  },
-  "archive": {
-    "archived_at": "2026-08-18",
-    "cleanup_applied": true,
-    "cleanup_branch": "art-004-post-merge-hygiene",
-    "cleanup_gate_7_note": "Gate 7 names main as the normal cleanup branch. This archive ran on art-004-post-merge-hygiene, cut from origin/main at merge commit 97b255d3, because this repository forbids committing directly to main and lands every change through a pull request. The branch contains only ART-004 post-merge hygiene.",
-    "spec_id": "ART-004",
-    "pull_request": 450,
-    "merge_commit": "97b255d39828425120a96a5d9e313d574ebbf8a9",
-    "merged_at": "2026-08-18T23:35:40Z",
-    "merged_by": "fgabelmannjr",
-    "base_branch": "main",
-    "source_spec_path_removed": "specs/art-004-gallery-completion-design-prototyping",
-    "reviewability": {
-      "combined_plan_reviewable_loc": 865,
-      "combined_plan_production_files": 9,
-      "combined_plan_total_files": 11,
-      "combined_plan_result": "block",
-      "human_approved_slices": [
-        {"slice": "keyboard foundation", "reviewable_loc": 160, "result": "pass"},
-        {"slice": "read-only ports", "reviewable_loc": 590, "result": "warn"},
-        {"slice": "decision ports", "reviewable_loc": 520, "result": "warn"}
-      ],
-      "split_decision": "operator-approved three-slice recovery; topology preserved through merge"
+    "spec_template": ".specify/presets/speckit-pro-reviewability/templates/spec-template.md",
+    "plan_template": ".specify/presets/speckit-pro-reviewability/templates/plan-template.md",
+    "tasks_template": ".specify/presets/speckit-pro-reviewability/templates/tasks-template.md",
+    "warn_thresholds": {
+      "reviewable_loc": 400,
+      "production_files": 6,
+      "total_files": 15,
+      "primary_surfaces": 1
     },
-    "process_evidence_preserved": [
-      "docs/ai/specs/.process/ART-004-design-concept.md",
-      "docs/ai/specs/.process/ART-004-workflow.md",
-      "docs/ai/specs/.process/ART-004-manual-uat.md",
-      "docs/ai/specs/.process/ART-004-retrospective.md",
-      "docs/ai/specs/.process/ART-004-verify-tasks-report.md"
-    ],
-    "evidence_relocation_note": "The completed quickstart/UAT matrix, retrospective, and verify-tasks report were moved from the active spec folder to durable ART-004 process paths and all live citations were repointed. Planning documents, contracts, checklists, implementation notes, and PR-packet exhaust remain recoverable at the merge commit.",
-    "report": ".specify/memory/archive-reports/2026-08-18-art-004-post-merge-hygiene.md",
-    "acceptance_note": "Manual file:// UAT passed for all three repaired artifacts and six new ports across Chromium, WebKit, and Safari. Two runtime findings were remediated before merge: module-map's grid track sizing and interaction-prototype's narrow-screen overflow/wrapping.",
-    "open_followups": []
-  },
-  "agent_runtime_check": {
-    "destination": "~/.codex/agents",
-    "model": "gpt-5.5",
-    "required_agents": 10,
-    "mutation_status": "no_op",
-    "pass": true
-  },
-  "relocation_suggestion": {
-    "status": "completed",
-    "reason": "durable ART-004 UAT, retrospective, and verify-tasks evidence was relocated during archive; the active spec folder was removed"
-  },
-  "capability_coverage": {
-    "codebase_context": "local repository reads plus codebase-analyst",
-    "spec_context": "workflow, design concept, roadmap, constitution, and spec-context-analyst",
-    "library_documentation": "installed documentation capabilities when needed",
-    "web_domain_research": "installed web/domain capabilities when needed",
-    "source_extraction": "GitHub evidence at pinned upstream commit",
-    "repo_local_helpers": "speckit_pro_runner"
-  },
-  "reviewability": {
-    "setup_gate": {
-      "target": "docs/ai/specs/html-artifacts-technical-roadmap.md",
-      "status": "warn",
-      "pass": true,
-      "reviewable_loc": 40,
-      "primary_surface_count": 3,
-      "note": "Repository-level G0 health evidence only; not ART-004 scope authority."
-    },
-    "art004_forward_projection": {
-      "status": "block",
-      "reviewable_loc": 865,
-      "block_threshold": 800,
-      "authority": "risk evidence only until Phase 3 declares actual file operations"
-    },
-    "plan_gate": {
-      "status": "block",
-      "pass": false,
-      "reviewable_loc": 865,
-      "production_files": 9,
-      "total_files": 11,
-      "exception_honored": false,
-      "blockers": [
-        "reviewable LOC 865 exceeds block threshold 800",
-        "production files 9 exceeds block threshold 8"
-      ],
-      "decision": "Stop and split",
-      "next_action": "superseded by the human-approved three-slice recovery",
-      "superseded_by": "three-slice approval on 2026-08-17"
-    },
-    "plan_estimator": {
-      "status": "pass",
-      "projected": 0,
-      "production_files": 0,
-      "declared_total_entries": 11,
-      "disposition": "non-authoritative for ART-004 because the current classifier omits the declared HTML/Python review surface"
-    },
-    "human_approved_split": {
-      "approved_at": "2026-08-17",
-      "decision": "approve three slices",
-      "status": "non-blocking; G3 passed",
-      "slices": [
-        "Keyboard foundation: ART-020 repair, global guard, negative fixture, keyboard UAT",
-        "Read-only ports: design-system, animation-prototype, interaction-prototype, svg-illustrations",
-        "Decision ports: visual-designs, component-variants, exports, clipboard fallback"
-      ],
-      "shared_integration": "serialized in slice order",
-      "gate_requirement": "all three per-slice reviewability results must be non-blocking before Checklist",
-      "gate_results": [
-        {"slice": "keyboard foundation", "status": "pass", "pass": true, "reviewable_loc": 160, "production_files": 3, "total_files": 4, "blockers": []},
-        {"slice": "read-only ports", "status": "warn", "pass": true, "reviewable_loc": 590, "production_files": 4, "total_files": 7, "blockers": []},
-        {"slice": "decision ports", "status": "warn", "pass": true, "reviewable_loc": 520, "production_files": 2, "total_files": 5, "blockers": []}
-      ]
-    },
-    "tasks_mode": {
-      "helper_id": "reviewability-gate",
-      "requested_mode": "tasks",
-      "status": "deferred",
-      "reason": "installed runner supports setup mode only",
-      "fallback_evidence": [
-        "G0 setup gate warn/pass",
-        "G3 slice 1 160/pass",
-        "G3 slice 2 590/warn",
-        "G3 slice 3 520/warn",
-        "human-approved three-slice recovery"
-      ],
-      "decision": "non-blocking; no unexpected correctness block"
+    "block_thresholds": {
+      "reviewable_loc": 800,
+      "production_files": 8,
+      "total_files": 25,
+      "primary_surfaces": 1
     }
   },
-  "atomicity_route": {
-    "route": "one-navigable-PR",
-    "releasable": true,
-    "signals": ["change-shape:modify-heavy"],
-    "hints": [],
-    "warnings": [],
-    "layer_plan_required": false
+  "capability_coverage": {
+    "codebase_context": "local repository reads and rg",
+    "spec_context": "local workflow, design concept, constitution, roadmap, and prior-spec evidence",
+    "library_documentation": "installed documentation skills when applicable",
+    "web_domain_research": "web research available to research-capable agents",
+    "source_extraction": "web open/extract and git retrieval paths available"
   },
-  "layer_plan": {
-    "status": "skipped",
-    "reason": "atomicity route one-navigable-PR does not require layer planning"
+  "reviewability_setup": {
+    "runner_status": "pass",
+    "runner_mode": "setup",
+    "scaffold_estimate_reviewable_loc": 555,
+    "roadmap_estimate_reviewable_loc": 560,
+    "scaffold_verdict": "warn",
+    "initial_operator_decision": "one combined slice",
+    "operator_decision": "seven sequential stacked slices, one template per slice"
   },
-  "plan": [
-    {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
-    {"step": "Phase 0: Prerequisites", "status": "completed"},
-    {"step": "Phase 1: Specify", "status": "completed"},
-    {"step": "Phase 2: Clarify - Source structure and fill regions", "status": "completed"},
-    {"step": "Phase 2: Clarify - Source structure and fill regions Consensus", "status": "skipped: executor reported zero unresolved items"},
-    {"step": "Phase 2: Clarify - Decision exports", "status": "completed"},
-    {"step": "Phase 2: Clarify - Decision exports Consensus", "status": "skipped: executor reported zero unresolved items"},
-    {"step": "Phase 2: Clarify - Global keyboard-scroll guard", "status": "completed"},
-    {"step": "Phase 2: Clarify - Global keyboard-scroll guard Consensus", "status": "skipped: executor reported zero unresolved items"},
-    {"step": "Phase 3: Plan", "status": "completed"},
-    {"step": "Phase 4: Checklist - ux", "status": "completed"},
-    {"step": "Phase 4: Checklist - ux Consensus", "status": "skipped: executor reported zero unresolved items"},
-    {"step": "Phase 4: Checklist - accessibility", "status": "completed"},
-    {"step": "Phase 4: Checklist - accessibility Consensus", "status": "skipped: executor reported zero unresolved items"},
-    {"step": "Phase 4: Checklist - error-handling", "status": "completed"},
-    {"step": "Phase 4: Checklist - error-handling Consensus", "status": "skipped: executor reported zero unresolved items"},
-    {"step": "Phase 5: Tasks", "status": "completed"},
-    {"step": "Phase 6: Analyze", "status": "completed"},
-    {"step": "Phase 6: Analyze - Consensus", "status": "completed"},
-    {"step": "Phase 6.5: Confidence Gate", "status": "completed"},
-    {"step": "Phase 7: Implement T001-T009 - setup and foundational gates", "status": "completed"},
-    {"step": "Phase 7: Implement T010-T022 - slice 1 keyboard foundation", "status": "completed"},
-    {"step": "Phase 7: Implement T023-T037 - slice 2 read-only ports", "status": "completed"},
-    {"step": "Phase 7: Implement T038-T052 - slice 3 decision ports", "status": "completed"},
-    {"step": "Phase 7: Implement T053-T060 - polish and release evidence", "status": "completed"},
-    {"step": "Post: Doctor Extension Check", "status": "completed"},
-    {"step": "Post: Verify Implementation", "status": "completed"},
-    {"step": "Post: Verify Tasks Phantom Check", "status": "completed"},
-    {"step": "Post: Code Review", "status": "completed"},
-    {"step": "Post: Integration Suite", "status": "completed"},
-    {"step": "Post: Reviewability Diff Gate", "status": "completed"},
-    {"step": "Post: Self-Review", "status": "completed"},
-    {"step": "Post: UAT Runbook Generation", "status": "skipped: generate-uat-skeleton deferred; no committed runbook"},
-    {"step": "Post: Final Reviewability Backstop", "status": "completed"},
-    {"step": "Post: PR Packet/Body Generation", "status": "completed"},
-    {"step": "Post: PR Body Generation", "status": "completed"},
-    {"step": "Post: PR Creation", "status": "completed"},
-    {"step": "Post: Review Remediation", "status": "completed"},
-    {"step": "Post: Retrospective", "status": "completed"}
-  ],
-  "gates": {
-    "G0": {
-      "pass": true,
-      "layer_1": "1447/1447",
-      "full_suite": "7399/7399",
-      "reviewability_setup": "warn/pass"
-    },
-    "G1": {
-      "pass": true,
-      "markers": 0,
-      "reason": "spec.md exists with 0 markers"
-    },
-    "G2": {
-      "pass": true,
-      "markers": 0,
-      "reason": "0 [NEEDS CLARIFICATION] markers"
-    },
-    "G3": {
-      "pass": true,
-      "markers": 0,
-      "reason": "all three approved slice gates are non-blocking and plan.md has 0 unresolved markers",
-      "decision": "approved three-slice topology",
-      "slice_results": ["160/pass", "590/warn", "520/warn"],
-      "prior_attempt": "combined topology blocked at 865 LOC and 9 production files"
-    },
-    "G4": {
-      "pass": true,
-      "markers": 0,
-      "reason": "0 [Gap] markers across spec, plan, and all three checklist domains",
-      "checklist_items": 111,
-      "initial_gaps": 16,
-      "fixed_gaps": 16,
-      "unresolved_for_consensus": 0
-    },
-    "G5": {
-      "pass": true,
-      "markers": 0,
-      "reason": "60 tasks found",
-      "task_count": 60,
-      "functional_requirements_covered": "17/17",
-      "user_stories_covered": "3/3",
-      "success_criteria_covered": "9/9"
-    },
-    "G6": {
-      "pass": true,
-      "markers": 0,
-      "reason": "0 CRITICAL/HIGH findings after remediation",
-      "initial_findings": {"critical": 0, "high": 1, "medium": 2, "low": 0},
-      "final_findings": {"critical": 0, "high": 0, "medium": 0, "low": 0},
-      "unresolved_for_consensus": 0
-    },
-    "G6.5": {
-      "pass": true,
-      "mode": "advisory",
-      "composite": 1.0,
-      "threshold": 0.9,
-      "recommended_action": "proceed",
-      "reason": "composite at or above threshold"
-    },
-    "G7": {
-      "pass": true,
-      "markers": 0,
-      "reason": "T001-T060 complete; post-merge full suite 7628/7628; generated release artifacts, references, diff, browser UAT, and exact PR title all pass"
+  "test_baseline_g0": {
+    "passed": 7400,
+    "total": 7400,
+    "toolchain_preflight": "ok",
+    "layers": {
+      "L1": "1448/1448",
+      "L4": "5766/5766",
+      "L5": "186/186"
     }
   },
   "phase_results": {
     "specify": {
-      "functional_requirements": 14,
+      "status": "completed",
       "user_stories": 3,
-      "acceptance_scenarios": 9,
-      "success_criteria": 7,
-      "quality_checklist": "16/16",
-      "after_hook": "optional doctor warning: legacy Claude command directory unavailable; Codex agents verified"
+      "functional_requirements": 24,
+      "acceptance_scenarios": 8,
+      "success_criteria": 12,
+      "needs_clarification_markers": 1,
+      "gap_markers": 0,
+      "artifact": "specs/art-005-gallery-completion-knowledge-reports-editors/spec.md"
     },
-    "clarify_session_1": {
-      "questions": 5,
-      "accepted_recommendations": 5,
-      "remaining_markers": 0,
-      "unresolved_for_consensus": 0,
-      "consensus": "skipped: executor reported zero unresolved items"
-    },
-    "clarify_session_2": {
-      "questions": 5,
-      "accepted_recommendations": 5,
-      "remaining_markers": 0,
-      "unresolved_for_consensus": 0,
-      "consensus": "skipped: executor reported zero unresolved items"
-    },
-    "clarify_session_3": {
-      "questions": 5,
-      "accepted_recommendations": 5,
-      "remaining_markers": 0,
-      "unresolved_for_consensus": 0,
-      "consensus": "skipped: executor reported zero unresolved items"
+    "clarify": {
+      "sessions": {
+        "Source, Fidelity, and Fill Regions": {
+          "status": "completed",
+          "questions": 5,
+          "accepted_answers": 5,
+          "unresolved_items": 0,
+          "consensus": "skipped: zero unresolved items",
+          "pinned_commit": "58c305be97f47b26b678f2c07dec01d4242268ec",
+          "semantic_readers": [
+            "slide-deck",
+            "concept-explainer",
+            "status-report",
+            "incident-report"
+          ]
+        },
+        "Editor State and Export Contracts": {
+          "status": "completed",
+          "questions": 5,
+          "accepted_answers": 5,
+          "unresolved_items": 0,
+          "consensus": "skipped: zero unresolved items",
+          "schemas": [
+            "triage-board column Markdown",
+            "artifact-gallery.feature-flags.export.v1",
+            "artifact-gallery.prompt-tuner.export.v1"
+          ],
+          "parent_adjustment": "Kept feature-flag requires as nullable string to match the pinned source model."
+        },
+        "Acceptance Evidence and Reviewability": {
+          "status": "completed",
+          "questions": 5,
+          "accepted_answers": 5,
+          "unresolved_items": 0,
+          "consensus": "skipped: zero unresolved items",
+          "active_evidence": [
+            ".process/uat-runbook.md",
+            ".process/uat-results.md",
+            ".process/uat-results.json"
+          ],
+          "reviewability_block_route": "stop for explicit operator topology decision"
+        }
+      }
     },
     "plan": {
       "status": "completed",
+      "reason": "all seven authored-LOC projections warn and remain below 800; the 33-path maximum carries a separate generated/control-plane-only size-block risk",
+      "plan_file": "specs/art-005-gallery-completion-knowledge-reports-editors/plan.md",
       "artifacts": [
         "plan.md",
         "research.md",
         "data-model.md",
         "quickstart.md",
-        "contracts/gallery-artifact-contract.md",
-        "contracts/decision-export-contract.md",
-        "contracts/keyboard-scroll-guard-contract.md"
+        "contracts/slice-topology-contract.md",
+        "contracts/gallery-template-contract.md",
+        "contracts/editor-export-contract.md",
+        "contracts/uat-evidence-contract.md"
       ],
-      "markers": 0,
-      "declared_authored_operations_by_slice": [4, 7, 5],
-      "declared_generated_paths_by_slice": [30, 38, 30],
-      "reviewable_loc_by_slice": [160, 590, 520],
-      "production_files_by_slice": [3, 4, 2],
-      "gate": "G3 passed",
-      "decision": "approve three slices",
-      "downstream": "Checklist may start",
-      "prior_attempt": "combined topology blocked at 865 LOC and 9 production files"
-    },
-    "checklist_ux": {
-      "status": "completed",
-      "items": 36,
-      "initial_gaps": 3,
-      "fixed_gaps": 3,
-      "remaining_gaps": 0,
-      "remediation_loops": 1,
-      "unresolved_for_consensus": 0,
-      "consensus": "skipped: executor reported zero unresolved items"
-    },
-    "checklist_accessibility": {
-      "status": "completed",
-      "items": 37,
-      "initial_gaps": 9,
-      "fixed_gaps": 9,
-      "remaining_gaps": 0,
-      "remediation_loops": 1,
-      "unresolved_for_consensus": 0,
-      "consensus": "skipped: executor reported zero unresolved items",
-      "recovery": "initial executor interrupted after repeated no-progress; replacement executor completed"
-    },
-    "checklist_error_handling": {
-      "status": "completed",
-      "items": 38,
-      "initial_gaps": 4,
-      "fixed_gaps": 4,
-      "remaining_gaps": 0,
-      "remediation_loops": 1,
-      "unresolved_for_consensus": 0,
-      "consensus": "skipped: executor reported zero unresolved items",
-      "non_blocking_error": "initial checklist path was corrected before verification; final artifact is under WORKFLOW_ROOT"
+      "slice_order": [
+        "slide-deck",
+        "concept-explainer",
+        "status-report",
+        "incident-report",
+        "triage-board",
+        "feature-flags",
+        "prompt-tuner"
+      ],
+      "stacking_model": "slice 1 uses the current branch; each later branch is cut from its predecessor after the predecessor PR is open",
+      "per_slice_gate": "project every slice independently and stop only an individually blocked slice for operator review",
+      "per_slice_projections": [
+        {
+          "slice": 1,
+          "artifact": "slide-deck",
+          "projected_reviewable_loc": 670,
+          "authored_paths": 7,
+          "maximum_physical_paths": 33,
+          "verdict": "warn"
+        },
+        {
+          "slice": 2,
+          "artifact": "concept-explainer",
+          "projected_reviewable_loc": 535,
+          "authored_paths": 7,
+          "maximum_physical_paths": 33,
+          "verdict": "warn"
+        },
+        {
+          "slice": 3,
+          "artifact": "status-report",
+          "projected_reviewable_loc": 560,
+          "authored_paths": 7,
+          "maximum_physical_paths": 33,
+          "verdict": "warn"
+        },
+        {
+          "slice": 4,
+          "artifact": "incident-report",
+          "projected_reviewable_loc": 620,
+          "authored_paths": 7,
+          "maximum_physical_paths": 33,
+          "verdict": "warn"
+        },
+        {
+          "slice": 5,
+          "artifact": "triage-board",
+          "projected_reviewable_loc": 785,
+          "authored_paths": 7,
+          "maximum_physical_paths": 33,
+          "verdict": "warn"
+        },
+        {
+          "slice": 6,
+          "artifact": "feature-flags",
+          "projected_reviewable_loc": 780,
+          "authored_paths": 7,
+          "maximum_physical_paths": 33,
+          "verdict": "warn"
+        },
+        {
+          "slice": 7,
+          "artifact": "prompt-tuner",
+          "projected_reviewable_loc": 790,
+          "authored_paths": 7,
+          "maximum_physical_paths": 33,
+          "verdict": "warn"
+        }
+      ],
+      "runner_estimator": {
+        "status": "pass",
+        "projected": 0,
+        "declared_new": 10,
+        "declared_modified": 3,
+        "production": 0,
+        "disposition": "advisory HTML classification blind spot; explicit per-slice component ceilings control"
+      },
+      "full_diff_projection": {
+        "implementation_authored_paths": 7,
+        "maximum_generated_paths": 25,
+        "maximum_control_plane_paths": 1,
+        "maximum_physical_paths": 33,
+        "total_file_block_threshold": 25,
+        "projected_size_only_block": true,
+        "disposition": "record required generated/control-plane-only total-file blocks in per-slice evidence and packets; stop on authored, correctness, or non-size blockers"
+      },
+      "prior_combined_block": {
+        "status": "resolved_by_operator_topology_decision",
+        "upstream_measurement": {
+          "files": 7,
+          "lines": 4042,
+          "bytes": 120618,
+          "digests_reverified": true
+        },
+        "projections": {
+          "conservative_reviewable_loc": 2856,
+          "art_003_average_reviewable_loc": 4356,
+          "block_threshold": 800
+        },
+        "runner_estimator": {
+          "status": "pass",
+          "projected": 0,
+          "declared_new": 10,
+          "declared_modified": 3,
+          "production": 0,
+          "disposition": "advisory blind spot for absent net-new production files; explicit measured checkpoint controls"
+        },
+        "operator_resolution": "seven sequential stacked slices, one template per slice"
+      }
     },
     "checklist": {
       "status": "completed",
-      "domains": ["ux", "accessibility", "error-handling"],
-      "items": 111,
-      "initial_gaps": 16,
-      "fixed_gaps": 16,
+      "total_items": 120,
+      "initial_gaps": 24,
       "remaining_gaps": 0,
-      "current_functional_requirements": 17,
-      "gate": "G4 passed",
-      "downstream": "Tasks may start"
+      "domains": {
+        "accessibility": {
+          "status": "completed",
+          "items": 32,
+          "initial_gaps": 6,
+          "remaining_gaps": 0,
+          "consensus": "skipped: zero unresolved items",
+          "slice_budget_adjustments": {
+            "slide-deck": 670,
+            "triage-board": 770
+          }
+        },
+        "ux": {
+          "status": "completed",
+          "items": 28,
+          "initial_gaps": 2,
+          "remaining_gaps": 0,
+          "consensus": "skipped: zero unresolved items",
+          "slice_budget_adjustments": {
+            "concept-explainer": 535,
+            "triage-board": 785
+          }
+        },
+        "data-integrity": {
+          "status": "completed",
+          "items": 30,
+          "initial_gaps": 12,
+          "remaining_gaps": 0,
+          "consensus": "skipped: zero unresolved items",
+          "slice_budget_adjustments": {},
+          "execution_note": "The executor applied remediation but its result turn hit model capacity; after one retry and one fresh-agent retry also hit capacity, the orchestrator followed error-recovery-codex.md and directly validated the preserved artifacts."
+        },
+        "error-handling": {
+          "status": "completed",
+          "items": 30,
+          "initial_gaps": 4,
+          "remaining_gaps": 0,
+          "consensus": "skipped: zero unresolved items",
+          "slice_budget_adjustments": {},
+          "execution_note": "The checklist-executor and its one retry hit model capacity; the orchestrator followed error-recovery-codex.md, ran the domain workflow directly, and validated the result with the same runner gates."
+        }
+      }
     },
     "tasks": {
       "status": "completed",
-      "tasks": 60,
-      "task_ids": "T001-T060",
-      "phases": 6,
-      "parallel_tasks": 9,
-      "parallel_sets": 3,
-      "functional_requirements": "17/17",
-      "user_stories": "3/3",
-      "success_criteria": "9/9",
-      "acceptance_scenarios": "9/9",
-      "tdd_mix": {"red": 11, "green": 12, "refactor": 5, "verify": 32},
-      "markers": {"clarifications": 0, "gaps": 0, "critical": 0, "high": 0, "medium": 0, "low": 0},
-      "gate": "G5 passed",
-      "atomicity_route": "one-navigable-PR",
-      "phase7_groups_reconciled": true,
-      "recovery": "three file-silent attempts interrupted; one capacity-error turn retried; final required phase executor completed"
+      "artifact": "specs/art-005-gallery-completion-knowledge-reports-editors/tasks.md",
+      "total_tasks": 119,
+      "first_task": "T001",
+      "last_task": "T119",
+      "contiguous": true,
+      "checked_tasks": 0,
+      "unchecked_tasks": 119,
+      "phantom_completions": 0,
+      "parallel_tasks": [
+        "T002",
+        "T003"
+      ],
+      "user_stories": [
+        "US1",
+        "US2",
+        "US3"
+      ],
+      "slice_groups": 7,
+      "execution_note": "The phase-executor made no progress, and one fresh phase-executor retry also made no progress. Per error-recovery-codex.md, the orchestrator ran the speckit-tasks workflow directly, validated strict formatting and traceability, and passed G5."
     },
     "analyze": {
       "status": "completed",
-      "initial_findings": {"critical": 0, "high": 1, "medium": 2, "low": 0},
-      "fixed_findings": 3,
-      "final_findings": {"critical": 0, "high": 0, "medium": 0, "low": 0},
-      "remediation_loops": 1,
-      "task_count": 60,
-      "functional_requirements": "17/17",
-      "success_criteria": "9/9",
-      "parallel_tasks": 9,
-      "unresolved_for_consensus": 0,
-      "consensus": "completed: clean-pass confidence synthesis",
-      "consensus_agent": "default semantic fallback because consensus-synthesizer was not exposed by the host",
-      "confidence_emit": {
-        "composite": 1.0,
-        "task_understanding": 1.0,
-        "approach_clarity": 1.0,
-        "requirements_alignment": 1.0,
-        "risk_assessment": 1.0,
-        "completeness": 1.0
+      "execution_path": "direct fallback after dedicated executor and one fresh retry remained frozen without a result or diff",
+      "initial_findings": {
+        "critical": 1,
+        "high": 2,
+        "medium": 2,
+        "low": 1,
+        "total": 6
       },
-      "gate": "G6 passed"
+      "remaining_findings": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "total": 0
+      },
+      "requirements_covered": 36,
+      "requirements_total": 36,
+      "mapped_tasks": 119,
+      "total_tasks": 119,
+      "unmapped_tasks": 0,
+      "consensus": "skipped: zero unresolved items after remediation",
+      "confidence_emit": {
+        "composite": 0.98,
+        "task_understanding": 0.99,
+        "approach_clarity": 0.98,
+        "requirements_alignment": 0.99,
+        "risk_assessment": 0.97,
+        "completeness": 0.96
+      }
     },
     "confidence_gate": {
       "status": "completed",
+      "helper_id": "confidence-gate",
+      "request_id": "art-005-g6-5",
       "mode": "advisory",
-      "composite": 1.0,
       "threshold": 0.9,
-      "criteria": {
-        "task_understanding": 1.0,
-        "approach_clarity": 1.0,
-        "requirements_alignment": 1.0,
-        "risk_assessment": 1.0,
-        "completeness": 1.0
-      },
-      "verdict": "G6.5 passed",
+      "composite": 0.98,
+      "verdict": "PASS",
+      "pass": true,
       "recommended_action": "proceed",
-      "implementation_started": true
+      "reason": "composite at or above threshold",
+      "writes_state": false,
+      "criteria": {
+        "task_understanding": 0.99,
+        "approach_clarity": 0.98,
+        "requirements_alignment": 0.99,
+        "risk_assessment": 0.97,
+        "completeness": 0.96
+      }
     },
     "implement": {
-      "status": "completed",
-      "completed_tasks": ["T001", "T002", "T003", "T004", "T005", "T006", "T007", "T008", "T009", "T010", "T011", "T012", "T013", "T014", "T015", "T016", "T017", "T018", "T019", "T020", "T021", "T022", "T023", "T024", "T025", "T026", "T027", "T028", "T029", "T030", "T031", "T032", "T033", "T034", "T035", "T036", "T037", "T038", "T039", "T040", "T041", "T042", "T043", "T044", "T045", "T046", "T047", "T048", "T049", "T050", "T051", "T052", "T053", "T054", "T055", "T056", "T057", "T058", "T059", "T060"],
-      "pending_browser_tasks": [],
-      "browser_attempt": "Playwright/Chromium completed T018 and Slices 2-3 offline UAT; Playwright/WebKit completed the Slice 3 semantic matrix; Safari 26.6.1 WebDriver completed T019 and the Slice 2-3 Option-Tab matrices after the operator enabled remote automation",
-      "browser_evidence": {
-        "protocol": "file:",
-        "regions": {"code-approaches": "3/3", "implementation-plan": "2/2", "module-map": "6/6"},
-        "checks": "source-order keyboard reach, specific accessible name, role=group, tabindex=0, 2px solid focus outline, ArrowRight scrollLeft 0->40, and Tab focus exit all passed",
-        "uat_finding_fixed": "module-map grid second track changed from 1fr to minmax(0, 1fr) so its five code regions receive internal overflow instead of expanding the page",
-        "t018": {"status": "passed", "engine": "Chromium 151.0.7922.138", "viewport": "320x900"},
-        "t019": {"status": "passed", "engine": "Safari 26.6.1", "requested_window": "320x900", "measured_viewport": "336x825", "keyboard_route": "Tab", "module_map_disclosures": "5/5 opened with Enter"}
-      },
-      "slice_1_automated_evidence": {
-        "full_suite": "7418/7418 passed after the UAT-discovered module-map sizing repair",
-        "reference_check": "passed after checkpoint e15e3a6cc",
-        "release_check": "passed after checkpoint e15e3a6cc"
-      },
-      "slice_2_red_evidence": {
-        "gallery": "518/523 passed; only Group M planned/missing-port checks and the three read-only keyboard-scroll minima fail",
-        "fill_regions": "60/61 passed; only R8 fails with the four planned rows and four missing files",
-        "synthetic_fixtures": "all Group M, Group L, and fill-region negative fixtures pass"
-      },
-      "slice_2_green_evidence": {
-        "ports": ["design-system", "animation-prototype", "interaction-prototype", "svg-illustrations"],
-        "manifest": "exactly four planned-to-shipped status changes; no other manifest drift",
-        "fill_regions": "62/62 passed",
-        "read_only_contracts": "Group M and Group L passed 26 focused tests after canonical URL normalization and compact capability-inventory coverage",
-        "full_gallery_before_generation": "525/529 passed; only the four generated-payload parity checks remain for T035"
-      },
-      "slice_2_browser_evidence": {
-        "chromium": {
-          "status": "passed",
-          "engine": "HeadlessChrome 149.0.7827.55",
-          "viewport": "360x900",
-          "mode": "offline file://",
-          "checks": "all four ports passed sequential Tab, visible 2px focus, theme and contrast, interaction/reset, viewport fit, reduced motion, non-color/source inventory, and declared-scroll ArrowRight checks"
-        },
-        "safari": {
-          "status": "passed",
-          "engine": "Safari 26.6.1",
-          "requested_window": "360x900",
-          "measured_viewport": "360x825",
-          "keyboard_route": "Option-Tab",
-          "checks": "all four ports passed sequential reach and focus exit, Enter/Space interaction and reset, theme toggle, no positive tabindex, viewport fit, and declared-scroll ArrowRight checks"
-        },
-        "uat_finding_fixed": "interaction-prototype zero-minimum mobile tracks and wrapping restored document width from 412 to 360 at a 360px Chromium viewport"
-      },
-      "slice_2_automated_evidence": {
-        "checkpoint": "01e97ad65",
-        "full_suite": "7450/7450 passed",
-        "gallery": "529/529 passed",
-        "fill_regions": "62/62 passed",
-        "release_check": "generated release artifacts match the source tree after the checkpoint",
-        "reference_check": "generated reference pages are current"
-      },
-      "slice_3_red_evidence": {
-        "gallery": "561/566 passed; only Group N status/file, Group O/P missing-file, and Group L component-scroll readiness checks fail",
-        "gallery_fixtures": "all 17 shared Group N/O/P decision fixtures passed",
-        "fill_regions": "69/70 passed; only R9 reports the two planned rows and two missing files",
-        "fill_fixtures": "34/34 passed"
-      },
-      "slice_3_green_evidence": {
-        "ports": ["visual-designs", "component-variants"],
-        "manifest": "exactly two planned-to-shipped status changes; no other manifest drift",
-        "fill_regions": "70/70 passed",
-        "decision_contracts": "all focused Group N/O/P/L tests passed after exact refusal and stale-success tightening",
-        "full_gallery_before_generation": "563/567 passed; only the four generated-payload parity checks remain for T050"
-      },
-      "slice_3_browser_evidence": {
-        "playwright": {
-          "status": "passed",
-          "engines": ["Chromium", "WebKit"],
-          "viewport": "360x900",
-          "mode": "offline file://",
-          "scenario_groups": 17,
-          "checks": "exact live prompt/Markdown payloads, validation, six clipboard-refusal modes, focused fallback parity, fallback invalidation, stale-settle suppression, keyboard/semantics, contrast, reduced motion, and viewport fit"
-        },
-        "safari": {
-          "status": "passed",
-          "engine": "Safari 26.6.1",
-          "requested_window": "360x900",
-          "measured_viewport": "360x825",
-          "keyboard_route": "Option-Tab",
-          "checks": "six visual and fifteen component controls reached in logical order; controls operated with ArrowRight, Space, and Enter; component snippet scrolled 0 to 29"
-        },
-        "runner_note": "The installed Playwright MCP profile was already in use, so the skill-approved isolated Playwright fallback preserved the active browser session; real Safari supplied the native generic-scroller ArrowRight evidence that headless WebKit could not synthesize"
-      },
-      "slice_3_automated_evidence": {
-        "checkpoint": "0a8228a8c",
-        "full_suite": "7496/7496 passed",
-        "gallery": "567/567 passed",
-        "fill_regions": "70/70 passed",
-        "release_check": "generated release artifacts match the source tree after the checkpoint",
-        "reference_check": "generated reference pages are current"
-      },
-      "final_evidence": {
-        "manifest": "exactly six planned-to-shipped status changes against d67742f10; all non-status fields unchanged",
-        "keyboard_guard": "nine target IDs swept; five focused Group L tests passed",
-        "fill_inventory": "26 required regions and three list slots covered; two focused shipped-gallery tests passed",
-        "uat": "all three repaired artifacts and all six new ports passed the consolidated file:// matrix",
-        "review_packet": "workflow records change rationale, non-goals, review order, scope gates, traceability, verification, known gaps, and rollback",
-        "art_020": "pre-implementation roadmap baseline already records Superseded by ART-004; no implementation-time roadmap drift",
-        "pr_title": "release-readiness validate-pr-title passed feat(art-004): complete design gallery artifacts with exit 0 and blocking=false",
-        "final_gate": "post-merge 7628/7628 passed; release artifacts match source after current-main integration; reference pages current; privacy 10/10; git diff check clean"
-      },
-      "implementation_notes": "specs/art-004-gallery-completion-design-prototyping/.process/implementation-notes.md"
-    },
-    "post_implementation": {
-      "status": "completed",
-      "items": [
-        {"step": "Post: Doctor Extension Check", "status": "completed"},
-        {"step": "Post: Verify Implementation", "status": "completed"},
-        {"step": "Post: Verify Tasks Phantom Check", "status": "completed"},
-        {"step": "Post: Code Review", "status": "completed"},
-        {"step": "Post: Integration Suite", "status": "completed"},
-        {"step": "Post: Reviewability Diff Gate", "status": "completed"},
-        {"step": "Post: Self-Review", "status": "completed"},
-        {"step": "Post: UAT Runbook Generation", "status": "skipped: generate-uat-skeleton deferred; no committed runbook"},
-        {"step": "Post: Final Reviewability Backstop", "status": "completed"},
-        {"step": "Post: PR Packet/Body Generation", "status": "completed"},
-        {"step": "Post: PR Body Generation", "status": "completed"},
-        {"step": "Post: PR Creation", "status": "completed"},
-        {"step": "Post: Review Remediation", "status": "completed"},
-        {"step": "Post: Retrospective", "status": "completed"}
+      "status": "in_progress",
+      "active_group": "Slice 2 concept-explainer T024-T036",
+      "active_task": "T024",
+      "completed_tasks": 23,
+      "total_tasks": 119,
+      "slice_prs": [
+        {
+          "slice": 1,
+          "artifact": "slide-deck",
+          "branch": "art-005-gallery-completion-knowledge-reports-editors",
+          "base": "main",
+          "number": 444,
+          "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/444",
+          "status": "open",
+          "source_checkpoint": "660bfe9ce8365afbe6d98af28dd26eccf46a2c9e",
+          "evidence_checkpoint": "373881395f40115dd80953c4b8892dc79346ce22"
+        }
       ],
-      "doctor": {"status": "completed", "passed": 4, "warnings": 1, "warning": "unrelated BRAND-001 planning directory is incomplete"},
-      "verify": {"status": "completed", "findings": 0},
-      "verify_tasks": {"status": "completed", "verified": 60, "total": 60, "flagged": 0, "report": "docs/ai/specs/.process/ART-004-verify-tasks-report.md"},
-      "code_review": {"status": "completed", "remediation_checkpoint": "d65345e65", "final_findings": 0},
-      "integration": {"status": "completed", "full_suite": "7628/7628", "layer_1": "1468/1468", "layer_4": "5968/5968", "layer_5": "192/192", "privacy": "10/10"},
-      "reviewability_diff_gate": {"status": "completed", "slice_results": ["160/pass", "590/warn", "520/warn"], "topology_changed": false},
-      "self_review": {"status": "completed", "edge_case_gaps": 0, "orphan_requirements": 0, "tidiness_findings": 0},
-      "uat_runbook": {"status": "skipped", "reason": "generate-uat-skeleton deferred; no committed feature-local runbook; no validator registered"},
-      "final_reviewability_backstop": {"status": "completed", "helper": "deferred", "proceeded_on_checkpoint": "d65345e65"},
-      "pr_packet": {
-        "status": "completed",
-        "packet_path": "specs/art-004-gallery-completion-design-prototyping/.process/pr-packets/art-004.json",
-        "body_file": "specs/art-004-gallery-completion-design-prototyping/.process/pr-packets/art-004/body.md",
-        "validation_result_path": "specs/art-004-gallery-completion-design-prototyping/.process/pr-packets/art-004/validation.json",
-        "read_only_status": "passed",
-        "pr_blocked": false,
-        "read_only_writes_state": false,
-        "validation_source": "validate-pr-packet-read-only",
-        "title": "feat(art-004): complete design gallery artifacts",
-        "title_gates": ["release-readiness:pass", "validate-pr-workflow-contract:pass"]
+      "baseline": {
+        "layer_1": "1448/1448",
+        "layer_4": "5766/5766",
+        "default_suite": "7400/7400",
+        "g4_markers": 0,
+        "upstream_digests_matched": 7,
+        "planning_privacy_repair": "quickstart absolute home path replaced before implementation source changes"
       },
-      "pr_body": {"status": "completed", "editable_fields_changed": ["what_changed", "why_it_matters"], "protected_sections_changed": false, "release_note": "present"},
-      "pr_creation": {
-        "status": "completed",
-        "number": 450,
-        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/450",
-        "is_draft": false,
-        "state": "MERGED",
-        "base_branch": "main",
-        "head_branch": "art-004-gallery-completion-design-prototyping",
-        "head_oid": "ecabf297dce87ee5652e876ed0e60f0ff5996b43",
-        "merge_commit": "97b255d39828425120a96a5d9e313d574ebbf8a9",
-        "merged_at": "2026-08-18T23:35:40Z",
-        "mergeable": "UNKNOWN"
-      },
-      "review_remediation": {
-        "status": "completed",
-        "source_findings": 1,
-        "review_threads": 2,
-        "remediation_commit": "37fcc4d4f",
-        "focused_gallery": "573/573",
-        "fill_regions": "70/70",
-        "release_artifacts": "match source",
-        "reference_pages": "current",
-        "resolved_threads": 2,
-        "remaining_actionable_feedback": 0,
-        "unresolved_threads": 0,
-        "review_comments": 0,
-        "mergeable": "MERGEABLE",
-        "ci_status_at_audit": "passed at 1861414c3"
-      },
-      "retrospective": {
-        "status": "completed",
-        "report": "docs/ai/specs/.process/ART-004-retrospective.md",
-        "tasks": "60/60",
-        "functional_requirements": "17/17",
-        "success_criteria": "9/9",
-        "spec_adherence": "100%",
-        "critical_findings": 0,
-        "significant_findings": 0,
-        "minor_findings": 1,
-        "proposed_spec_changes": 0
-      }
+      "slice_order": [
+        "slide-deck",
+        "concept-explainer",
+        "status-report",
+        "incident-report",
+        "triage-board",
+        "feature-flags",
+        "prompt-tuner"
+      ]
     }
-  }
+  },
+  "task_reviewability": {
+    "helper_id": "reviewability-gate",
+    "requested_mode": "tasks",
+    "status": "deferred",
+    "invoked": false,
+    "deferral_reason": "installed runner supports setup mode only; tasks mode is deferred",
+    "fallback_evidence": {
+      "setup_mode": {
+        "runner_status": "pass",
+        "runner_mode": "setup",
+        "scaffold_estimate_reviewable_loc": 555,
+        "scaffold_verdict": "warn"
+      },
+      "plan_estimator": {
+        "status": "pass",
+        "projected": 0,
+        "disposition": "HTML production-classification blind spot; explicit per-slice measured ceilings control"
+      },
+      "operator_decision": "seven sequential stacked slices, one template per slice",
+      "per_slice_range": "535-790 reviewable LOC",
+      "block_threshold": 800
+    },
+    "current_size_only_block": false,
+    "projected_full_diff_size_only_block": true,
+    "maximum_physical_paths_per_slice": 33,
+    "correctness_stop": false,
+    "pr_marker_plan_required": false,
+    "pr_marker_plan_disposition": "not required at this boundary: no actual current full diff exists and delivery already uses seven branch-split slices",
+    "checkbox_diff_disposition": "control-plane metadata excluded from authored LOC, included in the complete physical Git-path ledger"
+  },
+  "atomicity_route": {
+    "route": "one-navigable-PR",
+    "releasable": true,
+    "signals": [
+      "change-shape:modify-heavy"
+    ],
+    "hints": [],
+    "warnings": [],
+    "advisory": true,
+    "operator_topology": "seven sequential stacked slices",
+    "disposition": "classifier sees repeated shared-file modification; it does not override the operator-ratified seven-slice topology"
+  },
+  "layer_plan": {
+    "status": "skipped",
+    "reason": "atomicity-route returned one-navigable-PR; plan-layers-feature-dir runs only for an exact split-PR route",
+    "helper_invoked": false,
+    "operator_topology_preserved": "seven sequential stacked slices"
+  },
+  "gates": {
+    "G1": {
+      "pass": true,
+      "route": "clarify",
+      "runner_reported_markers": 0,
+      "direct_marker_count": 1,
+      "note": "The direct count found the intentional FR-005 marker; G1 routes it to Clarify."
+    },
+    "G2": {
+      "pass": true,
+      "markers": 0,
+      "reason": "0 [NEEDS CLARIFICATION] markers",
+      "clarify_sessions_completed": 3,
+      "consensus": "skipped for all sessions: zero unresolved items"
+    },
+    "G3": {
+      "pass": true,
+      "reason": "complete seven-slice design artifacts, constitution re-check, and zero unresolved markers",
+      "runner_syntax_diagnostic": {
+        "pass": true,
+        "markers": 0,
+        "reason": "plan.md exists with 0 unresolved markers"
+      },
+      "required_outputs": {
+        "plan.md": "present",
+        "research.md": "present",
+        "data-model.md": "present",
+        "contracts": 4,
+        "quickstart.md": "present"
+      },
+      "prior_runner_syntax_diagnostic": {
+        "pass": true,
+        "markers": 0,
+        "reason": "the prior STOP-only plan.md existed with 0 unresolved markers"
+      },
+      "prior_reviewability_block": {
+        "conservative_projection": 2856,
+        "threshold": 800,
+        "operator_decision_required": false,
+        "operator_resolution": "seven sequential stacked slices, one template per slice"
+      }
+    },
+    "G4": {
+      "pass": true,
+      "markers": 0,
+      "reason": "0 [Gap] markers across 120 checklist items",
+      "domains": {
+        "accessibility": "32 items; 6 initial gaps; 0 remaining",
+        "ux": "28 items; 2 initial gaps; 0 remaining",
+        "data-integrity": "30 items; 12 initial gaps; 0 remaining",
+        "error-handling": "30 items; 4 initial gaps; 0 remaining"
+      },
+      "executor_recovery": "data-integrity result delivery and error-handling execution hit model capacity; direct validation fallback completed per error-recovery-codex.md"
+    },
+    "G5": {
+      "pass": true,
+      "markers": 0,
+      "reason": "119 tasks found",
+      "task_count": 119,
+      "phantom_completions": 0,
+      "requirements_covered": 24,
+      "slice_boundaries": 7
+    },
+    "G6": {
+      "pass": true,
+      "markers": 0,
+      "reason": "0 CRITICAL/HIGH findings",
+      "initial_findings": 6,
+      "remaining_findings": 0,
+      "consensus": "skipped: zero unresolved items after remediation"
+    },
+    "G6.5": {
+      "pass": true,
+      "mode": "advisory",
+      "threshold": 0.9,
+      "composite": 0.98,
+      "verdict": "PASS",
+      "reason": "composite at or above threshold",
+      "recommended_action": "proceed"
+    }
+  },
+  "extensions": {
+    "archive": true,
+    "git": true,
+    "verify": true,
+    "verify_tasks": true,
+    "retrospective": true,
+    "speckit_utils": true
+  },
+  "plan": [
+    {
+      "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 0: Prerequisites",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 1: Specify",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Source, Fidelity, and Fill Regions",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Source, Fidelity, and Fill Regions Consensus",
+      "status": "skipped: zero unresolved items"
+    },
+    {
+      "step": "Phase 2: Clarify - Editor State and Export Contracts",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Editor State and Export Contracts Consensus",
+      "status": "skipped: zero unresolved items"
+    },
+    {
+      "step": "Phase 2: Clarify - Acceptance Evidence and Reviewability",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Acceptance Evidence and Reviewability Consensus",
+      "status": "skipped: zero unresolved items"
+    },
+    {
+      "step": "Phase 3: Plan",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - accessibility",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - accessibility Consensus",
+      "status": "skipped: zero unresolved items"
+    },
+    {
+      "step": "Phase 4: Checklist - ux",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - ux Consensus",
+      "status": "skipped: zero unresolved items"
+    },
+    {
+      "step": "Phase 4: Checklist - data-integrity",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - data-integrity Consensus",
+      "status": "skipped: zero unresolved items"
+    },
+    {
+      "step": "Phase 4: Checklist - error-handling",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - error-handling Consensus",
+      "status": "skipped: zero unresolved items"
+    },
+    {
+      "step": "Phase 5: Tasks",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 6: Analyze",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 6: Analyze - Consensus",
+      "status": "skipped: zero unresolved items"
+    },
+    {
+      "step": "Phase 6.5: Confidence Gate",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 7: Implement - Setup and foundational checks T001-T010",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 7: Implement - Slice 1 slide-deck T011-T023",
+      "status": "in_progress"
+    },
+    {
+      "step": "Phase 7: Implement - Slice 2 concept-explainer T024-T036",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - Slice 3 status-report T037-T049",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - Slice 4 incident-report T050-T062",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - Slice 5 triage-board T063-T078",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - Slice 6 feature-flags T079-T094",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - Slice 7 prompt-tuner T095-T111",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - Stack-wide closeout T112-T119",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Doctor Extension Check",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Verify Implementation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Verify Tasks Phantom Check",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Code Review",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Integration Suite",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Reviewability Diff Gate",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Self-Review",
+      "status": "pending"
+    },
+    {
+      "step": "Post: UAT Runbook Generation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Final Reviewability Backstop",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Packet/Body Generation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Body Generation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Creation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Review Remediation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Retrospective",
+      "status": "pending"
+    }
+  ]
 }

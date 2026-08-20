@@ -272,11 +272,16 @@ consumed unmodified. Do not add or edit an agent definition on either platform.
 Never add Grep, Glob, or Bash to this skill's tool surface: this step needs
 **no new tool grant**.
 
-**Dispatch, then await.** Dispatch with `spawn_agent`, using the bare identifier
-`codebase-analyst`, then poll `wait_agent` in a bounded loop until the actual
-summary is delivered. A status update, an unrelated mailbox wake, or a terminal
-status without a delivered result is **not** the result. Call `close_agent` only
-when that action is exposed. The await completes BEFORE the interview starts.
+**Dispatch, then await.** Dispatch with `spawn_agent`, using
+`agent_type: "codebase-analyst"` and `fork_turns: "none"`, then poll
+`wait_agent` in a bounded loop until the actual summary is delivered. The Seed
+below is a self-contained task package, so the analyst does not need inherited
+turns. Never omit `fork_turns` and never use `fork_turns: "all"` while selecting
+this custom agent: a full-history fork inherits the parent agent type and Codex
+rejects the incompatible override. A status update, an unrelated mailbox wake,
+or a terminal status without a delivered result is **not** the result. Call
+`close_agent` only when that action is exposed. The await completes BEFORE the
+interview starts.
 
 **The bound. A single expired poll is not the deadline.** Abandonment is governed
 by one execution deadline for the whole pass:

@@ -109,6 +109,7 @@ FLOOR: dict[str, tuple[str, ...]] = {
     "pr-writeup": ("motivation", "before-after", "file-by-file", "implementation-notes"),
     "annotated-diff": ("hunks",),
     "flowchart": ("flow-diagram",),
+    "slide-deck": ("deck-title", "slides", "speaker-notes"),
     **READ_ONLY_PORT_FLOOR,
     **DECISION_PORT_FLOOR,
 }
@@ -127,6 +128,7 @@ LIST_SLOTS: dict[str, tuple[str, ...]] = {
     "pr-writeup": ("file-by-file",),
     "annotated-diff": ("hunks",),
     "flowchart": ("nodes",),
+    "slide-deck": ("slides",),
     "interaction-prototype": ("views",),
     "visual-designs": ("directions",),
     "component-variants": ("variants",),
@@ -940,6 +942,19 @@ class FillRegionTests(unittest.TestCase):
         for identifier in sorted(FLOOR):
             with self.subTest(msg=identifier):
                 self.assertIn(identifier, identifiers or set())
+
+    def test_slide_deck_fill_inventory_template_exists(self) -> None:
+        relative = _template_path("slide-deck")
+        path = GALLERY_ROOT / relative
+        self.assertTrue(path.is_file(), f"{relative}: missing slide-deck fill-inventory template")
+        template = path.read_text(encoding="utf-8")
+        for slot in FLOOR["slide-deck"]:
+            with self.subTest(msg=slot):
+                self.assertIn(
+                    f"Slot: {slot} |",
+                    template,
+                    f"{relative}: missing {slot!r} fill-inventory slot",
+                )
 
 
 # ---------------------------------------------------------------------------

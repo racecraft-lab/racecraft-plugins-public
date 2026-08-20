@@ -7186,6 +7186,149 @@ class CanonicalBlockAgreementFixtureTests(CanonicalBlockAgreementFixtureCase):
 
 
 # ---------------------------------------------------------------------------
+# Group Q - ART-005 slide-deck reader contract (FR-003, FR-005, FR-006,
+# FR-013, FR-014, FR-022)
+# ---------------------------------------------------------------------------
+
+SLIDE_DECK_ID = "slide-deck"
+SLIDE_DECK_SOURCE_FILE = "09-slide-deck.html"
+SLIDE_DECK_LABEL = f"{TEMPLATES_DIR}/{SLIDE_DECK_ID}.html"
+_SLIDE_POSITION_RE = re.compile(r"\bSlide\s+\d+\s+of\s+\d+\b", re.IGNORECASE)
+_ART005_HORIZONTAL_OVERFLOW_RE = re.compile(r"overflow-x\s*:\s*(?:auto|scroll)\b", re.IGNORECASE)
+
+
+def check_q1(gallery_root: Path) -> list[str]:
+    """Q1 - the slide-deck row, reader markup, and interaction contract agree."""
+    entries = _entries(gallery_root)
+    matches = [
+        entry
+        for entry in entries or []
+        if isinstance(entry, dict) and entry.get("id") == SLIDE_DECK_ID
+    ]
+    if len(matches) != 1:
+        return [f"{MANIFEST_FILE}: expected one '{SLIDE_DECK_ID}' entry, found {len(matches)}"]
+
+    entry = matches[0]
+    source = entry.get("source")
+    failures: list[str] = []
+    if entry.get("status") != SHIPPED:
+        failures.append(f"{MANIFEST_FILE}: '{SLIDE_DECK_ID}' must be shipped, found {entry.get('status')!r}")
+    if entry.get("exports") != []:
+        failures.append(f"{MANIFEST_FILE}: '{SLIDE_DECK_ID}' is a reader and must keep exports: []")
+    if not isinstance(source, dict) or source.get("origin") != UPSTREAM or source.get("file") != SLIDE_DECK_SOURCE_FILE:
+        failures.append(
+            f"{MANIFEST_FILE}: '{SLIDE_DECK_ID}' must remain sourced from {SLIDE_DECK_SOURCE_FILE}"
+        )
+
+    artifact = _artifact_path(gallery_root, SLIDE_DECK_ID)
+    if artifact is None or not artifact.is_file():
+        failures.append(f"{SLIDE_DECK_LABEL}: missing reader artifact")
+        return failures
+
+    text = _document_text(artifact)
+    lowered = text.casefold()
+    elements = _elements(text)
+    attributes = [dict(element.attributes) for element in elements]
+
+    for block in CANONICAL_FILES:
+        if not _embeds(text, block):
+            failures.append(f"{SLIDE_DECK_LABEL}: missing canonical {block} block")
+            continue
+        expected = _canonical_region(gallery_root, block)
+        if expected is None or _region(text, block) != expected:
+            failures.append(f"{SLIDE_DECK_LABEL}: canonical {block} bytes drifted")
+
+    header = _attribution_header(text)
+    if header is None:
+        failures.append(f"{SLIDE_DECK_LABEL}: missing upstream attribution header")
+    else:
+        failures.extend(
+            f"{SLIDE_DECK_LABEL}: attribution is missing {element.name}"
+            for element in ATTRIBUTION_ELEMENTS
+            if not _carried(header, element)
+        )
+        if _labelled_value(header, UPSTREAM_FILE_LABEL) != SLIDE_DECK_SOURCE_FILE:
+            failures.append(f"{SLIDE_DECK_LABEL}: attribution must name {SLIDE_DECK_SOURCE_FILE}")
+
+    for token in ("copy as", "navigator.clipboard", "execcommand(", "download="):
+        if token in lowered:
+            failures.append(f"{SLIDE_DECK_LABEL}: reader exposes export token {token!r}")
+
+    named_navigation = [
+        attrs
+        for element, attrs in zip(elements, attributes)
+        if (element.tag == "nav" or attrs.get("role") == "navigation")
+        and (attrs.get("aria-label", "").strip() or attrs.get("aria-labelledby", "").strip())
+    ]
+    if not named_navigation:
+        failures.append(f"{SLIDE_DECK_LABEL}: slide navigation group has no programmatic name")
+
+    button_names = {
+        attrs.get("aria-label", "").strip().casefold()
+        for element, attrs in zip(elements, attributes)
+        if element.tag == "button"
+    }
+    if not any("previous" in name for name in button_names) or not any("next" in name for name in button_names):
+        failures.append(f"{SLIDE_DECK_LABEL}: missing named previous/next slide controls")
+    if not _SLIDE_POSITION_RE.search(text):
+        failures.append(f"{SLIDE_DECK_LABEL}: missing visible current-position text such as Slide 1 of 3")
+
+    slides = [
+        attrs
+        for attrs in attributes
+        if "slide" in attrs.get("class", "").split()
+    ]
+    if len(slides) < 2:
+        failures.append(f"{SLIDE_DECK_LABEL}: expected at least two slide elements")
+    if not any("hidden" in attrs for attrs in slides):
+        failures.append(f"{SLIDE_DECK_LABEL}: no inactive slide starts hidden")
+    if ".hidden =" not in text or ".inert =" not in text:
+        failures.append(f"{SLIDE_DECK_LABEL}: slide changes do not update hidden and inert together")
+    if "focusSlide: false" not in text or "focusSlide: true" not in text or ".focus(" not in text:
+        failures.append(f"{SLIDE_DECK_LABEL}: control and non-control focus paths are not explicit")
+    if "setInterval(" in text:
+        failures.append(f"{SLIDE_DECK_LABEL}: automatic slide rotation is prohibited")
+
+    if not re.search(r"<meta\s+[^>]*name=[\"']viewport[\"']", text, re.IGNORECASE):
+        failures.append(f"{SLIDE_DECK_LABEL}: missing mobile viewport metadata")
+    widths = [
+        int(value)
+        for value in re.findall(r"@media[^{}]*max-width\s*:\s*(\d+)px", text, re.IGNORECASE)
+    ]
+    if not any(width >= 360 for width in widths):
+        failures.append(f"{SLIDE_DECK_LABEL}: no responsive rule covers the 360 CSS px review width")
+    if "prefers-reduced-motion" not in text:
+        failures.append(f"{SLIDE_DECK_LABEL}: missing reduced-motion handling")
+
+    for element, attrs in zip(elements, attributes):
+        value = attrs.get("tabindex", "")
+        if value.lstrip("-").isdigit() and int(value) > 0:
+            failures.append(f"{SLIDE_DECK_LABEL}: <{element.tag}> uses positive tabindex={value!r}")
+
+    for selector, declarations in _RULE_RE.findall(text):
+        if not _ART005_HORIZONTAL_OVERFLOW_RE.search(declarations):
+            continue
+        classes = re.findall(r"\.([A-Za-z_-][\w-]*)", selector)
+        identifiers = re.findall(r"#([A-Za-z_-][\w-]*)", selector)
+        matched = [
+            attrs
+            for attrs in attributes
+            if attrs.get("id") in identifiers
+            or any(name in attrs.get("class", "").split() for name in classes)
+        ]
+        if not matched:
+            failures.append(f"{SLIDE_DECK_LABEL}: horizontal scroll rule has no bound actual element")
+            continue
+        for attrs in matched:
+            name = attrs.get("aria-label", "").strip() or attrs.get("aria-labelledby", "").strip()
+            if attrs.get("tabindex") != "0" or attrs.get("role") != "group" or not name:
+                failures.append(
+                    f"{SLIDE_DECK_LABEL}: actual horizontal scroll element must have tabindex=0, "
+                    "role=group, and a programmatic name"
+                )
+    return failures
+
+
 # Group L — horizontal keyboard-scroll regions (FR-022, FR-023)
 # ---------------------------------------------------------------------------
 
@@ -7973,6 +8116,37 @@ def check_m4(gallery_root: Path) -> list[str]:
                     "export-looking control"
                 )
     return failures
+
+
+GROUP_Q_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (("Q1", check_q1),)
+
+
+class SlideDeckReaderTests(unittest.TestCase):
+    def test_slide_deck_reader_contract_passes_against_the_shipped_gallery(self) -> None:
+        for name, check in GROUP_Q_CHECKS:
+            with self.subTest(msg=name):
+                self.assertEqual(check(GALLERY_ROOT), [])
+
+    def test_horizontal_scroll_rule_can_bind_an_id_selected_element(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            gallery = Path(raw) / "artifact-gallery"
+            shutil.copytree(GALLERY_ROOT, gallery)
+            artifact = gallery / TEMPLATES_DIR / f"{SLIDE_DECK_ID}.html"
+            text = artifact.read_text()
+            text = text.replace(
+                "</head>",
+                '<style>#review-scroll-region { overflow-x: auto; }</style>\n</head>',
+                1,
+            )
+            text = text.replace(
+                "</body>",
+                '<section id="review-scroll-region" tabindex="0" role="group" '
+                'aria-label="Slide comparison strip"></section>\n</body>',
+                1,
+            )
+            artifact.write_text(text)
+
+            self.assertEqual(check_q1(gallery), [])
 
 
 def check_m5(gallery_root: Path) -> list[str]:
@@ -9330,6 +9504,7 @@ CHECK_GROUPS: tuple[type[unittest.TestCase], ...] = (
     SuiteRegistrationFixtureTests,
     CanonicalBlockAgreementTests,
     CanonicalBlockAgreementFixtureTests,
+    SlideDeckReaderTests,
     KeyboardScrollGuardTests,
     KeyboardScrollGuardFixtureTests,
     ReadOnlyPortContractTests,

@@ -217,7 +217,7 @@
             "kind": "docs",
             "path": "artifact-gallery/manifest.json",
             "required": true,
-            "sha256": "29dad6799bad4fb8364adb4ea207934ca1464be306bd9e21940a0b6a094c5b1b",
+            "sha256": "520613b5a33e5b37d0fa7e81109b2ffcb9432c47f4801f8993dc68181d0bc205",
             "source_path": "speckit-pro/artifact-gallery/manifest.json",
             "transform": "none"
           },
@@ -309,6 +309,15 @@
             "required": true,
             "sha256": "5ed717ac46d4fbaaf5ea4213bbc82b4fdfbe9d38ac5391932d1ea4a3bace2ccc",
             "source_path": "speckit-pro/artifact-gallery/templates/pr-writeup.html",
+            "transform": "none"
+          },
+          {
+            "byte_count": 34329,
+            "kind": "docs",
+            "path": "artifact-gallery/templates/slide-deck.html",
+            "required": true,
+            "sha256": "3eae61580e81c2aaeecd2373dbcc794fa1e2c37fd4252a4c5f69d6d2df964e5e",
+            "source_path": "speckit-pro/artifact-gallery/templates/slide-deck.html",
             "transform": "none"
           },
           {
@@ -1326,7 +1335,7 @@
             "kind": "docs",
             "path": "artifact-gallery/manifest.json",
             "required": true,
-            "sha256": "29dad6799bad4fb8364adb4ea207934ca1464be306bd9e21940a0b6a094c5b1b",
+            "sha256": "520613b5a33e5b37d0fa7e81109b2ffcb9432c47f4801f8993dc68181d0bc205",
             "source_path": "speckit-pro/artifact-gallery/manifest.json",
             "transform": "none"
           },
@@ -1418,6 +1427,15 @@
             "required": true,
             "sha256": "5ed717ac46d4fbaaf5ea4213bbc82b4fdfbe9d38ac5391932d1ea4a3bace2ccc",
             "source_path": "speckit-pro/artifact-gallery/templates/pr-writeup.html",
+            "transform": "none"
+          },
+          {
+            "byte_count": 34329,
+            "kind": "docs",
+            "path": "artifact-gallery/templates/slide-deck.html",
+            "required": true,
+            "sha256": "3eae61580e81c2aaeecd2373dbcc794fa1e2c37fd4252a4c5f69d6d2df964e5e",
+            "source_path": "speckit-pro/artifact-gallery/templates/slide-deck.html",
             "transform": "none"
           },
           {
@@ -2250,7 +2268,7 @@
           }
         ],
         "extra_paths": [],
-        "file_tree_hash": "b9f731e6c81c5885e61d6f1efd21d388dce0e8e238bbf76d1094428f2086374d",
+        "file_tree_hash": "d3e7fdbb6b0265ba0f02def8c1d9585bf08c98ef7c57cd9790104baee1f0f4ea",
         "generated_root": "dist/claude/speckit-pro",
         "mismatched_paths": [],
         "missing_paths": [],
@@ -2342,7 +2360,7 @@
             "kind": "docs",
             "path": "artifact-gallery/manifest.json",
             "required": true,
-            "sha256": "29dad6799bad4fb8364adb4ea207934ca1464be306bd9e21940a0b6a094c5b1b",
+            "sha256": "520613b5a33e5b37d0fa7e81109b2ffcb9432c47f4801f8993dc68181d0bc205",
             "source_path": "speckit-pro/artifact-gallery/manifest.json",
             "transform": "none"
           },
@@ -2434,6 +2452,15 @@
             "required": true,
             "sha256": "5ed717ac46d4fbaaf5ea4213bbc82b4fdfbe9d38ac5391932d1ea4a3bace2ccc",
             "source_path": "speckit-pro/artifact-gallery/templates/pr-writeup.html",
+            "transform": "none"
+          },
+          {
+            "byte_count": 34329,
+            "kind": "docs",
+            "path": "artifact-gallery/templates/slide-deck.html",
+            "required": true,
+            "sha256": "3eae61580e81c2aaeecd2373dbcc794fa1e2c37fd4252a4c5f69d6d2df964e5e",
+            "source_path": "speckit-pro/artifact-gallery/templates/slide-deck.html",
             "transform": "none"
           },
           {
@@ -3247,11 +3274,11 @@
             "transform": "path_normalization"
           },
           {
-            "byte_count": 49074,
+            "byte_count": 49377,
             "kind": "skill",
             "path": "skills/speckit-scaffold-spec/SKILL.md",
             "required": true,
-            "sha256": "4d41c3c2500c80e137be339ef81600b866863a563bc96e0fef7351e77fe5afb9",
+            "sha256": "b8d062d461e6761cb17f7d3158a6427fcae324cc3e70f7ca4f478e9125e371fd",
             "source_path": "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
             "transform": "codex_overlay"
           },
@@ -3604,7 +3631,7 @@
             "kind": "docs",
             "path": "artifact-gallery/manifest.json",
             "required": true,
-            "sha256": "29dad6799bad4fb8364adb4ea207934ca1464be306bd9e21940a0b6a094c5b1b",
+            "sha256": "520613b5a33e5b37d0fa7e81109b2ffcb9432c47f4801f8993dc68181d0bc205",
             "source_path": "speckit-pro/artifact-gallery/manifest.json",
             "transform": "none"
           },
@@ -3696,6 +3723,15 @@
             "required": true,
             "sha256": "5ed717ac46d4fbaaf5ea4213bbc82b4fdfbe9d38ac5391932d1ea4a3bace2ccc",
             "source_path": "speckit-pro/artifact-gallery/templates/pr-writeup.html",
+            "transform": "none"
+          },
+          {
+            "byte_count": 34329,
+            "kind": "docs",
+            "path": "artifact-gallery/templates/slide-deck.html",
+            "required": true,
+            "sha256": "3eae61580e81c2aaeecd2373dbcc794fa1e2c37fd4252a4c5f69d6d2df964e5e",
+            "source_path": "speckit-pro/artifact-gallery/templates/slide-deck.html",
             "transform": "none"
           },
           {
@@ -4509,11 +4545,11 @@
             "transform": "path_normalization"
           },
           {
-            "byte_count": 49074,
+            "byte_count": 49377,
             "kind": "skill",
             "path": "skills/speckit-scaffold-spec/SKILL.md",
             "required": true,
-            "sha256": "4d41c3c2500c80e137be339ef81600b866863a563bc96e0fef7351e77fe5afb9",
+            "sha256": "b8d062d461e6761cb17f7d3158a6427fcae324cc3e70f7ca4f478e9125e371fd",
             "source_path": "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
             "transform": "codex_overlay"
           },
@@ -4789,7 +4825,7 @@
           }
         ],
         "extra_paths": [],
-        "file_tree_hash": "ebeccbf44dd5232b472f09d4b2867c594066939e4c3084251c8396890571aba0",
+        "file_tree_hash": "62b88375f85834369d416ec3950e283a17a79c64598f140a89f8e02c929bd654",
         "generated_root": "dist/codex/speckit-pro",
         "mismatched_paths": [],
         "missing_paths": [],

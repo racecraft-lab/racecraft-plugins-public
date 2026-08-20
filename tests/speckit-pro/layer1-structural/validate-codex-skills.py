@@ -9,7 +9,7 @@ guards, sidecar policy metadata, and source-artifact mappings. Every former
 names reproduced verbatim via ``subTest(msg=...)`` for a 1:1 baseline match.
 
 Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-codex-skills-baseline.txt``
-(TOTAL: 161).
+(TOTAL: 163).
 """
 
 from __future__ import annotations
@@ -162,6 +162,16 @@ class ValidateCodexSkills(unittest.TestCase):
                         re.search(r"^# SpecKit Scaffold Spec$", content, re.MULTILINE) is not None
                         and re.search(r"^# SpecKit Setup$", content, re.MULTILINE) is None,
                         "expected '# SpecKit Scaffold Spec' heading in codex-skills/speckit-scaffold-spec/SKILL.md",
+                    )
+
+                dispatch_section = content.split("**Dispatch, then await.**", 1)[-1].split("**The bound.", 1)[0]
+                with self.subTest(msg="speckit-scaffold-spec: blind-spot custom agent uses an isolated fork"):
+                    self.assertTrue(
+                        '`agent_type: "codebase-analyst"`' in dispatch_section
+                        and '`fork_turns: "none"`' in dispatch_section
+                        and '`fork_turns: "all"`' in dispatch_section
+                        and "self-contained" in dispatch_section,
+                        "expected blind-spot dispatch to select codebase-analyst with an explicit isolated fork",
                     )
 
             body = _body(lines)
