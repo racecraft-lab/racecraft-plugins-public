@@ -1,19 +1,20 @@
 # ART-005 UAT Runbook
 
 Feature: ART-005 gallery completion knowledge reports/editors
-Artifacts: `slide-deck`, `concept-explainer`, `status-report`
+Artifacts: `slide-deck`, `concept-explainer`, `status-report`, `incident-report`
 Driver: `manual`
 Template paths:
 - `speckit-pro/artifact-gallery/templates/slide-deck.html`
 - `speckit-pro/artifact-gallery/templates/concept-explainer.html`
 - `speckit-pro/artifact-gallery/templates/status-report.html`
+- `speckit-pro/artifact-gallery/templates/incident-report.html`
 Results path: `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.md`
 JSON path: `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json`
 
-T019 created the active UAT carriers. T048 re-executed the complete cumulative
-Slice 1-3 row set against source checkpoint
-`36ef824dee02292e13704473292084173acb2f91` on 2026-08-18. A fresh connected
-browser selection returned `No browser is available`, so the
+T019 created the active UAT carriers. T061 re-executed the complete cumulative
+Slice 1-4 row set against source checkpoint
+`f27b7833e3d3e05772c7ebc44d4640f2b9d129ea` on 2026-08-18. A fresh connected
+browser selection for the exact incident-report file returned `No browser is available`, so the
 operator-authorized Playwright MCP fallback supplied browser interaction and
 observation while the contract driver remained `manual`.
 
@@ -451,21 +452,128 @@ steps remain the reusable cumulative procedure for later slice checkpoints.
 2. Confirm the pinned upstream source is `11-status-report.html`.
 3. Confirm role is reader, status is `shipped`, and `exports` is `[]`.
 
+## Slice 4 Executable Rows
+
+IR-UAT-001 through IR-UAT-018 passed at the Slice 4 source checkpoint. These
+steps remain the reusable cumulative procedure for later slice checkpoints.
+
+### IR-UAT-001 Direct file open
+
+1. Open `file://<repo-root>/speckit-pro/artifact-gallery/templates/incident-report.html`.
+2. Confirm the title is `INC-2025-0412 - Elevated 502s on task sync`.
+3. Confirm the h1 is `Elevated 502s on task sync` and no server is required.
+
+### IR-UAT-002 Complete representative fills
+
+1. Confirm `summary`, `timeline`, `impact`, `root-cause`, and `follow-ups` are complete.
+2. Confirm at least two stable anchors exist in timeline and follow-ups.
+
+### IR-UAT-003 Named report navigation
+
+1. Locate the navigation named `Incident report sections`.
+2. Activate Summary, Timeline, Impact, Root cause, and Follow-ups.
+3. Confirm every link targets the matching stable section.
+
+### IR-UAT-004 Summary identity and state
+
+1. Confirm incident ID `INC-2025-0412`, `SEV-2`, and `Resolved` are visible.
+2. Confirm duration, detection time, owner, error peak, mitigation, and no-data-loss text.
+
+### IR-UAT-005 Anchored timeline
+
+1. Confirm the timeline is an ordered semantic list.
+2. Confirm seven anchored events run from the 14:02 rollout through 14:49 resolution.
+3. Confirm impact, alert, diagnosis, mitigation, and resolution are stated in text.
+
+### IR-UAT-006 Quantified impact
+
+1. Confirm failed requests, peak error rate, affected workspaces, data loss, SLA, and recovery.
+2. Confirm each value remains visible and associated with its label.
+
+### IR-UAT-007 Root-cause chain
+
+1. Confirm the retained value 8 versus inherited value 64 is explicit.
+2. Confirm missing magnitude validation and the separate-pipeline diagnosis delay are explicit.
+
+### IR-UAT-008 Owned follow-ups
+
+1. Confirm four anchored remediation items are present.
+2. Confirm every item exposes visible Status, Owner, and Due text.
+
+### IR-UAT-009 Offline reload
+
+1. Put the browser context offline and reload the exact local file.
+2. Confirm title, h1, navigation, five sections, timeline, follow-ups, and theme remain usable.
+3. Confirm a disposable remote probe fails with `net::ERR_INTERNET_DISCONNECTED`.
+
+### IR-UAT-010 Complete keyboard traversal
+
+1. Reload and start from the browser viewport.
+2. Confirm forward order: Dark theme, Summary, Timeline, Impact, Root cause, Follow-ups.
+3. Traverse backward and confirm the same six controls remain reachable.
+
+### IR-UAT-011 Focus visibility
+
+1. Keyboard-focus the Dark theme control and a report navigation link.
+2. Confirm the theme control has a 2px solid outline with 2px offset.
+3. Confirm navigation links have a 3px solid outline with 3px offset.
+
+### IR-UAT-012 Light/dark parity
+
+1. Record all incident content in light mode, then toggle Dark theme.
+2. Confirm all five sections, seven timeline events, and four follow-ups remain.
+3. Reload to confirm dark persistence, then return to light.
+
+### IR-UAT-013 Reduced motion
+
+1. Enable `prefers-reduced-motion: reduce` and reload.
+2. Confirm transition and animation durations are effectively removed.
+3. Confirm no animation remains running after settle.
+
+### IR-UAT-014 Color-independent meaning
+
+1. Confirm severity, status, duration, owner, timeline order, and milestone text are visible.
+2. Confirm follow-up Status, Owner, and Due labels carry meaning without hue.
+
+### IR-UAT-015 Horizontal scroll actual-element check
+
+1. Confirm source has no `overflow-x:auto` or `overflow-x:scroll` declaration.
+2. At both review widths, compare document client and scroll widths.
+3. Confirm no actual user-scroll element has horizontal overflow.
+
+### IR-UAT-016 360 CSS px layout
+
+1. Set the viewport to exactly 360 CSS px and reload.
+2. Confirm navigation, sections, timeline, impact, cause, and follow-ups remain inside the viewport.
+3. Confirm there is no page-level horizontal overflow or clipped reviewed node.
+
+### IR-UAT-017 >=1280 CSS px layout
+
+1. Set the viewport to at least 1280 CSS px and reload.
+2. Confirm navigation and all report sections remain visible without clipping.
+3. Confirm there is no page-level horizontal overflow.
+
+### IR-UAT-018 Manifest parity
+
+1. Confirm `id` is `incident-report` and title is `Incident Report`.
+2. Confirm the pinned upstream source is `12-incident-report.html`.
+3. Confirm role is reader, status is `shipped`, and `exports` is `[]`.
+
 ## Source-Backed Not Applicable Rows
 
 The cumulative JSON retains rows that honestly carry
 `verdict: not_applicable` after source and browser execution.
 
-1. SD-UAT-019, CE-UAT-019, and SR-UAT-019 record the horizontal-scroll N/A route from source
+1. SD-UAT-019, CE-UAT-019, SR-UAT-019, and IR-UAT-019 record the horizontal-scroll N/A route from source
    and runtime evidence: there is no `overflow-x: auto` or `overflow-x: scroll`;
    `html` and `body` use `overflow-x: hidden`; 360 and 1280 CSS px observations
    found no actual user-scroll element.
-2. SD-UAT-020 through SD-UAT-028, CE-UAT-020 through CE-UAT-028, and
-   SR-UAT-020 through SR-UAT-028 record
+2. SD-UAT-020 through SD-UAT-028, CE-UAT-020 through CE-UAT-028,
+   SR-UAT-020 through SR-UAT-028, and IR-UAT-020 through IR-UAT-028 record
    producer-only data-integrity/export cases that do not apply because all
-   three manifests declare `exports: []` and none of the templates has an
+   four manifests declare `exports: []` and none of the templates has an
    export surface.
-3. SD-UAT-029 through SD-UAT-036, CE-UAT-029 through CE-UAT-036, and
-   SR-UAT-029 through SR-UAT-036 record
+3. SD-UAT-029 through SD-UAT-036, CE-UAT-029 through CE-UAT-036,
+   SR-UAT-029 through SR-UAT-036, and IR-UAT-029 through IR-UAT-036 record
    producer-only clipboard/recovery/race cases that do not apply because all
-   three artifacts are readers with no clipboard action.
+   four artifacts are readers with no clipboard action.

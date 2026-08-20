@@ -55,7 +55,7 @@ for four artifacts is now an explicit Open Question.
 | Tasks | `/speckit-tasks` | ✅ Complete | 119 ordered tasks; G5 and phantom-completion checks pass |
 | Analyze | `/speckit-analyze` | ✅ Complete | Six findings remediated; G6 passes with 0 CRITICAL/HIGH findings |
 | Confidence Gate | G6.5 | ✅ Complete | Advisory PASS at 0.98 against the 0.90 threshold |
-| Implement | `/speckit-implement` | 🔄 In Progress | Slices 1-3 complete in PRs #444, #446, and #447; Slice 4 incident-report T050 next |
+| Implement | `/speckit-implement` | 🔄 In Progress | Slices 1-4 complete in PRs #444, #446, #447, and #448; Slice 5 triage-board T063 next |
 | Post | Post-Implementation | ⏳ Pending | Canonical closeout plus tracked `file://` UAT results |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -923,8 +923,8 @@ For every behavior:
 | 2 - Slice 1 | Complete | 13 | PR #444 open; source checkpoint `660bfe9ce`; 18 pass, 18 evidence-backed N/A, zero fail; final gates green |
 | 3 - Slice 2 | Complete | 13 | PR #446 open; source checkpoint `7c636c361`; cumulative UAT 36 pass, 36 evidence-backed N/A, zero fail; final gates green |
 | 4 - Slice 3 | Complete | 13 | PR #447 open; source checkpoint `36ef824de`; cumulative UAT 54 pass, 54 evidence-backed N/A, zero fail; final gates green |
-| 5 - Slice 4 | In Progress | 0 | incident-report T050 branch/budget binding next |
-| 6 - Slice 5 | Pending | 0 | triage-board plus incremental integration and UAT |
+| 5 - Slice 4 | Complete | 13 | PR #448 open; source checkpoint `f27b7833e`; cumulative UAT 72 pass, 72 evidence-backed N/A, zero fail; final gates green |
+| 6 - Slice 5 | In Progress | 0 | triage-board T063 branch/budget binding next |
 | 7 - Slice 6 | Pending | 0 | feature-flags plus incremental integration and UAT |
 | 8 - Slice 7 | Pending | 0 | prompt-tuner plus incremental integration and closeout |
 
@@ -935,7 +935,8 @@ For every behavior:
 | 1 | `art-005-gallery-completion-knowledge-reports-editors` | `main` | [#444](https://github.com/racecraft-lab/racecraft-plugins-public/pull/444) | Open |
 | 2 | `art-005-gallery-completion-knowledge-reports-editors-slice-2` | `art-005-gallery-completion-knowledge-reports-editors` | [#446](https://github.com/racecraft-lab/racecraft-plugins-public/pull/446) | Open |
 | 3 | `art-005-gallery-completion-knowledge-reports-editors-slice-3` | `art-005-gallery-completion-knowledge-reports-editors-slice-2` | [#447](https://github.com/racecraft-lab/racecraft-plugins-public/pull/447) | Open |
-| 4 | `art-005-gallery-completion-knowledge-reports-editors-slice-4` | `art-005-gallery-completion-knowledge-reports-editors-slice-3` | Pending | Active |
+| 4 | `art-005-gallery-completion-knowledge-reports-editors-slice-4` | `art-005-gallery-completion-knowledge-reports-editors-slice-3` | [#448](https://github.com/racecraft-lab/racecraft-plugins-public/pull/448) | Open |
+| 5 | `art-005-gallery-completion-knowledge-reports-editors-slice-5` | `art-005-gallery-completion-knowledge-reports-editors-slice-4` | Pending | Active |
 
 ---
 

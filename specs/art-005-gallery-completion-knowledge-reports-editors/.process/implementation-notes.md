@@ -215,3 +215,55 @@
 ### T049
 
 **Deviations/Edge cases/Surprises:** Refreshed PR #446 was open and clean at exact Slice 3 base `beb3727533133a4a3d7b6ac1f2a241e5a8039a1c`. The final boundary is 33 paths: seven implementation-authored, 22 generated, and four workflow/control-plane, with 377 reviewable LOC, one production template, and no correctness or non-size blocker; the total-file result is **SIZE-ONLY BLOCK / CONTINUE**. Packet `art-005-slice-3-status-report` passed dry-run/apply emission, read-only validation with `pr_blocked=false`, persisted current-fingerprint validation, workflow-contract validation, exact-title release readiness, and release-note policy. The exact emission head `e0d7c6009d48bf0f425242b9be14ae327720194e` was pushed and PR [#447](https://github.com/racecraft-lab/racecraft-plugins-public/pull/447) opened against the Slice 2 branch. GitHub reported `UNSTABLE` immediately after creation while checks started; this is not a packet or PR-creation blocker.
+
+### T050
+
+**Deviations/Edge cases/Surprises:** None. After PR #447 opened and Slice 3 closeout reached `2b0fa4eb1d1d5b1daf24eb13946eac4fb7beebd3`, Slice 4 was created from that exact head as `art-005-gallery-completion-knowledge-reports-editors-slice-4`. The plan and topology contract agree on exactly seven implementation-authored paths and a 620 reviewable-LOC ceiling (285 markup/content, 150 CSS, 45 behavior JS, and 140 incremental tests), leaving 180 LOC below the mandatory 800-LOC stop. `incident-report` remains `planned` with pinned source `12-incident-report.html` and `exports: []` before RED.
+
+### T051
+
+**Deviations/Edge cases/Surprises:** None. Group O pins the incident reader's manifest/source identity, canonical bytes, attribution, reader-only behavior, semantic main and five report headings, stable section navigation, list-backed timeline/follow-ups, text-backed incident meaning, mobile viewport, 360px responsive coverage, focus/reduced-motion handling, positive-tabindex prohibition, and conditional horizontal-scroll semantics.
+
+### T052
+
+**Deviations/Edge cases/Surprises:** None. The fill contract now pins `summary`, `timeline`, `impact`, `root-cause`, and `follow-ups`, marks timeline and follow-ups as repeated list slots, and adds a non-vacuity check requiring the incident-report inventory template.
+
+### T053
+
+**Deviations/Edge cases/Surprises:** Formal RED passed for the intended reason. Gallery reported 490/491; direct `check_o1` evidence names only the planned manifest status and missing incident reader. Fill-region reported 60/61 with only the new missing incident-report fill-inventory template failing. Existing Slice 1-3 checks remained green.
+
+### T054
+
+**Deviations/Edge cases/Surprises:** The static reader preserves the pinned incident identity, 47-minute event sequence, quantified impact, causal chain, and owned remediation work. It embeds both canonical regions byte-for-byte, fills all five declared slots, puts seven stable anchors in the ordered timeline and four in follow-ups, exposes five semantic sections through labelled navigation, and adds no authored script, export surface, persistence, network dependency, or horizontal scroller. The initial inventory used incident-specific source filenames outside the contract's closed source set; replacing them with the authoritative `spec.md`, `research.md`, `implementation-notes.md`, and `tasks.md` values made R4 green without changing reader behavior.
+
+### T055
+
+**Deviations/Edge cases/Surprises:** None. The manifest diff changes only `incident-report.status` from `planned` to `shipped`; pinned source `12-incident-report.html`, `exports: []`, and every other row remain unchanged.
+
+### T056
+
+**Deviations/Edge cases/Surprises:** Slice 1 `check_l1`, Slice 2 `check_m1`, Slice 3 `check_n1`, and Slice 4 `check_o1` all return no failures, and fill-region checks pass 61/61. The complete gallery module reports 487/491 only because F1-F4 require T059 regeneration of the Claude/Codex payload copies; no source-reader assertion is failing.
+
+### T057
+
+**Deviations/Edge cases/Surprises:** No further refactor was warranted. The reader already uses a single semantic main, stable navigation, ordered and unordered lists with replaceable regions inside persistent containers, audited gallery tokens, and no template-specific behavior. `git diff --check` is clean.
+
+### T058
+
+**Deviations/Edge cases/Surprises:** None. The 769-line physical template contains 458 byte-identical canonical lines, leaving 311 non-canonical template lines. With 109 incremental test lines, final reviewable implementation is 420 LOC: 200 below the 620 ceiling and 380 below the mandatory 800 stop. One production template and the seven declared authored paths remain in scope, so regeneration may proceed.
+
+### T059
+
+**Deviations/Edge cases/Surprises:** Authoritative regeneration completed normally after one silent running window, producing the Claude/Codex dist templates, both installed-cache templates, manifest mirrors, and refreshed proof/XPLAT fixtures; docs `reference:generate` regenerated seven pages byte-identically. All five template copies share SHA-256 `6e7d2afd7af50df884830ae51c1a0f8c5490eda81c144470ad6cb262d0a9adeb`; all five manifests share `7e59af11441cfae9159f0e3adc40e1a20bb9aeb01f0bd6f172f1a604b02e8e71`. Focused gallery and fill checks are green at 491/491 and 61/61.
+
+### T060
+
+**Deviations/Edge cases/Surprises:** Focused checks passed 491/491 and 61/61, Layer 1 passed 1,448/1,448, isolated Layer 4 passed 5,778/5,778, and the isolated default suite passed 7,412/7,412. Source checkpoint `f27b7833e3d3e05772c7ebc44d4640f2b9d129ea` is clean; its post-commit generated-artifact check passes, and packet-excluded spec-index mutation dry-run/read-only checks report zero stale maps/current index. The ignored packet directory was restored byte-identically.
+
+### T061
+
+**Deviations/Edge cases/Surprises:** Fresh connected-browser selection for the exact incident-report file returned `No browser is available`; the Browser skill's prescribed discovery check confirmed an empty connected-browser list, activating the operator-authorized Playwright MCP fallback. Google Chrome 151.0.7922.138 on macOS 26.6.2 re-executed all 144 cumulative rows at source checkpoint `f27b7833e3d3e05772c7ebc44d4640f2b9d129ea`: 72 pass, 72 structured `not_applicable`, zero fail, and 36 unique rows per artifact. Coverage included two independent 31-second deck no-autorotation observations; the complete deterministic/session-only concept simulation; the five-section status report; and incident navigation, seven timeline anchors, quantified impact, causal chain, and four owned follow-ups. Every reader passed offline reload, light/dark persistence and return, 0.01ms reduced-motion treatment with zero running animations, focus traversal/visibility, text-backed meaning, and unclipped 360/1280 CSS px layouts with no meaningful horizontal scroller or console/page error. All tested source, manifest, test, generated-mirror, and proof bytes remain unchanged after the checkpoint.
+
+### T062
+
+**Deviations/Edge cases/Surprises:** Refreshed PR #447 was open at exact Slice 4 base `2b0fa4eb1d1d5b1daf24eb13946eac4fb7beebd3`. The final boundary is 33 paths: seven implementation-authored, 22 generated, and four workflow/control-plane, with 420 reviewable LOC, one production template, and no correctness or non-size blocker; the total-file result is **SIZE-ONLY BLOCK / CONTINUE**. Packet `art-005-slice-4-incident-report` passed dry-run/apply emission, read-only validation with `pr_blocked=false`, persisted current-fingerprint validation, workflow-contract validation, exact-title release readiness, and release-note policy. The exact emission head `17699aac607938f049faf8a6a7b1d62ee32fb1fb` was pushed and PR [#448](https://github.com/racecraft-lab/racecraft-plugins-public/pull/448) opened against the Slice 3 branch. GitHub reported `UNSTABLE` immediately after creation while checks started; this is not a packet or PR-creation blocker.
