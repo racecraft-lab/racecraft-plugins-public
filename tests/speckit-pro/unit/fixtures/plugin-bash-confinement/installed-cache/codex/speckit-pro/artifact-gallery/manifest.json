@@ -218,7 +218,7 @@
       "stage": "ad-hoc",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "18-editor-triage-board.html" },
-      "status": "planned",
+      "status": "shipped",
       "exports": ["markdown"]
     },
     {
