@@ -113,6 +113,7 @@ FLOOR: dict[str, tuple[str, ...]] = {
     "concept-explainer": ("concept-title", "principles", "worked-example", "simulation-scenarios"),
     "status-report": ("summary", "landed", "in-flight", "blocked", "next-actions"),
     "incident-report": ("summary", "timeline", "impact", "root-cause", "follow-ups"),
+    "triage-board": ("triage-items", "column-labels"),
     **READ_ONLY_PORT_FLOOR,
     **DECISION_PORT_FLOOR,
 }
@@ -135,6 +136,7 @@ LIST_SLOTS: dict[str, tuple[str, ...]] = {
     "concept-explainer": ("simulation-scenarios",),
     "status-report": ("landed", "in-flight", "blocked", "next-actions"),
     "incident-report": ("timeline", "follow-ups"),
+    "triage-board": ("triage-items",),
     "interaction-prototype": ("views",),
     "visual-designs": ("directions",),
     "component-variants": ("variants",),
@@ -968,6 +970,8 @@ class FillRegionTests(unittest.TestCase):
         self.assertTrue((path := GALLERY_ROOT / _template_path("status-report")).is_file() and all(f"Slot: {slot} |" in path.read_text(encoding="utf-8") for slot in FLOOR["status-report"]), f"{_template_path('status-report')}: missing status-report fill-inventory template")
     def test_incident_report_fill_inventory_template_exists(self) -> None:
         self.assertTrue((path := GALLERY_ROOT / _template_path("incident-report")).is_file() and all(f"Slot: {slot} |" in path.read_text(encoding="utf-8") for slot in FLOOR["incident-report"]), f"{_template_path('incident-report')}: missing incident-report fill-inventory template")
+    def test_triage_board_fill_inventory_template_exists(self) -> None:
+        self.assertTrue((path := GALLERY_ROOT / _template_path("triage-board")).is_file() and all(f"Slot: {slot} |" in path.read_text(encoding="utf-8") for slot in FLOOR["triage-board"]), f"{_template_path('triage-board')}: missing triage-board fill-inventory template")
 
 
 # ---------------------------------------------------------------------------

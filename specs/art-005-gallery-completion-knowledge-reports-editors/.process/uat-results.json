@@ -1,16 +1,16 @@
 {
   "featureId": "ART-005",
-  "sourceCommit": "f27b7833e3d3e05772c7ebc44d4640f2b9d129ea",
-  "executedAt": "2026-08-18T20:44:34Z",
+  "sourceCommit": "69f803d37523499f80120d246400a7fbda30c6fa",
+  "executedAt": "2026-08-18T23:42:26Z",
   "environment": {
     "operatingSystem": "macOS 26.6.2 (Build 25G82; arm64)",
     "browserNameAndVersion": "Google Chrome 151.0.7922.138 via Playwright MCP fallback",
     "scheme": "file://",
-    "networkCondition": "Online baseline plus Playwright context-offline reload for all four readers; a disposable remote probe failed with net::ERR_INTERNET_DISCONNECTED while every local artifact remained usable.",
-    "themeCondition": "Light and dark modes exercised for all four readers; dark overrides persisted across reload and every reader returned to light after the tests.",
+    "networkCondition": "Online baseline plus Playwright context-offline reload for all five artifacts; disposable remote probes failed with net::ERR_INTERNET_DISCONNECTED while every local artifact remained usable.",
+    "themeCondition": "Light and dark modes exercised for all five artifacts; dark overrides persisted across reload and every artifact returned to light after the tests.",
     "reducedMotionCondition": "No-preference baseline plus prefers-reduced-motion: reduce emulation; transition and animation durations were 0.01ms with zero running animations after settle.",
-    "colorModeCondition": "Light and dark color schemes plus text-and-shape cues: Ready/Watch/Stop for slide-deck, labeled node circles and square keys for concept-explainer, eight explicit status/next-action labels for status-report, and text-backed severity/status plus numbered timeline and owned follow-ups for incident-report.",
-    "notes": "A fresh connected-browser selection for the exact Slice 4 incident-report URL returned No browser is available. The operator-authorized Playwright MCP fallback then re-executed the complete cumulative Slice 1-4 manual UAT at 360 and 1280 CSS px. No repository browser harness was committed."
+    "colorModeCondition": "Light and dark color schemes plus text-and-shape cues: Ready/Watch/Stop for slide-deck, labeled node circles and square keys for concept-explainer, explicit status/next-action labels for status-report, text-backed severity/status plus numbered timeline and owned follow-ups for incident-report, and named columns, tags, estimates, owners, empty-state text, and status announcements for triage-board.",
+    "notes": "The current session connected-browser selection returned No browser is available and the prescribed inventory was empty before fallback. The operator-authorized Playwright MCP fallback re-executed the complete cumulative Slice 1-5 manual UAT at the repaired source checkpoint, including a real contenteditable line break in triage-board, at 360 and 1280 CSS px. No repository browser harness was committed."
   },
   "driver": "manual",
   "runbookPath": "specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-runbook.md",
@@ -20,7 +20,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-001 direct_file_open",
       "claim": "The slide-deck reader opens directly over file:// with its expected title and no server dependency or visible error state.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: the exact repository-relative template opened over file:// with title Slide Deck - RACE-421 Release Confidence, h1 RACE-421 Release Confidence, no server dependency, and zero console or page errors.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: the exact repository-relative template opened over file:// with title Slide Deck - RACE-421 Release Confidence, h1 RACE-421 Release Confidence, no server dependency, and zero console or page errors.",
       "verdict": "pass",
       "date": "2026-08-18",
       "driver": "manual"
@@ -30,7 +30,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-002 complete_representative_fills",
       "claim": "The deck-title, slides, and speaker-notes fills contain complete representative reader content.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: the release-review kicker, title, audience/date/presenter context, all three anchored slide articles, Talk track heading, and three ordered speaker notes were present.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: the release-review kicker, title, audience/date/presenter context, all three anchored slide articles, Talk track heading, and three ordered speaker notes were present.",
       "verdict": "pass",
       "date": "2026-08-18",
       "driver": "manual"
@@ -40,7 +40,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-003 named_slide_navigation",
       "claim": "The deck exposes a named navigation group, named previous/next controls, and a polite current-position region.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: navigation named Slide deck navigation, buttons named Previous slide and Next slide, aria-controls=deck-stage, and aria-live=polite position text were exposed.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: navigation named Slide deck navigation, buttons named Previous slide and Next slide, aria-controls=deck-stage, and aria-live=polite position text were exposed.",
       "accessibilityObservation": {
         "statusRegions": [
           {
@@ -62,7 +62,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-004 previous_next_keyboard_wheel_navigation",
       "claim": "Previous/next controls, all declared keyboard keys, and a bounded wheel gesture move through the three-slide set.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: Next/Previous, ArrowRight/ArrowDown/PageDown, ArrowLeft/ArrowUp/PageUp, Home/End, and trusted wheel input all navigated correctly; the immediate repeated wheel gesture was locked and a later reverse gesture moved one step.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: Next/Previous, ArrowRight/ArrowDown/PageDown, ArrowLeft/ArrowUp/PageUp, Home/End, and trusted wheel input all navigated correctly; the immediate repeated wheel gesture was locked and a later reverse gesture moved one step.",
       "accessibilityObservation": {
         "focusOrder": [
           {
@@ -94,7 +94,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-005 current_position_updates",
       "claim": "The live current-position text follows every slide change and remains clamped to the valid range.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: Slide 1 of 3, Slide 2 of 3, and Slide 3 of 3 matched the active article, and PageUp/PageDown attempts at the two boundaries remained clamped.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: Slide 1 of 3, Slide 2 of 3, and Slide 3 of 3 matched the active article, and PageUp/PageDown attempts at the two boundaries remained clamped.",
       "accessibilityObservation": {
         "statusRegions": [
           {
@@ -119,7 +119,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-006 control_vs_non_control_focus",
       "claim": "Control-triggered navigation retains control focus while keyboard and wheel navigation focus the active slide.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: Next and Previous retained focus after click-driven changes, while keyboard and wheel changes visibly focused the newly active slide.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: Next and Previous retained focus after click-driven changes, while keyboard and wheel changes visibly focused the newly active slide.",
       "accessibilityObservation": {
         "focusOrder": [
           {
@@ -151,7 +151,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-007 hidden_slide_accessibility",
       "claim": "Only the active slide remains visible and interactive; inactive slides are removed from keyboard and accessibility traversal.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: at every position the active article was visible, non-inert, and aria-hidden=false; both inactive articles were hidden, inert, aria-hidden=true, and absent from Tab traversal.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: at every position the active article was visible, non-inert, and aria-hidden=false; both inactive articles were hidden, inert, aria-hidden=true, and absent from Tab traversal.",
       "accessibilityObservation": {
         "focusOrder": [
           {
@@ -177,7 +177,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-008 no_autorotation",
       "claim": "The deck never advances automatically while idle or while the deck stage is focused.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: slide 1 remained selected for 31.004 seconds with BODY focus and for 31.008 seconds with #deck-stage focus. No timer advanced the deck, and the temporary runtime stage tabindex was removed.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: slide 1 remained selected for 31.055 seconds with BODY focus and for 31.008 seconds with #deck-stage focus. No timer advanced the deck, and the temporary runtime stage tabindex was removed.",
       "accessibilityObservation": {
         "statusRegions": [
           {
@@ -200,7 +200,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-009 offline_reload",
       "claim": "The local reader remains usable after an offline reload.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: a disposable remote probe failed with net::ERR_INTERNET_DISCONNECTED, while the offline file:// deck reloaded with title, heading, theme control, notes, and navigation; Next advanced to Slide 2 of 3.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: a disposable remote probe failed with net::ERR_INTERNET_DISCONNECTED, while the offline file:// deck reloaded with title, heading, theme control, notes, and navigation; Next advanced to Slide 2 of 3.",
       "verdict": "pass",
       "date": "2026-08-18",
       "driver": "manual"
@@ -210,7 +210,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-010 complete_keyboard_traversal",
       "claim": "Forward and backward keyboard traversal reaches every enabled control in deterministic order at each navigation boundary.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: first-slide order was Dark theme then Next; middle-slide order from the active article was Previous then Next; last-slide order was Previous. Reverse traversal returned through the expected enabled controls.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: first-slide order was Dark theme then Next; middle-slide order from the active article was Previous then Next; last-slide order was Previous. Reverse traversal returned through the expected enabled controls.",
       "accessibilityObservation": {
         "focusOrder": [
           {
@@ -266,7 +266,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-011 focus_visibility",
       "claim": "Every keyboard-focused control and programmatically focused active slide has a visible focus indicator.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: the theme control used a 2px/2px solid outline, enabled navigation controls used 3px/3px, and all three keyboard-focused slides used 3px solid outlines with 6px offset; dark-mode Next focus was also visible.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: the theme control used a 2px/2px solid outline, enabled navigation controls used 3px/3px, and all three keyboard-focused slides used 3px solid outlines with 6px offset; dark-mode Next focus was also visible.",
       "accessibilityObservation": {
         "focusOrder": [
           {
@@ -316,7 +316,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-012 light_dark_parity",
       "claim": "Light and dark themes preserve the same deck content, controls, focus, and slide state.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: light and dark modes preserved identical title, slide, note, counter, control, and hidden/inert content; dark persisted across reload and the deck returned to light.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: light and dark modes preserved identical title, slide, note, counter, control, and hidden/inert content; dark persisted across reload and the deck returned to light.",
       "accessibilityObservation": {
         "contrastEvidence": {
           "conditions": [
@@ -345,7 +345,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-013 reduced_motion",
       "claim": "Reduced-motion mode preserves complete slide behavior without requiring animation to understand state.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: reduced-motion mode computed 1e-05s transition/animation durations, reached zero running animations after settle, and Home/End navigation remained complete.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: reduced-motion mode computed 1e-05s transition/animation durations, reached zero running animations after settle, and Home/End navigation remained complete.",
       "accessibilityObservation": {
         "focusOrder": [
           {
@@ -371,7 +371,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-014 color_independent_meaning",
       "claim": "Ready, Watch, and Stop meaning remains understandable without relying on hue.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: slide 3 showed Status: Ready, Status: Watch, and Status: Stop plus Ready - circle, Watch - square, and Stop - block.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: slide 3 showed Status: Ready, Status: Watch, and Status: Stop plus Ready - circle, Watch - square, and Stop - block.",
       "accessibilityObservation": {
         "contrastEvidence": {
           "statusText": [
@@ -396,7 +396,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-015 horizontal_scroll_actual_element_check",
       "claim": "The reader follows the no-horizontal-scroll-region route when source and runtime expose no meaningful horizontal scroll element.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: source contains no overflow-x:auto or overflow-x:scroll; all three slides at 360 and 1280 CSS px had no page overflow, clipped reviewed element, or actual horizontal scroll region.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: source contains no overflow-x:auto or overflow-x:scroll; all three slides at 360 and 1280 CSS px had no page overflow, clipped reviewed element, or actual horizontal scroll region.",
       "accessibilityObservation": {
         "scrollRegions": [
           {
@@ -426,7 +426,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-016 responsive_layout_360_css_px",
       "claim": "All three slides remain complete and usable at exactly 360 CSS px without horizontal overflow, clipping, or overlap.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: every slide passed at exactly 360 CSS px with no page-level horizontal overflow or clipped reviewed heading, slide, notes, or navigation element; a full-page screenshot was captured.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: every slide passed at exactly 360 CSS px with no page-level horizontal overflow or clipped reviewed heading, slide, notes, or navigation element; a full-page screenshot was captured.",
       "responsiveLayoutObservation": {
         "viewportWidthCssPx": 360,
         "pageHorizontalOverflow": false,
@@ -442,7 +442,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-017 responsive_layout_1280_css_px",
       "claim": "All three slides remain complete and usable at a desktop width of at least 1280 CSS px without horizontal overflow, clipping, or overlap.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: every slide passed at 1280 CSS px with no page-level horizontal overflow or clipped reviewed heading, slide, notes, or navigation element; a full-page screenshot was captured.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: every slide passed at 1280 CSS px with no page-level horizontal overflow or clipped reviewed heading, slide, notes, or navigation element; a full-page screenshot was captured.",
       "responsiveLayoutObservation": {
         "viewportWidthCssPx": 1280,
         "pageHorizontalOverflow": false,
@@ -458,7 +458,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-018 manifest_parity",
       "claim": "The slide-deck manifest entry matches the exhaustive ART-005 ID, title, source, role, status, and export classification.",
-      "observedResult": "Revalidated at the Slice 4 source checkpoint: manifest id slide-deck, title Slide Deck, upstream source 09-slide-deck.html, shipped status, reader role, and exports [] remain exact.",
+      "observedResult": "Revalidated at the Slice 5 source checkpoint: manifest id slide-deck, title Slide Deck, upstream source 09-slide-deck.html, shipped status, reader role, and exports [] remain exact.",
       "dataIntegrityObservation": {
         "caseId": "manifest_parity",
         "inputs": [
@@ -514,7 +514,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-001 direct_file_open",
       "claim": "The concept-explainer reader opens directly over file:// with its expected title and no server dependency or visible error state.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: the exact concept-explainer file opened over file:// with title Concept Explainer - Consistent Hashing, h1 Consistent hashing, in one ring, and zero console or page errors.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: the exact concept-explainer file opened over file:// with title Concept Explainer - Consistent Hashing, h1 Consistent hashing, in one ring, and zero console or page errors.",
       "verdict": "pass",
       "date": "2026-08-18",
       "driver": "manual"
@@ -524,7 +524,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-002 complete_representative_fills",
       "claim": "The concept-title, principles, worked-example, and simulation-scenarios fills contain complete representative reader content.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: all four content sections, three principles, two comparison cards, two anchored scenarios, complete simulation, and representative text were present.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: all four content sections, three principles, two comparison cards, two anchored scenarios, complete simulation, and representative text were present.",
       "verdict": "pass",
       "date": "2026-08-18",
       "driver": "manual"
@@ -534,7 +534,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-003 named_simulation_controls_and_status",
       "claim": "The transient simulation exposes named sliders, named buttons, a named control group, and a polite status region.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: the named Nodes and Keys sliders, Remove/Add/Reset buttons, simulation group, accessible ring image, and polite status region were exposed.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: the named Nodes and Keys sliders, Remove/Add/Reset buttons, simulation group, accessible ring image, and polite status region were exposed.",
       "accessibilityObservation": {
         "statusRegions": [
           {
@@ -560,7 +560,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-004 deterministic_ring_rendering",
       "claim": "The ring renders deterministic node/key ownership with visible labels and restores the same default drawing after reload.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: two clean reloads produced byte-identical ring markup with four labeled nodes and 32 square key markers.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: two clean reloads produced byte-identical ring markup with four labeled nodes and 32 square key markers.",
       "verdict": "pass",
       "date": "2026-08-18",
       "driver": "manual"
@@ -570,7 +570,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-005 add_remove_node_controls",
       "claim": "Add and Remove update the visible count, drawing, moved-key status, and focus without exceeding the bounded node range.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: Add changed 4 to 5 nodes with one moved key and retained #add-node focus; Remove returned to 4 and retained #remove-node focus.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: Add changed 4 to 5 nodes with one moved key and retained #add-node focus; Remove returned to 4 and retained #remove-node focus.",
       "accessibilityObservation": {
         "focusOrder": [
           {
@@ -609,7 +609,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-006 visible_minimum_and_maximum_feedback",
       "claim": "Node and key sliders enforce their declared ranges and expose exact visible feedback at every minimum and maximum.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: node limits 2/8 and key limits 10/60 produced exact minimum/maximum messages, matching marker/output values, and the correct disabled node controls.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: node limits 2/8 and key limits 10/60 produced exact minimum/maximum messages, matching marker/output values, and the correct disabled node controls.",
       "boundaryStateObservation": {
         "stateKind": "limit",
         "artifactState": "node-count=2 and 8; key-count=10 and 60",
@@ -625,7 +625,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-007 reset_simulation",
       "claim": "Reset restores the complete deterministic default state after node and key changes.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: Reset restored 4 nodes, 32 keys, four node marks, 32 key marks, and the visible Reset complete status.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: Reset restored 4 nodes, 32 keys, four node marks, 32 key marks, and the visible Reset complete status.",
       "verdict": "pass",
       "date": "2026-08-18",
       "driver": "manual"
@@ -635,7 +635,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-008 session_only_reload",
       "claim": "Simulation changes remain session-only and a reload restores the documented default state.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: a transient 6-node/50-key state rendered 50 key markers, then a reload restored 4/32 with no simulation-state storage key.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: a transient 6-node/50-key state rendered 50 key markers, then a reload restored 4/32 with no simulation-state storage key.",
       "verdict": "pass",
       "date": "2026-08-18",
       "driver": "manual"
@@ -645,7 +645,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-009 offline_reload",
       "claim": "The local concept reader and transient controls remain usable when the browser context is offline.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: a disposable remote probe failed with net::ERR_INTERNET_DISCONNECTED, while the offline file:// reader reloaded and Add changed the local node count to 5.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: a disposable remote probe failed with net::ERR_INTERNET_DISCONNECTED, while the offline file:// reader reloaded and Add changed the local node count to 5.",
       "verdict": "pass",
       "date": "2026-08-18",
       "driver": "manual"
@@ -655,7 +655,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-010 complete_keyboard_traversal",
       "claim": "All interactive controls are reachable in stable forward and backward keyboard order with accessible names.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: forward order was Dark theme, Nodes, Keys, Remove, Add, Reset; Shift+Tab returned through Add, Remove, Keys, Nodes, and Dark theme.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: forward order was Dark theme, Nodes, Keys, Remove, Add, Reset; Shift+Tab returned through Add, Remove, Keys, Nodes, and Dark theme.",
       "accessibilityObservation": {
         "focusOrder": [
           {
@@ -705,7 +705,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-011 visible_focus",
       "claim": "Every keyboard-focusable simulation control has a visible focus indicator in the reviewed theme.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: every theme, slider, and simulation-button keyboard stop exposed a solid outline at least 2px wide and offset; Add measured 3px/3px.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: every theme, slider, and simulation-button keyboard stop exposed a solid outline at least 2px wide and offset; Add measured 3px/3px.",
       "accessibilityObservation": {
         "focusOrder": [
           {
@@ -743,7 +743,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-012 light_dark_parity",
       "claim": "Light and dark themes preserve the same content, controls, status, focus treatment, and deterministic state.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: light and dark modes preserved identical content, controls, ring, status, and counts; dark persisted across reload and the reader returned to light.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: light and dark modes preserved identical content, controls, ring, status, and counts; dark persisted across reload and the reader returned to light.",
       "accessibilityObservation": {
         "contrastEvidence": {
           "themes": [
@@ -772,7 +772,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-013 reduced_motion",
       "claim": "Reduced-motion mode preserves complete simulation behavior without requiring animation to understand state.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: reduced-motion mode computed 1e-05s transition/animation durations, settled to zero running animations, and Add remained visibly focused while changing the count to 5 with complete status.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: reduced-motion mode computed 1e-05s transition/animation durations, settled to zero running animations, and Add remained visibly focused while changing the count to 5 with complete status.",
       "accessibilityObservation": {
         "focusOrder": [
           {
@@ -792,7 +792,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-014 color_independent_meaning",
       "claim": "Ring ownership and operational scenarios remain understandable without relying on hue.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: N1-N4 labels, square key markers, the named circle/key legend, Node loss and Scale out headings, and Watch text conveyed meaning without hue.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: N1-N4 labels, square key markers, the named circle/key legend, Node loss and Scale out headings, and Watch text conveyed meaning without hue.",
       "accessibilityObservation": {
         "contrastEvidence": {
           "nodeLabels": [
@@ -822,7 +822,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-015 horizontal_scroll_actual_element_check",
       "claim": "The reader follows the no-horizontal-scroll-region route when source and runtime expose no meaningful horizontal scroll element.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: source has no overflow-x:auto or overflow-x:scroll; 360 and 1280 CSS px runtime review found no page overflow, clipped reviewed element, or actual horizontal scroller.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: source has no overflow-x:auto or overflow-x:scroll; 360 and 1280 CSS px runtime review found no page overflow, clipped reviewed element, or actual horizontal scroller.",
       "accessibilityObservation": {
         "scrollRegions": [
           {
@@ -852,7 +852,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-016 responsive_layout_360_css_px",
       "claim": "The complete concept reader remains usable at exactly 360 CSS px without horizontal overflow, clipping, or lost controls.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: the complete reader passed at 360 CSS px with no page overflow or clipped heading, section, ring, controls, status, or scenario; a full-page screenshot was captured.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: the complete reader passed at 360 CSS px with no page overflow or clipped heading, section, ring, controls, status, or scenario; a full-page screenshot was captured.",
       "responsiveLayoutObservation": {
         "viewportWidthCssPx": 360,
         "pageHorizontalOverflow": false,
@@ -868,7 +868,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-017 responsive_layout_1280_css_px",
       "claim": "The complete concept reader remains usable at a desktop width of at least 1280 CSS px without horizontal overflow, clipping, or lost controls.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: the complete reader passed at 1280 CSS px with no page overflow or clipped heading, section, ring, controls, status, or scenario; a full-page screenshot was captured.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: the complete reader passed at 1280 CSS px with no page overflow or clipped heading, section, ring, controls, status, or scenario; a full-page screenshot was captured.",
       "responsiveLayoutObservation": {
         "viewportWidthCssPx": 1280,
         "pageHorizontalOverflow": false,
@@ -884,7 +884,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-018 manifest_parity",
       "claim": "The concept-explainer manifest entry matches the exhaustive ART-005 ID, title, source, role, status, and export classification.",
-      "observedResult": "Revalidated at the Slice 4 source checkpoint: manifest id concept-explainer, title Concept Explainer, upstream source 15-research-concept-explainer.html, shipped status, reader role, and exports [] remain exact.",
+      "observedResult": "Revalidated at the Slice 5 source checkpoint: manifest id concept-explainer, title Concept Explainer, upstream source 15-research-concept-explainer.html, shipped status, reader role, and exports [] remain exact.",
       "dataIntegrityObservation": {
         "caseId": "manifest_parity",
         "inputs": [
@@ -1253,7 +1253,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-019 horizontal_scroll_region_not_applicable_source_check",
       "claim": "No named keyboard-focusable horizontal scroll region is required when the source contains no meaningful horizontal overflow region.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Checkpoint source and runtime classification: the template contains no overflow-x:auto or overflow-x:scroll declaration, html/body use overflow-x:hidden, both reviewed widths had equal document clientWidth and scrollWidth, and no meaningful horizontal scroll element appeared on any slide.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Checkpoint source and runtime classification: the template contains no overflow-x:auto or overflow-x:scroll declaration, html/body use overflow-x:hidden, both reviewed widths had equal document clientWidth and scrollWidth, and no meaningful horizontal scroll element appeared on any slide.",
       "accessibilityObservation": {
         "scrollRegions": [
           {
@@ -1291,7 +1291,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-020 producer_only_live_export_freshness_not_applicable",
       "claim": "Live export freshness is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: manifest exports is an empty array and the template has no export control or generated export payload.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: manifest exports is an empty array and the template has no export control or generated export payload.",
       "dataIntegrityObservation": {
         "caseId": "live_export_freshness",
         "notApplicableReason": {
@@ -1314,7 +1314,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-021 producer_only_empty_values_not_applicable",
       "claim": "Empty-value serialization is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: slide-deck has no editable fields, no structured export, and no issue-producing serialization path.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: slide-deck has no editable fields, no structured export, and no issue-producing serialization path.",
       "dataIntegrityObservation": {
         "caseId": "empty_values",
         "notApplicableReason": {
@@ -1337,7 +1337,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-022 producer_only_invalid_raw_value_not_applicable",
       "claim": "Invalid raw value handling is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the template has no user-entered raw values and no export issue schema.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the template has no user-entered raw values and no export issue schema.",
       "dataIntegrityObservation": {
         "caseId": "invalid_raw_value",
         "notApplicableReason": {
@@ -1360,7 +1360,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-023 producer_only_unavailable_normalized_value_not_applicable",
       "claim": "Unavailable normalized value handling is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the template has no normalization path and no exported issue record.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the template has no normalization path and no exported issue record.",
       "dataIntegrityObservation": {
         "caseId": "unavailable_normalized_value",
         "notApplicableReason": {
@@ -1383,7 +1383,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-024 producer_only_duplicate_identifiers_not_applicable",
       "claim": "Duplicate identifier preservation and issue reporting are producer-only and do not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the reader has anchored slides for navigation but no exported producer entity collection.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the reader has anchored slides for navigation but no exported producer entity collection.",
       "dataIntegrityObservation": {
         "caseId": "duplicate_identifiers",
         "notApplicableReason": {
@@ -1406,7 +1406,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-025 producer_only_special_character_round_trip_not_applicable",
       "claim": "Special-character round trip is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: no structured JSON or Markdown export is generated from reader-entered values.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: no structured JSON or Markdown export is generated from reader-entered values.",
       "dataIntegrityObservation": {
         "caseId": "special_character_round_trip",
         "notApplicableReason": {
@@ -1429,7 +1429,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-026 producer_only_multiple_issue_order_not_applicable",
       "claim": "Multiple issue ordering is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the reader has no issue list, editor export contract, or validation output.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the reader has no issue list, editor export contract, or validation output.",
       "dataIntegrityObservation": {
         "caseId": "multiple_issue_order",
         "notApplicableReason": {
@@ -1452,7 +1452,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-027 producer_only_clipboard_exact_equality_not_applicable",
       "claim": "Clipboard/fallback exact equality is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: no attempted export string, clipboard write, or fallback export text exists.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: no attempted export string, clipboard write, or fallback export text exists.",
       "dataIntegrityObservation": {
         "caseId": "clipboard_exact_equality",
         "notApplicableReason": {
@@ -1475,7 +1475,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-028 producer_only_superseded_copy_attempt_not_applicable",
       "claim": "Superseded copy-attempt data integrity is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: no copy attempts can race because the reader exposes no copy/export action.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: no copy attempts can race because the reader exposes no copy/export action.",
       "dataIntegrityObservation": {
         "caseId": "superseded_copy_attempt",
         "notApplicableReason": {
@@ -1498,7 +1498,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-029 producer_only_clipboard_genuine_success_not_applicable",
       "claim": "Genuine clipboard success recovery evidence is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the reader has no clipboard write action.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the reader has no clipboard write action.",
       "errorHandlingObservation": {
         "caseId": "genuine_success",
         "notApplicableReason": {
@@ -1521,7 +1521,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-030 producer_only_clipboard_absent_not_applicable",
       "claim": "Unavailable clipboard fallback evidence is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: no clipboard method is invoked and no fallback export region exists.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: no clipboard method is invoked and no fallback export region exists.",
       "errorHandlingObservation": {
         "caseId": "clipboard_absent",
         "notApplicableReason": {
@@ -1544,7 +1544,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-031 producer_only_method_non_callable_not_applicable",
       "claim": "Non-callable clipboard method fallback evidence is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: no clipboard method is called by the reader.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: no clipboard method is called by the reader.",
       "errorHandlingObservation": {
         "caseId": "method_non_callable",
         "notApplicableReason": {
@@ -1567,7 +1567,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-032 producer_only_permission_denied_not_applicable",
       "claim": "Permission-denied clipboard fallback evidence is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: no clipboard permission request or rejection branch exists.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: no clipboard permission request or rejection branch exists.",
       "errorHandlingObservation": {
         "caseId": "permission_denied",
         "notApplicableReason": {
@@ -1590,7 +1590,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-033 producer_only_generic_rejection_not_applicable",
       "claim": "Generic rejected-promise clipboard fallback evidence is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the reader has no asynchronous clipboard write path.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the reader has no asynchronous clipboard write path.",
       "errorHandlingObservation": {
         "caseId": "generic_rejection",
         "notApplicableReason": {
@@ -1613,7 +1613,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-034 producer_only_synchronous_throw_not_applicable",
       "claim": "Synchronous clipboard throw fallback evidence is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the reader has no synchronous clipboard call.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the reader has no synchronous clipboard call.",
       "errorHandlingObservation": {
         "caseId": "synchronous_throw",
         "notApplicableReason": {
@@ -1636,7 +1636,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-035 producer_only_sequential_transition_not_applicable",
       "claim": "Failure-success-failure sequential transition evidence is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the reader has no clipboard status transition sequence.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the reader has no clipboard status transition sequence.",
       "errorHandlingObservation": {
         "caseId": "sequential_transition",
         "notApplicableReason": {
@@ -1659,7 +1659,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-036 producer_only_superseded_attempt_not_applicable",
       "claim": "Superseded clipboard attempt recovery evidence is producer-only and does not apply to the slide-deck reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the reader exposes no overlapping clipboard attempts.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the reader exposes no overlapping clipboard attempts.",
       "errorHandlingObservation": {
         "caseId": "superseded_attempt",
         "notApplicableReason": {
@@ -1682,7 +1682,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-019 horizontal_scroll_region_not_applicable_source_check",
       "claim": "No named keyboard-focusable horizontal scroll region is required when the source contains no meaningful horizontal overflow region.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Checkpoint source and runtime classification: the template contains no overflow-x:auto or overflow-x:scroll declaration, html/body use overflow-x:hidden, both reviewed widths had equal document clientWidth and scrollWidth, and no meaningful horizontal scroll element appeared.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Checkpoint source and runtime classification: the template contains no overflow-x:auto or overflow-x:scroll declaration, html/body use overflow-x:hidden, both reviewed widths had equal document clientWidth and scrollWidth, and no meaningful horizontal scroll element appeared.",
       "accessibilityObservation": {
         "scrollRegions": [
           {
@@ -1722,7 +1722,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-020 producer_only_live_export_freshness_not_applicable",
       "claim": "Live export freshness is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: manifest exports is an empty array and the template has no export control or generated export payload.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: manifest exports is an empty array and the template has no export control or generated export payload.",
       "dataIntegrityObservation": {
         "caseId": "live_export_freshness",
         "notApplicableReason": {
@@ -1745,7 +1745,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-021 producer_only_empty_values_not_applicable",
       "claim": "Empty-value serialization is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: concept-explainer has no editable fields, no structured export, and no issue-producing serialization path.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: concept-explainer has no editable fields, no structured export, and no issue-producing serialization path.",
       "dataIntegrityObservation": {
         "caseId": "empty_values",
         "notApplicableReason": {
@@ -1768,7 +1768,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-022 producer_only_invalid_raw_value_not_applicable",
       "claim": "Invalid raw value handling is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the template has no user-entered raw values and no export issue schema.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the template has no user-entered raw values and no export issue schema.",
       "dataIntegrityObservation": {
         "caseId": "invalid_raw_value",
         "notApplicableReason": {
@@ -1791,7 +1791,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-023 producer_only_unavailable_normalized_value_not_applicable",
       "claim": "Unavailable normalized value handling is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the template has no normalization path and no exported issue record.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the template has no normalization path and no exported issue record.",
       "dataIntegrityObservation": {
         "caseId": "unavailable_normalized_value",
         "notApplicableReason": {
@@ -1814,7 +1814,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-024 producer_only_duplicate_identifiers_not_applicable",
       "claim": "Duplicate identifier preservation and issue reporting are producer-only and do not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the reader has anchored slides for navigation but no exported producer entity collection.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the reader has anchored slides for navigation but no exported producer entity collection.",
       "dataIntegrityObservation": {
         "caseId": "duplicate_identifiers",
         "notApplicableReason": {
@@ -1837,7 +1837,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-025 producer_only_special_character_round_trip_not_applicable",
       "claim": "Special-character round trip is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: no structured JSON or Markdown export is generated from reader-entered values.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: no structured JSON or Markdown export is generated from reader-entered values.",
       "dataIntegrityObservation": {
         "caseId": "special_character_round_trip",
         "notApplicableReason": {
@@ -1860,7 +1860,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-026 producer_only_multiple_issue_order_not_applicable",
       "claim": "Multiple issue ordering is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the reader has no issue list, editor export contract, or validation output.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the reader has no issue list, editor export contract, or validation output.",
       "dataIntegrityObservation": {
         "caseId": "multiple_issue_order",
         "notApplicableReason": {
@@ -1883,7 +1883,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-027 producer_only_clipboard_exact_equality_not_applicable",
       "claim": "Clipboard/fallback exact equality is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: no attempted export string, clipboard write, or fallback export text exists.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: no attempted export string, clipboard write, or fallback export text exists.",
       "dataIntegrityObservation": {
         "caseId": "clipboard_exact_equality",
         "notApplicableReason": {
@@ -1906,7 +1906,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-028 producer_only_superseded_copy_attempt_not_applicable",
       "claim": "Superseded copy-attempt data integrity is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: no copy attempts can race because the reader exposes no copy/export action.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: no copy attempts can race because the reader exposes no copy/export action.",
       "dataIntegrityObservation": {
         "caseId": "superseded_copy_attempt",
         "notApplicableReason": {
@@ -1929,7 +1929,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-029 producer_only_clipboard_genuine_success_not_applicable",
       "claim": "Genuine clipboard success recovery evidence is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the reader has no clipboard write action.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the reader has no clipboard write action.",
       "errorHandlingObservation": {
         "caseId": "genuine_success",
         "notApplicableReason": {
@@ -1952,7 +1952,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-030 producer_only_clipboard_absent_not_applicable",
       "claim": "Unavailable clipboard fallback evidence is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: no clipboard method is invoked and no fallback export region exists.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: no clipboard method is invoked and no fallback export region exists.",
       "errorHandlingObservation": {
         "caseId": "clipboard_absent",
         "notApplicableReason": {
@@ -1975,7 +1975,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-031 producer_only_method_non_callable_not_applicable",
       "claim": "Non-callable clipboard method fallback evidence is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: no clipboard method is called by the reader.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: no clipboard method is called by the reader.",
       "errorHandlingObservation": {
         "caseId": "method_non_callable",
         "notApplicableReason": {
@@ -1998,7 +1998,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-032 producer_only_permission_denied_not_applicable",
       "claim": "Permission-denied clipboard fallback evidence is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: no clipboard permission request or rejection branch exists.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: no clipboard permission request or rejection branch exists.",
       "errorHandlingObservation": {
         "caseId": "permission_denied",
         "notApplicableReason": {
@@ -2021,7 +2021,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-033 producer_only_generic_rejection_not_applicable",
       "claim": "Generic rejected-promise clipboard fallback evidence is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the reader has no asynchronous clipboard write path.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the reader has no asynchronous clipboard write path.",
       "errorHandlingObservation": {
         "caseId": "generic_rejection",
         "notApplicableReason": {
@@ -2044,7 +2044,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-034 producer_only_synchronous_throw_not_applicable",
       "claim": "Synchronous clipboard throw fallback evidence is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the reader has no synchronous clipboard call.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the reader has no synchronous clipboard call.",
       "errorHandlingObservation": {
         "caseId": "synchronous_throw",
         "notApplicableReason": {
@@ -2067,7 +2067,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-035 producer_only_sequential_transition_not_applicable",
       "claim": "Failure-success-failure sequential transition evidence is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the reader has no clipboard status transition sequence.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the reader has no clipboard status transition sequence.",
       "errorHandlingObservation": {
         "caseId": "sequential_transition",
         "notApplicableReason": {
@@ -2090,7 +2090,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/concept-explainer.html",
       "step": "CE-UAT-036 producer_only_superseded_attempt_not_applicable",
       "claim": "Superseded clipboard attempt recovery evidence is producer-only and does not apply to the concept-explainer reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the reader exposes no overlapping clipboard attempts.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the reader exposes no overlapping clipboard attempts.",
       "errorHandlingObservation": {
         "caseId": "superseded_attempt",
         "notApplicableReason": {
@@ -2113,7 +2113,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-019 horizontal_scroll_region_not_applicable_source_check",
       "claim": "No named keyboard-focusable horizontal scroll region is required when the source contains no meaningful horizontal overflow region.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: source has no overflow-x:auto or overflow-x:scroll, html/body use overflow-x:hidden, 360 and 1280 CSS px measurements had equal scroll/client widths, and no actual horizontal user-scroll element appeared.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: source has no overflow-x:auto or overflow-x:scroll, html/body use overflow-x:hidden, 360 and 1280 CSS px measurements had equal scroll/client widths, and no actual horizontal user-scroll element appeared.",
       "accessibilityObservation": {
         "scrollRegions": [
           {
@@ -2153,7 +2153,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-020 producer_only_live_export_freshness_not_applicable",
       "claim": "Live export freshness is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: manifest exports is an empty array and the template has no export control or generated export payload.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: manifest exports is an empty array and the template has no export control or generated export payload.",
       "dataIntegrityObservation": {
         "caseId": "live_export_freshness",
         "notApplicableReason": {
@@ -2176,7 +2176,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-021 producer_only_empty_values_not_applicable",
       "claim": "Empty-value serialization is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: status-report has no editable fields, no structured export, and no issue-producing serialization path.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: status-report has no editable fields, no structured export, and no issue-producing serialization path.",
       "dataIntegrityObservation": {
         "caseId": "empty_values",
         "notApplicableReason": {
@@ -2199,7 +2199,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-022 producer_only_invalid_raw_value_not_applicable",
       "claim": "Invalid raw value handling is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the template has no user-entered raw values and no export issue schema.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the template has no user-entered raw values and no export issue schema.",
       "dataIntegrityObservation": {
         "caseId": "invalid_raw_value",
         "notApplicableReason": {
@@ -2222,7 +2222,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-023 producer_only_unavailable_normalized_value_not_applicable",
       "claim": "Unavailable normalized value handling is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the template has no normalization path and no exported issue record.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the template has no normalization path and no exported issue record.",
       "dataIntegrityObservation": {
         "caseId": "unavailable_normalized_value",
         "notApplicableReason": {
@@ -2245,7 +2245,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-024 producer_only_duplicate_identifiers_not_applicable",
       "claim": "Duplicate identifier preservation and issue reporting are producer-only and do not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the reader has anchored report items for reading but no exported producer entity collection.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the reader has anchored report items for reading but no exported producer entity collection.",
       "dataIntegrityObservation": {
         "caseId": "duplicate_identifiers",
         "notApplicableReason": {
@@ -2268,7 +2268,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-025 producer_only_special_character_round_trip_not_applicable",
       "claim": "Special-character round trip is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: no structured JSON or Markdown export is generated from reader-entered values.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: no structured JSON or Markdown export is generated from reader-entered values.",
       "dataIntegrityObservation": {
         "caseId": "special_character_round_trip",
         "notApplicableReason": {
@@ -2291,7 +2291,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-026 producer_only_multiple_issue_order_not_applicable",
       "claim": "Multiple issue ordering is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the reader has no issue list, editor export contract, or validation output.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the reader has no issue list, editor export contract, or validation output.",
       "dataIntegrityObservation": {
         "caseId": "multiple_issue_order",
         "notApplicableReason": {
@@ -2314,7 +2314,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-027 producer_only_clipboard_exact_equality_not_applicable",
       "claim": "Clipboard/fallback exact equality is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: no attempted export string, clipboard write, or fallback export text exists.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: no attempted export string, clipboard write, or fallback export text exists.",
       "dataIntegrityObservation": {
         "caseId": "clipboard_exact_equality",
         "notApplicableReason": {
@@ -2337,7 +2337,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-028 producer_only_superseded_copy_attempt_not_applicable",
       "claim": "Superseded copy-attempt data integrity is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: no copy attempts can race because the reader exposes no copy/export action.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: no copy attempts can race because the reader exposes no copy/export action.",
       "dataIntegrityObservation": {
         "caseId": "superseded_copy_attempt",
         "notApplicableReason": {
@@ -2360,7 +2360,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-029 producer_only_clipboard_genuine_success_not_applicable",
       "claim": "Genuine clipboard success recovery evidence is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the reader has no clipboard write action.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the reader has no clipboard write action.",
       "errorHandlingObservation": {
         "caseId": "genuine_success",
         "notApplicableReason": {
@@ -2383,7 +2383,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-030 producer_only_clipboard_absent_not_applicable",
       "claim": "Unavailable clipboard fallback evidence is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: no clipboard method is invoked and no fallback export region exists.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: no clipboard method is invoked and no fallback export region exists.",
       "errorHandlingObservation": {
         "caseId": "clipboard_absent",
         "notApplicableReason": {
@@ -2406,7 +2406,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-031 producer_only_method_non_callable_not_applicable",
       "claim": "Non-callable clipboard method fallback evidence is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: no clipboard method is called by the reader.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: no clipboard method is called by the reader.",
       "errorHandlingObservation": {
         "caseId": "method_non_callable",
         "notApplicableReason": {
@@ -2429,7 +2429,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-032 producer_only_permission_denied_not_applicable",
       "claim": "Permission-denied clipboard fallback evidence is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: no clipboard permission request or rejection branch exists.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: no clipboard permission request or rejection branch exists.",
       "errorHandlingObservation": {
         "caseId": "permission_denied",
         "notApplicableReason": {
@@ -2452,7 +2452,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-033 producer_only_generic_rejection_not_applicable",
       "claim": "Generic rejected-promise clipboard fallback evidence is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the reader has no asynchronous clipboard write path.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the reader has no asynchronous clipboard write path.",
       "errorHandlingObservation": {
         "caseId": "generic_rejection",
         "notApplicableReason": {
@@ -2475,7 +2475,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-034 producer_only_synchronous_throw_not_applicable",
       "claim": "Synchronous clipboard throw fallback evidence is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the reader has no synchronous clipboard call.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the reader has no synchronous clipboard call.",
       "errorHandlingObservation": {
         "caseId": "synchronous_throw",
         "notApplicableReason": {
@@ -2498,7 +2498,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-035 producer_only_sequential_transition_not_applicable",
       "claim": "Failure-success-failure sequential transition evidence is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the reader has no clipboard status transition sequence.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the reader has no clipboard status transition sequence.",
       "errorHandlingObservation": {
         "caseId": "sequential_transition",
         "notApplicableReason": {
@@ -2521,7 +2521,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/status-report.html",
       "step": "SR-UAT-036 producer_only_superseded_attempt_not_applicable",
       "claim": "Superseded clipboard attempt recovery evidence is producer-only and does not apply to the status-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the reader exposes no overlapping clipboard attempts.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the reader exposes no overlapping clipboard attempts.",
       "errorHandlingObservation": {
         "caseId": "superseded_attempt",
         "notApplicableReason": {
@@ -2544,7 +2544,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-001 direct_file_open",
       "claim": "The incident-report reader opens directly over file:// with its expected title and no server dependency or visible error state.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: The exact repository-relative template opened over file:// with title INC-2025-0412 - Elevated 502s on task sync, h1 Elevated 502s on task sync, no server dependency, and zero console or page errors.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: The exact repository-relative template opened over file:// with title INC-2025-0412 - Elevated 502s on task sync, h1 Elevated 502s on task sync, no server dependency, and zero console or page errors.",
       "verdict": "pass",
       "date": "2026-08-18",
       "driver": "manual"
@@ -2554,7 +2554,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-002 complete_representative_fills",
       "claim": "All five incident-report fill regions contain complete representative reader content.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: Summary, timeline, impact, root-cause, and follow-ups were complete; the timeline exposed seven stable anchors and follow-ups exposed four stable anchors.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: Summary, timeline, impact, root-cause, and follow-ups were complete; the timeline exposed seven stable anchors and follow-ups exposed four stable anchors.",
       "verdict": "pass",
       "date": "2026-08-18",
       "driver": "manual"
@@ -2564,7 +2564,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-003 named_report_navigation",
       "claim": "The incident report exposes named navigation to every stable semantic section.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: The Incident report sections navigation exposed Summary, Timeline, Impact, Root cause, and Follow-ups links; each activated its matching live section hash.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: The Incident report sections navigation exposed Summary, Timeline, Impact, Root cause, and Follow-ups links; each activated its matching live section hash.",
       "verdict": "pass",
       "date": "2026-08-18",
       "driver": "manual"
@@ -2574,7 +2574,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-004 summary_identity_and_state",
       "claim": "The summary communicates incident identity, severity, status, duration, detection time, owner, and outcome in text.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: Summary showed INC-2025-0412, SEV-2, Resolved, 47 min, 14:07 UTC, Devon Park, the 21.4% error peak, mitigation, and no data loss.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: Summary showed INC-2025-0412, SEV-2, Resolved, 47 min, 14:07 UTC, Devon Park, the 21.4% error peak, mitigation, and no data loss.",
       "verdict": "pass",
       "date": "2026-08-18",
       "driver": "manual"
@@ -2584,7 +2584,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-005 anchored_timeline",
       "claim": "The ordered timeline exposes at least two stable event anchors and the complete incident sequence.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: Seven anchored events ran from the 14:02 config promotion through 14:49 resolution, including impact, alert, diagnosis, and mitigation milestones.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: Seven anchored events ran from the 14:02 config promotion through 14:49 resolution, including impact, alert, diagnosis, and mitigation milestones.",
       "verdict": "pass",
       "date": "2026-08-18",
       "driver": "manual"
@@ -2594,7 +2594,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-006 quantified_impact",
       "claim": "The Impact section exposes quantified request, user, data-loss, recovery, and service-level effects.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: Impact showed about 41,200 failed requests, 21.4% peak errors, about 2,300 workspaces, no data loss, no SLA breach, and client retries.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: Impact showed about 41,200 failed requests, 21.4% peak errors, about 2,300 workspaces, no data loss, no SLA breach, and client retries.",
       "verdict": "pass",
       "date": "2026-08-18",
       "driver": "manual"
@@ -2604,7 +2604,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-007 root_cause_chain",
       "claim": "The Root cause section explains the causal chain and failed guardrail without relying on code styling alone.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: Three ordered text items identified the retained value 8 versus 64, missing magnitude validation, and the separate-pipeline diagnosis delay.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: Three ordered text items identified the retained value 8 versus 64, missing magnitude validation, and the separate-pipeline diagnosis delay.",
       "verdict": "pass",
       "date": "2026-08-18",
       "driver": "manual"
@@ -2614,7 +2614,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-008 owned_follow_ups",
       "claim": "The Follow-ups list exposes at least two stable anchored remediations with explicit status, owner, and due text.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: Four anchored remediation items exposed one Complete and three Open states with named owners and due dates.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: Four anchored remediation items exposed one Complete and three Open states with named owners and due dates.",
       "verdict": "pass",
       "date": "2026-08-18",
       "driver": "manual"
@@ -2624,7 +2624,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-009 offline_reload",
       "claim": "The local static incident report remains usable after an offline reload.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: With the context offline, the exact file retained its title, h1, five sections, seven timeline events, four follow-ups, theme control, and reader navigation; a remote probe failed with net::ERR_INTERNET_DISCONNECTED.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: With the context offline, the exact file retained its title, h1, five sections, seven timeline events, four follow-ups, theme control, and reader navigation; a remote probe failed with net::ERR_INTERNET_DISCONNECTED.",
       "verdict": "pass",
       "date": "2026-08-18",
       "driver": "manual"
@@ -2634,7 +2634,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-010 complete_keyboard_traversal",
       "claim": "Keyboard traversal reaches every authored interactive control in deterministic order.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: Forward order was Dark theme, Summary, Timeline, Impact, Root cause, Follow-ups; reverse traversal covered the same six stops and the temporary body tabindex was removed.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: Forward order was Dark theme, Summary, Timeline, Impact, Root cause, Follow-ups; reverse traversal covered the same six stops and the temporary body tabindex was removed.",
       "verdict": "pass",
       "date": "2026-08-18",
       "driver": "manual"
@@ -2644,7 +2644,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-011 focus_visibility",
       "claim": "Every keyboard-focusable incident-report control has a visible focus indicator.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: The theme toggle showed a 2px solid outline with 2px offset; report navigation links showed a 3px solid outline with 3px offset.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: The theme toggle showed a 2px solid outline with 2px offset; report navigation links showed a 3px solid outline with 3px offset.",
       "verdict": "pass",
       "date": "2026-08-18",
       "driver": "manual"
@@ -2654,7 +2654,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-012 light_dark_parity",
       "claim": "Light and dark themes preserve identical incident content, navigation, and focus behavior.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: Dark retained the same h1, five sections, seven timeline events, and four follow-ups, persisted across reload, and returned cleanly to light.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: Dark retained the same h1, five sections, seven timeline events, and four follow-ups, persisted across reload, and returned cleanly to light.",
       "verdict": "pass",
       "date": "2026-08-18",
       "driver": "manual"
@@ -2664,7 +2664,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-013 reduced_motion",
       "claim": "Reduced-motion mode preserves the complete report without meaningful animation.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: Reduce mode computed 0.01ms maximum transition and animation durations, zero running animations, and all five sections remained present.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: Reduce mode computed 0.01ms maximum transition and animation durations, zero running animations, and all five sections remained present.",
       "verdict": "pass",
       "date": "2026-08-18",
       "driver": "manual"
@@ -2674,7 +2674,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-014 color_independent_meaning",
       "claim": "Incident state and sequence remain understandable without relying on hue.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: SEV-2, Resolved, duration, owner, numbered timeline order, explicit milestone text, and follow-up Status/Owner/Due labels carried meaning without color.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: SEV-2, Resolved, duration, owner, numbered timeline order, explicit milestone text, and follow-up Status/Owner/Due labels carried meaning without color.",
       "verdict": "pass",
       "date": "2026-08-18",
       "driver": "manual"
@@ -2684,7 +2684,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-015 horizontal_scroll_actual_element_check",
       "claim": "The reader follows the no-horizontal-scroll-region route when source and runtime expose no meaningful horizontal scroll element.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: Source contained no overflow-x:auto or overflow-x:scroll declaration; runtime found no meaningful scroller and equal page scroll/client widths at 360 and 1280 CSS px.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: Source contained no overflow-x:auto or overflow-x:scroll declaration; runtime found no meaningful scroller and equal page scroll/client widths at 360 and 1280 CSS px.",
       "verdict": "pass",
       "date": "2026-08-18",
       "driver": "manual"
@@ -2694,7 +2694,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-016 responsive_layout_360_css_px",
       "claim": "The complete incident report remains usable at exactly 360 CSS px without horizontal overflow or clipping.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: At 360 CSS px the five sections, navigation, seven timeline events, and four follow-ups stayed visible with zero page overflow and no clipped reviewed node.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: At 360 CSS px the five sections, navigation, seven timeline events, and four follow-ups stayed visible with zero page overflow and no clipped reviewed node.",
       "verdict": "pass",
       "date": "2026-08-18",
       "driver": "manual"
@@ -2704,7 +2704,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-017 responsive_layout_1280_css_px",
       "claim": "The complete incident report remains usable at a desktop width of at least 1280 CSS px without horizontal overflow or clipping.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: At 1280 CSS px the five sections, navigation, seven timeline events, and four follow-ups stayed visible with zero page overflow and no clipped reviewed node.",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: At 1280 CSS px the five sections, navigation, seven timeline events, and four follow-ups stayed visible with zero page overflow and no clipped reviewed node.",
       "verdict": "pass",
       "date": "2026-08-18",
       "driver": "manual"
@@ -2714,7 +2714,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-018 manifest_parity",
       "claim": "The incident-report manifest entry matches the exhaustive ART-005 ID, title, source, role, status, and export classification.",
-      "observedResult": "Re-executed at the Slice 4 source checkpoint: Manifest matched id incident-report, title Incident Report, upstream source 12-incident-report.html, reader role, shipped status, and exports [].",
+      "observedResult": "Re-executed at the Slice 5 source checkpoint: Manifest matched id incident-report, title Incident Report, upstream source 12-incident-report.html, reader role, shipped status, and exports [].",
       "verdict": "pass",
       "date": "2026-08-18",
       "driver": "manual"
@@ -2724,7 +2724,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-019 horizontal_scroll_region_not_applicable_source_check",
       "claim": "No named keyboard-focusable horizontal scroll region is required when the source contains no meaningful horizontal overflow region.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: source has no overflow-x:auto or overflow-x:scroll declaration, 360 and 1280 CSS px measurements had equal scroll/client widths, and no actual horizontal user-scroll element appeared.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: source has no overflow-x:auto or overflow-x:scroll declaration, 360 and 1280 CSS px measurements had equal scroll/client widths, and no actual horizontal user-scroll element appeared.",
       "accessibilityObservation": {
         "scrollRegions": [
           {
@@ -2764,7 +2764,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-020 producer_only_live_export_freshness_not_applicable",
       "claim": "Live export freshness is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: manifest exports is an empty array and the template has no export control or generated export payload.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: manifest exports is an empty array and the template has no export control or generated export payload.",
       "dataIntegrityObservation": {
         "caseId": "live_export_freshness",
         "notApplicableReason": {
@@ -2787,7 +2787,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-021 producer_only_empty_values_not_applicable",
       "claim": "Empty-value serialization is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: incident-report has no editable fields, no structured export, and no issue-producing serialization path.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: incident-report has no editable fields, no structured export, and no issue-producing serialization path.",
       "dataIntegrityObservation": {
         "caseId": "empty_values",
         "notApplicableReason": {
@@ -2810,7 +2810,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-022 producer_only_invalid_raw_value_not_applicable",
       "claim": "Invalid raw value handling is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the template has no user-entered raw values and no export issue schema.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the template has no user-entered raw values and no export issue schema.",
       "dataIntegrityObservation": {
         "caseId": "invalid_raw_value",
         "notApplicableReason": {
@@ -2833,7 +2833,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-023 producer_only_unavailable_normalized_value_not_applicable",
       "claim": "Unavailable normalized value handling is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the template has no normalization path and no exported issue record.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the template has no normalization path and no exported issue record.",
       "dataIntegrityObservation": {
         "caseId": "unavailable_normalized_value",
         "notApplicableReason": {
@@ -2856,7 +2856,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-024 producer_only_duplicate_identifiers_not_applicable",
       "claim": "Duplicate identifier preservation and issue reporting are producer-only and do not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the reader has anchored report items for reading but no exported producer entity collection.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the reader has anchored report items for reading but no exported producer entity collection.",
       "dataIntegrityObservation": {
         "caseId": "duplicate_identifiers",
         "notApplicableReason": {
@@ -2879,7 +2879,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-025 producer_only_special_character_round_trip_not_applicable",
       "claim": "Special-character round trip is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: no structured JSON or Markdown export is generated from reader-entered values.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: no structured JSON or Markdown export is generated from reader-entered values.",
       "dataIntegrityObservation": {
         "caseId": "special_character_round_trip",
         "notApplicableReason": {
@@ -2902,7 +2902,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-026 producer_only_multiple_issue_order_not_applicable",
       "claim": "Multiple issue ordering is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the reader has no issue list, editor export contract, or validation output.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the reader has no issue list, editor export contract, or validation output.",
       "dataIntegrityObservation": {
         "caseId": "multiple_issue_order",
         "notApplicableReason": {
@@ -2925,7 +2925,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-027 producer_only_clipboard_exact_equality_not_applicable",
       "claim": "Clipboard/fallback exact equality is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: no attempted export string, clipboard write, or fallback export text exists.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: no attempted export string, clipboard write, or fallback export text exists.",
       "dataIntegrityObservation": {
         "caseId": "clipboard_exact_equality",
         "notApplicableReason": {
@@ -2948,7 +2948,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-028 producer_only_superseded_copy_attempt_not_applicable",
       "claim": "Superseded copy-attempt data integrity is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: no copy attempts can race because the reader exposes no copy/export action.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: no copy attempts can race because the reader exposes no copy/export action.",
       "dataIntegrityObservation": {
         "caseId": "superseded_copy_attempt",
         "notApplicableReason": {
@@ -2971,7 +2971,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-029 producer_only_clipboard_genuine_success_not_applicable",
       "claim": "Genuine clipboard success recovery evidence is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the reader has no clipboard write action.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the reader has no clipboard write action.",
       "errorHandlingObservation": {
         "caseId": "genuine_success",
         "notApplicableReason": {
@@ -2994,7 +2994,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-030 producer_only_clipboard_absent_not_applicable",
       "claim": "Unavailable clipboard fallback evidence is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: no clipboard method is invoked and no fallback export region exists.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: no clipboard method is invoked and no fallback export region exists.",
       "errorHandlingObservation": {
         "caseId": "clipboard_absent",
         "notApplicableReason": {
@@ -3017,7 +3017,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-031 producer_only_method_non_callable_not_applicable",
       "claim": "Non-callable clipboard method fallback evidence is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: no clipboard method is called by the reader.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: no clipboard method is called by the reader.",
       "errorHandlingObservation": {
         "caseId": "method_non_callable",
         "notApplicableReason": {
@@ -3040,7 +3040,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-032 producer_only_permission_denied_not_applicable",
       "claim": "Permission-denied clipboard fallback evidence is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: no clipboard permission request or rejection branch exists.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: no clipboard permission request or rejection branch exists.",
       "errorHandlingObservation": {
         "caseId": "permission_denied",
         "notApplicableReason": {
@@ -3063,7 +3063,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-033 producer_only_generic_rejection_not_applicable",
       "claim": "Generic rejected-promise clipboard fallback evidence is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the reader has no asynchronous clipboard write path.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the reader has no asynchronous clipboard write path.",
       "errorHandlingObservation": {
         "caseId": "generic_rejection",
         "notApplicableReason": {
@@ -3086,7 +3086,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-034 producer_only_synchronous_throw_not_applicable",
       "claim": "Synchronous clipboard throw fallback evidence is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the reader has no synchronous clipboard call.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the reader has no synchronous clipboard call.",
       "errorHandlingObservation": {
         "caseId": "synchronous_throw",
         "notApplicableReason": {
@@ -3109,7 +3109,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-035 producer_only_sequential_transition_not_applicable",
       "claim": "Failure-success-failure sequential transition evidence is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the reader has no clipboard status transition sequence.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the reader has no clipboard status transition sequence.",
       "errorHandlingObservation": {
         "caseId": "sequential_transition",
         "notApplicableReason": {
@@ -3132,7 +3132,7 @@
       "templatePath": "speckit-pro/artifact-gallery/templates/incident-report.html",
       "step": "IR-UAT-036 producer_only_superseded_attempt_not_applicable",
       "claim": "Superseded clipboard attempt recovery evidence is producer-only and does not apply to the incident-report reader.",
-      "observedResult": "Revalidated at Slice 4 source checkpoint f27b7833e3d3e05772c7ebc44d4640f2b9d129ea: Source-backed classification only: the reader exposes no overlapping clipboard attempts.",
+      "observedResult": "Revalidated at Slice 5 source checkpoint 69f803d37523499f80120d246400a7fbda30c6fa: Source-backed classification only: the reader exposes no overlapping clipboard attempts.",
       "errorHandlingObservation": {
         "caseId": "superseded_attempt",
         "notApplicableReason": {
@@ -3147,6 +3147,1214 @@
         }
       },
       "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-001 direct_file_open",
+      "claim": "The triage-board producer opens directly over file:// with the expected identity and no server dependency.",
+      "observedResult": "The exact repository-relative file opened over file:// with title Triage Board — Cycle 14, h1 Release triage board, six tickets, and zero console or page errors.",
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-002 complete_representative_fills",
+      "claim": "The column-labels and triage-items fills contain complete representative editor content.",
+      "observedResult": "Four named columns and six anchored tickets rendered; every ticket exposed id, title, tag, estimate, and owner fields, for 30 contenteditable textboxes.",
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-003 named_board_controls_and_status",
+      "claim": "The board, filter, reset, export control, tickets, editable fields, and status region are programmatically named.",
+      "observedResult": "The board exposed role=group with board-heading; the labeled filter, Clear filter, Reset board, Copy as Markdown, named tickets/fields, and persistent polite status region were all present.",
+      "accessibilityObservation": {
+        "statusRegions": [
+          {
+            "selector": "#copy-status",
+            "role": "status with aria-live=polite",
+            "exposedMessageText": "Movement, edit, filter, reset, copy success, and copy failure messages were exposed.",
+            "coveredMessageKinds": [
+              "movement",
+              "edit",
+              "filter",
+              "boundary",
+              "reset",
+              "copy success",
+              "copy failure"
+            ]
+          }
+        ]
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-004 keyboard_move_reorder_and_focus",
+      "claim": "Focused tickets move between columns and reorder within a column with arrow keys while retaining focus.",
+      "observedResult": "RC-421 moved Now→Next with ArrowRight, reordered to Next position 2 with ArrowUp, moved back with ArrowLeft, and returned to Now position 1; focus remained on the ticket and exact board/column boundary messages appeared.",
+      "accessibilityObservation": {
+        "focusOrder": [
+          {
+            "selector": "#triage-items-rc-421",
+            "role": "listitem",
+            "name": "Ticket RC-421, Fix local copy fallback",
+            "visibleFocusIndicator": "3px solid outline with 3px offset; focus remained after every move."
+          }
+        ],
+        "statusRegions": [
+          {
+            "selector": "#copy-status",
+            "role": "status with aria-live=polite",
+            "exposedMessageText": "Movement, edit, filter, reset, copy success, and copy failure messages were exposed.",
+            "coveredMessageKinds": [
+              "movement",
+              "edit",
+              "filter",
+              "boundary",
+              "reset",
+              "copy success",
+              "copy failure"
+            ]
+          }
+        ]
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-005 contenteditable_live_update",
+      "claim": "Editing a visible ticket updates its accessible name and announces the in-memory change.",
+      "observedResult": "Changing RC-421 title to Keyboard-edited title updated the ticket aria-label and exposed Ticket updated in memory. in the status region.",
+      "accessibilityObservation": {
+        "statusRegions": [
+          {
+            "selector": "#copy-status",
+            "role": "status with aria-live=polite",
+            "exposedMessageText": "Movement, edit, filter, reset, copy success, and copy failure messages were exposed.",
+            "coveredMessageKinds": [
+              "movement",
+              "edit",
+              "filter",
+              "boundary",
+              "reset",
+              "copy success",
+              "copy failure"
+            ]
+          }
+        ]
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-006 empty_column_feedback",
+      "claim": "A physically empty column exposes explicit visible feedback.",
+      "observedResult": "Moving RC-452 from Later to Cut left Later empty and revealed the exact text No tickets in this column.",
+      "boundaryStateObservation": {
+        "stateKind": "empty",
+        "artifactState": "Later contained zero tickets after keyboard movement.",
+        "visibleFeedback": "No tickets in this column.",
+        "statusRegionFeedback": "Moved RC-452 to Cut, position 2."
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-007 filtered_no_result_feedback",
+      "claim": "Filtering exposes explicit visible feedback for every nonmatching nonempty column and for an all-filtered board.",
+      "observedResult": "The bug filter left two tickets visible and showed No tickets match this filter. in three columns; after all tags were changed to other, all four columns showed that text and the status said Filter active: bug.",
+      "boundaryStateObservation": {
+        "stateKind": "filtered_no_result",
+        "artifactState": "bug filter with zero visible matches in the observed columns",
+        "visibleFeedback": "No tickets match this filter.",
+        "statusRegionFeedback": "Filter active: bug."
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-008 reset_and_session_only_state",
+      "claim": "Reset and reload restore the representative seed without persisted editor or status state.",
+      "observedResult": "Reset restored six seed tickets, cleared filter/export state, and announced Board reset to the representative session seed.; reloading after a transient title edit restored Fix local copy fallback and an empty status region.",
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-009 offline_reload",
+      "claim": "The local triage editor remains complete and usable while the browser context is offline.",
+      "observedResult": "Offline file:// reload preserved the title, h1, six tickets, four toolbar controls, editing, and copy fallback; a disposable remote probe failed with net::ERR_INTERNET_DISCONNECTED.",
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-010 complete_keyboard_traversal",
+      "claim": "Every interactive control, ticket, and editable field is reachable in complete forward and reverse keyboard order.",
+      "observedResult": "Forward traversal exposed 41 stops: theme, filter, three toolbar buttons, and each of six ticket containers followed by id, estimate, title, tag, and owner; reverse traversal returned through the same final ticket sequence.",
+      "accessibilityObservation": {
+        "focusOrder": [
+          {
+            "selector": ".rc-theme-toggle",
+            "role": "button",
+            "name": "Dark theme",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#tag-filter",
+            "role": "combobox",
+            "name": "Filter tickets by tag",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#clear-filter",
+            "role": "button",
+            "name": "Clear filter",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#reset-board",
+            "role": "button",
+            "name": "Reset board",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#copy-markdown",
+            "role": "button",
+            "name": "Copy as Markdown",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#triage-items-rc-421",
+            "role": "listitem",
+            "name": "Named ticket",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#triage-items-rc-421 [data-field=\"id\"]",
+            "role": "textbox",
+            "name": "Ticket ID",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#triage-items-rc-421 [data-field=\"estimate\"]",
+            "role": "textbox",
+            "name": "Estimate",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#triage-items-rc-421 [data-field=\"title\"]",
+            "role": "textbox",
+            "name": "Ticket title",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#triage-items-rc-421 [data-field=\"tag\"]",
+            "role": "textbox",
+            "name": "Tag",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#triage-items-rc-421 [data-field=\"owner\"]",
+            "role": "textbox",
+            "name": "Owner",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#triage-items-rc-433",
+            "role": "listitem",
+            "name": "Named ticket",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#triage-items-rc-433 [data-field=\"id\"]",
+            "role": "textbox",
+            "name": "Ticket ID",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#triage-items-rc-433 [data-field=\"estimate\"]",
+            "role": "textbox",
+            "name": "Estimate",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#triage-items-rc-433 [data-field=\"title\"]",
+            "role": "textbox",
+            "name": "Ticket title",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#triage-items-rc-433 [data-field=\"tag\"]",
+            "role": "textbox",
+            "name": "Tag",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#triage-items-rc-433 [data-field=\"owner\"]",
+            "role": "textbox",
+            "name": "Owner",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#ticket-rc-440",
+            "role": "listitem",
+            "name": "Named ticket",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#ticket-rc-440 [data-field=\"id\"]",
+            "role": "textbox",
+            "name": "Ticket ID",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#ticket-rc-440 [data-field=\"estimate\"]",
+            "role": "textbox",
+            "name": "Estimate",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#ticket-rc-440 [data-field=\"title\"]",
+            "role": "textbox",
+            "name": "Ticket title",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#ticket-rc-440 [data-field=\"tag\"]",
+            "role": "textbox",
+            "name": "Tag",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#ticket-rc-440 [data-field=\"owner\"]",
+            "role": "textbox",
+            "name": "Owner",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#ticket-rc-447",
+            "role": "listitem",
+            "name": "Named ticket",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#ticket-rc-447 [data-field=\"id\"]",
+            "role": "textbox",
+            "name": "Ticket ID",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#ticket-rc-447 [data-field=\"estimate\"]",
+            "role": "textbox",
+            "name": "Estimate",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#ticket-rc-447 [data-field=\"title\"]",
+            "role": "textbox",
+            "name": "Ticket title",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#ticket-rc-447 [data-field=\"tag\"]",
+            "role": "textbox",
+            "name": "Tag",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#ticket-rc-447 [data-field=\"owner\"]",
+            "role": "textbox",
+            "name": "Owner",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#ticket-rc-452",
+            "role": "listitem",
+            "name": "Named ticket",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#ticket-rc-452 [data-field=\"id\"]",
+            "role": "textbox",
+            "name": "Ticket ID",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#ticket-rc-452 [data-field=\"estimate\"]",
+            "role": "textbox",
+            "name": "Estimate",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#ticket-rc-452 [data-field=\"title\"]",
+            "role": "textbox",
+            "name": "Ticket title",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#ticket-rc-452 [data-field=\"tag\"]",
+            "role": "textbox",
+            "name": "Tag",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#ticket-rc-452 [data-field=\"owner\"]",
+            "role": "textbox",
+            "name": "Owner",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#ticket-rc-461",
+            "role": "listitem",
+            "name": "Named ticket",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#ticket-rc-461 [data-field=\"id\"]",
+            "role": "textbox",
+            "name": "Ticket ID",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#ticket-rc-461 [data-field=\"estimate\"]",
+            "role": "textbox",
+            "name": "Estimate",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#ticket-rc-461 [data-field=\"title\"]",
+            "role": "textbox",
+            "name": "Ticket title",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#ticket-rc-461 [data-field=\"tag\"]",
+            "role": "textbox",
+            "name": "Tag",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#ticket-rc-461 [data-field=\"owner\"]",
+            "role": "textbox",
+            "name": "Owner",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          }
+        ]
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-011 focus_visibility",
+      "claim": "Every keyboard stop and the manual-copy fallback exposes visible focus.",
+      "observedResult": "All 41 traversal stops measured a 3px solid outline with 3px offset; failure fallback focused and selected the labeled readonly textarea.",
+      "accessibilityObservation": {
+        "focusOrder": [
+          {
+            "selector": ".rc-theme-toggle",
+            "role": "button",
+            "name": "Dark theme",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#tag-filter",
+            "role": "combobox",
+            "name": "Filter tickets by tag",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#clear-filter",
+            "role": "button",
+            "name": "Clear filter",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#reset-board",
+            "role": "button",
+            "name": "Reset board",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#copy-markdown",
+            "role": "button",
+            "name": "Copy as Markdown",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          }
+        ],
+        "focusedFallbackTarget": {
+          "selector": "#copy-fallback",
+          "role": "textbox",
+          "accessibleName": "Markdown export for manual copy",
+          "focusedState": true,
+          "equalityProof": "selectionStart=0, selectionEnd=value.length, and fallback value equaled the exact attempted export bytes."
+        }
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-012 light_dark_parity",
+      "claim": "Light and dark modes preserve identical board content, controls, focus, and editor state.",
+      "observedResult": "Light→dark retained all content and interaction; dark persisted across reload; the artifact returned to light and the theme control retained a 3px/3px focus outline.",
+      "accessibilityObservation": {
+        "contrastEvidence": {
+          "auditedTokenSource": "Canonical embedded gallery light/dark tokens plus runtime focus-style measurements.",
+          "observations": [
+            {
+              "theme": "light",
+              "contentAndControls": "complete"
+            },
+            {
+              "theme": "dark",
+              "contentAndControls": "complete"
+            }
+          ]
+        }
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-013 reduced_motion",
+      "claim": "Reduced-motion mode preserves complete board behavior without requiring animation.",
+      "observedResult": "prefers-reduced-motion: reduce computed 0.01ms transition/animation durations with zero running animations after settle; keyboard movement and controls remained usable.",
+      "accessibilityObservation": {
+        "focusOrder": [
+          {
+            "selector": "#triage-items-rc-421",
+            "role": "listitem",
+            "name": "Ticket RC-421",
+            "visibleFocusIndicator": "Keyboard movement remained functional with reduced motion and retained the 3px focus outline."
+          }
+        ]
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-014 color_independent_meaning",
+      "claim": "Column, ticket, filter, boundary, and copy meaning remains understandable without hue.",
+      "observedResult": "Now/Next/Later/Cut headings, ticket IDs/titles, Tag/Owner/Estimate text, empty/filter messages, and copy status text conveyed every tested state without relying on color.",
+      "accessibilityObservation": {
+        "contrastEvidence": {
+          "auditedTokenSource": "Canonical embedded gallery tokens; all meaningful states also exposed explicit text labels.",
+          "observations": [
+            {
+              "state": "columns and tickets",
+              "textBacked": true
+            },
+            {
+              "state": "empty/filter/copy",
+              "textBacked": true
+            }
+          ]
+        }
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-015 horizontal_scroll_actual_element_check",
+      "claim": "The editor follows the no-horizontal-scroll-region route when source and runtime expose no meaningful horizontal scroll element.",
+      "observedResult": "At 360 CSS px clientWidth=scrollWidth=345; at 1280 both were 1280. No reviewed element clipped and no actual horizontal user-scroll region appeared.",
+      "accessibilityObservation": {
+        "scrollRegions": [
+          {
+            "selector": "html",
+            "role": "document root",
+            "name": "not_applicable",
+            "tabindex": "not_applicable",
+            "horizontalOverflowEvidence": "360: 345=345; 1280: 1280=1280.",
+            "actualScrollElement": "none"
+          },
+          {
+            "selector": ".board",
+            "role": "group",
+            "name": "Triage board",
+            "tabindex": "not_applicable",
+            "horizontalOverflowEvidence": "Responsive grid changed 4→2→1 columns without horizontal overflow.",
+            "actualScrollElement": "none"
+          }
+        ]
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-016 responsive_layout_360_css_px",
+      "claim": "The complete editor remains usable at exactly 360 CSS px without overflow, clipping, or overlap.",
+      "observedResult": "At 360 CSS px the page measured clientWidth=scrollWidth=345, the board became one column, and no reviewed main/toolbar/board/column/ticket node clipped; a full-page screenshot was captured.",
+      "responsiveLayoutObservation": {
+        "viewportWidthCssPx": 360,
+        "pageHorizontalOverflow": false,
+        "clippedOrOverlappingText": false,
+        "namedScrollExceptions": []
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-017 responsive_layout_1280_css_px",
+      "claim": "The complete editor remains usable at desktop width without overflow, clipping, or overlap.",
+      "observedResult": "At 1280 CSS px clientWidth equaled scrollWidth=1280 and no reviewed main/toolbar/board/column/ticket node clipped; a full-page screenshot was captured.",
+      "responsiveLayoutObservation": {
+        "viewportWidthCssPx": 1280,
+        "pageHorizontalOverflow": false,
+        "clippedOrOverlappingText": false,
+        "namedScrollExceptions": []
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-018 manifest_parity",
+      "claim": "Manifest identity, source, role, shipped state, and sole export kind match the exhaustive ART-005 table.",
+      "observedResult": "Manifest read-back matched id=triage-board, title=Triage Board, upstream source=18-editor-triage-board.html, role=producer, status=shipped, and exports=[markdown].",
+      "dataIntegrityObservation": {
+        "caseId": "manifest_parity",
+        "expectedOrder": [
+          "id=triage-board",
+          "source=upstream/18-editor-triage-board.html",
+          "role=producer",
+          "status=shipped",
+          "exports=[markdown]"
+        ],
+        "observedOrder": [
+          "id=triage-board",
+          "source=upstream/18-editor-triage-board.html",
+          "role=producer",
+          "status=shipped",
+          "exports=[markdown]"
+        ]
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-019 horizontal_scroll_region_not_applicable_source_check",
+      "claim": "No named keyboard-focusable horizontal scroll region is required when the source and runtime contain no meaningful horizontal overflow region.",
+      "observedResult": "Source and runtime classification at the Slice 5 checkpoint found no overflow-x:auto/scroll declaration, equal client/scroll widths at both review sizes, and no actual user-scroll element.",
+      "accessibilityObservation": {
+        "scrollRegions": [
+          {
+            "selector": ".board",
+            "role": "group",
+            "name": "Triage board",
+            "tabindex": "not_applicable",
+            "horizontalOverflowEvidence": "Responsive grid wraps; it never becomes a horizontal scroller.",
+            "actualScrollElement": "not_applicable_no_user_scroll_region"
+          }
+        ],
+        "notApplicableReason": {
+          "caseId": "horizontal_scroll_region",
+          "sourceEvidence": [
+            "triage-board CSS uses responsive 4/2/1-column grid",
+            "source search found no overflow-x:auto or overflow-x:scroll"
+          ],
+          "actualScrollElementDisposition": "Runtime review found no actual user-scroll element at 360 or 1280 CSS px."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-020 live_export_freshness",
+      "claim": "Every copy invocation serializes one fresh snapshot of the currently visible board.",
+      "observedResult": "A 938-byte baseline containing FRESHNESS-OLD-triage-board changed to a distinct 938-byte export containing FRESHNESS-NEW-triage-board and excluding the replaced sentinel.",
+      "dataIntegrityObservation": {
+        "caseId": "live_export_freshness",
+        "inputs": [
+          {
+            "selector": "#triage-items-rc-421 [data-field=title]",
+            "field": "title",
+            "rawValue": "FRESHNESS-OLD-triage-board"
+          },
+          {
+            "selector": "#triage-items-rc-421 [data-field=title]",
+            "field": "title",
+            "rawValue": "FRESHNESS-NEW-triage-board"
+          }
+        ],
+        "baselineExport": "938-byte Markdown containing FRESHNESS-OLD-triage-board",
+        "attemptedExport": "938-byte Markdown containing FRESHNESS-NEW-triage-board",
+        "comparison": {
+          "differsFromBaseline": true,
+          "containsChangedValue": true,
+          "excludesReplacedValue": true,
+          "exactClipboardOrFallbackEquality": true
+        }
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-021 empty_values_and_collections",
+      "claim": "Empty ticket fields and an all-empty visible board remain explicit and lossless in Markdown and issues.",
+      "observedResult": "Empty id/title values produced ordered empty_required_value issues with rawValue and normalizedValue as empty strings; filtering all tickets produced four - _No tickets._ column entries and a deterministic no-issues appendix.",
+      "boundaryStateObservation": {
+        "stateKind": "empty",
+        "artifactState": "Empty required fields plus zero visible tickets across all four columns.",
+        "visibleFeedback": "No tickets match this filter.",
+        "statusRegionFeedback": "Filter active: bug."
+      },
+      "dataIntegrityObservation": {
+        "caseId": "empty_values",
+        "inputs": [
+          {
+            "selector": "#ticket-rc-440 [data-field=id]",
+            "field": "id",
+            "rawValue": ""
+          },
+          {
+            "selector": "#ticket-rc-440 [data-field=title]",
+            "field": "title",
+            "rawValue": ""
+          }
+        ],
+        "expectedOrder": [
+          "empty_required_value:id",
+          "empty_required_value:title"
+        ],
+        "observedOrder": [
+          "empty_required_value:id",
+          "empty_required_value:title"
+        ],
+        "issues": [
+          {
+            "code": "empty_required_value",
+            "rawValue": "",
+            "normalizedValue": ""
+          },
+          {
+            "code": "empty_required_value",
+            "rawValue": "",
+            "normalizedValue": ""
+          }
+        ]
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-022 current_visible_ticket_order",
+      "claim": "Markdown preserves current visible column and ticket order after keyboard movement and filtering.",
+      "observedResult": "After RC-421 moved into Next and reordered, the Next export order was RC-440, RC-421, RC-447; a bug-filter export contained only RC-421 and RC-433 and represented three empty columns.",
+      "dataIntegrityObservation": {
+        "caseId": "live_export_freshness",
+        "expectedOrder": [
+          "RC-440",
+          "RC-421",
+          "RC-447"
+        ],
+        "observedOrder": [
+          "RC-440",
+          "RC-421",
+          "RC-447"
+        ],
+        "comparison": {
+          "differsFromBaseline": true,
+          "containsChangedValue": true,
+          "excludesReplacedValue": true,
+          "exactClipboardOrFallbackEquality": true
+        }
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-023 deterministic_column_and_field_order",
+      "claim": "Markdown uses the exact declared column, ticket-field, empty-column, and issue-appendix order.",
+      "observedResult": "Observed headings were Now, Next, Later, Cut, Issues; each ticket used id then Title, Tag, Estimate, Owner, and every empty column used - _No tickets._.",
+      "dataIntegrityObservation": {
+        "caseId": "multiple_issue_order",
+        "expectedOrder": [
+          "Now",
+          "Next",
+          "Later",
+          "Cut",
+          "Issues",
+          "id",
+          "title",
+          "tag",
+          "estimate",
+          "owner"
+        ],
+        "observedOrder": [
+          "Now",
+          "Next",
+          "Later",
+          "Cut",
+          "Issues",
+          "id",
+          "title",
+          "tag",
+          "estimate",
+          "owner"
+        ]
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-024 duplicate_identifiers",
+      "claim": "Duplicate ticket IDs across columns are preserved and reported without overwriting either occurrence.",
+      "observedResult": "RC-421 remained in Now and a Next ticket was changed to RC-421; both Markdown tickets remained, followed by duplicate_identifier at occurrence 3 related to occurrence 1.",
+      "dataIntegrityObservation": {
+        "caseId": "duplicate_identifiers",
+        "inputs": [
+          {
+            "selector": "#triage-items-rc-421 [data-field=id]",
+            "field": "id",
+            "rawValue": "RC-421"
+          },
+          {
+            "selector": "#ticket-rc-440 [data-field=id]",
+            "field": "id",
+            "rawValue": "RC-421"
+          }
+        ],
+        "issues": [
+          {
+            "code": "duplicate_identifier",
+            "artifactId": "triage-board",
+            "entityType": "triage_ticket",
+            "entityId": "RC-421",
+            "field": "id",
+            "occurrenceIndex": 3,
+            "relatedOccurrenceIndex": 1,
+            "rawValue": "RC-421",
+            "normalizedValue": "RC-421",
+            "message": "Identifier duplicates the first visible occurrence."
+          }
+        ]
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-025 special_character_round_trip",
+      "claim": "Multiline Unicode and quotes, backticks, pipes, slash, backslash, tab, and newline survive deterministic Markdown escaping.",
+      "observedResult": "Playwright entered a real browser-created line break in the visible contenteditable. The export preserved Ω and 🚀, quotes, slash, tab, and newline; backticks, pipes, and backslash were escaped deterministically and continuation text was indented.",
+      "dataIntegrityObservation": {
+        "caseId": "special_character_round_trip",
+        "inputs": [
+          {
+            "selector": "#triage-items-rc-421 [data-field=title]",
+            "field": "title",
+            "rawValue": "Unicode Ω 🚀 \"quote\" `code` pipe | slash / backslash \\\\ tab\\tline\\nnext line"
+          }
+        ],
+        "comparison": {
+          "differsFromBaseline": true,
+          "containsChangedValue": true,
+          "excludesReplacedValue": true,
+          "exactClipboardOrFallbackEquality": true
+        }
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-026 multiple_issue_order",
+      "claim": "Simultaneous duplicate and empty issues follow entity order, declared field order, then condition order.",
+      "observedResult": "The exact code order was duplicate_identifier, empty_required_value(estimate), empty_required_value(owner); every issue exposed code, artifactId, entityType, entityId, field, occurrence indexes, raw/normalized values, and message in the declared order.",
+      "dataIntegrityObservation": {
+        "caseId": "multiple_issue_order",
+        "expectedOrder": [
+          "duplicate_identifier",
+          "empty_required_value:estimate",
+          "empty_required_value:owner"
+        ],
+        "observedOrder": [
+          "duplicate_identifier",
+          "empty_required_value:estimate",
+          "empty_required_value:owner"
+        ],
+        "issues": [
+          {
+            "code": "duplicate_identifier",
+            "occurrenceIndex": 3,
+            "relatedOccurrenceIndex": 1
+          },
+          {
+            "code": "empty_required_value",
+            "field": "estimate",
+            "occurrenceIndex": 3
+          },
+          {
+            "code": "empty_required_value",
+            "field": "owner",
+            "occurrenceIndex": 3
+          }
+        ]
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-027 clipboard_exact_equality",
+      "claim": "Clipboard success and every manual fallback receive the exact attempted export bytes for that invocation.",
+      "observedResult": "The genuine success captured one 935-byte write; absent, non-callable, permission-denied, generic-rejection, and synchronous-throw fallbacks equaled their attempted strings byte for byte.",
+      "dataIntegrityObservation": {
+        "caseId": "clipboard_exact_equality",
+        "attemptedExport": "935-byte representative Markdown",
+        "comparison": {
+          "differsFromBaseline": false,
+          "containsChangedValue": true,
+          "excludesReplacedValue": true,
+          "exactClipboardOrFallbackEquality": true
+        }
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-028 superseded_copy_attempt_data_integrity",
+      "claim": "Older clipboard settlements cannot restore stale status, fallback content, fallback visibility, or focus.",
+      "observedResult": "Older delayed success settled after newer failure without replacing the newer fallback; older delayed failure settled after newer success without restoring fallback or moving focus.",
+      "dataIntegrityObservation": {
+        "caseId": "superseded_copy_attempt",
+        "supersededAttempt": {
+          "settlementOrder": [
+            "older success after newer failure",
+            "older failure after newer success"
+          ],
+          "noStaleMutation": true
+        }
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-029 clipboard_genuine_success",
+      "claim": "A callable resolving clipboard method is invoked exactly once and exposes the normalized success state.",
+      "observedResult": "One writeText call received the 935-byte export; status became Copied. Markdown is on the clipboard., fallback stayed hidden, and focus returned to Copy as Markdown.",
+      "errorHandlingObservation": {
+        "caseId": "genuine_success",
+        "clipboardMethodState": "callable",
+        "failureKind": "none",
+        "writeAttemptCount": 1,
+        "attemptedExport": "935-byte representative Markdown",
+        "clipboardTextObserved": "exact 935-byte representative Markdown",
+        "statusMessageObserved": "Copied. Markdown is on the clipboard.",
+        "fallbackLabelObserved": "Markdown export for manual copy",
+        "fallbackVisibleObserved": false,
+        "fallbackSelectableObserved": false,
+        "fallbackTextObserved": "",
+        "focusedTargetObserved": "#copy-markdown"
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-030 clipboard_absent",
+      "claim": "An absent clipboard capability makes zero write attempts and exposes the exact focused selectable fallback.",
+      "observedResult": "Zero write attempts occurred; the exact 935-byte export appeared in the labeled readonly textarea, fully selected and focused.",
+      "accessibilityObservation": {
+        "focusedFallbackTarget": {
+          "selector": "#copy-fallback",
+          "role": "textbox",
+          "accessibleName": "Markdown export for manual copy",
+          "focusedState": true,
+          "equalityProof": "selectionStart=0, selectionEnd=value.length, and fallback value equaled the exact attempted export bytes."
+        }
+      },
+      "errorHandlingObservation": {
+        "caseId": "clipboard_absent",
+        "clipboardMethodState": "absent",
+        "failureKind": "unavailable",
+        "writeAttemptCount": 0,
+        "attemptedExport": "935-byte representative Markdown",
+        "clipboardTextObserved": "not_available",
+        "statusMessageObserved": "Copy failed. The Markdown export is available below for manual copy.",
+        "fallbackLabelObserved": "Markdown export for manual copy",
+        "fallbackVisibleObserved": true,
+        "fallbackSelectableObserved": true,
+        "fallbackTextObserved": "exact attempted export",
+        "focusedTargetObserved": "#copy-fallback"
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-031 method_non_callable",
+      "claim": "A non-callable clipboard method makes zero write attempts and exposes the exact fallback.",
+      "observedResult": "A string-valued writeText capability made zero attempts and produced the same focused, selected 935-byte fallback.",
+      "accessibilityObservation": {
+        "focusedFallbackTarget": {
+          "selector": "#copy-fallback",
+          "role": "textbox",
+          "accessibleName": "Markdown export for manual copy",
+          "focusedState": true,
+          "equalityProof": "selectionStart=0, selectionEnd=value.length, and fallback value equaled the exact attempted export bytes."
+        }
+      },
+      "errorHandlingObservation": {
+        "caseId": "method_non_callable",
+        "clipboardMethodState": "non_callable",
+        "failureKind": "unavailable",
+        "writeAttemptCount": 0,
+        "attemptedExport": "935-byte representative Markdown",
+        "clipboardTextObserved": "not_available",
+        "statusMessageObserved": "Copy failed. The Markdown export is available below for manual copy.",
+        "fallbackLabelObserved": "Markdown export for manual copy",
+        "fallbackVisibleObserved": true,
+        "fallbackSelectableObserved": true,
+        "fallbackTextObserved": "exact attempted export",
+        "focusedTargetObserved": "#copy-fallback"
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-032 permission_denied",
+      "claim": "A NotAllowedError rejection is normalized to the exact manual-copy recovery state.",
+      "observedResult": "Exactly one callable write rejected with NotAllowedError; browser detail did not leak, and the exact attempted export was focused and selected in fallback.",
+      "accessibilityObservation": {
+        "focusedFallbackTarget": {
+          "selector": "#copy-fallback",
+          "role": "textbox",
+          "accessibleName": "Markdown export for manual copy",
+          "focusedState": true,
+          "equalityProof": "selectionStart=0, selectionEnd=value.length, and fallback value equaled the exact attempted export bytes."
+        }
+      },
+      "errorHandlingObservation": {
+        "caseId": "permission_denied",
+        "clipboardMethodState": "callable",
+        "failureKind": "permission_denied",
+        "writeAttemptCount": 1,
+        "attemptedExport": "representative Markdown",
+        "clipboardTextObserved": "rejected",
+        "statusMessageObserved": "Copy failed. The Markdown export is available below for manual copy.",
+        "fallbackLabelObserved": "Markdown export for manual copy",
+        "fallbackVisibleObserved": true,
+        "fallbackSelectableObserved": true,
+        "fallbackTextObserved": "exact attempted export",
+        "focusedTargetObserved": "#copy-fallback"
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-033 generic_rejection",
+      "claim": "A generic rejected clipboard promise is normalized to the exact manual-copy recovery state.",
+      "observedResult": "Exactly one callable write rejected generically; exception detail did not leak, and the exact attempted export was focused and selected in fallback.",
+      "accessibilityObservation": {
+        "focusedFallbackTarget": {
+          "selector": "#copy-fallback",
+          "role": "textbox",
+          "accessibleName": "Markdown export for manual copy",
+          "focusedState": true,
+          "equalityProof": "selectionStart=0, selectionEnd=value.length, and fallback value equaled the exact attempted export bytes."
+        }
+      },
+      "errorHandlingObservation": {
+        "caseId": "generic_rejection",
+        "clipboardMethodState": "callable",
+        "failureKind": "rejected",
+        "writeAttemptCount": 1,
+        "attemptedExport": "representative Markdown",
+        "clipboardTextObserved": "rejected",
+        "statusMessageObserved": "Copy failed. The Markdown export is available below for manual copy.",
+        "fallbackLabelObserved": "Markdown export for manual copy",
+        "fallbackVisibleObserved": true,
+        "fallbackSelectableObserved": true,
+        "fallbackTextObserved": "exact attempted export",
+        "focusedTargetObserved": "#copy-fallback"
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-034 synchronous_throw",
+      "claim": "A synchronous clipboard throw is normalized to the exact manual-copy recovery state.",
+      "observedResult": "Exactly one callable write threw synchronously; exception detail did not leak, and the exact attempted export was focused and selected in fallback.",
+      "accessibilityObservation": {
+        "focusedFallbackTarget": {
+          "selector": "#copy-fallback",
+          "role": "textbox",
+          "accessibleName": "Markdown export for manual copy",
+          "focusedState": true,
+          "equalityProof": "selectionStart=0, selectionEnd=value.length, and fallback value equaled the exact attempted export bytes."
+        }
+      },
+      "errorHandlingObservation": {
+        "caseId": "synchronous_throw",
+        "clipboardMethodState": "callable",
+        "failureKind": "synchronous_throw",
+        "writeAttemptCount": 1,
+        "attemptedExport": "representative Markdown",
+        "clipboardTextObserved": "throw",
+        "statusMessageObserved": "Copy failed. The Markdown export is available below for manual copy.",
+        "fallbackLabelObserved": "Markdown export for manual copy",
+        "fallbackVisibleObserved": true,
+        "fallbackSelectableObserved": true,
+        "fallbackTextObserved": "exact attempted export",
+        "focusedTargetObserved": "#copy-fallback"
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-035 sequential_transition",
+      "claim": "Distinct live values remain correct through failure, success, then failure.",
+      "observedResult": "Three invocations produced failure→success→failure; each invoked writeText once, success cleared fallback and focused the button, and the final fallback contained Sequential final failure rather than older content.",
+      "errorHandlingObservation": {
+        "caseId": "sequential_transition",
+        "clipboardMethodState": "callable",
+        "failureKind": "rejected",
+        "writeAttemptCount": 1,
+        "attemptedExport": "three distinct live-state exports",
+        "clipboardTextObserved": "failure, success, failure",
+        "statusMessageObserved": "final: Copy failed. The Markdown export is available below for manual copy.",
+        "fallbackLabelObserved": "Markdown export for manual copy",
+        "fallbackVisibleObserved": true,
+        "fallbackSelectableObserved": true,
+        "fallbackTextObserved": "latest attempted export",
+        "focusedTargetObserved": "#copy-fallback",
+        "settlementOrder": [
+          "failure",
+          "success",
+          "failure"
+        ],
+        "noStaleMutation": true
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "triage-board",
+      "templatePath": "speckit-pro/artifact-gallery/templates/triage-board.html",
+      "step": "TB-UAT-036 superseded_attempt",
+      "claim": "Both superseded-settlement directions preserve the latest invocation state.",
+      "observedResult": "Two-call race A kept the newer failure fallback after older success; race B kept newer success, hidden fallback, and copy-button focus after older failure. Reset also invalidated a pending success.",
+      "errorHandlingObservation": {
+        "caseId": "superseded_attempt",
+        "clipboardMethodState": "callable",
+        "failureKind": "none",
+        "writeAttemptCount": 1,
+        "attemptedExport": "two distinct exports per race",
+        "clipboardTextObserved": "latest invocation only",
+        "statusMessageObserved": "newer failure or newer success remained authoritative",
+        "fallbackLabelObserved": "Markdown export for manual copy",
+        "fallbackVisibleObserved": "matched newer invocation",
+        "fallbackSelectableObserved": "matched newer invocation",
+        "fallbackTextObserved": "matched newer invocation",
+        "focusedTargetObserved": "matched newer invocation",
+        "settlementOrder": [
+          "older delayed success after newer failure",
+          "older delayed failure after newer success",
+          "pending success after reset"
+        ],
+        "noStaleMutation": true
+      },
+      "verdict": "pass",
       "date": "2026-08-18",
       "driver": "manual"
     }

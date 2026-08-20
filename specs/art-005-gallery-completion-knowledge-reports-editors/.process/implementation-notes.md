@@ -267,3 +267,71 @@
 ### T062
 
 **Deviations/Edge cases/Surprises:** Refreshed PR #447 was open at exact Slice 4 base `2b0fa4eb1d1d5b1daf24eb13946eac4fb7beebd3`. The final boundary is 33 paths: seven implementation-authored, 22 generated, and four workflow/control-plane, with 420 reviewable LOC, one production template, and no correctness or non-size blocker; the total-file result is **SIZE-ONLY BLOCK / CONTINUE**. Packet `art-005-slice-4-incident-report` passed dry-run/apply emission, read-only validation with `pr_blocked=false`, persisted current-fingerprint validation, workflow-contract validation, exact-title release readiness, and release-note policy. The exact emission head `17699aac607938f049faf8a6a7b1d62ee32fb1fb` was pushed and PR [#448](https://github.com/racecraft-lab/racecraft-plugins-public/pull/448) opened against the Slice 3 branch. GitHub reported `UNSTABLE` immediately after creation while checks started; this is not a packet or PR-creation blocker.
+
+### T063
+
+**Deviations/Edge cases/Surprises:** None. After PR #448 opened and Slice 4 closeout reached `4c9f4fe521994ba43150532572f8ee7e5a442401`, Slice 5 was created from that exact head as `art-005-gallery-completion-knowledge-reports-editors-slice-5`. The plan and topology contract agree on exactly seven implementation-authored paths and a 785 reviewable-LOC ceiling (240 markup/content, 145 CSS, 230 behavior JS, and 170 incremental tests), leaving 15 LOC below the mandatory 800-LOC stop. `triage-board` remains `planned` with pinned source `18-editor-triage-board.html` and `exports: ["markdown"]` before RED.
+
+### T064
+
+**Deviations/Edge cases/Surprises:** None. Group P1 pins the shipped producer identity, exact Markdown export kind and control label, canonical bytes, attribution, named board/columns/tickets/filter/reset/fallback surfaces, keyboard column movement and within-column reordering, explicit empty/filter messages, persistent status semantics, memory-only behavior, responsive handling, reduced motion, and visible focus.
+
+### T065
+
+**Deviations/Edge cases/Surprises:** None. Group P2 parses the declared column, ticket-field, and issue-field arrays instead of accepting unordered token presence. It also pins a fresh live snapshot, exactly one serialization call, fixed headings and empty states, duplicate preservation/reporting, deterministic issue text, JSON-scalar issue values, and multiline Markdown escaping.
+
+### T066
+
+**Deviations/Edge cases/Surprises:** None. Group P3 pins invocation ordinals, fresh clipboard capability reads, zero attempts for absent/non-callable methods, one write for callable methods, normalized success/failure messages, exact selectable focused fallback, and two settlement-currency guards covering both superseded directions. Runtime sequencing and exception classes remain mandatory UAT rows.
+
+### T067
+
+**Deviations/Edge cases/Surprises:** None. The fill contract now pins `triage-items` and `column-labels`, treats triage-items as a repeated list slot, and requires a non-vacuous shipped inventory template with at least two anchored list items.
+
+### T068
+
+**Deviations/Edge cases/Surprises:** Formal RED passed for the intended reason. Gallery reported 491/494; direct P1-P3 evidence names only the planned manifest status and missing triage-board producer. Fill-region reported 62/63 with only the new missing triage-board fill-inventory template failing. Existing Slice 1-4 checks remained green.
+
+### T069
+
+**Deviations/Edge cases/Surprises:** The derivative preserves the pinned Cycle 14 board identity while replacing drag-only interaction with a static semantic board whose focused tickets move between columns with Left/Right and reorder with Up/Down. Six representative contenteditable tickets, named filter/reset/export controls, explicit empty and filtered-empty text, focus retention, and one persistent status region keep the session usable over direct `file://` without storage or URL state.
+
+### T070
+
+**Deviations/Edge cases/Surprises:** One immutable snapshot reads only currently visible tickets in exact `now`, `next`, `later`, `cut` and DOM order. The serializer uses exact ticket and issue field arrays, deterministic Markdown escaping with indented continuation lines, empty-column text, duplicate/empty issue records, JSON scalar issue values, and a fixed Issues appendix. The snapshot is captured and serialized once inside the current copy invocation; no export text is cached.
+
+### T071
+
+**Deviations/Edge cases/Surprises:** The copy handler clears stale status/fallback state, reads clipboard capability on every invocation, attempts callable `writeText` exactly once, makes zero attempts for absent/non-callable capability, normalizes every failure class to the labeled focused selectable textarea, and guards both success and failure settlements with the current attempt ordinal. Hidden copying, downloads, and exception-text exposure are absent.
+
+### T072
+
+**Deviations/Edge cases/Surprises:** None. The manifest diff changes only `triage-board.status` from `planned` to `shipped`; pinned source `18-editor-triage-board.html`, `exports: ["markdown"]`, and every other row remain unchanged.
+
+### T073
+
+**Deviations/Edge cases/Surprises:** Slice 1 `check_l1`, Slice 2 `check_m1`, Slice 3 `check_n1`, Slice 4 `check_o1`, and Slice 5 `check_p1`-`check_p3` all return no failures, and fill-region checks pass 63/63. The complete gallery module reports 490/494 only because F1-F4 require T076 regeneration of the Claude/Codex payload copies; no source producer assertion is failing.
+
+### T074
+
+**Deviations/Edge cases/Surprises:** No further refactor was warranted. The editor already uses flat named functions for filtering, movement, snapshotting, issue collection, serialization, and copy recovery; source checks are green and `git diff --check` passes. The measured implementation retains substantially more than the required 15-LOC mandatory-stop headroom.
+
+### T075
+
+**Deviations/Edge cases/Surprises:** The repaired seven-path `git diff --numstat` measurement reports 973 physical template lines, including 458 byte-identical canonical marker-block lines, leaving 515 non-canonical template lines. With 166 incremental focused-test lines, final reviewable implementation is 681 LOC: 104 below the 785 ceiling and 119 below the mandatory 800 stop. One production template and exactly seven declared authored paths remain in scope, so regeneration may proceed.
+
+### T076
+
+**Deviations/Edge cases/Surprises:** Authoritative regeneration and docs `reference:generate` completed, focused gallery and fill checks passed 494/494 and 63/63, Layer 1 passed 1,448/1,448, isolated Layer 4 passed 5,783/5,783, and the isolated default suite passed 7,417/7,417. Runtime UAT exposed that Chromium represents an entered contenteditable line break as `<br>`, while the original `.textContent` reader dropped it. Slice 5 now uses an explicit DOM text extractor that preserves text nodes, tabs, `<br>`, and block boundaries. Repaired source checkpoint `69f803d37523499f80120d246400a7fbda30c6fa` is clean; its post-commit generated-artifact check passes, and packet-excluded spec-index mutation dry-run/read-only checks report zero stale maps/current index.
+
+### T077
+
+**Deviations/Edge cases/Surprises:** Fresh connected-browser selection for the exact triage-board file returned `No browser is available`, and the prescribed connection inventory was empty, activating the operator-authorized Playwright MCP fallback. Google Chrome 151.0.7922.138 on macOS 26.6.2 re-executed all 180 cumulative rows at repaired source checkpoint `69f803d37523499f80120d246400a7fbda30c6fa`: 107 pass, 73 evidence-backed `not_applicable`, zero fail, and 36 rows per artifact. The extra N/A is the contract-required triage-board no-horizontal-scroll route. Coverage included two independent 31-second deck no-autorotation observations; every reader behavior; triage's 41-stop keyboard traversal, movement/reorder, empty/filter/reset states, exact fresh Markdown and issue order, Unicode, backticks, pipe, slash, backslash, tab, and a real contenteditable newline, clipboard success and five recovery capabilities, failure-success-failure, both settlement races, reset invalidation, offline/theme/reduced-motion behavior, and unclipped 360/1280 layouts. Source, generated, and focused-test bytes remain unchanged after the repaired checkpoint.
+
+### T078
+
+**Deviations/Edge cases/Surprises:** Refreshed PR #448 was open and clean at exact Slice 5 base `4c9f4fe521994ba43150532572f8ee7e5a442401`. The repaired final boundary is 33 paths: seven implementation-authored, 22 generated, and four workflow/control-plane, with 681 reviewable LOC, one production template, and no correctness or non-size blocker; the total-file result is **SIZE-ONLY BLOCK / CONTINUE**. Packet `art-005-slice-5-triage-board` passed repaired dry-run/apply emission, read-only validation with `pr_blocked=false`, persisted current-fingerprint validation, workflow-contract validation, exact-title release readiness, and release-note policy. Exact emission head `ae342052330dfbcf10042f1f8b2771c308c13b5c` was pushed and PR [#452](https://github.com/racecraft-lab/racecraft-plugins-public/pull/452) remained open, clean, and based on the Slice 4 branch at the verified live head.
+
+### Post implementation code-review remediation (Slice 5)
+
+**Deviations/Edge cases/Surprises:** Independent review found two triage-board defects: filtered ArrowUp/ArrowDown movement used hidden tickets as reorder targets, and ticket identifiers containing backticks were emitted inside a fixed one-backtick Markdown span. Checkpoint `34175fa6f2035d56ddb3e2d759a0bf4f4ef44d62` now reorders only the visible ticket set and selects a Markdown code-span fence longer than any internal backtick run. Focused gallery checks passed 494/494, fill checks 63/63, Layer 1 1,448/1,448, Layer 4 5,783/5,783, and the default suite 7,417/7,417; generated release artifacts and docs references are current. The operator-authorized Playwright MCP fallback then verified the exact checkpoint over `file://`: a visible bug ticket moved past a hidden feature ticket, the export order changed accordingly, an identifier containing one backtick serialized with a two-backtick fence, the malformed legacy form was absent, horizontal overflow was absent, and no page error occurred. The updated component ledger is 528 non-canonical template lines plus 167 incremental test lines = 695 reviewable LOC, 90 below the Slice 5 ceiling and 105 below the mandatory stop.

@@ -2,10 +2,10 @@
   "workflow_file": "docs/ai/specs/.process/ART-005-workflow.md",
   "spec_id": "ART-005",
   "feature_dir": "specs/art-005-gallery-completion-knowledge-reports-editors",
-  "branch": "art-005-gallery-completion-knowledge-reports-editors-slice-4",
+  "branch": "art-005-gallery-completion-knowledge-reports-editors-slice-5",
   "stage": "implement",
-  "updated_at": "2026-08-18T20:58:55Z",
-  "active_step": "Phase 7: Implement - Slice 5 triage-board T063-T078",
+  "updated_at": "2026-08-18T22:19:47Z",
+  "active_step": "Phase 7: Implement - Slice 6 feature-flags T079-T094",
   "settings": {
     "consensus_mode": "moderate",
     "gate_failure": "stop",
@@ -407,16 +407,16 @@
     },
     "implement": {
       "status": "in_progress",
-      "active_group": "Slice 5 triage-board T063-T078",
-      "active_task": "T063",
-      "completed_tasks": 62,
+      "active_group": "Slice 6 feature-flags T079-T094",
+      "active_task": "T079",
+      "completed_tasks": 78,
       "total_tasks": 119,
-      "active_branch": "art-005-gallery-completion-knowledge-reports-editors-slice-4",
-      "active_slice_base": "2b0fa4eb1d1d5b1daf24eb13946eac4fb7beebd3",
+      "active_branch": "art-005-gallery-completion-knowledge-reports-editors-slice-5",
+      "active_slice_base": "4c9f4fe521994ba43150532572f8ee7e5a442401",
       "active_slice_budget": {
-        "artifact": "triage-board",
+        "artifact": "feature-flags",
         "authored_paths": 7,
-        "reviewable_loc_ceiling": 785,
+        "reviewable_loc_ceiling": 780,
         "mandatory_stop": 800,
         "verdict": "warn"
       },
@@ -464,6 +464,17 @@
           "status": "open",
           "source_checkpoint": "f27b7833e3d3e05772c7ebc44d4640f2b9d129ea",
           "evidence_checkpoint": "50511c8e0512760e823a75b03f8f67e681a7c6a7"
+        },
+        {
+          "slice": 5,
+          "artifact": "triage-board",
+          "branch": "art-005-gallery-completion-knowledge-reports-editors-slice-5",
+          "base": "art-005-gallery-completion-knowledge-reports-editors-slice-4",
+          "number": 452,
+          "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/452",
+          "status": "open",
+          "source_checkpoint": "69f803d37523499f80120d246400a7fbda30c6fa",
+          "evidence_checkpoint": "a82b76962580c60f16d4accba0773b9ef6cacc01"
         }
       ],
       "baseline": {
@@ -733,11 +744,11 @@
     },
     {
       "step": "Phase 7: Implement - Slice 5 triage-board T063-T078",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - Slice 6 feature-flags T079-T094",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: Implement - Slice 7 prompt-tuner T095-T111",

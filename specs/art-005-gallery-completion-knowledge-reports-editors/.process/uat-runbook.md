@@ -1,22 +1,24 @@
 # ART-005 UAT Runbook
 
 Feature: ART-005 gallery completion knowledge reports/editors
-Artifacts: `slide-deck`, `concept-explainer`, `status-report`, `incident-report`
+Artifacts: `slide-deck`, `concept-explainer`, `status-report`, `incident-report`, `triage-board`
 Driver: `manual`
 Template paths:
 - `speckit-pro/artifact-gallery/templates/slide-deck.html`
 - `speckit-pro/artifact-gallery/templates/concept-explainer.html`
 - `speckit-pro/artifact-gallery/templates/status-report.html`
 - `speckit-pro/artifact-gallery/templates/incident-report.html`
+- `speckit-pro/artifact-gallery/templates/triage-board.html`
 Results path: `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.md`
 JSON path: `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json`
 
-T019 created the active UAT carriers. T061 re-executed the complete cumulative
-Slice 1-4 row set against source checkpoint
-`f27b7833e3d3e05772c7ebc44d4640f2b9d129ea` on 2026-08-18. A fresh connected
-browser selection for the exact incident-report file returned `No browser is available`, so the
-operator-authorized Playwright MCP fallback supplied browser interaction and
-observation while the contract driver remained `manual`.
+T019 created the active UAT carriers. T077 re-executed the complete cumulative
+Slice 1-5 row set against source checkpoint
+`69f803d37523499f80120d246400a7fbda30c6fa` on 2026-08-18. The current session's
+connected-browser selection returned `No browser is available`, and the
+prescribed inventory was empty, so the operator-authorized Playwright MCP
+fallback supplied browser interaction and observation while the contract driver
+remained `manual`.
 
 ## Manual Setup
 
@@ -559,12 +561,198 @@ steps remain the reusable cumulative procedure for later slice checkpoints.
 2. Confirm the pinned upstream source is `12-incident-report.html`.
 3. Confirm role is reader, status is `shipped`, and `exports` is `[]`.
 
+## Slice 5 Executable Rows
+
+TB-UAT-001 through TB-UAT-018 and TB-UAT-020 through TB-UAT-036 passed at the
+Slice 5 source checkpoint. TB-UAT-019 is the evidence-backed horizontal-scroll
+not-applicable route required when no actual user-scroll element exists.
+
+### TB-UAT-001 Direct file open
+
+1. Open the exact triage-board.html file URL.
+2. Confirm title Triage Board — Cycle 14, h1 Release triage board, and no visible error.
+
+### TB-UAT-002 Complete representative fills
+
+1. Confirm Now, Next, Later, and Cut are present.
+2. Confirm six anchored tickets and all id, title, tag, estimate, and owner fields.
+
+### TB-UAT-003 Named board controls and status
+
+1. Confirm the board is a named group.
+2. Confirm the labeled filter, Clear filter, Reset board, Copy as Markdown, named tickets/fields, and polite status region.
+
+### TB-UAT-004 Keyboard movement and reorder
+
+1. Focus RC-421 and use ArrowRight, ArrowUp, ArrowLeft, and ArrowUp.
+2. Confirm Next order RC-440, RC-421, RC-447; restored Now order RC-421, RC-433; focus retention; and exact boundary messages.
+
+### TB-UAT-005 Live contenteditable update
+
+1. Edit RC-421 title to Keyboard-edited title.
+2. Confirm the ticket accessible name updates and status says Ticket updated in memory.
+
+### TB-UAT-006 Empty-column feedback
+
+1. Move the only Later ticket to Cut with ArrowRight.
+2. Confirm Later shows No tickets in this column. and the movement is announced.
+
+### TB-UAT-007 Filtered-no-result feedback
+
+1. Select Bug and confirm two visible tickets plus three filtered-empty messages.
+2. Change all tags to other, select Bug, and confirm all four columns show No tickets match this filter.
+
+### TB-UAT-008 Reset and session-only state
+
+1. Reset after edits/moves/filtering and confirm the six-ticket seed returns.
+2. Edit a title, reload, and confirm seed content and empty status return with no editor persistence.
+
+### TB-UAT-009 Offline reload
+
+1. Set the browser context offline and reload the exact local file.
+2. Confirm title, board, tickets, controls, editing, and copy fallback remain usable; confirm a disposable remote probe fails.
+
+### TB-UAT-010 Complete keyboard traversal
+
+1. Tab from the viewport through the full editor and record every stop.
+2. Confirm 41 ordered stops: theme, filter, three buttons, then each ticket and its five fields; reverse with Shift+Tab.
+
+### TB-UAT-011 Focus visibility
+
+1. Keyboard-focus all 41 stops and the failure fallback.
+2. Confirm every stop has a 3px solid outline with 3px offset and fallback is focused and fully selected.
+
+### TB-UAT-012 Light/dark parity
+
+1. Exercise light, dark, persisted-dark reload, and return-to-light.
+2. Confirm identical board content, controls, state meaning, and focus visibility.
+
+### TB-UAT-013 Reduced motion
+
+1. Emulate prefers-reduced-motion: reduce and reload.
+2. Confirm 0.01ms transition/animation durations, zero running animations, and complete keyboard/control behavior.
+
+### TB-UAT-014 Color-independent meaning
+
+1. Review columns, ticket metadata, empty/filter states, and copy states.
+2. Confirm every state is named by visible text and does not depend on hue.
+
+### TB-UAT-015 Horizontal-scroll actual-element check
+
+1. At 360 and 1280 CSS px compare document clientWidth and scrollWidth.
+2. Confirm responsive 4/2/1-column layout creates no actual horizontal user-scroll region.
+
+### TB-UAT-016 360 CSS px layout
+
+1. Set the viewport to exactly 360 by 900 CSS px and reload.
+2. Confirm clientWidth=scrollWidth=345, one-column board, no clipped reviewed node, and capture a full-page screenshot.
+
+### TB-UAT-017 1280 CSS px layout
+
+1. Set the viewport to 1280 by 900 CSS px and reload.
+2. Confirm clientWidth=scrollWidth=1280, no clipped reviewed node, and capture a full-page screenshot.
+
+### TB-UAT-018 Manifest parity
+
+1. Read the triage-board manifest row.
+2. Confirm id/title/source, producer role, shipped status, and exports=[markdown].
+
+### TB-UAT-019 Horizontal-scroll N/A classification
+
+1. Confirm source has no overflow-x:auto or overflow-x:scroll path.
+2. Record not_applicable with source and runtime evidence because no meaningful horizontal scroll element exists.
+
+### TB-UAT-020 Live export freshness
+
+1. Export after setting the visible title to FRESHNESS-OLD-triage-board.
+2. Change it to FRESHNESS-NEW-triage-board and export again; require different bytes, new sentinel present, and old sentinel absent.
+
+### TB-UAT-021 Empty values and collections
+
+1. Empty a ticket id/title and confirm ordered empty_required_value issues with raw empty strings.
+2. Filter every ticket out and confirm four explicit - _No tickets._ entries plus deterministic Issues output.
+
+### TB-UAT-022 Current visible ticket order
+
+1. Move/reorder RC-421 and export.
+2. Confirm Next order RC-440, RC-421, RC-447; filter Bug and confirm only RC-421 and RC-433 are serialized.
+
+### TB-UAT-023 Deterministic column and field order
+
+1. Export the representative board.
+2. Confirm Now, Next, Later, Cut, Issues order and id/title/tag/estimate/owner ticket field order.
+
+### TB-UAT-024 Duplicate identifiers
+
+1. Change a Next-column ticket ID to RC-421, duplicating the Now ticket.
+2. Confirm both tickets remain and duplicate_identifier points occurrence 3 to occurrence 1.
+
+### TB-UAT-025 Special-character round trip
+
+1. Type multiline Unicode plus quotes, backticks, pipe, slash, backslash, tab, and a real line break into the visible ticket contenteditable.
+2. Export and confirm the browser-created line break and raw meaning are preserved with deterministic Markdown escaping and continuation indentation.
+
+### TB-UAT-026 Multiple issue order
+
+1. Combine a cross-column duplicate with empty estimate and owner values.
+2. Confirm issue order follows entity order, field order, and condition order, and every issue field uses the declared schema order.
+
+### TB-UAT-027 Clipboard/fallback exact equality
+
+1. Capture the exact attempted Markdown on success and every fallback class.
+2. Require byte equality between the invocation export and clipboard or fallback text.
+
+### TB-UAT-028 Superseded-attempt data integrity
+
+1. Run older-success-after-newer-failure and older-failure-after-newer-success races.
+2. Confirm the older settlement never restores stale status, fallback content/visibility, or focus.
+
+### TB-UAT-029 Genuine clipboard success
+
+1. Install a callable resolving writeText capability and invoke Copy as Markdown.
+2. Confirm exactly one write, exact 935-byte text, normalized success status, hidden fallback, and copy-button focus.
+
+### TB-UAT-030 Clipboard absent
+
+1. Remove clipboard capability and invoke copy.
+2. Confirm zero writes and exact labeled, focused, fully selected fallback.
+
+### TB-UAT-031 Method non-callable
+
+1. Expose a non-callable writeText value and invoke copy.
+2. Confirm zero writes and the same exact fallback recovery.
+
+### TB-UAT-032 Permission denied
+
+1. Reject one write with NotAllowedError.
+2. Confirm one attempt, normalized failure text, no exception leak, and exact focused fallback.
+
+### TB-UAT-033 Generic rejection
+
+1. Reject one write with a generic Error.
+2. Confirm one attempt, normalized failure text, no exception leak, and exact focused fallback.
+
+### TB-UAT-034 Synchronous throw
+
+1. Throw synchronously from one writeText call.
+2. Confirm one attempt, normalized failure text, no exception leak, and exact focused fallback.
+
+### TB-UAT-035 Failure-success-failure sequence
+
+1. Use three distinct live titles across failure, success, and failure invocations.
+2. Confirm one write per invocation, success clears fallback, and final fallback contains only the newest failed export.
+
+### TB-UAT-036 Both superseded races and reset invalidation
+
+1. Resolve an older success after a newer failure, then reject an older failure after a newer success.
+2. Confirm the newer state wins in both directions; also reset during a pending success and confirm its later settlement is ignored.
+
 ## Source-Backed Not Applicable Rows
 
 The cumulative JSON retains rows that honestly carry
 `verdict: not_applicable` after source and browser execution.
 
-1. SD-UAT-019, CE-UAT-019, SR-UAT-019, and IR-UAT-019 record the horizontal-scroll N/A route from source
+1. SD-UAT-019, CE-UAT-019, SR-UAT-019, IR-UAT-019, and TB-UAT-019 record the horizontal-scroll N/A route from source
    and runtime evidence: there is no `overflow-x: auto` or `overflow-x: scroll`;
    `html` and `body` use `overflow-x: hidden`; 360 and 1280 CSS px observations
    found no actual user-scroll element.
@@ -576,4 +764,4 @@ The cumulative JSON retains rows that honestly carry
 3. SD-UAT-029 through SD-UAT-036, CE-UAT-029 through CE-UAT-036,
    SR-UAT-029 through SR-UAT-036, and IR-UAT-029 through IR-UAT-036 record
    producer-only clipboard/recovery/race cases that do not apply because all
-   four artifacts are readers with no clipboard action.
+   four reader artifacts have no clipboard action; triage-board executes the producer rows.

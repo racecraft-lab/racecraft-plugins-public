@@ -1,57 +1,60 @@
 # ART-005 UAT Results
 
 Feature: ART-005 gallery completion knowledge reports/editors
-Artifacts: `slide-deck`, `concept-explainer`, `status-report`, `incident-report`
+Artifacts: `slide-deck`, `concept-explainer`, `status-report`, `incident-report`, `triage-board`
 Template paths:
 - `speckit-pro/artifact-gallery/templates/slide-deck.html`
 - `speckit-pro/artifact-gallery/templates/concept-explainer.html`
 - `speckit-pro/artifact-gallery/templates/status-report.html`
 - `speckit-pro/artifact-gallery/templates/incident-report.html`
+- `speckit-pro/artifact-gallery/templates/triage-board.html`
 Runbook path: `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-runbook.md`
 JSON path: `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json`
 Driver: `manual`
-Status: T061 complete; all 144 cumulative Slice 1-4 rows are bound to source
-checkpoint `f27b7833e3d3e05772c7ebc44d4640f2b9d129ea`.
+Status: T077 complete; all 180 cumulative Slice 1-5 rows are bound to source
+checkpoint `69f803d37523499f80120d246400a7fbda30c6fa`.
 
 ## Source Checkpoint vs Evidence Commit
 
 The source checkpoint is
-`f27b7833e3d3e05772c7ebc44d4640f2b9d129ea`. It contains all four source
+`69f803d37523499f80120d246400a7fbda30c6fa`. It contains all five source
 templates, the manifest, cumulative tests, generated outputs, and the
 pre-execution evidence carriers that were tested. The later evidence commit
 records these results without changing the tested source bytes. The JSON names
 the source checkpoint rather than the evidence commit.
 
-A fresh connected-browser selection for the exact incident-report URL returned
-`No browser is available`. Per the operator's fallback instruction, Playwright
-MCP then supplied browser interaction and observation. No repository browser
-harness was committed, so the contract driver remains `manual`.
+The current session's connected-browser selection returned `No browser is
+available`, and the prescribed inventory was empty. Per the operator's fallback
+instruction, Playwright MCP then supplied browser interaction and observation.
+No repository browser harness was committed, so the contract driver remains
+`manual`.
 
 ## Execution Environment
 
-- Executed at: `2026-08-18T20:44:34Z`
+- Executed at: `2026-08-18T23:42:26Z`
 - OS: macOS 26.6.2, Build 25G82, arm64
 - Browser: Google Chrome 151.0.7922.138
 - Scheme: direct `file://`
 - Viewports: 360 and 1280 CSS px widths, using a 900 CSS px observation height
-- Network: online baseline plus context-offline reload for all four readers;
-  a disposable remote probe failed with `net::ERR_INTERNET_DISCONNECTED`
+- Network: online baseline plus context-offline reload for all five artifacts;
+  disposable remote probes failed with `net::ERR_INTERNET_DISCONNECTED`
 - Themes: light and dark, including persisted-dark reload
 - Motion: no-preference plus `prefers-reduced-motion: reduce`
 - Color-independent review: Ready/Watch/Stop text plus circle/square/block;
   labeled node circles, square keys, scenario headings, and `Watch:` text;
   eight explicit status/next-action cues in the status report; text-backed
-  severity/status, numbered timeline events, and owned follow-ups in the incident report
+  severity/status, numbered timeline events, and owned follow-ups in the incident report;
+  named columns/ticket fields plus explicit empty, filter, boundary, and copy text in triage-board
 
 ## Row Totals
 
-- Total cumulative Slice 1-4 rows: 144
-- Executed pass rows: 72
-- Evidence-backed N/A rows in JSON: 72
-- JSON rows currently recorded: 144
-- Pass verdicts: 72
+- Total cumulative Slice 1-5 rows: 180
+- Executed pass rows: 107
+- Evidence-backed N/A rows in JSON: 73
+- JSON rows currently recorded: 180
+- Pass verdicts: 107
 - Fail verdicts: 0
-- Not-applicable verdicts: 72
+- Not-applicable verdicts: 73
 
 Every executable row passed; no result is omitted from the normalized JSON.
 
@@ -147,6 +150,46 @@ Every executable row passed; no result is omitted from the normalized JSON.
 | IR-UAT-017 | Pass | Complete report passed at 1280 CSS px with no page overflow or clipped reviewed node. |
 | IR-UAT-018 | Pass | Manifest matched ID, title, pinned source, reader role, shipped status, and `exports: []`. |
 
+## Triage-Board Executed Matrix
+
+| Row | Verdict | Evidence summary |
+|---|---|---|
+| TB-UAT-001 | Pass | Exact file:// template opened with expected title/h1, six tickets, and zero errors. |
+| TB-UAT-002 | Pass | Four columns, six anchored tickets, and 30 editable ordered fields were complete. |
+| TB-UAT-003 | Pass | Named board, controls, tickets/fields, and polite status semantics were exposed. |
+| TB-UAT-004 | Pass | Arrow movement/reorder retained focus and produced exact position/boundary messages. |
+| TB-UAT-005 | Pass | Live content edits updated the accessible ticket name and status region. |
+| TB-UAT-006 | Pass | Keyboard movement produced exact visible empty-column feedback. |
+| TB-UAT-007 | Pass | Bug and all-filtered cases produced exact filtered-no-result feedback. |
+| TB-UAT-008 | Pass | Reset and reload restored the six-ticket seed with no persisted editor/status state. |
+| TB-UAT-009 | Pass | Offline local reload preserved the editor; remote probe failed as expected. |
+| TB-UAT-010 | Pass | Forward/reverse traversal covered all 41 controls, tickets, and editable fields. |
+| TB-UAT-011 | Pass | All 41 stops and the manual fallback showed measured visible focus. |
+| TB-UAT-012 | Pass | Light/dark content matched, dark persisted, and the editor returned to light. |
+| TB-UAT-013 | Pass | Reduce mode computed 0.01ms durations and zero running animations. |
+| TB-UAT-014 | Pass | Columns, metadata, boundaries, and copy outcomes remained text-backed. |
+| TB-UAT-015 | Pass | Source/runtime found no actual horizontal scroll element at either width. |
+| TB-UAT-016 | Pass | 360 CSS px used one column with clientWidth=scrollWidth=345 and no clipping. |
+| TB-UAT-017 | Pass | 1280 CSS px had clientWidth=scrollWidth=1280 and no clipping. |
+| TB-UAT-018 | Pass | Manifest matched id/title/source, producer role, shipped, exports=[markdown]. |
+| TB-UAT-019 | N/A | No meaningful horizontal user-scroll element exists; structured source/runtime reason recorded. |
+| TB-UAT-020 | Pass | Exact OLD→NEW freshness sentinels produced distinct 938-byte current exports. |
+| TB-UAT-021 | Pass | Empty fields and all-empty visible board remained explicit in Markdown/issues. |
+| TB-UAT-022 | Pass | Moved and filtered ticket order matched the current visible DOM order. |
+| TB-UAT-023 | Pass | Column, ticket-field, empty-column, and Issues order matched the contract. |
+| TB-UAT-024 | Pass | Cross-column RC-421 duplicate was preserved and linked occurrence 3→1. |
+| TB-UAT-025 | Pass | A real contenteditable line break plus Unicode, quotes, backticks, pipe, slash, backslash, and tab round-tripped. |
+| TB-UAT-026 | Pass | Duplicate plus empty estimate/owner issues followed declared deterministic order. |
+| TB-UAT-027 | Pass | Every clipboard/fallback path equaled the exact invocation export bytes. |
+| TB-UAT-028 | Pass | Both older settlements were suppressed without stale status/fallback/focus mutation. |
+| TB-UAT-029 | Pass | Genuine success made one exact write, hid fallback, and focused the copy button. |
+| TB-UAT-030 | Pass | Absent clipboard made zero writes and focused/selected exact fallback. |
+| TB-UAT-031 | Pass | Non-callable writeText made zero writes and exposed exact fallback. |
+| TB-UAT-032 | Pass | NotAllowedError made one attempt and normalized to exact fallback. |
+| TB-UAT-033 | Pass | Generic rejection made one attempt and normalized to exact fallback. |
+| TB-UAT-034 | Pass | Synchronous throw made one attempt and normalized to exact fallback. |
+| TB-UAT-035 | Pass | Failure→success→failure used distinct live values and the latest fallback. |
+| TB-UAT-036 | Pass | Both race directions and pending-reset invalidation kept the current invocation authoritative. |
 ## Slide-Deck Evidence-Backed N/A Matrix
 
 | Row | Case | JSON treatment | Evidence basis |
@@ -239,10 +282,10 @@ Every executable row passed; no result is omitted from the normalized JSON.
 | IR-UAT-035 | `sequential_transition` | `not_applicable` with `errorHandlingObservation.notApplicableReason` | No clipboard recovery sequence exists. |
 | IR-UAT-036 | `superseded_attempt` | `not_applicable` with `errorHandlingObservation.notApplicableReason` | No overlapping clipboard attempts exist. |
 
-## Source and Browser Evidence Used For T061
+## Source and Browser Evidence Used For T077
 
 - `specs/art-005-gallery-completion-knowledge-reports-editors/contracts/uat-evidence-contract.md` defines the active paths, JSON schema, row schema, required matrix, and reader `not_applicable` rules.
-- `specs/art-005-gallery-completion-knowledge-reports-editors/plan.md` defines the cumulative Slice 1-4 UAT increments and active carriers.
+- `specs/art-005-gallery-completion-knowledge-reports-editors/plan.md` defines the cumulative Slice 1-5 UAT increments and active carriers.
 - `speckit-pro/artifact-gallery/manifest.json:170-178` declares `slide-deck`, source `09-slide-deck.html`, status `shipped`, and `exports: []`.
 - `speckit-pro/artifact-gallery/templates/slide-deck.html:805-889` shows the reader content, three slide articles, speaker notes, and navigation controls.
 - `speckit-pro/artifact-gallery/templates/slide-deck.html:486-492` sets `overflow-x:hidden` on `html` and `body`; source search found no `overflow-x:auto` or `overflow-x:scroll`.
@@ -254,14 +297,18 @@ Every executable row passed; no result is omitted from the normalized JSON.
 - `speckit-pro/artifact-gallery/templates/status-report.html:482` sets `overflow-x:hidden` on `html` and `body`; source search found no `overflow-x:auto` or `overflow-x:scroll`.
 - `speckit-pro/artifact-gallery/manifest.json:203-211` declares `incident-report`, source `12-incident-report.html`, status `shipped`, and `exports: []`.
 - `speckit-pro/artifact-gallery/templates/incident-report.html:606-768` contains complete incident summary, navigation, seven timeline anchors, impact, causal chain, and four follow-ups; source search found no `overflow-x:auto` or `overflow-x:scroll`.
+- `speckit-pro/artifact-gallery/manifest.json:214-222` declares `triage-board`, source `18-editor-triage-board.html`, status `shipped`, and `exports: ["markdown"]`.
+- `speckit-pro/artifact-gallery/templates/triage-board.html:545-948` contains the named board, four columns, six representative tickets, filtering/reset, keyboard movement, deterministic Markdown serializer, issue appendix, and invocation-current clipboard recovery.
+- Playwright MCP runtime checks recorded 41 forward keyboard stops, exact movement/filter/empty/reset status, 360/1280 geometry, live freshness sentinels, cross-column duplicates, every required special character, one-write/zero-write clipboard routes, all three forced failures, failure-success-failure, both races, and reset invalidation.
 - Playwright accessibility snapshots and runtime state checks covered navigation
   naming, focus order, hidden/inert state, live position text, responsive
   geometry, reduced motion, theme parity, deterministic/session-only behavior,
   exact boundary feedback, semantic report sections, eight text-backed status
   cues, named incident navigation, timeline/follow-up anchors, and zero final-load
-  console errors for all four readers.
+  clipboard/fallback/race behavior, and zero final-load console errors for all
+  five artifacts.
 - Playwright context offline mode produced `net::ERR_INTERNET_DISCONNECTED`
-  in a disposable remote-probe tab while all four local readers reloaded and
+  in disposable remote-probe tabs while all five local artifacts reloaded and
   remained usable.
 
 ## Slice 1 Pre-Generation Reviewability Measurement
@@ -791,3 +838,158 @@ Verification remains bound to the source checkpoint:
 - Generated release artifact check: **pass**
 - Packet-excluded spec-index dry-run/read-only checks: **pass**
 - Cumulative browser UAT: **72 pass, 72 evidence-backed N/A, 0 fail**
+
+## Slice 5 Pre-Generation Reviewability Measurement
+
+Slice base: `4c9f4fe521994ba43150532572f8ee7e5a442401`, the exact Slice 4
+closeout head from which `art-005-gallery-completion-knowledge-reports-editors-slice-5`
+was created after PR #448 opened.
+
+The seven implementation-authored paths remain the declared Slice 5 ledger:
+
+1. `speckit-pro/artifact-gallery/templates/triage-board.html`
+2. `speckit-pro/artifact-gallery/manifest.json`
+3. `tests/speckit-pro/unit/test-artifact-gallery.py`
+4. `tests/speckit-pro/unit/test-artifact-fill-regions.py`
+5. `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-runbook.md`
+6. `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.md`
+7. `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json`
+
+| Component | Physical additions | Canonical/excluded | Reviewable LOC |
+|---|---:|---:|---:|
+| `triage-board.html` | 973 | 458 byte-identical canonical lines | 515 |
+| `test-artifact-gallery.py` | 162 | 0 | 162 |
+| `test-artifact-fill-regions.py` | 4 | 0 | 4 |
+| Manifest status flip | 1 | 1 metadata line | 0 |
+| UAT carriers | pending cumulative evidence refresh | evidence-only | 0 |
+| **Total** | — | — | **681** |
+
+- Slice 5 component ceiling: **785** (104 LOC headroom)
+- Mandatory authored stop: **800** (119 LOC headroom)
+- Production templates: **1**
+- Primary surfaces: **1**
+- Pre-generation verdict: **WARN / CONTINUE**
+
+The producer adds no persistence, import-back, download, hidden-copy path,
+network dependency, shared gallery runtime, or page-level horizontal scroller.
+All Slice 1-5 source contracts pass, fill-region checks pass 63/63, and the only
+four focused-gallery failures are the T076-owned source/dist payload set-and-byte
+parity checks. The declared maximum physical boundary remains 33 paths; any
+final total-file block may continue only if every excess path is generated or
+workflow/control-plane evidence.
+
+## Slice 5 Cumulative UAT (T077)
+
+The current session's connected-browser selection returned `No browser is
+available`. The prescribed connection inventory was empty, so the
+operator-authorized Playwright MCP fallback re-executed all 180 cumulative rows
+against repaired source checkpoint
+`69f803d37523499f80120d246400a7fbda30c6fa`.
+
+- Browser: Google Chrome 151.0.7922.138 on macOS 26.6.2, Build 25G82, arm64
+- Viewports: 360 and 1280 CSS px by 900 CSS px
+- Verdicts: **107 pass, 73 structured `not_applicable`, 0 fail**
+- Per artifact: **36 rows each**; triage-board has 35 pass plus the required
+  no-horizontal-scroll-region N/A, while the four readers retain 18 pass/18 N/A
+- Slide-deck no-autorotation: BODY stayed on Slide 1 for 31.055 seconds;
+  focused stage stayed on Slide 1 for 31.008 seconds; temporary tabindex removed
+- Triage traversal: 41 forward stops with 3px/3px visible focus and reverse parity
+- Export: exact column/ticket/issue order; OLD→NEW freshness; duplicate 3→1;
+  empty/all-empty; Unicode, quotes, backticks, pipe, slash, backslash, tab, and a
+  real browser-created contenteditable line break all round-tripped
+- Clipboard: genuine one-write success; zero-write absent/non-callable; permission,
+  generic, and synchronous failures; failure→success→failure; both races; reset invalidation
+- Offline: all five local files reloaded and remained usable; remote probes
+  failed with `net::ERR_INTERNET_DISCONNECTED`
+- Motion: 0.01ms transition/animation durations and zero running animations
+- Layout: zero page overflow and zero clipped reviewed nodes at both widths
+- Console/page errors: **0** across final-load observations
+- Screenshots: `art-005-slice-5-repair-{slide-deck,concept-explainer,status-report,incident-report,triage-board}-{360,1280}.png`
+
+The tested template, manifest, focused tests, payload mirrors, installed-cache
+mirrors, and generated proofs remain byte-identical to the source checkpoint.
+Only the three UAT carriers and workflow/control-plane bookkeeping change in
+the later evidence commit.
+
+## Slice 5 Final Boundary Ledger (T078)
+
+Remote refs were refreshed immediately before this measurement. Slice 4 PR
+[#448](https://github.com/racecraft-lab/racecraft-plugins-public/pull/448) is
+open and clean at `4c9f4fe521994ba43150532572f8ee7e5a442401`; the Slice 5 branch
+and its merge base use that exact head. The Slice 5 source checkpoint is
+`69f803d37523499f80120d246400a7fbda30c6fa`, and cumulative UAT evidence
+is recorded at `a82b76962580c60f16d4accba0773b9ef6cacc01`.
+
+The source template, manifest, focused tests, payload mirrors, installed-cache
+mirrors, and generated proofs remain byte-identical after the tested source
+checkpoint. All later changes are cumulative UAT and workflow/control-plane
+evidence.
+
+The complete Slice 5 diff against its exact Slice 4 base contains 33 Git paths:
+
+- Seven implementation-authored paths:
+  - `speckit-pro/artifact-gallery/manifest.json`
+  - `speckit-pro/artifact-gallery/templates/triage-board.html`
+  - `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json`
+  - `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.md`
+  - `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-runbook.md`
+  - `tests/speckit-pro/unit/test-artifact-fill-regions.py`
+  - `tests/speckit-pro/unit/test-artifact-gallery.py`
+- Twenty-two source-derived generated paths:
+  - `dist/claude/speckit-pro/artifact-gallery/manifest.json`
+  - `dist/claude/speckit-pro/artifact-gallery/templates/triage-board.html`
+  - `dist/codex/speckit-pro/artifact-gallery/manifest.json`
+  - `dist/codex/speckit-pro/artifact-gallery/templates/triage-board.html`
+  - `docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json`
+  - `docs/ai/specs/.process/XPLAT-009-payload-completeness-result.json`
+  - `docs/ai/specs/.process/XPLAT-009-release-readiness-result.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-file-root.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-mutable.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-source-root.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-mutable.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-root-mismatch.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-same-root.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-single-product.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-source-mismatch.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-stale-hash.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-traversal-root.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/manifest.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/templates/triage-board.html`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/manifest.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/templates/triage-board.html`
+- Four required workflow/control-plane paths:
+  - `docs/ai/specs/.process/ART-005-workflow.md`
+  - `docs/ai/specs/.process/autopilot-state.json`
+  - `specs/art-005-gallery-completion-knowledge-reports-editors/.process/implementation-notes.md`
+  - `specs/art-005-gallery-completion-knowledge-reports-editors/tasks.md`
+
+The final component method counts 515 non-canonical template lines plus
+166 incremental test lines = **681 reviewable LOC**, 104 below the 785 ceiling
+and 119 below the mandatory 800 stop. The 33-path total exceeds the 25-file
+threshold by eight, but every excess path is required generated or
+workflow/control-plane evidence. With one production template, exactly seven
+implementation-authored paths, stable tested source bytes, and no correctness
+or non-size blocker, the disposition is **SIZE-ONLY BLOCK / CONTINUE** under the
+operator-ratified seven-branch topology. No typed reviewability exception is
+claimed.
+
+Runner-emitted packet `art-005-slice-5-triage-board` passed repaired emission
+dry-run and apply, read-only validation with `pr_blocked=false`, persisted
+current-fingerprint validation, workflow-contract validation, exact-title
+release readiness, and release-note policy. The repaired branch was pushed at
+exact emission head `ae342052330dfbcf10042f1f8b2771c308c13b5c`, and PR
+[#452](https://github.com/racecraft-lab/racecraft-plugins-public/pull/452)
+remains open and clean against
+`art-005-gallery-completion-knowledge-reports-editors-slice-4` before Slice 6.
+
+Verification remains bound to the source checkpoint:
+
+- Focused gallery module: **494/494**
+- Focused fill module: **63/63**
+- Layer 1: **1448/1448**
+- Isolated Layer 4: **5783/5783**
+- Isolated full suite: **7417/7417**
+- Generated release artifact check: **pass**
+- Packet-excluded spec-index dry-run/read-only checks: **pass**
+- Cumulative browser UAT: **107 pass, 73 evidence-backed N/A, 0 fail**
