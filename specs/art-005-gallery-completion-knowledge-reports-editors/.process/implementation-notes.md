@@ -111,3 +111,55 @@
 ### T023
 
 **Deviations/Edge cases/Surprises:** Source and generated gallery paths remained unchanged after checkpoint `660bfe9ce`. The final rerun passed focused 488/488 and 55/55, Layer 1 1448/1448, Layer 4 5769/5769, full suite 7403/7403, generated-artifact check, and spec-index check. The implementation interval contains seven authored paths, 24 generated paths, and four required process/prerequisite paths; the full PR boundary is 57 paths because the same branch carries the prerequisite ART-005 scaffold and plan. This is recorded as a total-file size-only block with 666 reviewable LOC and no correctness or non-size blocker. Runner-emitted packet `art-005-slice-1-slide-deck` passed read-only and persisted validation, workflow-title validation, exact CI release-readiness title validation, and release-note policy. Push advanced the remote head to evidence checkpoint `373881395f40115dd80953c4b8892dc79346ce22`, and PR #444 opened at https://github.com/racecraft-lab/racecraft-plugins-public/pull/444.
+
+### T024
+
+**Deviations/Edge cases/Surprises:** None. After PR #444 opened and the Slice 1 closeout reached `383950113c7aef4c41c566b07d5a5b79df473434`, Slice 2 was created from that exact head as `art-005-gallery-completion-knowledge-reports-editors-slice-2`. The plan and topology contract agree on exactly seven implementation-authored paths and a 535 reviewable-LOC ceiling (205 markup/content, 120 CSS, 105 behavior JS, and 105 incremental tests), leaving 265 LOC below the mandatory 800-LOC stop. `concept-explainer` remains `planned` with its pinned `15-research-concept-explainer.html` source and `exports: []` before RED.
+
+### T025
+
+**Deviations/Edge cases/Surprises:** None. The gallery contract adds 97 lines covering the reader manifest/source identity, canonical bytes, no-export classification, deterministic session-only controls/reset, visible counts and min/max feedback, accessible naming/focus, reduced motion, responsive behavior, and conditional ART-020 scroll semantics.
+
+### T026
+
+**Deviations/Edge cases/Surprises:** None. Four added lines pin the exact four-slot floor, the repeated `simulation-scenarios` list slot, and a non-vacuity assertion; together with T025 the incremental test scope is 101/105 lines.
+
+### T027
+
+**Deviations/Edge cases/Surprises:** Formal RED passed for the intended reason. The gallery module reported 488/489 with only the `planned` manifest status and missing `templates/concept-explainer.html`; the fill module reported 56/57 with the exact floor/list literals active and only the missing template/inventory assertion failing. Generic fill checks remain correctly gated until the manifest row ships.
+
+### T028
+
+**Deviations/Edge cases/Surprises:** The standalone reader embeds both canonical regions byte-for-byte, carries all four fills with two anchored scenarios, preserves deterministic consistent-hashing ownership, exposes bounded add/remove/reset plus slider controls, reports counts and boundaries through a polite status, and keeps simulation state session-only. `check_m1` now reports only the T029-owned `planned` status and fill checks pass 57/57. The first draft is 1,079 physical lines, 621 non-canonical lines; with 101 test lines the current 722 reviewable LOC remains below the 800 stop but exceeds the 535 slice ceiling by 187, so T031 has mandatory reduction work before generation.
+
+### T029
+
+**Deviations/Edge cases/Surprises:** The first manifest patch matched the wrong nearby `planned` row and briefly flipped `uat-walkthrough`; exact `git diff` inspection caught it immediately and it was corrected before testing. The final manifest diff changes only `concept-explainer.status` from `planned` to `shipped`; its pinned source, reader role, `exports: []`, and every other row value remain unchanged.
+
+### T030
+
+**Deviations/Edge cases/Surprises:** The Slice 2 reader contract (`check_m1`) and all Slice 1 assertions (`check_l1`) are green, and fill checks pass 57/57 after placing both anchored scenarios directly inside the declared list container. The complete gallery module reports 485/489 only because F1-F4 require T033's not-yet-regenerated Claude/Codex template and manifest mirrors; no source assertion is failing.
+
+### T031
+
+**Deviations/Edge cases/Surprises:** The refactor reduced the reader from 1,079 to 891 physical lines while preserving the 458 byte-identical canonical lines, all required hooks, deterministic/session-only simulation, bounded feedback, responsive behavior, focus, and reduced-motion handling. The final component count is 433 non-canonical template lines plus 101 incremental test lines = 534 reviewable LOC, one below the 535 ceiling and 266 below the mandatory 800 stop. `git diff --check` and fill checks remain green; gallery retains only the four T033-generated parity failures.
+
+### T032
+
+**Deviations/Edge cases/Surprises:** None. The explicit seven-path ledger reports 1,029 physical additions and one deletion: 891 template lines, 101 incremental test lines, one manifest status line, and 36 current evidence-carrier lines. The component method excludes 458 byte-identical canonical lines plus manifest/UAT carriers, yielding 534 final reviewable LOC with one line of declared-ceiling headroom and 266 lines below the mandatory stop.
+
+### T033
+
+**Deviations/Edge cases/Surprises:** None. Authoritative release regeneration produced the Claude/Codex dist mirrors, both installed-cache mirrors, and refreshed proof fixtures; docs `reference:generate` regenerated seven pages byte-identically. The source, two dist, and two installed-cache templates all have SHA-256 `320000b3dc8e775623b93f51432c9e42500fc941ebe64ed983bcf66fe836ab0d`; all five manifests share `5b7d050a5a376b83c069daa0594a8dc5f854f9d512acedac690c0d6e32f4c14f`. Gallery parity is now green at 489/489 and fill checks pass 57/57.
+
+### T034
+
+**Deviations/Edge cases/Surprises:** Focused checks passed 489/489 and 57/57, Layer 1 passed 1,448/1,448, Layer 4 passed 5,772/5,772, and the default suite passed 7,406/7,406. The first read-only spec-index run reported ART-005 stale only because the ignored local Slice 1 PR-packet directory was visible to the filesystem scanner; moving that directory aside made both mutation dry-run (`stale_map_count: 0`) and read-only check pass, after which it was restored unchanged. Source checkpoint `7c636c361c7593f3a4a5b9f007100af4a4084179` is clean, and its post-commit generated-artifact check plus packet-excluded spec-index check pass.
+
+### T035
+
+**Deviations/Edge cases/Surprises:** Connected browser selection returned `No browser is available`; the prescribed diagnostic listed zero instances, activating the operator-authorized Playwright MCP fallback. Google Chrome 151.0.7922.138 on macOS 26.6.2 completed all 72 cumulative rows at source checkpoint `7c636c361c7593f3a4a5b9f007100af4a4084179`: 36 pass, 36 evidence-backed `not_applicable`, zero fail. Coverage re-executed all Slice 1 deck behavior, including two 30-second no-autorotation observations, and all Slice 2 direct-file, fills, deterministic/session-only ring, control/boundary/reset, keyboard/focus, offline, theme, reduced-motion, color-independent, manifest, and 360/1280 layout routes. The first in-memory JSON composition had a syntax error and made no file change; splitting it into validated chunks produced 72 unique, schema-complete rows. Source and generated gallery paths remain unchanged after the checkpoint.
+
+### T036
+
+**Deviations/Edge cases/Surprises:** None. The source and generated gallery paths remained byte-identical after source checkpoint `7c636c361c7593f3a4a5b9f007100af4a4084179`; evidence checkpoint `c22b72566adaef0100aed42ceccf6868a64d5051` retained 534 reviewable LOC, one production template, and zero correctness blockers. The final 33-path boundary comprises seven authored paths, 22 generated paths, and four workflow/control-plane paths. Its total-file block is recorded as **SIZE-ONLY BLOCK / CONTINUE** under the operator-selected seven-slice topology, with no typed exception. Packet `art-005-slice-2-concept-explainer` passed emission dry-run/apply, read-only validation with `pr_blocked=false`, persisted fingerprint validation, workflow-contract validation, exact-title release readiness, and release-note policy. The exact tested head was pushed and PR [#446](https://github.com/racecraft-lab/racecraft-plugins-public/pull/446) opened against `art-005-gallery-completion-knowledge-reports-editors` before Slice 3.

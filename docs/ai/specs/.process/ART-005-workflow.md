@@ -2,14 +2,14 @@
 
 **Template Version**: 1.0.0
 **Created**: 2026-08-17
-**Purpose**: Execute ART-005 through the SpecKit workflow on branch `art-005-gallery-completion-knowledge-reports-editors`.
+**Purpose**: Execute ART-005 through the SpecKit workflow on the seven-slice stack rooted at `art-005-gallery-completion-knowledge-reports-editors`.
 
 ---
 
 ## How to Use This Template
 
 1. Start every phase from the dedicated ART-005 worktree and verify the active
-   branch is `art-005-gallery-completion-knowledge-reports-editors`.
+   branch matches the active slice in the stack contract.
 2. Re-read the design concept before each phase. Its Q&A log is the source of
    truth for human-approved scoping decisions.
 3. Run the phases through `$speckit-autopilot` with this workflow file. Scaffold
@@ -55,7 +55,7 @@ for four artifacts is now an explicit Open Question.
 | Tasks | `/speckit-tasks` | ✅ Complete | 119 ordered tasks; G5 and phantom-completion checks pass |
 | Analyze | `/speckit-analyze` | ✅ Complete | Six findings remediated; G6 passes with 0 CRITICAL/HIGH findings |
 | Confidence Gate | G6.5 | ✅ Complete | Advisory PASS at 0.98 against the 0.90 threshold |
-| Implement | `/speckit-implement` | 🔄 In Progress | Slice 1 complete in PR #444; Slice 2 concept-explainer T024-T036 next |
+| Implement | `/speckit-implement` | 🔄 In Progress | Slices 1-2 complete in PRs #444 and #446; Slice 3 status-report T037 next |
 | Post | Post-Implementation | ⏳ Pending | Canonical closeout plus tracked `file://` UAT results |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -98,7 +98,8 @@ Before starting any workflow phase, verify alignment with
 ### Worktree and Bootstrap Record
 
 - Required worktree: `.worktrees/art-005-gallery-completion-knowledge-reports-editors`
-- Required branch: `art-005-gallery-completion-knowledge-reports-editors`
+- Active branch: `art-005-gallery-completion-knowledge-reports-editors-slice-2`
+- Stack root: `art-005-gallery-completion-knowledge-reports-editors`
 - Base at scaffold: `origin/main` at `1cf86bddecbca620234657f6e59a48991eabbc88`
 - Docs dependency bootstrap completed: `pnpm --dir docs-site install --frozen-lockfile`
 - Repository test suite needs no bootstrap: run `python3 tests/speckit-pro/run-all.py`
@@ -114,7 +115,7 @@ Before starting any workflow phase, verify alignment with
 |-------|-------|
 | **Spec ID** | ART-005 |
 | **Name** | Gallery Completion — Knowledge, Reports & Editors |
-| **Branch** | `art-005-gallery-completion-knowledge-reports-editors` |
+| **Branch** | `art-005-gallery-completion-knowledge-reports-editors-slice-2` |
 | **Stage** | `implement` |
 | **Dependencies** | ART-001; dependency is satisfied on `main` |
 | **Enables** | Gallery completeness |
@@ -870,10 +871,10 @@ For every behavior:
 4. VERIFY: exercise the affected template directly over file://.
 
 ## Pre-Implementation Setup
-1. Confirm the repository root is the ART-005 worktree and the branch is
-   art-005-gallery-completion-knowledge-reports-editors.
+1. Confirm the repository root is the ART-005 worktree and the branch matches
+   the active slice in `contracts/slice-topology-contract.md`.
 2. Confirm git status is clean and the workflow/spec/plan/tasks identify the
-   same seven-slice stack, with the current branch as Slice 1.
+   same seven-slice stack and current slice.
 3. Confirm the pinned upstream commit and all seven file digests are recorded and
    retrievable; keep upstream bytes outside the worktree.
 4. Confirm Clarify reconciled the four provisional `exports: []` declarations
@@ -920,8 +921,8 @@ For every behavior:
 |-------|-------|-----------|-------|
 | 1 - Shared baseline and contracts | Complete | 10 | Pinned digests match; G4 passes; L1 1448/1448, L4 5766/5766, full 7400/7400 |
 | 2 - Slice 1 | Complete | 13 | PR #444 open; source checkpoint `660bfe9ce`; 18 pass, 18 evidence-backed N/A, zero fail; final gates green |
-| 3 - Slice 2 | Pending | 0 | T024 branch creation next; concept-explainer plus incremental integration and UAT |
-| 4 - Slice 3 | Pending | 0 | status-report plus incremental integration and UAT |
+| 3 - Slice 2 | Complete | 13 | PR #446 open; source checkpoint `7c636c361`; cumulative UAT 36 pass, 36 evidence-backed N/A, zero fail; final gates green |
+| 4 - Slice 3 | In Progress | 0 | status-report T037 branch/budget binding next |
 | 5 - Slice 4 | Pending | 0 | incident-report plus incremental integration and UAT |
 | 6 - Slice 5 | Pending | 0 | triage-board plus incremental integration and UAT |
 | 7 - Slice 6 | Pending | 0 | feature-flags plus incremental integration and UAT |
@@ -932,6 +933,8 @@ For every behavior:
 | Slice | Branch | Base | Pull request | Status |
 |---:|---|---|---|---|
 | 1 | `art-005-gallery-completion-knowledge-reports-editors` | `main` | [#444](https://github.com/racecraft-lab/racecraft-plugins-public/pull/444) | Open |
+| 2 | `art-005-gallery-completion-knowledge-reports-editors-slice-2` | `art-005-gallery-completion-knowledge-reports-editors` | [#446](https://github.com/racecraft-lab/racecraft-plugins-public/pull/446) | Open |
+| 3 | `art-005-gallery-completion-knowledge-reports-editors-slice-3` | `art-005-gallery-completion-knowledge-reports-editors-slice-2` | Pending | Next |
 
 ---
 

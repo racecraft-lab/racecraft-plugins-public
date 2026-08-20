@@ -185,7 +185,7 @@
       "stage": "ad-hoc",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "15-research-concept-explainer.html" },
-      "status": "planned",
+      "status": "shipped",
       "exports": []
     },
     {
