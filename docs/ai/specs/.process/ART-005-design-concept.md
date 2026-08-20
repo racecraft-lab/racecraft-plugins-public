@@ -411,10 +411,10 @@ need another interview turn.
   than guessed in setup.
   **Suggested next step:** Reuse the current UAT runbook/result convention and
   require per-template, per-check verdicts plus environment and commit identity.
-  **Resolved in Clarify Session 3:** Active evidence lives at
-  `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-runbook.md`,
-  `uat-results.md`, and `uat-results.json`; archival renames them to the
-  `docs/ai/specs/.process/ART-005-*` convention. The JSON binds run-level
+  **Resolved in Clarify Session 3:** Active-run evidence lived at the feature's
+  `.process/uat-{runbook,results}.*` paths. Post-merge archival preserved it as
+  `docs/ai/specs/.process/ART-005-uat-runbook.md`, `ART-005-uat-results.md`,
+  and `ART-005-uat-results.json`. The JSON binds run-level
   environment, commit, date, driver, and runbook identity to per-artifact rows
   carrying template path, step, claim, observation, verdict, date, and driver.
   The seven-artifact matrix and the real-versus-forced clipboard procedure are
