@@ -335,3 +335,73 @@
 ### Post implementation code-review remediation (Slice 5)
 
 **Deviations/Edge cases/Surprises:** Independent review found two triage-board defects: filtered ArrowUp/ArrowDown movement used hidden tickets as reorder targets, and ticket identifiers containing backticks were emitted inside a fixed one-backtick Markdown span. Checkpoint `34175fa6f2035d56ddb3e2d759a0bf4f4ef44d62` now reorders only the visible ticket set and selects a Markdown code-span fence longer than any internal backtick run. Focused gallery checks passed 494/494, fill checks 63/63, Layer 1 1,448/1,448, Layer 4 5,783/5,783, and the default suite 7,417/7,417; generated release artifacts and docs references are current. The operator-authorized Playwright MCP fallback then verified the exact checkpoint over `file://`: a visible bug ticket moved past a hidden feature ticket, the export order changed accordingly, an identifier containing one backtick serialized with a two-backtick fence, the malformed legacy form was absent, horizontal overflow was absent, and no page error occurred. The updated component ledger is 528 non-canonical template lines plus 167 incremental test lines = 695 reviewable LOC, 90 below the Slice 5 ceiling and 105 below the mandatory stop.
+
+### T079
+
+**Deviations/Edge cases/Surprises:** None. After PR #452 opened and Slice 5 closeout reached `3473cf84c56302be7df6f3c27316ef898f3b0454`, Slice 6 was created from that exact head as `art-005-gallery-completion-knowledge-reports-editors-slice-6`. The plan and topology contract agree on exactly seven implementation-authored paths and a 780 reviewable-LOC ceiling (230 markup/content, 150 CSS, 245 behavior JS, and 155 incremental tests), leaving 20 LOC below the mandatory 800-LOC stop. `feature-flags` remains `planned` with pinned source `19-editor-feature-flags.html` and `exports: ["markdown"]` before RED.
+
+### T080
+
+**Deviations/Edge cases/Surprises:** None. Group Q1 pins the feature-flags producer identity, canonical bytes, exact export label, named memory-only groups and checkbox controls, reset/fallback surfaces, dependency/invalid/empty feedback, semantic status, responsive handling, reduced motion, visible focus, and prohibited persistence/export paths.
+
+### T081
+
+**Deviations/Edge cases/Surprises:** None. Group Q2 pins the exact root, group, flag, and issue field arrays; schema version; one fenced JSON block; typed booleans/numbers/nulls; fresh pretty-printed serialization; duplicate and raw-invalid issue evidence; and all four stable issue messages.
+
+### T082
+
+**Deviations/Edge cases/Surprises:** None. Group Q3 carries the same invocation-ordinal, fresh-capability, zero/one-attempt, exact fallback, normalized-message, sequential-transition, and two-direction stale-settlement contract proven for triage-board.
+
+### T083
+
+**Deviations/Edge cases/Surprises:** None. The fill contract now pins `flags` and `environment-notes`, treats flags as a repeated list slot, and requires a non-vacuous shipped inventory template with at least two stable flag anchors.
+
+### T084
+
+**Deviations/Edge cases/Surprises:** Formal RED passed for the intended reason. Gallery reported 494/497 with all three new Q contracts failing only on the planned manifest state and missing feature-flags producer; fill-region reported 64/65 with only the missing feature-flags inventory template failing. Existing Slice 1-5 assertions remained green.
+
+### T085
+
+**Deviations/Edge cases/Surprises:** The derivative keeps the pinned production flag-editor identity while exposing four programmatically named ordered groups, six named checkbox flags, editable group/flag fields, an intentional empty group, dependency and invalid-rollout text, persistent live status, reset, and memory-only behavior. Two stable flag groups anchor the repeated fill region and the environment note explains the no-persistence boundary.
+
+### T086
+
+**Deviations/Edge cases/Surprises:** One fresh DOM snapshot emits the exact root/group/flag field order inside a single pretty-printed JSON fence. Empty strings/arrays and optional nulls retain their types; group and global flag duplicates stay ordered; invalid rollout and dependency text remains exact in deterministic issues; multiline, Unicode, and special characters pass directly through JSON serialization.
+
+### T087
+
+**Deviations/Edge cases/Surprises:** The copy handler clears stale state, increments an invocation ordinal, reads clipboard capability afresh, attempts callable `writeText` once, makes zero attempts for absent/non-callable capability, and applies exact success or focused fallback state only for the current settlement. Reset also invalidates a pending attempt.
+
+### T088
+
+**Deviations/Edge cases/Surprises:** None. The manifest diff changes only `feature-flags.status` from `planned` to `shipped`; pinned source `19-editor-feature-flags.html`, `exports: ["markdown"]`, and every other row remain unchanged.
+
+### T089
+
+**Deviations/Edge cases/Surprises:** Slice 6 Q1-Q3 return no failures and fill-region checks pass 65/65. The complete gallery reports 493/497 only because F1-F4 require T092 regeneration of the Claude/Codex payload copies; no source producer assertion is failing.
+
+### T090
+
+**Deviations/Edge cases/Surprises:** No further refactor was warranted. The editor already separates typed parsing, ordered issue collection, immutable snapshot capture, serialization, feedback, and clipboard recovery into flat named functions; `git diff --check` passes and the measured implementation retains 23 lines of mandatory-stop headroom.
+
+### T091
+
+**Deviations/Edge cases/Surprises:** The explicit seven-path ledger reports 1,093 physical template lines, including 458 byte-identical canonical lines, leaving 635 non-canonical template lines. With 142 incremental focused-test lines, final reviewable implementation is 777 LOC: three below the 780 ceiling and 23 below the mandatory 800 stop. One production template and exactly seven declared authored paths remain in scope, so regeneration may proceed.
+
+### T092
+
+**Deviations/Edge cases/Surprises:** Authoritative release regeneration and docs `reference:generate` completed, focused gallery and fill checks passed 497/497 and 65/65, Layer 1 passed 1,448/1,448, isolated Layer 4 passed 5,788/5,788, and the isolated default suite passed 7,422/7,422. The first source checkpoint was superseded when cumulative browser UAT exposed Slice 5's contenteditable line-break blindspot. After repairing Slice 5, Slice 6 merged repaired closeout `e023d51b30b5fd583e3351a377b35615f1bf0981`, regenerated every derived surface, reran the same gates, and sealed replacement source checkpoint `8b1e67587d24b01258df5856e8888588734a22de`. Its post-commit generated-artifact check passes, and packet-excluded spec-index mutation dry-run/read-only checks report zero stale maps/current index.
+
+### T093
+
+**Deviations/Edge cases/Surprises:** Fresh connected-browser selection had already returned `No browser is available` with an empty prescribed inventory for Slice 6, so the operator-authorized Playwright MCP fallback ran at exact source checkpoint `8b1e67587d24b01258df5856e8888588734a22de`. The cumulative record now contains 216 manual rows, exactly 36 per artifact: 142 pass, 74 evidence-backed `not_applicable`, and zero fail. Feature-flags passed exact schema/field order, typed/null values, one pretty JSON fence, current order, duplicates, empty/invalid/unavailable states, deterministic issues, multiline Unicode/special characters, freshness, all clipboard capabilities, failure-success-failure, both stale-settlement directions, reset invalidation, 41-stop keyboard parity, 3px/3px focus, theme, reduced motion, offline/session-only reload, and unclipped 360/1280 layouts. The feature-flags screenshots and accessibility snapshot were captured through Playwright. A transient harness expectation counted three visible issues while the representative seed correctly contributed a fourth unavailable dependency; the corrected targeted assertion passed without a product change.
+
+### T094
+
+**Deviations/Edge cases/Surprises:** Refreshed PR #452 was open and clean at exact Slice 6 base `e023d51b30b5fd583e3351a377b35615f1bf0981`. The final boundary is 33 paths: seven implementation-authored, 22 generated, and four workflow/control-plane, with 777 reviewable LOC, one production template, and no correctness or non-size blocker; the total-file result is **SIZE-ONLY BLOCK / CONTINUE**. Source, manifest, tests, and generated bytes did not change after checkpoint `8b1e67587d24b01258df5856e8888588734a22de`. Packet `art-005-slice-6-feature-flags` passed dry-run/apply emission, read-only validation with `pr_blocked=false`, persisted current-fingerprint validation, workflow-contract validation, exact-title release readiness, and release-note policy. Exact emission head `5da88f99f9f042ae02b62ce3535869462cb159f7` was pushed, and PR [#454](https://github.com/racecraft-lab/racecraft-plugins-public/pull/454) opened against the repaired Slice 5 branch. GitHub reported `UNSTABLE` only because checks had started and were still in progress.
+
+### Post implementation code-review remediation (Slice 6)
+
+**Deviations/Edge cases/Surprises:** Slice 6 first merged updated Slice 5 head `afe1da8d1dfc82fff31b984db0b57e0298934418`, preserving both append-only implementation histories in the sole authored merge conflict. Independent review then found that rollout parsing accepted whitespace, hexadecimal, and exponent text through `Number()`, and that empty required group id/label and flag key/description values appeared only in export issues without visible status feedback. Checkpoint `eb20daf245a159612146e060488959e5fd46de93` now accepts only plain decimal syntax before parsing, marks all required controls with `aria-invalid`, links them to a polite live validation status with `aria-errormessage`, and includes required values in its visible issue count. The compact repair measures 632 non-canonical template lines plus 147 incremental test lines = 779 reviewable LOC, one below the Slice 6 ceiling and 21 below the mandatory stop.
+
+**Verification:** Focused gallery checks passed 497/497, fill checks 65/65, Layer 1 1,448/1,448, Layer 4 5,788/5,788, and the default suite 7,422/7,422; generated release artifacts and docs references are current, and all five feature-flags template copies share SHA-256 `d3f65622f470fe25955dfb7234f24bff6dd8760993d6a1efaf9da3b054761399`. The operator-authorized Playwright MCP fallback rechecked the exact checkpoint over `file://`: whitespace, hexadecimal, and exponent rollout values produced `invalid_value` with null normalized values; `10.5` remained numeric; all four required field types exposed linked invalid state; the live summary reported the issues; horizontal overflow was absent; and no page error occurred.

@@ -229,7 +229,7 @@
       "stage": "ad-hoc",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "19-editor-feature-flags.html" },
-      "status": "planned",
+      "status": "shipped",
       "exports": ["markdown"]
     },
     {
