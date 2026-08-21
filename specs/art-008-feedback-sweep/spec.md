@@ -466,7 +466,7 @@ proceeds.
 - **FR-006**: The sweep MUST exclude replies it posted itself from the
   candidate set on every run, so a reply written by one sweep never becomes
   input to a later one. A comment is the sweep's own reply when **both** hold:
-  its body begins with the fixed HTML-comment marker FR-015 requires, matched
+  its body begins with the fixed HTML-comment prefix FR-015 requires, matched
   anchored at the start rather than anywhere in the body, and its author is the
   account this run authenticated as. Both conditions are needed. The marker
   alone would silently skip a reviewer who quoted a sweep reply while
@@ -698,8 +698,8 @@ proceeds.
   consensus protocol. The `answered`, `deferred`, and `no action` classes MUST
   NOT invoke consensus.
 - **FR-011a**: Consensus does not always return an answer, and the three ways it
-  fails to MUST all land on one specified behavior. The shipped protocol
-  produces `[HUMAN REVIEW NEEDED]` from each of them: all three analysts
+  fails to MUST all land on one specified behavior. The shipped protocol raises
+  its human-review outcome from each of them: all three analysts
   disagreeing after Round 2, a Round-1 escape whose Round 2 still cannot
   resolve, and an analyst that fails its single retry. Behavior does not branch
   on which occurred; only the report names it. The third is not hypothetical —
@@ -937,8 +937,12 @@ proceeds.
   edit; the other three classes have none of those to name, so requiring them
   of all four would make three of the four templates unsatisfiable. Each class
   MUST use one fixed reply template, and reply text MUST be plain,
-  public-readable English. Every template MUST open with the same fixed
-  HTML-comment marker, which renders as nothing and is what FR-006 matches on.
+  public-readable English. Every template MUST open with an HTML comment whose
+  **prefix** is the same fixed string in every reply, which renders as nothing
+  and is what FR-006 anchors its match on. The prefix is what is fixed, not the
+  whole comment: FR-015b appends the answered comment's id after it, so two
+  replies are not byte-identical to each other. Saying "the same fixed marker"
+  without that distinction would contradict FR-015b.
   A marker rather than a visible sentence, because a visible sentence is
   exactly what a reviewer quotes when they disagree, and quoting it would make
   their genuine objection invisible to the next run. The repository already
@@ -1137,20 +1141,55 @@ proceeds.
   section carried. The difference is that neither `SKILL.md` is edited at all:
   the Codex variant sits three words below its 8000-word cap, so it cannot take
   a line, and the Claude variant is left alone to keep the two in step.
-- **Budget result**: **two warns, zero blocks.** Over the 400 reviewable-LOC
-  warn and over the 6 production-file warn; under the 800 LOC block and the
-  8-file block, on a single primary surface. The file count matters more than it
-  looks: the block fires above 8, so the 7 this slice carries is a warn, while
-  the 9 the earlier draft claimed would have been a block. Getting that number
-  right was the difference between proceeding and stopping.
-- **The warn is accepted rather than re-sliced.** The only split that reaches
-  400 while still shipping a working checkpoint does not exist: the parse and
-  the two phase-execution references are the irreducible core, and the split
-  that would fit — records in one slice, consensus and replies and
-  stop-or-proceed in another — ships a checkpoint that reads feedback and acts
-  on none of it. Deferring the three serialization-family registry rows saves 15
-  to 30 lines and costs FR-007b. Re-slicing remains the operator's call, made
-  against real numbers rather than a rounded-down one.
+- **The error-handling checklist moved this again.** Five more requirements put
+  the high end at roughly **810 to 830**, which **crosses the 800 block**. The
+  midpoint of about 630 does not. This is the fourth revision of the number and
+  every one has been a hand estimate, because no code exists yet to measure.
+- **Budget result**: **two warns; the midpoint clears both blocks and the high
+  end crosses the LOC block.** Over the 400 reviewable-LOC warn and over the 6
+  production-file warn; under the 8-file block, on a single primary surface. The
+  file count matters more than it looks: that block fires above 8, so the 7 this
+  slice carries is a warn, while the 9 an earlier draft claimed would have been
+  a block.
+- **A size crossing does not stop this run, and the reason is not optimism.**
+  Every gate that could measure it is either advisory by contract or deferred on
+  the installed runner, and the shipped rule for the ones that are deferred is
+  explicit: a size-only block continues into marker planning rather than
+  becoming a manual re-slicing stop. Only a **correctness** block halts. There
+  is direct precedent in this repository: a prior spec recorded a size-only
+  block at 1800 reviewable LOC, 2.25 times over the threshold, and the run
+  continued with the crossing captured as marker-planning input.
+- **What would actually stop a run is stale evidence, so the numbers are
+  reconciled rather than left to drift.** Three generations of this figure — 745,
+  roughly 775, and 810 to 830 — were live across the spec and the plan at once,
+  with six separate places still asserting zero blocks. That is the condition the
+  correctness stops exist for, and it is now fixed in both documents.
+- **The crossing is accepted and recorded rather than re-sliced, and each
+  rejected lever is rejected for a stated reason.**
+  - *Re-slice.* No split reaches 400 while still shipping a working checkpoint.
+    The parse and the two phase-execution references are the irreducible core,
+    and the split that would fit — records in one slice, consensus and replies
+    and stop-or-proceed in another — ships a checkpoint that reads feedback and
+    acts on none of it. That is the "feedback becomes decoration" outcome this
+    feature exists to remove, reproduced one layer down.
+  - *Defer the three serialization-family registry rows.* Rejected on
+    arithmetic, not on principle: it saves an estimated 15 to 30 lines against a
+    10 to 30 line overage, so it may not even close the gap, and it costs
+    FR-007b's completeness guarantee and the manifest-derived parity test
+    FR-008a depends on. Worth stating precisely, because it is easy to overstate
+    the cost in the other direction: those three templates carry **no** prompt
+    kind, so deferring them would not reopen the imperative-text exposure
+    FR-007c closes. That exposure belongs to the seven templates that do carry
+    one, a different set.
+  - *Claim a typed exception.* Does not fit. The accepted classes are refactor,
+    infra, and upgrade, and this slice is net-new feature work: a new read-only
+    parse, a new phase-execution sequence, a new consensus-routed comment class.
+    Ratification is a roadmap-level pragma rather than a spec-level assertion,
+    and none exists for ART-008. Stretching a class to fit would be worse than
+    carrying the crossing honestly.
+  Re-slicing remains the operator's call, made against real numbers rather than
+  a rounded-down one, and the draft pull request this stage opens is where that
+  call belongs.
 - **The Plan estimator cannot check this, and must not be read as if it had.**
   `estimate-reviewable-loc` projects from production files only, and it counts
   a file as production only when its path sits under `src/`, `app/`, `lib/`, or

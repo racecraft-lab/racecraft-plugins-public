@@ -104,13 +104,23 @@ last step — the check would pass on the target path while the commit carried
 everything else. Amendment and bookkeeping commits here follow the enumerated
 single-path form, not the Phase 7 form.
 
-**5. `self_login` is validated, not assumed.** It must be a non-empty string;
-absent or empty returns `invalid_input` rather than proceeding. This input
-supplies the author half of the FR-006 self-reply test, and an empty value makes
-that half unsatisfiable while the marker half still matches — which silently
-turns the two-condition test into a one-condition one, disables the exclusion,
-and reopens the non-convergence FR-006a describes. A required field that breaks
-a safety property when empty is worth validating explicitly.
+**5. `self_login` is derived, then validated.** The orchestrator reads it from
+the live authenticated session at call time rather than from configuration, the
+way FR-004a requires the author-association field be read fresh. The helper then
+requires it to be a non-empty string after stripping surrounding whitespace;
+absent, empty, or whitespace-only returns `invalid_input` rather than
+proceeding. The helper cannot go further than presence, because its contract
+forbids it from reaching the network, so it has no second independently sourced
+value to compare against — verification is provenance, not checking.
+
+What an empty value actually breaks, stated correctly: comparison is exact, so
+an empty account matches **no** real comment author. The author condition is
+permanently false, the conjunction is therefore always false, and **no comment
+is ever excluded as a self-reply**, including the sweep's own. That reaches the
+same non-convergence FR-006a describes, but by disabling the rule rather than by
+narrowing it to the marker half. The distinction matters because the two
+failures have opposite shapes and a reader expecting the wrong one would test
+for the wrong thing.
 
 **6. The shell boundary is verified in both directions.** FR-004b covers reads
 and writes, so the captured-command fixture SC-009 rests on captures the **read**
@@ -203,7 +213,7 @@ rejects the whole request rather than the offending string (FR-008).
 files, seven test and fixture files. Two platform variants.
 
 **Reviewability Budget**: harness/adapter (single primary surface); **hand-derived
-515 to 745 reviewable LOC, midpoint near 630**; 7 production files; 14 authored
+515 to 830 reviewable LOC, midpoint near 630**; 7 production files; 14 authored
 files total; **warn on reviewable LOC and on production files, block on neither.**
 Derived by hand from the Declared File Operations block below, because the
 estimator cannot measure this slice. See "Reviewability Budget, derived by hand".
@@ -347,7 +357,7 @@ for the `SKILL.md` cap reason recorded above.
 
 | Dimension | Value | Warn | Block | Result |
 |---|---:|---:|---:|---|
-| Reviewable LOC | ~630 (515–745) | 400 | 800 | **WARN** |
+| Reviewable LOC | ~630 (515–830) | 400 | 800 | **WARN at the midpoint; the high end crosses the block** |
 | Production files | 7 | 6 | 8 | **WARN** |
 | Total authored files | 14 | 15 | 25 | pass |
 | Primary surfaces | 1 | >1 | >1 | pass |
@@ -411,7 +421,8 @@ Constitution version 1.2.0.
   unit coverage. **Secondary surfaces**: docs/process — both phase-execution
   references, both workflow-file-protocol files, and `consensus-protocol.md`.
 - **Within budget?** No. Warn on reviewable LOC (~630 against 400) and on
-  production files (7 against 6). Under the block on both (800, 8). Accepted
+  production files (7 against 6). Under the block at the midpoint on both (800,
+  8); the high end crosses the 800 LOC block after the error-handling pass. Accepted
   with the reasoning and the rejected split recorded above.
 - **Split decision**: ART-008 is two stacked vertical slices along a Path seam.
   This is slice 1. Slice 2 (artifact freshness) is specified separately on a
@@ -526,6 +537,7 @@ corpus, named for the durable behavior rather than for the spec id.
 
 No constitution violations. The reviewability warn is not a constitution
 violation: the preset's thresholds warn above 400 reviewable LOC and 6
-production files and block above 800 and 8, and this slice is under both blocks.
+production files and block above 800 and 8. This slice is under both blocks at
+its midpoint; its high end crosses the LOC block. Recorded, not hidden.
 The warn, its derivation, its acceptance, and the split option that was
 considered and rejected are recorded in "Reviewability Budget, derived by hand".

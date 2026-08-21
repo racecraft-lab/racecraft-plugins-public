@@ -6,8 +6,8 @@
   "status": "in_progress",
   "stage": "plan",
   "prior_run_note": "completed_archived",
-  "updated_at": "2026-08-21T03:18:19Z",
-  "active_step": "Phase 4: Checklist - error-handling Consensus",
+  "updated_at": "2026-08-21T03:28:55Z",
+  "active_step": "Phase 4: Checklist - state-management",
   "reclaimed_from": {
     "workflow_file": "docs/ai/specs/.process/ART-005-workflow.md",
     "spec_id": "ART-005",
@@ -171,6 +171,15 @@
       "todo_markers": 0,
       "clarification_markers": 0,
       "path_leaks": 0
+    },
+    "G4": {
+      "gate": "4",
+      "pass": true,
+      "domains_run": 2,
+      "domains_total": 3,
+      "note": "recorded per domain; the phase gate resolves after state-management",
+      "gap_markers_remaining": 0,
+      "counting_method": "own grep for any bracketed marker containing Gap; the runner helper undercounted in both domains (4 vs 8, then 21 vs 30) because its regex is the bare literal"
     }
   },
   "phase_results": {
@@ -429,7 +438,7 @@
           }
         },
         "error-handling": {
-          "status": "remediated, consensus in flight",
+          "status": "completed",
           "items": 56,
           "loops": 2,
           "gaps_found_my_grep": 30,
@@ -449,7 +458,35 @@
           "worst_finding": "replies post after the log row lands while the skip key is the log row alone, so a failed reply was permanently lost and SC-002 unsatisfiable. Not merely unspecified: the ordering made the loss irreversible.",
           "suite": "7659/7659 passed after remediation",
           "routed_to_consensus": 4,
-          "consensus_dispatches": 4
+          "consensus_dispatches": 4,
+          "consensus": {
+            "items": 4,
+            "analyst_dispatches": 4,
+            "round_2_items": 0,
+            "escape_hatches": 0,
+            "human_review": 0,
+            "outcomes": {
+              "I11 budget crossing": "both agree, record and continue; no lever taken",
+              "I12 marker carries a comment id": "both agree, extends the settled session 2 decision rather than reversing it",
+              "I13 unresolvable-consensus log placement": "Consensus Resolution Log only; an unresolvable comment is not handled; stop confirmed"
+            },
+            "budget_resolution": {
+              "verdict": "accept and record; measure later against real code",
+              "why_not_defer": "saves 15-30 lines against a 10-30 line overage, so it sits inside the estimate's own noise and may not close the gap, and it costs FR-007b completeness plus the parity test",
+              "why_not_typed_exception": "accepted classes are refactor, infra, upgrade; this is net-new feature work, and ratification is a roadmap-level pragma that does not exist for ART-008",
+              "why_not_reslice": "no split reaches 400 while shipping a working checkpoint; the one that fits ships a checkpoint that reads feedback and acts on none of it",
+              "when_the_block_bites": "never at plan stage. The estimator is advisory by contract; the tasks gate and the final backstop are both deferred on the installed runner and their shipped rule is that a size-only block continues into marker planning. Only a correctness block halts.",
+              "precedent": "PRSG-013 recorded a size-only block at 1800 reviewable LOC, 2.25x over, and the run continued with the crossing captured as marker-planning input",
+              "estimation_evidence": "the tightest published pre-code error band is about 10 percent, roughly 80 lines on this midpoint, three to eight times the margin being adjudicated; and defect detection flattens by 200-250 lines, so 810 is not materially different from 745"
+            },
+            "orchestrator_errors_corrected": [
+              "I stated that deferring the three serialization-family registry rows would cost part of the prompt-variant registration that closes the injection exposure. Wrong: those three templates carry no prompt kind. Deferring them costs FR-007b completeness and the parity test, not a security control.",
+              "three generations of the budget figure were live at once across spec.md and plan.md (745, ~775, 810-830) with six places still asserting zero blocks; all reconciled",
+              "plan.md mechanism 5 described the empty-login failure as collapsing to the marker half; corrected to permanently unsatisfiable",
+              "FR-015 said every reply opens with the same fixed marker, which FR-015b made false; corrected to a fixed prefix",
+              "FR-011a quoted the literal human-review flag string, which would trip a literal-match gate on every future run; reworded"
+            ]
+          }
         }
       }
     }
@@ -522,11 +559,11 @@
     },
     {
       "step": "Phase 4: Checklist - error-handling Consensus",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - state-management",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - state-management Consensus",
