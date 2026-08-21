@@ -2239,7 +2239,16 @@ def check_telemetry_ref_resolves(replay: dict, profile: dict) -> None:
         )
 
 
-class CommittedTelemetryProfileTests(unittest.TestCase):
+class _CommittedTelemetryProfileFixture:
+    def load_committed_profile(self) -> dict:
+        self.assertTrue(
+            PROFILE_PATH.is_file(),
+            f"committed telemetry capability profile missing (T019): {PROFILE_PATH}",
+        )
+        return _read_committed_json(PROFILE_PATH)
+
+
+class CommittedTelemetryProfileTests(_CommittedTelemetryProfileFixture, unittest.TestCase):
     """The committed WP2 telemetry capability profile at
     ``docs/ai/research/claude-telemetry-capability-profile.json`` is continuously
     re-validated (T019-T021/T023): it conforms to the ``telemetryProfile`` ``$def``,
@@ -2249,13 +2258,6 @@ class CommittedTelemetryProfileTests(unittest.TestCase):
     """
 
     require_validator = _require_validator
-
-    def load_committed_profile(self) -> dict:
-        self.assertTrue(
-            PROFILE_PATH.is_file(),
-            f"committed telemetry capability profile missing (T019): {PROFILE_PATH}",
-        )
-        return _read_committed_json(PROFILE_PATH)
 
     def test_committed_profile_validates_against_the_schema(self) -> None:
         validator = self.require_validator()
@@ -2432,17 +2434,10 @@ class RouteResolutionFixtureTests(unittest.TestCase):
                     check_route_resolution_crossrefs_resolve(fixture)
 
 
-class ExactTreatmentTelemetryLinkageTests(unittest.TestCase):
+class ExactTreatmentTelemetryLinkageTests(_CommittedTelemetryProfileFixture, unittest.TestCase):
     """FR-022 telemetry-linkage rule: a non-null ``outcome.telemetry_ref`` MUST
     resolve against the committed telemetry-profile field set during deterministic
     validation; a dangling reference fails validation (T024)."""
-
-    def load_committed_profile(self) -> dict:
-        self.assertTrue(
-            PROFILE_PATH.is_file(),
-            f"committed telemetry capability profile missing (T019): {PROFILE_PATH}",
-        )
-        return _read_committed_json(PROFILE_PATH)
 
     def test_null_telemetry_ref_needs_no_resolution(self) -> None:
         replay = valid_exact_treatment_replay()
