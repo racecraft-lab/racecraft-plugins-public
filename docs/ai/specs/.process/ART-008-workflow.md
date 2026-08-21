@@ -261,6 +261,7 @@ the gate can read one spec's number.
 | **Name** | Feedback Sweep (slice 1 of 2: the checkpoint) |
 | **Branch** | `art-008-feedback-sweep` |
 | **Stage** | plan |
+| **Draft PR** | [#464](https://github.com/racecraft-lab/racecraft-plugins-public/pull/464) |
 | **Dependencies** | ART-007 (Draft-PR Emission): complete, PR #445, archived 2026-08-18 |
 | **Enables** | The trusted human checkpoint the staged workflow exists for; ART-008 slice 2 (artifact freshness) stacks on this branch |
 | **Priority** | P1 |
