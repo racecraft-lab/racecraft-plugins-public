@@ -6,8 +6,8 @@
   "status": "in_progress",
   "stage": "plan",
   "prior_run_note": "completed_archived",
-  "updated_at": "2026-08-21T04:25:41Z",
-  "active_step": "Phase 4: Checklist - state-management Consensus",
+  "updated_at": "2026-08-21T04:42:41Z",
+  "active_step": "Phase 5: Tasks",
   "reclaimed_from": {
     "workflow_file": "docs/ai/specs/.process/ART-005-workflow.md",
     "spec_id": "ART-005",
@@ -175,11 +175,14 @@
     "G4": {
       "gate": "4",
       "pass": true,
-      "domains_run": 2,
-      "domains_total": 3,
-      "note": "recorded per domain; the phase gate resolves after state-management",
-      "gap_markers_remaining": 0,
-      "counting_method": "own grep for any bracketed marker containing Gap; the runner helper undercounted in both domains (4 vs 8, then 21 vs 30) because its regex is the bare literal"
+      "gap_markers": 0,
+      "domains": [
+        "security",
+        "error-handling",
+        "state-management"
+      ],
+      "suite": "7659/7659",
+      "counting_method": "own grep; the runner counter reported 4 vs 8, 21 vs 30, and 0 vs 16"
     }
   },
   "phase_results": {
@@ -384,7 +387,7 @@
       ]
     },
     "checklist": {
-      "status": "in_progress",
+      "status": "completed",
       "domains": {
         "security": {
           "status": "completed",
@@ -489,7 +492,7 @@
           }
         },
         "state-management": {
-          "status": "remediated, one consensus item in flight",
+          "status": "completed",
           "items": 37,
           "loops": 1,
           "interrupted": "the first executor died to an API error mid-write after adding FR-006c, FR-009a, FR-013a, FR-015c, SC-012 and SC-013 but before marking any gap resolved or finishing the plan alignment. A continuation was dispatched with the inherited state rather than restarting.",
@@ -501,8 +504,30 @@
           "convergence_proved": "the work set is trusted, minus logged, minus self-reply, and three rules make it monotone. Two cycling paths foreclosed: an empty authenticated account (now an input error that stops before any read) and the human-review item (a stationary point bounded by operator action, not a divergence)",
           "suite": "7659/7659 passed",
           "routed_to_consensus": 1,
-          "consensus_dispatches": 2
+          "consensus_dispatches": 2,
+          "consensus": {
+            "items": 1,
+            "analyst_dispatches": 2,
+            "round_2_items": 0,
+            "escape_hatches": 0,
+            "human_review": 0,
+            "outcome": "both agree the fix belongs in FR-012a and the row is load-bearing for the escape-rate metric; they differed only on drafting form",
+            "applied": "the bookkeeping-commit trigger is now stated as rows-written-to-either-log rather than handled-comments-exist, which subsumes the old proxy instead of adding a branch beside it. Handled comments were only ever a proxy for Feedback Sweep Log rows, and it held until FR-011a introduced a Consensus Resolution Log row with no counterpart.",
+            "objection_removed": "the forced-ordering rationale does not bind these rows: the Consensus Resolution Log schema carries no commit column, so nothing has to exist before the commit does"
+          }
         }
+      },
+      "totals": {
+        "domains": 3,
+        "items": 143,
+        "gaps_found": 54,
+        "gaps_closed": 54,
+        "consensus_items": 8,
+        "analyst_dispatches": 24,
+        "round_2_items": 0,
+        "escape_hatches": 0,
+        "human_review": 0,
+        "agent_failures_recovered": 2
       }
     }
   },
@@ -582,11 +607,11 @@
     },
     {
       "step": "Phase 4: Checklist - state-management Consensus",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze",

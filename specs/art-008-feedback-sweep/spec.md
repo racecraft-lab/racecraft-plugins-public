@@ -871,11 +871,35 @@ proceeds.
   unrecorded to a single item, which matters because the consensus protocol
   producing the resolved edit is not proven deterministic beyond routing and
   log aggregation, so a comment reprocessed inside that window is not
-  guaranteed to resolve the same way twice. A run with zero amendments but at
-  least one handled comment MUST still take exactly one bookkeeping commit,
-  carrying every `answered`, `deferred`, and `no action` row FR-018 requires;
-  a run with no handled comments writes no rows and takes no bookkeeping
-  commit.
+  guaranteed to resolve the same way twice.
+
+  **The trigger is rows, not handled comments.** A run takes a bookkeeping
+  commit when it wrote at least one row to **either** log, and takes none when
+  it wrote none. Handled comments were only ever a proxy for that: every handled
+  comment produces exactly one Feedback Sweep Log row, so the proxy held until
+  FR-011a introduced a Consensus Resolution Log row with no Feedback Sweep Log
+  counterpart. Stating the trigger as rows subsumes the proxy rather than adding
+  a second condition beside it, so the two cannot drift apart.
+
+  Three consequences follow, and each is a case a reader would otherwise have to
+  derive. A run with zero amendments but at least one handled comment takes
+  exactly one bookkeeping commit, carrying every `answered`, `deferred`, and
+  `no action` row FR-018 requires. **A run that handles no comment but is
+  required by FR-011a to write one or more Consensus Resolution Log rows also
+  takes exactly one, carrying every such row** — that run is not the case the
+  no-rows rule protects against, because comments were observed, read, and
+  routed to consensus, and a row is the required output. A run that wrote no row
+  to either log takes no bookkeeping commit; that is the comment-free sweep, and
+  an empty commit there would record nothing.
+
+  When one run has both handled comments and FR-011a rows, they ride the same
+  single bookkeeping commit. Nothing here mints a second per-item cadence beside
+  the existing one.
+
+  The ordering rationale above does not constrain this case. It binds rows that
+  name their own commit, and the Consensus Resolution Log schema carries no
+  commit column at all, so there is no value that has to exist before the commit
+  does.
 - **FR-012b**: The three artifacts FR-012 names are the sweep's **whole edit
   surface**, and that MUST be enforced rather than assumed. Two rules, at two
   different points, because they catch different failures:

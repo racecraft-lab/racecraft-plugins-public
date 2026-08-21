@@ -35,8 +35,8 @@ captured during scoping.
 | Specify | `/speckit-specify` | ✅ Complete | 19 FRs, 3 user stories, 11 acceptance scenarios, 9 edge cases, 8 success criteria. 3 `[NEEDS CLARIFICATION]` markers left for Clarify |
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 15 questions, 7 consensus items all resolved in Round 1 with 23 analyst dispatches. Spec grew 402 → 927 lines and 19 → 31 requirements. Zero markers, zero human-review flags |
 | Plan | `/speckit-plan` | ✅ Complete | 5 artifacts, 1506 lines. Budget re-derived by hand at 515-745 LOC (midpoint ~630) over 7 production files: two warns, zero blocks, warn accepted with the split lever recorded |
-| Checklist | `/speckit-checklist` | 🔄 In Progress | 3 domains, sequential with consensus after each |
-| Tasks | `/speckit-tasks` | ⏳ Pending | |
+| Checklist | `/speckit-checklist` | ✅ Complete | 3 domains, 143 items, **54 gaps found and 54 closed**. 8 consensus items across 24 analyst dispatches, all Round 1. Spec grew 31 → 48 requirements and 10 → 13 criteria |
+| Tasks | `/speckit-tasks` | 🔄 In Progress | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
@@ -103,6 +103,18 @@ terminal status.
   returned `pass` with `projected: 0`, which is recorded below as an absent
   measurement rather than a budget verdict; the hand-derived figure carries two
   warns and zero blocks.
+- G4 gate: PASS — 2026-08-20. Zero `[Gap]` markers across all four checklist
+  files, counted with a loose grep for any bracketed marker containing `Gap`.
+  Three domains ran sequentially with consensus after each: security (8 gaps),
+  error-handling (30), state-management (16). All 54 closed. Full suite green at
+  7659/7659 after remediation.
+
+  **The runner's gap counter is not trustworthy and was not trusted.** It
+  reported 4 against a true 8, then 21 against 30, then **0 against 16**. Its
+  regex is the bare `[Gap]` literal, so every combined form — `[Coverage, Gap]`,
+  `[Gap, Ambiguity]`, `[Conflict, Gap]` — is invisible to it. On the third
+  domain every single marker was a combined form, so its zero before remediation
+  and its zero after carried identical information: none.
 
 ---
 
