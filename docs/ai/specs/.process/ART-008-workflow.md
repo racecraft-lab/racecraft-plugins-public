@@ -1003,10 +1003,55 @@ are unchanged; this section records the verdict so a later session can read it.
 
 | Field | Value |
 |-------|-------|
-| Mode | <!-- advisory (default) or strict --> |
-| Composite confidence | <!-- 0.00-1.00 --> |
-| Verdict | <!-- proceed / remediate / stop --> |
-| Evidence | <!-- what the score was computed from --> |
+| Mode | `advisory` — resolved at Step 0.6b from no flag and no local config |
+| Threshold | 0.90 |
+| Composite confidence | **0.80** |
+| Verdict | below threshold, advisory. The plan stage ends here either way, because G6.5 is its terminal step |
+| Evidence | the Phase 6 synthesis emit below, computed over the completed Analyze pass |
+
+📊 Confidence: 0.80
+
+- Task understanding: 0.90
+- Approach clarity: 0.80
+- Requirements alignment: 0.86
+- Risk assessment: 0.68
+- Completeness: 0.78
+
+**Why each score, kept because a later run reads this rather than re-deriving
+it.** Task understanding at 0.90: the Analyze catches were specific and
+correctly scoped, held below 1.00 only because nothing in them is independently
+confirmed. Approach clarity at 0.80: the fixes are concrete mechanisms, but one
+interface question stays open, namely where the write-point path check gets its
+resolved target. Requirements alignment at 0.86: full requirement, criterion and
+task cross-referencing across three Clarify sessions and three checklist
+domains, capped because two upstream defects are filed rather than fixed and
+this slice guards only its own caller. Risk assessment at 0.68, the lowest:
+the reviewability crossing is disclosed and gated by a blocking task, which
+earns real credit, but no active gate can measure it and the estimate moved
+330 to 830 across four revisions, which is itself a risk signal. Completeness
+at 0.78: the planning artifacts are internally consistent and G0 through G6 all
+passed, but no code exists and the remaining gates are deferred, so this
+measures plan completeness rather than implementation readiness.
+
+**The remediation loop was considered and declined, with the reason recorded.**
+The procedure offers up to three focused rounds on the lowest criterion. For
+`risk_assessment` that round would re-run Analyze against remaining open
+findings, and there are none — Analyze closed all six it raised and routed
+nothing to consensus. The facts behind the 0.68 are not a remediable gap: the
+budget crossing is already disclosed, already reasoned through lever by lever,
+and already gated by a blocking checkpoint before implementation phase 3; the
+estimate drift is history that cannot be un-drifted; and the one thing that
+would genuinely raise the score is a real measurement against real code, which
+this stage by definition cannot produce. Iterating would re-score identical
+evidence and inflate the number without changing anything a reader should act
+on. A low score that is true is more useful here than a high one that is
+manufactured.
+
+**What this means for the next run.** A later `--stage implement` invocation
+reads this recorded verdict rather than re-running the gate. The score is
+advisory, so it does not block, but it is deliberately not a pass, and the
+operator should treat the risk-assessment line as the thing to satisfy before
+letting implementation run unattended.
 
 ---
 

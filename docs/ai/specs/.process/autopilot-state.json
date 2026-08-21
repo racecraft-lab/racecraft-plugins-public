@@ -6,8 +6,8 @@
   "status": "in_progress",
   "stage": "plan",
   "prior_run_note": "completed_archived",
-  "updated_at": "2026-08-21T05:39:43Z",
-  "active_step": "Phase 6.5: Confidence Gate",
+  "updated_at": "2026-08-21T05:41:46Z",
+  "active_step": "Plan-stage terminal: draft artifact generation",
   "reclaimed_from": {
     "workflow_file": "docs/ai/specs/.process/ART-005-workflow.md",
     "spec_id": "ART-005",
@@ -204,6 +204,15 @@
       "path_leaks": 0,
       "suite": "7659/7659",
       "consensus_items": 0
+    },
+    "G6.5": {
+      "gate": "6.5",
+      "pass": false,
+      "mode": "advisory",
+      "composite": 0.8,
+      "threshold": 0.9,
+      "recommended_action": "continue_with_warning",
+      "note": "advisory, so it warns rather than blocks; deliberately recorded as not a pass"
     }
   },
   "phase_results": {
@@ -590,6 +599,26 @@
       "cross_artifact_agreement": "all five documents carry 515 to 830; remaining 745 references are explicitly labelled Plan-time history",
       "roadmap_edited": true,
       "suite": "7659/7659"
+    },
+    "confidence_gate": {
+      "status": "resolved",
+      "mode": "advisory",
+      "threshold": 0.9,
+      "composite": 0.8,
+      "pass": false,
+      "recommended_action": "continue_with_warning",
+      "reason": "composite below threshold in advisory mode",
+      "criteria": {
+        "task_understanding": 0.9,
+        "approach_clarity": 0.8,
+        "requirements_alignment": 0.86,
+        "risk_assessment": 0.68,
+        "completeness": 0.78
+      },
+      "lowest_criterion": "risk_assessment",
+      "remediation_loop": "declined, with the reason recorded in the workflow file. The procedure's focused round for risk_assessment re-runs Analyze against remaining open findings, and there are none: Analyze closed all six it raised and routed nothing to consensus. The facts behind 0.68 are disclosed, reasoned lever by lever, and gated by a blocking task; the estimate drift is history; and the only thing that would genuinely raise the score is a measurement against real code, which this stage cannot produce. Iterating would re-score identical evidence.",
+      "row_left_pending": "G6.5 is an advisory phase the main loop does not flip, which the workflow file states and the coverage guard's WORKFLOW_ADVISORY_PHASES honors",
+      "emission": "a warn is not a strict-mode block, so the plan stage's terminal emission sequence runs"
     }
   },
   "test_baseline_g0": {
@@ -684,11 +713,11 @@
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Plan-stage terminal: draft artifact generation",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Plan-stage terminal: stage-boundary commit and push",
