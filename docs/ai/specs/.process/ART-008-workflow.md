@@ -35,9 +35,9 @@ captured during scoping.
 | Specify | `/speckit-specify` | ✅ Complete | 19 FRs, 3 user stories, 11 acceptance scenarios, 9 edge cases, 8 success criteria. 3 `[NEEDS CLARIFICATION]` markers left for Clarify |
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 15 questions, 7 consensus items all resolved in Round 1 with 23 analyst dispatches. Spec grew 402 → 927 lines and 19 → 31 requirements. Zero markers, zero human-review flags |
 | Plan | `/speckit-plan` | ✅ Complete | 5 artifacts, 1506 lines. Budget re-derived by hand at 515-745 LOC (midpoint ~630) over 7 production files: two warns, zero blocks, warn accepted with the split lever recorded |
-| Checklist | `/speckit-checklist` | ✅ Complete | 3 domains, 143 items, **54 gaps found and 54 closed**. 8 consensus items across 24 analyst dispatches, all Round 1. Spec grew 31 → 48 requirements and 10 → 13 criteria |
+| Checklist | `/speckit-checklist` | ✅ Complete | 3 domains, 143 items, **54 gaps found and 54 closed**. 8 consensus items across 24 analyst dispatches, all Round 1. Spec grew 31 → 48 requirements and 10 → 13 criteria. Those requirements moved the budget: the high end went 745 → ~775 → **810-830, which crosses the 800 block**, leaving the live figure at **515-830 (midpoint ~630)**, still two warns and still 7 production files |
 | Tasks | `/speckit-tasks` | ✅ Complete | 80 tasks, 6 phases, 9 parallel-safe. 48/48 requirements and 13/13 criteria covered; the orchestrator added T080 after finding SC-003 uncovered |
-| Analyze | `/speckit-analyze` | 🔄 In Progress | |
+| Analyze | `/speckit-analyze` | ✅ Complete | 6 findings, all remediated, zero unresolved for consensus. Caught a contradiction that would have stopped the feature on its own first write, and a fixture corpus that could not fail in the direction that mattered |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 | Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
@@ -125,6 +125,26 @@ terminal status.
   which is the criterion the state-management domain spent its pass proving. The
   fixture corpus covered its no-second-reply half; nothing pinned the whole-run
   assertion or its interrupted-run qualifier. Added as T080.
+- G6 gate: PASS — 2026-08-21. Zero `CRITICAL` findings, zero `[Gap]`, zero
+  `[NEEDS CLARIFICATION]`, zero absolute-path leaks. Full suite green at
+  7659/7659. Six findings raised and all six remediated; nothing routed to
+  consensus.
+
+  Two are worth naming because both were failures in a direction nothing tested.
+  **FR-012b called three artifacts the sweep's "whole edit surface" while three
+  other requirements oblige it to write a fourth**, the workflow file — so
+  applying the membership test to every write would have stopped the run on its
+  own first log row and taken the durable record and the skip key with it. Now
+  scoped to the amendment surface, with the two write classes separated by which
+  commit carries them. And **the author-association corpus pinned only the five
+  excluded values**, so an allowlist that wrongly rejected a permitted reviewer
+  would have passed every fixture; all eight values of the closed enum are now
+  pinned in the direction the filter actually decides them.
+
+  The manifest miscount is the subtlest: it declares eleven exporting entries,
+  not ten, and the eleventh ships no template file. The skip is now conditional
+  in both directions, because a bare name-skip would have left that entry's
+  imperative prompt lead unregistered the day its file lands.
 
 ---
 
@@ -642,17 +662,27 @@ production, because it counts a file as production only under `src/`, `app/`,
 path this slice touches fails both tests. Its `pass` carries no information
 about this slice's size and MUST NOT be read as a budget verdict.
 
-**Hand-derived figure: 515 to 745 reviewable LOC, midpoint ~630. Seven
-production files.** Plan corrected the spec's earlier 325 to 485 range upward
+**Hand-derived figure at Plan: 515 to 745 reviewable LOC, midpoint ~630. Seven
+production files.** (Superseded below; the live high end is 830.) Plan corrected the spec's earlier 325 to 485 range upward
 rather than corroborating it, because two of that range's anchors were measured
 against the wrong precedent: the comparable corroboration behavior is 162 lines
 rather than the 35 of one function body, and the comparable protocol entry is 58
 lines rather than 15 to 25.
 
-**Verdict: two warns, zero blocks.** Over the 400 LOC warn and over the 6
-production-file warn; under the 800 LOC block and the 8-file block, on a single
-primary surface. The 745 high end leaves roughly 55 lines of margin to the
-block.
+**Verdict at Plan: two warns, zero blocks.** Over the 400 LOC warn and over the
+6 production-file warn; under the 800 LOC block and the 8-file block, on a
+single primary surface. The 745 high end leaves roughly 55 lines of margin to
+the block.
+
+> **Superseded at Checklist (2026-08-20).** The trust-boundary and
+> error-handling passes added requirements after this verdict was recorded and
+> moved the high end to roughly **810 to 830, which crosses the 800 block**. The
+> midpoint of about 630 still does not, and the production-file count is
+> unchanged at 7, so it remains **two warns** — but the 55 lines of margin above
+> no longer exist. The live figure is **515 to 830, midpoint near 630**, carried
+> in the Phase 5 fallback evidence chain below and in `spec.md`, `plan.md`, and
+> `tasks.md`. The paragraph above is kept as the Plan-time record, not as the
+> current position.
 
 **The warn is accepted rather than re-sliced, and the reasoning is on the
 record.** The only split lever that preserves a working checkpoint defers three

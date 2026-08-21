@@ -337,7 +337,10 @@ slice is within budget.** The figures below are the measurement.
 | `consensus-protocol.md` | 5 | 12 | The fourth `Type` value in the row schema at line 617, plus the sweep-row escape-rate note. |
 | **Total** | **513** | **745** | Midpoint **≈ 630** |
 
-Stated as **515 to 745, midpoint near 630**.
+Stated as **515 to 745, midpoint near 630** — the low column sums to 513 and is
+carried forward rounded to 515, which is the figure every other document uses.
+This is the derivation as it stood when the plan was written; the error-handling
+pass has since moved the high end, and the live range is **515 to 830**.
 
 ### Corroborate or correct: this corrects the spec
 

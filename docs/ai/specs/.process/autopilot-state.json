@@ -6,8 +6,8 @@
   "status": "in_progress",
   "stage": "plan",
   "prior_run_note": "completed_archived",
-  "updated_at": "2026-08-21T05:01:41Z",
-  "active_step": "Phase 6: Analyze",
+  "updated_at": "2026-08-21T05:39:43Z",
+  "active_step": "Phase 6.5: Confidence Gate",
   "reclaimed_from": {
     "workflow_file": "docs/ai/specs/.process/ART-005-workflow.md",
     "spec_id": "ART-005",
@@ -194,6 +194,16 @@
       "duplicates": 0,
       "method": "orchestrator cross-reference with a trailing-boundary regex",
       "orchestrator_repair": "added T080 for SC-003, the only uncovered criterion"
+    },
+    "G6": {
+      "gate": "6",
+      "pass": true,
+      "critical_findings": 0,
+      "gap_markers": 0,
+      "clarification_markers": 0,
+      "path_leaks": 0,
+      "suite": "7659/7659",
+      "consensus_items": 0
     }
   },
   "phase_results": {
@@ -562,6 +572,24 @@
         "T014 is a blocking checkpoint in Foundational that forces the operator to record one budget lever before Phase 3 begins. The executor did not self-split and did not trim tasks to duck under the line."
       ],
       "boundaries_honored": "no task edits either SKILL.md; the eight generated paths carry regeneration tasks only; no task crosses a stated non-goal"
+    },
+    "analyze": {
+      "status": "completed",
+      "findings": 6,
+      "remediated": 6,
+      "unresolved_for_consensus": 0,
+      "executor_note": "the executor exhausted its budget at the summary stage after 115 tool calls; its edits were complete and were reviewed by the orchestrator before acceptance",
+      "findings_detail": [
+        "FR-012b called three artifacts the whole edit surface while FR-012a, FR-013 and FR-014 oblige the sweep to write the workflow file; the membership test applied to every write would have stopped the run on its first log row. Scoped to the amendment surface.",
+        "the gallery manifest declares eleven exporting entries, not ten; uat-walkthrough declares both kinds and ships no template file. The derivation skip is now conditional in both directions, because a name-only skip would leave its prompt lead unregistered once the file lands.",
+        "the author-association corpus pinned only the five excluded values, so a wrongly-rejecting allowlist would have passed every fixture; admitted cases added for all three permitted values.",
+        "three serialization-family templates carry no lead sentence and are recognized by a header block that no fixture exercised; cases added including a wrong-order negative.",
+        "the quickstart omitted docs-site reference regeneration, which a tracked test-tree change restales.",
+        "two task cross-references pointed at renumbered tasks; the reviewability figure was reconciled across all five documents and the roadmap now records that its scaffold expectation did not hold."
+      ],
+      "cross_artifact_agreement": "all five documents carry 515 to 830; remaining 745 references are explicitly labelled Plan-time history",
+      "roadmap_edited": true,
+      "suite": "7659/7659"
     }
   },
   "test_baseline_g0": {
@@ -648,15 +676,15 @@
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "pending"
+      "status": "skipped: zero unresolved items"
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Plan-stage terminal: draft artifact generation",

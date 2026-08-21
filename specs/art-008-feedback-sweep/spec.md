@@ -177,7 +177,8 @@ returns exactly.
 **The budget verdict is the finding to read.** See the Reviewability Budget
 section: the slice no longer fits the ~330 it was scoped against, the honest
 range at the time was 325 to 485, which Plan later corrected upward to 515 to
-745 by re-measuring against the right precedents. The Plan estimator is
+745 by re-measuring against the right precedents — and which the trust-boundary
+and error-handling passes moved again, to the live 515 to 830. The Plan estimator is
 structurally blind to either figure, because
 none of this slice's paths satisfy its production-file test. It will report zero
 and pass. Plan sizes this by hand.
@@ -603,6 +604,15 @@ proceeds.
   gallery ships ten exporting templates today and seven of them export a
   `prompt` kind beside the `markdown` kind. Each recognized entry records its
   template id and its kind.
+
+  **Shipped is the operative word, and it costs one exclusion.** The manifest
+  declares **eleven** entries as exporting, eight of them in both kinds. The
+  eleventh is `uat-walkthrough`, which declares both kinds but has **no template
+  file**, so it emits no lead sentence for the registry to carry and none for a
+  test to derive. Excluding it is what turns the manifest's eleven and eight
+  into the ten and seven above. The exclusion is named here rather than left to
+  arithmetic because FR-008a derives the expected set from the manifest, and a
+  derivation that did not know about it would demand an entry that cannot exist.
 - **FR-007c**: The `prompt` kind matters for safety, not completeness. Its lead
   is an imperative addressed to a coding agent, and an unregistered one reaches
   the consensus analysts as ordinary free text carrying an instruction. The
@@ -701,8 +711,20 @@ proceeds.
 
   A separate test MUST derive the expected
   set from the gallery manifest and the templates themselves — every template
-  the manifest says exports, in every kind it declares — and assert the
-  registry matches. Deriving rather than hardcoding is what keeps the registry
+  the manifest says exports, in every kind it declares, **less the FR-007b
+  exclusion** — and assert the registry matches. That exclusion is a pinned
+  list of exactly one entry, `uat-walkthrough`, which the manifest declares as
+  exporting both kinds but which ships no template file to read a lead from.
+
+  **The skip MUST be conditional in both directions, not a bare name.** An entry
+  is skipped only when it is on that list **and** its template file is still
+  absent. A template that goes missing by accident is therefore not silently
+  tolerated — it is not on the list, so it fails. And an entry that later ships
+  its file stops being skipped and must be derived, which matters more than it
+  looks: `uat-walkthrough` declares a `prompt` kind, so a name-only skip that
+  outlived the missing file would leave that imperative lead unregistered, which
+  is exactly the exposure FR-007c exists to close. A bare name closes the
+  registry against the gallery growing back. Deriving rather than hardcoding is what keeps the registry
   correct as the gallery grows: a template that changes its wording, or a new
   exporting template, fails a test rather than silently disabling recognition.
   It also makes the registry's size a data question rather than a design one,
@@ -900,9 +922,23 @@ proceeds.
   name their own commit, and the Consensus Resolution Log schema carries no
   commit column at all, so there is no value that has to exist before the commit
   does.
-- **FR-012b**: The three artifacts FR-012 names are the sweep's **whole edit
-  surface**, and that MUST be enforced rather than assumed. Two rules, at two
-  different points, because they catch different failures:
+- **FR-012b**: The three artifacts FR-012 names are the sweep's whole
+  **amendment** edit surface, and that MUST be enforced rather than assumed.
+
+  **The word amendment is load-bearing, and the check MUST be scoped to it.**
+  This rule governs writes that carry reviewer-derived content into the
+  planning artifacts. It does **not** govern the sweep's own bookkeeping, which
+  writes the workflow file under FR-012a, FR-013, and FR-014 — a path that is
+  deliberately not one of the three. An implementation that applied the rule-2
+  membership test to every write rather than to amendment writes would stop the
+  run on its own first log row, because the workflow file fails a three-member
+  equality test by construction, and it would take FR-013's durable record and
+  FR-009's skip key down with it. The two write classes are already separated by
+  commit — FR-012a puts bookkeeping in its own commit, staging the workflow file
+  alone, while an amendment commit stages the one artifact it amended — and that
+  separation is what the check keys off.
+
+  Two rules, at two different points, because they catch different failures:
   1. **At classification.** A comment whose requested change lies outside
      `spec.md`, `plan.md`, and `tasks.md` in the current feature directory MUST
      NOT take `amended`. It takes `deferred`, and the refused target MUST be
@@ -1361,16 +1397,23 @@ proceeds.
   behavior and its unit coverage.
 - **Secondary surfaces, if any**: docs/process — both phase-execution
   references and the workflow-file protocol entry for the Feedback Sweep Log.
-- **Projected reviewable LOC**: **515 to 745, midpoint near 630.** This figure
-  is Plan's, derived by hand from its Declared File Operations block, and it
-  **corrected an earlier estimate in this section upward** rather than
+- **Projected reviewable LOC**: **515 to 830, midpoint near 630.** That is the
+  live figure, and it is the one every other document states: `plan.md`
+  Technical Context and its budget-result table, `tasks.md`, and the workflow
+  file's Phase 5 fallback evidence chain. Read the range as 515 to 830; the
+  bullets below record how it got there, because the low end and the midpoint
+  have not moved since Plan and only the high end has.
+
+  Plan derived 515 to 745 by hand from its Declared File Operations block, and
+  that **corrected an earlier estimate in this section upward** rather than
   confirming it. Two anchors in that earlier estimate were measured against the
   wrong precedent: the parse was sized against a 35-line function body when the
   comparable behavior — closed vocabulary, record builder, observation
   validators, classifier — is 162 lines in this codebase's style, and a
   protocol entry was allowed 15 to 25 lines when the only comparable shipped
-  entry is 58. The trust-boundary requirements added after that correction move
-  the high end toward roughly 775.
+  entry is 58. The trust-boundary requirements added after that correction moved
+  the high end to roughly 775, and the error-handling pass moved it again to the
+  810-to-830 recorded in the next bullet but one.
 - **Projected production files**: **7.** Not the 8 or 9 an earlier draft of this
   section carried. The difference is that neither `SKILL.md` is edited at all:
   the Codex variant sits three words below its 8000-word cap, so it cannot take

@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain — *closed at Clarify, 2026-08-20*
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -33,12 +33,20 @@
 
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`
 
-### The one incomplete item
+### The one incomplete item — resolved at Clarify, 2026-08-20
 
-Three `[NEEDS CLARIFICATION]` markers remain, deliberately, at the maximum the
-command allows. Each is a scope-affecting choice with more than one defensible
-answer and no safe default, and each was left for the Clarify phase rather than
-guessed:
+**All three markers are closed and the spec now carries none.** Clarify session
+1 answered each: FR-010 takes one class per comment with `amended` dominating a
+divergent comment; FR-014 uses a fourth Consensus Resolution Log `Type` value,
+`Sweep`, which counts toward the Round-2 escape-rate metric; and FR-012 takes
+one commit per amendment with the log writes riding a separate `chore:`
+bookkeeping commit. The record below is the Specify-time state, kept because it
+explains why each was deferred rather than guessed.
+
+Three `[NEEDS CLARIFICATION]` markers remained at Specify, deliberately, at the
+maximum the command allows. Each is a scope-affecting choice with more than one
+defensible answer and no safe default, and each was left for the Clarify phase
+rather than guessed:
 
 1. **FR-010, classification granularity.** When one recognized export block
    carries several objections deserving different dispositions, is the class
@@ -72,9 +80,10 @@ guessed:
   excluded item (slice 2, ART-010, the existing post-implementation loop,
   deliberately-not-built, deferred), as the feature description required, rather
   than omitting them silently.
-- **Success criteria are technology-agnostic.** All eight are stated as
-  observable outcomes (dispositions recorded, replies posted, runs stopped,
-  edits attributable) rather than as internal mechanics.
+- **Success criteria are technology-agnostic.** All eight at Specify — thirteen
+  after Clarify and the checklist passes — are stated as observable outcomes
+  (dispositions recorded, replies posted, runs stopped, edits attributable)
+  rather than as internal mechanics.
 
 ### Validation iterations
 

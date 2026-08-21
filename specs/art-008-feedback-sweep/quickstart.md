@@ -208,7 +208,19 @@ there, it must free words first.
 3. **Check the harness manifest text.** Remediation and rollback strings must
    not contain the substring `bash` in any casing.
 
-4. **Run the full gate**: `python3 tests/speckit-pro/run-all.py`, zero failures.
+4. **Regenerate the docs-site reference pages.** This slice adds a test file and
+   a `suite-manifest.json` entry, and a tracked change under the test tree
+   restales the generated reference. Run the install once per worktree first:
+
+   ```bash
+   pnpm --dir docs-site install --frozen-lockfile
+   pnpm --dir docs-site reference:generate
+   ```
+
+   Skipping this does not fail quietly — `validate-docs` is inside the gate in
+   step 5, so a stale reference surfaces there rather than here.
+
+5. **Run the full gate**: `python3 tests/speckit-pro/run-all.py`, zero failures.
 
 ---
 

@@ -116,7 +116,7 @@ than a dropped candidate (FR-006).
 | `untrusted_author` | Association outside the allowlist (FR-005). Reported as "not swept: untrusted author". |
 | `self_reply` | The sweep's own earlier reply (FR-006). |
 | `already_logged` | The id already appears in the Feedback Sweep Log (FR-009). |
-| `thread_resolved` | The review thread is resolved, so it was never read (FR-004). |
+| `thread_resolved` | The review thread is resolved. FR-004's query filter means one normally never reaches the helper; this reason covers the one that does, so it is excluded visibly rather than dropped. See the `thread_resolved` field row above. |
 
 ### The self-reply test needs both halves
 

@@ -647,13 +647,26 @@ production files alone (9) return 352 / ok / 1. ART-008 therefore ships as
 
 | Slice | Branch | Scope | Projected |
 |---|---|---|---|
-| 1, the checkpoint | `art-008-feedback-sweep` (from `main`) | read both comment surfaces, trust filter, export recognition, classify, consensus-amend, Feedback Sweep Log and CRL rows, per-comment replies, stop-or-proceed, unreadable-PR stop | re-measure at Plan |
+| 1, the checkpoint | `art-008-feedback-sweep` (from `main`) | read both comment surfaces, trust filter, export recognition, classify, consensus-amend, Feedback Sweep Log and CRL rows, per-comment replies, stop-or-proceed, unreadable-PR stop | measured at Plan: **515-830, midpoint ~630**, 7 production files |
 | 2, artifact freshness | `art-008-feedback-sweep-slice-2` (from slice 1) | whole-set regeneration after amendments, stale-page detection on a clean sweep, draft-description refresh | re-measure at Plan |
 
 Primary surface: harness/adapter | Budget result: warning accepted for the
-whole spec; neither slice is expected to reach the 800 block, so no exception
-pragma is claimed. Full rationale and Q&A:
+whole spec; no exception pragma is claimed. Full rationale and Q&A:
 [.process/ART-008-design-concept.md](.process/ART-008-design-concept.md).
+
+**Slice 1 re-derivation (2026-08-20, at Plan and after the checklist passes).**
+The scaffold expectation recorded above — that neither slice would reach the 800
+block — **did not hold for slice 1**. The estimator cannot measure this slice at
+all (it classifies none of these paths as production and returns `projected: 0`
+with a `pass` that carries no information), so Plan sized it by hand from its
+Declared File Operations block at 515 to 745. The trust-boundary and
+error-handling checklist passes then moved the high end to roughly **810 to 830,
+which crosses the 800 block**; the midpoint of about 630 and the 7 production
+files leave it at **two warns**. The crossing is accepted and recorded rather
+than re-sliced, and no exception pragma is claimed, because the accepted
+exception classes are refactor, infra, and upgrade and this slice is net-new
+feature work. Slice 2 is still unmeasured. See `specs/art-008-feedback-sweep/`
+`spec.md` §Reviewability Budget for the rejected levers.
 
 **Scope:**
 - Two vertical slices (amended 2026-08-20 at scaffold; originally one) —
