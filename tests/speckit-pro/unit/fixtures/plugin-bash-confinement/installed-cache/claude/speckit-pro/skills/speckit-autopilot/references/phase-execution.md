@@ -926,7 +926,13 @@ For each page written to `specs/<feature>/artifacts/`, two positive tests:
 | Test | The page fails when |
 | --- | --- |
 | it is not its own template | the file is byte-identical to `speckit-pro/artifact-gallery/templates/<entry-id>.html` |
-| it is not still sample content | the body carries a `class="sample-notice"` element |
+| it is not still sample content | the body carries a sample-banner element: `class="sample-notice"`, `class="notice"`, or `class="note"` |
+
+**The banner test covers only the templates that carry a banner.** Seven of the
+shipped templates mark theirs, under three different class names, and the rest
+carry none at all. On those, byte-identity is the only guard, and one byte of
+drift defeats it. Neither test is a substitute for reading the page when the
+outcome is in doubt.
 
 **A page that fails either test is a gap for that page — whatever the agent
 reported — and the file is deleted.** Deleting is the point. The shipped

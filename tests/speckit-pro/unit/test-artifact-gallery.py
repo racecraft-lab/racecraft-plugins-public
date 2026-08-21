@@ -10192,6 +10192,229 @@ class PromptTunerProducerTests(unittest.TestCase):
         self.assertEqual(check_w3(GALLERY_ROOT), [])
 
 
+# ---------------------------------------------------------------------------
+# Group X - authored spec artifacts are filled, not shipped templates
+# ---------------------------------------------------------------------------
+
+SPECS_ROOT = REPO_ROOT / "specs"
+SPEC_ARTIFACT_GLOB = "*/artifacts/*.html"
+SAMPLE_NOTICE_CLASSES = ("sample-notice", "notice", "note")
+"""Every class the shipped corpus uses to mark its "this is a sample" banner.
+
+Three names, not one, because the templates were ported at different times and
+never converged: ``sample-notice`` in code-approaches, flowchart,
+implementation-plan and module-map; ``notice`` in spec-explainer; ``note`` in
+annotated-diff and pr-writeup. Naming only the first would leave sixteen of the
+twenty templates uncovered, spec-explainer among them, which is one of the pages
+the original defect shipped unfilled.
+
+The remaining thirteen templates carry no banner at all. There, byte-identity in
+``check_x1`` is the only guard, and one byte of drift defeats it. That is a
+stated limit of the assertion rather than a gap to close here: closing it would
+mean fingerprinting template prose, which goes stale on every template edit.
+"""
+
+
+def _spec_artifacts(specs_root: Path) -> list[Path]:
+    """Every authored spec artifact page; an absent specs root is zero files.
+
+    Zero artifacts is a pass, not a failure. Specs are archived out of this tree
+    once they merge, so a repository state carrying no ``specs/*/artifacts/`` at
+    all is ordinary and must not turn this group red.
+
+    This walks the working tree rather than asking git what is committed, since
+    no check in this file shells out and the standard library offers nothing
+    better. The consequence is recorded rather than left to read as an oversight:
+    on a clean checkout the working tree *is* the committed tree, so the sweep
+    equals the assertion the group states; run locally it additionally reaches an
+    artifact that is not committed yet, which catches the drift one step earlier.
+    """
+    if not specs_root.is_dir():
+        return []
+    return sorted(path for path in specs_root.glob(SPEC_ARTIFACT_GLOB) if path.is_file())
+
+
+def _spec_artifact_label(specs_root: Path, path: Path) -> str:
+    """A repository-relative label, so a failure names a path a reader can open."""
+    return f"{specs_root.name}/{path.relative_to(specs_root).as_posix()}"
+
+
+def check_x1(gallery_root: Path, specs_root: Path = SPECS_ROOT) -> list[str]:
+    """X1 - no authored spec artifact is byte-identical to its shipped template.
+
+    The gallery templates ship as complete worked examples rather than blank
+    scaffolds, so a page copied out and never filled renders as a finished
+    document about a fictional feature. Every "is each region populated?" check
+    passes on that page, which is why this comparison has to be positive: the
+    only reliable evidence the author did the work is that the bytes moved.
+
+    A basename with no template under ``templates/`` is not a failure. Gallery
+    entries come and go, and an artifact matching none of them is out of scope
+    rather than wrong.
+    """
+    templates_root = gallery_root / TEMPLATES_DIR
+    failures: list[str] = []
+    for path in _spec_artifacts(specs_root):
+        template = templates_root / path.name
+        if not template.is_file():
+            continue
+        if path.read_bytes() == template.read_bytes():
+            failures.append(
+                f"{_spec_artifact_label(specs_root, path)}: byte-identical to "
+                f"{TEMPLATES_DIR}/{path.name} — the shipped template was committed unfilled, so the page "
+                "documents the template's sample feature rather than this spec"
+            )
+    return failures
+
+
+def _banner_text(document: str) -> str | None:
+    """The page's sample-banner text, flattened, or ``None`` when it has none."""
+    for class_name in SAMPLE_NOTICE_CLASSES:
+        match = re.search(
+            rf'<([a-z]+)\b[^>]*class="[^"]*\b{re.escape(class_name)}\b[^"]*"[^>]*>(.*?)</\1>',
+            document,
+            re.S,
+        )
+        if match:
+            return " ".join(re.sub(r"<[^>]+>", " ", match.group(2)).split())
+    return None
+
+
+def check_x2(gallery_root: Path, specs_root: Path = SPECS_ROOT) -> list[str]:
+    """X2 - no authored spec artifact keeps its template's sample banner.
+
+    The test is the banner's *text*, not its class. Class alone cannot decide
+    this: the filled spec-explainer page legitimately keeps ``class="notice"``
+    for a scope note of its own, so a check that failed on the class would fail
+    a correct page. Comparing the flattened banner text against the same
+    template's banner separates the two exactly — a filled page has written its
+    own words there, and an unfilled one still carries the template's.
+
+    Both roots are read, so ``gallery_root`` is genuinely used here. The banner
+    is located by matching the element rather than the raw document, because a
+    filled artifact keeps the template's ``.sample-notice`` CSS rule inside
+    ``<style>`` after removing the paragraph that used it, and a substring scan
+    would report a page that is in fact correct.
+    """
+    failures: list[str] = []
+    templates = gallery_root / TEMPLATES_DIR
+    for path in _spec_artifacts(specs_root):
+        template = templates / path.name
+        if not template.is_file():
+            continue
+        template_banner = _banner_text(_document_text(template))
+        if template_banner is None:
+            continue
+        if _banner_text(_document_text(path)) == template_banner:
+            failures.append(
+                f"{_spec_artifact_label(specs_root, path)}: keeps the banner text from "
+                f"{TEMPLATES_DIR}/{path.name} verbatim — the template's own line saying the page "
+                "is a worked example, which a filled page replaces with its own words"
+            )
+    return failures
+
+
+GROUP_X_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (("X1", check_x1), ("X2", check_x2))
+
+
+class SpecArtifactFillTests(unittest.TestCase):
+    """Group X against the committed specs tree."""
+
+    def test_group_x_passes_against_the_committed_spec_artifacts(self) -> None:
+        for name, check in GROUP_X_CHECKS:
+            with self.subTest(msg=name):
+                self.assertEqual(check(GALLERY_ROOT, SPECS_ROOT), [])
+
+
+# --- Group X fixtures ------------------------------------------------------
+
+
+class SpecArtifactFillFixtureCase(GalleryFixtureCase):
+    """A synthetic templates directory and specs tree, both under the temp root.
+
+    Nothing is written into the repository: the real specs tree holds four filled
+    artifacts today and is empty again once this spec archives, so every way the
+    group can fail is exercised here instead.
+    """
+
+    template_name = "module-map.html"
+    template_text = (
+        "<!doctype html>\n<title>NIMBUS-101 Offline Draft Sync</title>\n"
+        '<style>.sample-notice { color: red; }</style>\n'
+        '<p class="sample-notice">This page is a sample.</p>\n'
+    )
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.write(f"{TEMPLATES_DIR}/{self.template_name}", self.template_text)
+        self.specs = self.gallery / "specs"
+
+    def write_artifact(self, text: str, *, spec: str = "some-feature", name: str | None = None) -> Path:
+        path = self.specs / spec / "artifacts" / (name or self.template_name)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("w", encoding="utf-8", newline="") as handle:
+            handle.write(text)
+        return path
+
+    @property
+    def filled_text(self) -> str:
+        return (
+            "<!doctype html>\n<title>Some Feature Module Map</title>\n"
+            '<style>.sample-notice { color: red; }</style>\n<p>The real module map.</p>\n'
+        )
+
+
+class SpecArtifactFillFixtureTests(SpecArtifactFillFixtureCase):
+    """X1 and X2 against synthetic specs trees built in a temporary directory."""
+
+    def test_a_filled_artifact_passes(self) -> None:
+        self.write_artifact(self.filled_text)
+
+        self.assertEqual(check_x1(self.gallery, self.specs), [])
+        self.assertEqual(check_x2(self.gallery, self.specs), [])
+
+    def test_x1_rejects_an_artifact_byte_identical_to_its_template(self) -> None:
+        self.write_artifact(self.template_text)
+
+        self.assertReports(check_x1(self.gallery, self.specs), self.template_name, "byte-identical")
+
+    def test_x1_accepts_an_artifact_differing_by_a_single_byte(self) -> None:
+        """Non-vacuity in the other direction: X1 compares bytes, not shape."""
+        self.write_artifact(self.template_text.replace("NIMBUS-101", "NIMBUS-102"))
+
+        self.assertEqual(check_x1(self.gallery, self.specs), [])
+
+    def test_x2_rejects_an_artifact_carrying_the_sample_notice_element(self) -> None:
+        self.write_artifact(self.template_text.replace("NIMBUS-101", "NIMBUS-102"))
+
+        self.assertReports(check_x2(self.gallery, self.specs), self.template_name, "banner text")
+
+    def test_x2_reads_the_element_rather_than_the_stylesheet(self) -> None:
+        """A filled artifact keeps the template's ``.sample-notice`` CSS rule."""
+        filled = self.filled_text
+        self.assertIn(".sample-notice", filled)
+
+        self.write_artifact(filled)
+
+        self.assertEqual(check_x2(self.gallery, self.specs), [])
+
+    def test_x2_reads_a_multi_class_attribute(self) -> None:
+        self.write_artifact(self.template_text.replace('"sample-notice"', '"callout sample-notice"'))
+
+        self.assertReports(check_x2(self.gallery, self.specs), self.template_name, "banner text")
+
+    def test_an_artifact_with_no_matching_template_is_out_of_scope(self) -> None:
+        self.write_artifact(self.template_text, name="not-a-gallery-entry.html")
+
+        self.assertEqual(check_x1(self.gallery, self.specs), [])
+
+    def test_an_absent_specs_root_passes(self) -> None:
+        self.assertFalse(self.specs.exists())
+
+        self.assertEqual(check_x1(self.gallery, self.specs), [])
+        self.assertEqual(check_x2(self.gallery, self.specs), [])
+
+
 class CheckSignatureTests(unittest.TestCase):
     """Enforce the rule the rest of this module depends on.
 
@@ -10270,6 +10493,8 @@ CHECK_GROUPS: tuple[type[unittest.TestCase], ...] = (
     DecisionExportContractTests,
     DecisionExportContractFixtureTests,
     DecisionAccessibilityContractTests,
+    SpecArtifactFillTests,
+    SpecArtifactFillFixtureTests,
 )
 
 

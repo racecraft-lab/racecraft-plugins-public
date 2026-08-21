@@ -218,10 +218,10 @@ budget below the runner's 32 KiB bounded-input limit, because that limit
 rejects the whole request rather than the offending string (FR-008).
 
 **Scale/Scope**: One new read-only helper operation, seven modified production
-files, seven test and fixture files. Two platform variants.
+files, eight test and fixture files. Two platform variants.
 
 **Reviewability Budget**: harness/adapter (single primary surface); **hand-derived
-515 to 830 reviewable LOC, midpoint near 630**; 7 production files; 14 authored
+515 to 830 reviewable LOC, midpoint near 630**; 7 production files; 15 authored
 files total; **warn on reviewable LOC and on production files, block on neither.**
 Derived by hand from the Declared File Operations block below, because the
 estimator cannot measure this slice. See "Reviewability Budget, derived by hand".
@@ -253,6 +253,7 @@ Test and fixture surface (authored, verification):
 - NEW tests/speckit-pro/unit/fixtures/feedback-sweep/comment-corpus.json
 - NEW tests/speckit-pro/unit/fixtures/feedback-sweep/expected-envelopes.json
 - MODIFIED tests/speckit-pro/suite-manifest.json
+- MODIFIED tests/speckit-pro/unit/test-artifact-gallery.py
 
 Generated surface (regenerate, never hand-edit, not counted as reviewable):
 
@@ -307,14 +308,14 @@ This was run against this plan rather than predicted. Verbatim output:
 
 ```json
 {"tool":"estimate-reviewable-loc","status":"pass","projected":0,
- "declared_files":{"production":0,"new":4,"modified":18,"total_entries":22},
+ "declared_files":{"production":0,"new":4,"modified":19,"total_entries":23},
  "greenfield":false,
  "thresholds":{"warn":400,"block":800,"greenfield_multiplier":1.5,
                "base_warn":400,"base_block":800}}
 ```
 
-Read it closely. The block parsed correctly — all **22** entries were seen, 4
-new and 18 modified — and **`production` is 0**. The helper is not failing to
+Read it closely. The block parsed correctly — all **23** entries were seen, 4
+new and 19 modified — and **`production` is 0**. The helper is not failing to
 read the plan; it is reading it correctly and finding nothing it recognizes as
 production code. `projected` is therefore 0, and `status` is `pass` against a
 warn line of 400 it never had a chance to cross.
