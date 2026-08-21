@@ -676,8 +676,13 @@ dl.faq dd {
         label: amended, answered, deferred, or no action. Amended items go through the
         existing consensus machinery to edit spec.md, plan.md, or tasks.md, land as
         one commit per amendment, and get recorded in a new Feedback Sweep Log. Every
-        handled comment gets exactly one reply. If anything was amended, the run stops
-        and asks for re-review; if nothing was, it walks straight into task work.</p>
+        handled comment gets exactly one reply. Every outbound write — amendment lines,
+        log cells, reply bodies — passes through one redaction surface that replaces
+        secret-shaped spans with a placeholder and proceeds rather than stopping, so
+        the sweep always converges; the files it writes for its own transport live in
+        a directory that ignores itself in any repository. If anything was amended,
+        or any redaction fired, the run stops after its writes have landed and asks
+        for re-review; otherwise it walks straight into task work.</p>
     </div>
     <!-- FILL:tldr:END -->
 
