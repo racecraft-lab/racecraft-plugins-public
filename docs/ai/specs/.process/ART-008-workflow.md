@@ -70,6 +70,18 @@ Each phase requires **human review and approval** before proceeding:
 | G6.5 | Before Implement | Composite confidence meets the autonomous implementation threshold |
 | G7 | After Each Implementation Phase | Tests pass, manual verification complete |
 
+### Gate Record
+
+Appended by the autopilot as each gate resolves. This is the durable verdict
+store the Step 1.1 coverage guard reads when a Workflow Overview row claims a
+terminal status.
+
+- G0 gate: PASS — 2026-08-20. Suite 7659/7659 (L1 1469, L4 5998, L5 192), zero
+  failures. TYPECHECK, BUILD, and LINT are `N/A` for this repository
+  (`detect-commands` reports a Python test-runner stack with no build,
+  typecheck, or lint entry point). Reviewability setup gate `warn` with empty
+  `blockers`. Constitution principles I through VI verified below.
+
 ---
 
 ## Prerequisites
@@ -85,14 +97,58 @@ Each phase requires **human review and approval** before proceeding:
 | IV. Test Coverage Before Merge | Layer 4 golden fixtures for the comment parse: both surfaces, every `authorAssociation` value, all three export leads, already-logged ids, and each corroboration status the sweep stops on | Layer 4 suite |
 | VI. KISS, Simplicity & YAGNI | One helper, one log table, no new phase row, no page-to-source mapping, no template edits (Design Concept Q1, Q6, Q9, Q10) | Code review against the design concept |
 
-**Constitution Check:** ✅ (no conflicts identified during scoping; verify again after Plan)
+**Constitution Check:** ✅ Verified (initial, 2026-08-20). No conflicts
+identified during scoping and none introduced by the baseline; verify again
+after Plan and after Implement.
+
+### Phase 0 Baseline (recorded 2026-08-20)
+
+| Field | Value |
+|-------|-------|
+| Python | 3.11.0 |
+| SpecKit CLI | `specify 0.14.2` on PATH (`check-prerequisites` reports 0.11.8 from its own resolution) |
+| `check-prerequisites` | `all_pass: true`, all 8 checks pass |
+| Test-count baseline (G0) | **7659** passed of 7659 — L1 1469, L4 5998, L5 192 |
+| `UNIT_TEST` / `FULL_VERIFY` | `python3 tests/speckit-pro/run-all.py` |
+| `BUILD` / `TYPECHECK` / `LINT` | `N/A` — `detect-commands` finds a test-runner-only Python stack |
+| Preset | `speckit-pro-reviewability` v1.0.0 (spec, plan, and tasks templates) |
+| Extensions | archive, git, verify, verify-tasks, retrospective, speckit-utils |
+| Local settings | none — no `.claude/speckit-pro.local.md`; runner defaults apply |
+| Confidence-gate mode | `advisory` (no flag in argv, no local config) |
+| Archive sweep | dry-run, zero eligible previously merged specs, nothing written |
+| Tier-2 relocation | no candidate. `specs/brand-001-racecraft-identity-system` is suppressed twice over: `non_speckit_namespace` (first segment `brand` is all-alpha and is neither `prsg` nor `spec`) and already-current (`structureVersion: 1`) |
+
+**The G0 baseline is preserved, not recomputed.** A later `--stage implement`
+run compares its post-implementation count against 7659; recapturing the
+baseline after planning would compare the tree against itself.
+
+#### Doctor Health Check (2026-08-20)
+
+Verdict: **warnings, zero failures. Nothing blocks Specify.** Structure,
+templates (5 of 5), constitution (996 words), and the Python runner (6 of 6
+required files, valid manifest) all pass. Three warnings, each expected:
+
+1. Agent config, verbatim `no command files registered`, checked at
+   `.claude/commands/speckit.*.md`. A stale check pattern that predates the
+   slash-command-to-skills migration. `.specify/init-options.json` carries
+   `"ai_skills": true` and 27 `speckit-*` skills are registered under
+   `.claude/skills/`, so registration is present where this version of the
+   check no longer looks.
+2. `specs/art-008-feedback-sweep` reports `spec ✗ plan ✗ tasks ✗`. That is the
+   correct pre-Specify state for this run.
+3. `specs/brand-001-racecraft-identity-system` reports the same shape. Unrelated
+   to this run and not archive-eligible.
+
+The shipped doctor implements structure, templates, agent config, runner,
+constitution, and features. It has no scripts, extensions, or git check, so
+those three are reported here as not implemented rather than as passes.
 
 ### Feature State (namespaced branch)
 
 | Field | Value |
 |-------|-------|
-| Feature dir | `specs/art-008-feedback-sweep` (pin via `.specify/feature.json` at run time, as the ART-007 and ART-012 runs did) |
-| `ON_FEATURE_BRANCH` | expected **true**: the runner's `check-prerequisites` recognizes namespaced worktree branches; the `feature.json` pin serves the vendored `check-prerequisites.sh` path whose `^[0-9]{3}-` regex does not match this repo's spec IDs |
+| Feature dir | `specs/art-008-feedback-sweep` — pinned at run time in `.specify/feature.json` (gitignored, so it is never committed), as the ART-007 and ART-012 runs did |
+| `ON_FEATURE_BRANCH` | **false**, and the scaffold-time prediction of `true` was wrong. `check-prerequisites` reports `worktree=true,feature=false`: the flag is defined as `^[0-9]{3}-` against the branch name, which `art-008-feedback-sweep` does not match. The value is a naming heuristic, not a statement about whether a branch exists. The Specify subagent is therefore told explicitly not to create a feature branch, because the branch does exist and is checked out here; the `feature.json` pin gives the vendored `check-prerequisites.sh` its feature directory |
 | `before_specify` → `speckit.git.feature` (`optional: false`) | **SKIP**: the branch already exists and is checked out in this worktree; the hook's purpose is satisfied |
 
 ### Reviewability Setup Gate (recorded at scaffold time, 2026-08-20)
@@ -140,6 +196,7 @@ the gate can read one spec's number.
 | **Spec ID** | ART-008 |
 | **Name** | Feedback Sweep (slice 1 of 2: the checkpoint) |
 | **Branch** | `art-008-feedback-sweep` |
+| **Stage** | plan |
 | **Dependencies** | ART-007 (Draft-PR Emission): complete, PR #445, archived 2026-08-18 |
 | **Enables** | The trusted human checkpoint the staged workflow exists for; ART-008 slice 2 (artifact freshness) stacks on this branch |
 | **Priority** | P1 |
