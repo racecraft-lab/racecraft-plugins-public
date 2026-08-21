@@ -6,8 +6,8 @@
   "status": "in_progress",
   "stage": "plan",
   "prior_run_note": "completed_archived",
-  "updated_at": "2026-08-21T02:34:02Z",
-  "active_step": "Phase 4: Checklist - security Consensus",
+  "updated_at": "2026-08-21T02:51:42Z",
+  "active_step": "Phase 4: Checklist - error-handling",
   "reclaimed_from": {
     "workflow_file": "docs/ai/specs/.process/ART-005-workflow.md",
     "spec_id": "ART-005",
@@ -378,7 +378,7 @@
       "status": "in_progress",
       "domains": {
         "security": {
-          "status": "remediated, consensus in flight",
+          "status": "completed",
           "items": 50,
           "gaps_found_my_grep": 8,
           "gaps_found_helper": 4,
@@ -395,7 +395,38 @@
             "Phase 7's commit path uses git add -A, so an amendment commit inheriting it would stage the whole worktree and defeat the allowlist"
           ],
           "routed_to_consensus": 3,
-          "consensus_dispatches": 9
+          "consensus_dispatches": 9,
+          "consensus": {
+            "items": 3,
+            "analyst_dispatches": 9,
+            "retries": 1,
+            "retry_reason": "one codebase analyst died to an API error mid-response and was re-dispatched",
+            "round_2_items": 0,
+            "escape_hatches": 0,
+            "human_review": 0,
+            "outcomes": {
+              "I8 analyst payload and trust unit": "3 of 3 unanimous on all four sub-positions",
+              "I9 amendment edit surface": "3 of 3, two-point structure with the write point as the enforcement boundary",
+              "I10 authenticated-identity input": "3 of 3 in substance; the apparent split was two layers, not a disagreement"
+            },
+            "added_requirements": [
+              "FR-006b",
+              "FR-007f",
+              "FR-008b",
+              "FR-012c",
+              "FR-012d"
+            ],
+            "corrections_to_orchestrator_or_checklist_text": [
+              "FR-007e framed removal as the primary safety claim; delimiting is the boundary and removal is defence in depth, and the spec now says which is cut first under pressure",
+              "the checklist said an empty authenticated account collapses the test to its marker half; with exact comparison the author clause is permanently false, so no comment is ever excluded. Same outcome, opposite mechanism",
+              "the spec's Reviewability Budget still carried 325-485 LOC and 8-or-9 production files after Plan corrected both to 515-745 and 7; reconciled"
+            ],
+            "threshold_fact": "production files warn above 6 and block above 8, so the 7 this slice carries is a warn while the 9 the earlier draft claimed would have been a block",
+            "filed_not_fixed": [
+              "the shared consensus prompt templates interpolate external text raw in all three variants; FR-007e fixes only this slice's own payload",
+              "no job-scoped edit-target guard exists on the shared consensus write path; FR-012b guards only the sweep's caller"
+            ]
+          }
         }
       }
     }
@@ -456,15 +487,15 @@
     },
     {
       "step": "Phase 4: Checklist - security",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - security Consensus",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - error-handling",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - error-handling Consensus",

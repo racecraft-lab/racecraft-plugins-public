@@ -176,7 +176,9 @@ returns exactly.
 
 **The budget verdict is the finding to read.** See the Reviewability Budget
 section: the slice no longer fits the ~330 it was scoped against, the honest
-range is 325 to 485, and the Plan estimator is structurally blind to it because
+range at the time was 325 to 485, which Plan later corrected upward to 515 to
+745 by re-measuring against the right precedents. The Plan estimator is
+structurally blind to either figure, because
 none of this slice's paths satisfy its production-file test. It will report zero
 and pass. Plan sizes this by hand.
 
@@ -430,6 +432,35 @@ proceeds.
   never matches, so it becomes the next run's candidate and produces another
   reply without end. SC-003 would be unreachable rather than merely delayed.
   This is why FR-006 is a requirement and not hygiene.
+- **FR-006b**: FR-006's author half depends on an input — the account this run
+  authenticated as — and that input has two failure modes the requirement must
+  name, because both silently disable the exclusion FR-006a says the loop
+  depends on.
+
+  **Provenance.** The orchestrator MUST read that account from the live
+  authenticated session at call time, the same way FR-004a requires the
+  author-association field be read fresh rather than assumed. It MUST NOT come
+  from configuration or a remembered value. This is the same shape of
+  dependency FR-004a already names, and it needs saying because no shipped
+  reference in this repository documents how the orchestrator learns its own
+  login, so nothing today guarantees the value arrives correct.
+
+  **Validation.** The value MUST be a non-empty string after surrounding
+  whitespace is stripped. Absent, empty, or whitespace-only MUST return an input
+  error rather than proceed. The deterministic parse cannot go further than
+  presence: its contract forbids it from reaching the network, so it has no
+  second, independently sourced value to compare against, and verification is
+  therefore the orchestrator's job through provenance rather than the parse's
+  through checking.
+
+  **What actually breaks, stated correctly.** An empty value does not reduce the
+  test to its marker half. Comparison is exact, so an empty account matches no
+  real comment author, the author condition is permanently false, and the whole
+  conjunction is therefore always false — meaning **no comment is ever excluded
+  as a self-reply**, including the sweep's own. The endless-reply outcome
+  FR-006a describes follows, by disabling the rule rather than by narrowing it.
+  The distinction matters because the two failures have opposite shapes and a
+  reader who expects the wrong one would test for the wrong thing.
 
 **Deterministic recognition**
 
@@ -493,10 +524,30 @@ proceeds.
   The remainder of the body still reaches the analyst, because FR-007d keeps
   the reviewer's genuine objections in play. It MUST be delimited and labelled
   as reviewer-supplied data rather than concatenated into the prompt as
-  instruction, which is the standard control for external content entering a
-  model prompt. Removal and labelling are complementary: removal handles the
-  strings the registry knows, labelling handles the rest, and neither claims to
-  handle the other's share.
+  instruction.
+
+  **Delimiting is the boundary; removal is defence in depth.** The two are not
+  equals and the spec says which is which, because a later reader deciding what
+  to cut under pressure must cut the right one. Delimiting is the control that
+  works against text the registry has never seen, which is every adversarial
+  case; removal only ever handles the fixed strings this product itself ships.
+  Removal is nonetheless worth keeping, because recognition already computes the
+  match span, so stripping it reuses work already paid for. **If cost ever
+  forces one of the two out, removal goes and delimiting stays.**
+- **FR-007f**: Removal MUST cover **every** matched registered line, not the
+  first. This is not a hypothetical: the registry holds each template's markdown
+  and prompt leads as separate entries, so a reviewer who pastes both copy
+  outputs from one page into one comment — an ordinary workflow this feature's
+  own design invites — produces two matches in the same window. Removing only
+  the first leaves the second sitting inside the delimited block, which is the
+  first-match sanitization failure that recurs across input-validation defects.
+  The helper's export record therefore reports **all** matched line numbers in
+  ascending order rather than a single one.
+
+  One implementation constraint, because getting it wrong silently corrupts the
+  body: removal indexes the line-ending-normalized **original** lines, never the
+  trailing-whitespace-stripped copies matching uses for comparison. The two
+  differ, and indexing the wrong one misaligns the reconstructed remainder.
 - **FR-008**: Candidate filtering, export recognition, and candidate reporting
   MUST be deterministic: the same observed pull-request comment data MUST
   always yield the same candidate set. Determinism requires two normalizations
@@ -513,7 +564,10 @@ proceeds.
   **for each of the five excluded association values**; one recognized export
   on each of the two comment surfaces; a disposition cell containing a pipe and
   a newline; a comment whose author cannot be resolved; a comment carrying the
-  self-reply marker; and the ordinary-comment path. A separate test MUST derive the expected
+  self-reply marker; a body carrying **two** registered lines, asserting both
+  are reported and both removed; an empty and a whitespace-only authenticated
+  account, each returning an input error; and the ordinary-comment path. A
+  separate test MUST derive the expected
   set from the gallery manifest and the templates themselves — every template
   the manifest says exports, in every kind it declares — and assert the
   registry matches. Deriving rather than hardcoding is what keeps the registry
@@ -523,6 +577,24 @@ proceeds.
   so covering ten templates costs the same machinery as covering three. That
   test reads the templates and edits none of them, so it does not cross the
   no-template-edits boundary and triggers no payload regeneration.
+- **FR-008b**: Two assertions pin the trust boundary itself rather than any one
+  behavior, because both guard a leak that would otherwise be invisible.
+
+  First, **no comment body appears anywhere in the parse's own output**. The
+  records it returns carry the id, the surface, the author and association, the
+  truncation flag, and the export metadata, and no body field at all. That is
+  already how the contract is shaped; a fixture asserting it turns an implicit
+  shape into a tested invariant, so a later field addition cannot quietly
+  reintroduce the most dangerous leak path.
+
+  Second, **an excluded comment's body and every registered line never appear in
+  an assembled analyst payload**, asserted against a captured payload the way
+  SC-009's boundary is asserted against captured commands. This is the half that
+  cannot be made structural: the orchestrator retains its own raw observation
+  and legitimately reads candidate bodies to build payloads, so what must be
+  proven is that it never reads one for an id the parse excluded. That is
+  judgment checked against a fixture rather than a type the runner can enforce,
+  and saying so is more honest than implying a guarantee that does not exist.
 
 **Idempotency and classification**
 
@@ -605,12 +677,42 @@ proceeds.
 
   Rule 1 alone would be prose a mis-routed item walks past; rule 2 alone would
   turn an ordinary out-of-scope request into a stopped run. Together the
-  ordinary case is handled gracefully and the defect case fails closed. This is
-  the least-privilege half of the trust boundary: FR-005 governs **whose** text
-  is acted on, and FR-012b governs **what that text can reach**. The repository
-  security policy treats a write grant broader than the job requires as a
-  finding in its own right, so an amendment step able to write any path would
-  be one even if FR-005 never failed.
+  ordinary case is handled gracefully and the defect case fails closed. Of the
+  two, **rule 2 is the enforcement boundary and rule 1 is disposition**: a
+  decision made once upstream is not a check made at the point of use, and only
+  the check at the point of use survives a future caller that skips the
+  classifier.
+
+  This is the least-privilege half of the trust boundary: FR-005 governs
+  **whose** text is acted on, and FR-012b governs **what that text can reach**.
+  The repository security policy treats a write grant broader than the job
+  requires as a finding in its own right, so an amendment step able to write any
+  path would be one even if FR-005 never failed.
+- **FR-012c**: Rule 2's comparison MUST be exact membership over resolved
+  paths, never containment. Resolve the candidate target and all three allowed
+  paths, then test the candidate for equality against that three-member set. A
+  containment or prefix test would admit anything beneath the feature
+  directory — its checklists, its contracts — which is not the stated surface,
+  and prefix comparison against an unresolved path is a recurring traversal
+  defect in its own right. The check MUST also reject a target that is a
+  symbolic link, and reject one whose every parent up to the feature directory
+  is not, following the hardening the repository's existing pre-write path
+  validator already performs; that validator checks repository boundary and
+  traversal safety but not job-scoped file identity, so this reuses its shape
+  rather than its predicate. The feature directory MUST arrive as an explicit
+  input rather than being inferred: the one inference mechanism available keys
+  off a branch-name pattern that **this feature's own branch does not match**,
+  so inference would resolve to the wrong specification or to nothing.
+- **FR-012d**: The write-point stop MUST report in the same shape the other two
+  stop conditions use, naming the defect — the refused target and the comment
+  id — and the resume path, which is to fix the classification and re-run.
+  FR-017 and FR-019 both name a report; a third stop condition that halted
+  without one would read as a bare failure beside them.
+
+  The `deferred` reply for rule 1 MUST NOT imply future action. This document
+  elsewhere requires deferred work to name a follow-up owner, and rule 1 has
+  none: the request is declined, not scheduled. Word it as recorded and not
+  acted on, with the target outside the sweep's edit surface.
 
 **Durable record**
 
@@ -740,28 +842,34 @@ proceeds.
   behavior and its unit coverage.
 - **Secondary surfaces, if any**: docs/process — both phase-execution
   references and the workflow-file protocol entry for the Feedback Sweep Log.
-- **Projected reviewable LOC**: **325 to 485, midpoint near 400.** The earlier
-  figure of ~330 was set against 18 requirements and is now stale: Clarify
-  added thirteen suffixed requirements, four of them substantial — pagination
-  to exhaustion, a registry spanning ten templates in two kinds, the
-  conversation-surface reply the spec itself calls work with no prior art, and
-  four-cause stop reporting. Estimated bottom-up against the nearest shipped
-  analogue: the corroboration classifier is 35 lines for a six-outcome
-  classification over one supplied observation, while this parse must also
-  normalize line endings, truncate at a byte budget with a per-comment flag,
-  whole-line match a ten-line window, filter an eight-value enum, apply the
-  anchored-marker-plus-author self-reply test, and emit a reasoned exclusion
-  list. That is 110 to 160 lines plus 45 to 60 of registry data, against
-  roughly 8 in the registry, 70 to 110 in each phase-execution reference, 15 to
-  25 in the workflow-file protocol, and 5 to 10 in the consensus protocol.
-- **Projected production files**: **8 or 9**, not 7. `consensus-protocol.md`
-  must change for the fourth `Type` value, and both `SKILL.md` files carry
-  helper names today.
-- **Budget result**: **at or over the 400 warn line, and under the 800 block.**
-  Stated plainly rather than rounded down. The slice is still one primary
-  surface and does not approach the block threshold, so it proceeds; but it no
-  longer fits the number this spec was scoped against, and Plan owns the
-  decision of whether to accept the warn or re-slice.
+- **Projected reviewable LOC**: **515 to 745, midpoint near 630.** This figure
+  is Plan's, derived by hand from its Declared File Operations block, and it
+  **corrected an earlier estimate in this section upward** rather than
+  confirming it. Two anchors in that earlier estimate were measured against the
+  wrong precedent: the parse was sized against a 35-line function body when the
+  comparable behavior — closed vocabulary, record builder, observation
+  validators, classifier — is 162 lines in this codebase's style, and a
+  protocol entry was allowed 15 to 25 lines when the only comparable shipped
+  entry is 58. The trust-boundary requirements added after that correction move
+  the high end toward roughly 775.
+- **Projected production files**: **7.** Not the 8 or 9 an earlier draft of this
+  section carried. The difference is that neither `SKILL.md` is edited at all:
+  the Codex variant sits three words below its 8000-word cap, so it cannot take
+  a line, and the Claude variant is left alone to keep the two in step.
+- **Budget result**: **two warns, zero blocks.** Over the 400 reviewable-LOC
+  warn and over the 6 production-file warn; under the 800 LOC block and the
+  8-file block, on a single primary surface. The file count matters more than it
+  looks: the block fires above 8, so the 7 this slice carries is a warn, while
+  the 9 the earlier draft claimed would have been a block. Getting that number
+  right was the difference between proceeding and stopping.
+- **The warn is accepted rather than re-sliced.** The only split that reaches
+  400 while still shipping a working checkpoint does not exist: the parse and
+  the two phase-execution references are the irreducible core, and the split
+  that would fit — records in one slice, consensus and replies and
+  stop-or-proceed in another — ships a checkpoint that reads feedback and acts
+  on none of it. Deferring the three serialization-family registry rows saves 15
+  to 30 lines and costs FR-007b. Re-slicing remains the operator's call, made
+  against real numbers rather than a rounded-down one.
 - **The Plan estimator cannot check this, and must not be read as if it had.**
   `estimate-reviewable-loc` projects from production files only, and it counts
   a file as production only when its path sits under `src/`, `app/`, `lib/`, or
@@ -851,10 +959,24 @@ Named owners, so none of these is a silent omission.
   resume path for every stop is to repair the tool or the record and re-run,
   the observation is retaken on every invocation, and a skip flag on a
   checkpoint whose whole purpose is to be unskippable deserves its own scoping
-  rather than an addition here. No owner is named because none exists: this is
-  the one entry in this section without one, and saying so is the honest
-  alternative to assigning it to a spec that has not agreed to it. The next
-  spec to touch the sweep inherits the case rather than rediscovering it.
+  rather than an addition here. No owner is named because none exists, which is
+  the honest alternative to assigning it to a spec that has not agreed to it.
+  The next spec to touch the sweep inherits the case rather than rediscovering
+  it.
+- **Owned by no spec yet**: hardening the shared consensus prompt templates so
+  every caller delimits external text as reviewer-supplied data. All three of
+  those templates interpolate their content raw today, with no delimiter and no
+  treat-as-data instruction, and all three analyst roles describe their input by
+  source rather than by trust level. FR-007e supplies that control **locally**,
+  in how this slice builds its own payload, and deliberately does not rewrite
+  the shared template that three other callers also use. Recorded so this
+  slice's local fix is not mistaken for having closed the general case.
+- **Owned by no spec yet**: a job-scoped edit-target guard on the shared
+  consensus write path. The component that proposes an edit emits a free-form
+  file path and nothing validates it; the three-file enumeration in the shared
+  protocol turns out to be justified by write contention rather than by scope
+  safety. FR-012b guards only the sweep's own caller into that path. The general
+  surface predates this slice and stays open.
 - **Owned by no spec yet, pending a concrete case**: which class heads the log
   row and reply when a single comment mixes only `answered` and `deferred`
   points, with nothing amend-worthy present. Neither class routes to consensus
@@ -921,6 +1043,15 @@ Named owners, so none of these is a silent omission.
 - SC-004's phrase "write-capable set" is shorthand for the author-association
   allowlist FR-005 defines. The association is a proxy for write access rather
   than a permissions check, as FR-005 states.
+- The author allowlist and the content controls answer two different questions
+  and neither substitutes for the other. FR-005 is an **authorization** gate: it
+  decides who may cause the sweep to act at all, and gating elevated processing
+  on the poster's standing is ordinary practice. FR-007e is a **content** control
+  and stays in force regardless of who posted. Letting the first silently
+  upgrade the second — treating a trusted author's relayed text as vetted
+  because the relayer is trusted — is the documented failure mode behind
+  real-world indirect-injection incidents, so the spec keeps the two axes
+  separate on purpose.
 - **The unit of trust is the comment, not the text inside it.** FR-005 is
   evaluated once per comment, against that comment's author association. A
   trusted author who quotes, pastes, or forwards text from an untrusted source
