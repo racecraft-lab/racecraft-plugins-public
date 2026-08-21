@@ -104,15 +104,17 @@ def digest_over(record: object) -> str:
     return "sha256:" + hashlib.sha256(canonical_json(record).encode("utf-8")).hexdigest()
 
 
-class CorpusCompositionTests(unittest.TestCase):
-    """Exactly twelve role contracts, independent booleans, and a contract-only
-    role that binds everything while never running (FR-011, FR-012, SC-005)."""
-
+class _RoleCorpusFixture:
     def setUp(self) -> None:
         self.assertIsNotNone(claude_role_corpus, "claude_role_corpus is not importable")
         self.module = claude_role_corpus
         self.corpus = self.module.load_corpus()
         self.roles = self.module.role_index(self.corpus)
+
+
+class CorpusCompositionTests(_RoleCorpusFixture, unittest.TestCase):
+    """Exactly twelve role contracts, independent booleans, and a contract-only
+    role that binds everything while never running (FR-011, FR-012, SC-005)."""
 
     def test_the_governed_corpus_binds_exactly_twelve_role_contracts(self) -> None:
         self.assertEqual(len(self.corpus["roles"]), 12)
@@ -222,15 +224,9 @@ class CorpusCompositionTests(unittest.TestCase):
         self.assertEqual(self.module.validate_corpus(self.corpus), ())
 
 
-class FixtureDigestTests(unittest.TestCase):
+class FixtureDigestTests(_RoleCorpusFixture, unittest.TestCase):
     """Every fixture binds its full contract and a canonical-JSON digest that is
     recomputed at acceptance and at replay (FR-033)."""
-
-    def setUp(self) -> None:
-        self.assertIsNotNone(claude_role_corpus, "claude_role_corpus is not importable")
-        self.module = claude_role_corpus
-        self.corpus = self.module.load_corpus()
-        self.roles = self.module.role_index(self.corpus)
 
     def test_every_fixture_binds_the_full_contract_field_set(self) -> None:
         for role_id, role in sorted(self.roles.items()):
