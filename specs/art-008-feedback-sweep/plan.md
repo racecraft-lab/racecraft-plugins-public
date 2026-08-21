@@ -23,6 +23,116 @@ boundary and the determinism guarantee inside a fixture-pinned Python surface
 while leaving classification, consensus, commits, and replies where they can
 only be orchestrator work.
 
+## Trust Boundary Enforcement
+
+This feature carries public pull-request text into agents that edit the planning
+artifacts, so the trust boundary is the design, not a caveat on it. Six
+mechanisms implement it. Each names where it runs, because "enforced in the
+helper" and "expected of the orchestrator" are different guarantees and the
+distinction is the point.
+
+**1. The allowlist runs in the helper, ahead of everything.** `sweep-pr-feedback`
+applies the FR-005 author-association filter itself and returns `candidates` and
+`excluded`. The candidate records carry id, surface, author, association,
+truncation flag, and export metadata — and **no body**. An untrusted comment's
+text is therefore absent from the helper's output by construction, not by an
+orchestrator remembering to drop it. This is the placement the spec's own
+security posture requires: the filter is a fixture-pinned Python surface, so it
+is provable, while orchestrator judgment is not.
+
+**2. Classification consumes the candidate list and nothing else.** The
+orchestrator holds the full observation it captured, untrusted bodies included,
+so the helper's filter is only as good as what the orchestrator does next. The
+rule: the classification loop iterates `candidates`, and a body is read out of
+the captured observation **only for an id present in that array**. No path
+enumerates the observation directly. Without this, mechanism 1 filters an
+envelope while the orchestrator reads around it — the filter would be real and
+bypassed at the same time.
+
+**3. The recognized-export payload (FR-007e).** For a recognized comment the
+consensus payload is the helper's export record plus the body with every matched
+registered line removed. The remainder is delimited and labelled as
+reviewer-supplied data rather than concatenated as instruction. Tagging without
+removal does not satisfy FR-007c; that reading is available from FR-007c's
+wording and is the one this plan forecloses.
+
+The labelling half is new work, not an existing guarantee this slice inherits.
+The shipped Gap Remediation prompt template in `consensus-protocol.md` is a bare
+`## Gap Description` heading over an inserted-text placeholder, with no
+delimiter and no "treat this as data" instruction, and the three analyst
+definitions describe their input as "the relevant context" — trusted framing.
+The analysts' `disallowedTools` frontmatter blunts blast radius but says nothing
+about the input, and the grounding note governs their **output**. So a sweep
+that hands a reviewer body to that template inherits raw interpolation. The
+sweep supplies its own delimiting rather than assuming the protocol does it.
+
+**4. The edit surface is an allowlist, checked twice (FR-012b).** At
+classification, a requested change outside `spec.md`, `plan.md`, and `tasks.md`
+in the feature directory takes `deferred` with the refused target named in the
+disposition and the reply. At the write, the resolved target path is validated
+against the same three-entry set in code before any write; a violation stops the
+run. That stop reports like the others this feature defines: it names the
+refused target path, the comment id it came from, and the resume path, so the
+operator can tell a mis-routed amendment from a broken tool. FR-017 and FR-019
+both fix a report shape for their stops, and a stop without one would be the
+only silent halt in the sweep. The two checks catch different failures — prose a
+mis-routed item walks past, and a defect that would otherwise write outside the
+surface — so neither replaces the other.
+
+This fills a repo-wide hole rather than restating a local rule. The consensus
+synthesizer's output contract accepts a free-form `File: <path>` and nothing
+downstream validates it, and the three-artifact enumeration in
+`consensus-protocol.md` is justified there by **write contention** — serializing
+concurrent edits — not by scope safety. No allowlist, no "only these three
+files" guard, and no rejection of an out-of-scope edit target exists anywhere in
+the repository today. The shape to copy is
+`speckit-pro/artifact-gallery/SPA-CONTRACT.md`, which already names
+pull-request-derived values untrusted and answers the escaping question with
+"the value goes somewhere else" rather than with a quoting rule. That contract
+is scoped to generated HTML; this is the same discipline applied to an edit
+target.
+
+**Staging, and the `git add -A` hazard.** Each amendment commit stages exactly
+the one artifact path it amended, never a directory. The precedent is the
+`Draft PR` bookkeeping commit in `phase-execution.md`, which stages the workflow
+file alone because the directory "also holds untracked run byproducts that a
+directory-wide add would sweep in". The hazard is specific and easy to miss: the
+sweep is a **Phase 7 setup step**, and Phase 7 is the one phase whose existing
+commit path uses `git add -A`. An amendment commit that inherits that pattern
+would stage the entire worktree, which defeats the edit-surface allowlist at the
+last step — the check would pass on the target path while the commit carried
+everything else. Amendment and bookkeeping commits here follow the enumerated
+single-path form, not the Phase 7 form.
+
+**5. `self_login` is validated, not assumed.** It must be a non-empty string;
+absent or empty returns `invalid_input` rather than proceeding. This input
+supplies the author half of the FR-006 self-reply test, and an empty value makes
+that half unsatisfiable while the marker half still matches — which silently
+turns the two-condition test into a one-condition one, disables the exclusion,
+and reopens the non-convergence FR-006a describes. A required field that breaks
+a safety property when empty is worth validating explicitly.
+
+**6. The shell boundary is verified in both directions.** FR-004b covers reads
+and writes, so the captured-command fixture SC-009 rests on captures the **read**
+argv as well as the reply writes. Quickstart Scenario 4 pins the reply half;
+without the read half, "every command the sweep issues" is asserted against a
+fixture that inspects some of them. The helper never runs `gh` at all, and the
+request reaches it as one JSON document on stdin, so no field of it is ever a
+shell argument.
+
+**What these do not claim.** None of the six inspects a trusted body for
+adversarial content, and none is a permissions check. The trust unit is the
+comment, recorded in the spec's Assumptions: a write-capable author who quotes
+untrusted text is treated as endorsing it. Mechanisms 3 and 4 are what make that
+residual tolerable — one keeps a known imperative out of an analyst prompt, the
+other bounds what any analyst outcome can reach.
+
+**Budget note.** These add an estimated 15 to 30 reviewable lines over the table
+below: the path check and `self_login` validation are small, and the rest is
+reference prose. The high end moves from 745 toward roughly 775 against the 800
+block. That margin is thinner than the table states and is recorded here rather
+than absorbed silently.
+
 ## Technical Context
 
 **Language/Version**: Python 3.11+ standard library (runner helper); Markdown

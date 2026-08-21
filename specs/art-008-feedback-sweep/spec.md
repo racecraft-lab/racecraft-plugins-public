@@ -472,6 +472,31 @@ proceeds.
   them over a button choice would reproduce the "feedback becomes decoration"
   outcome this feature exists to remove. The one exception is the empty-export
   form in FR-007a, which carries no objections to act on.
+- **FR-007e**: FR-007c's "carried as metadata" is a claim about the payload
+  handed to a consensus analyst, so the payload MUST be specified rather than
+  left to the implementation. For a recognized comment, the orchestrator builds
+  that payload from two parts: the helper's export record — template id, kind,
+  and anchors — and the comment body **with every registered line the helper
+  matched removed**. The metadata stands where the removed line was. The
+  registered lead therefore never appears in an analyst prompt as text, which
+  is the whole of FR-007c's safety claim.
+
+  **A registry entry that only tags the comment while the raw body still
+  reaches the analyst does not satisfy FR-007c.** That arrangement would leave
+  the imperative addressed to a coding agent sitting in the analyst prompt
+  exactly as it does today, with a label attached that nothing acts on, and the
+  security-keyword routing still matches none of its phrasing. Recognition
+  would then be bookkeeping rather than a defense. This paragraph exists
+  because that reading is available from FR-007c's wording alone, and one
+  consensus analyst took it.
+
+  The remainder of the body still reaches the analyst, because FR-007d keeps
+  the reviewer's genuine objections in play. It MUST be delimited and labelled
+  as reviewer-supplied data rather than concatenated into the prompt as
+  instruction, which is the standard control for external content entering a
+  model prompt. Removal and labelling are complementary: removal handles the
+  strings the registry knows, labelling handles the rest, and neither claims to
+  handle the other's share.
 - **FR-008**: Candidate filtering, export recognition, and candidate reporting
   MUST be deterministic: the same observed pull-request comment data MUST
   always yield the same candidate set. Determinism requires two normalizations
@@ -557,6 +582,35 @@ proceeds.
   carrying every `answered`, `deferred`, and `no action` row FR-018 requires;
   a run with no handled comments writes no rows and takes no bookkeeping
   commit.
+- **FR-012b**: The three artifacts FR-012 names are the sweep's **whole edit
+  surface**, and that MUST be enforced rather than assumed. Two rules, at two
+  different points, because they catch different failures:
+  1. **At classification.** A comment whose requested change lies outside
+     `spec.md`, `plan.md`, and `tasks.md` in the current feature directory MUST
+     NOT take `amended`. It takes `deferred`, and the refused target MUST be
+     named in the row's disposition and in the reply, so the reviewer learns
+     their request was understood and declined rather than silently ignored.
+     No new class is introduced: `deferred` already means recorded and not
+     acted on now, already routes nowhere, and already stops nothing.
+  2. **At the write.** Before any amendment write, the resolved edit's target
+     path MUST be checked against that same three-entry set, in code rather
+     than in judgment. A target outside it MUST stop the run and MUST NOT be
+     written, partially or otherwise. Reaching this check means classification
+     already failed, so it is a defect report and not a routine path — which is
+     why it stops rather than downgrading quietly.
+  Each amendment commit MUST stage exactly the one artifact path it amended,
+  never a directory, so a stray file cannot ride along on an amendment. This
+  borrows the path-not-directory staging FR-012a already fixes for the
+  bookkeeping commit, for the same reason.
+
+  Rule 1 alone would be prose a mis-routed item walks past; rule 2 alone would
+  turn an ordinary out-of-scope request into a stopped run. Together the
+  ordinary case is handled gracefully and the defect case fails closed. This is
+  the least-privilege half of the trust boundary: FR-005 governs **whose** text
+  is acted on, and FR-012b governs **what that text can reach**. The repository
+  security policy treats a write grant broader than the job requires as a
+  finding in its own right, so an amendment step able to write any path would
+  be one even if FR-005 never failed.
 
 **Durable record**
 
@@ -637,6 +691,16 @@ proceeds.
   all, it writes no rows, posts no replies, takes no bookkeeping commit, and
   proceeds. The two cases are separated so the first does not read as requiring
   an empty commit on a pull request that carried no comments.
+- **FR-018a**: The run report FR-005 requires exists on **every** path the
+  sweep takes, not only the stopping one. FR-017 defines a report for the
+  amended path and FR-018 proceeds without stopping, which would otherwise
+  leave the proceed path with nowhere for FR-005's "not swept: untrusted
+  author" line to appear — and the proceed path is exactly where a run that
+  swept nothing but untrusted comments lands. Every run therefore reports each
+  observed comment's disposition, candidates and exclusions alike, with every
+  exclusion naming its reason. Stopping and proceeding differ in what follows
+  the report, never in whether one is produced. A run that observed no comments
+  at all reports that, which is a one-line report rather than an absent one.
 - **FR-019**: When a Draft PR row is present but the pull request cannot be
   read, the run MUST stop before any task work with a report naming the status
   and the resume path. That covers **four** of the six corroboration statuses
@@ -857,6 +921,18 @@ Named owners, so none of these is a silent omission.
 - SC-004's phrase "write-capable set" is shorthand for the author-association
   allowlist FR-005 defines. The association is a proxy for write access rather
   than a permissions check, as FR-005 states.
+- **The unit of trust is the comment, not the text inside it.** FR-005 is
+  evaluated once per comment, against that comment's author association. A
+  trusted author who quotes, pastes, or forwards text from an untrusted source
+  is treated as endorsing it, and the sweep makes no attempt to attribute
+  quoted spans inside a trusted body. This is an accepted residual rather than
+  an oversight, and naming it is what keeps it accepted: it bounds the
+  untrusted-input surface to social engineering of a write-capable account,
+  which is the same bound the platform's own agent controls draw when they
+  ignore events from users without write access. The residual is why FR-012b
+  constrains the edit surface and why FR-007c keeps a registered imperative out
+  of an analyst prompt — neither defense assumes the body is clean, only that
+  the account vouching for it is write-capable.
 - A fail-closed gate on a mandatory path is normally expected to ship with a
   documented override, and this slice ships none. That is recorded as a gap
   under Non-Goals rather than resolved here, and it is explicitly **not** a

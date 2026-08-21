@@ -6,8 +6,8 @@
   "status": "in_progress",
   "stage": "plan",
   "prior_run_note": "completed_archived",
-  "updated_at": "2026-08-21T02:11:05Z",
-  "active_step": "Phase 4: Checklist - security",
+  "updated_at": "2026-08-21T02:34:02Z",
+  "active_step": "Phase 4: Checklist - security Consensus",
   "reclaimed_from": {
     "workflow_file": "docs/ai/specs/.process/ART-005-workflow.md",
     "spec_id": "ART-005",
@@ -373,6 +373,31 @@
         "Recognition degrades for the three serialization templates, where the registered line is the header, so a header-trimmed paste is unrecognizable; accepted because FR-007d forbids recognition forcing a class",
         "Two stale references found and deliberately not fixed as out of scope: consensus-protocol.md still documents aggregate-crl as callable, and five templates cite a contracts/export-payload-contract.md that does not exist"
       ]
+    },
+    "checklist": {
+      "status": "in_progress",
+      "domains": {
+        "security": {
+          "status": "remediated, consensus in flight",
+          "items": 50,
+          "gaps_found_my_grep": 8,
+          "gaps_found_helper": 4,
+          "helper_undercount_reason": "count-markers gaps mode matches only the bare [Gap] literal and missed all four combined forms: [Gap, Ambiguity], [Coverage, Gap], [Gap, Edge Case], [Gap, Exception Flow]",
+          "gaps_remaining": 0,
+          "added_requirements": [
+            "FR-007e analyst payload for a recognized export",
+            "FR-012b the amendment edit surface, enforced at two points",
+            "FR-018a the run report exists on every path, not only the stopping one"
+          ],
+          "repo_wide_findings": [
+            "consensus-protocol.md interpolates item text into the analyst prompt raw, with no delimiter and no treat-as-data instruction, so FR-007c's protection does not exist upstream",
+            "no edit-target guard exists anywhere in the repository; the synthesizer emits a free-form File: <path> and nothing validates it, and the three-file enumeration is justified by write contention rather than scope safety",
+            "Phase 7's commit path uses git add -A, so an amendment commit inheriting it would stage the whole worktree and defeat the allowlist"
+          ],
+          "routed_to_consensus": 3,
+          "consensus_dispatches": 9
+        }
+      }
     }
   },
   "test_baseline_g0": {
@@ -435,7 +460,7 @@
     },
     {
       "step": "Phase 4: Checklist - security Consensus",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - error-handling",
