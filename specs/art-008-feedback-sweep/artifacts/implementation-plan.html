@@ -1164,7 +1164,7 @@ h1 {
     <dl class="stats">
       <div class="stat"><dt>Phases</dt><dd>6</dd></div>
       <div class="stat"><dt>Production files</dt><dd>7</dd></div>
-      <div class="stat"><dt>Projected size</dt><dd>515–830 lines</dd></div>
+      <div class="stat"><dt>Reviewable size</dt><dd>595–910 lines</dd></div>
       <div class="stat"><dt>Tasks</dt><dd>80</dd></div>
     </dl>
 <!-- FILL:plan-stats:END -->
@@ -1340,9 +1340,9 @@ h1 {
             <td>The allowlist runs inside the helper ahead of everything, and candidate records carry no body. Classification reads a body only for an id already in <code>candidates</code>. Delimiting is the boundary; removing matched export lines is defence in depth and is the part cut first under pressure.</td>
           </tr>
           <tr>
-            <th scope="row">The reviewability high end of 830 lines crosses the 800-line block, though the midpoint of roughly 630 sits under it.</th>
+            <th scope="row">The reviewable high end of 910 lines crosses the 800-line block, and the midpoint of roughly 710 no longer sits comfortably under it.</th>
             <td><span class="sev sev-medium"><span class="sev-bars" aria-hidden="true">●●</span>Medium</span></td>
-            <td>Recorded rather than hidden, with every lever rejected for a stated reason. T014 blocks phase 3 until the lever decision is made against a real measurement.</td>
+            <td>Recorded rather than hidden, with every lever rejected for a stated reason. The figure moved from 515–830 when the artifact verification fix landed on this branch; the production-file count is unchanged at 7 because both files were already declared. T014 blocks phase 3 until the lever decision is made against this larger figure.</td>
           </tr>
           <tr>
             <th scope="row">The sweep never converges: each re-run reprocesses comments it already handled and the stage can never proceed.</th>
