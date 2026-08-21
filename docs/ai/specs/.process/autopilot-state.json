@@ -6,7 +6,7 @@
   "status": "completed_pr_open",
   "stage": "plan",
   "prior_run_note": "completed_archived",
-  "updated_at": "2026-08-21T13:52:58Z",
+  "updated_at": "2026-08-21T16:42:40Z",
   "active_step": null,
   "reclaimed_from": {
     "workflow_file": "docs/ai/specs/.process/ART-005-workflow.md",
@@ -876,7 +876,15 @@
         "code-approaches",
         "module-map"
       ],
-      "note": "the author exhausted its budget composing its summary, after every fill region was populated; the orchestrator verified all 21 regions across the four pages rather than taking the fragment at face value"
+      "as_first_recorded": {
+        "claim": "generated 4, gaps 0, all 21 fill regions verified populated",
+        "corrected_on": "2026-08-21",
+        "what_was_true": "one page of four was filled. implementation-plan, code-approaches, and module-map were written to specs/art-008-feedback-sweep/artifacts/ byte-identical to their shipped templates and committed that way, still titled NIMBUS-101 Offline Draft Sync and still carrying the sample-content notice. Only spec-explainer was real.",
+        "why_the_check_passed": "the shipped gallery templates are complete worked examples, not blank scaffolds, so a fill region is populated prose on a page nobody touched. An emptiness check cannot distinguish an unfilled page; the test has to be positive.",
+        "why_the_count_was_wrong": "the artifact-author agent exhausted its budget composing its summary. The returned fragment was recorded as gaps: 0 when the honest reading was unknown. phase-execution.md already ruled that a report which cannot be read as an outcome list is a whole-set gap; the run did not apply it."
+      },
+      "repaired_by": "e621c5fc7 fix(art-008): fill the three draft artifact pages that shipped as templates",
+      "verification": "positive, per page: differs from speckit-pro/artifact-gallery/templates/<id>.html; carries no class=\"sample-notice\" element; names ART-008; anchors and headings intact; test-artifact-gallery 587/587"
     },
     "boundary_commit": "2e3641fa6 chore(art-008): close the plan stage boundary",
     "push": "origin/art-008-feedback-sweep",

@@ -685,6 +685,23 @@ the block.
 > `tasks.md`. The paragraph above is kept as the Plan-time record, not as the
 > current position.
 
+> **Amended after the plan stage closed (2026-08-21).** A defect found in the
+> committed draft artifacts was fixed on this branch rather than deferred, at the
+> operator's direction: three of the four generated pages had been committed
+> byte-identical to their shipped gallery templates. The repair added **80
+> authored lines across two production files** —
+> `references/phase-execution.md` and its Codex mirror
+> `references/phase-execution-codex.md` — which are the on-disk verification
+> post-condition described under "Artifact verification defect" below.
+>
+> **Both files were already inside the Declared File Operations block**
+> (`plan.md` lines 241 and 242), so the production-file count is **unchanged at
+> 7** and no new surface enters the slice. The reviewable range moves to **595 to
+> 910, midpoint near 710.** The high end was already over the 800 block before
+> this change; it is now over by more. The file-count warn is untouched, and
+> T014 still forces the lever decision before implementation phase 3, now against
+> the larger figure. Recorded, not hidden.
+
 **The warn is accepted rather than re-sliced, and the reasoning is on the
 record.** The only split lever that preserves a working checkpoint defers three
 serialization-family registry rows, which saves 15 to 30 lines and costs
@@ -1172,19 +1189,87 @@ in this table, because no feedback sweep runs against ART-008's own workflow.
 
 ---
 
+## Artifact verification defect
+
+**Found 2026-08-21, after the plan stage closed and draft PR #464 was open.**
+
+### What shipped
+
+Three of the four generated draft pages — `implementation-plan.html`,
+`code-approaches.html`, and `module-map.html` — were committed **byte-identical
+to their shipped gallery templates**. Each still carried the title
+`NIMBUS-101 Offline Draft Sync` and the sample-content notice reading "This is
+sample content … waiting to be filled with a real feature." Only
+`spec-explainer.html` had been filled. The pull-request body linked all four as
+though they were real.
+
+### Two causes, and only one is an orchestration slip
+
+1. **The gap count was read off a truncated report.** The `artifact-author`
+   agent exhausted its budget composing its summary. The returned fragment was
+   recorded as `gaps: 0` when the honest reading was *unknown*.
+   `phase-execution.md` already ruled that a report which cannot be read as an
+   outcome list is a whole-set gap; the run did not apply its own rule.
+2. **Nothing verified the files on disk, and that is a product gap.** Even a run
+   that had correctly recorded a whole-set gap would still have left three
+   template copies in `artifacts/` to be committed and pushed. The contract
+   trusted the report end to end.
+
+### Why the verification that was run did not catch it
+
+The check asked "is every fill region populated?" That question **cannot fail**
+on these templates. They ship as complete worked examples, not blank scaffolds,
+so an untouched page is populated prose. The test has to be positive: does the
+page differ from its template, and does it name this feature.
+
+### The fix
+
+- `references/phase-execution.md` and its Codex mirror gain an on-disk
+  post-condition: after the dispatch returns and **before the boundary commit**,
+  a page byte-identical to its template, or carrying a `class="sample-notice"`
+  element, is a gap regardless of the reported outcome, and the file is deleted.
+  Fail-open is preserved — outcomes are converted, never blocked.
+- The same references now state explicitly that a truncated summary is missing
+  information, never evidence of success.
+- The three pages were filled from the planning record and verified positively.
+- `autopilot-state.json` carries the corrected record under
+  `terminal_step.artifacts.as_first_recorded` rather than a silent overwrite.
+
+### Recommended follow-up, deliberately not taken here
+
+A repository assertion that no committed `specs/*/artifacts/*.html` is
+byte-identical to a shipped template would catch this class in CI. It belongs in
+`tests/speckit-pro/unit/test-artifact-gallery.py`, which is **not** in this
+slice's Declared File Operations block, so it is left for its own change rather
+than widened into this one.
+
+---
+
 ## Lessons Learned
 
 ### What Worked Well
 
--
+- Grounding the refilled pages in `plan.md`'s Declared File Operations block and
+  the design concept's Q&A log, rather than in recollection, kept every module
+  path and task ID checkable against a source.
 
 ### Challenges Encountered
 
--
+- A fail-open agent plus a report-only contract produced a silent, plausible
+  wrong answer. The pages looked finished; only a diff against the template
+  showed they were not.
+- The same truncation failure hit twice in one run, on the consensus
+  synthesizers and again on the artifact author. Both times a partial reply was
+  read as a complete one.
 
 ### Patterns to Reuse
 
--
+- **Verify positively.** Ask what an artifact *is*, not whether something is
+  missing from it. Emptiness checks pass on templates that ship populated.
+- **A truncated agent summary is missing information, not a clean result.** When
+  an agent dies mid-summary, record `unknown` and re-check the artifact on disk.
+- **Diff generated output against its source template** before committing it.
+  One `diff -q` per page would have caught this at the boundary commit.
 
 ---
 
