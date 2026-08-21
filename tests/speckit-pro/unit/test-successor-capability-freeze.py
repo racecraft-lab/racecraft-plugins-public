@@ -195,6 +195,17 @@ class _SuccessorFreezeModuleFixture:
         self.assertIsNotNone(claude_successor_freeze, "claude_successor_freeze is not importable")
         self.module = claude_successor_freeze
 
+    def publish(self, **overrides: object) -> object:
+        arguments: dict[str, object] = {
+            "source_ledger": source_ledger(),
+            "collection": self.module.build_collection_record(**collection_fields()),
+            "freeze_id": "CAR-003-FREEZE-2026-07-24-V1",
+            "published_at": "2026-07-24T18:30:00Z",
+            "pinned_client_version": PINNED_CLIENT,
+        }
+        arguments.update(overrides)
+        return self.module.publish_freeze(**arguments)
+
 
 class CollectionRecordProvenanceTests(_SuccessorFreezeModuleFixture, unittest.TestCase):
     """The runtime catalog collection record carries its own mandatory
@@ -461,17 +472,6 @@ class PublicationAuthorityTests(_SuccessorFreezeModuleFixture, unittest.TestCase
     """The publication gate fails closed: every blocking condition maps to a
     closed authority-failure member, and a blocked publication emits no freeze
     record at all (FR-028, FR-044, SC-016)."""
-
-    def publish(self, **overrides: object) -> object:
-        arguments: dict[str, object] = {
-            "source_ledger": source_ledger(),
-            "collection": self.module.build_collection_record(**collection_fields()),
-            "freeze_id": "CAR-003-FREEZE-2026-07-24-V1",
-            "published_at": "2026-07-24T18:30:00Z",
-            "pinned_client_version": PINNED_CLIENT,
-        }
-        arguments.update(overrides)
-        return self.module.publish_freeze(**arguments)
 
     def test_authority_failure_members_are_exactly_the_ten_closed_conditions(self) -> None:
         schema = load_json(FREEZE_SCHEMA_PATH)
@@ -1098,17 +1098,6 @@ class FailClosedEvidenceTests(_SuccessorFreezeModuleFixture, unittest.TestCase):
             for observation in probe_ladder("opus")
         ]
         return self.module.build_collection_record(**fields)
-
-    def publish(self, **overrides: object) -> object:
-        arguments: dict[str, object] = {
-            "source_ledger": source_ledger(),
-            "collection": self.module.build_collection_record(**collection_fields()),
-            "freeze_id": "CAR-003-FREEZE-2026-07-24-V1",
-            "published_at": "2026-07-24T18:30:00Z",
-            "pinned_client_version": PINNED_CLIENT,
-        }
-        arguments.update(overrides)
-        return self.module.publish_freeze(**arguments)
 
     def test_the_unlabeled_surface_sentinel_is_refused_by_the_classifier(self) -> None:
         self.assertNotEqual(self.module.UNLABELED_SURFACE, self.module.ADMITTING_SURFACE)
