@@ -32,8 +32,8 @@ captured during scoping.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Optional but recommended |
+| Specify | `/speckit-specify` | ✅ Complete | 19 FRs, 3 user stories, 11 acceptance scenarios, 9 edge cases, 8 success criteria. 3 `[NEEDS CLARIFICATION]` markers left for Clarify |
+| Clarify | `/speckit-clarify` | 🔄 In Progress | 3 sessions. All three run: they carry the seven deferred Open Questions and the hidden-coupling search, which exist independent of the marker count |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
@@ -81,6 +81,13 @@ terminal status.
   (`detect-commands` reports a Python test-runner stack with no build,
   typecheck, or lint entry point). Reviewability setup gate `warn` with empty
   `blockers`. Constitution principles I through VI verified below.
+- G1 gate: PASS — 2026-08-20. Routing decision, not a pass/fail check.
+  `specs/art-008-feedback-sweep/spec.md` carries **3** `[NEEDS CLARIFICATION]`
+  markers (FR-010 classification granularity, FR-012 commit granularity,
+  FR-014 Consensus Resolution Log type value), so the run routes to Clarify.
+  Counted with a loose `grep -c "NEEDS CLARIFICATION"`, because the runner's
+  own counter matches only the bare literal and misses the colon form the spec
+  template prescribes. Zero `[Gap]` and zero `HUMAN REVIEW NEEDED`.
 
 ---
 
@@ -379,13 +386,25 @@ human confirming plan changes.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | <!-- e.g., FR-001 through FR-020 --> |
-| User Stories | <!-- Count --> |
-| Acceptance Criteria | <!-- Count --> |
+| Functional Requirements | 19 — FR-001 through FR-019 |
+| User Stories | 3 — P1 read and classify, P2 amend/record/reply/stop, P3 unreadable-PR stop |
+| Acceptance Criteria | 11 acceptance scenarios, plus 9 edge cases and 8 success criteria |
+| `[NEEDS CLARIFICATION]` markers | 3 — FR-010, FR-012, FR-014 |
+| Declared reviewability budget | ~330 reviewable LOC, 7 production files, 10 total, within budget (projected); Plan re-derives |
+
+Two requirements the design concept did not name came out of the Specify pass
+and are kept: **FR-006**, which excludes the sweep's own replies from the
+candidate set (a trusted author with a new comment id passes both the trust
+filter and the already-logged check, so without this every run would sweep the
+previous run's output), and **FR-010's** open question about a single export
+block carrying several objections with different dispositions. The spec carries
+`one class per comment` as a working default in Assumptions so the surrounding
+requirements stay coherent while that stays open.
 
 ### Files Generated
 
-- [ ] `specs/art-008-feedback-sweep/spec.md`
+- [x] `specs/art-008-feedback-sweep/spec.md`
+- [x] `specs/art-008-feedback-sweep/checklists/requirements.md`
 
 ### SpecKit Traceability Markers
 

@@ -6,8 +6,8 @@
   "status": "in_progress",
   "stage": "plan",
   "prior_run_note": "completed_archived",
-  "updated_at": "2026-08-21T00:07:48Z",
-  "active_step": "Phase 1: Specify",
+  "updated_at": "2026-08-21T00:19:21Z",
+  "active_step": "Phase 2: Clarify - Feedback Sweep Log and Commit Protocol",
   "reclaimed_from": {
     "workflow_file": "docs/ai/specs/.process/ART-005-workflow.md",
     "spec_id": "ART-005",
@@ -129,6 +129,21 @@
       "constitution": "principles I-VI verified; Constitution Check set to Verified",
       "reviewability_setup": "warn, pass=true, blockers=[]",
       "architecture_patterns": "AGENTS.md working rules, repository orientation, and editing boundaries read and recorded"
+    },
+    "G1": {
+      "gate": "1",
+      "pass": true,
+      "route": "clarify",
+      "direct_marker_count": 3,
+      "counting_method": "loose grep -c 'NEEDS CLARIFICATION' on spec.md",
+      "markers": [
+        "FR-010 classification granularity",
+        "FR-012 commit granularity",
+        "FR-014 CRL type value"
+      ],
+      "gap_markers": 0,
+      "human_review_markers": 0,
+      "note": "Routing decision, not pass/fail. All three Clarify sessions run regardless of the count: they carry the seven deferred Open Questions and the hidden-coupling search the expired blind-spot pass left owed."
     }
   },
   "phase_results": {
@@ -151,6 +166,28 @@
         ],
         "wrote_anything": false
       }
+    },
+    "specify": {
+      "status": "completed",
+      "files": [
+        "specs/art-008-feedback-sweep/spec.md",
+        "specs/art-008-feedback-sweep/checklists/requirements.md"
+      ],
+      "functional_requirements": 19,
+      "user_stories": 3,
+      "acceptance_scenarios": 11,
+      "edge_cases": 9,
+      "success_criteria": 8,
+      "key_entities": 6,
+      "declared_budget": {
+        "reviewable_loc": 330,
+        "production_files": 7,
+        "total_files": 10,
+        "result": "within budget (projected)"
+      },
+      "feature_directory": "specs/art-008-feedback-sweep",
+      "branch_hook_skipped": "before_specify speckit.git.feature - branch already exists and is checked out",
+      "verification": "branch unchanged, no NNN- directory generated, no absolute-path leaks under specs/"
     }
   },
   "test_baseline_g0": {
@@ -177,11 +214,11 @@
     },
     {
       "step": "Phase 1: Specify",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Feedback Sweep Log and Commit Protocol",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 2: Clarify - Feedback Sweep Log and Commit Protocol Consensus",
