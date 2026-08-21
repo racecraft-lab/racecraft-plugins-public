@@ -6,8 +6,8 @@
   "status": "in_progress",
   "stage": "plan",
   "prior_run_note": "completed_archived",
-  "updated_at": "2026-08-21T00:19:21Z",
-  "active_step": "Phase 2: Clarify - Feedback Sweep Log and Commit Protocol",
+  "updated_at": "2026-08-21T00:55:03Z",
+  "active_step": "Phase 2: Clarify - Helper Envelope and Hidden Coupling",
   "reclaimed_from": {
     "workflow_file": "docs/ai/specs/.process/ART-005-workflow.md",
     "spec_id": "ART-005",
@@ -144,6 +144,12 @@
       "gap_markers": 0,
       "human_review_markers": 0,
       "note": "Routing decision, not pass/fail. All three Clarify sessions run regardless of the count: they carry the seven deferred Open Questions and the hidden-coupling search the expired blind-spot pass left owed."
+    },
+    "G2_partial": {
+      "note": "Not the G2 gate itself, which runs after session 3. Session 1 verification only.",
+      "markers_after_session_1": 0,
+      "human_review_markers": 0,
+      "clarifications_section_present": true
     }
   },
   "phase_results": {
@@ -188,6 +194,50 @@
       "feature_directory": "specs/art-008-feedback-sweep",
       "branch_hook_skipped": "before_specify speckit.git.feature - branch already exists and is checked out",
       "verification": "branch unchanged, no NNN- directory generated, no absolute-path leaks under specs/"
+    },
+    "clarify": {
+      "status": "in_progress",
+      "sessions": {
+        "1": {
+          "focus": "Feedback Sweep Log and commit protocol",
+          "questions_returned": 5,
+          "settled_by_parent": [
+            "FR-012 one commit per amendment; run-wide amendment commit excluded",
+            "FR-013a log writes ride a separate bookkeeping commit staging the workflow file alone",
+            "FR-014 Type value Sweep",
+            "FR-010 one class per comment, amended dominant",
+            "FR-013 column set and placement after the Consensus Resolution Log",
+            "FR-009 skip key is the log's comment-id column alone"
+          ],
+          "markers_cleared": 3,
+          "unresolved_for_consensus": 4,
+          "consensus_round_1_dispatches": 7,
+          "consensus": {
+            "round_1_items": 4,
+            "round_1_analyst_dispatches": 7,
+            "round_2_items": 0,
+            "escape_hatches": 0,
+            "human_review": 0,
+            "outcomes": {
+              "I1 escape-rate inclusion": "both-agree, include (spec-context + domain-researcher)",
+              "I2 divergent-objection dominance": "high-confidence, confirm amended-dominance (spec-context)",
+              "I3 log-to-log link": "both-agree, confirm CRL # plus bidirectional refinement (codebase + spec-context)",
+              "I4 interrupt window": "both-agree, per-amendment cadence and accept re-processing (codebase + spec-context)"
+            },
+            "defects_found_in_orchestrator_text": [
+              "FR-012a rationale claimed cadence was forced when only the ordering is",
+              "FR-012a borrowed the Draft PR write rules while silently dropping the repair rule",
+              "a run with zero amendments but at least one handled comment had no commit to carry its rows",
+              "SC-002 was falsified by the same edge case as SC-003, not just SC-003",
+              "the orchestrator's own zero-amendment fix would have mandated an empty commit on a comment-free sweep"
+            ],
+            "renumbered": "FR-013a renamed to FR-012a: it sits in the Amendment section beside FR-012, so the original label read out of order",
+            "synthesizer_delivery": "3 of 4 synthesizer results returned empty result fields. I3 re-emitted on request and matched what the orchestrator had already applied. I1 and I2 edits were derived and applied by the orchestrator directly from the analyst responses, which were unanimous, high confidence, and escape-hatch free."
+          },
+          "status": "completed"
+        }
+      },
+      "finding_out_of_scope": "consensus-protocol.md:157-171 documents aggregate-crl and parse-consensus-categories in the present tense as shipped scripts. Both were deleted by the XPLAT-009 shipped-Bash purge (XPLAT-010-deleted-tests-ledger.md rows 1 and 20) and nothing replaced them; the scripts directory holds only validate-autopilot-phase-coverage.py and the Codex mirror has no scripts directory. Separately, workflow-file-protocol.md:26 names a mandatory 'Routed Categories' CRL column that no committed workflow file uses. Both are stale shipped prose, outside ART-008 slice 1's scope, flagged for the operator."
     }
   },
   "test_baseline_g0": {
@@ -218,15 +268,15 @@
     },
     {
       "step": "Phase 2: Clarify - Feedback Sweep Log and Commit Protocol",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Feedback Sweep Log and Commit Protocol Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Helper Envelope and Hidden Coupling",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 2: Clarify - Helper Envelope and Hidden Coupling Consensus",

@@ -484,7 +484,7 @@ threads need their own acceptance scenario (Open Question 6).
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | | | |
+| 1 | Feedback Sweep Log and commit protocol | 5 returned, 5 answered; 4 sub-items routed to consensus | All 3 spec markers cleared. One commit per amendment (FR-012); log writes ride a separate bookkeeping commit, per amendment, with the zero-amendment case covered (FR-012a); `Sweep` as the CRL `Type`, counted in the escape-rate metric with `Type` as the source discriminator (FR-014); one class per comment with `amended` dominant (FR-010); the log's column set, placement, and bidirectional `CRL #` link (FR-013, FR-014); comment id as the sole skip key (FR-009). SC-002 and SC-003 qualified after consensus found both falsified by the spec's own edge case. Consensus resolved all 4 items in Round 1 |
 | 2 | | | |
 | 3 | | | |
 
@@ -942,6 +942,26 @@ The canonical closeout. Every row must reach Complete or an explicit
 - [ ] PR title passes the release-readiness gate; exactly one non-empty
       release-note fence in the body
 - [ ] Merged to main branch (human merges; Claude never merges)
+
+---
+
+## Consensus Resolution Log
+
+One row per consensus resolution, across every phase that runs consensus. The
+`Round` and `Categories` columns are what make the Round-2 escape-rate metric
+computable from this table alone.
+
+`Type` carries the canonical vocabulary from
+`references/consensus-protocol.md` §Logging: `Clarify`, `Gap`, `Finding`. The
+`Sweep` value this spec adds is for the feature being built and does not appear
+in this table, because no feedback sweep runs against ART-008's own workflow.
+
+| # | Type | Phase / Session | Item | Categories | Round | Outcome | Resolution | Analysts Used |
+|---|------|-----------------|------|------------|-------|---------|------------|---------------|
+| 1 | Clarify | Clarify S1 | Do `Type: Sweep` rows count toward the Round-2 escape-rate metric, or are they excluded from its denominator? | `[spec, domain]` | 1 | **both-agree**, include. High confidence from each, no escape hatch | Include. Spec-context found no project record tying the 10% threshold to any phase-specific calibration, so the exclude case had no basis in this repository's history; every occurrence of the figure is one generic sentence over "consensus items". Domain-researcher reached the same answer through fail-safe asymmetry, SPC rational subgrouping, SRE error-budget practice, and the Wald selection-bias structure, and proposed stratified source-tagging rather than exclusion. That refinement needed no new field: the `Type` column already is the discriminator. Applied to `spec.md` FR-014 | spec-context-analyst, domain-researcher |
+| 2 | Clarify | Clarify S1 | When one comment's objections diverge across classes, which class wins? | `[spec]` | 1 | **high-confidence**, confirm amended-dominance. No escape hatch | Confirmed, and shown not to be invented. The roadmap's 2026-07-28 decision fixed that amendments always stop for re-review three weeks before the four-class vocabulary existed, and FR-003 plus SC-007 forbid any tie-break that is not a fixed explicit rule, leaving amended-dominance as the only rule satisfying both. A full four-level order was rejected as structure with no behavioral consequence. Applied to `spec.md` FR-010 and Assumptions | spec-context-analyst |
+| 3 | Clarify | Clarify S1 | How is the Feedback Sweep Log to Consensus Resolution Log link represented on disk? | `[codebase, spec]` | 1 | **both-agree**, confirm the `CRL #` column. High confidence from each, no escape hatch | Confirmed, and made bidirectional. Codebase traced both Markdown table readers to their anchors and found neither is anchored near these tables, so a new table and a new column are invisible to both; it also found the same row-number reference already used as prose in ART-007 and ART-012 with no instance of a row ever being reordered. Its refinement, adopted: the Consensus Resolution Log row's item text also names the comment id, keying the reverse direction on an immutable GitHub id. Spec-context confirmed no machine consumer exists but that this argues for a structured field, and that the mandatory-column list is a floor the committed corpus already varies above. Applied to `spec.md` FR-014 and Key Entities | codebase-analyst, spec-context-analyst |
+| 4 | Clarify | Clarify S1 | Bookkeeping cadence, and does the spec accept re-processing after an interrupted run or add a detection-and-repair rule? | `[codebase, spec]` | 1 | **both-agree**, per-amendment cadence and accept re-processing. High confidence from each, no escape hatch | Confirmed. Codebase separated two hazard classes: existing batching precedents batch local unpushed work, while this window spans pushed commits and posted replies, and the only precedent for recording an external side effect pairs the record tightly with the single action. It showed every candidate live witness is closed by FR-006, FR-012, or FR-016, so the `Draft PR` repair rule cannot port. Spec-context established that SC-003 **and** SC-002 are both falsified as written by the spec's own edge case, and that FR-017 backstops the worse branch because any re-amendment stops the run before task work. Consensus also found three defects in the orchestrator's own first-pass text, all fixed: FR-012a's rationale over-claimed cadence as forced when only the ordering is, the borrowed `Draft PR` rules silently dropped `repair`, and a run with zero amendments but handled comments had no commit to carry its rows. The synthesizer additionally corrected the orchestrator's own fix, which would have mandated an empty commit on a comment-free sweep. Applied to `spec.md` FR-012a, SC-002, SC-003, and an edge case | codebase-analyst, spec-context-analyst |
 
 ---
 

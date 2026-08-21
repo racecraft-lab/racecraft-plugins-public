@@ -8,6 +8,84 @@
 
 **Input**: User description: "ART-008 slice 1 of 2, the checkpoint. The plan stage ends at an open draft pull request whose body indexes the planning artifacts, and the gallery's draft-stage pages export a reader's objections as markdown meant to be pasted into a pull-request comment. Nothing reads those comments back, so an implement-stage run starts task work without looking at the pull request and the checkpoint is decoration. Make the implement stage open with a feedback sweep that reads unresolved review threads and pull-request conversation comments, acts only on write-capable authors, recognizes exported markdown blocks by their lead sentence, classifies each comment as amended, answered, deferred, or no action, routes amendments through the existing consensus machinery, records every handled comment in a Feedback Sweep Log in the workflow file, replies once per comment, and then stops for re-review when anything was amended or proceeds into task work when nothing was. Artifact regeneration, stale-page detection, and the draft-description refresh belong to slice 2."
 
+## Clarifications
+
+### Session 1 — Feedback Sweep Log and commit protocol (2026-08-20)
+
+- **Q: One commit per amendment or one per run, and where does the log write
+  go?** → One commit per amendment. The Feedback Sweep Log and Consensus
+  Resolution Log writes ride a separate bookkeeping commit, one per amendment,
+  staging the workflow file alone under a `chore:` subject. A row that names
+  its commit cannot exist until that commit's sha does, so the separation is
+  forced rather than stylistic. Recorded as FR-012 and FR-012a.
+- **Q: Which Consensus Resolution Log type value marks a sweep amendment, and
+  how does the escape-rate metric treat it?** → `Sweep`, a fourth value beside
+  `Clarify`, `Gap`, and `Finding`. Sweep rows count toward the Round-2
+  escape-rate metric rather than being excluded from it. They come from the
+  same category-routed protocol and can be mis-routed the same way, and the
+  dispositions that would have distorted the metric never reach the log,
+  because FR-011 keeps answered, deferred, and no-action items out of
+  consensus. Recorded as FR-014.
+- **Q: One class per comment, or one item per recognized objection?** → One
+  class per comment. FR-015's one-reply-per-comment rule and FR-009's
+  comment-id skip key both take the comment as the unit, and splitting a
+  comment into several classified items would leave both undefined. When one
+  comment's objections diverge, `amended` dominates and the non-dominant
+  objections are named in the disposition and the reply. Recorded as FR-010.
+- **Q: What is the Feedback Sweep Log's exact shape and placement?** → Header
+  `| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |`
+  under its own `### Feedback Sweep Log` heading, immediately after
+  `### Consensus Resolution Log`. Placement is additive-safe: the phase-coverage
+  guard's table reader is heading-anchored, breaks on any line starting with
+  `#`, and carries no reference to the Consensus Resolution Log at all.
+  Recorded as FR-013.
+- **Q: What does a re-run read to skip, and what happens to an amendment whose
+  log row never landed?** → The skip key is the log's comment-id column alone.
+  An amendment that was pushed before its bookkeeping commit landed is
+  re-processed on the next run, because the log is the only record and FR-006
+  bars the sweep's own reply from serving as a fallback marker.
+  Per-amendment bookkeeping bounds that window to one item. Recorded as
+  FR-009, FR-012a, and an edge case.
+
+**Correction carried into this session.** The design concept's rationale for
+keeping the sweep record out of the Consensus Resolution Log leaned on an
+aggregator script. That script does not exist: it was removed by an earlier
+shipped-Bash purge and nothing replaced it. The decision it justified still
+holds on its own terms, and the reasoning above is restated without the tool.
+
+**Four sub-items went to consensus and all four resolved in Round 1**, with no
+escalation, no human-review flag, and no escape-hatch keyword. Each is recorded
+in the workflow file's Consensus Resolution Log.
+
+- **Escape-rate inclusion.** Confirmed: sweep rows count. Two analysts agreed
+  from independent directions. The project-decisions view found no record tying
+  the 10% threshold to any phase-specific calibration, so the case for
+  excluding sweep rows had no basis in this repository's history. The
+  external-practice view reached the same place through control-limit design
+  and selection bias, and added that a mixed population is answered by
+  stratifying rather than excluding. That refinement needs no new field: the
+  `Type` column already is the discriminator.
+- **Divergent-objection dominance.** Confirmed. The rule turns out not to be
+  invented: the roadmap's 2026-07-28 decision fixed that amendments always stop
+  for re-review three weeks before the four-class vocabulary existed, and
+  FR-003's cross-platform determinism requirement rules out any tie-break that
+  is not a fixed explicit rule. Amended-dominance is the only rule satisfying
+  both.
+- **Log-to-log link.** Confirmed, and made bidirectional. Neither Markdown
+  table reader in the codebase is anchored near these two tables, so a new
+  table and a new column are invisible to both. Keying the reverse direction on
+  the comment id rather than on a row position alone costs nothing and follows
+  the idiom the codebase already uses for durable pointers.
+- **Interrupt window.** Confirmed: per-amendment cadence, and the window is
+  accepted rather than closed. The `Draft PR` repair rule does not port,
+  because repair needs a live witness independent of the record and every
+  candidate witness here is closed by FR-006, FR-012, or FR-016. Consensus also
+  found three defects in this session's own first-pass text, all now fixed:
+  FR-012a's rationale over-claimed (the ordering is forced, the cadence is a
+  separate choice), the borrowed `Draft PR` write rules silently dropped the
+  `repair` rule, and a run with zero amendments but handled comments had no
+  commit to carry its rows.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - The sweep reads and classifies draft-PR feedback (Priority: P1)
@@ -159,6 +237,21 @@ proceeds.
 - A trusted comment posted after the sweep read the pull request but before the
   run stops: it is not in this run's candidate set and is picked up on the next
   run.
+- One comment carrying objections that pull in different directions, for
+  example one worth amending and one worth deferring: it takes the single class
+  `amended`, and the deferred objection is named in the disposition text and in
+  the reply rather than dropped.
+- An amendment committed and pushed whose bookkeeping commit never landed: the
+  log has no row, so the skip key does not see it and the comment is a
+  candidate again on the next run. Per-amendment bookkeeping bounds this to
+  one item, and the sweep's own reply cannot serve as a fallback marker
+  because FR-006 excludes it from the candidate set. The fresh consensus round
+  then either recognizes the artifact already carries the edit and classifies
+  the comment answered or no action — one new log row, one new reply, no
+  second edit — or amends again, in which case FR-017 stops the run for
+  re-review before any task work, the same as a first-time amendment. Neither
+  path lets a duplicate edit reach task work unreviewed; this is why the
+  window is accepted rather than closed with new detection machinery.
 
 ## Requirements *(mandatory)*
 
@@ -209,14 +302,18 @@ proceeds.
 **Idempotency and classification**
 
 - **FR-009**: The sweep MUST skip any comment whose id already appears in the
-  Feedback Sweep Log.
+  Feedback Sweep Log. The skip key is the log's comment-id column and nothing
+  else: the log is the sole source of "already handled", so a comment absent
+  from it is a candidate even when a reply to it exists on the pull request.
 - **FR-010**: Every trusted, unrecorded comment MUST be assigned exactly one
   class from the closed set: amended, answered, deferred, no action. No other
-  value is permitted. [NEEDS CLARIFICATION: when one recognized export block
-  carries several distinct objections that merit different dispositions, for
-  example one amended and one deferred, does the sweep assign a single class to
-  the whole comment, or one classified item per recognized objection with the
-  log keyed by comment id plus anchor?]
+  value is permitted. The comment is the unit of classification, so a
+  recognized export block carrying several distinct objections still yields one
+  class, one log row, and one reply; the recognized anchors are carried as
+  detail on that row. When one comment's objections would warrant different
+  classes, `amended` MUST win over the other three, and every non-dominant
+  objection MUST be named in the row's disposition text and in the reply, so
+  nothing is silently dropped.
 - **FR-011**: Only the `amended` class routes through the category-routed
   consensus protocol. The `answered`, `deferred`, and `no action` classes MUST
   NOT invoke consensus.
@@ -225,21 +322,64 @@ proceeds.
 
 - **FR-012**: For each amended item, the sweep MUST apply the
   consensus-resolved edit to `spec.md`, `plan.md`, or `tasks.md`, then commit
-  and push that change. [NEEDS CLARIFICATION: does the sweep make one commit
-  per amendment or one commit for the whole run, and is the Feedback Sweep Log
-  write its own bookkeeping commit separate from the amendment commits?]
+  and push that change as **one commit per amendment**. A single run-wide
+  amendment commit is not permitted: FR-013 requires each log row to name its
+  commit, FR-015 requires each reply to name the amending commit, and FR-017
+  reports a commit range, none of which survive collapsing every amendment into
+  one blob.
+- **FR-012a**: The Feedback Sweep Log and Consensus Resolution Log writes MUST
+  ride a separate bookkeeping commit and MUST NOT be folded into an amendment
+  commit. The ordering is forced, not stylistic: a row that names its commit
+  cannot exist until that commit's sha does, so an amendment's bookkeeping
+  commit MUST land after that amendment's own commit. The bookkeeping commit
+  stages the workflow file path alone, never the workflow directory, and takes
+  a `chore:` subject, borrowing the `Draft PR` row's staging shape and subject
+  convention but not its `repair` rule: repair depends on a live witness
+  independent of the record, and none exists here. FR-012 defines no
+  commit-message convention that recovers a comment id from `git log`, FR-006
+  excludes the sweep's own reply from the candidate set so it cannot serve as
+  a fallback marker, and FR-016 forecloses thread resolution as a signal, so
+  there is no second leg to corroborate against and no repair rule is
+  defined. One bookkeeping commit is taken per amendment, not per run — a
+  cadence choice, not a consequence of the ordering rule, justified
+  separately: it bounds the window in which an amendment is pushed but
+  unrecorded to a single item, which matters because the consensus protocol
+  producing the resolved edit is not proven deterministic beyond routing and
+  log aggregation, so a comment reprocessed inside that window is not
+  guaranteed to resolve the same way twice. A run with zero amendments but at
+  least one handled comment MUST still take exactly one bookkeeping commit,
+  carrying every `answered`, `deferred`, and `no action` row FR-018 requires;
+  a run with no handled comments writes no rows and takes no bookkeeping
+  commit.
 
 **Durable record**
 
 - **FR-013**: The sweep MUST write one Feedback Sweep Log row per handled
   comment, carrying comment id, surface, author, class, disposition, and
-  commit. The workflow file MUST be the sole store; no state-file mirror of the
-  sweep record may be written.
+  commit. The table sits under its own `### Feedback Sweep Log` heading
+  immediately after `### Consensus Resolution Log` in the workflow file, with
+  the header `| # | Comment ID | Surface | Author | Class | Disposition |
+  Commit | CRL # |`. The workflow file MUST be the sole store; no state-file
+  mirror of the sweep record may be written.
 - **FR-014**: Each amended item MUST additionally produce a Consensus
-  Resolution Log row linked to its Feedback Sweep Log row.
-  [NEEDS CLARIFICATION: which Consensus Resolution Log type value marks a
-  sweep amendment, and how must the existing round and escape-rate aggregation
-  treat that value so sweep rows do not distort the metric?]
+  Resolution Log row linked to its Feedback Sweep Log row. The link is
+  bidirectional and costs no extra column: the sweep row's `CRL #` names the
+  Consensus Resolution Log row, and that row's item cell — the column naming
+  what was resolved, `Question/Gap/Finding` in the canonical header and `Item`
+  or `Question` in several committed workflow files — names the comment id, the
+  way existing rows already name their source label. Naming the id rather than
+  only a row position keys the reverse direction on an immutable value. The
+  row's `Type`
+  value is `Sweep`, a fourth value beside the shipped `Clarify`, `Gap`, and
+  `Finding`. Sweep rows COUNT toward the Round-2 escape-rate metric the log is
+  the data source for: they are produced by the same category-routed protocol
+  and can be mis-routed the same way, so excluding them would blind the metric
+  precisely where the input is least controlled. The dispositions that could
+  distort that metric — answered, deferred, no action — never reach the log at
+  all, because FR-011 keeps them out of consensus. Inclusion is not the same as
+  losing attribution: the `Type` column is itself the source discriminator, so
+  a breach of the threshold can be attributed to sweep rows or to phase rows
+  without either being excluded from the rate.
 
 **Reviewer-facing replies**
 
@@ -308,17 +448,26 @@ proceeds.
   its author and that author's association, whether it was recognized as an
   artifact export, and its assigned class.
 - **Feedback Sweep Log**: the durable table in the workflow file holding one
-  row per handled comment — comment id, surface, author, class, disposition,
-  commit. It is the sole record of what the sweep has already handled and the
-  basis for skipping on re-runs.
+  row per handled comment. Header: `| # | Comment ID | Surface | Author |
+  Class | Disposition | Commit | CRL # |`. It sits under its own
+  `### Feedback Sweep Log` heading immediately after the Consensus Resolution
+  Log. `CRL #` carries the linked Consensus Resolution Log row number and is
+  empty for every class but `amended`. The table is the sole record of what the
+  sweep has already handled and the basis for skipping on re-runs.
 - **Export lead registry**: the fixed set of three lead sentences that identify
   an artifact-exported markdown block. Adding a future exporting page costs one
   more entry.
 - **Classification**: the closed four-value vocabulary — amended, answered,
-  deferred, no action — assigned to every trusted, unrecorded comment.
+  deferred, no action — assigned to every trusted, unrecorded comment. Exactly
+  one value per comment, with `amended` dominant when a single comment's
+  objections would warrant different values.
 - **Consensus Resolution Log row**: the existing record that already governs
   consensus outcomes. Amendments add a row here in addition to the Feedback
-  Sweep Log row, linked by number.
+  Sweep Log row. The two are linked both ways: the sweep row's `CRL #` names
+  this row, and this row's item text names the comment id, so the join works
+  from either side and is keyed on an immutable GitHub id rather than on a
+  table position alone. Sweep rows take `Sweep` as their `Type`, which doubles
+  as the source discriminator for the escape-rate metric.
 - **Draft PR row**: the existing workflow-file record naming the draft pull
   request, together with its corroboration status. The sweep reads it and never
   writes it.
@@ -351,10 +500,15 @@ Named owners, so none of these is a silent omission.
 - **SC-001**: On a draft pull request carrying reviewer feedback, task work
   never begins until 100% of trusted, unrecorded comments carry a recorded
   disposition.
-- **SC-002**: Every handled comment receives exactly one reply. Across the
-  fixture corpus, no handled comment has zero replies and none has two.
-- **SC-003**: Re-running the sweep with no new comments produces zero new log
-  rows, zero new replies, and zero amendments, and proceeds into task work.
+- **SC-002**: Following a sweep run whose bookkeeping commits all landed, every
+  handled comment receives exactly one reply. Across the fixture corpus, no
+  handled comment has zero replies and none has two.
+- **SC-003**: Following a sweep run whose bookkeeping commits all landed,
+  re-running the sweep with no new comments produces zero new log rows, zero
+  new replies, and zero amendments, and proceeds into task work. When a prior
+  run's amendment was pushed but its bookkeeping commit did not land, the next
+  run's handling of that one item is the edge case documented under Edge
+  Cases, not a violation of this criterion.
 - **SC-004**: Zero artifact edits across the fixture corpus are attributable to
   an author outside the write-capable set.
 - **SC-005**: The same observed comment data yields the same candidate set on
@@ -383,9 +537,21 @@ Named owners, so none of these is a silent omission.
 - Recognized export blocks may arrive on either comment surface. The acceptance
   runbook exercises both placements: one export pasted as a conversation
   comment, one pasted into a review thread.
-- Pending the FR-010 clarification, the working default is one class per
-  comment, with recognized export anchors carried as detail on that comment's
-  record.
+- One class per comment is settled, not a working default. Recognized export
+  anchors are carried as detail on that comment's record.
+- The dominance rule ranks `amended` above the other three and stops there. It
+  does not order `answered`, `deferred`, and `no action` against each other,
+  because those three are behaviorally identical at both points classification
+  controls: none route through consensus and none stop the run. A comment
+  mixing only an answered point and a deferred point therefore has no stated
+  headline class. That gap has no effect on stop-or-proceed or on routing, so
+  it is left open rather than closed with a ranking that would carry no
+  behavioral consequence.
+- No aggregator script computes the Round-2 escape rate. The tool the design
+  concept named was removed by an earlier shipped-Bash purge, and nothing
+  replaced it, so the Consensus Resolution Log table is the metric's only data
+  source and a reader computes it from the `Round` column and the
+  `escape-hatch` outcome value.
 - The shape of the deterministic parse — what it is called and exactly which
   fields it reports — is a Plan-phase decision, mirroring the shipped
   observation-input pattern and the closed corroboration vocabulary already in
