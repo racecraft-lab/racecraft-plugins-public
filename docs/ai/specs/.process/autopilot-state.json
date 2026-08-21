@@ -3,11 +3,11 @@
   "spec_id": "ART-008",
   "feature_dir": "specs/art-008-feedback-sweep",
   "branch": "art-008-feedback-sweep",
-  "status": "in_progress",
+  "status": "completed_pr_open",
   "stage": "plan",
   "prior_run_note": "completed_archived",
-  "updated_at": "2026-08-21T05:41:46Z",
-  "active_step": "Plan-stage terminal: draft artifact generation",
+  "updated_at": "2026-08-21T13:52:58Z",
+  "active_step": null,
   "reclaimed_from": {
     "workflow_file": "docs/ai/specs/.process/ART-005-workflow.md",
     "spec_id": "ART-005",
@@ -717,15 +717,15 @@
     },
     {
       "step": "Plan-stage terminal: draft artifact generation",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Plan-stage terminal: stage-boundary commit and push",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Plan-stage terminal: draft PR emission and record",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement",
@@ -865,5 +865,40 @@
     },
     "pr_marker_plan": null,
     "marker_plan_reason": "house precedent: pass-or-warn evidence without a split demand creates no marker state, and the route is one-navigable-PR"
+  },
+  "terminal_step": {
+    "artifacts": {
+      "generated": 4,
+      "gaps": 0,
+      "pages": [
+        "implementation-plan",
+        "spec-explainer",
+        "code-approaches",
+        "module-map"
+      ],
+      "note": "the author exhausted its budget composing its summary, after every fill region was populated; the orchestrator verified all 21 regions across the four pages rather than taking the fragment at face value"
+    },
+    "boundary_commit": "2e3641fa6 chore(art-008): close the plan stage boundary",
+    "push": "origin/art-008-feedback-sweep",
+    "existence_test": "two-way, both negative: no Draft PR row recorded and no open pull request on the head branch, so this created rather than refreshed",
+    "packet": {
+      "emitted": true,
+      "mode": "draft",
+      "validation": "passed, pr_blocked false, writes_state false",
+      "note": "the packet directory is excluded via .git/info/exclude, so it is a build artifact for the body rather than a committed file"
+    },
+    "draft_pr": {
+      "number": 464,
+      "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/464",
+      "state": "OPEN",
+      "isDraft": true
+    },
+    "record_commit": "a54ca9d60 chore(art-008): record the draft pull request, staging the workflow file alone",
+    "corroboration_after": "match — recorded #464, observed #464",
+    "undocumented_behavior_found": [
+      "a draft body MUST carry an H1 matching generated_title.value; the reference says the description carries exactly two blocks and never mentions it, so a first-time body fails validation",
+      "the producer capitalizes the first letter of title_description when composing the title, which is also undocumented and made the H1 mismatch twice before it matched",
+      "the spec-index checker false-positives while an excluded build artifact sits under specs/; regenerating naively bakes non-existent paths into the committed map, which passes locally and fails on a clean checkout"
+    ]
   }
 }
