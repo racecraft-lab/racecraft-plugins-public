@@ -177,11 +177,11 @@ returns exactly.
 **The budget verdict is the finding to read.** See the Reviewability Budget
 section: the slice no longer fits the ~330 it was scoped against, the honest
 range at the time was 325 to 485, which Plan later corrected upward to 515 to
-745 by re-measuring against the right precedents — and which the trust-boundary
-and error-handling passes moved again, to the live 515 to 830. The Plan estimator is
-structurally blind to either figure, because
-none of this slice's paths satisfy its production-file test. It will report zero
-and pass. Plan sizes this by hand.
+745 by re-measuring against the right precedents — and which later passes moved
+again; the live figure has one home, that section's superseding note. The Plan
+estimator is structurally blind to every one of those figures, because none of
+this slice's paths satisfy its production-file test. It will report zero and
+pass. Plan sizes this by hand.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -246,7 +246,8 @@ plus a Consensus Resolution Log row for the amendment. It posts one reply on
 the comment saying what class it got, which artifact and section moved, and
 which commit carries it. Once every item is handled, the run stops and asks the
 reviewer to look again. If nothing was amended, the sweep still writes its rows
-and posts its replies, then walks straight into task work.
+and posts its replies, then walks straight into task work, unless a redaction
+fired on the way out, in which case it stops after those writes and says so.
 
 **Why this priority**: This is the roadmap's "sweep, amend, re-review" decision
 made real. It is what makes the checkpoint worth stopping for, and it depends
@@ -276,8 +277,8 @@ with no new comments and confirm it proceeds into task work instead.
 4. **Given** at least one amendment, **When** the sweep completes, **Then** the
    run stops before task work with a re-review report that names the comments
    swept, the amendments made, the commit range, and states that draft pages
-   regenerate once slice 2 lands; **Given** zero amendments, **Then** the run
-   proceeds directly into task execution.
+   regenerate once slice 2 lands; **Given** zero amendments and zero redaction
+   events, **Then** the run proceeds directly into task execution.
 
 ---
 
@@ -354,6 +355,12 @@ proceeds.
   page three of five: the whole observation is discarded and the run stops under
   FR-004c. Nothing was written, so nothing is unwound, and the report says
   reading had begun so the operator can tell this from a gate failure.
+- Phase 7's `git add -A` runs after the sweep, over whatever the sweep left in
+  the worktree: the helper request carrying every observed body, and the
+  reply body files. Under FR-004d those sit in an ignored directory the sweep
+  removed before proceeding or stopping, so the add finds nothing of the
+  sweep's; without both, the request would be committed with an excluded
+  author's body in it and no leg would have touched it.
 - An amendment committed locally whose push failed: the run stops before that
   amendment's bookkeeping commit, so no row and no reply exist, and the local
   commit stands. The next run treats the comment as a candidate again, which is
@@ -366,6 +373,17 @@ proceeds.
   consensus: after the shipped protocol's single retry it becomes a human-review
   outcome and takes the FR-011a path, while the other items in the batch
   complete.
+- A resolved edit, a disposition, or a reply that carries a secret-shaped
+  span or a line over the per-line bound: the span is replaced by a
+  placeholder naming its rule class before the write, the write proceeds,
+  the row is written, the reply is posted, and the run report names the
+  comment id, the leg, and the rule. Nothing is discarded, because a
+  discarded row would leave the comment in the work set with the same
+  prose regenerated on every re-run. Once every write has landed the run
+  stops for re-review under FR-012f, in FR-017's report shape: the redacted
+  text is already public when the stop fires, and the stop is what puts a
+  human in front of the report before task work. The next run finds the
+  rows and replies in place, fires no event, and proceeds.
 - A trusted comment posted after the sweep read the pull request but before the
   run stops: it is not in this run's candidate set and is picked up on the next
   run.
@@ -463,6 +481,70 @@ proceeds.
   mid-read failure cannot tell whether the pull request was ever reachable. The
   resume path is FR-019b's: fix the tool and re-run. The observation is retaken
   fresh on every invocation, so a re-run needs no repair step.
+- **FR-004d**: Every file the sweep writes for its own transport MUST live
+  under `specs/<feature>/.process/feedback-sweep/` and nowhere else: the
+  helper request the runner reads on stdin, which carries the observation;
+  every reply body file FR-004b passes by path; the captured commands; and any
+  scratch the run makes. The directory ignores itself: the sweep's first write
+  into it, before any byproduct, is a `.gitignore` inside it whose whole
+  content is `*`, which git honors in whatever repository the worktree belongs
+  to, so Phase 7's `git add -A` cannot stage the directory or the ignore file,
+  by construction rather than by care. This repository's root `.gitignore`
+  carries `specs/*/.process/feedback-sweep/` as well, so the directory is
+  ignored here even before the sweep has written into it. The sweep also
+  removes the directory before it proceeds into task work or stops, on every
+  path, and the run report names it as removed.
+
+  **These files are an outbound path of their own, and no redaction reaches
+  them.** The request carries every observed body, untrusted authors included
+  and nothing redacted, because FR-005's filter runs inside the helper over
+  those bodies, and FR-004b puts every reply body on disk. Neither passes
+  through FR-012f's surface, by design, and the sweep is a Phase 7 setup step
+  whose existing commit path is `git add -A` over the worktree. Left where
+  they fell, the request would be committed and pushed with an excluded
+  comment's body in it, no leg having redacted it, no stop having fired, and
+  no human having read it. The control is placement and an ignore entry,
+  because a redaction pass over the request would blind the parse it feeds.
+
+  **Carried with the directory, not with the repository.** The sweep is
+  shipped in `phase-execution.md` and runs in any consumer repository that has
+  initialized the Spec Kit integration, and a consumer's root `.gitignore`
+  carries no entry for this directory. A control that lived only in this
+  repository's configuration would therefore protect only this repository,
+  and a consumer run whose removal step never ran — a session that hit its
+  context limit between the helper call and removal, then resumed — would
+  stage a request carrying an excluded author's body. The self-ignore file is
+  what closes that: it travels with the directory because the sweep writes it
+  wherever it creates the directory. The nearest prior art is the pull-request
+  packet directory, which this repository excludes through
+  `.git/info/exclude`, a file a fresh clone does not carry; that precedent is
+  cited for the shape and not copied for the mechanism. The root entry is one
+  authored line of repository configuration, declared in the plan under its
+  own category; it is not production, so the production-file count is
+  unchanged.
+
+  **Removal is hygiene; the ignore entry is the control.** The entry keeps
+  the files out of every commit. Removal keeps them out of everything else
+  that reads the worktree, and one such reader is named: the spec-index
+  generator scans the filesystem rather than the git index, so live byproducts
+  would contaminate a regeneration. A stopping run removes the directory too,
+  because nothing in it is needed to resume — the observation is retaken fresh
+  on every invocation (FR-004c), and an owed reply is regenerated from its row
+  on the next run (FR-015b).
+
+  **Four fixtures, each of which can fail.** A scratch-repository test creates
+  a throwaway git repository with no root `.gitignore`, creates the directory
+  the way the sweep does — self-ignore file first, then a byproduct — and
+  asserts that `git add -A --dry-run` stages nothing under it; it goes red
+  when the self-ignore write is removed from the sequence, which is the
+  consumer-repository case pinned directly. A repository test asserts this
+  repository's root `.gitignore` carries the entry, and goes red when that line
+  is removed. The captured-command fixture asserts that every byproduct path in
+  every captured command — the request file on stdin, each body file path, the
+  capture files themselves — resolves under the directory, so a file written
+  anywhere else is a red test rather than a pushed body. And the run-report
+  fixture asserts the report names the directory as removed on every path,
+  stopping or proceeding.
 
 **Trust boundary**
 
@@ -633,9 +715,33 @@ proceeds.
   left to the implementation. For a recognized comment, the orchestrator builds
   that payload from two parts: the helper's export record — template id, kind,
   and anchors — and the comment body **with every registered line the helper
-  matched removed**. The metadata stands where the removed line was. The
-  registered lead therefore never appears in an analyst prompt as text, which
-  is the whole of FR-007c's safety claim.
+  matched removed**. A fixed placeholder stands where the removed line was and
+  the export record stands beside the block; the replacement is performed by
+  the redaction surface (FR-007g, step 3), which is handed the parse's
+  `matched_lines` for that comment. The registered lead therefore never appears
+  in an analyst prompt as text, which is the whole of FR-007c's safety claim.
+
+  **Anchors are bounded, because they are reviewer bytes that stand outside
+  the frame.** An anchor is the parenthesised value that ends an export line —
+  `(#phase-2)` in the shipped builders' output — and a pasted export is
+  editable text, so that value is reviewer-controlled. It conforms when the
+  whole of it matches `#[a-z0-9-]{1,64}`: a `#`, then one to sixty-four
+  characters from `a-z0-9-`, and nothing else. The record carries the run
+  after the `#`, as the contract's example does. **An export record holds at
+  most sixty-four anchors.** A non-conforming anchor is dropped and counted,
+  never carried: it reaches no record, no payload, no row, and no report
+  text, and the export record's `anchors_dropped` counts it. A conforming
+  anchor past the sixty-fourth is dropped and counted the same way. The
+  export record that stands beside the block therefore carries only
+  grammar-conforming bytes — a template id and a kind from the registry's
+  closed sets, and anchors drawn from a thirty-seven-character alphabet, at
+  most sixty-four of them, each at most sixty-four long. Nothing a reviewer
+  typed reaches the trusted voice except through that grammar, and by that
+  grammar no anchor carries a pipe, a newline, a space, or an instruction.
+  The cost is detail alone: a dropped anchor loses its hunk reference, while
+  the line that carried it still reaches the analyst inside the frame and the
+  objection is still named under FR-010. A fixture pins the drop and the
+  count.
 
   **A registry entry that only tags the comment while the raw body still
   reaches the analyst does not satisfy FR-007c.** That arrangement would leave
@@ -651,14 +757,42 @@ proceeds.
   as reviewer-supplied data rather than concatenated into the prompt as
   instruction.
 
-  **Delimiting is the boundary; removal is defence in depth.** The two are not
-  equals and the spec says which is which, because a later reader deciding what
-  to cut under pressure must cut the right one. Delimiting is the control that
-  works against text the registry has never seen, which is every adversarial
-  case; removal only ever handles the fixed strings this product itself ships.
-  Removal is nonetheless worth keeping, because recognition already computes the
-  match span, so stripping it reuses work already paid for. **If cost ever
-  forces one of the two out, removal goes and delimiting stays.**
+  **Delimiting is the strongest in-prompt layer; removal is defence in depth.**
+  The two are not equals and the spec says which is which, because a later
+  reader deciding what to cut under pressure must cut the right one. Delimiting
+  is the control that works against text the registry has never seen, which is
+  every adversarial case; removal only ever handles the fixed strings this
+  product itself ships. Removal is nonetheless worth keeping, because
+  recognition already computes the match span, so stripping it reuses work
+  already paid for. **If cost ever forces one of the two out, removal goes and
+  delimiting stays.** FR-007g's span replacement ranks **with removal**, not
+  with delimiting: both are bounded passes over the body rather than a change
+  to how the prompt frames it, so the replacement goes before the frame does —
+  and since one surface produces both, cutting the replacement is a change to
+  the surface, not to where the frame comes from.
+
+  **None of the three is a boundary, and nothing deterministic stands behind
+  them on this path.** All three are model-layer controls: they change what the
+  prompt says about the text, and whether that holds is a probabilistic
+  property of the model reading it. It would be convenient to say the
+  deterministic boundary is FR-005's allowlist, and it is not true. The helper
+  deterministically **classifies**: it returns a candidate list and an
+  exclusion list, and its records carry no body. What is forwarded is decided
+  by the orchestrator, which holds every body it observed, excluded ones
+  included, and reads one only for an id on the candidate list because the
+  phase-execution reference tells it to. That forwarding discipline is
+  orchestrator prose, checked against FR-008b's second fixture rather than
+  enforced by a type. **There is no deterministic boundary on the forward
+  path.** FR-005 is still the security boundary Assumptions names, in the sense
+  that matters — it fixes whose posting may cause the sweep to act, whatever
+  text that posting relays — but at the forward point it is applied by
+  judgment, and FR-005 itself records that the allowlist is a proxy that can
+  admit a read-only COLLABORATOR. This is stated
+  so that a later reader weighing whether the delimiting can be cheapened, or
+  the filter relaxed, does not answer yes on the strength of a deterministic
+  control that does not exist. The ranking above still holds — delimiting is
+  the strongest control available inside a prompt and the one published
+  guidance prescribes — and it is a ranking among probabilistic controls.
 - **FR-007f**: Removal MUST cover **every** matched registered line, not the
   first. This is not a hypothetical: the registry holds each template's markdown
   and prompt leads as separate entries, so a reviewer who pastes both copy
@@ -672,7 +806,205 @@ proceeds.
   One implementation constraint, because getting it wrong silently corrupts the
   body: removal indexes the line-ending-normalized **original** lines, never the
   trailing-whitespace-stripped copies matching uses for comparison. The two
-  differ, and indexing the wrong one misaligns the reconstructed remainder.
+  differ, and indexing the wrong one misaligns the reconstructed remainder. The
+  removal is executed by the redaction surface (FR-007g, step 3), and the
+  carriage-return fixture is what pins that the normalized array is the one
+  indexed.
+- **FR-007g**: Every body forwarded to a consensus analyst MUST be shaped before
+  it reaches the analyst, **whether the comment was recognized or not**, and the
+  shaping MUST be performed by code: the **analyst-payload leg of the redaction
+  surface**, the second named surface of `sweep-pr-feedback`. FR-007e specifies
+  the payload only for a recognized comment, and the common case is the
+  opposite one: FR-011 routes `amended` into consensus, and most `amended`
+  comments match no registered sentence and reach an analyst as ordinary
+  reviewer prose. For an ordinary comment the payload is the block the surface
+  returns and nothing else; for a recognized comment it is that block with the
+  helper's export record beside it, which is the two-part assembly FR-007e
+  already describes. The assembly is orchestrator work. Everything inside the
+  block is not, and that is the point of this requirement: an earlier reading
+  placed the shaping in orchestrator prose and forbade the helper from doing
+  it, which left every rule below with no producer and therefore no fixture
+  that could fail. A requirement nothing executes is not a requirement.
+
+  **What the surface takes and what it returns.** It takes one body — the
+  capture-truncated copy the parse validated, as captured, with the line
+  endings it arrived with, as one text value — together with the comment id,
+  the `truncated` flag the parse echoed for that comment, and the
+  `matched_lines` the parse reported for it, empty for an ordinary comment. The
+  two extra values are the parse's own record for that comment handed back, not
+  new data. The body arrives as one string rather than as the array of lines
+  FR-012f's outbound legs take, because this leg normalizes line endings itself
+  and the parse has already bounded the body far below the runner's per-string
+  limit. It returns the delimited block as one text value and a structured
+  report: the budget, whether the body is truncated, the count of registered
+  leads removed, the count of spans withheld, the count of those that were
+  unclosed, and one entry per span naming its kind, its first line, its line
+  count, and whether it was unclosed. A `matched_lines` index beyond the body's
+  line count is `invalid_input` naming the comment id, never a silent skip: the
+  indices were computed over this body, so a miss means the orchestrator handed
+  over a different one.
+
+  **This widens nothing.** FR-008b's first assertion is about the parse
+  envelope: candidate records carry no body, and they still do not. The
+  surface is networkless and write-less like the parse, and it receives one
+  body at a time, for an id the orchestrator was already entitled to read
+  under the classification rule that iterates `candidates` and nothing else.
+  Registration stays one operation; the Known Interface Gap in `tasks.md`
+  sanctions named surfaces of that one operation, and this is the second. What
+  the surface does not do is decide whether a body is forwarded — that is
+  orchestrator prose, and no deterministic boundary stands on the forward
+  path — and it does not make the analyst honour the frame, which is a
+  property of the model reading it. The surface makes the payload's **shape**
+  provable. It proves nothing about what is done with it.
+
+  **The order is defined, and there is one order.** Five steps, in place,
+  over one line array:
+
+  1. **Normalize line endings**, CRLF and CR to LF, by the rule the parse
+     uses. This is what makes `matched_lines` index the array they were
+     computed against (FR-007f), and it is why the orchestrator hands over the
+     copy as captured rather than a normalized copy of its own: there is no
+     second copy to get wrong.
+  2. **Bound at 8192 bytes**, the budget `data-model.md` and the contract fix
+     for comment bodies — FR-008 requires a budget and names no number —
+     cutting on a character boundary so the result is valid text. On a
+     conforming input this is a no-op. On a body over budget it is the cut,
+     and the surface cuts rather than rejects, because its output is the
+     bound: the payload cannot exceed the budget whatever was handed in. The
+     report's `truncated` is the input flag **or** the surface's own cut, and
+     the two cannot disagree, because the bound is one number and cutting an
+     already-cut body at that number changes nothing. The bound runs
+     **before** the scan on purpose: a cut that lands inside a fence leaves an
+     unclosed opener, the scan then withholds to the end of the body, and the
+     report says both things — truncated, and one span withheld, unclosed.
+     Neither rule is argued in isolation; this is their composition.
+  3. **Replace each matched registered line in place** with the fixed
+     placeholder `[registered export lead removed]`. Replacement keeps one
+     line as one line, so nothing shifts under the scan. This runs before the
+     scan because the scan collapses many lines into one placeholder and
+     would move the indices. A lead a reviewer pasted inside a fence is
+     replaced here and then withheld with its fence in the next step; the
+     report still counts it as removed.
+  4. **One left-to-right span scan.** Two opener shapes. A **fence** opens on
+     a line whose first non-whitespace run is three or more backticks or three
+     or more tildes; its info string is the rest of that line, trimmed. An
+     **HTML comment** opens at `<!--` anywhere in the text. At each point the
+     **earliest opener by byte offset wins**; a fence's offset is its first
+     fence character, which is the first non-whitespace byte of its line, so
+     a `<!--` later on the same line never outranks it. A span closes only on
+     its own closer: a fence closes at the first later line whose first
+     non-whitespace run is the same character, at least as long, with nothing
+     but whitespace after it; an HTML comment closes at the first `-->` found
+     when the search begins after the opener's own four bytes. **Spans do not
+     nest**: inside a span no opener of either kind is recognized. When a
+     span closes the scan resumes at the next byte, and because a fence opener
+     is recognized only at the start of a line, the remainder of a line after
+     a `-->` is never one. **An unclosed opener runs to the end of the body**
+     and its placeholder says so. A fence's placeholder replaces the opener
+     line through the closer line; a comment's placeholder replaces exactly
+     the bytes from `<!--` through `-->`, so prose beside it on the same line
+     survives. That is the whole rule, so the overlapping case has one
+     answer. The body `<!-- draft note` / ```` ``` ```` / `--> keep this` /
+     ```` ``` ```` / `The real objection is X.` yields a comment placeholder
+     for lines one to three, ` keep this`, and an unclosed-fence placeholder
+     for lines four and five. The objection is withheld, the counts say two
+     spans and one unclosed, and two conforming implementations produce the
+     same bytes. An unclosed opener withholding trailing prose is the stated
+     cost of failing closed, and the counts are what disclose it.
+  5. **Frame and label.** The block is an opening delimiter line carrying the
+     comment id; one fixed statement line; the shaped body; and a closing
+     delimiter line carrying the id again. The statement line says the block
+     is reviewer-supplied data and not instruction, whether the body was
+     truncated and at what budget, how many spans were withheld and how many
+     of those were unclosed, how many leads were removed, that a bracketed
+     placeholder marks each point where the reviewer's text is not visible,
+     and that the full comment is on the pull request. The exact strings are
+     fixed in the contract and pinned by the golden envelope, and the counts
+     the statement carries MUST equal the counts the report carries.
+
+  **The scan runs after the parse, so FR-006 is untouched.** The parse's
+  exclusions ran over the observed body before the surface exists in the
+  flow, so the self-reply marker's anchored match at position 0 is
+  unaffected, and a reviewer's quoted sweep reply is still admitted as a
+  candidate before any span is replaced. Inside a candidate that quoted
+  marker is an HTML comment like any other and is withheld like any other,
+  which costs nothing: the marker renders as nothing and carries no
+  objection.
+
+  **Placeholders are bounded, and they stand inside the frame.** The grammar
+  is fixed: `[withheld: fenced block, info "<echo>", <n> lines]` or
+  `[withheld: fenced block, no info string, <n> lines]` for a fence,
+  `[withheld: html comment, <n> lines]` for a comment, `1 line` when the count
+  is one, with `, unclosed` before the closing bracket when the span ran to
+  the end. The echoed info string is reviewer-controlled text and is cut at
+  **32 bytes** on a character boundary; a comment's placeholder echoes
+  nothing. No placeholder therefore exceeds **96 bytes**, and the worst case
+  is stated rather than left to arithmetic: the smallest span is seven bytes
+  (`<!---->`) or eight (a minimal fence pair), so a body at the budget holds
+  at most roughly 1170 spans, and the shaped body is at most roughly six
+  times the budget under adversarial input and a few placeholders long under
+  any real comment. Placeholders stand inside the delimiter, never outside
+  it, because a fence's info string is reviewer bytes and a placeholder
+  written outside the frame would move them into the trusted voice the frame
+  exists to keep them out of. The export record beside the block is the one
+  other thing outside the frame, and FR-007e bounds it to grammar-conforming
+  bytes for the same reason.
+
+  **What the shaping is for, stated so nothing more is read into it.** Volume
+  bounding and machine-span removal, only. A fenced block is where pasted
+  machine content sits — logs, diffs, configuration, the credential nobody
+  meant to paste — and where a body's volume is least bounded; an HTML
+  comment renders as nothing on the pull request, so the Assumptions rule
+  that a trusted author endorses what their body carries does not reach it,
+  because an author cannot endorse text their own view never showed them.
+  Neither rule detects an instruction. An imperative sentence written as
+  ordinary prose passes through the surface unchanged and reaches the analyst
+  inside the frame, and a fixture pins that it does, so nobody later mistakes
+  the span rule for a filter. The controls against that text remain the frame
+  itself, FR-005's author allowlist, and FR-017's checkpoint, and none of the
+  three is detection. The trade is real and is named: a reviewer who fences
+  the replacement text they are proposing loses it from the analyst's view,
+  the placeholder tells the analyst where, and the reply's last line under
+  FR-015 tells the reviewer so. Indented code blocks — four leading spaces,
+  no delimiter — are **out of scope**: they are not a span, they pass
+  through, and a fixture pins that too. The bound on volume is the byte
+  budget in step 2, not the span rule, and the span rule is not claimed to be
+  complete over code-shaped content. Nor is the scan CommonMark: a backtick
+  run inside an indented block, a line markdown reads as inline code, and an
+  HTML comment inside inline code are all spans to the surface and visible
+  text to the author, so the surface can withhold what the author's view
+  showed, and that over-withholding is accepted for the one deterministic
+  rule the fixtures pin.
+
+  **Both readers are told, and what follows from telling is not overstated.**
+  The statement line tells the analyst it is reading a reduced body and what
+  kind of reduction it is; the disposition cell records the truncation and
+  the span count — orchestrator prose under T083, with no fixture of its own
+  — and the reply's fixed last line under FR-015, which is fixtured, carries
+  both to the reviewer, who reads the pull request and not the workflow
+  file, so the reviewer whose comment was cut can see why the sweep answered
+  only the part it saw. What the analyst does with the notice is model
+  judgment. No defined outcome follows from it: FR-011a's three triggers do
+  not include an analyst noticing that it lacks information, three analysts
+  can agree confidently on a reduced body, and this document does not claim
+  otherwise. What holds is FR-017 — an amendment built on a reduced body
+  still stops the run for re-review before anything merges — and the reply's
+  truncation line, which is where the reviewer learns their fence was not
+  read.
+
+  **Delimiter forgery is disclosed, not solved.** A body line identical to
+  one of the delimiter lines passes through unchanged, and a fixture pins
+  that it does, so no implementation escapes it "helpfully" and breaks the
+  byte-exact envelope. The frame is a model-layer control, as FR-007e says of
+  every in-prompt control, and a forged delimiter is the same residual by
+  another route. The comment id in both delimiter lines is what a forger has
+  to know; it is not a defense.
+
+  **Ranking is unchanged.** The span replacement ranks with FR-007f's removal
+  — a bounded pass over the body — and the frame ranks as FR-007e's
+  delimiting. If cost ever forces a cut, the replacement goes and the frame
+  stays, and because one surface produces both, cutting the replacement is a
+  change to the surface and not to where the frame comes from.
 - **FR-008**: Candidate filtering, export recognition, and candidate reporting
   MUST be deterministic: the same observed pull-request comment data MUST
   always yield the same candidate set. Determinism requires two normalizations
@@ -693,8 +1025,25 @@ proceeds.
   id after its fixed prefix, asserting the FR-006 anchor still matches and
   FR-015b's reconciliation reads the id rather than the prefix; a body carrying
   **two** registered lines, asserting both are reported and both removed; an
-  empty and a whitespace-only authenticated account, each returning an input
-  error; and the ordinary-comment path.
+  export carrying a malformed anchor and one carrying sixty-five conforming
+  anchors, each asserting the non-conforming or surplus anchor is absent from
+  `anchors` and counted in `anchors_dropped`; an empty and a whitespace-only
+  authenticated account, each returning an input
+  error; and — each as a request to the redaction surface's analyst-payload
+  leg, asserted against the block and report it returns rather than against a
+  hand-written payload — a body carrying a fenced code block and one carrying
+  an HTML comment, each asserting the seeded span never reaches the block
+  while its placeholder does, inside the frame; an unclosed fence and an
+  unclosed HTML comment, each running to the end of the body and saying so;
+  the overlapping-span body, returning the one block FR-007g defines; the body
+  truncated inside a fence, whose report and statement line both say truncated
+  and both count one unclosed span; a carriage-return body with a matched
+  line, removed only when the normalized array is indexed; an indented code
+  block, a plain-prose imperative, and a delimiter-shaped line, each passing
+  through unchanged; and every block carrying its originating comment id in
+  both delimiter lines; and the ordinary-comment path, pinned as a payload
+  shape as well as a candidate one — the returned block alone, with no export
+  record beside it.
 
   The failure paths MUST be pinned too, or the requirements grow while the
   corpus stays where the happy path left it: a read that fails on the second
@@ -709,12 +1058,78 @@ proceeds.
   when something else has already gone wrong, which is exactly the condition a
   hand-run check never reaches.
 
-  A separate test MUST derive the expected
-  set from the gallery manifest and the templates themselves — every template
-  the manifest says exports, in every kind it declares, **less the FR-007b
-  exclusion** — and assert the registry matches. That exclusion is a pinned
-  list of exactly one entry, `uat-walkthrough`, which the manifest declares as
-  exporting both kinds but which ships no template file to read a lead from.
+  The outbound path MUST be pinned on the redaction surface, because every
+  rule in it is a MUST that a hand-run check never exercises: one case per hit
+  class on the amendment leg, six in all, each asserting the seeded span is
+  replaced by its placeholder, the surrounding text and the line count are
+  unchanged, the report carries exactly one event naming that rule, and the
+  write proceeds; one seeded string carried across all three legs, asserting
+  the same on the log-row and reply legs and that line 1 of the reply is
+  still the marker, alone and byte-identical; the marker-line case, the
+  marker carrying a node id as the sole line of a `reply` request, asserting
+  zero events and byte-identical output; the ordered bound case — a line over
+  8192 bytes whose tail carries a bearer token, asserting one
+  `over_bound_line` event and no `bearer_token` event — beside its sibling at
+  8188 bytes, the longest line whose bearer replacement still fits the bound,
+  asserting the reverse; the
+  key-span cases, a header with body and END line asserting a placeholder on
+  every line, a header with body and no END asserting placeholders to the end
+  of the text, and a body with no header asserting **no** redaction, which
+  pins the residual as a known miss rather than coverage; the negative cases,
+  each asserting zero events and byte-identical output — `bearer
+  authentication_credentials`, `bearer credentials/authorization-header`, the
+  phrase `bearer token`, a bare `GITHUB_TOKEN`,
+  `RELEASE_PLEASE_TOKEN=${{ secrets.RELEASE_PLEASE_TOKEN }}`,
+  `GH_TOKEN=<your-token>`, a `_TOKEN=` value of twenty `x`s, and a bare
+  GitHub node id, which is a token-shaped run with no trigger before it; the
+  corpus-scan case, every line of this feature's seven documents — `spec.md`,
+  `plan.md`, `tasks.md`, `data-model.md`, the contract, `quickstart.md`, and
+  `research.md` — through the amendment leg, one request per document,
+  asserting zero events and byte-identical output, so no rule fires on the
+  prose that describes it; the idempotence case, every positive case's output
+  fed back through the surface and returned unchanged with zero events; the
+  boundary case, an 8189-byte line ending in a bearer hit, asserting the whole
+  output line is the `over_bound_line` placeholder, the report carries the
+  `bearer_token` event and then the `over_bound_line` event on that line, and
+  the placeholder fed back returns unchanged; the transport cases, a 9 KB line
+  and the same line cut to 8193 bytes asserting byte-identical output and a
+  byte-identical report, and a request carrying a 33 KiB line asserting the
+  runner's `invalid_input` naming the field; a `leg` outside the four,
+  returning an input error; and the no-echo search, the seeded string absent
+  from every captured output in the corpus.
+
+  The byproduct rule is pinned by the three fixtures FR-004d names: the root
+  `.gitignore` carrying `specs/*/.process/feedback-sweep/`, red when the line
+  is removed; every byproduct path in every captured command resolving under
+  that directory; and the run report naming the directory as removed on every
+  path.
+
+  The orchestrator half of the surface MUST be pinned the way SC-009 pins the
+  shell boundary: every invocation of the surface is captured — leg, comment
+  id, and the request and response as sent — beside the captured commands,
+  and a fixture asserts per-leg call counts derived from the corpus
+  expectations rather than typed beside them. The derivation is fixed by the
+  call granularity FR-012f and FR-007g state: one `amendment` call per
+  amendment; one `log_row` call per prose cell, which is three for an amended
+  item, two for a human-review item, and one for any other class; one `reply`
+  call per reply the run posts, which is every comment handled this run plus
+  every owed reply FR-015b reconciles this run, both read from the case's
+  expectations, so a re-run case that classifies nothing and posts one owed
+  reply derives one; and one `analyst_payload` call per comment routed to
+  consensus. A forgotten call fails the count, which is the failure a
+  response-only corpus cannot see. The same capture makes the report
+  checkable: the disposition text the run report carries for a comment MUST
+  be byte-identical to the `log_row` response for that comment's
+  `Disposition` cell, taken before FR-013's escaping, so a report built from
+  the orchestrator's pre-redaction copy fails by comparison rather than by
+  inspection.
+
+  A separate test MUST derive the expected set from the gallery manifest and
+  the templates themselves — every template the manifest says exports, in
+  every kind it declares, **less the FR-007b exclusion** — and assert the
+  registry matches. That exclusion is a pinned list of exactly one entry,
+  `uat-walkthrough`, which the manifest declares as exporting both kinds but
+  which ships no template file to read a lead from.
 
   **The skip MUST be conditional in both directions, not a bare name.** An entry
   is skipped only when it is on that list **and** its template file is still
@@ -799,8 +1214,9 @@ proceeds.
   class from the closed set: amended, answered, deferred, no action. No other
   value is permitted. The comment is the unit of classification, so a
   recognized export block carrying several distinct objections still yields one
-  class, one log row, and one reply; the recognized anchors are carried as
-  detail on that row. When one comment's objections would warrant different
+  class, one log row, and one reply; the recognized anchors — the conforming
+  ones FR-007e keeps, which carry no pipe by grammar — are carried as detail
+  on that row. When one comment's objections would warrant different
   classes, `amended` MUST win over the other three, and every non-dominant
   objection MUST be named in the row's disposition text and in the reply, so
   nothing is silently dropped. This order is forced, not stylistic: the
@@ -874,6 +1290,21 @@ proceeds.
   commit, FR-015 requires each reply to name the amending commit, and FR-017
   reports a commit range, none of which survive collapsing every amendment into
   one blob.
+
+  **The amendment commit's subject is fixed-shape and carries no reviewer
+  byte.** It is `docs(<feature-id>): amend <artifact> for <comment-id>`, with
+  no body: the scope is the feature's roadmap id in lowercase, `art-008` for
+  this feature; `<artifact>` is one of `spec.md`, `plan.md`, and `tasks.md`;
+  and `<comment-id>` is the id the observation carries for the comment
+  amended. Every slot is an id or an enum, so no byte derived from a comment
+  or a resolution reaches `git log`, and the subject is not an outbound leg
+  of FR-012f because nothing in it ever passed through a reviewer. It
+  satisfies the repository release-readiness title regex,
+  `^(feat|fix|chore|docs|test|refactor)\([a-z0-9-]+\): .+`, which the runner
+  applies to pull-request titles, so a reader who checks the subject against
+  the gate this repository already runs finds it in shape. The
+  captured-command fixture SC-009 rests on asserts every amendment commit's
+  argv carries a subject of exactly that shape and nothing outside its slots.
 - **FR-012a**: The Feedback Sweep Log and Consensus Resolution Log writes MUST
   ride a separate bookkeeping commit and MUST NOT be folded into an amendment
   commit. The ordering is forced, not stylistic: a row that names its commit
@@ -882,12 +1313,16 @@ proceeds.
   stages the workflow file path alone, never the workflow directory, and takes
   a `chore:` subject, borrowing the `Draft PR` row's staging shape and subject
   convention but not its `repair` rule: repair depends on a live witness
-  independent of the record, and none exists here. FR-012 defines no
-  commit-message convention that recovers a comment id from `git log`, FR-006
-  excludes the sweep's own reply from the candidate set so it cannot serve as
-  a fallback marker, and FR-016 forecloses thread resolution as a signal, so
-  there is no second leg to corroborate against and no repair rule is
-  defined. One bookkeeping commit is taken per amendment, not per run — a
+  independent of the record, and none is used here. FR-012's fixed subject
+  does name the comment id, so `git log` could say which comment an
+  unrecorded amendment belonged to, but this slice builds no repair rule on
+  it: the subject says which comment, not whether that comment's row landed,
+  and reading history back to decide is the detection machinery the Edge
+  Cases accept the window instead of. FR-006 excludes the sweep's own reply
+  from the candidate set so it cannot serve as a fallback marker, and FR-016
+  forecloses thread resolution as a signal, so no repair rule is defined and
+  the re-candidacy path stands. One bookkeeping commit is taken per
+  amendment, not per run — a
   cadence choice, not a consequence of the ordering rule, justified
   separately: it bounds the window in which an amendment is pushed but
   unrecorded to a single item, which matters because the consensus protocol
@@ -1031,6 +1466,299 @@ proceeds.
   the resume path FR-019b fixes for a tool that could not be reached. Retrying
   inside the run would multiply the window in which an amendment is pushed but
   unrecorded, which is the window FR-012a's cadence exists to bound.
+- **FR-012f**: FR-012b bounds **where** an amendment writes and nothing bounds
+  **what** the sweep carries outward. Three writes leave the run: an amendment
+  commit pushed to a public repository, a bookkeeping commit carrying the log
+  rows, and a public reply. The files the sweep writes for its own transport
+  are not a fourth, because FR-004d keeps them in a directory that ignores itself in any repository and
+  removes them before the run ends; the amendment commit's subject is not a
+  fourth either, because FR-012 fixes it from ids and enums alone, so no
+  reviewer byte reaches it. Every one of the three is prose the sweep composed
+  from a reviewer's comment and an analyst's recommendation, so every byte in
+  either already has a complete outbound path. Before each is written, its
+  text MUST pass through one redaction surface, and the write MUST proceed
+  with the text that surface returns. This requirement prevents no write and
+  discards nothing, and it runs after classification on every leg, so it
+  touches neither the class nor the skip key. What it does once every write
+  has landed is stated below, under **Any event stops the run after
+  publication**.
+
+  **Why redact rather than refuse.** A refusal at the commit would be a denial
+  of service on ordinary input. FR-013 puts reviewer-derived prose in the
+  `Disposition` cell, and the Assumptions name quoting — a reviewer relaying a
+  bug report, a stack trace, an issue excerpt — as the expected route for
+  untrusted text, so a pasted `Authorization` header in a disposition is
+  ordinary reviewer input rather than an attack. FR-012a then batches every row
+  of a zero-amendment run into one bookkeeping commit, so refusing that commit
+  over one cell discards every row in the run, FR-009's skip key sees none of
+  them, and the next run regenerates the same disposition and refuses again.
+  That is a permanent livelock, and no operator action short of hand-writing
+  the rows breaks it. Replacing the span and writing the row keeps FR-006c's
+  invariant intact, which is the whole of convergence; SC-013 measures it.
+
+  **What redact-and-proceed publishes that refuse-and-stop would not.** The
+  choice above is a trade, and its cost is stated here rather than left to be
+  found. A rule replaces its span and nothing beside it, so everything around
+  a hit is committed, pushed, and posted: for `bearer_token` and
+  `assigned_token` the rest of the hit's own line, and for every rule the
+  neighbouring lines of the same text. Take the relayed bug report the
+  Assumptions call ordinary reviewer input — a 401 against an internal vault
+  host, quoted with its header: the token is replaced, and the hostname, the
+  path, the service account, and the rotation date publish beside the
+  placeholder. The surface does not catch a password written in prose, a
+  connection string, an internal URL or hostname, an account name, a value
+  split across a line break, an encoded value, or a key body whose header was
+  omitted; the paragraph **What the rules still miss** below records the
+  rule-level residuals, and nothing in this requirement narrows either list.
+  Under refuse-and-stop none of those bytes reaches the remote; under this
+  requirement they reach it before any human reads them, and the stop under
+  **Any event stops the run after publication** is what puts a human in front
+  of the result afterwards, not before.
+
+  **The surface.** It is a second named surface of the `sweep-pr-feedback`
+  operation, beside the write-point path check FR-012b rule 2 runs through, and
+  it MUST NOT become a second registered operation. It takes three inputs — a
+  `leg` from the closed set `amendment`, `log_row`, `reply`, `analyst_payload`,
+  of which the first three are this requirement's outbound legs and the fourth
+  is FR-007g's inbound one; the originating comment id; and the text as an
+  array of lines — and returns the transformed lines plus a report: one event
+  per redaction, each naming the rule and the line it fired on, and never the
+  bytes it replaced. The shape and the leg values are fixed here; the field
+  names settle with the contract at Plan. The text arrives as lines rather than
+  as one string because the runner's bounded-input limit is enforced per
+  string, and a line is the unit the bound below is defined over. **One line in
+  is one line out**: every input line maps to exactly one output line, so a
+  caller writes the result back where the input came from without re-aligning
+  anything. The surface validates the leg against its closed set, requires a
+  non-empty comment id, and requires an array of strings on an outbound leg;
+  anything else returns `invalid_input`.
+
+  This widens nothing FR-008b guards. FR-008b's first assertion is that the
+  **parse** envelope carries no body, and mechanism 1's guarantee is that
+  **candidate records** carry no body; both stand, because this is a different
+  named surface with its own request and response. The helper remains
+  networkless and write-less, so handing it one text at a time, after
+  classification, gives it nothing it can do with that text except return it.
+  FR-007g's inbound shaping runs on this same surface, on the `analyst_payload`
+  leg, with the body as one string and the parse's own record beside it; that
+  leg is FR-007g's to define, and the deny-set below never runs on it.
+
+  **Six hit classes and no more.** Five are the secret-shaped deny-set; the
+  sixth is a length bound. Each names the span it replaces, because a rule that
+  named a match but not a span would leave the value beside it standing.
+  1. **The bound runs first.** A line longer than **8192 bytes** as UTF-8 is
+     `over_bound_line`: the whole line is replaced, and it is never scanned,
+     never truncated, and never split. The figure is the one `data-model.md`
+     and the contract fix for a comment body — FR-008 requires a budget and
+     names no number — reused so the feature carries one number rather than
+     two. Replacing whole rather than cutting is deliberate: a cut could carry
+     a secret past the scan, and scanning only the head fails open on the
+     tail. Two costs on the amendment leg follow and are accepted: a
+     legitimate single-line rewrite that crosses the bound — `tasks.md`
+     already carries task lines several kilobytes long — lands as the
+     placeholder, committed and pushed, and is restored by hand at the FR-017
+     stop from the resolution text; and in the pushed-but-unrecorded window a
+     redacted amendment never reads as an artifact that already carries the
+     edit, so the fresh round lands a second placeholder commit before that
+     stop.
+  2. **The deny-set**, applied after the bound in this order, every
+     non-overlapping occurrence left to right. Every rule requires a value
+     beside its trigger and never fires on a name, a phrase, or a quoted
+     header alone, which is why this specification's own prose about the rules
+     matches none of them; a fixture scans all seven feature documents to
+     prove it.
+     - `private_key_header` — a line that is **exactly** a PEM header and
+       nothing else: `-----BEGIN `, optionally a run of uppercase letters,
+       digits, and spaces ending in a space, then `PRIVATE KEY-----` or
+       `PRIVATE KEY BLOCK-----`, case sensitive, with nothing on the line but
+       the header and surrounding whitespace. One rule covers the OPENSSH,
+       RSA, EC, DSA, PKCS#8, and PGP headers without enumerating them, and a
+       header quoted inside a sentence, inside backticks, or beside other text
+       is not the line and matches nothing. **Its span is multi-line**: from
+       that line through the first later line that is exactly the matching
+       `-----END` form, or to the end of the text when none is, every line of
+       the span becoming the placeholder. A header alone would leave the key
+       body it introduces standing beneath a placeholder.
+     - `aws_secret_key` — a key name beginning `AWS_SECRET`, case-insensitive,
+       continuing through any run of letters, digits, and underscores;
+       optional spaces or tabs; `=` or `:`; optional spaces or tabs; an
+       optional single `"` or `'`; then a **token-shaped run**. The span is
+       the run alone. The name by itself — in a sentence, a heading, or this
+       bullet — matches nothing, because the rule requires the value that
+       matters, and the credentials-file form `aws_secret_access_key = …` is
+       why the name is case-insensitive.
+     - `aws_access_key` — the same shape with a name beginning
+       `AWS_ACCESS_KEY`; the same span.
+     - `bearer_token` — `bearer`, case-insensitive, then one or more spaces or
+       tabs, then a token-shaped run; the span is the run alone, and the rest
+       of the line publishes, as **Why redact rather than refuse** states.
+     - `assigned_token` — a name of one or more characters from `A-Z0-9_`
+       ending `_TOKEN`, immediately followed by `=`, then an optional single
+       `"` or `'`, then a token-shaped run; the span is the run alone. A
+       placeholder value needs no exclusion list: `${{ … }}` and `<…>` begin
+       with a character outside the run's class, and a row of `x`s carries no
+       digit, so none of them is a run.
+
+     A **token-shaped run** is twenty or more consecutive characters from
+     `A-Za-z0-9._~+/=-`, extending to the first character outside that class
+     or to the end of the line, **at least one of them a digit**. The length
+     floor keeps the phrase "bearer token" out; the digit keeps `bearer
+     authentication_credentials` and a row of `x` placeholders out, since a
+     word is not a token; and the class keeps every placeholder shape out,
+     because `$`, `<`, and `{` begin none of its runs, so
+     `${{ secrets.RELEASE_PLEASE_TOKEN }}` and `<your-token>` never match. A
+     bare reference to `GITHUB_TOKEN` still matches nothing, because the
+     assignment is required. A GitHub node id **is** a token-shaped run —
+     twenty or more characters from the class with a digit among them — and
+     it matches nothing for the same reason: no trigger precedes it. The rules
+     fire on the trigger, never on the run alone.
+  3. **The bound runs again, on the same pass.** A placeholder can be longer
+     than the span it replaces — `[redacted: bearer_token]` is 24 bytes for a
+     20-byte run, and the `aws_*` and `assigned_token` placeholders are 26 —
+     so a line that arrived under the bound can leave over it. After the
+     deny-set has run on a line, the surface measures the output line against
+     the same 8192 bytes, and a line that grew past it takes
+     `over_bound_line` whole, with the deny-set event and then the bound event
+     both reported on that line. This is what makes the next paragraph's
+     claim true at the boundary and not only away from it.
+
+  **The placeholder is `[redacted: <rule>]`**, with the rule name from the
+  closed set of six and nothing else, so it carries zero reviewer bytes,
+  contains neither a pipe nor a newline, and matches no rule. With step 3 in
+  place the surface's first-pass output is a fixpoint by construction: every
+  output line is either under the bound with placeholders where its spans
+  were — and a placeholder begins and ends with a bracket outside the run
+  class, so it can join no run beside it — or it is the over-bound
+  placeholder alone. Run on its own output the surface returns that output
+  unchanged with zero events, and a fixture asserts so at the boundary as
+  well as away from it: an 8189-byte line ending in a bearer hit returns the
+  `over_bound_line` placeholder, and that placeholder fed back returns
+  unchanged. Replaced spans are never rescanned.
+
+  **What the rules still miss, stated so nobody later treats this as coverage.**
+  **It is not a secret scanner, and both phase-execution references say so in
+  those words**; a test greps them for the phrase and fails on any occurrence
+  outside that denial. It is line-anchored and literal, so a value split
+  across a line break, an encoded value, a key body whose header was omitted,
+  and `AWS_` and `SECRET` on adjacent lines all pass. The value-required
+  rules add residuals of their own: a prose run after `bearer` that happens
+  to carry a digit, such as `authentication_credentials_v2`, is redacted; a
+  genuine token with no digit is missed; a token carrying a character outside
+  the class is cut short at that character, so the rest of it passes; a key
+  name on one line with its value on the next matches nothing, because
+  trigger and run must share a line; and a PEM header with anything else on
+  its line is not a header line and passes, together with the key body
+  beneath it. A header on a line of its own inside an amendment — an example
+  in a fenced block, say — opens a span to the END line or the end of that
+  text, which is the rule working as written; the corpus scan pins that no
+  feature document carries one today. It catches the paste nobody thought
+  about on the way out; FR-005 is still the boundary, and this is the last
+  gate rather than the first.
+
+  **Three legs, and where each is called.**
+  1. **Amendment.** After consensus resolves the edit and before the
+     orchestrator writes it, the text the edit **introduces** into the artifact
+     — the replacement or inserted lines the orchestrator is about to write —
+     passes through the surface, and the orchestrator writes what comes back,
+     stages the one path, commits, and pushes exactly as FR-012 and FR-012b
+     require. Only text the edit authored is ever passed: never the file around
+     it, and never a diff read back from the worktree, so a context line or a
+     removed line cannot reach the surface because no diff exists to carry one.
+     This requirement therefore reads no staged path list back; FR-012b's
+     single-path staging rule and the `git add -A` hazard the plan flags remain
+     the controls on what a commit stages, and they remain prose. A redacted
+     amendment is still an amendment: FR-017 stops the run for re-review, so
+     the placeholder in the committed text is put in front of a human before
+     task work continues; the stop enforces no reading, its resume path is a
+     re-run, and the post-publication stop below is that same stop and that
+     same report.
+  2. **Log row.** The cells the sweep fills with prose rather than an id, an
+     enum, a sha, or a count — the Feedback Sweep Log `Disposition` cell, the
+     disposition text of the Consensus Resolution Log row FR-014 and FR-011a
+     write, and that row's item cell, which names the comment id and then
+     summarizes the item in prose the way every shipped row does — pass
+     through the surface **before** FR-013's pipe and newline escaping, **one
+     call per cell**. An amended item therefore makes three calls on this
+     leg, a human-review item two, and any other class one, and FR-008a's
+     captured-call fixture counts them. Redaction can remove a pipe only by
+     replacing a whole line, which the bound and the key-header rule do, and
+     never adds one, and the placeholder contains neither, so escaping never
+     splits a placeholder and `CRL #` stays in its column.
+  3. **Reply.** The filled reply body, marker included, passes through the
+     surface before it is written to the file FR-004b passes by path. The
+     marker survives by construction, and the reason is where it stands, not
+     what it carries: the comment id in it **is** a token-shaped run — a node
+     id such as `IC_kwDOKQ7tDs5vXkZ9` is twenty-plus characters from the class
+     with digits among them — and what keeps every rule off it is that FR-015
+     puts the marker alone on line 1. That line is far under the bound, and no
+     deny-set trigger — a PEM header, an `AWS_` key name, `bearer`, `_TOKEN=`
+     — appears on it, so no within-line rule fires; `over_bound_line`
+     replaces only the line it measured, and `private_key_header`'s span runs
+     forward from its own header line, so neither reaches line 1 from a hit
+     on line 2 or later. An over-bound disposition therefore costs line 2
+     onward and never the marker: FR-006 still excludes the reply, FR-015b
+     still reads its id, the work set does not grow, and the reply is not
+     posted again. A fixture passes the marker line alone through the `reply`
+     leg and asserts it returns unchanged with zero events, and it can fail,
+     because the id is token-shaped: a rule loosened to fire without its
+     trigger would redact it.
+
+  **Any event stops the run after publication.** A run in which the surface
+  fired on any leg — one event, any rule, any leg — MUST stop for re-review
+  once every write the run owes has landed: after every amendment commit and
+  bookkeeping commit is pushed, and after every reply is posted at the point
+  FR-015c fixes. This is notification after publication, never prevention.
+  The redacted reply is already on the pull request and the redacted row is
+  already on the remote when the stop fires; what the stop adds is a human
+  reading the report before task work starts, which is the reader the proceed
+  path otherwise has nowhere to require. The stop is a ninth FR-020 condition
+  and the second that is not a failure. It reuses FR-017's report shape — the
+  comments swept, the amendments made, the commit range — with, per affected
+  comment, the leg, the rule, and the count, and its resume path is re-run.
+  When FR-017 or FR-011a also holds, the conditions are one stop and one
+  report, as FR-020 requires. When nothing was amended, this stop replaces
+  FR-018's proceed at that same point, the way FR-011a's does. It sits after
+  the reply point, so FR-015c's list of stops that post replies grows by
+  exactly this one and its list of stops that post none is untouched. It is
+  convergent: the rows exist and the replies exist, so the next run skips
+  every affected comment under FR-009, finds zero new work, fires no event,
+  and proceeds. SC-013 sees a clean terminal state, and T084's re-run case
+  asserts it.
+
+  **The run report carries the event, never the match.** The run report every
+  run produces (FR-018a) names, per affected comment, the leg, the rule, and
+  the count, and nothing else about the match. It MUST NOT carry the matched
+  line, an excerpt of it, a redacted or truncated copy, or any encoded form of
+  it, and neither may any log row, any reply, or the surface's own report. The
+  report's sink is the operator's, as FR-018a states, and the rule holds there
+  too: a report that quoted the match to be helpful would hand the operator
+  the secret the redaction kept out of the pull request, inside a report whose
+  every other line names public state. The disposition the report carries per
+  comment is the string the `log_row` leg returned for that comment's
+  `Disposition` cell, before FR-013's escaping, never the orchestrator's copy
+  from before the call; FR-008a's captured-call fixture asserts the two are
+  byte-identical, so the report can never carry more than the committed row
+  does. This extends FR-008b's first assertion — no body in the parse's
+  output — to the matches themselves. The placeholder in the written text is
+  the in-place evidence; the report is the index to it.
+
+  **The runner's bound still sits above the surface's, and the surface's
+  bound makes it unreachable.** The runner rejects any single string over 32
+  KiB at the framework boundary, before the surface runs, with a field name
+  and no comment id. No line needs to get there. For any line over 8192 bytes
+  the surface's output is the `over_bound_line` placeholder, and nothing past
+  byte 8193 can change that: byte 8193 is what proves the line is over, and
+  an over-bound line is never scanned. Cutting such a line at the first
+  character boundary at or past byte 8193 before transport is therefore
+  outcome-equivalent — the same placeholder, the same one event, the same
+  report — and the orchestrator cuts there. No line is ever split, so one line
+  in is still one line out. The cut is orchestrator prose, and two fixtures
+  bound it from both sides. On the surface, a 9 KB line and the same line cut
+  to 8193 bytes return byte-identical output and a byte-identical report. At
+  the runner, a request carrying a 33 KiB line returns `invalid_input` naming
+  the field, which pins the failure shape a skipped cut produces: loud, at the
+  boundary, before any write, rather than a line that reached the remote
+  unscanned.
 
 **Durable record**
 
@@ -1121,8 +1849,9 @@ proceeds.
   or `Question` in several committed workflow files — names the comment id, the
   way existing rows already name their source label. Naming the id rather than
   only a row position keys the reverse direction on an immutable value. The
-  row's `Type`
-  value is `Sweep`, a fourth value beside the shipped `Clarify`, `Gap`, and
+  cell carries prose after the id, the way every shipped row does, so it is
+  one of the cells FR-012f's log-row leg enumerates. The row's `Type` value
+  is `Sweep`, a fourth value beside the shipped `Clarify`, `Gap`, and
   `Finding`. Sweep rows COUNT toward the Round-2 escape-rate metric the log is
   the data source for: they are produced by the same category-routed protocol
   and can be mis-routed the same way, so excluding them would blind the metric
@@ -1150,16 +1879,38 @@ proceeds.
   MUST use one fixed reply template, and reply text MUST be plain,
   public-readable English. Every template MUST open with an HTML comment whose
   **prefix** is the same fixed string in every reply, which renders as nothing
-  and is what FR-006 anchors its match on. The prefix is what is fixed, not the
-  whole comment: FR-015b appends the answered comment's id after it, so two
-  replies are not byte-identical to each other. Saying "the same fixed marker"
-  without that distinction would contradict FR-015b.
+  and is what FR-006 anchors its match on. **The marker is the whole of line
+  1, alone**: the comment opens at position 0 and closes on that same line,
+  and the disposition starts on line 2 — no class word, no disposition text,
+  nothing else shares the marker's line. The placement is load-bearing, not
+  tidiness: FR-012f's reply leg works per line, so a marker that shares no
+  line with anything can never be inside a span, and a fixture there asserts
+  the marker line passes every rule unchanged. The prefix is what is fixed,
+  not the whole comment: FR-015b appends the answered comment's id after it,
+  so two replies are not byte-identical to each other. Saying "the same fixed
+  marker" without that distinction would contradict FR-015b.
   A marker rather than a visible sentence, because a visible sentence is
   exactly what a reviewer quotes when they disagree, and quoting it would make
   their genuine objection invisible to the next run. The repository already
   treats HTML-comment markers in author-facing pull-request text as contract
   rather than convenience, so this reuses a shipped idiom under a distinct
   name that no existing reader matches.
+
+  **The reply tells the reviewer what the sweep did not read.** Every
+  template carries one more fixed-shape line, the last line of the reply,
+  present only when the parse reported that comment `truncated` or its
+  analyst-payload report carries `spans_withheld` above zero: `Body truncated
+  at 8192 bytes; N spans withheld.`, with `N` the report's `spans_withheld`
+  count — zero for a comment never routed to consensus, which has no such
+  report — and nothing else in the line. It passes through the `reply` leg
+  with the rest of the body and matches no rule. SC-008 fixes the pull
+  request as the place a reviewer learns what happened, and the disposition
+  cell sits in the workflow file that criterion says they need not open, so
+  this line is the channel FR-007g needs and the cell is not: a reviewer
+  whose fenced proposal was withheld, or whose comment was cut, reads so in
+  the reply that answers it. The captured-command fixture asserts the line is
+  present, with the report's count, in the reply for a corpus comment whose
+  body truncates inside a fence, and absent from the reply for a plain body.
 - **FR-015a**: The two surfaces need different writes. A review-thread reply is
   posted into its thread. The pull-request conversation has no threading, so a
   reply there is a new top-level comment that MUST name the comment it answers,
@@ -1265,10 +2016,11 @@ proceeds.
   and it does not stop the run.
 
   **Which stops post replies follows from where the reply point sits, and the
-  two kinds MUST NOT be collapsed.** FR-017's re-review stop and FR-011a's
-  human-review stop occur **after** the end-of-run reply point, so a run
-  reaching either has already posted every reply it owes — which is where
-  FR-011a places its sibling replies. Every other stop this document defines
+  two kinds MUST NOT be collapsed.** FR-017's re-review stop, FR-011a's
+  human-review stop, and FR-012f's post-publication stop occur **after** the
+  end-of-run reply point, so a run reaching any of them has already posted
+  every reply it owes — which is where FR-011a places its sibling replies.
+  Every other stop this document defines
   aborts **before** that point and therefore posts none: an invalid
   authenticated account (FR-006b), a corroboration failure (FR-019), a failed
   observation (FR-004c), an unreadable log row (FR-009a), a refused edit target
@@ -1289,7 +2041,9 @@ proceeds.
   the commit range, and states that draft pages regenerate once slice 2 lands.
 - **FR-018**: When no comment was classified `amended` but at least one comment
   was handled, the sweep MUST write its records, post its replies, and proceed
-  directly into task execution without stopping. When no comment was handled at
+  directly into task execution without stopping, unless a redaction event
+  fired, in which case FR-012f's post-publication stop follows the last reply
+  and the next run proceeds. When no comment was handled at
   all, it writes no rows, posts no replies, takes no bookkeeping commit, and
   proceeds. The two cases are separated so the first does not read as requiring
   an empty commit on a pull request that carried no comments.
@@ -1303,6 +2057,18 @@ proceeds.
   exclusion naming its reason. Stopping and proceeding differ in what follows
   the report, never in whether one is produced. A run that observed no comments
   at all reports that, which is a one-line report rather than an absent one.
+
+  **The report is operator-facing, and its dispositions are the redacted
+  ones.** It is emitted to the sink the plan-stage stop report reaches — the
+  report an operator reads to decide what to do next — in FR-017's shape,
+  which is that report's shape under FR-020's three-part contract, on a
+  stopping path, and on the proceed path with the per-comment dispositions
+  alone, since there is no condition and no resume path to name. It is never
+  posted to the pull request and never committed. Every disposition it
+  carries is the string the `log_row` leg returned for that comment's
+  `Disposition` cell, before FR-013's escaping, so the report never carries
+  more than the committed row does; FR-012f states the rule and FR-008a's
+  captured-call fixture checks it.
 - **FR-019**: When a Draft PR row is present but the pull request cannot be
   read, the run MUST stop before any task work with a report naming the status
   and the resume path. That covers **four** of the six corroboration statuses
@@ -1368,10 +2134,11 @@ proceeds.
   outside the six (FR-019), a failed observation (FR-004c), an unreadable
   Feedback Sweep Log row (FR-009a), a consensus outcome requiring human review
   (FR-011a), a resolved edit target outside the three artifacts (FR-012b rule
-  2), a failed push (FR-012e), and one or more amendments requiring re-review
-  (FR-017). The last of those is the only one that is not a failure, and it uses
-  the same contract because an operator reading a report should not have to know
-  which kind it is to find the resume path.
+  2), a failed push (FR-012e), one or more amendments requiring re-review
+  (FR-017), and one or more redaction events in the run, reported after every
+  write landed (FR-012f). The last two are the only ones that are not
+  failures, and they use the same contract because an operator reading a
+  report should not have to know which kind it is to find the resume path.
 
   One stop needs more than the shared contract. A human-review stop (FR-011a)
   MUST name both operator actions FR-006c identifies — resolve the substance and
@@ -1397,12 +2164,15 @@ proceeds.
   behavior and its unit coverage.
 - **Secondary surfaces, if any**: docs/process — both phase-execution
   references and the workflow-file protocol entry for the Feedback Sweep Log.
-- **Projected reviewable LOC**: **515 to 830, midpoint near 630.** That is the
-  live figure, and it is the one every other document states: `plan.md`
-  Technical Context and its budget-result table, `tasks.md`, and the workflow
-  file's Phase 5 fallback evidence chain. Read the range as 515 to 830; the
-  bullets below record how it got there, because the low end and the midpoint
-  have not moved since Plan and only the high end has.
+- **Projected reviewable LOC**: **515 to 830, midpoint near 630, superseded.**
+  That is the plan-time figure as the error-handling pass left it, kept as
+  history. The live figure has one home, the superseding note below, and every
+  other site — `plan.md` Technical Context and its budget-result table,
+  `tasks.md`, and the workflow file's Phase 5 fallback evidence chain — either
+  repeats that figure or says it is superseded and points there. The bullets
+  below record how the plan-time number got where it did, because the low end
+  and the midpoint did not move between Plan and the error-handling pass and
+  only the high end did.
 
   Plan derived 515 to 745 by hand from its Declared File Operations block, and
   that **corrected an earlier estimate in this section upward** rather than
@@ -1422,12 +2192,56 @@ proceeds.
   the high end at roughly **810 to 830**, which **crosses the 800 block**. The
   midpoint of about 630 does not. This is the fourth revision of the number and
   every one has been a hand estimate, because no code exists yet to measure.
-- **Budget result**: **two warns; the midpoint clears both blocks and the high
-  end crosses the LOC block.** Over the 400 reviewable-LOC warn and over the 6
-  production-file warn; under the 8-file block, on a single primary surface. The
-  file count matters more than it looks: that block fires above 8, so the 7 this
-  slice carries is a warn, while the 9 an earlier draft claimed would have been
-  a block.
+  Superseded; the live figure is in the superseding note below.
+- **Superseding note: the live figure, and its only home.** The plan-time
+  range in the bullets above is left as written because it records what was
+  true when those bullets were. Two later passes moved it. The artifact
+  verification repair recorded in the workflow file added 80 authored lines to
+  the two phase-execution references, for **595 to 910**. The trust-boundary
+  remediation then made two requirements into helper code rather than prose,
+  and the delta below is derived from that code, not from the prose estimate it
+  replaces. **FR-012f** and **FR-007g** share one named surface of
+  `sweep-pr-feedback` that takes one body and a comment id and returns the
+  transformed text with a report. Its line items, in this codebase's
+  comment-dense style: the five deny-set patterns with the tightened
+  `bearer_token` and `assigned_token` forms, and the in-place replacement loop
+  with its over-bound line class, **30 to 45**; truncation at the budget, the
+  single left-to-right span scan with its bounded placeholder, and delimiting
+  under the comment id label, **40 to 60**; the surface's input validation,
+  report assembly, and dispatch inside the existing operation, **15 to 25**;
+  and the orchestrator half in both phase-execution references — the four
+  legs' call sites, the report line, and the disposition line — **25 to 40**,
+  with the Codex mirror at roughly 70% of the Claude text. Fixtures and test
+  assertions are authored but are not reviewable LOC, matching the plan's
+  derivation table, which counts production paths only. The disclosure and
+  wording siblings — the plan's seventh trust-boundary item, the quoting note
+  in Assumptions, the delimiting reword, and the adaptive-attempt line — add
+  **zero**, because none of them is implementation. The delta is **110 to 170
+  reviewable lines**, and the live figure is **705 to 1080, midpoint near
+  890**. **Production files are unchanged at 7**: every line lands inside paths
+  the Declared File Operations block already names, and the surface is a
+  second named surface of the one registered operation, not a second
+  registration. Authored files move from 15 to **16**: FR-004d's `.gitignore`
+  entry is one authored line of repository configuration, declared in the
+  plan under its own category, and the gate warns strictly above 15 and
+  blocks above 25, so it is a third warn and not a block. FR-004d also adds
+  roughly 5 to 10 reference lines for the directory, the removal, and the
+  report line; the range above is not re-derived for a delta that size, and
+  the midpoint and the block crossing are unchanged by it. **The midpoint now
+  crosses the 800 block, not only the high end.** T014's lever decision is
+  taken against this figure, and the size-crossing rule two bullets below is
+  what lets the run continue past it. This note is the live figure's only
+  home: every other site that states a number either repeats this one or says
+  it is superseded and points here.
+- **Budget result**: **a warn on production files, a warn on authored files,
+  and a block on reviewable LOC at the live midpoint.** Over the 400
+  reviewable-LOC warn, over the 6 production-file warn, and one over the 15
+  authored-file warn at 16; under both file blocks, on a single primary
+  surface;
+  and, at the live figure the superseding note above states, over the 800 LOC
+  block at the midpoint and not only at the high end. The file count matters
+  more than it looks: that block fires above 8, so the 7 this slice carries is
+  a warn, while the 9 an earlier draft claimed would have been a block.
 - **A size crossing does not stop this run, and the reason is not optimism.**
   Every gate that could measure it is either advisory by contract or deferred on
   the installed runner, and the shipped rule for the ones that are deferred is
@@ -1436,11 +2250,16 @@ proceeds.
   is direct precedent in this repository: a prior spec recorded a size-only
   block at 1800 reviewable LOC, 2.25 times over the threshold, and the run
   continued with the crossing captured as marker-planning input.
-- **What would actually stop a run is stale evidence, so the numbers are
-  reconciled rather than left to drift.** Three generations of this figure — 745,
-  roughly 775, and 810 to 830 — were live across the spec and the plan at once,
-  with six separate places still asserting zero blocks. That is the condition the
-  correctness stops exist for, and it is now fixed in both documents.
+- **What would actually stop a run is stale evidence, so the figure has one
+  home.** Three generations of this number — 745, roughly 775, and 810 to 830 —
+  were once live across the spec and the plan at the same time, with six
+  separate places still asserting zero blocks, and the artifact verification
+  repair's 595 to 910 then joined them. That is the condition the correctness
+  stops exist for. The fix is not to erase the history but to give the live
+  figure exactly one home, the superseding note above. Every other site that
+  states a number either repeats that figure or says it is superseded and
+  points there, and a sentence claiming "that is the live figure" about any
+  other number is a defect, not a lag.
 - **The crossing is accepted and recorded rather than re-sliced, and each
   rejected lever is rejected for a stated reason.**
   - *Re-slice.* No split reaches 400 while still shipping a working checkpoint.
@@ -1568,6 +2387,27 @@ Named owners, so none of these is a silent omission.
   in how this slice builds its own payload, and deliberately does not rewrite
   the shared template that three other callers also use. Recorded so this
   slice's local fix is not mistaken for having closed the general case.
+- **Owned by no spec yet**: extracting a reviewer's objection into structured
+  fields before it reaches an analyst. The published guidance for carrying
+  external text between agent steps is to forward only validated structure —
+  enums, ids, checked JSON — rather than free prose, and this slice forwards
+  prose on purpose. FR-007g bounds it instead of restructuring it: one byte
+  budget, a fixed set of replaced spans, and an originating comment id, all
+  produced by the redaction surface's analyst-payload leg, and all of it
+  volume bounding and machine-span removal rather than a content control —
+  an imperative written as prose reaches the analyst inside the frame, and
+  FR-007g says so. The reason the stronger control stays out is the reason
+  FR-007d gives for not letting recognition force a class — **the reviewer's
+  argument is the payload**. An objection reduced to a class and a target path
+  is the "feedback becomes decoration" outcome this feature exists to remove,
+  reached by a different route: nothing would be discarded over a button
+  choice, and everything would be discarded over a schema. The helper's parse
+  envelope is closed-vocabulary because every field in it is an enum, an id,
+  or a count, and a reviewer's reasoning is none of those; the one surface
+  that returns text returns it framed as data, not parsed into fields.
+  Recorded so shaping is not mistaken for structuring, and so a later spec
+  that finds a structured subset genuinely worth extracting inherits the case
+  rather than rediscovering it.
 - **Owned by no spec yet**: a job-scoped edit-target guard on the shared
   consensus write path. The component that proposes an edit emits a free-form
   file path and nothing validates it; the three-file enumeration in the shared
@@ -1602,11 +2442,22 @@ Named owners, so none of these is a silent omission.
   Cases, not a violation of this criterion.
 - **SC-004**: Zero artifact edits across the fixture corpus are attributable to
   an author outside the write-capable set.
-- **SC-005**: The same observed comment data yields the same candidate set on
-  every run, demonstrated by golden fixtures covering every registered
-  sentence in both the verbatim and header-trimmed shapes, a carriage-return
-  body, an oversized body that truncates, every excluded author-association
-  value, and the ordinary-comment path.
+- **SC-005**: The same observed comment data yields the same candidate set
+  **and the same returned analyst block** on every run, and the second half is
+  provable for the same reason as the first: the block is produced by the
+  redaction surface's analyst-payload leg, a fixture-pinned Python surface,
+  rather than assembled in prose. Demonstrated by golden fixtures covering
+  every registered sentence in both the verbatim and header-trimmed shapes, a
+  carriage-return body, an oversized body that truncates, every excluded
+  author-association value, the ordinary-comment path, and — against the
+  surface's returned block and report, never against a hand-written expected
+  string — a body carrying a fenced code block and one carrying an HTML
+  comment, each asserting the seeded span is absent and its placeholder
+  present inside the frame; the overlapping-span body, asserting the one
+  block FR-007g's scan defines for it; the body truncated inside a fence,
+  asserting the report and the statement line both say truncated and both
+  count the one unclosed span; and every block carrying its originating
+  comment id in both delimiter lines.
 - **SC-006**: All four unreadable draft-pull-request conditions stop the run
   before any task work, each with a report naming the condition and a resume
   path, and the could-not-observe stop is distinguishable in that report from
@@ -1660,8 +2511,30 @@ Named owners, so none of these is a silent omission.
   for every comment that window touched. The composed case is included: a run
   that records two amendments and fails to push a third leaves zero replies
   posted, and the next run posts both owed replies and re-enters consensus on
-  the third. Convergence was asserted by FR-006a before it was measurable
-  anywhere; this is where it becomes measurable.
+  the third. The post-publication redaction stop FR-012f defines is included
+  too: the run after it finds every affected comment's row and reply in
+  place, fires no event, and proceeds. Convergence was asserted by FR-006a
+  before it was measurable anywhere; this is where it becomes measurable.
+- **SC-014**: Nothing the sweep writes outward carries a span the deny-set
+  names or a line over the per-line bound. Across the fixture corpus — each
+  of the six hit classes on the amendment leg, the text an amendment
+  introduces, and one seeded class carried across each of the other two legs,
+  the prose cells of a log row and a reply body — the seeded string is absent
+  from every captured output: the surface's response,
+  the committed artifact text, the Feedback Sweep Log row, the reply body, and
+  the run report; the placeholder naming the rule stands in its place; the row
+  is written, the commit is taken, and the reply is posted exactly as they
+  would be without the hit; and the run report names the comment id, the leg,
+  the rule, and a count, and nothing else about the match. The negative half
+  is measured too: the false-positive shapes FR-012f names pass through
+  byte-identical with zero events, which is what makes the tightened rules
+  falsifiable rather than merely narrower. The seeded string is present in the
+  surface's request by construction, which is why the search runs over outputs.
+  It needs evidence of its own because nothing else here measures what the
+  sweep carries outward — SC-009 covers shell arguments, SC-004 covers
+  authorship, and SC-011 covers atomicity — and a run that commits to a public
+  repository and then posts a public reply is an outbound path none of the
+  three inspects.
 
 ## Assumptions
 
@@ -1690,10 +2563,35 @@ Named owners, so none of these is a silent omission.
   an oversight, and naming it is what keeps it accepted: it bounds the
   untrusted-input surface to social engineering of a write-capable account,
   which is the same bound the platform's own agent controls draw when they
-  ignore events from users without write access. The residual is why FR-012b
-  constrains the edit surface and why FR-007c keeps a registered imperative out
-  of an analyst prompt — neither defense assumes the body is clean, only that
-  the account vouching for it is write-capable.
+  ignore events from users without write access. The expected route to that
+  residual is quoting rather than a compromised account: a reviewer pastes an
+  anonymous bug report, a stack trace, or an issue excerpt into a comment, and
+  the rule above trusts every word of it verbatim. That is ordinary reviewer
+  behavior rather than an attack, which is both why it is the likely path and
+  why a content filter is a poor answer to it — relayed text arrives anchored
+  to a genuine reviewer intent, with nothing anomalous in the surrounding
+  comment for a classifier to key on. **The compensating control is the
+  checkpoint, and the checkpoint gates merge, not disclosure.** FR-017 stops
+  the run for re-review before any task work whenever anything was classified
+  `amended`, and SC-001 makes that gate measurable, so an amendment that a
+  quoted instruction induced is put in front of the human whose comment
+  carried it before task work continues. The stop enforces no reading — a
+  re-run is its resume path — and what keeps the induced amendment out of
+  `main` is the pull request's draft state and a human merge action. Read the
+  order: that amendment is committed, pushed to
+  a public repository, and replied to on a public pull request **before** that
+  human sees it. For the whole interval between the push and the re-review the
+  induced content is public, in the branch history, and in a comment, and
+  nothing in this slice shortens that interval. What the checkpoint controls
+  is whether the content survives into the merged artifact; what it does not
+  control is who saw it first. The sweep does not have to recognize a relayed
+  instruction; it has to make what the instruction produced visible to the
+  person who relayed it, and it makes it visible to everyone else at the same
+  moment. The residual is why FR-012b constrains the edit surface, why FR-012f
+  redacts secret-shaped text from the three outbound legs before they are
+  public, and why FR-007c keeps a registered imperative out of an analyst
+  prompt — none of the three assumes the body is clean, only that the account
+  vouching for it is write-capable.
 - A fail-closed gate on a mandatory path is normally expected to ship with a
   documented override, and this slice ships none. That is recorded as a gap
   under Non-Goals rather than resolved here, and it is explicitly **not** a

@@ -34,9 +34,9 @@ captured during scoping.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 19 FRs, 3 user stories, 11 acceptance scenarios, 9 edge cases, 8 success criteria. 3 `[NEEDS CLARIFICATION]` markers left for Clarify |
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 15 questions, 7 consensus items all resolved in Round 1 with 23 analyst dispatches. Spec grew 402 → 927 lines and 19 → 31 requirements. Zero markers, zero human-review flags |
-| Plan | `/speckit-plan` | ✅ Complete | 5 artifacts, 1506 lines. Budget re-derived by hand at 515-745 LOC (midpoint ~630) over 7 production files: two warns, zero blocks, warn accepted with the split lever recorded |
-| Checklist | `/speckit-checklist` | ✅ Complete | 3 domains, 143 items, **54 gaps found and 54 closed**. 8 consensus items across 24 analyst dispatches, all Round 1. Spec grew 31 → 48 requirements and 10 → 13 criteria. Those requirements moved the budget: the high end went 745 → ~775 → **810-830, which crosses the 800 block**, leaving the live figure at **515-830 (midpoint ~630)**, still two warns and still 7 production files |
-| Tasks | `/speckit-tasks` | ✅ Complete | 80 tasks, 6 phases, 9 parallel-safe. 48/48 requirements and 13/13 criteria covered; the orchestrator added T080 after finding SC-003 uncovered |
+| Plan | `/speckit-plan` | ✅ Complete | 5 artifacts, 1506 lines. Budget re-derived by hand at 515-745 LOC (midpoint ~630) over 7 production files: two warns, zero blocks, warn accepted with the split lever recorded, since superseded — the live figure's one home is `spec.md`'s Reviewability Budget superseding note |
+| Checklist | `/speckit-checklist` | ✅ Complete | 3 domains, 143 items, **54 gaps found and 54 closed**. 8 consensus items across 24 analyst dispatches, all Round 1. Spec grew 31 → 48 requirements and 10 → 13 criteria. Those requirements moved the budget: the high end went 745 → ~775 → **810-830, which crosses the 800 block**, leaving it at **515-830 (midpoint ~630)** at that time, since superseded — the live figure's one home is `spec.md`'s Reviewability Budget superseding note — and still 7 production files |
+| Tasks | `/speckit-tasks` | ✅ Complete | 93 tasks, 6 phases, 9 parallel-safe. 51/51 requirements and 14/14 criteria covered; the orchestrator added T080 after finding SC-003 uncovered, the trust-boundary remediation added T081–T087 for FR-007g, FR-012f, and SC-014, and the third remediation pass added T088–T093 for FR-004d, the captured-call fixture, and the fixed-shape commit subject |
 | Analyze | `/speckit-analyze` | ✅ Complete | 6 findings, all remediated, zero unresolved for consensus. Caught a contradiction that would have stopped the feature on its own first write, and a fixture corpus that could not fail in the direction that mattered |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
@@ -115,7 +115,7 @@ terminal status.
   `[Gap, Ambiguity]`, `[Conflict, Gap]` — is invisible to it. On the third
   domain every single marker was a combined form, so its zero before remediation
   and its zero after carried identical information: none.
-- G5 gate: PASS — 2026-08-21. Every one of the 48 requirements and all 13
+- G5 gate: PASS — 2026-08-21 (counts as at the gate; the trust-boundary remediation grew them afterwards, see the Tasks row). Every one of the 48 requirements and all 13
   success criteria are referenced by at least one of the 80 tasks, cross-checked
   by the orchestrator with a trailing-boundary regex so a lettered child never
   satisfies its parent. Task ids are sequential with no duplicates.
@@ -657,14 +657,16 @@ verbatim:
  "greenfield":false,"thresholds":{"warn":400,"block":800}}
 ```
 
-It parsed all 22 declared entries and classified **none** of them as
-production, because it counts a file as production only under `src/`, `app/`,
-`lib/`, or `scripts/`, or with a JavaScript, TypeScript, or SQL extension. Every
+It parsed all 22 declared entries — the block held 22 at that run and has
+grown since, and none of the added paths is one the estimator counts, so the
+verdict stands — and classified **none** of them as production, because it
+counts a file as production only under `src/`, `app/`, `lib/`, or `scripts/`,
+or with a JavaScript, TypeScript, or SQL extension. Every
 path this slice touches fails both tests. Its `pass` carries no information
 about this slice's size and MUST NOT be read as a budget verdict.
 
 **Hand-derived figure at Plan: 515 to 745 reviewable LOC, midpoint ~630. Seven
-production files.** (Superseded below; the live high end is 830.) Plan corrected the spec's earlier 325 to 485 range upward
+production files.** (Superseded below; the live figure's one home is `spec.md`'s Reviewability Budget superseding note.) Plan corrected the spec's earlier 325 to 485 range upward
 rather than corroborating it, because two of that range's anchors were measured
 against the wrong precedent: the comparable corroboration behavior is 162 lines
 rather than the 35 of one function body, and the comparable protocol entry is 58
@@ -680,10 +682,11 @@ the block.
 > moved the high end to roughly **810 to 830, which crosses the 800 block**. The
 > midpoint of about 630 still does not, and the production-file count is
 > unchanged at 7, so it remains **two warns** — but the 55 lines of margin above
-> no longer exist. The live figure is **515 to 830, midpoint near 630**, carried
-> in the Phase 5 fallback evidence chain below and in `spec.md`, `plan.md`, and
-> `tasks.md`. The paragraph above is kept as the Plan-time record, not as the
-> current position.
+> no longer exist. The figure at that time was **515 to 830, midpoint near
+> 630**, since superseded; the live figure's one home is `spec.md`'s
+> Reviewability Budget superseding note, and the Phase 5 fallback evidence chain
+> below points there. The paragraph above is kept as the Plan-time record, not
+> as the current position.
 
 > **Amended after the plan stage closed (2026-08-21).** A defect found in the
 > committed draft artifacts was fixed on this branch rather than deferred, at the
@@ -697,10 +700,12 @@ the block.
 > **Both files were already inside the Declared File Operations block**
 > (`plan.md` lines 241 and 242), so the production-file count is **unchanged at
 > 7** and no new surface enters the slice. The reviewable range moves to **595 to
-> 910, midpoint near 710.** The high end was already over the 800 block before
-> this change; it is now over by more. The file-count warn is untouched, and
-> T014 still forces the lever decision before implementation phase 3, now against
-> the larger figure. Recorded, not hidden.
+> 910**, since superseded in turn: the live figure's one home is `spec.md`'s
+> Reviewability Budget superseding note, and it crosses the 800 block at the
+> midpoint. The high end was already over the 800 block before this change; it
+> is now over by more. The file-count warn is untouched, and T014 still forces
+> the lever decision before implementation phase 3, now against the larger
+> figure. Recorded, not hidden.
 
 **The warn is accepted rather than re-sliced, and the reasoning is on the
 record.** The only split lever that preserves a working checkpoint defers three
@@ -960,9 +965,11 @@ Recorded per the deferred-helper contract:
 setup-mode result recorded at scaffold returned `warn` with empty `blockers`.
 The plan-phase estimator returned `pass` with `projected: 0` and is an **absent
 measurement**, because it classifies none of this slice's paths as production.
-The operator-facing figure is therefore the hand-derived one: 515 to 830
-reviewable LOC, midpoint near 630, seven production files. That is two warns,
-with the high end crossing the 800 block and the midpoint under it.
+The operator-facing figure is therefore the hand-derived one, whose only home
+is `spec.md`'s Reviewability Budget superseding note: at this writing 705 to
+1080 reviewable LOC, midpoint near 890, seven production files. That is a warn
+on production files and a size-only block on reviewable LOC at the midpoint,
+which continues into marker planning rather than stopping the run.
 
 **No marker planning state is created.** House precedent is that pass-or-warn
 evidence without a split demand creates none, and the atomicity route is
@@ -1045,9 +1052,11 @@ task cross-referencing across three Clarify sessions and three checklist
 domains, capped because two upstream defects are filed rather than fixed and
 this slice guards only its own caller. Risk assessment at 0.68, the lowest:
 the reviewability crossing is disclosed and gated by a blocking task, which
-earns real credit, but no active gate can measure it and the estimate moved
-330 to 830 across four revisions, which is itself a risk signal. Completeness
-at 0.78: the planning artifacts are internally consistent and G0 through G6 all
+earns real credit, but no active gate can measure it and the estimate had
+moved 330 to 830 across four revisions at this gate, since superseded — two
+later passes took the high end to 1080 — which is itself a risk signal.
+Completeness at 0.78: the planning artifacts are internally consistent and G0
+through G6 all
 passed, but no code exists and the remaining gates are deferred, so this
 measures plan completeness rather than implementation readiness.
 
@@ -1242,6 +1251,65 @@ byte-identical to a shipped template would catch this class in CI. It belongs in
 `tests/speckit-pro/unit/test-artifact-gallery.py`, which is **not** in this
 slice's Declared File Operations block, so it is left for its own change rather
 than widened into this one.
+
+---
+
+## Trust boundary remediation
+
+**Run 2026-08-21, after the plan stage closed, at the operator's direction.**
+A review of the sweep against Anthropic's and OpenAI's published
+prompt-injection guidance produced six findings (F-1 to F-6). Three remediation
+passes, each adversarially verified, carried them into `spec.md`, `plan.md`,
+and `tasks.md`. The review and its revision history are the published Claude
+Code artifact titled "Sweep Trust Boundary Review", owned by the operator; its
+URL carries a session-shaped identifier and is deliberately not recorded here.
+
+### What changed in the contract
+
+- **FR-004d.** Every sweep byproduct lives under
+  `specs/<feature>/.process/feedback-sweep/`, whose first write is its own
+  `.gitignore` containing `*`, so the directory ignores itself in any consumer
+  repository; this repository's root `.gitignore` carries the entry as well.
+  Removal before proceeding stays as hygiene. Four fixtures.
+- **FR-012f.** One redaction surface, a second named surface of
+  `sweep-pr-feedback`, runs on every outbound leg and **proceeds redacted
+  rather than stopping**: a stop-and-discard here was a permanent livelock
+  against FR-012a's batched bookkeeping commit. Six hit classes, tightened so
+  the spec's own text matches none of them, pinned by a corpus-scan fixture.
+  Any redaction event stops the run after publication so a human sees it.
+- **FR-007g.** Analyst-payload shaping moved into that same surface so it has
+  a producer and fixtures that can fail. Defined span order, bounded
+  placeholder echo, both truncation and withheld-span counts reported to the
+  reviewer in the reply's last line.
+- **Disclosures.** The analysts' `disallowedTools` bounds repository writes
+  and nothing else, including this repository, and the relaxation prerequisite
+  is a policy reversal `validate-tool-scoping.py` forbids (plan item 7). There
+  is no deterministic boundary on the forward path; the helper classifies and
+  forwarding discipline is orchestrator prose. Quoting is the expected route
+  for untrusted text, and the checkpoint gates merge, not disclosure.
+- **Fixed shapes.** The amendment commit subject is built from ids alone;
+  the reply marker stands alone on line 1.
+
+### Findings ledger
+
+| Pass | Against | Closed | Left |
+|------|---------|--------|------|
+| 1 | F-1..F-6 | applied | 2 blocking, 23 major, 14 minor found |
+| 2 | 39 | 28 fixed, 6 dissolved, 4 accepted | 1 blocking, 11 major found |
+| 3 | 35 | 30 fixed, 2 dissolved, 2 accepted | 2 major, 22 minor found |
+| hand | 2 major | both fixed (consumer-repo ignore; owed-reply call count) | 22 minors disclosed |
+
+The two pass-1 prescriptions that failed verification were the author's own:
+a fail-closed stop in a convergence-invariant feature, and a fixture asserting
+a hand-written string. Both are recorded in the review artifact, struck
+through, with what replaced them.
+
+### Budget consequence, for T014
+
+Live reviewable range **705 to 1080, midpoint near 890**, over the 800 block
+at the midpoint; production files unchanged at 7; authored files 16, a third
+warn. The security hardening grew this slice enough that moving FR-012f and
+FR-007g to their own slice is a live option at the T014 lever decision.
 
 ---
 

@@ -26,7 +26,7 @@ only be orchestrator work.
 ## Trust Boundary Enforcement
 
 This feature carries public pull-request text into agents that edit the planning
-artifacts, so the trust boundary is the design, not a caveat on it. Six
+artifacts, so the trust boundary is the design, not a caveat on it. Seven
 mechanisms implement it. Each names where it runs, because "enforced in the
 helper" and "expected of the orchestrator" are different guarantees and the
 distinction is the point.
@@ -52,32 +52,88 @@ bypassed at the same time.
 **3. The recognized-export payload (FR-007e).** For a recognized comment the
 consensus payload is the helper's export record plus the body with every matched
 registered line removed. The remainder is delimited and labelled as
-reviewer-supplied data rather than concatenated as instruction. Tagging without
-removal does not satisfy FR-007c; that reading is available from FR-007c's
-wording and is the one this plan forecloses.
+reviewer-supplied data rather than concatenated as instruction. That labelling
+is a model-layer control — the strongest thing available inside a prompt, and
+still probabilistic — and nothing deterministic stands behind it on this path.
+Mechanism 1 classifies deterministically; mechanism 2, which decides what is
+forwarded, is orchestrator prose checked against FR-008b's second fixture. There
+is no deterministic boundary on the forward path, and FR-007e says so rather
+than letting the allowlist be read as one. Tagging without removal does not
+satisfy FR-007c; that reading is available from FR-007c's wording and is the one
+this plan forecloses.
 
 The labelling half is new work, not an existing guarantee this slice inherits.
 The shipped Gap Remediation prompt template in `consensus-protocol.md` is a bare
 `## Gap Description` heading over an inserted-text placeholder, with no
 delimiter and no "treat this as data" instruction, and the three analyst
 definitions describe their input as "the relevant context" — trusted framing.
-The analysts' `disallowedTools` frontmatter blunts blast radius but says nothing
-about the input, and the grounding note governs their **output**. So a sweep
-that hands a reviewer body to that template inherits raw interpolation. The
-sweep supplies its own delimiting rather than assuming the protocol does it.
+The analysts' `disallowedTools` frontmatter denies the built-in write tools but
+says nothing about `Bash` or about the input, and the grounding note governs
+their **output**; what that frontmatter does and does not bound is item 7. So a
+sweep that hands a reviewer body to that template inherits raw interpolation.
+The sweep supplies its own delimiting rather than assuming the protocol does it.
 
-**4. The edit surface is an allowlist, checked twice (FR-012b).** At
-classification, a requested change outside `spec.md`, `plan.md`, and `tasks.md`
-in the feature directory takes `deferred` with the refused target named in the
-disposition and the reply. At the write, the resolved target path is validated
-against the same three-entry set in code before any write; a violation stops the
-run. That stop reports like the others this feature defines: it names the
-refused target path, the comment id it came from, and the resume path, so the
-operator can tell a mis-routed amendment from a broken tool. FR-017 and FR-019
-both fix a report shape for their stops, and a stop without one would be the
-only silent halt in the sweep. The two checks catch different failures — prose a
-mis-routed item walks past, and a defect that would otherwise write outside the
-surface — so neither replaces the other.
+**Shaping applies to every forwarded body, not only a recognized one, and it
+is code (FR-007g).** FR-007e specifies the payload for a recognized comment,
+and the common case is the opposite: only `amended` reaches consensus, and most
+`amended` comments match no registered sentence. Every body therefore passes
+through the **analyst-payload leg of the redaction surface** — the second named
+surface of `sweep-pr-feedback`, beside the checks T004 settles — before an
+analyst sees it. The surface takes the capture-truncated body as captured, the
+comment id, and the parse's own `truncated` flag and `matched_lines` for that
+comment, and returns one delimited block plus a report. Inside it the order is
+fixed: normalize line endings; bound at the 8192-byte budget `data-model.md`
+fixes, a no-op on a conforming input; replace matched registered lines in
+place; one left-to-right span scan in which the earliest opener wins, spans do
+not nest, and an unclosed opener runs to the end of the body; then frame and
+label with the comment id. Placeholders stand inside the frame and are
+bounded, the info-string echo at 32 bytes. The report and the statement line
+both carry the truncation and the count of spans withheld, so the analyst
+knows it is reading a reduced body and the disposition can say so to the
+reviewer. The orchestrator's whole part is the call and the two-part assembly
+— block beside the export record for a recognized comment, block alone for an
+ordinary one — which is what the two phase-execution references document.
+
+This does not disturb mechanism 1. FR-008b's first assertion is about the
+parse envelope, and candidate records still carry no body; the surface is
+networkless and write-less, receives one body at a time, and only ever for an
+id the orchestrator was entitled to read under mechanism 2. Registration stays
+one operation and production files stay seven. What the surface proves is the
+payload's shape. It does not decide whether a body is forwarded — that is
+mechanism 2's orchestrator prose, and nothing deterministic stands on the
+forward path — and it does not make the analyst honour the frame, which is a
+model property. The earlier claim that shaping "adds no Python" is withdrawn:
+a rule nothing executes has no fixture that can fail, which is the defect the
+producer exists to close.
+
+**4. The edit surface is an allowlist, checked twice, and what crosses it is
+redacted once (FR-012b, FR-012f).** At classification, a requested change
+outside `spec.md`, `plan.md`, and `tasks.md` in the feature directory takes
+`deferred` with the refused target named in the disposition and the reply. At
+the write, the resolved target path is validated against the same three-entry
+set in code before any write; a violation stops the run. That stop reports like
+the others this feature defines: it names the refused target path, the comment
+id it came from, and the resume path, so the operator can tell a mis-routed
+amendment from a broken tool. FR-017 and FR-019 both fix a report shape for
+their stops, and a stop without one would be the only silent halt in the sweep.
+The two checks catch different failures — prose a mis-routed item walks past,
+and a defect that would otherwise write outside the surface — so neither
+replaces the other. The redaction pass is a third thing, not a third check: the
+two checks bound **where** an amendment goes and it bounds **what** the sweep
+carries outward. It runs in the helper as a named surface of
+`sweep-pr-feedback`, it takes one body and a comment id and returns the
+transformed text with a report, and it never refuses a write. Every line an
+amendment adds, every Feedback Sweep Log cell, and every reply body goes
+through it before it is written, a deny-set hit is replaced in place by a
+placeholder naming the rule class, and the event is recorded in the run report
+every run produces (FR-018a). The row is always written and the commit always
+taken, which is what keeps FR-006c's convergence invariant intact: a refusal
+here would discard the row, leave the comment in the work set, and regenerate
+the same hit on every re-run. A run that fired any event then stops once every
+write has landed, under FR-012f, in FR-017's report shape: the redacted text
+is already public, and the stop puts a human in front of the report before
+task work. The next run finds the rows and replies in place, fires no event,
+and proceeds, so the stop costs no convergence.
 
 This fills a repo-wide hole rather than restating a local rule. The consensus
 synthesizer's output contract accepts a free-form `File: <path>` and nothing
@@ -103,6 +159,35 @@ would stage the entire worktree, which defeats the edit-surface allowlist at the
 last step — the check would pass on the target path while the commit carried
 everything else. Amendment and bookkeeping commits here follow the enumerated
 single-path form, not the Phase 7 form.
+
+The hazard has a second face the single-path rule does not cover. Phase 7's
+own `git add -A` runs **after** the sweep, over whatever the sweep left in the
+worktree, and the sweep leaves files: the helper request carrying every
+observed body, untrusted authors included and nothing redacted, because the
+parse filters over those bodies; the reply body files FR-004b forces onto
+disk; the captured commands. FR-004d is the control. Every such file lives
+under `specs/<feature>/.process/feedback-sweep/`, and the sweep's first write
+into that directory is a `.gitignore` of its own containing `*`, so the
+directory ignores itself in whatever repository the worktree belongs to and
+`git add -A` cannot stage it. That placement matters because the sweep ships
+in `phase-execution.md` and runs in consumer repositories whose root
+`.gitignore` knows nothing of this directory; a control that lived only in
+this repository's configuration would protect only this repository. This
+repository's root `.gitignore` carries the entry as well, as belt and braces.
+The sweep removes the directory before it proceeds or stops. The precedent is
+the pull-request packet directory, excluded today through `.git/info/exclude`,
+which a fresh clone does not carry; that is prior art for the shape and not
+for the mechanism. Four fixtures pin it: a scratch repository with no root
+ignore in which `git add -A --dry-run` stages nothing under the directory,
+this repository's `.gitignore` line present, every byproduct path in every
+captured command under the directory, and the run report naming the directory
+as removed.
+
+No check reads the staged diff back for a second path. Single-path staging is
+a convention rule 2 does not verify at the commit, so an inherited `git add -A`
+is warned about here rather than caught, and FR-012f's redaction pass does not
+change that: it transforms the lines an amendment adds, not the paths a commit
+touches.
 
 **5. `self_login` is derived, then validated.** The orchestrator reads it from
 the live authenticated session at call time rather than from configuration, the
@@ -130,18 +215,87 @@ fixture that inspects some of them. The helper never runs `gh` at all, and the
 request reaches it as one JSON document on stdin, so no field of it is ever a
 shell argument.
 
-**What these do not claim.** None of the six inspects a trusted body for
-adversarial content, and none is a permissions check. The trust unit is the
-comment, recorded in the spec's Assumptions: a write-capable author who quotes
-untrusted text is treated as endorsing it. Mechanisms 3 and 4 are what make that
-residual tolerable — one keeps a known imperative out of an analyst prompt, the
-other bounds what any analyst outcome can reach.
+**7. The analysts' `disallowedTools` bounds neither the repository nor the
+host.** This one runs nowhere in this repository. It is frontmatter on the three
+analysts and the synthesizer, enforced by the harness that spawns them, and the
+sweep neither sets it nor can read it back. What it denies is `Write`, `Edit`,
+`MultiEdit`, `NotebookEdit`, `Skill`, `Agent`, `TeamCreate`, and `SendMessage` —
+the built-in write and delegation tools, which is the whole of what mechanism
+3's `disallowedTools` sentence bounds. None of the four declares a `tools:`
+allowlist, so each inherits whatever the operator's session carries: `Bash`,
+`WebFetch`, `WebSearch`, and every installed MCP server. `Bash` is the one that
+matters, because it is a write tool under another name. An analyst holding it
+can write any file in the worktree by shell redirection, `git add` it, `git
+commit`, `git push`, and `gh pr comment`, and none of that passes through
+anything mechanisms 1 through 6 or the FR-012f redaction pass inspect: rule 2
+checks a target the orchestrator resolved, and the redaction pass transforms
+text the orchestrator hands it, so an analyst that resolves nothing and hands
+over nothing meets neither. A reviewer body that survives mechanism 3 therefore
+reaches an agent that can read any file the operator can read, reach the
+network, and write to this repository and its remote on its own authority.
+**Nothing in this plan bounds what that agent does with the text, in this
+repository or on the host.** What the seven mechanisms bound is what the
+*orchestrator* does with it.
+
+The absent allowlist is policy, not oversight, and the policy is tested.
+`tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.py` line 163,
+`test_operator_tool_surface_no_tools_allowlist_pinning`, asserts that **every**
+Claude agent definition carries no `tools:` line, and fails with a message that
+names the agent and reads "pins a tools: allowlist - availability is
+operator-owned; use disallowedTools for role denials only". So an agent-side
+allowlist on these four definitions is not an unwritten improvement; it is a
+reversal of a repository-wide rule across the whole agent surface, and editing
+any of the twelve governed definitions also restales the Layer 6 digest chain.
+The softer reason still holds — the four serve Clarify, Checklist, and Analyze
+as well as this sweep, so a list narrow enough to bound a reviewer body would
+break callers that need those tools — but it is not what stands in the way.
+**This becomes blocking if FR-005 is ever relaxed.** The author-association
+allowlist is what keeps the text reaching those agents to text a write-capable
+account posted, and the paragraph below records that relayed text passes it by
+design. The residual is a residual: an agent carrying the operator's full tool
+surface reads text the sweep did not inspect, and nothing here makes that
+tolerable or claims to. Admitting `CONTRIBUTOR`, or any other value FR-005
+excludes, would put anonymous text in front of that agent as well.
+The prerequisite for that relaxation is the policy reversal above, taken
+deliberately at the Layer 5 test and the Layer 6 corpus together, not a
+frontmatter edit on four files.
+
+**What these do not claim.** None of the seven inspects a trusted body for
+adversarial content, and none is a permissions check. FR-012f is not a
+counterexample: it transforms what the three outbound legs carry, not what a
+comment carried in, and it names five secret shapes and an over-bound line
+rather than judging intent. The trust unit is the comment, recorded in the
+spec's Assumptions: a write-capable author who quotes untrusted text is treated
+as endorsing it, and quoting is the expected route for untrusted text rather
+than an edge case. The number to reason with is the adaptive one: published
+injection-resistance figures sit near a tenth of a percent against a single
+attempt and rise to five or six percent against roughly a hundred adaptive
+ones, and a public pull request is an unbounded retry surface. Relayed text is
+how attempts arrive — a bug report, an issue, a support thread that a
+maintainer pastes into a review comment as ordinary triage — so each relay is
+an attempt, and nothing in this design counts or limits them. Mechanism 3
+keeps a known imperative out of an analyst prompt, and mechanism 4 bounds what
+an analyst outcome can reach through the orchestrator; item 7 records that an
+analyst holding `Bash` passes through neither. The residual stands as a
+residual, and this plan does not call it tolerable.
 
 **Budget note.** These add an estimated 15 to 30 reviewable lines over the table
 below: the path check and `self_login` validation are small, and the rest is
 reference prose. The high end moves from 745 toward roughly 775 against the 800
 block. That margin is thinner than the table states and is recorded here rather
-than absorbed silently.
+than absorbed silently. Superseded: the live figure's one home is `spec.md`'s
+Reviewability Budget superseding note.
+
+FR-012f and FR-007g add more than the item-7 line above, and what they add is
+code: the two share one named surface of `sweep-pr-feedback` that takes one
+body and a comment id and returns the transformed text with a report. The
+line-item derivation — the deny-set and replacement loop, the span scan and
+delimiter, the surface's validation and dispatch, and the orchestrator prose in
+both phase-execution files — lives in `spec.md`'s Reviewability Budget
+superseding note at **110 to 170 reviewable lines**, none of it fixture or test.
+Item 7 adds none: it is disclosure of frontmatter this repository does not set.
+Production files are unchanged at 7, and the summed range is carried in the
+Failure Paths superseding note below rather than restated here.
 
 ## Failure Paths
 
@@ -152,9 +306,9 @@ mechanism.
 
 **One report builder, not one per stop.** FR-020 fixes a single contract —
 condition, what landed, resume path — and every stop calls it. This is the
-consolidation the spec needed anyway: eight stop conditions had accumulated with
+consolidation the spec needed anyway: nine stop conditions have accumulated with
 their reports described one requirement at a time. Building the report once, from
-the run state the orchestrator already holds, is fewer lines than eight
+the run state the orchestrator already holds, is fewer lines than nine
 hand-written wordings and is the only way the what-landed part stays accurate,
 since no individual stop knows what the ones before it did.
 
@@ -189,6 +343,22 @@ absorbed: the levers are the serialization-family deferral already described
 under the split option, accepting the block explicitly, or re-slicing. This plan
 does not choose among them.
 
+**Superseding note: the live figure lives in the spec.** The 810-to-830 figure
+above is left as written because it records what was true when this paragraph
+was. Two later passes moved it: the artifact verification repair recorded in the
+workflow file, for **595 to 910**, and the trust-boundary remediation, which
+made FR-012f and FR-007g into helper code — one named surface of
+`sweep-pr-feedback` that redacts and shapes one body at a time. `spec.md`'s
+Reviewability Budget superseding note derives that delta line item by line item
+at **110 to 170 reviewable lines**, for a live figure of **705 to 1080, midpoint
+near 890**. That note is the figure's only home; this paragraph repeats it and
+does not re-derive it. **Production files stay at 7**: every one of those lines
+lands inside a path the Declared File Operations block already names, and the
+surface is a second named surface of the one registered operation rather than a
+second registration. **The midpoint now crosses the 800 block, not only the
+high end.** T014 takes its lever decision against that figure, and the levers
+are the three named above.
+
 ## Technical Context
 
 **Language/Version**: Python 3.11+ standard library (runner helper); Markdown
@@ -218,13 +388,19 @@ budget below the runner's 32 KiB bounded-input limit, because that limit
 rejects the whole request rather than the offending string (FR-008).
 
 **Scale/Scope**: One new read-only helper operation, seven modified production
-files, eight test and fixture files. Two platform variants.
+files, eight test and fixture files, and one repository-configuration line in
+`.gitignore`. Two platform variants.
 
 **Reviewability Budget**: harness/adapter (single primary surface); **hand-derived
-515 to 830 reviewable LOC, midpoint near 630**; 7 production files; 15 authored
-files total; **warn on reviewable LOC and on production files, block on neither.**
-Derived by hand from the Declared File Operations block below, because the
-estimator cannot measure this slice. See "Reviewability Budget, derived by hand".
+515 to 830 reviewable LOC, midpoint near 630, at the time this line was
+written, since superseded** — the live figure has one home, `spec.md`'s
+Reviewability Budget superseding note, repeated in the Failure Paths superseding
+note above, and it crosses the 800 block at the midpoint; 7 production files; 16
+authored files total, the sixteenth being FR-004d's `.gitignore` entry; **warn
+on production files, warn on authored files, block on reviewable LOC at the
+live figure.** Derived by hand from the Declared File Operations block below,
+because the estimator cannot measure this slice. See "Reviewability Budget,
+derived by hand".
 
 ## Declared File Operations
 
@@ -255,6 +431,10 @@ Test and fixture surface (authored, verification):
 - MODIFIED tests/speckit-pro/suite-manifest.json
 - MODIFIED tests/speckit-pro/unit/test-artifact-gallery.py
 
+Repository configuration (authored, not production):
+
+- MODIFIED .gitignore
+
 Generated surface (regenerate, never hand-edit, not counted as reviewable):
 
 - MODIFIED dist/claude/speckit-pro/speckit_pro_runner/helpers/read_only.py
@@ -271,6 +451,11 @@ The `dist/` and installed-cache entries are byte-identical copies produced by
 already records that adding a read-only helper restales them and that
 regenerating is required rather than optional. The reference `.md` files ship
 into both distributions too and regenerate through the same script.
+
+The `.gitignore` entry is FR-004d's one line, `specs/*/.process/feedback-sweep/`,
+which ignores the directory the sweep writes its transport files to. It is
+authored and reviewed, so it counts toward the sixteen authored files, and it
+is not production, so it does not count toward the seven.
 
 ### Two files deliberately absent from this block
 
@@ -308,14 +493,14 @@ This was run against this plan rather than predicted. Verbatim output:
 
 ```json
 {"tool":"estimate-reviewable-loc","status":"pass","projected":0,
- "declared_files":{"production":0,"new":4,"modified":19,"total_entries":23},
+ "declared_files":{"production":0,"new":4,"modified":20,"total_entries":24},
  "greenfield":false,
  "thresholds":{"warn":400,"block":800,"greenfield_multiplier":1.5,
                "base_warn":400,"base_block":800}}
 ```
 
-Read it closely. The block parsed correctly — all **23** entries were seen, 4
-new and 19 modified — and **`production` is 0**. The helper is not failing to
+Read it closely. The block parsed correctly — all **24** entries were seen, 4
+new and 20 modified — and **`production` is 0**. The helper is not failing to
 read the plan; it is reading it correctly and finding nothing it recognizes as
 production code. `projected` is therefore 0, and `status` is `pass` against a
 warn line of 400 it never had a chance to cross.
@@ -338,10 +523,12 @@ slice is within budget.** The figures below are the measurement.
 | `consensus-protocol.md` | 5 | 12 | The fourth `Type` value in the row schema at line 617, plus the sweep-row escape-rate note. |
 | **Total** | **513** | **745** | Midpoint **≈ 630** |
 
-Stated as **515 to 745, midpoint near 630** — the low column sums to 513 and is
-carried forward rounded to 515, which is the figure every other document uses.
-This is the derivation as it stood when the plan was written; the error-handling
-pass has since moved the high end, and the live range is **515 to 830**.
+Stated as **515 to 745, midpoint near 630** — the low column sums to 513 and
+was carried forward rounded to 515, the figure the other documents' plan-time
+bullets still carry as history.
+This is the derivation as it stood when the plan was written. Later passes have
+moved it; the live figure has one home, `spec.md`'s Reviewability Budget
+superseding note, repeated in the Failure Paths superseding note above.
 
 ### Corroborate or correct: this corrects the spec
 
@@ -369,21 +556,25 @@ for the `SKILL.md` cap reason recorded above.
 
 | Dimension | Value | Warn | Block | Result |
 |---|---:|---:|---:|---|
-| Reviewable LOC | ~630 (515–830) | 400 | 800 | **WARN at the midpoint; the high end crosses the block** |
+| Reviewable LOC | ~630 (515–830), superseded | 400 | 800 | **WARN at the plan-time midpoint; the live figure crosses the block at the midpoint** |
 | Production files | 7 | 6 | 8 | **WARN** |
-| Total authored files | 14 | 15 | 25 | pass |
+| Total authored files | 16 (15 at plan time) | 15 | 25 | **WARN** |
 | Primary surfaces | 1 | >1 | >1 | pass |
 
-**Two warns, no blocks at the midpoint. The table above is the figure as it
-stood when this plan was first written, and the error-handling checklist has
-since moved it.**
+**Three warns now, two at plan time, and no blocks at the plan-time midpoint.
+The table above is the figure as it stood after the error-handling checklist,
+and two later passes have moved it.** Sixteen authored files is one over the
+warn line, because the gate warns strictly above 15 (`reviewability-gate` in
+`read_only.py` tests `total > 15`) and blocks only above 25; the sixteenth is
+`.gitignore`, one line carrying FR-004d's ignore entry, authored configuration
+rather than production, so the production count is untouched. Fifteen sat on
+the line and passed when this table was written.
 
-That pass added five requirements, and the current range is **roughly 810 to
-830 at the high end with the midpoint still under 800**. The high end therefore
-crosses the block; the midpoint does not. The margin the next paragraph was
-written about no longer exists, and the Failure Paths section above carries the
-current numbers and the three levers. Read that section, not this table, for
-the live figure.
+The live figure has one home, `spec.md`'s Reviewability Budget superseding note,
+repeated in this plan's Failure Paths superseding note: it crosses the 800 block
+at the midpoint, not only at the high end. The margin the next paragraph was
+written about no longer exists, and the Failure Paths section carries the three
+levers. Read that note, not this table, for the live figure.
 
 The reason the margin matters is unchanged: the implementation must hold the
 references to the sequence rather than restating the spec's rationale in them.
@@ -432,10 +623,13 @@ Constitution version 1.2.0.
 - **Primary surface**: harness/adapter — the deterministic comment parse and its
   unit coverage. **Secondary surfaces**: docs/process — both phase-execution
   references, both workflow-file-protocol files, and `consensus-protocol.md`.
-- **Within budget?** No. Warn on reviewable LOC (~630 against 400) and on
-  production files (7 against 6). Under the block at the midpoint on both (800,
-  8); the high end crosses the 800 LOC block after the error-handling pass. Accepted
-  with the reasoning and the rejected split recorded above.
+- **Within budget?** No. Warn on production files (7 against 6, under the block
+  of 8) and on authored files (16 against 15, under the block of 25, the
+  sixteenth being FR-004d's `.gitignore` line). Reviewable LOC warned at the
+  plan-time midpoint (~630 against 400) and
+  crosses the 800 block at the live midpoint (Failure Paths superseding note).
+  Accepted with the reasoning and the rejected split recorded above, and carried
+  into marker planning under the spec's size-crossing rule.
 - **Split decision**: ART-008 is two stacked vertical slices along a Path seam.
   This is slice 1. Slice 2 (artifact freshness) is specified separately on a
   branch stacked on this one and owns page regeneration, stale-page detection,
@@ -453,8 +647,10 @@ the simpler shape. No Complexity Tracking entry is required.
 **Post-design re-check.** Re-evaluated after Phase 1. The design artifacts
 introduced no new violation: the helper stays Python 3.11+ stdlib and read-only,
 truncation moved to the orchestrator without adding a Bash or `jq` dependency,
-and no new plugin component type appeared. The two reviewability warns stand
-exactly as recorded above, and neither became a block.
+and no new plugin component type appeared. The production-file warn stands as
+recorded above; the reviewable-LOC warn became a size-only block at the live
+midpoint after the design closed, which continues into marker planning rather
+than stopping the run.
 
 ## Slice Topology
 
@@ -514,7 +710,7 @@ specs/art-008-feedback-sweep/
 speckit-pro/
 ├── speckit_pro_runner/
 │   └── helpers/
-│       ├── read_only.py          # + sweep_pr_feedback(), registry, 3 registration points
+│       ├── read_only.py          # + sweep_pr_feedback(), the redaction surface, registry, 3 registration points
 │       └── registry.py           # + one HelperEntry
 ├── skills/speckit-autopilot/references/
 │   ├── phase-execution.md        # + Phase 7 setup sweep sequence, ahead of the notes record
@@ -547,9 +743,11 @@ corpus, named for the durable behavior rather than for the spec id.
 
 > **Fill ONLY if Constitution Check has violations that must be justified**
 
-No constitution violations. The reviewability warn is not a constitution
-violation: the preset's thresholds warn above 400 reviewable LOC and 6
-production files and block above 800 and 8. This slice is under both blocks at
-its midpoint; its high end crosses the LOC block. Recorded, not hidden.
+No constitution violations. The reviewability warns are not a constitution
+violation: the preset's thresholds warn above 400 reviewable LOC, 6 production
+files, and 15 authored files, and block above 800, 8, and 25. This slice is
+under both file blocks
+and crosses the LOC block at the live midpoint (Failure Paths superseding
+note), a size-only crossing. Recorded, not hidden.
 The warn, its derivation, its acceptance, and the split option that was
 considered and rejected are recorded in "Reviewability Budget, derived by hand".
