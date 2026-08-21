@@ -1018,7 +1018,7 @@ pre.code .dim {
         <div class="module-body">
           <p class="module-loc">speckit-pro/speckit_pro_runner/helpers/read_only.py<span class="range"> : new operation</span></p>
           <h3>sweep-pr-feedback</h3>
-          <p class="what">The one new read-only surface. It takes the orchestrator's <code>gh</code> observation as data, applies the FR-005 author-association allowlist, matches the registered export lead sentences as whole-line exact matches anywhere in the body, and returns a closed-vocabulary envelope. It never runs <code>gh</code>, never touches the network, and never assigns a class. Candidate records carry no comment body, so an untrusted comment's text is absent from the output by construction.</p>
+          <p class="what">The one new read-only operation, with two named surfaces. The parse surface takes the orchestrator's <code>gh</code> observation as data, applies the FR-005 author-association allowlist, matches the registered export lead sentences as whole-line exact matches anywhere in the body, and returns a closed-vocabulary envelope whose candidate records carry no comment body. The redaction surface (FR-012f, FR-007g) takes one body at a time and returns it shaped and redacted, one line in and one line out, for every outbound leg. Neither runs <code>gh</code>, touches the network, or assigns a class.</p>
           <details class="snippet">
             <summary>Show source</summary>
 <pre class="code" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" aria-label="sweep-pr-feedback envelope shape"><span class="dim"># speckit-pro/speckit_pro_runner/helpers/read_only.py</span>

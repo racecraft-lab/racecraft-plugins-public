@@ -1164,8 +1164,8 @@ h1 {
     <dl class="stats">
       <div class="stat"><dt>Phases</dt><dd>6</dd></div>
       <div class="stat"><dt>Production files</dt><dd>7</dd></div>
-      <div class="stat"><dt>Reviewable size</dt><dd>595–910 lines</dd></div>
-      <div class="stat"><dt>Tasks</dt><dd>80</dd></div>
+      <div class="stat"><dt>Reviewable size</dt><dd>705–1080 lines</dd></div>
+      <div class="stat"><dt>Tasks</dt><dd>93</dd></div>
     </dl>
 <!-- FILL:plan-stats:END -->
   </section>
@@ -1188,15 +1188,15 @@ h1 {
         <ul class="tags"><li>registry.py</li><li>fixtures</li><li>T014 gate</li></ul>
       </div>
       <div class="milestone" id="phases-user-story-1">
-        <p class="when">Phase 3 · 29 tasks · MVP</p>
+        <p class="when">Phase 3 · 33 tasks · MVP</p>
         <h3>The sweep reads and classifies feedback</h3>
-        <p class="what">The P1 story and the minimum shippable slice. The helper applies the allowlist and the export registry; the orchestrator gives each comment exactly one class from a closed vocabulary. Ten tests land before the nineteen implementation tasks.</p>
+        <p class="what">The P1 story and the minimum shippable slice. The helper applies the allowlist and the export registry; the orchestrator gives each comment exactly one class from a closed vocabulary. The trust-boundary review added the byproduct directory that ignores itself in any repository (FR-004d) and the tightened deny-set with its corpus scan.</p>
         <ul class="tags"><li>read_only.py</li><li>phase-execution.md</li></ul>
       </div>
       <div class="milestone" id="phases-user-story-2">
-        <p class="when">Phase 4 · 22 tasks</p>
+        <p class="when">Phase 4 · 31 tasks</p>
         <h3>Amendments run through consensus and stop for re-review</h3>
-        <p class="what">Only <code>amended</code> comments reach the consensus protocol, with the reviewer body delimited and labelled as data. Every handled comment gets a log row and one reply, artifacts regenerate, and a run that changed anything stops with a report instead of walking into task work.</p>
+        <p class="what">Only <code>amended</code> comments reach the consensus protocol, with the reviewer body shaped and delimited by one redaction surface (FR-007g). Every outbound write passes through that surface and proceeds redacted rather than stopping (FR-012f); any redaction event stops the run after publication so a human sees it. Every handled comment gets a log row and one reply.</p>
         <ul class="tags"><li>consensus-protocol.md</li><li>workflow-file-protocol.md</li></ul>
       </div>
       <div class="milestone" id="phases-user-story-3">
@@ -1340,9 +1340,14 @@ h1 {
             <td>The allowlist runs inside the helper ahead of everything, and candidate records carry no body. Classification reads a body only for an id already in <code>candidates</code>. Delimiting is the boundary; removing matched export lines is defence in depth and is the part cut first under pressure.</td>
           </tr>
           <tr>
-            <th scope="row">The reviewable high end of 910 lines crosses the 800-line block, and the midpoint of roughly 710 no longer sits comfortably under it.</th>
+            <th scope="row">The live reviewable range is 705–1080 lines, and the midpoint near 890 is itself over the 800-line block, with a third warn on authored files at 16.</th>
+            <td><span class="sev sev-high"><span class="sev-bars" aria-hidden="true">●●●</span>High</span></td>
+            <td>Recorded rather than hidden. The figure grew from 515–830 through the artifact verification fix and three trust-boundary remediation passes; the production-file count is unchanged at 7 because every file was already declared. T014 blocks phase 3 until the operator decides the lever, and moving FR-012f and FR-007g to their own slice is now a live option.</td>
+          </tr>
+          <tr>
+            <th scope="row">Redact-and-proceed publishes the rest of a hit line and its neighbours, such as internal hosts, service accounts, and dates, where a stop would have held them back.</th>
             <td><span class="sev sev-medium"><span class="sev-bars" aria-hidden="true">●●</span>Medium</span></td>
-            <td>Recorded rather than hidden, with every lever rejected for a stated reason. The figure moved from 515–830 when the artifact verification fix landed on this branch; the production-file count is unchanged at 7 because both files were already declared. T014 blocks phase 3 until the lever decision is made against this larger figure.</td>
+            <td>Accepted as the price of convergence, and disclosed in FR-012f rather than presented as a feature. Any redaction event stops the run after all rows, commits, and replies have landed, so a human sees it; that is notification after publication, never prevention. The surface is not a secret scanner and the spec says so.</td>
           </tr>
           <tr>
             <th scope="row">The sweep never converges: each re-run reprocesses comments it already handled and the stage can never proceed.</th>
@@ -1377,9 +1382,10 @@ h1 {
       </div>
       <div class="task-panel">
         <h3>Read and classify</h3>
-        <p class="task-count">29 tasks</p>
+        <p class="task-count">33 tasks</p>
         <ul class="task-list">
           <li><span class="task-id">T024</span>The two trust-boundary assertions.</li>
+          <li><span class="task-id">T088</span>The self-ignoring byproduct directory and its scratch-repo fixture.</li>
           <li><span class="task-id">T029</span>The author-association allowlist, ahead of everything.</li>
           <li><span class="task-id">T031</span>The export lead registry: 14 leads.</li>
           <li><span class="task-id">T032</span>Whole-line exact matching against the body.</li>
@@ -1388,9 +1394,11 @@ h1 {
       </div>
       <div class="task-panel">
         <h3>Amend, record, and stop</h3>
-        <p class="task-count">27 tasks</p>
+        <p class="task-count">36 tasks</p>
         <ul class="task-list">
           <li><span class="task-id">T048</span>Only <code>amended</code> routes through consensus.</li>
+          <li><span class="task-id">T091</span>The corpus scan: the spec never matches its own deny-set.</li>
+          <li><span class="task-id">T092</span>The captured-call fixture: a forgotten leg fails the count.</li>
           <li><span class="task-id">T050</span>One commit per amendment.</li>
           <li><span class="task-id">T051</span>The FR-012b write-point edit-surface check, in code.</li>
           <li><span class="task-id">T055</span>The Feedback Sweep Log entry.</li>
