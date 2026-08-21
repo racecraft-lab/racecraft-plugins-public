@@ -794,6 +794,23 @@ See the classifier script at
 
 ---
 
+## Layer Plan
+
+**When this is filled:** immediately after the Atomicity Route is recorded, and
+always before Analyze or Implement continues. The layer planner runs only when
+the route is exactly `split-PR`. On every other route the run records
+`layer_plan.status = skipped` here and in `autopilot-state.json`, names the
+route that caused the skip, and continues with the route as context.
+
+| Field | Value |
+|-------|-------|
+| **Status** | |
+| **Reason** | |
+| **Helper invoked** | |
+| **Warnings** | |
+
+---
+
 ## Phase 6: Analyze
 
 **When to run:** Always run after generating tasks to catch issues.
