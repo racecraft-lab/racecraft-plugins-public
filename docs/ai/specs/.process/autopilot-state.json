@@ -6,8 +6,8 @@
   "status": "in_progress",
   "stage": "plan",
   "prior_run_note": "completed_archived",
-  "updated_at": "2026-08-21T01:44:41Z",
-  "active_step": "Phase 3: Plan",
+  "updated_at": "2026-08-21T02:11:05Z",
+  "active_step": "Phase 4: Checklist - security",
   "reclaimed_from": {
     "workflow_file": "docs/ai/specs/.process/ART-005-workflow.md",
     "spec_id": "ART-005",
@@ -160,6 +160,17 @@
       "clarify_sessions_completed": 3,
       "consensus": "7 items, all resolved in Round 1",
       "counting_method": "loose grep for both the bare and colon marker forms"
+    },
+    "G3": {
+      "gate": "3",
+      "pass": true,
+      "plan_md": true,
+      "research_md": true,
+      "data_model_md": true,
+      "fail_markers": 0,
+      "todo_markers": 0,
+      "clarification_markers": 0,
+      "path_leaks": 0
     }
   },
   "phase_results": {
@@ -327,6 +338,41 @@
         "escape_hatches": 0,
         "human_review": 0
       }
+    },
+    "plan": {
+      "status": "completed",
+      "artifacts": [
+        "specs/art-008-feedback-sweep/plan.md",
+        "specs/art-008-feedback-sweep/research.md",
+        "specs/art-008-feedback-sweep/data-model.md",
+        "specs/art-008-feedback-sweep/quickstart.md",
+        "specs/art-008-feedback-sweep/contracts/sweep-pr-feedback.md"
+      ],
+      "declared_file_operations": {
+        "production": 7,
+        "test_and_fixture": 7,
+        "generated": 8,
+        "total_entries": 22
+      },
+      "hand_derived_loc": {
+        "low": 515,
+        "high": 745,
+        "midpoint": 630
+      },
+      "verdict": "two warns (LOC over 400, production files 7 over 6), zero blocks; warn accepted, split lever recorded",
+      "estimator": {
+        "status": "pass",
+        "projected": 0,
+        "production_classified": 0,
+        "reading": "absent measurement, not a budget verdict"
+      },
+      "plan_findings": [
+        "Codex SKILL.md sits at 7997 of 8000 body words, three words of headroom, so no SKILL.md edit is taken at all; that alone drops production files from 8-9 to 7",
+        "uat-walkthrough is a phantom manifest entry declaring exports with no template file, so FR-008a's derive test pins an explicit skip list rather than skipping silently",
+        "Truncation must be orchestrator-side: the 32 KiB bound rejects the whole request before the helper runs, so the helper can validate the budget but never perform it",
+        "Recognition degrades for the three serialization templates, where the registered line is the header, so a header-trimmed paste is unrecognizable; accepted because FR-007d forbids recognition forcing a class",
+        "Two stale references found and deliberately not fixed as out of scope: consensus-protocol.md still documents aggregate-crl as callable, and five templates cite a contracts/export-payload-contract.md that does not exist"
+      ]
     }
   },
   "test_baseline_g0": {
@@ -381,11 +427,11 @@
     },
     {
       "step": "Phase 3: Plan",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - security",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - security Consensus",

@@ -34,8 +34,8 @@ captured during scoping.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 19 FRs, 3 user stories, 11 acceptance scenarios, 9 edge cases, 8 success criteria. 3 `[NEEDS CLARIFICATION]` markers left for Clarify |
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 15 questions, 7 consensus items all resolved in Round 1 with 23 analyst dispatches. Spec grew 402 → 927 lines and 19 → 31 requirements. Zero markers, zero human-review flags |
-| Plan | `/speckit-plan` | 🔄 In Progress | |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
+| Plan | `/speckit-plan` | ✅ Complete | 5 artifacts, 1506 lines. Budget re-derived by hand at 515-745 LOC (midpoint ~630) over 7 production files: two warns, zero blocks, warn accepted with the split lever recorded |
+| Checklist | `/speckit-checklist` | 🔄 In Progress | 3 domains, sequential with consensus after each |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
@@ -96,6 +96,13 @@ terminal status.
   escalation, no escape-hatch keyword, and no human-review flag. Session 3
   returned zero unresolved items and verified all eight settled interview
   decisions are encoded.
+- G3 gate: PASS — 2026-08-20. `plan.md`, `research.md`, and `data-model.md` all
+  exist and are non-empty, plus `quickstart.md` and one contract. Zero `FAIL` in
+  any constitutional gate section, zero `[TODO]`, zero `[NEEDS CLARIFICATION]`,
+  and zero absolute-path leaks under `specs/`. The reviewability estimator
+  returned `pass` with `projected: 0`, which is recorded below as an absent
+  measurement rather than a budget verdict; the hand-derived figure carries two
+  warns and zero blocks.
 
 ---
 
@@ -590,11 +597,50 @@ threads need their own acceptance scenario (Open Question 6).
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | Technical context, execution flow |
-| `research.md` | ⏳ | Decision rationales (if needed) |
-| `data-model.md` | ⏳ | Entities and types |
-| `contracts/` | ⏳ | API specifications |
-| `quickstart.md` | ⏳ | Developer onboarding |
+| `plan.md` | ✅ | 375 lines. Declared File Operations block complete: 22 entries across a production surface of 7, a test and fixture surface of 7, and 8 generated paths |
+| `research.md` | ✅ | 291 lines. Decision rationales, including the accepted recognition degradation for the three serialization templates |
+| `data-model.md` | ✅ | 348 lines. Envelope, swept-comment record, registry entry, log row |
+| `contracts/` | ✅ | `sweep-pr-feedback.md`, 241 lines |
+| `quickstart.md` | ✅ | 251 lines |
+
+#### Reviewability budget, re-derived at Plan
+
+**The estimator is an absent measurement, not a pass.** Run against this plan,
+verbatim:
+
+```json
+{"tool":"estimate-reviewable-loc","status":"pass","projected":0,
+ "declared_files":{"production":0,"new":4,"modified":18,"total_entries":22},
+ "greenfield":false,"thresholds":{"warn":400,"block":800}}
+```
+
+It parsed all 22 declared entries and classified **none** of them as
+production, because it counts a file as production only under `src/`, `app/`,
+`lib/`, or `scripts/`, or with a JavaScript, TypeScript, or SQL extension. Every
+path this slice touches fails both tests. Its `pass` carries no information
+about this slice's size and MUST NOT be read as a budget verdict.
+
+**Hand-derived figure: 515 to 745 reviewable LOC, midpoint ~630. Seven
+production files.** Plan corrected the spec's earlier 325 to 485 range upward
+rather than corroborating it, because two of that range's anchors were measured
+against the wrong precedent: the comparable corroboration behavior is 162 lines
+rather than the 35 of one function body, and the comparable protocol entry is 58
+lines rather than 15 to 25.
+
+**Verdict: two warns, zero blocks.** Over the 400 LOC warn and over the 6
+production-file warn; under the 800 LOC block and the 8-file block, on a single
+primary surface. The 745 high end leaves roughly 55 lines of margin to the
+block.
+
+**The warn is accepted rather than re-sliced, and the reasoning is on the
+record.** The only split lever that preserves a working checkpoint defers three
+serialization-family registry rows, which saves 15 to 30 lines and costs
+FR-007b. No split reaches 400 while still shipping a checkpoint: the parse
+helper and the two phase-execution references are the irreducible core. The
+split that would fit — records in one slice, consensus and replies and
+stop-or-proceed in another — was rejected on merit, because it ships a
+checkpoint that reads feedback and acts on none of it. Re-slicing remains the
+operator's call.
 
 ---
 
