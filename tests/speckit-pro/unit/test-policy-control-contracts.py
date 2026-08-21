@@ -1442,15 +1442,17 @@ class CodexAdaptiveMovementAndBreachTests(unittest.TestCase):
         self.assertEqual(classified["disposition_reason"], SERVICE_REROUTE_DISPOSITION_REASON)
 
 
-class CodexJustifiedHighEffortControlTests(unittest.TestCase):
-    """G56R-004 FR-018, FR-019, FR-023, SC-008, and SC-015: fixed high-effort route."""
-
+class _CodexJustifiedHighEffortFixture:
     def setUp(self) -> None:
         self.assertIsNotNone(codex_policy_controls, "codex_policy_controls is not importable")
         self.module = codex_policy_controls
         self.error = self.module.ControlContractError
         self.registry = load_json(CODEX_REGISTRY_FIXTURE_PATH)
         self.control = control_of_kind(self.registry, "justified_high_effort")
+
+
+class CodexJustifiedHighEffortControlTests(_CodexJustifiedHighEffortFixture, unittest.TestCase):
+    """G56R-004 FR-018, FR-019, FR-023, SC-008, and SC-015: fixed high-effort route."""
 
     def validate_control(self, control: dict[str, object]) -> dict[str, object]:
         self.assertTrue(
@@ -1591,15 +1593,8 @@ def codex_unit_member(
     return member
 
 
-class CodexParentPlusChildrenAggregationTests(unittest.TestCase):
+class CodexParentPlusChildrenAggregationTests(_CodexJustifiedHighEffortFixture, unittest.TestCase):
     """G56R-004 FR-020 through FR-022 and SC-009: governed unit aggregation."""
-
-    def setUp(self) -> None:
-        self.assertIsNotNone(codex_policy_controls, "codex_policy_controls is not importable")
-        self.module = codex_policy_controls
-        self.error = self.module.ControlContractError
-        self.registry = load_json(CODEX_REGISTRY_FIXTURE_PATH)
-        self.control = control_of_kind(self.registry, "justified_high_effort")
 
     def aggregate(self, members: list[dict[str, object]]) -> dict[str, object]:
         self.assertTrue(
