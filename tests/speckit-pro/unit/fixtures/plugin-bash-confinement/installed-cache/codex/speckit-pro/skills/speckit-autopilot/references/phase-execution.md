@@ -906,6 +906,46 @@ sequence; generation is not one of them, because fail-open below turns every
 shortfall this step can produce into an outcome. The sequence continues to
 step 2 either way.
 
+**A truncated report is not a clean one.** An agent that exhausts its budget
+while composing its summary returns a fragment, and a fragment that does not
+carry one outcome per selected page is exactly the "cannot be read as an outcome
+list" case above — it takes the whole-set gap rather than being read as far as it
+got. A partial summary is missing information, never evidence of success, and a
+gap count read off one is not a measurement.
+
+#### The written pages are verified on disk, not taken on report
+
+**Every outcome above is a claim about a file; this step checks the file.** The
+agent reports what it believes it wrote, and a dispatch that dies partway through
+can leave a page on disk its own report never mentioned. Run this check after the
+dispatch returns and **before the boundary commit**, so nothing that fails it can
+reach a commit.
+
+For each page written to `specs/<feature>/artifacts/`, two positive tests:
+
+| Test | The page fails when |
+| --- | --- |
+| it is not its own template | the file is byte-identical to `speckit-pro/artifact-gallery/templates/<entry-id>.html` |
+| it is not still sample content | the body carries a `class="sample-notice"` element |
+
+**A page that fails either test is a gap for that page — whatever the agent
+reported — and the file is deleted.** Deleting is the point. The shipped
+templates are complete worked examples built on an invented feature, so an
+unfilled page is neither empty nor obviously broken: it is a plausible-looking
+document about something else. Left on disk it is committed, pushed, and linked
+from the pull-request body as though it were real.
+
+**This is why an emptiness check cannot stand in for these two.** "Is every
+marked region populated?" answers yes on a page that was never touched, because
+the shipped region content is populated prose. Both tests above are positive —
+they ask what the page *is*, not whether something is missing from it.
+
+**The check converts outcomes; it never blocks.** A page turned into a gap here
+reports through the same three sinks as any other gap, and a run whose every page
+fails still opens the pull request carrying a whole-set gap. Fail-open is
+unchanged. What changes is that a page no reader could tell from a template is no
+longer counted as generated.
+
 #### Strict-mode block: the return happens before generation
 
 On a strict-mode block the run never enters the sequence above. The blocked-stop
