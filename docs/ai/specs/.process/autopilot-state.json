@@ -6,8 +6,8 @@
   "status": "in_progress",
   "stage": "plan",
   "prior_run_note": "completed_archived",
-  "updated_at": "2026-08-21T04:42:41Z",
-  "active_step": "Phase 5: Tasks",
+  "updated_at": "2026-08-21T05:01:41Z",
+  "active_step": "Phase 6: Analyze",
   "reclaimed_from": {
     "workflow_file": "docs/ai/specs/.process/ART-005-workflow.md",
     "spec_id": "ART-005",
@@ -183,6 +183,17 @@
       ],
       "suite": "7659/7659",
       "counting_method": "own grep; the runner counter reported 4 vs 8, 21 vs 30, and 0 vs 16"
+    },
+    "G5": {
+      "gate": "5",
+      "pass": true,
+      "fr_coverage": "48/48",
+      "sc_coverage": "13/13",
+      "tasks": 80,
+      "sequential": true,
+      "duplicates": 0,
+      "method": "orchestrator cross-reference with a trailing-boundary regex",
+      "orchestrator_repair": "added T080 for SC-003, the only uncovered criterion"
     }
   },
   "phase_results": {
@@ -529,6 +540,28 @@
         "human_review": 0,
         "agent_failures_recovered": 2
       }
+    },
+    "tasks": {
+      "status": "completed",
+      "artifact": "specs/art-008-feedback-sweep/tasks.md",
+      "total_tasks": 80,
+      "phases": 6,
+      "parallel_safe": 9,
+      "story_split": {
+        "US1": 29,
+        "US2": 22,
+        "US3": 5,
+        "setup": 6,
+        "foundational": 8,
+        "polish": 10
+      },
+      "coverage": "48 of 48 requirements and 13 of 13 criteria, verified independently by the orchestrator with a trailing-boundary regex so a parent is never satisfied by a lettered child",
+      "orchestrator_added": "T080. The executor verified requirement coverage but not criterion coverage, and SC-003 — the clean-re-run convergence claim — was the one criterion no task cited. T044 covers the no-second-reply half; nothing pinned the whole-run assertion or its interrupted-run qualifier.",
+      "flags_raised_by_executor": [
+        "Known interface gap: FR-012b rule 2 needs the path check at the write point, but the helper is called once before classification when no resolved target exists. T004 adds the feature-dir input and T051 implements the check; how the orchestrator invokes it at the write is left open rather than inventing an unregistered second operation the plan does not budget for.",
+        "T014 is a blocking checkpoint in Foundational that forces the operator to record one budget lever before Phase 3 begins. The executor did not self-split and did not trim tasks to duck under the line."
+      ],
+      "boundaries_honored": "no task edits either SKILL.md; the eight generated paths carry regeneration tasks only; no task crosses a stated non-goal"
     }
   },
   "test_baseline_g0": {
@@ -611,11 +644,11 @@
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
@@ -731,5 +764,49 @@
       ],
       "note": "This is an operator decision, routed to consensus for a recommendation. The plan-stage estimator cannot see it and reports zero."
     }
+  },
+  "atomicity_route": {
+    "route": "one-navigable-PR",
+    "releasable": true,
+    "signals": [
+      "change-shape:modify-heavy"
+    ],
+    "hints": [],
+    "warnings": [],
+    "advisory": true,
+    "note": "structural seams, not size; the reviewability crossing is a separate question the classifier neither sees nor comments on"
+  },
+  "layer_plan": {
+    "status": "skipped",
+    "reason": "the layer planner runs only on an exact split-PR route; the classifier returned one-navigable-PR",
+    "helper_invoked": false,
+    "warnings": []
+  },
+  "task_reviewability": {
+    "helper_id": "reviewability-gate",
+    "requested_mode": "tasks",
+    "status": "deferred",
+    "invoked": false,
+    "deferral_reason": "installed runner supports setup mode only; tasks mode is deferred",
+    "fallback_evidence": {
+      "setup_mode": {
+        "status": "warn",
+        "blockers": []
+      },
+      "plan_estimator": {
+        "status": "pass",
+        "projected": 0,
+        "reading": "absent measurement, not a verdict"
+      },
+      "hand_derived": {
+        "loc_low": 515,
+        "loc_high": 830,
+        "midpoint": 630,
+        "production_files": 7,
+        "verdict": "two warns; high end crosses the 800 block, midpoint under it"
+      }
+    },
+    "pr_marker_plan": null,
+    "marker_plan_reason": "house precedent: pass-or-warn evidence without a split demand creates no marker state, and the route is one-navigable-PR"
   }
 }

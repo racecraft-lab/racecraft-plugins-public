@@ -36,8 +36,8 @@ captured during scoping.
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 15 questions, 7 consensus items all resolved in Round 1 with 23 analyst dispatches. Spec grew 402 → 927 lines and 19 → 31 requirements. Zero markers, zero human-review flags |
 | Plan | `/speckit-plan` | ✅ Complete | 5 artifacts, 1506 lines. Budget re-derived by hand at 515-745 LOC (midpoint ~630) over 7 production files: two warns, zero blocks, warn accepted with the split lever recorded |
 | Checklist | `/speckit-checklist` | ✅ Complete | 3 domains, 143 items, **54 gaps found and 54 closed**. 8 consensus items across 24 analyst dispatches, all Round 1. Spec grew 31 → 48 requirements and 10 → 13 criteria |
-| Tasks | `/speckit-tasks` | 🔄 In Progress | |
-| Analyze | `/speckit-analyze` | ⏳ Pending | |
+| Tasks | `/speckit-tasks` | ✅ Complete | 80 tasks, 6 phases, 9 parallel-safe. 48/48 requirements and 13/13 criteria covered; the orchestrator added T080 after finding SC-003 uncovered |
+| Analyze | `/speckit-analyze` | 🔄 In Progress | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 | Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
@@ -115,6 +115,16 @@ terminal status.
   `[Gap, Ambiguity]`, `[Conflict, Gap]` — is invisible to it. On the third
   domain every single marker was a combined form, so its zero before remediation
   and its zero after carried identical information: none.
+- G5 gate: PASS — 2026-08-21. Every one of the 48 requirements and all 13
+  success criteria are referenced by at least one of the 80 tasks, cross-checked
+  by the orchestrator with a trailing-boundary regex so a lettered child never
+  satisfies its parent. Task ids are sequential with no duplicates.
+
+  One repair: the executor verified requirement coverage but not criterion
+  coverage, and **SC-003 was uncovered** — the clean-re-run convergence claim,
+  which is the criterion the state-management domain spent its pass proving. The
+  fixture corpus covered its no-second-reply half; nothing pinned the whole-run
+  assertion or its interrupted-run qualifier. Added as T080.
 
 ---
 
@@ -844,10 +854,16 @@ line count. Surface the four fields the SKILL extracts from the emitted decision
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
-| **Releasable** | | `true`, or `false` for a destructive-migration or concurrency-sensitive change (a passing CI run does not prove such a change is safe to release). |
-| **Signals** | | The decisive detector findings behind the route and releasability reading (may be empty when the classifier abstains). |
-| **Warnings** | | Any release-safety warning attached to the change (empty when there is no releasability risk). |
+| **Route** | `one-navigable-PR` | The change is modify-heavy across shared files rather than a set of independent additive capabilities, so it reviews as one navigable pull request. |
+| **Releasable** | `true` | No destructive migration and nothing concurrency-sensitive. |
+| **Signals** | `change-shape:modify-heavy` | The decisive finding: this slice edits existing references and helpers rather than adding separable surfaces. |
+| **Warnings** | none | No release-safety risk attached. |
+
+Recorded 2026-08-20 from the read-only classifier, which writes no file of its
+own. Advisory: it wires no pull-request emission and no branch creation. Note
+that the route speaks to **structural seams**, not to size — this slice's
+reviewability crossing is a separate question, recorded in the Reviewability
+Budget, and the classifier neither sees nor comments on it.
 
 To produce the decision, run the classifier against the feature directory:
 
@@ -870,10 +886,39 @@ route that caused the skip, and continues with the route as context.
 
 | Field | Value |
 |-------|-------|
-| **Status** | |
-| **Reason** | |
-| **Helper invoked** | |
-| **Warnings** | |
+| **Status** | `skipped` |
+| **Reason** | The layer planner runs only on an exact `split-PR` route. The atomicity classifier returned `one-navigable-PR`, so the planner is skipped by rule rather than by choice. |
+| **Helper invoked** | no |
+| **Warnings** | none |
+
+Mirrored in `autopilot-state.json` under `layer_plan`. The route travels forward
+as implementation context.
+
+### Tasks-phase reviewability gate
+
+The runner's `reviewability-gate` supports **setup mode only** on the installed
+runner; tasks mode is deferred and MUST NOT be invoked as an active helper.
+Recorded per the deferred-helper contract:
+
+| Field | Value |
+|-------|-------|
+| Helper id | `reviewability-gate` |
+| Requested mode | `tasks` |
+| Status | `deferred` |
+| Invoked | no |
+| Deferral reason | installed runner supports setup mode only |
+
+**Fallback evidence chain, which is what the phase actually runs on.** The
+setup-mode result recorded at scaffold returned `warn` with empty `blockers`.
+The plan-phase estimator returned `pass` with `projected: 0` and is an **absent
+measurement**, because it classifies none of this slice's paths as production.
+The operator-facing figure is therefore the hand-derived one: 515 to 830
+reviewable LOC, midpoint near 630, seven production files. That is two warns,
+with the high end crossing the 800 block and the midpoint under it.
+
+**No marker planning state is created.** House precedent is that pass-or-warn
+evidence without a split demand creates none, and the atomicity route is
+`one-navigable-PR`. `tasks.md` remains the task source and is not marker state.
 
 ---
 
