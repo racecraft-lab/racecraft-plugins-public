@@ -309,22 +309,42 @@ record to manufacture a `no_record` reading.
 One sweep run, in order:
 
 ```text
-read corroboration status
-  ├─ no_record ─────────────► proceed to task work (one-line note)
-  ├─ skipped | pr_closed | pr_missing | identity_mismatch ─► STOP, report + resume path
-  └─ match
-       └─ observe both surfaces (paginated to exhaustion, authorAssociation requested)
-            └─ truncate bodies to 8 KiB, flag each
-                 └─ helper: filter, recognize, report envelope
-                      └─ orchestrator: assign one class per candidate
-                           ├─ amended ─► consensus ─► edit ─► commit+push (one per amendment)
-                           │               └─► bookkeeping commit (chore:, workflow file alone)
-                           └─ answered | deferred | no action ─► rows only
-                                └─ reply once per handled comment
-                                     ├─ any amended ─► STOP for re-review
-                                     ├─ none amended, ≥1 handled ─► proceed
-                                     └─ none handled ─► no rows, no commit, proceed
+validate self_login ─ invalid ─────────────────────────► STOP (FR-006b)
+  └─ read corroboration status
+       ├─ no_record ────────────────────► proceed to task work (one-line note)
+       ├─ skipped | pr_closed | pr_missing | identity_mismatch ─► STOP, per-status resume path
+       ├─ outside the six ──────────────► STOP, malformed record (FR-019)
+       └─ match
+            └─ observe both surfaces (paginated to exhaustion, authorAssociation requested)
+                 ├─ any read fails ─► discard whole observation ─► STOP (FR-004c)
+                 └─ both exhausted
+                      └─ truncate bodies to 8 KiB, flag each
+                           └─ helper: filter, recognize, report envelope
+                                └─ orchestrator: assign one class per candidate
+                                     ├─ amended ─► consensus
+                                     │    ├─ no answer ─► CRL row, no sweep row, no class
+                                     │    │                 (siblings finish; STOP below)
+                                     │    └─ resolved ─► target check ─┬─ outside ─► STOP (FR-012b.2)
+                                     │                                 └─ ok ─► edit ─► commit
+                                     │                                      ├─ push fails ─► STOP (FR-012e)
+                                     │                                      └─► bookkeeping commit
+                                     └─ answered | deferred | no action ─► rows only
+                                          └─ reconcile, then reply to each unanswered handled comment
+                                               ├─ a reply fails ─► report it; owed next run (FR-015b)
+                                               ├─ any human-review item ─► STOP (FR-011a)
+                                               ├─ any amended ─► STOP for re-review
+                                               ├─ none amended, ≥1 handled ─► proceed
+                                               └─ none handled ─► no rows, no commit, proceed
 ```
+
+The FR-011a stop sits at the same point as FR-017's, after this run's rows and
+replies, so sibling items that resolved are fully processed and the two stops
+emit one report rather than two.
+
+Every STOP above emits the one FR-020 report: condition, what already landed,
+resume path. Reads precede writes throughout, which is why the only stop needing
+no unwind reasoning is the read failure — at that point nothing has been
+written.
 
 **Commit ordering is forced, not stylistic.** A row that names its commit cannot
 exist until that commit's sha does, so an amendment's bookkeeping commit must

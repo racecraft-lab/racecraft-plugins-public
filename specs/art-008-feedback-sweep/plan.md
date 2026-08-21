@@ -133,6 +133,44 @@ reference prose. The high end moves from 745 toward roughly 775 against the 800
 block. That margin is thinner than the table states and is recorded here rather
 than absorbed silently.
 
+## Failure Paths
+
+The sweep reads a live pull request, edits artifacts, commits, pushes, and
+writes back to a reviewer, so it has five places to fail partway. Two design
+decisions cover all five, and both are placement decisions rather than new
+mechanism.
+
+**One report builder, not one per stop.** FR-020 fixes a single contract —
+condition, what landed, resume path — and every stop calls it. This is the
+consolidation the spec needed anyway: eight stop conditions had accumulated with
+their reports described one requirement at a time. Building the report once, from
+the run state the orchestrator already holds, is fewer lines than eight
+hand-written wordings and is the only way the what-landed part stays accurate,
+since no individual stop knows what the ones before it did.
+
+**Reads are one transaction; writes are ordered so that stopping is safe.** All
+reads precede all writes, so FR-004c's discard-on-failure needs no unwind path —
+there is nothing to unwind. On the write side, FR-012a's existing ordering does
+the work: amendment commit, push, then bookkeeping commit, then replies. A stop
+between any two of those leaves a state the next run reaches by a route the spec
+already reasons about, so no failure needs a repair rule of its own.
+
+The one exception is the reply, which lands after the row that would otherwise
+suppress it. FR-015b closes that with the marker already required by FR-015 and
+already matched by FR-006 — it now carries the answered comment's id — so the
+pull request itself witnesses which replies exist. No log column, no state file,
+and the FR-006 anchor is unchanged because the id follows the fixed prefix.
+
+**Budget note.** These add an estimated 35 to 55 reviewable lines: the report
+builder and the reconciliation read are the substantial parts, and the remaining
+stops are two or three lines each once the builder exists. Against the 775 high
+end recorded above, the high end now reaches roughly **810 to 830, which crosses
+the 800 block**, while the midpoint stays under it. That is a threshold crossing
+rather than a thinner margin, and it is flagged for the operator rather than
+absorbed: the levers are the serialization-family deferral already described
+under the split option, accepting the block explicitly, or re-slicing. This plan
+does not choose among them.
+
 ## Technical Context
 
 **Language/Version**: Python 3.11+ standard library (runner helper); Markdown
@@ -314,10 +352,18 @@ for the `SKILL.md` cap reason recorded above.
 | Total authored files | 14 | 15 | 25 | pass |
 | Primary surfaces | 1 | >1 | >1 | pass |
 
-**Two warns, no blocks. The warn is accepted, explicitly and not silently.**
+**Two warns, no blocks at the midpoint. The table above is the figure as it
+stood when this plan was first written, and the error-handling checklist has
+since moved it.**
 
-The high end of 745 leaves roughly 55 lines of margin to the 800 block. That
-margin is real but thin, and it is the reason the implementation must hold the
+That pass added five requirements, and the current range is **roughly 810 to
+830 at the high end with the midpoint still under 800**. The high end therefore
+crosses the block; the midpoint does not. The margin the next paragraph was
+written about no longer exists, and the Failure Paths section above carries the
+current numbers and the three levers. Read that section, not this table, for
+the live figure.
+
+The reason the margin matters is unchanged: the implementation must hold the
 references to the sequence rather than restating the spec's rationale in them.
 
 ### The split option, if the operator chooses to re-slice

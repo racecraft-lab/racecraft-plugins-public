@@ -6,8 +6,8 @@
   "status": "in_progress",
   "stage": "plan",
   "prior_run_note": "completed_archived",
-  "updated_at": "2026-08-21T02:51:42Z",
-  "active_step": "Phase 4: Checklist - error-handling",
+  "updated_at": "2026-08-21T03:18:19Z",
+  "active_step": "Phase 4: Checklist - error-handling Consensus",
   "reclaimed_from": {
     "workflow_file": "docs/ai/specs/.process/ART-005-workflow.md",
     "spec_id": "ART-005",
@@ -427,6 +427,29 @@
               "no job-scoped edit-target guard exists on the shared consensus write path; FR-012b guards only the sweep's caller"
             ]
           }
+        },
+        "error-handling": {
+          "status": "remediated, consensus in flight",
+          "items": 56,
+          "loops": 2,
+          "gaps_found_my_grep": 30,
+          "gaps_found_helper": 21,
+          "helper_undercount_reason": "count-markers gaps mode uses the literal regex \\[Gap\\] at read_only.py:838, so it missed 2 [Clarity, Gap], 3 [Conflict, Gap], and 4 [Coverage, Gap]. Same failure as the security domain.",
+          "gaps_remaining": 0,
+          "added_requirements": [
+            "FR-004c all-or-nothing observation, partial reads stop",
+            "FR-011a consensus outcomes that produce no answer",
+            "FR-012e amendment committed but push failed",
+            "FR-015b reply reconciliation against the pull request",
+            "FR-020 one report contract across all eight stops"
+          ],
+          "added_criteria": [
+            "SC-011"
+          ],
+          "worst_finding": "replies post after the log row lands while the skip key is the log row alone, so a failed reply was permanently lost and SC-002 unsatisfiable. Not merely unspecified: the ordering made the loss irreversible.",
+          "suite": "7659/7659 passed after remediation",
+          "routed_to_consensus": 4,
+          "consensus_dispatches": 4
         }
       }
     }
@@ -499,7 +522,7 @@
     },
     {
       "step": "Phase 4: Checklist - error-handling Consensus",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - state-management",
@@ -618,6 +641,18 @@
       "production_files": "8 or 9"
     },
     "verdict": "at or over the 400 warn line, under the 800 block. One primary surface. Proceeds, but no longer fits the number it was scoped against.",
-    "estimator_is_blind": "estimate-reviewable-loc counts a file as production only under src/, app/, lib/, scripts/ or with a JS/TS/SQL extension. Every ART-008 path fails both tests, so the plan estimator will report projected 0 and status pass regardless of the real diff. Plan must size by hand and treat the helper verdict as an absent measurement, not a passing one."
+    "estimator_is_blind": "estimate-reviewable-loc counts a file as production only under src/, app/, lib/, scripts/ or with a JS/TS/SQL extension. Every ART-008 path fails both tests, so the plan estimator will report projected 0 and status pass regardless of the real diff. Plan must size by hand and treat the helper verdict as an absent measurement, not a passing one.",
+    "after_error_handling_checklist": {
+      "reviewable_loc_high": "810 to 830",
+      "midpoint": "under 800",
+      "block_threshold": 800,
+      "verdict": "the HIGH END now crosses the block; the midpoint does not. Verified against read_only.py:976-992 where the block fires at loc > 800.",
+      "levers": [
+        "defer the three serialization-family registry rows, saving 15-30 lines and costing part of FR-007b",
+        "claim an explicit typed exception",
+        "re-slice"
+      ],
+      "note": "This is an operator decision, routed to consensus for a recommendation. The plan-stage estimator cannot see it and reports zero."
+    }
   }
 }

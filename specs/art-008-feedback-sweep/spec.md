@@ -345,7 +345,26 @@ proceeds.
   this is the first sweep on this feature.
 - The pull request is readable and carries zero comments: a clean sweep with no
   rows written, which proceeds into task work.
-- A consensus round on an amended item that reaches no agreement.
+- A consensus round on an amended item that reaches no agreement: it produces no
+  edit and no class, writes a Consensus Resolution Log row and no sweep row, and
+  stops the run under FR-011a. Because no sweep row exists, the comment is a
+  candidate again once a human has resolved the disagreement.
+- One comment surface reads cleanly and the other fails, or pagination fails on
+  page three of five: the whole observation is discarded and the run stops under
+  FR-004c. Nothing was written, so nothing is unwound, and the report says
+  reading had begun so the operator can tell this from a gate failure.
+- An amendment committed locally whose push failed: the run stops before that
+  amendment's bookkeeping commit, so no row and no reply exist, and the local
+  commit stands. The next run treats the comment as a candidate again, which is
+  the interrupt window FR-012a already bounds, reached by a different route.
+- A reply that posts on the review-thread surface and fails on the conversation
+  surface: each affected comment keeps its log row and is owed a reply, which
+  FR-015b's reconciliation posts on the next run rather than the failure being
+  permanent.
+- An analyst that dies mid-round, which happened during this specification's own
+  consensus: after the shipped protocol's single retry it becomes a human-review
+  outcome and takes the FR-011a path, while the other items in the batch
+  complete.
 - A trusted comment posted after the sweep read the pull request but before the
   run stops: it is not in this run's candidate set and is picked up on the next
   run.
@@ -399,6 +418,37 @@ proceeds.
   passes its body by file path rather than inline. This is the constraint the
   nearest shipped precedent violates: it interpolates comment and reply text
   directly into a command string.
+- **FR-004c**: The two reads are **one observation, taken all or nothing**. It
+  succeeds only when both surfaces have been read to exhaustion; any read error
+  at any point fails the whole observation. This covers the case FR-019 does
+  not: FR-019's statuses are observed at the gate, **before** these reads begin,
+  so a pull request that corroborated `match` can still fail once reading
+  starts. Three failures fall under this rule — one surface readable and the
+  other not, a page of either surface failing partway through pagination, and a
+  read that returns output that cannot be parsed.
+
+  **A failed observation is discarded rather than swept.** The partial data MUST
+  NOT reach classification. The run writes no Feedback Sweep Log rows, posts no
+  replies, takes no commit, and stops with the FR-020 report. Nothing needs
+  unwinding, because every read precedes every write.
+
+  The reason is FR-019a's principle applied one step later. At the gate,
+  treating "could not observe" as "observed nothing" would make the checkpoint
+  silently optional; here, sweeping the half that was read would make it
+  silently partial, and a half-swept pull request that reported success is worse
+  than one that reported failure, because only the second gets re-run.
+  SC-001's claim that every trusted, unrecorded comment carries a disposition
+  cannot be evaluated against a candidate set that is missing an unknown number
+  of comments, so a partial set has no verifiable relationship to the criterion
+  the sweep exists to satisfy.
+
+  **The report distinguishes this from the gate stop.** Both draw on the same
+  four causes FR-019b names — absent, unauthenticated, rate-limited, or
+  unparseable output — so the report MUST also name that reading had begun, and
+  which surface failed. An operator who cannot tell a gate failure from a
+  mid-read failure cannot tell whether the pull request was ever reachable. The
+  resume path is FR-019b's: fix the tool and re-run. The observation is retaken
+  fresh on every invocation, so a re-run needs no repair step.
 
 **Trust boundary**
 
@@ -452,6 +502,16 @@ proceeds.
   second, independently sourced value to compare against, and verification is
   therefore the orchestrator's job through provenance rather than the parse's
   through checking.
+
+  That input error **stops the run**, and it stops it with the FR-020 report
+  like every other stop rather than as a bare error return. The condition named
+  is the missing authenticated account, and the resume path is to supply it from
+  the live session and re-run. Naming it as a stop matters because the parse
+  returning an error and the run halting are two different events, and only the
+  first was stated: an orchestrator reading this requirement alone could log the
+  error and continue, which is the exact outcome FR-006a says the loop cannot
+  survive. The stop occurs before any read, so nothing has landed and the
+  report's what-landed line is empty.
 
   **What actually breaks, stated correctly.** An empty value does not reduce the
   test to its marker half. Comparison is exact, so an empty account matches no
@@ -564,10 +624,27 @@ proceeds.
   **for each of the five excluded association values**; one recognized export
   on each of the two comment surfaces; a disposition cell containing a pipe and
   a newline; a comment whose author cannot be resolved; a comment carrying the
-  self-reply marker; a body carrying **two** registered lines, asserting both
-  are reported and both removed; an empty and a whitespace-only authenticated
-  account, each returning an input error; and the ordinary-comment path. A
-  separate test MUST derive the expected
+  self-reply marker, and one carrying the marker with a **different** comment
+  id after its fixed prefix, asserting the FR-006 anchor still matches and
+  FR-015b's reconciliation reads the id rather than the prefix; a body carrying
+  **two** registered lines, asserting both are reported and both removed; an
+  empty and a whitespace-only authenticated account, each returning an input
+  error; and the ordinary-comment path.
+
+  The failure paths MUST be pinned too, or the requirements grow while the
+  corpus stays where the happy path left it: a read that fails on the second
+  surface and one that fails mid-pagination, both asserting zero rows, zero
+  replies, and zero commits; a corroboration value outside the six; a push
+  failure after an amendment commit, asserting no row and no reply followed it;
+  a reply that fails on one surface, asserting the comment is owed a reply and
+  that a re-run posts exactly one; a comment already carrying a sweep reply,
+  asserting no second one; and a human-review consensus outcome, asserting a
+  Consensus Resolution Log row, no Feedback Sweep Log row, and a stop. Each of
+  these is a stop or a recovery whose whole value is that it behaves correctly
+  when something else has already gone wrong, which is exactly the condition a
+  hand-run check never reaches.
+
+  A separate test MUST derive the expected
   set from the gallery manifest and the templates themselves — every template
   the manifest says exports, in every kind it declares — and assert the
   registry matches. Deriving rather than hardcoding is what keeps the registry
@@ -620,6 +697,57 @@ proceeds.
 - **FR-011**: Only the `amended` class routes through the category-routed
   consensus protocol. The `answered`, `deferred`, and `no action` classes MUST
   NOT invoke consensus.
+- **FR-011a**: Consensus does not always return an answer, and the three ways it
+  fails to MUST all land on one specified behavior. The shipped protocol
+  produces `[HUMAN REVIEW NEEDED]` from each of them: all three analysts
+  disagreeing after Round 2, a Round-1 escape whose Round 2 still cannot
+  resolve, and an analyst that fails its single retry. Behavior does not branch
+  on which occurred; only the report names it. The third is not hypothetical —
+  an analyst died mid-round during this specification's own consensus.
+
+  **No edit, no class, no sweep row.** A human-review outcome MUST NOT produce
+  an artifact edit, and the comment MUST NOT be given a class. `amended` is
+  wrong because no edit was resolved, and the other three are wrong because each
+  asserts a disposition nobody reached. The closed set of four stands unchanged;
+  this outcome does not mint a fifth. The comment therefore gets **no Feedback
+  Sweep Log row**, and that is the load-bearing consequence: FR-009's skip key is
+  that log's comment-id column and nothing else, so writing no row is what makes
+  the comment a candidate again on the next run, after a human has resolved it.
+  A row here would record the sweep's failure as its disposition and make the
+  outcome permanent.
+
+  **It surfaces in the Consensus Resolution Log instead**, one row, `Type`
+  `Sweep`, its item cell naming the comment id the way FR-014 requires, its
+  disposition naming the human-review outcome and which of the three ways
+  produced it. The two logs differ in what they key: the Consensus Resolution
+  Log is the record of consensus rounds and feeds no skip key, so a row there
+  costs no idempotency. FR-014's bidirectional link degrades to one direction
+  here, by design — the comment id still names the item, and there is no sweep
+  row for the `CRL #` to point back from, because none was written. The row
+  COUNTS toward the Round-2 escape-rate metric, for FR-014's stated reason: it
+  is exactly the escape the metric exists to measure.
+
+  **It stops the run, whether or not anything was amended.** This is the part
+  that would otherwise go wrong. FR-018 proceeds when no comment was classified
+  `amended`, and a human-review item takes no class at all, so a run whose only
+  unresolved item was this one would read as nothing-to-act-on and walk into task
+  work — the proceed-versus-stop collapse this feature forecloses everywhere
+  else. A human-review outcome stops the run under FR-020, naming every affected
+  comment id. When other items amended in the same run, FR-017's stop and this
+  one are the same stop and produce one report, not two.
+
+  **Other items in the batch still complete.** The shipped protocol's
+  do-not-block-the-batch rule holds: items that resolved are edited, committed,
+  recorded, **and replied to** normally, and the run stops after that.
+  Discarding resolved work because a sibling item failed would waste consensus
+  rounds that already succeeded, and the stop happens either way.
+
+  **The stop sits exactly where FR-017's does** — after this run's rows and
+  replies for every handled comment, before any task work. Saying so is what
+  makes "the same stop, one report" literally true rather than approximately
+  true, and it settles the sibling replies: they post. When nothing was amended,
+  this stop replaces FR-018's proceed at that same point, which is the whole of
+  FR-011a's effect on a run that would otherwise have continued.
 
 **Amendment**
 
@@ -703,22 +831,64 @@ proceeds.
   input rather than being inferred: the one inference mechanism available keys
   off a branch-name pattern that **this feature's own branch does not match**,
   so inference would resolve to the wrong specification or to nothing.
-- **FR-012d**: The write-point stop MUST report in the same shape the other two
-  stop conditions use, naming the defect — the refused target and the comment
-  id — and the resume path, which is to fix the classification and re-run.
-  FR-017 and FR-019 both name a report; a third stop condition that halted
-  without one would read as a bare failure beside them.
+- **FR-012d**: The write-point stop MUST report under the FR-020 contract,
+  naming the defect — the refused target and the comment id — and the resume
+  path, which is to fix the classification and re-run. Every stop this document
+  defines names a report; one that halted without one would read as a bare
+  failure beside them.
 
   The `deferred` reply for rule 1 MUST NOT imply future action. This document
   elsewhere requires deferred work to name a follow-up owner, and rule 1 has
   none: the request is declined, not scheduled. Word it as recorded and not
   acted on, with the target outside the sweep's edit surface.
+- **FR-012e**: The push is part of the amendment step, not a step after it, so
+  an amendment whose commit succeeded and whose push failed MUST have a
+  specified outcome. It is a different failure from the one under Edge Cases:
+  there, the amendment reached the remote and its bookkeeping never did; here,
+  the amendment never reached the remote at all, and the local branch carries a
+  commit the pull request has never seen.
+
+  **The run stops immediately, before that amendment's bookkeeping commit is
+  taken**, under FR-020, naming the unpushed commit's sha and the comment id.
+  Ordering does the work: FR-012a already fixes the bookkeeping commit after the
+  amendment's own commit, so stopping between them means no log row is written
+  and — because FR-015 gates replies on bookkeeping commits having landed — no
+  reply is posted.
+
+  **The local commit stands and MUST NOT be unwound.** The edit is correct work
+  that consensus resolved; discarding it would throw away a completed round to
+  tidy a state that is already recoverable. Recovery follows the path Edge Cases
+  already accepts, reached by a different route: no row means FR-009's skip key
+  does not see the comment, so it is a candidate again next run, and the fresh
+  consensus round either recognizes the artifact already carries the edit and
+  classifies it `answered` or `no action`, or amends again and stops for
+  re-review under FR-017. Per-amendment cadence bounds the exposure to one item,
+  exactly as FR-012a intends it to. No new detection machinery is defined, for
+  the reason FR-012a gives: there is no witness independent of the record to
+  corroborate against.
+
+  **A bookkeeping commit whose push fails stops the run the same way**, and
+  differs in one consequence worth stating. Its row is already in the local
+  workflow file, and the sweep reads that file locally, so FR-009's skip key
+  **does** see the comment on the next run and skips it. The reply is what would
+  otherwise be lost, and FR-015b's reconciliation rule is what recovers it.
+
+  **No automatic retry.** A failed push stops and the operator re-runs, matching
+  the resume path FR-019b fixes for a tool that could not be reached. Retrying
+  inside the run would multiply the window in which an amendment is pushed but
+  unrecorded, which is the window FR-012a's cadence exists to bound.
 
 **Durable record**
 
 - **FR-013**: The sweep MUST write one Feedback Sweep Log row per handled
   comment, carrying comment id, surface, author, class, disposition, and
-  commit. The table sits under its own `### Feedback Sweep Log` heading
+  commit. A comment is **handled** when it was assigned a class under FR-010,
+  which is the definition every "handled" in this document carries. It excludes
+  a comment the trust filter or the self-reply rule dropped, and — since FR-011a
+  — a comment whose consensus round returned no answer, because that comment
+  takes no class. The term was load-bearing before it was defined; stating it
+  here keeps FR-018's proceed condition and FR-015's reply count reading off the
+  same set. The table sits under its own `### Feedback Sweep Log` heading
   immediately after `### Consensus Resolution Log` in the workflow file, with
   the header `| # | Comment ID | Surface | Author | Class | Disposition |
   Commit | CRL # |`. Because FR-010 puts reviewer-derived prose in the
@@ -750,7 +920,10 @@ proceeds.
   all, because FR-011 keeps them out of consensus. Inclusion is not the same as
   losing attribution: the `Type` column is itself the source discriminator, so
   a breach of the threshold can be attributed to sweep rows or to phase rows
-  without either being excluded from the rate.
+  without either being excluded from the rate. A human-review outcome under
+  FR-011a also writes one row here and no Feedback Sweep Log row, so the
+  bidirectional link degrades to one direction on that path alone; FR-011a
+  states why.
 
 **Reviewer-facing replies**
 
@@ -779,6 +952,64 @@ proceeds.
   order. Neither shipped reply-writer in this repository posts to the
   conversation surface at all, so that write is new work with no prior art to
   copy.
+- **FR-015b**: A reply write can fail, and without a rule for it the failure is
+  permanent and silent. The sequence is what makes it so: FR-013's row is
+  written and its bookkeeping commit lands **before** any reply is posted, and
+  FR-009's skip key is that row. A reply that fails after its row landed
+  therefore leaves a comment the next run skips as already handled and never
+  replies to, and SC-002 becomes unsatisfiable rather than merely violated. The
+  failure needs no unusual conditions: FR-015a records that the
+  conversation-surface write has no prior art in this repository, so it is the
+  least proven write the sweep makes.
+
+  **Replies are reconciled against the pull request, not assumed from the log.**
+  Before posting, the sweep MUST determine which handled comments already carry
+  one of its replies, and post only to those that do not. A comment is owed a
+  reply when it is **present in this run's observation**, has a Feedback Sweep
+  Log row, and carries no sweep reply answering it. On the next run this closes
+  the gap; within a run it is what makes a retry safe.
+
+  The observation qualifier is load-bearing, not throat-clearing. FR-004 reads
+  only unresolved review threads, so a thread a human resolved between runs is
+  invisible to the next one — both the comment and the reply inside it. Keying
+  the rule on log rows alone would read that invisibility as a missing reply and
+  post a second one into a thread someone had deliberately closed, turning a
+  recovery rule into a duplicate-reply generator and breaking SC-002 from the
+  other direction. A comment the sweep cannot see this run is not owed anything
+  this run.
+
+  **The witness is machinery FR-006 already defines.** The sweep identifies its
+  own replies by the same two-condition test — the anchored marker and the
+  authenticated account — and it already observes every comment on both
+  surfaces, so no new read and no new record is needed. To make the
+  correspondence exact rather than positional, **the fixed HTML-comment marker
+  MUST carry the answered comment's id**. FR-006 continues to anchor on the
+  marker's fixed prefix, which is unchanged; the id follows it inside the same
+  HTML comment, so it renders as nothing and a reviewer never sees it. Without
+  the id, a review thread carrying more than one comment gives no way to tell
+  which one a reply answered.
+
+  This deliberately adds no column to the Feedback Sweep Log, whose shape is
+  settled, and writes no state mirror, which FR-013 forbids. It also does not
+  contradict FR-012a's finding that no witness exists for the bookkeeping
+  window: there, the question is which comment an unrecorded amendment belonged
+  to, and no reply exists yet to answer it; here, the question is whether a
+  reply exists, and the reply is its own direct evidence.
+
+  **A failed reply is reported and does not by itself stop the run.** It MUST
+  appear in the FR-018a run report naming the comment id and the surface, so a
+  lost reply is visible rather than silent. It does not stop, and the
+  distinction from FR-004c is principled rather than convenient: an observation
+  that failed means the substantive work never happened, while a reply that
+  failed means the work landed and only the notification did not. Stopping task
+  work over an undelivered notification that the next run re-sends would let
+  flakiness in the least-proven write block a run whose every durable record is
+  correct.
+
+  **Per-comment granularity handles the split-surface case.** A run where
+  replies post on one surface and fail on the other is many per-comment
+  failures, not a distinct condition: each comment is owed a reply or is not,
+  and the reconciliation rule reads the same on both surfaces.
 - **FR-016**: The sweep MUST NOT resolve any review thread.
 
 **Stop or proceed**
@@ -810,6 +1041,27 @@ proceeds.
   the workflow file carries no Draft PR row (`no_record`), the sweep MUST
   proceed without stopping, and on `match` it sweeps. The six are exhaustive
   and each maps to exactly one behavior.
+
+  **Each stopping status names its own resume path**, because the four have
+  different fixes and a shared wording would send the operator to the wrong one.
+  `skipped`: fix the tool and re-run, per FR-019b. `pr_closed`: reopen the pull
+  request, or clear the `Draft PR` row if the checkpoint is genuinely abandoned,
+  then re-run. `pr_missing`: clear the `Draft PR` row, which is the one status
+  where the row's absence would match reality. `identity_mismatch`: correct the
+  row to name the right pull request, then re-run.
+
+  **The sweep never writes the `Draft PR` row on any path**, including these
+  stops. Clearing or correcting it is an operator action named in a resume path,
+  never something the run does for itself. A run that repaired the record it had
+  just failed to corroborate would destroy the evidence of the discrepancy.
+
+  **A value outside the six is a malformed record and MUST stop**, reported as
+  such rather than mapped onto one of the six. The vocabulary being exhaustive
+  is a statement about what the preceding spec emits, not a guarantee about what
+  this one will read: the row is text in a workflow file that a human edits.
+  Fail-closed is forced here rather than chosen: exactly one status proceeds, an
+  unrecognized value is not that one, and a default that proceeded would make a
+  corrupted record the cheapest way past the checkpoint.
 - **FR-019a**: `skipped` stops, and the distinction it turns on must be stated
   rather than left to a reader. `no_record` means the gate does not apply,
   because no checkpoint was ever opened; `skipped` means the gate applies and
@@ -828,6 +1080,35 @@ proceeds.
   is **not** a resume path here: that path exists for `pr_missing`, where the
   row's absence would match reality, and reusing it for `skipped` would erase a
   probably-true record to manufacture a `no_record` reading.
+- **FR-020**: Every stop uses **one report contract**, with three parts: the
+  **condition** that stopped the run, **what already landed** before it did, and
+  the **resume path**. Stops accumulated one requirement at a time as this
+  specification grew, each naming a report in its own words, and by the end no
+  single place said how many there were or what they had in common. This
+  requirement is that place.
+
+  The **what-landed** part is the one that has to be stated, because it is the
+  part a per-stop wording keeps omitting and the part an operator needs most: it
+  names the commits pushed, the log rows written, and the replies posted so far
+  in the run, so recovery starts from what is true rather than from a guess. On
+  stops that occur before any write it is empty, and saying so explicitly is
+  cheaper than leaving the reader to infer it.
+
+  The complete set of stop conditions is: an invalid authenticated account
+  (FR-006b), a corroboration status that is not `match` or `no_record`, or one
+  outside the six (FR-019), a failed observation (FR-004c), a consensus outcome
+  requiring human review (FR-011a), a resolved edit target outside the three
+  artifacts (FR-012b rule 2), a failed push (FR-012e), and one or more
+  amendments requiring re-review (FR-017). The last of those is the only one
+  that is not a failure, and it uses the same contract because an operator
+  reading a report should not have to know which kind it is to find the resume
+  path.
+
+  Two stops MUST NOT produce two reports. When several conditions hold in one
+  run — most commonly a human-review item alongside a completed amendment — the
+  run emits one report naming every condition. FR-018a's per-comment
+  dispositions appear in that same report rather than in a second one, so every
+  run produces exactly one report on every path, stopping or proceeding.
 
 ### Reviewability Notes *(if applicable)*
 
@@ -992,7 +1273,11 @@ Named owners, so none of these is a silent omission.
   disposition.
 - **SC-002**: Following a sweep run whose bookkeeping commits all landed, every
   handled comment receives exactly one reply. Across the fixture corpus, no
-  handled comment has zero replies and none has two.
+  handled comment has zero replies and none has two. When a reply write itself
+  failed, that comment is owed a reply the next run posts under FR-015b's
+  reconciliation rule, and the criterion is met across the pair of runs rather
+  than within the first — the same shape of qualifier SC-003 carries, and for
+  the same reason.
 - **SC-003**: Following a sweep run whose bookkeeping commits all landed,
   re-running the sweep with no new comments produces zero new log rows, zero
   new replies, and zero amendments, and proceeds into task work. When a prior
@@ -1033,6 +1318,14 @@ Named owners, so none of these is a silent omission.
   including `CRL #`, readable in its own position, and a comment whose author
   cannot be resolved still produces a complete row. Both are found-and-fixed
   defects rather than hypotheticals, which is why they carry a criterion.
+- **SC-011**: No failure leaves the sweep having acted on part of the feedback
+  while reporting success. Across the fixture corpus, a run that failed to read
+  either surface completely writes zero rows, posts zero replies, and takes zero
+  commits; every stop carries a report naming the condition, what already
+  landed, and a resume path; and no path reaches task work after a stop
+  condition held. This is the criterion the whole error-handling surface exists
+  to satisfy, and it is stated separately from SC-006 because SC-006 covers only
+  the four conditions observable at the gate, before any work has been done.
 ## Assumptions
 
 - The Draft PR row and its corroboration vocabulary already ship from the
