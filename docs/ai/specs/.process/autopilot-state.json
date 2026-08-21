@@ -6,8 +6,8 @@
   "status": "in_progress",
   "stage": "plan",
   "prior_run_note": "completed_archived",
-  "updated_at": "2026-08-21T01:26:43Z",
-  "active_step": "Phase 2: Clarify - Settled-Decision Verification",
+  "updated_at": "2026-08-21T01:44:41Z",
+  "active_step": "Phase 3: Plan",
   "reclaimed_from": {
     "workflow_file": "docs/ai/specs/.process/ART-005-workflow.md",
     "spec_id": "ART-005",
@@ -150,6 +150,16 @@
       "markers_after_session_1": 0,
       "human_review_markers": 0,
       "clarifications_section_present": true
+    },
+    "G2": {
+      "gate": "2",
+      "pass": true,
+      "markers": 0,
+      "human_review_markers": 0,
+      "clarifications_section": true,
+      "clarify_sessions_completed": 3,
+      "consensus": "7 items, all resolved in Round 1",
+      "counting_method": "loose grep for both the bare and colon marker forms"
     }
   },
   "phase_results": {
@@ -196,7 +206,7 @@
       "verification": "branch unchanged, no NNN- directory generated, no absolute-path leaks under specs/"
     },
     "clarify": {
-      "status": "in_progress",
+      "status": "completed",
       "sessions": {
         "1": {
           "focus": "Feedback Sweep Log and commit protocol",
@@ -283,9 +293,40 @@
               "Non-Goals: the operator skip flag stays deferred, but the concrete case is now named rather than absent"
             ]
           }
+        },
+        "3": {
+          "focus": "Settled-decision verification",
+          "status": "completed",
+          "questions_returned": 1,
+          "consensus_items": 0,
+          "verification": "all 8 settled interview decisions encoded, none partial or missing",
+          "consistency_findings": 15,
+          "high_severity_fixed": [
+            "FR-015 required an artifact, section, and commit from all four reply classes; only amended has them, so three of the four templates were unsatisfiable",
+            "FR-015's exactly-one-reply rule lacked the qualifier SC-002 and SC-003 gained in session 1 for the same edge case",
+            "FR-004b, the no-shell-argument injection boundary, had no criterion, scenario, or fixture anywhere"
+          ],
+          "added": [
+            "SC-009 no comment text in a shell argument",
+            "SC-010 log survives reviewer prose and unresolvable authors"
+          ],
+          "stale_figure_fixed": "three templates share the identical empty-export sentence, not two",
+          "verified_correct": [
+            "ten exporting templates with seven carrying a prompt kind",
+            "the six-value corroboration vocabulary matches the shipped classifier exactly"
+          ]
         }
       },
-      "finding_out_of_scope": "consensus-protocol.md:157-171 documents aggregate-crl and parse-consensus-categories in the present tense as shipped scripts. Both were deleted by the XPLAT-009 shipped-Bash purge (XPLAT-010-deleted-tests-ledger.md rows 1 and 20) and nothing replaced them; the scripts directory holds only validate-autopilot-phase-coverage.py and the Codex mirror has no scripts directory. Separately, workflow-file-protocol.md:26 names a mandatory 'Routed Categories' CRL column that no committed workflow file uses. Both are stale shipped prose, outside ART-008 slice 1's scope, flagged for the operator."
+      "finding_out_of_scope": "consensus-protocol.md:157-171 documents aggregate-crl and parse-consensus-categories in the present tense as shipped scripts. Both were deleted by the XPLAT-009 shipped-Bash purge (XPLAT-010-deleted-tests-ledger.md rows 1 and 20) and nothing replaced them; the scripts directory holds only validate-autopilot-phase-coverage.py and the Codex mirror has no scripts directory. Separately, workflow-file-protocol.md:26 names a mandatory 'Routed Categories' CRL column that no committed workflow file uses. Both are stale shipped prose, outside ART-008 slice 1's scope, flagged for the operator.",
+      "totals": {
+        "sessions": 3,
+        "questions": 15,
+        "consensus_items": 7,
+        "analyst_dispatches": 23,
+        "round_2_items": 0,
+        "escape_hatches": 0,
+        "human_review": 0
+      }
     }
   },
   "test_baseline_g0": {
@@ -332,15 +373,15 @@
     },
     {
       "step": "Phase 2: Clarify - Settled-Decision Verification",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Settled-Decision Verification Consensus",
-      "status": "pending"
+      "status": "skipped: zero unresolved items"
     },
     {
       "step": "Phase 3: Plan",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - security",
@@ -459,5 +500,22 @@
       }
     ],
     "note": "relocate-process-artifacts is deferred and was not invoked."
+  },
+  "budget_warning": {
+    "declared_at_scaffold": {
+      "reviewable_loc": 330,
+      "production_files": 7,
+      "total_files": 10
+    },
+    "revised_at_clarify": {
+      "reviewable_loc_range": [
+        325,
+        485
+      ],
+      "midpoint": 400,
+      "production_files": "8 or 9"
+    },
+    "verdict": "at or over the 400 warn line, under the 800 block. One primary surface. Proceeds, but no longer fits the number it was scoped against.",
+    "estimator_is_blind": "estimate-reviewable-loc counts a file as production only under src/, app/, lib/, scripts/ or with a JS/TS/SQL extension. Every ART-008 path fails both tests, so the plan estimator will report projected 0 and status pass regardless of the real diff. Plan must size by hand and treat the helper verdict as an absent measurement, not a passing one."
   }
 }

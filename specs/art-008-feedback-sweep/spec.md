@@ -134,6 +134,52 @@ export. Ten do, and seven of those export a prompt kind as well. FR-007b widens
 the registry to all of them and FR-008a derives the expected set from the
 manifest, which makes the count a data question rather than a design one.
 
+### Session 3 — settled-decision verification (2026-08-20)
+
+Verification, not fresh design. **All eight settled interview decisions came
+back encoded**, none partial and none missing, each traced to the requirement
+carrying it. The spec did not drift from the interview across two sessions of
+heavy editing. No sub-item needed consensus.
+
+- **Q: Do exported blocks inside review threads need their own acceptance
+  scenario?** → Extend the existing one rather than add a new one. The behavior
+  is surface-independent by construction, so a standalone scenario would assert
+  nothing FR-007 does not already force. But leaving it entirely to prose was
+  wrong: no scenario named a surface for an export, the fixture list named
+  shapes and paths but never a surface, and the promise rested on an assumption
+  pointing at a runbook that does not exist yet. US1 Scenario 3 now carries the
+  review-thread placement, and FR-008a pins a fixture on each surface.
+
+**Fifteen consistency defects, all fixed.** The two that mattered most were
+contradictions the spec had grown into:
+
+- **FR-015 required every reply to name an artifact, a section, and a commit,
+  across all four classes.** Only `amended` has any of those, so three of the
+  four templates it mandates were unsatisfiable. Now scoped.
+- **FR-015's "exactly one reply" had no qualifier**, while SC-002 and SC-003
+  gained one in session 1 for exactly the same edge case. The requirement and
+  the criterion measuring it disagreed. Now aligned.
+
+Six requirements had no criterion or scenario reaching them. Two of those gaps
+were serious enough to earn new criteria rather than a note: **FR-004b**, the
+no-shell-argument injection boundary, had no verification anywhere despite
+being the security boundary of the whole feature and being stated as a
+correction to shipped precedent; and **FR-013's** pipe-escaping and
+unresolvable-author rules, both found-and-fixed defects, had no test. Those are
+now SC-009 and SC-010. FR-019b's four-cause reporting is now covered by SC-006.
+
+One more stale count fell out: three shipped templates declare the identical
+empty-export sentence, not two. Two figures were verified correct and left
+alone: ten exporting templates with seven carrying a prompt kind, and the
+six-value corroboration vocabulary, which matches the shipped classifier's six
+returns exactly.
+
+**The budget verdict is the finding to read.** See the Reviewability Budget
+section: the slice no longer fits the ~330 it was scoped against, the honest
+range is 325 to 485, and the Plan estimator is structurally blind to it because
+none of this slice's paths satisfy its production-file test. It will report zero
+and pass. Plan sizes this by hand.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - The sweep reads and classifies draft-PR feedback (Priority: P1)
@@ -174,9 +220,12 @@ exclusion reason.
 3. **Given** a verbatim export paste, whose registered sentence sits on line
    four behind the artifact header, **When** the sweep runs, **Then** the
    comment is recognized as an artifact export; **Given** the same paste with
-   that header trimmed off, **Then** it is still recognized; and **Given** a
-   comment carrying no registered sentence in its opening lines, **Then** it is
-   treated as an ordinary comment.
+   that header trimmed off, **Then** it is still recognized; **Given** the same
+   recognized paste posted into a review thread rather than into the
+   conversation, **Then** it is recognized identically and its row records the
+   review-thread surface; and **Given** a comment carrying no registered
+   sentence in its opening lines, **Then** it is treated as an ordinary
+   comment.
 4. **Given** a comment id that already appears in the Feedback Sweep Log, and a
    reply the sweep itself posted on an earlier run, **When** the sweep runs
    again, **Then** neither becomes a candidate and no duplicate record or reply
@@ -217,8 +266,10 @@ with no new comments and confirm it proceeds into task work instead.
    exists; no state file outside the workflow file is written.
 3. **Given** four handled comments across all four classes, **When** the sweep
    finishes, **Then** each comment carries exactly one reply naming its class,
-   the artifact and section touched, and the commit, and no review thread has
-   been resolved by the sweep.
+   **and Given** the one classified `amended`, **Then** its reply additionally
+   names the artifact, the section, and the commit, while the other three name
+   none of those because none exists; and no review thread has been resolved by
+   the sweep.
 4. **Given** at least one amendment, **When** the sweep completes, **Then** the
    run stops before task work with a re-review report that names the comments
    swept, the amendments made, the commit range, and states that draft pages
@@ -397,10 +448,10 @@ proceeds.
   returns before the lead is ever pushed, so an empty export carries no
   registered lead and would otherwise reach the sweep as ordinary reviewer
   feedback. A recognized empty export takes the class `no action`. Empty
-  sentences are not unique per template — at least two shipped templates
-  declare the identical string — so an empty export MUST report its template id
-  as ambiguous whenever the matched sentence is shared, rather than guessing
-  between the templates that share it.
+  sentences are not unique per template — **three** shipped templates declare
+  the identical string, and three share its companion — so an empty export MUST
+  report its template id as ambiguous whenever the matched sentence is shared,
+  rather than guessing between the templates that share it.
 - **FR-007b**: The registry MUST cover **every shipped template that declares
   an export**, in every kind it declares, not only the draft-stage pages. The
   gallery ships ten exporting templates today and seven of them export a
@@ -433,8 +484,11 @@ proceeds.
   degrading that one item.
 - **FR-008a**: Golden fixtures MUST pin: every registered sentence, in both the
   verbatim payload shape and a header-trimmed paste; a body delimited with
-  carriage returns; an oversized body that truncates; the untrusted-author
-  path; and the ordinary-comment path. A separate test MUST derive the expected
+  carriage returns; an oversized body that truncates; the untrusted-author path
+  **for each of the five excluded association values**; one recognized export
+  on each of the two comment surfaces; a disposition cell containing a pipe and
+  a newline; a comment whose author cannot be resolved; a comment carrying the
+  self-reply marker; and the ordinary-comment path. A separate test MUST derive the expected
   set from the gallery manifest and the templates themselves — every template
   the manifest says exports, in every kind it declares — and assert the
   registry matches. Deriving rather than hardcoding is what keeps the registry
@@ -544,9 +598,16 @@ proceeds.
 
 **Reviewer-facing replies**
 
-- **FR-015**: The sweep MUST post exactly one reply per handled comment, naming
-  the class, the artifact and section touched, and the amending commit. Each
-  class MUST use one fixed reply template, and reply text MUST be plain,
+- **FR-015**: Following a sweep run whose bookkeeping commits all landed, the
+  sweep MUST post exactly one reply per handled comment. The qualifier is the
+  same one SC-002 and SC-003 carry and for the same reason: an amendment pushed
+  before its bookkeeping commit landed is re-processed, and the edge case that
+  documents it produces a second reply on that one comment. Every reply names
+  its class. **Only an `amended` reply names an artifact, a section, and a
+  commit**, because only `amended` routes through consensus and produces an
+  edit; the other three classes have none of those to name, so requiring them
+  of all four would make three of the four templates unsatisfiable. Each class
+  MUST use one fixed reply template, and reply text MUST be plain,
   public-readable English. Every template MUST open with the same fixed
   HTML-comment marker, which renders as nothing and is what FR-006 matches on.
   A marker rather than a visible sentence, because a visible sentence is
@@ -570,9 +631,12 @@ proceeds.
   stop for re-review before any task work, with a report shaped like the
   plan-stage stop report that names the comments swept, the amendments made,
   the commit range, and states that draft pages regenerate once slice 2 lands.
-- **FR-018**: When no comment was classified `amended`, the sweep MUST write
-  its records, post its replies, and proceed directly into task execution
-  without stopping.
+- **FR-018**: When no comment was classified `amended` but at least one comment
+  was handled, the sweep MUST write its records, post its replies, and proceed
+  directly into task execution without stopping. When no comment was handled at
+  all, it writes no rows, posts no replies, takes no bookkeeping commit, and
+  proceeds. The two cases are separated so the first does not read as requiring
+  an empty commit on a pull request that carried no comments.
 - **FR-019**: When a Draft PR row is present but the pull request cannot be
   read, the run MUST stop before any task work with a report naming the status
   and the resume path. That covers **four** of the six corroboration statuses
@@ -612,14 +676,39 @@ proceeds.
   behavior and its unit coverage.
 - **Secondary surfaces, if any**: docs/process — both phase-execution
   references and the workflow-file protocol entry for the Feedback Sweep Log.
-- **Projected reviewable LOC**: ~330, re-derived at Plan from the Declared File
-  Operations block. The whole-spec advisory estimate before splitting was
-  `{"estimated_loc":452,"suggested_slices":2,"status":"warn"}` from 3 user
-  stories, 14 files, and 18 functional requirements, modify-weighted.
-- **Projected production files**: 7
-- **Projected total files**: 10
-- **Budget result**: within budget (projected). Plan re-measures from its own
-  Declared File Operations block and records the result there.
+- **Projected reviewable LOC**: **325 to 485, midpoint near 400.** The earlier
+  figure of ~330 was set against 18 requirements and is now stale: Clarify
+  added thirteen suffixed requirements, four of them substantial — pagination
+  to exhaustion, a registry spanning ten templates in two kinds, the
+  conversation-surface reply the spec itself calls work with no prior art, and
+  four-cause stop reporting. Estimated bottom-up against the nearest shipped
+  analogue: the corroboration classifier is 35 lines for a six-outcome
+  classification over one supplied observation, while this parse must also
+  normalize line endings, truncate at a byte budget with a per-comment flag,
+  whole-line match a ten-line window, filter an eight-value enum, apply the
+  anchored-marker-plus-author self-reply test, and emit a reasoned exclusion
+  list. That is 110 to 160 lines plus 45 to 60 of registry data, against
+  roughly 8 in the registry, 70 to 110 in each phase-execution reference, 15 to
+  25 in the workflow-file protocol, and 5 to 10 in the consensus protocol.
+- **Projected production files**: **8 or 9**, not 7. `consensus-protocol.md`
+  must change for the fourth `Type` value, and both `SKILL.md` files carry
+  helper names today.
+- **Budget result**: **at or over the 400 warn line, and under the 800 block.**
+  Stated plainly rather than rounded down. The slice is still one primary
+  surface and does not approach the block threshold, so it proceeds; but it no
+  longer fits the number this spec was scoped against, and Plan owns the
+  decision of whether to accept the warn or re-slice.
+- **The Plan estimator cannot check this, and must not be read as if it had.**
+  `estimate-reviewable-loc` projects from production files only, and it counts
+  a file as production only when its path sits under `src/`, `app/`, `lib/`, or
+  `scripts/`, or when it ends in a JavaScript, TypeScript, or SQL extension.
+  Every path this slice touches — the runner helpers under
+  `speckit-pro/speckit_pro_runner/`, both phase-execution references, both
+  protocol references — matches none of those. The estimator will return a
+  projection of zero and a status of `pass` no matter how large the real diff
+  is. Plan MUST size this slice by hand from its Declared File Operations block
+  and record that hand figure, treating the helper's verdict as an absent
+  measurement rather than a passing one.
 - **Split decision**: ART-008 is split into two stacked vertical slices along a
   Path seam. This spec is slice 1, the checkpoint: the comment-driven path. It
   is followed by slice 2, artifact freshness, specified separately on a branch
@@ -691,20 +780,22 @@ Named owners, so none of these is a silent omission.
   bodies; a state-file mirror of the sweep record; a new Workflow Overview
   phase row; edits to any shipped gallery template; and edits to any of the
   twelve governed Layer 6 corpus agent definitions.
-- **Deferred, with the concrete case now named**: an operator flag to skip the
+- **Owned by no spec yet, and deliberately so**: an operator flag to skip the
   sweep. Clarify surfaced the case that was missing at scoping — a fail-closed
   gate on a mandatory path normally ships with a documented override, and
   FR-019 is one. The case is real but the flag stays out of this slice: the
   resume path for every stop is to repair the tool or the record and re-run,
   the observation is retaken on every invocation, and a skip flag on a
   checkpoint whose whole purpose is to be unskippable deserves its own scoping
-  rather than an addition here. Recorded so the next spec inherits the case
-  rather than rediscovering it.
-- **Deferred pending a concrete case**: which class heads the log row and
-  reply when a single comment mixes only `answered` and `deferred` points,
-  with nothing amend-worthy present. Neither class routes to consensus or
-  changes stop-or-proceed, and no such comment has surfaced. Clarify may
-  revisit.
+  rather than an addition here. No owner is named because none exists: this is
+  the one entry in this section without one, and saying so is the honest
+  alternative to assigning it to a spec that has not agreed to it. The next
+  spec to touch the sweep inherits the case rather than rediscovering it.
+- **Owned by no spec yet, pending a concrete case**: which class heads the log
+  row and reply when a single comment mixes only `answered` and `deferred`
+  points, with nothing amend-worthy present. Neither class routes to consensus
+  or changes stop-or-proceed, so the choice has no behavioral consequence and
+  no owner is assigned.
 
 ## Success Criteria *(mandatory)*
 
@@ -732,9 +823,9 @@ Named owners, so none of these is a silent omission.
 - **SC-006**: All four unreadable draft-pull-request conditions stop the run
   before any task work, each with a report naming the condition and a resume
   path, and the could-not-observe stop is distinguishable in that report from
-  the three discrepancy stops; the no-record condition proceeds. Every one of
-  the six corroboration statuses has exactly one specified behavior, with none
-  left to prose alone.
+  the three discrepancy stops **and names which of its four causes occurred**;
+  the no-record condition proceeds. Every one of the six corroboration statuses
+  has exactly one specified behavior, with none left to prose alone.
 - **SC-007**: Both platform variants produce the same sweep outcome for the
   same input, with no behavioral difference between them.
 - **SC-008**: After an amendment run stops, a reviewer can tell from the pull
@@ -745,6 +836,17 @@ Named owners, so none of these is a silent omission.
   put an amendment summary there. Slice 2 owns the description refresh and MUST
   NOT weaken the replies on the assumption that the description carries this.
 
+- **SC-009**: No comment text reaches a shell argument on any path, read or
+  write, demonstrated by inspecting every command the sweep issues. This is the
+  injection boundary for a feature that carries public pull-request text into
+  agents that edit the planning artifacts, and it is stated as a correction to
+  shipped precedent rather than a restatement of it, so it needs evidence of
+  its own rather than inheriting anyone else's.
+- **SC-010**: The Feedback Sweep Log survives reviewer-derived prose:
+  a disposition containing a pipe and a newline leaves every later column,
+  including `CRL #`, readable in its own position, and a comment whose author
+  cannot be resolved still produces a complete row. Both are found-and-fixed
+  defects rather than hypotheticals, which is why they carry a criterion.
 ## Assumptions
 
 - The Draft PR row and its corroboration vocabulary already ship from the

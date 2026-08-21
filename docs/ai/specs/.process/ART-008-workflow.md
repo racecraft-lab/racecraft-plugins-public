@@ -33,8 +33,8 @@ captured during scoping.
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 19 FRs, 3 user stories, 11 acceptance scenarios, 9 edge cases, 8 success criteria. 3 `[NEEDS CLARIFICATION]` markers left for Clarify |
-| Clarify | `/speckit-clarify` | 🔄 In Progress | 3 sessions. All three run: they carry the seven deferred Open Questions and the hidden-coupling search, which exist independent of the marker count |
-| Plan | `/speckit-plan` | ⏳ Pending | |
+| Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 15 questions, 7 consensus items all resolved in Round 1 with 23 analyst dispatches. Spec grew 402 → 927 lines and 19 → 31 requirements. Zero markers, zero human-review flags |
+| Plan | `/speckit-plan` | 🔄 In Progress | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
@@ -88,6 +88,14 @@ terminal status.
   Counted with a loose `grep -c "NEEDS CLARIFICATION"`, because the runner's
   own counter matches only the bare literal and misses the colon form the spec
   template prescribes. Zero `[Gap]` and zero `HUMAN REVIEW NEEDED`.
+- G2 gate: PASS — 2026-08-20. Zero `[NEEDS CLARIFICATION]` markers, counted by
+  loose grep for both the bare and colon forms; zero `HUMAN REVIEW NEEDED`; and
+  a `## Clarifications` section carrying all three sessions with the decision,
+  the reasoning, and the requirement id for each. Seven sub-items went to
+  consensus across sessions 1 and 2 and every one resolved in Round 1, with no
+  escalation, no escape-hatch keyword, and no human-review flag. Session 3
+  returned zero unresolved items and verified all eight settled interview
+  decisions are encoded.
 
 ---
 
@@ -485,8 +493,8 @@ threads need their own acceptance scenario (Open Question 6).
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
 | 1 | Feedback Sweep Log and commit protocol | 5 returned, 5 answered; 4 sub-items routed to consensus | All 3 spec markers cleared. One commit per amendment (FR-012); log writes ride a separate bookkeeping commit, per amendment, with the zero-amendment case covered (FR-012a); `Sweep` as the CRL `Type`, counted in the escape-rate metric with `Type` as the source discriminator (FR-014); one class per comment with `amended` dominant (FR-010); the log's column set, placement, and bidirectional `CRL #` link (FR-013, FR-014); comment id as the sole skip key (FR-009). SC-002 and SC-003 qualified after consensus found both falsified by the spec's own edge case. Consensus resolved all 4 items in Round 1 |
-| 2 | | | |
-| 3 | | | |
+| 2 | Helper envelope and hidden coupling | 5 returned, 5 answered; 3 sub-items routed to consensus, 8 analysts | Carried the blind-spot search the scaffold never ran, and changed the spec most. Found that the export lead is not on a comment's first line (it is line four), that an empty export carries no lead at all and would have been mistaken for feedback, that the runner's 32 KiB bound rejects a whole request over one oversized string, that a draft description has no editable region, that the runner cannot post the replies, and that an unescaped pipe in the disposition would break the log link. Consensus registered the prompt-kind variants, settled the own-reply marker plus author match, and mapped `skipped` to stop. Scope correction: ten templates export, not three |
+| 3 | Settled-decision verification | 1 question, 15 consistency findings; 0 sub-items needed consensus | All eight settled interview decisions verified encoded, none partial or missing. Fixed two contradictions the spec had grown into: FR-015 required an artifact, section, and commit from all four reply classes when only `amended` has them, and its one-reply rule lacked the qualifier SC-002 and SC-003 already carried. Added SC-009 and SC-010 to cover the no-shell-argument boundary and the log-escaping rules, which had no verification at all. Corrected the empty-sentence count from two templates to three. Delivered the budget verdict below |
 
 ---
 
