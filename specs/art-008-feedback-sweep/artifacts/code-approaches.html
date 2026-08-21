@@ -156,7 +156,7 @@
 </script>
 <!-- GALLERY-HEAD:END -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Code Approaches — NIMBUS-101 Offline Draft Sync</title>
+<title>Code Approaches — ART-008 Feedback Sweep</title>
 <style>
 /* BRAND-KIT:START */
 :root {
@@ -957,10 +957,9 @@ h1 {
       <p class="artifact-kind" id="artifact-title">Code Approaches</p>
     </div>
 <!-- FILL:feature-header:START -->
-    <p class="eyebrow"><span id="feature-id">NIMBUS-101</span> · draft pull request</p>
-    <h1 id="feature-name">Offline Draft Sync</h1>
-    <p class="lede">A draft written without a connection is saved on the device, and the save has to wait for a pause in the typing rather than firing on every keystroke. Three ways to hold it back.</p>
-    <p class="sample-notice">This is sample content. Every region of this document is a worked example built on the invented feature NIMBUS-101, and each one is waiting to be filled with a real feature.</p>
+    <p class="eyebrow"><span id="feature-id">ART-008</span> · draft pull request</p>
+    <h1 id="feature-name">Feedback Sweep</h1>
+    <p class="lede">The gallery's exporting templates write markdown with different lead sentences and no shared machine-readable marker. The sweep has to tell an artifact export apart from an ordinary review comment. Three ways to recognize one.</p>
 <!-- FILL:feature-header:END -->
   </header>
 
@@ -971,87 +970,28 @@ h1 {
       <legend class="choice-legend">Which approach should this change take?</legend>
       <div class="approaches" id="approach-list">
 <!-- FILL:approaches:START -->
-        <article class="approach" id="approaches-inline-timer-in-the-editor">
+        <article class="approach" id="approaches-lead-sentence-registry">
           <header class="approach-head">
-            <h3>Inline timer in the editor</h3>
-            <p>The delay lives directly inside the component that owns the draft field.</p>
+            <h3>Lead-sentence registry in the parser</h3>
+            <p>The read-only helper carries the shipped lead sentences and matches them against the comment body.</p>
           </header>
 
-          <div class="code" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" aria-label="Code example for the inline timer approach"><pre><span class="kw">export function</span> <span class="fn">DraftEditor</span>() {
-  <span class="kw">const</span> [draft, setDraft] = <span class="fn">useState</span>(<span class="str">''</span>);
-  <span class="kw">const</span> [settled, setSettled] = <span class="fn">useState</span>(<span class="str">''</span>);
-
-  <span class="fn">useEffect</span>(() <span class="kw">=&gt;</span> {
-    <span class="kw">const</span> id = <span class="fn">setTimeout</span>(() <span class="kw">=&gt;</span> setSettled(draft), <span class="str">300</span>);
-    <span class="kw">return</span> () <span class="kw">=&gt;</span> <span class="fn">clearTimeout</span>(id);
-  }, [draft]);
-
-  <span class="fn">useLocalDraft</span>({ body: settled });
-
-  <span class="kw">return</span> (
-    &lt;<span class="fn">textarea</span>
-      value={draft}
-      onChange={(e) <span class="kw">=&gt;</span> setDraft(e.target.value)}
-      placeholder=<span class="str">"Write your draft…"</span>
-    /&gt;
-  );
-}</pre></div>
-
-          <table class="tradeoffs">
-            <caption class="tradeoff-caption">Trade-offs for the inline timer</caption>
-            <thead>
-              <tr>
-                <th scope="col">Pro</th>
-                <th scope="col">Con</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><span class="mark" aria-hidden="true">+</span>No new abstraction for a reviewer to learn</td>
-                <td><span class="mark" aria-hidden="true">−</span>The same timer is rewritten wherever a draft is edited</td>
-              </tr>
-              <tr>
-                <td><span class="mark" aria-hidden="true">+</span>Easy to step through when a save goes missing</td>
-                <td><span class="mark" aria-hidden="true">−</span>Two pieces of state for one draft body</td>
-              </tr>
-              <tr>
-                <td><span class="mark" aria-hidden="true">+</span>No dependency and no bundle change</td>
-                <td><span class="mark" aria-hidden="true">−</span>The pause length is buried in the component</td>
-              </tr>
-            </tbody>
-          </table>
-
-          <ul class="chips">
-            <li class="chip">Bundle impact: <strong>+0 kb</strong></li>
-            <li class="chip">Testability: <strong>medium</strong></li>
-            <li class="chip">Reuse: <strong>low</strong></li>
-            <li class="chip">Offline safe: <strong>yes</strong></li>
-          </ul>
-        </article>
-
-        <article class="approach" id="approaches-shared-debounce-hook">
-          <header class="approach-head">
-            <h3>Shared debounce hook</h3>
-            <p>The timer moves into one hook under <code>src/hooks/</code> that every draft surface imports.</p>
-          </header>
-
-          <div class="code" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" aria-label="Code example for the shared debounce hook approach"><pre><span class="cm">// src/hooks/useDebounce.ts</span>
-<span class="kw">export function</span> <span class="fn">useDebounce</span>&lt;T&gt;(value: T, ms = <span class="str">300</span>): T {
-  <span class="kw">const</span> [settled, setSettled] = <span class="fn">useState</span>(value);
-  <span class="fn">useEffect</span>(() <span class="kw">=&gt;</span> {
-    <span class="kw">const</span> id = <span class="fn">setTimeout</span>(() <span class="kw">=&gt;</span> setSettled(value), ms);
-    <span class="kw">return</span> () <span class="kw">=&gt;</span> <span class="fn">clearTimeout</span>(id);
-  }, [value, ms]);
-  <span class="kw">return</span> settled;
+          <div class="code" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" aria-label="Code example for the lead-sentence registry approach"><pre><span class="cm"># speckit-pro/speckit_pro_runner/helpers/read_only.py</span>
+EXPORT_LEADS = {
+    <span class="str">'Objections recorded while reviewing this plan.'</span>: <span class="str">'implementation-plan'</span>,
+    <span class="str">'The approach chosen while reviewing these options.'</span>: <span class="str">'code-approaches'</span>,
+    <span class="str">'Objections recorded while reading this module map.'</span>: <span class="str">'module-map'</span>,
 }
 
-<span class="cm">// DraftEditor.tsx</span>
-<span class="kw">const</span> [draft, setDraft] = <span class="fn">useState</span>(<span class="str">''</span>);
-<span class="kw">const</span> settled = <span class="fn">useDebounce</span>(draft, <span class="str">300</span>);
-<span class="fn">useLocalDraft</span>({ body: settled });</pre></div>
+<span class="kw">def</span> <span class="fn">recognize</span>(body):
+    <span class="cm"># Whole-line exact matches, anywhere in the body, all of them.</span>
+    hits = [(i, EXPORT_LEADS[line])
+            <span class="kw">for</span> i, line <span class="kw">in</span> <span class="fn">enumerate</span>(body.splitlines(), <span class="str">1</span>)
+            <span class="kw">if</span> line <span class="kw">in</span> EXPORT_LEADS]
+    <span class="kw">return</span> hits</pre></div>
 
           <table class="tradeoffs">
-            <caption class="tradeoff-caption">Trade-offs for the shared hook</caption>
+            <caption class="tradeoff-caption">Trade-offs for the lead-sentence registry</caption>
             <thead>
               <tr>
                 <th scope="col">Pro</th>
@@ -1060,58 +1000,44 @@ h1 {
             </thead>
             <tbody>
               <tr>
-                <td><span class="mark" aria-hidden="true">+</span>One import serves the editor, the outbox note, and the conflict prompt</td>
-                <td><span class="mark" aria-hidden="true">−</span>One more file to maintain and document</td>
+                <td><span class="mark" aria-hidden="true">+</span>No template edits, so no payload regeneration and no cache proofs</td>
+                <td><span class="mark" aria-hidden="true">−</span>An export's lead sentence is prose, and prose can be edited</td>
               </tr>
               <tr>
-                <td><span class="mark" aria-hidden="true">+</span>Unit tests run it against fake timers in isolation</td>
-                <td><span class="mark" aria-hidden="true">−</span>The generic type hides what is being held back</td>
+                <td><span class="mark" aria-hidden="true">+</span>Layer 4 fixtures pin every registered lead</td>
+                <td><span class="mark" aria-hidden="true">−</span>Two templates sharing a sentence are ambiguous and need their own outcome</td>
               </tr>
               <tr>
-                <td><span class="mark" aria-hidden="true">+</span>The pause length is a visible, tunable argument</td>
-                <td><span class="mark" aria-hidden="true">−</span>The editor still re-renders on every keystroke</td>
+                <td><span class="mark" aria-hidden="true">+</span>A future exporting template costs one added string</td>
+                <td><span class="mark" aria-hidden="true">−</span>A reviewer who retypes the sentence gets treated as an export</td>
               </tr>
             </tbody>
           </table>
 
           <ul class="chips">
-            <li class="chip">Bundle impact: <strong>+0.2 kb</strong></li>
-            <li class="chip">Testability: <strong>high</strong></li>
-            <li class="chip">Reuse: <strong>high</strong></li>
-            <li class="chip">Offline safe: <strong>yes</strong></li>
+            <li class="chip">Files touched: <strong>2</strong></li>
+            <li class="chip">Payload regen: <strong>helper only</strong></li>
+            <li class="chip">Fixture cost: <strong>low</strong></li>
+            <li class="chip">Future templates: <strong>one string</strong></li>
           </ul>
         </article>
 
-        <article class="approach" id="approaches-third-party-debounce-library">
+        <article class="approach" id="approaches-hidden-marker-in-the-export">
           <header class="approach-head">
-            <h3>Third-party debounce library</h3>
-            <p>Adopt <code>use-debounce</code> for both the value and the save callback.</p>
+            <h3>Hidden marker in the templates' exports</h3>
+            <p>Each exporting template emits a machine-readable marker the parser matches exactly.</p>
           </header>
 
-          <div class="code" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" aria-label="Code example for the third-party debounce library approach"><pre><span class="kw">import</span> { useDebouncedCallback }
-  <span class="kw">from</span> <span class="str">'use-debounce'</span>;
+          <div class="code" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" aria-label="Code example for the hidden marker approach"><pre><span class="cm">&lt;!-- speckit-pro/artifact-gallery/templates/module-map.html --&gt;</span>
+<span class="kw">var</span> MARKDOWN_LEAD =
+  <span class="str">'&lt;!-- speckit-pro:export template="module-map" v="1" --&gt;\n'</span> +
+  <span class="str">'Objections recorded while reading this module map.'</span>;
 
-<span class="kw">export function</span> <span class="fn">DraftEditor</span>() {
-  <span class="kw">const</span> [settled, setSettled] = <span class="fn">useState</span>(<span class="str">''</span>);
-
-  <span class="kw">const</span> onChange = <span class="fn">useDebouncedCallback</span>(
-    (next: <span class="kw">string</span>) <span class="kw">=&gt;</span> setSettled(next),
-    <span class="str">300</span>,
-    { leading: <span class="kw">false</span>, maxWait: <span class="str">1000</span> },
-  );
-
-  <span class="fn">useLocalDraft</span>({ body: settled });
-
-  <span class="kw">return</span> (
-    &lt;<span class="fn">textarea</span>
-      defaultValue=<span class="str">""</span>
-      onChange={(e) <span class="kw">=&gt;</span> onChange(e.target.value)}
-    /&gt;
-  );
-}</pre></div>
+<span class="cm"># and in the parser</span>
+MARKER = re.<span class="fn">compile</span>(<span class="str">r'&lt;!-- speckit-pro:export template="([a-z-]+)"'</span>)</pre></div>
 
           <table class="tradeoffs">
-            <caption class="tradeoff-caption">Trade-offs for the library</caption>
+            <caption class="tradeoff-caption">Trade-offs for the hidden marker</caption>
             <thead>
               <tr>
                 <th scope="col">Pro</th>
@@ -1120,25 +1046,68 @@ h1 {
             </thead>
             <tbody>
               <tr>
-                <td><span class="mark" aria-hidden="true">+</span>A ceiling on the wait, so a fast typist still gets a save</td>
-                <td><span class="mark" aria-hidden="true">−</span>A new runtime dependency to audit and update</td>
+                <td><span class="mark" aria-hidden="true">+</span>Exact and unambiguous; no two templates can collide</td>
+                <td><span class="mark" aria-hidden="true">−</span>Edits three shipped templates plus their payload copies and cache proofs</td>
               </tr>
               <tr>
-                <td><span class="mark" aria-hidden="true">+</span>The callback form skips the intermediate re-renders</td>
-                <td><span class="mark" aria-hidden="true">−</span>An uncontrolled field diverges from the rest of the editor</td>
+                <td><span class="mark" aria-hidden="true">+</span>Carries a version, so the shape can change later</td>
+                <td><span class="mark" aria-hidden="true">−</span>That file count alone exceeds the slice's budget for a detection detail</td>
               </tr>
               <tr>
-                <td><span class="mark" aria-hidden="true">+</span>Unmount, flush, and cancel are already covered</td>
-                <td><span class="mark" aria-hidden="true">−</span>Roughly 1.4 kb for something a ten-line hook does</td>
+                <td><span class="mark" aria-hidden="true">+</span>Survives a reviewer rewording the visible prose</td>
+                <td><span class="mark" aria-hidden="true">−</span>Exports pasted before the change ship without the marker</td>
               </tr>
             </tbody>
           </table>
 
           <ul class="chips">
-            <li class="chip">Bundle impact: <strong>+1.4 kb</strong></li>
-            <li class="chip">Testability: <strong>high</strong></li>
-            <li class="chip">Reuse: <strong>high</strong></li>
-            <li class="chip">Offline safe: <strong>yes</strong></li>
+            <li class="chip">Files touched: <strong>3 templates + proofs</strong></li>
+            <li class="chip">Payload regen: <strong>full</strong></li>
+            <li class="chip">Fixture cost: <strong>medium</strong></li>
+            <li class="chip">Future templates: <strong>one marker each</strong></li>
+          </ul>
+        </article>
+
+        <article class="approach" id="approaches-treat-exports-as-ordinary-comments">
+          <header class="approach-head">
+            <h3>Treat exports as ordinary comments</h3>
+            <p>No recognition at all. Every comment is parsed the same way.</p>
+          </header>
+
+          <div class="code" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" aria-label="Code example for treating exports as ordinary comments"><pre><span class="cm"># speckit-pro/speckit_pro_runner/helpers/read_only.py</span>
+<span class="kw">def</span> <span class="fn">recognize</span>(body):
+    <span class="cm"># Nothing to do: the sweep never distinguishes an export.</span>
+    <span class="kw">return</span> []</pre></div>
+
+          <table class="tradeoffs">
+            <caption class="tradeoff-caption">Trade-offs for no recognition</caption>
+            <thead>
+              <tr>
+                <th scope="col">Pro</th>
+                <th scope="col">Con</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="mark" aria-hidden="true">+</span>The simplest parser, and no registry to keep in step</td>
+                <td><span class="mark" aria-hidden="true">−</span>The roadmap's comment-schema fixtures would have nothing to parse</td>
+              </tr>
+              <tr>
+                <td><span class="mark" aria-hidden="true">+</span>No template coupling of any kind</td>
+                <td><span class="mark" aria-hidden="true">−</span>The per-phase anchors inside an export are lost</td>
+              </tr>
+              <tr>
+                <td><span class="mark" aria-hidden="true">+</span>Nothing to version or migrate</td>
+                <td><span class="mark" aria-hidden="true">−</span>An objection attached to a named phase reads as unstructured prose</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <ul class="chips">
+            <li class="chip">Files touched: <strong>0 extra</strong></li>
+            <li class="chip">Payload regen: <strong>none</strong></li>
+            <li class="chip">Fixture cost: <strong>none</strong></li>
+            <li class="chip">Future templates: <strong>no cost, no benefit</strong></li>
           </ul>
         </article>
 <!-- FILL:approaches:END -->
@@ -1151,8 +1120,9 @@ h1 {
     <p class="section-intro">What planning chose, and what would reopen the question.</p>
     <aside class="reco">
 <!-- FILL:recommendation:START -->
-      <p>Go with the <strong>shared debounce hook</strong>. Three surfaces already hand-roll the inline timer — the draft editor, the outbox note field, and the conflict prompt — so extracting one hook removes the duplication without taking on a dependency, and it leaves the pause length as an argument the flag ramp can tune.</p>
-      <p>Revisit the third-party library only if the replay work later needs <code>maxWait</code> or <code>flush()</code>. A draft that never settles because the author never pauses is a real failure mode, and it is the one thing a ten-line hook does not answer.</p>
+      <p>Go with the <strong>lead-sentence registry in the parser</strong>. It is the only option that gives the comment-schema fixtures something real to parse without editing three shipped templates and regenerating their payload copies and cache proofs, which alone would exceed what this slice budgets for a detection detail. The recognition rule is whole-line exact matching anywhere in the body, and the helper reports every matched line rather than the first, so an export pasted below a reviewer's own prose is still recognized.</p>
+      <p>Two known costs are accepted rather than solved. A lead sentence is prose, so a template that rewords one silently drops out of the registry; the Layer 4 fixtures pin every registered lead precisely so that shows up as a test failure rather than a quiet miss. Two templates sharing a sentence resolve to an explicit <code>template_ambiguous</code> outcome instead of a guess.</p>
+      <p>Revisit the hidden marker only when a template's export shape needs to change in a way the prose cannot carry, or when a second consumer outside this sweep needs to parse the same block. Neither is true today, and both would justify paying the payload regeneration then.</p>
 <!-- FILL:recommendation:END -->
     </aside>
   </section>

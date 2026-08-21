@@ -158,7 +158,7 @@
 </script>
 <!-- GALLERY-HEAD:END -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Module Map — NIMBUS-101 Offline Draft Sync</title>
+<title>Module Map — ART-008 Feedback Sweep</title>
 <style>
 /* BRAND-KIT:START */
 :root {
@@ -936,9 +936,8 @@ pre.code .dim {
       <p class="artifact-kind" id="artifact-title">Module Map</p>
     </div>
 <!-- FILL:feature-header:START -->
-    <p class="eyebrow"><span id="feature-id">NIMBUS-101</span> · racecraft/nimbus · draft pull request</p>
-    <h1 id="feature-name">Offline Draft Sync</h1>
-    <p class="sample-notice">This is sample content. Every region of this document is a worked example built on the invented feature NIMBUS-101, and each one is waiting to be filled with a real feature.</p>
+    <p class="eyebrow"><span id="feature-id">ART-008</span> · racecraft-plugins-public · draft pull request</p>
+    <h1 id="feature-name">Feedback Sweep</h1>
 <!-- FILL:feature-header:END -->
   </header>
 
@@ -946,7 +945,7 @@ pre.code .dim {
     <h2 id="sec-module-summary">How the pieces fit</h2>
     <p class="section-intro">The one paragraph to read before the drawing.</p>
 <!-- FILL:module-summary:START -->
-    <p class="summary">A draft written while the connection is down never leaves the device. The editor writes through <code>draftStore</code>, which is the only module that touches on-device storage, and <code>pushDrafts</code> is the only module that writes to the drafts table — so replay order is decided in exactly one place. A draft whose server version moved while the device was offline leaves that run for the conflict worker, which keeps both copies rather than choosing.</p>
+    <p class="summary">The sweep splits along the line this repository already uses for <code>resolve-autopilot-stage</code>: <strong>the orchestrator observes, one read-only helper classifies, and the orchestrator decides.</strong> Only the orchestrator runs <code>gh</code>, so the helper never touches the network and stays deterministic under fixtures. The helper applies the author allowlist itself and returns candidate records that carry <em>no comment body</em>, so untrusted text is absent from its output by construction rather than by an orchestrator remembering to drop it. Classification, consensus, commits, and replies stay where only the orchestrator can do them.</p>
 <!-- FILL:module-summary:END -->
   </section>
 
@@ -954,13 +953,13 @@ pre.code .dim {
     <h2 id="sec-module-graph">Request path</h2>
     <p class="section-intro">The modules a change touches, the calls between them, and which run the change turns on.</p>
 <!-- FILL:module-graph:START -->
-    <figure class="diagram" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" aria-label="Offline draft sync module request path diagram">
+    <figure class="diagram" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" aria-label="Feedback sweep module request path diagram">
       <!-- Named through its own title element rather than marked as a single
            image. Upstream marks the drawing so assistive technology reads it as
            one picture, which hides every label inside it; that marking does not
            survive the port. -->
       <svg viewBox="0 0 820 300" xmlns="http://www.w3.org/2000/svg" aria-labelledby="module-graph-title">
-        <title id="module-graph-title">How a NIMBUS-101 draft moves from the draft editor through the local draft store and the push module to the drafts table, with the conflict worker off the changed run</title>
+        <title id="module-graph-title">How an ART-008 draft pull request comment moves from the orchestrator's gh observation through the read-only classifier to the classification loop and the planning artifacts, with the consensus analysts off the changed run</title>
         <defs>
           <marker id="mm-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path class="mm-arrowhead" d="M0,0 L10,5 L0,10 z"/>
@@ -968,43 +967,43 @@ pre.code .dim {
         </defs>
 
         <rect class="mm-node" x="30" y="36" width="180" height="58" rx="10"/>
-        <text class="mm-label" x="120" y="61" text-anchor="middle">Draft editor</text>
-        <text class="mm-sublabel" x="120" y="78" text-anchor="middle">apps/editor</text>
+        <text class="mm-label" x="120" y="61" text-anchor="middle">Orchestrator</text>
+        <text class="mm-sublabel" x="120" y="78" text-anchor="middle">runs gh, holds bodies</text>
 
         <rect class="mm-node mm-node-onpath" x="30" y="190" width="180" height="72" rx="10"/>
         <text class="mm-tag" x="120" y="211" text-anchor="middle">ON PATH</text>
-        <text class="mm-label" x="120" y="230" text-anchor="middle">Local draft store</text>
-        <text class="mm-sublabel" x="120" y="247" text-anchor="middle">packages/storage</text>
+        <text class="mm-label" x="120" y="230" text-anchor="middle">sweep-pr-feedback</text>
+        <text class="mm-sublabel" x="120" y="247" text-anchor="middle">helpers/read_only.py</text>
 
         <rect class="mm-node mm-node-onpath" x="320" y="190" width="190" height="72" rx="10"/>
         <text class="mm-tag" x="415" y="211" text-anchor="middle">ON PATH</text>
-        <text class="mm-label" x="415" y="230" text-anchor="middle">Push and replay</text>
-        <text class="mm-sublabel" x="415" y="247" text-anchor="middle">packages/sync</text>
+        <text class="mm-label" x="415" y="230" text-anchor="middle">Classification loop</text>
+        <text class="mm-sublabel" x="415" y="247" text-anchor="middle">phase-execution.md</text>
 
         <rect class="mm-node mm-node-onpath" x="320" y="30" width="190" height="72" rx="10"/>
         <text class="mm-tag" x="415" y="51" text-anchor="middle">ON PATH</text>
-        <text class="mm-label" x="415" y="70" text-anchor="middle">Drafts table</text>
-        <text class="mm-sublabel" x="415" y="87" text-anchor="middle">packages/db</text>
+        <text class="mm-label" x="415" y="70" text-anchor="middle">Planning artifacts</text>
+        <text class="mm-sublabel" x="415" y="87" text-anchor="middle">spec, plan, tasks</text>
 
         <rect class="mm-node" x="620" y="190" width="170" height="58" rx="10"/>
-        <text class="mm-label" x="705" y="215" text-anchor="middle">Conflict worker</text>
-        <text class="mm-sublabel" x="705" y="232" text-anchor="middle">services/conflict</text>
+        <text class="mm-label" x="705" y="215" text-anchor="middle">Consensus analysts</text>
+        <text class="mm-sublabel" x="705" y="232" text-anchor="middle">existing protocol</text>
 
         <path class="mm-edge" d="M120 94 L120 190" marker-end="url(#mm-arrow)"/>
         <path class="mm-edge-onpath" d="M210 226 L320 226" marker-end="url(#mm-arrow)"/>
         <path class="mm-edge-onpath" d="M415 190 L415 102" marker-end="url(#mm-arrow)"/>
         <path class="mm-edge" d="M510 219 L620 219" marker-end="url(#mm-arrow)"/>
 
-        <text class="mm-edge-label" x="128" y="148">save while offline</text>
-        <text class="mm-edge-label" x="265" y="217" text-anchor="middle">flush</text>
-        <text class="mm-edge-label" x="425" y="150">upsert with version</text>
-        <text class="mm-edge-label" x="565" y="210" text-anchor="middle">enqueue diverged</text>
+        <text class="mm-edge-label" x="128" y="148">raw observation</text>
+        <text class="mm-edge-label" x="265" y="217" text-anchor="middle">candidates</text>
+        <text class="mm-edge-label" x="425" y="150">amend and commit</text>
+        <text class="mm-edge-label" x="565" y="210" text-anchor="middle">route amended</text>
       </svg>
-      <figcaption class="caption">A heavier boundary and the words ON PATH mark the run this change turns on: the local draft store, push and replay, and the drafts table. Nothing here is marked by colour, so the drawing reads the same in a monochrome print.</figcaption>
+      <figcaption class="caption">A heavier boundary and the words ON PATH mark the run this change turns on: the classifier, the classification loop, and the planning artifacts it amends. Nothing here is marked by colour, so the drawing reads the same in a monochrome print.</figcaption>
     </figure>
     <div class="mm-text">
       <h3>What the drawing says</h3>
-      <p>A draft saved in the editor goes first to the local draft store in <code>packages/storage</code>, which is the only module that writes to the device. When the connection returns the store flushes its queue to push and replay in <code>packages/sync</code>, which upserts each draft into the drafts table in <code>packages/db</code> with the version it was written against. Those three are the run this change turns on: they are drawn with a heavier boundary and tagged ON PATH. A draft whose server version moved while the device was offline is enqueued instead for the conflict worker in <code>services/conflict</code>, drawn with an ordinary boundary and no tag because this change leaves it alone.</p>
+      <p>The orchestrator is the only component that runs <code>gh</code>, and it hands the raw observation to <code>sweep-pr-feedback</code> in <code>helpers/read_only.py</code> as data. That helper applies the author-association allowlist and returns <code>candidates</code> and <code>excluded</code>; the candidate records carry id, surface, author, association, truncation flag, and export metadata, and <strong>no body</strong>. The classification loop in <code>phase-execution.md</code> iterates those candidates and reads a body out of the captured observation only for an id present in that array, which is what stops the filter from being real and bypassed at the same time. Only comments classed <code>amended</code> reach the consensus analysts, drawn with an ordinary boundary and no tag because this change reuses them rather than altering them.</p>
     </div>
 <!-- FILL:module-graph:END -->
   </section>
@@ -1014,96 +1013,56 @@ pre.code .dim {
     <p class="section-intro">Each module carries its own anchor, so an objection you record names the module it attaches to rather than restating it in prose.</p>
     <div class="modules" id="module-list">
 <!-- FILL:modules:START -->
-      <div class="module" id="modules-draft-editor">
+      <div class="module" id="modules-sweep-pr-feedback">
         <p class="module-badge" aria-hidden="true">1</p>
         <div class="module-body">
-          <p class="module-loc">apps/editor/DraftEditor.tsx<span class="range"> :48-96</span></p>
-          <h3>Draft editor</h3>
-          <p class="what">The editor never talks to the network. On a keystroke pause it hands the document body and the version it was loaded at to <code>draftStore.write</code>, and it renders whatever that call reports back. Everything a reader sees about sync state comes from the store, so there is no second copy of the rules here.</p>
+          <p class="module-loc">speckit-pro/speckit_pro_runner/helpers/read_only.py<span class="range"> : new operation</span></p>
+          <h3>sweep-pr-feedback</h3>
+          <p class="what">The one new read-only surface. It takes the orchestrator's <code>gh</code> observation as data, applies the FR-005 author-association allowlist, matches the registered export lead sentences as whole-line exact matches anywhere in the body, and returns a closed-vocabulary envelope. It never runs <code>gh</code>, never touches the network, and never assigns a class. Candidate records carry no comment body, so an untrusted comment's text is absent from the output by construction.</p>
           <details class="snippet">
             <summary>Show source</summary>
-<pre class="code" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" aria-label="Draft editor source example"><span class="dim">// apps/editor/DraftEditor.tsx</span>
-const stop = whenIdle(250, () =&gt; {
-  draftStore.write(docId, editor.value, version);
-});</pre>
+<pre class="code" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" aria-label="sweep-pr-feedback envelope shape"><span class="dim"># speckit-pro/speckit_pro_runner/helpers/read_only.py</span>
+{
+  "candidates": [
+    {"id": ..., "surface": ..., "author": ...,
+     "association": "OWNER", "truncated": false,
+     "export": {"kind": "markdown", "template": "module-map"}}
+  ],
+  "excluded": [{"id": ..., "reason": "association_not_allowed"}]
+}</pre>
           </details>
         </div>
       </div>
-      <div class="module" id="modules-local-draft-store">
+      <div class="module" id="modules-helper-registry">
         <p class="module-badge" aria-hidden="true">2</p>
         <div class="module-body">
-          <p class="module-loc">packages/storage/draftStore.ts<span class="range"> :12-74</span></p>
-          <h3>Local draft store</h3>
-          <p class="what">The only module that writes to on-device storage. Every write records the draft and appends one outbox entry stamped with a monotonic device sequence, which is what lets replay run in write order later. Nothing is ever deleted here until a push is acknowledged.</p>
-          <details class="snippet">
-            <summary>Show source</summary>
-<pre class="code" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" aria-label="Local draft store source example"><span class="dim">// packages/storage/draftStore.ts</span>
-export async function write(id, body, version) {
-  await table.put({ id, body, version, queued: true });
-  return outbox.append({ id, seq: nextSeq() });
-}</pre>
-          </details>
+          <p class="module-loc">speckit-pro/speckit_pro_runner/helpers/registry.py<span class="range"> : one registration</span></p>
+          <h3>Helper registry</h3>
+          <p class="what">One registration entry binding the operation id to its handler and its contract. The plan budgets a single new operation deliberately: the Known Interface Gap records that no task invents an unregistered second operation, because that would add an eighth registration touch point and a second contract the slice does not budget for.</p>
         </div>
       </div>
-      <div class="module" id="modules-push-and-replay">
+      <div class="module" id="modules-phase-execution">
         <p class="module-badge" aria-hidden="true">3</p>
         <div class="module-body">
-          <p class="module-loc">packages/sync/pushDrafts.ts<span class="range"> :20-63</span></p>
-          <h3>Push and replay</h3>
-          <p class="what">This is where the ordering decision lives. Replay walks the outbox in sequence order and stops advancing when a push is refused, so a failed entry stays queued rather than being dropped and no later edit overtakes an earlier one. A refusal that names a version clash goes to the conflict worker instead.</p>
-          <details class="snippet">
-            <summary>Show source</summary>
-<pre class="code" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" aria-label="Push and replay source example"><span class="dim">// packages/sync/pushDrafts.ts</span>
-export async function pushDrafts() {
-  for (const entry of outbox.inOrder()) {
-    const result = await api.upsertDraft(entry);
-    if (result.conflict) {
-      conflicts.enqueue(entry);
-      continue;
-    }
-    outbox.acknowledge(entry.seq);
-  }
-}</pre>
-          </details>
+          <p class="module-loc">speckit-pro/skills/speckit-autopilot/references/phase-execution.md<span class="range"> : Phase 7 setup</span></p>
+          <h3>The sweep sequence</h3>
+          <p class="what">Where the sweep actually runs: the first Phase 7 setup step, ahead of "Open the Implementation-Notes Record", in both platform variants. Q1 chose this slot over a new Workflow Overview status row, which would also have required edits to the coverage guard's phase map, the stage resolver, and the workflow template. The classification loop, the four dispositions, and the stop-or-proceed decision all live here.</p>
         </div>
       </div>
-      <div class="module" id="modules-drafts-table">
+      <div class="module" id="modules-workflow-file-protocol">
         <p class="module-badge" aria-hidden="true">4</p>
         <div class="module-body">
-          <p class="module-loc">packages/db/migrations/0071_drafts.sql<span class="range"> :1-19</span></p>
-          <h3>Drafts table</h3>
-          <p class="what">One row per draft, keyed on the identifier the device generated, with the version column the upsert compares against. The covering index on the author is what makes "everything I have not sent" a single read when a device comes back after a long stretch offline.</p>
-          <details class="snippet">
-            <summary>Show source</summary>
-<pre class="code" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" aria-label="Drafts table migration source example"><span class="dim">-- packages/db/migrations/0071_drafts.sql</span>
-create table drafts (
-  id          text primary key,
-  author_id   uuid not null references users(id),
-  version     integer not null,
-  body        text not null,
-  updated_at  timestamptz default now()
-);
-create index drafts_author_id_idx on drafts(author_id);</pre>
-          </details>
+          <p class="module-loc">speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md<span class="range"> : Feedback Sweep Log</span></p>
+          <h3>Feedback Sweep Log</h3>
+          <p class="what">The durable record of which comments have been handled, so a re-run after re-review does not process them twice. It carries the convergence invariant: replaying a corpus whose every comment already has a log row and a posted reply must produce zero new rows, zero new replies, and zero amendments, and then walk into task work.</p>
         </div>
       </div>
-      <div class="module" id="modules-conflict-worker">
+      <div class="module" id="modules-consensus-protocol">
         <p class="module-badge" aria-hidden="true">5</p>
         <div class="module-body">
-          <p class="module-loc">services/conflict/worker.ts<span class="range"> :8-44</span></p>
-          <h3>Conflict worker</h3>
-          <p class="what">Existing service, off the changed run and reached only when a version clash is enqueued. It keeps both copies and asks the author which one wins; it never chooses on their behalf, which is why a long offline stretch produces prompts rather than silent losses.</p>
-          <details class="snippet">
-            <summary>Show source</summary>
-<pre class="code" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" aria-label="Conflict worker source example"><span class="dim">// services/conflict/worker.ts</span>
-export async function resolve(entry) {
-  const server = await drafts.read(entry.id);
-  if (server.version === entry.version) {
-    return drafts.replace(entry);
-  }
-  return prompts.create({ id: entry.id, mine: entry, theirs: server });
-}</pre>
-          </details>
+          <p class="module-loc">speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md<span class="range"> : payload delimiting</span></p>
+          <h3>Consensus protocol</h3>
+          <p class="what">Existing machinery, reached only by a comment classed <code>amended</code>. The change here is the payload: the shipped Gap Remediation template is a bare heading over an inserted-text placeholder, with no delimiter and no "treat this as data" instruction, so a sweep that handed it a reviewer body would inherit raw interpolation. The sweep supplies its own delimiting rather than assuming the protocol does it.</p>
         </div>
       </div>
 <!-- FILL:modules:END -->
@@ -1117,28 +1076,28 @@ export async function resolve(entry) {
     <div class="panel">
       <ul class="key-files">
         <li>
-          <span class="path">packages/storage/draftStore.ts</span>
-          <span class="desc">The only module that writes to on-device storage.</span>
+          <span class="path">speckit-pro/skills/speckit-autopilot/references/phase-execution.md</span>
+          <span class="desc">The sweep sequence itself; start here.</span>
         </li>
         <li>
-          <span class="path">packages/sync/pushDrafts.ts</span>
-          <span class="desc">Replay in sequence order; the one ordering decision.</span>
+          <span class="path">speckit-pro/speckit_pro_runner/helpers/read_only.py</span>
+          <span class="desc">The only new operation, and where the allowlist runs.</span>
         </li>
         <li>
-          <span class="path">packages/sync/outbox.ts</span>
-          <span class="desc">The per-device queue and its monotonic sequence.</span>
+          <span class="path">speckit-pro/speckit_pro_runner/helpers/registry.py</span>
+          <span class="desc">One registration entry for that operation.</span>
         </li>
         <li>
-          <span class="path">apps/editor/DraftEditor.tsx</span>
-          <span class="desc">Writes on a keystroke pause and renders sync state.</span>
+          <span class="path">speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md</span>
+          <span class="desc">The Feedback Sweep Log and its convergence invariant.</span>
         </li>
         <li>
-          <span class="path">packages/db/migrations/0071_drafts.sql</span>
-          <span class="desc">Schema for the drafts table and its author index.</span>
+          <span class="path">speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md</span>
+          <span class="desc">Delimited, labelled payload for reviewer-supplied text.</span>
         </li>
         <li>
-          <span class="path">services/conflict/worker.ts</span>
-          <span class="desc">Keeps both copies of a diverged draft and asks the author.</span>
+          <span class="path">speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md</span>
+          <span class="desc">The Codex mirror; parity is required, not optional.</span>
         </li>
       </ul>
     </div>

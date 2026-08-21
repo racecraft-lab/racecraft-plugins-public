@@ -160,7 +160,7 @@
 </script>
 <!-- GALLERY-HEAD:END -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Implementation Plan — NIMBUS-101 Offline Draft Sync</title>
+<title>Implementation Plan — ART-008 Feedback Sweep</title>
 <style>
 /* BRAND-KIT:START */
 :root {
@@ -1151,10 +1151,9 @@ h1 {
       <p class="artifact-kind" id="artifact-title">Implementation Plan</p>
     </div>
 <!-- FILL:feature-header:START -->
-    <p class="eyebrow"><span id="feature-id">NIMBUS-101</span> · draft pull request</p>
-    <h1 id="feature-name">Offline Draft Sync</h1>
-    <p class="lede">Hold every draft written without a connection on the device, then replay it in order once the connection returns.</p>
-    <p class="sample-notice">This is sample content. Every region of this document is a worked example built on the invented feature NIMBUS-101, and each one is waiting to be filled with a real feature.</p>
+    <p class="eyebrow"><span id="feature-id">ART-008</span> · slice 1 of 2 · draft pull request</p>
+    <h1 id="feature-name">Feedback Sweep</h1>
+    <p class="lede">Open the implement stage by reading the draft pull request's own review comments, amend the planning artifacts through consensus, and stop for re-review whenever anything changed.</p>
 <!-- FILL:feature-header:END -->
   </header>
 
@@ -1163,10 +1162,10 @@ h1 {
     <p class="section-intro">The shape of the change before anyone reads a line of it.</p>
 <!-- FILL:plan-stats:START -->
     <dl class="stats">
-      <div class="stat"><dt>Phases</dt><dd>4</dd></div>
-      <div class="stat"><dt>Files touched</dt><dd>11</dd></div>
-      <div class="stat"><dt>Projected size</dt><dd>620 lines</dd></div>
-      <div class="stat"><dt>Behind flag</dt><dd class="is-mono">nimbus_offline_drafts</dd></div>
+      <div class="stat"><dt>Phases</dt><dd>6</dd></div>
+      <div class="stat"><dt>Production files</dt><dd>7</dd></div>
+      <div class="stat"><dt>Projected size</dt><dd>515–830 lines</dd></div>
+      <div class="stat"><dt>Tasks</dt><dd>80</dd></div>
     </dl>
 <!-- FILL:plan-stats:END -->
   </section>
@@ -1176,29 +1175,41 @@ h1 {
     <p class="section-intro">Each phase carries its own anchor, so an objection you record names the phase it attaches to rather than restating it in prose.</p>
     <div class="milestones" id="plan-phase-list">
 <!-- FILL:phases:START -->
-      <div class="milestone" id="phases-local-draft-store">
-        <p class="when">Week 1 · Mon to Tue</p>
-        <h3>Local draft store</h3>
-        <p class="what">A versioned draft record on the device, written on every keystroke pause. No network path yet, so the store can be reviewed on its own.</p>
-        <ul class="tags"><li>apps/editor</li><li>packages/storage</li><li>migration 0071</li></ul>
+      <div class="milestone" id="phases-setup">
+        <p class="when">Phase 1 · 6 tasks</p>
+        <h3>Setup: design-artifact corrections</h3>
+        <p class="what">Settle the contract before any code depends on it. T004 resolves the Known Interface Gap by deciding how the orchestrator invokes the write-point path check, which is the one interface question planning deliberately left open.</p>
+        <ul class="tags"><li>contracts/</li><li>blocking</li></ul>
       </div>
-      <div class="milestone" id="phases-outbox-and-replay">
-        <p class="when">Week 1 · Wed to Fri</p>
-        <h3>Outbox and replay</h3>
-        <p class="what">Every unsent draft joins a per-device outbox. Replay runs in write order when the connection returns, and a failed push stays queued rather than being dropped.</p>
-        <ul class="tags"><li>packages/sync</li><li>apps/editor</li></ul>
+      <div class="milestone" id="phases-foundational">
+        <p class="when">Phase 2 · 8 tasks</p>
+        <h3>Foundational: blocking prerequisites</h3>
+        <p class="what">The fixture corpus and the registration touch points. T014 also forces the reviewability lever decision against a real measurement before phase 3 opens, so the budget crossing cannot land silently.</p>
+        <ul class="tags"><li>registry.py</li><li>fixtures</li><li>T014 gate</li></ul>
       </div>
-      <div class="milestone" id="phases-conflict-resolution">
-        <p class="when">Week 2 · Mon to Wed</p>
-        <h3>Conflict resolution</h3>
-        <p class="what">A draft whose server version moved while the device was offline goes to the conflict worker, which keeps both copies and asks the author which one wins.</p>
-        <ul class="tags"><li>packages/sync</li><li>services/conflict</li></ul>
+      <div class="milestone" id="phases-user-story-1">
+        <p class="when">Phase 3 · 29 tasks · MVP</p>
+        <h3>The sweep reads and classifies feedback</h3>
+        <p class="what">The P1 story and the minimum shippable slice. The helper applies the allowlist and the export registry; the orchestrator gives each comment exactly one class from a closed vocabulary. Ten tests land before the nineteen implementation tasks.</p>
+        <ul class="tags"><li>read_only.py</li><li>phase-execution.md</li></ul>
       </div>
-      <div class="milestone" id="phases-flag-ramp-and-telemetry">
-        <p class="when">Week 2 · Thu to Fri</p>
-        <h3>Flag ramp and telemetry</h3>
-        <p class="what">Counters for queue depth, replay latency, and conflict rate, then a ramp from internal to ten percent to everyone over three days.</p>
-        <ul class="tags"><li>packages/telemetry</li><li>config/flags</li></ul>
+      <div class="milestone" id="phases-user-story-2">
+        <p class="when">Phase 4 · 22 tasks</p>
+        <h3>Amendments run through consensus and stop for re-review</h3>
+        <p class="what">Only <code>amended</code> comments reach the consensus protocol, with the reviewer body delimited and labelled as data. Every handled comment gets a log row and one reply, artifacts regenerate, and a run that changed anything stops with a report instead of walking into task work.</p>
+        <ul class="tags"><li>consensus-protocol.md</li><li>workflow-file-protocol.md</li></ul>
+      </div>
+      <div class="milestone" id="phases-user-story-3">
+        <p class="when">Phase 5 · 5 tasks</p>
+        <h3>An unreadable draft pull request stops the stage</h3>
+        <p class="what">The P3 story, and the one that decides the feature fails closed. When a Draft PR row exists but the pull request cannot be read, the stage stops rather than proceeding as though there were no feedback. An absent comment is not an absent opinion.</p>
+        <ul class="tags"><li>fail closed</li><li>stop report</li></ul>
+      </div>
+      <div class="milestone" id="phases-polish">
+        <p class="when">Phase 6 · 10 tasks</p>
+        <h3>Polish and cross-cutting concerns</h3>
+        <p class="what">Codex parity across both reference variants, the payload and proof regeneration the shipped-byte change requires, and T080, which pins the clean-re-run convergence case that SC-003 depends on.</p>
+        <ul class="tags"><li>Codex parity</li><li>regen ritual</li><li>T080</li></ul>
       </div>
 <!-- FILL:phases:END -->
     </div>
@@ -1208,9 +1219,9 @@ h1 {
     <h2 id="sec-data-flow">Data flow</h2>
     <p class="section-intro">Where a write goes, and which part of the path is allowed to run late.</p>
 <!-- FILL:data-flow:START -->
-    <figure class="diagram" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" aria-label="Offline draft sync data flow diagram">
+    <figure class="diagram" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" aria-label="Feedback sweep data flow diagram">
       <svg viewBox="0 0 860 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="data-flow-title">
-        <title id="data-flow-title">How a NIMBUS-101 draft moves from the editor to the drafts table and back to the device</title>
+        <title id="data-flow-title">How an ART-008 draft pull request comment moves from the gh observation through the allowlist and classification to an amendment, a log row, and a reply</title>
         <defs>
           <marker id="df-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path class="df-arrowhead" d="M0,0 L10,5 L0,10 z"/>
@@ -1221,33 +1232,33 @@ h1 {
         </defs>
 
         <rect class="df-node" x="20" y="20" width="180" height="54" rx="10"/>
-        <text class="df-label" x="110" y="43" text-anchor="middle">Draft editor</text>
-        <text class="df-sublabel" x="110" y="60" text-anchor="middle">apps/editor</text>
+        <text class="df-label" x="110" y="43" text-anchor="middle">gh observation</text>
+        <text class="df-sublabel" x="110" y="60" text-anchor="middle">orchestrator only</text>
 
         <rect class="df-node" x="20" y="150" width="180" height="54" rx="10"/>
-        <text class="df-label" x="110" y="173" text-anchor="middle">Local draft store</text>
-        <text class="df-sublabel" x="110" y="190" text-anchor="middle">on the device</text>
+        <text class="df-label" x="110" y="173" text-anchor="middle">Author allowlist</text>
+        <text class="df-sublabel" x="110" y="190" text-anchor="middle">in the helper</text>
 
         <rect class="df-node" x="340" y="150" width="180" height="54" rx="10"/>
-        <text class="df-label" x="430" y="173" text-anchor="middle">sync.pushDrafts</text>
-        <text class="df-sublabel" x="430" y="190" text-anchor="middle">packages/sync</text>
+        <text class="df-label" x="430" y="173" text-anchor="middle">Classification</text>
+        <text class="df-sublabel" x="430" y="190" text-anchor="middle">one class each</text>
 
         <rect class="df-node df-node-store" x="340" y="260" width="180" height="64" rx="10"/>
         <text class="df-tag" x="430" y="279" text-anchor="middle">STORE</text>
-        <text class="df-label" x="430" y="297" text-anchor="middle">drafts table</text>
-        <text class="df-sublabel" x="430" y="314" text-anchor="middle">packages/db</text>
+        <text class="df-label" x="430" y="297" text-anchor="middle">Feedback Sweep Log</text>
+        <text class="df-sublabel" x="430" y="314" text-anchor="middle">workflow file</text>
 
         <rect class="df-node" x="660" y="150" width="180" height="54" rx="10"/>
-        <text class="df-label" x="750" y="173" text-anchor="middle">Replay outbox</text>
-        <text class="df-sublabel" x="750" y="190" text-anchor="middle">one per device</text>
+        <text class="df-label" x="750" y="173" text-anchor="middle">Consensus</text>
+        <text class="df-sublabel" x="750" y="190" text-anchor="middle">amended only</text>
 
         <rect class="df-node" x="660" y="20" width="180" height="54" rx="10"/>
-        <text class="df-label" x="750" y="43" text-anchor="middle">Other devices</text>
-        <text class="df-sublabel" x="750" y="60" text-anchor="middle">same account</text>
+        <text class="df-label" x="750" y="43" text-anchor="middle">spec, plan, tasks</text>
+        <text class="df-sublabel" x="750" y="60" text-anchor="middle">the edit allowlist</text>
 
         <rect class="df-node" x="660" y="266" width="180" height="54" rx="10"/>
-        <text class="df-label" x="750" y="289" text-anchor="middle">Conflict worker</text>
-        <text class="df-sublabel" x="750" y="306" text-anchor="middle">diverged drafts</text>
+        <text class="df-label" x="750" y="289" text-anchor="middle">Reply once</text>
+        <text class="df-sublabel" x="750" y="306" text-anchor="middle">per comment</text>
 
         <path class="df-edge" d="M110 74 L110 150" marker-end="url(#df-arrow)"/>
         <path class="df-edge" d="M200 177 L340 177" marker-end="url(#df-arrow)"/>
@@ -1258,19 +1269,19 @@ h1 {
         <path class="df-edge-deferred" d="M750 150 L750 74" marker-end="url(#df-arrow-deferred)"/>
         <path class="df-edge-deferred" d="M660 162 C 540 120, 280 120, 205 162" marker-end="url(#df-arrow-deferred)"/>
 
-        <text class="df-edge-label" x="118" y="118">save while offline</text>
-        <text class="df-edge-label" x="240" y="170">flush</text>
-        <text class="df-edge-label" x="438" y="240">upsert with version</text>
-        <text class="df-edge-label" x="548" y="286">enqueue diverged</text>
-        <text class="df-edge-label" x="548" y="172">queue for retry</text>
-        <text class="df-edge-label" x="758" y="118">push on reconnect</text>
-        <text class="df-edge-label" x="352" y="112">reconcile local id</text>
+        <text class="df-edge-label" x="118" y="118">candidates, no body</text>
+        <text class="df-edge-label" x="240" y="170">iterate</text>
+        <text class="df-edge-label" x="438" y="240">record row</text>
+        <text class="df-edge-label" x="548" y="286">then reply</text>
+        <text class="df-edge-label" x="548" y="172">delimited payload</text>
+        <text class="df-edge-label" x="758" y="118">amend</text>
+        <text class="df-edge-label" x="352" y="112">stop for re-review</text>
       </svg>
-      <figcaption class="caption">Solid: the write path, in order. Dashed: the deferred path, which runs only once the connection returns. The editor never waits on the dashed path.</figcaption>
+      <figcaption class="caption">Solid: the path every handled comment takes. Dashed: the amendment path, which runs only for a comment classed <code>amended</code> and ends by stopping the stage. The three other classes never reach it.</figcaption>
     </figure>
     <div class="df-text">
       <h3>What the drawing says</h3>
-      <p>A draft saved in the editor lands first in the local draft store, which is the only write that happens while the connection is down. When the connection returns the store flushes to <code>sync.pushDrafts</code>, which upserts each draft into the drafts table with its version, and a draft whose version moved on the server is enqueued for the conflict worker. The dashed path is the replay outbox: it holds what could not be pushed, pushes it to the account's other devices once the connection returns, and reconciles each local id back to the server id in the local draft store. The drafts table is the only persistence node here, marked STORE and drawn with a heavier boundary.</p>
+      <p>Only the orchestrator runs <code>gh</code>. It passes the raw observation to the helper, which applies the author allowlist and returns candidate records carrying no comment body. Classification iterates those candidates and gives each exactly one class, then writes a row to the Feedback Sweep Log and posts exactly one reply. The dashed path belongs to <code>amended</code> alone: the reviewer's remaining text is delimited and labelled as data before it reaches consensus, the resolved edit target is checked against the three-entry allowlist of <code>spec.md</code>, <code>plan.md</code>, and <code>tasks.md</code> in code before any write, and a run that amended anything stops for re-review rather than continuing into task work. The log is the only persistence node here, marked STORE, and it is what makes a re-run converge instead of reprocessing.</p>
     </div>
 <!-- FILL:data-flow:END -->
   </section>
@@ -1281,28 +1292,28 @@ h1 {
 <!-- FILL:mockups:START -->
     <div class="mocks">
       <div class="mock">
-        <h3>A · Editor with no connection</h3>
+        <h3>A · The Feedback Sweep Log</h3>
+        <div class="mock-body">
+          <ul class="outbox">
+            <li><span class="outbox-state">Amended</span><span class="outbox-txt">Thread 4: FR-007e wording, routed to consensus</span></li>
+            <li><span class="outbox-state">Acked</span><span class="outbox-txt">Comment 12: agreement, no change requested</span></li>
+            <li><span class="outbox-state">Deferred</span><span class="outbox-txt">Comment 15: asked to edit README, outside the allowlist</span></li>
+            <li><span class="outbox-state">Excluded</span><span class="outbox-txt">Comment 18: author association not allowed</span></li>
+          </ul>
+        </div>
+      </div>
+      <div class="mock">
+        <h3>B · The stop report</h3>
         <div class="mock-body">
           <div class="card-mock">
-            <p class="cm-title">Round 4 race report</p>
-            <p class="cm-meta">Draft · edited 4 minutes ago</p>
-            <p class="cm-banner">No connection. Saved on this device and queued to sync.</p>
+            <p class="cm-title">Feedback sweep amended 2 artifacts</p>
+            <p class="cm-meta">Stage held · implement did not start</p>
+            <p class="cm-banner">Re-review the draft pull request, then re-run autopilot to continue.</p>
             <ul class="cm-lines">
-              <li></li>
               <li></li>
               <li class="is-short"></li>
             </ul>
           </div>
-        </div>
-      </div>
-      <div class="mock">
-        <h3>B · Outbox in the sidebar</h3>
-        <div class="mock-body">
-          <ul class="outbox">
-            <li><span class="outbox-state">Queued</span><span class="outbox-txt">Round 4 race report, waiting for a connection</span></li>
-            <li><span class="outbox-state">Sent</span><span class="outbox-txt">Tyre pressure notes, synced 2 minutes ago</span></li>
-            <li><span class="outbox-state">Conflict</span><span class="outbox-txt">Pit strategy draft, edited on two devices</span></li>
-          </ul>
         </div>
       </div>
     </div>
@@ -1313,7 +1324,7 @@ h1 {
     <h2 id="sec-risk-register">Risks and mitigations</h2>
     <p class="section-intro">Severity is stated in words as well as marked, so a single row lifted out of the table still reads.</p>
 <!-- FILL:risk-register:START -->
-    <div class="table-scroll" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" aria-label="Risks and mitigations for offline draft sync">
+    <div class="table-scroll" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" aria-label="Risks and mitigations for the feedback sweep">
       <table class="risks">
         <thead>
           <tr>
@@ -1324,19 +1335,24 @@ h1 {
         </thead>
         <tbody>
           <tr>
-            <th scope="row">Replay order is lost when a device reconnects mid-flush, so a later edit lands before an earlier one.</th>
+            <th scope="row">This repository is public, so any account can comment, and comment text reaches agents that edit the planning artifacts.</th>
             <td><span class="sev sev-high"><span class="sev-bars" aria-hidden="true">●●●</span>High</span></td>
-            <td>Stamp every outbox entry with a monotonic device sequence and refuse a push whose predecessor has not been acknowledged.</td>
+            <td>The allowlist runs inside the helper ahead of everything, and candidate records carry no body. Classification reads a body only for an id already in <code>candidates</code>. Delimiting is the boundary; removing matched export lines is defence in depth and is the part cut first under pressure.</td>
           </tr>
           <tr>
-            <th scope="row">The local store grows without bound on a device that stays offline for weeks.</th>
+            <th scope="row">The reviewability high end of 830 lines crosses the 800-line block, though the midpoint of roughly 630 sits under it.</th>
             <td><span class="sev sev-medium"><span class="sev-bars" aria-hidden="true">●●</span>Medium</span></td>
-            <td>Cap the store by total size, evict acknowledged drafts first, and warn in the editor before anything is dropped.</td>
+            <td>Recorded rather than hidden, with every lever rejected for a stated reason. T014 blocks phase 3 until the lever decision is made against a real measurement.</td>
           </tr>
           <tr>
-            <th scope="row">Conflict prompts pile up after a long offline stretch and the author dismisses them all at once.</th>
+            <th scope="row">The sweep never converges: each re-run reprocesses comments it already handled and the stage can never proceed.</th>
+            <td><span class="sev sev-medium"><span class="sev-bars" aria-hidden="true">●●</span>Medium</span></td>
+            <td>The Feedback Sweep Log plus one reply per comment make "already handled" durable, and T080 pins the invariant: a clean replay produces zero new rows, zero new replies, and zero amendments, then proceeds.</td>
+          </tr>
+          <tr>
+            <th scope="row">A draft pull request that cannot be read looks the same as one with no feedback, so the stage proceeds on an absent opinion.</th>
             <td><span class="sev sev-low"><span class="sev-bars" aria-hidden="true">●</span>Low</span></td>
-            <td>Group conflicts by document, resolve the newest first, and keep both copies until the author chooses.</td>
+            <td>The feature fails closed. A recorded Draft PR row that cannot be read stops the stage with a report naming the reason and the resume path.</td>
           </tr>
         </tbody>
       </table>
@@ -1350,30 +1366,45 @@ h1 {
 <!-- FILL:task-inventory:START -->
     <div class="task-grid">
       <div class="task-panel">
-        <h3>Local draft store</h3>
-        <p class="task-count">6 tasks</p>
+        <h3>Setup and foundations</h3>
+        <p class="task-count">14 tasks</p>
         <ul class="task-list">
-          <li><span class="task-id">T004</span>Define the draft record and its version column.</li>
-          <li><span class="task-id">T005</span>Write the draft on a keystroke pause, not on every keystroke.</li>
-          <li><span class="task-id">T006</span>Read the store back on editor load.</li>
-          <li><span class="task-id">T007</span>Cap the store by total size and evict acknowledged drafts.</li>
-          <li><span class="task-id">T008</span>Warn in the editor before anything is evicted.</li>
-          <li><span class="task-id">T009</span>Migration 0071 and its rollback.</li>
+          <li><span class="task-id">T004</span>Add <code>feature_dir</code> to the request, settling the interface gap.</li>
+          <li><span class="task-id">T007</span>Append the operation to <code>EXPECTED_HELPERS</code> and <code>NO_BASH_ANCESTOR</code>.</li>
+          <li><span class="task-id">T012</span>One <code>HelperEntry</code> in <code>registry.py</code>.</li>
+          <li><span class="task-id">T014</span>Reviewability checkpoint; operator decision before phase 3.</li>
         </ul>
       </div>
       <div class="task-panel">
-        <h3>Outbox, replay, and conflicts</h3>
-        <p class="task-count">9 tasks</p>
+        <h3>Read and classify</h3>
+        <p class="task-count">29 tasks</p>
         <ul class="task-list">
-          <li><span class="task-id">T010</span>Per-device outbox with a monotonic sequence.</li>
-          <li><span class="task-id">T011</span>Replay in write order on reconnect.</li>
-          <li><span class="task-id">T012</span>Keep a failed push queued rather than dropping it.</li>
-          <li><span class="task-id">T013</span>Reconcile the local id back to the server id.</li>
-          <li><span class="task-id">T014</span>Detect a server version that moved while offline.</li>
-          <li><span class="task-id">T015</span>Route a diverged draft to the conflict worker.</li>
-          <li><span class="task-id">T016</span>Keep both copies until the author chooses.</li>
-          <li><span class="task-id">T017</span>Group conflict prompts by document.</li>
-          <li><span class="task-id">T018</span>Counters for queue depth, latency, and conflict rate.</li>
+          <li><span class="task-id">T024</span>The two trust-boundary assertions.</li>
+          <li><span class="task-id">T029</span>The author-association allowlist, ahead of everything.</li>
+          <li><span class="task-id">T031</span>The export lead registry: 14 leads.</li>
+          <li><span class="task-id">T032</span>Whole-line exact matching against the body.</li>
+          <li><span class="task-id">T034</span>Assert <code>counts.observed == candidates + excluded</code>.</li>
+        </ul>
+      </div>
+      <div class="task-panel">
+        <h3>Amend, record, and stop</h3>
+        <p class="task-count">27 tasks</p>
+        <ul class="task-list">
+          <li><span class="task-id">T048</span>Only <code>amended</code> routes through consensus.</li>
+          <li><span class="task-id">T050</span>One commit per amendment.</li>
+          <li><span class="task-id">T051</span>The FR-012b write-point edit-surface check, in code.</li>
+          <li><span class="task-id">T055</span>The Feedback Sweep Log entry.</li>
+          <li><span class="task-id">T064</span>Stop for re-review, or proceed.</li>
+        </ul>
+      </div>
+      <div class="task-panel">
+        <h3>Parity, regeneration, and proof</h3>
+        <p class="task-count">10 tasks</p>
+        <ul class="task-list">
+          <li><span class="task-id">T073</span>Verify cross-platform parity at Layer 1.</li>
+          <li><span class="task-id">T074</span>Regenerate the payload and its proofs.</li>
+          <li><span class="task-id">T077</span>Run the full gate with zero failures.</li>
+          <li><span class="task-id">T080</span>Pin the clean-re-run convergence case.</li>
         </ul>
       </div>
     </div>
