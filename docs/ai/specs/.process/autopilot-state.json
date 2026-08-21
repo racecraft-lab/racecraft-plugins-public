@@ -6,8 +6,8 @@
   "status": "in_progress",
   "stage": "plan",
   "prior_run_note": "completed_archived",
-  "updated_at": "2026-08-21T00:55:03Z",
-  "active_step": "Phase 2: Clarify - Helper Envelope and Hidden Coupling",
+  "updated_at": "2026-08-21T01:14:33Z",
+  "active_step": "Phase 2: Clarify - Helper Envelope and Hidden Coupling Consensus",
   "reclaimed_from": {
     "workflow_file": "docs/ai/specs/.process/ART-005-workflow.md",
     "spec_id": "ART-005",
@@ -235,6 +235,33 @@
             "synthesizer_delivery": "3 of 4 synthesizer results returned empty result fields. I3 re-emitted on request and matched what the orchestrator had already applied. I1 and I2 edits were derived and applied by the orchestrator directly from the analyst responses, which were unanimous, high confidence, and escape-hatch free."
           },
           "status": "completed"
+        },
+        "2": {
+          "focus": "Helper envelope and hidden coupling",
+          "status": "in_progress",
+          "questions_returned": 5,
+          "applied_by_parent": [
+            "FR-007 rewritten: whole-line match within the first ten lines, not the first line. The shipped builder emits Artifact/feature/blank ahead of the lead, so the lead sits on line four of a verbatim paste. Verified directly in implementation-plan.html payload().",
+            "FR-007a added: the empty-export sentences are registered. The builder returns before pushing the lead when nothing was recorded, so an empty export would otherwise reach the sweep as ordinary feedback. Two templates ship the identical string, so template id reports ambiguous.",
+            "FR-008 extended: line-ending normalization plus mandatory per-comment truncation below the runner's 32 KiB bounded-input limit, which is enforced over every string and rejects the whole request.",
+            "FR-008a added: fixture corpus and a template-parity test reading the lead declarations out of the three templates. Test-only, so it does not cross the no-template-edits non-goal.",
+            "FR-004a added: both reads paginate to exhaustion and request the author-association field, which no shipped query requests today.",
+            "FR-004b added: no comment text in a shell argument, in either direction.",
+            "FR-005 extended: the closed eight-value association enum, a fixture per excluded value, and the honest statement that the allowlist is a proxy for write access rather than a permissions check.",
+            "FR-013 extended: pipe and newline escaping in the Disposition cell, because the table readers split on the bare pipe and one unescaped pipe would shift CRL # out of position; plus an explicit value when the author is unresolvable.",
+            "SC-005 broadened to the real fixture corpus. SC-008 now states it rests on the replies alone, because a draft description is fully fingerprint-protected with no editable region.",
+            "Key Entities and Assumptions updated: registry shape, swept-comment fields, the runner's deferred command-plan apply mode, the installed-cache twins, and the seven-place helper registration traps."
+          ],
+          "routed_to_consensus": [
+            "I5 [security] register the three PROMPT_LEAD variants",
+            "I6 [security, codebase] the FR-006 own-reply recognition mechanism",
+            "I7 [domain, codebase] whether corroboration status skipped stops or proceeds"
+          ],
+          "consensus_round_1_dispatches": 8,
+          "verified_by_parent": [
+            "payload() puts Artifact/featureLine/blank ahead of the lead and returns early on the empty branch",
+            "BOUNDED_TEXT_INPUT_BYTES is 32 KiB, enforced over every input string, rejecting the whole request"
+          ]
         }
       },
       "finding_out_of_scope": "consensus-protocol.md:157-171 documents aggregate-crl and parse-consensus-categories in the present tense as shipped scripts. Both were deleted by the XPLAT-009 shipped-Bash purge (XPLAT-010-deleted-tests-ledger.md rows 1 and 20) and nothing replaced them; the scripts directory holds only validate-autopilot-phase-coverage.py and the Codex mirror has no scripts directory. Separately, workflow-file-protocol.md:26 names a mandatory 'Routed Categories' CRL column that no committed workflow file uses. Both are stale shipped prose, outside ART-008 slice 1's scope, flagged for the operator."
@@ -280,7 +307,7 @@
     },
     {
       "step": "Phase 2: Clarify - Helper Envelope and Hidden Coupling Consensus",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 2: Clarify - Settled-Decision Verification",

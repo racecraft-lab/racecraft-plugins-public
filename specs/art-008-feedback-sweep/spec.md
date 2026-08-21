@@ -95,10 +95,11 @@ draft pull request the plan stage left behind. It collects every review thread
 still marked unresolved and every comment in the pull-request conversation. It
 keeps only the comments written by accounts with write access to the
 repository, and it sets the rest aside as untrusted rather than acting on them.
-Among the kept comments it recognizes the ones that are artifact exports,
-because those begin with one of three known sentences. It ignores anything it
-already handled on a previous run, and it ignores its own replies. What is left
-gets a single label each: amended, answered, deferred, or no action.
+Among the kept comments it recognizes the ones that are artifact exports, by
+finding one of a fixed set of known sentences among the comment's opening
+lines. It ignores anything it already handled on a previous run, and it ignores
+its own replies. What is left gets a single label each: amended, answered,
+deferred, or no action.
 
 **Why this priority**: Nothing else in the sweep can happen until the feedback
 is read, filtered for trust, and sorted. This story alone converts the
@@ -122,10 +123,12 @@ exclusion reason.
    **When** the sweep runs, **Then** that comment is reported as "not swept:
    untrusted author", is not passed to the consensus protocol, and produces no
    artifact edit.
-3. **Given** a comment whose first line is one of the three shipped export lead
-   sentences, **When** the sweep runs, **Then** the comment is recognized as an
-   artifact export, and **Given** a comment whose first line matches none of
-   them, **Then** it is treated as an ordinary comment.
+3. **Given** a verbatim export paste, whose registered sentence sits on line
+   four behind the artifact header, **When** the sweep runs, **Then** the
+   comment is recognized as an artifact export; **Given** the same paste with
+   that header trimmed off, **Then** it is still recognized; and **Given** a
+   comment carrying no registered sentence in its opening lines, **Then** it is
+   treated as an ordinary comment.
 4. **Given** a comment id that already appears in the Feedback Sweep Log, and a
    reply the sweep itself posted on an earlier run, **When** the sweep runs
    again, **Then** neither becomes a candidate and no duplicate record or reply
@@ -214,9 +217,17 @@ proceeds.
 
 ### Edge Cases
 
-- A trusted comment whose first line matches a registered export lead sentence
-  but whose body carries no objections: recognized as an export, but there is
-  nothing to classify beyond "no action".
+- An export pasted from a page where nothing was recorded: it carries no lead
+  sentence at all, because the builder returns before pushing one, and instead
+  carries a different sentence saying nothing was recorded and that the record
+  is not an approval. FR-007a registers those sentences so the comment is
+  recognized rather than mistaken for reviewer feedback, and it takes the class
+  `no action`. Two templates ship the identical sentence, so the template id is
+  reported as ambiguous.
+- An export pasted with a body large enough to exceed the truncation budget:
+  recognition still works, because the registered sentence sits in the opening
+  lines, and the record carries the truncation flag so a reader knows the tail
+  was not examined.
 - A reply the sweep itself posted on an earlier run: the author is
   write-capable and the comment id is new, so the trust filter and the
   already-logged check both pass it. It must still be excluded, or every run
@@ -275,29 +286,74 @@ proceeds.
   status is `match`, the sweep MUST read every review thread whose resolved
   flag is false and every pull-request conversation comment on that pull
   request. It MUST NOT read review summary bodies.
+- **FR-004a**: Both reads MUST be **paginated to exhaustion**. The nearest
+  shipped precedent caps its query at a fixed page of threads and a fixed page
+  of comments per thread, with no pagination, and silent truncation at those
+  caps would contradict SC-001's claim that every trusted, unrecorded comment
+  carries a disposition. The reads MUST also request the author-association
+  field explicitly; no shipped query requests it today, so FR-005's filter has
+  no input unless this read supplies it.
+- **FR-004b**: No comment text may reach a shell argument, in either direction.
+  Reads pass their query by file or by structured argument, and every write
+  passes its body by file path rather than inline. This is the constraint the
+  nearest shipped precedent violates: it interpolates comment and reply text
+  directly into a command string.
 
 **Trust boundary**
 
 - **FR-005**: The sweep MUST act only on comments whose author association is
   OWNER, MEMBER, or COLLABORATOR. Every other comment MUST appear in the run
   report as "not swept: untrusted author", MUST NOT be passed to the consensus
-  protocol, and MUST NOT influence any artifact edit.
+  protocol, and MUST NOT influence any artifact edit. The source vocabulary is
+  a closed eight-value enum — OWNER, MEMBER, COLLABORATOR, CONTRIBUTOR,
+  FIRST_TIMER, FIRST_TIME_CONTRIBUTOR, MANNEQUIN, NONE — and every one of the
+  five excluded values MUST have a fixture. The allowlist is a **proxy** for
+  write access rather than a statement of it: COLLABORATOR can be a read-only
+  invitation and MEMBER is organization membership, which does not imply write
+  on this repository. The allowlist stays exactly as stated; the proxy is named
+  here so no later reader mistakes it for a permissions check.
 - **FR-006**: The sweep MUST exclude replies it posted itself from the
   candidate set on every run, so a reply written by one sweep never becomes
   input to a later one.
 
 **Deterministic recognition**
 
-- **FR-007**: The sweep MUST recognize an artifact-exported markdown block by
-  matching the comment's lead sentence against a fixed registry holding the
-  three shipped export lead sentences. A comment matching none of them MUST be
+- **FR-007**: The sweep MUST recognize an artifact-exported block by matching
+  the registry's sentences against the comment's **first ten lines**, as a
+  whole-line exact match after normalizing line endings and stripping trailing
+  whitespace. The lead sentence is **not** the comment's first line: the
+  shipped builder emits `Artifact: <title>`, a feature line, and a blank line
+  ahead of it, so the lead lands on line four of a verbatim paste. The
+  ten-line window also survives a reviewer trimming that header, and a
+  template later adding one. A comment matching no registered sentence MUST be
   treated as an ordinary comment, and recognition MUST NOT require editing any
   shipped gallery template or its payload copy.
+- **FR-007a**: The registry MUST also hold the **empty-export** sentences the
+  same builder emits when nothing was recorded. On that path the builder
+  returns before the lead is ever pushed, so an empty export carries no
+  registered lead and would otherwise reach the sweep as ordinary reviewer
+  feedback. A recognized empty export takes the class `no action`. Two of the
+  three templates ship the identical empty sentence, so an empty export MUST
+  report its template id as ambiguous rather than guessing between them.
 - **FR-008**: Candidate filtering, export recognition, and candidate reporting
   MUST be deterministic: the same observed pull-request comment data MUST
-  always yield the same candidate set. That behavior MUST be pinned by golden
-  fixtures covering each registered lead sentence, the untrusted-author path,
-  and the ordinary-comment path.
+  always yield the same candidate set. Determinism requires two normalizations
+  stated here rather than left to the implementation: line endings are
+  normalized before matching, and each comment body is truncated at a fixed
+  byte budget well below the runner's 32 KiB bounded-input limit, with the
+  truncation flagged per comment. Truncating is not optional — the limit is
+  enforced over every string in a request and rejects the **whole** request, so
+  one oversized comment would otherwise fail an entire sweep rather than
+  degrading that one item.
+- **FR-008a**: Golden fixtures MUST pin: every registered sentence, in both the
+  verbatim payload shape and a header-trimmed paste; a body delimited with
+  carriage returns; an oversized body that truncates; the untrusted-author
+  path; and the ordinary-comment path. A separate test MUST read the lead
+  sentences out of the three shipped templates and assert the registry matches
+  what they declare, so a template that changes its wording fails a test rather
+  than silently disabling recognition. That test reads the templates and edits
+  none of them, so it does not cross the no-template-edits boundary and
+  triggers no payload regeneration.
 
 **Idempotency and classification**
 
@@ -313,7 +369,13 @@ proceeds.
   detail on that row. When one comment's objections would warrant different
   classes, `amended` MUST win over the other three, and every non-dominant
   objection MUST be named in the row's disposition text and in the reply, so
-  nothing is silently dropped.
+  nothing is silently dropped. This order is forced, not stylistic: the
+  roadmap's "sweep, amend, re-review" decision rejected leaving re-run
+  responsibility to manual judgment because that lets feedback become
+  decoration, and a classifier that let a mixed comment escape `amended`
+  would recreate that same rejected path one layer down; FR-003's
+  cross-platform determinism requirement rules out any non-fixed tie-break
+  as the alternative.
 - **FR-011**: Only the `amended` class routes through the category-routed
   consensus protocol. The `answered`, `deferred`, and `no action` classes MUST
   NOT invoke consensus.
@@ -359,8 +421,17 @@ proceeds.
   commit. The table sits under its own `### Feedback Sweep Log` heading
   immediately after `### Consensus Resolution Log` in the workflow file, with
   the header `| # | Comment ID | Surface | Author | Class | Disposition |
-  Commit | CRL # |`. The workflow file MUST be the sole store; no state-file
-  mirror of the sweep record may be written.
+  Commit | CRL # |`. Because FR-010 puts reviewer-derived prose in the
+  `Disposition` cell, that cell MUST escape any pipe as `\|` and any newline as
+  a line break: the table readers in this codebase split rows on the bare pipe
+  with no escape handling, so one unescaped pipe would shift `CRL #` out of
+  position and make FR-014's link read the wrong column. The comment-id key
+  sits ahead of the disposition and so survives regardless, which keeps FR-009
+  safe. When a comment's author cannot be resolved — the account was deleted,
+  and the author field is nullable where the association field is not — the
+  `Author` cell records that explicitly rather than being left blank. The
+  workflow file MUST be the sole store; no state-file mirror of the sweep
+  record may be written.
 - **FR-014**: Each amended item MUST additionally produce a Consensus
   Resolution Log row linked to its Feedback Sweep Log row. The link is
   bidirectional and costs no extra column: the sweep row's `CRL #` names the
@@ -445,8 +516,10 @@ proceeds.
 
 - **Swept comment**: one pull-request comment the sweep considered. Carries its
   id, the surface it came from (review thread or pull-request conversation),
-  its author and that author's association, whether it was recognized as an
-  artifact export, and its assigned class.
+  its author association and, where resolvable, its author, whether it was
+  recognized as an artifact export together with that export's form and
+  template id, whether its body was truncated before matching, and its assigned
+  class.
 - **Feedback Sweep Log**: the durable table in the workflow file holding one
   row per handled comment. Header: `| # | Comment ID | Surface | Author |
   Class | Disposition | Commit | CRL # |`. It sits under its own
@@ -454,9 +527,12 @@ proceeds.
   Log. `CRL #` carries the linked Consensus Resolution Log row number and is
   empty for every class but `amended`. The table is the sole record of what the
   sweep has already handled and the basis for skipping on re-runs.
-- **Export lead registry**: the fixed set of three lead sentences that identify
-  an artifact-exported markdown block. Adding a future exporting page costs one
-  more entry.
+- **Export lead registry**: the fixed set of sentences that identify an
+  artifact-exported block, matched as a whole line within the comment's opening
+  lines rather than against its first line. It holds the three markdown lead
+  sentences and the empty-export sentences the same builder emits when nothing
+  was recorded. Adding a future exporting page costs one more entry per form,
+  and a test asserts the registry still matches what the templates declare.
 - **Classification**: the closed four-value vocabulary — amended, answered,
   deferred, no action — assigned to every trusted, unrecorded comment. Exactly
   one value per comment, with `amended` dominant when a single comment's
@@ -492,6 +568,11 @@ Named owners, so none of these is a silent omission.
 - **Deferred pending a concrete case**: an operator flag to skip the sweep. No
   case has surfaced, so the stop report's resume path is the only route.
   Clarify may revisit.
+- **Deferred pending a concrete case**: which class heads the log row and
+  reply when a single comment mixes only `answered` and `deferred` points,
+  with nothing amend-worthy present. Neither class routes to consensus or
+  changes stop-or-proceed, and no such comment has surfaced. Clarify may
+  revisit.
 
 ## Success Criteria *(mandatory)*
 
@@ -512,9 +593,10 @@ Named owners, so none of these is a silent omission.
 - **SC-004**: Zero artifact edits across the fixture corpus are attributable to
   an author outside the write-capable set.
 - **SC-005**: The same observed comment data yields the same candidate set on
-  every run, demonstrated by golden fixtures covering all three registered
-  export lead sentences, the untrusted-author path, and the ordinary-comment
-  path.
+  every run, demonstrated by golden fixtures covering every registered
+  sentence in both the verbatim and header-trimmed shapes, a carriage-return
+  body, an oversized body that truncates, every excluded author-association
+  value, and the ordinary-comment path.
 - **SC-006**: All four unreadable draft-pull-request conditions stop the run
   before any task work, each with a report naming the condition and a resume
   path; the no-record condition proceeds.
@@ -522,6 +604,11 @@ Named owners, so none of these is a silent omission.
   same input, with no behavioral difference between them.
 - **SC-008**: After an amendment run stops, a reviewer can tell from the pull
   request alone what changed and where, without opening the workflow file.
+  This rests entirely on the FR-015 replies, and deliberately so: slice 1 makes
+  no write to the pull-request description, and a draft description is fully
+  fingerprint-protected with no editable region, so there is nowhere safe to
+  put an amendment summary there. Slice 2 owns the description refresh and MUST
+  NOT weaken the replies on the assumption that the description carries this.
 
 ## Assumptions
 
@@ -531,9 +618,20 @@ Named owners, so none of these is a silent omission.
   rather than defining its own.
 - The category-routed consensus machinery and its four existing roles are
   reused unchanged. This slice adds a caller, not a new protocol.
-- The three shipped export lead sentences are stable strings on the shipped
-  pages. Recognition depends on them, so a page that changes its lead sentence
-  needs a registry entry updated in the same change.
+- The registered sentences are stable strings on the shipped pages. Recognition
+  depends on them, so a page that changes one needs its registry entry updated
+  in the same change; FR-008a's parity test is what makes that failure loud
+  instead of silent.
+- The replies FR-015 requires are an orchestrator write, not a runner one. The
+  runner's command-plan apply mode is deferred by design and returns an
+  expected failure, so no part of the reply path may be built on it. That also
+  means the reply behavior sits outside the runner's determinism guarantees, so
+  SC-002 is provable only against a captured-command fixture rather than a
+  golden helper response.
+- Adding a read-only helper restales the byte-identical installed-cache copies
+  of the runner sources under the test fixtures. Regenerating them is a
+  required step, not an optional one, and the plan counts those copies as
+  generated rather than authored.
 - Recognized export blocks may arrive on either comment surface. The acceptance
   runbook exercises both placements: one export pasted as a conversation
   comment, one pasted into a review thread.
@@ -542,25 +640,40 @@ Named owners, so none of these is a silent omission.
 - The dominance rule ranks `amended` above the other three and stops there. It
   does not order `answered`, `deferred`, and `no action` against each other,
   because those three are behaviorally identical at both points classification
-  controls: none route through consensus and none stop the run. A comment
-  mixing only an answered point and a deferred point therefore has no stated
-  headline class. That gap has no effect on stop-or-proceed or on routing, so
-  it is left open rather than closed with a ranking that would carry no
-  behavioral consequence.
+  controls: none route through consensus and none stop the run. The one case
+  that leaves open is recorded under Non-Goals as deferred pending a concrete
+  case, beside the operator-flag deferral it resembles.
 - No aggregator script computes the Round-2 escape rate. The tool the design
   concept named was removed by an earlier shipped-Bash purge, and nothing
   replaced it, so the Consensus Resolution Log table is the metric's only data
   source and a reader computes it from the `Round` column and the
   `escape-hatch` outcome value.
-- The shape of the deterministic parse — what it is called and exactly which
-  fields it reports — is a Plan-phase decision, mirroring the shipped
-  observation-input pattern and the closed corroboration vocabulary already in
-  use.
+- The deterministic parse is one read-only runner operation registered the way
+  the stage resolver already is. Its exact name and field list stay a
+  Plan-phase decision, but Clarify has grounded the shape: it reports the
+  surfaces read, trusted and untrusted counts, per-comment candidates carrying
+  the export form and its anchors, and an explicit exclusion list naming each
+  excluded comment's reason. It **reports and never decides**, mirroring the
+  corroboration helper: assigning a class stays orchestrator judgment, because
+  `amended` is what routes an item into consensus.
+- Registering a read-only operation touches seven places, three of which fail
+  in ways that name a digest or a JSON blob rather than the mistake: the
+  argument-derivation branch rejects a helper that adds no explicit entry, the
+  harness manifest compares its helper list in order rather than sorted, and a
+  helper not declared as having no shell ancestor is required to name a shell
+  script that no longer exists. The remediation and rollback text in that
+  manifest also may not contain the substring `bash` in any casing. Plan
+  accounts for these; they are recorded here so a later reader does not
+  rediscover them by failing.
 - One fixed reply template per class, with the exact wording settled at Plan.
-- The scoping interview's blind-spot pass did not run, so coupling in the
-  corroboration input path this slice reuses has not been independently
-  searched. Clarify reads that input contract before Plan commits to the parse
-  shape.
+- The scoping interview's blind-spot pass did not run. Clarify session 2 did
+  that search instead and it changed the spec: it found that the export lead
+  does not sit on a comment's first line, that an empty export carries no lead
+  at all, that the runner rejects an entire request over one oversized string,
+  that a draft description has no editable region, that the runner cannot post
+  the replies, and that an unescaped pipe in the disposition text would break
+  the log-to-log link. Those are recorded as requirements above rather than
+  left as an unsearched gap.
 - Reviewers inside the write-capable set act in good faith. The author-
   association filter is the security boundary; it is not a judgement about any
   individual reviewer's intent.
