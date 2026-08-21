@@ -86,6 +86,54 @@ in the workflow file's Consensus Resolution Log.
   `repair` rule, and a run with zero amendments but handled comments had no
   commit to carry its rows.
 
+### Session 2 — helper envelope and hidden coupling (2026-08-20)
+
+This session also carried the unknown-unknowns search the scaffold's blind-spot
+pass never ran. It changed the spec more than any other pass. The findings that
+became requirements are recorded at FR-004a, FR-004b, FR-005, FR-007, FR-007a,
+FR-008, FR-008a, FR-013, SC-005, and SC-008; the ones that became assumptions
+are in the Assumptions section. Three sub-items went to consensus.
+
+- **Q: Should the registry recognize the "Copy as Prompt" imperative
+  variants?** → Yes, with the entry recording its kind, and recognition alone
+  never forcing a class. Two of three analysts. The deciding argument inverts
+  the intuition: leaving them unregistered is the *worse* posture, because the
+  imperative text then reaches the analysts as unlabelled free text and the
+  security-keyword routing matches none of that phrasing. Recorded as FR-007c
+  and FR-007d.
+- **Q: How does the sweep recognize its own reply?** → An anchored HTML-comment
+  marker at the start of the body, **and** an author match, both required.
+  Unanimous on the marker; the author half is an added filter that costs
+  nothing and blocks another account from spoofing it. Matching the author
+  alone was rejected because the sweep authenticates as the operator, who is
+  the reviewer the checkpoint exists for. A visible sentence was rejected
+  because a reviewer quoting a reply to disagree with it would copy that
+  sentence and be silently skipped. Recorded as FR-006, FR-006a, FR-015, and
+  FR-015a.
+- **Q: Does corroboration status `skipped` stop or proceed?** → Stop. Both
+  analysts, high confidence, and it turned out to be a vocabulary gap rather
+  than an open question: User Story 3 and SC-006 already counted the
+  unreachable-tool case as a fourth stop condition, while FR-019 named only
+  three by token. The distinction that carries it: `no_record` means the gate
+  does not apply, `skipped` means the gate applies and evaluation failed.
+  Recorded as FR-019, FR-019a, and FR-019b.
+
+**Dissent worth preserving.** On the prompt variants, the third analyst argued
+for neutralizing rather than labelling — excluding a recognized prompt-variant
+comment from the automated amend path and routing it to human review — on the
+grounds that a tag nothing consumes changes nothing about what reaches the
+agent. That objection is answered inside the chosen option rather than
+dismissed: FR-007c requires the registered lead to be carried as matched
+metadata rather than passed through as free text, which is the substance of
+what marking is for. The remaining difference is only whether a recognized
+prompt paste should additionally be barred from amending, and the majority
+judged that too costly against honest mis-clicks.
+
+**A scope correction the search produced.** The spec had said three templates
+export. Ten do, and seven of those export a prompt kind as well. FR-007b widens
+the registry to all of them and FR-008a derives the expected set from the
+manifest, which makes the count a data question rather than a design one.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - The sweep reads and classifies draft-PR feedback (Priority: P1)
@@ -314,7 +362,23 @@ proceeds.
   here so no later reader mistakes it for a permissions check.
 - **FR-006**: The sweep MUST exclude replies it posted itself from the
   candidate set on every run, so a reply written by one sweep never becomes
-  input to a later one.
+  input to a later one. A comment is the sweep's own reply when **both** hold:
+  its body begins with the fixed HTML-comment marker FR-015 requires, matched
+  anchored at the start rather than anywhere in the body, and its author is the
+  account this run authenticated as. Both conditions are needed. The marker
+  alone would silently skip a reviewer who quoted a sweep reply while
+  disagreeing with it, since a quote copies the raw body; the author alone
+  would skip that account's every genuine comment, because the sweep
+  authenticates as the operator rather than as a bot, and the operator is the
+  reviewer this checkpoint exists for. Anchoring defeats the quote case, which
+  prefixes the copied text. Every self-reply exclusion MUST be named in the run
+  report the way an untrusted-author exclusion is, so a marker collision drops
+  a candidate visibly rather than silently.
+- **FR-006a**: Without a working self-reply exclusion the loop cannot converge:
+  each run's reply is a new comment with a new id, which the FR-009 skip key
+  never matches, so it becomes the next run's candidate and produces another
+  reply without end. SC-003 would be unreachable rather than merely delayed.
+  This is why FR-006 is a requirement and not hygiene.
 
 **Deterministic recognition**
 
@@ -332,9 +396,31 @@ proceeds.
   same builder emits when nothing was recorded. On that path the builder
   returns before the lead is ever pushed, so an empty export carries no
   registered lead and would otherwise reach the sweep as ordinary reviewer
-  feedback. A recognized empty export takes the class `no action`. Two of the
-  three templates ship the identical empty sentence, so an empty export MUST
-  report its template id as ambiguous rather than guessing between them.
+  feedback. A recognized empty export takes the class `no action`. Empty
+  sentences are not unique per template — at least two shipped templates
+  declare the identical string — so an empty export MUST report its template id
+  as ambiguous whenever the matched sentence is shared, rather than guessing
+  between the templates that share it.
+- **FR-007b**: The registry MUST cover **every shipped template that declares
+  an export**, in every kind it declares, not only the draft-stage pages. The
+  gallery ships ten exporting templates today and seven of them export a
+  `prompt` kind beside the `markdown` kind. Each recognized entry records its
+  template id and its kind.
+- **FR-007c**: The `prompt` kind matters for safety, not completeness. Its lead
+  is an imperative addressed to a coding agent, and an unregistered one reaches
+  the consensus analysts as ordinary free text carrying an instruction. The
+  security-keyword routing that would otherwise force a full fan-out matches
+  none of that phrasing, so leaving these unregistered hides the pattern from
+  the mechanism meant to catch it. Recognition is labelling, not distrust: a
+  recognized comment still passes the FR-005 filter first and is still
+  classified normally by FR-010. What recognition changes is that a registered
+  lead is matched as a known constant and carried as metadata, so it does not
+  reach an analyst as free instruction text.
+- **FR-007d**: Recognition MUST NOT by itself force a class. A reviewer who
+  clicks the wrong copy button still meant their objections, and discarding
+  them over a button choice would reproduce the "feedback becomes decoration"
+  outcome this feature exists to remove. The one exception is the empty-export
+  form in FR-007a, which carries no objections to act on.
 - **FR-008**: Candidate filtering, export recognition, and candidate reporting
   MUST be deterministic: the same observed pull-request comment data MUST
   always yield the same candidate set. Determinism requires two normalizations
@@ -348,12 +434,16 @@ proceeds.
 - **FR-008a**: Golden fixtures MUST pin: every registered sentence, in both the
   verbatim payload shape and a header-trimmed paste; a body delimited with
   carriage returns; an oversized body that truncates; the untrusted-author
-  path; and the ordinary-comment path. A separate test MUST read the lead
-  sentences out of the three shipped templates and assert the registry matches
-  what they declare, so a template that changes its wording fails a test rather
-  than silently disabling recognition. That test reads the templates and edits
-  none of them, so it does not cross the no-template-edits boundary and
-  triggers no payload regeneration.
+  path; and the ordinary-comment path. A separate test MUST derive the expected
+  set from the gallery manifest and the templates themselves — every template
+  the manifest says exports, in every kind it declares — and assert the
+  registry matches. Deriving rather than hardcoding is what keeps the registry
+  correct as the gallery grows: a template that changes its wording, or a new
+  exporting template, fails a test rather than silently disabling recognition.
+  It also makes the registry's size a data question rather than a design one,
+  so covering ten templates costs the same machinery as covering three. That
+  test reads the templates and edits none of them, so it does not cross the
+  no-template-edits boundary and triggers no payload regeneration.
 
 **Idempotency and classification**
 
@@ -457,7 +547,21 @@ proceeds.
 - **FR-015**: The sweep MUST post exactly one reply per handled comment, naming
   the class, the artifact and section touched, and the amending commit. Each
   class MUST use one fixed reply template, and reply text MUST be plain,
-  public-readable English.
+  public-readable English. Every template MUST open with the same fixed
+  HTML-comment marker, which renders as nothing and is what FR-006 matches on.
+  A marker rather than a visible sentence, because a visible sentence is
+  exactly what a reviewer quotes when they disagree, and quoting it would make
+  their genuine objection invisible to the next run. The repository already
+  treats HTML-comment markers in author-facing pull-request text as contract
+  rather than convenience, so this reuses a shipped idiom under a distinct
+  name that no existing reader matches.
+- **FR-015a**: The two surfaces need different writes. A review-thread reply is
+  posted into its thread. The pull-request conversation has no threading, so a
+  reply there is a new top-level comment that MUST name the comment it answers,
+  keeping one-reply-per-comment legible to a human reading the conversation in
+  order. Neither shipped reply-writer in this repository posts to the
+  conversation surface at all, so that write is new work with no prior art to
+  copy.
 - **FR-016**: The sweep MUST NOT resolve any review thread.
 
 **Stop or proceed**
@@ -470,11 +574,30 @@ proceeds.
   its records, post its replies, and proceed directly into task execution
   without stopping.
 - **FR-019**: When a Draft PR row is present but the pull request cannot be
-  read — the GitHub CLI is unreachable, or corroboration reports `pr_closed`,
-  `pr_missing`, or `identity_mismatch` — the run MUST stop before any task work
-  with a report naming the status and the resume path. When the workflow file
-  carries no Draft PR row (`no_record`), the sweep MUST proceed without
-  stopping.
+  read, the run MUST stop before any task work with a report naming the status
+  and the resume path. That covers **four** of the six corroboration statuses
+  by name: `skipped`, `pr_closed`, `pr_missing`, and `identity_mismatch`. When
+  the workflow file carries no Draft PR row (`no_record`), the sweep MUST
+  proceed without stopping, and on `match` it sweeps. The six are exhaustive
+  and each maps to exactly one behavior.
+- **FR-019a**: `skipped` stops, and the distinction it turns on must be stated
+  rather than left to a reader. `no_record` means the gate does not apply,
+  because no checkpoint was ever opened; `skipped` means the gate applies and
+  the observation failed. Treating "could not observe" as "observed nothing"
+  would make the checkpoint silently optional exactly when the tool is
+  unreliable, which is when unread feedback is most likely. Nothing in this
+  repository treats an unreachable tool as evidence of a clean state.
+- **FR-019b**: The `skipped` stop MUST read differently from the three
+  discrepancy stops, and MUST name which of its causes occurred — the tool was
+  absent, unauthenticated, rate-limited, or returned output that could not be
+  parsed. Collapsing it into the discrepancy wording costs the operator the
+  ability to tell a broken tool from a real discrepancy, and those have
+  different fixes. Behavior does not branch on the cause; only the report does.
+  The resume path for `skipped` is to fix the tool and re-run, because the
+  observation is retaken fresh on every invocation. Clearing the `Draft PR` row
+  is **not** a resume path here: that path exists for `pr_missing`, where the
+  row's absence would match reality, and reusing it for `skipped` would erase a
+  probably-true record to manufacture a `no_record` reading.
 
 ### Reviewability Notes *(if applicable)*
 
@@ -527,12 +650,15 @@ proceeds.
   Log. `CRL #` carries the linked Consensus Resolution Log row number and is
   empty for every class but `amended`. The table is the sole record of what the
   sweep has already handled and the basis for skipping on re-runs.
-- **Export lead registry**: the fixed set of sentences that identify an
+- **Export lead registry**: the set of sentences that identify an
   artifact-exported block, matched as a whole line within the comment's opening
-  lines rather than against its first line. It holds the three markdown lead
-  sentences and the empty-export sentences the same builder emits when nothing
-  was recorded. Adding a future exporting page costs one more entry per form,
-  and a test asserts the registry still matches what the templates declare.
+  lines rather than against its first line. It covers every shipped template
+  the manifest says exports, in every kind it declares, plus the empty-export
+  sentences the same builder emits when nothing was recorded. Each entry
+  carries its template id and kind. The set is derived from the manifest and
+  the templates by a test rather than hand-maintained, so a new exporting page
+  or a reworded lead fails that test instead of silently disabling
+  recognition.
 - **Classification**: the closed four-value vocabulary — amended, answered,
   deferred, no action — assigned to every trusted, unrecorded comment. Exactly
   one value per comment, with `amended` dominant when a single comment's
@@ -565,9 +691,15 @@ Named owners, so none of these is a silent omission.
   bodies; a state-file mirror of the sweep record; a new Workflow Overview
   phase row; edits to any shipped gallery template; and edits to any of the
   twelve governed Layer 6 corpus agent definitions.
-- **Deferred pending a concrete case**: an operator flag to skip the sweep. No
-  case has surfaced, so the stop report's resume path is the only route.
-  Clarify may revisit.
+- **Deferred, with the concrete case now named**: an operator flag to skip the
+  sweep. Clarify surfaced the case that was missing at scoping — a fail-closed
+  gate on a mandatory path normally ships with a documented override, and
+  FR-019 is one. The case is real but the flag stays out of this slice: the
+  resume path for every stop is to repair the tool or the record and re-run,
+  the observation is retaken on every invocation, and a skip flag on a
+  checkpoint whose whole purpose is to be unskippable deserves its own scoping
+  rather than an addition here. Recorded so the next spec inherits the case
+  rather than rediscovering it.
 - **Deferred pending a concrete case**: which class heads the log row and
   reply when a single comment mixes only `answered` and `deferred` points,
   with nothing amend-worthy present. Neither class routes to consensus or
@@ -599,7 +731,10 @@ Named owners, so none of these is a silent omission.
   value, and the ordinary-comment path.
 - **SC-006**: All four unreadable draft-pull-request conditions stop the run
   before any task work, each with a report naming the condition and a resume
-  path; the no-record condition proceeds.
+  path, and the could-not-observe stop is distinguishable in that report from
+  the three discrepancy stops; the no-record condition proceeds. Every one of
+  the six corroboration statuses has exactly one specified behavior, with none
+  left to prose alone.
 - **SC-007**: Both platform variants produce the same sweep outcome for the
   same input, with no behavioral difference between them.
 - **SC-008**: After an amendment run stops, a reviewer can tell from the pull
@@ -612,10 +747,19 @@ Named owners, so none of these is a silent omission.
 
 ## Assumptions
 
-- The Draft PR row and its corroboration vocabulary (`match`, `pr_closed`,
-  `pr_missing`, `identity_mismatch`, `no_record`) already ship from the
-  preceding spec. This slice reads that record and reuses that vocabulary
-  rather than defining its own.
+- The Draft PR row and its corroboration vocabulary already ship from the
+  preceding spec. That vocabulary is **six** values, not five: `match`,
+  `no_record`, `skipped`, `pr_closed`, `pr_missing`, and `identity_mismatch`.
+  This slice reads that record and reuses the whole vocabulary rather than
+  defining its own, and FR-019 assigns a behavior to every one of the six.
+- SC-004's phrase "write-capable set" is shorthand for the author-association
+  allowlist FR-005 defines. The association is a proxy for write access rather
+  than a permissions check, as FR-005 states.
+- A fail-closed gate on a mandatory path is normally expected to ship with a
+  documented override, and this slice ships none. That is recorded as a gap
+  under Non-Goals rather than resolved here, and it is explicitly **not** a
+  reason to weaken FR-019: the fix for a stopped run is to repair the tool, and
+  the observation is retaken on every invocation.
 - The category-routed consensus machinery and its four existing roles are
   reused unchanged. This slice adds a caller, not a new protocol.
 - The registered sentences are stable strings on the shipped pages. Recognition

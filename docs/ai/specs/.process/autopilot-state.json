@@ -6,8 +6,8 @@
   "status": "in_progress",
   "stage": "plan",
   "prior_run_note": "completed_archived",
-  "updated_at": "2026-08-21T01:14:33Z",
-  "active_step": "Phase 2: Clarify - Helper Envelope and Hidden Coupling Consensus",
+  "updated_at": "2026-08-21T01:26:43Z",
+  "active_step": "Phase 2: Clarify - Settled-Decision Verification",
   "reclaimed_from": {
     "workflow_file": "docs/ai/specs/.process/ART-005-workflow.md",
     "spec_id": "ART-005",
@@ -238,7 +238,7 @@
         },
         "2": {
           "focus": "Helper envelope and hidden coupling",
-          "status": "in_progress",
+          "status": "completed",
           "questions_returned": 5,
           "applied_by_parent": [
             "FR-007 rewritten: whole-line match within the first ten lines, not the first line. The shipped builder emits Artifact/feature/blank ahead of the lead, so the lead sits on line four of a verbatim paste. Verified directly in implementation-plan.html payload().",
@@ -261,7 +261,28 @@
           "verified_by_parent": [
             "payload() puts Artifact/featureLine/blank ahead of the lead and returns early on the empty branch",
             "BOUNDED_TEXT_INPUT_BYTES is 32 KiB, enforced over every input string, rejecting the whole request"
-          ]
+          ],
+          "consensus": {
+            "round_1_items": 3,
+            "round_1_analyst_dispatches": 8,
+            "round_2_items": 0,
+            "escape_hatches": 0,
+            "human_review": 0,
+            "outcomes": {
+              "I5 prompt-lead variants": "2 of 3 majority, register with the kind recorded; domain-researcher dissented toward neutralizing, answered inside the majority option by requiring the matched lead to be carried as metadata rather than free text",
+              "I6 own-reply recognition": "3 of 3 unanimous, anchored HTML-comment marker plus an author match, both required",
+              "I7 corroboration status skipped": "both-agree, stop; retry refinement declined as out-of-scope machinery"
+            },
+            "scope_correction": "The spec said three templates export. Ten do, and seven of those export a prompt kind as well. FR-007b widens the registry to every shipped exporting template and FR-008a derives the expected set from the manifest, so the count is data rather than design. Verified directly against the manifest and the template sources.",
+            "applied_after_consensus": [
+              "FR-006 and FR-006a: marker-plus-author exclusion, anchored, with self-reply exclusions named in the run report; convergence rationale recorded",
+              "FR-007b, FR-007c, FR-007d: registry covers every shipped exporting template in every kind; the prompt kind's safety rationale; recognition never forces a class",
+              "FR-015 and FR-015a: the marker opens every reply template; the two surfaces need different writes and the conversation write has no prior art",
+              "FR-019, FR-019a, FR-019b: all six corroboration statuses mapped, skipped stops, and its report reads distinctly and names its cause",
+              "SC-006 and the Assumptions vocabulary list corrected from five statuses to six",
+              "Non-Goals: the operator skip flag stays deferred, but the concrete case is now named rather than absent"
+            ]
+          }
         }
       },
       "finding_out_of_scope": "consensus-protocol.md:157-171 documents aggregate-crl and parse-consensus-categories in the present tense as shipped scripts. Both were deleted by the XPLAT-009 shipped-Bash purge (XPLAT-010-deleted-tests-ledger.md rows 1 and 20) and nothing replaced them; the scripts directory holds only validate-autopilot-phase-coverage.py and the Codex mirror has no scripts directory. Separately, workflow-file-protocol.md:26 names a mandatory 'Routed Categories' CRL column that no committed workflow file uses. Both are stale shipped prose, outside ART-008 slice 1's scope, flagged for the operator."
@@ -303,15 +324,15 @@
     },
     {
       "step": "Phase 2: Clarify - Helper Envelope and Hidden Coupling",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Helper Envelope and Hidden Coupling Consensus",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Settled-Decision Verification",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 2: Clarify - Settled-Decision Verification Consensus",
