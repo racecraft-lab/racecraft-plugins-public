@@ -6,8 +6,8 @@
   "status": "in_progress",
   "stage": "plan",
   "prior_run_note": "completed_archived",
-  "updated_at": "2026-08-21T03:28:55Z",
-  "active_step": "Phase 4: Checklist - state-management",
+  "updated_at": "2026-08-21T04:25:41Z",
+  "active_step": "Phase 4: Checklist - state-management Consensus",
   "reclaimed_from": {
     "workflow_file": "docs/ai/specs/.process/ART-005-workflow.md",
     "spec_id": "ART-005",
@@ -487,6 +487,21 @@
               "FR-011a quoted the literal human-review flag string, which would trip a literal-match gate on every future run; reworded"
             ]
           }
+        },
+        "state-management": {
+          "status": "remediated, one consensus item in flight",
+          "items": 37,
+          "loops": 1,
+          "interrupted": "the first executor died to an API error mid-write after adding FR-006c, FR-009a, FR-013a, FR-015c, SC-012 and SC-013 but before marking any gap resolved or finishing the plan alignment. A continuation was dispatched with the inherited state rather than restarting.",
+          "gaps_found_my_grep": 16,
+          "gaps_found_helper": 0,
+          "helper_undercount_reason": "all 16 markers were combined forms, so the bare-literal regex saw none. Its zero before remediation and its zero after carry the same information: none. Third data point after 4-of-8 and 9-of-30.",
+          "gaps_remaining": 0,
+          "self_contradiction_caught": "FR-015c, written by the interrupted run, closed with a blanket rule that a run stopping for another reason still posts the replies it owes. That would post two replies in a case its own worked example three paragraphs earlier fixes at zero. Corrected by partitioning the eight stops: two sit after the reply point and have already replied, six abort before it and post none.",
+          "convergence_proved": "the work set is trusted, minus logged, minus self-reply, and three rules make it monotone. Two cycling paths foreclosed: an empty authenticated account (now an input error that stops before any read) and the human-review item (a stationary point bounded by operator action, not a divergence)",
+          "suite": "7659/7659 passed",
+          "routed_to_consensus": 1,
+          "consensus_dispatches": 2
         }
       }
     }
@@ -563,11 +578,11 @@
     },
     {
       "step": "Phase 4: Checklist - state-management",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - state-management Consensus",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 5: Tasks",

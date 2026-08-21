@@ -160,10 +160,18 @@ since no individual stop knows what the ones before it did.
 
 **Reads are one transaction; writes are ordered so that stopping is safe.** All
 reads precede all writes, so FR-004c's discard-on-failure needs no unwind path —
-there is nothing to unwind. On the write side, FR-012a's existing ordering does
-the work: amendment commit, push, then bookkeeping commit, then replies. A stop
-between any two of those leaves a state the next run reaches by a route the spec
-already reasons about, so no failure needs a repair rule of its own.
+there is nothing to unwind. The write side is ordered at two levels, and keeping
+them apart is what makes the failure states exact. **Per amendment**, FR-012a's
+existing ordering does the work: amendment commit, push, then bookkeeping
+commit, repeated once for each amendment the run makes. **Replies are not part
+of that cycle.** FR-015c fixes them at one point per run — after every
+bookkeeping commit the run takes has landed — so the sequence is the whole
+commit cycle first, replies once at the end. A stop between any two writes
+leaves a state the next run reaches by a route the spec already reasons about,
+so no failure needs a repair rule of its own; and because the reply point sits
+after the entire commit cycle, a run that aborts inside that cycle has posted
+zero replies rather than some, which is what makes the composed interrupt case
+a single determinate outcome instead of two.
 
 The one exception is the reply, which lands after the row that would otherwise
 suppress it. FR-015b closes that with the marker already required by FR-015 and
