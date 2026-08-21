@@ -163,13 +163,15 @@ def vector(**overrides: object) -> dict[str, object]:
     return base
 
 
-class OrderedLadderTests(unittest.TestCase):
-    """Floors, then non-inferiority, then the resource comparison — and a stage
-    that was not reached is recorded, never omitted (FR-017, FR-018, SC-007)."""
-
+class _AnalysisDecisionModuleFixture:
     def setUp(self) -> None:
         self.assertIsNotNone(claude_analysis_decision, "claude_analysis_decision is not importable")
         self.module = claude_analysis_decision
+
+
+class OrderedLadderTests(_AnalysisDecisionModuleFixture, unittest.TestCase):
+    """Floors, then non-inferiority, then the resource comparison — and a stage
+    that was not reached is recorded, never omitted (FR-017, FR-018, SC-007)."""
 
     def test_the_ladder_declares_its_stages_in_the_only_permitted_order(self) -> None:
         self.assertEqual(self.module.LADDER_GATES, LADDER_GATES)
@@ -242,13 +244,9 @@ class OrderedLadderTests(unittest.TestCase):
             self.module.evaluate_ladder({"bindings": "probably"})
 
 
-class ParetoDominanceTests(unittest.TestCase):
+class ParetoDominanceTests(_AnalysisDecisionModuleFixture, unittest.TestCase):
     """Eight dimensions, a declared direction for each, categorical terminal state,
     and a reasoning-token report beside every result (FR-018, FR-049, FR-058)."""
-
-    def setUp(self) -> None:
-        self.assertIsNotNone(claude_analysis_decision, "claude_analysis_decision is not importable")
-        self.module = claude_analysis_decision
 
     def test_the_dimension_set_is_exactly_eight_and_matches_the_frozen_policy(self) -> None:
         self.assertEqual(tuple(sorted(self.module.PARETO_DIMENSIONS)), PARETO_DIMENSIONS)
@@ -439,13 +437,9 @@ class ParetoDominanceTests(unittest.TestCase):
         self.assertFalse(diagnostic["properties"]["decision_bearing"]["const"])
 
 
-class TerminalMappingTests(unittest.TestCase):
+class TerminalMappingTests(_AnalysisDecisionModuleFixture, unittest.TestCase):
     """Each non-qualifying condition maps to its own closed member, and nothing
     anywhere forces a weighted ranking (FR-019, FR-024, SC-008)."""
-
-    def setUp(self) -> None:
-        self.assertIsNotNone(claude_analysis_decision, "claude_analysis_decision is not importable")
-        self.module = claude_analysis_decision
 
     def test_the_terminal_set_is_closed_and_carries_an_explicit_inconclusive(self) -> None:
         self.assertEqual(tuple(sorted(self.module.TERMINAL_STATES)), TERMINAL_STATES)
@@ -1200,15 +1194,11 @@ def calibration_partition(**extra: object) -> dict[str, object]:
     return partition
 
 
-class DecisionBundleWriteGuardTests(unittest.TestCase):
+class DecisionBundleWriteGuardTests(_AnalysisDecisionModuleFixture, unittest.TestCase):
     """The no-weighting and no-final-output guards run on the write path, before
     the bundle is sealed and digested. A guard that only exists as a reader
     cannot stop a caller-supplied weight from reaching sealed evidence
     (FR-019, FR-024)."""
-
-    def setUp(self) -> None:
-        self.assertIsNotNone(claude_analysis_decision, "claude_analysis_decision is not importable")
-        self.module = claude_analysis_decision
 
     def test_a_clean_bundle_still_seals_against_its_own_digest(self) -> None:
         bundle = decision_bundle(self.module)
