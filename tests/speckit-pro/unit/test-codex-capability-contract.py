@@ -213,6 +213,17 @@ def load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def predecessor_freeze_fixture(published: dict) -> dict:
+    prior = copy.deepcopy(published)
+    prior["candidate_freeze_id"] = "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03"
+    prior["telemetry_profile_id"] = "sha256:f39d0acd9403d193b07861c5cba5dac0e7ba901936ad542c18dd4eb008ec898b"
+    prior.pop("treatment_contract_digest", None)
+    prior.pop("treatment_evidence_digest", None)
+    prior["published_at"] = TREATMENT_PREDECESSOR_PUBLISHED_AT
+    prior["supersedes_candidate_freeze_id"] = None
+    return prior
+
+
 def rebind_treatment_owners(bundle: dict) -> dict:
     route_ids: dict[str, str] = {}
     for route in bundle["route_resolutions"]:
@@ -5431,13 +5442,7 @@ class TreatmentContractTests(unittest.TestCase):
 
     def test_successor_freeze_preserves_capability_payload(self) -> None:
         published = load_json(ROOT / "docs/ai/research/codex-g56r-002-executable-candidate-freeze.json")
-        prior = copy.deepcopy(published)
-        prior["candidate_freeze_id"] = "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03"
-        prior["telemetry_profile_id"] = "sha256:f39d0acd9403d193b07861c5cba5dac0e7ba901936ad542c18dd4eb008ec898b"
-        prior.pop("treatment_contract_digest", None)
-        prior.pop("treatment_evidence_digest", None)
-        prior["published_at"] = TREATMENT_PREDECESSOR_PUBLISHED_AT
-        prior["supersedes_candidate_freeze_id"] = None
+        prior = predecessor_freeze_fixture(published)
         self.assertEqual(treatment.content_id(prior, "candidate_freeze_id"), prior["candidate_freeze_id"])
         bounded_reads: list[Path] = []
         original_read = treatment_io._read_bounded_regular_file
@@ -5600,18 +5605,7 @@ class TreatmentContractTests(unittest.TestCase):
             )
 
     def test_successor_rejects_missing_or_mutated_treatment_evidence(self) -> None:
-        published = load_json(PUBLISHED_FREEZE_PATH)
-        prior = copy.deepcopy(published)
-        prior["candidate_freeze_id"] = (
-            "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03"
-        )
-        prior["telemetry_profile_id"] = (
-            "sha256:f39d0acd9403d193b07861c5cba5dac0e7ba901936ad542c18dd4eb008ec898b"
-        )
-        prior.pop("treatment_contract_digest", None)
-        prior.pop("treatment_evidence_digest", None)
-        prior["published_at"] = TREATMENT_PREDECESSOR_PUBLISHED_AT
-        prior["supersedes_candidate_freeze_id"] = None
+        prior = predecessor_freeze_fixture(load_json(PUBLISHED_FREEZE_PATH))
         successor_bundle, successor_evidence = bind_trusted_treatment_evidence(
             self.rebound(copy.deepcopy(self.bundle))
         )
@@ -5697,18 +5691,7 @@ class TreatmentContractTests(unittest.TestCase):
             )
 
     def test_successor_rejects_treatment_evidence_after_publication(self) -> None:
-        published = load_json(PUBLISHED_FREEZE_PATH)
-        prior = copy.deepcopy(published)
-        prior["candidate_freeze_id"] = (
-            "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03"
-        )
-        prior["telemetry_profile_id"] = (
-            "sha256:f39d0acd9403d193b07861c5cba5dac0e7ba901936ad542c18dd4eb008ec898b"
-        )
-        prior.pop("treatment_contract_digest", None)
-        prior.pop("treatment_evidence_digest", None)
-        prior["published_at"] = TREATMENT_PREDECESSOR_PUBLISHED_AT
-        prior["supersedes_candidate_freeze_id"] = None
+        prior = predecessor_freeze_fixture(load_json(PUBLISHED_FREEZE_PATH))
 
         future_route = copy.deepcopy(self.bundle)
         future_route["route_resolutions"][0]["resolved_at"] = "2026-07-19T04:01:00Z"
@@ -5751,17 +5734,7 @@ class TreatmentContractTests(unittest.TestCase):
 
     def test_successor_snapshots_mutating_treatment_evidence_once(self) -> None:
         published = load_json(PUBLISHED_FREEZE_PATH)
-        prior = copy.deepcopy(published)
-        prior["candidate_freeze_id"] = (
-            "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03"
-        )
-        prior["telemetry_profile_id"] = (
-            "sha256:f39d0acd9403d193b07861c5cba5dac0e7ba901936ad542c18dd4eb008ec898b"
-        )
-        prior.pop("treatment_contract_digest", None)
-        prior.pop("treatment_evidence_digest", None)
-        prior["published_at"] = TREATMENT_PREDECESSOR_PUBLISHED_AT
-        prior["supersedes_candidate_freeze_id"] = None
+        prior = predecessor_freeze_fixture(published)
         successor_bundle, successor_evidence = bind_trusted_treatment_evidence(
             self.rebound(copy.deepcopy(self.bundle))
         )
@@ -5813,13 +5786,7 @@ class TreatmentContractTests(unittest.TestCase):
 
     def test_successor_rejects_cross_bound_treatment_bundle(self) -> None:
         published = load_json(ROOT / "docs/ai/research/codex-g56r-002-executable-candidate-freeze.json")
-        prior = copy.deepcopy(published)
-        prior["candidate_freeze_id"] = "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03"
-        prior["telemetry_profile_id"] = "sha256:f39d0acd9403d193b07861c5cba5dac0e7ba901936ad542c18dd4eb008ec898b"
-        prior.pop("treatment_contract_digest", None)
-        prior.pop("treatment_evidence_digest", None)
-        prior["published_at"] = TREATMENT_PREDECESSOR_PUBLISHED_AT
-        prior["supersedes_candidate_freeze_id"] = None
+        prior = predecessor_freeze_fixture(published)
 
         def assert_valid_but_rejected(bundle: dict, message: str) -> None:
             rebound = self.rebound(rebind_treatment_owners(bundle))
