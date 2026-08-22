@@ -1,0 +1,41 @@
+{
+  "body_file": "specs/g56r-005-model-availability-fallback-recovery/.process/pr-packets/g56r-005-draft/body.md",
+  "error_class": "none",
+  "exit_code": 0,
+  "failures": [],
+  "mode": "single",
+  "packet_id": "g56r-005-draft",
+  "pr_blocked": false,
+  "remediation_evidence": [],
+  "rule_outcomes": [
+    {
+      "evidence": "no failures",
+      "rule": "packet.validation",
+      "status": "passed"
+    }
+  ],
+  "schema_version": "1.0.0",
+  "source_fingerprints": {
+    "body": {
+      "algorithm": "sha256",
+      "path": "specs/g56r-005-model-availability-fallback-recovery/.process/pr-packets/g56r-005-draft/body.md",
+      "sha256": "f1be2ddec155437dc185b2ed4cd2f9f14cb644c4c396c3d285fa4d823a32f100",
+      "size_bytes": 2633
+    },
+    "packet": {
+      "algorithm": "sha256",
+      "path": "specs/g56r-005-model-availability-fallback-recovery/.process/pr-packets/g56r-005-draft.json",
+      "sha256": "6163ab0336b80dd216cc45da86f0e23b8ad1663ed1a509efc32a448cc3a55421",
+      "size_bytes": 7887
+    }
+  },
+  "status": "passed",
+  "stderr_line": "",
+  "target": {
+    "base_branch": "main",
+    "head_branch": "g56r-005-model-availability-fallback-recovery"
+  },
+  "timestamp": "2026-08-22T19:54:54Z",
+  "title_value": "feat(g56r-005): Add model availability fallback and recovery simulation",
+  "validation_result_path": "specs/g56r-005-model-availability-fallback-recovery/.process/pr-packets/g56r-005-draft/validation.json"
+}

@@ -648,8 +648,8 @@ production routing, live qualification, or cross-platform reconciliation.
 | Post: Self-Review | ✅ Complete | Four-question audit found no edge-case, traceability, tidiness, or silent-deferral defect |
 | Post: UAT Runbook Generation | ⏭️ Skipped | `generate-uat-skeleton` is deferred and no committed source-derived skeleton exists; fail-open by contract |
 | Post: Final Reviewability Backstop | ✅ Complete (WARN) | Deferred helper honored via current committed reviewability evidence at `34551bdc7`; verified size-only warning, no correctness block |
-| Post: PR Packet/Body Generation | ⏳ Pending | |
-| Post: PR Body Generation | ⏳ Pending | |
+| Post: PR Packet/Body Generation | ✅ Complete | `pr-packet-output` dry-run/apply succeeded; read-only and persisted validation passed with `pr_blocked: false` |
+| Post: PR Body Generation | ✅ Complete | Packet-owned implementation-era body generated with current verification, UAT, scope, non-goals, and known gaps |
 | Post: PR Creation | ⏳ Pending | |
 | Post: Review Remediation | ⏳ Pending | |
 | Post: Retrospective | ⏳ Pending | |

@@ -6,7 +6,7 @@
   "status": "in_progress",
   "stage": "implement",
   "updated_at": "2026-08-22T19:40:38Z",
-  "active_step": "Post: PR Packet/Body Generation",
+  "active_step": "Post: PR Creation",
   "settings": {
     "consensus_mode": "moderate",
     "gate_failure": "stop",
@@ -436,15 +436,15 @@
       "verify_implementation": {
         "status": "completed",
         "functional_requirements": "22/22",
-        "success_criteria": "8/9 verified; SC-008 pending scheduled packet refresh",
+        "success_criteria": "9/9 verified after packet refresh",
         "critical": 0,
         "high": 0
       },
       "verify_tasks": {
         "status": "completed",
-        "verified": 24,
-        "partial": 1,
-        "partial_task": "T025 pending scheduled packet refresh"
+        "verified": 25,
+        "partial": 0,
+        "partial_task": null
       },
       "code_review": {
         "status": "completed",
@@ -503,6 +503,18 @@
         "warnings": ["reviewable LOC exceeds 400 warning threshold"],
         "blockers": [],
         "proceed": true
+      },
+      "pr_packet": {
+        "status": "completed",
+        "packet_path": "specs/g56r-005-model-availability-fallback-recovery/.process/pr-packets/g56r-005-draft.json",
+        "body_file": "specs/g56r-005-model-availability-fallback-recovery/.process/pr-packets/g56r-005-draft/body.md",
+        "validation_result_path": "specs/g56r-005-model-availability-fallback-recovery/.process/pr-packets/g56r-005-draft/validation.json",
+        "mode": "single",
+        "title": "feat(g56r-005): Add model availability fallback and recovery simulation",
+        "read_only_validation": "passed",
+        "persisted_validation": "passed",
+        "pr_blocked": false,
+        "workflow_contract": "passed"
       }
     }
   },
@@ -542,9 +554,9 @@
     {"step": "Post: Self-Review", "status": "completed"},
     {"step": "Post: UAT Runbook Generation", "status": "skipped: deferred helper; no committed skeleton"},
     {"step": "Post: Final Reviewability Backstop", "status": "completed"},
-    {"step": "Post: PR Packet/Body Generation", "status": "in_progress"},
-    {"step": "Post: PR Body Generation", "status": "pending"},
-    {"step": "Post: PR Creation", "status": "pending"},
+    {"step": "Post: PR Packet/Body Generation", "status": "completed"},
+    {"step": "Post: PR Body Generation", "status": "completed"},
+    {"step": "Post: PR Creation", "status": "in_progress"},
     {"step": "Post: Review Remediation", "status": "pending"},
     {"step": "Post: Retrospective", "status": "pending"}
   ]
