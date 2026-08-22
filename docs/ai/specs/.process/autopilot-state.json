@@ -486,10 +486,14 @@
         ]
       },
       "uat_runbook": {
-        "status": "skipped",
+        "status": "completed",
         "helper_id": "generate-uat-skeleton",
-        "reason": "runner operation is deferred and no committed source-derived skeleton exists",
-        "fail_open": true
+        "helper_status": "deferred",
+        "mode": "manual-source-derived",
+        "path": "specs/g56r-005-model-availability-fallback-recovery/.process/uat-runbook.md",
+        "result": "pass after UAT-001 remediation",
+        "findings": 1,
+        "open_findings": 0
       },
       "final_reviewability_gate": {
         "status": "warn",
@@ -582,7 +586,7 @@
     {"step": "Post: Integration Suite", "status": "completed"},
     {"step": "Post: Reviewability Diff Gate", "status": "completed"},
     {"step": "Post: Self-Review", "status": "completed"},
-    {"step": "Post: UAT Runbook Generation", "status": "skipped: deferred helper; no committed skeleton"},
+    {"step": "Post: UAT Runbook Generation", "status": "completed: manual source-derived UAT; one finding remediated"},
     {"step": "Post: Final Reviewability Backstop", "status": "completed"},
     {"step": "Post: PR Packet/Body Generation", "status": "completed"},
     {"step": "Post: PR Body Generation", "status": "completed"},

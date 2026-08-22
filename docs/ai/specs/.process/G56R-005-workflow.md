@@ -646,13 +646,13 @@ production routing, live qualification, or cross-platform reconciliation.
 | Post: Integration Suite | ✅ Complete | Authoritative exact-worktree run passed 7659/7659: L1 1469, L4 5998, L5 192 |
 | Post: Reviewability Diff Gate | ✅ Complete (WARN) | 471 reviewable runtime LOC, 0 production files, 13 implementation-delta files, one cohesive simulation surface; above the 400-LOC warning but below file-count limits, so no split |
 | Post: Self-Review | ✅ Complete | Four-question audit found no edge-case, traceability, tidiness, or silent-deferral defect |
-| Post: UAT Runbook Generation | ⏭️ Skipped | `generate-uat-skeleton` is deferred and no committed source-derived skeleton exists; fail-open by contract |
+| Post: UAT Runbook Generation | ✅ Complete | Manual source-derived runbook committed after browser and behavioral UAT; one unsafe dynamic-title finding was remediated and retested |
 | Post: Final Reviewability Backstop | ✅ Complete (WARN) | Deferred helper honored via current committed reviewability evidence at `34551bdc7`; verified size-only warning, no correctness block |
 | Post: PR Packet/Body Generation | ✅ Complete | `pr-packet-output` dry-run/apply succeeded; read-only and persisted validation passed with `pr_blocked: false` |
 | Post: PR Body Generation | ✅ Complete | Packet-owned implementation-era body generated with current verification, UAT, scope, non-goals, and known gaps |
 | Post: PR Creation | ✅ Complete | Existing draft PR [#487](https://github.com/racecraft-lab/racecraft-plugins-public/pull/487) updated from validated packet fields at head `656852e5a` |
 | Post: Review Remediation | ✅ Complete | Live PR inspection found 0 reviews, 0 threads, and 0 comments; the independent local finding was already remediated |
-| Post: Retrospective | ✅ Complete | `retrospective.md`: 25/25 tasks, 100% spec adherence, 0 critical/significant findings, 2 minor process findings |
+| Post: Retrospective | ✅ Complete | `retrospective.md`: 25/25 tasks, 100% spec adherence, 0 critical and 1 remediated significant finding, 2 minor process findings |
 
 ### Parallel Post-Implementation Evidence
 
@@ -669,6 +669,10 @@ production routing, live qualification, or cross-platform reconciliation.
 - **Integration:** the final authoritative suite passed 7659/7659. Earlier
   unprivileged cross-worktree fixture failures were sandbox artifacts and are
   superseded by the exact-worktree-permitted run.
+- **Manual UAT:** all four browser artifacts and all four deterministic user
+  stories passed. UAT-001 found repository-derived feature text in a dynamic
+  `document.title` script; static title slots, author instructions, generated
+  pages, and the regression floor were remediated and retested.
 
 ### Reviewability Diff Gate
 

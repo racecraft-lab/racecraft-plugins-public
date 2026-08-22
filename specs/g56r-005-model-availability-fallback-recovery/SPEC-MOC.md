@@ -36,6 +36,7 @@ real route policies into the production Codex installer.
 - [.process/pr-packets/g56r-005-draft.json](.process/pr-packets/g56r-005-draft.json)
 - [.process/pr-packets/g56r-005-draft/body.md](.process/pr-packets/g56r-005-draft/body.md)
 - [.process/pr-packets/g56r-005-draft/validation.json](.process/pr-packets/g56r-005-draft/validation.json)
+- [.process/uat-runbook.md](.process/uat-runbook.md)
 - [artifacts/code-approaches.html](artifacts/code-approaches.html)
 - [artifacts/implementation-plan.html](artifacts/implementation-plan.html)
 - [artifacts/module-map.html](artifacts/module-map.html)

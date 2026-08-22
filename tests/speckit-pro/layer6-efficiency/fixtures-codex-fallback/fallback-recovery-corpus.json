@@ -3,11 +3,11 @@
   "fixture_kind": "codex_fallback_recovery_replay",
   "description": "Deterministic local simulation seeds only; no row makes a live model or service availability claim.",
   "source_roster": {
-    "source_roster_id": "sha256:551f435f9f4871898125fe70d511c755f4070bd71f078504501c1fbb823b2856",
+    "source_roster_id": "sha256:6bda28dda07eac46d068f3b26ea5db85c3b502da192da92fe83c9e2e4da48be4",
     "canonicalization": "json-sorted-keys-compact-over-path-sha256-classification-rows",
     "members": [
       {"classification": "required_core", "path": "speckit-pro/codex-agents/analyze-executor.toml", "sha256": "sha256:eac0a81678fe8b82411ab90258af41bc819681e4111547c16581e12d60afb3a4"},
-      {"classification": "required_core", "path": "speckit-pro/codex-agents/artifact-author.toml", "sha256": "sha256:1795d0df9d5be833fce0eb131282edc20e446dcf5ecb25d219c6f0e61c4fb693"},
+      {"classification": "required_core", "path": "speckit-pro/codex-agents/artifact-author.toml", "sha256": "sha256:80a8e9cae9579e862ffce3eb1d9f411d2793f338e2acab4a3f80800517202919"},
       {"classification": "optional_helper", "path": "speckit-pro/codex-agents/autopilot-fast-helper.toml", "sha256": "sha256:aa570f8ff51fa3cb7848d8c05253ddf5d080f5d4a2dbed9a55f0149fceb1296d"},
       {"classification": "required_core", "path": "speckit-pro/codex-agents/checklist-executor.toml", "sha256": "sha256:ec29b97b8211c626e00fed1edbf0f601d3328dde57e22fb54626b5a92c2671d0"},
       {"classification": "required_core", "path": "speckit-pro/codex-agents/clarify-executor.toml", "sha256": "sha256:7853d199bcf06685239d724a289d7aeaafcf5a133e665c21bc23375220d3f490"},

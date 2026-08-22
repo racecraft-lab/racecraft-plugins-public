@@ -17,9 +17,9 @@ counts:
   modified: 0
   unspecified: 0
 critical_findings: 0
-significant_findings: 0
+significant_findings: 1
 minor_findings: 2
-positive_findings: 2
+positive_findings: 3
 ---
 
 # Retrospective: G56R-005
@@ -29,6 +29,12 @@ positive_findings: 2
 G56R-005 completed its implementation contract with 25/25 tasks marked complete and 100% spec adherence across 22 functional requirements and 9 success criteria. The delivered surface is repository-local deterministic simulation evidence only: no production route policy, installer, payload, version, live service, checkpoint, resume, or frozen Claude/G56R-004 behavior was changed.
 
 Two minor process findings remain. First, the Codex task/worktree binding bug required explicit execution-root binding and is already tracked as `TODO-CODEX-WORKTREE-BINDING`. Second, implementation exceeded the planned reviewable line estimate in the primary runtime file, but stayed within the declared one-slice feature boundary with zero production files changed.
+
+Manual UAT found one significant artifact-generation defect: the four HTML
+review pages corrected stale static titles by inserting repository-derived text
+into a script body. The templates, Claude and Codex author instructions,
+generated pages, and regression floor were fixed; the browser and behavioral
+UAT suites now pass with zero open findings.
 
 ## Proposed Spec Changes
 
@@ -88,7 +94,11 @@ All 9 measurable outcomes passed. Focused verification passed 33/33 after review
 
 ## Significant Deviations
 
-None.
+- REMEDIATED: Manual UAT found stale static document titles plus a dynamic
+  `document.title` workaround that violated the gallery's generated-content
+  safety contract. Four templates now expose required static title slots, both
+  author surfaces forbid the workaround, shipped artifacts were regenerated,
+  and browser retesting passed.
 
 ## Minor Findings
 
@@ -99,6 +109,8 @@ None.
 
 - POSITIVE: The post-review schema defect was remediated with a focused RED test (`declaration_source` enum missing) followed by a closed five-value schema contract and GREEN focused/full verification.
 - POSITIVE: Recovered HTML review artifacts are present for this spec: `implementation-plan.html`, `spec-explainer.html`, `code-approaches.html`, and `module-map.html`.
+- POSITIVE: Manual browser and behavioral UAT produced a committed runbook and
+  caught the dynamic-title defect before merge.
 
 Neither positive deviation requires a constitution change. The schema remediation is a normal contract hardening, and the review artifacts restore intended process evidence.
 
@@ -106,7 +118,7 @@ Neither positive deviation requires a constitution change. The schema remediatio
 
 | Principle | Result | Evidence |
 |-----------|--------|----------|
-| I. Plugin Structure Compliance | PASS | Work stayed in repository-only tests/spec artifacts; install-facing plugin payload behavior was not changed. |
+| I. Plugin Structure Compliance | PASS | Feature behavior stayed repository-only; the separately requested artifact-generation repair changed only gallery templates and Claude/Codex artifact-author instructions, with shipped payloads regenerated. |
 | II. Cross-Platform Runtime & Script Safety | PASS | New runtime is Python stdlib, structured JSON, deterministic UTF-8; no new Bash or `jq` dependency. |
 | III. Semantic Versioning | PASS | No plugin version or manifest version changed. |
 | IV. Test Coverage Before Merge | PASS | Focused tests are registered in `suite-manifest.json`; full deterministic suite passed 7659/7659. |
@@ -141,6 +153,7 @@ The only notable execution deviation was orchestrator-directed implementation in
 |---------|-----------------|-------|------------|
 | Worktree binding bug | Implement/Post verification | Codex task root, sandbox write scope, phase-agent cwd, and workflow authority did not bind to the same registered feature worktree | Implement `TODO-CODEX-WORKTREE-BINDING` before relying on same-task worktree adoption for future specs |
 | `declaration_source` schema mismatch | Independent post-implementation review | Valid schema constrained only `local` while fail-closed tests intentionally used inherited/generic/unqualified sources | Keep contract canaries for every fail-closed vocabulary value, including values intended only for invalid-policy rejection paths |
+| Unsafe dynamic document title | Manual browser UAT | Draft templates had no fillable static title slot, so generated pages retained example metadata and used a script workaround | Require and regression-test a static `document-title` fill region; forbid repository-derived title text in script bodies |
 
 ## Lessons Learned and Recommendations
 
@@ -148,6 +161,8 @@ The only notable execution deviation was orchestrator-directed implementation in
 2. Treat exact-worktree binding as part of the execution contract, not just an operator convenience.
 3. Continue separating local deterministic evidence from live service claims until G56R-006 owns production wiring.
 4. Keep generated review artifacts checked during setup/plan recovery so reviewers can inspect the spec visually before implementation.
+5. Treat document metadata as generated content: expose a safe fill region
+   instead of repairing it after load with JavaScript.
 
 ## File Traceability Appendix
 
@@ -162,6 +177,7 @@ The only notable execution deviation was orchestrator-directed implementation in
 | `tests/speckit-pro/suite-manifest.json` | Layer 4 registration for focused tests. |
 | `specs/g56r-005-model-availability-fallback-recovery/.process/pr-packets/g56r-005-draft/body.md` | PR packet summary, review order, verification, scope, UAT, and known gaps. |
 | `specs/g56r-005-model-availability-fallback-recovery/artifacts/*.html` | Generated HTML review artifacts for plan, explainer, approach, and module-map review. |
+| `specs/g56r-005-model-availability-fallback-recovery/.process/uat-runbook.md` | Manual browser and deterministic behavioral UAT evidence, finding, remediation, and retest result. |
 
 ## Self-Assessment Checklist
 

@@ -8,6 +8,7 @@
   Copyright (c) 2026 Anthropic PBC
 -->
 <!--
+  Slot: document-title | Fills: the browser title using the artifact kind, feature identifier, and feature name | Source: spec.md
   Slot: feature-header | Fills: the feature identifier, its name, and the one-line question these approaches answer; keep id="feature-id" on the identifier and id="feature-name" on the name, because every export reads them to name the feature | Source: spec.md
   Slot: approaches | Fills: one entry per approach weighed, each with its own anchor, a heading of any rank carrying the approach's visible label, and the trade-off that decides for or against it | Source: research.md, plan.md
   Slot: recommendation | Fills: which approach planning chose, why it won, and what would reopen the question | Source: research.md
@@ -156,7 +157,9 @@
 </script>
 <!-- GALLERY-HEAD:END -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Code Approaches — NIMBUS-101 Offline Draft Sync</title>
+<!-- FILL:document-title:START -->
+<title>Code Approaches — G56R-005 Model Availability, Fallback, and Recovery Simulation</title>
+<!-- FILL:document-title:END -->
 <style>
 /* BRAND-KIT:START */
 :root {
@@ -961,7 +964,6 @@ h1 {
     <h1 id="feature-name">Model Availability, Fallback, and Recovery Simulation</h1>
     <p class="lede">How should Codex fallback and required-agent recovery be proven without changing frozen Claude behavior or wiring production routing?</p>
     <p class="sample-notice">These are the concrete implementation boundaries planning weighed before choosing the repository-local two-layer simulation.</p>
-    <script>document.title = 'Code Approaches — G56R-005 Model Availability, Fallback, and Recovery Simulation';</script>
 <!-- FILL:feature-header:END -->
   </header>
 
