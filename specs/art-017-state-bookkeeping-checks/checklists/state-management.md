@@ -28,7 +28,7 @@
 - [x] CHK012 Do the spec, plan, data model, and contract consistently limit newly blocking authority to `in_progress_errors`, `duplicate_state_steps`, and `state_order_errors`? [Consistency, Spec §FR-001-FR-004, Plan §Summary, Data Model §Status Evidence Rule, Contract §Required Blocking Keys]
 - [x] CHK013 Do legacy structural coverage advisories remain visible but nonblocking under status-evidence across the spec, plan, and contract? [Consistency, Spec §Edge Cases, Spec §SC-006, Plan §Constraints, Contract §Required Blocking Keys]
 - [x] CHK014 Does the malformed multi-diagnostic state edge case preserve full diagnostics while changing status-evidence authority only for the three ART-017 keys? [Consistency, Spec §Edge Cases, Contract §Report Shape Contract]
-- [x] CHK015 Are generated surfaces consistently treated as derived outputs rather than authored state-management requirements or hand-edited proof? [Consistency, Spec §FR-015, Plan §Structure Decision, Quickstart §Release Artifact Refresh]
+- [x] CHK015 Are generated surfaces consistently treated as derived outputs rather than authored state-management requirements or hand-edited proof? [Consistency, Spec §FR-017, Plan §Structure Decision, Quickstart §Release Artifact Refresh]
 
 ## Acceptance Criteria Quality
 
@@ -43,7 +43,7 @@
 - [x] CHK021 Are ART-014 dependency, ART-008 independence, and final latest-main rebase/regeneration requirements documented as state-management boundaries rather than implementation guesses? [Dependencies, Spec §Assumptions, Research §Rebase then regenerate before ready or merge, Quickstart §Final Integration Boundary]
 - [x] CHK022 Are implementation-surface boundaries narrow enough to keep ART-017 on the existing validator, authored autopilot paragraph, and existing bookkeeping guard tests? [Scope, Plan §Declared File Operations, Plan §Structure Decision]
 - [x] CHK023 Are storage and dependency constraints explicit that ART-017 does not add persistent state or new runtime dependencies? [Non-Functional, Plan §Technical Context, Data Model §Overview]
-- [x] CHK024 Are PR review packet requirements sufficient to let reviewers trace state-management requirements to changed files, generated-artifact status, verification evidence, known gaps, and final integration notes? [Completeness, Spec §PR Review Packet Requirements, Spec §FR-016]
+- [x] CHK024 Are PR review packet requirements sufficient to let reviewers trace state-management requirements to changed files, generated-artifact status, verification evidence, known gaps, and final integration notes? [Completeness, Spec §PR Review Packet Requirements, Spec §FR-019]
 
 ## Notes
 

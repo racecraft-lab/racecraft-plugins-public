@@ -42,7 +42,7 @@
 
 - [x] CHK021 Are primary clean, isolated exception, multi-diagnostic exception, legacy-advisory, and tracked-corpus scenarios all represented in the requirements? [Coverage, Spec §User Story 1, Spec §Edge Cases, Spec §SC-003-SC-006]
 - [x] CHK022 Are workflows with missing, untracked, mismatched, or synthetic adjacent state explicitly excluded from clean-pair evidence rather than treated as failures of the scoped rule? [Edge Case, Spec §FR-012-FR-013, Contract §Workflow/State Pair Corpus Contract]
-- [x] CHK023 Is generated-artifact failure handling bounded to regeneration and verification rather than hand-edited recovery paths? [Dependencies, Spec §FR-015, Plan §Structure Decision, Quickstart §Release Artifact Refresh]
+- [x] CHK023 Is generated-artifact failure handling bounded to regeneration and verification rather than hand-edited recovery paths? [Dependencies, Spec §FR-017, Plan §Structure Decision, Quickstart §Release Artifact Refresh]
 - [x] CHK024 Are final-integration failure risks addressed by requiring latest-main rebase, artifact regeneration, docs checks, and full-suite proof if ART-008 lands first? [Dependencies, Spec §PR Review Packet Requirements, Quickstart §Final Integration Boundary]
 
 ## Notes

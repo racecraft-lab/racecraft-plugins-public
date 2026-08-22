@@ -37,8 +37,8 @@ failure shape, and ART-008 integration ordering.
 | Plan | `/speckit-plan` | ✅ Complete | Five design artifacts generated; G3 passed; advisory plan estimate recorded |
 | Checklist | `/speckit-checklist` | ✅ Complete | 78 items across three domains; 5 gaps remediated; G4 passed with 0 markers |
 | Tasks | `/speckit-tasks` | ✅ Complete | 31 tasks across five phases; 19/19 FR coverage; G5 passed |
-| Analyze | `/speckit-analyze` | 🔄 In Progress | Analyze executor active after post-G5 routing |
-| Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
+| Analyze | `/speckit-analyze` | ✅ Complete | 3 findings remediated; 0 remain; G6 passed |
+| Confidence Gate | G6.5 | 🔄 In Progress | Advisory gate evaluating the 0.99 confidence emit |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 | Post | Post-Implementation | ⏳ Pending | Canonical 14-item closeout; outside this plan-stage invocation |
 
@@ -591,7 +591,22 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | |
+| A1 | HIGH | Quickstart omitted release-artifact `--check` and made the same-HEAD boundary conditional on ART-008. | Added the independent consistency check and one unconditional ordered latest-main evidence sequence. |
+| A2 | LOW | State-management checklist retained stale FR citations after reliability renumbering. | Updated generated-surface and PR-packet citations to FR-017 and FR-019. |
+| A3 | LOW | Error-handling checklist retained a stale generated-artifact citation. | Updated the citation to FR-017. |
+
+Post-remediation Analyze result: 0 CRITICAL, 0 HIGH, 0 MEDIUM, and 0 LOW
+findings remain. No routed analyst consensus was required because the unresolved
+count was zero; the parent synthesized the mandatory clean-pass confidence emit
+from the grounded artifacts and remediated finding record.
+
+📊 Confidence: 0.99
+
+- Task understanding: 0.98
+- Approach clarity: 0.98
+- Requirements alignment: 1.00
+- Risk assessment: 1.00
+- Completeness: 1.00
 
 ---
 

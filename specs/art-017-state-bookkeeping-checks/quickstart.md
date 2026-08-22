@@ -47,6 +47,7 @@ After authored source/test/prose changes are green, regenerate derived plugin su
 
 ```bash
 python3 scripts/refresh-release-artifacts.py
+python3 scripts/refresh-release-artifacts.py --check
 pnpm --dir docs-site reference:generate
 pnpm --dir docs-site reference:check
 ```
@@ -54,6 +55,7 @@ pnpm --dir docs-site reference:check
 Expected result:
 
 - Generated Claude/Codex payloads, installed-cache fixtures, proof/evidence files, and docs references match the authored source tree.
+- The independent release-artifact consistency check passes after regeneration and before docs-reference generation.
 - No generated payload, proof, installed-cache, or reference file is hand-edited.
 
 ## Full Verification
@@ -71,4 +73,14 @@ Expected result:
 
 ## Final Integration Boundary
 
-If ART-008 lands first, ART-017 must rebase onto latest `main`, regenerate shared derived artifacts, run docs reference generation/checking, and rerun the full suite before the PR is marked ready or merged.
+Before the PR is marked ready or merged, record one latest `origin/main` HEAD and collect final evidence against that rebased tree in this order:
+
+1. Rebase `art-017-state-bookkeeping-checks` onto the recorded latest-main HEAD, after ART-008 if ART-008 has landed.
+2. Run `python3 scripts/refresh-release-artifacts.py`.
+3. Run `python3 scripts/refresh-release-artifacts.py --check`.
+4. Run `pnpm --dir docs-site reference:generate`.
+5. Run `pnpm --dir docs-site reference:check`.
+6. Run `python3 tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py`.
+7. Run `python3 tests/speckit-pro/run-all.py`.
+
+Do not use pre-rebase or pre-regeneration green evidence for final readiness.
