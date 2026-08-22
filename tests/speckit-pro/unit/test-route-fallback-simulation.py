@@ -250,6 +250,15 @@ class SimulatorCaseMixin:
         return matches[0]
 
 
+class _RouteCorpusFixture(SimulatorCaseMixin):
+    """Shared access to the committed route-fallback corpus."""
+
+    def setUp(self) -> None:  # type: ignore[override]
+        super().setUp()
+        self.corpus = self.module.load_corpus()
+        self.cases = self.corpus["cases"]
+
+
 class ResolutionWalkTests(SimulatorCaseMixin, unittest.TestCase):
     """FR-004 and FR-001: the attempt-ordered walk, and its purity.
 
@@ -966,7 +975,7 @@ class ReportScopedFieldTests(SimulatorCaseMixin, unittest.TestCase):
                 )
 
 
-class ReplayDeterminismTests(unittest.TestCase):
+class ReplayDeterminismTests(_RouteCorpusFixture, unittest.TestCase):
     """FR-014 and SC-002: every corpus case replays byte-identically, twice over.
 
     Both comparisons run over the string the simulator's own ``serialize_report``
@@ -974,12 +983,6 @@ class ReplayDeterminismTests(unittest.TestCase):
     established comparison shape re-serializes both sides, so a divergent local copy
     would CANCEL a real discrepancy instead of failing on it.
     """
-
-    def setUp(self) -> None:
-        self.assertIsNotNone(claude_route_fallback, "claude_route_fallback is not importable")
-        self.module = claude_route_fallback
-        self.corpus = self.module.load_corpus()
-        self.cases = self.corpus["cases"]
 
     def replay(self, case: dict[str, object]) -> str:
         policy = case["policy"]
@@ -1777,7 +1780,7 @@ class CorpusEnvelopeTests(unittest.TestCase):
                     self.assertNotIn(other, payload)
 
 
-class FixtureHygieneTests(unittest.TestCase):
+class FixtureHygieneTests(_RouteCorpusFixture, unittest.TestCase):
     """FR-012c, FR-018, FR-032, SC-006, and SC-013: a synthetic cast, and severity by code.
 
     The ``fixture-`` prefix is the POSITIVE rule and is what the corpus is held to, because
@@ -1790,12 +1793,6 @@ class FixtureHygieneTests(unittest.TestCase):
     emitter is a hand-authored, byte-compared corpus, where leaving severity to the emitter
     would be unfalsifiable authoring latitude rather than a caller's judgement.
     """
-
-    def setUp(self) -> None:
-        self.assertIsNotNone(claude_route_fallback, "claude_route_fallback is not importable")
-        self.module = claude_route_fallback
-        self.corpus = self.module.load_corpus()
-        self.cases = self.corpus["cases"]
 
     def emitted_diagnostics(self) -> list[tuple[str, dict[str, object]]]:
         emitted: list[tuple[str, dict[str, object]]] = []
