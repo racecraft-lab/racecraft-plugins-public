@@ -1,12 +1,12 @@
 {
   "schema_version": "1.0",
   "workflow_file": "docs/ai/specs/.process/ART-017-workflow.md",
-  "updated_at": "2026-08-22T16:44:59Z",
+  "updated_at": "2026-08-22T16:46:59Z",
   "stage": "plan",
   "stage_source": "argv",
   "stage_basis": "explicit --stage plan",
   "confidence_gate_mode": "advisory",
-  "active_step": "Phase 6.5: Confidence Gate",
+  "active_step": "Plan stage terminal: draft-PR emission",
   "archive_sweep": {
     "status": "no_candidates",
     "execution_path": "extension_contract",
@@ -92,6 +92,20 @@
     "status": "skipped",
     "reason": "atomicity route is one-navigable-PR; planner runs only for split-PR"
   },
+  "confidence_gate": {
+    "mode": "advisory",
+    "threshold": 0.9,
+    "composite": 0.99,
+    "pass": true,
+    "recommended_action": "proceed",
+    "criteria": {
+      "task_understanding": 0.98,
+      "approach_clarity": 0.98,
+      "requirements_alignment": 1.0,
+      "risk_assessment": 1.0,
+      "completeness": 1.0
+    }
+  },
   "plan": [
     {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
     {"step": "Phase 0: Prerequisites", "status": "completed"},
@@ -112,7 +126,7 @@
     {"step": "Phase 5: Tasks", "status": "completed"},
     {"step": "Phase 6: Analyze", "status": "completed"},
     {"step": "Phase 6: Analyze - Consensus", "status": "completed"},
-    {"step": "Phase 6.5: Confidence Gate", "status": "in_progress"},
+    {"step": "Phase 6.5: Confidence Gate", "status": "completed"},
     {"step": "Phase 7: Implement - Setup (T001-T004)", "status": "skipped: out of stage — resolved stage is plan"},
     {"step": "Phase 7: Implement - Foundational (T005-T006)", "status": "skipped: out of stage — resolved stage is plan"},
     {"step": "Phase 7: Implement - US1 (T007-T015)", "status": "skipped: out of stage — resolved stage is plan"},

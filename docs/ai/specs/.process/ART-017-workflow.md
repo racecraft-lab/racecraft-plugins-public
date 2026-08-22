@@ -38,7 +38,7 @@ failure shape, and ART-008 integration ordering.
 | Checklist | `/speckit-checklist` | ✅ Complete | 78 items across three domains; 5 gaps remediated; G4 passed with 0 markers |
 | Tasks | `/speckit-tasks` | ✅ Complete | 31 tasks across five phases; 19/19 FR coverage; G5 passed |
 | Analyze | `/speckit-analyze` | ✅ Complete | 3 findings remediated; 0 remain; G6 passed |
-| Confidence Gate | G6.5 | 🔄 In Progress | Advisory gate evaluating the 0.99 confidence emit |
+| Confidence Gate | G6.5 | ✅ Complete | PASS: 0.99 composite ≥ 0.90 advisory threshold; proceed to plan-stage emission |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 | Post | Post-Implementation | ⏳ Pending | Canonical 14-item closeout; outside this plan-stage invocation |
 
@@ -617,10 +617,10 @@ are unchanged; this section records the verdict so a later session can read it.
 
 | Field | Value |
 |-------|-------|
-| Mode | <!-- advisory (default) or strict --> |
-| Composite confidence | <!-- 0.00-1.00 --> |
-| Verdict | <!-- proceed / remediate / stop --> |
-| Evidence | <!-- what the score was computed from --> |
+| Mode | `advisory` |
+| Composite confidence | `0.99` (threshold `0.90`) |
+| Verdict | `proceed` — gate exit 0 |
+| Evidence | Task understanding 0.98; approach clarity 0.98; requirements alignment 1.00; risk assessment 1.00; completeness 1.00 |
 
 ---
 
