@@ -30,7 +30,7 @@ autonomous phase loop.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 4 stories, 22 requirements, 26 acceptance scenarios; G1 passed |
 | Clarify | `/speckit-clarify` | 🔄 In Progress | Resolution Contract session is next |
-| Plan | `/speckit-plan` | ⏳ Pending | Derive a Codex-local resolver and fake-home adapter plan |
+| Plan | `/speckit-plan` | ✅ Complete | 5 artifacts; G3 and reviewability estimator passed |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Error handling, state management, and data integrity |
 | Tasks | `/speckit-tasks` | ⏳ Pending | Vertical, TDD-first, dependency-ordered tasks |
 | Analyze | `/speckit-analyze` | ⏳ Pending | Require full traceability and no critical findings |
@@ -500,6 +500,16 @@ result from LOC alone.
 ```text
 runner helper atomicity-route specs/g56r-005-model-availability-fallback-recovery
 ```
+
+### Plan Results
+
+- Artifacts created: `plan.md`, `research.md`, `data-model.md`,
+  `quickstart.md`, and `contracts/fallback-recovery-contract.md`.
+- G3 passed with zero unresolved markers.
+- Plan reviewability estimator passed with 10 declared file entries, 0
+  projected production LOC, and no split required.
+- Spec index regenerated after plan artifacts were added; touched
+  `specs/g56r-005-model-availability-fallback-recovery/SPEC-MOC.md`.
 
 ---
 

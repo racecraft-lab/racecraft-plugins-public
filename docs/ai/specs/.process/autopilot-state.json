@@ -5,8 +5,8 @@
   "branch": "g56r-005-model-availability-fallback-recovery",
   "status": "in_progress",
   "stage": "plan",
-  "updated_at": "2026-08-22T15:47:00Z",
-  "active_step": "Phase 3: Plan",
+  "updated_at": "2026-08-22T16:02:00Z",
+  "active_step": "Phase 4: Checklist - Error Handling",
   "settings": {
     "consensus_mode": "moderate",
     "gate_failure": "stop",
@@ -192,6 +192,40 @@
           "consensus_status": "skipped: zero unresolved items"
         }
       }
+    },
+    "plan": {
+      "status": "completed",
+      "artifacts": [
+        "specs/g56r-005-model-availability-fallback-recovery/plan.md",
+        "specs/g56r-005-model-availability-fallback-recovery/research.md",
+        "specs/g56r-005-model-availability-fallback-recovery/data-model.md",
+        "specs/g56r-005-model-availability-fallback-recovery/quickstart.md",
+        "specs/g56r-005-model-availability-fallback-recovery/contracts/fallback-recovery-contract.md"
+      ],
+      "gate": {
+        "id": "G3",
+        "pass": true,
+        "markers": 0,
+        "reason": "plan.md exists with 0 unresolved markers"
+      },
+      "reviewability_estimate": {
+        "status": "pass",
+        "projected": 0,
+        "declared_files": {
+          "production": 0,
+          "new": 6,
+          "modified": 4,
+          "total_entries": 10
+        },
+        "split_required": false
+      },
+      "spec_index_regeneration": {
+        "status": "applied",
+        "stale_map_count": 1,
+        "touched_paths": [
+          "specs/g56r-005-model-availability-fallback-recovery/SPEC-MOC.md"
+        ]
+      }
     }
   },
   "plan": [
@@ -204,8 +238,8 @@
     {"step": "Phase 2: Clarify - State and Recovery Consensus", "status": "skipped: zero unresolved items"},
     {"step": "Phase 2: Clarify - Bounds and Attribution", "status": "completed"},
     {"step": "Phase 2: Clarify - Bounds and Attribution Consensus", "status": "skipped: zero unresolved items"},
-    {"step": "Phase 3: Plan", "status": "in_progress"},
-    {"step": "Phase 4: Checklist - Error Handling", "status": "pending"},
+    {"step": "Phase 3: Plan", "status": "completed"},
+    {"step": "Phase 4: Checklist - Error Handling", "status": "in_progress"},
     {"step": "Phase 4: Checklist - Error Handling Consensus", "status": "pending"},
     {"step": "Phase 4: Checklist - State Management", "status": "pending"},
     {"step": "Phase 4: Checklist - State Management Consensus", "status": "pending"},
