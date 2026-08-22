@@ -3039,31 +3039,31 @@ class GateFoundationTests(unittest.TestCase):
         # remain (the FR-007 terminal-absence assertion already holds).
         self.assertEqual([layer["id"] for layer in layers if layer["dispatch"] == "shell-legacy-transitional"], [])
 
-    def test_layer7_replay_runners_use_ported_python_module_only(self) -> None:
+    def assert_ported_python_layer(
+        self,
+        layer_id: str,
+        expected_script: dict[str, str],
+        summary: str,
+    ) -> None:
         from speckit_pro_runner.gates import suite as suite_gate
 
         manifest = json.loads((REPO_ROOT / "tests/speckit-pro/suite-manifest.json").read_text(encoding="utf-8"))
-        layer7 = next(layer for layer in manifest["layers"] if layer["id"] == "7")
+        layer = next(item for item in manifest["layers"] if item["id"] == layer_id)
 
-        self.assertEqual(layer7["dispatch"], "python-module")
-        self.assertEqual(
-            layer7["scripts"],
-            [
-                {
-                    "path": "tests/speckit-pro/layer7-integration/run-all-fixtures.py",
-                    "label": "run-all-fixtures",
-                    "baseline": "tests/speckit-pro/parity/bash-to-python/run-all-fixtures-baseline.txt",
-                }
-            ],
-        )
-        spec = suite_gate.default_command_spec("layer-7", {}, REPO_ROOT)
+        self.assertEqual(layer["dispatch"], "python-module")
+        self.assertEqual(layer["scripts"], [expected_script])
+        spec = suite_gate.default_command_spec(f"layer-{layer_id}", {}, REPO_ROOT)
         self.assertNotIsInstance(spec, dict)
         self.assertFalse(spec.internal)
         self.assertIn("run-layer-scripts.py", " ".join(spec.argv))
-        self.assertFalse(hasattr(suite_gate, "check_layer7"), "native check_layer7 must retire at the Layer-7 port boundary")
+        retired_check = f"check_layer{layer_id}"
+        self.assertFalse(
+            hasattr(suite_gate, retired_check),
+            f"native {retired_check} must retire at the Layer-{layer_id} port boundary",
+        )
 
         completed = subprocess.run(
-            [sys.executable, "tests/speckit-pro/run-layer-scripts.py", "--layer", "7"],
+            [sys.executable, "tests/speckit-pro/run-layer-scripts.py", "--layer", layer_id],
             cwd=REPO_ROOT,
             text=True,
             capture_output=True,
@@ -3072,44 +3072,30 @@ class GateFoundationTests(unittest.TestCase):
             check=False,
         )
         self.assertEqual(0, completed.returncode, completed.stderr + completed.stdout)
-        self.assertIn("layer-7 integration fixtures", completed.stdout)
-        self.assertIn("PASS tests/speckit-pro/layer7-integration/run-all-fixtures.py", completed.stdout)
+        self.assertIn(summary, completed.stdout)
+        self.assertIn(f"PASS {expected_script['path']}", completed.stdout)
+
+    def test_layer7_replay_runners_use_ported_python_module_only(self) -> None:
+        self.assert_ported_python_layer(
+            "7",
+            {
+                "path": "tests/speckit-pro/layer7-integration/run-all-fixtures.py",
+                "label": "run-all-fixtures",
+                "baseline": "tests/speckit-pro/parity/bash-to-python/run-all-fixtures-baseline.txt",
+            },
+            "layer-7 integration fixtures",
+        )
 
     def test_layer8_parity_runner_uses_ported_python_module_only(self) -> None:
-        from speckit_pro_runner.gates import suite as suite_gate
-
-        manifest = json.loads((REPO_ROOT / "tests/speckit-pro/suite-manifest.json").read_text(encoding="utf-8"))
-        layer8 = next(layer for layer in manifest["layers"] if layer["id"] == "8")
-
-        self.assertEqual(layer8["dispatch"], "python-module")
-        self.assertEqual(
-            layer8["scripts"],
-            [
-                {
-                    "path": "tests/speckit-pro/layer8-parity/run-parity-fixtures.py",
-                    "label": "run-parity-fixtures",
-                    "baseline": "tests/speckit-pro/parity/bash-to-python/run-parity-fixtures-baseline.txt",
-                }
-            ],
+        self.assert_ported_python_layer(
+            "8",
+            {
+                "path": "tests/speckit-pro/layer8-parity/run-parity-fixtures.py",
+                "label": "run-parity-fixtures",
+                "baseline": "tests/speckit-pro/parity/bash-to-python/run-parity-fixtures-baseline.txt",
+            },
+            "layer-8 parity fixtures",
         )
-        spec = suite_gate.default_command_spec("layer-8", {}, REPO_ROOT)
-        self.assertNotIsInstance(spec, dict)
-        self.assertFalse(spec.internal)
-        self.assertIn("run-layer-scripts.py", " ".join(spec.argv))
-        self.assertFalse(hasattr(suite_gate, "check_layer8"), "native check_layer8 must retire at the Layer-8 port boundary")
-
-        completed = subprocess.run(
-            [sys.executable, "tests/speckit-pro/run-layer-scripts.py", "--layer", "8"],
-            cwd=REPO_ROOT,
-            text=True,
-            capture_output=True,
-            env=runner_env(),
-            shell=False,
-            check=False,
-        )
-        self.assertEqual(0, completed.returncode, completed.stderr + completed.stdout)
-        self.assertIn("layer-8 parity fixtures", completed.stdout)
-        self.assertIn("PASS tests/speckit-pro/layer8-parity/run-parity-fixtures.py", completed.stdout)
 
     def test_suite_manifest_loader_fails_closed_when_absent_or_malformed(self) -> None:
         from speckit_pro_runner.gates import suite as suite_gate
