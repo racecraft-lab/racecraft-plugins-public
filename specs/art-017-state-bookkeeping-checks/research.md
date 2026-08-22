@@ -43,15 +43,23 @@
 
 ## Decision: Narrow the authored autopilot paragraph only
 
-**Rationale**: The authored skill already contains the explanation of scoped status-evidence behavior. Updating that source paragraph keeps one explanation source, while generated Codex/payload/reference copies can be refreshed through tooling.
+**Rationale**: The authored skill already contains the explanation of scoped status-evidence behavior. Updating that source paragraph keeps one explanation source, while generated Claude Code and Codex payload, installed-cache, and reference copies can be refreshed through tooling.
 
 **Alternatives considered**:
 - Hand-edit every generated mirror and reference. Rejected because generated surfaces are not sources of truth.
 - Code and tests only. Rejected because the existing prose would still describe the new blocking behavior incorrectly.
 
+## Decision: Require same-source parity for both supported distributions
+
+**Rationale**: Claude Code and Codex consume separate generated install payloads, but both are derived from the same authored validator and skill guidance. Final release evidence must rebuild and check both payloads and both installed-cache fixture trees so one client cannot remain stale while the other passes.
+
+**Alternatives considered**:
+- Verify only the Codex mirror. Rejected because the shared runtime repair also ships to Claude Code.
+- Treat a green full suite as implicit distribution evidence. Rejected because explicit release-artifact consistency is the authoritative stale-output check.
+
 ## Decision: Rebase then regenerate before ready or merge
 
-**Rationale**: ART-017 authored files are independent from ART-008 during development, but both can touch shared generated payload and documentation surfaces. Final integration must use latest `main`, regenerate shared artifacts, run docs reference generation/checking, and pass the full suite.
+**Rationale**: ART-017 authored files are independent from ART-008 during development, but both can touch shared generated payload and documentation surfaces. Final integration must use latest `main`, regenerate both supported distribution payloads and fixtures, run the independent artifact check and docs reference generation/checking, and pass the full suite.
 
 **Alternatives considered**:
 - Stack ART-017 on ART-008. Rejected because authored-file independence does not require a branch dependency.

@@ -54,7 +54,8 @@ pnpm --dir docs-site reference:check
 
 Expected result:
 
-- Generated Claude/Codex payloads, installed-cache fixtures, proof/evidence files, and docs references match the authored source tree.
+- Both `dist/claude/speckit-pro/` and `dist/codex/speckit-pro/` match the same authored validator and skill guidance.
+- Both `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/` and `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/` mirror their corresponding client payloads.
 - The independent release-artifact consistency check passes after regeneration and before docs-reference generation.
 - No generated payload, proof, installed-cache, or reference file is hand-edited.
 
@@ -84,3 +85,4 @@ Before the PR is marked ready or merged, record one latest `origin/main` HEAD an
 7. Run `python3 tests/speckit-pro/run-all.py`.
 
 Do not use pre-rebase or pre-regeneration green evidence for final readiness.
+Do not mark the PR ready if either the Claude Code or Codex payload/fixture pair is missing, stale, or derived from a different source tree.

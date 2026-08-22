@@ -31,5 +31,5 @@
 
 ## Notes
 
-- Validation iteration 1 passed. The specification keeps ART-017 at the user-facing gate and evidence contract level; repository implementation constraints are recorded only as governance assumptions for downstream planning.
+- Validation iteration 2 passed after adding explicit Claude Code and Codex distribution parity. The specification keeps ART-017 at the user-facing gate and evidence contract level; repository implementation constraints remain in downstream planning.
 - No [NEEDS CLARIFICATION] markers remain.

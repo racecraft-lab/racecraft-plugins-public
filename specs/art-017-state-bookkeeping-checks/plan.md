@@ -6,7 +6,7 @@
 
 ## Summary
 
-ART-017 makes three current-run autopilot state invariants blocking under the exact `--rule status-evidence` invocation the autopilot already runs. The implementation stays surgical: add `in_progress_errors`, `duplicate_state_steps`, and `state_order_errors` to the existing status-evidence rule, flip those three intent verdicts to `gated` in the same change, prove each key with isolated negative controls, preserve legacy coverage advisories as nonblocking, narrow the authored autopilot guidance, and regenerate derived payload/reference/proof surfaces through repository tooling.
+ART-017 makes three current-run autopilot state invariants blocking under the exact `--rule status-evidence` invocation the autopilot already runs. The implementation stays surgical: add `in_progress_errors`, `duplicate_state_steps`, and `state_order_errors` to the existing status-evidence rule, flip those three intent verdicts to `gated` in the same change, prove each key with isolated negative controls, preserve legacy coverage advisories as nonblocking, narrow the authored autopilot guidance, and regenerate Claude Code and Codex payload/reference/proof surfaces from the same authored source through repository tooling.
 
 ## Technical Context
 
@@ -18,13 +18,13 @@ ART-017 makes three current-run autopilot state invariants blocking under the ex
 
 **Testing**: Existing Python `unittest` coverage in `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py`, dispatched directly and through `python3 tests/speckit-pro/run-all.py`.
 
-**Target Platform**: SpecKit Pro maintainer worktrees and CI on supported local/CI Python 3.11+ environments.
+**Target Platform**: SpecKit Pro maintainers running Claude Code or Codex, plus CI on supported local/CI Python 3.11+ environments.
 
 **Project Type**: Public Claude Code and Codex plugin marketplace repository; this slice changes shared SpecKit Pro guard behavior and one authored skill paragraph.
 
 **Performance Goals**: No new network, package-install, or long-running runtime path. Validation remains deterministic over the supplied workflow/state pair and emits the complete JSON report before deciding the scoped exit code.
 
-**Constraints**: Quote and implement "Use status-evidence (Recommended)" by adding exactly the three named keys to the existing `status-evidence` tuple, with no helper-level grouping. Quote and implement "Keep them atomic (Recommended)" by moving rule membership and each intent verdict together. Keep `missing_state_prefixes` and `missing_state_post_items` visible but nonblocking under `status-evidence`. Discover corpus paths from the git index with an argument-array subprocess, `shell=False`, repository-root `cwd`, NUL-delimited output, and stable repo-relative sorting; enumeration, decoding, file-read, and JSON-parse failures fail the corpus test rather than skip it. Do not hand-edit generated Codex skills, `dist/**`, installed-cache proofs, or generated docs references.
+**Constraints**: Quote and implement "Use status-evidence (Recommended)" by adding exactly the three named keys to the existing `status-evidence` tuple, with no helper-level grouping. Quote and implement "Keep them atomic (Recommended)" by moving rule membership and each intent verdict together. Keep `missing_state_prefixes` and `missing_state_post_items` visible but nonblocking under `status-evidence`. Discover corpus paths from the git index with an argument-array subprocess, `shell=False`, repository-root `cwd`, NUL-delimited output, and stable repo-relative sorting; enumeration, decoding, file-read, and JSON-parse failures fail the corpus test rather than skip it. Do not hand-edit generated Codex skills, either Claude Code or Codex `dist/**` payload, either installed-cache fixture tree, proofs, or generated docs references.
 
 **Scale/Scope**: One vertical slice. Authored production files are limited to the validator script and one authored autopilot skill paragraph; authored tests stay in the existing bookkeeping guard unit module. Setup estimated 125 LOC and one slice; the warning was accepted because only the roadmap-wide surface count crossed the reviewability warning threshold.
 
@@ -42,7 +42,7 @@ ART-017 makes three current-run autopilot state invariants blocking under the ex
 
 | Principle | Plan Verdict | Evidence |
 |-----------|--------------|----------|
-| I. Plugin Structure Compliance | PASS | No new plugin directory or manifest surface. Authored plugin source changes are treated as release inputs, with generated payloads/proofs/references refreshed by tooling after implementation. |
+| I. Plugin Structure Compliance | PASS | No new plugin directory or manifest surface. Authored plugin source changes are treated as release inputs, with both Claude Code and Codex payloads/proofs/references refreshed by tooling after implementation. |
 | II. Cross-Platform Runtime & Script Safety | PASS | Authored implementation remains Python 3.11+ standard library. No Bash, `jq`, PowerShell, package-install, or shell text-processing implementation path is introduced. |
 | III. Semantic Versioning | PASS | ART-017 does not manually edit plugin version fields. Release-please remains authoritative for version movement. |
 | IV. Test Coverage Before Merge | PASS WITH REQUIRED IMPLEMENTATION EVIDENCE | The plan adds focused Layer 4 unit coverage for the three newly blocking keys, legacy advisory behavior, clean control behavior, report-shape preservation, and tracked authority-matched workflow/state pairs. Full suite proof is required before ready/merge. |
@@ -82,13 +82,16 @@ tests/
         `-- test-autopilot-bookkeeping-guard.py
 
 dist/                         # Generated by scripts/refresh-release-artifacts.py
+|-- claude/speckit-pro/      # Generated Claude Code install payload
+`-- codex/speckit-pro/       # Generated Codex install payload
 docs-site/                    # Reference pages generated/checked by pnpm scripts
 docs/ai/specs/.process/       # Generated installed-cache proof/evidence outputs
 tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/
-                              # Generated installed-cache fixture mirrors
+|-- claude/speckit-pro/      # Generated Claude Code installed-cache fixture
+`-- codex/speckit-pro/       # Generated Codex installed-cache fixture
 ```
 
-**Structure Decision**: Use the existing single-repository plugin/tooling layout. ART-017 changes the authored validator, the authored skill guidance paragraph, and the existing unit-test module only. Generated mirrors, payloads, installed-cache fixtures, proof JSON, and docs reference pages are derived outputs and must be regenerated by repository tooling rather than hand-edited.
+**Structure Decision**: Use the existing single-repository plugin/tooling layout. ART-017 changes the authored validator, the authored skill guidance paragraph, and the existing unit-test module only. Generated Claude Code and Codex mirrors, payloads, installed-cache fixtures, proof JSON, and docs reference pages are derived outputs and must be regenerated together by repository tooling rather than hand-edited.
 
 ## Phase 0 Research Summary
 
@@ -100,6 +103,7 @@ Research is complete with no unresolved clarification markers.
 - Decision: Preserve the full JSON report shape and existing problem-key names.
 - Decision: Cover tracked authority-matched adjacent workflow/state pairs only.
 - Decision: Narrow the authored autopilot paragraph only, then regenerate derived surfaces.
+- Decision: Require same-source release parity for both Claude Code and Codex payloads and installed-cache fixtures.
 - Decision: Develop independently from ART-008 and serialize only the final integration boundary: record the latest-main HEAD, rebase, regenerate release artifacts, run the independent release-artifact `--check`, generate/check docs references, run the targeted bookkeeping test, and run the full suite against that same HEAD before ready/merge.
 
 Details are recorded in [research.md](./research.md).
@@ -118,7 +122,7 @@ Data entities and validation rules are recorded in [data-model.md](./data-model.
 6. Add a tracked-pair corpus regression that obtains tracked paths from `["git", "ls-files", "-z"]` at the repository root with `shell=False`, decodes and sorts repo-relative paths deterministically, and classifies every tracked workflow candidate as eligible or excluded with a reason. Fail on discovery/read/JSON errors, require at least one eligible authority-matched adjacent state, invoke every eligible pair exactly once, and assert candidate, eligible, excluded, invoked, and passed counts reconcile.
 7. Move the three ART-017 keys into the `status-evidence` rule tuple and flip their `PROBLEM_KEY_INTENT` verdicts to `gated` with reasons tied to current-run state integrity.
 8. Narrow the authored autopilot paragraph in `speckit-pro/skills/speckit-autopilot/SKILL.md` so it distinguishes legacy structural coverage debt from the three blocking state invariants.
-9. Regenerate derived release, payload, proof, installed-cache, Codex, and docs-reference surfaces through the existing repository commands.
+9. Regenerate both `dist/claude/speckit-pro/` and `dist/codex/speckit-pro/`, their corresponding installed-cache fixture trees, generated Codex skills, proofs, and docs-reference surfaces through the existing repository commands; require both client distributions to derive from the same final authored source.
 10. At final integration, record the latest-main HEAD and run in order against that same rebased tree: `python3 scripts/refresh-release-artifacts.py`, `python3 scripts/refresh-release-artifacts.py --check`, `pnpm --dir docs-site reference:generate`, `pnpm --dir docs-site reference:check`, `python3 tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py`, and `python3 tests/speckit-pro/run-all.py`. Do not reuse pre-rebase or pre-regeneration green evidence.
 
 ## Requirement Traceability
@@ -132,7 +136,7 @@ Data entities and validation rules are recorded in [data-model.md](./data-model.
 | FR-009 through FR-011 | Shared clean builder and isolated mutations in unit tests | Each negative control exits `1` with its target list non-empty and every other status-evidence-selected key empty; the clean control exits `0`. |
 | FR-012 through FR-015 | Git-index tracked authority-matched pair census and corpus regression | Deterministic candidate/eligible/excluded/invoked/passed counts reconcile; at least one eligible pair exists; discovery/read/parse failures fail closed; missing/mismatched/synthetic states are excluded with reasons. |
 | FR-016 | Authored autopilot `SKILL.md` paragraph | Prose review plus regenerated downstream mirrors. |
-| FR-017 through FR-018 | Ordered final integration and generated artifact commands | Record latest-main HEAD; run `python3 scripts/refresh-release-artifacts.py` and `--check`; generate/check docs references; run targeted bookkeeping coverage and the full suite against the same tree. |
+| FR-017 through FR-018, FR-020 | Ordered final integration and generated artifact commands | Record latest-main HEAD; rebuild both Claude Code and Codex payload/fixture trees; run `python3 scripts/refresh-release-artifacts.py --check`; generate/check docs references; run targeted bookkeeping coverage and the full suite against the same tree. |
 | FR-019 | PR packet generated after planning/task/analyze phases | Draft PR packet must include scope, traceability, verification, generated-artifact status, known gaps, and ART-008 integration note. |
 
 ## Complexity Tracking

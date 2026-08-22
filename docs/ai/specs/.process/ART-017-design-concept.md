@@ -36,8 +36,9 @@ stop_reason: "natural"
 - Preserve the complete JSON report shape and existing problem-key values;
   ART-017 changes scoped exit-code authority, not diagnostics.
 - Narrow the existing authored autopilot paragraph so it distinguishes legacy
-  coverage debt from current-run state invariants, then regenerate Codex and
-  release payload mirrors through repository tooling.
+  coverage debt from current-run state invariants, then regenerate both Claude
+  Code and Codex release payload and installed-cache mirrors through repository
+  tooling.
 - Develop independently from ART-008, then rebase onto the latest `main`,
   regenerate shared artifacts, and run the full suite before ART-017 is made
   ready or merged.
@@ -147,8 +148,8 @@ stop_reason: "natural"
 **Recommended answer:** Narrow the existing paragraph.
 > The authored skill already explains why legacy structural coverage remains
 > outside the scoped rule. Narrowing that paragraph to distinguish the three
-> state invariants keeps one source of truth; generated Codex and payload copies
-> can then be refreshed through repository tooling.
+> state invariants keeps one source of truth; generated Claude Code and Codex
+> payload copies can then be refreshed through repository tooling.
 
 **Alternatives offered:**
 - Expand all references: duplicate the key-level explanation across task-list
@@ -200,9 +201,9 @@ stop_reason: "natural"
 
 **Recommended answer:** Rebase, then regenerate.
 > The authored ART-017 files are independent from ART-008's main implementation
-> files, while release payloads and generated documentation are shared derived
-> surfaces. Independent development plus serialized final regeneration preserves
-> both lanes without stale artifacts.
+> files, while both client release payloads and generated documentation are
+> shared derived surfaces. Independent development plus serialized final
+> regeneration preserves both lanes without stale artifacts.
 
 **Alternatives offered:**
 - Merge ART-017 first: coordinate ART-017 integration ahead of the active

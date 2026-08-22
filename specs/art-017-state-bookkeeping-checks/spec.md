@@ -33,7 +33,7 @@
 
 **Why this priority**: The implementation is only trustworthy if the behavioral gate, classification record, and regression evidence move together. This prevents future maintainers from reading an advisory classification that no longer matches runtime behavior.
 
-**Independent Test**: Can be fully tested by comparing the intent classification for the three named keys with their status-evidence rule membership, checking every tracked authority-matched adjacent workflow/state pair, and verifying legacy coverage advisories remain nonblocking.
+**Independent Test**: Can be fully tested by comparing the intent classification for the three named keys with their status-evidence rule membership, checking every tracked authority-matched adjacent workflow/state pair, verifying legacy coverage advisories remain nonblocking, and proving the Claude Code and Codex distributions both carry the same updated guard behavior and guidance.
 
 **Acceptance Scenarios**:
 
@@ -41,6 +41,7 @@
 2. **Given** any other advisory problem key, **When** the status-evidence gate runs, **Then** that key remains advisory unless separately authorized by another spec.
 3. **Given** a tracked workflow and a tracked same-directory `autopilot-state.json` whose repo-relative `workflow_file` names that workflow, **When** the tracked-pair corpus regression runs, **Then** the authority-matched pair succeeds without pairing the state to another workflow or synthesizing missing state.
 4. **Given** a reviewer opens the PR, **When** they follow the review packet, **Then** they can trace every requirement to changed files, generated artifact refreshes, and verification evidence.
+5. **Given** final generated release evidence, **When** distribution parity is evaluated, **Then** both the Claude Code and Codex distributions contain the same updated guard behavior and authored guidance, with neither distribution stale or missing.
 
 ### Edge Cases
 
@@ -49,6 +50,7 @@
 - Legacy coverage advisories such as missing state-prefix or missing post-item coverage can still appear in the report, but they must not become blocking under status-evidence.
 - Final integration may occur after ART-008 lands; ART-017 remains independently developed and serializes only the final rebase, artifact regeneration, and verification boundary.
 - Existing consumers may depend on problem-key names and JSON report shape; ART-017 must preserve those contracts.
+- One supported distribution can regenerate successfully while the other is stale or absent; final readiness must fail unless both Claude Code and Codex pass the same-source consistency evidence.
 
 ## Requirements *(mandatory)*
 
@@ -73,6 +75,7 @@
 - **FR-017**: [US2] Generated mirrors, payloads, proofs, and reference outputs MUST be refreshed by repository tooling rather than hand-edited.
 - **FR-018**: [US2] Final readiness evidence MUST be collected against one recorded latest-main HEAD in this order: rebase, release-artifact regeneration, independent release-artifact consistency checking, docs-reference generation and checking, the targeted bookkeeping-guard check, and the full repository suite. Evidence from before the rebase or regeneration MUST NOT satisfy the final gate.
 - **FR-019**: [US2] The PR review packet MUST include scope budget, traceability, verification evidence, generated-artifact status, known gaps, and final integration notes.
+- **FR-020**: [US2] Final release evidence MUST prove that both supported distributions, Claude Code and Codex, package the same updated guard behavior and authored guidance, with neither distribution stale or missing.
 
 ### Reviewability Notes *(if applicable)*
 
@@ -81,7 +84,7 @@
 ### Reviewability Budget *(mandatory)*
 
 - **Primary surface**: harness/adapter, seed/config, docs/process
-- **Secondary surfaces, if any**: Generated mirrors, release payloads, installed-cache proofs, and docs references as derived verification surfaces
+- **Secondary surfaces, if any**: Generated Claude Code and Codex mirrors, release payloads, installed-cache proofs, and docs references as derived verification surfaces
 - **Projected reviewable LOC**: 125
 - **Projected production files**: 3
 - **Projected total files**: 5
@@ -95,13 +98,14 @@
 - Deferred work MUST name the follow-up spec or issue.
 - ART-017 review order MUST start with authored rule and intent changes, then isolated negative controls, then tracked-pair corpus evidence, then authored prose, and finally generated artifact refreshes.
 - The review packet MUST call out that ART-008 is independent and that ART-017 must rebase and regenerate shared derived artifacts before ready or merge if ART-008 lands first.
+- The review packet MUST report Claude Code and Codex distribution freshness separately and show that both were produced from the same final authored source tree.
 
 ### Key Entities *(include if feature involves data)*
 
 - **State Diagnostic Key**: A named problem list emitted by state validation. ART-017 changes blocking authority only for `in_progress_errors`, `duplicate_state_steps`, and `state_order_errors`.
 - **Rule Intent Record**: The maintained classification that explains whether a diagnostic key is advisory or gated and why.
 - **Workflow/State Pair**: A tracked workflow and tracked same-directory `autopilot-state.json` used as real corpus evidence only when the state's repo-relative `workflow_file` names that workflow exactly.
-- **Review Packet**: The PR-facing evidence bundle that lets reviewers trace requirements to changed files, generated outputs, and verification commands.
+- **Review Packet**: The PR-facing evidence bundle that lets reviewers trace requirements to changed files, generated outputs for both supported distributions, and verification commands.
 
 ## Success Criteria *(mandatory)*
 
@@ -115,11 +119,13 @@
 - **SC-006**: Legacy coverage advisories remain nonblocking under status-evidence in at least one explicit regression case.
 - **SC-007**: The diagnostic report keeps the same top-level shape and existing problem-key names before and after the ART-017 behavior change.
 - **SC-008**: The PR evidence bundle records one latest-main HEAD and the ordered final results for release-artifact regeneration and `--check`, docs-reference generation and checking, the targeted bookkeeping-guard check, and the full repository suite before ready or merge.
+- **SC-009**: 2 of 2 supported distributions, Claude Code and Codex, are regenerated from the same final authored source tree and pass repository consistency evidence before the PR is ready or merged.
 
 ## Assumptions
 
 - ART-014 is complete and remains the dependency that identified the three accidentally advisory state bookkeeping keys.
 - ART-017 is independent from ART-008 until the final integration boundary, where rebasing and derived-artifact regeneration settle shared outputs.
 - The existing status-evidence gate remains the correct operator-facing authority for autopilot phase-transition state checks.
+- Claude Code and Codex consume release payloads derived from the same authored validator and autopilot guidance source.
 - The nine remaining advisory keys are outside ART-017 unless a future spec reclassifies them.
 - Repository governance requires strict test-first evidence, generated-artifact regeneration through tooling, and final verification before merge.

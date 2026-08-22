@@ -77,15 +77,31 @@ ART-017 does not add persistent storage. The data model describes existing guard
 - Each mutated control exits `1`.
 - Each mutated control populates only its target ART-017 problem list among the three new keys.
 
+## Entity: Distribution Artifact Pair
+
+**Fields**:
+- `client`: One of `claude` or `codex`.
+- `install_payload`: Generated client-specific SpecKit Pro payload.
+- `installed_cache_fixture`: Generated fixture mirror for that client payload.
+- `authored_source`: The shared validator and autopilot guidance source tree used for generation.
+- `consistency_result`: Pass/fail result from repository release-artifact checking.
+
+**Validation rules**:
+- Exactly two client pairs must be present: Claude Code and Codex.
+- Both pairs must derive from the same final authored source tree.
+- Each installed-cache fixture must mirror its corresponding client payload.
+- A missing, stale, or inconsistent pair blocks final readiness.
+
 ## Entity: Review Packet
 
 **Fields**:
 - `scope_budget`: Projected and actual reviewability footprint.
 - `traceability`: Requirement-to-file and requirement-to-verification map.
-- `verification`: Targeted tests, generated-artifact refreshes, docs reference checks, and full-suite evidence.
+- `verification`: Targeted tests, two-distribution generated-artifact refreshes, docs reference checks, and full-suite evidence.
 - `generated_artifact_status`: Derived surfaces refreshed or intentionally deferred.
 - `integration_note`: ART-008 independence and latest-main rebase/regeneration requirement.
 
 **Validation rules**:
 - The packet must order review from authored rule/intent changes, to negative controls, to corpus evidence, to authored prose, to generated artifact refreshes.
+- Generated-artifact status must report Claude Code and Codex freshness separately and prove both came from the same final source tree.
 - Known gaps must name a follow-up spec or issue.

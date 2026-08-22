@@ -676,7 +676,7 @@ dl.faq dd {
       <li><b>Keep report contracts stable.</b> The validator still emits the complete JSON report with the same top-level fields and problem-key names.</li>
       <li><b>Move authority and intent together.</b> The three rule memberships and the three intent verdicts change atomically so the classification record matches runtime behavior.</li>
       <li><b>Prove real stored pairs stay valid.</b> Regression evidence covers every tracked workflow with an authority-matched adjacent <code>autopilot-state.json</code>.</li>
-      <li><b>Refresh derived surfaces through tooling.</b> Generated Codex skills, release payloads, proof files, and docs references are regenerated instead of hand-edited.</li>
+      <li><b>Keep both clients current.</b> Claude Code and Codex payloads and installed-cache fixtures are regenerated from the same authored source, then checked instead of hand-edited.</li>
     </ul>
 <!-- FILL:goals:END -->
 
@@ -686,7 +686,7 @@ dl.faq dd {
       <li><b>No broad advisory reclassification.</b> The remaining advisory keys stay outside ART-017 unless a future spec authorizes them.</li>
       <li><b>No new rule contract.</b> ART-017 uses the existing <code>status-evidence</code> rule rather than adding a new state rule or changing invocations.</li>
       <li><b>No report-shape change.</b> The feature does not add a top-level summary, rename problem keys, or fail fast before emitting diagnostics.</li>
-      <li><b>No hand-edited generated mirrors.</b> Codex/payload/proof/reference copies are treated as derived outputs.</li>
+      <li><b>No hand-edited generated mirrors.</b> Claude Code and Codex payload, fixture, proof, and reference copies are treated as derived outputs.</li>
       <li><b>No ART-008 branch dependency.</b> ART-017 develops independently and serializes only the final rebase, regeneration, and verification boundary.</li>
     </ul>
 <!-- FILL:non-goals:END -->
@@ -699,6 +699,7 @@ dl.faq dd {
     <details><summary>Clean workflow/state pairs remain green</summary><div class="body"><p>A valid workflow/state pair succeeds under the same invocation and emits the same report shape consumers already receive.</p></div></details>
     <details><summary>Advisory coverage debt remains advisory</summary><div class="body"><p>Legacy coverage keys such as <code>missing_state_prefixes</code> and <code>missing_state_post_items</code> can still appear in the report but do not become blocking under <code>status-evidence</code>.</p></div></details>
     <details><summary>Tracked-pair corpus evidence is exact</summary><div class="body"><p>Only tracked workflows with a tracked same-directory state whose repo-relative <code>workflow_file</code> equals the workflow path are invoked. Missing, mismatched, untracked, or synthetic states are excluded with reasons.</p></div></details>
+    <details><summary>Both supported distributions carry the repair</summary><div class="body"><p>Claude Code and Codex payloads and installed-cache fixtures are regenerated from the same final authored source and must all pass release consistency evidence.</p></div></details>
     <details><summary>Final readiness uses one rebased regenerated tree</summary><div class="body"><p>Readiness evidence records latest main, rebases, regenerates release artifacts, runs the independent artifact check, generates and checks docs references, then runs targeted and full-suite verification.</p></div></details>
 <!-- FILL:acceptance-criteria:END -->
 

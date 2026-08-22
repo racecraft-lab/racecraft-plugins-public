@@ -58,3 +58,14 @@ A tracked corpus pair is valid only when:
 - The state's repo-relative `workflow_file` value exactly equals the workflow repo-relative path.
 
 The corpus regression must exclude workflows with no adjacent tracked state, states that name another workflow, and any synthesized state file.
+
+## Distribution Parity Contract
+
+The same authored validator and autopilot guidance must feed both supported client distributions:
+
+- Claude Code payload: `dist/claude/speckit-pro/`
+- Codex payload: `dist/codex/speckit-pro/`
+- Claude Code installed-cache fixture: `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/`
+- Codex installed-cache fixture: `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/`
+
+Final readiness requires `scripts/refresh-release-artifacts.py --check` to confirm that both payload/fixture pairs match the same final authored source tree. A missing or stale client distribution fails this contract.

@@ -12,7 +12,7 @@
 - [x] CHK002 Is the clean-control success requirement defined under the same scoped invocation as the three negative controls? [Completeness, Spec §FR-009-FR-011, Spec §SC-003-SC-004]
 - [x] CHK003 Are legacy structural coverage findings required to remain visible without becoming blocking under `status-evidence`? [Completeness, Spec §FR-004, Spec §SC-006, Contract §Required Blocking Keys]
 - [x] CHK004 Is complete diagnostic-report preservation required when a newly selected problem key fails the scoped gate? [Completeness, Spec §FR-007-FR-008, Contract §Report Shape Contract]
-- [x] CHK005 Are rule membership, intent verdict, negative-control evidence, corpus evidence, and authored guidance all included in the same reliability slice? [Completeness, Spec §FR-005-FR-019, Plan §Implementation Approach]
+- [x] CHK005 Are rule membership, intent verdict, negative-control evidence, corpus evidence, authored guidance, and two-distribution parity all included in the same reliability slice? [Completeness, Spec §FR-005-FR-020, Plan §Implementation Approach]
 
 ## Deterministic Corpus Discovery
 
@@ -34,8 +34,8 @@
 ## Authored and Generated Surface Ownership
 
 - [x] CHK017 Are the authored validator, authored autopilot skill paragraph, and authored unit test named as the only direct implementation surfaces? [Ownership, Plan §Declared File Operations, Plan §Structure Decision]
-- [x] CHK018 Are generated Codex skills, Claude/Codex payloads, installed-cache fixtures, proof/evidence JSON, and docs-reference pages consistently classified as derived outputs? [Consistency, Spec §FR-017, Plan §Project Structure, Research §Narrow the authored autopilot paragraph only]
-- [x] CHK019 Is hand editing prohibited for every generated payload, proof, installed-cache, Codex, and docs-reference surface? [Reliability, Spec §FR-017, Plan §Constraints, Quickstart §Release Artifact Refresh]
+- [x] CHK018 Are generated Codex skills, Claude/Codex payloads, installed-cache fixtures, proof/evidence JSON, and docs-reference pages consistently classified as derived outputs? [Consistency, Spec §FR-017, Spec §FR-020, Plan §Project Structure, Research §Narrow the authored autopilot paragraph only]
+- [x] CHK019 Is hand editing prohibited for every generated payload, proof, installed-cache, Codex, and docs-reference surface, with both client distributions required to pass same-source consistency evidence? [Reliability, Spec §FR-017, Spec §FR-020, Plan §Constraints, Quickstart §Release Artifact Refresh]
 - [x] CHK020 Are repository-owned regeneration commands identified separately for release artifacts and docs references? [Dependencies, Plan §Requirement Traceability, Quickstart §Release Artifact Refresh]
 - [x] CHK021 Does final freshness evidence require the independent release-artifact consistency check after regeneration so a clean targeted or full test run cannot mask stale generated payloads or proofs? [Reliability, Spec §FR-018, Spec §SC-008, Plan §Implementation Approach]
 
@@ -45,7 +45,7 @@
 - [x] CHK023 Are final readiness requirements ordered against one recorded latest-main HEAD—rebase, regenerate, consistency checks, targeted checks, then full suite—so pre-rebase or pre-regeneration green evidence cannot be reused? [Evidence Freshness, Spec §FR-018, Spec §SC-008, Plan §Implementation Approach]
 - [x] CHK024 Are docs reference generation and checking required after shared source changes rather than inferred from a clean Python suite? [Reliability, Plan §Phase 0 Research Summary, Quickstart §Release Artifact Refresh]
 - [x] CHK025 Is the full repository suite required before ready or merge in addition to focused bookkeeping-guard coverage? [Completeness, Constitution §IV, Quickstart §Full Verification]
-- [x] CHK026 Does the PR evidence bundle require generated-artifact status, targeted checks, full-suite evidence, known gaps, and final ART-008 integration notes? [Traceability, Spec §FR-019, Spec §PR Review Packet Requirements, Spec §SC-008]
+- [x] CHK026 Does the PR evidence bundle require separate Claude Code and Codex artifact freshness, targeted checks, full-suite evidence, known gaps, and final ART-008 integration notes? [Traceability, Spec §FR-019, Spec §FR-020, Spec §PR Review Packet Requirements, Spec §SC-008-SC-009]
 
 ## Acceptance Criteria and Assumptions
 
@@ -57,7 +57,7 @@
 ## Notes
 
 - Remediation loop 1 closed four requirement gaps for deterministic discovery, non-vacuous pair accounting, generated-artifact freshness, and final evidence ordering.
-- Evidence: `spec.md` §FR-013-FR-014, §FR-018, §SC-005, and §SC-008; `plan.md` §Constraints, §Implementation Approach, and §Requirement Traceability.
-- Requirement-ID audit: the three letter-suffixed functional-requirement IDs added during the interrupted draft were replaced with unique three-digit IDs because the autopilot traceability contract extracts `FR-XXX` markers from `spec.md`; `spec.md`, `plan.md`, and this checklist now reference `FR-001` through `FR-019` without suffixes.
+- Evidence: `spec.md` §FR-013-FR-014, §FR-018, §FR-020, §SC-005, and §SC-008-SC-009; `plan.md` §Constraints, §Implementation Approach, and §Requirement Traceability.
+- Requirement-ID audit: the three letter-suffixed functional-requirement IDs added during the interrupted draft were replaced with unique three-digit IDs because the autopilot traceability contract extracts `FR-XXX` markers from `spec.md`; the approved cross-platform clarification extends the canonical sequence through `FR-020` without suffixes.
 - Codebase evidence: git-index enumeration currently finds 63 tracked `.process` workflow candidates sharing one tracked adjacent state, with one authority-matched pair and 62 authority-mismatch exclusions. The census requirements prevent either the eligible pair or the exclusions from disappearing behind a vacuous green result.
 - Optional checklist hooks were git commit prompts only and were not executed because this delegated task is non-committing.

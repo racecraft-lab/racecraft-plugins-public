@@ -32,12 +32,12 @@ failure shape, and ART-008 integration ordering.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ✅ Complete | 2 user stories, 16 FRs, 8 acceptance scenarios, 8 success criteria; G1 passed |
+| Specify | `/speckit-specify` | ✅ Complete | 2 user stories, 20 FRs, 9 acceptance scenarios, 9 success criteria; G1 remained satisfied after the approved cross-platform refinement |
 | Clarify | `/speckit-clarify` | ✅ Complete | Three sessions complete; one corpus-identity ambiguity resolved by 2/2 consensus; G2 passed with 0 markers |
 | Plan | `/speckit-plan` | ✅ Complete | Five design artifacts generated; G3 passed; advisory plan estimate recorded |
 | Checklist | `/speckit-checklist` | ✅ Complete | 78 items across three domains; 5 gaps remediated; G4 passed with 0 markers |
-| Tasks | `/speckit-tasks` | ✅ Complete | 31 tasks across five phases; 19/19 FR coverage; G5 passed |
-| Analyze | `/speckit-analyze` | ✅ Complete | 3 findings remediated; 0 remain; G6 passed |
+| Tasks | `/speckit-tasks` | ✅ Complete | 31 tasks across five phases; 20/20 FR coverage; G5 passed |
+| Analyze | `/speckit-analyze` | ✅ Complete | 3 original findings plus 1 approved-refinement consistency finding remediated; 0 remain; G6 passed |
 | Confidence Gate | G6.5 | ✅ Complete | PASS: 0.99 composite ≥ 0.90 advisory threshold; proceed to plan-stage emission |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 | Post | Post-Implementation | ⏳ Pending | Canonical 14-item closeout; outside this plan-stage invocation |
@@ -133,6 +133,8 @@ membership from verdicts would violate the existing exact-consistency invariant.
 Re-estimate from the real plan at G3 and whenever the declared requirement or
 authored-file set changes. Before ready/merge, rebase after ART-008 as needed,
 regenerate shared artifacts, and use the actual diff gate as final authority.
+After FR-020 was approved, the plan estimator was rerun: `status: pass`,
+`projected: 0`; the three declared authored file operations remain unchanged.
 
 ### Success Criteria Summary
 
@@ -154,9 +156,10 @@ regenerate shared artifacts, and use the actual diff gate as final authority.
 - [ ] The authored autopilot paragraph distinguishes legacy coverage debt from
       the three blocking state invariants without duplicating key-level prose
       across other references.
-- [ ] Generated Codex/payload/proof/reference surfaces are regenerated through
-      repository tooling; targeted tests, docs reference checks, and the full
-      Python suite pass after the final main rebase.
+- [ ] Both Claude Code and Codex payload/fixture pairs are regenerated from the
+      same final authored source through repository tooling; targeted tests,
+      release consistency, docs reference checks, and the full Python suite
+      pass after the final main rebase.
 
 ---
 
@@ -214,8 +217,9 @@ Codex. Both distributions consume the same authored guard behavior.
 - Add an explicit regression over every tracked workflow with an adjacent
   `autopilot-state.json`; a workflow without an adjacent state is outside that
   pair corpus, not synthesized silently.
-- Narrow only the existing authored guard paragraph, then regenerate mirrors,
-  payloads, proofs, and docs references through repository tooling.
+- Narrow only the existing authored guard paragraph, then regenerate both
+  Claude Code and Codex payload/fixture pairs, mirrors, proofs, and docs
+  references through repository tooling.
 - Python 3.11+ standard library only. Follow strict RED → GREEN → REFACTOR TDD.
 - Treat `docs/ai/specs/.process/ART-017-design-concept.md` as the source of truth
   for the eight settled decisions and their rationale.
@@ -238,9 +242,9 @@ Codex. Both distributions consume the same authored guard behavior.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | 16 (FR-001 through FR-016) |
+| Functional Requirements | 20 (FR-001 through FR-020) |
 | User Stories | 2 |
-| Acceptance Criteria | 8 acceptance scenarios; 8 measurable success criteria |
+| Acceptance Criteria | 9 acceptance scenarios; 9 measurable success criteria |
 
 ### Files Generated
 
@@ -292,7 +296,7 @@ new ambiguity or contradiction appears.
 #### Session 3: Integration And Generated Artifacts
 
 ```text
-/speckit-clarify Verify the release boundary: narrow the authored autopilot paragraph only, regenerate derived Codex/payload/proof/reference surfaces, preserve ART-008 independence, and require a latest-main rebase plus regeneration and full-suite proof before ready or merge.
+/speckit-clarify Verify the release boundary: narrow the authored autopilot paragraph only, regenerate both Claude Code and Codex payload/fixture pairs plus proof/reference surfaces, preserve ART-008 independence, and require a latest-main rebase plus regeneration and full-suite proof before ready or merge.
 ```
 
 ### Clarify Results
@@ -437,7 +441,7 @@ pairs, authored/generated parity, and final integration all remain reproducible.
 
 Focus on ART-017 requirements:
 - Deterministic discovery and validation of every tracked adjacent workflow/state pair
-- Authored-source ownership versus generated Codex, payload, proof, and docs-reference surfaces
+- Authored-source ownership versus generated Claude Code and Codex payload/fixture, proof, and docs-reference surfaces
 - Final latest-main rebase, regeneration, targeted checks, and full-suite evidence while ART-008 develops separately
 - Pay special attention to: a clean local test must not mask stale generated artifacts or an unvalidated tracked state pair
 ```
@@ -448,7 +452,7 @@ Focus on ART-017 requirements:
 |-----------|-------|------|-----------------|
 | state-management | 24 | 0 | FR-001–FR-015; state invariants, clean controls, authority-matched pairs, and generated boundaries |
 | error-handling | 24 | 1 → 0 | FR-001–FR-013; scoped exit authority, full-report preservation, clean controls, and remediated failure causality |
-| reliability | 30 | 4 → 0 | FR-012–FR-019; deterministic census, non-vacuous coverage, artifact freshness, and final evidence ordering |
+| reliability | 30 | 4 → 0 | FR-012–FR-020; deterministic census, non-vacuous coverage, two-distribution artifact freshness, and final evidence ordering |
 | **Total** | **78** | **5 → 0** | All three domains closed; no unresolved consensus items |
 
 ### Addressing Gaps
@@ -501,7 +505,7 @@ When checklist identifies `[Gap]` items:
 | **Total Tasks** | 31 |
 | **Phases** | 5 |
 | **Parallel Opportunities** | 0 implementation tasks marked `[P]`; review-only inspection may overlap after T013 |
-| **User Stories Covered** | 2/2; FR-001 through FR-019 mapped |
+| **User Stories Covered** | 2/2; FR-001 through FR-020 mapped |
 
 ### Tasks Reviewability Boundary
 
@@ -576,7 +580,7 @@ Focus on:
 5. Corpus completeness — tasks define deterministic tracked workflow/adjacent-state discovery and an exact-invocation regression without silently synthesizing missing states.
 6. Failure-contract stability — no task changes the JSON report shape, key names, full-report emission, or legacy coverage visibility.
 7. Scope and file accuracy — authored edits remain the validator, authored autopilot `SKILL.md`, and existing bookkeeping-guard test unless a justified amendment updates the reviewability estimate.
-8. Integration hygiene — derived surfaces are regenerated rather than hand-edited, docs reference steps are present for the tracked Python test change, and final readiness waits for latest-main rebase/regeneration/full-suite evidence after ART-008 coordination.
+8. Integration hygiene — both Claude Code and Codex derived payload/fixture pairs are regenerated from the same source rather than hand-edited, docs reference steps are present for the tracked Python test change, and final readiness waits for latest-main rebase/regeneration/full-suite evidence after ART-008 coordination.
 ```
 
 ### Analyze Severity Levels
@@ -595,11 +599,12 @@ Focus on:
 | A1 | HIGH | Quickstart omitted release-artifact `--check` and made the same-HEAD boundary conditional on ART-008. | Added the independent consistency check and one unconditional ordered latest-main evidence sequence. |
 | A2 | LOW | State-management checklist retained stale FR citations after reliability renumbering. | Updated generated-surface and PR-packet citations to FR-017 and FR-019. |
 | A3 | LOW | Error-handling checklist retained a stale generated-artifact citation. | Updated the citation to FR-017. |
+| A4 | LOW | The authoritative design concept retained Codex-only shorthand after the approved two-distribution refinement. | Named both Claude Code and Codex payload/fixture outputs without changing the eight settled design decisions. |
 
-Post-remediation Analyze result: 0 CRITICAL, 0 HIGH, 0 MEDIUM, and 0 LOW
-findings remain. No routed analyst consensus was required because the unresolved
-count was zero; the parent synthesized the mandatory clean-pass confidence emit
-from the grounded artifacts and remediated finding record.
+Post-refinement Analyze result: 0 CRITICAL, 0 HIGH, 0 MEDIUM, and 0 LOW findings
+remain across 20 requirements and 31 tasks, with 20/20 requirement coverage. No
+routed analyst consensus was required because the unresolved count was zero;
+the parent retained the grounded clean-pass confidence emit.
 
 📊 Confidence: 0.99
 
