@@ -1,12 +1,12 @@
 {
   "schema_version": "1.0",
   "workflow_file": "docs/ai/specs/.process/ART-017-workflow.md",
-  "updated_at": "2026-08-22T19:38:00Z",
+  "updated_at": "2026-08-22T20:01:39Z",
   "stage": "implement",
   "stage_source": "argv",
   "stage_basis": "explicit --stage implement",
   "confidence_gate_mode": "advisory",
-  "active_step": "Post: PR Creation",
+  "active_step": "complete",
   "archive_sweep": {
     "status": "no_candidates",
     "execution_path": "extension_contract",
@@ -100,7 +100,7 @@
     "decision": "continue with one navigable PR; disclose test-dominant size to reviewers"
   },
   "final_verification": {
-    "head": "667f04c878a6c8ff4479bf04dc069f1a7e02ea81",
+    "head": "c280f28c714997a598c23605f7c99c20a9ebba97",
     "origin_main": "847ada00f037d40957ab17e4ce54c60d9420c8e4",
     "targeted": "272/272 passed",
     "codex_structural": "163/163 passed",
@@ -178,8 +178,8 @@
     {"step": "Post: Final Reviewability Backstop", "status": "skipped"},
     {"step": "Post: PR Packet/Body Generation", "status": "completed"},
     {"step": "Post: PR Body Generation", "status": "completed"},
-    {"step": "Post: PR Creation", "status": "in_progress"},
-    {"step": "Post: Review Remediation", "status": "pending"},
-    {"step": "Post: Retrospective", "status": "pending"}
+    {"step": "Post: PR Creation", "status": "completed"},
+    {"step": "Post: Review Remediation", "status": "completed"},
+    {"step": "Post: Retrospective", "status": "completed"}
   ]
 }

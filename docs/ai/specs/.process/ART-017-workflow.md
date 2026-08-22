@@ -40,7 +40,7 @@ failure shape, and ART-008 integration ordering.
 | Analyze | `/speckit-analyze` | ✅ Complete | 3 original findings plus 1 approved-refinement consistency finding remediated; 0 remain; G6 passed |
 | Confidence Gate | G6.5 | ✅ Complete | PASS: 0.99 composite ≥ 0.90 advisory threshold; proceed to plan-stage emission |
 | Implement | `/speckit-implement` | ✅ Complete | 31/31 tasks; G7 passed; focused 272/272 and full suite 7896/7896 |
-| Post | Post-Implementation | 🔄 In Progress | Canonical 14-item closeout started |
+| Post | Post-Implementation | ✅ Complete | Canonical 14-item closeout complete; PR #490 is ready for review with exact-head CI green |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
@@ -709,9 +709,9 @@ The canonical closeout. Every row must reach Complete or an explicit
 | Post: Final Reviewability Backstop | ⏭️ Skipped | Installed helper is deferred; size-only evidence is nonblocking and the one-navigable-PR route is preserved |
 | Post: PR Packet/Body Generation | ✅ Complete | `pr-packet-output` dry-run/apply generated the tracked single-PR packet and body; read-only validation passed with `pr_blocked=false`, `writes_state=false` |
 | Post: PR Body Generation | ✅ Complete | Packet-owned body contains final scope, verification, known gaps, UAT fallback, and exactly one valid consumer release-note fence |
-| Post: PR Creation | 🔄 In Progress | Existing draft PR #490 matches the packet target and will be refreshed rather than duplicated |
-| Post: Review Remediation | ⏳ Pending | |
-| Post: Retrospective | ⏳ Pending | |
+| Post: PR Creation | ✅ Complete | Existing PR #490 was refreshed from the validated packet, marked ready for review, and verified at head `c280f28c7` |
+| Post: Review Remediation | ✅ Complete | Copilot reported no blocking issues or inline comments; the sole CI defect was a local-only `.DS_Store` MOC backlink, removed through the official spec-index generator before fresh exact-head CI passed |
+| Post: Retrospective | ✅ Complete | Checked-in retrospective contract fallback completed with 0 critical findings; lessons and the out-of-scope same-task handoff follow-up are recorded below |
 
 - [x] All tasks marked complete in tasks.md
 - [x] Targeted bookkeeping-guard unittest passes: 272/272
@@ -721,7 +721,7 @@ The canonical closeout. Every row must reach Complete or an explicit
 - [x] Linting: N/A — repository uses the Python-authoritative suite
 - [x] Build: N/A — no separate build surface for this Python/Markdown repair
 - [x] Manual acceptance cross-walk complete; UAT skeleton capability is deferred
-- [ ] PR created and reviewed
+- [x] PR created and reviewed
 - [ ] Merged to main branch
 
 ### Self-Review
@@ -779,6 +779,19 @@ The canonical closeout. Every row must reach Complete or an explicit
 
 ### Challenges Encountered
 
+- The original plan counted three authored files and omitted the separate Codex
+  source skill; independent review corrected the final authored-source count to
+  four.
+- Sandbox-only filesystem restrictions caused false failures in payload rebuild
+  checks. The same checks passed under the normal-permissions runner used for
+  authoritative evidence.
+- Exhaustive negative and corpus coverage pushed the authored test diff beyond
+  the setup estimate. The final reviewability gate records this as a size-only,
+  nonblocking warning.
+- The first clean CI run exposed a local ignored `.DS_Store` backlink embedded
+  in the generated `SPEC-MOC.md`. Moving the local file aside, rerunning the
+  official spec-index writer, and restoring the ignored file produced clean,
+  reproducible exact-head CI at `c280f28c7`.
 - [ ] **TODO — restore the Codex same-task scaffold-to-autopilot handoff.**
       SpecKit Pro 2.27.0 still emits the new-task, relative-workflow recovery
       form even when the generated worktree is a registered descendant that can
