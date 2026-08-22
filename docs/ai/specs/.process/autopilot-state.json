@@ -3,10 +3,10 @@
   "spec_id": "G56R-005",
   "feature_dir": "specs/g56r-005-model-availability-fallback-recovery",
   "branch": "g56r-005-model-availability-fallback-recovery",
-  "status": "in_progress",
+  "status": "completed",
   "stage": "implement",
-  "updated_at": "2026-08-22T19:40:38Z",
-  "active_step": "Post: Retrospective",
+  "updated_at": "2026-08-22T20:03:07Z",
+  "active_step": null,
   "settings": {
     "consensus_mode": "moderate",
     "gate_failure": "stop",
@@ -535,6 +535,16 @@
         "live_comments": 0,
         "ci_status_at_inspection": "in_progress",
         "reopen_on_final_head_failure": true
+      },
+      "retrospective": {
+        "status": "completed",
+        "artifact": "specs/g56r-005-model-availability-fallback-recovery/retrospective.md",
+        "tasks": "25/25",
+        "spec_adherence_percent": 100,
+        "critical_findings": 0,
+        "significant_findings": 0,
+        "minor_findings": 2,
+        "positive_findings": 2
       }
     }
   },
@@ -578,6 +588,6 @@
     {"step": "Post: PR Body Generation", "status": "completed"},
     {"step": "Post: PR Creation", "status": "completed"},
     {"step": "Post: Review Remediation", "status": "completed"},
-    {"step": "Post: Retrospective", "status": "in_progress"}
+    {"step": "Post: Retrospective", "status": "completed"}
   ]
 }
