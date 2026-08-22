@@ -5,8 +5,8 @@
   "branch": "g56r-005-model-availability-fallback-recovery",
   "status": "in_progress",
   "stage": "plan",
-  "updated_at": "2026-08-22T15:18:46Z",
-  "active_step": "Phase 2: Clarify - Resolution Contract",
+  "updated_at": "2026-08-22T15:47:00Z",
+  "active_step": "Phase 3: Plan",
   "settings": {
     "consensus_mode": "moderate",
     "gate_failure": "stop",
@@ -146,19 +146,65 @@
           "docs/ai/specs/codex-gpt-5-6-agent-routing-roadmap-MOC.md"
         ]
       }
+    },
+    "clarify": {
+      "status": "in_progress",
+      "sessions": {
+        "resolution_contract": {
+          "status": "completed",
+          "questions": 5,
+          "answers_applied": 5,
+          "outcomes": [
+            "fixed diagnostic ordering contract",
+            "fallback exhaustion represented under terminal no_safe_route",
+            "loop detection on reached repeated route",
+            "explicit independently qualified no-helper continuation proof",
+            "canonical non-route treatment comparison and digest evidence"
+          ],
+          "unresolved_for_consensus": 0,
+          "consensus_status": "skipped: zero unresolved items"
+        },
+        "state_and_recovery": {
+          "status": "completed",
+          "questions": 4,
+          "answers_applied": 4,
+          "outcomes": [
+            "canonical fake-home state IDs",
+            "temporary fake_home_root write boundary",
+            "rollback trigger and write-state disposition",
+            "deterministic Recovery Record without host metadata"
+          ],
+          "unresolved_for_consensus": 0,
+          "consensus_status": "skipped: zero unresolved items"
+        },
+        "bounds_and_attribution": {
+          "status": "completed",
+          "questions": 5,
+          "answers_applied": 5,
+          "outcomes": [
+            "service reroute attribution separated from plugin reasons",
+            "approved versus unapproved reroute rules",
+            "terminal precedence for strict override, budgets, cancellation, and writes",
+            "deterministic budget counters",
+            "scoring eligibility separated from route qualification"
+          ],
+          "unresolved_for_consensus": 0,
+          "consensus_status": "skipped: zero unresolved items"
+        }
+      }
     }
   },
   "plan": [
     {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
     {"step": "Phase 0: Prerequisites", "status": "completed"},
     {"step": "Phase 1: Specify", "status": "completed"},
-    {"step": "Phase 2: Clarify - Resolution Contract", "status": "in_progress"},
-    {"step": "Phase 2: Clarify - Resolution Contract Consensus", "status": "pending"},
-    {"step": "Phase 2: Clarify - State and Recovery", "status": "pending"},
-    {"step": "Phase 2: Clarify - State and Recovery Consensus", "status": "pending"},
-    {"step": "Phase 2: Clarify - Bounds and Attribution", "status": "pending"},
-    {"step": "Phase 2: Clarify - Bounds and Attribution Consensus", "status": "pending"},
-    {"step": "Phase 3: Plan", "status": "pending"},
+    {"step": "Phase 2: Clarify - Resolution Contract", "status": "completed"},
+    {"step": "Phase 2: Clarify - Resolution Contract Consensus", "status": "skipped: zero unresolved items"},
+    {"step": "Phase 2: Clarify - State and Recovery", "status": "completed"},
+    {"step": "Phase 2: Clarify - State and Recovery Consensus", "status": "skipped: zero unresolved items"},
+    {"step": "Phase 2: Clarify - Bounds and Attribution", "status": "completed"},
+    {"step": "Phase 2: Clarify - Bounds and Attribution Consensus", "status": "skipped: zero unresolved items"},
+    {"step": "Phase 3: Plan", "status": "in_progress"},
     {"step": "Phase 4: Checklist - Error Handling", "status": "pending"},
     {"step": "Phase 4: Checklist - Error Handling Consensus", "status": "pending"},
     {"step": "Phase 4: Checklist - State Management", "status": "pending"},

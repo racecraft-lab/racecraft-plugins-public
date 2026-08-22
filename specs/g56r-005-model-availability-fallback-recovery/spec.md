@@ -8,6 +8,95 @@
 
 **Input**: User description: "G56R-005 Model Availability, Fallback, and Recovery Simulation"
 
+## Clarifications
+
+### Session 2026-08-22 — Resolution Contract
+
+- **Q: What exact ordering contract governs diagnostics?** **A:** Evaluate a
+  strict override before the route walk. If it is compatible or absent, visit
+  the preferred route and then declared fallbacks in order. For each reached
+  route, emit every applicable reason in this order: model absence, unsupported
+  effort, capability-discovery unavailability, availability-probe failure,
+  treatment-probe failure, and non-route treatment mutation. Detect a loop when
+  a previously attempted route is reached. Emit exactly one terminal outcome
+  last.
+- **Q: Is fallback exhaustion a second terminal outcome?** **A:** No. Record
+  fallback exhaustion as diagnostic evidence or terminal details and use
+  `no_safe_route` as the sole terminal outcome for an exhausted route walk.
+- **Q: When is a fallback loop detected?** **A:** Detect it on arrival at a
+  route already attempted during the sequential walk; do not re-attempt or
+  re-consult that route. Do not reject an unreachable duplicate during a
+  pre-walk scan.
+- **Q: What proves a validated no-helper continuation?** **A:** The fixture must
+  explicitly declare and independently qualify the no-helper continuation,
+  prove zero helper-route attempts with counters separate from required-route
+  counters, and still prove required-agent success or atomic failure.
+- **Q: How is treatment immutability proved?** **A:** Canonically compare and
+  digest every non-route treatment field—agent identity, instructions, tools,
+  skills and MCP bindings, sandbox, mutation policy, and output contract—and
+  permit only model and effort to differ.
+
+### Session 2026-08-22 — State and Recovery
+
+- **Q: What identifies fake-home pre-state and previous-known-good state?**
+  **A:** Derive each state ID from a canonical manifest containing sorted
+  fake-home-relative paths, SHA-256 content digests, file modes, and
+  required/optional role classification. Exclude absolute temporary roots,
+  mtimes, inodes, timestamps, and host-specific paths.
+- **Q: What is the fake-home adapter's allowed write boundary?** **A:** Require
+  an explicit harness-created temporary `fake_home_root` and resolve the only
+  writable destination as `<fake_home_root>/.codex/agents`. Checked-in fixture
+  roots may seed a copied pre-state but are never mutation targets. Reject real
+  homes, path traversal, symlink traversal, and every destination outside the
+  resolved boundary.
+- **Q: Which failures prove atomic no-write and which trigger rollback?**
+  **A:** A failure before any managed file is touched proves atomic no-write and
+  does not run rollback. Any later failure, post-copy verification failure, or
+  cancellation after a managed file is touched triggers rollback followed by
+  best-effort cleanup. Successful rollback restores the exact pre-state and
+  reports `writes_state=false`; failed rollback reports `writes_state=true` and
+  deterministic manual-remediation evidence. Cleanup never replaces the
+  rollback or terminal result.
+- **Q: What exact cleanup and replay evidence is required?** **A:** Emit a closed
+  canonical JSON Recovery Record with sorted keys and deterministic arrays for
+  pre-state and final-state IDs, staged, applied, rolled-back, and cleanup
+  actions, sorted cleanup errors, rollback outcome, write-state disposition,
+  and manual remediation. Exclude absolute temporary paths and host-specific
+  timestamps or metadata.
+
+### Session 2026-08-22 — Bounds and Attribution
+
+- **Q: How are service reroutes separated from plugin route reasons?** **A:**
+  Store service reroute evidence in a distinct attribution record with
+  `origin=service`, approved/unapproved disposition, observed target route, and
+  scoring effect. Do not interleave service attribution with the plugin reason
+  sequence; plugin reasons still follow the Resolution Ordering Contract.
+- **Q: What makes service reroute evidence approved?** **A:** The observed
+  service target must match a declared route or declared allowed route mutation,
+  change only model and effort, preserve the non-route treatment digest, and be
+  explicitly marked approved by fixture evidence. Otherwise it is unapproved
+  service evidence and cannot produce a successful scoring-eligible terminal
+  outcome.
+- **Q: What is the precedence among budget, cancellation, strict override, and
+  route outcomes?** **A:** Incompatible strict override is checked first and
+  remains terminal before fallback evaluation or writes. During a normal replay,
+  cancellation or any declared budget breach observed before route success is
+  terminal for the harness run. After fake-home mutation starts, cancellation
+  triggers only the bounded recovery needed to preserve or report state before
+  emitting the terminal outcome.
+- **Q: How are time, retry, fan-out, context, and escalation bounds represented?**
+  **A:** Fixtures declare numeric or closed-enum limits for each bound. The
+  harness records consumed counters and terminal breach reason using
+  deterministic counters, not wall-clock host metadata. Fan-out greater than
+  one, recursive agent execution, and human-in-the-loop escalation are rejected
+  for this simulation.
+- **Q: How is scoring eligibility reported when route qualification and service
+  reroute evidence disagree?** **A:** Report route qualification and score
+  eligibility as separate fields. A qualified plugin route is not
+  scoring-eligible when unapproved service reroute evidence is present; an
+  approved service reroute can preserve eligibility only when the final route is
+  otherwise qualified and treatment immutability is proven.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Resolve preferred and fallback routes deterministically (Priority: P1)
@@ -58,13 +147,13 @@ Release reviewers can exercise optional-helper degradation, strict override reje
 
 **Acceptance Scenarios**:
 
-1. **Given** an optional helper is unavailable, **When** a validated no-helper route remains safe, **Then** the harness records optional-helper degradation and continues through the no-helper path.
+1. **Given** an optional helper is unavailable and the fixture explicitly declares an independently qualified no-helper continuation, **When** the required-agent route resolves safely, **Then** the harness records optional-helper degradation, proves zero helper-route attempts with separate counters, and continues through the no-helper path.
 2. **Given** an incompatible strict override, **When** the resolver evaluates the override, **Then** it rejects the override as terminal and never falls back to another route.
 3. **Given** all declared fallbacks are exhausted, **When** the resolver reaches the final candidate, **Then** it records fallback exhaustion and reports no-safe-route without partial installation.
-4. **Given** a fake home with a previous-known-good required install, **When** a replacement fails after staging but before completion, **Then** the previous-known-good install remains available and the failed replacement is not promoted.
-5. **Given** a fake home where atomic no-write validation fails before staging, **When** the attempted operation exits, **Then** no required install target is created or modified.
-6. **Given** a fake home where a required install is partially materialized, **When** rollback runs, **Then** all partial required-install artifacts are removed and the recovery record names the rollback outcome.
-7. **Given** a recovery fixture is replayed multiple times, **When** each replay starts from the same fake-home state, **Then** the final fake-home state and diagnostics remain byte-stable.
+4. **Given** a fake home with a previous-known-good required install identified by a canonical content manifest, **When** a replacement fails after staging but before completion, **Then** rollback restores the exact path, content, mode, and role-classification manifest and the failed replacement is not promoted.
+5. **Given** a fake home where validation fails before any managed file is touched, **When** the attempted operation exits, **Then** no install target is created or modified, rollback is not run, and the pre-state and final-state IDs are identical.
+6. **Given** a fake home where a required install is partially materialized, **When** rollback runs, **Then** it restores or removes every touched managed file, runs bounded best-effort cleanup, preserves the rollback result regardless of cleanup outcome, and records `writes_state=false` only when the exact pre-state is restored.
+7. **Given** a recovery fixture is replayed multiple times from the same canonical pre-state, **When** each replay completes, **Then** its canonical Recovery Record and final-state manifest are byte-identical and contain no absolute temporary roots, timestamps, inodes, or host-specific paths.
 
 ---
 
@@ -83,7 +172,7 @@ Cross-platform maintainers can run one sequential harness state machine that enf
 3. **Given** a fixture that exceeds fan-out or context limits, **When** the harness evaluates the fixture, **Then** it rejects the fixture before route success can be reported.
 4. **Given** cancellation is requested during a fake-home operation, **When** the harness observes cancellation, **Then** it stops sequential processing and performs only the bounded recovery action required to preserve fake-home state.
 5. **Given** a fixture attempts escalation beyond the declared limit, **When** the harness evaluates the escalation path, **Then** it fails closed without invoking a human-in-the-loop or recursive agent path.
-6. **Given** a fixture introduces a loop, generic substitution, or unqualified-adjacent substitution, **When** the resolver evaluates the candidate, **Then** it rejects the candidate before fallback success can be reported.
+6. **Given** a fixture's sequential walk reaches a route that was already attempted, **When** the resolver observes the repeated route, **Then** it emits loop rejection without re-attempting or re-consulting the route and ends with no-safe-route; an unreachable later duplicate does not invalidate an earlier successful resolution.
 7. **Given** a fixture inherits model or effort from a parent or adjacent route rather than declaring it locally, **When** the resolver evaluates the route, **Then** it rejects inherited model or effort and preserves the Codex-local reason vocabulary.
 
 ### Edge Cases
@@ -105,28 +194,46 @@ Cross-platform maintainers can run one sequential harness state machine that enf
 
 ### Functional Requirements
 
-- **FR-001**: System MUST accept fixture policies containing preferred routes, ordered fallback routes, local capability evidence, exact invocation probe outcomes, treatment probe outcomes, strict override settings, service reroute evidence, helper availability, and fake-home starting state.
+- **FR-001**: System MUST accept fixture policies containing preferred routes, ordered fallback routes, local capability evidence, exact invocation probe outcomes, treatment probe outcomes, strict override settings, service reroute evidence, helper availability, and an explicit fake-home starting state plus harness-created temporary `fake_home_root`.
 - **FR-002**: System MUST perform pure route resolution separately from fake-home state changes so route decisions can be replayed without writing to any filesystem target.
-- **FR-003**: System MUST emit ordered applicable reasons plus exactly one terminal outcome for every route resolution attempt.
+- **FR-003**: System MUST emit every applicable diagnostic in the Resolution Ordering Contract and exactly one terminal outcome, placed last, for every route resolution attempt.
 - **FR-004**: System MUST treat preferred model absence, unsupported effort, discovery unavailability, availability-probe failure, and treatment-probe failure as distinct locally authored reasons.
 - **FR-005**: System MUST qualify a route only when its declared model, declared effort, local capability evidence, availability probe, and treatment probe satisfy the fixture policy.
-- **FR-006**: System MUST allow fallback routes to change only model and effort, and MUST reject any fallback or treatment mutation that changes a non-route property.
+- **FR-006**: System MUST allow fallback routes to change only model and effort, MUST canonically compare and digest agent identity, instructions, tools, skills and MCP bindings, sandbox, mutation policy, and output contract, and MUST reject any fallback or treatment mutation whose non-route comparison differs.
 - **FR-007**: System MUST reject incompatible strict overrides as terminal outcomes and MUST NOT evaluate fallback routes after a strict override rejection.
 - **FR-008**: System MUST attribute service reroute evidence separately from plugin reasons and MUST distinguish approved service reroutes from unapproved service reroutes.
 - **FR-009**: System MUST calculate scoring eligibility from qualified route evidence plus approved service reroute status, and MUST mark unapproved service reroutes as ineligible.
-- **FR-010**: System MUST reject no-safe-route, fallback exhaustion, loop, unqualified-adjacent, generic substitution, inherited model, and inherited effort cases as fail-closed outcomes.
-- **FR-011**: System MUST record optional-helper unavailability and continue only when a validated no-helper continuation path is declared by the fixture.
+- **FR-010**: System MUST detect a loop only when the sequential walk reaches an already attempted route, MUST NOT re-attempt or re-consult that route, and MUST reject loop, unqualified-adjacent, generic substitution, inherited model, and inherited effort cases fail-closed; fallback exhaustion MUST be diagnostic evidence or terminal details under the sole terminal `no_safe_route` outcome rather than a second terminal outcome.
+- **FR-011**: System MUST record optional-helper unavailability and continue only when the fixture explicitly declares an independently qualified no-helper continuation; the replay MUST prove zero helper-route attempts with helper counters separate from required-route counters and MUST still prove required-agent success or atomic failure.
 - **FR-012**: System MUST enforce declared retry limits and record bounded-retry exhaustion before any unbounded retry behavior can occur.
 - **FR-013**: System MUST enforce declared time, fan-out, context, cancellation, and escalation budgets for every harness run.
 - **FR-014**: System MUST use one non-recursive sequential harness state machine for simulation replay and MUST NOT invoke human-in-the-loop scoping or recursive agent execution.
-- **FR-015**: System MUST apply fake-home state changes only through a staged adapter that can prove atomic no-write, rollback, and final-state preservation.
-- **FR-016**: System MUST detect partial required Codex agent installation in fake homes and restore the previous-known-good install state when replacement cannot complete safely.
-- **FR-017**: System MUST preserve a previous-known-good fake-home install when a new required install attempt fails before promotion.
-- **FR-018**: System MUST produce byte-stable replay records for the same fixture inputs, including reason order, attribution category, score eligibility, terminal outcome, and final fake-home state.
+- **FR-015**: System MUST apply fake-home state changes only through a staged adapter whose sole writable destination is the resolved `<fake_home_root>/.codex/agents`; it MUST reject real homes, checked-in fixture mutation, traversal, symlink traversal, or any destination outside that boundary, and MUST prove atomic no-write, rollback, and final-state preservation.
+- **FR-016**: System MUST detect partial required Codex agent installation in fake homes; a failure before any managed file is touched MUST prove atomic no-write without rollback, while a failure, verification failure, or cancellation after a managed file is touched MUST trigger rollback followed by bounded best-effort cleanup.
+- **FR-017**: System MUST identify pre-state and previous-known-good state from a canonical manifest of sorted fake-home-relative paths, SHA-256 content digests, file modes, and required/optional role classification; successful rollback MUST restore that exact manifest and report `writes_state=false`, while failed rollback MUST report `writes_state=true` with deterministic manual-remediation evidence, and cleanup MUST NOT replace the rollback or terminal result.
+- **FR-018**: System MUST produce byte-stable canonical JSON replay and Recovery Records for the same fixture inputs, including reason order, attribution category, score eligibility, terminal outcome, pre-state and final-state IDs, deterministic staged/applied/rolled-back/cleanup action arrays, sorted cleanup errors, rollback outcome, write-state disposition, manual remediation, and final fake-home state; records MUST exclude absolute temporary roots, mtimes, inodes, timestamps, and host-specific paths.
 - **FR-019**: System MUST preserve frozen Claude and G56R-004 behavior by keeping the Codex resolver and reason vocabulary locally authoritative without importing Claude logic or extracting a shared resolver core.
 - **FR-020**: System MUST avoid live model or service qualification claims and MUST NOT wire production resolver, installer, payload, version, release artifact, checkpoint, or resume behavior in this feature.
 - **FR-021**: System MUST cover every scenario listed in the Required Scenario Coverage section with at least one independently replayable fixture or acceptance case.
 - **FR-022**: System MUST provide review evidence that maps each major requirement and success criterion to fixture coverage, replay output, and any fake-home state assertion.
+
+### Resolution Ordering Contract
+
+1. Evaluate strict override compatibility before any route walk. An incompatible
+   override stops before writes or fallback evaluation and emits the strict
+   override rejection as its sole terminal outcome.
+2. When no incompatible strict override stops evaluation, visit the preferred
+   route and then each declared fallback in fixture order.
+3. For each reached route, emit all applicable reasons in this fixed order:
+   model absence, unsupported effort, capability-discovery unavailability,
+   availability-probe failure, treatment-probe failure, and non-route treatment
+   mutation.
+4. Detect a loop when the walk reaches a route already attempted. Emit loop
+   rejection without re-attempting or re-consulting that route. A duplicate that
+   is never reached cannot invalidate an earlier successful resolution.
+5. Emit exactly one terminal outcome last. When every reachable declared route
+   is exhausted, record exhaustion in diagnostic evidence or terminal details
+   and use `no_safe_route` as the sole terminal outcome.
 
 ### Required Scenario Coverage
 
@@ -136,7 +243,8 @@ Cross-platform maintainers can run one sequential harness state machine that enf
 - Optional helper unavailable; validated no-helper continuation; incompatible strict override; bounded retry; fallback exhaustion.
 - Loop rejection; unqualified-adjacent rejection; generic substitution rejection; inherited model rejection; inherited effort rejection.
 - Partial required installation; non-route treatment mutation rejection.
-- Atomic no-write; rollback; previous-known-good preservation; cancellation.
+- Atomic no-write; rollback; previous-known-good preservation; cancellation;
+  fake-home boundary escape, traversal, and symlink rejection.
 - Retry, time, fan-out, context, cancellation, and escalation budget enforcement.
 
 ### Reviewability Notes *(if applicable)*
@@ -161,20 +269,20 @@ Cross-platform maintainers can run one sequential harness state machine that enf
 - Deferred work MUST name the follow-up spec or issue.
 - Review packet MUST explicitly state that live model or service qualification was not performed.
 - Review packet MUST show that generated payloads, plugin versions, production routing, and frozen Claude/G56R-004 behavior were not modified.
-- Review packet MUST include fake-home recovery evidence for partial required install, rollback, atomic no-write, and previous-known-good preservation.
+- Review packet MUST include fake-home recovery evidence for partial required install, rollback, cleanup, atomic no-write, previous-known-good preservation, boundary rejection, canonical state IDs, and the absence of host-specific paths or metadata.
 
 ### Key Entities *(include if feature involves data)*
 
-- **Fixture Policy**: A deterministic policy record that declares preferred route, fallback route order, strict override status, allowed route mutations, helper availability, service reroute evidence, and fake-home starting state.
-- **Route Candidate**: A declared model and effort pairing with local qualification evidence and probe outcomes.
-- **Diagnostic Reason**: A locally authored Codex reason that explains why a route was qualified, rejected, skipped, or terminated.
-- **Terminal Outcome**: The single final result for a resolution attempt, such as qualified route, strict override rejected, bounded retry exhausted, fallback exhausted, or no safe route.
+- **Fixture Policy**: A deterministic policy record that declares preferred route, fallback route order, strict override status, allowed route mutations, helper availability, any explicit independently qualified no-helper continuation, service reroute evidence, and fake-home starting state.
+- **Route Candidate**: A declared model and effort pairing with local qualification evidence, probe outcomes, and canonical digest evidence for every non-route treatment field.
+- **Diagnostic Reason**: A locally authored Codex reason that explains why a route was qualified, rejected, or skipped and occupies its fixed position in the Resolution Ordering Contract.
+- **Terminal Outcome**: The single final result emitted last for a resolution attempt, such as qualified route, strict override rejected, bounded retry exhausted, or no safe route; fallback exhaustion is evidence or details under no-safe-route, not a second terminal outcome.
 - **Service Reroute Evidence**: Attribution record for externally observed reroute behavior, separated from plugin-authored reasons and marked approved or unapproved.
 - **Score Eligibility Record**: Deterministic decision explaining whether a replay can contribute to scoring based on route qualification and service reroute approval.
 - **Harness Budget**: Declared retry, time, fan-out, context, cancellation, and escalation limits for a sequential replay.
-- **Fake Home State**: Isolated filesystem representation used to prove required Codex agent install safety without touching a real user home.
-- **Previous-Known-Good Install**: The last validated fake-home install state that must remain recoverable if a replacement fails.
-- **Recovery Record**: Deterministic evidence for atomic no-write, rollback, previous-known-good preservation, and cancellation handling.
+- **Fake Home State**: Isolated filesystem representation rooted at an explicit harness-created temporary directory, identified by a canonical manifest of sorted relative paths, content digests, modes, and role classifications; its only writable destination is `.codex/agents` beneath that root.
+- **Previous-Known-Good Install**: The last validated fake-home install state, identified by the canonical state manifest rather than host filesystem metadata, that must remain exactly recoverable if a replacement fails.
+- **Recovery Record**: Closed canonical JSON evidence containing pre-state and final-state IDs, deterministic staged/applied/rolled-back/cleanup action arrays, sorted cleanup errors, rollback outcome, write-state disposition, manual remediation, and cancellation handling without absolute temporary paths or host-specific metadata.
 
 ### Local Capability Evidence
 
@@ -193,11 +301,11 @@ Cross-platform maintainers can run one sequential harness state machine that enf
 ### Measurable Outcomes
 
 - **SC-001**: 100% of required scenario coverage rows are represented by at least one independently replayable acceptance case or fixture.
-- **SC-002**: Replaying the same fixture inputs three consecutive times produces identical reason order, attribution category, score eligibility, terminal outcome, and fake-home final state.
-- **SC-003**: 100% of resolution attempts produce exactly one terminal outcome and zero ambiguous terminal states.
+- **SC-002**: Replaying the same fixture inputs three consecutive times produces byte-identical canonical records for reason order, attribution category, score eligibility, terminal outcome, recovery actions, pre-state and final-state IDs, and fake-home final state, with zero absolute temporary roots or host-specific metadata.
+- **SC-003**: 100% of resolution attempts produce diagnostics in the Resolution Ordering Contract order, exactly one terminal outcome emitted last, and zero ambiguous terminal states; every exhausted fallback walk ends only in `no_safe_route`.
 - **SC-004**: 100% of strict override rejection cases stop without fallback evaluation.
 - **SC-005**: 100% of service reroute cases report service attribution separately from plugin reasons and mark approved versus unapproved status.
-- **SC-006**: 100% of fake-home failure cases preserve previous-known-good state or prove atomic no-write when no prior state exists.
+- **SC-006**: 100% of fake-home failure cases either preserve the exact canonical previous-known-good manifest or prove atomic no-write when no managed file was touched; rollback failures report `writes_state=true` and manual remediation, cleanup never masks rollback, and every no-helper continuation proves an explicit independent qualification, zero helper-route attempts, separate counters, and required-agent success or atomic failure.
 - **SC-007**: 100% of retry, time, fan-out, context, cancellation, and escalation budget fixtures terminate at the declared bound with no recursive or human-in-the-loop path.
 - **SC-008**: Reviewers can trace every functional requirement to scenario coverage and verification evidence within the PR packet.
 - **SC-009**: Final review finds zero production route policy changes, zero live model availability claims, zero generated payload changes, and zero frozen Claude/G56R-004 contract edits.
@@ -207,6 +315,9 @@ Cross-platform maintainers can run one sequential harness state machine that enf
 - G0 baseline is 7659/7659 before this Phase 1 specification, and parent validation owns any broader gate execution after the phase completes.
 - "Availability" and "service reroute" mean deterministic local fixture evidence only; this feature makes no live model, service, provider, or runtime claim.
 - "Required Codex agent install" means a fake-home representation of required install outputs, not a real user home or production installer target.
+- Checked-in fake-home fixtures are immutable seeds. Every mutation replay copies
+  its pre-state into an explicit harness-created temporary root and may write
+  only beneath that root's `.codex/agents` directory.
 - "Score eligibility" means eligibility for local evaluation scoring, not an external service score.
 - Existing Claude fallback behavior remains frozen and is used only as preservation evidence and precedent; Codex reason vocabulary remains locally authoritative.
 - Production resolver wiring, installer wiring, payload regeneration, version changes, release artifacts, checkpoint scheduling, and resume scheduling are deferred to later specs.

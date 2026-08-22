@@ -333,9 +333,12 @@ terminal precedence.
 
 | Session | Focus | Questions | Key Outcomes |
 |---------|-------|-----------|--------------|
-| 1 | Resolution contract | Pending | Pending |
-| 2 | State and recovery | Pending | Pending |
-| 3 | Bounds and attribution | Pending | Pending |
+| 1 | Resolution contract | 5 resolved | Fixed diagnostic order; exhaustion is details under `no_safe_route`; loop detection on arrival; explicit no-helper proof; canonical non-route treatment comparison |
+| 2 | State and recovery | 4 resolved | Canonical fake-home state IDs; temporary-root-only write boundary; rollback trigger and write-state disposition; deterministic Recovery Record |
+| 3 | Bounds and attribution | 5 resolved | Separate service attribution; approved/unapproved reroute rules; terminal precedence; deterministic budget counters; scoring eligibility split from route qualification |
+
+All three sessions reported zero unresolved-for-consensus items, so their
+mandatory consensus steps were skipped with evidence rather than dispatched.
 
 ---
 
