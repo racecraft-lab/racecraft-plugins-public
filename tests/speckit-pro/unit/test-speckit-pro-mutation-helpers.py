@@ -94,6 +94,22 @@ class MutationHelperTests(unittest.TestCase):
         self.assertIsInstance(response["diagnostics"], list)
         self.assertIsInstance(response["data"], dict)
 
+    @staticmethod
+    def fail_on_autopilot_agent_write(real_write: object) -> object:
+        def fail_write(
+            target: Path,
+            content: bytes,
+            target_dir: Path,
+            identity: tuple[int, int] | None,
+            *,
+            mode: int | None = None,
+        ) -> None:
+            if target.name == "autopilot-fast-helper.toml":
+                raise OSError("injected test failure")
+            real_write(target, content, target_dir, identity, mode=mode)
+
+        return fail_write
+
     def test_install_subprocess_dispatch_preserves_selected_python_candidate(self) -> None:
         from speckit_pro_runner.helpers import install
 
@@ -484,23 +500,9 @@ class MutationHelperTests(unittest.TestCase):
             from speckit_pro_runner.helpers import install
             from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
 
-            real_write = install.write_codex_agent_atomic
-
-            def fail_second_write(
-                target: Path,
-                content: bytes,
-                target_dir: Path,
-                identity: tuple[int, int] | None,
-                *,
-                mode: int | None = None,
-            ) -> None:
-                if target.name == "autopilot-fast-helper.toml":
-                    raise OSError("injected test failure")
-                real_write(target, content, target_dir, identity, mode=mode)
-
             with (
                 patch.object(install, "codex_agent_destination", return_value=destination),
-                patch.object(install, "write_codex_agent_atomic", side_effect=fail_second_write),
+                patch.object(install, "write_codex_agent_atomic", side_effect=self.fail_on_autopilot_agent_write(install.write_codex_agent_atomic)),
             ):
                 response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
 
@@ -592,23 +594,9 @@ class MutationHelperTests(unittest.TestCase):
                     target_path.unlink()
                     target_path.symlink_to(outside)
 
-            real_write = install.write_codex_agent_atomic
-
-            def fail_second_write(
-                target: Path,
-                content: bytes,
-                target_dir: Path,
-                identity: tuple[int, int] | None,
-                *,
-                mode: int | None = None,
-            ) -> None:
-                if target.name == "autopilot-fast-helper.toml":
-                    raise OSError("injected test failure")
-                real_write(target, content, target_dir, identity, mode=mode)
-
             with (
                 patch.object(install, "codex_agent_destination", return_value=destination),
-                patch.object(install, "write_codex_agent_atomic", side_effect=fail_second_write),
+                patch.object(install, "write_codex_agent_atomic", side_effect=self.fail_on_autopilot_agent_write(install.write_codex_agent_atomic)),
                 patch.object(install.os, "replace", side_effect=swap_after_rollback_replace),
             ):
                 response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
