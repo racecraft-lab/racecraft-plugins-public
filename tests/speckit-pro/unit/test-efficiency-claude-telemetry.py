@@ -1140,6 +1140,18 @@ class ClaudeCapabilitiesLiveBoundaryTests(unittest.TestCase):
     def _clean_unset_proof(self, cap):
         return cap.build_unset_proof(env={}, settings={})
 
+    def _assemble_snapshot(self, cap):
+        _, probe_run = _run_bounded_matrix_with_fake_invoker(cap)
+        return cap.assemble_runtime_capability_snapshot(
+            probe_run,
+            captured_at_utc="2026-07-16T12:00:00Z",
+            version=1,
+            pinned_client_version="2.19.3",
+            authentication_mode="subscription",
+            unset_proof=self._clean_unset_proof(cap),
+            unavailable_model_id=_UNAVAILABLE_PROBE_ID,
+        )
+
     # -- T011: probe command construction (pure, FR-compliant argv) -----------
 
     def test_build_probe_command_shapes_argv_per_purpose_and_surface(self) -> None:
@@ -1605,16 +1617,7 @@ class ClaudeCapabilitiesLiveBoundaryTests(unittest.TestCase):
 
     def test_assembled_capability_answers_cover_six_questions_capq6_open(self) -> None:
         cap = self.require_capabilities()
-        _, probe_run = _run_bounded_matrix_with_fake_invoker(cap)
-        snapshot = cap.assemble_runtime_capability_snapshot(
-            probe_run,
-            captured_at_utc="2026-07-16T12:00:00Z",
-            version=1,
-            pinned_client_version="2.19.3",
-            authentication_mode="subscription",
-            unset_proof=self._clean_unset_proof(cap),
-            unavailable_model_id=_UNAVAILABLE_PROBE_ID,
-        )
+        snapshot = self._assemble_snapshot(cap)
         answers = {a["capability_question_id"]: a for a in snapshot["capability_answers"]}
         self.assertEqual(set(answers), {"CAP-Q1", "CAP-Q2", "CAP-Q3", "CAP-Q4", "CAP-Q5", "CAP-Q6"})
         self.assertEqual(answers["CAP-Q1"]["answer"], "claude-opus-4-8")
@@ -1632,16 +1635,7 @@ class ClaudeCapabilitiesLiveBoundaryTests(unittest.TestCase):
 
     def test_write_snapshot_fail_closed_writes_valid_and_aborts_invalid(self) -> None:
         cap = self.require_capabilities()
-        _, probe_run = _run_bounded_matrix_with_fake_invoker(cap)
-        snapshot = cap.assemble_runtime_capability_snapshot(
-            probe_run,
-            captured_at_utc="2026-07-16T12:00:00Z",
-            version=1,
-            pinned_client_version="2.19.3",
-            authentication_mode="subscription",
-            unset_proof=self._clean_unset_proof(cap),
-            unavailable_model_id=_UNAVAILABLE_PROBE_ID,
-        )
+        snapshot = self._assemble_snapshot(cap)
         with tempfile.TemporaryDirectory() as tmp:
             good = Path(tmp) / "snap.json"
             disposition = cap.write_snapshot_fail_closed(snapshot, good)
