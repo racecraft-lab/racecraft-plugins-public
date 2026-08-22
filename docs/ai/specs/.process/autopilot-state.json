@@ -523,8 +523,8 @@
         "base_branch": "main",
         "head_branch": "g56r-005-model-availability-fallback-recovery",
         "packet_publish_head": "656852e5a",
-        "draft": true,
-        "last_pushed_head": "fa778f0d5"
+        "draft_at_packet_publish": true,
+        "review_inspection_head": "fa778f0d5"
       },
       "review_remediation": {
         "status": "completed",
