@@ -33,19 +33,19 @@
 
 **Why this priority**: The implementation is only trustworthy if the behavioral gate, classification record, and regression evidence move together. This prevents future maintainers from reading an advisory classification that no longer matches runtime behavior.
 
-**Independent Test**: Can be fully tested by comparing the intent classification for the three named keys with their status-evidence rule membership, checking every tracked workflow that has an adjacent state file, and verifying legacy coverage advisories remain nonblocking.
+**Independent Test**: Can be fully tested by comparing the intent classification for the three named keys with their status-evidence rule membership, checking every tracked authority-matched adjacent workflow/state pair, and verifying legacy coverage advisories remain nonblocking.
 
 **Acceptance Scenarios**:
 
 1. **Given** the three ART-017 problem keys, **When** maintainers inspect their intent records and rule membership, **Then** each key is classified as gated under status-evidence with a reason tied to current-run state integrity.
 2. **Given** any other advisory problem key, **When** the status-evidence gate runs, **Then** that key remains advisory unless separately authorized by another spec.
-3. **Given** a tracked workflow with an adjacent `autopilot-state.json`, **When** the tracked-pair corpus regression runs, **Then** the pair succeeds without synthesizing state for workflows that do not have an adjacent state file.
+3. **Given** a tracked workflow and a tracked same-directory `autopilot-state.json` whose repo-relative `workflow_file` names that workflow, **When** the tracked-pair corpus regression runs, **Then** the authority-matched pair succeeds without pairing the state to another workflow or synthesizing missing state.
 4. **Given** a reviewer opens the PR, **When** they follow the review packet, **Then** they can trace every requirement to changed files, generated artifact refreshes, and verification evidence.
 
 ### Edge Cases
 
 - A malformed state may contain more than one existing diagnostic key; the report still includes all diagnostics, while status-evidence authority changes only for the three ART-017 keys.
-- A tracked workflow without an adjacent `autopilot-state.json` is outside the pair corpus and must not receive silently synthesized state.
+- A tracked workflow is outside the pair corpus when it lacks a tracked same-directory `autopilot-state.json` whose repo-relative `workflow_file` names it; a nearby state naming another workflow must not be paired to it, and missing state must not be synthesized.
 - Legacy coverage advisories such as missing state-prefix or missing post-item coverage can still appear in the report, but they must not become blocking under status-evidence.
 - Final integration may occur after ART-008 lands; ART-017 remains independently developed and serializes only the final rebase, artifact regeneration, and verification boundary.
 - Existing consumers may depend on problem-key names and JSON report shape; ART-017 must preserve those contracts.
@@ -65,8 +65,8 @@
 - **FR-009**: [US1] Regression evidence MUST include one clean workflow/state builder and exactly three isolated mutations, one per ART-017 problem key.
 - **FR-010**: [US1] Each isolated mutation MUST prove that its target problem key alone makes the exact status-evidence gate fail while the other two ART-017 problem lists remain empty.
 - **FR-011**: [US1] The clean control MUST prove that a valid workflow/state pair succeeds under the same status-evidence gate.
-- **FR-012**: [US2] Regression evidence MUST cover every tracked workflow that has an adjacent `autopilot-state.json`.
-- **FR-013**: [US2] Workflows without adjacent state files MUST be excluded from the pair corpus rather than supplied with synthetic state.
+- **FR-012**: [US2] Regression evidence MUST cover every authority-matched adjacent pair where both the workflow and same-directory `autopilot-state.json` are tracked and the state's repo-relative `workflow_file` equals the workflow path.
+- **FR-013**: [US2] A workflow lacking an authority-matched adjacent tracked state MUST be excluded from the pair corpus; the system MUST NOT pair it with a state naming another workflow or synthesize state.
 - **FR-014**: [US2] The authored autopilot guidance MUST distinguish legacy coverage debt from the three blocking current-run state invariants in one source of truth.
 - **FR-015**: [US2] Generated mirrors, payloads, proofs, and reference outputs MUST be refreshed by repository tooling rather than hand-edited.
 - **FR-016**: [US2] The PR review packet MUST include scope budget, traceability, verification evidence, generated-artifact status, known gaps, and final integration notes.
@@ -97,7 +97,7 @@
 
 - **State Diagnostic Key**: A named problem list emitted by state validation. ART-017 changes blocking authority only for `in_progress_errors`, `duplicate_state_steps`, and `state_order_errors`.
 - **Rule Intent Record**: The maintained classification that explains whether a diagnostic key is advisory or gated and why.
-- **Workflow/State Pair**: A tracked workflow file and its adjacent `autopilot-state.json` used as real corpus evidence for the status-evidence gate.
+- **Workflow/State Pair**: A tracked workflow and tracked same-directory `autopilot-state.json` used as real corpus evidence only when the state's repo-relative `workflow_file` names that workflow exactly.
 - **Review Packet**: The PR-facing evidence bundle that lets reviewers trace requirements to changed files, generated outputs, and verification commands.
 
 ## Success Criteria *(mandatory)*
@@ -108,7 +108,7 @@
 - **SC-002**: 3 of 3 ART-017 intent records are classified as gated with reasons tied to current-run state integrity.
 - **SC-003**: 3 of 3 isolated negative controls fail the exact status-evidence gate with only their target ART-017 problem list populated among the three new keys.
 - **SC-004**: 1 clean workflow/state control succeeds under the same status-evidence gate.
-- **SC-005**: 100% of tracked workflows with adjacent state files succeed in the tracked-pair corpus regression.
+- **SC-005**: 100% of tracked authority-matched adjacent workflow/state pairs succeed in the corpus regression, with zero directory-only mismatches or synthesized states included.
 - **SC-006**: Legacy coverage advisories remain nonblocking under status-evidence in at least one explicit regression case.
 - **SC-007**: The diagnostic report keeps the same top-level shape and existing problem-key names before and after the ART-017 behavior change.
 - **SC-008**: The PR evidence bundle lists targeted checks, generated-artifact refreshes, and the full repository verification command needed before ready or merge.

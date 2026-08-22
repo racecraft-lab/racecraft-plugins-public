@@ -33,8 +33,8 @@ failure shape, and ART-008 integration ordering.
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 2 user stories, 16 FRs, 8 acceptance scenarios, 8 success criteria; G1 passed |
-| Clarify | `/speckit-clarify` | 🔄 In Progress | Session 1 active; three settled-decision verification sessions planned |
-| Plan | `/speckit-plan` | ⏳ Pending | |
+| Clarify | `/speckit-clarify` | ✅ Complete | Three sessions complete; one corpus-identity ambiguity resolved by 2/2 consensus; G2 passed with 0 markers |
+| Plan | `/speckit-plan` | 🔄 In Progress | Plan executor active after G2 |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
@@ -298,9 +298,15 @@ new ambiguity or contradiction appears.
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | | | |
-| 2 | | | |
-| 3 | | | |
+| 1 | Rule authority and failure contract | 0 | No edits required: `status-evidence`, atomic rule/intent changes, advisory legacy coverage, and full-report preservation are already explicit. Consensus skipped because unresolved count was zero. |
+| 2 | Negative controls and corpus evidence | 1 | Applied Round-1 2/2 consensus: a tracked pair requires a tracked same-directory state whose repo-relative `workflow_file` names the workflow; directory-only mismatches and synthesized states are excluded. |
+| 3 | Integration and generated artifacts | 0 | No edits required: the authored-source boundary, tooling-owned derived outputs, ART-008 independence, and latest-main rebase/regeneration/full-suite proof are already explicit. Consensus skipped because unresolved count was zero. |
+
+### Consensus Resolution Log
+
+| # | Type | Question/Gap/Finding | Categories | Round | Outcome | Resolution | Analysts Used |
+|---|------|----------------------|------------|-------|---------|------------|---------------|
+| 1 | Clarify | What makes a tracked workflow/state corpus pair valid? | [codebase, spec] | 1 | both-agree | Require tracked same-directory adjacency plus exact repo-relative `workflow_file` authority matching; exclude mismatches and synthetic states. | codebase-analyst, spec-context-analyst |
 
 ---
 
