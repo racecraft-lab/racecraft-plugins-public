@@ -647,7 +647,7 @@ production routing, live qualification, or cross-platform reconciliation.
 | Post: Reviewability Diff Gate | ✅ Complete (WARN) | 584 reviewable authored LOC, 0 production files, 20 implementation/remediation files; above the 400-LOC and 15-file warnings but below the 25-file block, so no split |
 | Post: Self-Review | ✅ Complete | Four-question audit found no edge-case, traceability, tidiness, or silent-deferral defect |
 | Post: UAT Runbook Generation | ✅ Complete | Manual source-derived runbook committed after browser and behavioral UAT; one unsafe dynamic-title finding was remediated and retested |
-| Post: Final Reviewability Backstop | ✅ Complete (WARN) | Deferred helper honored via current committed evidence at `762828118`; LOC and file-count warnings remain below the block, with no correctness blocker |
+| Post: Final Reviewability Backstop | ✅ Complete (WARN) | Deferred helper honored via current committed evidence at `91012212c`; LOC and file-count warnings remain below the block, with no correctness blocker |
 | Post: PR Packet/Body Generation | ✅ Complete | `pr-packet-output` dry-run/apply succeeded; read-only and persisted validation passed with `pr_blocked: false` |
 | Post: PR Body Generation | ✅ Complete | Packet-owned implementation-era body generated with current verification, UAT, scope, non-goals, and known gaps |
 | Post: PR Creation | ✅ Complete | Existing draft PR [#487](https://github.com/racecraft-lab/racecraft-plugins-public/pull/487) updated from validated packet fields at head `656852e5a` |

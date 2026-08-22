@@ -500,7 +500,7 @@
         "mode": "committed_fallback_evidence",
         "helper_id": "final-reviewability-backstop",
         "helper_status": "deferred",
-        "evidence_commit": "762828118",
+        "evidence_commit": "91012212c",
         "reviewable_loc": 584,
         "production_files": 0,
         "total_files": 20,
@@ -537,6 +537,7 @@
         "live_reviews": 1,
         "live_threads": 2,
         "live_comments": 2,
+        "live_findings_remediated": 2,
         "ci_status_at_inspection": "in_progress",
         "reopen_on_final_head_failure": true
       },

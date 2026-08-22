@@ -10,7 +10,8 @@ Adds deterministic Codex-local evidence for model availability fallback, service
 
 <!-- speckit-pro-editable:what_changed:start -->
 - Added closed schemas, a reviewed source-roster-bound scenario corpus, a pure resolver, reroute attribution/scoring, fake-home recovery, and bounded sequential execution.
-- Added 33 focused feature tests and repository suite registration.
+- Added 35 focused feature tests and repository suite registration.
+- Bound nested recovery records to their closed schema and made shared policy fixtures supply every required neutral section.
 - Added safe static document-title fill slots to the four draft-stage templates and updated both Claude and Codex artifact authors to forbid repository-derived title scripts.
 - Recorded manual browser and behavioral UAT, regenerated the four G56R-005 pages, shipped payloads, references, and spec index.
 <!-- speckit-pro-editable:what_changed:end -->
@@ -24,6 +25,7 @@ G56R-006 can build production routing against deterministic fail-closed evidence
 ## How To Review
 
 - Review the route-policy and report schemas, corpus, resolver, and focused tests.
+- Confirm the report's closed recovery-record reference and the schema-shaped policy fixture defaults.
 - Review the document-title fill-region regression and Claude/Codex artifact-author rules.
 - Open the four generated HTML artifacts and inspect the manual UAT runbook.
 - Confirm the generated payload, reference, spec-index, and release-consistency evidence.
@@ -40,7 +42,7 @@ Follow specs/g56r-005-model-availability-fallback-recovery/.process/uat-runbook.
 
 - Manual browser and deterministic behavioral UAT passed after UAT-001 remediation; zero findings remain open.
 - Static-title fill-region contract passed 90/90; artifact gallery validation passed 587/587.
-- Focused G56R-005 fallback-recovery suite passed 33/33.
+- Focused G56R-005 fallback-recovery suite passed 35/35 after all review remediation.
 - Full deterministic suite passed 7663/7663: L1 1469, L4 6002, L5 192.
 - Docs reference, spec index, release-artifact consistency, and git diff checks pass.
 

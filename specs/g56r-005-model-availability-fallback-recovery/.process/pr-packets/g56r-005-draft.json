@@ -42,7 +42,7 @@
       "why_it_matters"
     ],
     "normalization": "LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
-    "value": "83bfccdc7cf65d97df9b275863af4db6c0b97596a10d02c7012b2b19f1415e21"
+    "value": "25f480efa7863d9701b0b2ae9faeadbba84c499a8efd6f7d0e41c634c5988dc9"
   },
   "required_headings": [
     "Summary",
@@ -146,7 +146,7 @@
       "No general artifact-gallery redesign beyond the safe static-title contract."
     ],
     "production_files": 0,
-    "reviewable_loc": 525,
+    "reviewable_loc": 584,
     "total_files": 80
   },
   "source_feature_dir": "specs/g56r-005-model-availability-fallback-recovery",
@@ -184,7 +184,7 @@
       "kind": "verification",
       "result": "pass",
       "source": "validation",
-      "summary": "Focused G56R-005 fallback-recovery suite passed 33/33."
+      "summary": "Focused G56R-005 fallback-recovery suite passed 35/35 after all review remediation."
     },
     {
       "kind": "verification",
