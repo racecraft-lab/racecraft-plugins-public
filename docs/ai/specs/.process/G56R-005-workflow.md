@@ -650,7 +650,7 @@ production routing, live qualification, or cross-platform reconciliation.
 | Post: Final Reviewability Backstop | ✅ Complete (WARN) | Deferred helper honored via current committed reviewability evidence at `34551bdc7`; verified size-only warning, no correctness block |
 | Post: PR Packet/Body Generation | ✅ Complete | `pr-packet-output` dry-run/apply succeeded; read-only and persisted validation passed with `pr_blocked: false` |
 | Post: PR Body Generation | ✅ Complete | Packet-owned implementation-era body generated with current verification, UAT, scope, non-goals, and known gaps |
-| Post: PR Creation | ⏳ Pending | |
+| Post: PR Creation | ✅ Complete | Existing draft PR [#487](https://github.com/racecraft-lab/racecraft-plugins-public/pull/487) updated from validated packet fields at head `656852e5a` |
 | Post: Review Remediation | ⏳ Pending | |
 | Post: Retrospective | ⏳ Pending | |
 
