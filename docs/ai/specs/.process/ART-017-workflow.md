@@ -88,7 +88,7 @@ Each phase requires **human review and approval** before proceeding:
 | Worktree binding | Dedicated registered worktree at `.worktrees/art-017-state-bookkeeping-checks`; branch matches `art-017-state-bookkeeping-checks` |
 | Archive Sweep | `no_candidates`; BRAND-001 is pending and ART-017 was excluded as the current target; cleanup disabled |
 | Stage | `plan` — explicit `--stage plan` |
-| Draft PR corroboration | `no_record` |
+| Draft PR corroboration | `match` — draft PR #490 is open for the bound branch |
 | Confidence mode | `advisory` (default; no local override) |
 | Consensus / gate / commit settings | `moderate` / `stop` / `per-phase` defaults |
 | Project commands | UNIT_TEST and FULL_VERIFY: `python3 tests/speckit-pro/run-all.py`; all other discovered command slots N/A |
@@ -112,6 +112,7 @@ Each phase requires **human review and approval** before proceeding:
 | **Enables** | Honest state bookkeeping under the invocation the autopilot already issues |
 | **Priority** | P3 |
 | **Stage** | plan |
+| **Draft PR** | [#490](https://github.com/racecraft-lab/racecraft-plugins-public/pull/490) |
 | **Roadmap tools** | None declared |
 
 ### Reviewability Budget And Split Decision
