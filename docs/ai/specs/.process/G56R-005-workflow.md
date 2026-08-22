@@ -29,9 +29,9 @@ autonomous phase loop.
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 4 stories, 22 requirements, 26 acceptance scenarios; G1 passed |
-| Clarify | `/speckit-clarify` | 🔄 In Progress | Resolution Contract session is next |
+| Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions resolved; G2 passed |
 | Plan | `/speckit-plan` | ✅ Complete | 5 artifacts; G3 and reviewability estimator passed |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Error handling, state management, and data integrity |
+| Checklist | `/speckit-checklist` | ✅ Complete | Error handling, state management, and data integrity checklists; no gaps |
 | Tasks | `/speckit-tasks` | ⏳ Pending | Vertical, TDD-first, dependency-ordered tasks |
 | Analyze | `/speckit-analyze` | ⏳ Pending | Require full traceability and no critical findings |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-implementation composite confidence |
@@ -444,12 +444,16 @@ Focus on G56R-005 requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| error-handling | Pending | Pending | Pending |
-| state-management | Pending | Pending | Pending |
-| data-integrity | Pending | Pending | Pending |
-| **Total** | Pending | Pending | Pending |
+| error-handling | 11 | 0 | FR-003, FR-007, FR-010, FR-012, FR-013, FR-016, FR-017 |
+| state-management | 11 | 0 | FR-015, FR-016, FR-017, FR-018 |
+| data-integrity | 11 | 0 | FR-001, FR-006, FR-008, FR-009, FR-011, FR-018, FR-022 |
+| **Total** | 33 | 0 | All gaps resolved or absent |
 
 Every genuine `[Gap]` must update `spec.md` or `plan.md`, then be rechecked.
+
+All three checklist domains reported zero unresolved-for-consensus items, so
+their mandatory consensus steps were skipped with evidence rather than
+dispatched.
 
 ---
 
