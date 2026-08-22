@@ -32,7 +32,7 @@ autonomous phase loop.
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions resolved; G2 passed |
 | Plan | `/speckit-plan` | ✅ Complete | 5 artifacts; G3 and reviewability estimator passed |
 | Checklist | `/speckit-checklist` | ✅ Complete | Error handling, state management, and data integrity checklists; no gaps |
-| Tasks | `/speckit-tasks` | ⏳ Pending | Vertical, TDD-first, dependency-ordered tasks |
+| Tasks | `/speckit-tasks` | ✅ Complete | 25 vertical TDD-first tasks; G5 passed |
 | Analyze | `/speckit-analyze` | ⏳ Pending | Require full traceability and no critical findings |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-implementation composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | Not run by the planning handoff |
@@ -481,10 +481,10 @@ dispatched.
 
 | Metric | Value |
 |--------|-------|
-| Total Tasks | Pending |
-| Phases | Pending |
-| Parallel Opportunities | Pending |
-| User Stories Covered | Target: 4 |
+| Total Tasks | 25 |
+| Phases | 6 |
+| Parallel Opportunities | 3 documented groups |
+| User Stories Covered | 4/4 |
 
 ---
 
