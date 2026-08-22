@@ -82,7 +82,7 @@
 
 ### T021
 
-**Deviations/Edge cases/Surprises:** Focused verification passed 32/32 tests.
+**Deviations/Edge cases/Surprises:** Focused verification passed 33/33 tests after the Post review contract remediation.
 
 ### T022
 
@@ -94,7 +94,7 @@
 
 ### T024
 
-**Deviations/Edge cases/Surprises:** Spec-index regeneration changed only the feature SPEC-MOC and recheck passed. Docs references generated 7 pages and `reference:check` passed. The release-artifact check correctly remains pending until the expected generated docs reference is committed because the checker rejects any dirty generated path before isolated regeneration.
+**Deviations/Edge cases/Surprises:** Spec-index regeneration changed only the feature SPEC-MOC and recheck passed. Docs references generated 7 pages and `reference:check` passed. After checkpointing the expected generated docs page, isolated release-artifact regeneration passed and proved payload, version, marketplace, and release evidence remained current.
 
 ### T025 — PR Packet Evidence
 
@@ -102,6 +102,20 @@
 - **Why:** Freeze deterministic G56R-005 evidence before any G56R-006 production routing or installer wiring.
 - **Non-goals:** No production routing, real-home install, live model/service qualification, payload/version/release change, checkpoint/resume change, shared resolver extraction, or Claude/G56R-004 behavior edit.
 - **Review order:** Schemas → corpus/roster → `codex_route_fallback.py` → focused tests → suite manifest → generated docs/spec index.
-- **Traceability:** Corpus `traceability` covers all 22 FRs and 9 SCs; focused verification passed 32/32.
+- **Traceability:** Corpus `traceability` covers all 22 FRs and 9 SCs; focused verification passed 33/33 after review remediation.
 - **Verification:** Layer 4 5998/5998; full deterministic suite 7659/7659; docs reference and spec-index checks pass. Live model/service smoke was not run by design.
 - **Rollback:** Remove the new simulation files and focused-test registration, then regenerate the docs reference and spec index.
+
+### Post Review Remediation
+
+**Finding:** Independent review found that the route-policy schema constrained
+`declaration_source` to `local` while the resolver intentionally rejects four
+non-local declaration sources.
+
+**RED:** Added `test_route_policy_declares_every_supported_declaration_source`;
+the focused suite failed with `KeyError: 'enum'` (32 pass, 1 error).
+
+**GREEN:** Replaced the single-value contract with the closed five-value enum
+`local`, `inherited_model`, `inherited_effort`, `generic_substitution`, and
+`unqualified_adjacent`. Focused verification passed 33/33 and the final full
+suite passed 7659/7659.

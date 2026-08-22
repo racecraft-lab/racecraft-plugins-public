@@ -42,7 +42,7 @@
 - [X] T021 Run `tests/speckit-pro/unit/test-codex-route-fallback-recovery.py` and preserve passing output for PR evidence.
 - [X] T022 Run Layer 4 through `tests/speckit-pro/run-all.py` and preserve deterministic harness evidence.
 - [X] T023 Run the full suite through `tests/speckit-pro/run-all.py` and preserve the result.
-- [ ] T024 Run generated-artifact, docs-reference, spec-index, and scope checks for `tests/speckit-pro/suite-manifest.json` and all changed test-surface files, including `pnpm --dir docs-site reference:generate`/`reference:check` when the tracked `tests/speckit-pro/` change contract applies and `python3 scripts/refresh-release-artifacts.py --check` to prove payload/release artifacts remain unchanged (FR-020, SC-009).
+- [X] T024 Run generated-artifact, docs-reference, spec-index, and scope checks for `tests/speckit-pro/suite-manifest.json` and all changed test-surface files, including `pnpm --dir docs-site reference:generate`/`reference:check` when the tracked `tests/speckit-pro/` change contract applies and `python3 scripts/refresh-release-artifacts.py --check` to prove payload/release artifacts remain unchanged (FR-020, SC-009).
 - [X] T025 Prepare the PR packet from `specs/g56r-005-model-availability-fallback-recovery/plan.md` with non-goals, review order, traceability, verification, rollback, explicit live-smoke-unrun evidence, and proof that production routing, payload/version/release artifacts, checkpoint/resume behavior, and frozen Claude/G56R-004 contracts were not modified (FR-019, FR-020, SC-008, SC-009).
 
 ## Dependencies & Execution Order

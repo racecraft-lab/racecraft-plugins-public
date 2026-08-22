@@ -5,8 +5,8 @@
   "branch": "g56r-005-model-availability-fallback-recovery",
   "status": "in_progress",
   "stage": "implement",
-  "updated_at": "2026-08-22T18:06:14Z",
-  "active_step": "Phase 7: Implement - Review Evidence and Verification (T020-T025)",
+  "updated_at": "2026-08-22T19:40:38Z",
+  "active_step": "Post: Final Reviewability Backstop",
   "settings": {
     "consensus_mode": "moderate",
     "gate_failure": "stop",
@@ -394,9 +394,9 @@
       "iteration_count": 0
     },
     "implement": {
-      "status": "in_progress",
-      "current_group": "review_evidence_verification",
-      "completed_tasks": ["T001", "T002", "T003", "T004", "T005", "T006", "T007", "T008", "T009", "T010", "T011", "T012", "T013", "T014", "T015", "T016", "T017", "T018", "T019", "T020", "T021", "T022", "T023", "T025"],
+      "status": "completed",
+      "current_group": null,
+      "completed_tasks": ["T001", "T002", "T003", "T004", "T005", "T006", "T007", "T008", "T009", "T010", "T011", "T012", "T013", "T014", "T015", "T016", "T017", "T018", "T019", "T020", "T021", "T022", "T023", "T024", "T025"],
       "task_results": [
         {"task": "T001", "status": "completed", "verification": "three schemas parse; git diff --check"},
         {"task": "T002", "status": "completed", "verification": "11 roster rows, 32 scenarios, 22 cases"},
@@ -418,11 +418,79 @@
         {"task": "T018", "status": "completed", "verification": "bounded sequential harness GREEN"},
         {"task": "T019", "status": "completed", "verification": "canonical output host-data exclusion GREEN"},
         {"task": "T020", "status": "completed", "verification": "all 22 FR and 9 SC traceability rows present"},
-        {"task": "T021", "status": "completed", "verification": "focused 32/32"},
+        {"task": "T021", "status": "completed", "verification": "focused 33/33 after review remediation"},
         {"task": "T022", "status": "completed", "verification": "Layer 4 5998/5998"},
         {"task": "T023", "status": "completed", "verification": "full suite 7659/7659"},
+        {"task": "T024", "status": "completed", "verification": "spec index, docs reference, scope, and release artifacts current"},
         {"task": "T025", "status": "completed", "verification": "PR packet evidence recorded; live smoke unrun"}
       ]
+    },
+    "post_implementation": {
+      "doctor": {
+        "status": "completed",
+        "pass": 3,
+        "warn": 2,
+        "fail": 0,
+        "blocking": false
+      },
+      "verify_implementation": {
+        "status": "completed",
+        "functional_requirements": "22/22",
+        "success_criteria": "8/9 verified; SC-008 pending scheduled packet refresh",
+        "critical": 0,
+        "high": 0
+      },
+      "verify_tasks": {
+        "status": "completed",
+        "verified": 24,
+        "partial": 1,
+        "partial_task": "T025 pending scheduled packet refresh"
+      },
+      "code_review": {
+        "status": "completed",
+        "important_findings": 1,
+        "nits": 0,
+        "remediation": "declaration_source closed enum added after focused RED",
+        "focused_verification": "33/33"
+      },
+      "integration_suite": {
+        "status": "completed",
+        "passed": 7659,
+        "total": 7659,
+        "layers": {
+          "L1": "1469/1469",
+          "L4": "5998/5998",
+          "L5": "192/192"
+        },
+        "environment_note": "Authoritative exact-worktree-permitted run; sandbox-denied fixture run superseded."
+      },
+      "reviewability_diff_gate": {
+        "status": "warn",
+        "reviewable_loc": 471,
+        "production_files": 0,
+        "total_files": 13,
+        "primary_surfaces": ["deterministic fallback simulation"],
+        "warnings": ["reviewable LOC exceeds 400 warning threshold"],
+        "blockers": [],
+        "split_decision": "one cohesive slice; contracts, runtime, and deterministic proof remain together"
+      },
+      "self_review": {
+        "status": "completed",
+        "tests": "focused 33/33; full suite 7659/7659; generated-artifact checks pass",
+        "edge_case_gaps": 0,
+        "requirements": "FR-001 through FR-022 mapped; SC-001 through SC-009 traced",
+        "tidiness_findings": 0,
+        "known_gaps": [
+          "TODO-CODEX-WORKTREE-BINDING",
+          "live reroute smoke intentionally unrun"
+        ]
+      },
+      "uat_runbook": {
+        "status": "skipped",
+        "helper_id": "generate-uat-skeleton",
+        "reason": "runner operation is deferred and no committed source-derived skeleton exists",
+        "fail_open": true
+      }
     }
   },
   "plan": [
@@ -451,16 +519,16 @@
     {"step": "Phase 7: Implement - Service Reroute Attribution (T008-T011)", "status": "completed"},
     {"step": "Phase 7: Implement - Fake-Home Recovery and Optional Helper (T012-T016)", "status": "completed"},
     {"step": "Phase 7: Implement - Bounded Sequential Harness (T017-T019)", "status": "completed"},
-    {"step": "Phase 7: Implement - Review Evidence and Verification (T020-T025)", "status": "in_progress"},
-    {"step": "Post: Doctor Extension Check", "status": "pending"},
-    {"step": "Post: Verify Implementation", "status": "pending"},
-    {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
-    {"step": "Post: Code Review", "status": "pending"},
-    {"step": "Post: Integration Suite", "status": "pending"},
-    {"step": "Post: Reviewability Diff Gate", "status": "pending"},
-    {"step": "Post: Self-Review", "status": "pending"},
-    {"step": "Post: UAT Runbook Generation", "status": "pending"},
-    {"step": "Post: Final Reviewability Backstop", "status": "pending"},
+    {"step": "Phase 7: Implement - Review Evidence and Verification (T020-T025)", "status": "completed"},
+    {"step": "Post: Doctor Extension Check", "status": "completed"},
+    {"step": "Post: Verify Implementation", "status": "completed"},
+    {"step": "Post: Verify Tasks Phantom Check", "status": "completed"},
+    {"step": "Post: Code Review", "status": "completed"},
+    {"step": "Post: Integration Suite", "status": "completed"},
+    {"step": "Post: Reviewability Diff Gate", "status": "completed"},
+    {"step": "Post: Self-Review", "status": "completed"},
+    {"step": "Post: UAT Runbook Generation", "status": "skipped: deferred helper; no committed skeleton"},
+    {"step": "Post: Final Reviewability Backstop", "status": "in_progress"},
     {"step": "Post: PR Packet/Body Generation", "status": "pending"},
     {"step": "Post: PR Body Generation", "status": "pending"},
     {"step": "Post: PR Creation", "status": "pending"},

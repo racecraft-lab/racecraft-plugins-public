@@ -100,7 +100,15 @@
         "availability_probe": {"$ref": "#/$defs/probe"},
         "treatment_probe": {"$ref": "#/$defs/probe"},
         "non_route_treatment_digest": {"$ref": "#/$defs/digest"},
-        "declaration_source": {"const": "local"}
+        "declaration_source": {
+          "enum": [
+            "local",
+            "inherited_model",
+            "inherited_effort",
+            "generic_substitution",
+            "unqualified_adjacent"
+          ]
+        }
       }
     },
     "serviceReroute": {

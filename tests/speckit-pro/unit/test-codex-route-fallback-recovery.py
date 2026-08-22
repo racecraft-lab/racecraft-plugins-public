@@ -94,6 +94,20 @@ class ContractAndCorpusTests(unittest.TestCase):
                 self.assertEqual(document["properties"]["schema_version"]["const"], "1.0.0")
                 self.assertFalse(document["additionalProperties"])
 
+    def test_route_policy_declares_every_supported_declaration_source(self) -> None:
+        document = load_json(CONTRACT_ROOT / "route-policy.schema.json")
+        declaration_source = document["$defs"]["routeCandidate"]["properties"]["declaration_source"]
+        self.assertEqual(
+            declaration_source["enum"],
+            [
+                "local",
+                "inherited_model",
+                "inherited_effort",
+                "generic_substitution",
+                "unqualified_adjacent",
+            ],
+        )
+
     def test_fixture_covers_every_declared_required_scenario(self) -> None:
         corpus = load_json(CORPUS_PATH)
         covered = {scenario for case in corpus["cases"] for scenario in case["covers"]}

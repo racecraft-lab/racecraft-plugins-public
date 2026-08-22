@@ -35,7 +35,7 @@ autonomous phase loop.
 | Tasks | `/speckit-tasks` | ✅ Complete | 25 vertical TDD-first tasks; G5 passed |
 | Analyze | `/speckit-analyze` | ✅ Complete | 4 findings remediated (0C/1H/3M); G6 passed with no unresolved findings |
 | Confidence Gate | G6.5 | ✅ Complete | PASS: 0.99 ≥ 0.90 in advisory mode |
-| Implement | `/speckit-implement` | 🔄 In Progress | T001-T019 complete; review evidence and verification T020-T025 in progress |
+| Implement | `/speckit-implement` | ✅ Complete | T001-T025 complete; focused 33/33 after review remediation, Layer 4 5998/5998, full suite 7659/7659, generated checks current |
 | Post | Post-Implementation | ⏳ Pending | Not run by the `stage=plan` handoff |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -631,7 +631,7 @@ production routing, live qualification, or cross-platform reconciliation.
 | Shared contract foundation | T001-T004 | 4/4 | Schemas, roster-bound corpus, RED tests, and Layer 4 registration complete |
 | Resolver and reroute stories | T005-T011 | 7/7 | Deterministic route resolution, attribution, scoring, and treatment digest complete |
 | Recovery and bounds stories | T012-T019 | 8/8 | Fake-home recovery and bounded sequential harness complete |
-| Cross-cutting verification | T020-T025 | 5/6 | Traceability, focused, Layer 4, full suite, and PR packet evidence complete; generated-artifact final check pending |
+| Cross-cutting verification | T020-T025 | 6/6 | Traceability, focused, full suite, generated artifacts, scope, and PR packet evidence complete |
 
 ---
 
@@ -639,20 +639,71 @@ production routing, live qualification, or cross-platform reconciliation.
 
 | Canonical Item | Status | Evidence |
 |---|---|---|
-| Post: Doctor Extension Check | ⏳ Pending | |
-| Post: Verify Implementation | ⏳ Pending | |
-| Post: Verify Tasks Phantom Check | ⏳ Pending | |
-| Post: Code Review | ⏳ Pending | |
-| Post: Integration Suite | ⏳ Pending | |
-| Post: Reviewability Diff Gate | ⏳ Pending | |
-| Post: Self-Review | ⏳ Pending | |
-| Post: UAT Runbook Generation | ⏳ Pending | |
+| Post: Doctor Extension Check | ✅ Complete | 3 PASS, 2 non-blocking WARN, 0 FAIL; templates and runner are healthy |
+| Post: Verify Implementation | ✅ Complete | 22/22 FRs and 8/9 SCs verified; SC-008 awaits the scheduled packet refresh |
+| Post: Verify Tasks Phantom Check | ✅ Complete | 24 verified, T025 partial only because the plan-stage packet is intentionally stale until Post emission |
+| Post: Code Review | ✅ Complete | One important declaration-source schema mismatch found and remediated RED→GREEN; 33/33 focused tests pass |
+| Post: Integration Suite | ✅ Complete | Authoritative exact-worktree run passed 7659/7659: L1 1469, L4 5998, L5 192 |
+| Post: Reviewability Diff Gate | ✅ Complete (WARN) | 471 reviewable runtime LOC, 0 production files, 13 implementation-delta files, one cohesive simulation surface; above the 400-LOC warning but below file-count limits, so no split |
+| Post: Self-Review | ✅ Complete | Four-question audit found no edge-case, traceability, tidiness, or silent-deferral defect |
+| Post: UAT Runbook Generation | ⏭️ Skipped | `generate-uat-skeleton` is deferred and no committed source-derived skeleton exists; fail-open by contract |
 | Post: Final Reviewability Backstop | ⏳ Pending | |
 | Post: PR Packet/Body Generation | ⏳ Pending | |
 | Post: PR Body Generation | ⏳ Pending | |
 | Post: PR Creation | ⏳ Pending | |
 | Post: Review Remediation | ⏳ Pending | |
 | Post: Retrospective | ⏳ Pending | |
+
+### Parallel Post-Implementation Evidence
+
+- **Doctor:** templates 5/5, Python runner PASS, feature discovery PASS;
+  missing command registration and constitution were non-blocking repository
+  warnings.
+- **Verify chain:** all 25 completed task rows reference existing files; all 22
+  FRs and all 9 SCs have traceability evidence. T025/SC-008 remains partial
+  only until the mandatory implementation-era PR packet refresh below.
+- **Independent review:** the route-policy schema allowed only `local` even
+  though the fail-closed resolver intentionally handles four non-local
+  declaration sources. A new focused test first failed, the schema was expanded
+  to the closed five-value enum, and the focused suite passed 33/33.
+- **Integration:** the final authoritative suite passed 7659/7659. Earlier
+  unprivileged cross-worktree fixture failures were sandbox artifacts and are
+  superseded by the exact-worktree-permitted run.
+
+### Reviewability Diff Gate
+
+Status: **WARN**. The implementation delta contains 13 files, including six
+generated/process bookkeeping surfaces, four contracts/fixtures, one focused
+test, one manifest registration, and one 471-line deterministic simulation
+runtime. It changes zero production files and remains one cohesive review
+surface. The runtime exceeds the 400-LOC warning threshold, but total files are
+below the 15-file warning and 25-file block thresholds. Splitting contracts,
+runtime, and their deterministic proof would make either slice unverifiable, so
+the one-slice plan remains current.
+
+### Self-Review (auto-generated)
+
+**Tests executed:** The repository has no separate build, typecheck, or lint
+command for this test-only Python surface. Focused verification passed 33/33;
+the full deterministic suite passed 7659/7659; docs reference, spec-index, and
+release-artifact consistency checks pass.
+
+**Edge cases:** The 32-row required-scenario corpus and focused tests cover
+absence, unsupported effort, unavailable discovery, probe/treatment failure,
+exhaustion, strict override, reroute attribution, optional-helper loss,
+fake-home traversal/symlink/write/rollback/cleanup failures, cancellation,
+bounded retry, fan-out, HITL, and recursion. No `[edge-case-gap]` markers.
+
+**Requirements matched:** Every `FR-001` through `FR-022` appears in both
+`spec.md` and a completed task; the corpus traceability table also maps all nine
+success criteria. No orphan requirement or completed task was found.
+
+**Follow-up & tidiness:** No TODO, FIXME, debug logging, breakpoint, temporary
+fixture, or orphaned implementation file was found. The separate Codex task
+worktree-binding bug is explicitly tracked as `TODO-CODEX-WORKTREE-BINDING` in
+autopilot state and will be included as a known gap in the PR packet; it is out
+of scope for G56R-005 feature behavior. Live reroute smoke remains intentionally
+unrun because this spec makes no live availability claim.
 
 - [ ] Every task is complete or explicitly skipped with rationale.
 - [ ] Focused unit tests pass.
