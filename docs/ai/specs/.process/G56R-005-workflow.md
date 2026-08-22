@@ -162,6 +162,7 @@ baseline of record.
 | **Enables** | G56R-006 capability-aware resolver, materializer, installer, and strict override |
 | **Priority** | P1 |
 | **Stage** | `plan` |
+| **Draft PR** | [#487](https://github.com/racecraft-lab/racecraft-plugins-public/pull/487) — Artifact gap: the whole draft-stage gallery set was not generated because `artifact-author` produced no readable outcome before the bounded wait expired |
 
 ### Reviewability Budget and Split Decision
 
