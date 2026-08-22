@@ -39,7 +39,7 @@ failure shape, and ART-008 integration ordering.
 | Tasks | `/speckit-tasks` | ✅ Complete | 31 tasks across five phases; 20/20 FR coverage; G5 passed |
 | Analyze | `/speckit-analyze` | ✅ Complete | 3 original findings plus 1 approved-refinement consistency finding remediated; 0 remain; G6 passed |
 | Confidence Gate | G6.5 | ✅ Complete | PASS: 0.99 composite ≥ 0.90 advisory threshold; proceed to plan-stage emission |
-| Implement | `/speckit-implement` | ✅ Complete | 31/31 tasks; G7 passed; focused 270/270 and full suite 7894/7894 |
+| Implement | `/speckit-implement` | ✅ Complete | 31/31 tasks; G7 passed; focused 272/272 and full suite 7896/7896 |
 | Post | Post-Implementation | 🔄 In Progress | Canonical 14-item closeout started |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -79,7 +79,7 @@ Each phase requires **human review and approval** before proceeding:
 | IV. Test Coverage Before Merge | Add one isolated negative control per armed key plus the tracked workflow/state-pair regression in the existing Layer 4 test | ✅ Verified baseline — full suite passed 7659/7659; new RED/GREEN evidence remains an implementation requirement |
 | VI. KISS, Simplicity & YAGNI | Add exactly three explicit rule members and three atomic verdict flips; do not redesign rule scoping or derive a new abstraction | ✅ Verified for planning — design-concept Non-goals preserve the three-key surgical boundary |
 
-**Constitution Check:** ✅ Verified — G0 passed 7659/7659 with toolchain preflight green. Final implementation verification passed 7894/7894 after the latest-main rebase and two-client regeneration. `detect-commands` found the Python-authoritative suite as UNIT_TEST/FULL_VERIFY; BUILD, TYPECHECK, LINT, and INTEGRATION_TEST are N/A. The committed setup reviewability result remains `warn`, `pass: true`, with no blockers.
+**Constitution Check:** ✅ Verified — G0 passed 7659/7659 with toolchain preflight green. Final implementation verification passed 7896/7896 after the latest-main rebase and two-client regeneration. `detect-commands` found the Python-authoritative suite as UNIT_TEST/FULL_VERIFY; BUILD, TYPECHECK, LINT, and INTEGRATION_TEST are N/A. The committed setup reviewability result remains `warn`, `pass: true`, with no blockers.
 
 ### Autopilot Runtime Record
 
@@ -672,14 +672,14 @@ Before starting any task:
 |-------|-------|-----------|-------|
 | 1 - Setup and guardrails | T001-T006 | 6/6 | Pre-edit 35/35 baseline; shared clean builder and source ownership frozen |
 | 2 - User Story 1 | T007-T015 | 9/9 | RED 135/138 proved the three missing authorities; GREEN and legacy/report regressions pass 172/172 |
-| 3 - User Story 2 | T016-T023 | 8/8 | Git-index corpus reconciles 69 candidates to 1 eligible pair and 68 exclusions; focused suite passes 270/270 |
-| 4 - Final integration | T024-T031 | 8/8 | Rebased on `847ada00f`; both client payloads current; docs references current; focused 270/270 and full suite 7894/7894 |
+| 3 - User Story 2 | T016-T023 | 8/8 | Git-index corpus reconciles 69 candidates to 1 eligible pair and 68 exclusions; focused suite passes 272/272 |
+| 4 - Final integration | T024-T031 | 8/8 | Rebased on `847ada00f`; both client payloads current; docs references current; focused 272/272 and full suite 7896/7896 |
 
 ### PR Review Packet Evidence
 
 - **Scope budget:** one slice; authored implementation is limited to the validator, both active client autopilot source skills, and the bookkeeping-guard test module. Independent review corrected the source count from three to four.
 - **Traceability:** 20/20 functional requirements map to completed or final-integration tasks in `tasks.md`.
-- **Current verification:** focused bookkeeping-guard suite passes 270/270 after the strict RED → GREEN sequence.
+- **Current verification:** focused bookkeeping-guard suite passes 272/272 after the strict RED → GREEN sequence.
 - **Client artifact status:** Claude Code and Codex payload/fixture pairs were regenerated separately; the validator digest matches across authored source and all four client copies, and `refresh-release-artifacts.py --check` exits 0.
 - **Known gaps:** no implementation gap; optional extension results, independent review, UAT handling, final packet validation, and review remediation remain Post work.
 - **Rollback and flags:** rollback is the atomic three-key tuple/verdict change; no new runtime flag or schema is introduced.
@@ -687,7 +687,7 @@ Before starting any task:
 
 **Final integration base:** `origin/main` = `847ada00f037d40957ab17e4ce54c60d9420c8e4`. ART-008 remains open as PR #464 and was not stacked; ART-017 rebased cleanly onto this base before regeneration.
 
-**Final review order:** authored rule/intent changes → isolated negative controls → tracked-pair corpus evidence → authored prose → Claude Code freshness → Codex freshness → final integration evidence. Same-HEAD verification: focused 270/270; full suite 7894/7894 (L1 1469, L4 6233, L5 192).
+**Final review order:** authored rule/intent changes → isolated negative controls → tracked-pair corpus evidence → authored prose → Claude Code freshness → Codex freshness → final integration evidence. Same-HEAD verification at `667f04c87`: focused 272/272; Codex structural 163/163; full suite 7896/7896 (L1 1469, L4 6235, L5 192).
 
 ---
 
@@ -699,30 +699,70 @@ The canonical closeout. Every row must reach Complete or an explicit
 | Canonical Item | Status | Evidence |
 |---|---|---|
 | Post: Doctor Extension Check | ✅ Complete | ART-017 healthy; one unrelated BRAND-001 missing-artifact warning |
-| Post: Verify Implementation | ⏳ Pending | |
-| Post: Verify Tasks Phantom Check | ⏳ Pending | |
-| Post: Code Review | 🔄 In Progress | Independent review found stale Codex guidance; TDD remediation is 272/272 GREEN, regeneration and re-review pending |
-| Post: Integration Suite | ⏳ Pending | |
-| Post: Reviewability Diff Gate | ⏳ Pending | |
-| Post: Self-Review | ⏳ Pending | |
-| Post: UAT Runbook Generation | ⏳ Pending | |
-| Post: Final Reviewability Backstop | ⏳ Pending | |
+| Post: Verify Implementation | ✅ Complete | Checked-in verify contract fallback passed all 20 FRs against the four authored files, generated evidence, and final focused/docs/release checks |
+| Post: Verify Tasks Phantom Check | ✅ Complete | Checked-in verify-tasks fallback found 31/31 complete, 20/20 FR coverage, all referenced surfaces present, and no phantom completion |
+| Post: Code Review | ✅ Complete | Independent review found stale Codex guidance; TDD remediation reached 272/272, generated outputs were refreshed, and re-review found no remaining issue |
+| Post: Integration Suite | ✅ Complete | Same-tree full suite passed 7896/7896 with toolchain preflight green |
+| Post: Reviewability Diff Gate | ✅ Complete | Actual authored nonblank diff is +502/-68 (570 gross, +434 net); size-only over-budget warning recorded, with generated/planning/gallery output excluded |
+| Post: Self-Review | ✅ Complete | 9 acceptance scenarios mapped; 20/20 FRs map to completed tasks and commits; same-task handoff TODO has an explicit landing branch |
+| Post: UAT Runbook Generation | ⏭️ Skipped | `generate-uat-skeleton` is deferred and no committed feature-local runbook exists |
+| Post: Final Reviewability Backstop | ⏭️ Skipped | Installed helper is deferred; size-only evidence is nonblocking and the one-navigable-PR route is preserved |
 | Post: PR Packet/Body Generation | ⏳ Pending | |
 | Post: PR Body Generation | ⏳ Pending | |
 | Post: PR Creation | ⏳ Pending | |
 | Post: Review Remediation | ⏳ Pending | |
 | Post: Retrospective | ⏳ Pending | |
 
-- [ ] All tasks marked complete in tasks.md
-- [ ] Targeted bookkeeping-guard unittest passes
-- [ ] Full suite passes: `python3 tests/speckit-pro/run-all.py`
-- [ ] Docs references regenerate and check clean
-- [ ] Release artifacts regenerate and artifact-consistency is clean
-- [ ] Linting: N/A — repository uses the Python-authoritative suite
-- [ ] Build: N/A — no separate build surface for this Python/Markdown repair
-- [ ] Manual verification complete
+- [x] All tasks marked complete in tasks.md
+- [x] Targeted bookkeeping-guard unittest passes: 272/272
+- [x] Full suite passes: 7896/7896 via `python3 tests/speckit-pro/run-all.py`
+- [x] Docs references regenerate and check clean
+- [x] Release artifacts regenerate and artifact-consistency is clean
+- [x] Linting: N/A — repository uses the Python-authoritative suite
+- [x] Build: N/A — no separate build surface for this Python/Markdown repair
+- [x] Manual acceptance cross-walk complete; UAT skeleton capability is deferred
 - [ ] PR created and reviewed
 - [ ] Merged to main branch
+
+### Self-Review
+
+1. **Tests executed?** At `2026-08-22T19:25:50Z`, the final same-tree run at
+   `667f04c87` passed 7896/7896 with toolchain preflight green (L1 1469, L4
+   6235, L5 192). The focused bookkeeping guard passed 272/272, the Codex
+   structural guard passed 163/163, release-artifact consistency passed, and
+   docs references were current. BUILD, TYPECHECK, LINT, and
+   INTEGRATION_TEST are N/A in the detected project command contract.
+2. **Edge cases?** The three isolated malformed-state cases are covered at
+   `test-autopilot-bookkeeping-guard.py:687`, `:701`, and `:714`; the clean
+   report-shape control at `:381`; legacy advisory debt at `:396`; exact
+   rule/intent consistency at `:1021-1086`; tracked, missing, mismatched,
+   untracked, non-adjacent, unreadable, and malformed state cases at
+   `:493-629`; and the full tracked-pair census at `:649`. Both client sources
+   are pinned by `:415`, and generated parity is covered by the full suite.
+   The reviewer-packet acceptance scenario is completed by the following Post
+   packet step, not by runtime code. No `[edge-case-gap]` remains.
+3. **Requirements matched?** The `tasks.md` coverage table maps FR-001 through
+   FR-020 to completed T001-T031. Runtime evidence is in `17e2b216f`, generated
+   client evidence in `a97ee9a3f`, implementation records in `9dffb9dae`,
+   cross-client review repair in `1d29456f9`, and the final size/provenance
+   repairs in `11e224bb4` and `667f04c87`. No orphan FR or completed task was
+   found.
+4. **Follow-up & tidiness?** The only planning marker is the explicit
+   same-task scaffold-to-autopilot follow-up below; its landing place is the
+   unmerged `fix-codex-same-task-autopilot` branch at `7ccc8a994`, to be rebased
+   or superseded outside ART-017. The authored diff contains no leftover debug
+   logging, commented-out implementation, temporary fixture, or orphaned file.
+
+### Reviewability Closeout
+
+- The four authored implementation files contain +502/-68 nonblank changed
+  lines (570 gross, +434 net). The dominant surface is the exhaustive existing
+  test module; generated payloads/proofs, planning records, and HTML artifacts
+  are excluded from this count.
+- This exceeds the setup estimate and is recorded as a size-only
+  `over_budget` warning. The installed final-backstop helper is deferred, there
+  is no correctness blocker or independent slice boundary, and the existing
+  one-navigable-PR route remains the least risky review shape.
 
 ---
 
@@ -730,7 +770,12 @@ The canonical closeout. Every row must reach Complete or an explicit
 
 ### What Worked Well
 
--
+- One shared clean fixture made the three RED controls independent and kept the
+  exact scoped invocation visible in every assertion.
+- Treating Claude Code and Codex guidance as separate authored sources caught a
+  real stale-client explanation before PR readiness.
+- Regenerating after the latest-main rebase, then checking from a committed
+  clean tree, preserved trustworthy two-client release evidence.
 
 ### Challenges Encountered
 
@@ -747,7 +792,10 @@ The canonical closeout. Every row must reach Complete or an explicit
 
 ### Patterns to Reuse
 
--
+- Keep rule membership, intent verdicts, isolated exit-code controls, and
+  corpus reconciliation in one atomic change.
+- Run client-source guidance regressions before generated-artifact refresh so a
+  stale supported client cannot be hidden by payload regeneration.
 
 ---
 

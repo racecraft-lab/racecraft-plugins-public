@@ -1,12 +1,12 @@
 {
   "schema_version": "1.0",
   "workflow_file": "docs/ai/specs/.process/ART-017-workflow.md",
-  "updated_at": "2026-08-22T18:48:23Z",
+  "updated_at": "2026-08-22T19:31:00Z",
   "stage": "implement",
   "stage_source": "argv",
   "stage_basis": "explicit --stage implement",
   "confidence_gate_mode": "advisory",
-  "active_step": "Post: Code Review",
+  "active_step": "Post: PR Packet/Body Generation",
   "archive_sweep": {
     "status": "no_candidates",
     "execution_path": "extension_contract",
@@ -88,6 +88,31 @@
     "signals": ["change-shape:modify-heavy"],
     "warnings": []
   },
+  "final_reviewability": {
+    "status": "over_budget",
+    "helper_status": "deferred",
+    "authored_nonblank_additions": 502,
+    "authored_nonblank_deletions": 68,
+    "authored_nonblank_gross": 570,
+    "authored_nonblank_net": 434,
+    "size_only": true,
+    "correctness_block": false,
+    "decision": "continue with one navigable PR; disclose test-dominant size to reviewers"
+  },
+  "final_verification": {
+    "head": "667f04c878a6c8ff4479bf04dc069f1a7e02ea81",
+    "origin_main": "847ada00f037d40957ab17e4ce54c60d9420c8e4",
+    "targeted": "272/272 passed",
+    "codex_structural": "163/163 passed",
+    "release_artifacts": "passed",
+    "docs_references": "passed",
+    "full_suite": "7896/7896 passed",
+    "layers": {"L1": "1469/1469", "L4": "6235/6235", "L5": "192/192"}
+  },
+  "uat_runbook": {
+    "status": "skipped",
+    "reason": "generate-uat-skeleton deferred; no committed feature-local runbook exists"
+  },
   "layer_plan": {
     "status": "skipped",
     "reason": "atomicity route is one-navigable-PR; planner runs only for split-PR"
@@ -133,15 +158,15 @@
     {"step": "Phase 7: Implement - US2 (T016-T023)", "status": "completed"},
     {"step": "Phase 7: Implement - Integration (T024-T031)", "status": "completed"},
     {"step": "Post: Doctor Extension Check", "status": "completed"},
-    {"step": "Post: Verify Implementation", "status": "pending"},
-    {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
-    {"step": "Post: Code Review", "status": "in_progress"},
-    {"step": "Post: Integration Suite", "status": "pending"},
-    {"step": "Post: Reviewability Diff Gate", "status": "pending"},
-    {"step": "Post: Self-Review", "status": "pending"},
-    {"step": "Post: UAT Runbook Generation", "status": "pending"},
-    {"step": "Post: Final Reviewability Backstop", "status": "pending"},
-    {"step": "Post: PR Packet/Body Generation", "status": "pending"},
+    {"step": "Post: Verify Implementation", "status": "completed"},
+    {"step": "Post: Verify Tasks Phantom Check", "status": "completed"},
+    {"step": "Post: Code Review", "status": "completed"},
+    {"step": "Post: Integration Suite", "status": "completed"},
+    {"step": "Post: Reviewability Diff Gate", "status": "completed"},
+    {"step": "Post: Self-Review", "status": "completed"},
+    {"step": "Post: UAT Runbook Generation", "status": "skipped"},
+    {"step": "Post: Final Reviewability Backstop", "status": "skipped"},
+    {"step": "Post: PR Packet/Body Generation", "status": "in_progress"},
     {"step": "Post: PR Body Generation", "status": "pending"},
     {"step": "Post: PR Creation", "status": "pending"},
     {"step": "Post: Review Remediation", "status": "pending"},
