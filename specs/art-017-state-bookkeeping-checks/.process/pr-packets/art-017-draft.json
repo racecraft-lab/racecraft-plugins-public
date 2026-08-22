@@ -42,7 +42,7 @@
       "why_it_matters"
     ],
     "normalization": "LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
-    "value": "e1687f34e85449c1fd46ee7c2afe9e9586355ae3b15e975e1323b73d844b049c"
+    "value": "3b2457e92132f1b1d72da2fd001c38895d1577498e8ed5c343f1928a5c8c0df1"
   },
   "required_headings": [
     "Summary",
@@ -74,6 +74,7 @@
       "speckit-pro/skills/speckit-autopilot/SKILL.md",
       "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
       "specs/art-017-state-bookkeeping-checks/.process/implementation-notes.md",
+      "specs/art-017-state-bookkeeping-checks/.process/uat-runbook.md",
       "specs/art-017-state-bookkeeping-checks/SPEC-MOC.md",
       "specs/art-017-state-bookkeeping-checks/artifacts/code-approaches.html",
       "specs/art-017-state-bookkeeping-checks/artifacts/implementation-plan.html",
@@ -114,7 +115,7 @@
     ],
     "production_files": 4,
     "reviewable_loc": 570,
-    "total_files": 48
+    "total_files": 49
   },
   "source_feature_dir": "specs/art-017-state-bookkeeping-checks",
   "source_markers": [
@@ -129,9 +130,9 @@
     "head_branch": "art-017-state-bookkeeping-checks"
   },
   "uat": {
-    "how_to_uat": "No manual UAT runbook was generated because generate-uat-skeleton is deferred. Run `python3 tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` and inspect the three isolated state mutations; each must exit 1 under `--rule status-evidence`, while the clean and legacy-coverage controls exit 0.",
+    "how_to_uat": "Follow specs/art-017-state-bookkeeping-checks/.process/uat-runbook.md. The executed run passed 9/9 scenarios: each isolated state invariant exited 1 under --rule status-evidence; clean and legacy-debt controls exited 0; tracked-pair, reviewer-traceability, and Claude/Codex parity checks passed.",
     "uat_runbook_heading": "## UAT Runbook",
-    "uat_source": "packet-input"
+    "uat_source": "specs/art-017-state-bookkeeping-checks/.process/uat-runbook.md"
   },
   "validation_result_path": "specs/art-017-state-bookkeeping-checks/.process/pr-packets/art-017-draft/validation.json",
   "verification_evidence": [
@@ -164,6 +165,12 @@
       "result": "pass",
       "source": "validation",
       "summary": "Docs reference generation completed and reference:check reported current."
+    },
+    {
+      "kind": "uat",
+      "result": "pass",
+      "source": "specs/art-017-state-bookkeeping-checks/.process/uat-runbook.md",
+      "summary": "Manual UAT passed all 9 acceptance scenarios; both initial UAT-oracle findings were remediated and no product finding remains."
     }
   ]
 }

@@ -15,28 +15,29 @@ SpecKit autopilot now stops when current-run state bookkeeping contains multiple
 - Armed exactly in_progress_errors, duplicate_state_steps, and state_order_errors under status-evidence and aligned their intent records.
 - Added isolated negative controls, clean/report-shape coverage, deterministic tracked-pair census, and fail-closed corpus error cases.
 - Aligned Claude Code and Codex guidance, then regenerated both client payloads, installed-cache proofs, and reference outputs.
+- Executed and recorded manual UAT for all 9 acceptance scenarios.
 <!-- speckit-pro-editable:what_changed:end -->
 
 ## Why It Matters
 
 <!-- speckit-pro-editable:why_it_matters:start -->
-The autopilot can no longer report contradictory current-run bookkeeping and still continue with exit zero. Maintainers also get one consistent rule, intent, test, and two-client distribution story.
+The autopilot can no longer report contradictory current-run bookkeeping and still continue with exit zero. Maintainers also get one consistent rule, intent, test, manual UAT, and two-client distribution story.
 <!-- speckit-pro-editable:why_it_matters:end -->
 
 ## How To Review
 
-- Review the validator's three-key rule and intent delta first.
+- Review the validator three-key rule and intent delta first.
 - Review the three isolated failure tests, clean control, legacy advisory control, and tracked-pair census.
+- Follow the committed UAT runbook and its observed 9/9 results.
 - Confirm Claude Code and Codex authored guidance agree, then treat dist and installed-cache changes as generated evidence.
-- Use the final 7896/7896 suite result and artifact/reference checks as integration evidence.
 
 ## How To UAT
 
-No manual UAT runbook was generated because generate-uat-skeleton is deferred. Run `python3 tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` and inspect the three isolated state mutations; each must exit 1 under `--rule status-evidence`, while the clean and legacy-coverage controls exit 0.
+Follow specs/art-017-state-bookkeeping-checks/.process/uat-runbook.md. The executed run passed 9/9 scenarios: each isolated state invariant exited 1 under --rule status-evidence; clean and legacy-debt controls exited 0; tracked-pair, reviewer-traceability, and Claude/Codex parity checks passed.
 
 ## UAT Runbook
 
-No manual UAT runbook was generated because generate-uat-skeleton is deferred. Run `python3 tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` and inspect the three isolated state mutations; each must exit 1 under `--rule status-evidence`, while the clean and legacy-coverage controls exit 0.
+Follow specs/art-017-state-bookkeeping-checks/.process/uat-runbook.md. The executed run passed 9/9 scenarios: each isolated state invariant exited 1 under --rule status-evidence; clean and legacy-debt controls exited 0; tracked-pair, reviewer-traceability, and Claude/Codex parity checks passed.
 
 ## Verification
 
@@ -45,6 +46,7 @@ No manual UAT runbook was generated because generate-uat-skeleton is deferred. R
 - Codex skill structural validation passed 163/163.
 - Release-artifact consistency check passed on the committed final source tree.
 - Docs reference generation completed and reference:check reported current.
+- Manual UAT passed all 9 acceptance scenarios; both initial UAT-oracle findings were remediated and no product finding remains.
 
 ## Scope
 
@@ -64,6 +66,7 @@ No manual UAT runbook was generated because generate-uat-skeleton is deferred. R
 - speckit-pro/skills/speckit-autopilot/SKILL.md
 - speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py
 - specs/art-017-state-bookkeeping-checks/.process/implementation-notes.md
+- specs/art-017-state-bookkeeping-checks/.process/uat-runbook.md
 - specs/art-017-state-bookkeeping-checks/SPEC-MOC.md
 - specs/art-017-state-bookkeeping-checks/artifacts/code-approaches.html
 - specs/art-017-state-bookkeeping-checks/artifacts/implementation-plan.html
@@ -99,6 +102,6 @@ No manual UAT runbook was generated because generate-uat-skeleton is deferred. R
 
 ## Known Gaps
 
-- No known implementation gap remains.
+- No known implementation or manual UAT gap remains.
 - The authored nonblank diff is 570 gross lines, dominated by exhaustive regression coverage; this is a disclosed size-only reviewability warning.
 - The separate Codex same-task scaffold-to-autopilot handoff bug remains outside ART-017 and is tracked in the workflow against branch fix-codex-same-task-autopilot.
