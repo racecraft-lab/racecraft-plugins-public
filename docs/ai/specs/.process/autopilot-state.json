@@ -1,12 +1,12 @@
 {
   "schema_version": "1.0",
   "workflow_file": "docs/ai/specs/.process/ART-017-workflow.md",
-  "updated_at": "2026-08-22T15:39:01Z",
+  "updated_at": "2026-08-22T15:50:38Z",
   "stage": "plan",
   "stage_source": "argv",
   "stage_basis": "explicit --stage plan",
   "confidence_gate_mode": "advisory",
-  "active_step": "Phase 3: Plan",
+  "active_step": "Phase 4: Checklist - state-management",
   "archive_sweep": {
     "status": "no_candidates",
     "execution_path": "extension_contract",
@@ -54,6 +54,19 @@
     "tests_total": 7659,
     "toolchain_preflight": "passed"
   },
+  "plan_reviewability": {
+    "helper_id": "estimate-reviewable-loc",
+    "status": "pass",
+    "projected": 0,
+    "declared_files": {
+      "production": 0,
+      "new": 0,
+      "modified": 3,
+      "total_entries": 3
+    },
+    "setup_forward_estimate": 125,
+    "split_decision": "one vertical slice; no split"
+  },
   "plan": [
     {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
     {"step": "Phase 0: Prerequisites", "status": "completed"},
@@ -64,8 +77,8 @@
     {"step": "Phase 2: Clarify - Negative Controls And Corpus Evidence Consensus", "status": "completed"},
     {"step": "Phase 2: Clarify - Integration And Generated Artifacts", "status": "completed"},
     {"step": "Phase 2: Clarify - Integration And Generated Artifacts Consensus", "status": "completed"},
-    {"step": "Phase 3: Plan", "status": "in_progress"},
-    {"step": "Phase 4: Checklist - state-management", "status": "pending"},
+    {"step": "Phase 3: Plan", "status": "completed"},
+    {"step": "Phase 4: Checklist - state-management", "status": "in_progress"},
     {"step": "Phase 4: Checklist - state-management Consensus", "status": "pending"},
     {"step": "Phase 4: Checklist - error-handling", "status": "pending"},
     {"step": "Phase 4: Checklist - error-handling Consensus", "status": "pending"},

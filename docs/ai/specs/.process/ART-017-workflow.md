@@ -34,8 +34,8 @@ failure shape, and ART-008 integration ordering.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 2 user stories, 16 FRs, 8 acceptance scenarios, 8 success criteria; G1 passed |
 | Clarify | `/speckit-clarify` | ✅ Complete | Three sessions complete; one corpus-identity ambiguity resolved by 2/2 consensus; G2 passed with 0 markers |
-| Plan | `/speckit-plan` | 🔄 In Progress | Plan executor active after G2 |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
+| Plan | `/speckit-plan` | ✅ Complete | Five design artifacts generated; G3 passed; advisory plan estimate recorded |
+| Checklist | `/speckit-checklist` | 🔄 In Progress | State-management domain active; error-handling and reliability follow |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
@@ -351,11 +351,18 @@ new ambiguity or contradiction appears.
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | Technical context, execution flow |
-| `research.md` | ⏳ | Decision rationales (if needed) |
-| `data-model.md` | ⏳ | Entities and types |
-| `contracts/` | ⏳ | API specifications |
-| `quickstart.md` | ⏳ | Developer onboarding |
+| `plan.md` | ✅ Complete | Surgical three-file authored boundary, one vertical slice, and G3 pass |
+| `research.md` | ✅ Complete | Seven settled decisions; no open questions |
+| `data-model.md` | ✅ Complete | Seven state/diagnostic/evidence entities and validation rules |
+| `contracts/` | ✅ Complete | Exact `status-evidence` command, exit, report, and corpus contract |
+| `quickstart.md` | ✅ Complete | RED/GREEN, regeneration, full verification, and integration boundary |
+
+The advisory G3 estimator returned `status: pass`, `projected: 0`, with three
+modified entries and zero classifier-recognized production files. The earlier
+125-LOC setup forward estimate remains recorded; neither result changes the
+one-slice decision. The optional after-Plan `speckit-utils.validate` hook was
+not run because that extension is not installed and task traceability does not
+exist until Phase 5; the parent-owned per-phase commit hook is handled below.
 
 ---
 
