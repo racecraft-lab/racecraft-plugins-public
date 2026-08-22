@@ -90,7 +90,7 @@ All 9 measurable outcomes passed. Focused verification passed 33/33 after review
 | Resolver shape | One Codex-local resolver, no Claude import, no shared core | One Codex-local resolver; focused test guards against Claude import and shared core extraction | None |
 | State mutation | Fake-home staged adapter only | Fake-home writes confined to harness-created temporary roots under `.codex/agents` | None |
 | Production scope | No production resolver, installer, payload, version, release, checkpoint, or resume wiring | No production route or installer files changed; release-artifact check passed | None |
-| Reviewability | 385 projected reviewable LOC, 0 production files, 10 total files | Primary runtime file is 471 lines; 0 production files; generated/process artifacts increased total branch files | Minor |
+| Reviewability | 385 projected reviewable LOC, 0 production files, 10 total files | Final authored review surface is 525 LOC across 20 implementation/remediation files; 0 production files | Minor |
 
 ## Significant Deviations
 

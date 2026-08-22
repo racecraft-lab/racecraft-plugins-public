@@ -466,13 +466,13 @@
       },
       "reviewability_diff_gate": {
         "status": "warn",
-        "reviewable_loc": 471,
+        "reviewable_loc": 525,
         "production_files": 0,
-        "total_files": 13,
-        "primary_surfaces": ["deterministic fallback simulation"],
-        "warnings": ["reviewable LOC exceeds 400 warning threshold"],
+        "total_files": 20,
+        "primary_surfaces": ["deterministic fallback simulation", "artifact title generation"],
+        "warnings": ["reviewable LOC exceeds 400 warning threshold", "reviewable file count exceeds 15 warning threshold"],
         "blockers": [],
-        "split_decision": "one cohesive slice; contracts, runtime, and deterministic proof remain together"
+        "split_decision": "one feature slice plus its bounded UAT remediation; both remain paired with their deterministic proof"
       },
       "self_review": {
         "status": "completed",
@@ -500,11 +500,11 @@
         "mode": "committed_fallback_evidence",
         "helper_id": "final-reviewability-backstop",
         "helper_status": "deferred",
-        "evidence_commit": "34551bdc7",
-        "reviewable_loc": 471,
+        "evidence_commit": "762828118",
+        "reviewable_loc": 525,
         "production_files": 0,
-        "total_files": 13,
-        "warnings": ["reviewable LOC exceeds 400 warning threshold"],
+        "total_files": 20,
+        "warnings": ["reviewable LOC exceeds 400 warning threshold", "reviewable file count exceeds 15 warning threshold"],
         "blockers": [],
         "proceed": true
       },

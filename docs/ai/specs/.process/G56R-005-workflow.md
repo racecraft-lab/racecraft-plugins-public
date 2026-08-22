@@ -644,10 +644,10 @@ production routing, live qualification, or cross-platform reconciliation.
 | Post: Verify Tasks Phantom Check | ✅ Complete | 24 verified, T025 partial only because the plan-stage packet is intentionally stale until Post emission |
 | Post: Code Review | ✅ Complete | One important declaration-source schema mismatch found and remediated RED→GREEN; 33/33 focused tests pass |
 | Post: Integration Suite | ✅ Complete | Authoritative exact-worktree run passed 7663/7663: L1 1469, L4 6002, L5 192 |
-| Post: Reviewability Diff Gate | ✅ Complete (WARN) | 471 reviewable runtime LOC, 0 production files, 13 implementation-delta files, one cohesive simulation surface; above the 400-LOC warning but below file-count limits, so no split |
+| Post: Reviewability Diff Gate | ✅ Complete (WARN) | 525 reviewable authored LOC, 0 production files, 20 implementation/remediation files; above the 400-LOC and 15-file warnings but below the 25-file block, so no split |
 | Post: Self-Review | ✅ Complete | Four-question audit found no edge-case, traceability, tidiness, or silent-deferral defect |
 | Post: UAT Runbook Generation | ✅ Complete | Manual source-derived runbook committed after browser and behavioral UAT; one unsafe dynamic-title finding was remediated and retested |
-| Post: Final Reviewability Backstop | ✅ Complete (WARN) | Deferred helper honored via current committed reviewability evidence at `34551bdc7`; verified size-only warning, no correctness block |
+| Post: Final Reviewability Backstop | ✅ Complete (WARN) | Deferred helper honored via current committed evidence at `762828118`; LOC and file-count warnings remain below the block, with no correctness blocker |
 | Post: PR Packet/Body Generation | ✅ Complete | `pr-packet-output` dry-run/apply succeeded; read-only and persisted validation passed with `pr_blocked: false` |
 | Post: PR Body Generation | ✅ Complete | Packet-owned implementation-era body generated with current verification, UAT, scope, non-goals, and known gaps |
 | Post: PR Creation | ✅ Complete | Existing draft PR [#487](https://github.com/racecraft-lab/racecraft-plugins-public/pull/487) updated from validated packet fields at head `656852e5a` |
@@ -676,14 +676,14 @@ production routing, live qualification, or cross-platform reconciliation.
 
 ### Reviewability Diff Gate
 
-Status: **WARN**. The implementation delta contains 13 files, including six
-generated/process bookkeeping surfaces, four contracts/fixtures, one focused
-test, one manifest registration, and one 471-line deterministic simulation
-runtime. It changes zero production files and remains one cohesive review
-surface. The runtime exceeds the 400-LOC warning threshold, but total files are
-below the 15-file warning and 25-file block thresholds. Splitting contracts,
-runtime, and their deterministic proof would make either slice unverifiable, so
-the one-slice plan remains current.
+Status: **WARN**. The final authored review surface is 525 LOC across 20
+implementation/remediation files: the original deterministic simulation slice
+plus the bounded static-title repair found during UAT. It changes zero
+production files. Reviewable LOC exceeds the 400-LOC warning and the file count
+exceeds the 15-file warning, but both remain below the 25-file block. Splitting
+the feature contract from its deterministic proof, or the four-title repair
+from its paired author/test contract, would make the slices less verifiable, so
+the one-PR route remains current.
 
 ### Self-Review (auto-generated)
 
