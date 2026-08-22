@@ -1,12 +1,12 @@
 {
   "schema_version": "1.0",
   "workflow_file": "docs/ai/specs/.process/ART-017-workflow.md",
-  "updated_at": "2026-08-22T19:31:00Z",
+  "updated_at": "2026-08-22T19:38:00Z",
   "stage": "implement",
   "stage_source": "argv",
   "stage_basis": "explicit --stage implement",
   "confidence_gate_mode": "advisory",
-  "active_step": "Post: PR Packet/Body Generation",
+  "active_step": "Post: PR Creation",
   "archive_sweep": {
     "status": "no_candidates",
     "execution_path": "extension_contract",
@@ -113,6 +113,16 @@
     "status": "skipped",
     "reason": "generate-uat-skeleton deferred; no committed feature-local runbook exists"
   },
+  "pr_packet": {
+    "packet_path": "specs/art-017-state-bookkeeping-checks/.process/pr-packets/art-017-draft.json",
+    "body_file": "specs/art-017-state-bookkeeping-checks/.process/pr-packets/art-017-draft/body.md",
+    "validation_result_path": "specs/art-017-state-bookkeeping-checks/.process/pr-packets/art-017-draft/validation.json",
+    "status": "passed",
+    "pr_blocked": false,
+    "read_only_writes_state": false,
+    "workflow_contract": "passed",
+    "release_note": "passed"
+  },
   "layer_plan": {
     "status": "skipped",
     "reason": "atomicity route is one-navigable-PR; planner runs only for split-PR"
@@ -166,9 +176,9 @@
     {"step": "Post: Self-Review", "status": "completed"},
     {"step": "Post: UAT Runbook Generation", "status": "skipped"},
     {"step": "Post: Final Reviewability Backstop", "status": "skipped"},
-    {"step": "Post: PR Packet/Body Generation", "status": "in_progress"},
-    {"step": "Post: PR Body Generation", "status": "pending"},
-    {"step": "Post: PR Creation", "status": "pending"},
+    {"step": "Post: PR Packet/Body Generation", "status": "completed"},
+    {"step": "Post: PR Body Generation", "status": "completed"},
+    {"step": "Post: PR Creation", "status": "in_progress"},
     {"step": "Post: Review Remediation", "status": "pending"},
     {"step": "Post: Retrospective", "status": "pending"}
   ]

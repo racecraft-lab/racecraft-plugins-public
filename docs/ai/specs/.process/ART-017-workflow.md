@@ -707,9 +707,9 @@ The canonical closeout. Every row must reach Complete or an explicit
 | Post: Self-Review | ✅ Complete | 9 acceptance scenarios mapped; 20/20 FRs map to completed tasks and commits; same-task handoff TODO has an explicit landing branch |
 | Post: UAT Runbook Generation | ⏭️ Skipped | `generate-uat-skeleton` is deferred and no committed feature-local runbook exists |
 | Post: Final Reviewability Backstop | ⏭️ Skipped | Installed helper is deferred; size-only evidence is nonblocking and the one-navigable-PR route is preserved |
-| Post: PR Packet/Body Generation | ⏳ Pending | |
-| Post: PR Body Generation | ⏳ Pending | |
-| Post: PR Creation | ⏳ Pending | |
+| Post: PR Packet/Body Generation | ✅ Complete | `pr-packet-output` dry-run/apply generated the tracked single-PR packet and body; read-only validation passed with `pr_blocked=false`, `writes_state=false` |
+| Post: PR Body Generation | ✅ Complete | Packet-owned body contains final scope, verification, known gaps, UAT fallback, and exactly one valid consumer release-note fence |
+| Post: PR Creation | 🔄 In Progress | Existing draft PR #490 matches the packet target and will be refreshed rather than duplicated |
 | Post: Review Remediation | ⏳ Pending | |
 | Post: Retrospective | ⏳ Pending | |
 
