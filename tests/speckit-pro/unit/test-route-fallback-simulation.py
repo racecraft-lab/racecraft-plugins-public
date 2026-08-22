@@ -241,6 +241,11 @@ class SimulatorCaseMixin:
     ) -> dict[str, object]:
         return self.module.resolve(policy, snapshot, overrides, policy["budgets"])
 
+    def failing_snapshot(self, *routes: dict[str, object]) -> dict[str, object]:
+        return snapshot_for(
+            *routes, invocation={str(each["resolved_model"]): "failure" for each in routes}
+        )
+
     def codes(self, report: dict[str, object]) -> list[str]:
         return [str(entry["code"]) for entry in report["diagnostics"]]
 
@@ -2657,11 +2662,6 @@ class BudgetCapTests(SimulatorCaseMixin, unittest.TestCase):
         """A route whose exact-invocation probe outcome is a failure."""
         return route_of(route_id, f"alias-{route_id}", f"model-{route_id}")
 
-    def failing_snapshot(self, *routes: dict[str, object]) -> dict[str, object]:
-        return snapshot_for(
-            *routes, invocation={str(each["resolved_model"]): "failure" for each in routes}
-        )
-
     # --- candidate_routes: walk breadth (FR-026) ---
 
     def test_the_walk_truncates_at_the_declared_candidate_cap(self) -> None:
@@ -2806,11 +2806,6 @@ class ExhaustedBudgetEnumerationTests(SimulatorCaseMixin, unittest.TestCase):
 
     def failing(self, route_id: str) -> dict[str, object]:
         return route_of(route_id, f"alias-{route_id}", f"model-{route_id}")
-
-    def failing_snapshot(self, *routes: dict[str, object]) -> dict[str, object]:
-        return snapshot_for(
-            *routes, invocation={str(each["resolved_model"]): "failure" for each in routes}
-        )
 
     def terminal(self, report: dict[str, object]) -> dict[str, object]:
         return self.only_diagnostic(report, "no_safe_route")
