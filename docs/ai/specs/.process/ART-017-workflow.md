@@ -705,7 +705,7 @@ The canonical closeout. Every row must reach Complete or an explicit
 | Post: Integration Suite | ✅ Complete | Same-tree full suite passed 7896/7896 with toolchain preflight green |
 | Post: Reviewability Diff Gate | ✅ Complete | Actual authored nonblank diff is +502/-68 (570 gross, +434 net); size-only over-budget warning recorded, with generated/planning/gallery output excluded |
 | Post: Self-Review | ✅ Complete | 9 acceptance scenarios mapped; 20/20 FRs map to completed tasks and commits; same-task handoff TODO has an explicit landing branch |
-| Post: UAT Runbook Generation | ⏭️ Skipped | `generate-uat-skeleton` is deferred and no committed feature-local runbook exists |
+| Post: UAT Runbook Generation | ✅ Complete | User-requested manual UAT executed 9/9 acceptance scenarios; committed runbook records observed results and remediation of both initial oracle findings |
 | Post: Final Reviewability Backstop | ⏭️ Skipped | Installed helper is deferred; size-only evidence is nonblocking and the one-navigable-PR route is preserved |
 | Post: PR Packet/Body Generation | ✅ Complete | `pr-packet-output` dry-run/apply generated the tracked single-PR packet and body; read-only validation passed with `pr_blocked=false`, `writes_state=false` |
 | Post: PR Body Generation | ✅ Complete | Packet-owned body contains final scope, verification, known gaps, UAT fallback, and exactly one valid consumer release-note fence |
@@ -720,7 +720,7 @@ The canonical closeout. Every row must reach Complete or an explicit
 - [x] Release artifacts regenerate and artifact-consistency is clean
 - [x] Linting: N/A — repository uses the Python-authoritative suite
 - [x] Build: N/A — no separate build surface for this Python/Markdown repair
-- [x] Manual acceptance cross-walk complete; UAT skeleton capability is deferred
+- [x] Manual UAT complete: 9/9 acceptance scenarios passed with all findings remediated
 - [x] PR created and reviewed
 - [ ] Merged to main branch
 
@@ -792,6 +792,11 @@ The canonical closeout. Every row must reach Complete or an explicit
   in the generated `SPEC-MOC.md`. Moving the local file aside, rerunning the
   official spec-index writer, and restoring the ignored file produced clean,
   reproducible exact-head CI at `c280f28c7`.
+- Manual UAT initially produced two false findings because its temporary oracle
+  required punctuation-identical intent prose and byte-identical cross-client
+  guidance. The corrected oracle tests the documented invariant meaning and
+  behavioral parity while retaining byte parity for the generated validator;
+  the rerun passed 9/9 with no product finding.
 - [ ] **TODO — restore the Codex same-task scaffold-to-autopilot handoff.**
       SpecKit Pro 2.27.0 still emits the new-task, relative-workflow recovery
       form even when the generated worktree is a registered descendant that can

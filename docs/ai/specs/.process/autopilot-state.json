@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "workflow_file": "docs/ai/specs/.process/ART-017-workflow.md",
-  "updated_at": "2026-08-22T20:01:39Z",
+  "updated_at": "2026-08-22T21:17:59Z",
   "stage": "implement",
   "stage_source": "argv",
   "stage_basis": "explicit --stage implement",
@@ -110,8 +110,10 @@
     "layers": {"L1": "1469/1469", "L4": "6235/6235", "L5": "192/192"}
   },
   "uat_runbook": {
-    "status": "skipped",
-    "reason": "generate-uat-skeleton deferred; no committed feature-local runbook exists"
+    "status": "passed",
+    "path": "specs/art-017-state-bookkeeping-checks/.process/uat-runbook.md",
+    "acceptance_scenarios": "9/9 passed",
+    "findings": "2 UAT-oracle findings remediated; 0 product findings remain"
   },
   "pr_packet": {
     "packet_path": "specs/art-017-state-bookkeeping-checks/.process/pr-packets/art-017-draft.json",
@@ -174,7 +176,7 @@
     {"step": "Post: Integration Suite", "status": "completed"},
     {"step": "Post: Reviewability Diff Gate", "status": "completed"},
     {"step": "Post: Self-Review", "status": "completed"},
-    {"step": "Post: UAT Runbook Generation", "status": "skipped"},
+    {"step": "Post: UAT Runbook Generation", "status": "completed"},
     {"step": "Post: Final Reviewability Backstop", "status": "skipped"},
     {"step": "Post: PR Packet/Body Generation", "status": "completed"},
     {"step": "Post: PR Body Generation", "status": "completed"},

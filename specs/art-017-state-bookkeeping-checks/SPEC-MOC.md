@@ -35,6 +35,7 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [.process/pr-packets/art-017-draft.json](.process/pr-packets/art-017-draft.json)
 - [.process/pr-packets/art-017-draft/body.md](.process/pr-packets/art-017-draft/body.md)
 - [.process/pr-packets/art-017-draft/validation.json](.process/pr-packets/art-017-draft/validation.json)
+- [.process/uat-runbook.md](.process/uat-runbook.md)
 - [artifacts/code-approaches.html](artifacts/code-approaches.html)
 - [artifacts/implementation-plan.html](artifacts/implementation-plan.html)
 - [artifacts/module-map.html](artifacts/module-map.html)
