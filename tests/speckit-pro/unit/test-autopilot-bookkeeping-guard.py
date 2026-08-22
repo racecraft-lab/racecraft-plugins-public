@@ -34,6 +34,13 @@ from test_result import run_counted  # noqa: E402
 
 SKILL_SCRIPTS = REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot" / "scripts"
 VALIDATOR = SKILL_SCRIPTS / "validate-autopilot-phase-coverage.py"
+CLAUDE_AUTOPILOT_SKILL = REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot" / "SKILL.md"
+CODEX_AUTOPILOT_SKILL = REPO_ROOT / "speckit-pro" / "codex-skills" / "speckit-autopilot" / "SKILL.md"
+BLOCKING_STATE_INVARIANT_KEYS = (
+    "in_progress_errors",
+    "duplicate_state_steps",
+    "state_order_errors",
+)
 
 PLAN_STEPS = (
     "Archive Sweep: previously merged specs dry-run/apply eligibility",
@@ -145,6 +152,24 @@ def run_status_evidence_report(workflow_path: Path, state_path: Path) -> tuple[i
         text=True, capture_output=True, check=False,
     )
     return completed.returncode, json.loads(completed.stdout)
+
+
+def status_evidence_guidance_paragraph(path: Path) -> str:
+    """Return the source paragraph that explains the scoped bookkeeping guard."""
+    paragraphs = [
+        paragraph.replace("\n", " ")
+        for paragraph in path.read_text(encoding="utf-8").split("\n\n")
+    ]
+    matches = [
+        paragraph
+        for paragraph in paragraphs
+        if "status-evidence" in paragraph
+        and "exit code" in paragraph
+        and "full report" in paragraph
+    ]
+    if len(matches) != 1:
+        raise AssertionError(f"expected one status-evidence guidance paragraph in {path}")
+    return matches[0]
 
 
 def tracked_workflow_state_paths(repo_root: Path = REPO_ROOT) -> tuple[str, ...]:
@@ -382,6 +407,26 @@ class LegacyCoverageAdvisoryTests(StatusEvidenceReportAssertions, unittest.TestC
         self.assertTrue(report["missing_state_prefixes"], report)
         self.assertTrue(report["missing_state_post_items"], report)
         self.assertSelectedKeysEmpty(report)
+
+
+class StatusEvidenceSourceGuidanceTests(unittest.TestCase):
+    """The shipped source skills must describe the same scoped-gate contract."""
+
+    def test_source_guidance_distinguishes_legacy_debt_from_blocking_state_invariants(self) -> None:
+        for label, path in (
+            ("Claude", CLAUDE_AUTOPILOT_SKILL),
+            ("Codex", CODEX_AUTOPILOT_SKILL),
+        ):
+            with self.subTest(skill=label):
+                guidance = status_evidence_guidance_paragraph(path)
+                folded = guidance.lower()
+                self.assertIn("legacy structural coverage debt", folded)
+                self.assertIn("visible", folded)
+                self.assertIn("nonblocking", folded)
+                self.assertIn("current-run state invariants", folded)
+                self.assertIn("stop the run", folded)
+                for key in BLOCKING_STATE_INVARIANT_KEYS:
+                    self.assertIn(key, guidance)
 
 
 class TrackedPathEnumerationTests(unittest.TestCase):
@@ -1060,6 +1105,7 @@ def build_suite() -> unittest.TestSuite:
         RuleScopingTests,
         CleanStatusEvidenceControlTests,
         LegacyCoverageAdvisoryTests,
+        StatusEvidenceSourceGuidanceTests,
         TrackedPathEnumerationTests,
         AuthorityMatchedPairClassificationTests,
         TrackedPairCorpusTests,

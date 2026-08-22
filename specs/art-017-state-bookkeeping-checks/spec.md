@@ -71,7 +71,7 @@
 - **FR-013**: [US2] Pair discovery MUST enumerate workflow and state paths from the git index in stable repo-relative order and MUST fail closed if tracked-path enumeration, state reading, or state JSON parsing cannot complete.
 - **FR-014**: [US2] Corpus evidence MUST record the total tracked workflow candidates, eligible authority-matched pairs, exclusions with a reason, and invoked/passed pairs; at least one eligible pair MUST exist, every candidate MUST be accounted for, and the invoked count MUST equal the eligible count.
 - **FR-015**: [US2] A workflow lacking an authority-matched adjacent tracked state MUST be excluded from the pair corpus; the system MUST NOT pair it with a state naming another workflow or synthesize state.
-- **FR-016**: [US2] The authored autopilot guidance MUST distinguish legacy coverage debt from the three blocking current-run state invariants in one source of truth.
+- **FR-016**: [US2] The authored Claude Code and Codex autopilot guidance MUST each distinguish legacy coverage debt from the three blocking current-run state invariants, with a regression preventing either active client source from going stale.
 - **FR-017**: [US2] Generated mirrors, payloads, proofs, and reference outputs MUST be refreshed by repository tooling rather than hand-edited.
 - **FR-018**: [US2] Final readiness evidence MUST be collected against one recorded latest-main HEAD in this order: rebase, release-artifact regeneration, independent release-artifact consistency checking, docs-reference generation and checking, the targeted bookkeeping-guard check, and the full repository suite. Evidence from before the rebase or regeneration MUST NOT satisfy the final gate.
 - **FR-019**: [US2] The PR review packet MUST include scope budget, traceability, verification evidence, generated-artifact status, known gaps, and final integration notes.
@@ -126,6 +126,6 @@
 - ART-014 is complete and remains the dependency that identified the three accidentally advisory state bookkeeping keys.
 - ART-017 is independent from ART-008 until the final integration boundary, where rebasing and derived-artifact regeneration settle shared outputs.
 - The existing status-evidence gate remains the correct operator-facing authority for autopilot phase-transition state checks.
-- Claude Code and Codex consume release payloads derived from the same authored validator and autopilot guidance source.
+- Claude Code and Codex consume release payloads derived from the same authored validator plus their client-specific authored autopilot guidance sources.
 - The nine remaining advisory keys are outside ART-017 unless a future spec reclassifies them.
 - Repository governance requires strict test-first evidence, generated-artifact regeneration through tooling, and final verification before merge.

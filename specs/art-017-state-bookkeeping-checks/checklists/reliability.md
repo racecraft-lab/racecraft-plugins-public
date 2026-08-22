@@ -34,7 +34,7 @@
 ## Authored and Generated Surface Ownership
 
 - [x] CHK017 Are the authored validator, authored autopilot skill paragraph, and authored unit test named as the only direct implementation surfaces? [Ownership, Plan §Declared File Operations, Plan §Structure Decision]
-- [x] CHK018 Are generated Codex skills, Claude/Codex payloads, installed-cache fixtures, proof/evidence JSON, and docs-reference pages consistently classified as derived outputs? [Consistency, Spec §FR-017, Spec §FR-020, Plan §Project Structure, Research §Narrow the authored autopilot paragraph only]
+- [x] CHK018 Are Claude/Codex payloads, installed-cache fixtures, proof/evidence JSON, and docs-reference pages classified as derived outputs while both active client source skills remain authored? [Consistency, Spec §FR-017, Spec §FR-020, Plan §Project Structure]
 - [x] CHK019 Is hand editing prohibited for every generated payload, proof, installed-cache, Codex, and docs-reference surface, with both client distributions required to pass same-source consistency evidence? [Reliability, Spec §FR-017, Spec §FR-020, Plan §Constraints, Quickstart §Release Artifact Refresh]
 - [x] CHK020 Are repository-owned regeneration commands identified separately for release artifacts and docs references? [Dependencies, Plan §Requirement Traceability, Quickstart §Release Artifact Refresh]
 - [x] CHK021 Does final freshness evidence require the independent release-artifact consistency check after regeneration so a clean targeted or full test run cannot mask stale generated payloads or proofs? [Reliability, Spec §FR-018, Spec §SC-008, Plan §Implementation Approach]

@@ -123,3 +123,7 @@
 ### T031
 
 **Deviations/Edge cases/Surprises:** None; final packet source order is frozen as authored rule/intent, isolated controls, corpus evidence, authored prose, separate Claude/Codex freshness, then integration evidence.
+
+### T021
+
+**Deviations/Edge cases/Surprises:** Independent post-review found that the Codex source skill is authored, not a generated mirror. A cross-client guidance regression moved from one real Codex RED failure to 272/272 GREEN after the matching Codex paragraph was corrected; the authored boundary is now four files.

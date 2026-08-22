@@ -122,7 +122,7 @@ no blockers. Its raw roadmap-wide scan reported `40` reviewable LOC, `3`
 production files, `5` total files, and three primary surfaces
 (`docs/process`, `harness/adapter`, `seed/config`); only the surface count crossed
 the warn threshold. The ART-017-specific Grill Me estimator used one behavior
-story, three authored files, seven scoped requirements, and
+story, three initially declared authored files, seven scoped requirements, and
 `new_vs_modify=modify`, returning `estimated_loc: 125`,
 `suggested_slices: 1`, `status: ok`.
 
@@ -338,7 +338,7 @@ new ambiguity or contradiction appears.
 - Preserve legacy coverage behavior: `missing_state_prefixes` and `missing_state_post_items` remain visible but nonblocking under `status-evidence`.
 - Preserve the full JSON report shape, existing key names, and values; only scoped exit authority and intent verdicts change.
 - Keep all authored tooling Python 3.11+ standard library; no Bash or `jq` implementation path.
-- Do not hand-edit `speckit-pro/codex-skills/**`, `dist/**`, installed-cache proofs, or generated docs references.
+- Treat both active client skill sources as authored; do not hand-edit `dist/**`, installed-cache proofs, or generated docs references.
 
 ## Architecture Notes
 - Authored production files are limited to:
@@ -356,7 +356,7 @@ new ambiguity or contradiction appears.
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ✅ Complete | Surgical three-file authored boundary, one vertical slice, and G3 pass |
+| `plan.md` | ✅ Complete | One vertical slice; post-review correction expanded the authored boundary from three to four files to include the Codex source skill |
 | `research.md` | ✅ Complete | Seven settled decisions; no open questions |
 | `data-model.md` | ✅ Complete | Seven state/diagnostic/evidence entities and validation rules |
 | `contracts/` | ✅ Complete | Exact `status-evidence` command, exit, report, and corpus contract |
@@ -677,7 +677,7 @@ Before starting any task:
 
 ### PR Review Packet Evidence
 
-- **Scope budget:** one slice; authored implementation remains limited to the validator, authored autopilot skill, and bookkeeping-guard test module.
+- **Scope budget:** one slice; authored implementation is limited to the validator, both active client autopilot source skills, and the bookkeeping-guard test module. Independent review corrected the source count from three to four.
 - **Traceability:** 20/20 functional requirements map to completed or final-integration tasks in `tasks.md`.
 - **Current verification:** focused bookkeeping-guard suite passes 270/270 after the strict RED → GREEN sequence.
 - **Client artifact status:** Claude Code and Codex payload/fixture pairs were regenerated separately; the validator digest matches across authored source and all four client copies, and `refresh-release-artifacts.py --check` exits 0.
@@ -698,10 +698,10 @@ The canonical closeout. Every row must reach Complete or an explicit
 
 | Canonical Item | Status | Evidence |
 |---|---|---|
-| Post: Doctor Extension Check | ⏳ Pending | |
+| Post: Doctor Extension Check | ✅ Complete | ART-017 healthy; one unrelated BRAND-001 missing-artifact warning |
 | Post: Verify Implementation | ⏳ Pending | |
 | Post: Verify Tasks Phantom Check | ⏳ Pending | |
-| Post: Code Review | ⏳ Pending | |
+| Post: Code Review | 🔄 In Progress | Independent review found stale Codex guidance; TDD remediation is 272/272 GREEN, regeneration and re-review pending |
 | Post: Integration Suite | ⏳ Pending | |
 | Post: Reviewability Diff Gate | ⏳ Pending | |
 | Post: Self-Review | ⏳ Pending | |
