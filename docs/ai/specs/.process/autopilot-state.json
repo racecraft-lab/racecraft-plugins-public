@@ -5,8 +5,8 @@
   "branch": "g56r-005-model-availability-fallback-recovery",
   "status": "in_progress",
   "stage": "plan",
-  "updated_at": "2026-08-22T16:03:42Z",
-  "active_step": "Phase 6.5: Confidence Gate",
+  "updated_at": "2026-08-22T16:23:02Z",
+  "active_step": "Plan stage boundary",
   "settings": {
     "consensus_mode": "moderate",
     "gate_failure": "stop",
@@ -17,8 +17,8 @@
     "source": "argv",
     "basis": "explicit --stage plan",
     "recorded_stage": null,
-    "planning_complete": false,
-    "confidence_gate_status": "⏳ Pending",
+    "planning_complete": true,
+    "confidence_gate_status": "✅ Complete",
     "from_phase": null,
     "draft_pr_corroboration": "no_record"
   },
@@ -68,6 +68,33 @@
       "out_of_scope_for": "G56R-005 feature behavior"
     }
   ],
+  "draft_artifact_generation": {
+    "status": "gap",
+    "generated_pages": [],
+    "gaps": [
+      {
+        "page": "whole draft-stage gallery set",
+        "reason": "artifact-author produced no readable outcome and no files before the bounded wait expired"
+      }
+    ],
+    "fail_open": true
+  },
+  "draft_pr_packet": {
+    "status": "ready",
+    "packet_id": "g56r-005-draft",
+    "mode": "draft",
+    "packet_path": "specs/g56r-005-model-availability-fallback-recovery/.process/pr-packets/g56r-005-draft.json",
+    "body_file": "specs/g56r-005-model-availability-fallback-recovery/.process/pr-packets/g56r-005-draft/body.md",
+    "title": "feat(g56r-005): Add model availability fallback and recovery simulation",
+    "title_validation": "pass",
+    "packet_validation": {
+      "status": "passed",
+      "pr_blocked": false,
+      "writes_state": false,
+      "packet_sha256": "a05e65986107627fa60e152444875b875aa66fb0767e2d5d4a1a6bb3a7e2d389",
+      "body_sha256": "ee6589cd2709f1d139cc1cdbe4976230750e4515ea83bb23922fb6334978a9ea"
+    }
+  },
   "project_commands": {
     "BUILD": "N/A",
     "TYPECHECK": "N/A",
@@ -347,6 +374,24 @@
         "stale_map_count": 0,
         "touched_paths": []
       }
+    },
+    "confidence_gate": {
+      "status": "completed",
+      "gate": "G6.5",
+      "mode": "advisory",
+      "threshold": 0.9,
+      "composite": 0.99,
+      "pass": true,
+      "recommended_action": "proceed",
+      "reason": "composite at or above threshold",
+      "criteria": {
+        "task_understanding": 0.98,
+        "approach_clarity": 0.97,
+        "requirements_alignment": 0.99,
+        "risk_assessment": 1.0,
+        "completeness": 1.0
+      },
+      "iteration_count": 0
     }
   },
   "plan": [
@@ -369,7 +414,7 @@
     {"step": "Phase 5: Tasks", "status": "completed"},
     {"step": "Phase 6: Analyze", "status": "completed"},
     {"step": "Phase 6: Analyze - Consensus", "status": "skipped: zero unresolved items"},
-    {"step": "Phase 6.5: Confidence Gate", "status": "in_progress"},
+    {"step": "Phase 6.5: Confidence Gate", "status": "completed"},
     {"step": "Phase 7: Implement - Pending task decomposition", "status": "skipped: outside stage plan"},
     {"step": "Post: Doctor Extension Check", "status": "skipped: outside stage plan"},
     {"step": "Post: Verify Implementation", "status": "skipped: outside stage plan"},

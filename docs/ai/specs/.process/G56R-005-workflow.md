@@ -34,7 +34,7 @@ autonomous phase loop.
 | Checklist | `/speckit-checklist` | ✅ Complete | Error handling, state management, and data integrity checklists; no gaps |
 | Tasks | `/speckit-tasks` | ✅ Complete | 25 vertical TDD-first tasks; G5 passed |
 | Analyze | `/speckit-analyze` | ✅ Complete | 4 findings remediated (0C/1H/3M); G6 passed with no unresolved findings |
-| Confidence Gate | G6.5 | ⏳ Pending | Pre-implementation composite confidence |
+| Confidence Gate | G6.5 | ✅ Complete | PASS: 0.99 ≥ 0.90 in advisory mode |
 | Implement | `/speckit-implement` | ⏳ Pending | Not run by the `stage=plan` handoff |
 | Post | Post-Implementation | ⏳ Pending | Not run by the `stage=plan` handoff |
 
@@ -583,9 +583,20 @@ was current (`stale_map_count: 0`) and changed no files.
 | Field | Value |
 |-------|-------|
 | Mode | advisory |
-| Composite confidence | Pending |
-| Verdict | Pending |
-| Evidence | Pending |
+| Composite confidence | 0.99 |
+| Verdict | PASS |
+| Evidence | Task understanding 0.98; approach clarity 0.97; requirements alignment 0.99; risk assessment 1.00; completeness 1.00; threshold 0.90 |
+
+### Draft Artifact Generation
+
+| Outcome | Page | Detail |
+|---------|------|--------|
+| Gap | Whole draft-stage gallery set | `artifact-author` produced no readable outcome and no files before the bounded wait expired; generation failed open |
+
+The draft PR packet was generated in `draft` mode and its read-only validation
+passed with `pr_blocked: false`. The exact title
+`feat(g56r-005): Add model availability fallback and recovery simulation` also
+passed the repository release-readiness title check.
 
 ---
 
