@@ -32,15 +32,15 @@ failure shape, and ART-008 integration ordering.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Optional but recommended |
+| Specify | `/speckit-specify` | ✅ Complete | 2 user stories, 16 FRs, 8 acceptance scenarios, 8 success criteria; G1 passed |
+| Clarify | `/speckit-clarify` | 🔄 In Progress | Session 1 active; three settled-decision verification sessions planned |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
-| Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
+| Post | Post-Implementation | ⏳ Pending | Canonical 14-item closeout; outside this plan-stage invocation |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
@@ -74,12 +74,28 @@ Each phase requires **human review and approval** before proceeding:
 
 | Principle | Requirement | Verification |
 |-----------|-------------|--------------|
-| I. Plugin Structure Compliance | Treat authored plugin/test changes as release inputs; regenerate payloads, installed-cache proofs, and docs references instead of hand-editing generated copies | `python3 scripts/refresh-release-artifacts.py`; `pnpm --dir docs-site reference:generate`; artifact-consistency checks |
-| II. Cross-Platform Runtime & Script Safety | Keep the guard on Python 3.11+ standard library and preserve structured JSON output; add no active Bash or `jq` path | `python3 tests/speckit-pro/run-all.py --layer 4` |
-| IV. Test Coverage Before Merge | Add one isolated negative control per armed key plus the tracked workflow/state-pair regression in the existing Layer 4 test | Targeted unittest, then `python3 tests/speckit-pro/run-all.py` |
-| VI. KISS, Simplicity & YAGNI | Add exactly three explicit rule members and three atomic verdict flips; do not redesign rule scoping or derive a new abstraction | Code review against `ART-017-design-concept.md` Non-goals |
+| I. Plugin Structure Compliance | Treat authored plugin/test changes as release inputs; regenerate payloads, installed-cache proofs, and docs references instead of hand-editing generated copies | ✅ Verified at G0 — structural Layer 1 passed 1469/1469; implementation-time regeneration remains required |
+| II. Cross-Platform Runtime & Script Safety | Keep the guard on Python 3.11+ standard library and preserve structured JSON output; add no active Bash or `jq` path | ✅ Verified at G0 — Layer 4 passed 5998/5998 under Python 3.11.0 |
+| IV. Test Coverage Before Merge | Add one isolated negative control per armed key plus the tracked workflow/state-pair regression in the existing Layer 4 test | ✅ Verified baseline — full suite passed 7659/7659; new RED/GREEN evidence remains an implementation requirement |
+| VI. KISS, Simplicity & YAGNI | Add exactly three explicit rule members and three atomic verdict flips; do not redesign rule scoping or derive a new abstraction | ✅ Verified for planning — design-concept Non-goals preserve the three-key surgical boundary |
 
-**Constitution Check:** ⏳ Pending — the planning-stage autopilot records the G0 baseline and verifies these rows before G1.
+**Constitution Check:** ✅ Verified — G0 passed 7659/7659 with toolchain preflight green. `detect-commands` found the Python-authoritative suite as UNIT_TEST/FULL_VERIFY; BUILD, TYPECHECK, LINT, and INTEGRATION_TEST are N/A. The committed setup reviewability result remains `warn`, `pass: true`, with no blockers.
+
+### Autopilot Runtime Record
+
+| Field | Value |
+|-------|-------|
+| Worktree binding | Dedicated registered worktree at `.worktrees/art-017-state-bookkeeping-checks`; branch matches `art-017-state-bookkeeping-checks` |
+| Archive Sweep | `no_candidates`; BRAND-001 is pending and ART-017 was excluded as the current target; cleanup disabled |
+| Stage | `plan` — explicit `--stage plan` |
+| Draft PR corroboration | `no_record` |
+| Confidence mode | `advisory` (default; no local override) |
+| Consensus / gate / commit settings | `moderate` / `stop` / `per-phase` defaults |
+| Project commands | UNIT_TEST and FULL_VERIFY: `python3 tests/speckit-pro/run-all.py`; all other discovered command slots N/A |
+| Preset conventions | `speckit-pro-reviewability` v1.0.0 templates for spec, plan, and tasks; 18 extension hook events configured |
+| Codex agents | Installed 2.27.0 bundle verified `mutation_status: no_op` for gpt-5.5 |
+| Capability path | Codebase/spec context → repository reads and installed SpecKit agents; external library/domain evidence only if a phase identifies a real external claim |
+| Tier-2 relocation | Suppressed: ART namespace is `non_speckit_namespace`; no relocation operation invoked |
 
 ---
 
@@ -221,13 +237,18 @@ Codex. Both distributions consume the same authored guard behavior.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | <!-- e.g., FR-001 through FR-020 --> |
-| User Stories | <!-- Count --> |
-| Acceptance Criteria | <!-- Count --> |
+| Functional Requirements | 16 (FR-001 through FR-016) |
+| User Stories | 2 |
+| Acceptance Criteria | 8 acceptance scenarios; 8 measurable success criteria |
 
 ### Files Generated
 
-- [ ] `specs/art-017-state-bookkeeping-checks/spec.md`
+- [x] `specs/art-017-state-bookkeeping-checks/spec.md`
+
+**G1:** PASS — `spec.md` exists with zero `[NEEDS CLARIFICATION]` markers.
+The optional after-Specify doctor hook is registered only for the project's
+Claude integration and has no Codex command surface; Codex-native prerequisite,
+runner, constitution, template, and agent checks passed during G0.
 
 ### SpecKit Traceability Markers
 
@@ -616,6 +637,8 @@ The canonical closeout. Every row must reach Complete or an explicit
 | Post: Reviewability Diff Gate | ⏳ Pending | |
 | Post: Self-Review | ⏳ Pending | |
 | Post: UAT Runbook Generation | ⏳ Pending | |
+| Post: Final Reviewability Backstop | ⏳ Pending | |
+| Post: PR Packet/Body Generation | ⏳ Pending | |
 | Post: PR Body Generation | ⏳ Pending | |
 | Post: PR Creation | ⏳ Pending | |
 | Post: Review Remediation | ⏳ Pending | |
