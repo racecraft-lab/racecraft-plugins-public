@@ -227,6 +227,7 @@ ENGINE_PROBE_INSTANCE: dict[str, object] = {
 
 class _ClaudePolicyControlsFixture:
     def setUp(self) -> None:
+        super().setUp()
         self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
         self.module = claude_policy_controls
         self.error = self.module.ControlContractError
@@ -5147,7 +5148,7 @@ class SchemaEngineKeywordCoverageTests(_ClaudePolicyControlsFixture, unittest.Te
         )
 
 
-class BindingDriftOnProductionPathsTests(unittest.TestCase):
+class BindingDriftOnProductionPathsTests(_ClaudePolicyControlsFixture, unittest.TestCase):
     """FR-005a and SC-018: the byte-drift guard runs where consumers actually go.
 
     A guard reachable only from a unit test guards the unit test. Every loader a
@@ -5158,8 +5159,7 @@ class BindingDriftOnProductionPathsTests(unittest.TestCase):
     BOUND = "score-bundle.schema.json"
 
     def setUp(self) -> None:
-        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
-        self.module = claude_policy_controls
+        super().setUp()
         self.path = CONTRACT_ROOT / self.BOUND
         self.original = self.path.read_bytes()
         self.addCleanup(self.path.write_bytes, self.original)
