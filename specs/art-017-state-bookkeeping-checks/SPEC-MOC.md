@@ -34,7 +34,7 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [.process/implementation-notes.md](.process/implementation-notes.md)
 - [.process/pr-packets/art-017-draft.json](.process/pr-packets/art-017-draft.json)
 - [.process/pr-packets/art-017-draft/body.md](.process/pr-packets/art-017-draft/body.md)
-- [.DS_Store](.DS_Store)
+- [.process/pr-packets/art-017-draft/validation.json](.process/pr-packets/art-017-draft/validation.json)
 - [artifacts/code-approaches.html](artifacts/code-approaches.html)
 - [artifacts/implementation-plan.html](artifacts/implementation-plan.html)
 - [artifacts/module-map.html](artifacts/module-map.html)
