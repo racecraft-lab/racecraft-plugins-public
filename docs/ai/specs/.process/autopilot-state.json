@@ -4,9 +4,9 @@
   "feature_dir": "specs/g56r-005-model-availability-fallback-recovery",
   "branch": "g56r-005-model-availability-fallback-recovery",
   "status": "in_progress",
-  "stage": "plan",
-  "updated_at": "2026-08-22T17:43:10Z",
-  "active_step": "Plan stage boundary",
+  "stage": "implement",
+  "updated_at": "2026-08-22T18:06:14Z",
+  "active_step": "Phase 7: Implement - Foundation (T001-T004)",
   "settings": {
     "consensus_mode": "moderate",
     "gate_failure": "stop",
@@ -15,12 +15,12 @@
   },
   "stage_resolution": {
     "source": "argv",
-    "basis": "explicit --stage plan",
-    "recorded_stage": null,
+    "basis": "explicit --stage implement",
+    "recorded_stage": "plan",
     "planning_complete": true,
     "confidence_gate_status": "✅ Complete",
     "from_phase": null,
-    "draft_pr_corroboration": "no_record"
+    "draft_pr_corroboration": "match"
   },
   "archive_sweep": {
     "status": "no_candidates",
@@ -392,6 +392,12 @@
         "completeness": 1.0
       },
       "iteration_count": 0
+    },
+    "implement": {
+      "status": "in_progress",
+      "current_group": "foundation",
+      "completed_tasks": [],
+      "task_results": []
     }
   },
   "plan": [
@@ -415,20 +421,25 @@
     {"step": "Phase 6: Analyze", "status": "completed"},
     {"step": "Phase 6: Analyze - Consensus", "status": "skipped: zero unresolved items"},
     {"step": "Phase 6.5: Confidence Gate", "status": "completed"},
-    {"step": "Phase 7: Implement - Pending task decomposition", "status": "skipped: outside stage plan"},
-    {"step": "Post: Doctor Extension Check", "status": "skipped: outside stage plan"},
-    {"step": "Post: Verify Implementation", "status": "skipped: outside stage plan"},
-    {"step": "Post: Verify Tasks Phantom Check", "status": "skipped: outside stage plan"},
-    {"step": "Post: Code Review", "status": "skipped: outside stage plan"},
-    {"step": "Post: Integration Suite", "status": "skipped: outside stage plan"},
-    {"step": "Post: Reviewability Diff Gate", "status": "skipped: outside stage plan"},
-    {"step": "Post: Self-Review", "status": "skipped: outside stage plan"},
-    {"step": "Post: UAT Runbook Generation", "status": "skipped: outside stage plan"},
-    {"step": "Post: Final Reviewability Backstop", "status": "skipped: outside stage plan"},
-    {"step": "Post: PR Packet/Body Generation", "status": "skipped: outside stage plan"},
-    {"step": "Post: PR Body Generation", "status": "skipped: outside stage plan"},
-    {"step": "Post: PR Creation", "status": "skipped: outside stage plan"},
-    {"step": "Post: Review Remediation", "status": "skipped: outside stage plan"},
-    {"step": "Post: Retrospective", "status": "skipped: outside stage plan"}
+    {"step": "Phase 7: Implement - Foundation (T001-T004)", "status": "in_progress"},
+    {"step": "Phase 7: Implement - Deterministic Route Resolution (T005-T007)", "status": "pending"},
+    {"step": "Phase 7: Implement - Service Reroute Attribution (T008-T011)", "status": "pending"},
+    {"step": "Phase 7: Implement - Fake-Home Recovery and Optional Helper (T012-T016)", "status": "pending"},
+    {"step": "Phase 7: Implement - Bounded Sequential Harness (T017-T019)", "status": "pending"},
+    {"step": "Phase 7: Implement - Review Evidence and Verification (T020-T025)", "status": "pending"},
+    {"step": "Post: Doctor Extension Check", "status": "pending"},
+    {"step": "Post: Verify Implementation", "status": "pending"},
+    {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
+    {"step": "Post: Code Review", "status": "pending"},
+    {"step": "Post: Integration Suite", "status": "pending"},
+    {"step": "Post: Reviewability Diff Gate", "status": "pending"},
+    {"step": "Post: Self-Review", "status": "pending"},
+    {"step": "Post: UAT Runbook Generation", "status": "pending"},
+    {"step": "Post: Final Reviewability Backstop", "status": "pending"},
+    {"step": "Post: PR Packet/Body Generation", "status": "pending"},
+    {"step": "Post: PR Body Generation", "status": "pending"},
+    {"step": "Post: PR Creation", "status": "pending"},
+    {"step": "Post: Review Remediation", "status": "pending"},
+    {"step": "Post: Retrospective", "status": "pending"}
   ]
 }

@@ -35,7 +35,7 @@ autonomous phase loop.
 | Tasks | `/speckit-tasks` | ✅ Complete | 25 vertical TDD-first tasks; G5 passed |
 | Analyze | `/speckit-analyze` | ✅ Complete | 4 findings remediated (0C/1H/3M); G6 passed with no unresolved findings |
 | Confidence Gate | G6.5 | ✅ Complete | PASS: 0.99 ≥ 0.90 in advisory mode |
-| Implement | `/speckit-implement` | ⏳ Pending | Not run by the `stage=plan` handoff |
+| Implement | `/speckit-implement` | 🔄 In Progress | Foundation tasks T001-T004 started under the explicit `stage=implement` handoff |
 | Post | Post-Implementation | ⏳ Pending | Not run by the `stage=plan` handoff |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -161,7 +161,7 @@ baseline of record.
 | **Dependencies** | G56R-004 complete and archived after PR #403 |
 | **Enables** | G56R-006 capability-aware resolver, materializer, installer, and strict override |
 | **Priority** | P1 |
-| **Stage** | `plan` |
+| **Stage** | `implement` |
 | **Draft PR** | [#487](https://github.com/racecraft-lab/racecraft-plugins-public/pull/487) |
 
 ### Reviewability Budget and Split Decision
@@ -628,7 +628,7 @@ production routing, live qualification, or cross-platform reconciliation.
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| Shared contract foundation | Pending | Pending | |
+| Shared contract foundation | T001-T004 | 0/4 | In progress |
 | Resolver and reroute stories | Pending | Pending | |
 | Recovery and bounds stories | Pending | Pending | |
 | Cross-cutting verification | Pending | Pending | |
@@ -647,6 +647,8 @@ production routing, live qualification, or cross-platform reconciliation.
 | Post: Reviewability Diff Gate | ⏳ Pending | |
 | Post: Self-Review | ⏳ Pending | |
 | Post: UAT Runbook Generation | ⏳ Pending | |
+| Post: Final Reviewability Backstop | ⏳ Pending | |
+| Post: PR Packet/Body Generation | ⏳ Pending | |
 | Post: PR Body Generation | ⏳ Pending | |
 | Post: PR Creation | ⏳ Pending | |
 | Post: Review Remediation | ⏳ Pending | |
