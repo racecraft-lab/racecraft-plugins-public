@@ -1,12 +1,12 @@
 {
   "schema_version": "1.0",
   "workflow_file": "docs/ai/specs/.process/ART-017-workflow.md",
-  "updated_at": "2026-08-22T16:26:58Z",
+  "updated_at": "2026-08-22T16:35:48Z",
   "stage": "plan",
   "stage_source": "argv",
   "stage_basis": "explicit --stage plan",
   "confidence_gate_mode": "advisory",
-  "active_step": "Phase 5: Tasks",
+  "active_step": "Phase 6: Analyze",
   "archive_sweep": {
     "status": "no_candidates",
     "execution_path": "extension_contract",
@@ -67,6 +67,31 @@
     "setup_forward_estimate": 125,
     "split_decision": "one vertical slice; no split"
   },
+  "tasks_reviewability": {
+    "helper_id": "reviewability-gate",
+    "requested_mode": "tasks",
+    "status": "deferred",
+    "invoked": false,
+    "deferral_reason": "installed runner supports setup mode only",
+    "fallback_evidence": {
+      "setup": {"status": "warn", "pass": true, "blockers": 0},
+      "plan": {"status": "pass", "projected": 0},
+      "split_decision": "one vertical slice; no split"
+    },
+    "decision": "proceed",
+    "correctness_block": false,
+    "marker_plan_required": false
+  },
+  "atomicity_route": {
+    "route": "one-navigable-PR",
+    "releasable": true,
+    "signals": ["change-shape:modify-heavy"],
+    "warnings": []
+  },
+  "layer_plan": {
+    "status": "skipped",
+    "reason": "atomicity route is one-navigable-PR; planner runs only for split-PR"
+  },
   "plan": [
     {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
     {"step": "Phase 0: Prerequisites", "status": "completed"},
@@ -84,11 +109,15 @@
     {"step": "Phase 4: Checklist - error-handling Consensus", "status": "completed"},
     {"step": "Phase 4: Checklist - reliability", "status": "completed"},
     {"step": "Phase 4: Checklist - reliability Consensus", "status": "completed"},
-    {"step": "Phase 5: Tasks", "status": "in_progress"},
-    {"step": "Phase 6: Analyze", "status": "pending"},
+    {"step": "Phase 5: Tasks", "status": "completed"},
+    {"step": "Phase 6: Analyze", "status": "in_progress"},
     {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
     {"step": "Phase 6.5: Confidence Gate", "status": "pending"},
-    {"step": "Phase 7: Implement - Pending task decomposition", "status": "skipped: out of stage — resolved stage is plan"},
+    {"step": "Phase 7: Implement - Setup (T001-T004)", "status": "skipped: out of stage — resolved stage is plan"},
+    {"step": "Phase 7: Implement - Foundational (T005-T006)", "status": "skipped: out of stage — resolved stage is plan"},
+    {"step": "Phase 7: Implement - US1 (T007-T015)", "status": "skipped: out of stage — resolved stage is plan"},
+    {"step": "Phase 7: Implement - US2 (T016-T023)", "status": "skipped: out of stage — resolved stage is plan"},
+    {"step": "Phase 7: Implement - Integration (T024-T031)", "status": "skipped: out of stage — resolved stage is plan"},
     {"step": "Post: Doctor Extension Check", "status": "skipped: out of stage — resolved stage is plan"},
     {"step": "Post: Verify Implementation", "status": "skipped: out of stage — resolved stage is plan"},
     {"step": "Post: Verify Tasks Phantom Check", "status": "skipped: out of stage — resolved stage is plan"},

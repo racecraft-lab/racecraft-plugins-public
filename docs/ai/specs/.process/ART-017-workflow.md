@@ -36,8 +36,8 @@ failure shape, and ART-008 integration ordering.
 | Clarify | `/speckit-clarify` | ✅ Complete | Three sessions complete; one corpus-identity ambiguity resolved by 2/2 consensus; G2 passed with 0 markers |
 | Plan | `/speckit-plan` | ✅ Complete | Five design artifacts generated; G3 passed; advisory plan estimate recorded |
 | Checklist | `/speckit-checklist` | ✅ Complete | 78 items across three domains; 5 gaps remediated; G4 passed with 0 markers |
-| Tasks | `/speckit-tasks` | 🔄 In Progress | Task executor active after G4 |
-| Analyze | `/speckit-analyze` | ⏳ Pending | |
+| Tasks | `/speckit-tasks` | ✅ Complete | 31 tasks across five phases; 19/19 FR coverage; G5 passed |
+| Analyze | `/speckit-analyze` | 🔄 In Progress | Analyze executor active after post-G5 routing |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 | Post | Post-Implementation | ⏳ Pending | Canonical 14-item closeout; outside this plan-stage invocation |
@@ -497,10 +497,21 @@ When checklist identifies `[Gap]` items:
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | |
-| **Phases** | |
-| **Parallel Opportunities** | |
-| **User Stories Covered** | |
+| **Total Tasks** | 31 |
+| **Phases** | 5 |
+| **Parallel Opportunities** | 0 implementation tasks marked `[P]`; review-only inspection may overlap after T013 |
+| **User Stories Covered** | 2/2; FR-001 through FR-019 mapped |
+
+### Tasks Reviewability Boundary
+
+The installed runner exposes `reviewability-gate` in setup mode only. The
+requested tasks-mode evaluation is therefore recorded as `deferred` and was not
+invoked. The fallback evidence chain is current and usable: scaffold setup
+status `warn` with `pass: true` and no blockers, G3 plan estimate `pass` with
+`projected: 0`, and the operator-ratified one-slice/no-split decision. Decision:
+proceed. No correctness or safety block is present, and no PR marker plan is
+required. The optional after-Tasks commit hook is parent-owned and handled at
+the phase boundary.
 
 ---
 
@@ -521,10 +532,10 @@ line count. Surface the four fields the SKILL extracts from the emitted decision
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
-| **Releasable** | | `true`, or `false` for a destructive-migration or concurrency-sensitive change (a passing CI run does not prove such a change is safe to release). |
-| **Signals** | | The decisive detector findings behind the route and releasability reading (may be empty when the classifier abstains). |
-| **Warnings** | | Any release-safety warning attached to the change (empty when there is no releasability risk). |
+| **Route** | `one-navigable-PR` | Modify-heavy, one atomic rule/intent change with a serial evidence chain. |
+| **Releasable** | `true` | No destructive-migration or concurrency-sensitive signature. |
+| **Signals** | `change-shape:modify-heavy` | The classifier's decisive signal. |
+| **Warnings** | None | No release-safety warning emitted. |
 
 To produce the decision, run the classifier against the feature directory:
 
@@ -534,6 +545,16 @@ runner helper atomicity-route specs/art-017-state-bookkeeping-checks
 
 See the classifier script at
 [`speckit-autopilot/scripts/atomicity-route`](../../speckit-autopilot/scripts/atomicity-route).
+
+---
+
+## Layer Plan
+
+| Field | Value |
+|-------|-------|
+| Status | `skipped` |
+| Reason | Atomicity route is `one-navigable-PR`; layer planning runs only for `split-PR`. |
+| Planner invocation | Not run |
 
 ---
 
