@@ -54,8 +54,8 @@
   },
   "worktree_binding_override": {
     "status": "operator_directed",
-    "task_reported_root": "/Users/fredrickgabelmann/.codex/worktrees/7818/racecraft-plugins-public",
-    "execution_root": "/Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public/.worktrees/g56r-005-model-availability-fallback-recovery",
+    "task_reported_root": "<task-bound checkout>",
+    "execution_root": "<workflow-bound G56R-005 feature worktree>",
     "branch": "g56r-005-model-availability-fallback-recovery",
     "workflow_present_only_in_execution_root": true,
     "sandbox_note": "Tests that create fixture directories require explicit execution-root write permission when the Codex task remains bound to another checkout."
