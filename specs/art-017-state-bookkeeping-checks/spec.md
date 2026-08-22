@@ -63,13 +63,16 @@
 - **FR-007**: [US1] The diagnostic report MUST preserve its existing shape and problem-key values when one of the three ART-017 keys fails.
 - **FR-008**: [US1] The scoped return result MUST change only for status-evidence authority and the three updated intent verdicts.
 - **FR-009**: [US1] Regression evidence MUST include one clean workflow/state builder and exactly three isolated mutations, one per ART-017 problem key.
-- **FR-010**: [US1] Each isolated mutation MUST prove that its target problem key alone makes the exact status-evidence gate fail while the other two ART-017 problem lists remain empty.
+- **FR-010**: [US1] Each isolated mutation MUST prove that its target problem key alone makes the exact status-evidence gate fail: the target list MUST be non-empty, and every other problem key selected by `status-evidence`, including the other two ART-017 problem lists, MUST remain empty.
 - **FR-011**: [US1] The clean control MUST prove that a valid workflow/state pair succeeds under the same status-evidence gate.
 - **FR-012**: [US2] Regression evidence MUST cover every authority-matched adjacent pair where both the workflow and same-directory `autopilot-state.json` are tracked and the state's repo-relative `workflow_file` equals the workflow path.
-- **FR-013**: [US2] A workflow lacking an authority-matched adjacent tracked state MUST be excluded from the pair corpus; the system MUST NOT pair it with a state naming another workflow or synthesize state.
-- **FR-014**: [US2] The authored autopilot guidance MUST distinguish legacy coverage debt from the three blocking current-run state invariants in one source of truth.
-- **FR-015**: [US2] Generated mirrors, payloads, proofs, and reference outputs MUST be refreshed by repository tooling rather than hand-edited.
-- **FR-016**: [US2] The PR review packet MUST include scope budget, traceability, verification evidence, generated-artifact status, known gaps, and final integration notes.
+- **FR-013**: [US2] Pair discovery MUST enumerate workflow and state paths from the git index in stable repo-relative order and MUST fail closed if tracked-path enumeration, state reading, or state JSON parsing cannot complete.
+- **FR-014**: [US2] Corpus evidence MUST record the total tracked workflow candidates, eligible authority-matched pairs, exclusions with a reason, and invoked/passed pairs; at least one eligible pair MUST exist, every candidate MUST be accounted for, and the invoked count MUST equal the eligible count.
+- **FR-015**: [US2] A workflow lacking an authority-matched adjacent tracked state MUST be excluded from the pair corpus; the system MUST NOT pair it with a state naming another workflow or synthesize state.
+- **FR-016**: [US2] The authored autopilot guidance MUST distinguish legacy coverage debt from the three blocking current-run state invariants in one source of truth.
+- **FR-017**: [US2] Generated mirrors, payloads, proofs, and reference outputs MUST be refreshed by repository tooling rather than hand-edited.
+- **FR-018**: [US2] Final readiness evidence MUST be collected against one recorded latest-main HEAD in this order: rebase, release-artifact regeneration, independent release-artifact consistency checking, docs-reference generation and checking, the targeted bookkeeping-guard check, and the full repository suite. Evidence from before the rebase or regeneration MUST NOT satisfy the final gate.
+- **FR-019**: [US2] The PR review packet MUST include scope budget, traceability, verification evidence, generated-artifact status, known gaps, and final integration notes.
 
 ### Reviewability Notes *(if applicable)*
 
@@ -106,12 +109,12 @@
 
 - **SC-001**: 3 of 3 ART-017 diagnostic keys are explicit status-evidence members, and 0 additional advisory keys are newly armed.
 - **SC-002**: 3 of 3 ART-017 intent records are classified as gated with reasons tied to current-run state integrity.
-- **SC-003**: 3 of 3 isolated negative controls fail the exact status-evidence gate with only their target ART-017 problem list populated among the three new keys.
+- **SC-003**: 3 of 3 isolated negative controls exit `1` under the exact status-evidence gate with the target ART-017 problem list non-empty and every other problem key selected by `status-evidence` empty.
 - **SC-004**: 1 clean workflow/state control succeeds under the same status-evidence gate.
-- **SC-005**: 100% of tracked authority-matched adjacent workflow/state pairs succeed in the corpus regression, with zero directory-only mismatches or synthesized states included.
+- **SC-005**: The tracked-pair census accounts for 100% of tracked workflow candidates, contains at least one eligible authority-matched adjacent workflow/state pair, invokes every eligible pair exactly once, and reports 100% success with zero directory-only mismatches or synthesized states included.
 - **SC-006**: Legacy coverage advisories remain nonblocking under status-evidence in at least one explicit regression case.
 - **SC-007**: The diagnostic report keeps the same top-level shape and existing problem-key names before and after the ART-017 behavior change.
-- **SC-008**: The PR evidence bundle lists targeted checks, generated-artifact refreshes, and the full repository verification command needed before ready or merge.
+- **SC-008**: The PR evidence bundle records one latest-main HEAD and the ordered final results for release-artifact regeneration and `--check`, docs-reference generation and checking, the targeted bookkeeping-guard check, and the full repository suite before ready or merge.
 
 ## Assumptions
 

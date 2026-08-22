@@ -24,7 +24,7 @@ ART-017 makes three current-run autopilot state invariants blocking under the ex
 
 **Performance Goals**: No new network, package-install, or long-running runtime path. Validation remains deterministic over the supplied workflow/state pair and emits the complete JSON report before deciding the scoped exit code.
 
-**Constraints**: Quote and implement "Use status-evidence (Recommended)" by adding exactly the three named keys to the existing `status-evidence` tuple, with no helper-level grouping. Quote and implement "Keep them atomic (Recommended)" by moving rule membership and each intent verdict together. Keep `missing_state_prefixes` and `missing_state_post_items` visible but nonblocking under `status-evidence`. Do not hand-edit generated Codex skills, `dist/**`, installed-cache proofs, or generated docs references.
+**Constraints**: Quote and implement "Use status-evidence (Recommended)" by adding exactly the three named keys to the existing `status-evidence` tuple, with no helper-level grouping. Quote and implement "Keep them atomic (Recommended)" by moving rule membership and each intent verdict together. Keep `missing_state_prefixes` and `missing_state_post_items` visible but nonblocking under `status-evidence`. Discover corpus paths from the git index with an argument-array subprocess, `shell=False`, repository-root `cwd`, NUL-delimited output, and stable repo-relative sorting; enumeration, decoding, file-read, and JSON-parse failures fail the corpus test rather than skip it. Do not hand-edit generated Codex skills, `dist/**`, installed-cache proofs, or generated docs references.
 
 **Scale/Scope**: One vertical slice. Authored production files are limited to the validator script and one authored autopilot skill paragraph; authored tests stay in the existing bookkeeping guard unit module. Setup estimated 125 LOC and one slice; the warning was accepted because only the roadmap-wide surface count crossed the reviewability warning threshold.
 
@@ -100,7 +100,7 @@ Research is complete with no unresolved clarification markers.
 - Decision: Preserve the full JSON report shape and existing problem-key names.
 - Decision: Cover tracked authority-matched adjacent workflow/state pairs only.
 - Decision: Narrow the authored autopilot paragraph only, then regenerate derived surfaces.
-- Decision: Develop independently from ART-008 and serialize only the latest-main rebase, artifact regeneration, docs reference generation/checking, and full-suite proof before ready/merge.
+- Decision: Develop independently from ART-008 and serialize only the final integration boundary: record the latest-main HEAD, rebase, regenerate release artifacts, run the independent release-artifact `--check`, generate/check docs references, run the targeted bookkeeping test, and run the full suite against that same HEAD before ready/merge.
 
 Details are recorded in [research.md](./research.md).
 
@@ -112,13 +112,14 @@ Data entities and validation rules are recorded in [data-model.md](./data-model.
 
 1. Add RED tests first in `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py`.
 2. Extend the existing fixture support into one shared clean workflow/state builder.
-3. Add three isolated mutation tests for `in_progress_errors`, `duplicate_state_steps`, and `state_order_errors`; each must assert exit code `1`, target list non-empty, and the other two new lists empty under `--rule status-evidence`.
+3. Add three isolated mutation tests for `in_progress_errors`, `duplicate_state_steps`, and `state_order_errors`; each must assert exit code `1`, the target list non-empty, and every other problem key selected by `status-evidence` empty under the exact scoped invocation.
 4. Keep or add a clean control proving the same invocation exits `0`.
 5. Add a legacy advisory control proving `missing_state_prefixes` and `missing_state_post_items` remain reported but nonblocking under `status-evidence`.
-6. Add a tracked-pair corpus regression that discovers tracked workflows with adjacent tracked `autopilot-state.json` files and includes only pairs where the state `workflow_file` equals the workflow repo-relative path.
+6. Add a tracked-pair corpus regression that obtains tracked paths from `["git", "ls-files", "-z"]` at the repository root with `shell=False`, decodes and sorts repo-relative paths deterministically, and classifies every tracked workflow candidate as eligible or excluded with a reason. Fail on discovery/read/JSON errors, require at least one eligible authority-matched adjacent state, invoke every eligible pair exactly once, and assert candidate, eligible, excluded, invoked, and passed counts reconcile.
 7. Move the three ART-017 keys into the `status-evidence` rule tuple and flip their `PROBLEM_KEY_INTENT` verdicts to `gated` with reasons tied to current-run state integrity.
 8. Narrow the authored autopilot paragraph in `speckit-pro/skills/speckit-autopilot/SKILL.md` so it distinguishes legacy structural coverage debt from the three blocking state invariants.
 9. Regenerate derived release, payload, proof, installed-cache, Codex, and docs-reference surfaces through the existing repository commands.
+10. At final integration, record the latest-main HEAD and run in order against that same rebased tree: `python3 scripts/refresh-release-artifacts.py`, `python3 scripts/refresh-release-artifacts.py --check`, `pnpm --dir docs-site reference:generate`, `pnpm --dir docs-site reference:check`, `python3 tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py`, and `python3 tests/speckit-pro/run-all.py`. Do not reuse pre-rebase or pre-regeneration green evidence.
 
 ## Requirement Traceability
 
@@ -128,11 +129,11 @@ Data entities and validation rules are recorded in [data-model.md](./data-model.
 | FR-004 | Validator rule tuple and legacy advisory tests | Control proves coverage debt remains reported but nonblocking under `status-evidence`. |
 | FR-005 through FR-006 | `PROBLEM_KEY_INTENT` entries for the three ART-017 keys | Existing gated-verdict rule-map consistency test plus updated reasons. |
 | FR-007 through FR-008 | CLI/report contract preserved in validator | Report-shape and key-name assertions; scoped exit-code tests. |
-| FR-009 through FR-011 | Shared clean builder and isolated mutations in unit tests | Targeted unit module and full suite. |
-| FR-012 through FR-013 | Tracked authority-matched pair corpus regression | Corpus test excludes missing/mismatched/synthetic states. |
-| FR-014 | Authored autopilot `SKILL.md` paragraph | Prose review plus regenerated downstream mirrors. |
-| FR-015 | Generated artifact commands | `python3 scripts/refresh-release-artifacts.py`; `pnpm --dir docs-site reference:generate`; `pnpm --dir docs-site reference:check`. |
-| FR-016 | PR packet generated after planning/task/analyze phases | Draft PR packet must include scope, traceability, verification, generated-artifact status, known gaps, and ART-008 integration note. |
+| FR-009 through FR-011 | Shared clean builder and isolated mutations in unit tests | Each negative control exits `1` with its target list non-empty and every other status-evidence-selected key empty; the clean control exits `0`. |
+| FR-012 through FR-015 | Git-index tracked authority-matched pair census and corpus regression | Deterministic candidate/eligible/excluded/invoked/passed counts reconcile; at least one eligible pair exists; discovery/read/parse failures fail closed; missing/mismatched/synthetic states are excluded with reasons. |
+| FR-016 | Authored autopilot `SKILL.md` paragraph | Prose review plus regenerated downstream mirrors. |
+| FR-017 through FR-018 | Ordered final integration and generated artifact commands | Record latest-main HEAD; run `python3 scripts/refresh-release-artifacts.py` and `--check`; generate/check docs references; run targeted bookkeeping coverage and the full suite against the same tree. |
+| FR-019 | PR packet generated after planning/task/analyze phases | Draft PR packet must include scope, traceability, verification, generated-artifact status, known gaps, and ART-008 integration note. |
 
 ## Complexity Tracking
 

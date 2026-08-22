@@ -35,8 +35,8 @@ failure shape, and ART-008 integration ordering.
 | Specify | `/speckit-specify` | ✅ Complete | 2 user stories, 16 FRs, 8 acceptance scenarios, 8 success criteria; G1 passed |
 | Clarify | `/speckit-clarify` | ✅ Complete | Three sessions complete; one corpus-identity ambiguity resolved by 2/2 consensus; G2 passed with 0 markers |
 | Plan | `/speckit-plan` | ✅ Complete | Five design artifacts generated; G3 passed; advisory plan estimate recorded |
-| Checklist | `/speckit-checklist` | 🔄 In Progress | State-management domain active; error-handling and reliability follow |
-| Tasks | `/speckit-tasks` | ⏳ Pending | |
+| Checklist | `/speckit-checklist` | ✅ Complete | 78 items across three domains; 5 gaps remediated; G4 passed with 0 markers |
+| Tasks | `/speckit-tasks` | 🔄 In Progress | Task executor active after G4 |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
@@ -445,10 +445,10 @@ Focus on ART-017 requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| state-management | | | |
-| error-handling | | | |
-| reliability | | | |
-| **Total** | | | |
+| state-management | 24 | 0 | FR-001–FR-015; state invariants, clean controls, authority-matched pairs, and generated boundaries |
+| error-handling | 24 | 1 → 0 | FR-001–FR-013; scoped exit authority, full-report preservation, clean controls, and remediated failure causality |
+| reliability | 30 | 4 → 0 | FR-012–FR-019; deterministic census, non-vacuous coverage, artifact freshness, and final evidence ordering |
+| **Total** | **78** | **5 → 0** | All three domains closed; no unresolved consensus items |
 
 ### Addressing Gaps
 

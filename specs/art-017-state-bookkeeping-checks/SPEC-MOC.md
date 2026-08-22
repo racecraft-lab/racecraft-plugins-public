@@ -26,6 +26,9 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [data-model.md](data-model.md)
 - [research.md](research.md)
 - [contracts/status-evidence-guard.md](contracts/status-evidence-guard.md)
+- [checklists/error-handling.md](checklists/error-handling.md)
+- [checklists/reliability.md](checklists/reliability.md)
 - [checklists/requirements.md](checklists/requirements.md)
+- [checklists/state-management.md](checklists/state-management.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->
