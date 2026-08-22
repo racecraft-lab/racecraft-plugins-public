@@ -99,6 +99,17 @@ CANDIDATE_TERMINAL_FAILURE_CODES = {
 }
 
 
+def _load_module(module_name_prefix: str, path: Path):
+    module_name = f"{module_name_prefix}_{uuid4().hex}"
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
 def load_statistics_module():
     if not MODULE_PATH.exists():
         return types.SimpleNamespace(
@@ -124,47 +135,22 @@ def load_statistics_module():
                 "reason_codes": ["missing_implementation"],
             },
         )
-    module_name = f"_g56r_003_qualification_statistics_{uuid4().hex}"
-    spec = importlib.util.spec_from_file_location(module_name, MODULE_PATH)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"cannot load {MODULE_PATH}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[module_name] = module
-    spec.loader.exec_module(module)
-    return module
+    return _load_module("_g56r_003_qualification_statistics", MODULE_PATH)
 
 
 def load_contract_test_helpers():
-    module_name = f"_g56r_003_contract_test_helpers_{uuid4().hex}"
-    spec = importlib.util.spec_from_file_location(module_name, CONTRACT_TEST_PATH)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"cannot load {CONTRACT_TEST_PATH}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[module_name] = module
-    spec.loader.exec_module(module)
-    return module
+    return _load_module("_g56r_003_contract_test_helpers", CONTRACT_TEST_PATH)
 
 
 def load_replay_module():
-    module_name = f"_g56r_003_qualification_replay_statistics_{uuid4().hex}"
-    spec = importlib.util.spec_from_file_location(module_name, REPLAY_MODULE_PATH)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"cannot load {REPLAY_MODULE_PATH}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[module_name] = module
-    spec.loader.exec_module(module)
-    return module
+    return _load_module(
+        "_g56r_003_qualification_replay_statistics",
+        REPLAY_MODULE_PATH,
+    )
 
 
 def load_scoring_test_helpers():
-    module_name = f"_g56r_003_scoring_helpers_{uuid4().hex}"
-    spec = importlib.util.spec_from_file_location(module_name, SCORING_TEST_PATH)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"cannot load {SCORING_TEST_PATH}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[module_name] = module
-    spec.loader.exec_module(module)
-    return module
+    return _load_module("_g56r_003_scoring_helpers", SCORING_TEST_PATH)
 
 
 def canonical_json(value: object) -> str:
