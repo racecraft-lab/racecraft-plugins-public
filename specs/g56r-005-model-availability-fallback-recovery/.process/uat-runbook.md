@@ -100,6 +100,8 @@ overflow at desktop or mobile width.
 - Deterministic behavioral acceptance: PASS.
 - Static-title contract: 90/90 PASS.
 - Artifact gallery validation: 587/587 PASS.
+- Focused fallback/recovery contract suite: 35/35 PASS after all review
+  remediation.
 - Full repository suite: 7663/7663 PASS (L1 1469, L4 6002, L5 192).
 - Live model/service reroute smoke: intentionally not run; the specification
   makes no live availability claim.

@@ -72,7 +72,12 @@
     },
     "terminal_outcome": {"$ref": "#/$defs/terminal"},
     "terminal_details": {"type": "array", "items": {"type": "string"}},
-    "recovery_record": {"type": ["object", "null"]}
+    "recovery_record": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "recovery-record.schema.json"}
+      ]
+    }
   },
   "$defs": {
     "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},

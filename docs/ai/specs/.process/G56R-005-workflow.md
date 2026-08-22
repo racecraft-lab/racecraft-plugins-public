@@ -35,7 +35,7 @@ autonomous phase loop.
 | Tasks | `/speckit-tasks` | ✅ Complete | 25 vertical TDD-first tasks; G5 passed |
 | Analyze | `/speckit-analyze` | ✅ Complete | 4 findings remediated (0C/1H/3M); G6 passed with no unresolved findings |
 | Confidence Gate | G6.5 | ✅ Complete | PASS: 0.99 ≥ 0.90 in advisory mode |
-| Implement | `/speckit-implement` | ✅ Complete | T001-T025 complete; focused 33/33 after review remediation, Layer 4 6002/6002, full suite 7663/7663, generated checks current |
+| Implement | `/speckit-implement` | ✅ Complete | T001-T025 complete; focused 35/35 after review remediation, Layer 4 6002/6002, full suite 7663/7663, generated checks current |
 | Post | Post-Implementation | ⏳ Pending | Not run by the `stage=plan` handoff |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -642,17 +642,17 @@ production routing, live qualification, or cross-platform reconciliation.
 | Post: Doctor Extension Check | ✅ Complete | 3 PASS, 2 non-blocking WARN, 0 FAIL; templates and runner are healthy |
 | Post: Verify Implementation | ✅ Complete | 22/22 FRs and 8/9 SCs verified; SC-008 awaits the scheduled packet refresh |
 | Post: Verify Tasks Phantom Check | ✅ Complete | 24 verified, T025 partial only because the plan-stage packet is intentionally stale until Post emission |
-| Post: Code Review | ✅ Complete | One important declaration-source schema mismatch found and remediated RED→GREEN; 33/33 focused tests pass |
+| Post: Code Review | ✅ Complete | Three important contract findings found and remediated RED→GREEN: declaration-source vocabulary, closed recovery-record binding, and schema-shaped policy fixtures; 35/35 focused tests pass |
 | Post: Integration Suite | ✅ Complete | Authoritative exact-worktree run passed 7663/7663: L1 1469, L4 6002, L5 192 |
-| Post: Reviewability Diff Gate | ✅ Complete (WARN) | 525 reviewable authored LOC, 0 production files, 20 implementation/remediation files; above the 400-LOC and 15-file warnings but below the 25-file block, so no split |
+| Post: Reviewability Diff Gate | ✅ Complete (WARN) | 584 reviewable authored LOC, 0 production files, 20 implementation/remediation files; above the 400-LOC and 15-file warnings but below the 25-file block, so no split |
 | Post: Self-Review | ✅ Complete | Four-question audit found no edge-case, traceability, tidiness, or silent-deferral defect |
 | Post: UAT Runbook Generation | ✅ Complete | Manual source-derived runbook committed after browser and behavioral UAT; one unsafe dynamic-title finding was remediated and retested |
 | Post: Final Reviewability Backstop | ✅ Complete (WARN) | Deferred helper honored via current committed evidence at `762828118`; LOC and file-count warnings remain below the block, with no correctness blocker |
 | Post: PR Packet/Body Generation | ✅ Complete | `pr-packet-output` dry-run/apply succeeded; read-only and persisted validation passed with `pr_blocked: false` |
 | Post: PR Body Generation | ✅ Complete | Packet-owned implementation-era body generated with current verification, UAT, scope, non-goals, and known gaps |
 | Post: PR Creation | ✅ Complete | Existing draft PR [#487](https://github.com/racecraft-lab/racecraft-plugins-public/pull/487) updated from validated packet fields at head `656852e5a` |
-| Post: Review Remediation | ✅ Complete | Live PR inspection found 0 reviews, 0 threads, and 0 comments; the independent local finding was already remediated |
-| Post: Retrospective | ✅ Complete | `retrospective.md`: 25/25 tasks, 100% spec adherence, 0 critical and 1 remediated significant finding, 2 minor process findings |
+| Post: Review Remediation | ✅ Complete | One live review contained two important threads; both were remediated RED→GREEN at 35/35 and full suite 7663/7663 before reply/resolution |
+| Post: Retrospective | ✅ Complete | `retrospective.md`: 25/25 tasks, 100% spec adherence, 0 critical and 4 remediated significant findings, 2 minor process findings |
 
 ### Parallel Post-Implementation Evidence
 
@@ -665,7 +665,11 @@ production routing, live qualification, or cross-platform reconciliation.
 - **Independent review:** the route-policy schema allowed only `local` even
   though the fail-closed resolver intentionally handles four non-local
   declaration sources. A new focused test first failed, the schema was expanded
-  to the closed five-value enum, and the focused suite passed 33/33.
+  to the closed five-value enum, and the focused suite passed.
+- **Live review:** two important contract gaps were confirmed. The report now
+  binds `recovery_record` to the dedicated closed schema, and the shared policy
+  helper now supplies neutral values for every required top-level section. Both
+  fixes were proven RED then GREEN; the final focused suite passed 35/35.
 - **Integration:** the final authoritative suite passed 7663/7663. Earlier
   unprivileged cross-worktree fixture failures were sandbox artifacts and are
   superseded by the exact-worktree-permitted run.
@@ -676,7 +680,7 @@ production routing, live qualification, or cross-platform reconciliation.
 
 ### Reviewability Diff Gate
 
-Status: **WARN**. The final authored review surface is 525 LOC across 20
+Status: **WARN**. The final authored review surface is 584 LOC across 20
 implementation/remediation files: the original deterministic simulation slice
 plus the bounded static-title repair found during UAT. It changes zero
 production files. Reviewable LOC exceeds the 400-LOC warning and the file count
@@ -688,7 +692,7 @@ the one-PR route remains current.
 ### Self-Review (auto-generated)
 
 **Tests executed:** The repository has no separate build, typecheck, or lint
-command for this test-only Python surface. Focused verification passed 33/33;
+command for this test-only Python surface. Focused verification passed 35/35;
 the full deterministic suite passed 7663/7663; docs reference, spec-index, and
 release-artifact consistency checks pass.
 

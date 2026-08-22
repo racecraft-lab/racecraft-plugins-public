@@ -77,6 +77,23 @@ def policy(preferred: dict, *fallbacks: dict, strict_status: str = "absent") -> 
         "preferred_route": preferred,
         "fallback_routes": list(fallbacks),
         "strict_override": {"status": strict_status},
+        "helper_state": {
+            "available": True,
+            "no_helper_continuation_qualified": False,
+            "helper_route_attempts": 0,
+        },
+        "fake_home": {
+            "seed_state_id": "sha256:" + "c" * 64,
+            "temporary_root_required": True,
+        },
+        "budgets": {
+            "max_retries": 0,
+            "max_elapsed_units": 1,
+            "max_fanout": 1,
+            "max_context_units": 0,
+            "cancellation_point": "none",
+            "max_escalations": 0,
+        },
     }
 
 
@@ -106,6 +123,42 @@ class ContractAndCorpusTests(unittest.TestCase):
                 "generic_substitution",
                 "unqualified_adjacent",
             ],
+        )
+
+    def test_resolution_report_binds_recovery_record_to_its_closed_schema(self) -> None:
+        document = load_json(CONTRACT_ROOT / "route-resolution-report.schema.json")
+        self.assertEqual(
+            document["properties"]["recovery_record"],
+            {"oneOf": [{"type": "null"}, {"$ref": "recovery-record.schema.json"}]},
+        )
+
+    def test_policy_fixture_helper_supplies_closed_neutral_defaults(self) -> None:
+        fixture = policy(route("preferred"))
+        self.assertEqual(
+            fixture["helper_state"],
+            {
+                "available": True,
+                "no_helper_continuation_qualified": False,
+                "helper_route_attempts": 0,
+            },
+        )
+        self.assertEqual(
+            fixture["fake_home"],
+            {
+                "seed_state_id": "sha256:" + "c" * 64,
+                "temporary_root_required": True,
+            },
+        )
+        self.assertEqual(
+            fixture["budgets"],
+            {
+                "max_retries": 0,
+                "max_elapsed_units": 1,
+                "max_fanout": 1,
+                "max_context_units": 0,
+                "cancellation_point": "none",
+                "max_escalations": 0,
+            },
         )
 
     def test_fixture_covers_every_declared_required_scenario(self) -> None:

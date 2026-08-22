@@ -17,7 +17,7 @@ counts:
   modified: 0
   unspecified: 0
 critical_findings: 0
-significant_findings: 1
+significant_findings: 4
 minor_findings: 2
 positive_findings: 3
 ---
@@ -36,11 +36,17 @@ into a script body. The templates, Claude and Codex author instructions,
 generated pages, and regression floor were fixed; the browser and behavioral
 UAT suites now pass with zero open findings.
 
+Code review found three additional important contract defects. The local review
+expanded the declaration-source vocabulary. The live PR review then bound
+`recovery_record` to its dedicated closed schema and made the shared policy
+fixture helper supply every required top-level section. All three were
+remediated with focused RED/GREEN tests; the final focused suite passes 35/35.
+
 ## Proposed Spec Changes
 
 None.
 
-No `spec.md` edits are proposed. The post-review declaration-source schema mismatch was a contract implementation defect, not a requirement gap, and was remediated with a RED/GREEN test update.
+No `spec.md` edits are proposed. The review findings were contract implementation defects, not requirement gaps, and were remediated with RED/GREEN test updates.
 
 ## Requirement Coverage Matrix
 
@@ -80,7 +86,7 @@ No `spec.md` edits are proposed. The post-review declaration-source schema misma
 
 ## Success Criteria Assessment
 
-All 9 measurable outcomes passed. Focused verification passed 33/33 after review remediation. The static-title contract passed 90/90. Layer 4 passed 6002/6002 with exact-worktree fixture-write permission. The full deterministic suite passed 7663/7663: Layer 1 1469/1469, Layer 4 6002/6002, and Layer 5 192/192.
+All 9 measurable outcomes passed. Focused verification passed 35/35 after all review remediation. The static-title contract passed 90/90. Layer 4 passed 6002/6002 with exact-worktree fixture-write permission. The full deterministic suite passed 7663/7663: Layer 1 1469/1469, Layer 4 6002/6002, and Layer 5 192/192.
 
 ## Architecture Drift
 
@@ -90,7 +96,7 @@ All 9 measurable outcomes passed. Focused verification passed 33/33 after review
 | Resolver shape | One Codex-local resolver, no Claude import, no shared core | One Codex-local resolver; focused test guards against Claude import and shared core extraction | None |
 | State mutation | Fake-home staged adapter only | Fake-home writes confined to harness-created temporary roots under `.codex/agents` | None |
 | Production scope | No production resolver, installer, payload, version, release, checkpoint, or resume wiring | No production route or installer files changed; release-artifact check passed | None |
-| Reviewability | 385 projected reviewable LOC, 0 production files, 10 total files | Final authored review surface is 525 LOC across 20 implementation/remediation files; 0 production files | Minor |
+| Reviewability | 385 projected reviewable LOC, 0 production files, 10 total files | Final authored review surface is 584 LOC across 20 implementation/remediation files; 0 production files | Minor |
 
 ## Significant Deviations
 
@@ -99,6 +105,11 @@ All 9 measurable outcomes passed. Focused verification passed 33/33 after review
   safety contract. Four templates now expose required static title slots, both
   author surfaces forbid the workaround, shipped artifacts were regenerated,
   and browser retesting passed.
+- REMEDIATED: The route-resolution report accepted any recovery-record object;
+  it now accepts only `null` or the dedicated closed recovery-record schema.
+- REMEDIATED: The shared policy fixture helper omitted required helper,
+  fake-home, and budget sections; neutral schema-shaped defaults now keep every
+  route-resolution fixture aligned with the closed policy contract.
 
 ## Minor Findings
 
@@ -154,6 +165,8 @@ The only notable execution deviation was orchestrator-directed implementation in
 | Worktree binding bug | Implement/Post verification | Codex task root, sandbox write scope, phase-agent cwd, and workflow authority did not bind to the same registered feature worktree | Implement `TODO-CODEX-WORKTREE-BINDING` before relying on same-task worktree adoption for future specs |
 | `declaration_source` schema mismatch | Independent post-implementation review | Valid schema constrained only `local` while fail-closed tests intentionally used inherited/generic/unqualified sources | Keep contract canaries for every fail-closed vocabulary value, including values intended only for invalid-policy rejection paths |
 | Unsafe dynamic document title | Manual browser UAT | Draft templates had no fillable static title slot, so generated pages retained example metadata and used a script workaround | Require and regression-test a static `document-title` fill region; forbid repository-derived title text in script bodies |
+| Open recovery-record object | Live PR review | The report schema used a generic object/null union instead of the dedicated closed recovery contract | Bind nested contract properties to their authoritative schema and test the exact reference shape |
+| Incomplete shared policy fixture | Live PR review | Resolver tests used a convenience helper that omitted three required policy sections | Give shared fixture helpers neutral schema-shaped defaults and assert them directly |
 
 ## Lessons Learned and Recommendations
 
@@ -163,6 +176,8 @@ The only notable execution deviation was orchestrator-directed implementation in
 4. Keep generated review artifacts checked during setup/plan recovery so reviewers can inspect the spec visually before implementation.
 5. Treat document metadata as generated content: expose a safe fill region
    instead of repairing it after load with JavaScript.
+6. Keep shared test builders schema-shaped even when the runtime path under test
+   reads only a subset of the contract.
 
 ## File Traceability Appendix
 
