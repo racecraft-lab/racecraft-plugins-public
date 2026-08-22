@@ -5,7 +5,7 @@
   "branch": "g56r-005-model-availability-fallback-recovery",
   "status": "in_progress",
   "stage": "plan",
-  "updated_at": "2026-08-22T16:25:00Z",
+  "updated_at": "2026-08-22T15:50:51Z",
   "active_step": "Phase 6: Analyze",
   "settings": {
     "consensus_mode": "moderate",
@@ -148,7 +148,7 @@
       }
     },
     "clarify": {
-      "status": "in_progress",
+      "status": "completed",
       "sessions": {
         "resolution_contract": {
           "status": "completed",
@@ -166,16 +166,24 @@
         },
         "state_and_recovery": {
           "status": "completed",
-          "questions": 4,
-          "answers_applied": 4,
+          "questions": 5,
+          "answers_applied": 5,
           "outcomes": [
             "canonical fake-home state IDs",
             "temporary fake_home_root write boundary",
             "rollback trigger and write-state disposition",
+            "optional helper separated from required-core completeness with bound roster identity",
             "deterministic Recovery Record without host metadata"
           ],
-          "unresolved_for_consensus": 0,
-          "consensus_status": "skipped: zero unresolved items"
+          "unresolved_for_consensus": 1,
+          "consensus_status": "completed",
+          "consensus": {
+            "item": "autopilot-fast-helper destination classification and roster count",
+            "verdict": "qualified agreement",
+            "codebase_analyst": "qualified",
+            "spec_context_analyst": "agree",
+            "decision": "Validate helper source integrity, exclude it from required-core destination completeness, bind the current 10-core-plus-helper roster identity, and fail closed for re-review on roster drift."
+          }
         },
         "bounds_and_attribution": {
           "status": "completed",
@@ -250,7 +258,7 @@
         },
         "data_integrity": {
           "status": "completed",
-          "items": 11,
+          "items": 12,
           "gaps": 0,
           "consensus_status": "skipped: zero unresolved items"
         }
@@ -262,11 +270,35 @@
       "total_tasks": 25,
       "phases": 6,
       "user_stories_covered": 4,
-      "parallel_opportunity_groups": 3,
+      "parallel_opportunity_groups": 1,
       "gate": {
         "id": "G5",
         "pass": true,
+        "markers": 0,
+        "task_count": 25,
         "reason": "tasks.md exists and contains actionable tasks"
+      },
+      "atomicity_route": {
+        "route": "one-navigable-PR",
+        "releasable": true,
+        "signals": ["change-shape:modify-heavy"],
+        "warnings": []
+      },
+      "layer_plan": {
+        "status": "ok",
+        "increment_count": 6,
+        "task_count": 25,
+        "error_count": 0,
+        "warning_count": 36,
+        "warning_disposition": "Expected reference_not_found warnings for declared NEW implementation paths.",
+        "order": ["foundation", "us1", "us2", "us3", "us4", "polish"]
+      },
+      "spec_index_regeneration": {
+        "status": "applied",
+        "stale_map_count": 1,
+        "touched_paths": [
+          "specs/g56r-005-model-availability-fallback-recovery/SPEC-MOC.md"
+        ]
       }
     }
   },
@@ -277,7 +309,7 @@
     {"step": "Phase 2: Clarify - Resolution Contract", "status": "completed"},
     {"step": "Phase 2: Clarify - Resolution Contract Consensus", "status": "skipped: zero unresolved items"},
     {"step": "Phase 2: Clarify - State and Recovery", "status": "completed"},
-    {"step": "Phase 2: Clarify - State and Recovery Consensus", "status": "skipped: zero unresolved items"},
+    {"step": "Phase 2: Clarify - State and Recovery Consensus", "status": "completed"},
     {"step": "Phase 2: Clarify - Bounds and Attribution", "status": "completed"},
     {"step": "Phase 2: Clarify - Bounds and Attribution Consensus", "status": "skipped: zero unresolved items"},
     {"step": "Phase 3: Plan", "status": "completed"},

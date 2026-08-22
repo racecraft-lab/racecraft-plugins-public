@@ -5,6 +5,7 @@
 The replay harness accepts one fixture case with:
 
 - a `FixturePolicy`
+- a canonical bundled-source roster and its bound identity
 - local capability evidence
 - exact invocation and treatment probe outcomes
 - optional service reroute evidence
@@ -14,20 +15,22 @@ The replay harness accepts one fixture case with:
 
 ## Processing Contract
 
-1. Reject incompatible strict override before fallback evaluation or writes.
-2. Walk the preferred route, then fallbacks in fixture order.
-3. Detect loops only when the walk reaches a previously attempted route.
-4. For each reached route, emit applicable plugin reasons in the fixed Resolution Ordering Contract order.
-5. Keep service reroute attribution outside the plugin reason sequence.
-6. Apply fake-home writes only beneath a harness-created `<fake_home_root>/.codex/agents`.
-7. After managed files are touched, cancellation or failure triggers rollback and bounded cleanup.
-8. Emit exactly one terminal outcome last.
+1. Canonicalize the current bundled-source roster, classify `autopilot-fast-helper.toml` as the sole optional-helper definition, and fail closed if its identity differs from the reviewed fixture binding.
+2. Reject incompatible strict override before fallback evaluation or writes.
+3. Walk the preferred route, then fallbacks in fixture order.
+4. Detect loops only when the walk reaches a previously attempted route.
+5. For each reached route, emit applicable plugin reasons in the fixed Resolution Ordering Contract order.
+6. Keep service reroute attribution outside the plugin reason sequence.
+7. Apply fake-home writes only beneath a harness-created `<fake_home_root>/.codex/agents`.
+8. After managed files are touched, cancellation or failure triggers rollback and bounded cleanup.
+9. Emit exactly one terminal outcome last.
 
 ## Output Contract
 
 The route report is canonical JSON with sorted keys and deterministic arrays. It contains:
 
 - policy and case identifiers
+- source-roster identity and required/optional classification
 - ordered plugin diagnostics
 - service reroute attribution
 - route qualification result

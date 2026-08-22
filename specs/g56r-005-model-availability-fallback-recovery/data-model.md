@@ -4,6 +4,7 @@
 
 - `schema_version`: constant `1.0.0`
 - `policy_id`: stable fixture identifier
+- `source_roster_id`: SHA-256 identity of the canonical SourceRoster
 - `agent`: role identity and role class
 - `preferred_route`: first RouteCandidate
 - `fallback_routes`: ordered list of RouteCandidate
@@ -12,6 +13,18 @@
 - `helper_state`: required/optional helper availability and optional no-helper continuation evidence
 - `fake_home`: seed state and harness-created temporary root requirement
 - `budgets`: HarnessBudget
+
+## SourceRoster
+
+- sorted source-relative TOML paths and SHA-256 content digests
+- explicit `required_core` or `optional_helper` classification per definition
+- exactly one recognized optional helper: `autopilot-fast-helper.toml`
+- `source_roster_id`: SHA-256 over the canonical roster bytes
+
+The current bound fixture snapshot contains 10 required-core definitions plus
+the optional helper. A changed identity, including the roadmap's future
+11-core-plus-helper state, is a fail-closed fixture-review event rather than an
+implicitly accepted count change.
 
 ## RouteCandidate
 

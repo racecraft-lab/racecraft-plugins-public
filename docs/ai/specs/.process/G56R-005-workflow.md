@@ -33,10 +33,10 @@ autonomous phase loop.
 | Plan | `/speckit-plan` | ✅ Complete | 5 artifacts; G3 and reviewability estimator passed |
 | Checklist | `/speckit-checklist` | ✅ Complete | Error handling, state management, and data integrity checklists; no gaps |
 | Tasks | `/speckit-tasks` | ✅ Complete | 25 vertical TDD-first tasks; G5 passed |
-| Analyze | `/speckit-analyze` | ⏳ Pending | Require full traceability and no critical findings |
+| Analyze | `/speckit-analyze` | 🔄 In Progress | Reconcile roster-identity consensus, then require full traceability |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-implementation composite confidence |
-| Implement | `/speckit-implement` | ⏳ Pending | Not run by the planning handoff |
-| Post | Post-Implementation | ⏳ Pending | Canonical closeout after implementation |
+| Implement | `/speckit-implement` | ⏳ Pending | Not run by the `stage=plan` handoff |
+| Post | Post-Implementation | ⏳ Pending | Not run by the `stage=plan` handoff |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
@@ -334,11 +334,17 @@ terminal precedence.
 | Session | Focus | Questions | Key Outcomes |
 |---------|-------|-----------|--------------|
 | 1 | Resolution contract | 5 resolved | Fixed diagnostic order; exhaustion is details under `no_safe_route`; loop detection on arrival; explicit no-helper proof; canonical non-route treatment comparison |
-| 2 | State and recovery | 4 resolved | Canonical fake-home state IDs; temporary-root-only write boundary; rollback trigger and write-state disposition; deterministic Recovery Record |
+| 2 | State and recovery | 5 resolved | Canonical state IDs; temporary-root write boundary; rollback matrix; conditional helper and roster identity; deterministic Recovery Record |
 | 3 | Bounds and attribution | 5 resolved | Separate service attribution; approved/unapproved reroute rules; terminal precedence; deterministic budget counters; scoring eligibility split from route qualification |
 
-All three sessions reported zero unresolved-for-consensus items, so their
-mandatory consensus steps were skipped with evidence rather than dispatched.
+Sessions 1 and 3 reported zero unresolved-for-consensus items, so their
+mandatory consensus steps were skipped with evidence. Session 2 routed the
+helper-roster tension to `codebase-analyst` and `spec-context-analyst`.
+Consensus was qualified agreement: validate the helper in bundled-source
+integrity, exclude it from required-core destination completeness, bind the
+current 10-core-plus-helper roster identity, and fail closed for re-review when
+the roadmap's future 11-core-plus-helper roster arrives. The current installer's
+all-11 label remains present-state implementation evidence.
 
 ---
 
@@ -446,8 +452,8 @@ Focus on G56R-005 requirements:
 |-----------|-------|------|-----------------|
 | error-handling | 11 | 0 | FR-003, FR-007, FR-010, FR-012, FR-013, FR-016, FR-017 |
 | state-management | 11 | 0 | FR-015, FR-016, FR-017, FR-018 |
-| data-integrity | 11 | 0 | FR-001, FR-006, FR-008, FR-009, FR-011, FR-018, FR-022 |
-| **Total** | 33 | 0 | All gaps resolved or absent |
+| data-integrity | 12 | 0 | FR-001, FR-006, FR-008, FR-009, FR-011, FR-016, FR-018, FR-022 |
+| **Total** | 34 | 0 | All gaps resolved or absent |
 
 Every genuine `[Gap]` must update `spec.md` or `plan.md`, then be rechecked.
 
@@ -483,8 +489,13 @@ dispatched.
 |--------|-------|
 | Total Tasks | 25 |
 | Phases | 6 |
-| Parallel Opportunities | 3 documented groups |
+| Parallel Opportunities | 1 safe `[P]` foundation group |
 | User Stories Covered | 4/4 |
+
+G5 recheck passed with 25 tasks after the layer-planner repair. The planner now
+returns `status=ok`, 6 increments, 25 tasks, and 0 errors. Its 36 warnings are
+expected `reference_not_found` notices for declared NEW implementation paths.
+The reconciliation boundary regenerated the feature `SPEC-MOC.md`.
 
 ---
 
@@ -496,14 +507,17 @@ result from LOC alone.
 
 | Field | Value |
 |-------|-------|
-| Route | Pending |
-| Releasable | Pending |
-| Signals | Pending |
-| Warnings | Pending |
+| Route | `one-navigable-PR` |
+| Releasable | `true` |
+| Signals | `change-shape:modify-heavy` |
+| Warnings | None |
 
 ```text
 runner helper atomicity-route specs/g56r-005-model-availability-fallback-recovery
 ```
+
+The layer plan orders Foundation → US1 → US2 → US3 → US4 → Polish with
+declared dependency edges and one safe parallel foundation group.
 
 ### Plan Results
 

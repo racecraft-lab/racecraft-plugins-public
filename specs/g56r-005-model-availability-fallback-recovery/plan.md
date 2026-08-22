@@ -12,7 +12,7 @@ Create deterministic, repository-local Codex simulation evidence for model route
 
 **Language/Version**: Python 3.11+ standard library only
 
-**Primary Dependencies**: Existing repo-local helpers under `tests/speckit-pro/lib`, `tests/speckit-pro/layer6-efficiency/lib`, and `speckit-pro/speckit_pro_runner/helpers/install.py`; no new third-party dependencies
+**Primary Dependencies**: Existing repo-local helpers under `tests/speckit-pro/lib`, `tests/speckit-pro/layer6-efficiency/lib`, and `speckit-pro/speckit_pro_runner/helpers/install.py`; the authoritative bundled Codex source roster; no new third-party dependencies
 
 **Storage**: Canonical JSON fixtures, JSON Schema contracts, fake-home temporary filesystem state
 
@@ -92,7 +92,7 @@ tests/speckit-pro/
     └── test-codex-route-fallback-recovery.py
 ```
 
-**Structure Decision**: Keep the feature in the existing repository-only test and Layer 6 evidence surface. The production plugin runner remains read-only precedent for required-agent roster and fake-home safety patterns, but G56R-005 does not modify installer runtime behavior.
+**Structure Decision**: Keep the feature in the existing repository-only test and Layer 6 evidence surface. The production plugin runner remains read-only precedent for required-agent roster and fake-home safety patterns, but G56R-005 does not modify installer runtime behavior. Bind fixtures to an identity derived from the current bundled source roster, classify `autopilot-fast-helper.toml` as conditional optional-helper destination state, and fail closed for fixture re-review on roster drift. The current checkout has 10 core definitions plus the helper; the roadmap's future 11-core-plus-helper target is not hard-coded into this simulation.
 
 ## Complexity Tracking
 

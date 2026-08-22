@@ -10,11 +10,11 @@
 
 ## Decision 2: Treat `autopilot-fast-helper.toml` as conditional optional helper state
 
-**Decision**: Validate all bundled Codex source TOML files for source integrity, but exclude `autopilot-fast-helper.toml` from required-agent destination all-or-nothing completeness in the simulation. Track it as optional helper availability and require an explicitly qualified no-helper continuation before continuing.
+**Decision**: Validate all bundled Codex source TOML files for source integrity, but exclude `autopilot-fast-helper.toml` from required-agent destination all-or-nothing completeness in the simulation. Track it as optional helper availability, bind the fixture corpus to a digest of the authoritative source roster and its required/optional classification, fail closed for re-review on roster drift, and require an explicitly qualified no-helper continuation before continuing.
 
-**Rationale**: The autopilot runtime contract describes `autopilot-fast-helper` as optional. Required-agent install safety must still prove all-or-nothing behavior for the required executor/analyst set.
+**Rationale**: The autopilot runtime contract describes `autopilot-fast-helper` as optional. Required-agent install safety must still prove all-or-nothing behavior for the required executor/analyst set. The current checkout contains 10 core definitions plus the helper, while the roadmap targets a future 11-core-plus-helper corpus; identity binding prevents this feature from silently treating either count as timeless.
 
-**Alternatives considered**: Counting the helper as required destination material. Rejected for the simulation contract because it would make optional-helper degradation impossible to represent without contradicting the runtime contract.
+**Alternatives considered**: Counting the helper as required destination material or hard-coding the roadmap's future twelve-role total. Rejected because the first makes optional-helper degradation impossible and the second invents a source definition absent from the current checkout.
 
 ## Decision 3: Fake-home writes require a harness-created temporary root
 

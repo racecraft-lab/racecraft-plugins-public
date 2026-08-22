@@ -23,3 +23,4 @@
 - [x] CHK009 Each required scenario coverage row maps to at least one fixture or acceptance case.
 - [x] CHK010 Each major FR/SC maps to fixture output and review-packet evidence.
 - [x] CHK011 PR evidence states live model/service availability was not tested and production routing/payload/version behavior was not modified.
+- [x] CHK012 Fixture policy binds a canonical bundled-source roster identity, classifies the helper separately, and fails closed for re-review on roster drift without hard-coding the roadmap's future count.

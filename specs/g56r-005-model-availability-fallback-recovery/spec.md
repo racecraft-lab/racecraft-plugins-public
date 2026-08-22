@@ -57,6 +57,15 @@
   reports `writes_state=false`; failed rollback reports `writes_state=true` and
   deterministic manual-remediation evidence. Cleanup never replaces the
   rollback or terminal result.
+- **Q: Is `autopilot-fast-helper.toml` part of required-agent destination
+  completeness?** **A:** No. Validate it as part of complete bundled source
+  integrity, but classify it as the conditional optional-helper destination
+  state and exclude it from required-core all-or-nothing completeness. Bind
+  fixtures to the authoritative source roster identity; the current checkout is
+  10 core agents plus this helper, while the roadmap's future target is 11 core
+  agents plus the helper. Fail closed for re-review when that roster identity
+  changes rather than hard-coding either count. A qualified no-helper path may
+  omit or remove only the plugin-managed helper.
 - **Q: What exact cleanup and replay evidence is required?** **A:** Emit a closed
   canonical JSON Recovery Record with sorted keys and deterministic arrays for
   pre-state and final-state IDs, staged, applied, rolled-back, and cleanup
@@ -204,12 +213,12 @@ Cross-platform maintainers can run one sequential harness state machine that enf
 - **FR-008**: System MUST attribute service reroute evidence separately from plugin reasons and MUST distinguish approved service reroutes from unapproved service reroutes.
 - **FR-009**: System MUST calculate scoring eligibility from qualified route evidence plus approved service reroute status, and MUST mark unapproved service reroutes as ineligible.
 - **FR-010**: System MUST detect a loop only when the sequential walk reaches an already attempted route, MUST NOT re-attempt or re-consult that route, and MUST reject loop, unqualified-adjacent, generic substitution, inherited model, and inherited effort cases fail-closed; fallback exhaustion MUST be diagnostic evidence or terminal details under the sole terminal `no_safe_route` outcome rather than a second terminal outcome.
-- **FR-011**: System MUST record optional-helper unavailability and continue only when the fixture explicitly declares an independently qualified no-helper continuation; the replay MUST prove zero helper-route attempts with helper counters separate from required-route counters and MUST still prove required-agent success or atomic failure.
+- **FR-011**: System MUST validate every bundled Codex agent source definition, classify `autopilot-fast-helper.toml` separately as conditional optional-helper destination state, and record optional-helper unavailability; continuation is allowed only when the fixture explicitly declares an independently qualified no-helper path that proves zero helper-route attempts with helper counters separate from required-route counters, required-core success or atomic failure, and omission or removal of only the plugin-managed helper.
 - **FR-012**: System MUST enforce declared retry limits and record bounded-retry exhaustion before any unbounded retry behavior can occur.
 - **FR-013**: System MUST enforce declared time, fan-out, context, cancellation, and escalation budgets for every harness run.
 - **FR-014**: System MUST use one non-recursive sequential harness state machine for simulation replay and MUST NOT invoke human-in-the-loop scoping or recursive agent execution.
 - **FR-015**: System MUST apply fake-home state changes only through a staged adapter whose sole writable destination is the resolved `<fake_home_root>/.codex/agents`; it MUST reject real homes, checked-in fixture mutation, traversal, symlink traversal, or any destination outside that boundary, and MUST prove atomic no-write, rollback, and final-state preservation.
-- **FR-016**: System MUST detect partial required Codex agent installation in fake homes; a failure before any managed file is touched MUST prove atomic no-write without rollback, while a failure, verification failure, or cancellation after a managed file is touched MUST trigger rollback followed by bounded best-effort cleanup.
+- **FR-016**: System MUST derive required-core membership from the authoritative bundled source roster minus the explicitly classified optional helper, bind fixtures to that roster identity, and fail closed for re-review on roster drift rather than hard-code a role count; it MUST detect partial required-core installation in fake homes, prove atomic no-write without rollback before any managed file is touched, and trigger rollback followed by bounded best-effort cleanup for a later failure, verification failure, or cancellation.
 - **FR-017**: System MUST identify pre-state and previous-known-good state from a canonical manifest of sorted fake-home-relative paths, SHA-256 content digests, file modes, and required/optional role classification; successful rollback MUST restore that exact manifest and report `writes_state=false`, while failed rollback MUST report `writes_state=true` with deterministic manual-remediation evidence, and cleanup MUST NOT replace the rollback or terminal result.
 - **FR-018**: System MUST produce byte-stable canonical JSON replay and Recovery Records for the same fixture inputs, including reason order, attribution category, score eligibility, terminal outcome, pre-state and final-state IDs, deterministic staged/applied/rolled-back/cleanup action arrays, sorted cleanup errors, rollback outcome, write-state disposition, manual remediation, and final fake-home state; records MUST exclude absolute temporary roots, mtimes, inodes, timestamps, and host-specific paths.
 - **FR-019**: System MUST preserve frozen Claude and G56R-004 behavior by keeping the Codex resolver and reason vocabulary locally authoritative without importing Claude logic or extracting a shared resolver core.
@@ -273,7 +282,7 @@ Cross-platform maintainers can run one sequential harness state machine that enf
 
 ### Key Entities *(include if feature involves data)*
 
-- **Fixture Policy**: A deterministic policy record that declares preferred route, fallback route order, strict override status, allowed route mutations, helper availability, any explicit independently qualified no-helper continuation, service reroute evidence, and fake-home starting state.
+- **Fixture Policy**: A deterministic policy record that declares preferred route, fallback route order, strict override status, allowed route mutations, authoritative source-roster identity and required/optional classification, helper availability, any explicit independently qualified no-helper continuation, service reroute evidence, and fake-home starting state.
 - **Route Candidate**: A declared model and effort pairing with local qualification evidence, probe outcomes, and canonical digest evidence for every non-route treatment field.
 - **Diagnostic Reason**: A locally authored Codex reason that explains why a route was qualified, rejected, or skipped and occupies its fixed position in the Resolution Ordering Contract.
 - **Terminal Outcome**: The single final result emitted last for a resolution attempt, such as qualified route, strict override rejected, bounded retry exhausted, or no safe route; fallback exhaustion is evidence or details under no-safe-route, not a second terminal outcome.
@@ -281,7 +290,7 @@ Cross-platform maintainers can run one sequential harness state machine that enf
 - **Score Eligibility Record**: Deterministic decision explaining whether a replay can contribute to scoring based on route qualification and service reroute approval.
 - **Harness Budget**: Declared retry, time, fan-out, context, cancellation, and escalation limits for a sequential replay.
 - **Fake Home State**: Isolated filesystem representation rooted at an explicit harness-created temporary directory, identified by a canonical manifest of sorted relative paths, content digests, modes, and role classifications; its only writable destination is `.codex/agents` beneath that root.
-- **Previous-Known-Good Install**: The last validated fake-home install state, identified by the canonical state manifest rather than host filesystem metadata, that must remain exactly recoverable if a replacement fails.
+- **Previous-Known-Good Install**: The last validated fake-home install state, identified by the canonical state manifest and bound source-roster identity rather than host filesystem metadata, that must remain exactly recoverable if a replacement fails.
 - **Recovery Record**: Closed canonical JSON evidence containing pre-state and final-state IDs, deterministic staged/applied/rolled-back/cleanup action arrays, sorted cleanup errors, rollback outcome, write-state disposition, manual remediation, and cancellation handling without absolute temporary paths or host-specific metadata.
 
 ### Local Capability Evidence
@@ -305,7 +314,7 @@ Cross-platform maintainers can run one sequential harness state machine that enf
 - **SC-003**: 100% of resolution attempts produce diagnostics in the Resolution Ordering Contract order, exactly one terminal outcome emitted last, and zero ambiguous terminal states; every exhausted fallback walk ends only in `no_safe_route`.
 - **SC-004**: 100% of strict override rejection cases stop without fallback evaluation.
 - **SC-005**: 100% of service reroute cases report service attribution separately from plugin reasons and mark approved versus unapproved status.
-- **SC-006**: 100% of fake-home failure cases either preserve the exact canonical previous-known-good manifest or prove atomic no-write when no managed file was touched; rollback failures report `writes_state=true` and manual remediation, cleanup never masks rollback, and every no-helper continuation proves an explicit independent qualification, zero helper-route attempts, separate counters, and required-agent success or atomic failure.
+- **SC-006**: 100% of fake-home failure cases either preserve the exact canonical previous-known-good manifest or prove atomic no-write when no managed file was touched; rollback failures report `writes_state=true` and manual remediation, cleanup never masks rollback, every no-helper continuation proves independent qualification and required-core success or atomic failure with zero helper-route attempts and separate counters, and any source-roster drift fails closed for fixture re-review.
 - **SC-007**: 100% of retry, time, fan-out, context, cancellation, and escalation budget fixtures terminate at the declared bound with no recursive or human-in-the-loop path.
 - **SC-008**: Reviewers can trace every functional requirement to scenario coverage and verification evidence within the PR packet.
 - **SC-009**: Final review finds zero production route policy changes, zero live model availability claims, zero generated payload changes, and zero frozen Claude/G56R-004 contract edits.
@@ -318,6 +327,11 @@ Cross-platform maintainers can run one sequential harness state machine that enf
 - Checked-in fake-home fixtures are immutable seeds. Every mutation replay copies
   its pre-state into an explicit harness-created temporary root and may write
   only beneath that root's `.codex/agents` directory.
+- The current checkout contains 10 core Codex agent TOMLs plus
+  `autopilot-fast-helper.toml`; the roadmap's later target contains 11 core
+  agents plus the helper. G56R-005 binds fixtures to the current source-roster
+  identity and treats any transition between those states as review-requiring
+  roster drift, not as an implicit fixture update.
 - "Score eligibility" means eligibility for local evaluation scoring, not an external service score.
 - Existing Claude fallback behavior remains frozen and is used only as preservation evidence and precedent; Codex reason vocabulary remains locally authoritative.
 - Production resolver wiring, installer wiring, payload regeneration, version changes, release artifacts, checkpoint scheduling, and resume scheduling are deferred to later specs.
