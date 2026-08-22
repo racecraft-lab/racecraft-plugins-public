@@ -19,14 +19,14 @@
     "body": {
       "algorithm": "sha256",
       "path": "specs/art-017-state-bookkeeping-checks/.process/pr-packets/art-017-draft/body.md",
-      "sha256": "9ac41e972a5bfc59bc6ff4f406f036489f7210eb7a78810748e74e1fe3bf566a",
-      "size_bytes": 6896
+      "sha256": "998910757acbc5bd4566c5c21427e1bbae97ffdedf80078f4cc2e1f280607dad",
+      "size_bytes": 7140
     },
     "packet": {
       "algorithm": "sha256",
       "path": "specs/art-017-state-bookkeeping-checks/.process/pr-packets/art-017-draft.json",
-      "sha256": "e5496f7593fd99b00b771a5dea33c8664e470faf85e7f2b0746f6f1520698c63",
-      "size_bytes": 8162
+      "sha256": "76b20082d8aba0c819187cd9ece9415f9044198103081a7371556f657a21fe72",
+      "size_bytes": 8564
     }
   },
   "status": "passed",
@@ -35,7 +35,7 @@
     "base_branch": "main",
     "head_branch": "art-017-state-bookkeeping-checks"
   },
-  "timestamp": "2026-08-22T19:37:25Z",
+  "timestamp": "2026-08-22T21:23:46Z",
   "title_value": "fix(art-017): Arm state bookkeeping checks",
   "validation_result_path": "specs/art-017-state-bookkeeping-checks/.process/pr-packets/art-017-draft/validation.json"
 }
