@@ -265,7 +265,7 @@ Cross-platform maintainers can run one sequential harness state machine that enf
 
 - **Primary surface**: harness/adapter
 - **Secondary surfaces, if any**: seed/config and docs/process
-- **Projected reviewable LOC**: 900 non-generated LOC
+- **Projected reviewable LOC**: 385 non-generated LOC
 - **Projected production files**: 0
 - **Projected total files**: 10
 - **Budget result**: within budget

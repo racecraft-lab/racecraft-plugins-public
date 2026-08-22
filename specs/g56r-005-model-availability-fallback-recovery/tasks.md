@@ -12,14 +12,14 @@
 ## Phase 2: User Story 1 - Deterministic Route Resolution
 
 - [ ] T005 Add failing preferred-absence, effort, discovery, availability, treatment, exhaustion, and single-terminal tests in `tests/speckit-pro/unit/test-codex-route-fallback-recovery.py` (FR-003, FR-004, FR-005, FR-010).
-- [ ] T006 Implement the pure resolver in `tests/speckit-pro/layer6-efficiency/lib/codex_route_fallback.py` and prove it in `tests/speckit-pro/unit/test-codex-route-fallback-recovery.py` with strict override pre-check, ordered walk, loop-on-arrival detection, and fixed diagnostic ordering (FR-002, FR-003, FR-007, FR-010).
+- [ ] T006 Implement the pure resolver in `tests/speckit-pro/layer6-efficiency/lib/codex_route_fallback.py` and prove it in `tests/speckit-pro/unit/test-codex-route-fallback-recovery.py` with strict override pre-check, ordered walk, loop-on-arrival detection, fixed diagnostic ordering, and no import of the frozen Claude resolver or shared resolver core (FR-002, FR-003, FR-007, FR-010, FR-019, SC-004).
 - [ ] T007 Add three-run route-diagnostic and terminal byte-stability assertions in `tests/speckit-pro/unit/test-codex-route-fallback-recovery.py` (SC-002, SC-003).
 
 ## Phase 3: User Story 2 - Service Reroute Attribution
 
-- [ ] T008 Add failing reroute-attribution and scoring-split cases in `tests/speckit-pro/unit/test-codex-route-fallback-recovery.py` and `tests/speckit-pro/layer6-efficiency/fixtures-codex-fallback/fallback-recovery-corpus.json` (FR-008, FR-009).
-- [ ] T009 Implement separate service-reroute attribution in `tests/speckit-pro/layer6-efficiency/lib/codex_route_fallback.py` and prove plugin reason order in `tests/speckit-pro/unit/test-codex-route-fallback-recovery.py` (FR-008).
-- [ ] T010 Implement scoring eligibility in `tests/speckit-pro/layer6-efficiency/lib/codex_route_fallback.py` and prove approved/qualified versus unapproved/ineligible cases in `tests/speckit-pro/unit/test-codex-route-fallback-recovery.py` (FR-009).
+- [ ] T008 Add failing reroute-attribution and scoring-split cases in `tests/speckit-pro/unit/test-codex-route-fallback-recovery.py` and `tests/speckit-pro/layer6-efficiency/fixtures-codex-fallback/fallback-recovery-corpus.json` (FR-008, FR-009, SC-005).
+- [ ] T009 Implement separate service-reroute attribution in `tests/speckit-pro/layer6-efficiency/lib/codex_route_fallback.py` and prove plugin reason order in `tests/speckit-pro/unit/test-codex-route-fallback-recovery.py` (FR-008, SC-005).
+- [ ] T010 Implement scoring eligibility in `tests/speckit-pro/layer6-efficiency/lib/codex_route_fallback.py` and prove approved/qualified versus unapproved/ineligible cases in `tests/speckit-pro/unit/test-codex-route-fallback-recovery.py` (FR-009, SC-005).
 - [ ] T011 Implement treatment digest comparison in `tests/speckit-pro/layer6-efficiency/lib/codex_route_fallback.py` and prove model/effort-only deltas in `tests/speckit-pro/unit/test-codex-route-fallback-recovery.py` (FR-006).
 
 ## Phase 4: User Story 3 - Fake-Home Recovery And Optional Helper
@@ -32,8 +32,8 @@
 
 ## Phase 5: User Story 4 - Bounded Sequential Harness
 
-- [ ] T017 Add failing bound, cancellation, inheritance, substitution, recursion, and HITL-rejection cases in `tests/speckit-pro/unit/test-codex-route-fallback-recovery.py` and `tests/speckit-pro/layer6-efficiency/fixtures-codex-fallback/fallback-recovery-corpus.json` (FR-012, FR-013, FR-014).
-- [ ] T018 Implement the bounded non-recursive harness in `tests/speckit-pro/layer6-efficiency/lib/codex_route_fallback.py` and prove deterministic counters and terminal precedence in `tests/speckit-pro/unit/test-codex-route-fallback-recovery.py` (FR-012, FR-013, FR-014).
+- [ ] T017 Add failing bound, cancellation, inheritance, substitution, recursion, and HITL-rejection cases in `tests/speckit-pro/unit/test-codex-route-fallback-recovery.py` and `tests/speckit-pro/layer6-efficiency/fixtures-codex-fallback/fallback-recovery-corpus.json` (FR-012, FR-013, FR-014, SC-007).
+- [ ] T018 Implement the bounded non-recursive harness in `tests/speckit-pro/layer6-efficiency/lib/codex_route_fallback.py` and prove deterministic counters and terminal precedence in `tests/speckit-pro/unit/test-codex-route-fallback-recovery.py` (FR-012, FR-013, FR-014, SC-007).
 - [ ] T019 Add host-data exclusion assertions in `tests/speckit-pro/unit/test-codex-route-fallback-recovery.py` for canonical replay output (FR-018).
 
 ## Phase 6: Polish - Review Evidence And Verification
@@ -42,8 +42,8 @@
 - [ ] T021 Run `tests/speckit-pro/unit/test-codex-route-fallback-recovery.py` and preserve passing output for PR evidence.
 - [ ] T022 Run Layer 4 through `tests/speckit-pro/run-all.py` and preserve deterministic harness evidence.
 - [ ] T023 Run the full suite through `tests/speckit-pro/run-all.py` and preserve the result.
-- [ ] T024 Run generated-artifact, reference, and scope checks for `tests/speckit-pro/suite-manifest.json` and all changed test-surface files.
-- [ ] T025 Prepare the PR packet from `specs/g56r-005-model-availability-fallback-recovery/plan.md` with non-goals, review order, traceability, verification, rollback, and explicit live-smoke-unrun evidence.
+- [ ] T024 Run generated-artifact, docs-reference, spec-index, and scope checks for `tests/speckit-pro/suite-manifest.json` and all changed test-surface files, including `pnpm --dir docs-site reference:generate`/`reference:check` when the tracked `tests/speckit-pro/` change contract applies and `python3 scripts/refresh-release-artifacts.py --check` to prove payload/release artifacts remain unchanged (FR-020, SC-009).
+- [ ] T025 Prepare the PR packet from `specs/g56r-005-model-availability-fallback-recovery/plan.md` with non-goals, review order, traceability, verification, rollback, explicit live-smoke-unrun evidence, and proof that production routing, payload/version/release artifacts, checkpoint/resume behavior, and frozen Claude/G56R-004 contracts were not modified (FR-019, FR-020, SC-008, SC-009).
 
 ## Dependencies & Execution Order
 

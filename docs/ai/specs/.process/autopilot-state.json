@@ -5,8 +5,8 @@
   "branch": "g56r-005-model-availability-fallback-recovery",
   "status": "in_progress",
   "stage": "plan",
-  "updated_at": "2026-08-22T15:50:51Z",
-  "active_step": "Phase 6: Analyze",
+  "updated_at": "2026-08-22T16:03:42Z",
+  "active_step": "Phase 6.5: Confidence Gate",
   "settings": {
     "consensus_mode": "moderate",
     "gate_failure": "stop",
@@ -300,6 +300,53 @@
           "specs/g56r-005-model-availability-fallback-recovery/SPEC-MOC.md"
         ]
       }
+    },
+    "analyze": {
+      "status": "completed",
+      "initial_findings": {
+        "critical": 0,
+        "high": 1,
+        "medium": 3,
+        "low": 0
+      },
+      "remediation_loops": 1,
+      "final_findings": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "remediations": [
+        "aligned the reviewability estimate at 385 LOC",
+        "bound FR-019 and FR-020 safety scope to T006, T024, and T025",
+        "made SC-004, SC-005, and SC-007 task traceability explicit",
+        "made generated-artifact and docs-reference duties concrete"
+      ],
+      "traceability": {
+        "functional_requirements": "22/22",
+        "success_criteria": "9/9"
+      },
+      "unresolved_for_consensus": 0,
+      "consensus_status": "skipped: zero unresolved items",
+      "confidence_emit": {
+        "composite": 0.99,
+        "task_understanding": 0.98,
+        "approach_clarity": 0.97,
+        "requirements_alignment": 0.99,
+        "risk_assessment": 1.0,
+        "completeness": 1.0
+      },
+      "gate": {
+        "id": "G6",
+        "pass": true,
+        "markers": 0,
+        "reason": "0 CRITICAL/HIGH findings"
+      },
+      "spec_index_regeneration": {
+        "status": "no_op",
+        "stale_map_count": 0,
+        "touched_paths": []
+      }
     }
   },
   "plan": [
@@ -320,9 +367,9 @@
     {"step": "Phase 4: Checklist - Data Integrity", "status": "completed"},
     {"step": "Phase 4: Checklist - Data Integrity Consensus", "status": "skipped: zero unresolved items"},
     {"step": "Phase 5: Tasks", "status": "completed"},
-    {"step": "Phase 6: Analyze", "status": "in_progress"},
-    {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
-    {"step": "Phase 6.5: Confidence Gate", "status": "pending"},
+    {"step": "Phase 6: Analyze", "status": "completed"},
+    {"step": "Phase 6: Analyze - Consensus", "status": "skipped: zero unresolved items"},
+    {"step": "Phase 6.5: Confidence Gate", "status": "in_progress"},
     {"step": "Phase 7: Implement - Pending task decomposition", "status": "skipped: outside stage plan"},
     {"step": "Post: Doctor Extension Check", "status": "skipped: outside stage plan"},
     {"step": "Post: Verify Implementation", "status": "skipped: outside stage plan"},

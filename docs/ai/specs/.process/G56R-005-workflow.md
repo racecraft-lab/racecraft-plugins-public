@@ -33,7 +33,7 @@ autonomous phase loop.
 | Plan | `/speckit-plan` | ✅ Complete | 5 artifacts; G3 and reviewability estimator passed |
 | Checklist | `/speckit-checklist` | ✅ Complete | Error handling, state management, and data integrity checklists; no gaps |
 | Tasks | `/speckit-tasks` | ✅ Complete | 25 vertical TDD-first tasks; G5 passed |
-| Analyze | `/speckit-analyze` | 🔄 In Progress | Reconcile roster-identity consensus, then require full traceability |
+| Analyze | `/speckit-analyze` | ✅ Complete | 4 findings remediated (0C/1H/3M); G6 passed with no unresolved findings |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-implementation composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | Not run by the `stage=plan` handoff |
 | Post | Post-Implementation | ⏳ Pending | Not run by the `stage=plan` handoff |
@@ -551,9 +551,30 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| Pending | Pending | Pending | Pending |
+| A-001 | MEDIUM | `spec.md` projected 900 reviewable LOC while the accepted one-slice estimate was 385 | Restored the approved 385-LOC estimate |
+| A-002 | HIGH | FR-019 and FR-020 safety boundaries were not explicitly bound to implementation and review tasks | Bound the no-shared-Claude-core rule to T006 and the complete no-scope-leak proof to T024/T025 |
+| A-003 | MEDIUM | SC-004, SC-005, and SC-007 were testable but not named in `tasks.md` | Added explicit success-criterion traceability to T006, T008-T010, and T017-T018 |
+| A-004 | MEDIUM | T024 did not name the concrete generated-artifact, docs-reference, spec-index, and release-artifact checks | Added the exact conditional reference commands and release-artifact check |
 
-G6 requires no unresolved CRITICAL or HIGH finding.
+G6 passed after one remediation loop. The authoritative marker helper reported
+zero gaps, clarifications, and severity markers; the G6 validator reported
+`0 CRITICAL/HIGH findings`. All 22 functional requirements and all 9 success
+criteria now trace into `tasks.md`. The phase-boundary spec-index regeneration
+was current (`stale_map_count: 0`) and changed no files.
+
+### Consensus Resolution Log
+
+| Item | Round | Routed Categories | Outcome | Analysts Used |
+|------|-------|-------------------|---------|---------------|
+| Analyze clean-pass synthesis | N/A | None | Zero unresolved items; confidence record emitted | consensus-synthesizer |
+
+📊 Confidence: 0.99
+
+- Task understanding: 0.98
+- Approach clarity: 0.97
+- Requirements alignment: 0.99
+- Risk assessment: 1.00
+- Completeness: 1.00
 
 ---
 
