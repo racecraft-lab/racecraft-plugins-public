@@ -100,6 +100,12 @@ class GenerateSpecIndexTests(unittest.TestCase):
         shutil.copytree(FIXTURES / name, target)
         return target
 
+    def _spec_index_write_fixture(self):
+        from speckit_pro_runner.envelope import RunnerRequest
+        from speckit_pro_runner.helpers import mutation, registry
+
+        return RunnerRequest, mutation, registry, self.copy_fixture("stale-fill")
+
     def test_check_returns_current_stale_and_error_without_writes(self) -> None:
         cases = (
             ("current-empty", 0, "ok"),
@@ -213,10 +219,7 @@ class GenerateSpecIndexTests(unittest.TestCase):
         self.assertEqual(moc.read_bytes(), first_write)
 
     def test_write_rejects_target_swap_between_conflict_check_and_replace(self) -> None:
-        from speckit_pro_runner.envelope import RunnerRequest
-        from speckit_pro_runner.helpers import mutation, registry
-
-        root = self.copy_fixture("stale-fill")
+        RunnerRequest, mutation, registry, root = self._spec_index_write_fixture()
         moc = root / "specs" / "prsg-901-stale" / "SPEC-MOC.md"
         calls = 0
         real_ensure = mutation.ensure_safe_write_target_fd
@@ -250,10 +253,7 @@ class GenerateSpecIndexTests(unittest.TestCase):
         self.assertFalse(body["data"]["mutation"]["live_mutation"])
 
     def test_write_acquires_lock_before_rendering_sources(self) -> None:
-        from speckit_pro_runner.envelope import RunnerRequest
-        from speckit_pro_runner.helpers import mutation, registry
-
-        root = self.copy_fixture("stale-fill")
+        RunnerRequest, mutation, registry, root = self._spec_index_write_fixture()
         lock_acquired = False
         real_acquire = mutation.acquire_mutation_lock
         real_render = mutation.render_spec_index
@@ -290,10 +290,7 @@ class GenerateSpecIndexTests(unittest.TestCase):
         self.assertEqual(body["data"]["mutation"]["mutation_status"], "applied")
 
     def test_write_rejects_render_dependency_change_between_render_and_commit(self) -> None:
-        from speckit_pro_runner.envelope import RunnerRequest
-        from speckit_pro_runner.helpers import mutation, registry
-
-        root = self.copy_fixture("stale-fill")
+        RunnerRequest, mutation, registry, root = self._spec_index_write_fixture()
         moc = root / "specs" / "prsg-901-stale" / "SPEC-MOC.md"
         before = moc.read_text(encoding="utf-8")
         prs = root / "specs" / "prsg-901-stale" / ".process" / "prs.json"
@@ -331,10 +328,7 @@ class GenerateSpecIndexTests(unittest.TestCase):
         self.assertFalse(body["data"]["writes_state"])
 
     def test_write_rolls_back_render_dependency_change_immediately_before_replace(self) -> None:
-        from speckit_pro_runner.envelope import RunnerRequest
-        from speckit_pro_runner.helpers import mutation, registry
-
-        root = self.copy_fixture("stale-fill")
+        RunnerRequest, mutation, registry, root = self._spec_index_write_fixture()
         moc = root / "specs" / "prsg-901-stale" / "SPEC-MOC.md"
         before = moc.read_text(encoding="utf-8")
         prs = root / "specs" / "prsg-901-stale" / ".process" / "prs.json"
@@ -373,10 +367,7 @@ class GenerateSpecIndexTests(unittest.TestCase):
         self.assertFalse(body["data"]["writes_state"])
 
     def test_write_rechecks_applied_map_before_success(self) -> None:
-        from speckit_pro_runner.envelope import RunnerRequest
-        from speckit_pro_runner.helpers import mutation, registry
-
-        root = self.copy_fixture("stale-fill")
+        RunnerRequest, mutation, registry, root = self._spec_index_write_fixture()
         moc = root / "specs" / "prsg-901-stale" / "SPEC-MOC.md"
         real_after_write = mutation.snapshot_changed_diagnostic_after_write
 
