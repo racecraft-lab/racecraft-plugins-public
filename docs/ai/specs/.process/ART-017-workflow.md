@@ -39,7 +39,7 @@ failure shape, and ART-008 integration ordering.
 | Tasks | `/speckit-tasks` | ✅ Complete | 31 tasks across five phases; 20/20 FR coverage; G5 passed |
 | Analyze | `/speckit-analyze` | ✅ Complete | 3 original findings plus 1 approved-refinement consistency finding remediated; 0 remain; G6 passed |
 | Confidence Gate | G6.5 | ✅ Complete | PASS: 0.99 composite ≥ 0.90 advisory threshold; proceed to plan-stage emission |
-| Implement | `/speckit-implement` | ⏳ Pending | |
+| Implement | `/speckit-implement` | 🔄 In Progress | Setup tasks T001-T004 started after implementation-stage preflight |
 | Post | Post-Implementation | ⏳ Pending | Canonical 14-item closeout; outside this plan-stage invocation |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -87,7 +87,7 @@ Each phase requires **human review and approval** before proceeding:
 |-------|-------|
 | Worktree binding | Dedicated registered worktree at `.worktrees/art-017-state-bookkeeping-checks`; branch matches `art-017-state-bookkeeping-checks` |
 | Archive Sweep | `no_candidates`; BRAND-001 is pending and ART-017 was excluded as the current target; cleanup disabled |
-| Stage | `plan` — explicit `--stage plan` |
+| Stage | `implement` — explicit `--stage implement` |
 | Draft PR corroboration | `match` — draft PR #490 is open for the bound branch |
 | Confidence mode | `advisory` (default; no local override) |
 | Consensus / gate / commit settings | `moderate` / `stop` / `per-phase` defaults |
@@ -111,7 +111,7 @@ Each phase requires **human review and approval** before proceeding:
 | **Dependencies** | ART-014, satisfied by PR #433 and archived 2026-08-13 |
 | **Enables** | Honest state bookkeeping under the invocation the autopilot already issues |
 | **Priority** | P3 |
-| **Stage** | plan |
+| **Stage** | implement |
 | **Draft PR** | [#490](https://github.com/racecraft-lab/racecraft-plugins-public/pull/490) |
 | **Roadmap tools** | None declared |
 
@@ -670,10 +670,20 @@ Before starting any task:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - Foundation | | | |
-| 2 - User Story 1 | | | |
-| 3 - User Story 2 | | | |
-| 4 - Polish | | | |
+| 1 - Setup and guardrails | T001-T006 | 6/6 | Pre-edit 35/35 baseline; shared clean builder and source ownership frozen |
+| 2 - User Story 1 | T007-T015 | 9/9 | RED 135/138 proved the three missing authorities; GREEN and legacy/report regressions pass 172/172 |
+| 3 - User Story 2 | T016-T023 | 8/8 | Git-index corpus reconciles 69 candidates to 1 eligible pair and 68 exclusions; focused suite passes 270/270 |
+| 4 - Final integration | T024-T031 | 0/8 | Latest-main rebase, generated surfaces, docs, full suite, and final packet refresh pending |
+
+### PR Review Packet Evidence
+
+- **Scope budget:** one slice; authored implementation remains limited to the validator, authored autopilot skill, and bookkeeping-guard test module.
+- **Traceability:** 20/20 functional requirements map to completed or final-integration tasks in `tasks.md`.
+- **Current verification:** focused bookkeeping-guard suite passes 270/270 after the strict RED → GREEN sequence.
+- **Client artifact status:** Claude Code and Codex regeneration/check evidence is pending T025-T026 and will be recorded separately.
+- **Known gaps:** final latest-main rebase, generated references, full suite, and same-HEAD packet evidence remain pending T024-T031.
+- **Rollback and flags:** rollback is the atomic three-key tuple/verdict change; no new runtime flag or schema is introduced.
+- **ART-008 integration:** do not stack on ART-008; T024 records current `origin/main` and rebases only if upstream has advanced.
 
 ---
 

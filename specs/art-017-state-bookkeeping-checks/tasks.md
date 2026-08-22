@@ -24,10 +24,10 @@
 - FR-009 and FR-011 have one shared clean workflow/state builder and a clean `status-evidence` control.
 - FR-018 evidence starts from the current branch before production edits.
 
-- [ ] T001 Run `python3 tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` against `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` and record the pre-edit targeted baseline for FR-018 evidence.
-- [ ] T002 Add or extend one shared clean workflow/state builder in `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` for FR-009 and FR-011.
-- [ ] T003 Add the clean `--rule status-evidence` control in `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` proving exit `0` and complete JSON report emission for FR-007 and FR-011.
-- [ ] T004 Add reusable assertion support in `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` for exact command invocation, target problem-list population, other selected-key emptiness, and report-shape checks for FR-007, FR-008, and FR-010.
+- [X] T001 Run `python3 tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` against `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` and record the pre-edit targeted baseline for FR-018 evidence.
+- [X] T002 Add or extend one shared clean workflow/state builder in `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` for FR-009 and FR-011.
+- [X] T003 Add the clean `--rule status-evidence` control in `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` proving exit `0` and complete JSON report emission for FR-007 and FR-011.
+- [X] T004 Add reusable assertion support in `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` for exact command invocation, target problem-list population, other selected-key emptiness, and report-shape checks for FR-007, FR-008, and FR-010.
 
 ---
 
@@ -41,8 +41,8 @@
 - FR-001 through FR-006 are understood against the current `RULE_PROBLEM_KEYS` and `PROBLEM_KEY_INTENT` surfaces.
 - FR-016 and FR-017 source-vs-generated ownership is identified before generated artifacts are touched.
 
-- [ ] T005 Inspect `RULE_PROBLEM_KEYS["status-evidence"]` and `PROBLEM_KEY_INTENT` in `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py` and confirm the three ART-017 keys are not yet inconsistently changed before RED tests for FR-001 through FR-006.
-- [ ] T006 Locate the single authored autopilot guidance paragraph to narrow in `speckit-pro/skills/speckit-autopilot/SKILL.md`, leaving generated mirrors untouched for FR-016 and FR-017.
+- [X] T005 Inspect `RULE_PROBLEM_KEYS["status-evidence"]` and `PROBLEM_KEY_INTENT` in `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py` and confirm the three ART-017 keys are not yet inconsistently changed before RED tests for FR-001 through FR-006.
+- [X] T006 Locate the single authored autopilot guidance paragraph to narrow in `speckit-pro/skills/speckit-autopilot/SKILL.md`, leaving generated mirrors untouched for FR-016 and FR-017.
 
 **Checkpoint**: Baseline and guardrails are ready; user-story implementation can begin.
 
@@ -58,18 +58,18 @@
 
 > Write these tests first and confirm T007-T010 fail before changing runtime authority.
 
-- [ ] T007 [US1] Add the RED isolated `in_progress_errors` mutation test in `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` and confirm it fails because the exact `status-evidence` invocation still exits `0` for FR-001, FR-009, and FR-010.
-- [ ] T008 [US1] Add the RED isolated `duplicate_state_steps` mutation test in `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` and confirm it fails because the exact `status-evidence` invocation still exits `0` for FR-002, FR-009, and FR-010.
-- [ ] T009 [US1] Add the RED isolated `state_order_errors` mutation test in `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` and confirm it fails because the exact `status-evidence` invocation still exits `0` for FR-003, FR-009, and FR-010.
-- [ ] T010 [US1] Run `python3 tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` against `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` and record that only the three new ART-017 RED controls fail for expected missing rule authority for FR-001 through FR-003 and FR-010.
+- [X] T007 [US1] Add the RED isolated `in_progress_errors` mutation test in `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` and confirm it fails because the exact `status-evidence` invocation still exits `0` for FR-001, FR-009, and FR-010.
+- [X] T008 [US1] Add the RED isolated `duplicate_state_steps` mutation test in `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` and confirm it fails because the exact `status-evidence` invocation still exits `0` for FR-002, FR-009, and FR-010.
+- [X] T009 [US1] Add the RED isolated `state_order_errors` mutation test in `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` and confirm it fails because the exact `status-evidence` invocation still exits `0` for FR-003, FR-009, and FR-010.
+- [X] T010 [US1] Run `python3 tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` against `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` and record that only the three new ART-017 RED controls fail for expected missing rule authority for FR-001 through FR-003 and FR-010.
 
 ### Implementation for User Story 1
 
-- [ ] T011 [US1] Atomically add `in_progress_errors`, `duplicate_state_steps`, and `state_order_errors` to `RULE_PROBLEM_KEYS["status-evidence"]` and flip their three `PROBLEM_KEY_INTENT` verdicts to `gated` with current-run state-invariant reasons in `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py` for FR-001 through FR-006.
-- [ ] T012 [US1] Preserve report construction, existing problem-key names, list-valued diagnostics, and `main()` rule-selection behavior in `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py` while changing only scoped exit authority and the three intent records for FR-007 and FR-008.
-- [ ] T013 [US1] Run `python3 tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` against `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` and make the clean control plus the three isolated negative controls pass for FR-001 through FR-011.
-- [ ] T014 [US1] Add or verify a legacy advisory regression in `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` proving `missing_state_prefixes` and `missing_state_post_items` remain report-visible but nonblocking under `status-evidence` for FR-004, FR-007, and FR-008.
-- [ ] T015 [US1] Add or verify a report-shape and diagnostic-key preservation assertion in `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` covering metadata fields and list-valued problem keys for FR-007 and FR-008.
+- [X] T011 [US1] Atomically add `in_progress_errors`, `duplicate_state_steps`, and `state_order_errors` to `RULE_PROBLEM_KEYS["status-evidence"]` and flip their three `PROBLEM_KEY_INTENT` verdicts to `gated` with current-run state-invariant reasons in `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py` for FR-001 through FR-006.
+- [X] T012 [US1] Preserve report construction, existing problem-key names, list-valued diagnostics, and `main()` rule-selection behavior in `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py` while changing only scoped exit authority and the three intent records for FR-007 and FR-008.
+- [X] T013 [US1] Run `python3 tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` against `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` and make the clean control plus the three isolated negative controls pass for FR-001 through FR-011.
+- [X] T014 [US1] Add or verify a legacy advisory regression in `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` proving `missing_state_prefixes` and `missing_state_post_items` remain report-visible but nonblocking under `status-evidence` for FR-004, FR-007, and FR-008.
+- [X] T015 [US1] Add or verify a report-shape and diagnostic-key preservation assertion in `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` covering metadata fields and list-valued problem keys for FR-007 and FR-008.
 
 **Checkpoint**: US1 is independently functional when the exact scoped gate halts each contradictory current-run state and the clean/legacy controls preserve existing behavior.
 
@@ -83,17 +83,17 @@
 
 ### Tests for User Story 2
 
-- [ ] T016 [US2] Add deterministic git-index workflow/state path enumeration in `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` using `git ls-files -z`, `shell=False`, repository-root `cwd`, UTF-8 decoding, and stable repo-relative ordering for FR-012 and FR-013.
-- [ ] T017 [US2] Add authority-matched pair classification in `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` requiring tracked same-directory `autopilot-state.json` and exact repo-relative `workflow_file` equality, with missing, mismatched, untracked, and synthetic states excluded for FR-012, FR-013, and FR-015.
-- [ ] T018 [US2] Add the tracked-pair corpus regression in `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` recording workflow candidates, eligible pairs, exclusions with reasons, invoked pairs, and passed pairs; require at least one eligible pair and exact count reconciliation for FR-012 through FR-015.
-- [ ] T019 [US2] Add fail-closed assertions or helper coverage in `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` so tracked-path enumeration, state reading, or state JSON parsing failures cannot be silently skipped for FR-013 and FR-014.
-- [ ] T020 [US2] Run `python3 tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` against `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` and confirm intent/rule consistency, tracked-pair corpus success, legacy advisory behavior, and report shape for FR-004 through FR-015.
+- [X] T016 [US2] Add deterministic git-index workflow/state path enumeration in `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` using `git ls-files -z`, `shell=False`, repository-root `cwd`, UTF-8 decoding, and stable repo-relative ordering for FR-012 and FR-013.
+- [X] T017 [US2] Add authority-matched pair classification in `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` requiring tracked same-directory `autopilot-state.json` and exact repo-relative `workflow_file` equality, with missing, mismatched, untracked, and synthetic states excluded for FR-012, FR-013, and FR-015.
+- [X] T018 [US2] Add the tracked-pair corpus regression in `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` recording workflow candidates, eligible pairs, exclusions with reasons, invoked pairs, and passed pairs; require at least one eligible pair and exact count reconciliation for FR-012 through FR-015.
+- [X] T019 [US2] Add fail-closed assertions or helper coverage in `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` so tracked-path enumeration, state reading, or state JSON parsing failures cannot be silently skipped for FR-013 and FR-014.
+- [X] T020 [US2] Run `python3 tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` against `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` and confirm intent/rule consistency, tracked-pair corpus success, legacy advisory behavior, and report shape for FR-004 through FR-015.
 
 ### Implementation for User Story 2
 
-- [ ] T021 [US2] Narrow the existing authored guidance paragraph in `speckit-pro/skills/speckit-autopilot/SKILL.md` so legacy structural coverage debt stays distinct from the three blocking current-run state invariants for FR-016.
-- [ ] T022 [US2] Review `git diff` for `speckit-pro/skills/speckit-autopilot/SKILL.md`, `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py`, and `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` to confirm authored edits stayed inside the planned three-file boundary for FR-016 and FR-017.
-- [ ] T023 [US2] Assemble PR review-packet evidence from `specs/art-017-state-bookkeeping-checks/tasks.md`, `specs/art-017-state-bookkeeping-checks/quickstart.md`, and the final command outputs so the draft PR body covers scope budget, traceability, verification, separate Claude Code and Codex generated-artifact status, known gaps, rollback/no-flag notes, and ART-008 integration notes for FR-019 and FR-020.
+- [X] T021 [US2] Narrow the existing authored guidance paragraph in `speckit-pro/skills/speckit-autopilot/SKILL.md` so legacy structural coverage debt stays distinct from the three blocking current-run state invariants for FR-016.
+- [X] T022 [US2] Review `git diff` for `speckit-pro/skills/speckit-autopilot/SKILL.md`, `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py`, and `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` to confirm authored edits stayed inside the planned three-file boundary for FR-016 and FR-017.
+- [X] T023 [US2] Assemble PR review-packet evidence from `specs/art-017-state-bookkeeping-checks/tasks.md`, `specs/art-017-state-bookkeeping-checks/quickstart.md`, and the final command outputs so the draft PR body covers scope budget, traceability, verification, separate Claude Code and Codex generated-artifact status, known gaps, rollback/no-flag notes, and ART-008 integration notes for FR-019 and FR-020.
 
 **Checkpoint**: US2 is independently functional when maintainers can verify rule/intent integrity, corpus completeness, source ownership, and review evidence without relying on generated surfaces as authored truth.
 
