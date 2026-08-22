@@ -162,7 +162,7 @@ baseline of record.
 | **Enables** | G56R-006 capability-aware resolver, materializer, installer, and strict override |
 | **Priority** | P1 |
 | **Stage** | `plan` |
-| **Draft PR** | [#487](https://github.com/racecraft-lab/racecraft-plugins-public/pull/487) — Artifact gap: the whole draft-stage gallery set was not generated because `artifact-author` produced no readable outcome before the bounded wait expired |
+| **Draft PR** | [#487](https://github.com/racecraft-lab/racecraft-plugins-public/pull/487) |
 
 ### Reviewability Budget and Split Decision
 
@@ -592,10 +592,15 @@ was current (`stale_map_count: 0`) and changed no files.
 
 | Outcome | Page | Detail |
 |---------|------|--------|
-| Gap | Whole draft-stage gallery set | `artifact-author` produced no readable outcome and no files before the bounded wait expired; generation failed open |
+| Generated | Implementation Plan | `specs/g56r-005-model-availability-fallback-recovery/artifacts/implementation-plan.html` |
+| Generated | Spec Explainer | `specs/g56r-005-model-availability-fallback-recovery/artifacts/spec-explainer.html` |
+| Generated | Code Approaches | `specs/g56r-005-model-availability-fallback-recovery/artifacts/code-approaches.html` |
+| Generated | Module Map | `specs/g56r-005-model-availability-fallback-recovery/artifacts/module-map.html` |
 
-The draft PR packet was generated in `draft` mode and its read-only validation
-passed with `pr_blocked: false`. The exact title
+All four draft-stage review pages were generated from the shipped templates,
+validated for fill-region integrity, and browser-checked with no console errors
+or warnings. The draft PR packet was regenerated in `draft` mode and its
+read-only validation passed with `pr_blocked: false`. The exact title
 `feat(g56r-005): Add model availability fallback and recovery simulation` also
 passed the repository release-readiness title check.
 

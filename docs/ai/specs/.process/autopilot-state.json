@@ -5,7 +5,7 @@
   "branch": "g56r-005-model-availability-fallback-recovery",
   "status": "in_progress",
   "stage": "plan",
-  "updated_at": "2026-08-22T16:23:02Z",
+  "updated_at": "2026-08-22T17:43:10Z",
   "active_step": "Plan stage boundary",
   "settings": {
     "consensus_mode": "moderate",
@@ -69,15 +69,15 @@
     }
   ],
   "draft_artifact_generation": {
-    "status": "gap",
-    "generated_pages": [],
-    "gaps": [
-      {
-        "page": "whole draft-stage gallery set",
-        "reason": "artifact-author produced no readable outcome and no files before the bounded wait expired"
-      }
+    "status": "generated",
+    "generated_pages": [
+      "specs/g56r-005-model-availability-fallback-recovery/artifacts/implementation-plan.html",
+      "specs/g56r-005-model-availability-fallback-recovery/artifacts/spec-explainer.html",
+      "specs/g56r-005-model-availability-fallback-recovery/artifacts/code-approaches.html",
+      "specs/g56r-005-model-availability-fallback-recovery/artifacts/module-map.html"
     ],
-    "fail_open": true
+    "gaps": [],
+    "fail_open": false
   },
   "draft_pr_packet": {
     "status": "ready",
@@ -91,8 +91,8 @@
       "status": "passed",
       "pr_blocked": false,
       "writes_state": false,
-      "packet_sha256": "a05e65986107627fa60e152444875b875aa66fb0767e2d5d4a1a6bb3a7e2d389",
-      "body_sha256": "ee6589cd2709f1d139cc1cdbe4976230750e4515ea83bb23922fb6334978a9ea"
+      "packet_sha256": "5eb6040b4f452a26f97b3a2e10e8e990769e3405b609d6a3f63dfa04df36b01f",
+      "body_sha256": "e5c8a5644b6a431a224632614eedcf511d7b869ac94873d2ad93b333f30983d1"
     }
   },
   "project_commands": {
