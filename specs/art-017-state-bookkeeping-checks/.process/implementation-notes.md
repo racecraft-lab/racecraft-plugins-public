@@ -91,3 +91,11 @@
 ### T023
 
 **Deviations/Edge cases/Surprises:** Final same-HEAD integration outputs remain intentionally pending and will replace the provisional packet evidence during T031/Post body generation.
+
+### T024
+
+**Deviations/Edge cases/Surprises:** `origin/main` was recorded at `847ada00f037d40957ab17e4ce54c60d9420c8e4`; ART-008 remains open as PR #464 and was not stacked; the 13-commit feature branch rebased cleanly after one sandbox metadata escalation.
+
+### T025
+
+**Deviations/Edge cases/Surprises:** The official refresher required sandbox escalation to replace generated payload directories. The validator digest is identical across authored source, both client payloads, and both installed-cache fixtures; each client SKILL payload matches its own installed-cache fixture.

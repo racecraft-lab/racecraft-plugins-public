@@ -109,8 +109,8 @@
 - FR-019 PR evidence includes the generated-artifact and ART-008 integration status.
 - FR-020 proves 2 of 2 supported distributions, Claude Code and Codex, match the same final authored source tree.
 
-- [ ] T024 Record the latest `origin/main` HEAD after ART-008 if it has landed, rebase `art-017-state-bookkeeping-checks`, and use `specs/art-017-state-bookkeeping-checks/quickstart.md` as the ordered final-integration checklist for FR-018 through FR-020.
-- [ ] T025 Run `python3 scripts/refresh-release-artifacts.py` from the repository root and review `dist/claude/speckit-pro/`, `dist/codex/speckit-pro/`, `speckit-pro/codex-skills/`, both client trees under `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/`, and proof outputs under `docs/ai/specs/.process/` for FR-017, FR-018, and FR-020.
+- [X] T024 Record the latest `origin/main` HEAD after ART-008 if it has landed, rebase `art-017-state-bookkeeping-checks`, and use `specs/art-017-state-bookkeeping-checks/quickstart.md` as the ordered final-integration checklist for FR-018 through FR-020.
+- [X] T025 Run `python3 scripts/refresh-release-artifacts.py` from the repository root and review `dist/claude/speckit-pro/`, `dist/codex/speckit-pro/`, `speckit-pro/codex-skills/`, both client trees under `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/`, and proof outputs under `docs/ai/specs/.process/` for FR-017, FR-018, and FR-020.
 - [ ] T026 Run `python3 scripts/refresh-release-artifacts.py --check` from the repository root and preserve evidence that both Claude Code and Codex payload/fixture pairs match the same final authored source tree for FR-017, FR-018, and FR-020.
 - [ ] T027 If `docs-site/node_modules/` is absent, run `pnpm --dir docs-site install --frozen-lockfile` against `docs-site/pnpm-lock.yaml` before docs reference commands; do not add or change dependencies for FR-017 and FR-018.
 - [ ] T028 Run `pnpm --dir docs-site reference:generate` and `pnpm --dir docs-site reference:check` for generated reference outputs under `docs-site/` for FR-017 and FR-018.

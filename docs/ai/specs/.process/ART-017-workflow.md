@@ -685,6 +685,8 @@ Before starting any task:
 - **Rollback and flags:** rollback is the atomic three-key tuple/verdict change; no new runtime flag or schema is introduced.
 - **ART-008 integration:** do not stack on ART-008; T024 records current `origin/main` and rebases only if upstream has advanced.
 
+**Final integration base:** `origin/main` = `847ada00f037d40957ab17e4ce54c60d9420c8e4`. ART-008 remains open as PR #464 and was not stacked; ART-017 rebased cleanly onto this base before regeneration.
+
 ---
 
 ## Post-Implementation Checklist
