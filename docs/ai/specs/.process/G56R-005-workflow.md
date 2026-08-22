@@ -28,8 +28,8 @@ autonomous phase loop.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | Freeze deterministic simulation behavior and outcomes |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Resolve only evidence-backed residual ambiguity |
+| Specify | `/speckit-specify` | ✅ Complete | 4 stories, 22 requirements, 26 acceptance scenarios; G1 passed |
+| Clarify | `/speckit-clarify` | 🔄 In Progress | Resolution Contract session is next |
 | Plan | `/speckit-plan` | ⏳ Pending | Derive a Codex-local resolver and fake-home adapter plan |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Error handling, state management, and data integrity |
 | Tasks | `/speckit-tasks` | ⏳ Pending | Vertical, TDD-first, dependency-ordered tasks |
@@ -98,6 +98,14 @@ reference command, first run the documented
 - Tools: repository-local Python 3.11 runner/helpers, Git, and the existing
   SpecKit commands. No new external tool or dependency is declared.
 
+### Tooling TODO
+
+- [ ] **TODO-CODEX-WORKTREE-BINDING:** Fix same-task worktree adoption so the
+  Codex UI task root, sandbox write scope, phase-agent working directory, and
+  autopilot workflow authority bind to one registered feature worktree without
+  requiring a new task. This is tracked process debt and is out of scope for
+  G56R-005 feature behavior.
+
 ### Grounded Source Truth
 
 Use these sources in order:
@@ -126,14 +134,18 @@ cross-platform reconciliation to CAR-012/G56R-012.
 
 | Principle | Requirement | Verification |
 |-----------|-------------|--------------|
-| I. Plugin Structure Compliance | Keep simulation work on the declared repository/test surface; do not add install-facing payload changes | Inspect final diff and run Layer 1 |
-| II. Cross-Platform Runtime & Script Safety | Python 3.11+ standard library, structured JSON, UTF-8 determinism, `shell=False`, no active Bash or `jq` | Layer 4 and focused unit tests |
-| III. Semantic Versioning | No plugin version or release-artifact changes for repository-only simulation | Manifest and final diff check |
-| IV. Test Coverage Before Merge | Register new test paths through the suite manifest and pass targeted plus full tests | Focused tests, Layer 4, full suite |
-| V. Conventional Commits | Repository-valid lowercase scope and plain-English description | Commit and PR title gate |
-| VI. KISS, Simplicity & YAGNI | One Codex-local resolver, one bounded state model, no speculative shared framework | Plan review and G6 analysis |
+| I. Plugin Structure Compliance | Keep simulation work on the declared repository/test surface; do not add install-facing payload changes | ✅ Layer 1 baseline `1469/1469` |
+| II. Cross-Platform Runtime & Script Safety | Python 3.11+ standard library, structured JSON, UTF-8 determinism, `shell=False`, no active Bash or `jq` | ✅ Layer 4 baseline `5998/5998` |
+| III. Semantic Versioning | No plugin version or release-artifact changes for repository-only simulation | ✅ Layer 1 version/manifest checks passed |
+| IV. Test Coverage Before Merge | Register new test paths through the suite manifest and pass targeted plus full tests | ✅ Full baseline `7659/7659` |
+| V. Conventional Commits | Repository-valid lowercase scope and plain-English description | ✅ Commit policy recorded; PR title gate remains terminal evidence |
+| VI. KISS, Simplicity & YAGNI | One Codex-local resolver, one bounded state model, no speculative shared framework | ✅ Design boundary recorded; re-check at G3 and G6 |
 
-**Constitution Check:** Pending formal G3 validation; no setup conflict found.
+**Constitution Check:** ✅ Verified for G0. Toolchain preflight passed; the
+authoritative execution-root-permitted suite passed `7659/7659` (`L1
+1469/1469`, `L4 5998/5998`, `L5 192/192`). An earlier cross-worktree sandbox
+run failed only because temporary fixture writes were denied; it is not the
+baseline of record.
 
 ---
 
@@ -149,6 +161,7 @@ cross-platform reconciliation to CAR-012/G56R-012.
 | **Dependencies** | G56R-004 complete and archived after PR #403 |
 | **Enables** | G56R-006 capability-aware resolver, materializer, installer, and strict override |
 | **Priority** | P1 |
+| **Stage** | `plan` |
 
 ### Reviewability Budget and Split Decision
 
@@ -269,13 +282,20 @@ availability claims.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | Pending |
-| User Stories | Target: 4 |
-| Acceptance Criteria | Pending |
+| Functional Requirements | 22 |
+| User Stories | 4 |
+| Acceptance Scenarios | 26 |
+| Success Criteria | 9 |
+| Unresolved Markers | 0 |
 
 ### Files Generated
 
-- [ ] `specs/g56r-005-model-availability-fallback-recovery/spec.md`
+- [x] `specs/g56r-005-model-availability-fallback-recovery/spec.md`
+
+**Gate G1:** ✅ PASS — runner `validate-gate` returned `pass=true`,
+`markers=0`, and `spec.md exists with 0 markers`. The required phase-boundary
+spec-index regeneration updated the feature `SPEC-MOC.md` and the G56R roadmap
+MOC.
 
 ---
 
