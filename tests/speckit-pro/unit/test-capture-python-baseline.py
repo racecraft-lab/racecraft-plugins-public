@@ -45,109 +45,90 @@ def run_tool(
 
 
 class CapturePythonBaselineTests(unittest.TestCase):
-    def test_build_suite_captures_subtest_names_in_runtime_order(self) -> None:
+    def _assert_capture(
+        self,
+        script_name: str,
+        source: str,
+        expected_inventory: str,
+        *,
+        expected_returncode: int = 0,
+    ) -> subprocess.CompletedProcess[str]:
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir)
-            target = write_script(
-                root,
-                "counted_port.py",
-                """
-                import unittest
-
-                class CountedPortTests(unittest.TestCase):
-                    def test_inventory(self):
-                        for name in ("first check", "second check", "first check"):
-                            with self.subTest(msg=name):
-                                self.assertTrue(True)
-
-                def build_suite():
-                    return unittest.defaultTestLoader.loadTestsFromTestCase(CountedPortTests)
-                """,
-            )
+            target = write_script(root, script_name, source)
             output = root / "baseline.txt"
-
             completed = run_tool(target, out=output)
 
-            self.assertEqual(completed.returncode, 0, completed.stderr)
-            self.assertEqual(
-                output.read_text(encoding="utf-8"),
-                "001 first check\n002 second check\n003 first check\nTOTAL: 3\n",
-            )
+            self.assertEqual(completed.returncode, expected_returncode, completed.stderr)
+            self.assertEqual(output.read_text(encoding="utf-8"), expected_inventory)
+            return completed
+
+    def test_build_suite_captures_subtest_names_in_runtime_order(self) -> None:
+        self._assert_capture(
+            "counted_port.py",
+            """
+            import unittest
+
+            class CountedPortTests(unittest.TestCase):
+                def test_inventory(self):
+                    for name in ("first check", "second check", "first check"):
+                        with self.subTest(msg=name):
+                            self.assertTrue(True)
+
+            def build_suite():
+                return unittest.defaultTestLoader.loadTestsFromTestCase(CountedPortTests)
+            """,
+            "001 first check\n002 second check\n003 first check\nTOTAL: 3\n",
+        )
 
     def test_default_loader_captures_module_without_build_suite(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            root = Path(tmp_dir)
-            target = write_script(
-                root,
-                "default_loader_port.py",
-                """
-                import unittest
+        self._assert_capture(
+            "default_loader_port.py",
+            """
+            import unittest
 
-                class DefaultLoaderPortTests(unittest.TestCase):
-                    def test_inventory(self):
-                        with self.subTest(msg="discovered check"):
-                            self.assertEqual(2 + 2, 4)
-                """,
-            )
-            output = root / "baseline.txt"
-
-            completed = run_tool(target, out=output)
-
-            self.assertEqual(completed.returncode, 0, completed.stderr)
-            self.assertEqual(output.read_text(encoding="utf-8"), "001 discovered check\nTOTAL: 1\n")
+            class DefaultLoaderPortTests(unittest.TestCase):
+                def test_inventory(self):
+                    with self.subTest(msg="discovered check"):
+                        self.assertEqual(2 + 2, 4)
+            """,
+            "001 discovered check\nTOTAL: 1\n",
+        )
 
     def test_reporter_capture_writes_inventory_and_propagates_target_exit(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            root = Path(tmp_dir)
-            target = write_script(
-                root,
-                "reporter_port.py",
-                """
-                import os
-                import sys
+        completed = self._assert_capture(
+            "reporter_port.py",
+            """
+            import os
+            import sys
 
-                def main():
-                    if os.environ.get("VERBOSE") == "true":
-                        print("  reporter first ... PASS")
-                        print("  reporter second ... FAIL")
-                    return 7
+            def main():
+                if os.environ.get("VERBOSE") == "true":
+                    print("  reporter first ... PASS")
+                    print("  reporter second ... FAIL")
+                return 7
 
-                if __name__ == "__main__":
-                    raise SystemExit(main())
-                """,
-            )
-            output = root / "baseline.txt"
-
-            completed = run_tool(target, out=output)
-
-            self.assertEqual(completed.returncode, 7, completed.stderr)
-            self.assertEqual(
-                output.read_text(encoding="utf-8"),
-                "001 reporter first\n002 reporter second\nTOTAL: 2\n",
-            )
-            self.assertIn("target_exit_code=7", completed.stdout)
+            if __name__ == "__main__":
+                raise SystemExit(main())
+            """,
+            "001 reporter first\n002 reporter second\nTOTAL: 2\n",
+            expected_returncode=7,
+        )
+        self.assertIn("target_exit_code=7", completed.stdout)
 
     def test_zero_count_cli_capture_is_valid(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            root = Path(tmp_dir)
-            target = write_script(
-                root,
-                "zero_count_port.py",
-                """
-                def main():
-                    print("No counted checks for this invocation mode")
-                    return 0
+        self._assert_capture(
+            "zero_count_port.py",
+            """
+            def main():
+                print("No counted checks for this invocation mode")
+                return 0
 
-                if __name__ == "__main__":
-                    raise SystemExit(main())
-                """,
-            )
-            output = root / "baseline.txt"
-
-            completed = run_tool(target, out=output)
-
-            self.assertEqual(completed.returncode, 0, completed.stderr)
-            self.assertEqual(output.read_text(encoding="utf-8"), "TOTAL: 0\n")
+            if __name__ == "__main__":
+                raise SystemExit(main())
+            """,
+            "TOTAL: 0\n",
+        )
 
     def test_missing_and_non_python_targets_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
