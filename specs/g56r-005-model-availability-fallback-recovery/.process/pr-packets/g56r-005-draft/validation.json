@@ -19,14 +19,14 @@
     "body": {
       "algorithm": "sha256",
       "path": "specs/g56r-005-model-availability-fallback-recovery/.process/pr-packets/g56r-005-draft/body.md",
-      "sha256": "f1be2ddec155437dc185b2ed4cd2f9f14cb644c4c396c3d285fa4d823a32f100",
-      "size_bytes": 2633
+      "sha256": "35029f14828a83e4834b56853e674524288d817369f64ee92e51f36c3e0a7634",
+      "size_bytes": 3322
     },
     "packet": {
       "algorithm": "sha256",
       "path": "specs/g56r-005-model-availability-fallback-recovery/.process/pr-packets/g56r-005-draft.json",
-      "sha256": "6163ab0336b80dd216cc45da86f0e23b8ad1663ed1a509efc32a448cc3a55421",
-      "size_bytes": 7887
+      "sha256": "2ffb9b9a9cd6a8b6e6fe8040debbfcc9f738f1da83df5837ca4674640e3d3ba2",
+      "size_bytes": 11718
     }
   },
   "status": "passed",
@@ -35,7 +35,7 @@
     "base_branch": "main",
     "head_branch": "g56r-005-model-availability-fallback-recovery"
   },
-  "timestamp": "2026-08-22T19:54:54Z",
+  "timestamp": "2026-08-22T21:45:33Z",
   "title_value": "feat(g56r-005): Add model availability fallback and recovery simulation",
   "validation_result_path": "specs/g56r-005-model-availability-fallback-recovery/.process/pr-packets/g56r-005-draft/validation.json"
 }
