@@ -111,12 +111,12 @@
 
 - [X] T024 Record the latest `origin/main` HEAD after ART-008 if it has landed, rebase `art-017-state-bookkeeping-checks`, and use `specs/art-017-state-bookkeeping-checks/quickstart.md` as the ordered final-integration checklist for FR-018 through FR-020.
 - [X] T025 Run `python3 scripts/refresh-release-artifacts.py` from the repository root and review `dist/claude/speckit-pro/`, `dist/codex/speckit-pro/`, `speckit-pro/codex-skills/`, both client trees under `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/`, and proof outputs under `docs/ai/specs/.process/` for FR-017, FR-018, and FR-020.
-- [ ] T026 Run `python3 scripts/refresh-release-artifacts.py --check` from the repository root and preserve evidence that both Claude Code and Codex payload/fixture pairs match the same final authored source tree for FR-017, FR-018, and FR-020.
-- [ ] T027 If `docs-site/node_modules/` is absent, run `pnpm --dir docs-site install --frozen-lockfile` against `docs-site/pnpm-lock.yaml` before docs reference commands; do not add or change dependencies for FR-017 and FR-018.
-- [ ] T028 Run `pnpm --dir docs-site reference:generate` and `pnpm --dir docs-site reference:check` for generated reference outputs under `docs-site/` for FR-017 and FR-018.
-- [ ] T029 Run `python3 tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` on the rebased, regenerated tree and record targeted same-HEAD evidence for FR-001 through FR-018.
-- [ ] T030 Run `python3 tests/speckit-pro/run-all.py` on the same rebased, regenerated tree and record full-suite same-HEAD evidence, including two-distribution payload/fixture validation, for FR-018 through FR-020.
-- [ ] T031 Verify the final PR packet uses the review order from `specs/art-017-state-bookkeeping-checks/spec.md`: authored rule/intent changes, isolated negative controls, tracked-pair corpus evidence, authored prose, separate Claude Code and Codex generated-artifact freshness, and final integration notes for FR-019 and FR-020.
+- [X] T026 Run `python3 scripts/refresh-release-artifacts.py --check` from the repository root and preserve evidence that both Claude Code and Codex payload/fixture pairs match the same final authored source tree for FR-017, FR-018, and FR-020.
+- [X] T027 If `docs-site/node_modules/` is absent, run `pnpm --dir docs-site install --frozen-lockfile` against `docs-site/pnpm-lock.yaml` before docs reference commands; do not add or change dependencies for FR-017 and FR-018.
+- [X] T028 Run `pnpm --dir docs-site reference:generate` and `pnpm --dir docs-site reference:check` for generated reference outputs under `docs-site/` for FR-017 and FR-018.
+- [X] T029 Run `python3 tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` on the rebased, regenerated tree and record targeted same-HEAD evidence for FR-001 through FR-018.
+- [X] T030 Run `python3 tests/speckit-pro/run-all.py` on the same rebased, regenerated tree and record full-suite same-HEAD evidence, including two-distribution payload/fixture validation, for FR-018 through FR-020.
+- [X] T031 Verify the final PR packet uses the review order from `specs/art-017-state-bookkeeping-checks/spec.md`: authored rule/intent changes, isolated negative controls, tracked-pair corpus evidence, authored prose, separate Claude Code and Codex generated-artifact freshness, and final integration notes for FR-019 and FR-020.
 
 ---
 

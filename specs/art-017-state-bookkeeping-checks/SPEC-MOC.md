@@ -31,5 +31,13 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [checklists/reliability.md](checklists/reliability.md)
 - [checklists/requirements.md](checklists/requirements.md)
 - [checklists/state-management.md](checklists/state-management.md)
+- [.process/implementation-notes.md](.process/implementation-notes.md)
+- [.process/pr-packets/art-017-draft.json](.process/pr-packets/art-017-draft.json)
+- [.process/pr-packets/art-017-draft/body.md](.process/pr-packets/art-017-draft/body.md)
+- [.DS_Store](.DS_Store)
+- [artifacts/code-approaches.html](artifacts/code-approaches.html)
+- [artifacts/implementation-plan.html](artifacts/implementation-plan.html)
+- [artifacts/module-map.html](artifacts/module-map.html)
+- [artifacts/spec-explainer.html](artifacts/spec-explainer.html)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

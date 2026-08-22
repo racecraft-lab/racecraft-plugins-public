@@ -99,3 +99,27 @@
 ### T025
 
 **Deviations/Edge cases/Surprises:** The official refresher required sandbox escalation to replace generated payload directories. The validator digest is identical across authored source, both client payloads, and both installed-cache fixtures; each client SKILL payload matches its own installed-cache fixture.
+
+### T026
+
+**Deviations/Edge cases/Surprises:** The first `--check` correctly reported regenerated-but-uncommitted outputs as drift. After the tooling-owned outputs were checkpointed, the identical check exited 0 with no drift; both client payload/fixture pairs are current.
+
+### T027
+
+**Deviations/Edge cases/Surprises:** `docs-site/node_modules` was absent; the frozen lockfile install reused the local pnpm store, added 464 packages, and changed no dependency declarations.
+
+### T028
+
+**Deviations/Edge cases/Surprises:** None; seven reference pages regenerated and `reference:check` reports them current.
+
+### T029
+
+**Deviations/Edge cases/Surprises:** None; the focused suite passes 270/270 on the rebased, regenerated tree.
+
+### T030
+
+**Deviations/Edge cases/Surprises:** The sandboxed first full-suite run produced 86 filesystem-permission failures (7807/7893). Two elevated diagnostics passed, and the normal-permissions rerun passed 7894/7894: Layer 1 1469/1469, Layer 4 6233/6233, Layer 5 192/192.
+
+### T031
+
+**Deviations/Edge cases/Surprises:** None; final packet source order is frozen as authored rule/intent, isolated controls, corpus evidence, authored prose, separate Claude/Codex freshness, then integration evidence.
