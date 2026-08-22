@@ -35,7 +35,7 @@ autonomous phase loop.
 | Tasks | `/speckit-tasks` | ✅ Complete | 25 vertical TDD-first tasks; G5 passed |
 | Analyze | `/speckit-analyze` | ✅ Complete | 4 findings remediated (0C/1H/3M); G6 passed with no unresolved findings |
 | Confidence Gate | G6.5 | ✅ Complete | PASS: 0.99 ≥ 0.90 in advisory mode |
-| Implement | `/speckit-implement` | 🔄 In Progress | Foundation tasks T001-T004 started under the explicit `stage=implement` handoff |
+| Implement | `/speckit-implement` | 🔄 In Progress | T001-T019 complete; review evidence and verification T020-T025 in progress |
 | Post | Post-Implementation | ⏳ Pending | Not run by the `stage=plan` handoff |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -628,10 +628,10 @@ production routing, live qualification, or cross-platform reconciliation.
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| Shared contract foundation | T001-T004 | 0/4 | In progress |
-| Resolver and reroute stories | Pending | Pending | |
-| Recovery and bounds stories | Pending | Pending | |
-| Cross-cutting verification | Pending | Pending | |
+| Shared contract foundation | T001-T004 | 4/4 | Schemas, roster-bound corpus, RED tests, and Layer 4 registration complete |
+| Resolver and reroute stories | T005-T011 | 7/7 | Deterministic route resolution, attribution, scoring, and treatment digest complete |
+| Recovery and bounds stories | T012-T019 | 8/8 | Fake-home recovery and bounded sequential harness complete |
+| Cross-cutting verification | T020-T025 | 5/6 | Traceability, focused, Layer 4, full suite, and PR packet evidence complete; generated-artifact final check pending |
 
 ---
 

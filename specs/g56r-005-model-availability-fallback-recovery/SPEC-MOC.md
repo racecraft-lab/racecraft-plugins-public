@@ -32,5 +32,12 @@ real route policies into the production Codex installer.
 - [checklists/data-integrity.md](checklists/data-integrity.md)
 - [checklists/error-handling.md](checklists/error-handling.md)
 - [checklists/state-management.md](checklists/state-management.md)
+- [.process/implementation-notes.md](.process/implementation-notes.md)
+- [.process/pr-packets/g56r-005-draft.json](.process/pr-packets/g56r-005-draft.json)
+- [.process/pr-packets/g56r-005-draft/body.md](.process/pr-packets/g56r-005-draft/body.md)
+- [artifacts/code-approaches.html](artifacts/code-approaches.html)
+- [artifacts/implementation-plan.html](artifacts/implementation-plan.html)
+- [artifacts/module-map.html](artifacts/module-map.html)
+- [artifacts/spec-explainer.html](artifacts/spec-explainer.html)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->
