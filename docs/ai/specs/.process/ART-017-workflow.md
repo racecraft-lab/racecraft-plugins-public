@@ -642,7 +642,16 @@ The canonical closeout. Every row must reach Complete or an explicit
 
 ### Challenges Encountered
 
--
+- [ ] **TODO — restore the Codex same-task scaffold-to-autopilot handoff.**
+      SpecKit Pro 2.27.0 still emits the new-task, relative-workflow recovery
+      form even when the generated worktree is a registered descendant that can
+      be bound safely. The unmerged local branch
+      `fix-codex-same-task-autopilot` at `7ccc8a994` contains an earlier guarded
+      absolute-path implementation based on 2.25.0. Rebase or supersede that
+      repair on current `main`, preserve its descendant/path/subagent binding
+      checks, regenerate release artifacts, verify the installed Codex payload,
+      and ship it in a tagged release. This platform follow-up is outside
+      ART-017's state-bookkeeping implementation scope.
 
 ### Patterns to Reuse
 
