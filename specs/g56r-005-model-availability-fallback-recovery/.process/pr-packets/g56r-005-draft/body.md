@@ -55,3 +55,9 @@ Follow specs/g56r-005-model-availability-fallback-recovery/.process/uat-runbook.
 
 - The Codex task/worktree binding bug remains tracked as TODO-CODEX-WORKTREE-BINDING and is outside G56R-005 feature behavior.
 - Live model/service reroute smoke was intentionally not run because this spec makes no live availability claim.
+
+## Release note
+
+```release-note
+SpecKit Pro now generates draft review artifacts with correct static feature titles and prevents repository-derived titles from being inserted into scripts.
+```

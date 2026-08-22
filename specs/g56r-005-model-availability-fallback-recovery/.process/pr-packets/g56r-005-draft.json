@@ -42,7 +42,7 @@
       "why_it_matters"
     ],
     "normalization": "LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
-    "value": "25f480efa7863d9701b0b2ae9faeadbba84c499a8efd6f7d0e41c634c5988dc9"
+    "value": "8110eda9436949b7ebd9c4dd2df65dff0915080c6e00ed86d85e100359d5aa57"
   },
   "required_headings": [
     "Summary",
