@@ -3,6 +3,7 @@
 **Result:** PASS after one artifact-generation finding was remediated  
 **Date:** 2026-08-22  
 **Baseline head:** `231270a16d02ff9cbeca350be27ede94b4f2970d`  
+**Remediation commit:** `3d16d4aeb`
 **Worktree:** `.worktrees/g56r-005-model-availability-fallback-recovery`
 
 ## Scope and setup
@@ -97,5 +98,8 @@ overflow at desktop or mobile width.
 
 - Manual browser acceptance: PASS.
 - Deterministic behavioral acceptance: PASS.
+- Static-title contract: 90/90 PASS.
+- Artifact gallery validation: 587/587 PASS.
+- Full repository suite: 7663/7663 PASS (L1 1469, L4 6002, L5 192).
 - Live model/service reroute smoke: intentionally not run; the specification
   makes no live availability claim.

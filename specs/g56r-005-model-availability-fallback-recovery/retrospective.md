@@ -80,7 +80,7 @@ No `spec.md` edits are proposed. The post-review declaration-source schema misma
 
 ## Success Criteria Assessment
 
-All 9 measurable outcomes passed. Focused verification passed 33/33 after review remediation. Layer 4 passed 5998/5998 with exact-worktree fixture-write permission. The full deterministic suite passed 7659/7659: Layer 1 1469/1469, Layer 4 5998/5998, and Layer 5 192/192.
+All 9 measurable outcomes passed. Focused verification passed 33/33 after review remediation. The static-title contract passed 90/90. Layer 4 passed 6002/6002 with exact-worktree fixture-write permission. The full deterministic suite passed 7663/7663: Layer 1 1469/1469, Layer 4 6002/6002, and Layer 5 192/192.
 
 ## Architecture Drift
 
@@ -121,7 +121,7 @@ Neither positive deviation requires a constitution change. The schema remediatio
 | I. Plugin Structure Compliance | PASS | Feature behavior stayed repository-only; the separately requested artifact-generation repair changed only gallery templates and Claude/Codex artifact-author instructions, with shipped payloads regenerated. |
 | II. Cross-Platform Runtime & Script Safety | PASS | New runtime is Python stdlib, structured JSON, deterministic UTF-8; no new Bash or `jq` dependency. |
 | III. Semantic Versioning | PASS | No plugin version or manifest version changed. |
-| IV. Test Coverage Before Merge | PASS | Focused tests are registered in `suite-manifest.json`; full deterministic suite passed 7659/7659. |
+| IV. Test Coverage Before Merge | PASS | Focused tests are registered in `suite-manifest.json`; full deterministic suite passed 7663/7663. |
 | V. Conventional Commits | PASS | Branch commits and PR title use conventional lowercase scope form. |
 | VI. KISS, Simplicity & YAGNI | PASS | One local resolver, one fake-home adapter boundary, and one sequential harness; no speculative production wiring. |
 

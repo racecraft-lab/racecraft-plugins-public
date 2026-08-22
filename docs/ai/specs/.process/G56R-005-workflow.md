@@ -35,7 +35,7 @@ autonomous phase loop.
 | Tasks | `/speckit-tasks` | ✅ Complete | 25 vertical TDD-first tasks; G5 passed |
 | Analyze | `/speckit-analyze` | ✅ Complete | 4 findings remediated (0C/1H/3M); G6 passed with no unresolved findings |
 | Confidence Gate | G6.5 | ✅ Complete | PASS: 0.99 ≥ 0.90 in advisory mode |
-| Implement | `/speckit-implement` | ✅ Complete | T001-T025 complete; focused 33/33 after review remediation, Layer 4 5998/5998, full suite 7659/7659, generated checks current |
+| Implement | `/speckit-implement` | ✅ Complete | T001-T025 complete; focused 33/33 after review remediation, Layer 4 6002/6002, full suite 7663/7663, generated checks current |
 | Post | Post-Implementation | ⏳ Pending | Not run by the `stage=plan` handoff |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -135,15 +135,15 @@ cross-platform reconciliation to CAR-012/G56R-012.
 | Principle | Requirement | Verification |
 |-----------|-------------|--------------|
 | I. Plugin Structure Compliance | Keep simulation work on the declared repository/test surface; do not add install-facing payload changes | ✅ Layer 1 baseline `1469/1469` |
-| II. Cross-Platform Runtime & Script Safety | Python 3.11+ standard library, structured JSON, UTF-8 determinism, `shell=False`, no active Bash or `jq` | ✅ Layer 4 baseline `5998/5998` |
+| II. Cross-Platform Runtime & Script Safety | Python 3.11+ standard library, structured JSON, UTF-8 determinism, `shell=False`, no active Bash or `jq` | ✅ Layer 4 baseline `6002/6002` |
 | III. Semantic Versioning | No plugin version or release-artifact changes for repository-only simulation | ✅ Layer 1 version/manifest checks passed |
-| IV. Test Coverage Before Merge | Register new test paths through the suite manifest and pass targeted plus full tests | ✅ Full baseline `7659/7659` |
+| IV. Test Coverage Before Merge | Register new test paths through the suite manifest and pass targeted plus full tests | ✅ Full baseline `7663/7663` |
 | V. Conventional Commits | Repository-valid lowercase scope and plain-English description | ✅ Commit policy recorded; PR title gate remains terminal evidence |
 | VI. KISS, Simplicity & YAGNI | One Codex-local resolver, one bounded state model, no speculative shared framework | ✅ Design boundary recorded; re-check at G3 and G6 |
 
 **Constitution Check:** ✅ Verified for G0. Toolchain preflight passed; the
-authoritative execution-root-permitted suite passed `7659/7659` (`L1
-1469/1469`, `L4 5998/5998`, `L5 192/192`). An earlier cross-worktree sandbox
+authoritative execution-root-permitted suite passed `7663/7663` (`L1
+1469/1469`, `L4 6002/6002`, `L5 192/192`). An earlier cross-worktree sandbox
 run failed only because temporary fixture writes were denied; it is not the
 baseline of record.
 
@@ -643,7 +643,7 @@ production routing, live qualification, or cross-platform reconciliation.
 | Post: Verify Implementation | ✅ Complete | 22/22 FRs and 8/9 SCs verified; SC-008 awaits the scheduled packet refresh |
 | Post: Verify Tasks Phantom Check | ✅ Complete | 24 verified, T025 partial only because the plan-stage packet is intentionally stale until Post emission |
 | Post: Code Review | ✅ Complete | One important declaration-source schema mismatch found and remediated RED→GREEN; 33/33 focused tests pass |
-| Post: Integration Suite | ✅ Complete | Authoritative exact-worktree run passed 7659/7659: L1 1469, L4 5998, L5 192 |
+| Post: Integration Suite | ✅ Complete | Authoritative exact-worktree run passed 7663/7663: L1 1469, L4 6002, L5 192 |
 | Post: Reviewability Diff Gate | ✅ Complete (WARN) | 471 reviewable runtime LOC, 0 production files, 13 implementation-delta files, one cohesive simulation surface; above the 400-LOC warning but below file-count limits, so no split |
 | Post: Self-Review | ✅ Complete | Four-question audit found no edge-case, traceability, tidiness, or silent-deferral defect |
 | Post: UAT Runbook Generation | ✅ Complete | Manual source-derived runbook committed after browser and behavioral UAT; one unsafe dynamic-title finding was remediated and retested |
@@ -666,7 +666,7 @@ production routing, live qualification, or cross-platform reconciliation.
   though the fail-closed resolver intentionally handles four non-local
   declaration sources. A new focused test first failed, the schema was expanded
   to the closed five-value enum, and the focused suite passed 33/33.
-- **Integration:** the final authoritative suite passed 7659/7659. Earlier
+- **Integration:** the final authoritative suite passed 7663/7663. Earlier
   unprivileged cross-worktree fixture failures were sandbox artifacts and are
   superseded by the exact-worktree-permitted run.
 - **Manual UAT:** all four browser artifacts and all four deterministic user
@@ -689,7 +689,7 @@ the one-slice plan remains current.
 
 **Tests executed:** The repository has no separate build, typecheck, or lint
 command for this test-only Python surface. Focused verification passed 33/33;
-the full deterministic suite passed 7659/7659; docs reference, spec-index, and
+the full deterministic suite passed 7663/7663; docs reference, spec-index, and
 release-artifact consistency checks pass.
 
 **Edge cases:** The 32-row required-scenario corpus and focused tests cover

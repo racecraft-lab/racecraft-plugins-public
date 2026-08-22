@@ -140,15 +140,15 @@
     "operator_split_decision": "one vertical slice"
   },
   "test_baseline_g0": {
-    "passed": 7659,
-    "total": 7659,
+    "passed": 7663,
+    "total": 7663,
     "toolchain_preflight": "ok",
     "layers": {
       "L1": "1469/1469",
-      "L4": "5998/5998",
+      "L4": "6002/6002",
       "L5": "192/192"
     },
-    "environment_note": "An unprivileged cross-worktree run failed with sandbox PermissionError; the authoritative execution-root-permitted run passed 7659/7659."
+    "environment_note": "An unprivileged cross-worktree run failed with sandbox PermissionError; the authoritative execution-root-permitted run passed 7663/7663."
   },
   "phase_results": {
     "specify": {
@@ -419,8 +419,8 @@
         {"task": "T019", "status": "completed", "verification": "canonical output host-data exclusion GREEN"},
         {"task": "T020", "status": "completed", "verification": "all 22 FR and 9 SC traceability rows present"},
         {"task": "T021", "status": "completed", "verification": "focused 33/33 after review remediation"},
-        {"task": "T022", "status": "completed", "verification": "Layer 4 5998/5998"},
-        {"task": "T023", "status": "completed", "verification": "full suite 7659/7659"},
+        {"task": "T022", "status": "completed", "verification": "Layer 4 6002/6002"},
+        {"task": "T023", "status": "completed", "verification": "full suite 7663/7663"},
         {"task": "T024", "status": "completed", "verification": "spec index, docs reference, scope, and release artifacts current"},
         {"task": "T025", "status": "completed", "verification": "PR packet evidence recorded; live smoke unrun"}
       ]
@@ -455,11 +455,11 @@
       },
       "integration_suite": {
         "status": "completed",
-        "passed": 7659,
-        "total": 7659,
+        "passed": 7663,
+        "total": 7663,
         "layers": {
           "L1": "1469/1469",
-          "L4": "5998/5998",
+          "L4": "6002/6002",
           "L5": "192/192"
         },
         "environment_note": "Authoritative exact-worktree-permitted run; sandbox-denied fixture run superseded."
@@ -476,7 +476,7 @@
       },
       "self_review": {
         "status": "completed",
-        "tests": "focused 33/33; full suite 7659/7659; generated-artifact checks pass",
+        "tests": "focused 33/33; artifact-title contract 90/90; full suite 7663/7663; generated-artifact checks pass",
         "edge_case_gaps": 0,
         "requirements": "FR-001 through FR-022 mapped; SC-001 through SC-009 traced",
         "tidiness_findings": 0,
