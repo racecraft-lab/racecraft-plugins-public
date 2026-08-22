@@ -695,10 +695,10 @@ runtime contract, not a hardcoded interpreter name; `<plugin-root>` is the
 directory that owns `skills/speckit-autopilot/`. `--rule status-evidence`
 scopes the exit code to the bookkeeping rule, the same scoping the Claude
 variant uses, so both distributions gate on one rule. The full report still
-prints: legacy structural coverage debt remains visible but nonblocking under
-this scoped rule, while current-run state invariants (`in_progress_errors`,
-`duplicate_state_steps`, `state_order_errors`) now stop the run. Drop `--rule`
-to gate on every check once a spec is migrated.
+prints: legacy structural coverage debt remains visible, nonblocking, while
+current-run state invariants (`in_progress_errors`, `duplicate_state_steps`,
+`state_order_errors`) stop the run. Drop `--rule` to gate on every check after
+migration.
 
 When `pr-marker-plan.v2` declares a changed-file manifest, append
 `--expected-base-commit <live-baseRefOid> --expected-head-commit <live-headRefOid>`.
