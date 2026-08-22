@@ -1,0 +1,616 @@
+# SpecKit Workflow: G56R-005 — Model Availability, Fallback, and Recovery Simulation
+
+**Template Version**: 1.0.0
+**Created**: 2026-08-22
+**Purpose**: Executable workflow populated from the G56R technical roadmap,
+current repository contracts, the mandatory blind-spot pass, and the
+human-validated Grill Me design concept.
+
+---
+
+## Design Concept
+
+This workflow was enriched from the required Grill Me interview. The complete
+Q&A log, Goals, Non-goals, Decisions, and Open Questions live at:
+
+```text
+docs/ai/specs/.process/G56R-005-design-concept.md
+```
+
+The design concept is the source of truth for setup decisions. Re-read it
+before every phase. Once autopilot begins, later clarifications use
+`/speckit-clarify` and the consensus protocol; Grill Me is not part of the
+autonomous phase loop.
+
+---
+
+## Workflow Overview
+
+| Phase | Command | Status | Notes |
+|-------|---------|--------|-------|
+| Specify | `/speckit-specify` | ⏳ Pending | Freeze deterministic simulation behavior and outcomes |
+| Clarify | `/speckit-clarify` | ⏳ Pending | Resolve only evidence-backed residual ambiguity |
+| Plan | `/speckit-plan` | ⏳ Pending | Derive a Codex-local resolver and fake-home adapter plan |
+| Checklist | `/speckit-checklist` | ⏳ Pending | Error handling, state management, and data integrity |
+| Tasks | `/speckit-tasks` | ⏳ Pending | Vertical, TDD-first, dependency-ordered tasks |
+| Analyze | `/speckit-analyze` | ⏳ Pending | Require full traceability and no critical findings |
+| Confidence Gate | G6.5 | ⏳ Pending | Pre-implementation composite confidence |
+| Implement | `/speckit-implement` | ⏳ Pending | Not run by the planning handoff |
+| Post | Post-Implementation | ⏳ Pending | Canonical closeout after implementation |
+
+**Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
+
+G6.5 is advisory by default. Leaving it Pending until the gate runs does not
+make later rows out of order.
+
+### Phase Gates
+
+| Gate | Checkpoint | Approval Criteria |
+|------|------------|-------------------|
+| G1 | After Specify | Stories, requirements, and acceptance scenarios are testable; no clarification markers remain |
+| G2 | After Clarify | Reason order, state transitions, reroute attribution, and no-write semantics are unambiguous |
+| G3 | After Plan | Constitution and reviewability gates pass; every planned path is declared |
+| G4 | After Checklist | Every genuine gap is remediated or explicitly scoped out |
+| G5 | After Tasks | FR coverage, dependencies, RED→GREEN pairs, and state-fixture cleanup are complete |
+| G6 | After Analyze | No CRITICAL/HIGH inconsistency or coverage finding remains |
+| G6.5 | Before Implement | Composite confidence meets the autonomous threshold or receives explicit disposition |
+| G7 | After each implementation group | Targeted tests pass and fake-home/state evidence is recorded |
+
+---
+
+## Prerequisites
+
+### Worktree and Branch
+
+- Worktree: use the registered checkout returned by
+  `git rev-parse --show-toplevel` for the branch below. Do not encode a
+  maintainer-specific absolute path in committed artifacts.
+- Branch: `g56r-005-model-availability-fallback-recovery`
+- Base at scaffold: `origin/main` commit `8859efc058`
+- Remote: `origin`
+- Never run this workflow from `main`, a detached checkout, or another feature
+  worktree.
+
+### Worktree Bootstrap
+
+No bootstrap command was run. Root `AGENTS.md` states that the repository test
+suite needs no bootstrap and runs directly with
+`python3 tests/speckit-pro/run-all.py`. `docs-site/` is the only
+dependency-bearing surface. If a later implementation changes a tracked
+`.md`, `.py`, or `.sh` under `tests/speckit-pro/` and therefore invokes a docs
+reference command, first run the documented
+`pnpm --dir docs-site install --frozen-lockfile` once in this worktree.
+
+### Runtime and Capability Context
+
+- Installed SpecKit CLI: `specify 0.14.2`.
+- Installed Codex agents: the required dry-run returned `status=ok`,
+  `mutation_status=no_op`, and all eleven bundled agent files current.
+- Preset: `speckit-pro-reviewability` v1.0.0 is installed and enabled. The
+  installed CLI resolved its `spec-template`, `plan-template`, and
+  `tasks-template` overlays successfully.
+- Agent surface: the mandatory read-only `codebase-analyst` blind-spot pass
+  surfaced five findings; all five were resolved during Grill Me, while two
+  lower-impact findings were set aside by the analyst.
+- Capability path: repository files, runner helpers, Git state, and the
+  codebase analyst provided direct local evidence. No external documentation or
+  live model capability claim is needed for this deterministic simulation.
+- Tools: repository-local Python 3.11 runner/helpers, Git, and the existing
+  SpecKit commands. No new external tool or dependency is declared.
+
+### Grounded Source Truth
+
+Use these sources in order:
+
+1. `docs/ai/specs/.process/G56R-005-design-concept.md` — human-approved scope
+   and decisions.
+2. `docs/ai/specs/codex-gpt-5-6-agent-routing-technical-roadmap.md` — goal,
+   dependency, budget, reason vocabulary, and non-goals.
+3. Current Codex contracts and fixtures under
+   `tests/speckit-pro/layer6-efficiency/contracts-codex-specification/` and
+   `tests/speckit-pro/layer6-efficiency/fixtures-codex/`.
+4. `speckit-pro/codex-agents/` plus the current installer's required Codex
+   agent set — roster authority.
+5. Existing pure Claude fallback resolver and tests — behavior-shape evidence
+   only, never a contract or import dependency.
+6. G56R-004's deterministic evidence and operator-only live-smoke boundary.
+7. `.specify/memory/constitution.md`, root `AGENTS.md`, and
+   `tests/speckit-pro/suite-manifest.json` — runtime, testing, simplicity, and
+   test-registration rules.
+
+The Codex reason `capability_discovery_unavailable` intentionally differs from
+Claude's frozen `capability_probe_unavailable`. Preserve both and defer their
+cross-platform reconciliation to CAR-012/G56R-012.
+
+### Constitution Validation
+
+| Principle | Requirement | Verification |
+|-----------|-------------|--------------|
+| I. Plugin Structure Compliance | Keep simulation work on the declared repository/test surface; do not add install-facing payload changes | Inspect final diff and run Layer 1 |
+| II. Cross-Platform Runtime & Script Safety | Python 3.11+ standard library, structured JSON, UTF-8 determinism, `shell=False`, no active Bash or `jq` | Layer 4 and focused unit tests |
+| III. Semantic Versioning | No plugin version or release-artifact changes for repository-only simulation | Manifest and final diff check |
+| IV. Test Coverage Before Merge | Register new test paths through the suite manifest and pass targeted plus full tests | Focused tests, Layer 4, full suite |
+| V. Conventional Commits | Repository-valid lowercase scope and plain-English description | Commit and PR title gate |
+| VI. KISS, Simplicity & YAGNI | One Codex-local resolver, one bounded state model, no speculative shared framework | Plan review and G6 analysis |
+
+**Constitution Check:** Pending formal G3 validation; no setup conflict found.
+
+---
+
+## Specification Context
+
+### Basic Information
+
+| Field | Value |
+|-------|-------|
+| **Spec ID** | G56R-005 |
+| **Name** | Model Availability, Fallback, and Recovery Simulation |
+| **Branch** | `g56r-005-model-availability-fallback-recovery` |
+| **Dependencies** | G56R-004 complete and archived after PR #403 |
+| **Enables** | G56R-006 capability-aware resolver, materializer, installer, and strict override |
+| **Priority** | P1 |
+
+### Reviewability Budget and Split Decision
+
+The setup reviewability helper scanned the series-wide roadmap and returned a
+non-blocking warning because the roadmap spans three primary surfaces. Its
+aggregate estimate was 395 reviewable LOC, two production files, and fifteen
+total files; that is context, not the target-spec budget.
+
+The G56R-005 roadmap entry declares one harness/adapter surface, approximately
+242 reviewable LOC, approximately three production files, approximately ten
+total files, `status: ok`, and one suggested slice. The Grill Me estimator used
+four vertical user stories, ten files, eighteen functional-requirement groups,
+and `new_vs_modify: modify`:
+
+```json
+{"estimated_loc":385,"suggested_slices":1,"status":"ok"}
+```
+
+**Split decision:** keep one thin vertical slice. The plan-phase authoritative
+reviewable-LOC check must re-slice if concrete paths push the implementation
+over the reviewability ceiling.
+
+### Success Criteria Summary
+
+- [ ] Deterministic fixtures cover preferred model absent, unsupported effort,
+  unavailable discovery, exact-invocation probe success/failure, treatment
+  failure, approved/unapproved reroutes, and no safe required route.
+- [ ] Ordered reasons use the Codex-local closed vocabulary and terminate in a
+  single outcome without losing earlier applicable diagnostics.
+- [ ] Optional-helper loss continues only through an explicitly validated
+  no-helper route; every required-agent failure is all-or-nothing.
+- [ ] Strict incompatible overrides stop before writes and never fall back.
+- [ ] A bounded non-recursive state machine proves retry exhaustion,
+  cancellation, loop rejection, and separate harness controls.
+- [ ] Fake-home fixtures prove atomic no-write, rollback, and
+  previous-known-good preservation for every failure boundary.
+- [ ] Fallback changes only explicit model and effort; all other agent contract
+  bytes remain identical.
+- [ ] Reports are byte-stable, targeted tests pass, Layer 4 passes, and the
+  complete repository suite passes. Live reroute smoke remains explicitly
+  unrun and no live claim is made.
+
+---
+
+## Phase 1: Specify
+
+**Output:** `specs/g56r-005-model-availability-fallback-recovery/spec.md`
+
+### Specify Prompt
+
+```text
+/speckit-specify
+
+## Feature: G56R-005 Model Availability, Fallback, and Recovery Simulation
+
+### Problem Statement
+
+G56R-006 cannot safely install real route policies until route availability,
+fallback exhaustion, strict overrides, service reroute attribution, and
+filesystem recovery semantics have deterministic, bounded, fail-closed proof.
+G56R-005 creates that proof without wiring production routing or making live
+availability claims.
+
+### Users and Consumers
+
+- G56R-006 maintainers need a frozen simulation contract before production
+  resolver and installer wiring.
+- Evaluation maintainers need stable reason ordering and service-reroute
+  attribution.
+- Release reviewers need evidence that failures cannot partially replace a
+  required Codex agent install.
+- Cross-platform maintainers need explicit preservation of frozen Claude
+  behavior while the Codex reason vocabulary remains locally authoritative.
+
+### Four Vertical User Stories
+
+1. Resolve a fixture policy through qualified preferred and fallback routes,
+   producing byte-stable ordered diagnostics and one terminal outcome.
+2. Distinguish approved and unapproved service reroutes from plugin reasons and
+   scoring eligibility through deterministic replay.
+3. Exercise optional-helper degradation, strict override rejection, exhaustion,
+   rollback, atomic no-write, and previous-known-good preservation in fake homes.
+4. Enforce retry, time, fan-out, context, cancellation, and escalation bounds
+   through one non-recursive sequential harness state machine.
+
+### Required Scenario Matrix
+
+- Preferred model absent; effort unsupported; discovery unavailable.
+- Exact invocation availability-probe success and failure; treatment-probe
+  failure; approved and unapproved service reroute; no safe route.
+- Optional helper unavailable; validated no-helper continuation; incompatible
+  strict override; bounded retry; fallback exhaustion.
+- Loop, unqualified-adjacent, generic substitution, inherited model/effort,
+  partial required installation, and non-route treatment mutation rejection.
+- Atomic no-write, rollback, previous-known-good preservation, cancellation,
+  and every declared harness budget.
+
+### Frozen Decisions
+
+- Codex-local resolver and reason vocabulary; no Claude import or shared-core
+  extraction.
+- Ordered applicable reasons plus one terminal outcome.
+- Strict override never falls back.
+- Service reroutes are separately attributed evidence.
+- Fallback may change model and effort only.
+- Pure resolution plus fake-home state adapter; no production installer wiring.
+
+### Out of Scope
+
+- Live model/service qualification or claims.
+- Production resolver/installer integration, payloads, versions, or release
+  artifacts.
+- Frozen Claude/G56R-004 contract edits or early CAR-012/G56R-012 reconciliation.
+- Production checkpoint/resume scheduling.
+```
+
+### Specify Results
+
+| Metric | Value |
+|--------|-------|
+| Functional Requirements | Pending |
+| User Stories | Target: 4 |
+| Acceptance Criteria | Pending |
+
+### Files Generated
+
+- [ ] `specs/g56r-005-model-availability-fallback-recovery/spec.md`
+
+---
+
+## Phase 2: Clarify
+
+Run at most five targeted questions per session. Do not reopen choices already
+settled in the Design Concept without contradictory repository evidence.
+
+### Clarify Session 1: Resolution Contract
+
+```text
+/speckit-clarify Focus on deterministic resolution: exact reason ordering,
+terminal outcomes, strict override rejection, qualified fallback eligibility,
+validated no-helper continuation, loop detection, and treatment immutability.
+```
+
+### Clarify Session 2: State and Recovery
+
+```text
+/speckit-clarify Focus on fake-home state: pre-state identity, write boundary,
+atomic no-write, rollback trigger and result, previous-known-good preservation,
+required-agent completeness, cleanup, and byte-stable evidence.
+```
+
+### Clarify Session 3: Bounds and Attribution
+
+```text
+/speckit-clarify Focus on service-reroute attribution and separate harness
+controls: approved versus unapproved evidence, scoring eligibility, time,
+retry, fan-out, context growth, cancellation, escalation/de-escalation, and
+terminal precedence.
+```
+
+### Clarify Results
+
+| Session | Focus | Questions | Key Outcomes |
+|---------|-------|-----------|--------------|
+| 1 | Resolution contract | Pending | Pending |
+| 2 | State and recovery | Pending | Pending |
+| 3 | Bounds and attribution | Pending | Pending |
+
+---
+
+## Phase 3: Plan
+
+**Output:** `specs/g56r-005-model-availability-fallback-recovery/plan.md`
+
+### Plan Prompt
+
+```text
+/speckit-plan
+
+## Tech Stack
+
+- Runtime: Python 3.11+ standard library only.
+- Data: canonical structured JSON and JSON Schema following existing Codex
+  contract patterns.
+- Testing: unittest-compatible repository tests registered through
+  tests/speckit-pro/suite-manifest.json.
+- Filesystem proof: temporary fake homes only; never write the maintainer's
+  installed Codex agents.
+
+## Architecture Constraints
+
+- Create the minimum Codex-local resolver/state adapter needed by G56R-005.
+- Reuse existing parsing, schema, digest, and canonical serialization utilities
+  only when their contract is platform-neutral.
+- Do not import or modify the Claude fallback resolver, and do not extract a
+  cross-platform framework.
+- Derive required agents from speckit-pro/codex-agents and the installer's
+  required set; avoid a second hand-maintained roster.
+- Keep the resolver pure. Place fake-home transition/rollback assertions at a
+  narrow adapter boundary that cannot reach a real home.
+- Use a bounded sequential state machine. Cancellation is terminal.
+- Keep service reroute attribution separate from plugin reason ordering.
+- Verify non-route treatment bytes before and after every selected fallback.
+
+## Reviewability and Verification
+
+- Declare every add/modify/delete path and estimated reviewable LOC.
+- Preserve one vertical slice only if the concrete plan remains at or below the
+  repository ceiling.
+- Plan RED→GREEN pairs for every scenario family and state transition.
+- Require targeted tests, Layer 4, the full repository suite, scope checks, and
+  generated-artifact checks appropriate to the final changed paths.
+- Record live smoke as unrun; do not substitute synthetic replay for a live
+  availability claim.
+```
+
+### Plan Results
+
+| Artifact | Status | Notes |
+|----------|--------|-------|
+| `plan.md` | ⏳ | Architecture and reviewability packet |
+| `research.md` | ⏳ | Existing-contract reuse decisions |
+| `data-model.md` | ⏳ | Route, diagnostic, reroute, state, and budget records |
+| `contracts/` | ⏳ | Codex-local simulation schemas if required |
+| `quickstart.md` | ⏳ | Deterministic replay and verification commands |
+
+---
+
+## Phase 4: Domain Checklists
+
+### 1. Error Handling
+
+```text
+/speckit-checklist error-handling
+
+Focus on G56R-005 requirements:
+- Stable ordering for simultaneous route failures.
+- Exhaustion, loop rejection, strict override, treatment failure, and no-safe-route outcomes.
+- Cancellation precedence and prohibition on post-cancel retries.
+- Approved versus unapproved service reroute disposition.
+- Pay special attention to fail-closed behavior without losing diagnostic evidence.
+```
+
+### 2. State Management
+
+```text
+/speckit-checklist state-management
+
+Focus on G56R-005 requirements:
+- Fake-home pre-state and previous-known-good identity.
+- Atomic no-write, rollback completeness, and cleanup.
+- Required-agent all-or-nothing behavior and optional-helper qualification.
+- Pay special attention to proving unchanged bytes after every rejected route.
+```
+
+### 3. Data Integrity
+
+```text
+/speckit-checklist data-integrity
+
+Focus on G56R-005 requirements:
+- Closed reason and terminal-outcome vocabularies.
+- Byte-stable canonical reports and content/digest bindings.
+- Model/effort-only deltas with every other treatment field identical.
+- Roster derivation and schema completeness.
+- Pay special attention to invented, missing, duplicate, or reordered evidence.
+```
+
+### Checklist Results
+
+| Checklist | Items | Gaps | Spec References |
+|-----------|-------|------|-----------------|
+| error-handling | Pending | Pending | Pending |
+| state-management | Pending | Pending | Pending |
+| data-integrity | Pending | Pending | Pending |
+| **Total** | Pending | Pending | Pending |
+
+Every genuine `[Gap]` must update `spec.md` or `plan.md`, then be rechecked.
+
+---
+
+## Phase 5: Tasks
+
+### Tasks Prompt
+
+```text
+/speckit-tasks
+
+## Task Structure
+
+- Organize by the four vertical user stories, not by schema/module/test layers.
+- Use strict RED → GREEN → REFACTOR → VERIFY task pairs.
+- Make every task small, testable, dependency-ordered, and FR-traceable.
+- Mark only truly independent fixture/test work [P].
+- Put shared contract/fixture foundations before their consuming stories.
+- Include suite-manifest registration and every changed-surface verification gate.
+- Include explicit fake-home cleanup and a guard against real-home writes.
+- Finish with targeted tests, Layer 4, full suite, artifact/reference checks when
+  triggered, scope review, and live-smoke-unrun evidence.
+```
+
+### Tasks Results
+
+| Metric | Value |
+|--------|-------|
+| Total Tasks | Pending |
+| Phases | Pending |
+| Parallel Opportunities | Pending |
+| User Stories Covered | Target: 4 |
+
+---
+
+## Atomicity Route
+
+The autopilot fills this after Tasks by running the read-only classifier against
+`specs/g56r-005-model-availability-fallback-recovery`. Do not pre-decide the
+result from LOC alone.
+
+| Field | Value |
+|-------|-------|
+| Route | Pending |
+| Releasable | Pending |
+| Signals | Pending |
+| Warnings | Pending |
+
+```text
+runner helper atomicity-route specs/g56r-005-model-availability-fallback-recovery
+```
+
+---
+
+## Phase 6: Analyze
+
+### Analyze Prompt
+
+```text
+/speckit-analyze
+
+Focus on:
+1. Constitution and one-slice reviewability alignment.
+2. Complete traceability across every route, reroute, bound, state, and rejection requirement.
+3. Consistent reason ordering and terminal outcomes across spec, plan, schemas, and tasks.
+4. Complete RED→GREEN coverage for fake-home failure and rollback states.
+5. No production installer, live qualification, frozen-contract edit, or payload scope leak.
+6. Correct declaration of generated-artifact and docs-reference duties for the concrete file plan.
+```
+
+### Analysis Results
+
+| ID | Severity | Issue | Resolution |
+|----|----------|-------|------------|
+| Pending | Pending | Pending | Pending |
+
+G6 requires no unresolved CRITICAL or HIGH finding.
+
+---
+
+## Phase 6.5: Confidence Gate
+
+| Field | Value |
+|-------|-------|
+| Mode | advisory |
+| Composite confidence | Pending |
+| Verdict | Pending |
+| Evidence | Pending |
+
+---
+
+## Phase 7: Implement
+
+### Implement Prompt
+
+```text
+/speckit-implement
+
+For every task:
+1. RED: add the smallest deterministic failing test.
+2. GREEN: implement only the behavior required by that test.
+3. REFACTOR: preserve stable report bytes and keep the resolver/state boundary narrow.
+4. VERIFY: run the focused test and record the observable fixture/state result.
+
+Before implementation, confirm the branch/worktree and a clean relevant
+baseline. Never write outside temporary fake homes. Do not broaden scope into
+production routing, live qualification, or cross-platform reconciliation.
+```
+
+### Implementation Progress
+
+| Phase | Tasks | Completed | Notes |
+|-------|-------|-----------|-------|
+| Shared contract foundation | Pending | Pending | |
+| Resolver and reroute stories | Pending | Pending | |
+| Recovery and bounds stories | Pending | Pending | |
+| Cross-cutting verification | Pending | Pending | |
+
+---
+
+## Post-Implementation Checklist
+
+| Canonical Item | Status | Evidence |
+|---|---|---|
+| Post: Doctor Extension Check | ⏳ Pending | |
+| Post: Verify Implementation | ⏳ Pending | |
+| Post: Verify Tasks Phantom Check | ⏳ Pending | |
+| Post: Code Review | ⏳ Pending | |
+| Post: Integration Suite | ⏳ Pending | |
+| Post: Reviewability Diff Gate | ⏳ Pending | |
+| Post: Self-Review | ⏳ Pending | |
+| Post: UAT Runbook Generation | ⏳ Pending | |
+| Post: PR Body Generation | ⏳ Pending | |
+| Post: PR Creation | ⏳ Pending | |
+| Post: Review Remediation | ⏳ Pending | |
+| Post: Retrospective | ⏳ Pending | |
+
+- [ ] Every task is complete or explicitly skipped with rationale.
+- [ ] Focused unit tests pass.
+- [ ] `python3 tests/speckit-pro/run-all.py --layer 4` passes.
+- [ ] `python3 tests/speckit-pro/run-all.py` passes.
+- [ ] Triggered docs references and generated artifacts are current.
+- [ ] The final diff contains no production installer, payload, version, live
+  capture, frozen Claude contract, or unrelated change.
+- [ ] Live reroute smoke is explicitly recorded as unrun.
+- [ ] PR title passes the repository release-readiness gate.
+
+---
+
+## Lessons Learned
+
+### What Worked Well
+
+- Pending
+
+### Challenges Encountered
+
+- Pending
+
+### Patterns to Reuse
+
+- Pending
+
+---
+
+## Project Structure Reference
+
+```text
+speckit-pro/
+├── codex-agents/                         # Required Codex agent source roster
+└── speckit_pro_runner/                   # Existing route-agnostic installer/helper code
+
+tests/speckit-pro/
+├── layer6-efficiency/
+│   ├── contracts-codex-specification/    # Codex-local contracts
+│   ├── fixtures-codex/                   # Deterministic fixture corpus
+│   └── lib/                              # Repository simulation helpers
+├── unit/                                 # Focused registered tests
+└── suite-manifest.json                   # Test registration authority
+
+specs/g56r-005-model-availability-fallback-recovery/
+└── SPEC-MOC.md                           # Spec-level navigation marker
+```
+
+---
+
+Template based on SpecKit best practices and populated for the repository's
+Python-authoritative, reviewability-gated workflow.
