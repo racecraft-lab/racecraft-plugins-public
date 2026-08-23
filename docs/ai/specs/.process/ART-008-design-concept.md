@@ -7,7 +7,7 @@ spec_id: "ART-008"
 source_input:
   type: "topic"
   ref: "ART-008 scope description from docs/ai/specs/html-artifacts-technical-roadmap.md"
-question_count: 12
+question_count: 13
 stop_reason: "natural"
 ---
 
@@ -15,7 +15,7 @@ stop_reason: "natural"
 
 > **Source:** ART-008 scope in `docs/ai/specs/html-artifacts-technical-roadmap.md`
 > **Date:** 2026-08-20
-> **Questions asked:** 12
+> **Questions asked:** 13
 > **Stop reason:** natural (no critical open branches remained)
 > **Blind-spot pass:** did not run — wait deadline expired
 
@@ -471,10 +471,6 @@ Q12 is separated from Q11.
 **User's answer:** Mitigate both inside this slice by scoping every agent that reads reviewer text (Recommended)
 
 ---
-
-TWO COUNT SITES IN THE SAME FILE, both required:
-- Front matter :10 — `question_count: 12` becomes `question_count: 13`.
-- Header :18 — `> **Questions asked:** 12` becomes `> **Questions asked:** 13`.
 
 ## Open Questions
 

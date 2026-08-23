@@ -247,7 +247,7 @@ guarantee it matched nothing.
 
 | Code | Condition | Effect |
 |---|---|---|
-| `malformed_record` | Unknown `class`, `target`, `perspective`, `outcome`, or `basis`; missing field; extra field; non-string prose field; `comment_id` mismatch; `target` non-null on a class other than `amended` or null on `amended`; `edit` present on `human_review` or absent on `resolved`; a `reason`, a perspective record, or a `replacement` past its budget. | Stop under FR-020 naming the comment id. No retry, no coercion, and no default: the four classes route differently, so there is no safe guess between them — the fail-closed reasoning FR-019 gives for a corroboration value outside its six. |
+| `malformed_record` | Unknown `class`, `target`, `perspective`, `outcome`, or `basis`; missing field; extra field; non-string prose field; `comment_id` mismatch; `target` non-null on a class other than `amended` or null on `amended`; `edit` present on `human_review` or absent on `resolved`; a `reason`, a perspective record, an `edit.anchor`, or an `edit.replacement` past its budget. | Stop under FR-020 naming the comment id. No retry, no coercion, and no default: the four classes route differently, so there is no safe guess between them — the fail-closed reasoning FR-019 gives for a corroboration value outside its six. |
 | `anchor_not_unique` | The anchor occurs zero times, or more than once. | Stop before any write, naming the comment id and the count. |
 | — | `edit.file` resolves outside the three-member set. | FR-012b rule 2's stop, unchanged. Reaching it means classification already failed, so it is a defect report rather than a routine path. |
 
@@ -303,6 +303,7 @@ Layer 5.
 | `classifier-mixed-comment-dominance` | A non-dominant objection is absent from the disposition or the reply. |
 | `classifier-empty-kind-candidate` | An `empty`-kind candidate is dispatched, or gets a block, or takes a class other than `no action`. |
 | `analyst-perspective-record-shape`, `analyst-replacement-over-budget` | An unknown `perspective`, a missing `escape_hatch`, a perspective record past 8192 bytes, or a `replacement` past it is accepted. |
+| `analyst-anchor-over-cap` | An anchor a single byte over 512 is written anyway, or is cut to fit rather than stopping. |
 | `analyst-anchor-absent`, `analyst-anchor-duplicated`, `analyst-anchor-unique` | A miss or a collision writes anyway, or a clean anchor is refused. |
 | `analyst-edit-file-outside-set` | Rule 2 admits a fourth path, or part of the edit is written before the stop. |
 | `analyst-empty-replacement-deletion` | A deletion is recorded as an ordinary amendment. |

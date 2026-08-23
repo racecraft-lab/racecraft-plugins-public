@@ -136,7 +136,10 @@ This does not disturb mechanism 1. FR-008b's first assertion is about the
 parse envelope, and candidate records still carry no body; the surface is
 networkless and write-less, receives one body at a time, and only ever for an
 id the orchestrator was entitled to read under mechanism 2. Registration stays
-one operation and production files stay seven. What the surface proves is the
+one operation, and production files stayed seven through this pass —
+superseded by the consumer-scoping pass, whose count lives in the superseding
+note under Reviewability below and in `spec.md`'s second Reviewability Budget
+superseding note. What the surface proves is the
 payload's shape. It does not decide whether a body is forwarded — that is
 mechanism 2's orchestrator prose, and nothing deterministic stands on the
 forward path — and it does not make the analyst honour the frame, which is a

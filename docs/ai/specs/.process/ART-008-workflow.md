@@ -37,7 +37,7 @@ captured during scoping.
 | Plan | `/speckit-plan` | ✅ Complete | 5 artifacts, 1506 lines. Budget re-derived by hand at 515-745 LOC (midpoint ~630) over 7 production files: two warns, zero blocks, warn accepted with the split lever recorded, since superseded — the live figure's one home is `spec.md`'s Reviewability Budget superseding note |
 | Checklist | `/speckit-checklist` | ✅ Complete | 3 domains, 143 items, **54 gaps found and 54 closed**. 8 consensus items across 24 analyst dispatches, all Round 1. Spec grew 31 → 48 requirements and 10 → 13 criteria. Those requirements moved the budget: the high end went 745 → ~775 → **810-830, which crosses the 800 block**, leaving it at **515-830 (midpoint ~630)** at that time, since superseded — the live figure's one home is `spec.md`'s Reviewability Budget superseding note — and still 7 production files |
 | Tasks | `/speckit-tasks` | ✅ Complete | **109 tasks**, 6 phases (7/8/40/37/5/12). **54/54 requirements and 15/15 criteria covered**; the orchestrator added T080 after finding SC-003 uncovered, the trust-boundary remediation added T081–T087 for FR-007g, FR-012f, and SC-014, and the third remediation pass added T088–T093 for FR-004d, the captured-call fixture, and the fixed-shape commit subject, and the consumer-scoping pass added T094–T109 for the two scoped agents, the Layer 5 carve-out, the piped observation, and the payload regeneration their shipped bytes require |
-| Analyze | `/speckit-analyze` | ✅ Complete | 6 findings, all remediated, zero unresolved for consensus. Caught a contradiction that would have stopped the feature on its own first write, and a fixture corpus that could not fail in the direction that mattered |
+| Analyze | `/speckit-analyze` | ✅ Complete | First pass: 6 findings, all remediated, zero unresolved for consensus. Caught a contradiction that would have stopped the feature on its own first write, and a fixture corpus that could not fail in the direction that mattered. **Scoped re-run 2026-08-22** against the consumer-scoping amendment the first pass never saw: **9 findings, 9 remediated, 1 flagged for consensus** (the SC-015 narrowing, tagged `[security]`). Both passes are tabled under [Phase 6](#phase-6-analyze) |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 | Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
@@ -1019,9 +1019,57 @@ Focus on:
 
 ### Analysis Results
 
-| ID | Severity | Issue | Resolution |
-|----|----------|-------|------------|
-| | | | |
+The first pass raised six findings and closed all six. A **second, scoped pass**
+ran on 2026-08-22 against the consumer-scoping amendment alone, which the first
+pass never saw. Its findings are below.
+
+#### Scoped re-run: the consumer-scoping amendment
+
+| ID | Severity | Issue | Evidence | Resolution |
+|----|----------|-------|----------|------------|
+| A-1 | CRITICAL | Eleven tasks cite `FR-007h` and `FR-012g` as acceptance. Neither requirement exists in `spec.md`; both entered in `tasks.md` alone at commit `5d4f36606`. Traceability breaks for every task the amendment added. | `tasks.md` T095–T101, T103–T105, T107; `spec.md` requirement list runs FR-007g → FR-008 and FR-012f → FR-013 | Repointed all eleven citations to the requirements that carry the content: `FR-010a` (classifier, piped observation), `FR-008c` (tool scoping, Codex sandbox), `FR-011b` (analyst, structured edit). No requirement added, so 54/54 coverage and the budget are unchanged. |
+| A-2 | HIGH | `tasks.md`'s superseding budget note says it repeats the spec's live figure and repeats the **superseded** one — 705–1080, "Production files stay at 7", "15 to 16" — while T014 in the same file says 12 production files. The file contradicts itself. | `tasks.md:20-31` against `tasks.md` T014 and `spec.md`'s second superseding note | Split into a first note kept as history and a second carrying the live 1120–1720 / ~1420, 12 production files, 22 authored files, both blocks operator-accepted. T014's stale quote of the live figure corrected with it. |
+| A-3 | HIGH | SC-015 claimed that every tool call attributed to a scoped-agent dispatch names a tool on that agent's allowlist, "demonstrated by" a fixture. FR-008a's capture records the agent name, comment id, prompt, and returned record — not an agent's tool calls — and the corpus is a deterministic harness with no live agent, so no fixture can produce that evidence. A security criterion asserting unproducible evidence is the "rule nothing executes" defect the spec names elsewhere. | `spec.md` SC-015 against FR-008a's captured-dispatch paragraph | Narrowed to the two halves that are producible: the declaration pinned by Layer 5 equality, and the routing measured over the captured corpus. The dropped claim is recorded explicitly as what the criterion does not claim, alongside the harness-enforcement limit it already carried. **Flagged for consensus — this narrows a security criterion.** |
+| A-4 | MEDIUM | The consumer-scoping record said the sanitized block is "handed over by path under FR-004d's directory" and "the sanitized blocks are passed by path". FR-010a hands the block in the dispatch prompt, and the contract states nothing here is written to disk. | `ART-008-workflow.md` consumer-scoping section against `spec.md` FR-010a and `contracts/sweep-classifier-output.md:13-15` | Corrected both sentences to in-prompt transport, naming T097 as the fixture that goes red if an implementation spools a block to a file. |
+| A-5 | MEDIUM | The contract bounds `edit.anchor` at 512 bytes. FR-011b stated no cap, its stop list named three fields rather than four, and the contract's own `malformed_record` budget list omitted the anchor — so the cap had no stop behind it. | `contracts/sweep-classifier-output.md:218` and its Validation table, against `spec.md` FR-011b item 2 | Cap and its stop added to FR-011b, the anchor added to the contract's `malformed_record` budget list, and T094's diagnostics extended. Stops rather than cuts, for the reason the `replacement` does: a cut anchor matches different bytes. |
+| A-6 | MEDIUM | The design concept records Q13 but `question_count` and "Questions asked" both still read 12, and an unapplied authoring instruction block ("TWO COUNT SITES IN THE SAME FILE") sat committed in the document body. | `ART-008-design-concept.md:10`, `:18`, `:475-477` | Both counts set to 13; the instruction block removed. |
+| A-7 | LOW | T095 specifies the allowlist comparison as an ordered tuple; FR-008c specifies equality over the parsed set. Ordered comparison adds a reorder failure mode no requirement asks for. | `tasks.md` T095 against `spec.md` FR-008c assertion 2 | T095 aligned to set equality, explicitly silent on ordering. |
+| A-8 | LOW | `plan.md`'s trust-boundary mechanism 3 asserts "production files stay seven" in place, with no superseded marker or pointer, against the one-home rule the spec states. | `plan.md:139` | Marked as true through that pass and pointed at the live figure's home. |
+| A-9 | LOW | Layer 1 requires a `Capability path:` marker in every non-excluded agent, and its subtest is worded as an output-format requirement, while FR-010a makes a fifth field in the classifier record malformed. A future editor could satisfy the subtest by breaking the contract. | `tests/speckit-pro/layer1-structural/validate-capability-pointer.py:92-98` (a substring search over whole file text) against `spec.md` FR-010a | T098 and T104 now state that the markers live in body prose and never in the returned record, with the substring-search mechanics cited. |
+
+Nine findings, nine remediated, one flagged for consensus on category rather
+than on doubt. **This supersedes the Phase 6.5 sentence reading "Analyze closed
+all six it raised and routed nothing to consensus"** for the amendment surface;
+the G6.5 verdict itself is not re-scored here, because the gate is terminal for
+the plan stage and its recorded reasoning still holds.
+
+#### Verdicts recorded as no-finding
+
+- **F-1 is closed at the consumer layer.** Every consumer of reviewer text and
+  its surface: the runner helper (deterministic code, no model);
+  `sweep-classifier` (`Read`); `sweep-analyst` (`Read`, `Grep`, `Glob`), four
+  dispatches per amended item including synthesis; the orchestrator, which
+  keeps `Bash` but is never handed a body — construction rather than
+  enforcement, with FR-008b's captured-dispatch fixture as the regression
+  tripwire. The `anchor` never leaves: the contract makes anchor bytes on the
+  `amendment` leg a red fixture. The Codex network residual is disclosed rather
+  than closed.
+- **The Layer 5 carve-out is exactly two names, not a pattern.** T095's three
+  assertions match the validator's actual structure: the role tuples at
+  `validate-tool-scoping.py:29-48`, the suite builder iterating
+  `TEST_METHOD_ORDER` at `:49-59`, and `OPEN_EXECUTORS` at `:31` for the
+  disjointness assertion. Exemption is by membership, so `tools:` on a
+  non-member stays red on the unchanged rule.
+- **The Layer 6 corpus does not restale.** `corpus-manifest.json` binds twelve
+  named roles and no directory scan; `run-efficiency-benchmarks.py:247` reads a
+  TOML per named role. `artifact-author` already ships on both platforms
+  outside the corpus. T109's claim is correct and needs no task.
+- **Codex parity is asymmetric by design and is disclosed as such.** The TOML
+  format carries no tool allowlist and no network field, `validate-codex-agents.py:42`
+  rejects every Claude-only field, and `sandbox_mode` is the only lever. FR-008c
+  claims read-only filesystem and network per Codex defaults, and claims
+  nothing about tools. SC-007 is parity of sweep outcome, not of enforcement
+  strength.
 
 ---
 
@@ -1320,7 +1368,7 @@ are recorded as **Q13** in the design concept; this is what it changes.
 
 - **Two scoped consumers, both platforms, used only by the sweep.**
   `sweep-classifier` takes one sanitized, delimited body — the FR-007g output,
-  handed over by path under FR-004d's directory — plus the closed class
+  handed over **in the dispatch prompt**, never by path — plus the closed class
   vocabulary, and returns `{class, target, reason}` with the reason capped at
   512 bytes and passed through the FR-012f redaction surface before any use.
   `sweep-analyst` is dispatched three times per amended item with the
@@ -1331,8 +1379,13 @@ are recorded as **Q13** in the design concept; this is what it changes.
   `SendMessage`, and `Skill`. Codex pins `sandbox_mode = "read-only"`.
 - **Classification leaves the orchestrator.** The orchestrator holds `Bash`, so
   the rule is that it is never handed a body: the `gh` read is piped into the
-  runner, the sanitized blocks are passed by path, and what comes back is an
-  enum, a target, and bounded text. That is construction rather than
+  runner, the sanitized blocks pass through the orchestrator unread and reach
+  each agent in its dispatch prompt rather than through a file, and what comes
+  back is an enum, a target, and bounded text. FR-010a and
+  `contracts/sweep-classifier-output.md` both fix that transport — the contract
+  says nothing here is written to disk — so an implementation that spools a
+  block to `FR-004d`'s directory to hand it over fails T097 rather than
+  satisfying this record. That is construction rather than
   enforcement — the orchestrator could read the file it wrote — and the plan's
   item 7 carries the residual rather than dissolving it.
 - **Synthesis does not go to `consensus-synthesizer`,** which declares no

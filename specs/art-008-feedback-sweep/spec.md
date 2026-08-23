@@ -1694,11 +1694,19 @@ proceeds.
      record naming any fourth path MUST stop the run and MUST NOT write, and
      FR-012b rule 2 still runs at the write regardless, because a decision made
      once upstream is not a check made at the point of use.
-  2. `anchor` — text that MUST resolve to exactly one occurrence in that file.
-     The orchestrator applies the edit serially, the way the shipped protocol
-     applies every Artifact Edit, and that application requires a unique match.
-     Zero matches and two matches are both defects and both MUST stop the run
-     before any write.
+  2. `anchor` — a verbatim excerpt of the target file's current bytes, bounded
+     at **512 bytes** by `contracts/sweep-classifier-output.md`, that MUST
+     resolve to exactly one occurrence in that file. The orchestrator applies
+     the edit serially, the way the shipped protocol applies every Artifact
+     Edit, and that application requires a unique match. Zero matches and two
+     matches are both defects and both MUST stop the run before any write, and
+     so is an anchor over the cap. The cap is stated because every other string
+     an untrusted-input consumer returns carries one — the `reason` at 512
+     bytes and the `replacement` at 8192 — and an unbounded third would be the
+     one field that could push the assembled request past the runner's 32 KiB
+     string limit. Like the `replacement`, an over-cap anchor stops rather than
+     being cut: a cut anchor is a different anchor, and a different anchor
+     matches different bytes.
   3. `replacement` — bounded at **8192 bytes**, the one text budget this
      feature already carries rather than a third number minted here. Over
      budget MUST stop the run and MUST NOT write. This is the one place the
@@ -1709,9 +1717,10 @@ proceeds.
      record as the analyst returned it, which is the volume control; what is
      actually written is whatever the redaction surface returns for it.
 
-  All three stops are fixtured in the same corpus, one red case per field: a
-  synthesis response naming a fourth file, one whose anchor resolves twice, and
-  one whose replacement is a single byte over 8192. Each case is red unless the
+  All four stops are fixtured in the same corpus, one red case per stop: a
+  synthesis response naming a fourth file, one whose anchor resolves twice, one
+  whose anchor is a single byte over 512, and one whose replacement is a single
+  byte over 8192. Each case is red unless the
   run stops having written nothing and having captured no `amendment` leg call
   for that item, so a stop that leaks a partial write or a redaction request
   fails as loudly as no stop at all.
@@ -3140,25 +3149,37 @@ Named owners, so none of these is a silent omission.
   repository and then posts a public reply is an outbound path none of the
   three inspects.
 - **SC-015**: The agents that read reviewer text hold only what their role
-  needs, and the orchestrator holds no reviewer text at all. Across the
-  captured corpus, every tool call attributed to a `sweep-classifier` or
-  `sweep-analyst` dispatch names a tool on that agent's stated allowlist —
-  `Read` for the classifier; `Read`, `Grep`, and `Glob` for the analyst — and
-  no call from either names `Bash`, a network tool, a write tool, or an
-  orchestration tool; no dispatch carrying a block names an agent outside the
-  two; and no captured orchestrator step reads a comment body out of the
-  observation, which is piped into the runner rather than held for the
-  orchestrator to interpret. Demonstrated by two fixtures that can fail, both
-  over the capture FR-008a defines: the per-agent dispatch fixture, red when a
-  captured call names a tool outside the allowlist or a block reaches a third
-  agent; and the orchestrator-read fixture, red when any captured orchestrator
-  step carries a body rather than an id, an enum, or surface-shaped text.
-  **This is a different measurement from the Layer 5 assertion, and both are
-  needed.** Layer 5 pins the frontmatter on the two definitions — that the
-  allowlist is exactly what it says and that the exempt pair is exactly those
-  two names — and it would pass unchanged if the sequence routed a block to an
-  unscoped role, because it never looks at a run. This criterion measures what
-  a run did. It needs evidence of its own because nothing else here measures
+  needs, and the orchestrator holds no reviewer text at all. Two measurements
+  together, and the split between them is stated first because it is what keeps
+  this criterion falsifiable. **The declaration is pinned by Layer 5**: each
+  agent's frontmatter carries exactly its stated allowlist — `Read` for the
+  classifier; `Read`, `Grep`, and `Glob` for the analyst — with `Bash`, every
+  network tool, and every write tool absent from both by equality rather than
+  by containment, the orchestration set and `Skill` denied, and the exempt pair
+  fixed at those two names, all as FR-008c specifies. **The routing is
+  measured over the captured corpus**: no dispatch carrying a block names an
+  agent outside the two, and no captured orchestrator step reads a comment body
+  out of the observation, which is piped into the runner rather than held for
+  the orchestrator to interpret. Demonstrated by two fixtures that can fail,
+  both over the capture FR-008a defines: the per-agent dispatch fixture, red
+  when a block reaches a third agent or a per-agent dispatch count is wrong;
+  and the orchestrator-read fixture, red when any captured orchestrator step
+  carries a body rather than an id, an enum, or surface-shaped text.
+
+  **What this criterion deliberately does not claim.** It does not assert that
+  every tool call a dispatched agent made names a tool on its allowlist. The
+  capture FR-008a defines records the agent name, the comment id, the prompt as
+  sent, and the structured record returned; it does not record an agent's own
+  tool calls, and the fixture corpus is a deterministic harness with no live
+  agent in it, so no fixture here can produce that evidence. Claiming it would
+  be the defect this spec names elsewhere — a rule nothing executes has no
+  fixture that can fail. What stands in its place is the pair above: the
+  declaration, pinned by equality in the repository, and the routing, measured
+  against a run.
+  **Neither half substitutes for the other.** Layer 5 would pass unchanged if
+  the sequence routed a block to an unscoped role, because it never looks at a
+  run; the captured corpus would pass unchanged if a definition's allowlist
+  were widened, because it never looks at frontmatter. It needs evidence of its own because nothing else here measures
   the consumers' capability surface or the orchestrator's read discipline:
   SC-009 covers shell arguments, SC-004 covers authorship, and SC-014 covers
   what the run carries outward, and the failure this one guards against leaves
@@ -3166,7 +3187,9 @@ Named owners, so none of these is a silent omission.
   recorded with it: a capture records the calls a run made, and what prevents
   a denied call is the harness that spawns the agent, so this criterion
   measures the record and Layer 5 pins the declaration — neither is a proof
-  that the harness enforced anything, and the spec does not claim one.
+  that the harness enforced anything, and the spec does not claim one. That
+  limit and the no-tool-call-evidence limit above are the same limit seen from
+  two sides, and both are recorded rather than argued away.
 
 ## Assumptions
 
