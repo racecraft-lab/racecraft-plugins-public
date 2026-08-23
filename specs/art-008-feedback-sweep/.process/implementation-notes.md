@@ -975,3 +975,21 @@ An earlier worker had already noticed the adjacent half of this, that Layer 4
 discovery is not manifest-gated, so the file ran without its manifest row. The
 manifest row supplies the label and baseline; `run_counted` supplies the count.
 Both are needed and neither implies the other.
+
+
+### T098's Codex mirror, closed
+
+The verification pass found one acceptance clause still open: T098 owed a Codex
+mirror of the `capability-discovery.md` amendment, and that reference tree has no
+such file. The concrete residual was
+`speckit-pro/codex-skills/speckit-autopilot/SKILL.md`, which still asserted
+without qualification that subagents inherit the operator's full installed
+surface. The two pinned-allowlist agents falsify that sentence, and the Claude
+SKILL.md carries no equivalent, so the inaccuracy was Codex-only.
+
+Closed by narrowing the sentence in place. The constraint made it interesting:
+that file sits at exactly 8000 of 8000 body words, so the correction had to be
+word-negative. A first rewrite measured 8002 and was rejected by the check before
+being written; the applied version lands at **7998**, two words under. Measured
+with the validator's own `_body()` helper rather than `wc -w`, because the cap is
+computed after frontmatter is stripped.

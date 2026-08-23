@@ -2905,11 +2905,11 @@
             "transform": "path_normalization"
           },
           {
-            "byte_count": 60986,
+            "byte_count": 60968,
             "kind": "skill",
             "path": "skills/speckit-autopilot/SKILL.md",
             "required": true,
-            "sha256": "2840de4ff3c826e1229a5153436f3633bb0e25db79e71568050013bcc0e67f1f",
+            "sha256": "335ab98c078ac710ebd615d61f99ed7127e0f4b23d37a1d05568be857ecb1928",
             "source_path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
             "transform": "codex_overlay"
           },
@@ -4248,11 +4248,11 @@
             "transform": "path_normalization"
           },
           {
-            "byte_count": 60986,
+            "byte_count": 60968,
             "kind": "skill",
             "path": "skills/speckit-autopilot/SKILL.md",
             "required": true,
-            "sha256": "2840de4ff3c826e1229a5153436f3633bb0e25db79e71568050013bcc0e67f1f",
+            "sha256": "335ab98c078ac710ebd615d61f99ed7127e0f4b23d37a1d05568be857ecb1928",
             "source_path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
             "transform": "codex_overlay"
           },
@@ -5113,7 +5113,7 @@
           }
         ],
         "extra_paths": [],
-        "file_tree_hash": "0108d8c97b803a3ff70f1e82360994835ce50e30168391a1e298e807e7b28868",
+        "file_tree_hash": "d119e7e2e0a4155665da1091bde3094aa91c44df9f893fa2d886b04f1e457988",
         "generated_root": "dist/codex/speckit-pro",
         "mismatched_paths": [],
         "missing_paths": [],
