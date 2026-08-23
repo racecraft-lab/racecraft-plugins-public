@@ -140,3 +140,80 @@ untracked path under a scanned tree is not harmless here: the spec-index
 generator walks the filesystem rather than the git index, so a stray file can
 become a committed dangling backlink that passes locally and fails on a clean
 checkout.
+
+### T007
+
+**Deviations/Edge cases/Surprises:** No deviations. Red state captured cleanly:
+76/76 before, 73/76 after, `FAILED (failures=2, errors=1)`.
+
+**One finding changed the task plan.** A third failure fired that no acceptance
+criterion named and no task owned. `test_helper_python_authoritative_records`
+iterates `filtered_helpers()` and indexes `HELPER_CASES[helper_id]` at line 2161,
+skipping only `helper-registry-dispatch`, so appending the id to
+`EXPECTED_HELPERS` raises `KeyError` on every run until a `HELPER_CASES` entry
+exists. Phase 2 could not have reached green. The worker correctly refused to add
+it out of scope and flagged it. T012 found the same gap independently. The
+orchestrator added it to `tasks.md` as **T110**, depending on T010 and T011,
+because the assertions after the lookup read a real dispatch response rather than
+an `unknown_helper` envelope. Task count 109 to 110.
+
+The index question is settled with evidence: index 18, the last element, with the
+manifest holding exactly 18 records in matching order, so appending renumbers
+nothing. The failure output confirms it independently ("First extra element 18").
+`bash-reference-manifest.json` stays at 16 comparisons and needs no new record.
+
+Left deliberately: the comment block at lines 79-82 rationalizes each
+`NO_BASH_ANCESTOR` member individually and now has three members with two
+rationales. Flagged rather than silently drifted.
+
+### T009
+
+**Deviations/Edge cases/Surprises:** One deviation, and the worker was right.
+**The task prompt's premise was wrong.** It said to match
+`requests/resolve-autopilot-stage.json` "including how `pr_observation` is
+structured there"; that fixture carries no `pr_observation` at all, because the
+input is optional for that helper and only the test file constructs one. The
+worker took the payload from the authoritative contract instead and corroborated
+the underlying convention twice: the `ok`-must-be-JSON-literal-`true` rule at
+`read_only.py:1345`, and the sibling observation built in-test at
+`test-autopilot-stage-resolution.py:1455`. Same `ok` convention, different
+payload key, because ART-008's is `comments`.
+
+One choice worth keeping. `self_login` is `speckit-pro-bot`, deliberately not
+`octocat`: `octocat` authors the canonical candidate comment, so a matching
+`self_login` would flip it to a `self_reply` exclusion under FR-006 and silently
+invalidate the contract's own Response example of observed 2, candidates 1,
+excluded 1.
+
+Its acceptance proof exceeded what was asked. Three differential probes
+established that envelope validation runs before `request_id` is copied onto the
+response, so an echoed `request_id` proves `schema_version`, `mode`, `helper_id`,
+and `inputs` all validated and the request died at the registry lookup.
+`unknown_helper` with `fixture-sweep-pr-feedback` echoed is therefore exactly the
+pre-T010 state, not a malformed envelope.
+
+Minor: the report credited the `EXPECTED_HELPERS` edit to T012. It was T007.
+
+### T012
+
+**Deviations/Edge cases/Surprises:** Independently found the same unowned
+`HELPER_CASES` gap T007 found, and established the set difference precisely:
+`sweep-pr-feedback` is the only member of `EXPECTED_HELPERS` missing from
+`HELPER_CASES` besides the deliberately skipped `helper-registry-dispatch`. It
+also confirmed the contract's seven-row registration checklist is incomplete by
+one touch point, since `HELPER_CASES` appears nowhere in `tasks.md` or the
+contract.
+
+**One deviation is a process hazard worth recording.** The worker ran two
+path-scoped `git stash push` / `git stash pop` round trips to build counterfactual
+evidence. The evidence was genuinely good: it showed the edit removed exactly one
+failure, the one the task names, and that the other two never read the registry.
+But the stash stack is shared with the main checkout and every other worktree, and
+concurrent sessions push and pop it, so a `pop` can take an entry that is not
+yours. No amount of care by the worker closes that race. It came out clean, the
+stack holds only its 11 pre-existing entries and `registry.py` compiles. The
+orchestrator has since added an explicit `git stash` prohibition to every
+remaining worker prompt, with scratchpad copies named as the substitute.
+
+Also recorded: the line-238 mismatch resolving from the ACTUAL side confirms the
+harness executes worktree source rather than the installed plugin cache.

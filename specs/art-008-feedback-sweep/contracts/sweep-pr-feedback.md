@@ -33,6 +33,16 @@ inputs below and no discriminator, and the parse stays the shape a reader meets
 first. The Request, Response, and Diagnostics immediately below are the `parse`
 surface's. A `named_surface` outside the three values is `invalid_input`.
 
+**An explicit JSON `null` reads as absence and routes to `parse`.** Absence and
+an explicit null are the same request, because a caller assembling the object
+programmatically writes the key with a null value where a caller writing it by
+hand omits the key, and neither expresses a choice of surface. The empty string
+is a different case and is **not** absence: it is a value outside the three, so
+it is `invalid_input`. The distinction is stated because the natural Python
+idiom for the default, `inputs.get("named_surface") or "parse"`, silently routes
+the empty string to the parse and so disagrees with the closed-set rule. Test
+`is None`.
+
 The other two exist because neither can run when the parse runs. The
 write-point check is called once per resolved edit, after classification, and
 no resolved target exists yet at parse time. The redaction surface is called at
@@ -603,17 +613,47 @@ rather than an ambiguity to resolve.
 | # | File | Change |
 |---|---|---|
 | 1 | `helpers/read_only.py` | `sweep_pr_feedback()` |
-| 2 | `helpers/read_only.py` | Allowed-inputs entry: `{"workflow_file", "self_login", "feature_dir", "pr_observation"}` |
+| 2 | `helpers/read_only.py` | `path_keys_by_helper` entry. **Real path inputs only**: `{"workflow_file", "feature_dir"}` |
 | 3 | `helpers/read_only.py` | Argument-derivation branch |
 | 4 | `helpers/read_only.py` | Dispatch-table entry |
 | 5 | `helpers/registry.py` | One `HelperEntry`, `None` script, `python_only` |
-| 6 | `tests/.../test-speckit-pro-read-only-helpers.py` | Append to `EXPECTED_HELPERS`; add to `NO_BASH_ANCESTOR` |
+| 6 | `tests/.../test-speckit-pro-read-only-helpers.py` | Append to `EXPECTED_HELPERS`; add to `NO_BASH_ANCESTOR`; add a `HELPER_CASES` entry |
 | 7 | `tests/.../fixtures/read-only-helpers/fixture-manifest.json` | One record, **at the position matching `EXPECTED_HELPERS`** |
 
 **Seven rows, whatever the `named_surface`.** The `check_target` and `redact`
 fields extend row 2's allowed-inputs entry and row 3's derivation branch; they
 add no row. That is the whole of what keeps this feature at one registered
 operation.
+
+**Row 2 is not an allowlist, and listing a non-path input there corrupts it.**
+The map at `read_only.py:247` is `path_keys_by_helper`, and every key it lists
+is run through `request_path_display`, whose `normalize_path_input` is
+`str(raw).replace("\\", "/")`. A listed key is therefore rewritten: each
+backslash becomes a forward slash, and the value is then resolved as a path and
+re-rendered repo-relative. That is correct for `workflow_file` and
+`feature_dir` and wrong for anything else.
+
+The consequence is worst on the redaction surface. `text` is a raw reviewer
+comment body and `lines` is an array of them. Putting either behind this map
+would silently rewrite every backslash a reviewer typed, before the deny-set
+ever runs, corrupting the exact bytes FR-007g's golden envelope pins. **The rule
+is: add only real path inputs, whatever a row's prose says.** `self_login` and
+`pr_observation` were named here in an earlier draft and were verified inert
+rather than left to trust, because `pr_observation` is skipped by the
+`isinstance(value, str)` guard and `self_login` round-trips unchanged on every
+shape that matters, including the FR-006b whitespace-only case. They are removed
+from the row so the next reader does not extend the pattern to a field where it
+does damage.
+
+**Row 6 has three parts, not two.** `HELPER_CASES` was missing from this
+checklist until implementation found it. `test_helper_python_authoritative_records`
+iterates every registered helper, skips only `helper-registry-dispatch`, and
+indexes `HELPER_CASES[helper_id]` directly, so appending an id to
+`EXPECTED_HELPERS` raises `KeyError` on every run until the entry exists. The
+gap is silent at authoring time and unmissable at run time, and the next helper
+added to this repository would hit it identically. The entry carries the same
+inputs as the registered request fixture. Unlike row 7, `HELPER_CASES` is a
+keyed dict, so its insertion point carries no ordering constraint.
 
 `fixture_ids == EXPECTED_HELPERS` compares **in order**, while the sibling
 registry-dispatch assertion compares against `sorted(EXPECTED_HELPERS)`. The two

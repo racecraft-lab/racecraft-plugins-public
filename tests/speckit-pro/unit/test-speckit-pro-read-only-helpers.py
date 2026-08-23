@@ -71,6 +71,7 @@ EXPECTED_HELPERS = [
     "validate-pr-workflow-contract",
     "validate-pr-packet-read-only",
     "estimate-spec-size",
+    "sweep-pr-feedback",
 ]
 
 JSON_STDOUT_PARITY_HELPERS = {"atomicity-route"}
@@ -80,7 +81,7 @@ JSON_STDOUT_PARITY_HELPERS = {"atomicity-route"}
 # view and never had a script; `resolve-autopilot-stage` is new behaviour with no
 # deleted `.sh` ancestor, and inventing a `source_script` for it would record a
 # lie in a provenance manifest.
-NO_BASH_ANCESTOR = ("helper-registry-dispatch", "resolve-autopilot-stage")
+NO_BASH_ANCESTOR = ("helper-registry-dispatch", "resolve-autopilot-stage", "sweep-pr-feedback")
 
 HELPER_CASES: dict[str, dict[str, object]] = {
     "check-prerequisites": {"workflow_file": WORKFLOW_FILE},
@@ -103,6 +104,38 @@ HELPER_CASES: dict[str, dict[str, object]] = {
     "validate-pr-workflow-contract": {"title": "feat(XPLAT-005): Add read-only helper port"},
     "validate-pr-packet-read-only": {"packet_path": "tests/speckit-pro/unit/fixtures/read-only-helpers/missing-pr-packet.json"},
     "estimate-spec-size": {"user_stories": 2, "files": 3, "frs": 4},
+    "sweep-pr-feedback": {
+        "workflow_file": "docs/ai/specs/.process/ART-008-workflow.md",
+        "self_login": "speckit-pro-bot",
+        "feature_dir": "specs/art-008-feedback-sweep",
+        "pr_observation": {
+            "ok": True,
+            "comments": [
+                {
+                    "id": "IC_kwDO...",
+                    "surface": "pr_conversation",
+                    "author": "octocat",
+                    "author_association": "OWNER",
+                    "body": (
+                        "Artifact: Implementation Plan\nFeature: ART-008\n\n"
+                        "Objections recorded while reviewing this plan.\n\n"
+                        "Phase / Registry  (#phase-2)\n"
+                        "The registry should cover every exporting template."
+                    ),
+                    "truncated": False,
+                },
+                {
+                    "id": "PRRC_kwDO...",
+                    "surface": "review_thread",
+                    "author": None,
+                    "author_association": "CONTRIBUTOR",
+                    "body": "Drive-by suggestion.",
+                    "truncated": False,
+                    "thread_resolved": False,
+                },
+            ],
+        },
+    },
 }
 
 

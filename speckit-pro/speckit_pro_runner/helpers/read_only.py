@@ -254,6 +254,7 @@ def canonicalize_inputs(helper_id: str, inputs: dict[str, Any], repo_root: Path)
         "estimate-reviewable-loc": {"plan_file"},
         "resolve-confidence-mode": {"config_path"},
         "resolve-autopilot-stage": {"workflow_file"},
+        "sweep-pr-feedback": {"workflow_file", "self_login", "feature_dir", "pr_observation"},
         "confidence-gate": {"workflow_file"},
         "generate-spec-index-check": {"repo_root"},
         "o5-topology": {"target"},
@@ -349,6 +350,10 @@ def explicit_or_derived_args(helper_id: str, inputs: dict[str, Any], repo_root: 
                 return invalid_args(helper_id, "autopilot_args must be an array of strings")
             argv.extend(["--", *autopilot_args])
         return argv
+    if helper_id == "sweep-pr-feedback":
+        # The observation arrives as request data on stdin, so there are no
+        # derived CLI args and no field is interpolated into a command (FR-004b).
+        return []
     if helper_id == "confidence-gate":
         workflow_file = inputs.get("workflow_file")
         if not isinstance(workflow_file, str) or not workflow_file:
@@ -1518,6 +1523,81 @@ def resolve_autopilot_stage(inputs: dict[str, Any], repo_root: Path) -> dict[str
         "confidence_gate_status": signals["confidence_gate_status"],
         "from_phase": parsed["from_phase"],
         "corroboration": corroboration,
+    }))
+
+
+# The three named surfaces of this one registered operation, chosen by the
+# `named_surface` input; an absent value means `parse`. A fourth value is a
+# malformed request rather than a surface to discover, so the set is closed here
+# and read before any input the three surfaces do not share.
+SWEEP_PARSE_SURFACE = "parse"
+SWEEP_NAMED_SURFACES = (SWEEP_PARSE_SURFACE, "check_target", "redact")
+
+
+def sweep_pr_feedback(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+    """Report the sweepable comments of one supplied pull-request observation.
+
+    Reports; never decides. The helper assigns no class: `amended` is what routes
+    an item into consensus, so that judgment stays with the orchestrator reading
+    this envelope. It runs no `gh`, reaches no network, and writes no file. The
+    orchestrator takes the one read-only observation and passes it in as data,
+    which is what leaves the parse deterministic and offline-testable.
+
+    Only the `parse` surface is built here. The write-point target check
+    (FR-012b rule 2) and the redaction surface (FR-012f, FR-007g) are further
+    named surfaces of this same operation, and neither can run while the parse
+    runs: no resolved edit target exists yet, and the text a write redacts is
+    text the parse never saw.
+
+    Candidate filtering and export recognition are not built yet, so every
+    observed comment is carried as a candidate with a null export. The four
+    exclusion reasons (FR-004, FR-005, FR-006, FR-009) and the export record
+    (FR-007) land against this shape rather than change it.
+    """
+    named_surface = inputs.get("named_surface")
+    if named_surface is None:
+        named_surface = SWEEP_PARSE_SURFACE
+    if named_surface not in SWEEP_NAMED_SURFACES:
+        return make_result("", f"error: unknown named_surface: {named_surface}\n", 2)
+    if named_surface != SWEEP_PARSE_SURFACE:
+        return make_result("", f"error: named_surface not available yet: {named_surface}\n", 2)
+    observation = inputs.get("pr_observation")
+    comments = observation.get("comments") if isinstance(observation, dict) else None
+    if not isinstance(comments, list):
+        comments = []
+    candidates: list[dict[str, Any]] = []
+    excluded: list[dict[str, Any]] = []
+    for entry in comments:
+        comment = entry if isinstance(entry, dict) else {}
+        # No `body` key, on either list and on every path: an untrusted comment's
+        # text is absent from this output by construction rather than by a caller
+        # remembering to drop it. A null `author` is carried through, because a
+        # deleted account is reported as one and never as a blank.
+        candidates.append({
+            "id": comment.get("id"),
+            "surface": comment.get("surface"),
+            "author": comment.get("author"),
+            "author_association": comment.get("author_association"),
+            "truncated": comment.get("truncated"),
+            "export": None,
+        })
+    return make_result(json_text({
+        "tool": "sweep-pr-feedback",
+        # Both surfaces are read as one all-or-nothing observation (FR-004c), so
+        # this reports what the observation covered rather than which of the two
+        # happened to carry a comment.
+        "surfaces_read": ["review_thread", "pr_conversation"],
+        # `observed` is counted from the observation rather than from the two
+        # lists, which is what keeps `observed == candidates + excluded`
+        # falsifiable: a comment a later filter drops shows up as a mismatch
+        # instead of agreeing with itself.
+        "counts": {
+            "observed": len(comments),
+            "candidates": len(candidates),
+            "excluded": len(excluded),
+        },
+        "candidates": candidates,
+        "excluded": excluded,
     }))
 
 
@@ -4464,6 +4544,7 @@ PY_HELPERS: dict[str, Callable[[dict[str, Any], Path], dict[str, Any]]] = {
     "estimate-spec-size": estimate_spec_size,
     "resolve-confidence-mode": resolve_confidence_mode,
     "resolve-autopilot-stage": resolve_autopilot_stage,
+    "sweep-pr-feedback": sweep_pr_feedback,
     "confidence-gate": confidence_gate,
     "generate-spec-index-check": generate_spec_index_check,
     "o5-topology": o5_topology,

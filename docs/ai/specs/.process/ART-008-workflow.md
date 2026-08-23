@@ -1267,6 +1267,49 @@ Before starting any task:
 
 ---
 
+## Reviewability Checkpoint (T014)
+
+**Recorded 2026-08-23, at the Phase 2 checkpoint, before any user-story work.**
+T014 requires the operator's budget decision to be written here before Phase 3
+of `tasks.md` may begin. Both halves of the budget are over a block, and both
+are accepted.
+
+| Half | Plan-time figure | Live figure | Threshold | Verdict |
+|---|---|---|---|---|
+| Reviewable LOC | 515-830, midpoint ~630 | **1120-1720, midpoint ~1420** | warn 400, block 800 | **over block, accepted** |
+| Production files | 7 | **12** | warn 6, block 8 | **over block, accepted** |
+
+**The decision is taken against the live figure, not the plan-time one.** Its
+only home is `spec.md`'s second Reviewability Budget superseding note. Three
+passes moved it after the plan closed: the artifact-verification repair took it
+to 595-910, the trust-boundary remediation added 110 to 170 lines of helper code
+and reference prose to reach 705-1080, and the consumer-scoping pass added 415 to
+640. The midpoint now crosses the 800 block, not only the high end. The file
+count reached 12 through the four sweep agent definitions across both platforms
+plus the `install.py` edit that the closed `REQUIRED_CODEX_AGENT_NAMES` bundle
+forces.
+
+**Lever (b) is taken, and the decision is the operator's, recorded as such.**
+
+**Reason.** The trust boundary is not separable from the feature. F-1 and F-2 are
+the feature's own consumers reading attacker-controllable text, and a slice that
+ships the reader without the scoping ships the vulnerability.
+
+**Precedent.** PRSG-013 recorded a size-only block at 1800 reviewable LOC across
+78 files and the run continued.
+
+**The other two levers, and why they are not taken.** Lever (a), deferring the
+serialization-family registry rows `feature-flags`, `prompt-tuner`, and
+`triage-board`, saves 15 to 30 lines at the cost of FR-007b. It stays available
+and unexercised. Lever (c), re-slicing, is refused for the same reason the plan
+refused the read-path-only split: that split produces a checkpoint which reads
+feedback and acts on none of it.
+
+**The plan's rejected split is not silently revived.** Read-path-only 1a was
+considered and rejected at plan time, and this acceptance does not reopen it.
+
+---
+
 ## Post-Implementation Checklist
 
 The canonical closeout. Every row must reach Complete or an explicit
