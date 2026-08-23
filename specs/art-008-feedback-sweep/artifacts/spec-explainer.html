@@ -676,7 +676,10 @@ dl.faq dd {
         label: amended, answered, deferred, or no action. Amended items go through the
         existing consensus machinery to edit spec.md, plan.md, or tasks.md, land as
         one commit per amendment, and get recorded in a new Feedback Sweep Log. Every
-        handled comment gets exactly one reply. Every outbound write — amendment lines,
+        handled comment gets exactly one reply. Classification and amendment both read reviewer text, so both run in
+        harness-scoped agents that resolve no <code>Bash</code>, no network, and no
+        write tool; the orchestrator is handed an enum and a capped reason, never a
+        body. Every outbound write — amendment lines,
         log cells, reply bodies — passes through one redaction surface that replaces
         secret-shaped spans with a placeholder and proceeds rather than stopping, so
         the sweep always converges; the files it writes for its own transport live in

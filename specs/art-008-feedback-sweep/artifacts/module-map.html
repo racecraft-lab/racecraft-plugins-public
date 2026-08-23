@@ -945,7 +945,7 @@ pre.code .dim {
     <h2 id="sec-module-summary">How the pieces fit</h2>
     <p class="section-intro">The one paragraph to read before the drawing.</p>
 <!-- FILL:module-summary:START -->
-    <p class="summary">The sweep splits along the line this repository already uses for <code>resolve-autopilot-stage</code>: <strong>the orchestrator observes, one read-only helper classifies, and the orchestrator decides.</strong> Only the orchestrator runs <code>gh</code>, so the helper never touches the network and stays deterministic under fixtures. The helper applies the author allowlist itself and returns candidate records that carry <em>no comment body</em>, so untrusted text is absent from its output by construction rather than by an orchestrator remembering to drop it. Classification, consensus, commits, and replies stay where only the orchestrator can do them.</p>
+    <p class="summary">The sweep splits along the line this repository already uses for <code>resolve-autopilot-stage</code>: <strong>the orchestrator observes, one read-only helper filters and shapes, one scoped agent classifies, and the orchestrator decides.</strong> Only the orchestrator runs <code>gh</code>, and it pipes that read straight into the helper, which never touches the network and stays deterministic under fixtures. The helper applies the author allowlist itself and returns candidate records that carry <em>no comment body</em>, so untrusted text is absent from its output by construction rather than by an orchestrator remembering to drop it. Commits and replies stay where only the orchestrator can do them. <strong>Classification and amendment do not:</strong> both read reviewer text, so both moved to harness-scoped agents that resolve no <code>Bash</code>, no network, and no write tool. The orchestrator is handed an enum, a target, a byte-capped reason, and a structured edit, never a body.</p>
 <!-- FILL:module-summary:END -->
   </section>
 
@@ -959,7 +959,7 @@ pre.code .dim {
            one picture, which hides every label inside it; that marking does not
            survive the port. -->
       <svg viewBox="0 0 820 300" xmlns="http://www.w3.org/2000/svg" aria-labelledby="module-graph-title">
-        <title id="module-graph-title">How an ART-008 draft pull request comment moves from the orchestrator's gh observation through the read-only classifier to the classification loop and the planning artifacts, with the consensus analysts off the changed run</title>
+        <title id="module-graph-title">How an ART-008 draft pull request comment moves from the orchestrator's gh observation through the read-only classifier to the classification loop and the planning artifacts, with the scoped sweep analysts on it</title>
         <defs>
           <marker id="mm-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path class="mm-arrowhead" d="M0,0 L10,5 L0,10 z"/>
@@ -968,7 +968,7 @@ pre.code .dim {
 
         <rect class="mm-node" x="30" y="36" width="180" height="58" rx="10"/>
         <text class="mm-label" x="120" y="61" text-anchor="middle">Orchestrator</text>
-        <text class="mm-sublabel" x="120" y="78" text-anchor="middle">runs gh, holds bodies</text>
+        <text class="mm-sublabel" x="120" y="78" text-anchor="middle">pipes gh, holds no body</text>
 
         <rect class="mm-node mm-node-onpath" x="30" y="190" width="180" height="72" rx="10"/>
         <text class="mm-tag" x="120" y="211" text-anchor="middle">ON PATH</text>
@@ -977,8 +977,8 @@ pre.code .dim {
 
         <rect class="mm-node mm-node-onpath" x="320" y="190" width="190" height="72" rx="10"/>
         <text class="mm-tag" x="415" y="211" text-anchor="middle">ON PATH</text>
-        <text class="mm-label" x="415" y="230" text-anchor="middle">Classification loop</text>
-        <text class="mm-sublabel" x="415" y="247" text-anchor="middle">phase-execution.md</text>
+        <text class="mm-label" x="415" y="230" text-anchor="middle">sweep-classifier</text>
+        <text class="mm-sublabel" x="415" y="247" text-anchor="middle">Read only, no Bash</text>
 
         <rect class="mm-node mm-node-onpath" x="320" y="30" width="190" height="72" rx="10"/>
         <text class="mm-tag" x="415" y="51" text-anchor="middle">ON PATH</text>
@@ -986,24 +986,24 @@ pre.code .dim {
         <text class="mm-sublabel" x="415" y="87" text-anchor="middle">spec, plan, tasks</text>
 
         <rect class="mm-node" x="620" y="190" width="170" height="58" rx="10"/>
-        <text class="mm-label" x="705" y="215" text-anchor="middle">Consensus analysts</text>
-        <text class="mm-sublabel" x="705" y="232" text-anchor="middle">existing protocol</text>
+        <text class="mm-label" x="705" y="215" text-anchor="middle">sweep-analyst ×3</text>
+        <text class="mm-sublabel" x="705" y="232" text-anchor="middle">scoped, read-only</text>
 
         <path class="mm-edge" d="M120 94 L120 190" marker-end="url(#mm-arrow)"/>
         <path class="mm-edge-onpath" d="M210 226 L320 226" marker-end="url(#mm-arrow)"/>
         <path class="mm-edge-onpath" d="M415 190 L415 102" marker-end="url(#mm-arrow)"/>
         <path class="mm-edge" d="M510 219 L620 219" marker-end="url(#mm-arrow)"/>
 
-        <text class="mm-edge-label" x="128" y="148">raw observation</text>
-        <text class="mm-edge-label" x="265" y="217" text-anchor="middle">candidates</text>
+        <text class="mm-edge-label" x="128" y="148">piped observation</text>
+        <text class="mm-edge-label" x="265" y="217" text-anchor="middle">shaped block</text>
         <text class="mm-edge-label" x="425" y="150">amend and commit</text>
         <text class="mm-edge-label" x="565" y="210" text-anchor="middle">route amended</text>
       </svg>
-      <figcaption class="caption">A heavier boundary and the words ON PATH mark the run this change turns on: the classifier, the classification loop, and the planning artifacts it amends. Nothing here is marked by colour, so the drawing reads the same in a monochrome print.</figcaption>
+      <figcaption class="caption">A heavier boundary and the words ON PATH mark the run this change turns on: the classifier, the scoped analysts, and the planning artifacts they amend. Nothing here is marked by colour, so the drawing reads the same in a monochrome print.</figcaption>
     </figure>
     <div class="mm-text">
       <h3>What the drawing says</h3>
-      <p>The orchestrator is the only component that runs <code>gh</code>, and it hands the raw observation to <code>sweep-pr-feedback</code> in <code>helpers/read_only.py</code> as data. That helper applies the author-association allowlist and returns <code>candidates</code> and <code>excluded</code>; the candidate records carry id, surface, author, association, truncation flag, and export metadata, and <strong>no body</strong>. The classification loop in <code>phase-execution.md</code> iterates those candidates and reads a body out of the captured observation only for an id present in that array, which is what stops the filter from being real and bypassed at the same time. Only comments classed <code>amended</code> reach the consensus analysts, drawn with an ordinary boundary and no tag because this change reuses them rather than altering them.</p>
+      <p>The orchestrator is the only component that runs <code>gh</code>, and it hands the raw observation to <code>sweep-pr-feedback</code> in <code>helpers/read_only.py</code> as data. That helper applies the author-association allowlist and returns <code>candidates</code> and <code>excluded</code>; the candidate records carry id, surface, author, association, truncation flag, and export metadata, and <strong>no body</strong>. Each candidate's sanitized block goes to <code>sweep-classifier</code>, which resolves <code>Read</code> and nothing else, so the orchestrator never reads a body and a model that ignores the delimiter still cannot act. Only comments classed <code>amended</code> reach <code>sweep-analyst</code>, three perspectives plus a synthesis, scoped the same way.</p>
     </div>
 <!-- FILL:module-graph:END -->
   </section>
@@ -1057,8 +1057,24 @@ pre.code .dim {
           <p class="what">The durable record of which comments have been handled, so a re-run after re-review does not process them twice. It carries the convergence invariant: replaying a corpus whose every comment already has a log row and a posted reply must produce zero new rows, zero new replies, and zero amendments, and then walk into task work.</p>
         </div>
       </div>
-      <div class="module" id="modules-consensus-protocol">
+      <div class="module" id="modules-sweep-classifier">
         <p class="module-badge" aria-hidden="true">5</p>
+        <div class="module-body">
+          <p class="module-loc">speckit-pro/agents/sweep-classifier.md<span class="range"> + the Codex TOML</span></p>
+          <h3>sweep-classifier</h3>
+          <p class="what">The only reader of a comment body on the classification path. Its Claude frontmatter pins <code>tools: Read</code> and its Codex definition pins <code>sandbox_mode = "read-only"</code>, so a model that ignores the delimiter still cannot shell out, fetch a URL, spawn a sub-agent, or write a file. It receives one sanitized block and the closed vocabulary, and returns <code>{class, target, reason}</code> with the reason byte-capped and redacted before use.</p>
+        </div>
+      </div>
+      <div class="module" id="modules-sweep-analyst">
+        <p class="module-badge" aria-hidden="true">6</p>
+        <div class="module-body">
+          <p class="module-loc">speckit-pro/agents/sweep-analyst.md<span class="range"> + the Codex TOML</span></p>
+          <h3>sweep-analyst</h3>
+          <p class="what">Three dispatches per amended item, the perspective given in the prompt rather than by role, plus a fourth for synthesis. Scoped to <code>Read, Grep, Glob</code>. Synthesis deliberately does <em>not</em> use <code>consensus-synthesizer</code>, which declares no allowlist and so inherits <code>Bash</code> and the network: routing sanitized reviewer text there would reopen the finding one hop downstream. The domain perspective runs without web access, which is accepted and stated.</p>
+        </div>
+      </div>
+      <div class="module" id="modules-consensus-protocol">
+        <p class="module-badge" aria-hidden="true">7</p>
         <div class="module-body">
           <p class="module-loc">speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md<span class="range"> : payload delimiting</span></p>
           <h3>Consensus protocol</h3>
@@ -1094,6 +1110,14 @@ pre.code .dim {
         <li>
           <span class="path">speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md</span>
           <span class="desc">Delimited, labelled payload for reviewer-supplied text.</span>
+        </li>
+        <li>
+          <span class="path">speckit-pro/agents/sweep-classifier.md</span>
+          <span class="desc">The scoped reader; its allowlist is the control.</span>
+        </li>
+        <li>
+          <span class="path">tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.py</span>
+          <span class="desc">The carve-out that pins both allowlists and its own membership.</span>
         </li>
         <li>
           <span class="path">speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md</span>

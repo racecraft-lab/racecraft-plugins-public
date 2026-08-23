@@ -1163,9 +1163,9 @@ h1 {
 <!-- FILL:plan-stats:START -->
     <dl class="stats">
       <div class="stat"><dt>Phases</dt><dd>6</dd></div>
-      <div class="stat"><dt>Production files</dt><dd>7</dd></div>
-      <div class="stat"><dt>Reviewable size</dt><dd>705–1080 lines</dd></div>
-      <div class="stat"><dt>Tasks</dt><dd>93</dd></div>
+      <div class="stat"><dt>Production files</dt><dd>12</dd></div>
+      <div class="stat"><dt>Reviewable size</dt><dd>1120–1720 lines</dd></div>
+      <div class="stat"><dt>Tasks</dt><dd>109</dd></div>
     </dl>
 <!-- FILL:plan-stats:END -->
   </section>
@@ -1176,7 +1176,7 @@ h1 {
     <div class="milestones" id="plan-phase-list">
 <!-- FILL:phases:START -->
       <div class="milestone" id="phases-setup">
-        <p class="when">Phase 1 · 6 tasks</p>
+        <p class="when">Phase 1 · 7 tasks</p>
         <h3>Setup: design-artifact corrections</h3>
         <p class="what">Settle the contract before any code depends on it. T004 resolves the Known Interface Gap by deciding how the orchestrator invokes the write-point path check, which is the one interface question planning deliberately left open.</p>
         <ul class="tags"><li>contracts/</li><li>blocking</li></ul>
@@ -1188,15 +1188,15 @@ h1 {
         <ul class="tags"><li>registry.py</li><li>fixtures</li><li>T014 gate</li></ul>
       </div>
       <div class="milestone" id="phases-user-story-1">
-        <p class="when">Phase 3 · 33 tasks · MVP</p>
+        <p class="when">Phase 3 · 40 tasks · MVP</p>
         <h3>The sweep reads and classifies feedback</h3>
-        <p class="what">The P1 story and the minimum shippable slice. The helper applies the allowlist and the export registry; the orchestrator gives each comment exactly one class from a closed vocabulary. The trust-boundary review added the byproduct directory that ignores itself in any repository (FR-004d) and the tightened deny-set with its corpus scan.</p>
+        <p class="what">The P1 story and the minimum shippable slice. The helper applies the allowlist and the export registry, and each comment gets exactly one class from a closed vocabulary. The trust-boundary review added the byproduct directory that ignores itself in any repository (FR-004d) and the tightened deny-set with its corpus scan. The consumer-scoping pass moves classification out of the orchestrator entirely, into <code>sweep-classifier</code>: an agent that resolves <code>Read</code> and nothing else.</p>
         <ul class="tags"><li>read_only.py</li><li>phase-execution.md</li></ul>
       </div>
       <div class="milestone" id="phases-user-story-2">
-        <p class="when">Phase 4 · 31 tasks</p>
+        <p class="when">Phase 4 · 37 tasks</p>
         <h3>Amendments run through consensus and stop for re-review</h3>
-        <p class="what">Only <code>amended</code> comments reach the consensus protocol, with the reviewer body shaped and delimited by one redaction surface (FR-007g). Every outbound write passes through that surface and proceeds redacted rather than stopping (FR-012f); any redaction event stops the run after publication so a human sees it. Every handled comment gets a log row and one reply.</p>
+        <p class="what">Only <code>amended</code> comments reach the consensus protocol, with the reviewer body shaped and delimited by one redaction surface (FR-007g). Every outbound write passes through that surface and proceeds redacted rather than stopping (FR-012f); any redaction event stops the run after publication so a human sees it. The three perspectives and their synthesis run on <code>sweep-analyst</code>, not on <code>consensus-synthesizer</code>, which inherits <code>Bash</code>. Every handled comment gets a log row and one reply.</p>
         <ul class="tags"><li>consensus-protocol.md</li><li>workflow-file-protocol.md</li></ul>
       </div>
       <div class="milestone" id="phases-user-story-3">
@@ -1206,7 +1206,7 @@ h1 {
         <ul class="tags"><li>fail closed</li><li>stop report</li></ul>
       </div>
       <div class="milestone" id="phases-polish">
-        <p class="when">Phase 6 · 10 tasks</p>
+        <p class="when">Phase 6 · 12 tasks</p>
         <h3>Polish and cross-cutting concerns</h3>
         <p class="what">Codex parity across both reference variants, the payload and proof regeneration the shipped-byte change requires, and T080, which pins the clean-re-run convergence case that SC-003 depends on.</p>
         <ul class="tags"><li>Codex parity</li><li>regen ritual</li><li>T080</li></ul>
@@ -1233,15 +1233,15 @@ h1 {
 
         <rect class="df-node" x="20" y="20" width="180" height="54" rx="10"/>
         <text class="df-label" x="110" y="43" text-anchor="middle">gh observation</text>
-        <text class="df-sublabel" x="110" y="60" text-anchor="middle">orchestrator only</text>
+        <text class="df-sublabel" x="110" y="60" text-anchor="middle">piped to the runner</text>
 
         <rect class="df-node" x="20" y="150" width="180" height="54" rx="10"/>
         <text class="df-label" x="110" y="173" text-anchor="middle">Author allowlist</text>
         <text class="df-sublabel" x="110" y="190" text-anchor="middle">in the helper</text>
 
         <rect class="df-node" x="340" y="150" width="180" height="54" rx="10"/>
-        <text class="df-label" x="430" y="173" text-anchor="middle">Classification</text>
-        <text class="df-sublabel" x="430" y="190" text-anchor="middle">one class each</text>
+        <text class="df-label" x="430" y="173" text-anchor="middle">sweep-classifier</text>
+        <text class="df-sublabel" x="430" y="190" text-anchor="middle">Read only, no Bash</text>
 
         <rect class="df-node df-node-store" x="340" y="260" width="180" height="64" rx="10"/>
         <text class="df-tag" x="430" y="279" text-anchor="middle">STORE</text>
@@ -1249,7 +1249,7 @@ h1 {
         <text class="df-sublabel" x="430" y="314" text-anchor="middle">workflow file</text>
 
         <rect class="df-node" x="660" y="150" width="180" height="54" rx="10"/>
-        <text class="df-label" x="750" y="173" text-anchor="middle">Consensus</text>
+        <text class="df-label" x="750" y="173" text-anchor="middle">sweep-analyst ×3</text>
         <text class="df-sublabel" x="750" y="190" text-anchor="middle">amended only</text>
 
         <rect class="df-node" x="660" y="20" width="180" height="54" rx="10"/>
@@ -1281,7 +1281,7 @@ h1 {
     </figure>
     <div class="df-text">
       <h3>What the drawing says</h3>
-      <p>Only the orchestrator runs <code>gh</code>. It passes the raw observation to the helper, which applies the author allowlist and returns candidate records carrying no comment body. Classification iterates those candidates and gives each exactly one class, then writes a row to the Feedback Sweep Log and posts exactly one reply. The dashed path belongs to <code>amended</code> alone: the reviewer's remaining text is delimited and labelled as data before it reaches consensus, the resolved edit target is checked against the three-entry allowlist of <code>spec.md</code>, <code>plan.md</code>, and <code>tasks.md</code> in code before any write, and a run that amended anything stops for re-review rather than continuing into task work. The log is the only persistence node here, marked STORE, and it is what makes a re-run converge instead of reprocessing.</p>
+      <p>Only the orchestrator runs <code>gh</code>, and it pipes that read straight into the runner, so no unredacted observation lands on disk or enters its context. The helper applies the author allowlist and returns candidate records carrying no comment body. Each candidate's sanitized block goes to <code>sweep-classifier</code>, which resolves <code>Read</code> and nothing else and returns one class, then writes a row to the Feedback Sweep Log and posts exactly one reply. The dashed path belongs to <code>amended</code> alone: the reviewer's remaining text is delimited and labelled as data before it reaches consensus, the resolved edit target is checked against the three-entry allowlist of <code>spec.md</code>, <code>plan.md</code>, and <code>tasks.md</code> in code before any write, and a run that amended anything stops for re-review rather than continuing into task work. The log is the only persistence node here, marked STORE, and it is what makes a re-run converge instead of reprocessing.</p>
     </div>
 <!-- FILL:data-flow:END -->
   </section>
@@ -1340,9 +1340,9 @@ h1 {
             <td>The allowlist runs inside the helper ahead of everything, and candidate records carry no body. Classification reads a body only for an id already in <code>candidates</code>. Delimiting is the boundary; removing matched export lines is defence in depth and is the part cut first under pressure.</td>
           </tr>
           <tr>
-            <th scope="row">The live reviewable range is 705–1080 lines, and the midpoint near 890 is itself over the 800-line block, with a third warn on authored files at 16.</th>
+            <th scope="row">Two size-only blocks are crossed at once: the live reviewable range 1120–1720 puts the midpoint near 1420 over the 800-line block, and production files reach 12 against a block at 8.</th>
             <td><span class="sev sev-high"><span class="sev-bars" aria-hidden="true">●●●</span>High</span></td>
-            <td>Recorded rather than hidden. The figure grew from 515–830 through the artifact verification fix and three trust-boundary remediation passes; the production-file count is unchanged at 7 because every file was already declared. T014 blocks phase 3 until the operator decides the lever, and moving FR-012f and FR-007g to their own slice is now a live option.</td>
+            <td>Recorded rather than hidden. The figure grew from 515–830 through the artifact verification fix, three remediation passes, and the consumer-scoping pass, which added four agent definitions across both platforms plus the <code>install.py</code> inventory edit. <strong>Both crossings are operator-accepted at T014</strong>, because the trust boundary is not separable from the feature: a slice that ships the reader without the scoping ships the vulnerability. Precedent is PRSG-013, a recorded size-only block at 1800 lines that continued.</td>
           </tr>
           <tr>
             <th scope="row">Redact-and-proceed publishes the rest of a hit line and its neighbours, such as internal hosts, service accounts, and dates, where a stop would have held them back.</th>
@@ -1372,20 +1372,23 @@ h1 {
     <div class="task-grid">
       <div class="task-panel">
         <h3>Setup and foundations</h3>
-        <p class="task-count">14 tasks</p>
+        <p class="task-count">15 tasks</p>
         <ul class="task-list">
           <li><span class="task-id">T004</span>Add <code>feature_dir</code> to the request, settling the interface gap.</li>
           <li><span class="task-id">T007</span>Append the operation to <code>EXPECTED_HELPERS</code> and <code>NO_BASH_ANCESTOR</code>.</li>
           <li><span class="task-id">T012</span>One <code>HelperEntry</code> in <code>registry.py</code>.</li>
-          <li><span class="task-id">T014</span>Reviewability checkpoint; operator decision before phase 3.</li>
+          <li><span class="task-id">T014</span>Reviewability checkpoint; the operator takes lever (b).</li>
+          <li><span class="task-id">T094</span>The classifier and analyst output contract.</li>
         </ul>
       </div>
       <div class="task-panel">
         <h3>Read and classify</h3>
-        <p class="task-count">33 tasks</p>
+        <p class="task-count">40 tasks</p>
         <ul class="task-list">
           <li><span class="task-id">T024</span>The two trust-boundary assertions.</li>
           <li><span class="task-id">T088</span>The self-ignoring byproduct directory and its scratch-repo fixture.</li>
+          <li><span class="task-id">T095</span>The Layer 5 carve-out and its three assertions.</li>
+          <li><span class="task-id">T098</span>Create <code>sweep-classifier</code>, pinned to <code>Read</code>.</li>
           <li><span class="task-id">T029</span>The author-association allowlist, ahead of everything.</li>
           <li><span class="task-id">T031</span>The export lead registry: 14 leads.</li>
           <li><span class="task-id">T032</span>Whole-line exact matching against the body.</li>
@@ -1394,11 +1397,12 @@ h1 {
       </div>
       <div class="task-panel">
         <h3>Amend, record, and stop</h3>
-        <p class="task-count">36 tasks</p>
+        <p class="task-count">37 tasks</p>
         <ul class="task-list">
           <li><span class="task-id">T048</span>Only <code>amended</code> routes through consensus.</li>
           <li><span class="task-id">T091</span>The corpus scan: the spec never matches its own deny-set.</li>
           <li><span class="task-id">T092</span>The captured-call fixture: a forgotten leg fails the count.</li>
+          <li><span class="task-id">T104</span>Create <code>sweep-analyst</code>; synthesis runs here too.</li>
           <li><span class="task-id">T050</span>One commit per amendment.</li>
           <li><span class="task-id">T051</span>The FR-012b write-point edit-surface check, in code.</li>
           <li><span class="task-id">T055</span>The Feedback Sweep Log entry.</li>
@@ -1407,7 +1411,7 @@ h1 {
       </div>
       <div class="task-panel">
         <h3>Parity, regeneration, and proof</h3>
-        <p class="task-count">10 tasks</p>
+        <p class="task-count">12 tasks</p>
         <ul class="task-list">
           <li><span class="task-id">T073</span>Verify cross-platform parity at Layer 1.</li>
           <li><span class="task-id">T074</span>Regenerate the payload and its proofs.</li>
