@@ -596,6 +596,393 @@
         "resume": "operator"
       }
     },
+    "corroboration-identity-mismatch-stops": {
+      "purpose": "The branch carries an open pull request the row does not name. The sweep reads neither surface, because it cannot tell which pull request the feedback it would sweep belongs to, and the operator corrects the row.",
+      "acceptance": [
+        "FR-019",
+        "SC-006"
+      ],
+      "corroboration": {
+        "status": "identity_mismatch",
+        "draft_pr_row": "| **Draft PR** | [#438](https://github.com/owner/repo/pull/438) |",
+        "draft_pr_observation": {
+          "ok": true,
+          "pull_requests": [
+            {
+              "number": 512,
+              "url": "https://github.com/owner/repo/pull/512",
+              "state": "open"
+            }
+          ]
+        }
+      },
+      "inputs": {
+        "workflow_file": "docs/ai/specs/.process/ART-008-workflow.md",
+        "self_login": "speckit-pro-bot",
+        "feature_dir": "specs/art-008-feedback-sweep",
+        "pr_observation": {
+          "ok": true,
+          "comments": [
+            {
+              "id": "IC_kwDOKQ7tDs5vZ0206A",
+              "surface": "pr_conversation",
+              "author": "octocat",
+              "author_association": "OWNER",
+              "body": "The registry should cover every exporting template.",
+              "truncated": false
+            }
+          ]
+        }
+      },
+      "outcome": {
+        "items": [],
+        "faults": {
+          "push_rejected_for": [],
+          "reply_rejected_for": []
+        },
+        "owed_replies_in": [],
+        "consensus_comments": [],
+        "replies_posted": [],
+        "owed_replies_left": [],
+        "rows_written": [],
+        "crl_rows_written": [],
+        "commits": [],
+        "unpushed_commits": 0,
+        "stop": true,
+        "resume": "operator"
+      }
+    },
+    "corroboration-match-sweeps": {
+      "purpose": "The one corroboration status that lets the sweep run. The recorded Draft PR row and the live observation agree, so the comment is read, classified, recorded, answered, and the run proceeds into task work.",
+      "acceptance": [
+        "FR-019",
+        "SC-006"
+      ],
+      "corroboration": {
+        "status": "match",
+        "draft_pr_row": "| **Draft PR** | [#438](https://github.com/owner/repo/pull/438) |",
+        "draft_pr_observation": {
+          "ok": true,
+          "pull_requests": [
+            {
+              "number": 438,
+              "url": "https://github.com/owner/repo/pull/438",
+              "state": "open"
+            }
+          ]
+        }
+      },
+      "inputs": {
+        "workflow_file": "docs/ai/specs/.process/ART-008-workflow.md",
+        "self_login": "speckit-pro-bot",
+        "feature_dir": "specs/art-008-feedback-sweep",
+        "pr_observation": {
+          "ok": true,
+          "comments": [
+            {
+              "id": "IC_kwDOKQ7tDs5vZ0201A",
+              "surface": "pr_conversation",
+              "author": "octocat",
+              "author_association": "OWNER",
+              "body": "The registry should cover every exporting template.",
+              "truncated": false
+            }
+          ]
+        }
+      },
+      "outcome": {
+        "items": [
+          {
+            "comment_id": "IC_kwDOKQ7tDs5vZ0201A",
+            "class": "answered",
+            "target": null,
+            "disposition": "Recorded as answered.",
+            "resolution": "resolved"
+          }
+        ],
+        "faults": {
+          "push_rejected_for": [],
+          "reply_rejected_for": []
+        },
+        "owed_replies_in": [],
+        "consensus_comments": [
+          "IC_kwDOKQ7tDs5vZ0201A"
+        ],
+        "replies_posted": [
+          "IC_kwDOKQ7tDs5vZ0201A"
+        ],
+        "owed_replies_left": [],
+        "rows_written": [
+          "IC_kwDOKQ7tDs5vZ0201A"
+        ],
+        "crl_rows_written": [],
+        "commits": [
+          {
+            "kind": "bookkeeping",
+            "artifact": null,
+            "comment_id": null
+          }
+        ],
+        "unpushed_commits": 0,
+        "stop": false,
+        "resume": null
+      }
+    },
+    "corroboration-no-record-proceeds": {
+      "purpose": "No Draft PR row was ever written, so the gate does not apply. The run takes no observation and sweeps nothing, and it proceeds rather than stopping: there is no checkpoint to carry unread feedback.",
+      "acceptance": [
+        "FR-019",
+        "FR-019a",
+        "SC-006"
+      ],
+      "corroboration": {
+        "status": "no_record",
+        "draft_pr_row": "",
+        "draft_pr_observation": null
+      },
+      "inputs": {
+        "workflow_file": "docs/ai/specs/.process/ART-008-workflow.md",
+        "self_login": "speckit-pro-bot",
+        "feature_dir": "specs/art-008-feedback-sweep",
+        "pr_observation": {
+          "ok": true,
+          "comments": [
+            {
+              "id": "IC_kwDOKQ7tDs5vZ0202A",
+              "surface": "pr_conversation",
+              "author": "octocat",
+              "author_association": "OWNER",
+              "body": "The registry should cover every exporting template.",
+              "truncated": false
+            }
+          ]
+        }
+      },
+      "outcome": {
+        "items": [],
+        "faults": {
+          "push_rejected_for": [],
+          "reply_rejected_for": []
+        },
+        "owed_replies_in": [],
+        "consensus_comments": [],
+        "replies_posted": [],
+        "owed_replies_left": [],
+        "rows_written": [],
+        "crl_rows_written": [],
+        "commits": [],
+        "unpushed_commits": 0,
+        "stop": false,
+        "resume": null
+      }
+    },
+    "corroboration-outside-the-six-stops-as-malformed": {
+      "purpose": "A corroboration value the closed vocabulary does not carry. It is reported as a malformed record and stops, never mapped onto one of the six: exactly one status proceeds, so a default that proceeded would make a corrupted record the cheapest way past the checkpoint.",
+      "acceptance": [
+        "FR-019",
+        "FR-008a",
+        "SC-006"
+      ],
+      "corroboration": {
+        "status": "stale_record",
+        "outside_the_six": true,
+        "draft_pr_row": "| **Draft PR** | [#438](https://github.com/owner/repo/pull/438) |",
+        "draft_pr_observation": null
+      },
+      "inputs": {
+        "workflow_file": "docs/ai/specs/.process/ART-008-workflow.md",
+        "self_login": "speckit-pro-bot",
+        "feature_dir": "specs/art-008-feedback-sweep",
+        "pr_observation": {
+          "ok": true,
+          "comments": [
+            {
+              "id": "IC_kwDOKQ7tDs5vZ0207A",
+              "surface": "pr_conversation",
+              "author": "octocat",
+              "author_association": "OWNER",
+              "body": "The registry should cover every exporting template.",
+              "truncated": false
+            }
+          ]
+        }
+      },
+      "outcome": {
+        "items": [],
+        "faults": {
+          "push_rejected_for": [],
+          "reply_rejected_for": []
+        },
+        "owed_replies_in": [],
+        "consensus_comments": [],
+        "replies_posted": [],
+        "owed_replies_left": [],
+        "rows_written": [],
+        "crl_rows_written": [],
+        "commits": [],
+        "unpushed_commits": 0,
+        "stop": true,
+        "resume": "operator"
+      }
+    },
+    "corroboration-pr-closed-stops": {
+      "purpose": "The recorded pull request resolves and is closed. The sweep neither reopens it nor clears the row, and the resume path is the operator's: reopen the pull request, or clear the row if the checkpoint is genuinely abandoned.",
+      "acceptance": [
+        "FR-019",
+        "SC-006"
+      ],
+      "corroboration": {
+        "status": "pr_closed",
+        "draft_pr_row": "| **Draft PR** | [#438](https://github.com/owner/repo/pull/438) |",
+        "draft_pr_observation": {
+          "ok": true,
+          "pull_requests": [
+            {
+              "number": 438,
+              "url": "https://github.com/owner/repo/pull/438",
+              "state": "closed"
+            }
+          ]
+        }
+      },
+      "inputs": {
+        "workflow_file": "docs/ai/specs/.process/ART-008-workflow.md",
+        "self_login": "speckit-pro-bot",
+        "feature_dir": "specs/art-008-feedback-sweep",
+        "pr_observation": {
+          "ok": true,
+          "comments": [
+            {
+              "id": "IC_kwDOKQ7tDs5vZ0204A",
+              "surface": "pr_conversation",
+              "author": "octocat",
+              "author_association": "OWNER",
+              "body": "The registry should cover every exporting template.",
+              "truncated": false
+            }
+          ]
+        }
+      },
+      "outcome": {
+        "items": [],
+        "faults": {
+          "push_rejected_for": [],
+          "reply_rejected_for": []
+        },
+        "owed_replies_in": [],
+        "consensus_comments": [],
+        "replies_posted": [],
+        "owed_replies_left": [],
+        "rows_written": [],
+        "crl_rows_written": [],
+        "commits": [],
+        "unpushed_commits": 0,
+        "stop": true,
+        "resume": "operator"
+      }
+    },
+    "corroboration-pr-missing-stops": {
+      "purpose": "The recorded number resolves to nothing and nothing else is open. The sweep leaves the row exactly as found, and clearing it is the operator's step: this is the one status where the row's absence would match reality.",
+      "acceptance": [
+        "FR-019",
+        "SC-006"
+      ],
+      "corroboration": {
+        "status": "pr_missing",
+        "draft_pr_row": "| **Draft PR** | [#438](https://github.com/owner/repo/pull/438) |",
+        "draft_pr_observation": {
+          "ok": true,
+          "pull_requests": []
+        }
+      },
+      "inputs": {
+        "workflow_file": "docs/ai/specs/.process/ART-008-workflow.md",
+        "self_login": "speckit-pro-bot",
+        "feature_dir": "specs/art-008-feedback-sweep",
+        "pr_observation": {
+          "ok": true,
+          "comments": [
+            {
+              "id": "IC_kwDOKQ7tDs5vZ0205A",
+              "surface": "pr_conversation",
+              "author": "octocat",
+              "author_association": "OWNER",
+              "body": "The registry should cover every exporting template.",
+              "truncated": false
+            }
+          ]
+        }
+      },
+      "outcome": {
+        "items": [],
+        "faults": {
+          "push_rejected_for": [],
+          "reply_rejected_for": []
+        },
+        "owed_replies_in": [],
+        "consensus_comments": [],
+        "replies_posted": [],
+        "owed_replies_left": [],
+        "rows_written": [],
+        "crl_rows_written": [],
+        "commits": [],
+        "unpushed_commits": 0,
+        "stop": true,
+        "resume": "operator"
+      }
+    },
+    "corroboration-skipped-stops": {
+      "purpose": "The gate applies and could not be evaluated. A rate-limited tool is not evidence that the recorded pull request is gone, so the run stops instead of reading the absence as no_record, and its resume path is to fix the tool.",
+      "acceptance": [
+        "FR-019",
+        "FR-019a",
+        "FR-019b",
+        "SC-006"
+      ],
+      "corroboration": {
+        "status": "skipped",
+        "draft_pr_row": "| **Draft PR** | [#438](https://github.com/owner/repo/pull/438) |",
+        "draft_pr_observation": {
+          "ok": false,
+          "reason": "gh reported a rate limit"
+        }
+      },
+      "inputs": {
+        "workflow_file": "docs/ai/specs/.process/ART-008-workflow.md",
+        "self_login": "speckit-pro-bot",
+        "feature_dir": "specs/art-008-feedback-sweep",
+        "pr_observation": {
+          "ok": true,
+          "comments": [
+            {
+              "id": "IC_kwDOKQ7tDs5vZ0203A",
+              "surface": "pr_conversation",
+              "author": "octocat",
+              "author_association": "OWNER",
+              "body": "The registry should cover every exporting template.",
+              "truncated": false
+            }
+          ]
+        }
+      },
+      "outcome": {
+        "items": [],
+        "faults": {
+          "push_rejected_for": [],
+          "reply_rejected_for": []
+        },
+        "owed_replies_in": [],
+        "consensus_comments": [],
+        "replies_posted": [],
+        "owed_replies_left": [],
+        "rows_written": [],
+        "crl_rows_written": [],
+        "commits": [],
+        "unpushed_commits": 0,
+        "stop": true,
+        "resume": "re-run"
+      }
+    },
     "failure-comment-already-carrying-a-sweep-reply": {
       "purpose": "A comment the log already carries, observed beside the sweep reply that answered it. The comment is excluded as already logged and the reply as a self reply, so no second reply is posted and no second row is written.",
       "acceptance": [

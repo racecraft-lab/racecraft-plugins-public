@@ -1004,6 +1004,62 @@ whose corroboration status is `match`, **adds no row to the Workflow Overview
 table**, and changes neither the phase-coverage guard's governed phase-id list,
 the stage-to-phase map, nor the workflow template.
 
+**The six corroboration statuses are exhaustive, and each maps to exactly one
+outcome.** Step 0.6c classifies the recorded `Draft PR` row and reports one of
+them, and the sweep reads that report rather than taking an observation of its
+own. No status falls to a default, and no two share a behaviour by accident.
+
+| Status | What the sweep does | Resume path |
+| --- | --- | --- |
+| `match` | sweep | none, the run proceeds |
+| `no_record` | proceed without sweeping | none, the run proceeds |
+| `skipped` | stop | fix the tool, then re-run |
+| `pr_closed` | stop | reopen the pull request, or clear the `Draft PR` row if the checkpoint is genuinely abandoned, then re-run |
+| `pr_missing` | stop | clear the row, then re-run |
+| `identity_mismatch` | stop | correct the row to name the right pull request, then re-run |
+
+**Each stopping status names its own resume path**, because the four have
+different fixes and one shared path would send an operator to the wrong repair.
+**Clearing the row belongs to `pr_missing` alone**: it is the one status where
+the row's absence would match reality. **The sweep never writes the `Draft PR`
+row on any path**, these four stops included, because a run that repaired the
+record it had just failed to corroborate would destroy the evidence of the
+discrepancy and leave the next reader a healthy row where a stop had been. **A
+value outside the six is a malformed record and stops**, never mapped onto one
+of the six and never read as absence: exactly one status proceeds, so a default
+that proceeded would make a corrupted record the cheapest way past the
+checkpoint.
+
+**`skipped` and `no_record` are different readings and never interchangeable.**
+`no_record` means the gate **does not apply**: no draft pull request was ever
+opened, so there is no checkpoint to carry unread feedback, and the run
+proceeds. `skipped` means the gate **applies and could not be evaluated**: a row
+is recorded and the observation behind it failed, so the run stops. Treating
+"could not observe" as "observed nothing" would make the checkpoint silently
+optional exactly when the tool is unreliable, which is when unread feedback is
+most likely to be sitting on the pull request. **A tool that was absent,
+unauthenticated, rate-limited, or that returned output which could not be parsed
+is not evidence that a recorded pull request is gone**: those four are the
+causes of a `skipped`, and not one of them observed anything about the pull
+request.
+
+**The `skipped` report must read differently from the three discrepancy stops,
+and must name which of the four causes occurred**: the tool was absent, the tool
+was unauthenticated, the tool was rate-limited, or the tool returned output that
+could not be parsed. Those three stops observed something and this one observed
+nothing, so a report that read the same would tell an operator the record is
+wrong when the record may be perfectly correct. **Behaviour does not branch on
+the cause; only the report does**, so all four take the same stop and the same
+resume path. **Clearing the `Draft PR` row is not a resume path here**: that
+belongs to `pr_missing`, and reusing it for a `skipped` would erase a
+probably-true record to manufacture a `no_record` reading on the next run.
+
+**Every one of these paths reports**, and a gate stop takes the standard stop
+report's three parts: the **condition**, which is the status and, for `skipped`,
+its cause; **what already landed**, which is nothing, because the gate is
+evaluated ahead of the first read and therefore ahead of every write; and the
+**resume path** from the table above.
+
 **Read the authenticated account from the live session, at call time.** The
 sweep excludes the replies it posted itself, and that rule's author half
 compares against the account this run authenticated as, which is the parse's
@@ -1034,9 +1090,19 @@ rule: one surface readable and the other not, a page failing partway through
 pagination, and output that cannot be parsed. **A failed observation is
 discarded rather than swept**: the partial data does not reach classification,
 the run writes zero log rows, posts zero replies, takes zero commits, and
-stops. Nothing needs unwinding, because every read precedes every write. The
-stop report names that **reading had begun** and **which surface failed**,
-which is what tells it apart from the corroboration-gate stop.
+stops. Nothing needs unwinding, because every read precedes every write.
+
+**The mid-read failure report is not the gate stop, and must not read like
+it.** It draws on the same four causes the gate's `skipped` draws on: the tool
+was absent, the tool was unauthenticated, the tool was rate-limited, or the tool
+returned output that could not be parsed. So the report **also names that
+reading had begun** and **which surface failed**, because an operator who cannot
+tell a gate failure from a mid-read failure cannot tell whether the pull request
+was ever reachable. It takes the standard stop report's three parts, and its
+what-landed part is empty for the same reason the gate's is: every read precedes
+every write. The resume path is the same as the gate's `skipped`, fix the tool
+and re-run, and needs no repair step first, because the observation is retaken
+fresh on every invocation.
 
 **One classifier per candidate, and no body read.** The parse returns
 `candidates` and `excluded`; a candidate record carries the comment id,

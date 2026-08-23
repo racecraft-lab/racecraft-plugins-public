@@ -58,6 +58,15 @@ GALLERY_TEMPLATES = PLUGIN_ROOT / "artifact-gallery" / "templates"
 # repository, so a system temporary directory is out of reach.
 WORKFLOW_SCRATCH = FIXTURE_DIR / ".workflow-scratch"
 
+# The corroboration gate reads the status the shipped classifier reports, so the
+# module is imported rather than re-implemented here. `dont_write_bytecode` keeps
+# the import from leaving a `__pycache__` under the plugin tree.
+sys.dont_write_bytecode = True
+if str(PLUGIN_ROOT) not in sys.path:
+    sys.path.insert(0, str(PLUGIN_ROOT))
+
+from speckit_pro_runner.helpers import read_only  # noqa: E402
+
 HELPER_ID = "sweep-pr-feedback"
 BODY_BUDGET_BYTES = 8192
 
@@ -755,6 +764,9 @@ def dispatched_candidates(name: str) -> list[str]:
     rather than typed beside the case, so a run that shapes and dispatches only
     the amended items fails a count.
     """
+    if not takes_the_observation(name):
+        # A run the gate stopped never read a surface, so it has no candidate.
+        return []
     want = expectations()[name]
     if want["status"] != "ok" or "stdout_json" not in want:
         return []
@@ -914,6 +926,12 @@ class PipedObservationTest(unittest.TestCase):
                 parse_calls = [
                     entry for entry in run["commands"] if entry.get("role") == "parse_observation"
                 ]
+                if not takes_the_observation(name):
+                    self.assertEqual(
+                        len(parse_calls), 0,
+                        "a run the corroboration gate stopped reads no surface",
+                    )
+                    continue
                 self.assertEqual(len(parse_calls), 1, "one piped parse call per run")
                 argv = parse_calls[0]["argv"]
                 self.assertIn("|", argv, "the captured argv shows the read piped into the runner")
@@ -1293,6 +1311,9 @@ PROSE_COLUMNS = ("Disposition", "Question/Gap/Finding", "Resolution")
 
 UNRESOLVED_AUTHOR_CELL = "unresolved account"
 
+# The workflow row the sweep never writes, on any path (T067).
+DRAFT_PR_ROW_KEY = "Draft PR"
+
 
 def redact_request(leg: str, comment_id: str, **fields: Any) -> dict[str, Any]:
     inputs: dict[str, Any] = {"named_surface": "redact", "leg": leg, "comment_id": comment_id}
@@ -1503,6 +1524,96 @@ def declared_outcome(name: str) -> dict[str, Any] | None:
     return cases()[name].get("outcome")
 
 
+# T066: the corroboration gate. A case carrying this key declares the status the
+# gate saw, and the raw material the shipped classifier reports it from, so the
+# declared half is recomputed rather than taken on the fixture's word.
+CORROBORATION_KEY = "corroboration"
+
+# The gate's mapping from a stopping status to its own resume path. The four
+# differ, so a single shared path would send an operator to the wrong repair.
+GATE_RESUME = {
+    "skipped": "re-run",
+    "pr_closed": "operator",
+    "pr_missing": "operator",
+    "identity_mismatch": "operator",
+}
+# A value outside the six is a malformed record, never mapped onto one of them.
+MALFORMED_GATE_RESUME = "operator"
+
+
+def corroboration_gate(name: str) -> dict[str, Any] | None:
+    return cases()[name].get(CORROBORATION_KEY)
+
+
+def corroboration_status(name: str) -> str | None:
+    gate = corroboration_gate(name)
+    return None if gate is None else gate["status"]
+
+
+def gate_case_names() -> list[str]:
+    return [name for name in sorted(cases()) if corroboration_gate(name) is not None]
+
+
+def takes_the_observation(name: str) -> bool:
+    """Whether the run reads the two surfaces at all.
+
+    Only `match` admits the sweep. A case declaring no gate predates it and is
+    read as admitted, which is what keeps every earlier case unchanged.
+    """
+    status = corroboration_status(name)
+    return status is None or status == "match"
+
+
+def gate_outcome(status: str) -> tuple[bool, str | None]:
+    """What the gate does with one status: stop with a resume path, or proceed."""
+    if status == "no_record":
+        return False, None
+    return True, GATE_RESUME.get(status, MALFORMED_GATE_RESUME)
+
+
+def gate_report_line(name: str) -> str:
+    """The one line a gate-evaluated run adds to its report."""
+    gate = corroboration_gate(name) or {}
+    status = gate["status"]
+    if status == "match":
+        return "Corroboration: match. The gate admitted the sweep."
+    if status == "no_record":
+        return (
+            "Corroboration: no_record. No draft pull request was ever opened, so "
+            "the gate does not apply and the run proceeds."
+        )
+    if status == "skipped":
+        reason = (gate.get("draft_pr_observation") or {}).get("reason")
+        return (
+            "Corroboration: skipped. The gate applies and could not be evaluated: "
+            f"{reason or read_only.UNUSABLE_OBSERVATION_REASON}. Nothing was "
+            "observed about the recorded pull request."
+        )
+    if status in GATE_RESUME:
+        return (
+            f"Corroboration: {status}. The recorded identity and the observed one "
+            "disagree."
+        )
+    return (
+        f"Corroboration: {status} is outside the six statuses. The record is "
+        "malformed and the run stops."
+    )
+
+
+def classified_status(name: str) -> str:
+    """The status the shipped classifier reports for the case's raw material."""
+    gate = corroboration_gate(name) or {}
+    lines = [read_only.AUTOPILOT_BASIC_INFO_HEADING, "", "| Field | Value |",
+             "| --- | --- |"]
+    if gate.get("draft_pr_row"):
+        lines.append(gate["draft_pr_row"])
+    blanked = read_only.HTML_COMMENT_RE.sub("", "\n".join(lines) + "\n").splitlines()
+    record = read_only.corroborate_draft_pr(
+        read_only.workflow_draft_pr_row(blanked), gate.get("draft_pr_observation")
+    )
+    return str(record["status"])
+
+
 def modeled_item(name: str, comment_id: str) -> dict[str, Any]:
     outcome = declared_outcome(name)
     for entry in (outcome or {}).get("items") or []:
@@ -1651,14 +1762,20 @@ def build_capture(names: list[str]) -> dict[str, dict[str, Any]]:
                 filled[column] = value
             return filled
 
-        commands.append({
-            "role": "parse_observation",
-            "argv": "gh pr view --json comments,reviewThreads | python3 -m speckit_pro_runner",
-            "argv_list": [],
-            "byproducts": [f"{BYPRODUCT_DIR}/observation-request.json"],
-        })
+        # The corroboration gate runs ahead of the two reads, so a status the gate
+        # does not admit leaves the run with no observation to classify at all.
+        gate_status = corroboration_status(name)
+        if takes_the_observation(name):
+            commands.append({
+                "role": "parse_observation",
+                "argv": "gh pr view --json comments,reviewThreads | python3 -m speckit_pro_runner",
+                "argv_list": [],
+                "byproducts": [f"{BYPRODUCT_DIR}/observation-request.json"],
+            })
 
-        if response.get("status") == "ok" and isinstance(envelope, dict):
+        if gate_status is not None and gate_status != "match":
+            stopped, resume = gate_outcome(gate_status)
+        elif response.get("status") == "ok" and isinstance(envelope, dict):
             observed = {
                 entry["id"]: entry
                 for entry in case["inputs"]["pr_observation"]["comments"]
@@ -1873,8 +1990,13 @@ def build_capture(names: list[str]) -> dict[str, dict[str, Any]]:
             "redactions": events,
             "byproducts_removed": BYPRODUCT_DIR,
         }
+        gate_line = None
+        if gate_status is not None:
+            gate_line = gate_report_line(name)
+            report["corroboration"] = gate_line
         report_text = "\n".join([
             f"Run report for corpus case {name}.",
+        ] + ([gate_line] if gate_line else []) + [
             f"Commits taken this run: {len(commits)}.",
             f"Rows written this run: {len(rows)}.",
             f"Replies posted this run: {len(replies)}.",
@@ -2021,6 +2143,163 @@ class ModeledRunResultTest(unittest.TestCase):
         ]
         self.assertTrue(author_cells)
         self.assertNotEqual(UNRESOLVED_AUTHOR_CELL.strip(), "")
+
+
+class CorroborationGateTest(unittest.TestCase):
+    """T066: the six corroboration statuses, and what the sweep does with each.
+
+    Three links, each able to fail on its own. The vocabulary is read off the
+    shipped module, so a seventh status cannot be added without failing here. Each
+    case's declared status is recomputed by the shipped classifier from the case's
+    own raw material, so a mislabelled case fails rather than being believed. And
+    the gate's mapping is walked into the capture and compared against the outcome
+    the corpus declares beside the case, which is what makes the mapping wrong
+    rather than merely different when it changes.
+    """
+
+    def setUp(self) -> None:
+        self.commands = captured("captured_commands")
+        self.surface = captured("captured_surface_calls")
+        self.gates = {name: corroboration_gate(name) for name in gate_case_names()}
+
+    def outside_value(self) -> str:
+        outside = [
+            gate["status"] for gate in self.gates.values() if gate.get("outside_the_six")
+        ]
+        self.assertEqual(len(outside), 1, "exactly one case carries a value outside the six")
+        return outside[0]
+
+    def test_the_corpus_covers_the_shipped_vocabulary_and_one_value_outside_it(self) -> None:
+        shipped = tuple(read_only.AUTOPILOT_CORROBORATION_STATUSES)
+        self.assertEqual(len(shipped), 6, "the corroboration vocabulary is closed at six")
+        inside = sorted(
+            gate["status"] for gate in self.gates.values() if not gate.get("outside_the_six")
+        )
+        self.assertEqual(
+            inside, sorted(shipped),
+            "one corpus case per shipped status, and none the module does not carry",
+        )
+        self.assertNotIn(self.outside_value(), shipped)
+
+    def test_each_declared_status_is_what_the_shipped_classifier_reports(self) -> None:
+        for name, gate in sorted(self.gates.items()):
+            if gate.get("outside_the_six"):
+                continue
+            with self.subTest(case=name):
+                self.assertEqual(
+                    classified_status(name), gate["status"],
+                    "the declared status is recomputed from the case's own row and "
+                    "observation, never taken on the fixture's word",
+                )
+
+    def test_exactly_one_status_sweeps_and_exactly_one_proceeds_without_sweeping(self) -> None:
+        swept: list[str] = []
+        proceeded: list[str] = []
+        stopped: list[str] = []
+        for name, gate in sorted(self.gates.items()):
+            results = self.surface[name]["results"]
+            if results["stop"]:
+                stopped.append(gate["status"])
+            elif results["rows_written"] or results["replies_posted"]:
+                swept.append(gate["status"])
+            else:
+                proceeded.append(gate["status"])
+        self.assertEqual(swept, ["match"], "only a corroborated record admits the sweep")
+        self.assertEqual(
+            proceeded, ["no_record"],
+            "no_record is the one status that proceeds without sweeping: the gate does "
+            "not apply, because no draft pull request was ever opened",
+        )
+        self.assertEqual(
+            sorted(stopped),
+            sorted(["identity_mismatch", "pr_closed", "pr_missing", "skipped",
+                    self.outside_value()]),
+        )
+
+    def test_every_stopping_status_names_its_own_resume_path(self) -> None:
+        seen: dict[str, str] = {}
+        for name, gate in sorted(self.gates.items()):
+            results = self.surface[name]["results"]
+            if not results["stop"]:
+                continue
+            outcome = declared_outcome(name)
+            with self.subTest(case=name):
+                self.assertIsNotNone(results["resume"], "a stop always names a resume path")
+                self.assertEqual(results["resume"], outcome["resume"])
+            seen[gate["status"]] = results["resume"]
+        self.assertEqual(
+            seen.get("skipped"), "re-run",
+            "a skipped gate is repaired by fixing the tool, never by editing the row",
+        )
+        self.assertEqual(
+            sorted(key for key, value in seen.items() if value == "operator"),
+            sorted(["identity_mismatch", "pr_closed", "pr_missing", self.outside_value()]),
+        )
+
+    def test_a_gate_that_did_not_admit_the_run_reads_and_writes_nothing(self) -> None:
+        seen = 0
+        for name, gate in sorted(self.gates.items()):
+            if gate["status"] == "match":
+                continue
+            seen += 1
+            run = self.commands[name]
+            results = self.surface[name]["results"]
+            with self.subTest(case=name):
+                self.assertEqual(
+                    [entry for entry in run["commands"]
+                     if entry["role"] == "parse_observation"],
+                    [], "a run the gate did not admit reads neither surface",
+                )
+                self.assertEqual(self.surface[name]["calls"], [])
+                self.assertEqual(results["rows_written"], [])
+                self.assertEqual(results["replies_posted"], [])
+                self.assertEqual(results["commits"], [])
+        self.assertEqual(seen, 6)
+
+    def test_the_gate_report_names_the_status_and_the_skipped_cause(self) -> None:
+        for name, gate in sorted(self.gates.items()):
+            run = self.commands[name]
+            line = run["report"].get("corroboration")
+            with self.subTest(case=name):
+                self.assertIsNotNone(line, "a gate-evaluated run names the gate in its report")
+                self.assertIn(gate["status"], line)
+                self.assertIn(line, run["report_text"])
+                if gate["status"] != "skipped":
+                    continue
+                reason = (gate.get("draft_pr_observation") or {})["reason"]
+                self.assertIn(
+                    reason, line, "the four-cause report names which cause occurred"
+                )
+                self.assertNotIn(
+                    "clear the row", line.lower(),
+                    "clearing the row belongs to pr_missing and would manufacture a "
+                    "no_record reading here",
+                )
+
+    def test_a_mid_read_failure_is_not_reported_as_a_gate_stop(self) -> None:
+        for name in ("failure-read-fails-on-the-second-surface",
+                     "failure-read-fails-midway-through-pagination"):
+            run = self.commands[name]
+            with self.subTest(case=name):
+                self.assertIsNone(run["report"].get("corroboration"))
+                self.assertEqual(
+                    len([entry for entry in run["commands"]
+                         if entry["role"] == "parse_observation"]),
+                    1, "reading had begun, which is what tells this from a gate stop",
+                )
+                self.assertTrue(run["report"]["stopped"])
+
+    def test_the_sweep_never_writes_the_draft_pr_row(self) -> None:
+        # A tripwire rather than a discriminator: nothing in the walk writes that
+        # row today, so this passes trivially. It is here to fail the day a repair
+        # step is added to a stop that had just failed to corroborate the record.
+        for name, run in sorted(self.commands.items()):
+            for entry in run["commands"]:
+                with self.subTest(case=name, role=entry["role"]):
+                    self.assertNotIn(DRAFT_PR_ROW_KEY, entry["argv"])
+            for write in run["writes"]:
+                with self.subTest(case=name, path=write["path"]):
+                    self.assertNotIn(DRAFT_PR_ROW_KEY, write["content"])
 
 
 class SurfaceCallTest(unittest.TestCase):
