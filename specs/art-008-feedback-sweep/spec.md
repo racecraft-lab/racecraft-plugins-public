@@ -1288,10 +1288,17 @@ proceeds.
      `sweep-analyst` is red, and so is dropping `Grep`, so the assertion is a
      pin in both directions rather than a ceiling. `Read` is on the
      classifier's line because the runtime refuses a subagent that resolves
-     zero tools and `Read` is the narrowest tool a subagent can be given; the
-     implementation task verifies whether an explicitly empty list is accepted
-     and tightens to it if it is, and this assertion is what would then be
-     tightened with it.
+     zero tools and `Read` is the narrowest tool a subagent can be given.
+     **The empty-list question is deliberately not probed, and this clause
+     says so rather than leaving the tightening open.** A bare `tools:` key is
+     YAML null and reads as omitted, so an agent carrying one inherits the
+     operator's whole surface, `Bash` included, and the dispatch succeeds. The
+     probe would therefore look like success at the exact moment it disarmed
+     the control, which is why the implementation task forbids it outright.
+     `Read` is the floor and stands. What the implementation task probes
+     instead is that the allowlist **binds**, so this assertion stays pinned
+     at the two stated allowlists rather than held open against a tightening
+     that has no safe way to be tested.
   3. **The tuple's membership is asserted exactly.** The assertion MUST
      compare `UNTRUSTED_INPUT_CONSUMERS` against its literal two-name value
      and MUST assert it disjoint from the open-executor tuple. Appending an
@@ -1437,9 +1444,11 @@ proceeds.
   that pin all of it, and states the honest Codex limit: `read-only` filesystem,
   network per Codex defaults, nothing claimed about tools. `Read` rather than
   nothing, because the runtime refuses a subagent that resolves zero tools and
-  `Read` is the narrowest tool a subagent can hold; the implementation task
-  checks whether an explicitly empty list is accepted and tightens to it if it
-  is. This is a **reversal of a repository-wide rule**, taken deliberately, and
+  `Read` is the narrowest tool a subagent can hold. The empty-list question is
+  deliberately not probed, for the reason FR-008c records: a bare `tools:` key
+  is YAML null and reads as omitted, so the probe would look like success at
+  the moment it disarmed the control. The implementation task probes that the
+  allowlist binds instead. This is a **reversal of a repository-wide rule**, taken deliberately, and
   the reason is the sentence FR-008c records: capability inheritance is right
   for an agent acting on trusted input and wrong for one reading text an
   attacker can write.
@@ -3188,7 +3197,14 @@ Named owners, so none of these is a silent omission.
   capture FR-008a defines records the agent name, the comment id, the prompt as
   sent, and the structured record returned; it does not record an agent's own
   tool calls, and the fixture corpus is a deterministic harness with no live
-  agent in it, so no fixture here can produce that evidence. Claiming it would
+  agent in it. The repository is not blind to a dispatched agent's own calls:
+  the Layer 7 transcript harness carries a `sidechain` scope and its grounding
+  runner already asserts that named tools were not invoked. That instrument
+  still cannot produce this claim. It records no per-agent attribution, no
+  committed fixture carries a sidechain event, and the evidence would cost a
+  live capture over a real pull request, so this slice does not buy it. The
+  reason the claim is dropped is cost and attribution, not the absence of any
+  observer. Claiming it would
   be the defect this spec names elsewhere — a rule nothing executes has no
   fixture that can fail. What stands in its place is the pair above: the
   declaration, pinned by equality in the repository, and the routing, measured
@@ -3207,6 +3223,22 @@ Named owners, so none of these is a silent omission.
   that the harness enforced anything, and the spec does not claim one. That
   limit and the no-tool-call-evidence limit above are the same limit seen from
   two sides, and both are recorded rather than argued away.
+
+  **One enforcement observation is produced, and it is named here so that
+  removing it is visible.** The implementation task that ships the classifier
+  runs a binding probe once, before any later work depends on the answer: the
+  agent is dispatched with its pinned allowlist in a session with an MCP server
+  connected, asked for a tool outside that allowlist, and the runtime's refusal
+  text is recorded verbatim in the workflow file; the slice stops if either
+  tool is reachable. That refusal is what tells a bound allowlist from an
+  inherited one. It is a slice gate rather than a standing per-run fixture,
+  which is why it stands beside this criterion rather than inside it.
+
+  **The declaration half rests on a stated platform assumption.** Claude Code
+  enforces `tools:` as an allowlist and `disallowedTools` as a denylist, so
+  pinning the declaration by equality verifies the configuration of an
+  enforcing control rather than a hint. A bare or emptied `tools:` inherits the
+  full pool, which is why the assertion is an equality and not a containment.
 
 ## Assumptions
 

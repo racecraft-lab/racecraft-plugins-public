@@ -278,9 +278,11 @@ nothing else does:
   from the four-value vocabulary, the target from the three-file allowlist or
   `null`, and a reason bounded at 512 bytes. Claude frontmatter pins
   `tools: Read`, which is the narrowest allowlist a subagent can carry, because
-  the runtime refuses a subagent that resolves zero tools; the implementation
-  task verifies whether an explicitly empty list is accepted and tightens to it
-  if so. `disallowedTools` names `Agent`, `TeamCreate`, `SendMessage`, and
+  the runtime refuses a subagent that resolves zero tools. The empty-list
+  question is deliberately not probed: a bare `tools:` key is YAML null and
+  reads as omitted, so the agent would inherit the operator's whole surface,
+  `Bash` included, and the dispatch would succeed. `Read` is the floor and
+  stands; the implementation task probes that the allowlist binds instead. `disallowedTools` names `Agent`, `TeamCreate`, `SendMessage`, and
   `Skill`. Codex pins `sandbox_mode = "read-only"`.
 - **`sweep-analyst`** pins `tools: Read, Grep, Glob` and the same denials, with
   the same Codex sandbox. It is dispatched three times per amended item with
