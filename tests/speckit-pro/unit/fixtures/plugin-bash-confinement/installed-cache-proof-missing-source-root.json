@@ -19,7 +19,7 @@
       "surface": "codex_payload_fixture",
       "installed_root": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro",
       "source_payload_root": "dist/codex/speckit-pro",
-      "source_payload_tree_hash": "da7a00f8cdf1389f77c77607f20f50b19b2d92998b16e5795fe7d2dbaa36d46c",
+      "source_payload_tree_hash": "8834b233555395ad01e2d72938cc7b20f556942cef43aaca350f24398094680f",
       "source_derived": true,
       "mutable_user_cache": false,
       "script_file_count": 0,

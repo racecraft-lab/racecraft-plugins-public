@@ -272,11 +272,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 5946,
+              "byte_count": 6211,
               "kind": "agent",
               "path": "agents/artifact-author.md",
               "required": true,
-              "sha256": "69d0bb46a6cce921c36324dc4d60b19ec1b08f0a3a6fa0911f40974a8a21077a",
+              "sha256": "5a631eec3dcb03629c5f8090b4d43f85b7b5f7eb78b8b0b265636b842db0bde4",
               "source_path": "speckit-pro/agents/artifact-author.md",
               "transform": "none"
             },
@@ -434,11 +434,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 55639,
+              "byte_count": 55837,
               "kind": "docs",
               "path": "artifact-gallery/templates/code-approaches.html",
               "required": true,
-              "sha256": "5e713c8899877d3144013d0da608d11e31dc42891f8f40a77834756936fd576f",
+              "sha256": "5f6bbc2a8c5b178a8200b780be3cf4a8261401c825d5748793d2390e33b3b849",
               "source_path": "speckit-pro/artifact-gallery/templates/code-approaches.html",
               "transform": "none"
             },
@@ -488,11 +488,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 59410,
+              "byte_count": 59608,
               "kind": "docs",
               "path": "artifact-gallery/templates/implementation-plan.html",
               "required": true,
-              "sha256": "ac00e6b6c8b1ad6e7753b1c1be11a933e18ea3c0f13e7b3c5bce52cfd3ef9928",
+              "sha256": "77901c1d53c886d8ff607c2b9e785e6411d994985764da11bafcc7065d3ba8fb",
               "source_path": "speckit-pro/artifact-gallery/templates/implementation-plan.html",
               "transform": "none"
             },
@@ -515,11 +515,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 56341,
+              "byte_count": 56539,
               "kind": "docs",
               "path": "artifact-gallery/templates/module-map.html",
               "required": true,
-              "sha256": "42d3ca309fdb732214613e8365a3bf21213be6f8b132e3a1f5eb0da3204c7e07",
+              "sha256": "0df5b97fa1e7377941bfd567fbd1e70ac559aa53c331d43b2d3a85bdbc59a9fb",
               "source_path": "speckit-pro/artifact-gallery/templates/module-map.html",
               "transform": "none"
             },
@@ -551,11 +551,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 31286,
+              "byte_count": 31484,
               "kind": "docs",
               "path": "artifact-gallery/templates/spec-explainer.html",
               "required": true,
-              "sha256": "7de2bca5f7e8968ec76b8cdf5fe7ab2099751858fb0b176f3dc8de17b3c60364",
+              "sha256": "0427406af60719a8512acb76f1a42b3dde28adedd02c0b389c49f36e907cf1a4",
               "source_path": "speckit-pro/artifact-gallery/templates/spec-explainer.html",
               "transform": "none"
             },
@@ -1444,11 +1444,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 5946,
+              "byte_count": 6211,
               "kind": "agent",
               "path": "agents/artifact-author.md",
               "required": true,
-              "sha256": "69d0bb46a6cce921c36324dc4d60b19ec1b08f0a3a6fa0911f40974a8a21077a",
+              "sha256": "5a631eec3dcb03629c5f8090b4d43f85b7b5f7eb78b8b0b265636b842db0bde4",
               "source_path": "speckit-pro/agents/artifact-author.md",
               "transform": "none"
             },
@@ -1606,11 +1606,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 55639,
+              "byte_count": 55837,
               "kind": "docs",
               "path": "artifact-gallery/templates/code-approaches.html",
               "required": true,
-              "sha256": "5e713c8899877d3144013d0da608d11e31dc42891f8f40a77834756936fd576f",
+              "sha256": "5f6bbc2a8c5b178a8200b780be3cf4a8261401c825d5748793d2390e33b3b849",
               "source_path": "speckit-pro/artifact-gallery/templates/code-approaches.html",
               "transform": "none"
             },
@@ -1660,11 +1660,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 59410,
+              "byte_count": 59608,
               "kind": "docs",
               "path": "artifact-gallery/templates/implementation-plan.html",
               "required": true,
-              "sha256": "ac00e6b6c8b1ad6e7753b1c1be11a933e18ea3c0f13e7b3c5bce52cfd3ef9928",
+              "sha256": "77901c1d53c886d8ff607c2b9e785e6411d994985764da11bafcc7065d3ba8fb",
               "source_path": "speckit-pro/artifact-gallery/templates/implementation-plan.html",
               "transform": "none"
             },
@@ -1687,11 +1687,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 56341,
+              "byte_count": 56539,
               "kind": "docs",
               "path": "artifact-gallery/templates/module-map.html",
               "required": true,
-              "sha256": "42d3ca309fdb732214613e8365a3bf21213be6f8b132e3a1f5eb0da3204c7e07",
+              "sha256": "0df5b97fa1e7377941bfd567fbd1e70ac559aa53c331d43b2d3a85bdbc59a9fb",
               "source_path": "speckit-pro/artifact-gallery/templates/module-map.html",
               "transform": "none"
             },
@@ -1723,11 +1723,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 31286,
+              "byte_count": 31484,
               "kind": "docs",
               "path": "artifact-gallery/templates/spec-explainer.html",
               "required": true,
-              "sha256": "7de2bca5f7e8968ec76b8cdf5fe7ab2099751858fb0b176f3dc8de17b3c60364",
+              "sha256": "0427406af60719a8512acb76f1a42b3dde28adedd02c0b389c49f36e907cf1a4",
               "source_path": "speckit-pro/artifact-gallery/templates/spec-explainer.html",
               "transform": "none"
             },
@@ -2570,7 +2570,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "14e8aa937bde3840cbfa9f53d3cbcad8a8f554a600c86d7046024a07bbc82ac0",
+          "file_tree_hash": "7cefa500e78869e424bb6a446e687de3b5a981eefb006d93b8dac9ab06b97c0f",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
@@ -2682,11 +2682,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 55639,
+              "byte_count": 55837,
               "kind": "docs",
               "path": "artifact-gallery/templates/code-approaches.html",
               "required": true,
-              "sha256": "5e713c8899877d3144013d0da608d11e31dc42891f8f40a77834756936fd576f",
+              "sha256": "5f6bbc2a8c5b178a8200b780be3cf4a8261401c825d5748793d2390e33b3b849",
               "source_path": "speckit-pro/artifact-gallery/templates/code-approaches.html",
               "transform": "none"
             },
@@ -2736,11 +2736,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 59410,
+              "byte_count": 59608,
               "kind": "docs",
               "path": "artifact-gallery/templates/implementation-plan.html",
               "required": true,
-              "sha256": "ac00e6b6c8b1ad6e7753b1c1be11a933e18ea3c0f13e7b3c5bce52cfd3ef9928",
+              "sha256": "77901c1d53c886d8ff607c2b9e785e6411d994985764da11bafcc7065d3ba8fb",
               "source_path": "speckit-pro/artifact-gallery/templates/implementation-plan.html",
               "transform": "none"
             },
@@ -2763,11 +2763,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 56341,
+              "byte_count": 56539,
               "kind": "docs",
               "path": "artifact-gallery/templates/module-map.html",
               "required": true,
-              "sha256": "42d3ca309fdb732214613e8365a3bf21213be6f8b132e3a1f5eb0da3204c7e07",
+              "sha256": "0df5b97fa1e7377941bfd567fbd1e70ac559aa53c331d43b2d3a85bdbc59a9fb",
               "source_path": "speckit-pro/artifact-gallery/templates/module-map.html",
               "transform": "none"
             },
@@ -2799,11 +2799,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 31286,
+              "byte_count": 31484,
               "kind": "docs",
               "path": "artifact-gallery/templates/spec-explainer.html",
               "required": true,
-              "sha256": "7de2bca5f7e8968ec76b8cdf5fe7ab2099751858fb0b176f3dc8de17b3c60364",
+              "sha256": "0427406af60719a8512acb76f1a42b3dde28adedd02c0b389c49f36e907cf1a4",
               "source_path": "speckit-pro/artifact-gallery/templates/spec-explainer.html",
               "transform": "none"
             },
@@ -2862,11 +2862,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 5852,
+              "byte_count": 6117,
               "kind": "agent",
               "path": "codex-agents/artifact-author.toml",
               "required": true,
-              "sha256": "1795d0df9d5be833fce0eb131282edc20e446dcf5ecb25d219c6f0e61c4fb693",
+              "sha256": "80a8e9cae9579e862ffce3eb1d9f411d2793f338e2acab4a3f80800517202919",
               "source_path": "speckit-pro/codex-agents/artifact-author.toml",
               "transform": "none"
             },
@@ -3267,11 +3267,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 59948,
+              "byte_count": 61270,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/phase-execution-codex.md",
               "required": true,
-              "sha256": "697c90a8b08dceb9fc0720ce23446af09eed452603e32653ae50e7b511833008",
+              "sha256": "6dc8d9be4b28ac4c0cd756f3da454f56e7e0877c2c5faff8d8d22a06d8932fc7",
               "source_path": "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
               "transform": "path_normalization"
             },
@@ -4007,11 +4007,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 55639,
+              "byte_count": 55837,
               "kind": "docs",
               "path": "artifact-gallery/templates/code-approaches.html",
               "required": true,
-              "sha256": "5e713c8899877d3144013d0da608d11e31dc42891f8f40a77834756936fd576f",
+              "sha256": "5f6bbc2a8c5b178a8200b780be3cf4a8261401c825d5748793d2390e33b3b849",
               "source_path": "speckit-pro/artifact-gallery/templates/code-approaches.html",
               "transform": "none"
             },
@@ -4061,11 +4061,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 59410,
+              "byte_count": 59608,
               "kind": "docs",
               "path": "artifact-gallery/templates/implementation-plan.html",
               "required": true,
-              "sha256": "ac00e6b6c8b1ad6e7753b1c1be11a933e18ea3c0f13e7b3c5bce52cfd3ef9928",
+              "sha256": "77901c1d53c886d8ff607c2b9e785e6411d994985764da11bafcc7065d3ba8fb",
               "source_path": "speckit-pro/artifact-gallery/templates/implementation-plan.html",
               "transform": "none"
             },
@@ -4088,11 +4088,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 56341,
+              "byte_count": 56539,
               "kind": "docs",
               "path": "artifact-gallery/templates/module-map.html",
               "required": true,
-              "sha256": "42d3ca309fdb732214613e8365a3bf21213be6f8b132e3a1f5eb0da3204c7e07",
+              "sha256": "0df5b97fa1e7377941bfd567fbd1e70ac559aa53c331d43b2d3a85bdbc59a9fb",
               "source_path": "speckit-pro/artifact-gallery/templates/module-map.html",
               "transform": "none"
             },
@@ -4124,11 +4124,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 31286,
+              "byte_count": 31484,
               "kind": "docs",
               "path": "artifact-gallery/templates/spec-explainer.html",
               "required": true,
-              "sha256": "7de2bca5f7e8968ec76b8cdf5fe7ab2099751858fb0b176f3dc8de17b3c60364",
+              "sha256": "0427406af60719a8512acb76f1a42b3dde28adedd02c0b389c49f36e907cf1a4",
               "source_path": "speckit-pro/artifact-gallery/templates/spec-explainer.html",
               "transform": "none"
             },
@@ -4187,11 +4187,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 5852,
+              "byte_count": 6117,
               "kind": "agent",
               "path": "codex-agents/artifact-author.toml",
               "required": true,
-              "sha256": "1795d0df9d5be833fce0eb131282edc20e446dcf5ecb25d219c6f0e61c4fb693",
+              "sha256": "80a8e9cae9579e862ffce3eb1d9f411d2793f338e2acab4a3f80800517202919",
               "source_path": "speckit-pro/codex-agents/artifact-author.toml",
               "transform": "none"
             },
@@ -4592,11 +4592,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 59948,
+              "byte_count": 61270,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/phase-execution-codex.md",
               "required": true,
-              "sha256": "697c90a8b08dceb9fc0720ce23446af09eed452603e32653ae50e7b511833008",
+              "sha256": "6dc8d9be4b28ac4c0cd756f3da454f56e7e0877c2c5faff8d8d22a06d8932fc7",
               "source_path": "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
               "transform": "path_normalization"
             },
@@ -5232,7 +5232,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "da7a00f8cdf1389f77c77607f20f50b19b2d92998b16e5795fe7d2dbaa36d46c",
+          "file_tree_hash": "8834b233555395ad01e2d72938cc7b20f556942cef43aaca350f24398094680f",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
