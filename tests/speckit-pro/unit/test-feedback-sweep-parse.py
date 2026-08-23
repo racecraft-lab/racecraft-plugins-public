@@ -1036,6 +1036,140 @@ class ByproductIgnoreTest(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
+# T043: the work set shrinks or holds, and never grows.
+# ---------------------------------------------------------------------------
+
+# The path a second run's synthetic log is written to, beside the fixtures and
+# inside the repository, because the helper resolves `workflow_file` there.
+SECOND_RUN_WORKFLOW = (WORKFLOW_SCRATCH / "workflow.md").relative_to(REPO_ROOT).as_posix()
+
+SECOND_RUN_LOG_HEADER = (
+    "# Sample Workflow\n\n"
+    "### Feedback Sweep Log\n\n"
+    "| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n"
+    "|---|---|---|---|---|---|---|---|\n"
+)
+
+
+def sweep_reply(record: dict[str, Any], self_login: str) -> dict[str, Any]:
+    """The reply this run posts to one comment, as the next run observes it.
+
+    Anchored marker plus the authenticated author, which are the two halves the
+    self-reply exclusion needs. The association is inside the allowlist on
+    purpose: an untrusted one would be set aside by the trust filter first and
+    the rule under test would never run.
+    """
+    return {
+        "id": f"{record['id']}-sweep-reply",
+        "surface": record["surface"],
+        "author": self_login,
+        "author_association": "OWNER",
+        "body": f"<!-- speckit-pro:feedback-sweep {record['id']} -->\nRecorded.",
+        "truncated": False,
+    }
+
+
+class ConvergenceInvariantTest(unittest.TestCase):
+    """FR-006c: a run's work set never grows.
+
+    The work set is what the parse returns as `candidates`: the comments that
+    pass the trust filter, are absent from the Feedback Sweep Log, and are not
+    excluded as the sweep's own replies. The invariant is a claim about two
+    runs, so each case is replayed one run later. The log now carries every
+    comment the first run handled, and the reply the first run posted to each
+    one now sits on the surface beside it.
+
+    Three checks rather than one, because the invariant alone cannot fail on a
+    broken skip: a logged comment that came back was in the first set already,
+    so the subset still holds while convergence is gone. The two rules that
+    produce the invariant are therefore asserted beside it, and each is red on
+    its own. The third rule, that a no-row outcome leaves its item in the set
+    rather than adding a second one, needs a consensus round and is out of the
+    parse's reach; the reference carries it as the one path that does not
+    shrink.
+
+    No attempt counter appears here or anywhere else. A per-comment counter
+    would need the state-file mirror FR-013 forbids, so the human-review path is
+    bounded by an operator instead.
+    """
+
+    def test_the_second_run_work_set_never_grows(self) -> None:
+        for name in parse_case_names():
+            if expectations()[name]["status"] != "ok":
+                continue
+            envelope = stdout_json(run_case(name))
+            if not isinstance(envelope, dict):
+                continue
+            candidates = envelope.get("candidates") or []
+            if not candidates:
+                continue
+
+            case = cases()[name]
+            self_login = case["inputs"]["self_login"]
+            first = [record["id"] for record in candidates]
+            # Everything the log carries one run later: what this run handled,
+            # plus what it already skipped. Dropping the second half would let a
+            # comment the first run skipped return as a candidate and read as
+            # growth the sweep never caused.
+            logged = list(first) + [
+                record["id"]
+                for record in envelope.get("excluded") or []
+                if record["reason"] == "already_logged"
+            ]
+            rows = "".join(
+                f"| {number} | {comment_id} | pr conversation | octocat |"
+                " answered | Recorded. |  |  |\n"
+                for number, comment_id in enumerate(logged, start=1)
+            )
+            replies = [sweep_reply(record, self_login) for record in candidates]
+            inputs = {
+                **case["inputs"],
+                "workflow_file": SECOND_RUN_WORKFLOW,
+                "pr_observation": {
+                    "ok": True,
+                    "comments": [
+                        *(case["inputs"]["pr_observation"]["comments"]),
+                        *replies,
+                    ],
+                },
+            }
+            second_run = {"inputs": inputs, "workflow_content": SECOND_RUN_LOG_HEADER + rows}
+            with materialized_workflow(second_run):
+                response = run_runner(helper_request(f"{name}-second-run", inputs))
+            later = stdout_json(response)
+            with self.subTest(case=name, check="the second run parses"):
+                self.assertIsInstance(
+                    later, dict, f"second run returned {response.get('status')!r}"
+                )
+            if not isinstance(later, dict):
+                continue
+
+            excluded = {record["id"]: record["reason"] for record in later.get("excluded") or []}
+            for comment_id in first:
+                with self.subTest(case=name, comment=comment_id, rule="already_logged"):
+                    self.assertEqual(
+                        excluded.get(comment_id),
+                        "already_logged",
+                        "a handled comment must leave the work set permanently",
+                    )
+            for reply in replies:
+                with self.subTest(case=name, comment=reply["id"], rule="self_reply"):
+                    self.assertEqual(
+                        excluded.get(reply["id"]),
+                        "self_reply",
+                        "the replies a run posts are the only comments it adds to the "
+                        "surfaces it reads, and every one must be excluded",
+                    )
+            with self.subTest(case=name, rule="the work set never grows"):
+                grown = sorted(
+                    {record["id"] for record in later.get("candidates") or []} - set(first)
+                )
+                self.assertEqual(
+                    grown, [], f"the second run's work set grew by {grown}"
+                )
+
+
+# ---------------------------------------------------------------------------
 # Capture mode.
 # ---------------------------------------------------------------------------
 

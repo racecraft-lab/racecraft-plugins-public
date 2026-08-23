@@ -435,3 +435,61 @@ reference file onto the SKILL.md before scanning.
 One deliberate omission: the `.git/info/exclude` contrast the acceptance names
 was left out of the shipped prose as repository history rather than sweep
 behavior, with the operative half kept.
+
+### T098 and T099
+
+**Deviations/Edge cases/Surprises:** Four deviations, three findings that needed
+routing.
+
+Layer 5 moved 195/197 to **207/208**, one failure left, the `sweep-analyst`
+existence subtest that T104 closes. The predicted 196/197 was unreachable and the
+worker explained why rather than forcing it: the denominator grows because the
+carve-out subtests only exist once the files do, +9 from the classifier and +2
+from the TOML. FR-008c anticipates this ("the subtest count moves, and that is
+fine"). The real invariant is one failure, and which one.
+
+**Deviations.** (1) Amended `capability-discovery.md`, outside the stated file
+list, because T098 names it explicitly and no concurrent worker claimed it; the
+edit narrows the falsified claim to agents acting on trusted input and names the
+two untrusted-input consumers as the exception. (2) Bumped two counts in
+`test-speckit-pro-mutation-helpers.py`, 11 to 12, on the decisive precedent that
+`artifact-author.toml` bumped the same two 10 to 11 in its own commit; **T105
+takes them to 13**. (3) `disallowedTools` carries T098's four names rather than
+FR-010a's eight, because FR-008c is the normative pin and the other four are
+denied by the equality-pinned `tools: Read` allowlist itself. (4) The Codex
+mirror of the capability-discovery amendment has no legal target: that reference
+tree has no `capability-discovery.md`, and the nearest Codex statement sits in
+the SKILL.md at the 8000-word cap. Routed to the orchestrator, unresolved.
+
+**Layer 6 did not restale**, verified empirically rather than inferred: the
+twelve governed roles are a closed tuple and `sweep-classifier` sits outside it
+exactly as `artifact-author` does.
+
+**The finding that needed a new task.** `test-codex-route-fallback-recovery` is
+red and no shipped task owned it. Its roster is derived by globbing
+`speckit-pro/codex-agents/*.toml` and digesting every one, so any new TOML
+restales it. Causation was proved rather than assumed: deriving the roster while
+excluding `sweep-classifier.toml` reproduces the reviewed fixture exactly. The
+worker deliberately did not fix it, because the library raises
+`RosterDriftError("bundled Codex source roster drifted; fixture re-review
+required")` with no regeneration script, which makes it a fail-closed
+human-review control that regenerating-to-green would disarm. Added as **T111**,
+after T105, with the re-review framed as a stated judgment rather than a refresh.
+
+**The binding probe did not run, and the worker refused to fabricate it.** Its
+dispatch forbade spawning agents, so T098's stop condition is unmet rather than
+passed. The orchestrator then attempted it directly and could not: plugin agents
+load from the versioned plugin cache, not worktree source, so the runtime reports
+`Agent type 'speckit-pro:sweep-classifier' not found`. Staging the definition
+into the cache was refused by the permission classifier, correctly, since that is
+agent-config self-modification and a control proved only after editing the
+control's own configuration would be worth little. Recorded durably in the
+workflow file as UNRUN, with the discharge path after release and cache refresh.
+The stop condition is not triggered, because it fires on a reachable tool and
+none was observed; it is also not discharged.
+
+**Two concurrency observations.** A sibling's `git add -A` commit swept this
+worker's source files into `a36d12af7` before it finished, so its later
+mutation-helpers bump is working-tree-only. And someone ran the payload build
+mid-task, creating the two `dist/` agent copies while leaving the runner
+`.manifest.json` and `.sha256` stale, so T074 is still required.

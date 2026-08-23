@@ -1311,6 +1311,56 @@ considered and rejected at plan time, and this acceptance does not reopen it.
 
 ---
 
+## T098 Binding Probe: UNRUN, and why
+
+**Recorded 2026-08-23. This gate is unmet, not passed, and not failed.**
+
+T098's stop condition reads: *"If either tool is reachable, the scoping does not
+hold and this task stops the slice rather than shipping a control that does not
+bind."* The probe that would settle it did not run. **No result is claimed and
+none was fabricated.**
+
+**Why it could not run.** Claude Code loads plugin agents from the versioned
+plugin cache, not from worktree source. `speckit-pro/agents/sweep-classifier.md`
+exists in this branch but the runtime resolves no such agent, failing with
+`Agent type 'speckit-pro:sweep-classifier' not found` and listing the twelve
+agents the installed 2.27.0 cache carries. Staging the new definition into that
+cache to make the probe possible was attempted and refused by the permission
+classifier, which is correct: writing an agent definition into the plugin cache
+is agent-config self-modification, and a control proved only after the prover
+edited the control's own configuration would be worth little anyway.
+
+**What this does and does not mean.**
+
+- The stop condition is **not** triggered. It fires when a denied tool is
+  *reachable*, and nothing here observed a reachable tool. An unrun probe is not
+  evidence that the allowlist fails to bind.
+- The stop condition is **not** discharged either. Nothing here observed the
+  allowlist binding. The declaration half is pinned statically by Layer 5,
+  which asserts `tools: Read` by equality and the four denials by membership,
+  and that is a check on an enforcing control's configuration rather than on its
+  enforcement.
+- SC-015 already says exactly this, and says it deliberately. It was narrowed at
+  Analyze consensus row 8 to claim only what a fixture can produce, on the
+  ground that no committed fixture proves a negative over a model's tool use.
+  This entry is that narrowing meeting its first real instance rather than a new
+  discovery.
+
+**How it gets discharged.** After this feature ships and the plugin cache
+refreshes to the release carrying `sweep-classifier.md` and `sweep-analyst.md`,
+dispatch each agent once with a probe that asks it to enumerate its tool surface
+and attempt one `Bash` call, and record the verbatim result here. Two things must
+hold: no tool named `mcp__*` is present, and the `Bash` attempt is refused. A
+reachable tool at that point stops the slice, exactly as T098 states.
+
+**The empty-allowlist question stays closed.** FR-008c forbids probing whether an
+explicitly empty `tools:` list is accepted, because a bare `tools:` key is YAML
+null, reads as omitted, and makes the agent inherit the operator's whole surface
+including `Bash`. That probe would look like success at the exact moment it
+disarmed the control. `Read` is the floor and stands.
+
+---
+
 ## Post-Implementation Checklist
 
 The canonical closeout. Every row must reach Complete or an explicit
