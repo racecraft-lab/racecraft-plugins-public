@@ -1267,6 +1267,57 @@ table**, and it changes neither the phase-coverage guard's governed phase-id
 list, the stage-to-phase map, nor the workflow template. It is a setup step
 inside a phase that already exists, never a phase of its own.
 
+#### Phase 7 Setup: The Run Report Every Path Builds
+
+**Every path ends in the run report, and every run builds exactly one.**
+Stopping or proceeding, the sweep finishes by building the report described
+here. The sections below name only what their own condition contributes to it
+and never restate its shape. A run where several stopping conditions hold
+builds **one** report naming every one of them, never one report per
+condition.
+
+**Three parts, in this order.** The **condition**: what stopped the run, or
+that it proceeded. **What already landed** before that: the commits pushed,
+the log rows written, and the replies posted so far. The **resume path**, one
+line of substance.
+
+**What already landed is written as empty, never left out**, on a stop that
+happens before any write. An absent part reads as an oversight, while "no
+commit, no row, no reply" reads as a fact an operator can act on.
+
+**The per-comment dispositions sit inside that one report.** Report each
+observed comment, candidate and exclusion alike, and name a reason on every
+exclusion: the trust filter reports `not swept: untrusted author`, and every
+self-reply exclusion is named the same way. The proceed path is exactly where
+a run that swept nothing but untrusted comments lands, and a silent proceed
+there would leave an operator no way to tell it from a run that saw nothing. A
+run that observed no comment at all reports that, as a one-line report rather
+than an absent one.
+
+**Every redaction event goes in, on every path, stopping or proceeding**: per
+affected comment the comment id, the leg, the rule, and the count, and nothing
+else about the match.
+
+**The report names the sweep's byproduct directory as removed, on every
+path.**
+
+**The report goes to the operator's sink**, the one the plan-stage stop report
+reaches, and never to the pull request.
+
+**The conditions that end a run in this sequence** are an invalid
+authenticated account, a corroboration status that is neither `match` nor
+`no_record` or one outside the six, a failed observation, an unreadable
+Feedback Sweep Log row, a malformed classifier or analyst record, a resolved
+edit target outside the three artifacts, a failed push, a consensus outcome
+requiring human review, one or more amendments requiring re-review, and one or
+more redaction events reported once every write landed. The last two are the
+only ones that are not failures.
+
+**One condition needs more than the shared shape.** The human-review stop's
+resume path names **both** operator actions, resolve the substance and re-run
+**or** resolve the thread, because it is the only stop whose resume path a
+re-run alone does not satisfy.
+
 #### Phase 7 Setup: The Corroboration Gate
 
 **The six corroboration statuses are exhaustive, and each maps to exactly one
@@ -1325,11 +1376,10 @@ resume path.
 `pr_missing`, and reusing it for a `skipped` would erase a probably-true record
 to manufacture a `no_record` reading on the next run.
 
-**Every one of these paths reports**, and a gate stop takes the standard stop
-report's three parts: the **condition**, which is the status and, for `skipped`,
-its cause; **what already landed**, which is nothing, because the gate is
-evaluated ahead of the first read and therefore ahead of every write; and the
-**resume path** from the table above.
+**Every one of these paths reports.** A gate stop's condition is the status
+and, for `skipped`, its cause. Nothing landed, because the gate is evaluated
+ahead of the first read and therefore ahead of every write. The resume path is
+the one the table above gives.
 
 **Read the authenticated account from the live session, at call time.** The
 sweep excludes the replies it posted itself, and the author half of that rule
@@ -1374,11 +1424,10 @@ was absent, the tool was unauthenticated, the tool was rate-limited, or the tool
 returned output that could not be parsed. So the report **also names that
 reading had begun** and **which surface failed**, because an operator who cannot
 tell a gate failure from a mid-read failure cannot tell whether the pull request
-was ever reachable. It takes the standard stop report's three parts, and its
-what-landed part is empty for the same reason the gate's is: every read precedes
-every write. The resume path is the same as the gate's `skipped`, fix the tool
-and re-run, and needs no repair step first, because the observation is retaken
-fresh on every invocation.
+was ever reachable. Nothing landed, for the same reason nothing landed at the
+gate: every read precedes every write. The resume path is the same as the
+gate's `skipped`, fix the tool and re-run, and needs no repair step first,
+because the observation is retaken fresh on every invocation.
 
 **Dispatch one classifier per candidate, and read no body.** The parse returns
 `candidates` and `excluded`. A candidate record carries the comment id, the
@@ -1405,8 +1454,8 @@ rewrote, so pass it through the redaction surface's `log_row` leg **before** it
 reaches a cell, a reply, or the run report, and carry the string that leg
 returns rather than the orchestrator's own copy of what the classifier said. A
 record carrying a class outside the set, a target outside the three artifacts,
-or a missing field is **malformed**: stop the run naming that comment id, with
-the standard stop report. Do not coerce it onto a class, and do not re-prompt.
+or a missing field is **malformed**: stop the run naming that comment id. Do
+not coerce it onto a class, and do not re-prompt.
 A classifier that cannot answer in its own vocabulary is a defect, not a fifth
 outcome.
 
@@ -1592,10 +1641,9 @@ read of that surface rather than an error from it: the surface answers, and
 the stop belongs to the orchestrator. The answer carries a `reason` that is
 either null or one of `outside_set`, `symlink_target`, and `symlink_parent`.
 
-**A refused target stops the run under the same report contract every stop in
-this sequence uses**, naming the condition, what already landed, and the
-resume path. Name the **refused target path** and the **comment id it came
-from**; the resume path is to fix the classification and re-run.
+**A refused target stops the run.** Its condition names the **refused target
+path** and the **comment id it came from**, and its resume path is to fix the
+classification and re-run.
 
 **Reaching this check means classification already failed**, so it is a defect
 report and not a routine path. That is why it stops rather than downgrading
@@ -1699,14 +1747,12 @@ the line it measured, and the key-header span runs forward from its own header
 line. The self-reply anchor therefore survives, and an over-bound disposition
 costs line 2 onward and never the marker.
 
-**The run report names, per affected comment, the leg, the rule, and the
-count**, on every path, and nothing else about the match. Never the matched
-line, an excerpt of it, a redacted or truncated copy, or any encoded form,
-whether in the report, a log row, a reply, or the surface's own response. The
-disposition the report carries per comment is the `log_row` response for that
-comment's `Disposition` cell, before escaping, never the orchestrator's copy
-from before the call. The report goes to the operator's sink, the one the
-plan-stage stop report reaches, and never to the pull request.
+**Never the matched line**, an excerpt of it, a redacted or truncated copy, or
+any encoded form, whether in the report, a log row, a reply, or the surface's
+own response. The report carries an event exactly as the builder above names
+it, and nothing more. The disposition it carries per comment is the `log_row`
+response for that comment's `Disposition` cell, before escaping, never the
+orchestrator's copy from before the call.
 
 **Redaction never refuses a write and never discards a row.** A run with no
 amendment batches every row it wrote into one bookkeeping commit, so a refused
@@ -1714,10 +1760,8 @@ commit would discard them all, and the next run would regenerate the same
 disposition and refuse again: a livelock on ordinary reviewer input.
 
 **A run with any event stops once every write has landed**, after the last
-push and the last reply, in the re-review report's shape with resume path
-re-run. It is one more condition under the same one-report contract. The next
-run finds the rows and the replies already in place, fires no event, and
-proceeds.
+push and the last reply, with resume path re-run. The next run finds the rows
+and the replies already in place, fires no event, and proceeds.
 
 #### Phase 7 Setup: The Reply Templates
 
@@ -1808,10 +1852,10 @@ notification did not.
 
 #### Phase 7 Setup: Stop or Proceed
 
-**One or more `amended`: stop for re-review before any task work.** The report
-takes the plan-stage stop report's shape, names the comments swept, the
-amendments made, and the commit range, and **states that the draft artifact
-pages regenerate once slice 2 lands**.
+**One or more `amended`: stop for re-review before any task work.** Its
+what-landed part names the comments swept, the amendments made, and the commit
+range, and the report **states that the draft artifact pages regenerate once
+slice 2 lands**.
 
 **No `amended` but at least one comment handled: write the records, post the
 replies, and proceed directly into task execution**, without stopping. Nothing
@@ -1823,29 +1867,13 @@ cannot be read as requiring an empty commit on a pull request that carried no
 comments.
 
 **Any redaction event, on any leg: stop once every commit is pushed and every
-reply is posted.** The report takes the re-review report's shape, carries the
-leg, the rule, and the count per comment, and gives the resume path as re-run.
-Where nothing was amended, this stop replaces the proceed at that same point.
-Where the re-review stop or the human-review stop also holds, it is the same
-stop and one report.
+reply is posted.** The resume path is re-run. Where nothing was amended, this
+stop replaces the proceed at that same point. Where the re-review stop or the
+human-review stop also holds, it is the same stop and one report.
 
 The regeneration sentence is an interface slice 2 replaces. Until it does, it
 is the only thing telling a reviewer why the pages they are looking at are
 older than the amendments beside them.
-
-#### Phase 7 Setup: The Run Report
-
-**Every run reports, on every path it takes, not only the stopping ones.** The
-proceed path is exactly where a run that swept nothing but untrusted comments
-lands, and a silent proceed there would leave an operator no way to tell it
-from a run that saw nothing.
-
-**Report each observed comment's disposition, candidates and exclusions alike,
-and name a reason on every exclusion.** The trust filter reports `not swept:
-untrusted author`, and every self-reply exclusion is named the same way.
-
-**A run that observed no comments at all reports that**, which is a one-line
-report rather than an absent one.
 
 #### Phase 7 Setup: The Sweep's Byproduct Directory Ignores Itself
 

@@ -596,6 +596,178 @@
         "resume": "operator"
       }
     },
+    "convergence-clean-re-run-changes-nothing": {
+      "purpose": "The second run over a corpus every comment of which already carries a Feedback Sweep Log row and a posted sweep reply. Every observed comment is excluded, so the run writes zero rows, posts zero replies, takes zero amendments, and proceeds into task work.",
+      "acceptance": [
+        "SC-003",
+        "FR-009",
+        "FR-006"
+      ],
+      "inputs": {
+        "workflow_file": "tests/speckit-pro/unit/fixtures/feedback-sweep/.workflow-scratch/workflow.md",
+        "self_login": "speckit-pro-bot",
+        "feature_dir": "specs/art-008-feedback-sweep",
+        "pr_observation": {
+          "ok": true,
+          "comments": [
+            {
+              "id": "IC_kwDOKQ7tDs5vZ0301A",
+              "surface": "pr_conversation",
+              "author": "octocat",
+              "author_association": "OWNER",
+              "body": "The registry should cover every exporting template.",
+              "truncated": false
+            },
+            {
+              "id": "IC_kwDOKQ7tDs5vZ0302A",
+              "surface": "pr_conversation",
+              "author": "octocat",
+              "author_association": "OWNER",
+              "body": "The plan should name the byproduct directory.",
+              "truncated": false
+            },
+            {
+              "id": "IC_kwDOKQ7tDs5vZ0401A",
+              "surface": "pr_conversation",
+              "author": "speckit-pro-bot",
+              "author_association": "OWNER",
+              "body": "<!-- speckit-pro:feedback-sweep IC_kwDOKQ7tDs5vZ0301A -->\nRecorded as answered.",
+              "truncated": false
+            },
+            {
+              "id": "IC_kwDOKQ7tDs5vZ0402A",
+              "surface": "pr_conversation",
+              "author": "speckit-pro-bot",
+              "author_association": "OWNER",
+              "body": "<!-- speckit-pro:feedback-sweep IC_kwDOKQ7tDs5vZ0302A -->\nRecorded as answered.",
+              "truncated": false
+            }
+          ]
+        }
+      },
+      "outcome": {
+        "items": [],
+        "faults": {
+          "push_rejected_for": [],
+          "reply_rejected_for": []
+        },
+        "owed_replies_in": [],
+        "consensus_comments": [],
+        "replies_posted": [],
+        "owed_replies_left": [],
+        "rows_written": [],
+        "crl_rows_written": [],
+        "commits": [],
+        "unpushed_commits": 0,
+        "stop": false,
+        "resume": null
+      },
+      "workflow_content": "# Sample Workflow\n\n### Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 1 | IC_kwDOKQ7tDs5vZ0301A | pr conversation | octocat | answered | Recorded as answered. |  |  |\n| 2 | IC_kwDOKQ7tDs5vZ0302A | pr conversation | octocat | answered | Recorded as answered. |  |  |\n"
+    },
+    "convergence-re-run-after-a-lost-bookkeeping-commit": {
+      "purpose": "The run after an amendment that committed and pushed while its bookkeeping commit never landed. Two comments carry rows and replies and stay excluded; the third has no row, so the skip key misses it and it is a candidate again. Per-amendment bookkeeping bounds the window to that one item, and the sweep's own reply cannot shield it because the self-reply rule excludes that reply from the candidate set. The fresh round recognizes the artifact already carries the edit: one new row, one new reply, no second edit, and the run still proceeds.",
+      "acceptance": [
+        "SC-003",
+        "FR-009",
+        "FR-006"
+      ],
+      "inputs": {
+        "workflow_file": "tests/speckit-pro/unit/fixtures/feedback-sweep/.workflow-scratch/workflow.md",
+        "self_login": "speckit-pro-bot",
+        "feature_dir": "specs/art-008-feedback-sweep",
+        "pr_observation": {
+          "ok": true,
+          "comments": [
+            {
+              "id": "IC_kwDOKQ7tDs5vZ0301A",
+              "surface": "pr_conversation",
+              "author": "octocat",
+              "author_association": "OWNER",
+              "body": "The registry should cover every exporting template.",
+              "truncated": false
+            },
+            {
+              "id": "IC_kwDOKQ7tDs5vZ0302A",
+              "surface": "pr_conversation",
+              "author": "octocat",
+              "author_association": "OWNER",
+              "body": "The plan should name the byproduct directory.",
+              "truncated": false
+            },
+            {
+              "id": "IC_kwDOKQ7tDs5vZ0303A",
+              "surface": "pr_conversation",
+              "author": "octocat",
+              "author_association": "OWNER",
+              "body": "The tasks should name the corpus scan.",
+              "truncated": false
+            },
+            {
+              "id": "IC_kwDOKQ7tDs5vZ0401A",
+              "surface": "pr_conversation",
+              "author": "speckit-pro-bot",
+              "author_association": "OWNER",
+              "body": "<!-- speckit-pro:feedback-sweep IC_kwDOKQ7tDs5vZ0301A -->\nRecorded as answered.",
+              "truncated": false
+            },
+            {
+              "id": "IC_kwDOKQ7tDs5vZ0402A",
+              "surface": "pr_conversation",
+              "author": "speckit-pro-bot",
+              "author_association": "OWNER",
+              "body": "<!-- speckit-pro:feedback-sweep IC_kwDOKQ7tDs5vZ0302A -->\nRecorded as answered.",
+              "truncated": false
+            },
+            {
+              "id": "IC_kwDOKQ7tDs5vZ0403A",
+              "surface": "pr_conversation",
+              "author": "speckit-pro-bot",
+              "author_association": "OWNER",
+              "body": "<!-- speckit-pro:feedback-sweep IC_kwDOKQ7tDs5vZ0303A -->\nAmended tasks.md for the corpus scan.",
+              "truncated": false
+            }
+          ]
+        }
+      },
+      "outcome": {
+        "items": [
+          {
+            "comment_id": "IC_kwDOKQ7tDs5vZ0303A",
+            "class": "answered",
+            "target": null,
+            "disposition": "The artifact already carries the edit. Recorded as answered.",
+            "resolution": "resolved"
+          }
+        ],
+        "faults": {
+          "push_rejected_for": [],
+          "reply_rejected_for": []
+        },
+        "owed_replies_in": [],
+        "consensus_comments": [
+          "IC_kwDOKQ7tDs5vZ0303A"
+        ],
+        "replies_posted": [
+          "IC_kwDOKQ7tDs5vZ0303A"
+        ],
+        "owed_replies_left": [],
+        "rows_written": [
+          "IC_kwDOKQ7tDs5vZ0303A"
+        ],
+        "crl_rows_written": [],
+        "commits": [
+          {
+            "kind": "bookkeeping",
+            "artifact": null,
+            "comment_id": null
+          }
+        ],
+        "unpushed_commits": 0,
+        "stop": false,
+        "resume": null
+      },
+      "workflow_content": "# Sample Workflow\n\n### Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 1 | IC_kwDOKQ7tDs5vZ0301A | pr conversation | octocat | answered | Recorded as answered. |  |  |\n| 2 | IC_kwDOKQ7tDs5vZ0302A | pr conversation | octocat | answered | Recorded as answered. |  |  |\n"
+    },
     "corroboration-identity-mismatch-stops": {
       "purpose": "The branch carries an open pull request the row does not name. The sweep reads neither surface, because it cannot tell which pull request the feedback it would sweep belongs to, and the operator corrects the row.",
       "acceptance": [

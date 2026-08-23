@@ -1361,6 +1361,47 @@ disarmed the control. `Read` is the floor and stands.
 
 ---
 
+## Codex Fallback Roster Re-Review (T111)
+
+**Recorded 2026-08-23. This is a stated judgment, not a fixture refresh.**
+
+`tests/speckit-pro/unit/test-codex-route-fallback-recovery.py` derives its roster
+by globbing every `speckit-pro/codex-agents/*.toml` and digesting each one, so any
+new agent definition restales a reviewed fixture. The library raises
+`RosterDriftError("bundled Codex source roster drifted; fixture re-review
+required")` and ships **no regeneration script, deliberately**: it is a fail-closed
+human-review control, and refreshing the digest purely to green a suite disarms
+it. So the refresh is recorded here with what was actually reviewed.
+
+**What entered the roster, derived rather than asserted:**
+
+| Change | Members |
+|---|---|
+| Added | `sweep-classifier.toml`, `sweep-analyst.toml` |
+| Removed | none |
+| Pre-existing records changed | none |
+
+Core count moved **10 to 12**. The two additions are this feature's own
+untrusted-input consumers, the agents that read reviewer-written pull-request
+text. **Neither participates in route fallback.** They raise the count only
+because the roster is derived by globbing every Codex agent definition rather
+than by listing fallback participants, so no existing role's routing, fallback
+order, or qualification changes.
+
+**Why the count assertion was renamed rather than just bumped.** It read
+`test_current_roster_has_ten_core_roles_and_one_optional_helper`, so a bare
+integer change would have left a test whose name asserts ten and whose body
+asserts twelve. The name now says twelve and the body carries the reason, so the
+next reader meets the explanation rather than a bare number.
+
+**This will restale again.** Any future Codex agent definition trips the same
+control, and that is the control working. `artifact-author` never hit it because
+both this test and its fixture were born in a later commit than that agent.
+
+Route-fallback recovery is green at 35/35.
+
+---
+
 ## Post-Implementation Checklist
 
 The canonical closeout. Every row must reach Complete or an explicit

@@ -2145,6 +2145,82 @@ class ModeledRunResultTest(unittest.TestCase):
         self.assertNotEqual(UNRESOLVED_AUTHOR_CELL.strip(), "")
 
 
+# T080: SC-003 is the convergence claim itself. The corpus already covers the
+# no-second-reply half per comment; these two cases pin the whole-run assertion
+# and the one qualifier the criterion carries.
+CLEAN_RE_RUN_CASE = "convergence-clean-re-run-changes-nothing"
+LOST_BOOKKEEPING_CASE = "convergence-re-run-after-a-lost-bookkeeping-commit"
+
+
+class WholeRunConvergenceTest(unittest.TestCase):
+    """T080: the second run over an already-swept corpus, and its exception."""
+
+    def setUp(self) -> None:
+        self.runs = captured("captured_surface_calls")
+
+    def test_a_clean_re_run_writes_nothing_and_proceeds(self) -> None:
+        """Zero new rows, zero new replies, zero amendments, into task work."""
+        results = self.runs[CLEAN_RE_RUN_CASE]["results"]
+        self.assertEqual(results["rows_written"], [])
+        self.assertEqual(results["crl_rows_written"], [])
+        self.assertEqual(results["replies_posted"], [])
+        self.assertEqual(results["owed_replies_left"], [])
+        self.assertEqual(results["commits"], [])
+        self.assertEqual(results["unpushed_commits"], 0)
+        self.assertFalse(results["stop"], "a clean re-run proceeds into task work")
+        self.assertIsNone(results["resume"])
+
+    def test_the_clean_re_run_leaves_the_parse_no_candidate(self) -> None:
+        """Those zeros are the skip key's doing, read off the live parse."""
+        envelope = stdout_json(run_case(CLEAN_RE_RUN_CASE))
+        self.assertEqual(envelope["candidates"], [])
+        self.assertEqual(
+            sorted({entry["reason"] for entry in envelope["excluded"]}),
+            ["already_logged", "self_reply"],
+        )
+        self.assertEqual(envelope["counts"]["observed"], len(envelope["excluded"]))
+
+    def test_a_lost_bookkeeping_commit_re_sweeps_one_item_and_no_more(self) -> None:
+        """The qualifier: the documented edge case, bounded to a single item."""
+        envelope = stdout_json(run_case(LOST_BOOKKEEPING_CASE))
+        excluded = {entry["id"]: entry["reason"] for entry in envelope["excluded"]}
+        candidates = [entry["id"] for entry in envelope["candidates"]]
+        self.assertEqual(
+            len(candidates), 1, "per-amendment bookkeeping bounds the window to one"
+        )
+        reswept = candidates[0]
+        self.assertNotIn(reswept, excluded)
+        self.assertIn(
+            "self_reply",
+            set(excluded.values()),
+            "the sweep's own reply is observed and cannot serve as a fallback marker",
+        )
+        results = self.runs[LOST_BOOKKEEPING_CASE]["results"]
+        self.assertEqual(results["rows_written"], [reswept])
+        self.assertEqual(results["replies_posted"], [reswept])
+        self.assertEqual(
+            [entry for entry in results["commits"] if entry["kind"] == "amendment"],
+            [],
+            "the fresh round recognizes the edit rather than making a second one",
+        )
+        self.assertFalse(results["stop"], "nothing amended, so the run still proceeds")
+
+    def test_the_converged_comments_stay_converged_beside_the_re_swept_one(self) -> None:
+        """The window is one item wide: the rest of the run still converges."""
+        envelope = stdout_json(run_case(LOST_BOOKKEEPING_CASE))
+        already = [
+            entry["id"]
+            for entry in envelope["excluded"]
+            if entry["reason"] == "already_logged"
+        ]
+        self.assertEqual(len(already), 2)
+        results = self.runs[LOST_BOOKKEEPING_CASE]["results"]
+        for comment_id in already:
+            with self.subTest(comment=comment_id):
+                self.assertNotIn(comment_id, results["rows_written"])
+                self.assertNotIn(comment_id, results["replies_posted"])
+
+
 class CorroborationGateTest(unittest.TestCase):
     """T066: the six corroboration statuses, and what the sweep does with each.
 
