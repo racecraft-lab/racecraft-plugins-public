@@ -5,6 +5,14 @@ XPLAT-010 count-parity port (T046, US2). Python 3.11+ standard library only.
 Every former ``_pass``/``_fail`` execution maps to one counted ``subTest`` unit;
 names are reproduced via ``subTest(msg=...)`` for a 1:1 baseline match.
 
+``UNTRUSTED_INPUT_CONSUMERS`` is the one carve-out from the no-``tools:`` rule
+this file otherwise pins repository-wide: capability inheritance is right for an
+agent acting on trusted input and wrong for an agent reading
+attacker-controllable text, so the two agents that read reviewer text declare an
+allowlist instead of inheriting the operator's surface. The exemption is by
+membership rather than by pattern, and pinning that membership by equality is
+what keeps it the only exemption (art-008-feedback-sweep FR-008c).
+
 Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-tool-scoping-baseline.txt``
 (TOTAL: 186).
 """
@@ -37,6 +45,11 @@ READ_ONLY_ROLES = (
     "clarify-executor",
     "consensus-synthesizer",
 )
+UNTRUSTED_INPUT_CONSUMERS = ("sweep-classifier", "sweep-analyst")
+UNTRUSTED_INPUT_ALLOWLISTS = {
+    "sweep-classifier": {"Read"},
+    "sweep-analyst": {"Read", "Grep", "Glob"},
+}
 TERMINAL_WORKERS = ("implement-executor", "uat-runbook-author")
 SKILL_DRIVEN_EXECUTORS = ("phase-executor", "analyze-executor", "checklist-executor")
 CODEX_READ_ONLY_ROLES = ("codebase-analyst", "spec-context-analyst", "domain-researcher", "clarify-executor")
@@ -57,6 +70,7 @@ TEST_METHOD_ORDER = (
     "test_session_shape_metadata",
     "test_codex_agent_sandbox_mode_scoping",
     "test_named_tool_regression_guard",
+    "test_untrusted_input_consumers_pin_read_only_allowlists",
 )
 
 NAMED_TOOL_PATTERN = re.compile(r"mcp__[A-Za-z0-9-]+__[A-Za-z0-9_-]+")
@@ -150,11 +164,14 @@ class ValidateToolScoping(unittest.TestCase):
             agent_name = agent_file.stem
             frontmatter = _frontmatter(_read(agent_file).splitlines())
 
-            with self.subTest(msg=f"{agent_name} has NO tools: allowlist (inherits the operator's full surface)"):
-                self.assertIsNone(
-                    re.search(r"^tools:", frontmatter, re.MULTILINE),
-                    f"{agent_name} pins a tools: allowlist - availability is operator-owned; use disallowedTools for role denials only",
-                )
+            # UNTRUSTED_INPUT_CONSUMERS is exempt from this rule and from nothing
+            # else in this file; the mcp__ assertion below still binds them.
+            if agent_name not in UNTRUSTED_INPUT_CONSUMERS:
+                with self.subTest(msg=f"{agent_name} has NO tools: allowlist (inherits the operator's full surface)"):
+                    self.assertIsNone(
+                        re.search(r"^tools:", frontmatter, re.MULTILINE),
+                        f"{agent_name} pins a tools: allowlist - availability is operator-owned; use disallowedTools for role denials only",
+                    )
 
             with self.subTest(msg=f"{agent_name} frontmatter has no vendor-qualified mcp__ token"):
                 self.assertIsNone(
@@ -337,6 +354,65 @@ class ValidateToolScoping(unittest.TestCase):
                     violation,
                     f"{agent_file.name} prose names vendor-qualified optional tool '{violation}' - use capability discovery, not a hardcoded tool (TACD-004 FR-001)",
                 )
+
+    def test_untrusted_input_consumers_pin_read_only_allowlists(self) -> None:
+        with self.subTest(msg="carve-out: UNTRUSTED_INPUT_CONSUMERS is exactly the two reviewer-text readers"):
+            self.assertEqual(
+                ("sweep-classifier", "sweep-analyst"),
+                UNTRUSTED_INPUT_CONSUMERS,
+                "the no-tools-allowlist exemption is by membership, not by pattern - only agents that read attacker-controllable reviewer text belong here",
+            )
+
+        with self.subTest(msg="carve-out: UNTRUSTED_INPUT_CONSUMERS shares no member with OPEN_EXECUTORS"):
+            self.assertEqual(
+                set(),
+                set(UNTRUSTED_INPUT_CONSUMERS) & set(OPEN_EXECUTORS),
+                "an open executor must not buy an exemption from the no-tools-allowlist rule by joining the untrusted-input tuple",
+            )
+
+        with self.subTest(msg="carve-out: every UNTRUSTED_INPUT_CONSUMERS member has a pinned allowlist"):
+            self.assertEqual(
+                set(UNTRUSTED_INPUT_CONSUMERS),
+                set(UNTRUSTED_INPUT_ALLOWLISTS),
+                "a member without an entry in UNTRUSTED_INPUT_ALLOWLISTS would be exempted from the rule and pinned by nothing",
+            )
+
+        for agent in UNTRUSTED_INPUT_CONSUMERS:
+            agent_file = AGENTS_DIR / f"{agent}.md"
+
+            with self.subTest(msg=f"carve-out: {agent} Claude definition exists"):
+                self.assertTrue(
+                    agent_file.is_file(),
+                    f"speckit-pro/agents/{agent}.md is missing - an exempted name with no definition pins nothing",
+                )
+
+            if agent_file.is_file():
+                declared = {item.strip() for item in _yaml_field(agent_file, "tools").split(",") if item.strip()}
+                expected = UNTRUSTED_INPUT_ALLOWLISTS.get(agent, {"<no pinned allowlist>"})
+
+                with self.subTest(msg=f"carve-out: {agent} pins exactly '{', '.join(sorted(expected))}' in tools"):
+                    self.assertEqual(
+                        expected,
+                        declared,
+                        f"{agent} must declare exactly its stated allowlist - equality, never containment, so widening and narrowing are both red",
+                    )
+
+                denials = _disallowed_tools(agent_file)
+                for tool in ORCHESTRATION_TOOLS:
+                    with self.subTest(msg=f"carve-out: {agent} denies {tool} (a closed allowlist that can delegate is not closed)"):
+                        self.assert_denied(denials, tool, agent)
+
+                with self.subTest(msg=f"carve-out: {agent} denies Skill (scoped consumer does not re-enter phases)"):
+                    self.assert_denied(denials, "Skill", agent)
+
+            codex_file = CODEX_AGENTS_DIR / f"{agent}.toml"
+            if codex_file.is_file():
+                with self.subTest(msg=f"carve-out: codex {agent} sandbox_mode is read-only"):
+                    self.assertEqual(
+                        "read-only",
+                        _toml_field(codex_file, "sandbox_mode"),
+                        f"{agent} must be read-only - sandbox_mode is the only Codex lever, and it bounds the filesystem rather than the tool set",
+                    )
 
 
 def build_suite() -> unittest.TestSuite:

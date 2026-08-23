@@ -303,3 +303,48 @@ forbids `text` and `lines` with the reason attached.
 docs-site test reference page; `tests/speckit-pro/AGENTS.md` requires
 `pnpm --dir docs-site reference:generate` after a tracked `.py` change under that
 tree. T076 owns it. Correctly not run mid-phase with other workers in the tree.
+
+### T095
+
+**Deviations/Edge cases/Surprises:** Three deviations, all justified.
+
+(1) **No Codex TOML existence assertion.** The task said to assert each member's
+file exists; the worker implemented it for the Claude `.md` only. The TOMLs land
+at T099 and T105, one task after their `.md`, so asserting TOML existence here
+would make T098's and T104's stated acceptance unmeetable, since each creates
+only the `.md`. The Codex half instead uses the guard idiom already in the file
+at `test_codex_agent_sandbox_mode_scoping`, so the `read-only` pin arms the
+moment T099 and T105 land.
+
+(2) **The task's line numbers were stale**: it cites 29, 49, and 187 where the
+actual pre-edit values were 30-49, 50, and 187. Placement followed the real
+structure.
+
+(3) **One assertion beyond the literal three.** `UNTRUSTED_INPUT_ALLOWLISTS` plus
+a membership subtest asserting its keys equal the tuple. Without it, a member
+added to the tuple with no allowlist entry would be exempted from the
+no-allowlist rule and pinned by nothing, which is the same door assertion 3
+exists to close.
+
+**Count proof, which the task required because a method left off
+`TEST_METHOD_ORDER` never runs**: 192/192 before, 195/197 after. Total moved by
++5, so the method dispatches. The two reds are the Claude-definition existence
+assertions, the written-red state T095 names.
+
+**Eleven counterfactuals, run against a temp fixture tree with `AGENTS_DIR` and
+`CODEX_AGENTS_DIR` redirected, nothing written into the repository.** The two
+that matter most: a bare `tools:` key (YAML null) goes RED against the pinned
+floor, and a non-member pinning `tools: Read` goes RED on the unchanged
+no-allowlist rule while members skip it. Together those show the pin is
+bidirectional and the exemption is by membership rather than by pattern. The
+forbidden tightening was not written: no assertion moves toward an empty `tools:`
+list.
+
+**One stated mechanism in the task is wrong, and the worker checked rather than
+assumed.** The task says `_disallowed_tools` raises on an absent path, and gives
+that as the reason for the existence assertion. It does not raise: `_read`
+returns `""` for a non-file and `frontmatter([])` returns `""`, so the call
+returns `[]`. The existence assertion is still correct, because it converts a
+cascade of confusing "denies Agent" failures on a nonexistent file into one
+legible pending-work red per platform. The reason is different from the one
+recorded.
