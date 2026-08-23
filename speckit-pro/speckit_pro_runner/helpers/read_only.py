@@ -254,7 +254,10 @@ def canonicalize_inputs(helper_id: str, inputs: dict[str, Any], repo_root: Path)
         "estimate-reviewable-loc": {"plan_file"},
         "resolve-confidence-mode": {"config_path"},
         "resolve-autopilot-stage": {"workflow_file"},
-        "sweep-pr-feedback": {"workflow_file", "self_login", "feature_dir", "pr_observation"},
+        # Real path inputs only. Every key here is run through request_path_display,
+        # whose normalize_path_input rewrites each backslash, so a reviewer comment
+        # body listed here would be corrupted before the deny-set ever runs.
+        "sweep-pr-feedback": {"workflow_file", "feature_dir"},
         "confidence-gate": {"workflow_file"},
         "generate-spec-index-check": {"repo_root"},
         "o5-topology": {"target"},

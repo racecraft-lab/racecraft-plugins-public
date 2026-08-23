@@ -1,4 +1,3255 @@
 {
   "schema_version": "1.0",
-  "cases": {}
+  "cases": {
+    "registered-implementation-plan-markdown-verbatim": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0001A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "implementation-plan",
+              "template_ambiguous": false,
+              "kind": "markdown",
+              "matched_lines": [
+                4
+              ],
+              "anchors": [
+                "implementation-plan-one"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-implementation-plan-markdown-trimmed": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0002A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "implementation-plan",
+              "template_ambiguous": false,
+              "kind": "markdown",
+              "matched_lines": [
+                1
+              ],
+              "anchors": [
+                "implementation-plan-one"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-implementation-plan-prompt-verbatim": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0003A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "implementation-plan",
+              "template_ambiguous": false,
+              "kind": "prompt",
+              "matched_lines": [
+                4
+              ],
+              "anchors": [
+                "implementation-plan-one"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-implementation-plan-prompt-trimmed": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0004A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "implementation-plan",
+              "template_ambiguous": false,
+              "kind": "prompt",
+              "matched_lines": [
+                1
+              ],
+              "anchors": [
+                "implementation-plan-one"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-code-approaches-markdown-verbatim": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0005A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "code-approaches",
+              "template_ambiguous": false,
+              "kind": "markdown",
+              "matched_lines": [
+                4
+              ],
+              "anchors": [
+                "code-approaches-one"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-code-approaches-markdown-trimmed": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0006A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "code-approaches",
+              "template_ambiguous": false,
+              "kind": "markdown",
+              "matched_lines": [
+                1
+              ],
+              "anchors": [
+                "code-approaches-one"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-code-approaches-prompt-verbatim": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0007A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "code-approaches",
+              "template_ambiguous": false,
+              "kind": "prompt",
+              "matched_lines": [
+                4
+              ],
+              "anchors": [
+                "code-approaches-one"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-code-approaches-prompt-trimmed": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0008A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "code-approaches",
+              "template_ambiguous": false,
+              "kind": "prompt",
+              "matched_lines": [
+                1
+              ],
+              "anchors": [
+                "code-approaches-one"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-module-map-markdown-verbatim": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0009A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "module-map",
+              "template_ambiguous": false,
+              "kind": "markdown",
+              "matched_lines": [
+                4
+              ],
+              "anchors": [
+                "module-map-one"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-module-map-markdown-trimmed": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0010A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "module-map",
+              "template_ambiguous": false,
+              "kind": "markdown",
+              "matched_lines": [
+                1
+              ],
+              "anchors": [
+                "module-map-one"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-module-map-prompt-verbatim": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0011A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "module-map",
+              "template_ambiguous": false,
+              "kind": "prompt",
+              "matched_lines": [
+                4
+              ],
+              "anchors": [
+                "module-map-one"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-module-map-prompt-trimmed": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0012A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "module-map",
+              "template_ambiguous": false,
+              "kind": "prompt",
+              "matched_lines": [
+                1
+              ],
+              "anchors": [
+                "module-map-one"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-pr-writeup-markdown-verbatim": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0013A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "pr-writeup",
+              "template_ambiguous": false,
+              "kind": "markdown",
+              "matched_lines": [
+                4
+              ],
+              "anchors": [
+                "pr-writeup-one"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-pr-writeup-markdown-trimmed": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0014A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "pr-writeup",
+              "template_ambiguous": false,
+              "kind": "markdown",
+              "matched_lines": [
+                1
+              ],
+              "anchors": [
+                "pr-writeup-one"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-pr-writeup-prompt-verbatim": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0015A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "pr-writeup",
+              "template_ambiguous": false,
+              "kind": "prompt",
+              "matched_lines": [
+                4
+              ],
+              "anchors": [
+                "pr-writeup-one"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-pr-writeup-prompt-trimmed": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0016A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "pr-writeup",
+              "template_ambiguous": false,
+              "kind": "prompt",
+              "matched_lines": [
+                1
+              ],
+              "anchors": [
+                "pr-writeup-one"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-annotated-diff-markdown-verbatim": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0017A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "annotated-diff",
+              "template_ambiguous": false,
+              "kind": "markdown",
+              "matched_lines": [
+                4
+              ],
+              "anchors": [
+                "annotated-diff-one"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-annotated-diff-markdown-trimmed": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0018A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "annotated-diff",
+              "template_ambiguous": false,
+              "kind": "markdown",
+              "matched_lines": [
+                1
+              ],
+              "anchors": [
+                "annotated-diff-one"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-annotated-diff-prompt-verbatim": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0019A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "annotated-diff",
+              "template_ambiguous": false,
+              "kind": "prompt",
+              "matched_lines": [
+                4
+              ],
+              "anchors": [
+                "annotated-diff-one"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-annotated-diff-prompt-trimmed": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0020A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "annotated-diff",
+              "template_ambiguous": false,
+              "kind": "prompt",
+              "matched_lines": [
+                1
+              ],
+              "anchors": [
+                "annotated-diff-one"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-visual-designs-markdown-verbatim": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0021A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "visual-designs",
+              "template_ambiguous": false,
+              "kind": "markdown",
+              "matched_lines": [
+                4
+              ],
+              "anchors": [
+                "visual-designs-one"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-visual-designs-markdown-trimmed": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0022A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "visual-designs",
+              "template_ambiguous": false,
+              "kind": "markdown",
+              "matched_lines": [
+                1
+              ],
+              "anchors": [
+                "visual-designs-one"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-visual-designs-prompt-verbatim": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0023A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "visual-designs",
+              "template_ambiguous": false,
+              "kind": "prompt",
+              "matched_lines": [
+                4
+              ],
+              "anchors": [
+                "visual-designs-one"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-visual-designs-prompt-trimmed": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0024A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "visual-designs",
+              "template_ambiguous": false,
+              "kind": "prompt",
+              "matched_lines": [
+                1
+              ],
+              "anchors": [
+                "visual-designs-one"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-component-variants-markdown-verbatim": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0025A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "component-variants",
+              "template_ambiguous": false,
+              "kind": "markdown",
+              "matched_lines": [
+                4
+              ],
+              "anchors": [
+                "component-variants-one"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-component-variants-markdown-trimmed": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0026A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "component-variants",
+              "template_ambiguous": false,
+              "kind": "markdown",
+              "matched_lines": [
+                1
+              ],
+              "anchors": [
+                "component-variants-one"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-component-variants-prompt-verbatim": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0027A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "component-variants",
+              "template_ambiguous": false,
+              "kind": "prompt",
+              "matched_lines": [
+                4
+              ],
+              "anchors": [
+                "component-variants-one"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-component-variants-prompt-trimmed": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0028A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "component-variants",
+              "template_ambiguous": false,
+              "kind": "prompt",
+              "matched_lines": [
+                1
+              ],
+              "anchors": [
+                "component-variants-one"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-empty-01-markdown-verbatim": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0029A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": null,
+              "template_ambiguous": true,
+              "kind": "empty",
+              "matched_lines": [
+                4
+              ],
+              "anchors": [],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-empty-01-markdown-trimmed": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0030A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": null,
+              "template_ambiguous": true,
+              "kind": "empty",
+              "matched_lines": [
+                1
+              ],
+              "anchors": [],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-empty-02-markdown-verbatim": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0031A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "code-approaches",
+              "template_ambiguous": false,
+              "kind": "empty",
+              "matched_lines": [
+                4
+              ],
+              "anchors": [],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-empty-02-markdown-trimmed": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0032A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "code-approaches",
+              "template_ambiguous": false,
+              "kind": "empty",
+              "matched_lines": [
+                1
+              ],
+              "anchors": [],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-empty-03-markdown-verbatim": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0033A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "pr-writeup",
+              "template_ambiguous": false,
+              "kind": "empty",
+              "matched_lines": [
+                4
+              ],
+              "anchors": [],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-empty-03-markdown-trimmed": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0034A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "pr-writeup",
+              "template_ambiguous": false,
+              "kind": "empty",
+              "matched_lines": [
+                1
+              ],
+              "anchors": [],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-empty-04-prompt-verbatim": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0035A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": null,
+              "template_ambiguous": true,
+              "kind": "empty",
+              "matched_lines": [
+                4
+              ],
+              "anchors": [],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-empty-04-prompt-trimmed": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0036A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": null,
+              "template_ambiguous": true,
+              "kind": "empty",
+              "matched_lines": [
+                1
+              ],
+              "anchors": [],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-empty-05-prompt-verbatim": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0037A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "code-approaches",
+              "template_ambiguous": false,
+              "kind": "empty",
+              "matched_lines": [
+                4
+              ],
+              "anchors": [],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-empty-05-prompt-trimmed": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0038A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "code-approaches",
+              "template_ambiguous": false,
+              "kind": "empty",
+              "matched_lines": [
+                1
+              ],
+              "anchors": [],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-empty-06-prompt-verbatim": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0039A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "pr-writeup",
+              "template_ambiguous": false,
+              "kind": "empty",
+              "matched_lines": [
+                4
+              ],
+              "anchors": [],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-empty-06-prompt-trimmed": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0040A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "pr-writeup",
+              "template_ambiguous": false,
+              "kind": "empty",
+              "matched_lines": [
+                1
+              ],
+              "anchors": [],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-serialization-triage-board-verbatim": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0041A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "triage-board",
+              "template_ambiguous": false,
+              "kind": "markdown",
+              "matched_lines": [
+                2
+              ],
+              "anchors": [],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-serialization-triage-board-trimmed": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0042A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": null
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-serialization-feature-flags-verbatim": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0043A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "feature-flags",
+              "template_ambiguous": false,
+              "kind": "markdown",
+              "matched_lines": [
+                2
+              ],
+              "anchors": [],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-serialization-feature-flags-trimmed": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0044A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": null
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-serialization-prompt-tuner-verbatim": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0045A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "prompt-tuner",
+              "template_ambiguous": false,
+              "kind": "markdown",
+              "matched_lines": [
+                2
+              ],
+              "anchors": [],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "registered-serialization-prompt-tuner-trimmed": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0046A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": null
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "normalization-carriage-return-delimited": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0047A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "implementation-plan",
+              "template_ambiguous": false,
+              "kind": "markdown",
+              "matched_lines": [
+                4
+              ],
+              "anchors": [
+                "phase-2"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "normalization-crlf-delimited": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0048A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "implementation-plan",
+              "template_ambiguous": false,
+              "kind": "markdown",
+              "matched_lines": [
+                4
+              ],
+              "anchors": [
+                "phase-2"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "budget-body-at-8192-bytes": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0049A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": true,
+            "export": {
+              "template_id": "implementation-plan",
+              "template_ambiguous": false,
+              "kind": "markdown",
+              "matched_lines": [
+                4
+              ],
+              "anchors": [
+                "phase-2"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "budget-body-over-8192-bytes": {
+      "status": "input_error",
+      "exit_code": 2,
+      "diagnostic_codes": [
+        "invalid_input"
+      ],
+      "stderr_names": [
+        "IC_kwDOKQ7tDs5vX0050A"
+      ]
+    },
+    "association-excluded-contributor": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 0,
+          "excluded": 1
+        },
+        "candidates": [],
+        "excluded": [
+          {
+            "id": "PRRC_kwDOKQ7tDs5v0051A",
+            "surface": "review_thread",
+            "reason": "untrusted_author"
+          }
+        ]
+      }
+    },
+    "association-excluded-first-timer": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 0,
+          "excluded": 1
+        },
+        "candidates": [],
+        "excluded": [
+          {
+            "id": "PRRC_kwDOKQ7tDs5v0052A",
+            "surface": "review_thread",
+            "reason": "untrusted_author"
+          }
+        ]
+      }
+    },
+    "association-excluded-first-time-contributor": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 0,
+          "excluded": 1
+        },
+        "candidates": [],
+        "excluded": [
+          {
+            "id": "PRRC_kwDOKQ7tDs5v0053A",
+            "surface": "review_thread",
+            "reason": "untrusted_author"
+          }
+        ]
+      }
+    },
+    "association-excluded-mannequin": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 0,
+          "excluded": 1
+        },
+        "candidates": [],
+        "excluded": [
+          {
+            "id": "PRRC_kwDOKQ7tDs5v0054A",
+            "surface": "review_thread",
+            "reason": "untrusted_author"
+          }
+        ]
+      }
+    },
+    "association-excluded-none": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 0,
+          "excluded": 1
+        },
+        "candidates": [],
+        "excluded": [
+          {
+            "id": "PRRC_kwDOKQ7tDs5v0055A",
+            "surface": "review_thread",
+            "reason": "untrusted_author"
+          }
+        ]
+      }
+    },
+    "association-admitted-owner": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0056A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": null
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "association-admitted-member": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0057A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "MEMBER",
+            "truncated": false,
+            "export": null
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "association-admitted-collaborator": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0058A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "COLLABORATOR",
+            "truncated": false,
+            "export": null
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "association-outside-the-closed-enum": {
+      "status": "input_error",
+      "exit_code": 2,
+      "diagnostic_codes": [
+        "invalid_input"
+      ],
+      "stderr_names": [
+        "ORGANIZATION_MEMBER"
+      ]
+    },
+    "self-reply-marker-at-position-zero": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 0,
+          "excluded": 1
+        },
+        "candidates": [],
+        "excluded": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0060A",
+            "surface": "pr_conversation",
+            "reason": "self_reply"
+          }
+        ]
+      }
+    },
+    "self-reply-marker-with-different-author": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0061A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": null
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "self-reply-quoted-marker-not-anchored": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0062A",
+            "surface": "pr_conversation",
+            "author": "speckit-pro-bot",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": null
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "self-reply-marker-carrying-a-different-comment-id": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 0,
+          "excluded": 1
+        },
+        "candidates": [],
+        "excluded": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0063A",
+            "surface": "pr_conversation",
+            "reason": "self_reply"
+          }
+        ]
+      }
+    },
+    "self-login-empty": {
+      "status": "input_error",
+      "exit_code": 2,
+      "diagnostic_codes": [
+        "invalid_input"
+      ],
+      "stderr_names": [
+        "self_login"
+      ]
+    },
+    "self-login-whitespace-only": {
+      "status": "input_error",
+      "exit_code": 2,
+      "diagnostic_codes": [
+        "invalid_input"
+      ],
+      "stderr_names": [
+        "self_login"
+      ]
+    },
+    "recognition-shared-empty-sentence-is-ambiguous": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0066A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": null,
+              "template_ambiguous": true,
+              "kind": "empty",
+              "matched_lines": [
+                4
+              ],
+              "anchors": [],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "recognition-export-on-pr-conversation": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0067A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "implementation-plan",
+              "template_ambiguous": false,
+              "kind": "markdown",
+              "matched_lines": [
+                4
+              ],
+              "anchors": [
+                "phase-2"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "recognition-export-on-review-thread": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "PRRC_kwDOKQ7tDs5v0068A",
+            "surface": "review_thread",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "implementation-plan",
+              "template_ambiguous": false,
+              "kind": "markdown",
+              "matched_lines": [
+                4
+              ],
+              "anchors": [
+                "phase-2"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "recognition-two-registered-lines-in-one-body": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0069A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "implementation-plan",
+              "template_ambiguous": false,
+              "kind": "markdown",
+              "matched_lines": [
+                4,
+                6
+              ],
+              "anchors": [
+                "phase-2"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "recognition-anchor-malformed": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0070A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "implementation-plan",
+              "template_ambiguous": false,
+              "kind": "markdown",
+              "matched_lines": [
+                4
+              ],
+              "anchors": [],
+              "anchors_dropped": 1
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "recognition-anchor-count-over-sixty-four": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0071A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "implementation-plan",
+              "template_ambiguous": false,
+              "kind": "markdown",
+              "matched_lines": [
+                4
+              ],
+              "anchors": [
+                "phase-001",
+                "phase-002",
+                "phase-003",
+                "phase-004",
+                "phase-005",
+                "phase-006",
+                "phase-007",
+                "phase-008",
+                "phase-009",
+                "phase-010",
+                "phase-011",
+                "phase-012",
+                "phase-013",
+                "phase-014",
+                "phase-015",
+                "phase-016",
+                "phase-017",
+                "phase-018",
+                "phase-019",
+                "phase-020",
+                "phase-021",
+                "phase-022",
+                "phase-023",
+                "phase-024",
+                "phase-025",
+                "phase-026",
+                "phase-027",
+                "phase-028",
+                "phase-029",
+                "phase-030",
+                "phase-031",
+                "phase-032",
+                "phase-033",
+                "phase-034",
+                "phase-035",
+                "phase-036",
+                "phase-037",
+                "phase-038",
+                "phase-039",
+                "phase-040",
+                "phase-041",
+                "phase-042",
+                "phase-043",
+                "phase-044",
+                "phase-045",
+                "phase-046",
+                "phase-047",
+                "phase-048",
+                "phase-049",
+                "phase-050",
+                "phase-051",
+                "phase-052",
+                "phase-053",
+                "phase-054",
+                "phase-055",
+                "phase-056",
+                "phase-057",
+                "phase-058",
+                "phase-059",
+                "phase-060",
+                "phase-061",
+                "phase-062",
+                "phase-063",
+                "phase-064"
+              ],
+              "anchors_dropped": 1
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "recognition-author-cannot-be-resolved": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0072A",
+            "surface": "pr_conversation",
+            "author": null,
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": null
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "recognition-no-registered-sentence": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0073A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": null
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "recognition-serialization-triage-board": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0074A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "triage-board",
+              "template_ambiguous": false,
+              "kind": "markdown",
+              "matched_lines": [
+                2
+              ],
+              "anchors": [],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "recognition-serialization-feature-flags": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0075A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "feature-flags",
+              "template_ambiguous": false,
+              "kind": "markdown",
+              "matched_lines": [
+                2
+              ],
+              "anchors": [],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "recognition-serialization-prompt-tuner": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0076A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "prompt-tuner",
+              "template_ambiguous": false,
+              "kind": "markdown",
+              "matched_lines": [
+                2
+              ],
+              "anchors": [],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "recognition-serialization-header-lines-out-of-order": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0077A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": null
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "skip-comment-already-in-the-log": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 2,
+          "candidates": 1,
+          "excluded": 1
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0078A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": null
+          }
+        ],
+        "excluded": [
+          {
+            "id": "IC_kwDOKQ7tDs5vXkZ7Cq",
+            "surface": "pr_conversation",
+            "reason": "already_logged"
+          }
+        ]
+      }
+    },
+    "skip-resolved-review-thread": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 0,
+          "excluded": 1
+        },
+        "candidates": [],
+        "excluded": [
+          {
+            "id": "PRRC_kwDOKQ7tDs5v0079A",
+            "surface": "review_thread",
+            "reason": "thread_resolved"
+          }
+        ]
+      }
+    },
+    "skip-first-sweep-workflow-has-no-log": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 1,
+          "candidates": 1,
+          "excluded": 0
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0080A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": null
+          }
+        ],
+        "excluded": []
+      }
+    },
+    "skip-log-row-with-unreadable-comment-id": {
+      "status": "input_error",
+      "exit_code": 2,
+      "diagnostic_codes": [
+        "invalid_input"
+      ],
+      "stderr_names": [
+        "Feedback Sweep Log"
+      ]
+    },
+    "boundary-excluded-body-beside-a-recognized-candidate": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "stdout_json": {
+        "tool": "sweep-pr-feedback",
+        "surfaces_read": [
+          "review_thread",
+          "pr_conversation"
+        ],
+        "counts": {
+          "observed": 2,
+          "candidates": 1,
+          "excluded": 1
+        },
+        "candidates": [
+          {
+            "id": "IC_kwDOKQ7tDs5vX0083A",
+            "surface": "pr_conversation",
+            "author": "octocat",
+            "author_association": "OWNER",
+            "truncated": false,
+            "export": {
+              "template_id": "implementation-plan",
+              "template_ambiguous": false,
+              "kind": "markdown",
+              "matched_lines": [
+                4
+              ],
+              "anchors": [
+                "phase-2"
+              ],
+              "anchors_dropped": 0
+            }
+          }
+        ],
+        "excluded": [
+          {
+            "id": "PRRC_kwDOKQ7tDs5v0082A",
+            "surface": "review_thread",
+            "reason": "untrusted_author"
+          }
+        ]
+      }
+    },
+    "shape-plain-body-no-spans": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "capture_pending": true,
+      "golden": null,
+      "assertions": {
+        "body_unchanged": true,
+        "spans_withheld": 0,
+        "spans_unclosed": 0,
+        "leads_removed": 0
+      }
+    },
+    "shape-backtick-fence-closed-with-info-string": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "capture_pending": true,
+      "golden": null,
+      "assertions": {
+        "spans_withheld": 1,
+        "spans_unclosed": 0,
+        "span_kinds": [
+          "fenced_block"
+        ]
+      }
+    },
+    "shape-tilde-fence-closed-by-a-longer-run": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "capture_pending": true,
+      "golden": null,
+      "assertions": {
+        "spans_withheld": 1,
+        "spans_unclosed": 0,
+        "span_kinds": [
+          "fenced_block"
+        ]
+      }
+    },
+    "shape-four-backtick-fence-not-closed-by-three": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "capture_pending": true,
+      "golden": null,
+      "assertions": {
+        "spans_withheld": 1,
+        "spans_unclosed": 1,
+        "span_kinds": [
+          "fenced_block"
+        ]
+      }
+    },
+    "shape-fence-closer-with-trailing-text-does-not-close": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "capture_pending": true,
+      "golden": null,
+      "assertions": {
+        "spans_withheld": 1,
+        "spans_unclosed": 1,
+        "span_kinds": [
+          "fenced_block"
+        ]
+      }
+    },
+    "shape-html-comment-inside-one-line-with-prose-both-sides": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "capture_pending": true,
+      "golden": null,
+      "assertions": {
+        "spans_withheld": 1,
+        "spans_unclosed": 0,
+        "span_kinds": [
+          "html_comment"
+        ]
+      }
+    },
+    "shape-html-comment-across-lines-with-prose-outside": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "capture_pending": true,
+      "golden": null,
+      "assertions": {
+        "spans_withheld": 1,
+        "spans_unclosed": 0,
+        "span_kinds": [
+          "html_comment"
+        ]
+      }
+    },
+    "shape-unclosed-fence-runs-to-the-end": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "capture_pending": true,
+      "golden": null,
+      "assertions": {
+        "spans_withheld": 1,
+        "spans_unclosed": 1,
+        "span_kinds": [
+          "fenced_block"
+        ]
+      }
+    },
+    "shape-unclosed-html-comment-runs-to-the-end": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "capture_pending": true,
+      "golden": null,
+      "assertions": {
+        "spans_withheld": 1,
+        "spans_unclosed": 1,
+        "span_kinds": [
+          "html_comment"
+        ]
+      }
+    },
+    "shape-overlapping-comment-and-fence-spans": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "capture_pending": true,
+      "golden": null,
+      "assertions": {
+        "spans_withheld": 2,
+        "spans_unclosed": 1,
+        "span_kinds": [
+          "html_comment",
+          "fenced_block"
+        ],
+        "span_unclosed_flags": [
+          false,
+          true
+        ],
+        "body_contains": [
+          " keep this"
+        ]
+      }
+    },
+    "shape-fence-containing-a-comment-opener": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "capture_pending": true,
+      "golden": null,
+      "assertions": {
+        "spans_withheld": 1,
+        "spans_unclosed": 0,
+        "span_kinds": [
+          "fenced_block"
+        ]
+      }
+    },
+    "shape-html-comment-containing-a-fence-line": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "capture_pending": true,
+      "golden": null,
+      "assertions": {
+        "spans_withheld": 1,
+        "spans_unclosed": 0,
+        "span_kinds": [
+          "html_comment"
+        ]
+      }
+    },
+    "shape-backticks-after-a-comment-closer-are-not-an-opener": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "capture_pending": true,
+      "golden": null,
+      "assertions": {
+        "spans_withheld": 1,
+        "spans_unclosed": 0,
+        "span_kinds": [
+          "html_comment"
+        ]
+      }
+    },
+    "shape-empty-comment-token-does-not-close": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "capture_pending": true,
+      "golden": null,
+      "assertions": {
+        "spans_withheld": 1,
+        "spans_unclosed": 1,
+        "span_kinds": [
+          "html_comment"
+        ]
+      }
+    },
+    "shape-fence-info-string-containing-a-comment-opener": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "capture_pending": true,
+      "golden": null,
+      "assertions": {
+        "spans_withheld": 1,
+        "spans_unclosed": 0,
+        "span_kinds": [
+          "fenced_block"
+        ]
+      }
+    },
+    "shape-info-string-cut-at-thirty-two-bytes": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "capture_pending": true,
+      "golden": null,
+      "assertions": {
+        "spans_withheld": 1,
+        "spans_unclosed": 0,
+        "span_kinds": [
+          "fenced_block"
+        ]
+      }
+    },
+    "shape-info-string-cut-on-a-character-boundary": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "capture_pending": true,
+      "golden": null,
+      "assertions": {
+        "spans_withheld": 1,
+        "spans_unclosed": 0,
+        "span_kinds": [
+          "fenced_block"
+        ]
+      }
+    },
+    "shape-forty-minimal-fences": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "capture_pending": true,
+      "golden": null,
+      "assertions": {
+        "spans_withheld": 40,
+        "spans_unclosed": 0
+      }
+    },
+    "shape-indented-code-block-passes-through": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "capture_pending": true,
+      "golden": null,
+      "assertions": {
+        "body_unchanged": true,
+        "spans_withheld": 0,
+        "spans_unclosed": 0
+      }
+    },
+    "shape-truncated-inside-a-fence": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "capture_pending": true,
+      "golden": null,
+      "assertions": {
+        "truncated": true,
+        "spans_withheld": 1,
+        "spans_unclosed": 1
+      }
+    },
+    "shape-over-budget-body-whose-fence-closes-past-the-budget": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "capture_pending": true,
+      "golden": null,
+      "assertions": {
+        "truncated": true,
+        "spans_withheld": 1,
+        "spans_unclosed": 1,
+        "body_at_most_bytes": 8192
+      }
+    },
+    "shape-over-budget-cut-on-a-multibyte-character-boundary": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "capture_pending": true,
+      "golden": null,
+      "assertions": {
+        "truncated": true,
+        "spans_withheld": 0,
+        "body_at_most_bytes": 8192
+      }
+    },
+    "shape-at-budget-body-carrying-the-parse-truncated-flag": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "capture_pending": true,
+      "golden": null,
+      "assertions": {
+        "truncated": true,
+        "spans_withheld": 0,
+        "body_at_most_bytes": 8192,
+        "body_unchanged": true
+      }
+    },
+    "shape-carriage-return-body-with-one-matched-line": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "capture_pending": true,
+      "golden": null,
+      "assertions": {
+        "leads_removed": 1,
+        "spans_withheld": 0,
+        "lead_placeholders_in_block": 1
+      }
+    },
+    "shape-two-matched-lines": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "capture_pending": true,
+      "golden": null,
+      "assertions": {
+        "leads_removed": 2,
+        "spans_withheld": 0,
+        "lead_placeholders_in_block": 2
+      }
+    },
+    "shape-matched-line-inside-a-fence": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "capture_pending": true,
+      "golden": null,
+      "assertions": {
+        "leads_removed": 1,
+        "spans_withheld": 1,
+        "spans_unclosed": 0,
+        "lead_placeholders_in_block": 0
+      }
+    },
+    "shape-matched-line-past-the-last-line": {
+      "status": "input_error",
+      "exit_code": 2,
+      "diagnostic_codes": [
+        "invalid_input"
+      ],
+      "stderr_names": [
+        "IC_kwDOKQ7tDs5vX9001A"
+      ]
+    },
+    "shape-trailing-whitespace-on-a-non-matched-line": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "capture_pending": true,
+      "golden": null,
+      "assertions": {
+        "body_unchanged": true,
+        "spans_withheld": 0,
+        "leads_removed": 0
+      }
+    },
+    "shape-plain-prose-imperative": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "capture_pending": true,
+      "golden": null,
+      "assertions": {
+        "body_unchanged": true,
+        "spans_withheld": 0,
+        "leads_removed": 0
+      }
+    },
+    "shape-body-line-identical-to-the-closing-delimiter": {
+      "status": "ok",
+      "exit_code": 0,
+      "diagnostic_codes": [],
+      "capture_pending": true,
+      "golden": null,
+      "assertions": {
+        "body_unchanged": true,
+        "spans_withheld": 0,
+        "leads_removed": 0
+      }
+    }
+  },
+  "captured_payloads": {
+    "capture_pending": true,
+    "produced_by": "T043",
+    "runs": {}
+  },
+  "captured_commands": {
+    "capture_pending": true,
+    "produced_by": "T088",
+    "runs": {}
+  },
+  "captured_dispatches": {
+    "capture_pending": true,
+    "produced_by": "T043",
+    "runs": {}
+  }
 }
