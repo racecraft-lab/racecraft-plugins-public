@@ -1253,6 +1253,664 @@ pattern — recommended by Anthropic's BrowseComp architecture
 and Research system — routes each task to a specialized agent
 from the orchestrator level.
 
+#### Phase 7 Setup: The Pull-Request Feedback Sweep
+
+Run the sweep **first**, ahead of the byproduct directory below and ahead of
+the implementation-notes record. Reviewer feedback left on the draft pull
+request this stage already opened is read, classified, recorded, and answered
+before the first task is dispatched, so a comment that arrived while the stage
+was running is acted on rather than overtaken by the work it asks about.
+
+The sweep runs only when the workflow file carries a Draft PR row whose
+corroboration status is `match`. It **adds no row to the Workflow Overview
+table**, and it changes neither the phase-coverage guard's governed phase-id
+list, the stage-to-phase map, nor the workflow template. It is a setup step
+inside a phase that already exists, never a phase of its own.
+
+#### Phase 7 Setup: The Run Report Every Path Builds
+
+**Every path ends in the run report, and every run builds exactly one.**
+Stopping or proceeding, the sweep finishes by building the report described
+here. The sections below name only what their own condition contributes to it
+and never restate its shape. A run where several stopping conditions hold
+builds **one** report naming every one of them, never one report per
+condition.
+
+**Three parts, in this order.** The **condition**: what stopped the run, or
+that it proceeded. **What already landed** before that: the commits pushed,
+the log rows written, and the replies posted so far. The **resume path**, one
+line of substance.
+
+**What already landed is written as empty, never left out**, on a stop that
+happens before any write. An absent part reads as an oversight, while "no
+commit, no row, no reply" reads as a fact an operator can act on.
+
+**The per-comment dispositions sit inside that one report.** Report each
+observed comment, candidate and exclusion alike, and name a reason on every
+exclusion: the trust filter reports `not swept: untrusted author`, and every
+self-reply exclusion is named the same way. The proceed path is exactly where
+a run that swept nothing but untrusted comments lands, and a silent proceed
+there would leave an operator no way to tell it from a run that saw nothing. A
+run that observed no comment at all reports that, as a one-line report rather
+than an absent one.
+
+**Every redaction event goes in, on every path, stopping or proceeding**: per
+affected comment the comment id, the leg, the rule, and the count, and nothing
+else about the match.
+
+**The report names the sweep's byproduct directory as removed, on every
+path.**
+
+**The report goes to the operator's sink**, the one the plan-stage stop report
+reaches, and never to the pull request.
+
+**The conditions that end a run in this sequence** are an invalid
+authenticated account, a corroboration status that is neither `match` nor
+`no_record` or one outside the six, a failed observation, an unreadable
+Feedback Sweep Log row, a malformed classifier or analyst record, a resolved
+edit target outside the three artifacts, a failed push, a consensus outcome
+requiring human review, one or more amendments requiring re-review, and one or
+more redaction events reported once every write landed. The last two are the
+only ones that are not failures.
+
+**One condition needs more than the shared shape.** The human-review stop's
+resume path names **both** operator actions, resolve the substance and re-run
+**or** resolve the thread, because it is the only stop whose resume path a
+re-run alone does not satisfy.
+
+#### Phase 7 Setup: The Corroboration Gate
+
+**The six corroboration statuses are exhaustive, and each maps to exactly one
+outcome.** Step 0.6c classifies the recorded `Draft PR` row and reports one of
+them, and the sweep reads that report rather than taking an observation of its
+own. No status falls to a default, and no two share a behaviour by accident.
+
+| Status | What the sweep does | Resume path |
+| --- | --- | --- |
+| `match` | sweep | none, the run proceeds |
+| `no_record` | proceed without sweeping | none, the run proceeds |
+| `skipped` | stop | fix the tool, then re-run |
+| `pr_closed` | stop | reopen the pull request, or clear the `Draft PR` row if the checkpoint is genuinely abandoned, then re-run |
+| `pr_missing` | stop | clear the row, then re-run |
+| `identity_mismatch` | stop | correct the row to name the right pull request, then re-run |
+
+**Each stopping status names its own resume path**, because the four have
+different fixes and one shared path would send an operator to the wrong repair.
+**Clearing the row belongs to `pr_missing` alone**: it is the one status where
+the row's absence would match reality.
+
+**The sweep never writes the `Draft PR` row on any path**, these four stops
+included. A run that repaired the record it had just failed to corroborate
+would destroy the evidence of the discrepancy, and the next reader would find a
+healthy row where a stop had been.
+
+**A value outside the six is a malformed record and stops.** Do not map it onto
+one of the six, and do not read it as absence. Exactly one status proceeds, so
+a default that proceeded would make a corrupted record the cheapest way past
+the checkpoint.
+
+**`skipped` and `no_record` are different readings and never interchangeable.**
+`no_record` means the gate **does not apply**: no draft pull request was ever
+opened, so there is no checkpoint to carry unread feedback, and the run
+proceeds. `skipped` means the gate **applies and could not be evaluated**: a row
+is recorded and the observation behind it failed, so the run stops. Treating
+"could not observe" as "observed nothing" would make the checkpoint silently
+optional exactly when the tool is unreliable, which is when unread feedback is
+most likely to be sitting on the pull request.
+
+**A tool that was absent, unauthenticated, rate-limited, or that returned output
+which could not be parsed is not evidence that a recorded pull request is
+gone.** Those four are the causes of a `skipped`, and not one of them observed
+anything about the pull request.
+
+**The `skipped` report must read differently from the three discrepancy stops,
+and must name which of the four causes occurred**: the tool was absent, the tool
+was unauthenticated, the tool was rate-limited, or the tool returned output that
+could not be parsed. Those three stops observed something and this one observed
+nothing, so a report that read the same would tell an operator the record is
+wrong when the record may be perfectly correct. **Behaviour does not branch on
+the cause; only the report does.** All four take the same stop and the same
+resume path.
+
+**Clearing the `Draft PR` row is not a resume path here.** That belongs to
+`pr_missing`, and reusing it for a `skipped` would erase a probably-true record
+to manufacture a `no_record` reading on the next run.
+
+**Every one of these paths reports.** A gate stop's condition is the status
+and, for `skipped`, its cause. Nothing landed, because the gate is evaluated
+ahead of the first read and therefore ahead of every write. The resume path is
+the one the table above gives.
+
+**Read the authenticated account from the live session, at call time.** The
+sweep excludes the replies it posted itself, and the author half of that rule
+compares against the account this run authenticated as, which is the parse's
+`self_login` input. Read that account from the live authenticated session at
+the moment of the call. Never take it from configuration, from a project
+setting, or from a value remembered earlier in the run. This is the same
+freshness the author-association field below requires, and it needs saying
+because nothing else says how the orchestrator learns its own login, so nothing
+today guarantees the value arrives correct.
+
+**Two reads, and only two**, both `gh api` reads. Read **every review thread
+whose resolved flag is false** and **every pull-request conversation comment**.
+Do not read review summary bodies. **Paginate both to exhaustion**: follow the
+cursor until the surface reports no further page, rather than taking a first
+page and stopping. Request the **`authorAssociation`** field explicitly on both
+reads. No shipped query asks for it, so the author-association filter has no
+input unless this read supplies it. **No comment text reaches a shell argument
+in either direction**: a read passes its query by file or by structured
+argument, and a write passes its body by file path.
+
+**Pipe the observation straight into the runner.** The reads' output reaches
+`sweep-pr-feedback` on stdin, `gh ... | resolved_python -m speckit_pro_runner`,
+with the request envelope wrapped around the read rather than around a file.
+**No unredacted body is written to disk at any point**, which is a stronger
+control than ignoring such a file would be. Where a byproduct file is
+unavoidable it goes under `specs/<feature>/.process/feedback-sweep/` and
+nowhere else, the directory the next section describes, which is where the
+reply bodies already live.
+
+**The two reads are one observation, taken all or nothing.** It succeeds only
+when both surfaces have been read to exhaustion. Three failures fall under the
+rule: one surface readable and the other not, a page failing partway through
+pagination, and output that cannot be parsed. **A failed observation is
+discarded rather than swept.** The partial data does not reach classification.
+The run writes zero log rows, posts zero replies, takes zero commits, and
+stops. Nothing needs unwinding, because every read precedes every write.
+
+**The mid-read failure report is not the gate stop, and must not read like
+it.** It draws on the same four causes the gate's `skipped` draws on: the tool
+was absent, the tool was unauthenticated, the tool was rate-limited, or the tool
+returned output that could not be parsed. So the report **also names that
+reading had begun** and **which surface failed**, because an operator who cannot
+tell a gate failure from a mid-read failure cannot tell whether the pull request
+was ever reachable. Nothing landed, for the same reason nothing landed at the
+gate: every read precedes every write. The resume path is the same as the
+gate's `skipped`, fix the tool and re-run, and needs no repair step first,
+because the observation is retaken fresh on every invocation.
+
+**Dispatch one classifier per candidate, and read no body.** The parse returns
+`candidates` and `excluded`. A candidate record carries the comment id, the
+surface, the author, the association, the truncation flag, and the export
+metadata, and it carries **no body**. Iterate `candidates` and nothing else;
+no path enumerates the observation directly. For each candidate whose export
+kind is not `empty`, dispatch **exactly one `sweep-classifier`**, handed the
+sanitized delimited block the piped call already returned for that candidate,
+the closed class vocabulary, the three-file target set, and nothing else. A
+candidate whose export kind is `empty` is never dispatched: that form carries
+no objections and takes `no action` from the parse alone.
+
+**The orchestrator reads no comment body on any path.** It is a conduit for a
+block. It hands each block to the classifier unchanged, and for an amended
+item hands that same block to the analysts. It keeps a shell and could run the
+read for itself, so the control is that a body is never handed to it, which is
+construction rather than enforcement, and saying so is more honest than
+implying a guarantee that does not hold.
+
+What comes back is the structured record `contracts/sweep-classifier-output.md`
+fixes: the echoed comment id, the class, the target, and a bounded reason.
+Consume those and nothing else. The reason is reviewer-derived text a model
+rewrote, so pass it through the redaction surface's `log_row` leg **before** it
+reaches a cell, a reply, or the run report, and carry the string that leg
+returns rather than the orchestrator's own copy of what the classifier said. A
+record carrying a class outside the set, a target outside the three artifacts,
+or a missing field is **malformed**: stop the run naming that comment id. Do
+not coerce it onto a class, and do not re-prompt.
+A classifier that cannot answer in its own vocabulary is a defect, not a fifth
+outcome.
+
+**The dispatch lives here, not in the routing table.** It emits no category
+tag, it produces no `Unresolved for consensus` item, and it never consults
+`consensus-protocol.md`'s Category-Routed Dispatch table or the three
+phase-specific flows under it. That is what leaves Clarify, Checklist, and
+Analyze exactly as they were.
+
+**The vocabulary the dispatch hands over.** The closed class set is `amended`,
+`answered`, `deferred`, and `no action`, and the classifier returns exactly
+one of the four. The **comment** is the unit, so a recognized export carrying
+several distinct objections still yields one class, one log row, and one
+reply. Recognition never forces a class; the empty-export form above is the
+one exception. The rules for choosing among the four, including the tie-break
+for a comment whose objections pull different ways and the naming of every
+non-dominant objection, are stated once in the classifier's own definition.
+This reference carries the dispatch, the payload, and the record's shape, and
+points at that definition for the rules, so the two cannot drift.
+
+**A target outside the three artifacts takes `deferred` at classification.**
+That is rule 1, and it is the disposition half of a pair. A comment whose
+requested change lies outside `spec.md`, `plan.md`, and `tasks.md` in the
+feature directory is declined, so its class is `deferred` and its bounded
+reason **names the refused target**, which is what carries that name into the
+disposition cell and into the reply. The refused path travels in the reason
+and never in the record's `target` field, which the malformed-record rule
+above confines to the three artifacts. Word the disposition and the reply as
+**recorded and not acted on**, and let neither **imply future action**: the
+class name reads like a queue, and the request is declined rather than
+scheduled. The rule for choosing among the four classes stays in the
+classifier's own definition; what this sequence fixes is what a `deferred`
+reached this way has to carry.
+
+**Rule 1 is disposition and rule 2, at the write point below, is the
+enforcement boundary.** They are not the same rule and neither substitutes for
+the other. Rule 1 alone would be prose a mis-routed item walks past. Rule 2
+alone would turn an ordinary out-of-scope request into a stopped run, when
+declining it in a reply is the whole of the correct response.
+
+**The recognized-export payload.** For a recognized comment the payload is two
+parts standing side by side: the helper's export record, carrying the template
+id, the kind, and the anchors, and the block, which is the body with every
+line the parse named in `matched_lines` replaced in place by
+`[registered export lead removed]`. The export record stands **beside** the
+block, never inside it. The remainder is delimited and labelled as
+reviewer-supplied data, never concatenated into the prompt as instruction. A
+registry entry that only tags the comment while the raw body still reaches the
+agent does not satisfy this: the imperative addressed to a coding agent would
+still be sitting in the prompt, with a label attached that nothing acts on.
+
+**The removal is the redaction surface's work, not this reference's.** Hand
+the surface the parse's `matched_lines` for that comment and forward the block
+it returns **unchanged**. Delimiting is the strongest layer available inside a
+prompt and removal is defence in depth. Both are model-layer controls, and
+nothing deterministic stands behind them on the forward path, so neither is a
+reason to relax the author-association filter. If cost ever forces one of the
+two out, removal goes and delimiting stays.
+
+**The work set shrinks or holds, and never grows.** A run's **work set** is
+the comments that pass the trust filter, are absent from the Feedback Sweep
+Log, and are not excluded as the sweep's own replies. Every run either shrinks
+that set or leaves it unchanged. **No run may grow it.** That is what makes
+the loop terminate, and any future rule that writes to either comment surface
+has to be tested against it, because a rule that adds an unexcluded comment
+breaks convergence however reasonable it looks on its own.
+
+One path does not shrink the set. A comment whose consensus round returns a
+human-review outcome takes no class and writes no row, so it is in the set
+again on the next run and stops that run too. The set does not grow, so this
+is not divergence, but re-running without operator action reproduces the same
+stop. That path is bounded by a human rather than by a counter, and **no
+attempt counter is introduced**: a per-comment counter would need the
+state-file mirror the log rules forbid.
+
+#### Phase 7 Setup: Consensus for an Amended Comment
+
+**Only `amended` routes into consensus.** `answered`, `deferred`, and `no
+action` never invoke it. Those three are complete at classification, and a
+consensus round on any of them would spend four dispatches confirming a
+disposition already reached.
+
+**The sweep runs its own consensus.** Per amended item, dispatch **three
+`sweep-analyst`s**, the perspective (codebase, spec-context, domain) given
+**in the prompt rather than by role**, then **one more `sweep-analyst`** in a
+synthesis prompt. Four calls per item, all to the same definition. **Await
+all three before the synthesis call**, which reasons over the three answers
+together, and **apply the one structured edit it returns** by the amendment
+path below.
+
+**Synthesis is not `consensus-synthesizer`.** That agent declares no `tools:`
+allowlist, so it inherits a shell, web fetch, web search, and every installed
+MCP server. Routing sanitized reviewer text into it would reopen, one hop
+downstream, the exposure the classifier dispatch above exists to close.
+`sweep-analyst` carries a closed read-only allowlist instead, which is also
+why **the domain perspective runs without web access**: it reasons from the
+repository and the handed block, never from the network.
+
+**What stays untouched is the routing table, not the file that holds it.** The
+sweep emits no category-tagged `Unresolved for consensus` item, so the routing
+table and the three phase-specific flows under it are never reached and
+Clarify, Checklist, and Analyze keep the shared analysts and those flows
+unchanged. This slice does edit `consensus-protocol.md`, to add the `Sweep`
+row type and the note that its rows count toward the escape-rate metric, and
+those two are the only edits this feature makes to that file, so say routing
+table untouched and never say that file untouched.
+
+**When consensus does not answer, the item goes to human review.** Three ways
+lead there: all three analysts disagreeing after Round 2, a Round-1 escape
+whose Round 2 still cannot resolve, and an analyst that fails its single
+retry. All three land on one behavior, and only the report names which
+occurred.
+
+**No edit, no class, no sweep row.** No artifact is edited and the comment is
+given no class, because `amended` would assert an edit nobody resolved and the
+other three would assert a disposition nobody reached. Writing no Feedback
+Sweep Log row is the load-bearing part: the skip key is that log's comment-id
+column and nothing else, so the absent row is what makes the comment a
+candidate again once a human has resolved it. A row here would record the
+sweep's own failure as the comment's disposition and make it permanent.
+
+**It surfaces as one Consensus Resolution Log row instead**, `Type` `Sweep`,
+its item cell naming the comment id, and that row **counts** toward the
+Round-2 escape-rate metric. That log feeds no skip key, so a row there costs
+no idempotency.
+
+**It stops the run whether or not anything was amended.** A run whose only
+unresolved item took no class would otherwise read as nothing to act on and
+walk into task work. When other items amended in the same run, the re-review
+stop and this one are the same stop and one report, not two.
+
+**Other items in the batch still complete.** Items that resolved are edited,
+committed, recorded, and replied to normally, and the run stops after that.
+
+#### Phase 7 Setup: Amending, Committing, and Pushing
+
+**One commit per amendment, never one run-wide commit.** A log row names its
+commit, an `amended` reply names the amending commit, and the re-review stop
+reports a commit range. None of the three survives collapsing every amendment
+into a single blob.
+
+**Each amendment commit stages exactly the one artifact path it amended, never
+a directory**, so no stray file rides along on an amendment.
+
+**The subject is fixed in shape and carries no body:**
+
+```text
+docs(<feature-id>): amend <artifact> for <comment-id>
+```
+
+The scope is the feature's roadmap id in lowercase, `<artifact>` is one of the
+three artifacts, and `<comment-id>` is the observation's id for the comment
+being amended. Every slot is an id or an enum, so no byte from a comment or
+from a resolution reaches `git log`, and the subject is **not a redaction
+leg**. The shape also satisfies the release-readiness title regex.
+
+**The hazard to watch: this is a Phase 7 setup step, and Phase 7 is the one
+phase whose existing commit path uses `git add -A`.** An amendment commit that
+inherited that pattern would stage the whole worktree and defeat the
+edit-surface allowlist at the last step. Name the one path.
+
+**What the synthesis returns is a record, not a patch.** An analyst answers
+with `{file, anchor, replacement}` and nothing else: never a diff, never a
+patch, and never prose the orchestrator retypes into the artifact. `file` is
+one of the three allowed names, and `replacement` sits inside the contract's
+cap. An edit whose `file` falls outside those three names, or whose shape is
+not that record, **stops the run naming the comment id**, the same way a
+malformed classifier record does.
+
+**The order of the three steps is fixed: allowlist check, redaction, write.**
+Check the resolved target first, pass `replacement` through the redaction
+surface's `amendment` leg second, write what the surface returned third, then
+stage that one path, commit, and push. The order is not a preference.
+Redacting after the write leaves reviewer bytes in a commit, and checking the
+target after the write is not a check.
+
+**The write point checks the resolved target before any amendment write.** It
+is a named surface of the one registered helper operation, never a second
+registered operation.
+
+**A refusal is a verdict, not a diagnostic.** `allowed: false` is a successful
+read of that surface rather than an error from it: the surface answers, and
+the stop belongs to the orchestrator. The answer carries a `reason` that is
+either null or one of `outside_set`, `symlink_target`, and `symlink_parent`.
+
+**A refused target stops the run.** Its condition names the **refused target
+path** and the **comment id it came from**, and its resume path is to fix the
+classification and re-run.
+
+**Reaching this check means classification already failed**, so it is a defect
+report and not a routine path. That is why it stops rather than downgrading
+the item quietly: an out-of-scope request is meant to be declined at
+classification, and one that reached the write instead is worth an operator's
+attention.
+
+**The amendment leg runs between the check and the write.** Once consensus has
+resolved the edit and the target check has passed, the text the edit
+**introduces**, meaning the replacement or the inserted lines, goes through
+the redaction surface's `amendment` leg. Never the file around it, and never a
+diff read back off disk. The orchestrator then writes back **exactly what the
+leg returned**, stages the one artifact path, commits, and pushes. No staged
+path list is read back afterwards: single-path staging and the `git add -A`
+hazard named above stay the controls on what an amendment commit stages.
+
+**Cut each line for transport at the first character boundary at or past byte
+8193.** The surface answers a line longer than 8192 bytes with the whole-line
+placeholder whatever lies past that boundary, so sending the tail buys
+nothing. Cutting there is outcome-equivalent, keeps every string the call
+carries under the runner's 32 KiB limit, and **never splits a line**, because
+the cut falls on a character boundary and one line in stays one line out.
+
+**The push is part of the amendment step, not a step after it.** An amendment
+is not finished until its commit is on the remote.
+
+**A commit that succeeded whose push failed stops the run immediately, before
+that amendment's bookkeeping commit**, naming the unpushed commit's sha and
+the comment id. Ordering does the work: the bookkeeping commit already comes
+after the amendment's own commit, so stopping between them writes no log row,
+and because replies wait on bookkeeping commits landing, it posts no reply.
+
+**The local commit stands and is not unwound.** The edit is correct work that
+consensus resolved, and discarding it would throw away a completed round to
+tidy a state that already recovers on its own. With no row written, the skip
+key does not see the comment, so it is a candidate again on the next run.
+
+**A bookkeeping commit whose push fails stops the run the same way**, and
+differs in one consequence. Its row is already in the local workflow file, and
+the sweep reads that file locally, so the skip key **does** see the comment.
+The reply is what would otherwise be lost, and reply reconciliation against
+the pull request is what recovers it.
+
+**No automatic retry on either push.** Retrying inside the run would multiply
+the window that the per-amendment cadence exists to bound.
+
+**Log writes ride a separate bookkeeping commit and are never folded into an
+amendment commit.** The ordering is forced rather than stylistic: a row that
+names its commit cannot exist until that commit's sha does.
+
+**The bookkeeping commit stages the workflow file path alone, never the
+directory, and takes a `chore:` subject.**
+
+**The trigger is rows, not handled comments.** A run takes a bookkeeping
+commit when it wrote at least one row to **either** log, and takes none when
+it wrote none. Three consequences follow:
+
+- A run with zero amendments but at least one handled comment takes exactly
+  one, carrying every `answered`, `deferred`, and `no action` row.
+- A run that handles no comment but must write Consensus Resolution Log rows
+  also takes exactly one, carrying every such row.
+- A run that wrote no row to either log takes none. An empty commit there
+  would record nothing.
+
+**One bookkeeping commit per amendment, not per run**, which bounds the window
+in which an amendment is pushed but unrecorded to a single item.
+
+#### Phase 7 Setup: The Redaction Surface's Outbound Call Points
+
+**The surface has four legs and the set is closed at four**: `amendment`,
+`log_row`, and `reply` outbound, and `analyst_payload` inbound. Anything
+outside the four returns `invalid_input`. A fifth leg is code this feature
+does not budget for.
+
+**The `log_row` leg runs over every cell the sweep fills with prose** rather
+than with an id, an enum, a sha, or a count: the Feedback Sweep Log
+`Disposition` cell, the disposition text of the Consensus Resolution Log rows
+the sweep writes, and those rows' item cell, which names the comment id and
+then summarizes the item in prose the way every shipped row does. **One call
+per cell**, so an amended item makes three calls on this leg, a human-review
+item two, and any other class one. The classifier's bounded reason, which is
+what becomes the disposition, is capped at 512 bytes and carries neither a
+pipe nor a newline, because the readers of these tables split cells on the
+bare pipe.
+
+**The `log_row` call comes before the pipe and newline escaping, never
+after.** The placeholder the surface writes contains neither character, so
+escaping never splits a placeholder and `CRL #` stays in its column.
+
+**Capture each `log_row` response at the call, before escaping.** Captured
+after escaping, the identity assertion downstream compares the wrong pair and
+passes on a run report the orchestrator built from its own pre-call copy. The
+order is: call the leg, capture what it returned, then escape the captured
+string on its way into the cell.
+
+**The `reply` leg runs over the filled reply body, marker included**, before
+that body is written to the file the reply write passes by path. The marker
+stands alone on line 1, no rule's trigger appears on that line, and neither
+line-granularity rule reaches a line ahead of its own: the bound replaces only
+the line it measured, and the key-header span runs forward from its own header
+line. The self-reply anchor therefore survives, and an over-bound disposition
+costs line 2 onward and never the marker.
+
+**Never the matched line**, an excerpt of it, a redacted or truncated copy, or
+any encoded form, whether in the report, a log row, a reply, or the surface's
+own response. The report carries an event exactly as the builder above names
+it, and nothing more. The disposition it carries per comment is the `log_row`
+response for that comment's `Disposition` cell, before escaping, never the
+orchestrator's copy from before the call.
+
+**Redaction never refuses a write and never discards a row.** A run with no
+amendment batches every row it wrote into one bookkeeping commit, so a refused
+commit would discard them all, and the next run would regenerate the same
+disposition and refuse again: a livelock on ordinary reviewer input.
+
+**A run with any event stops once every write has landed**, after the last
+push and the last reply, with resume path re-run. The next run finds the rows
+and the replies already in place, fires no event, and proceeds.
+
+#### Phase 7 Setup: The Reply Templates
+
+**Exactly one reply per handled comment**, posted after a run's bookkeeping
+commits have all landed. **Every reply names its class.** Only an `amended`
+reply names an artifact, a section, and a commit: requiring those three of all
+four classes would leave three of the four templates unsatisfiable, because
+`answered`, `deferred`, and `no action` amend nothing.
+
+**One fixed template per class, in plain public-readable English**, fixed in
+shape so a reviewer reading two replies on one pull request can tell the
+classes apart at a glance.
+
+**Every template opens with an HTML comment whose prefix is the same fixed
+string in every reply**, `<!-- speckit-pro:feedback-sweep`, followed by the
+answered comment's id and the closing `-->`. It renders as nothing, and it is
+what the self-reply exclusion anchors on. A marker rather than a visible
+sentence, because a visible sentence is exactly what a reviewer quotes back
+when they disagree.
+
+**The marker is the whole of line 1, alone, and the disposition starts on line
+2.** Nothing else shares that line, which is what keeps the per-line redaction
+rules off it, as the reply leg above already relies on.
+
+**One more fixed-shape line is the last line of every template**, present only
+when the parse reported the comment `truncated` or its analyst-payload report
+carries `spans_withheld` above zero:
+
+```text
+Body truncated at 8192 bytes; N spans withheld.
+```
+
+`N` is that count, and nothing else appears in the line. This is the channel
+that tells a reviewer their fence or their tail was never read. The pull
+request is where a reviewer learns what happened to their comment, and the
+disposition cell lives in a file they need not open.
+
+#### Phase 7 Setup: Where a Reply Is Written, and When
+
+**Two write paths, one per surface.** A reply to a review-thread comment posts
+**into its thread**. The pull-request conversation has no threading, so a
+reply there is a **new top-level comment that names the comment it answers**.
+
+**Every reply body is passed by file path, never inline**, on both paths.
+
+**Replies post once, at the end of the run, after every bookkeeping commit
+this run takes has landed.** No reply is posted before that point. Two orders
+are defensible and only one may be written down, so this is the one: a reply
+asserts that the record behind it is durable. The rule also makes the composed
+interrupt case exact rather than ambiguous. A run interrupted after two rows
+were written, with one amendment commit local and unpushed, has posted
+**zero** replies.
+
+**Which stops post replies is named rather than inferred.** The re-review
+stop, the human-review stop, and the post-publication redaction stop all occur
+**after** the reply point, so a run that reaches any of them has already
+posted every reply it owes. **Every other stop aborts before the reply point
+and posts none**: an invalid authenticated account, a corroboration failure, a
+failed observation, an unreadable log row, a refused edit target, and a failed
+push. Never write a blanket rule that a stopping run first posts what it owes,
+which would contradict all six.
+
+**The sweep never resolves a review thread.** Not on any class, not on any
+path, and not after a reply. Resolution is the reviewer's, and a swept thread
+stays open until they close it.
+
+#### Phase 7 Setup: Reply Reconciliation
+
+**Replies are reconciled against the pull request, not assumed from the log.**
+A comment is owed a reply when three things hold together: it is **present in
+this run's observation**, it has a log row, and it carries no sweep reply
+answering it.
+
+**The observation qualifier is load-bearing.** Keying on log rows alone would
+post a second reply into a thread someone had deliberately resolved, which
+turns a recovery rule into a duplicate-reply generator.
+
+**The marker carries the answered comment's id** after its unchanged fixed
+prefix, inside the same HTML comment, so a thread carrying more than one
+comment still says which one a reply answered. Matching the prefix alone would
+find a reply and lose the question.
+
+**A failed reply is reported and does not by itself stop the run.** It appears
+in the run report naming the comment id and the surface. The asymmetry with a
+failed observation is deliberate: an observation that failed means the work
+never happened, while a reply that failed means the work landed and only the
+notification did not.
+
+#### Phase 7 Setup: Stop or Proceed
+
+**One or more `amended`: stop for re-review before any task work.** Its
+what-landed part names the comments swept, the amendments made, and the commit
+range, and the report **states that the draft artifact pages regenerate once
+slice 2 lands**.
+
+**No `amended` but at least one comment handled: write the records, post the
+replies, and proceed directly into task execution**, without stopping. Nothing
+was amended, so there is nothing to re-review.
+
+**No comment handled at all: no rows, no replies, no bookkeeping commit,
+proceed.** This case is stated apart from the one above so that the one above
+cannot be read as requiring an empty commit on a pull request that carried no
+comments.
+
+**Any redaction event, on any leg: stop once every commit is pushed and every
+reply is posted.** The resume path is re-run. Where nothing was amended, this
+stop replaces the proceed at that same point. Where the re-review stop or the
+human-review stop also holds, it is the same stop and one report.
+
+The regeneration sentence is an interface slice 2 replaces. Until it does, it
+is the only thing telling a reviewer why the pages they are looking at are
+older than the amendments beside them.
+
+#### Phase 7 Setup: The Sweep's Byproduct Directory Ignores Itself
+
+The pull-request feedback sweep writes the files it needs for its own transport
+under `specs/<feature>/.process/feedback-sweep/`. **The first write into that
+directory, before any byproduct, is a `.gitignore` inside it whose whole content
+is a single `*` line.** Create the directory and write that ignore file in one
+step. A byproduct that lands first has already been exposed, so the order is
+part of the rule rather than a preference.
+
+**Every file the sweep writes for its own transport goes there and nowhere
+else**: the helper request the runner reads on stdin, each reply body file the
+reply write passes by path, the captured commands, and any scratch the run
+needs. **The request cannot be redacted instead.** The parse filters over the
+comment bodies, so that file has to carry them, and keeping the directory
+ignored is what stops Phase 7's `git add -A` from staging a request holding
+every observed body.
+
+Git honors that file in whatever repository the worktree belongs to, and `*`
+matches the ignore file itself as well as every byproduct beside it, so Phase
+7's `git add -A` can stage neither. The control is by construction rather than
+by care: it holds in a consumer repository whose root ignore file this project
+never wrote and cannot amend.
+
+This repository's own root `.gitignore` carries
+`specs/*/.process/feedback-sweep/`, so the directory is ignored here even before
+the sweep has written into it. That entry is committed, so a fresh clone carries
+it. It covers this repository only, which is the whole reason the self-ignore
+write exists.
+
+**The sweep removes the directory before it proceeds into task work or stops,
+on every path.** Removal is neither conditional on the run having succeeded
+nor deferred to a later phase. The spec-index generator scans the worktree
+rather than the index, so a live byproduct left behind would contaminate a
+regeneration even though nothing staged it. **The run report names the
+directory as removed.**
+
 #### Phase 7 Setup: Open the Implementation-Notes Record
 
 Run this before Step 1, so the record exists before the first task is

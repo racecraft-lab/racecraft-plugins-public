@@ -7,7 +7,7 @@
   "stage": "implement",
   "prior_run_note": "completed_archived",
   "updated_at": "2026-08-23T00:00:00Z",
-  "active_step": "Phase 7: US1 Tests (T015-T024, T081, T082, T088, T095-T097)",
+  "active_step": "Post-Implementation",
   "reclaimed_from": {
     "workflow_file": "docs/ai/specs/.process/ART-005-workflow.md",
     "spec_id": "ART-005",
@@ -219,6 +219,18 @@
       "threshold": 0.9,
       "recommended_action": "continue_with_warning",
       "note": "advisory, so it warns rather than blocks; deliberately recorded as not a pass"
+    },
+    "G7": {
+      "status": "pass",
+      "suite": "7983/7983",
+      "layers": {
+        "L1": "1511/1511",
+        "L4": "6253/6253",
+        "L5": "219/219"
+      },
+      "baseline_g0": 7659,
+      "baseline_note": "G0 preserved verbatim per Step 0.6e; live-at-stage-start was 7912, all drift from merged main, recorded as non-blocking.",
+      "recorded_at": "2026-08-23"
     }
   },
   "phase_results": {
@@ -947,8 +959,17 @@
       }
     ],
     "tasks_added_during_implementation": [
-      "T110"
+      "T110",
+      "T111"
     ],
-    "notes_record": "specs/art-008-feedback-sweep/.process/implementation-notes.md"
+    "notes_record": "specs/art-008-feedback-sweep/.process/implementation-notes.md",
+    "tasks_complete": "111/111",
+    "phantom_completions_caught": [
+      "T051",
+      "T086"
+    ],
+    "known_gaps": [
+      "T098 binding probe UNRUN: plugin agents load from the versioned cache, not worktree source; stop condition not triggered and not discharged."
+    ]
   }
 }

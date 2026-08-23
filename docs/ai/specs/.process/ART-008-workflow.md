@@ -39,7 +39,7 @@ captured during scoping.
 | Tasks | `/speckit-tasks` | ✅ Complete | **109 tasks**, 6 phases (7/8/40/37/5/12). **54/54 requirements and 15/15 criteria covered**; the orchestrator added T080 after finding SC-003 uncovered, the trust-boundary remediation added T081–T087 for FR-007g, FR-012f, and SC-014, and the third remediation pass added T088–T093 for FR-004d, the captured-call fixture, and the fixed-shape commit subject, and the consumer-scoping pass added T094–T109 for the two scoped agents, the Layer 5 carve-out, the piped observation, and the payload regeneration their shipped bytes require |
 | Analyze | `/speckit-analyze` | ✅ Complete | First pass: 6 findings, all remediated, zero unresolved for consensus. Caught a contradiction that would have stopped the feature on its own first write, and a fixture corpus that could not fail in the direction that mattered. **Scoped re-run 2026-08-22** against the consumer-scoping amendment the first pass never saw: **9 findings, 9 remediated, 1 flagged for consensus** (the SC-015 narrowing, tagged `[security]`), **and that item is now resolved** — routed to all three analysts on 2026-08-23 and recorded as CRL row 8. Both passes are tabled under [Phase 6](#phase-6-analyze) |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
-| Implement | `/speckit-implement` | ⏳ Pending | |
+| Implement | `/speckit-implement` | ✅ Complete | **111/111 tasks.** G7 PASS: suite **7983/7983**, zero failures (L1 1511, L4 6253, L5 219) against the G0 baseline of 7659. Two tasks were added during implementation because no shipped task owned them: T110, the `HELPER_CASES` entry without which every added helper raises `KeyError`, and T111, the Codex fallback roster re-review. T051 and T086 were marked complete on their code halves, caught as phantom completions, reverted, and closed properly |
 | Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -78,6 +78,16 @@ terminal status.
 
 - G0 gate: PASS — 2026-08-20. Suite 7659/7659 (L1 1469, L4 5998, L5 192), zero
   failures. TYPECHECK, BUILD, and LINT are `N/A` for this repository
+
+- G7 gate: PASS — 2026-08-23. Suite **7983/7983**, zero failures (L1 1511, L4
+  6253, L5 219), against the G0 baseline of 7659. The baseline was preserved
+  verbatim rather than recaptured: a baseline taken after planning already
+  contains what the run added, which makes the comparison vacuous. The live count
+  at the start of this stage was 7912, all of that drift from merged `main`, and
+  it was recorded as a non-blocking diagnostic rather than substituted for 7659.
+  Release artifacts regenerated and verified consistent; docs-site reference
+  pages regenerated; all four new agent definitions and both `install.py` copies
+  confirmed byte-identical in the payload
   (`detect-commands` reports a Python test-runner stack with no build,
   typecheck, or lint entry point). Reviewability setup gate `warn` with empty
   `blockers`. Constitution principles I through VI verified below.

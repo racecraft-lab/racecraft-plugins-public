@@ -1442,7 +1442,7 @@ no objections and takes `no action` from the parse alone.
 
 **The orchestrator reads no comment body on any path.** It is a conduit for a
 block. It hands each block to the classifier unchanged, and for an amended
-item hands that same block to the analysts. It keeps `Bash` and could run the
+item hands that same block to the analysts. It keeps a shell and could run the
 read for itself, so the control is that a body is never handed to it, which is
 construction rather than enforcement, and saying so is more honest than
 implying a guarantee that does not hold.
@@ -1547,7 +1547,7 @@ together, and **apply the one structured edit it returns** by the amendment
 path below.
 
 **Synthesis is not `consensus-synthesizer`.** That agent declares no `tools:`
-allowlist, so it inherits `Bash`, `WebFetch`, `WebSearch`, and every installed
+allowlist, so it inherits a shell, web fetch, web search, and every installed
 MCP server. Routing sanitized reviewer text into it would reopen, one hop
 downstream, the exposure the classifier dispatch above exists to close.
 `sweep-analyst` carries a closed read-only allowlist instead, which is also
