@@ -61,7 +61,7 @@ def run_runner(request: object) -> tuple[subprocess.CompletedProcess[str], dict[
     return completed, response, stderr_records
 
 
-def changed_paths_against_review_base() -> list[str]:
+def review_base_candidates() -> list[str]:
     candidates = ["origin/main...HEAD"]
     parents = subprocess.run(
         ["git", "rev-list", "--parents", "-n", "1", "HEAD"],
@@ -72,6 +72,11 @@ def changed_paths_against_review_base() -> list[str]:
     )
     if parents.returncode == 0 and len(parents.stdout.split()) >= 3:
         candidates.append("HEAD^1...HEAD")
+    return candidates
+
+
+def changed_paths_against_review_base() -> list[str]:
+    candidates = review_base_candidates()
 
     errors = []
     for candidate in candidates:
@@ -96,16 +101,7 @@ def changed_paths_against_review_base() -> list[str]:
 
 def changed_lines_against_review_base(path: str) -> list[str]:
     """Return added and removed content lines for one path, against the review base."""
-    candidates = ["origin/main...HEAD"]
-    parents = subprocess.run(
-        ["git", "rev-list", "--parents", "-n", "1", "HEAD"],
-        cwd=REPO_ROOT,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    if parents.returncode == 0 and len(parents.stdout.split()) >= 3:
-        candidates.append("HEAD^1...HEAD")
+    candidates = review_base_candidates()
 
     errors = []
     for candidate in candidates:
@@ -128,16 +124,7 @@ def changed_lines_against_review_base(path: str) -> list[str]:
 
 
 def changed_status_against_review_base() -> dict[str, str]:
-    candidates = ["origin/main...HEAD"]
-    parents = subprocess.run(
-        ["git", "rev-list", "--parents", "-n", "1", "HEAD"],
-        cwd=REPO_ROOT,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    if parents.returncode == 0 and len(parents.stdout.split()) >= 3:
-        candidates.append("HEAD^1...HEAD")
+    candidates = review_base_candidates()
 
     errors = []
     for candidate in candidates:

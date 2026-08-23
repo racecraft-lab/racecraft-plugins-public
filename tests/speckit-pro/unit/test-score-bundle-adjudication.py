@@ -164,14 +164,16 @@ def git_output(*args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-class DeterministicGateTests(unittest.TestCase):
-    """All seven hard gates are required for every executed role, a missing gate
-    result fails closed, and no ballot is collected until every gate passes
-    (FR-014)."""
-
+class _ScoreBundleFixture:
     def setUp(self) -> None:
         self.assertIsNotNone(claude_score_bundle, "claude_score_bundle is not importable")
         self.module = claude_score_bundle
+
+
+class DeterministicGateTests(_ScoreBundleFixture, unittest.TestCase):
+    """All seven hard gates are required for every executed role, a missing gate
+    result fails closed, and no ballot is collected until every gate passes
+    (FR-014)."""
 
     def test_the_hard_gate_set_is_closed_to_seven_named_gates(self) -> None:
         self.assertEqual(self.module.REQUIRED_GATES, REQUIRED_GATES)
@@ -305,14 +307,13 @@ def scorer_b_ballot(module: object, **overrides: object) -> dict[str, object]:
     return module.build_ballot(**fields)  # type: ignore[attr-defined]
 
 
-class BlindedBallotTests(unittest.TestCase):
+class BlindedBallotTests(_ScoreBundleFixture, unittest.TestCase):
     """One blinded artifact per ballot, a mechanical leak check that fails closed,
     observed-identity family exclusion, and seeded presentation order with no
     normalization step (FR-035, FR-047)."""
 
     def setUp(self) -> None:
-        self.assertIsNotNone(claude_score_bundle, "claude_score_bundle is not importable")
-        self.module = claude_score_bundle
+        super().setUp()
         self.lexicon = self.module.build_leak_lexicon(
             model_identities=CANDIDATE_MODEL_IDS,
             aliases=CANDIDATE_ALIASES,
@@ -509,14 +510,10 @@ class BlindedBallotTests(unittest.TestCase):
                 self.assertFalse(hasattr(self.module, banned))
 
 
-class ScorerProvenanceTests(unittest.TestCase):
+class ScorerProvenanceTests(_ScoreBundleFixture, unittest.TestCase):
     """Two distinct scorers on one frozen rubric, adjudication on decision-affecting
     disagreement, complete provenance, and a bounded blinding residual
     (FR-015, FR-016, FR-048, SC-006)."""
-
-    def setUp(self) -> None:
-        self.assertIsNotNone(claude_score_bundle, "claude_score_bundle is not importable")
-        self.module = claude_score_bundle
 
     def collect(self, **overrides: object) -> object:
         fields: dict[str, object] = {
@@ -775,13 +772,12 @@ def complete_bundle(module: object, **overrides: object) -> dict[str, object]:
     return module.build_score_bundle(**fields)  # type: ignore[attr-defined]
 
 
-class ClosedTaxonomyTests(unittest.TestCase):
+class ClosedTaxonomyTests(_ScoreBundleFixture, unittest.TestCase):
     """The four closed taxonomies, the total code-to-plane mapping, the disposition
     biconditional, and the shared contracts left untouched (FR-034)."""
 
     def setUp(self) -> None:
-        self.assertIsNotNone(claude_score_bundle, "claude_score_bundle is not importable")
-        self.module = claude_score_bundle
+        super().setUp()
         self.schema = load_json(BUNDLE_SCHEMA_PATH)
 
     def published(self, field: str) -> tuple[str, ...]:
@@ -1010,14 +1006,13 @@ class ClosedTaxonomyTests(unittest.TestCase):
         self.assertEqual(status.stdout.strip(), "", "a repo-level shared contract was modified")
 
 
-class BlindingEvidenceTests(unittest.TestCase):
+class BlindingEvidenceTests(_ScoreBundleFixture, unittest.TestCase):
     """Blinding and ballot evidence is consumed, never asserted. A bundle with no
     leak-check finding, a failed finding, or no ballot at all fails closed instead
     of sealing as accepted (FR-014, FR-035, FR-048)."""
 
     def setUp(self) -> None:
-        self.assertIsNotNone(claude_score_bundle, "claude_score_bundle is not importable")
-        self.module = claude_score_bundle
+        super().setUp()
         self.passing = passing_leak_finding(self.module)
         self.failing = failing_leak_finding(self.module)
 
@@ -1066,14 +1061,13 @@ class BlindingEvidenceTests(unittest.TestCase):
         self.assertEqual(collection.failure_code, "required_evidence_missing")
 
 
-class EvidenceBoundaryIgnoreTests(unittest.TestCase):
+class EvidenceBoundaryIgnoreTests(_ScoreBundleFixture, unittest.TestCase):
     """Both halves of the evidence ignore rule: the named consolidated baseline is
     trackable, a representative per-run raw output beside it is still ignored, and
     the allow entry names the file rather than un-ignoring a directory (FR-027)."""
 
     def setUp(self) -> None:
-        self.assertIsNotNone(claude_score_bundle, "claude_score_bundle is not importable")
-        self.module = claude_score_bundle
+        super().setUp()
         self.gitignore = self.module.RESULTS_GITIGNORE_PATH
         self.assertTrue(self.gitignore.is_file(), self.gitignore)
         self.lines = tuple(

@@ -190,14 +190,27 @@ class ExclusionTaxonomyTests(unittest.TestCase):
             claude_successor_freeze.ExcludedTuple(model="opus", effort="fast", reason="just_because")
 
 
-class CollectionRecordProvenanceTests(unittest.TestCase):
-    """The runtime catalog collection record carries its own mandatory
-    provenance, and effort admission is a bounded configuration-acceptance
-    claim rather than verified support (FR-002)."""
-
+class _SuccessorFreezeModuleFixture:
     def setUp(self) -> None:
         self.assertIsNotNone(claude_successor_freeze, "claude_successor_freeze is not importable")
         self.module = claude_successor_freeze
+
+    def publish(self, **overrides: object) -> object:
+        arguments: dict[str, object] = {
+            "source_ledger": source_ledger(),
+            "collection": self.module.build_collection_record(**collection_fields()),
+            "freeze_id": "CAR-003-FREEZE-2026-07-24-V1",
+            "published_at": "2026-07-24T18:30:00Z",
+            "pinned_client_version": PINNED_CLIENT,
+        }
+        arguments.update(overrides)
+        return self.module.publish_freeze(**arguments)
+
+
+class CollectionRecordProvenanceTests(_SuccessorFreezeModuleFixture, unittest.TestCase):
+    """The runtime catalog collection record carries its own mandatory
+    provenance, and effort admission is a bounded configuration-acceptance
+    claim rather than verified support (FR-002)."""
 
     def test_a_complete_collection_record_is_provenance_clean(self) -> None:
         record = self.module.build_collection_record(**collection_fields())
@@ -270,14 +283,10 @@ class CollectionRecordProvenanceTests(unittest.TestCase):
         )
 
 
-class AdmissionAndLadderTests(unittest.TestCase):
+class AdmissionAndLadderTests(_SuccessorFreezeModuleFixture, unittest.TestCase):
     """Admission is the intersection of the official-source ledger and the
     pinned runtime. Diagnostic surfaces corroborate or invalidate, never admit
     (FR-003, FR-004, FR-005, FR-040, SC-002, SC-018)."""
-
-    def setUp(self) -> None:
-        self.assertIsNotNone(claude_successor_freeze, "claude_successor_freeze is not importable")
-        self.module = claude_successor_freeze
 
     def admit(self, *, collection: dict[str, object] | None = None,
               ledger: dict[str, object] | None = None,
@@ -459,25 +468,10 @@ class AdmissionAndLadderTests(unittest.TestCase):
                 )
 
 
-class PublicationAuthorityTests(unittest.TestCase):
+class PublicationAuthorityTests(_SuccessorFreezeModuleFixture, unittest.TestCase):
     """The publication gate fails closed: every blocking condition maps to a
     closed authority-failure member, and a blocked publication emits no freeze
     record at all (FR-028, FR-044, SC-016)."""
-
-    def setUp(self) -> None:
-        self.assertIsNotNone(claude_successor_freeze, "claude_successor_freeze is not importable")
-        self.module = claude_successor_freeze
-
-    def publish(self, **overrides: object) -> object:
-        arguments: dict[str, object] = {
-            "source_ledger": source_ledger(),
-            "collection": self.module.build_collection_record(**collection_fields()),
-            "freeze_id": "CAR-003-FREEZE-2026-07-24-V1",
-            "published_at": "2026-07-24T18:30:00Z",
-            "pinned_client_version": PINNED_CLIENT,
-        }
-        arguments.update(overrides)
-        return self.module.publish_freeze(**arguments)
 
     def test_authority_failure_members_are_exactly_the_ten_closed_conditions(self) -> None:
         schema = load_json(FREEZE_SCHEMA_PATH)
@@ -642,14 +636,10 @@ SENSITIVE_PROVOCATIONS = {
 }
 
 
-class HistoricalImmutabilityTests(unittest.TestCase):
+class HistoricalImmutabilityTests(_SuccessorFreezeModuleFixture, unittest.TestCase):
     """CAR-002 stays byte-unchanged and a non-allowlisted field blocks
     publication rather than being silently stripped (FR-001, FR-027, SC-001,
     SC-015)."""
-
-    def setUp(self) -> None:
-        self.assertIsNotNone(claude_successor_freeze, "claude_successor_freeze is not importable")
-        self.module = claude_successor_freeze
 
     def artifact_state(self) -> dict[str, str]:
         # Raw bytes, not decoded text: a text read collapses CRLF to LF before
@@ -831,14 +821,10 @@ def repoint_observation(**overrides: object) -> dict[str, object]:
     return observation
 
 
-class AliasRepointDetectionTests(unittest.TestCase):
+class AliasRepointDetectionTests(_SuccessorFreezeModuleFixture, unittest.TestCase):
     """Alias re-point detection reads five observables and attributes a
     divergence only when the elimination argument holds (FR-039, FR-045,
     SC-017)."""
-
-    def setUp(self) -> None:
-        self.assertIsNotNone(claude_successor_freeze, "claude_successor_freeze is not importable")
-        self.module = claude_successor_freeze
 
     def detect(self, **overrides: object) -> object:
         return self.module.detect_alias_repoint(
@@ -1006,13 +992,9 @@ def evidence_graph() -> dict[str, object]:
     }
 
 
-class RefreshTriggerTests(unittest.TestCase):
+class RefreshTriggerTests(_SuccessorFreezeModuleFixture, unittest.TestCase):
     """Four versioned refresh triggers invalidate additively and never rebind
     an already-bound pair (FR-041)."""
-
-    def setUp(self) -> None:
-        self.assertIsNotNone(claude_successor_freeze, "claude_successor_freeze is not importable")
-        self.module = claude_successor_freeze
 
     def test_the_trigger_set_matches_the_freeze_contract(self) -> None:
         schema = load_json(FREEZE_SCHEMA_PATH)
@@ -1100,16 +1082,12 @@ class RefreshTriggerTests(unittest.TestCase):
             self.module.apply_refresh_trigger("vibes_changed", evidence_graph())
 
 
-class FailClosedEvidenceTests(unittest.TestCase):
+class FailClosedEvidenceTests(_SuccessorFreezeModuleFixture, unittest.TestCase):
     """Missing provenance is refused rather than promoted. An observation that
     names no surface admits nothing, an attribution with no published freeze to
     compare against stays unresolved, published diagnostic evidence verifies
     against its own digest, and no emitted record aliases module state
     (FR-002, FR-004, FR-033, FR-039)."""
-
-    def setUp(self) -> None:
-        self.assertIsNotNone(claude_successor_freeze, "claude_successor_freeze is not importable")
-        self.module = claude_successor_freeze
 
     def unlabeled_collection(self) -> dict[str, object]:
         """A collection whose opus ladder carries no ``surface`` on any rung."""
@@ -1120,17 +1098,6 @@ class FailClosedEvidenceTests(unittest.TestCase):
             for observation in probe_ladder("opus")
         ]
         return self.module.build_collection_record(**fields)
-
-    def publish(self, **overrides: object) -> object:
-        arguments: dict[str, object] = {
-            "source_ledger": source_ledger(),
-            "collection": self.module.build_collection_record(**collection_fields()),
-            "freeze_id": "CAR-003-FREEZE-2026-07-24-V1",
-            "published_at": "2026-07-24T18:30:00Z",
-            "pinned_client_version": PINNED_CLIENT,
-        }
-        arguments.update(overrides)
-        return self.module.publish_freeze(**arguments)
 
     def test_the_unlabeled_surface_sentinel_is_refused_by_the_classifier(self) -> None:
         self.assertNotEqual(self.module.UNLABELED_SURFACE, self.module.ADMITTING_SURFACE)

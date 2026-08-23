@@ -225,13 +225,19 @@ ENGINE_PROBE_INSTANCE: dict[str, object] = {
 }
 
 
-class SchemaEngineFailClosedTests(unittest.TestCase):
-    """FR-004 and SC-017: the shared engine refuses, it never degrades."""
-
+class _ClaudePolicyControlsFixture:
     def setUp(self) -> None:
+        super().setUp()
         self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
         self.module = claude_policy_controls
         self.error = self.module.ControlContractError
+
+
+class SchemaEngineFailClosedTests(_ClaudePolicyControlsFixture, unittest.TestCase):
+    """FR-004 and SC-017: the shared engine refuses, it never degrades."""
+
+    def setUp(self) -> None:
+        super().setUp()
         self.schema = copy.deepcopy(ENGINE_PROBE_SCHEMA)
         self.instance = copy.deepcopy(ENGINE_PROBE_INSTANCE)
 
@@ -636,11 +642,9 @@ def synthetic_registry(frozen_at: str = FROZEN_AT) -> dict[str, object]:
     })
 
 
-class _ControlContractFixture:
+class _ControlContractFixture(_ClaudePolicyControlsFixture):
     def setUp(self) -> None:
-        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
-        self.module = claude_policy_controls
-        self.error = self.module.ControlContractError
+        super().setUp()
         self.registry = synthetic_registry()
 
 
@@ -790,13 +794,11 @@ def committed_binding(filename: str) -> dict[str, str]:
     return {"id": load_json(path)["$id"], "digest": file_bytes_digest(path)}
 
 
-class Car003BindingTests(unittest.TestCase):
+class Car003BindingTests(_ClaudePolicyControlsFixture, unittest.TestCase):
     """FR-005a and SC-018: additive-only references, checked against the bytes."""
 
     def setUp(self) -> None:
-        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
-        self.module = claude_policy_controls
-        self.error = self.module.ControlContractError
+        super().setUp()
         self.document = {
             "car_003_bindings": [committed_binding(name) for name in BOUND_CAR_003_DOCUMENTS]
         }
@@ -1442,15 +1444,17 @@ class CodexAdaptiveMovementAndBreachTests(unittest.TestCase):
         self.assertEqual(classified["disposition_reason"], SERVICE_REROUTE_DISPOSITION_REASON)
 
 
-class CodexJustifiedHighEffortControlTests(unittest.TestCase):
-    """G56R-004 FR-018, FR-019, FR-023, SC-008, and SC-015: fixed high-effort route."""
-
+class _CodexJustifiedHighEffortFixture:
     def setUp(self) -> None:
         self.assertIsNotNone(codex_policy_controls, "codex_policy_controls is not importable")
         self.module = codex_policy_controls
         self.error = self.module.ControlContractError
         self.registry = load_json(CODEX_REGISTRY_FIXTURE_PATH)
         self.control = control_of_kind(self.registry, "justified_high_effort")
+
+
+class CodexJustifiedHighEffortControlTests(_CodexJustifiedHighEffortFixture, unittest.TestCase):
+    """G56R-004 FR-018, FR-019, FR-023, SC-008, and SC-015: fixed high-effort route."""
 
     def validate_control(self, control: dict[str, object]) -> dict[str, object]:
         self.assertTrue(
@@ -1591,15 +1595,8 @@ def codex_unit_member(
     return member
 
 
-class CodexParentPlusChildrenAggregationTests(unittest.TestCase):
+class CodexParentPlusChildrenAggregationTests(_CodexJustifiedHighEffortFixture, unittest.TestCase):
     """G56R-004 FR-020 through FR-022 and SC-009: governed unit aggregation."""
-
-    def setUp(self) -> None:
-        self.assertIsNotNone(codex_policy_controls, "codex_policy_controls is not importable")
-        self.module = codex_policy_controls
-        self.error = self.module.ControlContractError
-        self.registry = load_json(CODEX_REGISTRY_FIXTURE_PATH)
-        self.control = control_of_kind(self.registry, "justified_high_effort")
 
     def aggregate(self, members: list[dict[str, object]]) -> dict[str, object]:
         self.assertTrue(
@@ -2703,11 +2700,9 @@ class CodexRawCaptureExclusionTests(unittest.TestCase):
                     self.sanitize(self.governed_summary(**seeded))
 
 
-class _UnpinnedControlFixture:
+class _UnpinnedControlFixture(_ClaudePolicyControlsFixture):
     def setUp(self) -> None:
-        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
-        self.module = claude_policy_controls
-        self.error = self.module.ControlContractError
+        super().setUp()
         self.registry = synthetic_registry()
         self.control = control_of_kind(self.registry, "unpinned")
 
@@ -2814,13 +2809,11 @@ def clean_row() -> dict[str, object]:
     }
 
 
-class AdaptiveSignalMapTests(unittest.TestCase):
+class AdaptiveSignalMapTests(_ClaudePolicyControlsFixture, unittest.TestCase):
     """FR-008 through FR-010c: total maps, one response per row, nothing unreachable."""
 
     def setUp(self) -> None:
-        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
-        self.module = claude_policy_controls
-        self.error = self.module.ControlContractError
+        super().setUp()
         self.registry = synthetic_registry()
         self.control = control_of_kind(self.registry, "adaptive")
         self.adaptive = self.control["adaptive"]
@@ -2952,13 +2945,11 @@ class AdaptiveSignalMapTests(unittest.TestCase):
             self.module.validate_registry(seal(self.registry))
 
 
-class AdaptiveRowResolutionTests(unittest.TestCase):
+class AdaptiveRowResolutionTests(_ClaudePolicyControlsFixture, unittest.TestCase):
     """FR-010b and FR-015a: one response per row, decided by the declared order."""
 
     def setUp(self) -> None:
-        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
-        self.module = claude_policy_controls
-        self.error = self.module.ControlContractError
+        super().setUp()
         self.control = control_of_kind(synthetic_registry(), "adaptive")
 
     def test_a_row_carrying_only_a_terminal_state_resolves_through_the_last_rank(self) -> None:
@@ -3017,13 +3008,11 @@ class AdaptiveRowResolutionTests(unittest.TestCase):
             self.module.resolve_response(self.control, row)
 
 
-class EscalationLadderTests(unittest.TestCase):
+class EscalationLadderTests(_ClaudePolicyControlsFixture, unittest.TestCase):
     """FR-011, FR-011a, FR-011b: rank is array position, and the ladder is total."""
 
     def setUp(self) -> None:
-        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
-        self.module = claude_policy_controls
-        self.error = self.module.ControlContractError
+        super().setUp()
         self.registry = synthetic_registry()
         self.control = control_of_kind(self.registry, "adaptive")
         self.freeze = synthetic_freeze()
@@ -3155,13 +3144,11 @@ def objective(**overrides: object) -> dict[str, object]:
     return row
 
 
-class CleanPassStreakTests(unittest.TestCase):
+class CleanPassStreakTests(_ClaudePolicyControlsFixture, unittest.TestCase):
     """FR-012 and FR-012a: what counts, what resets, and what the floor does."""
 
     def setUp(self) -> None:
-        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
-        self.module = claude_policy_controls
-        self.error = self.module.ControlContractError
+        super().setUp()
         self.control = control_of_kind(synthetic_registry(), "adaptive")
         self.state = {"current_route_id": "route-alpha-high", "clean_streak": 0}
 
@@ -3312,13 +3299,11 @@ def attempt(route_id: str, retries: int, duration_ms: int,
     return row
 
 
-class BoundScopeAndBreachTests(unittest.TestCase):
+class BoundScopeAndBreachTests(_ClaudePolicyControlsFixture, unittest.TestCase):
     """FR-014 and FR-014a: scope, non-reset across escalation, and breach outcomes."""
 
     def setUp(self) -> None:
-        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
-        self.module = claude_policy_controls
-        self.error = self.module.ControlContractError
+        super().setUp()
         self.registry = synthetic_registry()
         self.control = control_of_kind(self.registry, "adaptive")
         self.orchestration = control_of_kind(self.registry, "orchestration_changing")
@@ -3426,13 +3411,11 @@ class BoundScopeAndBreachTests(unittest.TestCase):
         self.assertIsNone(reading["failure_code"])
 
 
-class ServiceRerouteTests(unittest.TestCase):
+class ServiceRerouteTests(_ClaudePolicyControlsFixture, unittest.TestCase):
     """FR-015 and FR-015a: the already-frozen observable, never a coined signal."""
 
     def setUp(self) -> None:
-        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
-        self.module = claude_policy_controls
-        self.error = self.module.ControlContractError
+        super().setUp()
         self.control = control_of_kind(synthetic_registry(), "adaptive")
         self.row = objective(failure_code="service_reroute", failure_plane="treatment")
 
@@ -3511,13 +3494,11 @@ def unit_member(row_id: str, spawned_by: str | None = None, *,
     return member
 
 
-class AggregateFoldTests(unittest.TestCase):
+class AggregateFoldTests(_ClaudePolicyControlsFixture, unittest.TestCase):
     """FR-016, FR-016a, FR-016b, FR-016c: what sums, what folds, what floors."""
 
     def setUp(self) -> None:
-        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
-        self.module = claude_policy_controls
-        self.error = self.module.ControlContractError
+        super().setUp()
         self.control = control_of_kind(synthetic_registry(), "orchestration_changing")
         self.severity = self.control["orchestration_changing"]["terminal_state_severity"]
 
@@ -3696,13 +3677,11 @@ def graph(root: str, parent: str | None, children: list[str]) -> dict[str, objec
     }
 
 
-class UnitMembershipTests(unittest.TestCase):
+class UnitMembershipTests(_ClaudePolicyControlsFixture, unittest.TestCase):
     """FR-016d, FR-017, FR-017a, FR-018: who is in the unit, and how many may be."""
 
     def setUp(self) -> None:
-        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
-        self.module = claude_policy_controls
-        self.error = self.module.ControlContractError
+        super().setUp()
         self.control = control_of_kind(synthetic_registry(), "orchestration_changing")
         self.rows = [
             unit_member("parent", None, cost=10),
@@ -3860,13 +3839,11 @@ def tokened_member(row_id: str, spawned_by: str | None = None, *,
     return member
 
 
-class RawTokenAndCacheAggregationTests(unittest.TestCase):
+class RawTokenAndCacheAggregationTests(_ClaudePolicyControlsFixture, unittest.TestCase):
     """FR-016e: four raw members sum, two cache quantities sum, and none is promoted."""
 
     def setUp(self) -> None:
-        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
-        self.module = claude_policy_controls
-        self.error = self.module.ControlContractError
+        super().setUp()
         self.control = control_of_kind(synthetic_registry(), "orchestration_changing")
         self.members = [
             tokened_member("parent", None),
@@ -4035,13 +4012,8 @@ def withheld_objective_ids() -> set[str]:
     }
 
 
-class ReplayDeterminismTests(unittest.TestCase):
+class ReplayDeterminismTests(_ClaudePolicyControlsFixture, unittest.TestCase):
     """FR-028 and SC-005: the same committed bytes replay to the same result."""
-
-    def setUp(self) -> None:
-        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
-        self.module = claude_policy_controls
-        self.error = self.module.ControlContractError
 
     def test_two_replays_of_the_same_fixture_digest_identically(self) -> None:
         # SC-005's byte-identical claim is tested rather than asserted: the
@@ -4114,13 +4086,11 @@ class ReplayDeterminismTests(unittest.TestCase):
 REGISTRY_INSTANCE_PATH = FIXTURE_ROOT / "policy-control-registry.json"
 
 
-class CommittedRegistryInstanceTests(unittest.TestCase):
+class CommittedRegistryInstanceTests(_ClaudePolicyControlsFixture, unittest.TestCase):
     """Every rule above, run against the bytes the repository actually ships."""
 
     def setUp(self) -> None:
-        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
-        self.module = claude_policy_controls
-        self.error = self.module.ControlContractError
+        super().setUp()
         self.registry = self.module.load_registry(REGISTRY_INSTANCE_PATH)
 
     def test_the_committed_instance_loads_through_the_schema_and_the_semantics(self) -> None:
@@ -4297,13 +4267,11 @@ class ReservedPartitionRegistrationTests(unittest.TestCase):
             )
 
 
-class ReservedPartitionGuardTests(unittest.TestCase):
+class ReservedPartitionGuardTests(_ClaudePolicyControlsFixture, unittest.TestCase):
     """FR-026 and SC-007: one entry point covers replay rows and smoke rows."""
 
     def setUp(self) -> None:
-        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
-        self.module = claude_policy_controls
-        self.error = self.module.ControlContractError
+        super().setUp()
         self.guard = self.module.assert_reserved_partition_untouched
         self.reserved = entry_of_eligibility(True)
         self.reserved_objective = self.reserved["objective_ids"][0]
@@ -4578,13 +4546,11 @@ class SmokeRecordBoundTests(_UnpinnedControlFixture, unittest.TestCase):
         )
 
 
-class SmokeRecordEvidenceTests(unittest.TestCase):
+class SmokeRecordEvidenceTests(_ClaudePolicyControlsFixture, unittest.TestCase):
     """FR-027 and FR-030c: what makes a produced record inadmissible."""
 
     def setUp(self) -> None:
-        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
-        self.module = claude_policy_controls
-        self.error = self.module.ControlContractError
+        super().setUp()
         self.registry = synthetic_registry()
         self.control = control_of_kind(self.registry, "adaptive")
         self.reserved = entry_of_eligibility(True)
@@ -4845,13 +4811,11 @@ class DemonstrationStateTests(_ControlContractFixture, unittest.TestCase):
         self.assertFalse(set(self.module.DEMONSTRATION_STATES) & set(frozen_failure_codes()))
 
 
-class CacheIsolationTests(unittest.TestCase):
+class CacheIsolationTests(_ClaudePolicyControlsFixture, unittest.TestCase):
     """FR-032 and FR-032a: pairwise across the whole series, or not evidence."""
 
     def setUp(self) -> None:
-        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
-        self.module = claude_policy_controls
-        self.error = self.module.ControlContractError
+        super().setUp()
         self.registry = synthetic_registry()
         self.arms = [str(control["control_id"]) for control in self.registry["controls"]]
 
@@ -5101,7 +5065,7 @@ class SmokeDriverSealTests(unittest.TestCase):
         self.assertNotIn(SMOKE_DRIVER_PATH.name, registered)
 
 
-class SchemaEngineKeywordCoverageTests(unittest.TestCase):
+class SchemaEngineKeywordCoverageTests(_ClaudePolicyControlsFixture, unittest.TestCase):
     """An unenforceable keyword is refused, and the enforceable ones are enforced.
 
     The engine is shared by every contract in ``contracts-claude/``, several of
@@ -5110,11 +5074,6 @@ class SchemaEngineKeywordCoverageTests(unittest.TestCase):
     halves are pinned here: the corpus stays inside the supported set, and each
     keyword the corpus uses actually rejects something.
     """
-
-    def setUp(self) -> None:
-        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
-        self.module = claude_policy_controls
-        self.error = self.module.ControlContractError
 
     def accepts(self, instance: object, schema: dict[str, object]) -> bool:
         try:
@@ -5189,7 +5148,7 @@ class SchemaEngineKeywordCoverageTests(unittest.TestCase):
         )
 
 
-class BindingDriftOnProductionPathsTests(unittest.TestCase):
+class BindingDriftOnProductionPathsTests(_ClaudePolicyControlsFixture, unittest.TestCase):
     """FR-005a and SC-018: the byte-drift guard runs where consumers actually go.
 
     A guard reachable only from a unit test guards the unit test. Every loader a
@@ -5200,8 +5159,7 @@ class BindingDriftOnProductionPathsTests(unittest.TestCase):
     BOUND = "score-bundle.schema.json"
 
     def setUp(self) -> None:
-        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
-        self.module = claude_policy_controls
+        super().setUp()
         self.path = CONTRACT_ROOT / self.BOUND
         self.original = self.path.read_bytes()
         self.addCleanup(self.path.write_bytes, self.original)

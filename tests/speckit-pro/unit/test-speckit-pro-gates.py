@@ -220,6 +220,18 @@ class GateFoundationTests(unittest.TestCase):
         self.assertIsInstance(response["diagnostics"], list)
         self.assertIsInstance(response["data"], dict)
 
+    def assert_runner_ok(
+        self,
+        request: object,
+        *,
+        extra_env: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        completed, response, stderr_records = run_runner(request, extra_env=extra_env)
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok")
+        self.assertEqual(stderr_records, [])
+        return response
+
     def assert_status_exit_mapping(self, completed: subprocess.CompletedProcess[str], response: dict[str, Any]) -> None:
         self.assertEqual(completed.returncode, response["exit_code"])
         self.assertEqual(completed.returncode, STATUS_EXIT_CODES[response["status"]])
@@ -1495,7 +1507,7 @@ class GateFoundationTests(unittest.TestCase):
                 self.assertEqual(response["data"]["blocking_count"], 1)
                 self.assertEqual({finding["category"] for finding in response["data"]["findings"]}, {"scan_root"})
 
-        completed, response, stderr_records = run_runner(
+        response = self.assert_runner_ok(
             gate_request(
                 "active-path-guard",
                 "active-runtime-guard",
@@ -1505,9 +1517,6 @@ class GateFoundationTests(unittest.TestCase):
                 },
             )
         )
-        self.assertEqual(completed.returncode, 0)
-        self.assert_response(response, "ok")
-        self.assertEqual(stderr_records, [])
         self.assertEqual(response["data"]["blocking_count"], 0)
         self.assertLessEqual(
             {
@@ -1519,7 +1528,7 @@ class GateFoundationTests(unittest.TestCase):
             set(response["data"]["classified_counts"]),
         )
 
-        completed, response, stderr_records = run_runner(
+        response = self.assert_runner_ok(
             gate_request(
                 "active-path-guard",
                 "active-runtime-guard",
@@ -1529,9 +1538,6 @@ class GateFoundationTests(unittest.TestCase):
                 },
             )
         )
-        self.assertEqual(completed.returncode, 0)
-        self.assert_response(response, "ok")
-        self.assertEqual(stderr_records, [])
         self.assertEqual(response["data"]["blocking_count"], 0)
 
     def test_installed_release_payload_completeness_fixtures_cover_release_payload_blockers(self) -> None:
@@ -1723,10 +1729,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(response["data"]["feature_id"], "XPLAT-009")
         self.assertEqual(response["data"]["status"], "fail")
 
-        completed, response, stderr_records = run_runner(plugin_bash_confinement_fixture_request("zero-bash-guard"))
-        self.assertEqual(completed.returncode, 0)
-        self.assert_response(response, "ok")
-        self.assertEqual(stderr_records, [])
+        response = self.assert_runner_ok(plugin_bash_confinement_fixture_request("zero-bash-guard"))
         clean_response = response
         result = response["data"]
         self.assertEqual(result["feature_id"], "XPLAT-009")
@@ -2316,10 +2319,7 @@ class GateFoundationTests(unittest.TestCase):
             self.assertEqual(result["status"], "fail")
 
     def test_installed_release_payload_completeness_current_dist_passes_after_runner_rebuild(self) -> None:
-        completed, response, stderr_records = run_runner(installed_release_fixture_request("payload-completeness"))
-        self.assertEqual(completed.returncode, 0)
-        self.assert_response(response, "ok")
-        self.assertEqual(stderr_records, [])
+        response = self.assert_runner_ok(installed_release_fixture_request("payload-completeness"))
         self.assert_installed_release_promotion_metadata(
             response,
             "tests/speckit-pro/unit/fixtures/installed-plugin-release/payload-completeness-cases.json",
@@ -2573,10 +2573,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual([diag["code"] for diag in stderr_records], ["install_health_repair_blocked"])
 
     def test_installed_release_readiness_default_request_passes_after_native_uat_completion(self) -> None:
-        completed, response, stderr_records = run_runner(installed_release_fixture_request("release-readiness"))
-        self.assertEqual(completed.returncode, 0)
-        self.assert_response(response, "ok")
-        self.assertEqual(stderr_records, [])
+        response = self.assert_runner_ok(installed_release_fixture_request("release-readiness"))
         readiness = response["data"]["release_readiness"]
         self.assertEqual(readiness["feature_id"], "XPLAT-008")
         self.assertEqual(readiness["status"], "pass")
@@ -2613,10 +2610,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assert_release_readiness_contract_subset(readiness)
 
     def test_installed_release_readiness_ready_fixture_passes(self) -> None:
-        completed, response, stderr_records = run_runner(installed_release_fixture_request("release-readiness-ready"))
-        self.assertEqual(completed.returncode, 0)
-        self.assert_response(response, "ok")
-        self.assertEqual(stderr_records, [])
+        response = self.assert_runner_ok(installed_release_fixture_request("release-readiness-ready"))
         self.assert_installed_release_promotion_metadata(
             response,
             "tests/speckit-pro/unit/fixtures/installed-plugin-release/release-readiness-cases.json",
@@ -3391,10 +3385,7 @@ class GateFoundationTests(unittest.TestCase):
         )
 
     def test_install_verification_uses_fake_home_roots_and_command_plans_only(self) -> None:
-        completed, response, stderr_records = run_runner(fixture_request("install-verification"))
-        self.assertEqual(completed.returncode, 0)
-        self.assert_response(response, "ok")
-        self.assertEqual(stderr_records, [])
+        response = self.assert_runner_ok(fixture_request("install-verification"))
         install = response["data"]["install_verification"]
         self.assertEqual(install["status"], "complete")
         self.assertTrue(install["fake_home"])
@@ -3414,10 +3405,7 @@ class GateFoundationTests(unittest.TestCase):
                 "fake_home": True,
             },
         )
-        completed, response, stderr_records = run_runner(dry_run)
-        self.assertEqual(completed.returncode, 0)
-        self.assert_response(response, "ok")
-        self.assertEqual(stderr_records, [])
+        response = self.assert_runner_ok(dry_run)
         install = response["data"]["install_verification"]
         self.assertEqual(install["status"], "safe_repair")
         self.assertTrue(install["safe_repairs"])
@@ -3508,10 +3496,7 @@ class GateFoundationTests(unittest.TestCase):
                 self.assertTrue(response["data"]["release_check"]["blocking"])
 
     def test_release_readiness_aggregates_promotion_evidence_and_handoff_items(self) -> None:
-        completed, response, stderr_records = run_runner(fixture_request("release-readiness"))
-        self.assertEqual(completed.returncode, 0)
-        self.assert_response(response, "ok")
-        self.assertEqual(stderr_records, [])
+        response = self.assert_runner_ok(fixture_request("release-readiness"))
         readiness = response["data"]["release_readiness"]
         self.assertEqual(readiness["status"], "pass")
         self.assertEqual(readiness["blocking_count"], 0)
@@ -3569,13 +3554,10 @@ class GateFoundationTests(unittest.TestCase):
             "speckit-pro/speckit_pro_runner/gates/release.py",
             "tests/speckit-pro/unit/test-speckit-pro-gates.py",
         ]
-        completed, response, stderr_records = run_runner(
+        response = self.assert_runner_ok(
             request,
             extra_env={"TITLE": "feat(xplat): live release readiness", "BASE_REF": "main"},
         )
-        self.assertEqual(completed.returncode, 0)
-        self.assert_response(response, "ok")
-        self.assertEqual(stderr_records, [])
         readiness = response["data"]["release_readiness"]
         self.assertEqual(readiness["status"], "pass")
         checks = {check["check_id"]: check for check in readiness["checks"]}
@@ -3587,13 +3569,10 @@ class GateFoundationTests(unittest.TestCase):
             "docs/prd-harness-engineering-uplift.md",
             "docs/ai/specs/harness-engineering-uplift-technical-roadmap.md",
         ]
-        completed, response, stderr_records = run_runner(
+        response = self.assert_runner_ok(
             request,
             extra_env={"TITLE": "docs(specs): add harness engineering uplift roadmap", "BASE_REF": "main"},
         )
-        self.assertEqual(completed.returncode, 0)
-        self.assert_response(response, "ok")
-        self.assertEqual(stderr_records, [])
         readiness = response["data"]["release_readiness"]
         self.assertEqual(readiness["status"], "pass")
         checks = {check["check_id"]: check for check in readiness["checks"]}
@@ -3716,10 +3695,7 @@ class GateFoundationTests(unittest.TestCase):
                 "xplat_008_cutover_allowed": False,
             },
         )
-        completed, response, stderr_records = run_runner(good)
-        self.assertEqual(completed.returncode, 0)
-        self.assert_response(response, "ok")
-        self.assertEqual(stderr_records, [])
+        response = self.assert_runner_ok(good)
         self.assertEqual(response["data"]["blocking_count"], 0)
         self.assertEqual([finding["classification"] for finding in response["data"]["findings"]], ["ci_dispatch_glue"])
 
