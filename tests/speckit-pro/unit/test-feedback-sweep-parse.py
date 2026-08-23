@@ -40,6 +40,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from typing import Any, Iterator
@@ -915,6 +916,123 @@ class PipedObservationTest(unittest.TestCase):
                         self.assertNotIn(body, content)
                     for string in seeded:
                         self.assertNotIn(string, content)
+
+
+# The byproduct directory as the sweep composes it under a feature, split into
+# parts so the scratch repository below can rebuild the same path under a root
+# of its own. The feature name is arbitrary there; the shape is what is tested.
+BYPRODUCT_DIR_PARTS = ("specs", "001-scratch-feature", ".process", "feedback-sweep")
+
+# The whole content of the ignore file the sweep writes as its **first** write
+# into that directory, before any byproduct. `*` matches the ignore file itself,
+# so the directory disappears from `git add -A` entirely.
+SELF_IGNORE_CONTENT = "*\n"
+
+# The committed root entry a fresh clone carries. The self-ignore write covers a
+# consumer repository; this line covers this one, from before the first sweep.
+ROOT_IGNORE_ENTRY = "specs/*/.process/feedback-sweep/"
+
+# `git add -A --dry-run` reports one line per path it would stage.
+DRY_RUN_PATH_RE = re.compile(r"^(?:add|remove) '(?P<path>.*)'$")
+
+
+def scratch_git_env(home: Path) -> dict[str, str]:
+    """Environment for a throwaway repository that inherits no ignore rules.
+
+    A user-level ignore file could ignore the byproduct directory on its own and
+    mask the very omission this test exists to catch, so the scratch repository
+    is cut off from the system and global config **and** from the default
+    `$XDG_CONFIG_HOME/git/ignore` path git reads with no config naming it.
+    """
+    env = dict(os.environ)
+    env.update(
+        {
+            "HOME": str(home),
+            "XDG_CONFIG_HOME": str(home / "config"),
+            "GIT_CONFIG_GLOBAL": str(home / "absent-gitconfig"),
+            "GIT_CONFIG_SYSTEM": str(home / "absent-gitconfig"),
+            "GIT_CONFIG_NOSYSTEM": "1",
+        }
+    )
+    return env
+
+
+def run_git(args: list[str], cwd: Path, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", *args],
+        cwd=str(cwd),
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+class ByproductIgnoreTest(unittest.TestCase):
+    """FR-004d's first fixture: the byproduct directory is ignored two ways.
+
+    The self-ignore write covers **any** repository the sweep runs in, including
+    a consumer repository whose root ignore file this project never wrote. The
+    root entry covers this one, from the clone, before a sweep has written
+    anything at all. Each is red on its own, so neither can hide the other.
+    """
+
+    def test_the_directory_ignores_itself_with_no_root_ignore_in_the_repository(self) -> None:
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch) / "repo"
+            root.mkdir()
+            env = scratch_git_env(Path(scratch) / "home")
+
+            init = run_git(["init", "-q"], root, env)
+            self.assertEqual(init.returncode, 0, init.stderr)
+            self.assertFalse(
+                (root / ".gitignore").exists(),
+                "the premise here is a repository carrying no root ignore file at all",
+            )
+
+            # The control the emptiness below is measured against. Without a
+            # path the dry run must name, a dry run that named nothing for some
+            # unrelated reason would pass this test.
+            (root / "README.md").write_text("scratch\n", encoding="utf-8")
+
+            # The sweep's own order: create the directory, write the ignore file
+            # into it, and only then write a byproduct.
+            byproducts = root.joinpath(*BYPRODUCT_DIR_PARTS)
+            byproducts.mkdir(parents=True)
+            (byproducts / ".gitignore").write_text(SELF_IGNORE_CONTENT, encoding="utf-8")
+            (byproducts / "reply-body-1.md").write_text("reviewer text\n", encoding="utf-8")
+
+            dry_run = run_git(["add", "-A", "--dry-run"], root, env)
+            self.assertEqual(dry_run.returncode, 0, dry_run.stderr)
+            named = [
+                match.group("path")
+                for match in (
+                    DRY_RUN_PATH_RE.match(line) for line in dry_run.stdout.splitlines()
+                )
+                if match
+            ]
+            self.assertIn(
+                "README.md",
+                named,
+                f"the dry run named no path at all, so it proves nothing: {dry_run.stdout!r}",
+            )
+            for path in named:
+                with self.subTest(path=path):
+                    self.assertFalse(
+                        Path(path).is_relative_to(Path(*BYPRODUCT_DIR_PARTS)),
+                        f"git add -A would stage a sweep byproduct: {path}",
+                    )
+
+    def test_the_root_ignore_file_carries_the_byproduct_directory(self) -> None:
+        # Read relative to this file, never by absolute path, so the assertion
+        # travels with a clone into any checkout.
+        lines = (REPO_ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
+        self.assertIn(
+            ROOT_IGNORE_ENTRY,
+            lines,
+            f"the root .gitignore must carry {ROOT_IGNORE_ENTRY}, so a fresh clone ignores the "
+            "sweep's byproduct directory before the sweep has written into it",
+        )
 
 
 # ---------------------------------------------------------------------------

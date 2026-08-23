@@ -996,6 +996,21 @@ plan-declared file/test scope, tasks, reviewability evidence, and hazard route.
 Missing, malformed, stale, or fingerprint-mismatched marker plans are
 correctness stops at marker-required boundaries.
 
+**The feedback sweep's byproduct directory ignores itself.** The sweep writes
+its own transport files under `specs/<feature>/.process/feedback-sweep/`, and
+the first write into that
+directory, before any byproduct, is a `.gitignore` inside it whose whole content
+is a single `*` line. Create the directory and write that ignore file in one
+step: a byproduct that lands first has already been exposed, so the order is
+part of the rule. Git honors that file in whatever repository the worktree
+belongs to, and `*` matches the ignore file itself as well as every byproduct
+beside it, so Phase 7's `git add -A` can stage neither, by construction rather
+than by care, in a consumer repository whose root ignore file this project never
+wrote. This repository's own root `.gitignore` carries
+`specs/*/.process/feedback-sweep/`, committed so a fresh clone carries it, which
+ignores the directory here even before the sweep has written into it and covers
+this repository only.
+
 **Open the implementation-notes record before the first task is dispatched.**
 This is parent-session work, not delegated work, and it runs ahead of the first
 `spawn_agent` call rather than lazily on the first append: a phase interrupted

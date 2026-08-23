@@ -47,13 +47,18 @@ A component that cannot enumerate (its runtime exposes only a fixed set) selects
 directly from what it has.
 
 Subagent definitions that omit `tools:` inherit the operator's full session
-surface and enumerate it directly; the plugin never pins an agent availability
-allowlist. User-invocable skills may still declare platform-specific
-authorization metadata, such as Claude Code `allowed-tools`, so the invocation
-can call the core primitives it needs. That metadata is not an installed-tool
-inventory or a vendor/MCP availability allowlist; it is applied before
-discovery, and components enumerate only the runtime surface they actually
-receive.
+surface and enumerate it directly. Every agent acting on trusted input omits
+it, and for those the plugin pins no availability allowlist. The stated
+exception is the two agents that read reviewer-derived text, `sweep-classifier`
+and `sweep-analyst`: each pins a read-only `tools:` allowlist and so enumerates
+only what that allowlist grants. Capability inheritance is right for an agent
+acting on trusted input and wrong for an agent reading text an attacker can
+write (art-008-feedback-sweep FR-008c). User-invocable skills may still declare
+platform-specific authorization metadata, such as Claude Code `allowed-tools`,
+so the invocation can call the core primitives it needs. That metadata is not
+an installed-tool inventory or a vendor/MCP availability allowlist; it is
+applied before discovery, and components enumerate only the runtime surface
+they actually receive.
 
 A read-only subagent enumerates and selects like any other component, but only
 among read/research capabilities: its role boundary (below) is enforced by

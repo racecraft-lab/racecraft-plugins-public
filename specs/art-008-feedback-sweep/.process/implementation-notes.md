@@ -348,3 +348,90 @@ returns `[]`. The existence assertion is still correct, because it converts a
 cascade of confusing "denies Agent" failures on a nonexistent file into one
 legible pending-work red per platform. The reason is different from the one
 recorded.
+
+### T015-T024, T082, T096, T097 (US1 test harness and corpus)
+
+**Deviations/Edge cases/Surprises:** No deviations from the task text. 971-line
+harness, 112 corpus cases, **139 failures and 0 errors**, every one a real
+assertion against live runner output rather than a harness crash.
+
+**Three assertions were rewritten mid-task because they could not fail.** As
+first written, `test_counts_agree_with_the_two_lists`,
+`test_every_exclusion_reason_is_in_the_closed_set`, and
+`test_anchors_conform_to_the_grammar_the_record_stores` compared the expectation
+to itself. They now read the live response. Two are vacuously green today,
+because the skeleton emits no exclusions and no exports, and each goes red
+against a wrong implementation. The worker classified them honestly as
+"vacuously green now, falsifiable later" rather than counting them as coverage.
+
+**No golden is typed by hand.** The 30 shaping cases carry `capture_pending:
+true` with a null golden plus independent per-case assertions, and the refresh
+mode refuses on a non-ok response. That is what keeps T081's acceptance real: a
+test comparing a typed string to itself executes nothing.
+
+**Two design decisions the spec left open**, both recorded in the affected case's
+`purpose` string so a later implementer meets a decision rather than an
+accident: the serialization family's registered line is `Artifact:
+<template-id>`, grounded in `research.md:68-77`; and when a body matches both a
+markdown and a prompt lead, the export record's `kind` is the first matched
+line's kind in body order, because nothing fixes it and one record carries one
+kind.
+
+**A third independent confirmation of the `path_keys_by_helper` hazard.** The
+worker probed `read_only.py:257` and found the four-key entry still contradicted
+the contract's corrected row 2. It verified the two non-path keys were inert
+today rather than assuming, and flagged the extension risk. The orchestrator
+narrowed the code entry to `{"workflow_file", "feature_dir"}` with the reason in
+a comment. Three workers found this independently.
+
+**`run-all.py` discovers a Layer 4 test without a manifest row.** The new file
+ran as `FAIL test-feedback-sweep-parse (exit 1, no summary)` and counted as one
+failed unit. Layer 4 discovery is not manifest-gated; the manifest row supplies a
+label and baseline, not selection. Worth knowing when reading a red count.
+
+**Ambient suite state**, so a later reader does not misattribute it: 7907/7918
+with 11 failures, of which 7 are `test-speckit-pro-gates`, 1 is the runner
+`.sha256` mismatch stale against the source change, 2 are the Layer 5 carve-out
+awaiting T098 and T104, and 1 is this file's designed red. The 8 payload failures
+are the standard shipped-source-changed-artifacts-not-regenerated state that
+T074, T075, and T108 close.
+
+**T081 remains open, deliberately.** Its acceptance requires the expected blocks
+to be the redaction surface's own committed output, and that surface lands at
+T083. The corpus request cases are authored; the expected side cannot be
+produced yet. Marking it complete now would require hand-typing the goldens,
+which is exactly the tautology its acceptance forbids.
+
+### T088
+
+**Deviations/Edge cases/Surprises:** Both tests green; the 139 ambient failures
+unchanged in count and confined to the six earlier classes. Test count moved
+22 to 24.
+
+**One finding changed the test and is worth carrying.** A user-level ignore at
+`$XDG_CONFIG_HOME/git/ignore` silently masks this red. The worker proved it
+empirically: with `XDG_CONFIG_HOME` pointed at a directory holding `git/ignore`
+containing `feedback-sweep/`, `git add -A --dry-run` staged nothing even with no
+self-ignore write present; pointed at an empty directory, the same repository
+staged the byproduct. So the env isolation in the scratch-repo helper is
+load-bearing rather than decoration, and the red proof is honest only because of
+it. `GIT_CONFIG_NOSYSTEM`, `GIT_CONFIG_GLOBAL`, and `GIT_CONFIG_SYSTEM` alone do
+not cover it, because git reads that default path with no config naming it.
+
+The scratch-repo test also carries a positive control, asserting `README.md` is
+named, so a dry run that named nothing at all cannot pass vacuously.
+
+The second test's red proof needed care: with `REPO_ROOT` resolving into the
+scratch copy, an absent root `.gitignore` raises `FileNotFoundError`, which is an
+error rather than a clean red. The worker planted a root ignore carrying other
+entries and not this one, proving the test keys on the line rather than on the
+file's presence.
+
+Parity verified by a scripted check over fourteen load-bearing facts, zero
+present on one side only. The Codex block was scanned for Claude-only runtime
+terms, which matters because `validate-codex-skills` concatenates every
+reference file onto the SKILL.md before scanning.
+
+One deliberate omission: the `.git/info/exclude` contrast the acceptance names
+was left out of the shipped prose as repository history rather than sweep
+behavior, with the operative half kept.

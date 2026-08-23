@@ -1253,6 +1253,27 @@ pattern — recommended by Anthropic's BrowseComp architecture
 and Research system — routes each task to a specialized agent
 from the orchestrator level.
 
+#### Phase 7 Setup: The Sweep's Byproduct Directory Ignores Itself
+
+The pull-request feedback sweep writes the files it needs for its own transport
+under `specs/<feature>/.process/feedback-sweep/`. **The first write into that
+directory, before any byproduct, is a `.gitignore` inside it whose whole content
+is a single `*` line.** Create the directory and write that ignore file in one
+step. A byproduct that lands first has already been exposed, so the order is
+part of the rule rather than a preference.
+
+Git honors that file in whatever repository the worktree belongs to, and `*`
+matches the ignore file itself as well as every byproduct beside it, so Phase
+7's `git add -A` can stage neither. The control is by construction rather than
+by care: it holds in a consumer repository whose root ignore file this project
+never wrote and cannot amend.
+
+This repository's own root `.gitignore` carries
+`specs/*/.process/feedback-sweep/`, so the directory is ignored here even before
+the sweep has written into it. That entry is committed, so a fresh clone carries
+it. It covers this repository only, which is the whole reason the self-ignore
+write exists.
+
 #### Phase 7 Setup: Open the Implementation-Notes Record
 
 Run this before Step 1, so the record exists before the first task is
