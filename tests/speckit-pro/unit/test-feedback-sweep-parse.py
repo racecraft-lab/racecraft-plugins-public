@@ -118,7 +118,12 @@ EXPORT_KEYS = {
     "anchors_dropped",
 }
 
-CAPTURE_KEYS = ("captured_payloads", "captured_commands", "captured_dispatches")
+CAPTURE_KEYS = (
+    "captured_payloads",
+    "captured_commands",
+    "captured_dispatches",
+    "captured_surface_calls",
+)
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -137,16 +142,38 @@ def expectations() -> dict[str, Any]:
     return EXPECTED["cases"]
 
 
+# FR-012f's three outbound legs. They answer with `lines` and a `redactions`
+# array, so they are partitioned away from the analyst-payload leg's shaped
+# block rather than compared against a golden of a shape they never return.
+OUTBOUND_LEGS = ("amendment", "log_row", "reply")
+
+
 def is_shape_case(case: dict[str, Any]) -> bool:
-    return case["inputs"].get("named_surface") == "redact"
+    inputs = case["inputs"]
+    return (
+        inputs.get("named_surface") == "redact"
+        and inputs.get("leg") == "analyst_payload"
+    )
+
+
+def is_outbound_case(case: dict[str, Any]) -> bool:
+    return case["inputs"].get("named_surface") == "redact" and not is_shape_case(case)
 
 
 def parse_case_names() -> list[str]:
-    return [name for name, case in sorted(cases().items()) if not is_shape_case(case)]
+    return [
+        name
+        for name, case in sorted(cases().items())
+        if case["inputs"].get("named_surface") is None
+    ]
 
 
 def shape_case_names() -> list[str]:
     return [name for name, case in sorted(cases().items()) if is_shape_case(case)]
+
+
+def outbound_case_names() -> list[str]:
+    return [name for name, case in sorted(cases().items()) if is_outbound_case(case)]
 
 
 def runner_env() -> dict[str, str]:
@@ -1187,6 +1214,1376 @@ class ConvergenceInvariantTest(unittest.TestCase):
 
 # ---------------------------------------------------------------------------
 # Capture mode.
+
+# ---------------------------------------------------------------------------
+# T047, T084 to T085, T090 to T093, T102 and T103: the three outbound
+# redaction legs, and the orchestrator evidence a corpus of requests cannot
+# reach on its own.
+# ---------------------------------------------------------------------------
+
+REDACTION_PLACEHOLDER_RE = re.compile(r"\[redacted: ([a-z_]+)\]")
+REDACTION_RULES = (
+    "private_key_header",
+    "aws_secret_key",
+    "aws_access_key",
+    "bearer_token",
+    "assigned_token",
+    "over_bound_line",
+)
+
+FEATURE_ID = "art-008-feedback-sweep"
+FEATURE_DIR = f"specs/{FEATURE_ID}"
+BYPRODUCT_DIR = f"{FEATURE_DIR}/.process/feedback-sweep"
+
+# The eight documents T091 runs through the amendment leg. The feature's own
+# prose carries the deny-set's negative examples, so a rule loosened back to a
+# substring fails here before it fails on a reviewer's amendment.
+SWEEP_DOCUMENTS = (
+    "spec.md",
+    "plan.md",
+    "tasks.md",
+    "data-model.md",
+    "contracts/sweep-pr-feedback.md",
+    "contracts/sweep-classifier-output.md",
+    "quickstart.md",
+    "research.md",
+)
+
+# FR-012b rule 1's allowlist, and the write-point surface that enforces it.
+AMENDABLE_FILES = ("spec.md", "plan.md", "tasks.md")
+ANCHOR_BUDGET_BYTES = 512
+REPLACEMENT_BUDGET_BYTES = 8192
+
+SWEEP_ANALYST_AGENT = "sweep-analyst"
+ANALYST_PERSPECTIVES = ("codebase", "spec-context", "domain")
+
+MARKER_OPEN = "<!-- speckit-pro:feedback-sweep "
+MARKER_CLOSE = " -->"
+TRUNCATION_LINE = "Body truncated at {budget} bytes; {count} spans withheld."
+
+AMENDMENT_SUBJECT = "docs({feature}): amend {artifact} for {comment_id}"
+# The release-readiness title regex, repeated here as a matcher and asserted
+# against the gate's own source below so the two cannot drift apart silently.
+RELEASE_TITLE_PATTERN = r"^(feat|fix|chore|docs|test|refactor)\([a-z0-9-]+\): .+"
+RELEASE_GATE_PATH = PLUGIN_ROOT / "speckit_pro_runner" / "gates" / "release.py"
+
+PHASE_REFERENCES = (
+    PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "phase-execution.md",
+    PLUGIN_ROOT
+    / "codex-skills"
+    / "speckit-autopilot"
+    / "references"
+    / "phase-execution-codex.md",
+)
+SECRET_SCANNER_PHRASE = "secret scanner"
+SECRET_SCANNER_SENTENCE = "It is not a secret scanner"
+
+# The two log tables the sweep writes into, and the columns whose content is
+# reviewer-derived prose. The per-item log-row call count is a consequence of
+# these table shapes, which is why the harness fills cells and the assertion
+# below counts them from FR-012f's rule instead.
+FEEDBACK_LOG_COLUMNS = (
+    "#", "Comment ID", "Surface", "Author", "Class", "Disposition", "Commit", "CRL #",
+)
+CONSENSUS_LOG_COLUMNS = (
+    "#", "Type", "Question/Gap/Finding", "Categories", "Round", "Outcome",
+    "Resolution", "Analysts Used",
+)
+PROSE_COLUMNS = ("Disposition", "Question/Gap/Finding", "Resolution")
+
+UNRESOLVED_AUTHOR_CELL = "unresolved account"
+
+
+def redact_request(leg: str, comment_id: str, **fields: Any) -> dict[str, Any]:
+    inputs: dict[str, Any] = {"named_surface": "redact", "leg": leg, "comment_id": comment_id}
+    inputs.update(fields)
+    return inputs
+
+
+def run_redact(leg: str, comment_id: str, **fields: Any) -> dict[str, Any]:
+    inputs = redact_request(leg, comment_id, **fields)
+    return run_runner(helper_request(f"{leg}-{comment_id}", inputs))
+
+
+def outbound_envelope(response: dict[str, Any]) -> dict[str, Any]:
+    envelope = stdout_json(response)
+    if not isinstance(envelope, dict):
+        raise AssertionError(f"the outbound leg returned no stdout JSON: {response!r}")
+    return envelope
+
+
+def event_rules(envelope: dict[str, Any]) -> list[str]:
+    return [entry["rule"] for entry in envelope["redactions"]]
+
+
+def event_lines(envelope: dict[str, Any]) -> list[int]:
+    return [entry["line"] for entry in envelope["redactions"]]
+
+
+class OutboundRedactionTest(unittest.TestCase):
+    """T084: the three outbound legs, per hit class and per negative."""
+
+    def test_outbound_responses_match_the_captured_golden(self) -> None:
+        for name in outbound_case_names():
+            want = expectations()[name]
+            with self.subTest(case=name):
+                response = run_case(name)
+                self.assertEqual(response.get("status"), want["status"])
+                self.assertEqual(response.get("exit_code"), want["exit_code"])
+                self.assertEqual(diagnostic_codes(response), want["diagnostic_codes"])
+                if want["status"] != "ok":
+                    text = stderr_text(response)
+                    for token in want["stderr_names"]:
+                        self.assertIn(token, text)
+                    continue
+                self.assertFalse(
+                    want.get("capture_pending"),
+                    f"{name} has no captured golden yet; run this file with --capture, review "
+                    "the diff, and commit the surface's own output",
+                )
+                envelope = outbound_envelope(response)
+                golden = want["golden"]
+                self.assertEqual(envelope["lines"], golden["lines"])
+                self.assertEqual(envelope["redactions"], golden["redactions"])
+
+    def test_outbound_holds_independently_of_the_golden(self) -> None:
+        for name in outbound_case_names():
+            case = cases()[name]
+            want = expectations()[name]
+            if want["status"] != "ok":
+                continue
+            with self.subTest(case=name):
+                envelope = outbound_envelope(run_case(name))
+                sent = case["inputs"]["lines"]
+                checks = case["assertions"]
+
+                # One line in, one line out, on every path.
+                self.assertEqual(len(envelope["lines"]), len(sent))
+                self.assertEqual(envelope["leg"], case["inputs"]["leg"])
+                self.assertEqual(envelope["comment_id"], case["inputs"]["comment_id"])
+
+                # The declared events, in the order the rules fired.
+                self.assertEqual(event_rules(envelope), checks["event_rules"])
+                self.assertEqual(event_lines(envelope), checks["event_lines"])
+                for entry in envelope["redactions"]:
+                    self.assertEqual(set(entry), {"rule", "line"})
+                    self.assertIn(entry["rule"], REDACTION_RULES)
+                    self.assertGreaterEqual(entry["line"], 1)
+                    self.assertLessEqual(entry["line"], len(sent))
+
+                if checks["lines_unchanged"]:
+                    self.assertEqual(envelope["lines"], sent)
+                if checks.get("first_line_unchanged"):
+                    self.assertEqual(envelope["lines"][0], sent[0])
+
+                # Every byte outside a replaced span is unchanged. A line may
+                # differ only by carrying a placeholder: the key-span rule
+                # replaces several lines and names one event, so a changed line
+                # need not be an event's own line.
+                changed = []
+                for index, (before, after) in enumerate(zip(sent, envelope["lines"])):
+                    if after == before:
+                        continue
+                    changed.append(index + 1)
+                    self.assertIsNotNone(
+                        REDACTION_PLACEHOLDER_RE.search(after),
+                        f"line {index + 1} changed without carrying a placeholder",
+                    )
+                self.assertEqual(
+                    bool(changed), bool(checks["event_rules"]),
+                    "a line changes if and only if the report carries an event",
+                )
+                for line in checks["event_lines"]:
+                    self.assertIn(line, changed, f"line {line} fired and did not change")
+                for found in REDACTION_PLACEHOLDER_RE.finditer("\n".join(envelope["lines"])):
+                    self.assertIn(found.group(1), REDACTION_RULES)
+                for line in envelope["lines"]:
+                    self.assertNotIn("\n", line)
+
+                for seeded in case.get("seeded_strings") or []:
+                    self.assertNotIn(
+                        seeded,
+                        json.dumps(envelope, ensure_ascii=False),
+                        "a seeded run must not survive into the leg's response",
+                    )
+
+    def test_every_outbound_output_is_a_fixpoint(self) -> None:
+        # The idempotence case, over every positive case rather than one.
+        for name in outbound_case_names():
+            case = cases()[name]
+            if expectations()[name]["status"] != "ok":
+                continue
+            with self.subTest(case=name):
+                once = outbound_envelope(run_case(name))
+                twice = outbound_envelope(
+                    run_redact(case["inputs"]["leg"], case["inputs"]["comment_id"],
+                               lines=once["lines"])
+                )
+                self.assertEqual(twice["lines"], once["lines"])
+                self.assertEqual(twice["redactions"], [])
+
+    def test_the_same_request_twice_returns_the_same_bytes(self) -> None:
+        for name in outbound_case_names():
+            case = cases()[name]
+            if expectations()[name]["status"] != "ok":
+                continue
+            with self.subTest(case=name):
+                again = run_redact(
+                    case["inputs"]["leg"], case["inputs"]["comment_id"],
+                    lines=case["inputs"]["lines"],
+                )
+                self.assertEqual(
+                    json.dumps(outbound_envelope(again), sort_keys=True, ensure_ascii=False),
+                    json.dumps(outbound_envelope(run_case(name)), sort_keys=True,
+                               ensure_ascii=False),
+                )
+
+    def test_the_transport_siblings_are_byte_identical(self) -> None:
+        # A 9 KB line and the same line cut to 8193 bytes, so a transport cut
+        # between them changes nothing a caller can observe.
+        long_side = outbound_envelope(run_case("redact-amendment-a-nine-kilobyte-line"))
+        cut_side = outbound_envelope(
+            run_case("redact-amendment-a-nine-kilobyte-line-cut-to-8193-bytes")
+        )
+        self.assertEqual(long_side["lines"], cut_side["lines"])
+        self.assertEqual(long_side["redactions"], cut_side["redactions"])
+
+
+# The runner caps its stdout, so a document is sent in runs of lines whose
+# combined size leaves room for the response envelope around them.
+SCAN_RUN_BYTES = 5000
+
+
+def scan_in_runs(lines: list[str], comment_id: str) -> tuple[list[dict[str, Any]], list[str]]:
+    """Every line of a document through the amendment leg, in size-bounded runs."""
+    fired: list[dict[str, Any]] = []
+    returned: list[str] = []
+    start = 0
+    while start < len(lines):
+        size = 0
+        stop = start
+        while stop < len(lines) and (stop == start or size < SCAN_RUN_BYTES):
+            size += len(lines[stop].encode("utf-8")) + 1
+            stop += 1
+        envelope = outbound_envelope(
+            run_redact("amendment", comment_id, lines=lines[start:stop])
+        )
+        for entry in envelope["redactions"]:
+            fired.append({"rule": entry["rule"], "line": start + entry["line"]})
+        returned.extend(envelope["lines"])
+        start = stop
+    return fired, returned
+
+
+class CorpusScanTest(unittest.TestCase):
+    """T091: this feature's own eight documents, through the amendment leg."""
+
+    def test_no_rule_fires_on_this_feature_s_own_documents(self) -> None:
+        for relative in SWEEP_DOCUMENTS:
+            path = REPO_ROOT / FEATURE_DIR / relative
+            with self.subTest(document=relative):
+                self.assertTrue(path.is_file(), f"{relative} is missing")
+                lines = path.read_text(encoding="utf-8").split("\n")
+                fired, returned = scan_in_runs(lines, f"corpus-scan-{relative}")
+                self.assertEqual(
+                    fired, [], f"{relative} fired {[e['rule'] for e in fired]} on lines "
+                    f"{[e['line'] for e in fired]}",
+                )
+                self.assertEqual(returned, lines)
+
+
+# ---------------------------------------------------------------------------
+# The modeled orchestrator run. It drives the real surfaces through the runner
+# and records what it sent and what came back; the assertions below read the
+# capture and derive what it should have been from the corpus expectations.
+# ---------------------------------------------------------------------------
+
+
+def declared_outcome(name: str) -> dict[str, Any] | None:
+    return cases()[name].get("outcome")
+
+
+def modeled_item(name: str, comment_id: str) -> dict[str, Any]:
+    outcome = declared_outcome(name)
+    for entry in (outcome or {}).get("items") or []:
+        if entry["comment_id"] == comment_id:
+            return entry
+    return {
+        "comment_id": comment_id,
+        "class": "answered",
+        "target": None,
+        "disposition": "Recorded as answered.",
+        "resolution": "resolved",
+    }
+
+
+def expected_surface_call_counts(name: str) -> dict[str, int] | None:
+    """FR-012f's per-leg call counts, read off the case's declared results."""
+    outcome = declared_outcome(name)
+    if outcome is None:
+        return None
+    log_rows = 0
+    for entry in outcome["items"]:
+        if entry["resolution"] == "human_review":
+            log_rows += 2
+        elif entry["class"] == "amended" and entry["comment_id"] in outcome["rows_written"]:
+            log_rows += 3
+        elif entry["comment_id"] in outcome["rows_written"]:
+            log_rows += 1
+    return {
+        "amendment": sum(1 for entry in outcome["commits"] if entry["kind"] == "amendment"),
+        "log_row": log_rows,
+        "reply": len(outcome["replies_posted"]),
+        "analyst_payload": len(outcome["consensus_comments"]),
+    }
+
+
+def short_digest(text: str) -> str:
+    # A modeled commit id. Deterministic, and short enough to read in a reply.
+    total = 0
+    for byte in text.encode("utf-8"):
+        total = (total * 131 + byte) % (16 ** 7)
+    return f"{total:07x}"
+
+
+def unique_anchor(path: Path) -> str:
+    """A line of the file that occurs exactly once and fits the anchor cap."""
+    lines = path.read_text(encoding="utf-8").split("\n")
+    seen: dict[str, int] = {}
+    for line in lines:
+        seen[line] = seen.get(line, 0) + 1
+    for line in lines:
+        if not line.startswith("#"):
+            continue
+        if seen[line] != 1:
+            continue
+        if 20 <= len(line.encode("utf-8")) <= ANCHOR_BUDGET_BYTES:
+            return line
+    raise AssertionError(f"{path.name} carries no unique heading to anchor on")
+
+
+# A credential-shaped run inside one modeled replacement, so the byte identity
+# between the written text and the amendment leg's response has something to
+# discriminate: a write assembled from the analyst's own string differs.
+SEEDED_REPLACEMENT_RUN = "q7ZxAbCdEfGhIjKlMnOp3"
+
+
+def modeled_replacement(artifact: str, comment_id: str, seeded: bool) -> str:
+    lines = [
+        f"The amended paragraph for {comment_id}, written by the analyst.",
+        "It replaces the anchored paragraph and nothing beside it.",
+    ]
+    if seeded:
+        lines.append("The reviewer's log line read Authorization: bearer "
+                     + SEEDED_REPLACEMENT_RUN + " here.")
+    return "\n".join(lines)
+
+
+def build_capture(names: list[str]) -> dict[str, dict[str, Any]]:
+    """Walk the documented procedure once per case and record every call."""
+    payload_runs: dict[str, Any] = {}
+    command_runs: dict[str, Any] = {}
+    dispatch_runs: dict[str, Any] = {}
+    surface_runs: dict[str, Any] = {}
+    anchors = {name: unique_anchor(REPO_ROOT / FEATURE_DIR / name) for name in AMENDABLE_FILES}
+
+    for name in names:
+        case = cases()[name]
+        outcome = declared_outcome(name)
+        faults = (outcome or {}).get("faults") or {
+            "push_rejected_for": [], "reply_rejected_for": []
+        }
+        owed_in = list((outcome or {}).get("owed_replies_in") or [])
+        response = run_case(name)
+        envelope = stdout_json(response)
+
+        calls: list[dict[str, Any]] = []
+        dispatches: list[dict[str, Any]] = []
+        blocks: dict[str, str] = {}
+        payload_reports: dict[str, Any] = {}
+        log_row_responses: dict[str, str] = {}
+        report_dispositions: dict[str, str] = {}
+        commands: list[dict[str, Any]] = []
+        writes: list[dict[str, str]] = []
+        events: list[dict[str, Any]] = []
+        edits: dict[str, Any] = {}
+        written_text: dict[str, str] = {}
+        rows: list[str] = []
+        crl_rows: list[str] = []
+        replies: list[str] = []
+        commits: list[dict[str, Any]] = []
+        owed_left: list[str] = []
+        unpushed = 0
+        stopped = False
+        resume: str | None = None
+
+        def call(leg: str, comment_id: str, **fields: Any) -> dict[str, Any]:
+            request = redact_request(leg, comment_id, **fields)
+            reply = run_redact(leg, comment_id, **fields)
+            body = outbound_envelope(reply) if leg != "analyst_payload" else stdout_json(reply)
+            calls.append({
+                "leg": leg,
+                "comment_id": comment_id,
+                "request": request,
+                "response": body,
+            })
+            if leg != "analyst_payload":
+                counts: dict[str, int] = {}
+                for entry in body["redactions"]:
+                    counts[entry["rule"]] = counts.get(entry["rule"], 0) + 1
+                for rule, count in sorted(counts.items()):
+                    events.append({
+                        "comment_id": comment_id, "leg": leg, "rule": rule, "count": count
+                    })
+            return body
+
+        def fill_row(columns: tuple[str, ...], comment_id: str,
+                     values: dict[str, str]) -> dict[str, str]:
+            """Fill one table row, sending each prose cell through the log-row leg."""
+            filled: dict[str, str] = {}
+            for column in columns:
+                value = values.get(column, "")
+                if column in PROSE_COLUMNS and value:
+                    body = call("log_row", comment_id, lines=[value])
+                    value = body["lines"][0]
+                    if column == "Disposition":
+                        log_row_responses[comment_id] = value
+                filled[column] = value
+            return filled
+
+        commands.append({
+            "role": "parse_observation",
+            "argv": "gh pr view --json comments,reviewThreads | python3 -m speckit_pro_runner",
+            "argv_list": [],
+            "byproducts": [f"{BYPRODUCT_DIR}/observation-request.json"],
+        })
+
+        if response.get("status") == "ok" and isinstance(envelope, dict):
+            observed = {
+                entry["id"]: entry
+                for entry in case["inputs"]["pr_observation"]["comments"]
+            }
+            # Phase 1: consensus, the amendment, and the log rows.
+            for record in envelope["candidates"]:
+                if stopped:
+                    break
+                comment_id = record["id"]
+                export = record.get("export")
+                if export is not None and export.get("kind") == "empty":
+                    continue
+                matched = list((export or {}).get("matched_lines") or [])
+                payload = call(
+                    "analyst_payload", comment_id,
+                    text=observed[comment_id]["body"],
+                    truncated=bool(record["truncated"]),
+                    matched_lines=matched,
+                )
+                blocks[comment_id] = payload["text"]
+                payload_reports[comment_id] = payload["report"]
+                verdict = modeled_item(name, comment_id)
+                classifier_record = {
+                    "comment_id": comment_id,
+                    "class": verdict["class"],
+                    "target": verdict["target"],
+                    "reason": verdict["disposition"].replace("|", "/").replace("\n", " "),
+                }
+                dispatches.append({
+                    "agent": CLASSIFIER_AGENT,
+                    "comment_id": comment_id,
+                    "perspective": "classification",
+                    "prompt": f"Perspective: classification\n{payload['text']}",
+                    "bodies": [payload["text"]],
+                    "record": classifier_record,
+                    "malformed": False,
+                    "class_assigned": verdict["class"],
+                    "edit": None,
+                })
+                edit = None
+                if verdict["class"] == "amended":
+                    artifact = verdict["target"]
+                    if verdict["resolution"] == "resolved":
+                        edit = {
+                            "file": f"{FEATURE_DIR}/{artifact}",
+                            "anchor": anchors[artifact],
+                            "replacement": modeled_replacement(
+                                artifact, comment_id,
+                                seeded=comment_id.endswith("Y0009A"),
+                            ),
+                        }
+                    for perspective in ANALYST_PERSPECTIVES:
+                        dispatches.append({
+                            "agent": SWEEP_ANALYST_AGENT,
+                            "comment_id": comment_id,
+                            "perspective": perspective,
+                            "prompt": f"Perspective: {perspective}\n{payload['text']}",
+                            "bodies": [payload["text"]],
+                            "record": None,
+                            "malformed": False,
+                            "class_assigned": None,
+                            "edit": None,
+                        })
+                    dispatches.append({
+                        "agent": SWEEP_ANALYST_AGENT,
+                        "comment_id": comment_id,
+                        "perspective": "synthesis",
+                        "prompt": f"Perspective: synthesis\n{payload['text']}",
+                        "bodies": [payload["text"]],
+                        "record": None,
+                        "malformed": False,
+                        "class_assigned": None,
+                        "edit": edit,
+                    })
+
+                if verdict["resolution"] == "human_review":
+                    crl_rows.append(comment_id)
+                    fill_row(CONSENSUS_LOG_COLUMNS, comment_id, {
+                        "#": str(len(crl_rows)),
+                        "Type": "Sweep",
+                        "Question/Gap/Finding": f"Reviewer comment {comment_id}",
+                        "Categories": "sweep",
+                        "Round": "1",
+                        "Outcome": "human review",
+                        "Resolution": verdict["disposition"],
+                        "Analysts Used": "3",
+                    })
+                    stopped, resume = True, "operator"
+                    continue
+
+                artifact_path = None
+                if verdict["class"] == "amended":
+                    artifact = verdict["target"]
+                    artifact_path = f"{FEATURE_DIR}/{artifact}"
+                    body = call("amendment", comment_id,
+                                lines=edit["replacement"].split("\n"))
+                    written_text[comment_id] = "\n".join(body["lines"])
+                    subject = AMENDMENT_SUBJECT.format(
+                        feature=FEATURE_ID, artifact=artifact, comment_id=comment_id
+                    )
+                    commands.append({
+                        "role": "stage_artifact",
+                        "argv": f"git add -- {artifact_path}",
+                        "argv_list": ["git", "add", "--", artifact_path],
+                        "byproducts": [],
+                    })
+                    commands.append({
+                        "role": "amendment_commit",
+                        "argv": f"git commit -m {subject}",
+                        "argv_list": ["git", "commit", "-m", subject],
+                        "byproducts": [],
+                    })
+                    commits.append({
+                        "kind": "amendment", "artifact": artifact, "comment_id": comment_id
+                    })
+                    if comment_id in faults["push_rejected_for"]:
+                        unpushed += 1
+                        stopped, resume = True, "re-run"
+                        continue
+
+                rows.append(comment_id)
+                author = observed[comment_id]["author"] or UNRESOLVED_AUTHOR_CELL
+                commit_id = short_digest(comment_id + str(verdict["target"]))
+                if verdict["class"] == "amended":
+                    crl_rows.append(comment_id)
+                    fill_row(CONSENSUS_LOG_COLUMNS, comment_id, {
+                        "#": str(len(crl_rows)),
+                        "Type": "Sweep",
+                        "Question/Gap/Finding": f"Reviewer comment {comment_id}",
+                        "Categories": "sweep",
+                        "Round": "1",
+                        "Outcome": "resolved",
+                        "Resolution": verdict["disposition"],
+                        "Analysts Used": "3",
+                    })
+                feedback_row = fill_row(FEEDBACK_LOG_COLUMNS, comment_id, {
+                    "#": str(len(rows)),
+                    "Comment ID": comment_id,
+                    "Surface": record["surface"].replace("_", " "),
+                    "Author": author,
+                    "Class": verdict["class"],
+                    "Disposition": verdict["disposition"],
+                    "Commit": commit_id if verdict["class"] == "amended" else "",
+                    "CRL #": str(len(crl_rows)) if verdict["class"] == "amended" else "",
+                })
+                report_dispositions[comment_id] = feedback_row["Disposition"]
+                commands.append({
+                    "role": "bookkeeping_commit",
+                    "argv": f"git commit -m docs({FEATURE_ID}): record the feedback sweep log",
+                    "argv_list": ["git", "commit", "-m",
+                                  f"docs({FEATURE_ID}): record the feedback sweep log"],
+                    "byproducts": [],
+                })
+                commits.append({"kind": "bookkeeping", "artifact": None, "comment_id": None})
+
+            # Phase 2: the replies, once every write of phase 1 has landed.
+            if stopped:
+                owed_left = list(owed_in) + list(rows)
+            else:
+                for comment_id in list(owed_in) + list(rows):
+                    if comment_id in faults["reply_rejected_for"]:
+                        owed_left.append(comment_id)
+                        stopped, resume = True, "re-run"
+                        break
+                    verdict = modeled_item(name, comment_id)
+                    lines = [MARKER_OPEN + comment_id + MARKER_CLOSE]
+                    lines.append(
+                        report_dispositions.get(comment_id) or verdict["disposition"]
+                    )
+                    if verdict["class"] == "amended":
+                        lines.append(
+                            f"Amended {verdict['target']} at the section anchored on "
+                            f"{anchors[verdict['target']].lstrip('# ')}, in commit "
+                            f"{short_digest(comment_id + str(verdict['target']))}."
+                        )
+                    report = payload_reports.get(comment_id)
+                    if report is not None and report["truncated"]:
+                        lines.append(TRUNCATION_LINE.format(
+                            budget=BODY_BUDGET_BYTES, count=report["spans_withheld"]
+                        ))
+                    body = call("reply", comment_id, lines=lines)
+                    path = f"{BYPRODUCT_DIR}/reply-{comment_id}.md"
+                    writes.append({"path": path, "content": "\n".join(body["lines"])})
+                    surface = (observed.get(comment_id) or {}).get("surface", "pr_conversation")
+                    commands.append({
+                        "role": "reply",
+                        "argv": (
+                            f"gh pr comment --body-file {path}"
+                            if surface == "pr_conversation"
+                            else f"gh api --method POST --body-file {path}"
+                        ),
+                        "argv_list": [],
+                        "byproducts": [path],
+                        "comment_id": comment_id,
+                        "surface": surface,
+                    })
+                    replies.append(comment_id)
+        else:
+            stopped, resume = True, "re-run"
+
+        if events and not stopped:
+            # FR-012f's post-publication stop: everything the run owed has
+            # landed, and the run stops after it with a re-run resume path.
+            stopped, resume = True, "re-run"
+
+        report = {
+            "case": name,
+            "stopped": stopped,
+            "resume": resume,
+            "what_landed": {"commits": commits, "rows": rows, "replies": replies},
+            "dispositions": report_dispositions,
+            "redactions": events,
+            "byproducts_removed": BYPRODUCT_DIR,
+        }
+        report_text = "\n".join([
+            f"Run report for corpus case {name}.",
+            f"Commits taken this run: {len(commits)}.",
+            f"Rows written this run: {len(rows)}.",
+            f"Replies posted this run: {len(replies)}.",
+            f"Redaction events this run: {len(events)}.",
+            f"Byproduct directory removed: {BYPRODUCT_DIR}.",
+            f"Resume path: {resume or 'none, the run proceeded'}.",
+        ])
+        writes.append({"path": f"{BYPRODUCT_DIR}/run-report.md", "content": report_text})
+
+        payload_runs[name] = {"payloads": blocks, "reports": payload_reports}
+        command_runs[name] = {"commands": commands, "writes": writes, "report": report,
+                              "report_text": report_text}
+        dispatch_runs[name] = {
+            "dispatches": [
+                {k: v for k, v in entry.items() if k != "edit"} | {"edit": entry["edit"]}
+                for entry in dispatches
+            ],
+            "analyst_payload_blocks": blocks,
+            "report_dispositions": report_dispositions,
+            "log_row_responses": log_row_responses,
+        }
+        surface_runs[name] = {
+            "calls": calls,
+            "edits": {cid: entry for cid, entry in edits.items()},
+            "written_text": written_text,
+            "results": {
+                "rows_written": rows,
+                "crl_rows_written": crl_rows,
+                "replies_posted": replies,
+                "owed_replies_left": owed_left,
+                "commits": commits,
+                "unpushed_commits": unpushed,
+                "stop": stopped,
+                "resume": resume,
+            },
+        }
+    return {
+        "captured_payloads": payload_runs,
+        "captured_commands": command_runs,
+        "captured_dispatches": dispatch_runs,
+        "captured_surface_calls": surface_runs,
+    }
+
+
+def captured(key: str) -> dict[str, Any]:
+    block = EXPECTED[key]
+    if block.get("capture_pending"):
+        raise AssertionError(f"{key} is still pending")
+    return block.get("runs") or {}
+
+
+class ModeledRunResultTest(unittest.TestCase):
+    """T044, T045, T046: what a run leaves behind when something went wrong."""
+
+    def setUp(self) -> None:
+        self.runs = captured("captured_surface_calls")
+
+    def test_the_walked_procedure_reaches_the_declared_result(self) -> None:
+        for name, case in sorted(cases().items()):
+            outcome = case.get("outcome")
+            if outcome is None:
+                continue
+            got = self.runs[name]["results"]
+            with self.subTest(case=name):
+                for key in ("rows_written", "crl_rows_written", "replies_posted",
+                            "owed_replies_left", "commits", "unpushed_commits",
+                            "stop", "resume"):
+                    self.assertEqual(got[key], outcome[key], f"{name}: {key}")
+
+    def test_a_failed_read_writes_nothing_at_all(self) -> None:
+        for name in ("failure-read-fails-on-the-second-surface",
+                     "failure-read-fails-midway-through-pagination"):
+            with self.subTest(case=name):
+                got = self.runs[name]["results"]
+                self.assertEqual(got["rows_written"], [])
+                self.assertEqual(got["replies_posted"], [])
+                self.assertEqual(got["commits"], [])
+                self.assertTrue(got["stop"])
+
+    def test_a_rejected_push_is_followed_by_no_row_and_no_reply(self) -> None:
+        got = self.runs["failure-push-rejected-after-an-amendment-commit"]["results"]
+        self.assertEqual(got["rows_written"], [])
+        self.assertEqual(got["replies_posted"], [])
+        self.assertEqual(got["unpushed_commits"], 1)
+
+    def test_a_rejected_reply_is_owed_and_the_next_run_posts_exactly_one(self) -> None:
+        first = self.runs["failure-reply-rejected-on-one-surface"]["results"]
+        self.assertEqual(first["replies_posted"], [])
+        self.assertEqual(len(first["owed_replies_left"]), 1)
+        later = self.runs[
+            "failure-reply-rejected-on-one-surface-reconciled-next-run"
+        ]["results"]
+        self.assertEqual(later["replies_posted"], first["owed_replies_left"])
+        self.assertEqual(later["rows_written"], [])
+
+    def test_a_comment_already_answered_gets_no_second_row_and_no_second_reply(self) -> None:
+        got = self.runs["failure-comment-already-carrying-a-sweep-reply"]["results"]
+        self.assertEqual(got["rows_written"], [])
+        self.assertEqual(got["replies_posted"], [])
+
+    def test_human_review_writes_a_consensus_row_and_no_sweep_row(self) -> None:
+        got = self.runs["consensus-outcome-is-human-review"]["results"]
+        self.assertEqual(len(got["crl_rows_written"]), 1)
+        self.assertEqual(got["rows_written"], [])
+        self.assertTrue(got["stop"])
+        self.assertEqual(got["resume"], "operator")
+
+    def test_the_composed_interrupt_converges_over_two_runs(self) -> None:
+        first = self.runs[
+            "composed-interrupt-two-amendments-and-a-rejected-third-push"
+        ]["results"]
+        self.assertEqual(len(first["rows_written"]), 2)
+        self.assertEqual(first["replies_posted"], [])
+        self.assertEqual(first["unpushed_commits"], 1)
+        later = self.runs[
+            "composed-interrupt-the-next-run-reconciles-both-owed-replies"
+        ]["results"]
+        for comment_id in first["owed_replies_left"]:
+            self.assertIn(comment_id, later["replies_posted"])
+        self.assertEqual(len(later["replies_posted"]), 3)
+
+    def test_a_pipe_and_a_newline_leave_every_later_column_in_place(self) -> None:
+        # FR-013's escaping runs after the log-row leg, so what is asserted here
+        # is that the cell reaching the escaping still carries both characters
+        # and that the row the escaping produces keeps its eight columns.
+        name = "log-shape-disposition-carrying-a-pipe-and-a-newline"
+        disposition = cases()[name]["outcome"]["items"][0]["disposition"]
+        self.assertIn("|", disposition)
+        self.assertIn("\n", disposition)
+        escaped = disposition.replace("|", "\\|").replace("\n", "<br>")
+        cells = ["1", "IC", "pr conversation", "octocat", "answered", escaped, "", "7"]
+        row = "| " + " | ".join(cells) + " |"
+        self.assertEqual(len(row.split(" | ")), len(FEEDBACK_LOG_COLUMNS))
+        self.assertTrue(row.rstrip().endswith("7 |"), "the CRL # cell stays last")
+
+    def test_an_unresolved_author_says_so_rather_than_sitting_blank(self) -> None:
+        name = "log-shape-author-cannot-be-resolved-in-the-row"
+        comments = cases()[name]["inputs"]["pr_observation"]["comments"]
+        self.assertIsNone(comments[0]["author"])
+        report = captured("captured_commands")[name]["report"]
+        self.assertEqual(len(report["what_landed"]["rows"]), 1)
+        author_cells = [
+            write["content"] for write in captured("captured_commands")[name]["writes"]
+        ]
+        self.assertTrue(author_cells)
+        self.assertNotEqual(UNRESOLVED_AUTHOR_CELL.strip(), "")
+
+
+class SurfaceCallTest(unittest.TestCase):
+    """T092: every call the orchestrator makes to the redaction surface."""
+
+    def setUp(self) -> None:
+        self.runs = captured("captured_surface_calls")
+        self.commands = captured("captured_commands")
+
+    def test_every_captured_call_is_a_real_leg_carrying_a_comment(self) -> None:
+        for name, run in sorted(self.runs.items()):
+            for entry in run["calls"]:
+                with self.subTest(case=name, leg=entry["leg"]):
+                    self.assertEqual(set(entry), {"leg", "comment_id", "request", "response"})
+                    self.assertIn(entry["leg"], ("analyst_payload",) + OUTBOUND_LEGS)
+                    self.assertTrue(entry["comment_id"].strip())
+                    self.assertEqual(entry["request"]["leg"], entry["leg"])
+                    self.assertEqual(entry["request"]["comment_id"], entry["comment_id"])
+
+    def test_the_per_leg_call_counts_come_out_of_the_expectations(self) -> None:
+        checked = 0
+        for name, run in sorted(self.runs.items()):
+            want = expected_surface_call_counts(name)
+            if want is None:
+                continue
+            checked += 1
+            got = {leg: 0 for leg in ("amendment", "log_row", "reply", "analyst_payload")}
+            for entry in run["calls"]:
+                got[entry["leg"]] += 1
+            with self.subTest(case=name):
+                self.assertEqual(got, want)
+        self.assertGreater(checked, 0, "no case declares the outcome the counts derive from")
+
+    def test_one_analyst_payload_call_per_dispatched_candidate(self) -> None:
+        # The second, independent derivation of the same count: off the parse
+        # envelope rather than off the case's declared consensus list.
+        for name, run in sorted(self.runs.items()):
+            with self.subTest(case=name):
+                payload_calls = [e for e in run["calls"] if e["leg"] == "analyst_payload"]
+                self.assertEqual(
+                    sorted(e["comment_id"] for e in payload_calls),
+                    sorted(dispatched_candidates(name)),
+                )
+
+    def test_the_report_disposition_is_the_log_row_response(self) -> None:
+        dispatches = captured("captured_dispatches")
+        for name, run in sorted(dispatches.items()):
+            for comment_id, carried in sorted((run["report_dispositions"]).items()):
+                with self.subTest(case=name, comment=comment_id):
+                    self.assertEqual(carried, run["log_row_responses"][comment_id])
+
+    def test_at_least_one_log_row_leg_call_changed_its_cell(self) -> None:
+        # Without this the identity above compares two copies of the same
+        # unchanged string in every case and cannot fail.
+        changed = [
+            (name, entry["comment_id"])
+            for name, run in self.runs.items()
+            for entry in run["calls"]
+            if entry["leg"] == "log_row" and entry["response"]["redactions"]
+        ]
+        self.assertTrue(
+            changed,
+            "no captured log-row call redacted anything, so the report identity "
+            "assertion compares a string to itself",
+        )
+
+    def test_no_command_carries_the_run_report(self) -> None:
+        for name, run in sorted(self.commands.items()):
+            lines = [line for line in run["report_text"].split("\n") if len(line) >= 8]
+            self.assertTrue(lines)
+            for entry in run["commands"]:
+                argv = entry["argv"]
+                with self.subTest(case=name, role=entry["role"]):
+                    self.assertNotIn(run["report_text"], argv)
+                    for line in lines:
+                        self.assertNotIn(line, argv)
+
+
+class ReplyTest(unittest.TestCase):
+    """T047: the replies, proved against the captured commands."""
+
+    def setUp(self) -> None:
+        self.commands = captured("captured_commands")
+        self.surface = captured("captured_surface_calls")
+        self.payloads = captured("captured_payloads")
+
+    def reply_writes(self, name: str) -> dict[str, str]:
+        found = {}
+        for write in self.commands[name]["writes"]:
+            stem = write["path"].rsplit("/", 1)[-1]
+            if stem.startswith("reply-"):
+                found[stem[len("reply-"):-len(".md")]] = write["content"]
+        return found
+
+    def test_exactly_one_reply_per_comment_the_run_answers(self) -> None:
+        for name, run in sorted(self.surface.items()):
+            answered = run["results"]["replies_posted"]
+            with self.subTest(case=name):
+                self.assertEqual(sorted(self.reply_writes(name)), sorted(answered))
+                reply_calls = [e["comment_id"] for e in run["calls"] if e["leg"] == "reply"]
+                self.assertEqual(sorted(reply_calls), sorted(answered))
+                self.assertEqual(len(set(reply_calls)), len(reply_calls), "none at two")
+
+    def test_line_one_is_the_marker_alone(self) -> None:
+        for name in sorted(self.commands):
+            for comment_id, content in sorted(self.reply_writes(name).items()):
+                with self.subTest(case=name, comment=comment_id):
+                    lines = content.split("\n")
+                    self.assertEqual(lines[0], MARKER_OPEN + comment_id + MARKER_CLOSE)
+                    self.assertEqual(lines[0].index(MARKER_OPEN), 0)
+                    self.assertIn(MARKER_CLOSE, lines[0])
+                    self.assertGreaterEqual(len(lines), 2, "the disposition starts on line 2")
+                    self.assertNotIn(MARKER_OPEN, "\n".join(lines[1:]))
+
+    def test_only_the_amended_reply_names_an_artifact_and_a_commit(self) -> None:
+        for name in sorted(self.commands):
+            for comment_id, content in sorted(self.reply_writes(name).items()):
+                verdict = modeled_item(name, comment_id)
+                tail = "\n".join(content.split("\n")[1:])
+                with self.subTest(case=name, comment=comment_id):
+                    if verdict["class"] == "amended":
+                        self.assertIn(verdict["target"], tail)
+                        self.assertIn("commit", tail)
+                        self.assertIn("anchored on", tail)
+                    else:
+                        for artifact in AMENDABLE_FILES:
+                            self.assertNotIn(artifact, tail)
+                        self.assertNotIn("commit", tail)
+
+    def test_every_body_is_passed_by_file_path(self) -> None:
+        for name, run in sorted(self.commands.items()):
+            bodies = observed_bodies(cases()[name])
+            for entry in run["commands"]:
+                if entry["role"] != "reply":
+                    continue
+                with self.subTest(case=name, comment=entry.get("comment_id")):
+                    self.assertIn("--body-file", entry["argv"])
+                    self.assertIn(entry["comment_id"], entry["argv"])
+                    for body in bodies:
+                        self.assertNotIn(body, entry["argv"])
+                    content = self.reply_writes(name)[entry["comment_id"]]
+                    self.assertNotIn(content, entry["argv"])
+                    for line in content.split("\n"):
+                        if len(line) >= 12:
+                            self.assertNotIn(line, entry["argv"])
+
+    def test_the_truncation_line_counts_the_withheld_spans(self) -> None:
+        seen_truncated = 0
+        seen_plain = 0
+        for name in sorted(self.commands):
+            reports = self.payloads[name]["reports"]
+            for comment_id, content in sorted(self.reply_writes(name).items()):
+                report = reports.get(comment_id)
+                if report is None:
+                    continue
+                last = content.split("\n")[-1]
+                with self.subTest(case=name, comment=comment_id):
+                    if report["truncated"]:
+                        seen_truncated += 1
+                        self.assertEqual(last, TRUNCATION_LINE.format(
+                            budget=BODY_BUDGET_BYTES, count=report["spans_withheld"]
+                        ))
+                    else:
+                        seen_plain += 1
+                        self.assertNotIn("Body truncated at", content)
+        self.assertGreater(seen_truncated, 0, "no corpus comment is truncated")
+        self.assertGreater(seen_plain, 0, "no corpus comment has a plain body")
+
+
+class ByproductPlacementTest(unittest.TestCase):
+    """T090: every byproduct under the feature's own process directory."""
+
+    def setUp(self) -> None:
+        self.commands = captured("captured_commands")
+
+    def test_every_byproduct_path_resolves_under_the_process_directory(self) -> None:
+        root = (REPO_ROOT / BYPRODUCT_DIR).resolve()
+        seen = 0
+        for name, run in sorted(self.commands.items()):
+            paths = [path for entry in run["commands"] for path in entry["byproducts"]]
+            paths += [write["path"] for write in run["writes"]]
+            for path in paths:
+                seen += 1
+                with self.subTest(case=name, path=path):
+                    self.assertFalse(Path(path).is_absolute(), "byproducts are repo relative")
+                    self.assertTrue((REPO_ROOT / path).resolve().is_relative_to(root))
+        self.assertGreater(seen, 0, "no captured command names a byproduct")
+
+    def test_every_run_report_names_the_directory_as_removed(self) -> None:
+        for name, run in sorted(self.commands.items()):
+            with self.subTest(case=name):
+                self.assertEqual(run["report"]["byproducts_removed"], BYPRODUCT_DIR)
+                self.assertIn(BYPRODUCT_DIR, run["report_text"])
+                self.assertIn("removed", run["report_text"])
+
+
+class NoEchoTest(unittest.TestCase):
+    """T085: the seeded runs reach no output, and the report says little."""
+
+    def setUp(self) -> None:
+        self.commands = captured("captured_commands")
+        self.surface = captured("captured_surface_calls")
+        self.seeded = sorted({
+            seeded
+            for case in cases().values()
+            for seeded in (case.get("seeded_strings") or [])
+            if case["inputs"].get("named_surface") == "redact"
+            and case["inputs"].get("leg") in OUTBOUND_LEGS
+        })
+
+    def test_the_corpus_seeds_something_to_search_for(self) -> None:
+        self.assertGreater(len(self.seeded), 3, "the redaction cases seed nothing")
+
+    def test_no_seeded_run_reaches_a_surface_response(self) -> None:
+        for name in outbound_case_names():
+            if expectations()[name]["status"] != "ok":
+                continue
+            serialized = json.dumps(outbound_envelope(run_case(name)), ensure_ascii=False)
+            for seeded in self.seeded:
+                with self.subTest(case=name, seeded=len(seeded)):
+                    self.assertNotIn(seeded, serialized)
+
+    def test_no_seeded_run_reaches_an_output_the_run_leaves_behind(self) -> None:
+        # Scoped to outputs: the seed is in the surface's request by
+        # construction, which is why the request half is not searched.
+        for name, run in sorted(self.commands.items()):
+            haystack = json.dumps(
+                [run["writes"], run["report"], run["report_text"],
+                 [entry["argv"] for entry in run["commands"]]],
+                ensure_ascii=False,
+            )
+            written = json.dumps(self.surface[name]["written_text"], ensure_ascii=False)
+            for seeded in self.seeded:
+                with self.subTest(case=name, seeded=len(seeded)):
+                    self.assertNotIn(seeded, haystack)
+                    self.assertNotIn(seeded, written)
+
+    def test_no_seeded_run_reaches_a_response_the_orchestrator_received(self) -> None:
+        for name, run in sorted(self.surface.items()):
+            responses = json.dumps(
+                [entry["response"] for entry in run["calls"]], ensure_ascii=False
+            )
+            for seeded in self.seeded:
+                with self.subTest(case=name, seeded=len(seeded)):
+                    self.assertNotIn(seeded, responses)
+
+    def test_every_report_redaction_entry_says_only_what_fired(self) -> None:
+        for name, run in sorted(self.commands.items()):
+            for entry in run["report"]["redactions"]:
+                with self.subTest(case=name, rule=entry["rule"]):
+                    self.assertEqual(set(entry), {"comment_id", "leg", "rule", "count"})
+                    self.assertIn(entry["rule"], REDACTION_RULES)
+                    self.assertIn(entry["leg"], OUTBOUND_LEGS)
+                    self.assertGreaterEqual(entry["count"], 1)
+
+    def test_a_run_carrying_an_event_stops_after_everything_landed(self) -> None:
+        carrying = 0
+        for name, run in sorted(self.commands.items()):
+            report = run["report"]
+            if not report["redactions"]:
+                continue
+            carrying += 1
+            with self.subTest(case=name):
+                self.assertTrue(report["stopped"])
+                self.assertEqual(report["resume"], "re-run")
+                landed = report["what_landed"]
+                results = self.surface[name]["results"]
+                self.assertEqual(landed["rows"], results["rows_written"])
+                self.assertEqual(landed["replies"], results["replies_posted"])
+                self.assertEqual(landed["commits"], results["commits"])
+        self.assertGreater(carrying, 0, "no captured run carries a redaction event")
+
+    def test_the_documentation_never_calls_the_deny_set_a_scanner(self) -> None:
+        for path in PHASE_REFERENCES:
+            with self.subTest(reference=path.name):
+                self.assertTrue(path.is_file(), f"{path.name} is missing")
+                text = path.read_text(encoding="utf-8")
+                lowered = text.lower()
+                start = 0
+                while True:
+                    found = lowered.find(SECRET_SCANNER_PHRASE, start)
+                    if found < 0:
+                        break
+                    window = text[max(0, found - len(SECRET_SCANNER_SENTENCE)):found + 40]
+                    self.assertIn(
+                        SECRET_SCANNER_SENTENCE, window,
+                        f"{path.name} names a secret scanner outside the sentence that "
+                        "denies being one",
+                    )
+                    start = found + 1
+
+
+class AmendmentCommitTest(unittest.TestCase):
+    """T093: the commit subject is built from ids and enums alone."""
+
+    def setUp(self) -> None:
+        self.commands = captured("captured_commands")
+        self.seeded = sorted({
+            seeded
+            for case in cases().values()
+            for seeded in (case.get("seeded_strings") or [])
+        })
+
+    def test_every_amendment_subject_is_the_fixed_form(self) -> None:
+        seen = 0
+        for name, run in sorted(self.commands.items()):
+            for entry in run["commands"]:
+                if entry["role"] != "amendment_commit":
+                    continue
+                seen += 1
+                argv = entry["argv_list"]
+                with self.subTest(case=name, argv=argv[-1]):
+                    self.assertEqual(argv[:3], ["git", "commit", "-m"])
+                    self.assertEqual(len(argv), 4, "exactly one -m and no body")
+                    self.assertEqual(argv.count("-m"), 1)
+                    subject = argv[3]
+                    self.assertNotIn("\n", subject)
+                    artifact, comment_id = self.split_subject(subject)
+                    self.assertIn(artifact, AMENDABLE_FILES)
+                    self.assertEqual(
+                        subject,
+                        AMENDMENT_SUBJECT.format(
+                            feature=FEATURE_ID, artifact=artifact, comment_id=comment_id
+                        ),
+                    )
+                    self.assertRegex(subject, RELEASE_TITLE_PATTERN)
+                    for seeded in self.seeded:
+                        self.assertNotIn(seeded, subject)
+        self.assertGreater(seen, 0, "no captured run takes an amendment commit")
+
+    def split_subject(self, subject: str) -> tuple[str, str]:
+        head = f"docs({FEATURE_ID}): amend "
+        self.assertTrue(subject.startswith(head), subject)
+        rest = subject[len(head):]
+        artifact, _, comment_id = rest.partition(" for ")
+        return artifact, comment_id
+
+    def test_the_subject_matches_the_gate_s_own_pattern(self) -> None:
+        source = RELEASE_GATE_PATH.read_text(encoding="utf-8")
+        self.assertIn(
+            RELEASE_TITLE_PATTERN, source,
+            f"{RELEASE_GATE_PATH.name} no longer carries the title pattern asserted here",
+        )
+
+    def test_no_commit_argv_carries_a_seeded_run(self) -> None:
+        for name, run in sorted(self.commands.items()):
+            for entry in run["commands"]:
+                if not entry["role"].endswith("commit"):
+                    continue
+                with self.subTest(case=name, role=entry["role"]):
+                    for seeded in self.seeded:
+                        self.assertNotIn(seeded, entry["argv"])
+
+
+class AnalystDispatchTest(unittest.TestCase):
+    """T102: the sweep analyst, and the agents the sweep may never name."""
+
+    def setUp(self) -> None:
+        self.dispatches = captured("captured_dispatches")
+        self.surface = captured("captured_surface_calls")
+
+    def analyst_entries(self, run: dict[str, Any]) -> list[dict[str, Any]]:
+        return [e for e in run["dispatches"] if e["agent"] == SWEEP_ANALYST_AGENT]
+
+    def amended_items(self, name: str) -> list[str]:
+        """The amended items, read off the case's declared outcome."""
+        dispatched = set(dispatched_candidates(name))
+        outcome = declared_outcome(name) or {}
+        return sorted(
+            entry["comment_id"]
+            for entry in outcome.get("items") or []
+            if entry["class"] == "amended" and entry["comment_id"] in dispatched
+        )
+
+    def test_three_perspectives_and_one_synthesis_per_amended_item(self) -> None:
+        seen = 0
+        for name, run in sorted(self.dispatches.items()):
+            wanted = self.amended_items(name)
+            entries = self.analyst_entries(run)
+            with self.subTest(case=name):
+                self.assertEqual(sorted({e["comment_id"] for e in entries}), wanted)
+                for comment_id in wanted:
+                    seen += 1
+                    mine = [e for e in entries if e["comment_id"] == comment_id]
+                    perspectives = sorted(
+                        e["perspective"] for e in mine if e["perspective"] != "synthesis"
+                    )
+                    self.assertEqual(perspectives, sorted(ANALYST_PERSPECTIVES))
+                    for entry in mine:
+                        self.assertIn(entry["perspective"], entry["prompt"])
+                    synthesis = [e for e in mine if e["perspective"] == "synthesis"]
+                    self.assertEqual(len(synthesis), 1)
+                    self.assertEqual(len(mine), len(ANALYST_PERSPECTIVES) + 1)
+        self.assertGreater(seen, 0, "no captured run amends anything")
+
+    def test_no_dispatch_names_a_shared_analyst_or_the_synthesizer(self) -> None:
+        for name, run in sorted(self.dispatches.items()):
+            for entry in run["dispatches"]:
+                with self.subTest(case=name, agent=entry["agent"]):
+                    self.assertNotIn(entry["agent"], FORBIDDEN_AGENTS)
+                    self.assertIn(entry["agent"], (SWEEP_ANALYST_AGENT, CLASSIFIER_AGENT))
+
+    def test_each_prompt_carries_the_block_and_no_other_reviewer_bytes(self) -> None:
+        for name, run in sorted(self.dispatches.items()):
+            bodies = observed_bodies(cases()[name])
+            blocks = run["analyst_payload_blocks"]
+            for entry in self.analyst_entries(run):
+                with self.subTest(case=name, comment=entry["comment_id"]):
+                    block = blocks[entry["comment_id"]]
+                    self.assertEqual(entry["bodies"], [block])
+                    self.assertIn(block, entry["prompt"])
+                    residue = entry["prompt"].replace(block, "")
+                    for body in bodies:
+                        self.assertNotIn(body, residue)
+
+    def test_a_human_review_outcome_captures_no_structured_edit(self) -> None:
+        name = "consensus-outcome-is-human-review"
+        for entry in self.dispatches[name]["dispatches"]:
+            with self.subTest(comment=entry["comment_id"]):
+                self.assertIsNone(entry["edit"])
+        self.assertEqual(len(self.surface[name]["results"]["crl_rows_written"]), 1)
+
+
+def anchor_resolves_once(edit: dict[str, Any]) -> str | None:
+    """The contract's four stops, in the order a write point reaches them."""
+    if edit["file"] not in [f"{FEATURE_DIR}/{name}" for name in AMENDABLE_FILES]:
+        return "file_outside_the_allowlist"
+    if len(edit["anchor"].encode("utf-8")) > ANCHOR_BUDGET_BYTES:
+        return "anchor_over_the_cap"
+    if len(edit["replacement"].encode("utf-8")) > REPLACEMENT_BUDGET_BYTES:
+        return "replacement_over_the_cap"
+    text = (REPO_ROOT / edit["file"]).read_text(encoding="utf-8")
+    if text.count(edit["anchor"]) != 1:
+        return "anchor_does_not_resolve_once"
+    return None
+
+
+class StructuredEditTest(unittest.TestCase):
+    """T103: the record that makes an analyst's return reviewable."""
+
+    def setUp(self) -> None:
+        self.dispatches = captured("captured_dispatches")
+        self.surface = captured("captured_surface_calls")
+
+    def captured_edits(self) -> list[tuple[str, str, dict[str, Any]]]:
+        found = []
+        for name, run in sorted(self.dispatches.items()):
+            for entry in run["dispatches"]:
+                if entry["edit"] is not None:
+                    found.append((name, entry["comment_id"], entry["edit"]))
+        return found
+
+    def test_every_captured_edit_passes_all_four_stops(self) -> None:
+        found = self.captured_edits()
+        self.assertTrue(found, "no captured dispatch returned a structured edit")
+        for name, comment_id, edit in found:
+            with self.subTest(case=name, comment=comment_id):
+                self.assertEqual(set(edit), {"file", "anchor", "replacement"})
+                self.assertIsNone(anchor_resolves_once(edit))
+                resolved = (REPO_ROOT / edit["file"]).resolve()
+                allowed = [
+                    (REPO_ROOT / FEATURE_DIR / member).resolve()
+                    for member in AMENDABLE_FILES
+                ]
+                self.assertIn(resolved, allowed)
+
+    def test_one_red_case_per_stop(self) -> None:
+        good = self.captured_edits()[0][2]
+        over_anchor = dict(good, anchor="a" * (ANCHOR_BUDGET_BYTES + 1))
+        cases_by_stop = {
+            "file_outside_the_allowlist": dict(good, file=f"{FEATURE_DIR}/research.md"),
+            "anchor_over_the_cap": over_anchor,
+            "replacement_over_the_cap": dict(
+                good, replacement="r" * (REPLACEMENT_BUDGET_BYTES + 1)
+            ),
+            "anchor_does_not_resolve_once": dict(good, anchor="a line no document carries"),
+        }
+        for stop, edit in sorted(cases_by_stop.items()):
+            with self.subTest(stop=stop):
+                self.assertEqual(anchor_resolves_once(edit), stop)
+        # The cap is exclusive: one byte under the cap is not a stop.
+        self.assertIsNone(anchor_resolves_once(dict(good, anchor=good["anchor"])))
+
+    def write_point(self, target: str) -> dict[str, Any]:
+        response = run_runner(helper_request("write-point", {
+            "named_surface": "check_target", "feature_dir": FEATURE_DIR,
+            "target": target, "comment_id": "IC_kwDOKQ7tDs5vY0100A",
+        }))
+        self.assertEqual(response.get("status"), "ok", stderr_text(response))
+        return stdout_json(response)
+
+    def test_a_file_outside_the_allowlist_is_refused_at_the_write_point(self) -> None:
+        # T051's rule 2, against the real surface rather than the checker above.
+        # The surface answers with a verdict and leaves the halt to the caller,
+        # so the refusal is a reason and never a coerced path.
+        for member in AMENDABLE_FILES:
+            verdict = self.write_point(f"{FEATURE_DIR}/{member}")
+            with self.subTest(target=member):
+                self.assertTrue(verdict["allowed"])
+                self.assertIsNone(verdict["reason"])
+                self.assertEqual(verdict["resolved"], f"{FEATURE_DIR}/{member}")
+        refused = (
+            f"{FEATURE_DIR}/research.md",
+            f"{FEATURE_DIR}/contracts/sweep-pr-feedback.md",
+            f"{FEATURE_DIR}/../../README.md",
+            "README.md",
+        )
+        for target in refused:
+            verdict = self.write_point(target)
+            with self.subTest(target=target):
+                self.assertFalse(verdict["allowed"])
+                self.assertEqual(verdict["reason"], "outside_set")
+                self.assertNotIn(
+                    verdict["resolved"],
+                    [f"{FEATURE_DIR}/{member}" for member in AMENDABLE_FILES],
+                    "a refused target is never coerced onto an allowed path",
+                )
+
+    def test_every_captured_edit_is_allowed_by_the_write_point(self) -> None:
+        for name, comment_id, edit in self.captured_edits():
+            with self.subTest(case=name, comment=comment_id):
+                verdict = self.write_point(edit["file"])
+                self.assertTrue(verdict["allowed"])
+
+    def test_the_written_text_is_the_amendment_leg_s_response(self) -> None:
+        discriminating = 0
+        for name, run in sorted(self.surface.items()):
+            written = run["written_text"]
+            legs = {
+                entry["comment_id"]: entry
+                for entry in run["calls"] if entry["leg"] == "amendment"
+            }
+            for comment_id, text in sorted(written.items()):
+                with self.subTest(case=name, comment=comment_id):
+                    self.assertIn(comment_id, legs)
+                    self.assertEqual(text, "\n".join(legs[comment_id]["response"]["lines"]))
+                    sent = "\n".join(legs[comment_id]["request"]["lines"])
+                    if sent != text:
+                        discriminating += 1
+        self.assertGreater(
+            discriminating, 0,
+            "no captured amendment changed its replacement, so the byte identity "
+            "above cannot tell the leg's response from the analyst's own string",
+        )
+
+
+def capture_orchestrator_runs() -> int:
+    """Rewrite the four capture blocks from a walk over the real surfaces."""
+    document = load_json(EXPECTED_PATH)
+    produced = build_capture(parse_case_names())
+    for key, runs in produced.items():
+        block = document.get(key) or {}
+        block["capture_pending"] = False
+        block["produced_by"] = "T092"
+        block["runs"] = runs
+        document[key] = block
+    EXPECTED_PATH.write_text(
+        json.dumps(document, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
+    print(f"captured {len(produced['captured_commands'])} orchestrator runs")
+    return 0
+
+
 # ---------------------------------------------------------------------------
 
 
@@ -1210,6 +2607,24 @@ def capture_goldens() -> int:
         want["golden"] = {"text": envelope["text"], "report": envelope["report"]}
         want["capture_pending"] = False
         written += 1
+    for name in outbound_case_names():
+        want = document["cases"][name]
+        if want["status"] != "ok":
+            continue
+        response = run_case(name)
+        if response.get("status") != "ok":
+            refused.append(f"{name}: response status was {response.get('status')!r}")
+            continue
+        envelope = stdout_json(response)
+        if not isinstance(envelope, dict) or "lines" not in envelope:
+            refused.append(f"{name}: the response carried no outbound lines")
+            continue
+        want["golden"] = {
+            "lines": envelope["lines"],
+            "redactions": envelope["redactions"],
+        }
+        want["capture_pending"] = False
+        written += 1
     EXPECTED_PATH.write_text(
         json.dumps(document, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
@@ -1226,9 +2641,20 @@ def main(argv: list[str]) -> int:
         action="store_true",
         help="rewrite the shaping goldens from the redaction surface's own output",
     )
+    parser.add_argument(
+        "--capture-runs",
+        action="store_true",
+        help="rewrite the orchestrator capture blocks by walking the real surfaces",
+    )
     parsed, remaining = parser.parse_known_args(argv)
     if parsed.capture:
         return capture_goldens()
+    if parsed.capture_runs:
+        shutil.rmtree(WORKFLOW_SCRATCH, ignore_errors=True)
+        try:
+            return capture_orchestrator_runs()
+        finally:
+            shutil.rmtree(WORKFLOW_SCRATCH, ignore_errors=True)
     shutil.rmtree(WORKFLOW_SCRATCH, ignore_errors=True)
     result = unittest.main(argv=[sys.argv[0]] + remaining, exit=False, verbosity=2).result
     shutil.rmtree(WORKFLOW_SCRATCH, ignore_errors=True)

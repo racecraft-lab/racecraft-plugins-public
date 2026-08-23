@@ -709,3 +709,49 @@ one. T111 owns it.
 have been blamed on its own `install.py` edit. It checked: the manifest records a
 digest matching neither the pre-edit content nor the current content, so the entry
 was already stale before it touched the file.
+
+### T044-T047, T084, T085, T090-T093, T102, T103 (US2 tests and captures)
+
+**Deviations/Edge cases/Surprises:** 25 tests with 9 failures became **72 tests
+with 0 failures**, 154 corpus cases, four capture blocks at 94 runs each, zero
+pending goldens.
+
+**It ran falsification probes rather than asserting green.** Dropping one
+`log_row` call from the captures turns the per-leg count test red; rewriting one
+report disposition to the un-redacted string turns the identity test red. The
+fixture was restored by file copy and the suite re-run green. That is the
+difference between a passing test and a test that can fail.
+
+**It added a case specifically to stop a tautology.** T046's shipped cases would
+have made T092's identity assertion compare two copies of an unchanged string, so
+it added a disposition carrying a credential-shaped run, and a guard test that
+keeps at least one `log_row` call actually changing its cell.
+
+**Four assertions flagged as currently unfalsifiable, declared rather than
+counted as coverage.** One escapes text inside the test rather than observing
+output; one ends on a constant comparison because the filled Author cell is not
+captured anywhere; one greps for a sentence no worker has written yet, so it
+passes vacuously until the references land; and one is true by construction, but
+carries a `discriminating > 0` guard proving at least one captured amendment
+differs between request and response.
+
+**Three deviations that are judgment, not shortfall.** T091 scans in size-bounded
+line chunks because the runner truncates stdout near 16 KiB and six of the eight
+documents come back unparseable whole; splitting on line boundaries can only add
+events, never hide one, so zero over the runs implies zero over the file. T084's
+33 KiB transport case was omitted because **no transport cut exists in the
+runner** and a 33 KiB line is accepted, so writing the `invalid_input` assertion
+the task names would be a false test; this is consistent with the contract, which
+puts the cut on the caller. And it partitioned the case-name helpers rather than
+appending blindly, because 27 new outbound cases would otherwise have flowed into
+the shaping tests and raised `KeyError` on a missing `text` key, reddening
+green tests.
+
+**Two runtime facts worth carrying.** The runner caps stdout near 16 KiB and drops
+`stdout_json` when it trips, which any future whole-file surface test will hit.
+And `check_target` answers `status: ok` with `allowed` and a `reason`, never a
+diagnostic, so a test asserting a non-ok status passes for the wrong reason on an
+allowed path and fails on a refused one.
+
+**Eight em dashes in the expectations file are captured bytes**, pulled in as edit
+anchors from this feature's own document headings, not authored prose.
