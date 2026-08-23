@@ -493,3 +493,50 @@ worker's source files into `a36d12af7` before it finished, so its later
 mutation-helpers bump is working-tree-only. And someone ran the payload build
 mid-task, creating the two `dist/` agent copies while leaving the runner
 `.manifest.json` and `.sha256` stale, so T074 is still required.
+
+### T035-T043, T100, T101 (US1 reference documentation)
+
+**Deviations/Edge cases/Surprises:** Three forced deviations, four findings.
+
+**The orchestrator's parity scan was half wrong, and the worker proved it.** Two
+of four reported gaps were probe artifacts of a line-based grep: `reviewThreads`
+is symmetric and deliberately unprescribed, since FR-004b says reads pass their
+query by file or structured argument; `self_login` was present on both, and the
+Codex hit was missed because the phrase wraps across two lines. One gap was real,
+a `convergence` clause dropped in a Codex compression pass, and restored. The
+fourth, `gh api` 3 vs 0, belonged to unrelated pre-existing prose in the
+resolve-pr flow outside the sweep block, and the worker correctly refused to
+mirror another feature's flow into the Codex reference. Final parity: **58 facts,
+58 on both sides, zero on one side only.**
+
+**Deviations.** (1) No FR or SC ids in the shipped prose: neither reference cites
+this spec's requirements, and the only two FR citations in those files belong to
+an unrelated spec whose own FR-004 and FR-005 would collide. (2) `resolved_python`
+rather than the task text's literal `python3`, because the hardcoded interpreter
+failed `validate-installed-interpreter-contract` under the Installed Runtime
+Contract. (3) T043's fixture writes to its own temp directory rather than the
+shared scratch, for the reason below.
+
+**A concurrency hazard in the test file itself, found by being bitten.** The
+worker's fixture was flaky at 42, then 33, then 9, then 0 failures across
+consecutive runs. Cause: another worker's suite run calls
+`shutil.rmtree(WORKFLOW_SCRATCH)` in `main()`, deleting the workflow file
+mid-case. Fixed for the new fixture with an owned `tempfile.mkdtemp`, self-cleaning
+in a `finally`. **The pre-existing `materialized_workflow` path still carries this
+hazard** for any two concurrent runs of this file, and is worth closing later.
+
+**The Codex SKILL.md word cap has ZERO headroom, not three words.** Measured with
+the validator's own `_body()` helper rather than `wc -w`, because the cap is
+computed after frontmatter is stripped:
+`speckit-pro/codex-skills/speckit-autopilot/SKILL.md` is at **exactly 8000 of
+8000**. The next-largest is `speckit-scaffold-spec` at 7453 and everything else is
+under 4300, so the cap binds on one file. The standing project note recording
+7997 came from task prose rather than a measurement and has been corrected.
+
+**T040 versus T100 was written once, as T100's version.** T040's per-candidate
+body read never appears, because T100 replaces it: the orchestrator is a conduit
+and reads no body on any path. The worker also corrected T040's three-field
+shorthand to the contract's four fields, matching the landed fixture.
+
+Verification: Layer 1 **1490/1490**, `validate-codex-skills` 163/163,
+`validate-codex-parity` 85/85, parse test delta against the 9 baseline **zero**.

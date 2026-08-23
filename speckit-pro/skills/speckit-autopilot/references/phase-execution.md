@@ -1269,22 +1269,23 @@ inside a phase that already exists, never a phase of its own.
 
 **Read the authenticated account from the live session, at call time.** The
 sweep excludes the replies it posted itself, and the author half of that rule
-compares against the account this run authenticated as. Read that account from
-the live authenticated session at the moment of the call. Never take it from
-configuration, from a project setting, or from a value remembered earlier in
-the run. This is the same freshness the author-association field below
-requires, and it needs saying because nothing else says how the orchestrator
-learns its own login, so nothing today guarantees the value arrives correct.
+compares against the account this run authenticated as, which is the parse's
+`self_login` input. Read that account from the live authenticated session at
+the moment of the call. Never take it from configuration, from a project
+setting, or from a value remembered earlier in the run. This is the same
+freshness the author-association field below requires, and it needs saying
+because nothing else says how the orchestrator learns its own login, so nothing
+today guarantees the value arrives correct.
 
-**Two reads, and only two.** Read **every review thread whose resolved flag is
-false** and **every pull-request conversation comment**. Do not read review
-summary bodies. **Paginate both to exhaustion**: follow the cursor until the
-surface reports no further page, rather than taking a first page and stopping.
-Request the **`authorAssociation`** field explicitly on both reads. No shipped
-query asks for it, so the author-association filter has no input unless this
-read supplies it. **No comment text reaches a shell argument in either
-direction**: a read passes its query by file or by structured argument, and a
-write passes its body by file path.
+**Two reads, and only two**, both `gh api` reads. Read **every review thread
+whose resolved flag is false** and **every pull-request conversation comment**.
+Do not read review summary bodies. **Paginate both to exhaustion**: follow the
+cursor until the surface reports no further page, rather than taking a first
+page and stopping. Request the **`authorAssociation`** field explicitly on both
+reads. No shipped query asks for it, so the author-association filter has no
+input unless this read supplies it. **No comment text reaches a shell argument
+in either direction**: a read passes its query by file or by structured
+argument, and a write passes its body by file path.
 
 **Pipe the observation straight into the runner.** The reads' output reaches
 `sweep-pr-feedback` on stdin, `gh ... | resolved_python -m speckit_pro_runner`,

@@ -1006,18 +1006,19 @@ the stage-to-phase map, nor the workflow template.
 
 **Read the authenticated account from the live session, at call time.** The
 sweep excludes the replies it posted itself, and that rule's author half
-compares against the account this run authenticated as. Read it from the live
-authenticated session at the moment of the call: never from configuration, a
-project setting, or a value remembered earlier in the run. That is the same
-freshness the author-association field below requires.
+compares against the account this run authenticated as, which is the parse's
+`self_login` input. Read it from the live authenticated session at the moment
+of the call: never from configuration, a project setting, or a value remembered
+earlier in the run. That is the same freshness the author-association field
+below requires.
 
-**Two reads, and only two.** Read **every review thread whose resolved flag is
-false** and **every pull-request conversation comment**, never review summary
-bodies. **Paginate both to exhaustion**, following the cursor until the surface
-reports no further page, and request the **`authorAssociation`** field
-explicitly on both. **No comment text reaches a shell argument in either
-direction**: a read passes its query by file or by structured argument, a write
-passes its body by file path.
+**Two reads, and only two**, both `gh api` reads. Read **every review thread
+whose resolved flag is false** and **every pull-request conversation comment**,
+never review summary bodies. **Paginate both to exhaustion**, following the
+cursor until the surface reports no further page, and request the
+**`authorAssociation`** field explicitly on both. **No comment text reaches a
+shell argument in either direction**: a read passes its query by file or by
+structured argument, a write passes its body by file path.
 
 **Pipe the observation straight into the runner.** The reads' output reaches
 `sweep-pr-feedback` on stdin, `gh ... | resolved_python -m speckit_pro_runner`,
@@ -1098,12 +1099,14 @@ comments that pass the trust filter, are absent from the Feedback Sweep Log,
 and are not excluded as the sweep's own replies. Every run either shrinks that
 set or leaves it unchanged; **no run may grow it**, which is what makes the
 loop terminate, and any future rule that writes to either comment surface has
-to be tested against it. One path does not shrink the set: a comment whose
-consensus round returns a human-review outcome takes no class and writes no
-row, so it is in the set again on the next run and stops that run too. The set
-does not grow, so this is not divergence. That path is bounded by a human
-rather than by a counter, and **no attempt counter is introduced**: a
-per-comment counter would need the state-file mirror the log rules forbid.
+to be tested against it, because a rule that adds an unexcluded comment breaks
+convergence however reasonable it looks on its own. One path does not shrink
+the set: a comment whose consensus round returns a human-review outcome takes
+no class and writes no row, so it is in the set again on the next run and stops
+that run too. The set does not grow, so this is not divergence. That path is
+bounded by a human rather than by a counter, and **no attempt counter is
+introduced**: a per-comment counter would need the state-file mirror the log
+rules forbid.
 
 **The feedback sweep's byproduct directory ignores itself.** The sweep writes
 its own transport files under `specs/<feature>/.process/feedback-sweep/`, and
