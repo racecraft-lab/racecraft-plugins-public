@@ -1020,8 +1020,8 @@ direction**: a read passes its query by file or by structured argument, a write
 passes its body by file path.
 
 **Pipe the observation straight into the runner.** The reads' output reaches
-`sweep-pr-feedback` on stdin, `gh ... | python3 -m speckit_pro_runner`, the
-request envelope wrapped around the read rather than around a file, so **no
+`sweep-pr-feedback` on stdin, `gh ... | resolved_python -m speckit_pro_runner`,
+the request envelope wrapped around the read rather than around a file, so **no
 unredacted body is written to disk at any point**. Where a byproduct file is
 unavoidable it goes under `specs/<feature>/.process/feedback-sweep/` and
 nowhere else, the directory the next paragraph describes, where the reply

@@ -1287,13 +1287,13 @@ direction**: a read passes its query by file or by structured argument, and a
 write passes its body by file path.
 
 **Pipe the observation straight into the runner.** The reads' output reaches
-`sweep-pr-feedback` on stdin, `gh ... | python3 -m speckit_pro_runner`, with the
-request envelope wrapped around the read rather than around a file. **No
-unredacted body is written to disk at any point**, which is a stronger control
-than ignoring such a file would be. Where a byproduct file is unavoidable it
-goes under `specs/<feature>/.process/feedback-sweep/` and nowhere else, the
-directory the next section describes, which is where the reply bodies already
-live.
+`sweep-pr-feedback` on stdin, `gh ... | resolved_python -m speckit_pro_runner`,
+with the request envelope wrapped around the read rather than around a file.
+**No unredacted body is written to disk at any point**, which is a stronger
+control than ignoring such a file would be. Where a byproduct file is
+unavoidable it goes under `specs/<feature>/.process/feedback-sweep/` and
+nowhere else, the directory the next section describes, which is where the
+reply bodies already live.
 
 **The two reads are one observation, taken all or nothing.** It succeeds only
 when both surfaces have been read to exhaustion. Three failures fall under the

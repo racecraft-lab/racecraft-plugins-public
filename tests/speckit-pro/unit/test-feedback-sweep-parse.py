@@ -1039,9 +1039,12 @@ class ByproductIgnoreTest(unittest.TestCase):
 # T043: the work set shrinks or holds, and never grows.
 # ---------------------------------------------------------------------------
 
-# The path a second run's synthetic log is written to, beside the fixtures and
-# inside the repository, because the helper resolves `workflow_file` there.
-SECOND_RUN_WORKFLOW = (WORKFLOW_SCRATCH / "workflow.md").relative_to(REPO_ROOT).as_posix()
+# A second run's synthetic log is written inside the repository, because the
+# helper resolves `workflow_file` there, and into a directory of its own rather
+# than into `WORKFLOW_SCRATCH`: a concurrent run of this file removes that
+# directory wholesale, which would delete this run's log mid-case and read as a
+# broken skip rather than as the collision it is.
+SECOND_RUN_DIR_PREFIX = ".convergence-"
 
 SECOND_RUN_LOG_HEADER = (
     "# Sample Workflow\n\n"
@@ -1067,6 +1070,22 @@ def sweep_reply(record: dict[str, Any], self_login: str) -> dict[str, Any]:
         "body": f"<!-- speckit-pro:feedback-sweep {record['id']} -->\nRecorded.",
         "truncated": False,
     }
+
+
+def run_second_run(name: str, inputs: dict[str, Any], log: str) -> dict[str, Any]:
+    """Run one case again with the log and replies a first run would leave.
+
+    The log lives in a directory this call owns for its own length, so nothing
+    else can remove it while the runner is reading it.
+    """
+    scratch = Path(tempfile.mkdtemp(prefix=SECOND_RUN_DIR_PREFIX, dir=FIXTURE_DIR))
+    try:
+        workflow = scratch / "workflow.md"
+        workflow.write_text(log, encoding="utf-8")
+        request = {**inputs, "workflow_file": workflow.relative_to(REPO_ROOT).as_posix()}
+        return run_runner(helper_request(f"{name}-second-run", request))
+    finally:
+        shutil.rmtree(scratch, ignore_errors=True)
 
 
 class ConvergenceInvariantTest(unittest.TestCase):
@@ -1124,7 +1143,6 @@ class ConvergenceInvariantTest(unittest.TestCase):
             replies = [sweep_reply(record, self_login) for record in candidates]
             inputs = {
                 **case["inputs"],
-                "workflow_file": SECOND_RUN_WORKFLOW,
                 "pr_observation": {
                     "ok": True,
                     "comments": [
@@ -1133,9 +1151,7 @@ class ConvergenceInvariantTest(unittest.TestCase):
                     ],
                 },
             }
-            second_run = {"inputs": inputs, "workflow_content": SECOND_RUN_LOG_HEADER + rows}
-            with materialized_workflow(second_run):
-                response = run_runner(helper_request(f"{name}-second-run", inputs))
+            response = run_second_run(name, inputs, SECOND_RUN_LOG_HEADER + rows)
             later = stdout_json(response)
             with self.subTest(case=name, check="the second run parses"):
                 self.assertIsInstance(
