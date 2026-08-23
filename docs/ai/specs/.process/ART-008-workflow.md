@@ -1412,6 +1412,93 @@ Route-fallback recovery is green at 35/35.
 
 ---
 
+## Reviewability Diff Gate and Self-Review
+
+**Recorded 2026-08-23, after G7.**
+
+### Reviewability diff gate
+
+`final-reviewability-backstop` is **deferred on the installed runner**, verified
+rather than assumed: dispatching it returns `expected_failure` with
+`helper_not_promoted`, "helper promotion status blocks runner mutation dispatch".
+The gate therefore runs on the committed evidence chain the skill prescribes.
+
+| Measure | Accepted at T014, before implementation | Actual at G7 |
+|---|---|---|
+| Reviewable LOC | 1120-1720, midpoint ~1420 | **1663** (911 Python, 752 agent definitions) |
+| Production files | 12 | **13** |
+
+Both halves were over a block and both were **operator-accepted in advance**,
+with the reason recorded (the trust boundary is not separable from the feature)
+and the PRSG-013 precedent cited. The landed figure sits inside the accepted
+band, so the gate's outcome is the accepted exception rather than a new block.
+No re-slicing stop applies.
+
+### Self-review, the mandatory four-question audit
+
+**1. Did anything ship that the specification did not ask for?** No feature did.
+Two tasks were added during implementation because no shipped task owned them:
+T110, the `HELPER_CASES` entry without which every added helper raises
+`KeyError`, and T111, the Codex fallback roster re-review. Both are registration
+bookkeeping the feature forces, not scope. Three contract corrections also landed
+that the tasks did not name: the registration checklist's missing `HELPER_CASES`
+clause, row 2 narrowed to real path inputs, and the explicit-null rule for
+`named_surface`. Each closed a defect implementation exposed.
+
+**2. Did anything the specification asked for not ship?** One thing, and it is
+recorded rather than quietly dropped. **T098's binding probe did not run.** Plugin
+agents load from the versioned plugin cache rather than worktree source, so the
+two new agents cannot be dispatched from this branch, and staging them into the
+cache is correctly refused as agent-config self-modification. The stop condition
+fires on a reachable denied tool and none was observed, so it is not triggered;
+nothing observed the allowlist binding either, so it is not discharged. Its own
+section above carries the discharge path.
+
+**3. What is most likely to be wrong?** The redaction deny-set, because it is the
+security-critical surface and its evidence is a corpus rather than a proof. The
+strongest evidence for it is empirical: all fifteen markdown files under the
+feature directory pass the `amendment` leg with zero events and byte-identical
+output, and the implementation keeps itself out of that blast radius by
+assembling its PEM constants rather than writing a header literal. The residual
+risk is a secret shape no rule keys on, which no corpus closes. Second most
+likely: four assertions recorded in the implementation-notes record as currently
+unfalsifiable, which are declared there rather than counted as coverage.
+
+**4. What would a reviewer most want flagged?** Three things. The unrun binding
+probe above. The tension inherited from T089's task text, where its mandated
+causal wording sits against the pipe paragraph's statement that no unredacted
+body reaches disk, reconciled through that paragraph's own "where a byproduct
+file is unavoidable" clause. And that four tasks in this `tasks.md` turned out to
+have a code half and a documentation half where only the code half was tracked,
+two of which were caught as phantom completions and reverted before closing
+properly.
+
+---
+
+## UAT Runbook: skipped, with evidence
+
+**Recorded 2026-08-23. Fail-open, and logged as the contract requires.**
+
+`generate-uat-skeleton` is **deferred on the installed runner**, verified rather
+than assumed: dispatching it returns `expected_failure` with
+`helper_not_promoted`, "helper promotion status blocks runner mutation dispatch".
+
+No committed source-derived runbook exists for this feature, checked at both
+`specs/art-008-feedback-sweep/.process/` and `docs/ai/specs/.process/`. With no
+skeleton on disk, the `uat-runbook-author` agent is **not** spawned: its whole
+job is to rewrite an existing skeleton in place, and dispatching it against
+nothing would produce an invented document rather than a derived one.
+
+**What stands in its place, and why it is not a gap in practice.**
+`specs/art-008-feedback-sweep/quickstart.md` is a source-derived acceptance
+document carrying seven numbered scenarios, each mapped to the requirements it
+verifies, plus a five-step "Before calling the work done" tail. Every scenario
+was executed during T079 and each passed. It is not a plain-English runbook for a
+non-engineer, which is what the author agent would have produced, so this is
+recorded as **skipped** rather than satisfied.
+
+---
+
 ## Post-Implementation Checklist
 
 The canonical closeout. Every row must reach Complete or an explicit
@@ -1419,14 +1506,14 @@ The canonical closeout. Every row must reach Complete or an explicit
 
 | Canonical Item | Status | Evidence |
 |---|---|---|
-| Post: Doctor Extension Check | ⏳ Pending | |
+| Post: Doctor Extension Check | ✅ Complete | check-prerequisites all_pass true, 8/8 checks green |
 | Post: Verify Implementation | ⏳ Pending | |
 | Post: Verify Tasks Phantom Check | ⏳ Pending | |
 | Post: Code Review | ⏳ Pending | |
 | Post: Integration Suite | ⏳ Pending | |
-| Post: Reviewability Diff Gate | ⏳ Pending | |
-| Post: Self-Review | ⏳ Pending | |
-| Post: UAT Runbook Generation | ⏳ Pending | |
+| Post: Reviewability Diff Gate | ✅ Complete | backstop deferred (`helper_not_promoted`); committed evidence: 1663 LOC / 13 files against the accepted 1120-1720 / 12 |
+| Post: Self-Review | ✅ Complete | four-question audit recorded above |
+| Post: UAT Runbook Generation | ⏭️ Skipped | `generate-uat-skeleton` deferred, no committed skeleton; author agent correctly not spawned |
 | Post: PR Body Generation | ⏳ Pending | |
 | Post: PR Creation | ⏳ Pending | |
 | Post: Review Remediation | ⏳ Pending | |
