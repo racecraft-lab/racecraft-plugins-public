@@ -540,3 +540,45 @@ shorthand to the contract's four fields, matching the landed fixture.
 
 Verification: Layer 1 **1490/1490**, `validate-codex-skills` 163/163,
 `validate-codex-parity` 85/85, parse test delta against the 9 baseline **zero**.
+
+### T051 and T086
+
+**Deviations/Edge cases/Surprises:** Three deviations, each a decision inside a
+contract silence and commented in code so T084's author reads intent rather than
+accident. (1) **Rule-major intra-line event order**, because `spec.md:2093` says
+the deny-set is applied "in this order", so on a line with a bearer hit left of an
+AWS hit the events come rule-major. Output text is identical either way; only
+event order differs. (2) An over-bound line inside a PEM span takes the span
+placeholder and **both** events are kept; both placeholders carry zero reviewer
+bytes and the fixpoint holds either way. (3) The END line is strip-compared,
+mirroring the header rule's own surrounding-whitespace allowance, so a PEM block
+indented inside a fence still closes.
+
+**The trap-2 clearance is empirical, not argued.** All 15 `.md` files under the
+feature directory were fed through the `amendment` leg: **zero events,
+byte-identical output, line count preserved on every one.** That is the evidence
+FR-008a's corpus-scan case needs, and it also clears the two grammar judgment
+calls. The worker additionally kept its own code out of the blast radius by
+assembling the PEM constants as `"-" * 5 + "BEGIN "`, so no committed line in the
+implementation is itself a header.
+
+**One real defect found and closed after its first pass.** A NUL byte in `target`
+raised `ValueError` out of `Path.resolve` instead of returning a diagnostic.
+`target` is deliberately absent from `path_keys_by_helper`, so nothing upstream
+validates it, and the contract reserves `invalid_input` for a malformed request.
+Guarded for both `feature_dir` and `target`.
+
+**Two ordering details that are load-bearing rather than stylistic.** In the
+write-point check, each directory is tested for `is_symlink()` **before** the walk
+asks whether it is the stop point, because a link inside the feature directory
+pointing back at it resolves onto an allowed path: membership passes, and a walk
+that broke before testing where it stopped would let it through. And the
+candidate is kept both resolved and unresolved, because resolving destroys
+exactly what the link tests read. `contracts/../plan.md` resolving to allowed is
+the proof the comparison is over resolved paths.
+
+**Its RED was honest about being a probe bug.** The first run's three failures
+were all in the probe, and the detail is worth keeping: the boundary vector used a
+30-character run, where the 24-byte placeholder *shrinks* the line. The spec's
+named vector needs a 20-character run, where the placeholder grows it by 4 and
+8189 crosses the bound. Fixing the probe is what exercised the boundary math.

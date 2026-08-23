@@ -1537,7 +1537,8 @@ SWEEP_PARSE_SURFACE = "parse"
 SWEEP_NAMED_SURFACES = (SWEEP_PARSE_SURFACE, "check_target", "redact")
 
 # The redaction surface's closed leg set. Three outbound legs carry FR-012f's
-# deny-set and are not built yet; `analyst_payload` is FR-007g's inbound one.
+# bound and deny-set; `analyst_payload` is FR-007g's inbound shaping. A fifth leg
+# is a change to the contract rather than a configuration.
 SWEEP_REDACT_LEGS = ("amendment", "log_row", "reply", "analyst_payload")
 
 SWEEP_COMMENT_SURFACES = ("review_thread", "pr_conversation")
@@ -1871,8 +1872,8 @@ def sweep_pr_feedback(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]
         return sweep_error(f"unknown named_surface: {named_surface}")
     if named_surface == "redact":
         return sweep_redact(inputs)
-    if named_surface != SWEEP_PARSE_SURFACE:
-        return sweep_error(f"named_surface not available yet: {named_surface}")
+    if named_surface == "check_target":
+        return sweep_check_target(inputs, repo_root)
     return sweep_parse(inputs, repo_root)
 
 
@@ -1969,6 +1970,88 @@ def sweep_parse(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     }))
 
 
+# The three artifacts an amendment may write (FR-012b). The set is closed here
+# because it is the whole of the check: a fourth name is a contract change.
+SWEEP_EDIT_ALLOWLIST = ("spec.md", "plan.md", "tasks.md")
+
+
+def sweep_check_target(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+    """FR-012b rule 2: the resolved write target, checked in code before any write.
+
+    The test is the surface's and the stop is the orchestrator's, the same division
+    the parse keeps when it reports candidates and assigns no class. `allowed: false`
+    is a successful read with an answer in it rather than a diagnostic, so a refusal
+    returns a verdict and the halt stays with the caller under FR-012d.
+    """
+    feature_dir = inputs.get("feature_dir")
+    if not isinstance(feature_dir, str) or not feature_dir:
+        return sweep_error("feature_dir is required")
+    target = inputs.get("target")
+    if not isinstance(target, str) or not target:
+        return sweep_error("target is required")
+    if "\x00" in feature_dir or "\x00" in target:
+        # `target` is not a `path_keys_by_helper` entry, so nothing upstream has
+        # looked at it, and resolving a NUL byte raises rather than answering. A
+        # malformed request is `invalid_input`, never a traceback and never a
+        # verdict: the check has to be able to run before it can refuse anything.
+        return sweep_error("feature_dir and target must not carry a NUL byte")
+    comment_id = inputs.get("comment_id")
+    if not isinstance(comment_id, str) or not comment_id.strip():
+        return sweep_error("comment_id is required and must not be blank")
+    feature_path = resolve_input_path(feature_dir, repo_root)
+    if not trusted_dir_exists(feature_path, repo_root):
+        return sweep_error(
+            "feature_dir does not resolve to a directory:"
+            f" {request_path_display(feature_dir, repo_root)}"
+        )
+    # The candidate is kept both ways on purpose. The comparison reads the resolved
+    # path, and the two link tests read the unresolved one, because resolving is
+    # what destroys the information those tests are looking for.
+    candidate = resolve_input_path(target, repo_root)
+    allowed_paths = {
+        (feature_path / name).resolve(strict=False) for name in SWEEP_EDIT_ALLOWLIST
+    }
+    reason: str | None = None
+    if candidate.resolve(strict=False) not in allowed_paths:
+        # Exact membership over resolved paths, never containment (FR-012c). A
+        # containment or prefix test would admit everything beneath the feature
+        # directory, its checklists and its contracts included, and comparing
+        # prefixes against an unresolved path is a traversal defect of its own.
+        reason = "outside_set"
+    elif candidate.is_symlink():
+        reason = "symlink_target"
+    elif sweep_symlinked_parent(candidate, feature_path):
+        reason = "symlink_parent"
+    return make_result(json_text({
+        "tool": "sweep-pr-feedback",
+        "named_surface": "check_target",
+        "comment_id": comment_id,
+        "allowed": reason is None,
+        # The path the check actually compared, never the one the caller sent.
+        "resolved": repo_relative(candidate, repo_root),
+        "reason": reason,
+    }))
+
+
+def sweep_symlinked_parent(candidate: Path, feature_path: Path) -> bool:
+    """True when any directory from the target's parent up to `feature_dir` is a link.
+
+    Each directory is tested before the walk asks whether it is the one to stop at,
+    and the feature directory is therefore tested too. Both follow from the same
+    case: a link inside the feature directory pointing back at it resolves onto an
+    allowed path, so a walk that stopped before testing where it stopped would let
+    that link through as an ordinary parent.
+    """
+    stop = feature_path.resolve(strict=False)
+    parent = candidate.parent
+    while True:
+        if parent.is_symlink():
+            return True
+        if parent.resolve(strict=False) == stop or parent == parent.parent:
+            return False
+        parent = parent.parent
+
+
 def sweep_redact(inputs: dict[str, Any]) -> dict[str, Any]:
     """The redaction surface: one surface, four legs, and the set is closed at four.
 
@@ -1981,9 +2064,185 @@ def sweep_redact(inputs: dict[str, Any]) -> dict[str, Any]:
     comment_id = inputs.get("comment_id")
     if not isinstance(comment_id, str) or not comment_id.strip():
         return sweep_error("comment_id is required and must not be blank")
-    if leg != "analyst_payload":
-        return sweep_error(f"redaction leg not available yet: {leg}")
-    return sweep_analyst_payload(inputs, comment_id)
+    if leg == "analyst_payload":
+        return sweep_analyst_payload(inputs, comment_id)
+    lines = inputs.get("lines")
+    if not isinstance(lines, list) or any(not isinstance(entry, str) for entry in lines):
+        return sweep_error(
+            f"lines must be an array of strings on the {leg} leg for comment {comment_id}"
+        )
+    for field in ("text", "truncated", "matched_lines"):
+        if inputs.get(field) is not None:
+            # The leg fixes the request shape in both directions, so a request
+            # carrying both shapes is a malformed caller rather than an ambiguity.
+            return sweep_error(f"{field} is an analyst_payload field and not the {leg} leg's")
+    return sweep_redact_outbound(leg, comment_id, lines)
+
+
+# FR-012f's six hit classes. The placeholder carries the rule name and nothing
+# else, so it holds zero reviewer bytes, contains neither a pipe nor a newline,
+# and matches no rule.
+SWEEP_REDACT_PLACEHOLDER = "[redacted: {rule}]"
+SWEEP_BOUND_RULE = "over_bound_line"
+SWEEP_KEY_HEADER_RULE = "private_key_header"
+
+# A line that is a PEM header and nothing else but surrounding whitespace. One
+# pattern covers the OPENSSH, RSA, EC, DSA, PKCS#8, and PGP forms without
+# enumerating them, and a header quoted inside a sentence or beside other text is
+# not the line and matches nothing.
+SWEEP_KEY_HEADER_OPENER = "-" * 5 + "BEGIN "
+SWEEP_KEY_HEADER_CLOSER = "-" * 5 + "END "
+SWEEP_KEY_HEADER_RE = re.compile(
+    SWEEP_KEY_HEADER_OPENER + r"(?:[A-Z0-9 ]* )?PRIVATE KEY(?: BLOCK)?" + "-" * 5
+)
+
+# A token-shaped run: twenty or more consecutive characters from the class,
+# extending to the first character outside it, at least one of them a digit. The
+# lookahead reads only class characters, so the digit it finds is inside the same
+# maximal run; the run is greedy and sits last in every pattern, so nothing can
+# backtrack it shorter than the class allows. The floor keeps the phrase "bearer
+# token" out, the digit keeps a word and a row of placeholder characters out, and
+# the class keeps every `${{ ... }}` and `<...>` placeholder out.
+SWEEP_TOKEN_RUN = r"(?=[A-Za-z0-9._~+/=-]*[0-9])[A-Za-z0-9._~+/=-]{20,}"
+# The four value rules, in FR-012f's order. Group 1 is the run, because the span
+# each rule replaces is the run alone and never the trigger beside it. No rule
+# fires on a name, a phrase, or a quoted header alone.
+SWEEP_REDACT_VALUE_RULES = (
+    (
+        "aws_secret_key",
+        re.compile(r"(?i:AWS_SECRET[A-Za-z0-9_]*)[ \t]*[=:][ \t]*[\"']?(" + SWEEP_TOKEN_RUN + ")"),
+    ),
+    (
+        "aws_access_key",
+        re.compile(
+            r"(?i:AWS_ACCESS_KEY[A-Za-z0-9_]*)[ \t]*[=:][ \t]*[\"']?(" + SWEEP_TOKEN_RUN + ")"
+        ),
+    ),
+    ("bearer_token", re.compile(r"(?i:bearer)[ \t]+(" + SWEEP_TOKEN_RUN + ")")),
+    ("assigned_token", re.compile(r"[A-Z0-9_]*_TOKEN=[\"']?(" + SWEEP_TOKEN_RUN + ")")),
+)
+
+
+def sweep_key_header_closer(line: str) -> str | None:
+    """The closing line that matches this PEM header line, or None if it is not one.
+
+    `fullmatch` over the stripped line, and no MULTILINE flag anywhere, so an array
+    entry carrying an embedded newline can never read as a header either. The closer
+    is built from the header's own middle, so the span closes on its own form rather
+    than on any closing line.
+    """
+    header = line.strip()
+    if SWEEP_KEY_HEADER_RE.fullmatch(header) is None:
+        return None
+    return SWEEP_KEY_HEADER_CLOSER + header[len(SWEEP_KEY_HEADER_OPENER):]
+
+
+def sweep_redact_value_rules(line: str) -> tuple[str, list[str]]:
+    """Apply the four value rules in order, replacing each run and nothing beside it.
+
+    The line is carried as literal and placeholder pieces so that a replaced span is
+    never rescanned: only the literal pieces are offered to the next rule. Each rule
+    takes every non-overlapping occurrence left to right, and the trigger it matched
+    stays literal, because a later rule may legitimately read the same bytes.
+    """
+    pieces: list[tuple[bool, str]] = [(True, line)]
+    fired: list[str] = []
+    for rule, pattern in SWEEP_REDACT_VALUE_RULES:
+        rebuilt: list[tuple[bool, str]] = []
+        for scannable, text in pieces:
+            if not scannable:
+                rebuilt.append((scannable, text))
+                continue
+            position = 0
+            while True:
+                match = pattern.search(text, position)
+                if match is None:
+                    break
+                rebuilt.append((True, text[position:match.start(1)]))
+                rebuilt.append((False, SWEEP_REDACT_PLACEHOLDER.format(rule=rule)))
+                fired.append(rule)
+                position = match.end(1)
+            rebuilt.append((True, text[position:]))
+        pieces = rebuilt
+    return "".join(text for _scannable, text in pieces), fired
+
+
+def sweep_redact_outbound(leg: str, comment_id: str, lines: list[str]) -> dict[str, Any]:
+    """FR-012f's three outbound legs: the bound, the deny-set, and the bound again.
+
+    One line in is one line out on every path, so a caller writes the result back
+    where the input came from without re-aligning anything. The surface prevents no
+    write and discards nothing; the stop a fired event earns is the orchestrator's,
+    once every write the run owes has landed.
+    """
+    out = list(lines)
+    bound_placeholder = SWEEP_REDACT_PLACEHOLDER.format(rule=SWEEP_BOUND_RULE)
+    key_placeholder = SWEEP_REDACT_PLACEHOLDER.format(rule=SWEEP_KEY_HEADER_RULE)
+    # 1. The bound runs first. An over-bound line is replaced whole and never
+    #    scanned, never truncated, and never split: a cut could carry a secret past
+    #    the scan, and scanning only the head fails open on the tail.
+    over = [len(line.encode("utf-8")) > SWEEP_BODY_BUDGET_BYTES for line in out]
+    for index, flag in enumerate(over):
+        if flag:
+            out[index] = bound_placeholder
+    # 2. `private_key_header`, whose span is multi-line, resolved over the current
+    #    lines and never nested. An over-bound line is already its placeholder here,
+    #    so it can neither open a span nor close one, which is what "never scanned"
+    #    means for this rule. A span that covers one does replace it, and the two
+    #    placeholders carry the same zero reviewer bytes either way.
+    owner: list[int | None] = [None] * len(out)
+    index = 0
+    while index < len(out):
+        closer = sweep_key_header_closer(out[index])
+        if closer is None:
+            index += 1
+            continue
+        # Through the first later line that is the matching closing form, or to the
+        # end of the text when there is none, so a header never leaves the key body
+        # it introduces standing beneath a placeholder.
+        last = len(out) - 1
+        for probe in range(index + 1, len(out)):
+            if out[probe].strip() == closer:
+                last = probe
+                break
+        for member in range(index, last + 1):
+            owner[member] = index
+            out[member] = key_placeholder
+        index = last + 1
+    # 3. The deny-set on every line the first two steps left, then the bound again
+    #    on the same pass. Events are emitted line by line, so the report reads in
+    #    the order the rules fired.
+    events: list[dict[str, Any]] = []
+    for index, line in enumerate(out):
+        if over[index]:
+            events.append({"rule": SWEEP_BOUND_RULE, "line": index + 1})
+            continue
+        if owner[index] is not None:
+            # A span covering several lines is one event, naming its first line.
+            if owner[index] == index:
+                events.append({"rule": SWEEP_KEY_HEADER_RULE, "line": index + 1})
+            continue
+        shaped, fired = sweep_redact_value_rules(line)
+        for rule in fired:
+            events.append({"rule": rule, "line": index + 1})
+        if len(shaped.encode("utf-8")) > SWEEP_BODY_BUDGET_BYTES:
+            # A placeholder can be longer than the run it replaces, so a line that
+            # arrived under the bound can leave over it. Measuring again here is
+            # what makes the first pass a fixpoint at the boundary and not only
+            # away from it, and the deny-set event is reported before this one.
+            shaped = bound_placeholder
+            events.append({"rule": SWEEP_BOUND_RULE, "line": index + 1})
+        out[index] = shaped
+    return make_result(json_text({
+        "tool": "sweep-pr-feedback",
+        "named_surface": "redact",
+        "leg": leg,
+        "comment_id": comment_id,
+        "lines": out,
+        # One event per occurrence, naming the rule and the 1-based line it fired
+        # on, and never the bytes it replaced.
+        "redactions": events,
+    }))
 
 
 def sweep_fence_marks(lines: list[str]) -> list[tuple[str | None, int, str, int]]:
