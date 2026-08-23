@@ -3,10 +3,10 @@
   "spec_id": "ART-008",
   "feature_dir": "specs/art-008-feedback-sweep",
   "branch": "art-008-feedback-sweep",
-  "status": "completed_pr_open",
-  "stage": "plan",
+  "status": "in_progress",
+  "stage": "implement",
   "prior_run_note": "completed_archived",
-  "updated_at": "2026-08-21T16:42:40Z",
+  "updated_at": "2026-08-23T00:00:00Z",
   "active_step": null,
   "reclaimed_from": {
     "workflow_file": "docs/ai/specs/.process/ART-005-workflow.md",
@@ -16,18 +16,24 @@
   },
   "stage_resolution": {
     "source": "argv",
-    "basis": "explicit --stage plan",
-    "recorded_stage": null,
+    "basis": "explicit --stage implement",
+    "recorded_stage": "plan",
     "planning_complete": false,
     "confidence_gate_status": "⏳ Pending",
     "from_phase": null,
     "corroboration": {
-      "status": "no_record",
-      "recorded": null,
-      "observed": null,
+      "status": "match",
+      "recorded": {
+        "number": 464,
+        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/464"
+      },
+      "observed": {
+        "number": 464,
+        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/464"
+      },
       "merged": null,
       "reason": null,
-      "note": "No Draft PR row is present in the workflow file, so no gh observation was taken and no pr_observation was sent."
+      "note": "Draft PR row present; one gh observation taken and passed to the helper as inputs.pr_observation."
     }
   },
   "settings": {

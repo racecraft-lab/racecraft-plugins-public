@@ -186,6 +186,32 @@ after Plan and after Implement.
 run compares its post-implementation count against 7659; recapturing the
 baseline after planning would compare the tree against itself.
 
+#### Implement-Stage Pre-Flight (recorded 2026-08-23)
+
+The `--stage implement` run re-ran pre-flight in a fresh session. What it found:
+
+| Field | Value |
+|-------|-------|
+| Stage | `implement` (argv) — explicit `--stage implement` |
+| Draft PR corroboration | `match` — #464 recorded, #464 observed, OPEN and still a draft |
+| `check-prerequisites` | `all_pass: true`, all 8 checks pass |
+| Confidence-gate mode | `advisory`, unchanged; the recorded G6.5 verdict is read, not re-run |
+| Atomicity route | `one-navigable-PR`, carried forward; layer plan stays `skipped` and `pr_marker_plan` stays null |
+| Main sync | 11 commits merged from `origin/main`, generated artifacts regenerated, suite green |
+| Live test count | **7912** passed of 7912 — L1 1469, L4 6251, L5 192 |
+
+**Test-count drift, non-blocking.** The live count is 7912 against the recorded
+G0 baseline of **7659**, a difference of 253 tests. Every one of them arrived
+with the eleven merged `main` commits, not with this feature. The baseline stays
+7659: G7 verifies that the count rose against the number recorded before any
+planning ran, and replacing it here would compare the tree against itself. The
+drift is recorded so a reader can see the tree moved underneath the spec.
+
+**G6.5 was read, not re-run.** The recorded verdict is composite **0.80** in
+`advisory` mode, below the 0.90 threshold and deliberately so. This run read it
+and proceeded, which is what `advisory` means. The row stays `⏳ Pending` because
+no phase of the main loop flips it.
+
 #### Doctor Health Check (2026-08-20)
 
 Verdict: **warnings, zero failures. Nothing blocks Specify.** Structure,
@@ -260,7 +286,7 @@ the gate can read one spec's number.
 | **Spec ID** | ART-008 |
 | **Name** | Feedback Sweep (slice 1 of 2: the checkpoint) |
 | **Branch** | `art-008-feedback-sweep` |
-| **Stage** | plan |
+| **Stage** | implement |
 | **Draft PR** | [#464](https://github.com/racecraft-lab/racecraft-plugins-public/pull/464) |
 | **Dependencies** | ART-007 (Draft-PR Emission): complete, PR #445, archived 2026-08-18 |
 | **Enables** | The trusted human checkpoint the staged workflow exists for; ART-008 slice 2 (artifact freshness) stacks on this branch |
