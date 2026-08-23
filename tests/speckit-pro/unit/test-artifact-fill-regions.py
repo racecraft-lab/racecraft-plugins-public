@@ -102,10 +102,24 @@ DECISION_PORT_FLOOR: dict[str, tuple[str, ...]] = {
 }
 
 FLOOR: dict[str, tuple[str, ...]] = {
-    "implementation-plan": ("phases", "data-flow", "mockups", "risk-register", "task-inventory"),
-    "spec-explainer": ("tldr", "goals", "non-goals", "acceptance-criteria", "clarification-faq"),
-    "code-approaches": ("approaches",),
-    "module-map": ("module-graph",),
+    "implementation-plan": (
+        "document-title",
+        "phases",
+        "data-flow",
+        "mockups",
+        "risk-register",
+        "task-inventory",
+    ),
+    "spec-explainer": (
+        "document-title",
+        "tldr",
+        "goals",
+        "non-goals",
+        "acceptance-criteria",
+        "clarification-faq",
+    ),
+    "code-approaches": ("document-title", "approaches"),
+    "module-map": ("document-title", "module-graph"),
     "pr-writeup": ("motivation", "before-after", "file-by-file", "implementation-notes"),
     "annotated-diff": ("hunks",),
     "flowchart": ("flow-diagram",),
@@ -954,6 +968,25 @@ class FillRegionTests(unittest.TestCase):
         for identifier in sorted(FLOOR):
             with self.subTest(msg=identifier):
                 self.assertIn(identifier, identifiers or set())
+
+    def test_draft_feature_templates_fill_one_static_document_title_in_head(self) -> None:
+        for identifier in (
+            "implementation-plan",
+            "spec-explainer",
+            "code-approaches",
+            "module-map",
+        ):
+            with self.subTest(msg=identifier):
+                relative = _template_path(identifier)
+                template = (GALLERY_ROOT / relative).read_text(encoding="utf-8")
+                start = "<!-- FILL:document-title:START -->"
+                end = "<!-- FILL:document-title:END -->"
+                self.assertEqual(template.count(start), 1, f"{relative}: expected one title start marker")
+                self.assertEqual(template.count(end), 1, f"{relative}: expected one title end marker")
+                region = template.split(start, 1)[1].split(end, 1)[0]
+                self.assertRegex(region, r"\A\s*<title>[^<]+</title>\s*\Z")
+                self.assertLess(template.index("<head>"), template.index(start))
+                self.assertLess(template.index(end), template.index("</head>"))
 
     def test_slide_deck_fill_inventory_template_exists(self) -> None:
         relative = _template_path("slide-deck")

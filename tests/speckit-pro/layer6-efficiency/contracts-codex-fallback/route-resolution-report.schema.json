@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/schemas/g56r-005/route-resolution-report.schema.json",
+  "title": "G56R-005 Route Resolution Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "case_id",
+    "policy_id",
+    "source_roster_id",
+    "attempted_routes",
+    "plugin_diagnostics",
+    "service_reroute_attribution",
+    "qualified_route",
+    "scoring_eligible",
+    "helper_counters",
+    "required_route_counters",
+    "budget_counters",
+    "terminal_outcome",
+    "terminal_details"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "case_id": {"type": "string", "minLength": 1},
+    "policy_id": {"type": "string", "minLength": 1},
+    "source_roster_id": {"$ref": "#/$defs/digest"},
+    "attempted_routes": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "plugin_diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["route_id", "reason"],
+        "properties": {
+          "route_id": {"type": "string", "minLength": 1},
+          "reason": {"$ref": "#/$defs/reason"}
+        }
+      }
+    },
+    "service_reroute_attribution": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["origin", "observed_target_route", "approval", "scoring_effect"],
+          "properties": {
+            "origin": {"const": "service"},
+            "observed_target_route": {"type": "string", "minLength": 1},
+            "approval": {"enum": ["approved", "unapproved"]},
+            "scoring_effect": {"enum": ["eligible", "ineligible"]}
+          }
+        }
+      ]
+    },
+    "qualified_route": {"type": ["string", "null"]},
+    "scoring_eligible": {"type": "boolean"},
+    "helper_counters": {"$ref": "#/$defs/counters"},
+    "required_route_counters": {"$ref": "#/$defs/counters"},
+    "budget_counters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["retries", "elapsed_units", "fanout", "context_units", "escalations"],
+      "properties": {
+        "retries": {"type": "integer", "minimum": 0},
+        "elapsed_units": {"type": "integer", "minimum": 0},
+        "fanout": {"type": "integer", "minimum": 0},
+        "context_units": {"type": "integer", "minimum": 0},
+        "escalations": {"type": "integer", "minimum": 0}
+      }
+    },
+    "terminal_outcome": {"$ref": "#/$defs/terminal"},
+    "terminal_details": {"type": "array", "items": {"type": "string"}},
+    "recovery_record": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "recovery-record.schema.json"}
+      ]
+    }
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "reason": {
+      "enum": [
+        "model_absent",
+        "unsupported_effort",
+        "capability_discovery_unavailable",
+        "availability_probe_failed",
+        "treatment_probe_failed",
+        "non_route_treatment_mutation",
+        "loop_rejected",
+        "unqualified_adjacent_route",
+        "generic_substitution_rejected",
+        "inherited_model_rejected",
+        "inherited_effort_rejected",
+        "optional_helper_unavailable"
+      ]
+    },
+    "terminal": {
+      "enum": [
+        "qualified_route",
+        "strict_override_rejected",
+        "bounded_retry_exhausted",
+        "time_budget_exhausted",
+        "fanout_budget_rejected",
+        "context_budget_rejected",
+        "cancellation_observed",
+        "escalation_rejected",
+        "no_safe_route"
+      ]
+    },
+    "counters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attempts", "successes", "failures"],
+      "properties": {
+        "attempts": {"type": "integer", "minimum": 0},
+        "successes": {"type": "integer", "minimum": 0},
+        "failures": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}
