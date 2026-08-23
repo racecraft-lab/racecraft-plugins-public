@@ -64,12 +64,19 @@ def chmod_tree(root: Path, mode: int) -> None:
     except OSError:
         pass
 
-def make_gated_spec(root: Path, name: str) -> Path:
+
+def _write_spec(root: Path, name: str, content: str) -> Path:
     spec_dir = root / name
     spec_dir.mkdir(parents=True)
-    (spec_dir / "SPEC-MOC.md").write_text(
-        textwrap.dedent(
-            f"""\
+    (spec_dir / "SPEC-MOC.md").write_text(textwrap.dedent(content), encoding="utf-8")
+    return spec_dir
+
+
+def make_gated_spec(root: Path, name: str) -> Path:
+    spec_dir = _write_spec(
+        root,
+        name,
+        f"""\
             ---
             up: "[parent](roadmap.md)"
             related: []
@@ -79,20 +86,17 @@ def make_gated_spec(root: Path, name: str) -> Path:
             structureVersion: 1
             ---
             # {name}
-            """
-        ),
-        encoding="utf-8",
+            """,
     )
     (spec_dir / "roadmap.md").write_text("# roadmap\n", encoding="utf-8")
     return spec_dir
 
 
 def make_dangling_spec(root: Path, name: str) -> Path:
-    spec_dir = root / name
-    spec_dir.mkdir(parents=True)
-    (spec_dir / "SPEC-MOC.md").write_text(
-        textwrap.dedent(
-            f"""\
+    return _write_spec(
+        root,
+        name,
+        f"""\
             ---
             up: "[parent](no-such-roadmap.md)"
             related: []
@@ -102,19 +106,15 @@ def make_dangling_spec(root: Path, name: str) -> Path:
             structureVersion: 1
             ---
             # {name} - dangling up link
-            """
-        ),
-        encoding="utf-8",
+            """,
     )
-    return spec_dir
 
 
 def make_orphan_violation_spec(root: Path, name: str) -> Path:
-    spec_dir = root / name
-    spec_dir.mkdir(parents=True)
-    (spec_dir / "SPEC-MOC.md").write_text(
-        textwrap.dedent(
-            f"""\
+    return _write_spec(
+        root,
+        name,
+        f"""\
             ---
             related: []
             status: ""
@@ -123,19 +123,15 @@ def make_orphan_violation_spec(root: Path, name: str) -> Path:
             structureVersion: 1
             ---
             # {name} - missing up
-            """
-        ),
-        encoding="utf-8",
+            """,
     )
-    return spec_dir
 
 
 def make_legacy_spec(root: Path, name: str) -> Path:
-    spec_dir = root / name
-    spec_dir.mkdir(parents=True)
-    (spec_dir / "SPEC-MOC.md").write_text(
-        textwrap.dedent(
-            f"""\
+    return _write_spec(
+        root,
+        name,
+        f"""\
             ---
             up: "[parent](does-not-exist.md)"
             spec_id: "{name}"
@@ -144,11 +140,8 @@ def make_legacy_spec(root: Path, name: str) -> Path:
 
             A dangling [body link](also-missing.md) and a [[wikilink]] are ignored
             because this spec is not version-gated.
-            """
-        ),
-        encoding="utf-8",
+            """,
     )
-    return spec_dir
 
 
 def force_stale_mode_b_internal_error() -> subprocess.CompletedProcess[str]:
