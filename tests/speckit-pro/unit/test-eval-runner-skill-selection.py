@@ -648,6 +648,10 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
         prerequisites = (
             PLUGIN_ROOT / "codex-skills/speckit-autopilot/references/prerequisites-codex.md"
         ).read_text(encoding="utf-8")
+        phase_execution = (
+            PLUGIN_ROOT / "codex-skills/speckit-autopilot/references/phase-execution-codex.md"
+        ).read_text(encoding="utf-8")
+        phase_execution_normalized = " ".join(phase_execution.split())
 
         self.assertIn("start a new Codex task rooted at that worktree", scaffold)
         self.assertIn("Never hand off only the inner workflow path from the parent checkout", scaffold)
@@ -655,6 +659,10 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
         self.assertIn("git worktree list\n   --porcelain", prerequisites)
         self.assertIn("STOP: Workflow file is not in the current checkout", prerequisites)
         self.assertIn("Never copy, move, check out, rebase, or reconstruct the workflow", prerequisites)
+        self.assertIn("Re-check worktree affinity immediately before dispatch", phase_execution_normalized)
+        self.assertIn("must equal the workflow-bound repository root", phase_execution_normalized)
+        self.assertIn("not an artifact-content gap", phase_execution_normalized)
+        self.assertIn("STOP before artifact generation or pull-request refresh", phase_execution_normalized)
 
     def test_post_implementation_outcome_negative_canaries(self) -> None:
         claude = (PLUGIN_ROOT / "skills/speckit-autopilot/references/post-implementation.md").read_text(encoding="utf-8")

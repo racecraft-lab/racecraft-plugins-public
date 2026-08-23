@@ -1,0 +1,41 @@
+{
+  "body_file": "specs/art-017-state-bookkeeping-checks/.process/pr-packets/art-017-draft/body.md",
+  "error_class": "none",
+  "exit_code": 0,
+  "failures": [],
+  "mode": "single",
+  "packet_id": "art-017-draft",
+  "pr_blocked": false,
+  "remediation_evidence": [],
+  "rule_outcomes": [
+    {
+      "evidence": "no failures",
+      "rule": "packet.validation",
+      "status": "passed"
+    }
+  ],
+  "schema_version": "1.0.0",
+  "source_fingerprints": {
+    "body": {
+      "algorithm": "sha256",
+      "path": "specs/art-017-state-bookkeeping-checks/.process/pr-packets/art-017-draft/body.md",
+      "sha256": "998910757acbc5bd4566c5c21427e1bbae97ffdedf80078f4cc2e1f280607dad",
+      "size_bytes": 7140
+    },
+    "packet": {
+      "algorithm": "sha256",
+      "path": "specs/art-017-state-bookkeeping-checks/.process/pr-packets/art-017-draft.json",
+      "sha256": "76b20082d8aba0c819187cd9ece9415f9044198103081a7371556f657a21fe72",
+      "size_bytes": 8564
+    }
+  },
+  "status": "passed",
+  "stderr_line": "",
+  "target": {
+    "base_branch": "main",
+    "head_branch": "art-017-state-bookkeeping-checks"
+  },
+  "timestamp": "2026-08-22T21:23:46Z",
+  "title_value": "fix(art-017): Arm state bookkeeping checks",
+  "validation_result_path": "specs/art-017-state-bookkeeping-checks/.process/pr-packets/art-017-draft/validation.json"
+}

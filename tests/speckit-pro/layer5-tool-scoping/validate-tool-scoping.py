@@ -21,6 +21,7 @@ PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
+from structural_helpers import frontmatter as _frontmatter  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 AGENTS_DIR = PLUGIN_ROOT / "agents"
@@ -66,22 +67,6 @@ def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8") if path.is_file() else ""
 
 
-def _frontmatter(path: Path) -> str:
-    lines = _read(path).splitlines()
-    out: list[str] = []
-    fences = 0
-    for line in lines:
-        if line == "---":
-            fences += 1
-            if fences == 1:
-                continue
-            if fences == 2:
-                break
-        elif fences == 1:
-            out.append(line)
-    return "\n".join(out)
-
-
 def _md_body(path: Path) -> str:
     lines = _read(path).splitlines()
     out: list[str] = []
@@ -96,7 +81,7 @@ def _md_body(path: Path) -> str:
 
 
 def _yaml_field(path: Path, field: str) -> str:
-    for line in _frontmatter(path).splitlines():
+    for line in _frontmatter(_read(path).splitlines()).splitlines():
         if line.startswith(f"{field}:"):
             return re.sub(rf"^{re.escape(field)}:[ \t]*", "", line)
     return ""
@@ -127,7 +112,7 @@ def _toml_prose(path: Path) -> str:
 
 
 def _disallowed_tools(path: Path) -> list[str]:
-    for line in _frontmatter(path).splitlines():
+    for line in _frontmatter(_read(path).splitlines()).splitlines():
         if line.startswith("disallowedTools:"):
             raw = re.sub(r"^disallowedTools:[ \t]*", "", line)
             return [item.strip() for item in raw.split(",") if item.strip()]
@@ -163,7 +148,7 @@ class ValidateToolScoping(unittest.TestCase):
     def test_operator_tool_surface_no_tools_allowlist_pinning(self) -> None:
         for agent_file in _claude_agent_files():
             agent_name = agent_file.stem
-            frontmatter = _frontmatter(agent_file)
+            frontmatter = _frontmatter(_read(agent_file).splitlines())
 
             with self.subTest(msg=f"{agent_name} has NO tools: allowlist (inherits the operator's full surface)"):
                 self.assertIsNone(
