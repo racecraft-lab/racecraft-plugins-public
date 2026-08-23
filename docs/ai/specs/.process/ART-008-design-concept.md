@@ -412,6 +412,70 @@ consensus and produces a Consensus Resolution Log row.
 
 **User's answer:** Split into 2 vertical slices (Recommended)
 
+---
+
+`
+separator convention: the block below opens with its own `---`, matching how
+Q12 is separated from Q11.
+
+---
+
+### Q13. The trust-boundary review left F-1 and F-2 disclosed but not mitigated: the consensus analysts and the orchestrator read reviewer-derived text while inheriting the operator's full tool surface — `Bash`, `WebFetch`, `WebSearch`, and every installed MCP server — and a maintainer who quotes untrusted text launders it across the boundary. Should ART-008 mitigate them, and where?
+
+**Branch:** Trust boundary / untrusted-text consumers
+
+**Recommended answer:** Mitigate both inside this slice by scoping every agent that reads reviewer text
+> Two new agents ship on both platforms and are used only by the sweep.
+> `sweep-classifier` receives one sanitized, delimited body — the FR-007g
+> output — plus the closed class vocabulary, and returns a structured record:
+> a class from the four-value vocabulary, a target from the three-file
+> allowlist or `null`, and a reason capped at 512 bytes that crosses the
+> FR-012f redaction surface before the orchestrator uses it. Classification
+> therefore leaves the orchestrator entirely, which is the point: the
+> orchestrator holds `Bash`. `sweep-analyst` is dispatched three times per
+> amended item with the perspective — codebase, spec-context, domain — given
+> in the prompt, and once more for synthesis, so the shared analysts, their
+> routing table, and `consensus-synthesizer` are all untouched; synthesis
+> deliberately does **not** go to `consensus-synthesizer`, which inherits
+> `Bash` and would reopen F-1 one hop downstream. Claude frontmatter pins
+> `tools: Read` and `tools: Read, Grep, Glob` with `Agent`, `TeamCreate`,
+> `SendMessage`, and `Skill` denied; Codex pins `sandbox_mode = "read-only"`,
+> which is the only lever a Codex TOML has, and the claim stops at "read-only
+> filesystem; network per Codex defaults" because no network field exists in
+> the loader. `tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.py`
+> gains `UNTRUSTED_INPUT_CONSUMERS`, exempting exactly those two from the
+> repository-wide no-`tools:` rule while pinning each one's allowlist exactly
+> and the tuple's own membership exactly. Capability inheritance is right for
+> an agent acting on trusted input and wrong for an agent reading
+> attacker-controllable text, and that is the whole of the policy change: no
+> existing agent definition is edited, so the twelve governed Layer 6
+> definitions and their digest chain are untouched. Cost: production files go
+> from 7 to 12, which crosses the 8-file block, and the reviewable midpoint
+> goes to about 1420, which crosses the 800 block. Both are size-only and both
+> are accepted on the record, with PRSG-013 as the precedent for a recorded
+> block that continued.
+
+**Alternatives offered:**
+- Accept F-1 and F-2 as disclosed, where the third remediation pass left them:
+  plan item 7 already states that an analyst holding `Bash` passes through none
+  of the seven mechanisms, and the residual is recorded rather than called
+  tolerable. Keeps the slice at 7 production files and one block instead of
+  two. Cost: the boundary the design names is the one it does not build, and a
+  disclosure has no fixture that can fail.
+- Mitigate in a separate slice or a follow-up spec, deferring the scoped
+  consumers behind slice 1. Risk: the consumers are what this feature
+  dispatches, so slice 1 would ship the exposure and the fix would land after
+  the thing that creates it — the same ordering problem the sweep's own
+  checkpoint exists to prevent, one layer up.
+
+**User's answer:** Mitigate both inside this slice by scoping every agent that reads reviewer text (Recommended)
+
+---
+
+TWO COUNT SITES IN THE SAME FILE, both required:
+- Front matter :10 — `question_count: 12` becomes `question_count: 13`.
+- Header :18 — `> **Questions asked:** 12` becomes `> **Questions asked:** 13`.
+
 ## Open Questions
 
 - **What:** Commit granularity inside the sweep: one commit per amendment or

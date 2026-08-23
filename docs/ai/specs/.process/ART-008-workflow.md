@@ -1304,12 +1304,163 @@ a fail-closed stop in a convergence-invariant feature, and a fixture asserting
 a hand-written string. Both are recorded in the review artifact, struck
 through, with what replaced them.
 
+### Consumer scoping: F-1 and F-2 mitigated rather than disclosed
+
+**Run 2026-08-22, at the operator's direction, after the three passes above.**
+F-1 (the consensus analysts and the orchestrator read reviewer-derived text
+while inheriting the operator's full tool surface) and F-2 (a maintainer
+quoting untrusted text launders it across the boundary) were left DISCLOSED.
+The operator chose to mitigate both inside this slice rather than accept them
+or defer them to a later one. The decision and its two rejected alternatives
+are recorded as **Q13** in the design concept; this is what it changes.
+
+- **Two scoped consumers, both platforms, used only by the sweep.**
+  `sweep-classifier` takes one sanitized, delimited body — the FR-007g output,
+  handed over by path under FR-004d's directory — plus the closed class
+  vocabulary, and returns `{class, target, reason}` with the reason capped at
+  512 bytes and passed through the FR-012f redaction surface before any use.
+  `sweep-analyst` is dispatched three times per amended item with the
+  perspective in the prompt and once more in a synthesis prompt, and returns a
+  structured edit `{file, anchor, replacement}` against the three-file
+  allowlist, also redacted before the write. Claude frontmatter pins
+  `tools: Read` and `tools: Read, Grep, Glob`; both deny `Agent`, `TeamCreate`,
+  `SendMessage`, and `Skill`. Codex pins `sandbox_mode = "read-only"`.
+- **Classification leaves the orchestrator.** The orchestrator holds `Bash`, so
+  the rule is that it is never handed a body: the `gh` read is piped into the
+  runner, the sanitized blocks are passed by path, and what comes back is an
+  enum, a target, and bounded text. That is construction rather than
+  enforcement — the orchestrator could read the file it wrote — and the plan's
+  item 7 carries the residual rather than dissolving it.
+- **Synthesis does not go to `consensus-synthesizer`,** which declares no
+  `tools:` allowlist and inherits `Bash`. Routing sweep synthesis there would
+  reopen F-1 one hop downstream. `sweep-analyst` synthesizes instead.
+- **The Layer 5 carve-out is the only policy change.**
+  `tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.py` gains
+  `UNTRUSTED_INPUT_CONSUMERS = ("sweep-classifier", "sweep-analyst")` and three
+  assertions: members are exempt from the repository-wide no-`tools:` rule,
+  each pins exactly its stated allowlist, and the tuple's membership is
+  asserted exactly so an open executor cannot be added to it. Members also deny
+  the orchestration set and `Skill`, and a fourth assertion pins
+  `sandbox_mode = "read-only"` on both TOMLs without folding them into
+  `CODEX_READ_ONLY_ROLES`, which would pin model and effort values this design
+  never specified. The rationale lives in the module docstring. No existing
+  agent definition is edited, so the Layer 6 digest chain does not restale.
+- **The Codex claim is bounded by what the loader honors.** The installer reads
+  `name` and `model` and copies the rest byte-for-byte; Layer 1 forbids
+  `tools`/`disallowedTools` in a TOML outright; no `network` field exists
+  anywhere in the loader or the validators. The spec therefore claims only
+  "read-only filesystem; network per Codex defaults", and records that
+  `sandbox_mode = "read-only"` does not sandbox MCP server processes
+  (`speckit-pro/codex-skills/install/SKILL.md:53-62`).
+- **Ungoverned now, with a named deferral.** The Layer 6 corpus binds exactly
+  twelve roles through a digest chain with no regeneration script, and
+  `artifact-author` already shipped outside it on both platforms with a green
+  suite. The two sweep agents ship the same way. Non-Goals gains an entry owned
+  by no spec yet: they join the governed corpus under a future G56R spec,
+  because a security boundary nothing digest-binds is a gap, and the reason it
+  is deferred is that G56R qualification is its own workstream.
+- **The seam.** The sweep carries its own dispatch inside its Phase 7 setup
+  block in both phase-execution references and never emits a category-tagged
+  consensus item, so `consensus-protocol.md`'s routing table is never consulted
+  and Clarify, Checklist, and Analyze are unchanged. The **routing table** is
+  untouched; the file itself stays MODIFIED for T058's `Sweep` `Type` value.
+- **The installer is a production file.** `REQUIRED_CODEX_AGENT_NAMES` is a
+  closed inventory, so two new TOMLs force a line into
+  `speckit-pro/speckit_pro_runner/helpers/install.py`. Commit `1d58e5cbb`
+  (#445) is the precedent and the ripple map, including
+  `docs-site/src/content/docs/reference/agents.md`.
+
+=====================================================================
+W2. REPLACE the body of "### Budget consequence, for T014" (:1307-1312).
+---------------------------------------------------------------------
 ### Budget consequence, for T014
 
-Live reviewable range **705 to 1080, midpoint near 890**, over the 800 block
-at the midpoint; production files unchanged at 7; authored files 16, a third
-warn. The security hardening grew this slice enough that moving FR-012f and
-FR-007g to their own slice is a live option at the T014 lever decision.
+Live reviewable range **1120 to 1720, midpoint near 1420**, over the 800 block
+at the midpoint; **production files 12**, over the 8-file block; authored files
+**22**, a warn under the 25 block. The consumer-scoping pass added **415 to
+640** reviewable lines and five production paths on top of the trust-boundary
+remediation's 705-to-1080; the derivation's one home is `spec.md`'s second
+Reviewability Budget superseding note.
+
+**Both crossings are size-only and both are OPERATOR-ACCEPTED at the T014
+lever, which is lever (b): accept the block explicitly.** The reason is that
+the trust boundary is not separable from the feature — F-1 and F-2 are
+properties of the agents the sweep dispatches, so mitigating them means
+shipping those agents, and a slice that ships the sweep without them ships the
+disclosed exposure. Precedent for a recorded block whose run continued:
+`docs/ai/specs/.process/PRSG-013-workflow.md:570` records `status=block,
+is_size_only=true, reviewable_loc=1800, total_files=78`, and the run continued
+with the crossing captured as marker-planning input. The live midpoint of 1420
+is under that 1800. Lever (a), deferring the three serialization-family
+registry rows, saves 15 to 30 lines against a crossing this size and is not
+taken; lever (c), re-slicing, is rejected on the ground recorded in the plan
+and restated above.
+
+=====================================================================
+W3. Workflow Overview, Tasks row (:39). REPLACE.
+Contains one placeholder that only the tasks-drafting pass can fill; see
+`notes`.
+---------------------------------------------------------------------
+| Tasks | `/speckit-tasks` | ✅ Complete | {{93+N}} tasks, 6 phases, 9 parallel-safe. {{51+F}}/{{51+F}} requirements and {{14+S}}/{{14+S}} criteria covered; the orchestrator added T080 after finding SC-003 uncovered, the trust-boundary remediation added T081–T087 for FR-007g, FR-012f, and SC-014, the third remediation pass added T088–T093 for FR-004d, the captured-call fixture, and the fixed-shape commit subject, and the consumer-scoping pass added T094–{{T093+N}} for the two sweep agent definitions on both platforms, the Codex installer inventory line, the classifier and sweep-analyst dispatch in both phase-execution references, and the Layer 5 `UNTRUSTED_INPUT_CONSUMERS` carve-out |
+
+=====================================================================
+W4. Phase 5 fallback evidence chain (:963-972). REPLACE the paragraph
+beginning "**Fallback evidence chain, which is what the phase actually runs
+on.**" through "...rather than stopping the run."
+---------------------------------------------------------------------
+**Fallback evidence chain, which is what the phase actually runs on.** The
+setup-mode result recorded at scaffold returned `warn` with empty `blockers`.
+The plan-phase estimator returned `pass` with `projected: 0` and is an **absent
+measurement**, because it classifies none of this slice's paths as production.
+The operator-facing figure is therefore the hand-derived one, whose only home
+is `spec.md`'s Reviewability Budget superseding notes: at this writing 1120 to
+1720 reviewable LOC, midpoint near 1420, over **twelve** production files and
+twenty-two authored files. That is a size-only block on reviewable LOC at the
+midpoint, a size-only block on production files at 12 against a block of 8, and
+a warn on authored files at 22 against a warn of 15. Both blocks are recorded
+as operator-accepted under the size-crossing rule and continue into marker
+planning rather than stopping the run; the PRSG-013 precedent is cited in the
+Trust boundary remediation section's budget consequence.
+
+=====================================================================
+W5. Project Structure Reference (:1346-1356). REPLACE the `speckit-pro/`
+subtree lines so the two new production directories appear.
+---------------------------------------------------------------------
+```text
+racecraft-plugins-public/
+├── speckit-pro/                                   # Plugin source (ships to installers)
+│   ├── agents/                                    # sweep-classifier.md, sweep-analyst.md (new, scoped consumers)
+│   ├── codex-agents/                              # sweep-classifier.toml, sweep-analyst.toml (new, sandbox_mode read-only)
+│   ├── skills/speckit-autopilot/references/       # phase-execution.md, consensus-protocol.md, workflow-file-protocol.md
+│   ├── codex-skills/speckit-autopilot/references/ # phase-execution-codex.md, workflow-file-protocol-codex.md
+│   └── speckit_pro_runner/helpers/                # read_only.py (new feedback helper), registry.py, install.py (codex agent inventory)
+├── tests/speckit-pro/                             # Repository-only validation
+│   ├── layer5-tool-scoping/                       # validate-tool-scoping.py (UNTRUSTED_INPUT_CONSUMERS carve-out)
+│   └── unit/fixtures/read-only-helpers/           # helper request fixtures + harness manifests
+├── docs/ai/specs/                                 # Roadmap, .process/ exhaust (this file, design concept)
+└── specs/art-008-feedback-sweep/                  # CONTRACT artifacts: spec.md, plan.md, tasks.md, SPEC-MOC.md
+```
+
+=====================================================================
+W6. SITES DELIBERATELY LEFT UNCHANGED, with the reason, so a later reader does
+not read them as missed.
+---------------------------------------------------------------------
+- :37 Plan row and :38 Checklist row — dated plan-time and checklist-time
+  records that already say "since superseded — the live figure's one home is
+  `spec.md`'s Reviewability Budget superseding note". The pointer still
+  resolves to the live figure, so the rows need no edit.
+- :79 G0 gate ("L5 192") and the 7659/7659 suite counts — dated observations of
+  runs that happened. The carve-out's new subtests will move the live L5 count;
+  the record of that run does not move with it.
+- :118 G5 gate — already carries "counts as at the gate; the trust-boundary
+  remediation grew them afterwards, see the Tasks row", which now covers this
+  pass too.
+- :451 Specify Results, "Declared reviewability budget | ~330 reviewable LOC,
+  7 production files, 10 total, within budget (projected); Plan re-derives" —
+  explicitly a projection superseded by Plan.
+- :668-669 Plan artifacts table, "22 entries across a production surface of 7"
+  — a dated record of the block as the plan phase left it; the block was
+  already at 24 before this pass.
 
 ---
 

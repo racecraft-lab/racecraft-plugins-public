@@ -28,6 +28,7 @@ is scaffolded separately on a branch stacked on this one; add its relative
 - [tasks.md](tasks.md)
 - [data-model.md](data-model.md)
 - [research.md](research.md)
+- [contracts/sweep-classifier-output.md](contracts/sweep-classifier-output.md)
 - [contracts/sweep-pr-feedback.md](contracts/sweep-pr-feedback.md)
 - [checklists/error-handling.md](checklists/error-handling.md)
 - [checklists/requirements.md](checklists/requirements.md)

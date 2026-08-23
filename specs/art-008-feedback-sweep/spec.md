@@ -238,8 +238,8 @@ exclusion reason.
 
 ### User Story 2 - Amendments run through consensus, get recorded, and stop for re-review (Priority: P2)
 
-For every comment the sweep labelled amended, it hands the item to the existing
-category-routed consensus machinery, applies the agreed edit to the
+For every comment the sweep labelled amended, it runs the existing consensus
+round structure with its own scoped analyst, applies the agreed edit to the
 specification, the plan, or the task list, and commits and pushes that change.
 It then writes the durable record: one Feedback Sweep Log row for the comment,
 plus a Consensus Resolution Log row for the amendment. It posts one reply on
@@ -482,10 +482,14 @@ proceeds.
   resume path is FR-019b's: fix the tool and re-run. The observation is retaken
   fresh on every invocation, so a re-run needs no repair step.
 - **FR-004d**: Every file the sweep writes for its own transport MUST live
-  under `specs/<feature>/.process/feedback-sweep/` and nowhere else: the
-  helper request the runner reads on stdin, which carries the observation;
-  every reply body file FR-004b passes by path; the captured commands; and any
-  scratch the run makes. The directory ignores itself: the sweep's first write
+  under `specs/<feature>/.process/feedback-sweep/` and nowhere else: every
+  reply body file FR-004b passes by path; the outbound-leg request files; the
+  captured commands; and any scratch the run makes. **The observation is not
+  among them.** FR-010a pipes the two `gh` reads straight into the runner on
+  stdin, so the document that carried every observed body is never a file at
+  all, which is a stronger control than ignoring it and is why the pipe is
+  specified rather than left to the implementation. The directory ignores
+  itself: the sweep's first write
   into it, before any byproduct, is a `.gitignore` inside it whose whole
   content is `*`, which git honors in whatever repository the worktree belongs
   to, so Phase 7's `git add -A` cannot stage the directory or the ignore file,
@@ -495,16 +499,16 @@ proceeds.
   removes the directory before it proceeds into task work or stops, on every
   path, and the run report names it as removed.
 
-  **These files are an outbound path of their own, and no redaction reaches
-  them.** The request carries every observed body, untrusted authors included
-  and nothing redacted, because FR-005's filter runs inside the helper over
-  those bodies, and FR-004b puts every reply body on disk. Neither passes
-  through FR-012f's surface, by design, and the sweep is a Phase 7 setup step
-  whose existing commit path is `git add -A` over the worktree. Left where
-  they fell, the request would be committed and pushed with an excluded
-  comment's body in it, no leg having redacted it, no stop having fired, and
-  no human having read it. The control is placement and an ignore entry,
-  because a redaction pass over the request would blind the parse it feeds.
+  **These files are an outbound path of their own, and the strongest of them
+  no longer exists.** FR-004b puts every reply body on disk, and the
+  outbound-leg requests carry the text about to be published. The sweep is a
+  Phase 7 setup step whose existing commit path is `git add -A` over the
+  worktree, so left where they fell each would be committed and pushed. The
+  control is placement and an ignore entry. What used to sit here beside them
+  was the helper request carrying every observed body, untrusted authors
+  included and nothing redacted, which no leg could have redacted without
+  blinding the parse it fed; the pipe removes that file rather than protecting
+  it, and the fenced-sentinel fixture below is what keeps it removed.
 
   **Carried with the directory, not with the repository.** The sweep is
   shipped in `phase-execution.md` and runs in any consumer repository that has
@@ -512,8 +516,8 @@ proceeds.
   carries no entry for this directory. A control that lived only in this
   repository's configuration would therefore protect only this repository,
   and a consumer run whose removal step never ran — a session that hit its
-  context limit between the helper call and removal, then resumed — would
-  stage a request carrying an excluded author's body. The self-ignore file is
+  context limit between the first reply body write and removal, then resumed —
+  would stage a reply body and an outbound-leg request. The self-ignore file is
   what closes that: it travels with the directory because the sweep writes it
   wherever it creates the directory. The nearest prior art is the pull-request
   packet directory, which this repository excludes through
@@ -532,17 +536,23 @@ proceeds.
   on every invocation (FR-004c), and an owed reply is regenerated from its row
   on the next run (FR-015b).
 
-  **Four fixtures, each of which can fail.** A scratch-repository test creates
+  **Five fixtures, each of which can fail.** A scratch-repository test creates
   a throwaway git repository with no root `.gitignore`, creates the directory
   the way the sweep does — self-ignore file first, then a byproduct — and
   asserts that `git add -A --dry-run` stages nothing under it; it goes red
   when the self-ignore write is removed from the sequence, which is the
   consumer-repository case pinned directly. A repository test asserts this
   repository's root `.gitignore` carries the entry, and goes red when that line
-  is removed. The captured-command fixture asserts that every byproduct path in
-  every captured command — the request file on stdin, each body file path, the
-  capture files themselves — resolves under the directory, so a file written
-  anywhere else is a red test rather than a pushed body. And the run-report
+  is removed. The captured-command fixture asserts that the observation read is
+  a `gh` command piped into the runner and that no captured argv and no
+  captured stdin path names an observation or comment-body file anywhere, and
+  that every byproduct path a captured command does name — each body file path,
+  each outbound-leg request, the capture files themselves — resolves under the
+  directory, so a file written anywhere else is a red test rather than a pushed
+  body. A **fenced sentinel** case seeds a distinctive string inside a
+  candidate's fenced span, which FR-007g withholds from every block, and
+  asserts it absent from every file the run leaves and every captured argv, so
+  spooling the observation through a file first is red. And the run-report
   fixture asserts the report names the directory as removed on every path,
   stopping or proceeding.
 
@@ -772,17 +782,17 @@ proceeds.
   the surface, not to where the frame comes from.
 
   **None of the three is a boundary, and nothing deterministic stands behind
-  them on this path.** All three are model-layer controls: they change what the
-  prompt says about the text, and whether that holds is a probabilistic
-  property of the model reading it. It would be convenient to say the
-  deterministic boundary is FR-005's allowlist, and it is not true. The helper
-  deterministically **classifies**: it returns a candidate list and an
-  exclusion list, and its records carry no body. What is forwarded is decided
-  by the orchestrator, which holds every body it observed, excluded ones
-  included, and reads one only for an id on the candidate list because the
-  phase-execution reference tells it to. That forwarding discipline is
-  orchestrator prose, checked against FR-008b's second fixture rather than
-  enforced by a type. **There is no deterministic boundary on the forward
+  them on the forward path.** All three are model-layer controls: they change
+  what the prompt says about the text, and whether that holds is a
+  probabilistic property of the model reading it. It would be convenient to say
+  the deterministic boundary is FR-005's allowlist, and it is not true. The
+  helper deterministically **classifies**: it returns a candidate list and an
+  exclusion list, and its records carry no body. What is forwarded is still
+  decided by the orchestrator, which forwards a candidate's shaped block onward
+  only for an id on the candidate list because the phase-execution reference
+  tells it to. That forwarding discipline is orchestrator prose, checked
+  against FR-008b's second fixture rather than enforced by a type. **There is
+  no deterministic boundary on the forward
   path.** FR-005 is still the security boundary Assumptions names, in the sense
   that matters — it fixes whose posting may cause the sweep to act, whatever
   text that posting relays — but at the forward point it is applied by
@@ -793,6 +803,43 @@ proceeds.
   control that does not exist. The ranking above still holds — delimiting is
   the strongest control available inside a prompt and the one published
   guidance prescribes — and it is a ranking among probabilistic controls.
+
+  **What is deterministic is the consumer, and that is a different claim.**
+  The two agents that read a forwarded block — `sweep-classifier`, which
+  returns the class, and `sweep-analyst`, which returns a proposed edit — are
+  defined by this feature, used by this sequence alone, and neither inherits
+  the operator's session. On Claude each pins a `tools:` allowlist — `Read`
+  for the classifier; `Read`, `Grep`, and `Glob` for the analyst — and each
+  denies `Agent`, `TeamCreate`, `SendMessage`, and `Skill`, so neither holds
+  `Bash`, a network tool, a write tool, or the ability to delegate to an agent
+  that holds one. The Layer 5 tool-scoping test asserts the exact allowlist for
+  each and the exact membership of the exempt pair, so widening either list, or
+  adding a third agent to the exemption, fails a test rather than passing
+  review. That is a deterministic control, checked in this repository, over
+  **what a reviewer body can reach once it is forwarded**. It is not a control
+  over what is forwarded, and the two must not be read as one: the sentence
+  above still stands. FR-008c is where the assertion is specified.
+
+  **The Codex half of the claim is narrower, and is stated narrower.** The
+  Codex agent format carries no tool list and no network field, so the only
+  lever there is `sandbox_mode = "read-only"`, which bounds the filesystem.
+  For Codex this spec therefore claims a read-only filesystem and network per
+  Codex defaults, and claims nothing about tools. Neither runtime sandboxes an
+  MCP server process from inside an agent definition; that is curated at the
+  profile, outside this feature. Parity of outcome under SC-007 is parity of
+  the sweep's behavior, not parity of the two runtimes' enforcement strength.
+
+  **The orchestrator is the residual, and it is bounded by construction rather
+  than by enforcement.** It remains a model holding the operator's full
+  surface, `Bash` included. What keeps a reviewer body away from that surface
+  is that the orchestrator is never handed one to reason over: the observation
+  is piped into the runner, the shaped blocks pass through it unread, the class
+  comes from the classifier, and the edit comes from the analyst, each as a
+  structured record whose only free text is bounded and passed through FR-012f
+  before use. That is a property of how the sequence is written, not something
+  a type enforces, and an edit that had the orchestrator read a body back for
+  itself would undo it quietly. FR-008a's captured-dispatch corpus is what
+  turns that edit into a failed count instead of an unnoticed regression.
 - **FR-007f**: Removal MUST cover **every** matched registered line, not the
   first. This is not a hypothetical: the registry holds each template's markdown
   and prompt leads as separate entries, so a reviewer who pastes both copy
@@ -810,8 +857,8 @@ proceeds.
   removal is executed by the redaction surface (FR-007g, step 3), and the
   carriage-return fixture is what pins that the normalized array is the one
   indexed.
-- **FR-007g**: Every body forwarded to a consensus analyst MUST be shaped before
-  it reaches the analyst, **whether the comment was recognized or not**, and the
+- **FR-007g**: Every body forwarded to **any** agent MUST be shaped before it
+  reaches that agent, **whether the comment was recognized or not**, and the
   shaping MUST be performed by code: the **analyst-payload leg of the redaction
   surface**, the second named surface of `sweep-pr-feedback`. FR-007e specifies
   the payload only for a recognized comment, and the common case is the
@@ -820,11 +867,22 @@ proceeds.
   reviewer prose. For an ordinary comment the payload is the block the surface
   returns and nothing else; for a recognized comment it is that block with the
   helper's export record beside it, which is the two-part assembly FR-007e
-  already describes. The assembly is orchestrator work. Everything inside the
-  block is not, and that is the point of this requirement: an earlier reading
-  placed the shaping in orchestrator prose and forbade the helper from doing
-  it, which left every rule below with no producer and therefore no fixture
-  that could fail. A requirement nothing executes is not a requirement.
+  already describes.
+
+  **The population is every candidate, not only the routed ones, and the leg
+  runs inside the piped observation call.** FR-010a moves classification into
+  `sweep-classifier`, which reads a block for every candidate whose export kind
+  is not `empty`, so the trigger above is agent-wide rather than
+  consensus-wide. The leg is invoked once per such candidate, and it is invoked
+  **inside the piped `sweep-pr-feedback` call that consumes the observation**,
+  because FR-004's read is piped into the runner and that invocation is the
+  only place a raw body exists. Its response therefore carries the bodiless
+  candidate records, each candidate's block, and each candidate's shaping
+  report together. Everything inside the block is code's work, and that is the
+  point of this requirement: an earlier reading placed the shaping in
+  orchestrator prose and forbade the helper from doing it, which left every
+  rule below with no producer and therefore no fixture that could fail. A
+  requirement nothing executes is not a requirement.
 
   **What the surface takes and what it returns.** It takes one body — the
   capture-truncated copy the parse validated, as captured, with the line
@@ -847,13 +905,14 @@ proceeds.
   **This widens nothing.** FR-008b's first assertion is about the parse
   envelope: candidate records carry no body, and they still do not. The
   surface is networkless and write-less like the parse, and it receives one
-  body at a time, for an id the orchestrator was already entitled to read
-  under the classification rule that iterates `candidates` and nothing else.
+  body at a time, for an id the parse itself put on the candidate list inside
+  the same invocation — which is a narrower entitlement than the earlier one,
+  because the orchestrator no longer holds a body to hand back.
   Registration stays one operation; the Known Interface Gap in `tasks.md`
   sanctions named surfaces of that one operation, and this is the second. What
-  the surface does not do is decide whether a body is forwarded — that is
-  orchestrator prose, and no deterministic boundary stands on the forward
-  path — and it does not make the analyst honour the frame, which is a
+  the surface does not do is decide whether a shaped block is forwarded — that
+  is orchestrator prose, and no deterministic boundary stands on the forward
+  path — and it does not make the agent honour the frame, which is a
   property of the model reading it. The surface makes the payload's **shape**
   provable. It proves nothing about what is done with it.
 
@@ -1115,14 +1174,40 @@ proceeds.
   call per reply the run posts, which is every comment handled this run plus
   every owed reply FR-015b reconciles this run, both read from the case's
   expectations, so a re-run case that classifies nothing and posts one owed
-  reply derives one; and one `analyst_payload` call per comment routed to
-  consensus. A forgotten call fails the count, which is the failure a
+  reply derives one; and one `analyst_payload` call per **candidate whose
+  export kind is not `empty`**, not per comment routed to consensus, because
+  FR-010a hands the surface's block to `sweep-classifier` for every such
+  candidate and hands that same block to the analysts when the item takes
+  `amended`. A second call for the same comment id fails the count, and by
+  SC-005 it would return the same block anyway. A forgotten call fails the
+  count, which is the failure a
   response-only corpus cannot see. The same capture makes the report
   checkable: the disposition text the run report carries for a comment MUST
   be byte-identical to the `log_row` response for that comment's
   `Disposition` cell, taken before FR-013's escaping, so a report built from
   the orchestrator's pre-redaction copy fails by comparison rather than by
   inspection.
+
+  **The agent dispatches are captured on the same terms as the surface calls**,
+  because the whole trust claim of the sequence is that a block reaches only the
+  two scoped agents, and a claim about who was handed what is unmeasurable
+  against responses alone. Every dispatch is captured — the agent name, the
+  comment id, the prompt as sent, and the structured record returned — and a
+  fixture asserts per-agent counts derived from the corpus expectations rather
+  than typed beside them: one `sweep-classifier` dispatch per candidate whose
+  export kind is not `empty`, and for each item classified `amended`, three
+  `sweep-analyst` dispatches, one per perspective, plus one `sweep-analyst`
+  synthesis dispatch, which is four. A case with six such candidates of which
+  two amend therefore derives six classifier dispatches and eight analyst
+  dispatches. The same capture makes two negatives checkable that nothing else
+  here can see: **no dispatch names an agent outside the two**, so a block
+  routed to a shared consensus role or to `consensus-synthesizer` fails rather
+  than working; and **no captured orchestrator step carries a comment body**,
+  because the observation is piped into the runner under FR-004d's transport and
+  every orchestrator request beside it carries ids, enum values, and
+  surface-shaped or surface-redacted text alone, so classification performed in
+  the orchestrator fails a count instead of passing review. SC-015 measures
+  both.
 
   A separate test MUST derive the expected set from the gallery manifest and
   the templates themselves — every template the manifest says exports, in
@@ -1157,13 +1242,121 @@ proceeds.
   reintroduce the most dangerous leak path.
 
   Second, **an excluded comment's body and every registered line never appear in
-  an assembled analyst payload**, asserted against a captured payload the way
-  SC-009's boundary is asserted against captured commands. This is the half that
-  cannot be made structural: the orchestrator retains its own raw observation
-  and legitimately reads candidate bodies to build payloads, so what must be
-  proven is that it never reads one for an id the parse excluded. That is
-  judgment checked against a fixture rather than a type the runner can enforce,
-  and saying so is more honest than implying a guarantee that does not exist.
+  any payload dispatched to an agent**, asserted against a captured payload the
+  way SC-009's boundary is asserted against captured commands. This is the half
+  that cannot be made structural: the parse decides which ids get a shaped
+  block, and the orchestrator decides which of those blocks it forwards and to
+  whom, so what must be proven is that no block is produced or forwarded for an
+  id the parse excluded. That is judgment checked against a fixture rather than
+  a type the runner can enforce, and saying so is more honest than implying a
+  guarantee that does not exist.
+
+- **FR-008c**: The repository test that pins agent tool scoping MUST carry a
+  named carve-out for the two agents that read reviewer text, and the carve-out
+  MUST be tight enough that every way of widening it is red.
+
+  **The rule being carved out, and why it is right everywhere else.** Layer 5
+  asserts today that no Claude agent definition declares a `tools:` allowlist,
+  with the message that availability is operator-owned and role denials belong
+  in `disallowedTools`. That rule is correct for every agent the plugin ships
+  today, all of which act on operator input, spec text, and repository content
+  — trusted material, where inheriting whatever the operator installed is the
+  feature. It is wrong for the two agents this slice adds, whose input is
+  reviewer-derived and therefore attacker-controllable. Capability inheritance
+  is right for an agent acting on trusted input and wrong for an agent reading
+  text an attacker can write. Reversing a repository-wide rule for two named
+  agents is a policy change, it is taken here deliberately, and it is the only
+  policy change this slice makes.
+
+  **The carve-out is a tuple, not a pattern.** A new
+  `UNTRUSTED_INPUT_CONSUMERS = ("sweep-classifier", "sweep-analyst")` sits
+  beside the validator's existing role tuples, and three assertions bind it:
+  1. **Exemption from one rule, not from the file.** Members MUST be exempt
+     from the no-allowlist assertion and from nothing else. The second
+     assertion in that same test method — no vendor-qualified `mcp__` token
+     anywhere in the frontmatter — still binds them, as does every other check
+     in the file, including the session-shape metadata rule and the named-tool
+     regression guard that scans prose on both platforms. The exemption is by
+     membership rather than by pattern, so it does not generalize: adding
+     `tools: Read` to a non-member's definition is red on the unchanged rule.
+  2. **Each member pins exactly its stated allowlist.** `sweep-classifier`
+     exactly `Read`; `sweep-analyst` exactly `Read, Grep, Glob`. The
+     comparison MUST be equality over the parsed set, never containment, for
+     the reason FR-012c gives for the three-file check: a containment test
+     passes anything that also contains the allowed values, which is every
+     widening this assertion exists to catch. Appending `Bash` to
+     `sweep-analyst` is red, and so is dropping `Grep`, so the assertion is a
+     pin in both directions rather than a ceiling. `Read` is on the
+     classifier's line because the runtime refuses a subagent that resolves
+     zero tools and `Read` is the narrowest tool a subagent can be given; the
+     implementation task verifies whether an explicitly empty list is accepted
+     and tightens to it if it is, and this assertion is what would then be
+     tightened with it.
+  3. **The tuple's membership is asserted exactly.** The assertion MUST
+     compare `UNTRUSTED_INPUT_CONSUMERS` against its literal two-name value
+     and MUST assert it disjoint from the open-executor tuple. Appending an
+     open executor to it is red. Without this assertion the carve-out is a
+     door rather than a window: a future editor facing the no-allowlist rule
+     could buy an exemption for an open executor by adding one name to a tuple
+     whose whole justification is that its members read attacker-controllable
+     text, and nothing would notice.
+
+  **Members MUST also deny the orchestration set and `Skill`**, asserted in the
+  shape the read-only roles are already asserted in: `Agent`, `TeamCreate`,
+  `SendMessage`, and `Skill` each present in `disallowedTools`. Removing
+  `Agent` from `sweep-analyst`'s line is red. The allowlist alone would not be
+  enough without this, and the reason is one hop out: an agent that can spawn
+  another agent hands the reviewer's text to whatever it spawned, and the
+  spawned agent's surface is the operator's, not this one's. A closed allowlist
+  that can delegate is not closed.
+
+  **The Codex half is `sandbox_mode` and nothing else, and the claim is
+  narrowed to match.** The validator MUST assert `sandbox_mode = "read-only"`
+  for both members' Codex definitions directly, keyed off
+  `UNTRUSTED_INPUT_CONSUMERS` rather than by adding the two names to the
+  existing Codex read-only tuple, which would also assert a model and a
+  reasoning effort that this design never fixed for these agents and that no
+  requirement here justifies. Flipping either definition to `workspace-write`
+  is red. The honest limit belongs in the same breath: the Codex agent format
+  carries no tool allowlist and no network field. The installer reads exactly
+  two keys and copies the rest through byte-for-byte, the Layer 1 Codex
+  validator rejects the Claude-only frontmatter fields outright, and the only
+  place `network` appears anywhere in the repository is a descriptive corpus
+  manifest that nothing reads back from an agent definition. So the spec claims
+  for the Codex variants only **read-only filesystem; network per Codex
+  defaults**, and it does not claim the network is closed there. The install
+  skill's own operator note adds the second limit: a read-only sandbox does not
+  sandbox MCP server processes, so write-capable MCP servers are curated out at
+  profile level rather than by anything this slice ships.
+
+  **The rationale is recorded in the validator's module docstring**, in one
+  sentence: capability inheritance is right for agents acting on trusted input
+  and wrong for agents reading attacker-controllable text. A tuple whose reason
+  lives only in a spec is a tuple the next editor deletes as dead weight.
+
+  One implementation constraint, because getting it wrong makes the whole
+  carve-out silently inert: the validator's suite builder iterates its ordered
+  tuple of test-method names and nothing else, so a method added to the class
+  but not to that tuple never runs and nothing counts its absence. Every method
+  the carve-out adds is appended there in the same change.
+
+  **The subtest count moves, and that is fine.** The parity baseline recorded
+  for this validator is capture tooling with no run-time consumer — nothing
+  compares the live count against it — so the new subtests change the total
+  freely and no baseline file needs regenerating for them.
+
+  **What this pins, and what it leaves standing.** FR-008b's second assertion
+  ends by admitting that the forward path has no deterministic boundary,
+  because the orchestrator decides what it forwards and that discipline is
+  prose checked against a fixture. FR-008c does not change that. It changes
+  what a laundered instruction reaches once forwarded: a consumer with three
+  read tools, no shell, no network, and no fan-out, held there by an equality
+  assertion. The residual is the orchestrator itself, which keeps `Bash` and
+  applies every write. Its control is that it is never handed a comment body —
+  the observation is piped into the runner rather than written to disk, the
+  shaped blocks pass through unread, and classification moved out of it
+  entirely — which is a property of how the sequence is built rather than
+  something a test enforces, and this requirement claims no more than that.
 
 **Idempotency and classification**
 
@@ -1226,9 +1419,142 @@ proceeds.
   would recreate that same rejected path one layer down; FR-003's
   cross-platform determinism requirement rules out any non-fixed tie-break
   as the alternative.
-- **FR-011**: Only the `amended` class routes through the category-routed
-  consensus protocol. The `answered`, `deferred`, and `no action` classes MUST
-  NOT invoke consensus.
+- **FR-010a**: FR-010 fixes the classes, the unit, and the tie-break, and says
+  nothing about **who** assigns them. Today that is the orchestrator, which
+  holds the observation, reads a body for every candidate, and carries the
+  operator's whole tool surface — `Bash`, `WebFetch`, `WebSearch`, and every
+  installed MCP server. That is the trust-boundary review's F-1 and F-2 stated
+  once each: the participant that reads reviewer-controlled text is the one
+  participant that can act on it anywhere. Classification MUST therefore be
+  performed by **`sweep-classifier`**, a scoped agent this feature ships on both
+  platforms and only the sweep dispatches, **one dispatch per candidate**, and
+  the orchestrator MUST NOT read a comment body or a shaped block on any path.
+
+  **What bounds the classifier.** On Claude Code its frontmatter MUST pin
+  `tools: Read` and MUST deny `Write`, `Edit`, `MultiEdit`, `NotebookEdit`,
+  `Skill`, `Agent`, `TeamCreate`, and `SendMessage`; on Codex the definition
+  MUST declare `sandbox_mode = "read-only"`. FR-008c specifies the assertions
+  that pin all of it, and states the honest Codex limit: `read-only` filesystem,
+  network per Codex defaults, nothing claimed about tools. `Read` rather than
+  nothing, because the runtime refuses a subagent that resolves zero tools and
+  `Read` is the narrowest tool a subagent can hold; the implementation task
+  checks whether an explicitly empty list is accepted and tightens to it if it
+  is. This is a **reversal of a repository-wide rule**, taken deliberately, and
+  the reason is the sentence FR-008c records: capability inheritance is right
+  for an agent acting on trusted input and wrong for one reading text an
+  attacker can write.
+
+  **What it receives.** One prompt, one candidate: the comment id; **one**
+  sanitized, delimited block, which MUST be the output FR-007g's
+  analyst-payload leg produced for that comment and nothing else; the closed
+  class vocabulary and the three-file target set FR-012b fixes; and, for a
+  recognized comment, the parse's export record, which FR-007e already bounds to
+  grammar-conforming bytes. FR-007d still holds: recognition tells the classifier
+  what the comment is, never what class it takes. **A candidate whose export
+  kind is `empty` is never dispatched**, because FR-007a already forces
+  `no action` for that form from the parse alone and dispatching an agent to
+  re-decide a forced class would reopen what FR-007a closed. This widens
+  FR-007g's trigger from every body forwarded to a consensus analyst to every
+  body forwarded to any agent, and moves that leg's call site inside the piped
+  observation call, which supersedes its entitled-orchestrator rationale; those
+  two edits are the whole of this requirement's ripple into it.
+
+  **What it returns.** One structured record, four fields, fixed by
+  `contracts/sweep-classifier-output.md`: the echoed `comment_id`; `class`, from
+  FR-010's closed set; `target`, one of `spec.md`, `plan.md`, `tasks.md`, or
+  null, which MUST be null for every class except `amended`; and `reason`, a
+  string of at most **512 bytes** as UTF-8 carrying neither pipe nor newline.
+  The target is advisory — FR-012b rule 2 is still the write-point check, so a
+  target the analysts contradict widens nothing. A record carrying a fifth
+  field, a fifth class value, a target outside that set, a non-null target on a
+  class other than `amended`, or a reason over the cap is **malformed**, and a
+  malformed record MUST stop the run under FR-020 naming the comment id, with no
+  coercion and no re-prompt. Coercion would have the orchestrator decide which
+  of the four a fifth value meant, which is classification moving back into the
+  orchestrator one record at a time, and a re-prompt is the orchestrator
+  negotiating with a model over attacker-shaped input, which is the loop the
+  frame exists to avoid. The cap fails the record rather than cutting it for a
+  reason worth stating: a cut lands anywhere, and a cut inside a token-shaped
+  run leaves the run under the twenty characters the deny-set requires, so
+  nineteen bytes of a secret would publish behind a `bearer` trigger whose rule
+  no longer fires. One rule, one outcome, and the byte-identity below stays
+  exact.
+
+  **Where the classification rules now execute.** FR-010's amended-wins
+  tie-break and FR-012b rule 1, an out-of-scope target taking `deferred` with
+  the refused target named, move into the classifier's definition unchanged in
+  content. They are stated once, there, and both phase-execution references
+  carry the dispatch, the payload, and the record's shape and point at the
+  definition for the rules rather than restating them, so the two cannot drift
+  and the budget is not spent twice.
+
+  **The observation is piped, not filed.** The two `gh` reads' output MUST be
+  piped into the runner on stdin, and the sweep MUST NOT write, and MUST NOT
+  compose, any file or any argument carrying an observed body. FR-004b keeps
+  comment text out of a shell argument; this extends the same rule to disk and
+  to the orchestrator's judgment, and it replaces FR-004d's first named
+  byproduct — the request file that carried the observation — leaving the reply
+  body files, the outbound-leg request files, and the captures behind it. One
+  call still reads both surfaces, so FR-004c's all-or-nothing observation is
+  unchanged. The piped call shapes every dispatched candidate inside itself, so
+  its response carries the bodiless candidate records, each candidate's block,
+  and each candidate's shaping report together. **The orchestrator is a conduit
+  for a block and never a reader of one**: it hands each block to the classifier
+  unchanged, and for an amended item hands that same block to the analysts, and
+  no path asks it to read one.
+
+  **What the orchestrator acts on, and what it may do with it.** From the parse
+  response: ids, surfaces, authors, associations, truncation flags, export
+  metadata, and the shaping counts — `truncated`, `spans_withheld`,
+  `leads_removed` — which are what FR-013's disposition and FR-015's reply need,
+  taken from the report rather than from a model's transcription. From each
+  dispatch: the enum, the target, and the bounded reason. Nothing else, on any
+  path. The reason is reviewer-derived text a model rewrote, so it MUST pass
+  FR-012f's `log_row` leg before any use, and the string that leg returns is the
+  only form that reaches the `Disposition` cell, the run report, and any reply
+  text derived from it — never the orchestrator's copy of what the classifier
+  said. FR-012f already fixes that identity for the report; this extends it to
+  the reply and leaves the raw reason with no sink of its own.
+
+  **Two residuals, stated rather than implied.** `Read` is not path-scoped: the
+  classifier can open any file in the worktree, so "one dispatch, one block" is
+  a claim about what the dispatch hands over and never about what the agent
+  could open. What bounds it is the absence of a shell and of a network tool, so
+  nothing it reads leaves except through its own output, and that output is a
+  closed enum, a null-or-three target, and a capped reason redacted before use.
+  And nothing prevents the orchestrator from running `gh` itself and reading a
+  body it was not handed: the control is that it is never handed one, which is
+  construction rather than enforcement. FR-008b's second assertion checks
+  payload assembly against a captured payload; no fixture proves a negative over
+  a model's tool use, and this document claims none.
+
+  **Seven fixtures, each of which can fail.** The Layer 5 carve-out FR-008c
+  specifies asserts the tuple's membership exactly, each member's allowlist
+  exactly, and the denials, so adding `Bash` to the classifier or adding an open
+  executor to the tuple is red. The Codex parity check goes red when either
+  platform's definition is absent, and the install helper's bundle-inventory
+  test goes red when a shipped Codex definition is missing from the required
+  set. The byproduct assertions gain a **fenced** sentinel: a corpus body whose
+  fenced span carries a distinctive string, asserted absent from every file the
+  run leaves and every captured argv — the span is withheld from every block, so
+  the string reaches disk only if the raw observation was persisted, and writing
+  the observation to a request file first is what turns it red. The transport
+  assertion re-attaches FR-008b's first assertion to what the orchestrator
+  actually acts on: the parse response's candidate records carry no body field,
+  and adding one is red. Each candidate's block is compared byte for byte
+  against the golden block for that case, so a run that forwards the raw body,
+  or wraps the block in prose of its own, is red. The captured-call fixture
+  derives the new inventory from the corpus — one piped parse call per run, one
+  `analyst_payload` leg call per dispatched candidate, one classifier dispatch
+  per dispatched candidate — and a run that shapes blocks only for amended items
+  fails the count. And three malformed-record cases — a fifth class value, a
+  non-null target on `answered`, a 513-byte reason — each expect a stop with
+  zero rows, zero replies, and zero commits, beside a deny-set string seeded in
+  a reason and asserted absent from the row, the report, and the reply with the
+  placeholder in its place, which is red the moment the orchestrator uses its
+  own copy.
+- **FR-011**: Only the `amended` class routes into consensus. The `answered`,
+  `deferred`, and `no action` classes MUST NOT invoke consensus.
 - **FR-011a**: Consensus does not always return an answer, and the three ways it
   fails to MUST all land on one specified behavior. The shipped protocol raises
   its human-review outcome from each of them: all three analysts
@@ -1280,6 +1606,155 @@ proceeds.
   true, and it settles the sibling replies: they post. When nothing was amended,
   this stop replaces FR-018's proceed at that same point, which is the whole of
   FR-011a's effect on a run that would otherwise have continued.
+- **FR-011b**: The consensus work for an `amended` item MUST be performed by
+  `sweep-analyst`, a scoped agent this slice ships on both platforms, and MUST
+  NOT be performed by the three shared analysts or by `consensus-synthesizer`.
+  Four calls per item: three perspective calls and one synthesis call, all to
+  the same definition.
+
+  **Why a fourth analyst rather than the three that already exist.** The three
+  shared analysts and the synthesizer declare no `tools:` allowlist, so each
+  inherits the operator's full surface — `Bash`, `WebFetch`, `WebSearch`, and
+  every installed MCP server — and under FR-011 every one of them would be
+  reading reviewer-derived prose with that surface in hand. That is the F-1
+  exposure named in the trust-boundary review, and this requirement is where it
+  is closed rather than disclosed. `sweep-analyst` declares `tools: Read, Grep,
+  Glob` on Claude Code and `sandbox_mode = "read-only"` on Codex, and denies
+  `Agent`, `TeamCreate`, `SendMessage`, and `Skill`. FR-008c pins that
+  allowlist as an equality, so the day someone adds `Bash` to it the suite goes
+  red rather than the boundary going quiet. This is the first deterministic
+  control on this path's **consumers**: FR-007e says plainly that delimiting
+  and removal are model-layer controls and that nothing deterministic stands
+  behind them, and that remains true of the *forwarding decision*. What changes
+  here is the *consumer*. An instruction that survives the frame now arrives at
+  an agent that has three read tools, no shell, no network, and no way to spawn
+  anything that has them.
+
+  **The perspective is supplied in the prompt, so the routing table is
+  untouched.** `sweep-analyst` is dispatched three times per amended item, once
+  for each perspective in the closed set `codebase`, `spec-context`, `domain`.
+  The perspective is a prompt input, not an agent identity; the same definition
+  serves all three. The Category-Routed Dispatch table in the shipped consensus
+  protocol maps a category tag onto one of the three shared analysts, and the
+  sweep never emits a category-tagged unresolved item, so the table is never
+  consulted and none of its rows change. The precise claim is **the routing
+  table is untouched**, not that the file is: FR-014's `Sweep` value is added to
+  that same file's Consensus Resolution Log `Type` column, and stating the
+  narrow claim is what keeps the two from reading as a contradiction. The
+  sweep's own dispatch lives in the sweep sequence inside Phase 7 of both
+  phase-execution references, which is exactly where the seam sits: Clarify,
+  Checklist, and Analyze reach consensus through the routing table and the
+  three phase-specific flows precisely as they do today, and no edit in this
+  slice reaches them.
+
+  **Two adjacent phrases narrow with it.** FR-011 and FR-014 each called the
+  sweep's consensus *category-routed*, which was accurate while the sweep
+  called the shared roles. What the sweep reuses is the protocol's round
+  structure, its agreement rule, and its outcomes; what it no longer reuses is
+  the table that decides which shared analyst runs. Both phrases drop the
+  routing qualifier and keep everything else, and FR-014's escape-rate argument
+  survives the narrowing intact — sweep rows count because the same round
+  structure produces them and because the input is least controlled exactly
+  there.
+
+  **Synthesis is a fourth `sweep-analyst` call, not a `consensus-synthesizer`
+  call.** `consensus-synthesizer` declares no allowlist either, so routing the
+  three recommendations to it would reopen F-1 one hop downstream — three
+  scoped agents handing reviewer-derived findings to an agent holding the full
+  surface. A boundary that holds for three calls and fails on the fourth is not
+  a boundary, and the fourth call is the one that composes the edit, which is
+  the most reviewer-shaped output in the sequence. The synthesis prompt
+  therefore goes to the same scoped definition. The cost is stated rather than
+  hidden: `sweep-analyst` carries no synthesizer role prose of its own, so the
+  synthesis prompt supplies the agreement rule and the confidence vocabulary at
+  the call site. In exchange the shipped synthesizer keeps its existing callers
+  and its wording unchanged, which is the same trade FR-007e makes against the
+  shared prompt templates — fix it locally, leave the shared surface to a spec
+  that owns it.
+
+  **Only the synthesis call returns an edit, and that fixes the call counts.**
+  The three perspective calls return recommendations and nothing writable. The
+  synthesis call returns the structured edit below. FR-008a's captured-call
+  fixture derives its per-item expectation from that granularity — four
+  `sweep-analyst` dispatches per amended item, three perspectives and one
+  synthesis, and zero dispatches naming `codebase-analyst`,
+  `spec-context-analyst`, `domain-researcher`, or `consensus-synthesizer` for a
+  sweep item, with the three perspective values appearing exactly once each. A
+  corpus case whose amended item records three dispatches is red on the count;
+  one that records `codebase` twice is red on the perspective set; one that
+  records a `consensus-synthesizer` synthesis dispatch is red on the identity
+  assertion. The identity half is what makes the seam testable rather than
+  merely asserted in prose.
+
+  **What the synthesis call returns.** One structured record whose `edit`
+  object carries three fields, fixed by `contracts/sweep-classifier-output.md`
+  beside the classifier's own record:
+  1. `file` — one of `spec.md`, `plan.md`, and `tasks.md` in the current
+     feature directory, FR-012b's three-member set and no other value. A
+     record naming any fourth path MUST stop the run and MUST NOT write, and
+     FR-012b rule 2 still runs at the write regardless, because a decision made
+     once upstream is not a check made at the point of use.
+  2. `anchor` — text that MUST resolve to exactly one occurrence in that file.
+     The orchestrator applies the edit serially, the way the shipped protocol
+     applies every Artifact Edit, and that application requires a unique match.
+     Zero matches and two matches are both defects and both MUST stop the run
+     before any write.
+  3. `replacement` — bounded at **8192 bytes**, the one text budget this
+     feature already carries rather than a third number minted here. Over
+     budget MUST stop the run and MUST NOT write. This is the one place the
+     sweep bounds an untrusted volume by stopping rather than by cutting, and
+     the asymmetry is deliberate: FR-007g cuts because its output *is* the
+     bound and a cut payload is still a valid payload, while a cut replacement
+     writes half an amendment into a committed artifact. The budget binds the
+     record as the analyst returned it, which is the volume control; what is
+     actually written is whatever the redaction surface returns for it.
+
+  All three stops are fixtured in the same corpus, one red case per field: a
+  synthesis response naming a fourth file, one whose anchor resolves twice, and
+  one whose replacement is a single byte over 8192. Each case is red unless the
+  run stops having written nothing and having captured no `amendment` leg call
+  for that item, so a stop that leaks a partial write or a redaction request
+  fails as loudly as no stop at all.
+
+  **The replacement passes the redaction surface before any write.** The
+  `amendment` leg of FR-012f takes the synthesis call's `replacement`, and the
+  write proceeds with the text that leg returns. No separate rule is needed for
+  the reviewer-derived content inside it, because FR-012f already governs every
+  byte the sweep carries outward and an amendment commit is one of its three
+  outbound legs. FR-008a's per-leg capture is what pins it end to end: the
+  `amendment` request MUST be byte-identical to the synthesis call's
+  `replacement`, and the bytes written MUST be byte-identical to the response.
+  A captured case in which the write bytes differ from the response is red,
+  which is the failure a response-only corpus cannot see.
+
+  **The `domain` perspective runs without web access, and that is accepted.**
+  The shared `domain-researcher` serves that perspective with `WebFetch` and
+  `WebSearch`. `sweep-analyst` has neither, and FR-008c's equality assertion is
+  what keeps it that way — red the moment `WebFetch` joins the line. The trade
+  is deliberate and it is the direct form of the F-1 exposure: an agent that
+  can fetch a URL while reading reviewer prose turns a pasted link into a fetch
+  instruction, and no in-prompt frame is a control against that. So the domain
+  perspective here is repository-grounded — the constitution, the roadmap, the
+  sibling specs, and the shipped references, all reachable with `Read`, `Grep`,
+  and `Glob` — and it is weaker than the shared role by exactly the amount the
+  network would have added. Where a genuine external question decides an
+  amendment, the perspectives disagree or the synthesis cannot resolve them,
+  which is the path below, and a human answers it. Stating the gap is the
+  point: a later reader must not assume this agent researched anything
+  off-repository.
+
+  **The failure modes map onto FR-011a unchanged.** All three of FR-011a's ways
+  of failing to return an answer still apply, with `sweep-analyst` in the place
+  of the shared roles: all three perspectives disagreeing after Round 2, a
+  Round-1 escape whose Round 2 still cannot resolve, and a `sweep-analyst` that
+  fails its single retry. Each lands on FR-011a's human-review outcome exactly
+  as that requirement already writes it: no edit, no class, no Feedback Sweep
+  Log row, one Consensus Resolution Log row with `Type` `Sweep` naming which of
+  the three occurred, sibling items in the batch completing, and the run
+  stopping under FR-020. Behavior does not branch on which occurred; only the
+  report names it. This requirement changes who performs the round, not what a
+  failed round does, and restating FR-011a's outcome here in different words
+  would create a reconciliation bug rather than a clarification.
 
 **Amendment**
 
@@ -1380,7 +1855,11 @@ proceeds.
      named in the row's disposition and in the reply, so the reviewer learns
      their request was understood and declined rather than silently ignored.
      No new class is introduced: `deferred` already means recorded and not
-     acted on now, already routes nowhere, and already stops nothing.
+     acted on now, already routes nowhere, and already stops nothing. Under
+     FR-010a this rule is a **field rather than prose**: `sweep-classifier`
+     returns `target` from a closed enum of these three names or null, so it
+     cannot express a fourth path, and the refused target is named in the
+     bounded `reason` that becomes the disposition and the reply.
   2. **At the write.** Before any amendment write, the resolved edit's target
      path MUST be checked against that same three-entry set, in code rather
      than in judgment. A target outside it MUST stop the run and MUST NOT be
@@ -1853,8 +2332,9 @@ proceeds.
   one of the cells FR-012f's log-row leg enumerates. The row's `Type` value
   is `Sweep`, a fourth value beside the shipped `Clarify`, `Gap`, and
   `Finding`. Sweep rows COUNT toward the Round-2 escape-rate metric the log is
-  the data source for: they are produced by the same category-routed protocol
-  and can be mis-routed the same way, so excluding them would blind the metric
+  the data source for: they are produced by the same round structure and
+  agreement rule and can escape the same way, so excluding them would blind the
+  metric
   precisely where the input is least controlled. The dispositions that could
   distort that metric — answered, deferred, no action — never reach the log at
   all, because FR-011 keeps them out of consensus. Inclusion is not the same as
@@ -2163,10 +2643,13 @@ proceeds.
 - **Primary surface**: harness/adapter — the deterministic comment-parse
   behavior and its unit coverage.
 - **Secondary surfaces, if any**: docs/process — both phase-execution
-  references and the workflow-file protocol entry for the Feedback Sweep Log.
+  references, the workflow-file protocol entry for the Feedback Sweep Log, and
+  the two sweep agent definitions on both platforms, which are authored role
+  prose the harness reads rather than a second executable surface.
 - **Projected reviewable LOC**: **515 to 830, midpoint near 630, superseded.**
   That is the plan-time figure as the error-handling pass left it, kept as
-  history. The live figure has one home, the superseding note below, and every
+  history. The live figure has one home, the second superseding note below, and
+  every
   other site — `plan.md` Technical Context and its budget-result table,
   `tasks.md`, and the workflow file's Phase 5 fallback evidence chain — either
   repeats that figure or says it is superseded and points there. The bullets
@@ -2184,10 +2667,16 @@ proceeds.
   entry is 58. The trust-boundary requirements added after that correction moved
   the high end to roughly 775, and the error-handling pass moved it again to the
   810-to-830 recorded in the next bullet but one.
-- **Projected production files**: **7.** Not the 8 or 9 an earlier draft of this
-  section carried. The difference is that neither `SKILL.md` is edited at all:
-  the Codex variant sits three words below its 8000-word cap, so it cannot take
-  a line, and the Claude variant is left alone to keep the two in step.
+- **Projected production files**: **7 at plan time, 12 live.** Not the 8 or 9 an
+  earlier draft of this section carried, and not the 11 the consumer-scoping
+  pass first projected: the closed Codex agent inventory in the install helper
+  forces a line into a shipped production file, so the two sweep agents cost
+  five production paths rather than four. The second superseding note below
+  carries the live count and the block it crosses. The plan-time 7 held because
+  neither `SKILL.md` is edited at all: the Codex variant sits three words below
+  its 8000-word cap, so it cannot take a line, and the Claude variant is left
+  alone to keep the two in step. That is still true, and neither `SKILL.md` is
+  among the twelve.
 - **The error-handling checklist moved this again.** Five more requirements put
   the high end at roughly **810 to 830**, which **crosses the 800 block**. The
   midpoint of about 630 does not. This is the fourth revision of the number and
@@ -2230,18 +2719,101 @@ proceeds.
   the midpoint and the block crossing are unchanged by it. **The midpoint now
   crosses the 800 block, not only the high end.** T014's lever decision is
   taken against this figure, and the size-crossing rule two bullets below is
-  what lets the run continue past it. This note is the live figure's only
-  home: every other site that states a number either repeats this one or says
-  it is superseded and points here.
-- **Budget result**: **a warn on production files, a warn on authored files,
-  and a block on reviewable LOC at the live midpoint.** Over the 400
-  reviewable-LOC warn, over the 6 production-file warn, and one over the 15
-  authored-file warn at 16; under both file blocks, on a single primary
-  surface;
-  and, at the live figure the superseding note above states, over the 800 LOC
-  block at the midpoint and not only at the high end. The file count matters
-  more than it looks: that block fires above 8, so the 7 this slice carries is
-  a warn, while the 9 an earlier draft claimed would have been a block.
+  what lets the run continue past it. This note was the live figure's only
+  home; **superseded in turn by the note below, which is now the live figure's
+  only home.**
+- **Second superseding note: the consumer-scoping pass, and the live figure it
+  leaves.** The note above is left as written; this one supersedes it, and
+  supersedes nothing else. The operator chose to mitigate F-1 and F-2 inside
+  this slice — recorded as Q13 in the design concept and as an amendment in the
+  workflow file — rather than accept them as disclosed or move them to a later
+  slice. Two agents that read reviewer text ship on both platforms and are used
+  only by this sweep, and the Layer 5 no-allowlist rule gains a two-name
+  carve-out. The delta is derived from the shipped agent definitions this
+  repository already carries, not from a prose estimate. Its line items, each
+  against a measured anchor:
+
+  The Claude classifier definition, **80 to 120**. The narrowest shipped
+  read-only agent definition is 123 lines; this role is narrower still — one
+  sanitized block in, a four-field record out — but carries the same mandatory
+  pointer block Layer 1 requires of every agent on both runtimes: the
+  capability-discovery pointer, the grounding pointer, and a capability-path
+  line.
+
+  The Claude analyst definition, **110 to 150**. The two comparable shipped
+  analysts are 135 and 144 lines; this one carries three perspectives selected
+  from the prompt, a synthesis mode, and the structured edit's shape.
+
+  The two Codex mirrors, **70 to 110** and **100 to 135**. Agent definition
+  mirrors run at roughly **90%** of their Claude counterparts — 123 against
+  135, 112 against 123, 121 against 135 — and **not** at the 70% ratio that
+  holds for the reference documents. Using 70% here would undercount by about
+  forty lines, which is why the ratio is stated rather than reused.
+
+  The install helper's closed Codex agent inventory, **2 to 4**. Two names into
+  a tuple whose loader rejects both a missing and an unexpected definition. The
+  precedent added one such name in one line.
+
+  The Claude phase-execution reference, **30 to 60**, net. The classifier
+  dispatch per candidate, `sweep-analyst` three times plus a synthesis call per
+  amended item, and the piped transport. This is stated net of displacement
+  rather than silently offset: it **replaces** the orchestrator
+  classification-loop prose and the category-routed dispatch instruction that
+  the 705-to-1080 figure already carried.
+
+  The Codex phase-execution reference, **20 to 45**, at the measured 70%
+  reference ratio.
+
+  The redaction surface's host file, **5 to 15**. The classifier's bounded
+  `reason` crosses FR-012f's `log_row` leg before the orchestrator acts on it,
+  which reuses an existing leg rather than adding a fifth, and lands in a file
+  the Declared File Operations block already names.
+
+  **Three things in this pass are authored and add zero reviewable LOC**, named
+  so they read as counted-and-excluded rather than overlooked: the new planning
+  contract `contracts/sweep-classifier-output.md`, which fixes the classifier's
+  structured record and the analyst's structured edit and follows the
+  agent-contract precedent in ART-007 in appearing in no count; the Layer 5
+  carve-out; and the captured-call fixture extensions. The plan's derivation
+  table counts production paths only and this pass is counted the same way.
+
+  **The delta is 415 to 640 reviewable lines, and the live figure is 1120 to
+  1720, midpoint near 1420.**
+
+  **Production files move from 7 to 12, and 12 crosses the 8-file block.** The
+  count is the seven already declared, plus two Claude agent definitions, two
+  Codex mirrors, and the install helper whose closed inventory a new shipped
+  Codex definition forces open. **Authored files move from 16 to 22**: those
+  five production paths plus the Layer 5 validator, which is authored
+  verification. Twenty-two is over the warn of 15 and under the block of 25, so
+  the authored-file dimension stays a warn. The generated surface grows by
+  thirteen paths, exactly the ripple the precedent produced for one agent,
+  doubled where the agent count doubles and including the generated agents
+  reference page; generated paths are not reviewable and not authored.
+
+  **Both crossings are size-only and both are OPERATOR-ACCEPTED.** The reason is
+  not that the numbers are tolerable but that the boundary is not separable
+  from the feature: F-1 and F-2 are properties of the agents this feature
+  dispatches, so mitigating them means shipping those agents, and a slice that
+  ships the sweep without them ships the disclosed exposure and defers the fix
+  behind the thing that creates it. The alternatives were offered and rejected
+  on that ground, and both are recorded in the design concept's Q13. The
+  precedent for a recorded block that continued is the prior spec named in the
+  size-crossing bullet below, which recorded a size-only block at 1800
+  reviewable LOC and continued with the crossing captured as marker-planning
+  input rather than becoming a manual re-slicing stop. The live midpoint of
+  1420 is under that 1800. **This note is the live figure's only home**: every
+  other site either repeats it or says it is superseded and points here.
+- **Budget result**: **a block on production files, a block on reviewable LOC
+  at the live midpoint, and a warn on authored files.** Over the 400
+  reviewable-LOC warn and the 800 block at the live midpoint of about 1420;
+  over the 6 production-file warn and the 8-file block at 12; over the 15
+  authored-file warn at 22 and under its block of 25; on a single primary
+  surface. The file count matters more than it looks and it has now crossed:
+  the block fires above 8, so the 7 this slice carried through the
+  trust-boundary remediation was a warn and the 12 it carries after the
+  consumer-scoping pass is a block. Both blocks are size-only and both are
+  operator-accepted, per the second superseding note above.
 - **A size crossing does not stop this run, and the reason is not optimism.**
   Every gate that could measure it is either advisory by contract or deferred on
   the installed runner, and the shipped rule for the ones that are deferred is
@@ -2249,14 +2821,18 @@ proceeds.
   becoming a manual re-slicing stop. Only a **correctness** block halts. There
   is direct precedent in this repository: a prior spec recorded a size-only
   block at 1800 reviewable LOC, 2.25 times over the threshold, and the run
-  continued with the crossing captured as marker-planning input.
+  continued with the crossing captured as marker-planning input. That precedent
+  now covers two size-only crossings in this slice rather than one, and 1420 is
+  under the 1800 it records.
 - **What would actually stop a run is stale evidence, so the figure has one
   home.** Three generations of this number — 745, roughly 775, and 810 to 830 —
   were once live across the spec and the plan at the same time, with six
   separate places still asserting zero blocks, and the artifact verification
   repair's 595 to 910 then joined them. That is the condition the correctness
   stops exist for. The fix is not to erase the history but to give the live
-  figure exactly one home, the superseding note above. Every other site that
+  figure exactly one home, the second superseding note above. The
+  consumer-scoping pass adds a fifth generation, 1120 to 1720, and moves the one
+  home to that note. Every other site that
   states a number either repeats that figure or says it is superseded and
   points there, and a sentence claiming "that is the live figure" about any
   other number is a defect, not a lag.
@@ -2419,6 +2995,24 @@ Named owners, so none of these is a silent omission.
   points, with nothing amend-worthy present. Neither class routes to consensus
   or changes stop-or-proceed, so the choice has no behavioral consequence and
   no owner is assigned.
+- **Owned by no spec yet, and deliberately so**: qualifying `sweep-classifier`
+  and `sweep-analyst` into the governed Layer 6 corpus. The two agents ship
+  outside it. The corpus binds exactly twelve roles through a four-level sha256
+  digest chain over agent source bytes, it has no regeneration script, and
+  editing any governed definition restales the chain with an error that names a
+  digest rather than a file. The `artifact-author` agent is the precedent and it
+  is recent: it shipped on both platforms, outside the corpus, with a green
+  suite. This entry does not disturb the **Deliberately not built** bullet above
+  — no governed definition is edited here, and the twelve stay twelve; two new
+  agents simply ship beside them ungoverned. The disclosure is that a security
+  boundary nothing digest-binds is a gap: FR-008c pins these two definitions at
+  Layer 5, which catches a widened allowlist, and Layer 6 is the layer that
+  would catch a substituted definition. The destination is a future G56R-series
+  spec, because corpus qualification is its own workstream with its own
+  calibration run, and bolting two roles onto a hand-maintained digest chain
+  inside a slice that already crosses its file budget is how that chain gets
+  left broken. No spec is named because none has agreed to it, which is the
+  honest alternative to assigning it.
 
 ## Success Criteria *(mandatory)*
 
@@ -2530,11 +3124,49 @@ Named owners, so none of these is a silent omission.
   byte-identical with zero events, which is what makes the tightened rules
   falsifiable rather than merely narrower. The seeded string is present in the
   surface's request by construction, which is why the search runs over outputs.
+  The classifier's `reason` is measured on the other side of the same boundary,
+  by identity rather than by search: the reason text the orchestrator acts on,
+  and the reason text it carries into a `Disposition` cell, a reply, or the run
+  report, is byte-identical to the redaction surface's response for that
+  reason, asserted against the captured-dispatch corpus FR-008a defines. A
+  reason taken from `sweep-classifier`'s raw record — the one field where
+  reviewer-derived text could re-enter the outbound path after the surface ran
+  — therefore fails by comparison rather than by inspection, which is the same
+  identity check FR-008a fixes for a disposition cell, applied to the one free
+  text field a scoped agent returns.
   It needs evidence of its own because nothing else here measures what the
   sweep carries outward — SC-009 covers shell arguments, SC-004 covers
   authorship, and SC-011 covers atomicity — and a run that commits to a public
   repository and then posts a public reply is an outbound path none of the
   three inspects.
+- **SC-015**: The agents that read reviewer text hold only what their role
+  needs, and the orchestrator holds no reviewer text at all. Across the
+  captured corpus, every tool call attributed to a `sweep-classifier` or
+  `sweep-analyst` dispatch names a tool on that agent's stated allowlist —
+  `Read` for the classifier; `Read`, `Grep`, and `Glob` for the analyst — and
+  no call from either names `Bash`, a network tool, a write tool, or an
+  orchestration tool; no dispatch carrying a block names an agent outside the
+  two; and no captured orchestrator step reads a comment body out of the
+  observation, which is piped into the runner rather than held for the
+  orchestrator to interpret. Demonstrated by two fixtures that can fail, both
+  over the capture FR-008a defines: the per-agent dispatch fixture, red when a
+  captured call names a tool outside the allowlist or a block reaches a third
+  agent; and the orchestrator-read fixture, red when any captured orchestrator
+  step carries a body rather than an id, an enum, or surface-shaped text.
+  **This is a different measurement from the Layer 5 assertion, and both are
+  needed.** Layer 5 pins the frontmatter on the two definitions — that the
+  allowlist is exactly what it says and that the exempt pair is exactly those
+  two names — and it would pass unchanged if the sequence routed a block to an
+  unscoped role, because it never looks at a run. This criterion measures what
+  a run did. It needs evidence of its own because nothing else here measures
+  the consumers' capability surface or the orchestrator's read discipline:
+  SC-009 covers shell arguments, SC-004 covers authorship, and SC-014 covers
+  what the run carries outward, and the failure this one guards against leaves
+  no outbound artifact for any of the three to search. One honest limit is
+  recorded with it: a capture records the calls a run made, and what prevents
+  a denied call is the harness that spawns the agent, so this criterion
+  measures the record and Layer 5 pins the declaration — neither is a proof
+  that the harness enforced anything, and the spec does not claim one.
 
 ## Assumptions
 
@@ -2592,13 +3224,38 @@ Named owners, so none of these is a silent omission.
   public, and why FR-007c keeps a registered imperative out of an analyst
   prompt — none of the three assumes the body is clean, only that the account
   vouching for it is write-capable.
+
+  **What the residual can produce is now bounded, though the residual itself is
+  unchanged.** Laundered text still arrives, still passes FR-005 on the
+  relayer's standing, and the sweep still makes no attempt to attribute it. What
+  it reaches is no longer an agent carrying the operator's session. The only
+  readers are `sweep-classifier` and `sweep-analyst`, each scoped to the
+  read-only allowlist FR-007e states and FR-008c pins, and each receives the
+  sanitized, delimited block the FR-007g surface produced rather than a raw
+  body. What either returns is a structured record: a class from the closed
+  vocabulary, a target from FR-012b's three-file set, a bounded reason, and a
+  byte-capped replacement, each passed through FR-012f before any use. So a
+  quoted instruction can no longer reach a shell, the network, or a path
+  outside the three artifacts through the agent that read it; at most it argues
+  for an edit inside them, in a shape a person reads at the FR-017 checkpoint.
+  **None of that shortens the interval above.** The amendment is still
+  committed, pushed, and replied to in public before the human sees it. Scoping
+  the consumers changes what the induced content can be, not who saw it first,
+  and the two are recorded separately so a later reader does not trade one for
+  the other.
 - A fail-closed gate on a mandatory path is normally expected to ship with a
   documented override, and this slice ships none. That is recorded as a gap
   under Non-Goals rather than resolved here, and it is explicitly **not** a
   reason to weaken FR-019: the fix for a stopped run is to repair the tool, and
   the observation is retaken on every invocation.
-- The category-routed consensus machinery and its four existing roles are
-  reused unchanged. This slice adds a caller, not a new protocol.
+- The consensus machinery's **round structure, agreement rule, and outcomes**
+  are reused unchanged. Its four existing roles are not: FR-011b performs the
+  sweep's rounds with `sweep-analyst`, three perspective calls and one
+  synthesis call, because the shared roles and `consensus-synthesizer` inherit
+  the operator's tool surface and would read reviewer text with it. The
+  category-routed routing table is never consulted and never edited, so
+  Clarify, Checklist, and Analyze are untouched. This slice adds a caller and
+  two scoped roles, not a new protocol.
 - The registered sentences are stable strings on the shipped pages. Recognition
   depends on them, so a page that changes one needs its registry entry updated
   in the same change; FR-008a's parity test is what makes that failure loud
@@ -2610,9 +3267,10 @@ Named owners, so none of these is a silent omission.
   SC-002 is provable only against a captured-command fixture rather than a
   golden helper response.
 - Adding a read-only helper restales the byte-identical installed-cache copies
-  of the runner sources under the test fixtures. Regenerating them is a
-  required step, not an optional one, and the plan counts those copies as
-  generated rather than authored.
+  of the runner sources under the test fixtures, and shipping an agent restales
+  the installed-cache copies of the agent definitions on both platforms the
+  same way. Regenerating them is a required step, not an optional one, and the
+  plan counts those copies as generated rather than authored.
 - Recognized export blocks may arrive on either comment surface. The acceptance
   runbook exercises both placements: one export pasted as a conversation
   comment, one pasted into a review thread.
