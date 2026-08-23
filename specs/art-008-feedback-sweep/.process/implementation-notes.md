@@ -755,3 +755,43 @@ allowed path and fails on a refused one.
 
 **Eight em dashes in the expectations file are captured bytes**, pulled in as edit
 anchors from this feature's own document headings, not authored prose.
+
+### T051/T086 doc halves, T059-T065, T089, T106, T107
+
+**Deviations/Edge cases/Surprises:** **103 facts, zero on one side only.** All four
+gates post-edit equal the measured pre-edit baseline: Layer 1 1511/1511,
+codex-skills 163/163, codex-parity 87/87, interpreter-contract 6/6. Hygiene over
+367 added lines: zero em dashes, zero lines over 80 columns, zero FR or SC ids,
+zero absolute paths, zero banned Claude-only runtime terms in the Codex half.
+
+**The two outstanding halves closed, and the worker reconciled them against prose
+already in the file rather than just appending.** For T051 it found two conflicts:
+the malformed-record rule forty lines above stops the run on a record whose
+`target` is outside the three artifacts, so the refused path had to ride the
+bounded reason and never the `target` field; and the vocabulary paragraph says
+class-choosing rules live once in the classifier's definition, so what this
+sequence fixes is only what a `deferred` reached this way must carry. It also
+stated the rule-1 versus rule-2 distinction explicitly, since rule 1 alone is
+prose a mis-routed item walks past and rule 2 alone turns an ordinary
+out-of-scope request into a stopped run. The figure `8193` now appears on both
+sides, where it appeared zero times before.
+
+**A tension in the task text, surfaced rather than smoothed over.** T089's
+mandated causal wording, that the parse filters over those bodies so the request
+file has to carry them, sits against the pipe paragraph already in the file
+saying no unredacted body is written to disk at any point. They reconcile through
+that paragraph's own "where a byproduct file is unavoidable" clause, which is why
+the worker hooked the enumeration onto it rather than editing either sentence.
+**The tension is in the task text, not introduced by the implementation, and it is
+worth a reviewer's eye.**
+
+**Two more tasks were mostly already done, the same shape as T051 and T086.**
+T106 and T089 were each roughly two thirds documented by the earlier sweep-sequence
+commits; their genuine deltas were four sentences and two paragraphs. A task whose
+code half lands with a partial documentation half is a recurring pattern in this
+tasks.md, and it is why the phantom-completion check earns its place.
+
+**One vocabulary judgment left deliberate.** `slice 2` is spec-internal language now
+in shipped prose. T064 mandates it as report content, the follow-on sentence marks
+it as a temporary interface the same slice replaces, and the section already used
+slice vocabulary, so it was kept verbatim rather than paraphrased.

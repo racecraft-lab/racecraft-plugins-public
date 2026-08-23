@@ -1355,6 +1355,26 @@ non-dominant objection, are stated once in the classifier's own definition.
 This reference carries the dispatch, the payload, and the record's shape, and
 points at that definition for the rules, so the two cannot drift.
 
+**A target outside the three artifacts takes `deferred` at classification.**
+That is rule 1, and it is the disposition half of a pair. A comment whose
+requested change lies outside `spec.md`, `plan.md`, and `tasks.md` in the
+feature directory is declined, so its class is `deferred` and its bounded
+reason **names the refused target**, which is what carries that name into the
+disposition cell and into the reply. The refused path travels in the reason
+and never in the record's `target` field, which the malformed-record rule
+above confines to the three artifacts. Word the disposition and the reply as
+**recorded and not acted on**, and let neither **imply future action**: the
+class name reads like a queue, and the request is declined rather than
+scheduled. The rule for choosing among the four classes stays in the
+classifier's own definition; what this sequence fixes is what a `deferred`
+reached this way has to carry.
+
+**Rule 1 is disposition and rule 2, at the write point below, is the
+enforcement boundary.** They are not the same rule and neither substitutes for
+the other. Rule 1 alone would be prose a mis-routed item walks past. Rule 2
+alone would turn an ordinary out-of-scope request into a stopped run, when
+declining it in a reply is the whole of the correct response.
+
 **The recognized-export payload.** For a recognized comment the payload is two
 parts standing side by side: the helper's export record, carrying the template
 id, the kind, and the anchors, and the block, which is the body with every
@@ -1400,7 +1420,10 @@ disposition already reached.
 **The sweep runs its own consensus.** Per amended item, dispatch **three
 `sweep-analyst`s**, the perspective (codebase, spec-context, domain) given
 **in the prompt rather than by role**, then **one more `sweep-analyst`** in a
-synthesis prompt. Four calls per item, all to the same definition.
+synthesis prompt. Four calls per item, all to the same definition. **Await
+all three before the synthesis call**, which reasons over the three answers
+together, and **apply the one structured edit it returns** by the amendment
+path below.
 
 **Synthesis is not `consensus-synthesizer`.** That agent declares no `tools:`
 allowlist, so it inherits `Bash`, `WebFetch`, `WebSearch`, and every installed
@@ -1413,9 +1436,11 @@ repository and the handed block, never from the network.
 **What stays untouched is the routing table, not the file that holds it.** The
 sweep emits no category-tagged `Unresolved for consensus` item, so the routing
 table and the three phase-specific flows under it are never reached and
-Clarify, Checklist, and Analyze are unchanged. This slice does edit
-`consensus-protocol.md`, to add the `Sweep` row type, so say routing table
-untouched and never say that file untouched.
+Clarify, Checklist, and Analyze keep the shared analysts and those flows
+unchanged. This slice does edit `consensus-protocol.md`, to add the `Sweep`
+row type and the note that its rows count toward the escape-rate metric, and
+those two are the only edits this feature makes to that file, so say routing
+table untouched and never say that file untouched.
 
 **When consensus does not answer, the item goes to human review.** Three ways
 lead there: all three analysts disagreeing after Round 2, a Round-1 escape
@@ -1471,6 +1496,21 @@ phase whose existing commit path uses `git add -A`.** An amendment commit that
 inherited that pattern would stage the whole worktree and defeat the
 edit-surface allowlist at the last step. Name the one path.
 
+**What the synthesis returns is a record, not a patch.** An analyst answers
+with `{file, anchor, replacement}` and nothing else: never a diff, never a
+patch, and never prose the orchestrator retypes into the artifact. `file` is
+one of the three allowed names, and `replacement` sits inside the contract's
+cap. An edit whose `file` falls outside those three names, or whose shape is
+not that record, **stops the run naming the comment id**, the same way a
+malformed classifier record does.
+
+**The order of the three steps is fixed: allowlist check, redaction, write.**
+Check the resolved target first, pass `replacement` through the redaction
+surface's `amendment` leg second, write what the surface returned third, then
+stage that one path, commit, and push. The order is not a preference.
+Redacting after the write leaves reviewer bytes in a commit, and checking the
+target after the write is not a check.
+
 **The write point checks the resolved target before any amendment write.** It
 is a named surface of the one registered helper operation, never a second
 registered operation.
@@ -1490,6 +1530,22 @@ report and not a routine path. That is why it stops rather than downgrading
 the item quietly: an out-of-scope request is meant to be declined at
 classification, and one that reached the write instead is worth an operator's
 attention.
+
+**The amendment leg runs between the check and the write.** Once consensus has
+resolved the edit and the target check has passed, the text the edit
+**introduces**, meaning the replacement or the inserted lines, goes through
+the redaction surface's `amendment` leg. Never the file around it, and never a
+diff read back off disk. The orchestrator then writes back **exactly what the
+leg returned**, stages the one artifact path, commits, and pushes. No staged
+path list is read back afterwards: single-path staging and the `git add -A`
+hazard named above stay the controls on what an amendment commit stages.
+
+**Cut each line for transport at the first character boundary at or past byte
+8193.** The surface answers a line longer than 8192 bytes with the whole-line
+placeholder whatever lies past that boundary, so sending the tail buys
+nothing. Cutting there is outcome-equivalent, keeps every string the call
+carries under the runner's 32 KiB limit, and **never splits a line**, because
+the cut falls on a character boundary and one line in stays one line out.
 
 **The push is part of the amendment step, not a step after it.** An amendment
 is not finished until its commit is on the remote.
@@ -1591,6 +1647,134 @@ re-run. It is one more condition under the same one-report contract. The next
 run finds the rows and the replies already in place, fires no event, and
 proceeds.
 
+#### Phase 7 Setup: The Reply Templates
+
+**Exactly one reply per handled comment**, posted after a run's bookkeeping
+commits have all landed. **Every reply names its class.** Only an `amended`
+reply names an artifact, a section, and a commit: requiring those three of all
+four classes would leave three of the four templates unsatisfiable, because
+`answered`, `deferred`, and `no action` amend nothing.
+
+**One fixed template per class, in plain public-readable English**, fixed in
+shape so a reviewer reading two replies on one pull request can tell the
+classes apart at a glance.
+
+**Every template opens with an HTML comment whose prefix is the same fixed
+string in every reply**, `<!-- speckit-pro:feedback-sweep`, followed by the
+answered comment's id and the closing `-->`. It renders as nothing, and it is
+what the self-reply exclusion anchors on. A marker rather than a visible
+sentence, because a visible sentence is exactly what a reviewer quotes back
+when they disagree.
+
+**The marker is the whole of line 1, alone, and the disposition starts on line
+2.** Nothing else shares that line, which is what keeps the per-line redaction
+rules off it, as the reply leg above already relies on.
+
+**One more fixed-shape line is the last line of every template**, present only
+when the parse reported the comment `truncated` or its analyst-payload report
+carries `spans_withheld` above zero:
+
+```text
+Body truncated at 8192 bytes; N spans withheld.
+```
+
+`N` is that count, and nothing else appears in the line. This is the channel
+that tells a reviewer their fence or their tail was never read. The pull
+request is where a reviewer learns what happened to their comment, and the
+disposition cell lives in a file they need not open.
+
+#### Phase 7 Setup: Where a Reply Is Written, and When
+
+**Two write paths, one per surface.** A reply to a review-thread comment posts
+**into its thread**. The pull-request conversation has no threading, so a
+reply there is a **new top-level comment that names the comment it answers**.
+
+**Every reply body is passed by file path, never inline**, on both paths.
+
+**Replies post once, at the end of the run, after every bookkeeping commit
+this run takes has landed.** No reply is posted before that point. Two orders
+are defensible and only one may be written down, so this is the one: a reply
+asserts that the record behind it is durable. The rule also makes the composed
+interrupt case exact rather than ambiguous. A run interrupted after two rows
+were written, with one amendment commit local and unpushed, has posted
+**zero** replies.
+
+**Which stops post replies is named rather than inferred.** The re-review
+stop, the human-review stop, and the post-publication redaction stop all occur
+**after** the reply point, so a run that reaches any of them has already
+posted every reply it owes. **Every other stop aborts before the reply point
+and posts none**: an invalid authenticated account, a corroboration failure, a
+failed observation, an unreadable log row, a refused edit target, and a failed
+push. Never write a blanket rule that a stopping run first posts what it owes,
+which would contradict all six.
+
+**The sweep never resolves a review thread.** Not on any class, not on any
+path, and not after a reply. Resolution is the reviewer's, and a swept thread
+stays open until they close it.
+
+#### Phase 7 Setup: Reply Reconciliation
+
+**Replies are reconciled against the pull request, not assumed from the log.**
+A comment is owed a reply when three things hold together: it is **present in
+this run's observation**, it has a log row, and it carries no sweep reply
+answering it.
+
+**The observation qualifier is load-bearing.** Keying on log rows alone would
+post a second reply into a thread someone had deliberately resolved, which
+turns a recovery rule into a duplicate-reply generator.
+
+**The marker carries the answered comment's id** after its unchanged fixed
+prefix, inside the same HTML comment, so a thread carrying more than one
+comment still says which one a reply answered. Matching the prefix alone would
+find a reply and lose the question.
+
+**A failed reply is reported and does not by itself stop the run.** It appears
+in the run report naming the comment id and the surface. The asymmetry with a
+failed observation is deliberate: an observation that failed means the work
+never happened, while a reply that failed means the work landed and only the
+notification did not.
+
+#### Phase 7 Setup: Stop or Proceed
+
+**One or more `amended`: stop for re-review before any task work.** The report
+takes the plan-stage stop report's shape, names the comments swept, the
+amendments made, and the commit range, and **states that the draft artifact
+pages regenerate once slice 2 lands**.
+
+**No `amended` but at least one comment handled: write the records, post the
+replies, and proceed directly into task execution**, without stopping. Nothing
+was amended, so there is nothing to re-review.
+
+**No comment handled at all: no rows, no replies, no bookkeeping commit,
+proceed.** This case is stated apart from the one above so that the one above
+cannot be read as requiring an empty commit on a pull request that carried no
+comments.
+
+**Any redaction event, on any leg: stop once every commit is pushed and every
+reply is posted.** The report takes the re-review report's shape, carries the
+leg, the rule, and the count per comment, and gives the resume path as re-run.
+Where nothing was amended, this stop replaces the proceed at that same point.
+Where the re-review stop or the human-review stop also holds, it is the same
+stop and one report.
+
+The regeneration sentence is an interface slice 2 replaces. Until it does, it
+is the only thing telling a reviewer why the pages they are looking at are
+older than the amendments beside them.
+
+#### Phase 7 Setup: The Run Report
+
+**Every run reports, on every path it takes, not only the stopping ones.** The
+proceed path is exactly where a run that swept nothing but untrusted comments
+lands, and a silent proceed there would leave an operator no way to tell it
+from a run that saw nothing.
+
+**Report each observed comment's disposition, candidates and exclusions alike,
+and name a reason on every exclusion.** The trust filter reports `not swept:
+untrusted author`, and every self-reply exclusion is named the same way.
+
+**A run that observed no comments at all reports that**, which is a one-line
+report rather than an absent one.
+
 #### Phase 7 Setup: The Sweep's Byproduct Directory Ignores Itself
 
 The pull-request feedback sweep writes the files it needs for its own transport
@@ -1599,6 +1783,14 @@ directory, before any byproduct, is a `.gitignore` inside it whose whole content
 is a single `*` line.** Create the directory and write that ignore file in one
 step. A byproduct that lands first has already been exposed, so the order is
 part of the rule rather than a preference.
+
+**Every file the sweep writes for its own transport goes there and nowhere
+else**: the helper request the runner reads on stdin, each reply body file the
+reply write passes by path, the captured commands, and any scratch the run
+needs. **The request cannot be redacted instead.** The parse filters over the
+comment bodies, so that file has to carry them, and keeping the directory
+ignored is what stops Phase 7's `git add -A` from staging a request holding
+every observed body.
 
 Git honors that file in whatever repository the worktree belongs to, and `*`
 matches the ignore file itself as well as every byproduct beside it, so Phase
@@ -1611,6 +1803,13 @@ This repository's own root `.gitignore` carries
 the sweep has written into it. That entry is committed, so a fresh clone carries
 it. It covers this repository only, which is the whole reason the self-ignore
 write exists.
+
+**The sweep removes the directory before it proceeds into task work or stops,
+on every path.** Removal is neither conditional on the run having succeeded
+nor deferred to a later phase. The spec-index generator scans the worktree
+rather than the index, so a live byproduct left behind would contaminate a
+regeneration even though nothing staged it. **The run report names the
+directory as removed.**
 
 #### Phase 7 Setup: Open the Implementation-Notes Record
 
