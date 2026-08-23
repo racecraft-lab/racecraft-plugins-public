@@ -337,7 +337,7 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(stderr_records, [])
             self.assert_response(response, "ok", 0)
             self.assertEqual(response["data"]["mutation"]["mutation_status"], "planned")
-            self.assertEqual(len(response["data"]["mutation"]["planned_operations"]), 12)
+            self.assertEqual(len(response["data"]["mutation"]["planned_operations"]), 13)
             self.assertEqual(stale.read_text(encoding="utf-8"), "stale\n")
 
             completed, response, stderr_records = run_runner(
@@ -365,7 +365,7 @@ class MutationHelperTests(unittest.TestCase):
             mutation = response["data"]["mutation"]
             self.assertEqual(mutation["mutation_status"], "no_op")
             self.assertEqual(mutation["planned_operations"], [])
-            self.assertEqual(len(mutation["no_op_operations"]), 12)
+            self.assertEqual(len(mutation["no_op_operations"]), 13)
             self.assertFalse(response["data"]["restart_required"])
 
     def test_install_codex_agents_defaults_to_fake_user_home_without_touching_real_home(self) -> None:

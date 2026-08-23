@@ -668,3 +668,44 @@ an illustration rather than a normative claim.
 anything against the 1490 the dispatch stated, and it proved its edits could not
 have moved `validate-codex-parity` by reading that validator's scan scope. Third
 worker in a row to report drift rather than normalize it.
+
+### T104 and T105 (sweep-analyst agent)
+
+**Deviations/Edge cases/Surprises:** Four deviations, all unpinned choices
+declared rather than hidden. Layer 5 went 207/208 to **219/219, zero failures**,
+closing the carve-out on both agents. The denominator moved as FR-008c predicts,
+and the worker verified zero failures rather than forcing a predicted total.
+
+**Deviations.** `model: sonnet` and `color: pink` are unpinned; nothing binds
+either and it mirrored the classifier for shape. `maxTurns: 20` rather than the
+classifier's 10, reasoned rather than copied: the analyst must read a target file
+and verify anchor uniqueness before returning, which the classifier never does.
+The "What you receive" input table is an extrapolation, since the contract fixes
+the classifier's inputs explicitly but names the analyst's only in prose. And it
+left pre-existing gitignored `__pycache__` directories alone rather than racing
+concurrent test runs for no benefit.
+
+**Two design points in the agent body worth keeping.** First, it states plainly
+that the three tools are **permission-scoped, never path-scoped**, and that
+nothing in the body should be read as confining the agent to this repository. It
+then greps for the four claims that would have said otherwise and reports zero
+hits. An agent definition that overclaims its own containment is worse than one
+that states the real boundary, which here is the absent shell, the absent network
+tool, the redaction over `replacement`, and the human checkpoint.
+
+Second, it explains why **synthesis is `sweep-analyst` and never
+`consensus-synthesizer`**: that role declares no allowlist, so it inherits the
+operator's whole surface, and handing it reviewer-derived findings would reopen
+one hop downstream exactly what the allowlist closes. "A boundary that holds for
+three calls and fails on the fourth is not a boundary, and the fourth call is the
+one that composes the edit."
+
+**The route-fallback restale was left alone, correctly, and with a precise
+attribution.** The core-count assertion was **already red at 11** from T099's
+TOML, so this TOML moved an already-red assertion rather than breaking a green
+one. T111 owns it.
+
+**It disproved a plausible false attribution.** The runner manifest failure could
+have been blamed on its own `install.py` edit. It checked: the manifest records a
+digest matching neither the pre-edit content nor the current content, so the entry
+was already stale before it touched the file.
