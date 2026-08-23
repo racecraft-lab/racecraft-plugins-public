@@ -1071,6 +1071,53 @@ the plan stage and its recorded reasoning still holds.
   nothing about tools. SC-007 is parity of sweep outcome, not of enforcement
   strength.
 
+
+#### Adversarial refutation of the scoping design
+
+Run beside the scoped Analyze, read-only, against one claim: the summary's rule
+that no agent holding `Bash` or the network reads reviewer text. **The claim was
+broken.** The mechanism under it is sound — a Claude `tools:` allowlist is
+honored for plugin agents, and the Layer 5 carve-out survived a deliberate
+attempt to widen it — but the claim reached past what the mechanism covers.
+Eleven attack lines, nine upheld, one refused, one left unproven.
+
+Three findings needed a change beyond wording, and all three are fixed.
+
+| ID | Finding | Fix |
+|----|---------|-----|
+| R-1 | T098 told the implementer to probe whether an empty `tools:` allowlist resolves. A bare `tools:` key is YAML null and reads as omitted, so the agent inherits the operator's whole surface, `Bash` included, and the dispatch succeeds. Nothing in the response separates that from a zero-tool resolution, and T098 itself concedes a subagent cannot see its own resolved surface. The implementer would then pin the inheriting form into T095 and the suite would report the boundary intact while it was off | Probe replaced. It now asks whether the allowlist **binds**, in a session with an MCP server connected, and stops the slice if a tool outside the allowlist is reachable |
+| R-2 | T104 required the shipped `sweep-analyst.md` body to state that `Read`, `Grep`, and `Glob` "reach this repository and nothing else". They are permission-scoped and never path-scoped: a plugin agent cannot set `permissionMode`, inherits the parent session's, and the autopilot requires a permissive one. `spec.md` stated this residual for the classifier only, whose output is an enum; the analyst's is 8192 bytes of prose that the run pushes to a public remote | FR-011b now states the residual the way FR-010a states the classifier's, and T104 forbids the body from claiming a repository boundary it does not have |
+| R-3 | The plan's redaction paragraph claimed all structured returns cross the FR-012f surface. Two per amended item do not: the three perspective records carry a `finding` of free prose and an `evidence` array, and FR-012f's leg set is closed at four with no leg among them | The paragraph now names the two that cross nothing. The `anchor` is bounded another way and is settled; the perspective `finding` is the one open decision, below |
+| R-4 | `capability-discovery.md` states that the plugin never pins an agent availability allowlist. Both new agents pin one, both are required to carry the capability pointer to that file, and no task amended it | Amendment folded into T098, with the Codex mirror |
+
+Refused: the `edit.anchor` attack. The contract admits only a verbatim excerpt
+of the target file's committed bytes and stops the run on any match count other
+than one, so bytes an attacker chose cannot survive it. Recorded as a disclosed
+residual for the pre-check window rather than as a finding.
+
+Already disclosed in existing spec text, no edit: reviewer-derived prose in the
+Feedback Sweep Log's `Disposition` cells being re-read by later Bash-holding
+runs; the amended artifacts being read on the next run by `implement-executor`
+and `gate-validator`; the Codex variants' shell.
+
+**Left unproven, and now folded into T098's replacement probe.** Whether a
+`tools:` allowlist naming only built-in tools actually excludes the MCP tools
+the session inherits. The documentation implies it; nothing demonstrates it.
+`mcpServers` is ignored in plugin agents, so what a scoped agent could see is
+the parent session's inherited set, which is exactly what the allowlist is
+claimed to cut off. If it does not, `sweep-analyst` holds every installed MCP
+server while reading reviewer text and the scoping buys nothing. T098's probe
+answers it before any other implementation work depends on the answer, and
+stops the slice on a bad answer rather than shipping a control that does not
+bind.
+
+**The summary's rule was rewritten rather than defended.** `plan.md` now states
+what is enforced: no agent holding `Bash` or a network tool is ever handed a
+reviewer comment *body*; reviewer-*derived* text still reaches the orchestrator,
+bounded and named; the scoped agents' read tools are permission-scoped rather
+than path-scoped; and on Codex the claim is a read-only filesystem and nothing
+about the tool set.
+
 ---
 
 ## Phase 6.5: Confidence Gate
