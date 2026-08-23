@@ -36,7 +36,7 @@ captured during scoping.
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 15 questions, 7 consensus items all resolved in Round 1 with 23 analyst dispatches. Spec grew 402 → 927 lines and 19 → 31 requirements. Zero markers, zero human-review flags |
 | Plan | `/speckit-plan` | ✅ Complete | 5 artifacts, 1506 lines. Budget re-derived by hand at 515-745 LOC (midpoint ~630) over 7 production files: two warns, zero blocks, warn accepted with the split lever recorded, since superseded — the live figure's one home is `spec.md`'s Reviewability Budget superseding note |
 | Checklist | `/speckit-checklist` | ✅ Complete | 3 domains, 143 items, **54 gaps found and 54 closed**. 8 consensus items across 24 analyst dispatches, all Round 1. Spec grew 31 → 48 requirements and 10 → 13 criteria. Those requirements moved the budget: the high end went 745 → ~775 → **810-830, which crosses the 800 block**, leaving it at **515-830 (midpoint ~630)** at that time, since superseded — the live figure's one home is `spec.md`'s Reviewability Budget superseding note — and still 7 production files |
-| Tasks | `/speckit-tasks` | ✅ Complete | 93 tasks, 6 phases, 9 parallel-safe. 51/51 requirements and 14/14 criteria covered; the orchestrator added T080 after finding SC-003 uncovered, the trust-boundary remediation added T081–T087 for FR-007g, FR-012f, and SC-014, and the third remediation pass added T088–T093 for FR-004d, the captured-call fixture, and the fixed-shape commit subject |
+| Tasks | `/speckit-tasks` | ✅ Complete | **109 tasks**, 6 phases (7/8/40/37/5/12). **54/54 requirements and 15/15 criteria covered**; the orchestrator added T080 after finding SC-003 uncovered, the trust-boundary remediation added T081–T087 for FR-007g, FR-012f, and SC-014, and the third remediation pass added T088–T093 for FR-004d, the captured-call fixture, and the fixed-shape commit subject, and the consumer-scoping pass added T094–T109 for the two scoped agents, the Layer 5 carve-out, the piped observation, and the payload regeneration their shipped bytes require |
 | Analyze | `/speckit-analyze` | ✅ Complete | 6 findings, all remediated, zero unresolved for consensus. Caught a contradiction that would have stopped the feature on its own first write, and a fixture corpus that could not fail in the direction that mattered |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
@@ -966,10 +966,14 @@ setup-mode result recorded at scaffold returned `warn` with empty `blockers`.
 The plan-phase estimator returned `pass` with `projected: 0` and is an **absent
 measurement**, because it classifies none of this slice's paths as production.
 The operator-facing figure is therefore the hand-derived one, whose only home
-is `spec.md`'s Reviewability Budget superseding note: at this writing 705 to
-1080 reviewable LOC, midpoint near 890, seven production files. That is a warn
-on production files and a size-only block on reviewable LOC at the midpoint,
-which continues into marker planning rather than stopping the run.
+is `spec.md`'s Reviewability Budget superseding notes: at this writing 1120 to
+1720 reviewable LOC, midpoint near 1420, over **twelve** production files and
+twenty-two authored files. That is a size-only block on reviewable LOC at the
+midpoint, a size-only block on production files at 12 against a block of 8, and
+a warn on authored files at 22 against a warn of 15. Both blocks are recorded
+as operator-accepted under the size-crossing rule and continue into marker
+planning rather than stopping the run; the PRSG-013 precedent is cited in the
+Trust boundary remediation section's budget consequence.
 
 **No marker planning state is created.** House precedent is that pass-or-warn
 evidence without a split demand creates none, and the atomicity route is
@@ -1370,9 +1374,6 @@ are recorded as **Q13** in the design concept; this is what it changes.
   (#445) is the precedent and the ripple map, including
   `docs-site/src/content/docs/reference/agents.md`.
 
-=====================================================================
-W2. REPLACE the body of "### Budget consequence, for T014" (:1307-1312).
----------------------------------------------------------------------
 ### Budget consequence, for T014
 
 Live reviewable range **1120 to 1720, midpoint near 1420**, over the 800 block
@@ -1396,55 +1397,8 @@ registry rows, saves 15 to 30 lines against a crossing this size and is not
 taken; lever (c), re-slicing, is rejected on the ground recorded in the plan
 and restated above.
 
-=====================================================================
-W3. Workflow Overview, Tasks row (:39). REPLACE.
-Contains one placeholder that only the tasks-drafting pass can fill; see
-`notes`.
----------------------------------------------------------------------
-| Tasks | `/speckit-tasks` | ✅ Complete | {{93+N}} tasks, 6 phases, 9 parallel-safe. {{51+F}}/{{51+F}} requirements and {{14+S}}/{{14+S}} criteria covered; the orchestrator added T080 after finding SC-003 uncovered, the trust-boundary remediation added T081–T087 for FR-007g, FR-012f, and SC-014, the third remediation pass added T088–T093 for FR-004d, the captured-call fixture, and the fixed-shape commit subject, and the consumer-scoping pass added T094–{{T093+N}} for the two sweep agent definitions on both platforms, the Codex installer inventory line, the classifier and sweep-analyst dispatch in both phase-execution references, and the Layer 5 `UNTRUSTED_INPUT_CONSUMERS` carve-out |
+### Sites deliberately left unchanged
 
-=====================================================================
-W4. Phase 5 fallback evidence chain (:963-972). REPLACE the paragraph
-beginning "**Fallback evidence chain, which is what the phase actually runs
-on.**" through "...rather than stopping the run."
----------------------------------------------------------------------
-**Fallback evidence chain, which is what the phase actually runs on.** The
-setup-mode result recorded at scaffold returned `warn` with empty `blockers`.
-The plan-phase estimator returned `pass` with `projected: 0` and is an **absent
-measurement**, because it classifies none of this slice's paths as production.
-The operator-facing figure is therefore the hand-derived one, whose only home
-is `spec.md`'s Reviewability Budget superseding notes: at this writing 1120 to
-1720 reviewable LOC, midpoint near 1420, over **twelve** production files and
-twenty-two authored files. That is a size-only block on reviewable LOC at the
-midpoint, a size-only block on production files at 12 against a block of 8, and
-a warn on authored files at 22 against a warn of 15. Both blocks are recorded
-as operator-accepted under the size-crossing rule and continue into marker
-planning rather than stopping the run; the PRSG-013 precedent is cited in the
-Trust boundary remediation section's budget consequence.
-
-=====================================================================
-W5. Project Structure Reference (:1346-1356). REPLACE the `speckit-pro/`
-subtree lines so the two new production directories appear.
----------------------------------------------------------------------
-```text
-racecraft-plugins-public/
-├── speckit-pro/                                   # Plugin source (ships to installers)
-│   ├── agents/                                    # sweep-classifier.md, sweep-analyst.md (new, scoped consumers)
-│   ├── codex-agents/                              # sweep-classifier.toml, sweep-analyst.toml (new, sandbox_mode read-only)
-│   ├── skills/speckit-autopilot/references/       # phase-execution.md, consensus-protocol.md, workflow-file-protocol.md
-│   ├── codex-skills/speckit-autopilot/references/ # phase-execution-codex.md, workflow-file-protocol-codex.md
-│   └── speckit_pro_runner/helpers/                # read_only.py (new feedback helper), registry.py, install.py (codex agent inventory)
-├── tests/speckit-pro/                             # Repository-only validation
-│   ├── layer5-tool-scoping/                       # validate-tool-scoping.py (UNTRUSTED_INPUT_CONSUMERS carve-out)
-│   └── unit/fixtures/read-only-helpers/           # helper request fixtures + harness manifests
-├── docs/ai/specs/                                 # Roadmap, .process/ exhaust (this file, design concept)
-└── specs/art-008-feedback-sweep/                  # CONTRACT artifacts: spec.md, plan.md, tasks.md, SPEC-MOC.md
-```
-
-=====================================================================
-W6. SITES DELIBERATELY LEFT UNCHANGED, with the reason, so a later reader does
-not read them as missed.
----------------------------------------------------------------------
 - :37 Plan row and :38 Checklist row — dated plan-time and checklist-time
   records that already say "since superseded — the live figure's one home is
   `spec.md`'s Reviewability Budget superseding note". The pointer still
@@ -1461,6 +1415,8 @@ not read them as missed.
 - :668-669 Plan artifacts table, "22 entries across a production surface of 7"
   — a dated record of the block as the plan phase left it; the block was
   already at 24 before this pass.
+
+---
 
 ---
 
@@ -1497,10 +1453,13 @@ not read them as missed.
 ```text
 racecraft-plugins-public/
 ├── speckit-pro/                                   # Plugin source (ships to installers)
+│   ├── agents/                                    # sweep-classifier.md, sweep-analyst.md (new, scoped consumers)
+│   ├── codex-agents/                              # sweep-classifier.toml, sweep-analyst.toml (new, sandbox_mode read-only)
 │   ├── skills/speckit-autopilot/references/       # phase-execution.md, consensus-protocol.md, workflow-file-protocol.md
 │   ├── codex-skills/speckit-autopilot/references/ # phase-execution-codex.md, workflow-file-protocol-codex.md
-│   └── speckit_pro_runner/helpers/                # read_only.py (new feedback helper), registry.py
+│   └── speckit_pro_runner/helpers/                # read_only.py (new feedback helper), registry.py, install.py (codex agent inventory)
 ├── tests/speckit-pro/                             # Repository-only validation
+│   ├── layer5-tool-scoping/                       # validate-tool-scoping.py (UNTRUSTED_INPUT_CONSUMERS carve-out)
 │   └── unit/fixtures/read-only-helpers/           # helper request fixtures + harness manifests
 ├── docs/ai/specs/                                 # Roadmap, .process/ exhaust (this file, design concept)
 └── specs/art-008-feedback-sweep/                  # CONTRACT artifacts: spec.md, plan.md, tasks.md, SPEC-MOC.md
