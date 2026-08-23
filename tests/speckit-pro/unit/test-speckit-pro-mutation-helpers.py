@@ -28,6 +28,10 @@ if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
 
 
+from speckit_pro_runner.envelope import RunnerRequest
+from speckit_pro_runner.helpers import mutation, registry
+
+
 def runner_env() -> dict[str, str]:
     env = os.environ.copy()
     existing = env.get("PYTHONPATH")
@@ -758,9 +762,6 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(mutation["touched_paths"], [rel])
 
     def test_apply_rechecks_all_applied_targets_before_success(self) -> None:
-        from speckit_pro_runner.envelope import RunnerRequest
-        from speckit_pro_runner.helpers import mutation, registry
-
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
             first = git_root / "generated" / "first.md"
@@ -835,9 +836,6 @@ class MutationHelperTests(unittest.TestCase):
             self.assertFalse(target.exists())
 
     def test_apply_rechecks_dirty_worktree_after_lock_acquisition(self) -> None:
-        from speckit_pro_runner.envelope import RunnerRequest
-        from speckit_pro_runner.helpers import mutation, registry
-
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
             target = git_root / "generated" / "locked-dirty.md"
@@ -1223,9 +1221,6 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(os.stat(target).st_mode & 0o777, 0o600)
 
     def test_apply_rechecks_source_fingerprints_after_write_and_rolls_back(self) -> None:
-        from speckit_pro_runner.envelope import RunnerRequest
-        from speckit_pro_runner.helpers import mutation, registry
-
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
             source = git_root / "source.md"
@@ -1346,9 +1341,6 @@ class MutationHelperTests(unittest.TestCase):
             self.assertTrue(parent.is_dir())
 
     def test_apply_tracks_successful_write_when_final_parent_close_fails(self) -> None:
-        from speckit_pro_runner.envelope import RunnerRequest
-        from speckit_pro_runner.helpers import mutation, registry
-
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
             request = RunnerRequest(
@@ -1408,9 +1400,6 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual((git_root / "new.md").read_text(encoding="utf-8"), "new\n")
 
     def test_apply_cleans_parent_created_before_traversal_failure(self) -> None:
-        from speckit_pro_runner.envelope import RunnerRequest
-        from speckit_pro_runner.helpers import mutation, registry
-
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
             request = RunnerRequest(
@@ -1450,9 +1439,6 @@ class MutationHelperTests(unittest.TestCase):
             self.assertFalse(response["data"]["writes_state"])
 
     def test_apply_reports_temp_unlink_failure_after_failed_replace(self) -> None:
-        from speckit_pro_runner.envelope import RunnerRequest
-        from speckit_pro_runner.helpers import mutation, registry
-
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
             request = RunnerRequest(
@@ -1500,9 +1486,6 @@ class MutationHelperTests(unittest.TestCase):
             self.assertFalse((git_root / "new.md").exists())
 
     def test_apply_rejects_target_swap_between_snapshot_and_replace(self) -> None:
-        from speckit_pro_runner.envelope import RunnerRequest
-        from speckit_pro_runner.helpers import mutation, registry
-
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
             target = git_root / "target.md"
@@ -1550,9 +1533,6 @@ class MutationHelperTests(unittest.TestCase):
             self.assertFalse(response["data"]["writes_state"])
 
     def test_write_failure_cleanup_errors_mark_writes_state(self) -> None:
-        from speckit_pro_runner.envelope import RunnerRequest
-        from speckit_pro_runner.helpers import mutation, registry
-
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
             request = RunnerRequest(
@@ -1589,9 +1569,6 @@ class MutationHelperTests(unittest.TestCase):
             self.assertTrue(response["data"]["writes_state"])
 
     def test_apply_file_writes_fail_closed_on_unsupported_descriptor_platform(self) -> None:
-        from speckit_pro_runner.envelope import RunnerRequest
-        from speckit_pro_runner.helpers import mutation, registry
-
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
             request = RunnerRequest(
