@@ -844,14 +844,8 @@ def seal_calibration_protocol(protocol: dict) -> dict:
     return sealed
 
 
-def calibration_protocol_fixture() -> dict:
-    return seal_calibration_protocol({
-        "schema_version": "calibration-protocol.v1",
-        "calibration_protocol_id": schema_digest("calibration-protocol"),
-        "calibration_protocol_version": "2026-07-24.calibration",
-        "calibration_protocol_digest": schema_digest("calibration-protocol-digest"),
-        "status": "frozen_before_calibration",
-        "partition_binding": partition_binding(),
+def _calibration_protocol_evidence_bindings() -> dict:
+    return {
         "candidate_freeze_binding": schema_binding("candidate-freeze"),
         "runtime_snapshot_binding": schema_binding("runtime-snapshot"),
         "pinned_client_binding": schema_binding("codex-0.145.0"),
@@ -869,6 +863,18 @@ def calibration_protocol_fixture() -> dict:
         },
         "frozen_at": "2026-07-24T11:00:00Z",
         "independent_review_binding": schema_binding("calibration-protocol-review"),
+    }
+
+
+def calibration_protocol_fixture() -> dict:
+    return seal_calibration_protocol({
+        "schema_version": "calibration-protocol.v1",
+        "calibration_protocol_id": schema_digest("calibration-protocol"),
+        "calibration_protocol_version": "2026-07-24.calibration",
+        "calibration_protocol_digest": schema_digest("calibration-protocol-digest"),
+        "status": "frozen_before_calibration",
+        "partition_binding": partition_binding(),
+        **_calibration_protocol_evidence_bindings(),
     })
 
 
@@ -884,23 +890,7 @@ def specification_calibration_protocol_fixture() -> dict:
             "partition_type": "calibration",
             "qualification_eligible": False,
         },
-        "candidate_freeze_binding": schema_binding("candidate-freeze"),
-        "runtime_snapshot_binding": schema_binding("runtime-snapshot"),
-        "pinned_client_binding": schema_binding("codex-0.145.0"),
-        "corpus_binding": schema_binding("corpus"),
-        "workload_manifest_binding": schema_binding("workload-manifest"),
-        "scorer_bindings": [
-            schema_binding("opaque-scorer-a"),
-            schema_binding("opaque-scorer-b"),
-        ],
-        "rubric_binding": schema_binding("g56r-003-semantic-rubric"),
-        "adjudicator_binding": schema_binding("opaque-adjudicator-c"),
-        "cache_policy_binding": {
-            "id": "cache-isolation-v1",
-            "digest": schema_digest("cache-policy"),
-        },
-        "frozen_at": "2026-07-24T11:00:00Z",
-        "independent_review_binding": schema_binding("calibration-protocol-review"),
+        **_calibration_protocol_evidence_bindings(),
     }
 
 

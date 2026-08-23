@@ -724,6 +724,14 @@ class CodexQualificationScoringGateTests(unittest.TestCase):
         self.scoring = load_scoring_module()
         self.replay = load_replay_module()
 
+    def _default_score_inputs(self) -> tuple[dict, dict]:
+        gate_result = self.scoring.evaluate_hard_gates(gate_request())
+        semantic_result = self.scoring.evaluate_blinded_ballots(
+            gate_result,
+            semantic_request(),
+        )
+        return gate_result, semantic_result
+
     def assert_failed_gate_result(self, result: dict, *, code: str, first_gate: str | None) -> None:
         self.assertEqual(set(result), EXPECTED_RESULT_FIELDS)
         self.assertEqual(result["gate_disposition"], "failed")
@@ -928,8 +936,7 @@ class CodexQualificationScoringGateTests(unittest.TestCase):
         self.assertEqual(schema["properties"]["invalidated_bundle_binding"]["oneOf"][0], {"type": "null"})
 
     def test_score_bundle_builder_emits_immutable_bundle_without_embedding_traces(self) -> None:
-        gate_result = self.scoring.evaluate_hard_gates(gate_request())
-        semantic_result = self.scoring.evaluate_blinded_ballots(gate_result, semantic_request())
+        gate_result, semantic_result = self._default_score_inputs()
         request = score_bundle_request(gate_result, semantic_result=semantic_result)
         original = copy.deepcopy(request)
 
@@ -1106,11 +1113,7 @@ class CodexQualificationScoringGateTests(unittest.TestCase):
         self.assertIsNone(invalid_result["semantic_score"])
 
     def test_cli_score_rejects_a_fabricated_treatment_receipt(self) -> None:
-        gate_result = self.scoring.evaluate_hard_gates(gate_request())
-        semantic_result = self.scoring.evaluate_blinded_ballots(
-            gate_result,
-            semantic_request(),
-        )
+        gate_result, semantic_result = self._default_score_inputs()
         request = score_bundle_request(gate_result, semantic_result=semantic_result)
         validated_treatment = {
             "status": "valid",
@@ -1164,8 +1167,7 @@ class CodexQualificationScoringGateTests(unittest.TestCase):
         self.assertEqual(payload["reason"], "score_before_treatment_refused")
 
     def test_score_bundle_builder_rejects_resealed_non_blind_semantic_result(self) -> None:
-        gate_result = self.scoring.evaluate_hard_gates(gate_request())
-        semantic_result = self.scoring.evaluate_blinded_ballots(gate_result, semantic_request())
+        gate_result, semantic_result = self._default_score_inputs()
         ballot = semantic_result["ballots"][0]
         ballot["candidate_blind"] = False
         ballot["ballot_digest"] = self.scoring.digest(ballot_digest_payload(ballot))
@@ -1184,8 +1186,7 @@ class CodexQualificationScoringGateTests(unittest.TestCase):
             )
 
     def test_score_bundle_validation_rejects_resealed_duplicate_scorer_execution(self) -> None:
-        gate_result = self.scoring.evaluate_hard_gates(gate_request())
-        semantic_result = self.scoring.evaluate_blinded_ballots(gate_result, semantic_request())
+        gate_result, semantic_result = self._default_score_inputs()
         bundle = self.scoring.build_score_bundle(
             score_bundle_request(gate_result, semantic_result=semantic_result)
         )
@@ -1204,11 +1205,7 @@ class CodexQualificationScoringGateTests(unittest.TestCase):
             self.scoring.validate_score_bundle(bundle)
 
     def test_score_bundle_validation_rejects_resealed_rubric_drift(self) -> None:
-        gate_result = self.scoring.evaluate_hard_gates(gate_request())
-        semantic_result = self.scoring.evaluate_blinded_ballots(
-            gate_result,
-            semantic_request(),
-        )
+        gate_result, semantic_result = self._default_score_inputs()
         bundle = self.scoring.build_score_bundle(
             score_bundle_request(gate_result, semantic_result=semantic_result)
         )
@@ -1236,8 +1233,7 @@ class CodexQualificationScoringGateTests(unittest.TestCase):
             self.scoring.validate_score_bundle(bundle)
 
     def test_score_bundle_requires_every_upstream_id_and_digest_join(self) -> None:
-        gate_result = self.scoring.evaluate_hard_gates(gate_request())
-        semantic_result = self.scoring.evaluate_blinded_ballots(gate_result, semantic_request())
+        gate_result, semantic_result = self._default_score_inputs()
 
         for field in EXPECTED_SCORE_BINDING_FIELDS:
             for key in ("id", "digest"):
@@ -1262,8 +1258,7 @@ class CodexQualificationScoringGateTests(unittest.TestCase):
                     self.scoring.build_score_bundle(request)
 
     def test_score_bundle_closed_enums_and_none_coupling_fail_closed(self) -> None:
-        gate_result = self.scoring.evaluate_hard_gates(gate_request())
-        semantic_result = self.scoring.evaluate_blinded_ballots(gate_result, semantic_request())
+        gate_result, semantic_result = self._default_score_inputs()
         cases = (
             ("bad disposition", {"score_disposition": "pending"}, "score disposition"),
             ("bad plane", {"failure_plane": "runtime"}, "failure plane"),
@@ -1346,8 +1341,7 @@ class CodexQualificationScoringGateTests(unittest.TestCase):
         self.assertEqual(self.scoring.validate_score_bundle(bundle), bundle)
 
     def test_additive_invalidation_creates_new_bundle_without_mutating_prior(self) -> None:
-        gate_result = self.scoring.evaluate_hard_gates(gate_request())
-        semantic_result = self.scoring.evaluate_blinded_ballots(gate_result, semantic_request())
+        gate_result, semantic_result = self._default_score_inputs()
         prior = self.scoring.build_score_bundle(score_bundle_request(gate_result, semantic_result=semantic_result))
         prior_original = copy.deepcopy(prior)
         invalidated_binding = {
@@ -1376,8 +1370,7 @@ class CodexQualificationScoringGateTests(unittest.TestCase):
         self.assertEqual(self.scoring.validate_score_bundle(replacement), replacement)
 
     def test_score_bundle_rejects_embedded_or_mutated_trace_inputs(self) -> None:
-        gate_result = self.scoring.evaluate_hard_gates(gate_request())
-        semantic_result = self.scoring.evaluate_blinded_ballots(gate_result, semantic_request())
+        gate_result, semantic_result = self._default_score_inputs()
 
         embedded = score_bundle_request(gate_result, semantic_result=semantic_result)
         embedded["execution_trace"] = {"execution_trace_id": gate_result["execution_trace_id"]}
@@ -1391,8 +1384,7 @@ class CodexQualificationScoringGateTests(unittest.TestCase):
             self.scoring.validate_score_bundle(mutated)
 
     def test_committed_scorer_evidence_sanitizer_rejects_private_values_and_unknown_keys(self) -> None:
-        gate_result = self.scoring.evaluate_hard_gates(gate_request())
-        semantic_result = self.scoring.evaluate_blinded_ballots(gate_result, semantic_request())
+        gate_result, semantic_result = self._default_score_inputs()
         bundle = self.scoring.build_score_bundle(score_bundle_request(gate_result, semantic_result=semantic_result))
         original = copy.deepcopy(bundle)
 
@@ -1461,8 +1453,7 @@ class CodexQualificationScoringGateTests(unittest.TestCase):
         )
 
     def test_stale_score_bundle_versions_require_additive_invalidation(self) -> None:
-        gate_result = self.scoring.evaluate_hard_gates(gate_request())
-        semantic_result = self.scoring.evaluate_blinded_ballots(gate_result, semantic_request())
+        gate_result, semantic_result = self._default_score_inputs()
         current = self.scoring.build_score_bundle(score_bundle_request(gate_result, semantic_result=semantic_result))
         current_original = copy.deepcopy(current)
 
@@ -1499,8 +1490,7 @@ class CodexQualificationScoringGateTests(unittest.TestCase):
         self.assertEqual(self.scoring.sanitize_committed_scorer_evidence(replacement), replacement)
 
     def test_score_replay_is_deterministic_and_detects_drift(self) -> None:
-        gate_result = self.scoring.evaluate_hard_gates(gate_request())
-        semantic_result = self.scoring.evaluate_blinded_ballots(gate_result, semantic_request())
+        gate_result, semantic_result = self._default_score_inputs()
         bundle = self.scoring.build_score_bundle(score_bundle_request(gate_result, semantic_result=semantic_result))
 
         replay_bundle = self.replay.build_score_replay_bundle(
