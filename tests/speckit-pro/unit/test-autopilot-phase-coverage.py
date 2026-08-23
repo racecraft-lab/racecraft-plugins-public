@@ -37,6 +37,26 @@ REPORT_SCHEMA = (
 )
 
 
+def commit_test_repo(root: Path, message: str) -> None:
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(root),
+            "-c",
+            "user.name=SpecKit Tests",
+            "-c",
+            "user.email=git@github.com",
+            "-c",
+            "commit.gpgsign=false",
+            "commit",
+            "-qm",
+            message,
+        ],
+        check=True,
+    )
+
+
 def load_validator_module() -> object:
     spec = importlib.util.spec_from_file_location(
         "speckit_autopilot_phase_coverage_validator",
@@ -1050,23 +1070,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 local_schema_paths.append(local_schema)
             subprocess.run(["git", "init", "-q", str(root)], check=True)
             subprocess.run(["git", "-C", str(root), "add", "."], check=True)
-            subprocess.run(
-                [
-                    "git",
-                    "-C",
-                    str(root),
-                    "-c",
-                    "user.name=SpecKit Tests",
-                    "-c",
-                    "user.email=git@github.com",
-                    "-c",
-                    "commit.gpgsign=false",
-                    "commit",
-                    "-qm",
-                    "base",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "base")
             initial_commit = subprocess.run(
                 ["git", "-C", str(root), "rev-parse", "HEAD"],
                 text=True,
@@ -1080,14 +1084,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 ],
                 check=True,
             )
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "base gitlink",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "base gitlink")
             base_commit = subprocess.run(
                 ["git", "-C", str(root), "rev-parse", "HEAD"],
                 text=True,
@@ -1129,14 +1126,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 ],
                 check=True,
             )
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "implementation",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "implementation")
             implementation_commit = subprocess.run(
                 ["git", "-C", str(root), "rev-parse", "HEAD"],
                 text=True,
@@ -1459,23 +1449,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 ],
                 check=True,
             )
-            subprocess.run(
-                [
-                    "git",
-                    "-C",
-                    str(root),
-                    "-c",
-                    "user.name=SpecKit Tests",
-                    "-c",
-                    "user.email=git@github.com",
-                    "-c",
-                    "commit.gpgsign=false",
-                    "commit",
-                    "-qm",
-                    "evidence",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "evidence")
             evidence_commit = subprocess.run(
                 ["git", "-C", str(root), "rev-parse", "HEAD"],
                 text=True,
@@ -1487,23 +1461,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             ] = evidence_commit
             state_path.write_text(json.dumps(state), encoding="utf-8")
             subprocess.run(["git", "-C", str(root), "add", "autopilot-state.json"], check=True)
-            subprocess.run(
-                [
-                    "git",
-                    "-C",
-                    str(root),
-                    "-c",
-                    "user.name=SpecKit Tests",
-                    "-c",
-                    "user.email=git@github.com",
-                    "-c",
-                    "commit.gpgsign=false",
-                    "commit",
-                    "-qm",
-                    "head",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "head")
 
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 0, report)
@@ -1520,14 +1478,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 encoding="utf-8",
             )
             subprocess.run(["git", "-C", str(root), "add", "workflow.md"], check=True)
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "stale visible workflow fingerprint",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "stale visible workflow fingerprint")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 1)
             self.assertIn(
@@ -1537,14 +1488,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             )
             workflow_path.write_bytes(current_workflow)
             subprocess.run(["git", "-C", str(root), "add", "workflow.md"], check=True)
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "restore visible workflow fingerprint",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "restore visible workflow fingerprint")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 0, report)
 
@@ -1604,14 +1548,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             }
             state_path.write_text(json.dumps(state), encoding="utf-8")
             subprocess.run(["git", "-C", str(root), "add", "autopilot-state.json"], check=True)
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "fabricated completed review claim",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "fabricated completed review claim")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 1)
             self.assertIn(
@@ -1622,14 +1559,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             state.pop("phase_results")
             state_path.write_text(json.dumps(state), encoding="utf-8")
             subprocess.run(["git", "-C", str(root), "add", "autopilot-state.json"], check=True)
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "restore phase projection",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "restore phase projection")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 0, report)
 
@@ -1650,14 +1580,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             checkpoint["status"] = "pending"
             state_path.write_text(json.dumps(state), encoding="utf-8")
             subprocess.run(["git", "-C", str(root), "add", "autopilot-state.json"], check=True)
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "stale pending phase evidence",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "stale pending phase evidence")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 1)
             self.assertIn(
@@ -1721,14 +1644,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 ],
                 check=True,
             )
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "bind valid pending phase evidence",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "bind valid pending phase evidence")
             pending_evidence_commit = subprocess.run(
                 ["git", "-C", str(root), "rev-parse", "HEAD"],
                 text=True,
@@ -1747,14 +1663,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 ["git", "-C", str(root), "add", "autopilot-state.json"],
                 check=True,
             )
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "bind pending evidence authority",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "bind pending evidence authority")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 0, report)
 
@@ -1767,14 +1676,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             subprocess.run(
                 ["git", "-C", str(root), "add", "autopilot-state.json"], check=True,
             )
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "forge pending evidence digest",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "forge pending evidence digest")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 1)
             self.assertIn(
@@ -1788,14 +1690,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             subprocess.run(
                 ["git", "-C", str(root), "add", "autopilot-state.json"], check=True,
             )
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "forge pending evidence commit",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "forge pending evidence commit")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 1)
             self.assertIn(
@@ -1808,14 +1703,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             subprocess.run(
                 ["git", "-C", str(root), "add", "autopilot-state.json"], check=True,
             )
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "restore pending evidence claims",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "restore pending evidence claims")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 0, report)
 
@@ -1828,14 +1716,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             subprocess.run(
                 ["git", "-C", str(root), "add", str(evidence_path)], check=True,
             )
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "bind JSON-distinct pending evidence",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "bind JSON-distinct pending evidence")
             typed_evidence_commit = subprocess.run(
                 ["git", "-C", str(root), "rev-parse", "HEAD"],
                 text=True,
@@ -1850,14 +1731,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             subprocess.run(
                 ["git", "-C", str(root), "add", "autopilot-state.json"], check=True,
             )
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "bind typed pending evidence authority",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "bind typed pending evidence authority")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 1)
             self.assertIn(
@@ -1870,14 +1744,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             subprocess.run(
                 ["git", "-C", str(root), "add", str(evidence_path)], check=True,
             )
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "restore JSON-distinct pending evidence",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "restore JSON-distinct pending evidence")
             pending_evidence_commit = subprocess.run(
                 ["git", "-C", str(root), "rev-parse", "HEAD"],
                 text=True,
@@ -1892,28 +1759,14 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             subprocess.run(
                 ["git", "-C", str(root), "add", "autopilot-state.json"], check=True,
             )
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "restore pending evidence authority",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "restore pending evidence authority")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 0, report)
 
             checkpoint["commit_sha"] = base_commit
             state_path.write_text(json.dumps(state), encoding="utf-8")
             subprocess.run(["git", "-C", str(root), "add", "autopilot-state.json"], check=True)
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "mismatch pending checkpoint commit",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "mismatch pending checkpoint commit")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 1)
             self.assertIn(
@@ -1924,14 +1777,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             checkpoint["commit_sha"] = "f" * 40
             state_path.write_text(json.dumps(state), encoding="utf-8")
             subprocess.run(["git", "-C", str(root), "add", "autopilot-state.json"], check=True)
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "nonexistent pending checkpoint commit",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "nonexistent pending checkpoint commit")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 1)
             self.assertIn(
@@ -1952,14 +1798,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             checkpoint["commit_sha"] = unrelated_commit
             state_path.write_text(json.dumps(state), encoding="utf-8")
             subprocess.run(["git", "-C", str(root), "add", "autopilot-state.json"], check=True)
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "unrelated pending checkpoint commit",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "unrelated pending checkpoint commit")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 1)
             self.assertIn(
@@ -1976,14 +1815,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 ["git", "-C", str(root), "add", str(evidence_path), "autopilot-state.json"],
                 check=True,
             )
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "shadow pending verification owner",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "shadow pending verification owner")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 1)
             self.assertIn(
@@ -1995,14 +1827,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             duplicate_container["verification_details"] = {"full_suite": "all pass"}
             evidence_path.write_text(json.dumps(duplicate_container), encoding="utf-8")
             subprocess.run(["git", "-C", str(root), "add", str(evidence_path)], check=True)
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "duplicate pending verification containers",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "duplicate pending verification containers")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 1)
             self.assertIn(
@@ -2012,14 +1837,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
 
             evidence_path.write_text(json.dumps(pending_evidence), encoding="utf-8")
             subprocess.run(["git", "-C", str(root), "add", str(evidence_path)], check=True)
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "restore unique pending evidence owners",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "restore unique pending evidence owners")
             restored_pending_commit = subprocess.run(
                 ["git", "-C", str(root), "rev-parse", "HEAD"],
                 text=True,
@@ -2035,14 +1853,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 ["git", "-C", str(root), "add", "autopilot-state.json"],
                 check=True,
             )
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "bind restored pending evidence authority",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "bind restored pending evidence authority")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 0, report)
 
@@ -2053,14 +1864,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 json.dumps(missing_pending_evidence), encoding="utf-8",
             )
             subprocess.run(["git", "-C", str(root), "add", str(evidence_path)], check=True)
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "remove pending evidence owners",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "remove pending evidence owners")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 1)
             self.assertTrue(
@@ -2100,25 +1904,11 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 ],
                 check=True,
             )
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "restore current phase evidence",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "restore current phase evidence")
 
             tracked_path.write_text("changed after verification\n", encoding="utf-8")
             subprocess.run(["git", "-C", str(root), "add", "tracked.txt"], check=True)
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "unverified content change",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "unverified content change")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 1)
             self.assertIn(
@@ -2127,14 +1917,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             )
             tracked_path.write_text("changed\n", encoding="utf-8")
             subprocess.run(["git", "-C", str(root), "add", "tracked.txt"], check=True)
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "restore verified content",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "restore verified content")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 0, report)
 
@@ -2308,14 +2091,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 ["git", "-C", str(root), "add", str(evidence_path), str(verification_path)],
                 check=True,
             )
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "contradictory verification report",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "contradictory verification report")
             contradictory_commit = subprocess.run(
                 ["git", "-C", str(root), "rev-parse", "HEAD"],
                 text=True,
@@ -2348,14 +2124,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 ["git", "-C", str(root), "add", str(evidence_path), str(verification_path)],
                 check=True,
             )
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "restore verification report",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "restore verification report")
             evidence_commit = subprocess.run(
                 ["git", "-C", str(root), "rev-parse", "HEAD"],
                 text=True,
@@ -2371,14 +2140,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 ["git", "-C", str(root), "add", "autopilot-state.json"],
                 check=True,
             )
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "bind restored verification evidence",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "bind restored verification evidence")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 0, report)
 
@@ -2487,14 +2249,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             }
             evidence_path.write_text(json.dumps(failed_evidence), encoding="utf-8")
             subprocess.run(["git", "-C", str(root), "add", str(evidence_path)], check=True)
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "failed verification evidence",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "failed verification evidence")
             failed_evidence_commit = subprocess.run(
                 ["git", "-C", str(root), "rev-parse", "HEAD"],
                 text=True,
@@ -2518,14 +2273,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             pending_evidence.pop("completed_at")
             evidence_path.write_text(json.dumps(pending_evidence), encoding="utf-8")
             subprocess.run(["git", "-C", str(root), "add", str(evidence_path)], check=True)
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "pending evidence",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "pending evidence")
             pending_evidence_commit = subprocess.run(
                 ["git", "-C", str(root), "rev-parse", "HEAD"],
                 text=True,
@@ -2546,14 +2294,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
 
             evidence_path.write_text(json.dumps(valid_evidence), encoding="utf-8")
             subprocess.run(["git", "-C", str(root), "add", str(evidence_path)], check=True)
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "restore complete evidence",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "restore complete evidence")
             evidence_commit = subprocess.run(
                 ["git", "-C", str(root), "rev-parse", "HEAD"],
                 text=True,
@@ -2567,14 +2308,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 ["git", "-C", str(root), "add", "autopilot-state.json"],
                 check=True,
             )
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "bind restored complete evidence",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "bind restored complete evidence")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 0, report)
 
@@ -2756,14 +2490,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             subprocess.run(
                 ["git", "-C", str(root), "add", str(tasks_path)], check=True,
             )
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "update completed marker scope",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "update completed marker scope")
             replacement_commit = subprocess.run(
                 ["git", "-C", str(root), "rev-parse", "HEAD"],
                 text=True,
@@ -2925,14 +2652,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 ],
                 check=True,
             )
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "record replacement checkpoint evidence",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "record replacement checkpoint evidence")
             replacement_evidence_commit = subprocess.run(
                 ["git", "-C", str(root), "rev-parse", "HEAD"],
                 text=True,
@@ -3008,14 +2728,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 ],
                 check=True,
             )
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "record independent review authority",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "record independent review authority")
             replacement_evidence_commit = subprocess.run(
                 ["git", "-C", str(root), "rev-parse", "HEAD"],
                 text=True,
@@ -3027,14 +2740,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             subprocess.run(
                 ["git", "-C", str(root), "add", "autopilot-state.json"], check=True,
             )
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "bind replacement checkpoint authority",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "bind replacement checkpoint authority")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 0, report)
             self.assertEqual(report["checkpoint_source_fingerprint_errors"], [])
@@ -3050,14 +2756,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 ["git", "-C", str(root), "add", "autopilot-state.json"],
                 check=True,
             )
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "omit independent review evidence role",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "omit independent review evidence role")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 1)
             self.assertIn(
@@ -3071,14 +2770,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 ["git", "-C", str(root), "add", "autopilot-state.json"],
                 check=True,
             )
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "rebind independent review evidence role",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "rebind independent review evidence role")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 1)
             self.assertIn(
@@ -3096,14 +2788,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 ["git", "-C", str(root), "add", "autopilot-state.json"],
                 check=True,
             )
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "restore independent review evidence role",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "restore independent review evidence role")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 0, report)
 
@@ -3112,14 +2797,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             subprocess.run(
                 ["git", "-C", str(root), "add", str(tracked_path)], check=True,
             )
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "unreviewed non-carrier change",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "unreviewed non-carrier change")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 1)
             self.assertIn(
@@ -3131,14 +2809,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             subprocess.run(
                 ["git", "-C", str(root), "add", str(tracked_path)], check=True,
             )
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "restore reviewed non-carrier content",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "restore reviewed non-carrier content")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 0, report)
 
@@ -3190,14 +2861,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             subprocess.run(
                 ["git", "-C", str(root), "add", str(correction_path)], check=True,
             )
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "late historical correction",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "late historical correction")
             correction_commit = subprocess.run(
                 ["git", "-C", str(root), "rev-parse", "HEAD"],
                 text=True,
@@ -3222,14 +2886,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             subprocess.run(
                 ["git", "-C", str(root), "add", "autopilot-state.json"], check=True,
             )
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "declare late historical correction",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "declare late historical correction")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 1)
             self.assertIn(
@@ -3271,14 +2928,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 ],
                 check=True,
             )
-            subprocess.run(
-                [
-                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
-                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
-                    "commit", "-qm", "malformed correction schema authority",
-                ],
-                check=True,
-            )
+            commit_test_repo(root, "malformed correction schema authority")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 1)
             self.assertIn(
