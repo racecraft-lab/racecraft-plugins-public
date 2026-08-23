@@ -2454,35 +2454,28 @@ class SubagentModelOverrideTests(SimulatorCaseMixin, unittest.TestCase):
 
     # --- the allowlist-skip branch (FR-024b) ---
 
-    def test_an_allowlist_excluded_override_is_skipped_and_records_no_tuple(self) -> None:
+    def _skipped_override_report(self) -> dict[str, object]:
         preferred = self.forced()
-        report = self.resolve(
+        return self.resolve(
             policy_of(preferred),
             self.environment(preferred, permitted=False),
             self.overridden(),
         )
+
+    def test_an_allowlist_excluded_override_is_skipped_and_records_no_tuple(self) -> None:
+        report = self._skipped_override_report()
         self.assertEqual(report["override"]["disposition"], "skipped_by_allowlist")
         self.assertNotIn("tuple", report["override"])
 
     def test_the_skipped_branch_names_no_model_that_runs_instead(self) -> None:
-        preferred = self.forced()
-        report = self.resolve(
-            policy_of(preferred),
-            self.environment(preferred, permitted=False),
-            self.overridden(),
-        )
+        report = self._skipped_override_report()
         self.assertEqual(
             set(report["override"]),
             {"source", "requested_model", "disposition", "qualified", "would_have_been"},
         )
 
     def test_the_report_tuple_follows_the_qualified_walk_on_the_skipped_branch(self) -> None:
-        preferred = self.forced()
-        report = self.resolve(
-            policy_of(preferred),
-            self.environment(preferred, permitted=False),
-            self.overridden(),
-        )
+        report = self._skipped_override_report()
         self.assertEqual(
             report["effective_dispatch_tuple"],
             {
