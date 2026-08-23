@@ -24,8 +24,15 @@ while leaving consensus routing, commits, and replies where they can only be
 orchestrator work.
 
 **Assigning the class is no longer one of them.** The orchestrator holds
-`Bash`, and the rule this slice now enforces is that no agent holding `Bash` or
-the network reads reviewer text. Classification therefore moves out of the
+`Bash`, and the rule this slice now enforces is narrower than "no agent holding
+`Bash` or the network reads reviewer text", which is the rule an earlier draft
+of this summary claimed and did not earn. What is enforced is that **no agent
+holding `Bash` or a network tool is ever handed a reviewer comment body.**
+Reviewer-*derived* text still reaches the orchestrator, bounded and named below;
+the scoped agents' read tools are permission-scoped rather than path-scoped; and
+on Codex the claim is a read-only filesystem and nothing about the tool set.
+Each of those three is stated where it belongs rather than smoothed over here,
+because the summary is what a reader carries away. Classification therefore moves out of the
 orchestrator entirely, into `sweep-classifier`, a harness-scoped agent that
 receives one sanitized, delimited block and returns a structured record. The
 three amendment perspectives and their synthesis move to `sweep-analyst`,
@@ -282,11 +289,22 @@ nothing else does:
   `{file, anchor, replacement}` whose `file` is one of the three artifacts and
   whose `replacement` is byte-capped.
 
-Both structured returns cross the FR-012f redaction surface before any use: the
-classifier's `reason` before the orchestrator acts on it or writes it, the
-analyst's `replacement` before the write. So what leaves an untrusted-text
-reader is an enum, a path from a closed set, and bounded text that a
-fixture-pinned Python surface has already transformed.
+Two of the structured returns cross the FR-012f redaction surface before any
+use: the classifier's `reason` before the orchestrator acts on it or writes it,
+and the analyst's `replacement` before the write. **Two do not, and saying so is
+the point of this paragraph.** The three perspective records carry a `finding`
+of free prose and an `evidence` array, and FR-012f's leg set is closed at four
+with no leg among them; the synthesis record's `anchor` crosses nothing either.
+So what leaves an untrusted-text reader is an enum, a path from a closed set,
+two spans of bounded text a fixture-pinned Python surface has transformed, and
+two spans it has not. The anchor is bounded another way — the contract admits
+only a verbatim excerpt of the target file's committed bytes and stops the run
+on any match count other than one, so bytes an attacker chose cannot survive it.
+The perspective `finding` has no equivalent check, and it is the one genuinely
+open item on this path: closing it needs either a fifth redaction leg, which is
+`read_only.py` code FR-012f declined to budget, or a bounded record shape in
+place of prose. Until one of those is taken it is a disclosed residual, and this
+paragraph is where it is disclosed rather than a place it is claimed away.
 
 **Synthesis is performed by `sweep-analyst`, not by `consensus-synthesizer`.**
 The synthesizer declares no `tools:` allowlist and inherits `Bash`, so routing

@@ -1630,6 +1630,23 @@ proceeds.
   an agent that has three read tools, no shell, no network, and no way to spawn
   anything that has them.
 
+  **Two residuals, stated the way FR-010a states the classifier's.** First,
+  `Read`, `Grep`, and `Glob` are permission-scoped and never path-scoped. A
+  plugin agent cannot set `permissionMode` and inherits the parent session's,
+  and the autopilot requires a permissive one, so `sweep-analyst` can open any
+  file the operator's session can rather than only this repository. That is a
+  sharper residual than the classifier's, because the classifier's output is a
+  closed enum and a capped reason while the analyst's is up to 8192 bytes of
+  prose that the run commits and pushes to a public remote, and FR-012f's
+  deny-set is a secret-shaped filter rather than a general one. What bounds it
+  is the absence of a shell and of a network tool, the deny-set on the
+  `amendment` leg, and the human checkpoint FR-017 stops for; the shipped agent
+  body MUST NOT claim a repository boundary it does not have. Second, only the
+  synthesis record's `replacement` crosses a redaction leg. The three
+  perspective records return `finding` prose and an `evidence` array that cross
+  none, and they land in the orchestrator's context, which holds the full
+  surface. The plan discloses that as an open item rather than a closed one.
+
   **The perspective is supplied in the prompt, so the routing table is
   untouched.** `sweep-analyst` is dispatched three times per amended item, once
   for each perspective in the closed set `codebase`, `spec-context`, `domain`.
