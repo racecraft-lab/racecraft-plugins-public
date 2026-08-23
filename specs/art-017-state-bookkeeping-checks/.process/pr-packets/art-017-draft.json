@@ -1,0 +1,176 @@
+{
+  "body_file": "specs/art-017-state-bookkeeping-checks/.process/pr-packets/art-017-draft/body.md",
+  "editable_fields": [
+    {
+      "end_marker": "<!-- speckit-pro-editable:summary:end -->",
+      "field_id": "summary",
+      "heading": "Summary",
+      "start_marker": "<!-- speckit-pro-editable:summary:start -->"
+    },
+    {
+      "end_marker": "<!-- speckit-pro-editable:what_changed:end -->",
+      "field_id": "what_changed",
+      "heading": "What Changed",
+      "start_marker": "<!-- speckit-pro-editable:what_changed:start -->"
+    },
+    {
+      "end_marker": "<!-- speckit-pro-editable:why_it_matters:end -->",
+      "field_id": "why_it_matters",
+      "heading": "Why It Matters",
+      "start_marker": "<!-- speckit-pro-editable:why_it_matters:start -->"
+    }
+  ],
+  "generated_title": {
+    "description": "Arm state bookkeeping checks",
+    "rejected_candidates": [],
+    "scope": "art-017",
+    "source_evidence": {
+      "kind": "workflow",
+      "source": "docs/ai/specs/.process/ART-017-workflow.md",
+      "summary": "Title generated from active SpecKit workflow evidence."
+    },
+    "type": "fix",
+    "value": "fix(art-017): Arm state bookkeeping checks"
+  },
+  "mode": "single",
+  "packet_id": "art-017-draft",
+  "protected_body_fingerprint": {
+    "algorithm": "sha256",
+    "elided_fields": [
+      "summary",
+      "what_changed",
+      "why_it_matters"
+    ],
+    "normalization": "LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
+    "value": "3b2457e92132f1b1d72da2fd001c38895d1577498e8ed5c343f1928a5c8c0df1"
+  },
+  "required_headings": [
+    "Summary",
+    "What Changed",
+    "Why It Matters",
+    "How To Review",
+    "How To UAT",
+    "Verification",
+    "Scope",
+    "Known Gaps"
+  ],
+  "schema_version": "1.0.0",
+  "scope_evidence": {
+    "budget_result": "warning",
+    "changed_files": [
+      "dist/claude/speckit-pro/skills/speckit-autopilot/SKILL.md",
+      "dist/claude/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
+      "dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md",
+      "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
+      "docs/ai/specs/.process/ART-017-design-concept.md",
+      "docs/ai/specs/.process/ART-017-workflow.md",
+      "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json",
+      "docs/ai/specs/.process/XPLAT-009-payload-completeness-result.json",
+      "docs/ai/specs/.process/XPLAT-009-release-readiness-result.json",
+      "docs/ai/specs/.process/autopilot-state.json",
+      "docs/ai/specs/html-artifacts-roadmap-MOC.md",
+      "docs/ai/specs/html-artifacts-technical-roadmap.md",
+      "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
+      "speckit-pro/skills/speckit-autopilot/SKILL.md",
+      "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
+      "specs/art-017-state-bookkeeping-checks/.process/implementation-notes.md",
+      "specs/art-017-state-bookkeeping-checks/.process/uat-runbook.md",
+      "specs/art-017-state-bookkeeping-checks/SPEC-MOC.md",
+      "specs/art-017-state-bookkeeping-checks/artifacts/code-approaches.html",
+      "specs/art-017-state-bookkeeping-checks/artifacts/implementation-plan.html",
+      "specs/art-017-state-bookkeeping-checks/artifacts/module-map.html",
+      "specs/art-017-state-bookkeeping-checks/artifacts/spec-explainer.html",
+      "specs/art-017-state-bookkeeping-checks/checklists/error-handling.md",
+      "specs/art-017-state-bookkeeping-checks/checklists/reliability.md",
+      "specs/art-017-state-bookkeeping-checks/checklists/requirements.md",
+      "specs/art-017-state-bookkeeping-checks/checklists/state-management.md",
+      "specs/art-017-state-bookkeeping-checks/contracts/status-evidence-guard.md",
+      "specs/art-017-state-bookkeeping-checks/data-model.md",
+      "specs/art-017-state-bookkeeping-checks/plan.md",
+      "specs/art-017-state-bookkeeping-checks/quickstart.md",
+      "specs/art-017-state-bookkeeping-checks/research.md",
+      "specs/art-017-state-bookkeeping-checks/spec.md",
+      "specs/art-017-state-bookkeeping-checks/tasks.md",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-file-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-mutable.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-source-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-mutable.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-root-mismatch.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-same-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-single-product.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-source-mismatch.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-stale-hash.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-traversal-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/SKILL.md",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/SKILL.md",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
+      "tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py"
+    ],
+    "non_goals": [
+      "Do not arm the nine remaining advisory problem keys.",
+      "Do not redesign rule scoping, report shape, or failure schema.",
+      "Do not stack ART-017 on ART-008 or hand-edit generated payloads."
+    ],
+    "production_files": 4,
+    "reviewable_loc": 570,
+    "total_files": 49
+  },
+  "source_feature_dir": "specs/art-017-state-bookkeeping-checks",
+  "source_markers": [
+    {
+      "marker_id": "art-017-draft",
+      "rendered_text": "fix(art-017): Arm state bookkeeping checks",
+      "source": "specs/art-017-state-bookkeeping-checks"
+    }
+  ],
+  "target": {
+    "base_branch": "main",
+    "head_branch": "art-017-state-bookkeeping-checks"
+  },
+  "uat": {
+    "how_to_uat": "Follow specs/art-017-state-bookkeeping-checks/.process/uat-runbook.md. The executed run passed 9/9 scenarios: each isolated state invariant exited 1 under --rule status-evidence; clean and legacy-debt controls exited 0; tracked-pair, reviewer-traceability, and Claude/Codex parity checks passed.",
+    "uat_runbook_heading": "## UAT Runbook",
+    "uat_source": "specs/art-017-state-bookkeeping-checks/.process/uat-runbook.md"
+  },
+  "validation_result_path": "specs/art-017-state-bookkeeping-checks/.process/pr-packets/art-017-draft/validation.json",
+  "verification_evidence": [
+    {
+      "kind": "verification",
+      "result": "pass",
+      "source": "validation",
+      "summary": "Final repository suite passed 7896/7896 with toolchain preflight green (L1 1469, L4 6235, L5 192)."
+    },
+    {
+      "kind": "verification",
+      "result": "pass",
+      "source": "validation",
+      "summary": "Focused bookkeeping-guard suite passed 272/272."
+    },
+    {
+      "kind": "verification",
+      "result": "pass",
+      "source": "validation",
+      "summary": "Codex skill structural validation passed 163/163."
+    },
+    {
+      "kind": "verification",
+      "result": "pass",
+      "source": "validation",
+      "summary": "Release-artifact consistency check passed on the committed final source tree."
+    },
+    {
+      "kind": "verification",
+      "result": "pass",
+      "source": "validation",
+      "summary": "Docs reference generation completed and reference:check reported current."
+    },
+    {
+      "kind": "uat",
+      "result": "pass",
+      "source": "specs/art-017-state-bookkeeping-checks/.process/uat-runbook.md",
+      "summary": "Manual UAT passed all 9 acceptance scenarios; both initial UAT-oracle findings were remediated and no product finding remains."
+    }
+  ]
+}

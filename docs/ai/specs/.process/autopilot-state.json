@@ -1,99 +1,31 @@
 {
-  "workflow_file": "docs/ai/specs/.process/G56R-005-workflow.md",
-  "spec_id": "G56R-005",
-  "feature_dir": "specs/g56r-005-model-availability-fallback-recovery",
-  "branch": "g56r-005-model-availability-fallback-recovery",
-  "status": "completed",
+  "schema_version": "1.0",
+  "workflow_file": "docs/ai/specs/.process/ART-017-workflow.md",
+  "updated_at": "2026-08-22T21:17:59Z",
   "stage": "implement",
-  "updated_at": "2026-08-22T20:03:07Z",
-  "active_step": null,
-  "settings": {
-    "consensus_mode": "moderate",
-    "gate_failure": "stop",
-    "auto_commit": "per-phase",
-    "confidence_gate_mode": "advisory"
-  },
-  "stage_resolution": {
-    "source": "argv",
-    "basis": "explicit --stage implement",
-    "recorded_stage": "plan",
-    "planning_complete": true,
-    "confidence_gate_status": "✅ Complete",
-    "from_phase": null,
-    "draft_pr_corroboration": "match"
-  },
+  "stage_source": "argv",
+  "stage_basis": "explicit --stage implement",
+  "confidence_gate_mode": "advisory",
+  "active_step": "complete",
   "archive_sweep": {
     "status": "no_candidates",
     "execution_path": "extension_contract",
     "invocation_available": true,
     "prerequisite_available": true,
     "prerequisite_mode": "codex_native_worktree_binding",
-    "archive_extension_installed": true,
-    "cleanup_mode": "apply",
-    "safeToApplyCleanup": false,
     "eligible_previous_specs": [],
-    "excluded_current_spec": "specs/g56r-005-model-availability-fallback-recovery",
-    "retained_non_candidates": [
-      {
-        "path": "specs/brand-001-racecraft-identity-system",
-        "reason": "pending scaffold; no merged provenance"
-      }
+    "excluded_current_spec": "specs/art-017-state-bookkeeping-checks",
+    "archive_extension_installed": true,
+    "cleanup_mode": "apply_eligible_feature_branch",
+    "safeToApplyCleanup": false,
+    "notes": [
+      "BRAND-001 is pending and therefore not eligible for archive or cleanup."
     ]
   },
-  "prerequisites": {
-    "all_pass": true,
-    "python": "3.11.0",
-    "speckit_cli_runner_observation": "specify 0.11.8",
-    "speckit_cli_shell_observation": "specify 0.14.2",
-    "is_worktree": true,
-    "workflow_branch_match": true,
-    "runner_on_feature_branch_heuristic": false,
-    "codex_agents": "no_op",
-    "project_implementation_agent": "implement-executor",
-    "reviewability_setup": "pass"
-  },
-  "worktree_binding_override": {
-    "status": "operator_directed",
-    "task_reported_root": "<task-bound checkout>",
-    "execution_root": "<workflow-bound G56R-005 feature worktree>",
-    "branch": "g56r-005-model-availability-fallback-recovery",
-    "workflow_present_only_in_execution_root": true,
-    "sandbox_note": "Tests that create fixture directories require explicit execution-root write permission when the Codex task remains bound to another checkout."
-  },
-  "tooling_todos": [
-    {
-      "id": "TODO-CODEX-WORKTREE-BINDING",
-      "status": "pending",
-      "summary": "Fix same-task worktree adoption so the Codex UI task root, sandbox write scope, phase-agent cwd, and autopilot workflow authority bind to one registered feature worktree without requiring a new task.",
-      "out_of_scope_for": "G56R-005 feature behavior"
-    }
-  ],
-  "draft_artifact_generation": {
-    "status": "generated",
-    "generated_pages": [
-      "specs/g56r-005-model-availability-fallback-recovery/artifacts/implementation-plan.html",
-      "specs/g56r-005-model-availability-fallback-recovery/artifacts/spec-explainer.html",
-      "specs/g56r-005-model-availability-fallback-recovery/artifacts/code-approaches.html",
-      "specs/g56r-005-model-availability-fallback-recovery/artifacts/module-map.html"
-    ],
-    "gaps": [],
-    "fail_open": false
-  },
-  "draft_pr_packet": {
-    "status": "ready",
-    "packet_id": "g56r-005-draft",
-    "mode": "draft",
-    "packet_path": "specs/g56r-005-model-availability-fallback-recovery/.process/pr-packets/g56r-005-draft.json",
-    "body_file": "specs/g56r-005-model-availability-fallback-recovery/.process/pr-packets/g56r-005-draft/body.md",
-    "title": "feat(g56r-005): Add model availability fallback and recovery simulation",
-    "title_validation": "pass",
-    "packet_validation": {
-      "status": "passed",
-      "pr_blocked": false,
-      "writes_state": false,
-      "packet_sha256": "5eb6040b4f452a26f97b3a2e10e8e990769e3405b609d6a3f63dfa04df36b01f",
-      "body_sha256": "e5c8a5644b6a431a224632614eedcf511d7b869ac94873d2ad93b333f30983d1"
-    }
+  "settings": {
+    "consensus_mode": "moderate",
+    "gate_failure": "stop",
+    "auto_commit": "per-phase"
   },
   "project_commands": {
     "BUILD": "N/A",
@@ -109,477 +41,134 @@
   "preset_conventions": {
     "name": "speckit-pro-reviewability",
     "version": "1.0.0",
-    "spec_template": ".specify/presets/speckit-pro-reviewability/templates/spec-template.md",
-    "plan_template": ".specify/presets/speckit-pro-reviewability/templates/plan-template.md",
-    "tasks_template": ".specify/presets/speckit-pro-reviewability/templates/tasks-template.md",
-    "enforces": [
-      "reviewability budget",
-      "declared file operations",
-      "TDD-first task pairs",
-      "PR review packet evidence"
+    "templates": [
+      ".specify/presets/speckit-pro-reviewability/templates/spec-template.md",
+      ".specify/presets/speckit-pro-reviewability/templates/plan-template.md",
+      ".specify/presets/speckit-pro-reviewability/templates/tasks-template.md"
     ]
   },
-  "capability_coverage": {
-    "codebase_context": "local repository reads, rg, Git, and codebase-analyst",
-    "spec_context": "workflow, design concept, constitution, roadmap, and spec-context-analyst",
-    "library_documentation": "installed documentation capabilities when a phase requires external library facts",
-    "web_domain_research": "web/domain research capability available to domain-researcher when needed",
-    "source_extraction": "local file reads and web source extraction when needed"
+  "g0_baseline": {
+    "command": "python3 tests/speckit-pro/run-all.py",
+    "status": "passed",
+    "tests_passed": 7659,
+    "tests_total": 7659,
+    "toolchain_preflight": "passed"
   },
-  "reviewability_setup": {
-    "runner_status": "pass",
-    "runner_mode": "setup",
-    "reviewable_loc": 0,
-    "production_files": 0,
-    "total_files": 0,
-    "primary_surfaces": [
-      "docs/process"
-    ],
-    "scaffold_estimate_reviewable_loc": 385,
-    "scaffold_suggested_slices": 1,
-    "operator_split_decision": "one vertical slice"
+  "plan_reviewability": {
+    "helper_id": "estimate-reviewable-loc",
+    "status": "pass",
+    "projected": 0,
+    "declared_files": {
+      "production": 0,
+      "new": 0,
+      "modified": 3,
+      "total_entries": 3
+    },
+    "setup_forward_estimate": 125,
+    "split_decision": "one vertical slice; no split"
   },
-  "test_baseline_g0": {
-    "passed": 7663,
-    "total": 7663,
-    "toolchain_preflight": "ok",
-    "layers": {
-      "L1": "1469/1469",
-      "L4": "6002/6002",
-      "L5": "192/192"
+  "tasks_reviewability": {
+    "helper_id": "reviewability-gate",
+    "requested_mode": "tasks",
+    "status": "deferred",
+    "invoked": false,
+    "deferral_reason": "installed runner supports setup mode only",
+    "fallback_evidence": {
+      "setup": {"status": "warn", "pass": true, "blockers": 0},
+      "plan": {"status": "pass", "projected": 0},
+      "split_decision": "one vertical slice; no split"
     },
-    "environment_note": "An unprivileged cross-worktree run failed with sandbox PermissionError; the authoritative execution-root-permitted run passed 7663/7663."
+    "decision": "proceed",
+    "correctness_block": false,
+    "marker_plan_required": false
   },
-  "phase_results": {
-    "specify": {
-      "status": "completed",
-      "artifact": "specs/g56r-005-model-availability-fallback-recovery/spec.md",
-      "user_stories": 4,
-      "functional_requirements": 22,
-      "acceptance_scenarios": 26,
-      "success_criteria": 9,
-      "unresolved_for_consensus": 0,
-      "gate": {
-        "id": "G1",
-        "pass": true,
-        "markers": 0,
-        "reason": "spec.md exists with 0 markers"
-      },
-      "spec_index_regeneration": {
-        "status": "applied",
-        "stale_map_count": 2,
-        "touched_paths": [
-          "specs/g56r-005-model-availability-fallback-recovery/SPEC-MOC.md",
-          "docs/ai/specs/codex-gpt-5-6-agent-routing-roadmap-MOC.md"
-        ]
-      }
-    },
-    "clarify": {
-      "status": "completed",
-      "sessions": {
-        "resolution_contract": {
-          "status": "completed",
-          "questions": 5,
-          "answers_applied": 5,
-          "outcomes": [
-            "fixed diagnostic ordering contract",
-            "fallback exhaustion represented under terminal no_safe_route",
-            "loop detection on reached repeated route",
-            "explicit independently qualified no-helper continuation proof",
-            "canonical non-route treatment comparison and digest evidence"
-          ],
-          "unresolved_for_consensus": 0,
-          "consensus_status": "skipped: zero unresolved items"
-        },
-        "state_and_recovery": {
-          "status": "completed",
-          "questions": 5,
-          "answers_applied": 5,
-          "outcomes": [
-            "canonical fake-home state IDs",
-            "temporary fake_home_root write boundary",
-            "rollback trigger and write-state disposition",
-            "optional helper separated from required-core completeness with bound roster identity",
-            "deterministic Recovery Record without host metadata"
-          ],
-          "unresolved_for_consensus": 1,
-          "consensus_status": "completed",
-          "consensus": {
-            "item": "autopilot-fast-helper destination classification and roster count",
-            "verdict": "qualified agreement",
-            "codebase_analyst": "qualified",
-            "spec_context_analyst": "agree",
-            "decision": "Validate helper source integrity, exclude it from required-core destination completeness, bind the current 10-core-plus-helper roster identity, and fail closed for re-review on roster drift."
-          }
-        },
-        "bounds_and_attribution": {
-          "status": "completed",
-          "questions": 5,
-          "answers_applied": 5,
-          "outcomes": [
-            "service reroute attribution separated from plugin reasons",
-            "approved versus unapproved reroute rules",
-            "terminal precedence for strict override, budgets, cancellation, and writes",
-            "deterministic budget counters",
-            "scoring eligibility separated from route qualification"
-          ],
-          "unresolved_for_consensus": 0,
-          "consensus_status": "skipped: zero unresolved items"
-        }
-      }
-    },
-    "plan": {
-      "status": "completed",
-      "artifacts": [
-        "specs/g56r-005-model-availability-fallback-recovery/plan.md",
-        "specs/g56r-005-model-availability-fallback-recovery/research.md",
-        "specs/g56r-005-model-availability-fallback-recovery/data-model.md",
-        "specs/g56r-005-model-availability-fallback-recovery/quickstart.md",
-        "specs/g56r-005-model-availability-fallback-recovery/contracts/fallback-recovery-contract.md"
-      ],
-      "gate": {
-        "id": "G3",
-        "pass": true,
-        "markers": 0,
-        "reason": "plan.md exists with 0 unresolved markers"
-      },
-      "reviewability_estimate": {
-        "status": "pass",
-        "projected": 0,
-        "declared_files": {
-          "production": 0,
-          "new": 6,
-          "modified": 4,
-          "total_entries": 10
-        },
-        "split_required": false
-      },
-      "spec_index_regeneration": {
-        "status": "applied",
-        "stale_map_count": 1,
-        "touched_paths": [
-          "specs/g56r-005-model-availability-fallback-recovery/SPEC-MOC.md"
-        ]
-      }
-    },
-    "checklist": {
-      "status": "completed",
-      "gate": {
-        "id": "G4",
-        "pass": true,
-        "markers": 0,
-        "reason": "checklists/spec/plan contain 0 [Gap] markers"
-      },
-      "domains": {
-        "error_handling": {
-          "status": "completed",
-          "items": 11,
-          "gaps": 0,
-          "consensus_status": "skipped: zero unresolved items"
-        },
-        "state_management": {
-          "status": "completed",
-          "items": 11,
-          "gaps": 0,
-          "consensus_status": "skipped: zero unresolved items"
-        },
-        "data_integrity": {
-          "status": "completed",
-          "items": 12,
-          "gaps": 0,
-          "consensus_status": "skipped: zero unresolved items"
-        }
-      }
-    },
-    "tasks": {
-      "status": "completed",
-      "artifact": "specs/g56r-005-model-availability-fallback-recovery/tasks.md",
-      "total_tasks": 25,
-      "phases": 6,
-      "user_stories_covered": 4,
-      "parallel_opportunity_groups": 1,
-      "gate": {
-        "id": "G5",
-        "pass": true,
-        "markers": 0,
-        "task_count": 25,
-        "reason": "tasks.md exists and contains actionable tasks"
-      },
-      "atomicity_route": {
-        "route": "one-navigable-PR",
-        "releasable": true,
-        "signals": ["change-shape:modify-heavy"],
-        "warnings": []
-      },
-      "layer_plan": {
-        "status": "ok",
-        "increment_count": 6,
-        "task_count": 25,
-        "error_count": 0,
-        "warning_count": 36,
-        "warning_disposition": "Expected reference_not_found warnings for declared NEW implementation paths.",
-        "order": ["foundation", "us1", "us2", "us3", "us4", "polish"]
-      },
-      "spec_index_regeneration": {
-        "status": "applied",
-        "stale_map_count": 1,
-        "touched_paths": [
-          "specs/g56r-005-model-availability-fallback-recovery/SPEC-MOC.md"
-        ]
-      }
-    },
-    "analyze": {
-      "status": "completed",
-      "initial_findings": {
-        "critical": 0,
-        "high": 1,
-        "medium": 3,
-        "low": 0
-      },
-      "remediation_loops": 1,
-      "final_findings": {
-        "critical": 0,
-        "high": 0,
-        "medium": 0,
-        "low": 0
-      },
-      "remediations": [
-        "aligned the reviewability estimate at 385 LOC",
-        "bound FR-019 and FR-020 safety scope to T006, T024, and T025",
-        "made SC-004, SC-005, and SC-007 task traceability explicit",
-        "made generated-artifact and docs-reference duties concrete"
-      ],
-      "traceability": {
-        "functional_requirements": "22/22",
-        "success_criteria": "9/9"
-      },
-      "unresolved_for_consensus": 0,
-      "consensus_status": "skipped: zero unresolved items",
-      "confidence_emit": {
-        "composite": 0.99,
-        "task_understanding": 0.98,
-        "approach_clarity": 0.97,
-        "requirements_alignment": 0.99,
-        "risk_assessment": 1.0,
-        "completeness": 1.0
-      },
-      "gate": {
-        "id": "G6",
-        "pass": true,
-        "markers": 0,
-        "reason": "0 CRITICAL/HIGH findings"
-      },
-      "spec_index_regeneration": {
-        "status": "no_op",
-        "stale_map_count": 0,
-        "touched_paths": []
-      }
-    },
-    "confidence_gate": {
-      "status": "completed",
-      "gate": "G6.5",
-      "mode": "advisory",
-      "threshold": 0.9,
-      "composite": 0.99,
-      "pass": true,
-      "recommended_action": "proceed",
-      "reason": "composite at or above threshold",
-      "criteria": {
-        "task_understanding": 0.98,
-        "approach_clarity": 0.97,
-        "requirements_alignment": 0.99,
-        "risk_assessment": 1.0,
-        "completeness": 1.0
-      },
-      "iteration_count": 0
-    },
-    "implement": {
-      "status": "completed",
-      "current_group": null,
-      "completed_tasks": ["T001", "T002", "T003", "T004", "T005", "T006", "T007", "T008", "T009", "T010", "T011", "T012", "T013", "T014", "T015", "T016", "T017", "T018", "T019", "T020", "T021", "T022", "T023", "T024", "T025"],
-      "task_results": [
-        {"task": "T001", "status": "completed", "verification": "three schemas parse; git diff --check"},
-        {"task": "T002", "status": "completed", "verification": "11 roster rows, 32 scenarios, 22 cases"},
-        {"task": "T003", "status": "completed", "verification": "RED observed: missing codex_route_fallback.py"},
-        {"task": "T004", "status": "completed", "verification": "unique Layer 4 manifest registration"},
-        {"task": "T005", "status": "completed", "verification": "route-resolution RED observed"},
-        {"task": "T006", "status": "completed", "verification": "pure resolver GREEN"},
-        {"task": "T007", "status": "completed", "verification": "three-run canonical bytes stable"},
-        {"task": "T008", "status": "completed", "verification": "service attribution RED observed"},
-        {"task": "T009", "status": "completed", "verification": "separate service attribution GREEN"},
-        {"task": "T010", "status": "completed", "verification": "scoring split GREEN"},
-        {"task": "T011", "status": "completed", "verification": "model-effort-only treatment digest GREEN"},
-        {"task": "T012", "status": "completed", "verification": "optional-helper counters and continuation GREEN"},
-        {"task": "T013", "status": "completed", "verification": "fake-home recovery RED observed"},
-        {"task": "T014", "status": "completed", "verification": "canonical state identity GREEN"},
-        {"task": "T015", "status": "completed", "verification": "staged adapter and recovery record GREEN"},
-        {"task": "T016", "status": "completed", "verification": "roster and helper TOML binding GREEN"},
-        {"task": "T017", "status": "completed", "verification": "bounded harness RED observed"},
-        {"task": "T018", "status": "completed", "verification": "bounded sequential harness GREEN"},
-        {"task": "T019", "status": "completed", "verification": "canonical output host-data exclusion GREEN"},
-        {"task": "T020", "status": "completed", "verification": "all 22 FR and 9 SC traceability rows present"},
-        {"task": "T021", "status": "completed", "verification": "focused 35/35 after all review remediation"},
-        {"task": "T022", "status": "completed", "verification": "Layer 4 6002/6002"},
-        {"task": "T023", "status": "completed", "verification": "full suite 7663/7663"},
-        {"task": "T024", "status": "completed", "verification": "spec index, docs reference, scope, and release artifacts current"},
-        {"task": "T025", "status": "completed", "verification": "PR packet evidence recorded; live smoke unrun"}
-      ]
-    },
-    "post_implementation": {
-      "doctor": {
-        "status": "completed",
-        "pass": 3,
-        "warn": 2,
-        "fail": 0,
-        "blocking": false
-      },
-      "verify_implementation": {
-        "status": "completed",
-        "functional_requirements": "22/22",
-        "success_criteria": "9/9 verified after packet refresh",
-        "critical": 0,
-        "high": 0
-      },
-      "verify_tasks": {
-        "status": "completed",
-        "verified": 25,
-        "partial": 0,
-        "partial_task": null
-      },
-      "code_review": {
-        "status": "completed",
-        "important_findings": 3,
-        "nits": 0,
-        "remediation": "closed declaration_source enum, recovery-record schema binding, and schema-shaped policy defaults added after focused RED",
-        "focused_verification": "35/35"
-      },
-      "integration_suite": {
-        "status": "completed",
-        "passed": 7663,
-        "total": 7663,
-        "layers": {
-          "L1": "1469/1469",
-          "L4": "6002/6002",
-          "L5": "192/192"
-        },
-        "environment_note": "Authoritative exact-worktree-permitted run; sandbox-denied fixture run superseded."
-      },
-      "reviewability_diff_gate": {
-        "status": "warn",
-        "reviewable_loc": 584,
-        "production_files": 0,
-        "total_files": 20,
-        "primary_surfaces": ["deterministic fallback simulation", "artifact title generation"],
-        "warnings": ["reviewable LOC exceeds 400 warning threshold", "reviewable file count exceeds 15 warning threshold"],
-        "blockers": [],
-        "split_decision": "one feature slice plus its bounded UAT remediation; both remain paired with their deterministic proof"
-      },
-      "self_review": {
-        "status": "completed",
-        "tests": "focused 35/35; artifact-title contract 90/90; full suite 7663/7663; generated-artifact checks pass",
-        "edge_case_gaps": 0,
-        "requirements": "FR-001 through FR-022 mapped; SC-001 through SC-009 traced",
-        "tidiness_findings": 0,
-        "known_gaps": [
-          "TODO-CODEX-WORKTREE-BINDING",
-          "live reroute smoke intentionally unrun"
-        ]
-      },
-      "uat_runbook": {
-        "status": "completed",
-        "helper_id": "generate-uat-skeleton",
-        "helper_status": "deferred",
-        "mode": "manual-source-derived",
-        "path": "specs/g56r-005-model-availability-fallback-recovery/.process/uat-runbook.md",
-        "result": "pass after UAT-001 remediation",
-        "findings": 1,
-        "open_findings": 0
-      },
-      "final_reviewability_gate": {
-        "status": "warn",
-        "mode": "committed_fallback_evidence",
-        "helper_id": "final-reviewability-backstop",
-        "helper_status": "deferred",
-        "evidence_commit": "91012212c",
-        "reviewable_loc": 584,
-        "production_files": 0,
-        "total_files": 20,
-        "warnings": ["reviewable LOC exceeds 400 warning threshold", "reviewable file count exceeds 15 warning threshold"],
-        "blockers": [],
-        "proceed": true
-      },
-      "pr_packet": {
-        "status": "completed",
-        "packet_path": "specs/g56r-005-model-availability-fallback-recovery/.process/pr-packets/g56r-005-draft.json",
-        "body_file": "specs/g56r-005-model-availability-fallback-recovery/.process/pr-packets/g56r-005-draft/body.md",
-        "validation_result_path": "specs/g56r-005-model-availability-fallback-recovery/.process/pr-packets/g56r-005-draft/validation.json",
-        "mode": "single",
-        "title": "feat(g56r-005): Add model availability fallback and recovery simulation",
-        "read_only_validation": "passed",
-        "persisted_validation": "passed",
-        "pr_blocked": false,
-        "workflow_contract": "passed"
-      },
-      "pull_request": {
-        "status": "updated",
-        "number": 487,
-        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/487",
-        "base_branch": "main",
-        "head_branch": "g56r-005-model-availability-fallback-recovery",
-        "packet_publish_head": "656852e5a",
-        "draft_at_packet_publish": true,
-        "review_inspection_head": "fa778f0d5"
-      },
-      "review_remediation": {
-        "status": "completed",
-        "independent_findings": 1,
-        "independent_findings_remediated": 1,
-        "live_reviews": 1,
-        "live_threads": 2,
-        "live_comments": 2,
-        "live_findings_remediated": 2,
-        "ci_status_at_inspection": "in_progress",
-        "reopen_on_final_head_failure": true
-      },
-      "retrospective": {
-        "status": "completed",
-        "artifact": "specs/g56r-005-model-availability-fallback-recovery/retrospective.md",
-        "tasks": "25/25",
-        "spec_adherence_percent": 100,
-        "critical_findings": 0,
-        "significant_findings": 4,
-        "minor_findings": 2,
-        "positive_findings": 3
-      }
+  "atomicity_route": {
+    "route": "one-navigable-PR",
+    "releasable": true,
+    "signals": ["change-shape:modify-heavy"],
+    "warnings": []
+  },
+  "final_reviewability": {
+    "status": "over_budget",
+    "helper_status": "deferred",
+    "authored_nonblank_additions": 502,
+    "authored_nonblank_deletions": 68,
+    "authored_nonblank_gross": 570,
+    "authored_nonblank_net": 434,
+    "size_only": true,
+    "correctness_block": false,
+    "decision": "continue with one navigable PR; disclose test-dominant size to reviewers"
+  },
+  "final_verification": {
+    "head": "c280f28c714997a598c23605f7c99c20a9ebba97",
+    "origin_main": "847ada00f037d40957ab17e4ce54c60d9420c8e4",
+    "targeted": "272/272 passed",
+    "codex_structural": "163/163 passed",
+    "release_artifacts": "passed",
+    "docs_references": "passed",
+    "full_suite": "7896/7896 passed",
+    "layers": {"L1": "1469/1469", "L4": "6235/6235", "L5": "192/192"}
+  },
+  "uat_runbook": {
+    "status": "passed",
+    "path": "specs/art-017-state-bookkeeping-checks/.process/uat-runbook.md",
+    "acceptance_scenarios": "9/9 passed",
+    "findings": "2 UAT-oracle findings remediated; 0 product findings remain"
+  },
+  "pr_packet": {
+    "packet_path": "specs/art-017-state-bookkeeping-checks/.process/pr-packets/art-017-draft.json",
+    "body_file": "specs/art-017-state-bookkeeping-checks/.process/pr-packets/art-017-draft/body.md",
+    "validation_result_path": "specs/art-017-state-bookkeeping-checks/.process/pr-packets/art-017-draft/validation.json",
+    "status": "passed",
+    "pr_blocked": false,
+    "read_only_writes_state": false,
+    "workflow_contract": "passed",
+    "release_note": "passed"
+  },
+  "layer_plan": {
+    "status": "skipped",
+    "reason": "atomicity route is one-navigable-PR; planner runs only for split-PR"
+  },
+  "confidence_gate": {
+    "mode": "advisory",
+    "threshold": 0.9,
+    "composite": 0.99,
+    "pass": true,
+    "recommended_action": "proceed",
+    "criteria": {
+      "task_understanding": 0.98,
+      "approach_clarity": 0.98,
+      "requirements_alignment": 1.0,
+      "risk_assessment": 1.0,
+      "completeness": 1.0
     }
   },
   "plan": [
     {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
     {"step": "Phase 0: Prerequisites", "status": "completed"},
     {"step": "Phase 1: Specify", "status": "completed"},
-    {"step": "Phase 2: Clarify - Resolution Contract", "status": "completed"},
-    {"step": "Phase 2: Clarify - Resolution Contract Consensus", "status": "skipped: zero unresolved items"},
-    {"step": "Phase 2: Clarify - State and Recovery", "status": "completed"},
-    {"step": "Phase 2: Clarify - State and Recovery Consensus", "status": "completed"},
-    {"step": "Phase 2: Clarify - Bounds and Attribution", "status": "completed"},
-    {"step": "Phase 2: Clarify - Bounds and Attribution Consensus", "status": "skipped: zero unresolved items"},
+    {"step": "Phase 2: Clarify - Rule Authority And Failure Contract", "status": "completed"},
+    {"step": "Phase 2: Clarify - Rule Authority And Failure Contract Consensus", "status": "completed"},
+    {"step": "Phase 2: Clarify - Negative Controls And Corpus Evidence", "status": "completed"},
+    {"step": "Phase 2: Clarify - Negative Controls And Corpus Evidence Consensus", "status": "completed"},
+    {"step": "Phase 2: Clarify - Integration And Generated Artifacts", "status": "completed"},
+    {"step": "Phase 2: Clarify - Integration And Generated Artifacts Consensus", "status": "completed"},
     {"step": "Phase 3: Plan", "status": "completed"},
-    {"step": "Phase 4: Checklist - Error Handling", "status": "completed"},
-    {"step": "Phase 4: Checklist - Error Handling Consensus", "status": "skipped: zero unresolved items"},
-    {"step": "Phase 4: Checklist - State Management", "status": "completed"},
-    {"step": "Phase 4: Checklist - State Management Consensus", "status": "skipped: zero unresolved items"},
-    {"step": "Phase 4: Checklist - Data Integrity", "status": "completed"},
-    {"step": "Phase 4: Checklist - Data Integrity Consensus", "status": "skipped: zero unresolved items"},
+    {"step": "Phase 4: Checklist - state-management", "status": "completed"},
+    {"step": "Phase 4: Checklist - state-management Consensus", "status": "completed"},
+    {"step": "Phase 4: Checklist - error-handling", "status": "completed"},
+    {"step": "Phase 4: Checklist - error-handling Consensus", "status": "completed"},
+    {"step": "Phase 4: Checklist - reliability", "status": "completed"},
+    {"step": "Phase 4: Checklist - reliability Consensus", "status": "completed"},
     {"step": "Phase 5: Tasks", "status": "completed"},
     {"step": "Phase 6: Analyze", "status": "completed"},
-    {"step": "Phase 6: Analyze - Consensus", "status": "skipped: zero unresolved items"},
+    {"step": "Phase 6: Analyze - Consensus", "status": "completed"},
     {"step": "Phase 6.5: Confidence Gate", "status": "completed"},
-    {"step": "Phase 7: Implement - Foundation (T001-T004)", "status": "completed"},
-    {"step": "Phase 7: Implement - Deterministic Route Resolution (T005-T007)", "status": "completed"},
-    {"step": "Phase 7: Implement - Service Reroute Attribution (T008-T011)", "status": "completed"},
-    {"step": "Phase 7: Implement - Fake-Home Recovery and Optional Helper (T012-T016)", "status": "completed"},
-    {"step": "Phase 7: Implement - Bounded Sequential Harness (T017-T019)", "status": "completed"},
-    {"step": "Phase 7: Implement - Review Evidence and Verification (T020-T025)", "status": "completed"},
+    {"step": "Phase 7: Implement - Setup (T001-T004)", "status": "completed"},
+    {"step": "Phase 7: Implement - Foundational (T005-T006)", "status": "completed"},
+    {"step": "Phase 7: Implement - US1 (T007-T015)", "status": "completed"},
+    {"step": "Phase 7: Implement - US2 (T016-T023)", "status": "completed"},
+    {"step": "Phase 7: Implement - Integration (T024-T031)", "status": "completed"},
     {"step": "Post: Doctor Extension Check", "status": "completed"},
     {"step": "Post: Verify Implementation", "status": "completed"},
     {"step": "Post: Verify Tasks Phantom Check", "status": "completed"},
@@ -587,8 +176,8 @@
     {"step": "Post: Integration Suite", "status": "completed"},
     {"step": "Post: Reviewability Diff Gate", "status": "completed"},
     {"step": "Post: Self-Review", "status": "completed"},
-    {"step": "Post: UAT Runbook Generation", "status": "completed: manual source-derived UAT; one finding remediated"},
-    {"step": "Post: Final Reviewability Backstop", "status": "completed"},
+    {"step": "Post: UAT Runbook Generation", "status": "completed"},
+    {"step": "Post: Final Reviewability Backstop", "status": "skipped"},
     {"step": "Post: PR Packet/Body Generation", "status": "completed"},
     {"step": "Post: PR Body Generation", "status": "completed"},
     {"step": "Post: PR Creation", "status": "completed"},

@@ -21,6 +21,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 TEST_DIR = Path(__file__).resolve().parent
@@ -33,6 +34,13 @@ from test_result import run_counted  # noqa: E402
 
 SKILL_SCRIPTS = REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot" / "scripts"
 VALIDATOR = SKILL_SCRIPTS / "validate-autopilot-phase-coverage.py"
+CLAUDE_AUTOPILOT_SKILL = REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot" / "SKILL.md"
+CODEX_AUTOPILOT_SKILL = REPO_ROOT / "speckit-pro" / "codex-skills" / "speckit-autopilot" / "SKILL.md"
+BLOCKING_STATE_INVARIANT_KEYS = (
+    "in_progress_errors",
+    "duplicate_state_steps",
+    "state_order_errors",
+)
 
 PLAN_STEPS = (
     "Archive Sweep: previously merged specs dry-run/apply eligibility",
@@ -69,6 +77,196 @@ def workflow(*rows: tuple[str, str], body: str = "") -> str:
     lines.extend(f"| {phase} | `/speckit-x` | {status} | |" for phase, status in rows)
     lines.extend(["", body])
     return "\n".join(lines)
+
+
+def _clean_state_plan() -> list[dict[str, str]]:
+    """A state plan with every validator-required step, once, in canonical order."""
+    steps = [
+        {"step": step, "status": "completed"}
+        for step in validator.STATE_PREFIXES
+    ]
+    steps.extend(
+        {"step": post, "status": "pending"}
+        for post in validator.POST_STEPS
+    )
+    return steps
+
+
+def _clean_workflow() -> str:
+    """A workflow document with the sections and table cells coverage expects."""
+    lines = [
+        "# Workflow",
+        "",
+        "## Workflow Overview",
+        "",
+        "| Phase | Command | Status | Notes |",
+        "|---|---|---|---|",
+        "| Specify | `/speckit-x` | ⏳ Pending | |",
+        "",
+        "| Confidence Gate | G6.5 | Status | Notes |",
+        "|---|---|---|---|",
+        "| G6.5 | Confidence Gate | ⏳ Pending | |",
+        "",
+    ]
+    lines.extend(validator.WORKFLOW_SECTIONS)
+    lines.extend([
+        "",
+        "| Post | Status | Notes |",
+        "|---|---|---|",
+    ])
+    lines.extend(f"| Post | {post} | ⏳ Pending | |" for post in validator.POST_STEPS)
+    return "\n".join(lines)
+
+
+def clean_workflow_state_fixture(
+    root: Path,
+    *,
+    state_workflow_ref: str | None = SUPPLIED_WORKFLOW_REF,
+) -> tuple[Path, Path]:
+    """Lay out one clean repository-shaped workflow/state pair.
+
+    FR-009 negative controls mutate this pair one problem key at a time. FR-011
+    uses it unchanged to prove the same scoped invocation can succeed.
+    """
+    (root / ".git").write_text("gitdir: ../elsewhere/.git/worktrees/fixture\n", encoding="utf-8")
+    supplied = root / SUPPLIED_WORKFLOW_REF
+    supplied.parent.mkdir(parents=True, exist_ok=True)
+    supplied.write_text(_clean_workflow(), encoding="utf-8")
+    state = supplied.parent / "autopilot-state.json"
+    state.write_text(
+        json.dumps({
+            "workflow_file": state_workflow_ref,
+            "plan": _clean_state_plan(),
+        }),
+        encoding="utf-8",
+    )
+    return supplied, state
+
+
+def run_status_evidence_report(workflow_path: Path, state_path: Path) -> tuple[int, dict]:
+    """Run the exact scoped invocation autopilot issues at phase transitions."""
+    completed = subprocess.run(
+        [sys.executable, str(VALIDATOR),
+         "--workflow", str(workflow_path), "--state", str(state_path),
+         "--rule", "status-evidence"],
+        text=True, capture_output=True, check=False,
+    )
+    return completed.returncode, json.loads(completed.stdout)
+
+
+def status_evidence_guidance_paragraph(path: Path) -> str:
+    """Return the source paragraph that explains the scoped bookkeeping guard."""
+    paragraphs = [
+        paragraph.replace("\n", " ")
+        for paragraph in path.read_text(encoding="utf-8").split("\n\n")
+    ]
+    matches = [
+        paragraph
+        for paragraph in paragraphs
+        if "status-evidence" in paragraph
+        and "exit code" in paragraph
+        and "full report" in paragraph
+    ]
+    if len(matches) != 1:
+        raise AssertionError(f"expected one status-evidence guidance paragraph in {path}")
+    return matches[0]
+
+
+def tracked_workflow_state_paths(repo_root: Path = REPO_ROOT) -> tuple[str, ...]:
+    """Return tracked workflow/state paths from the git index in stable order."""
+    try:
+        completed = subprocess.run(
+            ["git", "ls-files", "-z"],
+            cwd=repo_root,
+            shell=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError("git ls-files -z failed while enumerating tracked paths") from exc
+    paths = completed.stdout.decode("utf-8").split("\0")
+    return tuple(sorted(
+        path for path in paths
+        if path.endswith("-workflow.md") or path.endswith("/autopilot-state.json")
+    ))
+
+
+def _adjacent_state_path(workflow_path: str) -> str:
+    if "/" not in workflow_path:
+        return "autopilot-state.json"
+    return workflow_path.rsplit("/", 1)[0] + "/autopilot-state.json"
+
+
+def classify_authority_matched_pairs(repo_root: Path, tracked_paths: tuple[str, ...]) -> dict:
+    """Classify tracked workflows by adjacent state authority."""
+    tracked = frozenset(tracked_paths)
+    eligible: list[tuple[str, str]] = []
+    excluded: list[dict[str, str | None]] = []
+
+    for workflow_path in sorted(path for path in tracked if path.endswith("-workflow.md")):
+        state_ref = _adjacent_state_path(workflow_path)
+        state_path = repo_root / state_ref
+        if state_ref not in tracked:
+            reason = "untracked-adjacent-state" if state_path.exists() else "missing-adjacent-state"
+            excluded.append({
+                "workflow": workflow_path,
+                "state": state_ref,
+                "reason": reason,
+            })
+            continue
+
+        try:
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"could not parse tracked state JSON: {state_ref}") from exc
+        workflow_file = state.get("workflow_file") if isinstance(state, dict) else None
+        if workflow_file == workflow_path:
+            eligible.append((workflow_path, state_ref))
+        else:
+            excluded.append({
+                "workflow": workflow_path,
+                "state": state_ref,
+                "reason": "workflow-file-mismatch",
+                "workflow_file": workflow_file,
+            })
+
+    return {"eligible": tuple(eligible), "excluded": tuple(excluded)}
+
+
+class StatusEvidenceReportAssertions:
+    """Reusable checks for status-evidence report shape and isolated findings."""
+
+    SELECTED_KEYS = frozenset(validator.RULE_PROBLEM_KEYS["status-evidence"])
+    EXPECTED_KEYS = frozenset({
+        "status",
+        "workflow_file",
+        "state_file",
+        "plan_step_count",
+        *validator.PROBLEM_KEY_INTENT,
+    })
+
+    def assertCompleteReport(self, report: dict) -> None:  # noqa: N802
+        self.assertEqual(set(report), self.EXPECTED_KEYS)
+        for key in validator.PROBLEM_KEY_INTENT:
+            with self.subTest(report_key=key):
+                self.assertIsInstance(report[key], list)
+
+    def assertSelectedKeysEmpty(self, report: dict) -> None:  # noqa: N802
+        for key in self.SELECTED_KEYS:
+            with self.subTest(selected_key=key):
+                self.assertEqual(report[key], [])
+
+    def assertOnlySelectedProblemKeyPopulated(  # noqa: N802
+        self,
+        report: dict,
+        target_key: str,
+    ) -> None:
+        self.assertIn(target_key, report)
+        self.assertTrue(report[target_key], f"{target_key} should be populated")
+        for key in self.SELECTED_KEYS - {target_key}:
+            with self.subTest(selected_key=key):
+                self.assertEqual(report[key], [])
 
 
 class WorkflowStatusEvidenceTests(unittest.TestCase):
@@ -177,6 +375,356 @@ class RuleScopingTests(unittest.TestCase):
         self.assertTrue(report["missing_workflow_post_items"])
 
 
+class CleanStatusEvidenceControlTests(StatusEvidenceReportAssertions, unittest.TestCase):
+    """FR-007/FR-011: the clean builder succeeds under the exact scoped gate."""
+
+    def test_clean_builder_status_evidence_run_exits_zero_with_complete_report(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            supplied, state = clean_workflow_state_fixture(Path(raw))
+            code, report = run_status_evidence_report(supplied, state)
+
+        self.assertEqual(code, 0, report)
+        self.assertCompleteReport(report)
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["plan_step_count"], len(_clean_state_plan()))
+        self.assertSelectedKeysEmpty(report)
+
+
+class LegacyCoverageAdvisoryTests(StatusEvidenceReportAssertions, unittest.TestCase):
+    """FR-004: legacy coverage debt stays visible without blocking status-evidence."""
+
+    def test_missing_state_coverage_lists_remain_visible_but_nonblocking(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            supplied, state = clean_workflow_state_fixture(Path(raw))
+            planted = json.loads(state.read_text(encoding="utf-8"))
+            planted["plan"] = [planted["plan"][0]]
+            state.write_text(json.dumps(planted), encoding="utf-8")
+
+            code, report = run_status_evidence_report(supplied, state)
+
+        self.assertEqual(code, 0, report)
+        self.assertCompleteReport(report)
+        self.assertTrue(report["missing_state_prefixes"], report)
+        self.assertTrue(report["missing_state_post_items"], report)
+        self.assertSelectedKeysEmpty(report)
+
+
+class StatusEvidenceSourceGuidanceTests(unittest.TestCase):
+    """The shipped source skills must describe the same scoped-gate contract."""
+
+    def test_source_guidance_distinguishes_legacy_debt_from_blocking_state_invariants(self) -> None:
+        for label, path in (
+            ("Claude", CLAUDE_AUTOPILOT_SKILL),
+            ("Codex", CODEX_AUTOPILOT_SKILL),
+        ):
+            with self.subTest(skill=label):
+                guidance = status_evidence_guidance_paragraph(path)
+                folded = guidance.lower()
+                self.assertIn("legacy structural coverage debt", folded)
+                self.assertIn("visible", folded)
+                self.assertIn("nonblocking", folded)
+                self.assertIn("current-run state invariants", folded)
+                self.assertIn("stop the run", folded)
+                for key in BLOCKING_STATE_INVARIANT_KEYS:
+                    self.assertIn(key, guidance)
+
+
+class TrackedPathEnumerationTests(unittest.TestCase):
+    """FR-013: tracked workflow/state discovery comes from the git index."""
+
+    def test_tracked_workflow_state_paths_use_git_index_contract(self) -> None:
+        stdout = (
+            "specs/zeta/ART-999-workflow.md\0"
+            "docs/unrelated.md\0"
+            "specs/alpha/autopilot-state.json\0"
+            "specs/alpha/ART-001-workflow.md\0"
+        ).encode("utf-8")
+        completed = subprocess.CompletedProcess(
+            args=["git", "ls-files", "-z"],
+            returncode=0,
+            stdout=stdout,
+            stderr=b"",
+        )
+
+        with mock.patch("subprocess.run", return_value=completed) as run:
+            paths = tracked_workflow_state_paths(REPO_ROOT)
+
+        run.assert_called_once_with(
+            ["git", "ls-files", "-z"],
+            cwd=REPO_ROOT,
+            shell=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+        )
+        self.assertEqual(
+            paths,
+            (
+                "specs/alpha/ART-001-workflow.md",
+                "specs/alpha/autopilot-state.json",
+                "specs/zeta/ART-999-workflow.md",
+            ),
+        )
+
+    def test_git_index_enumeration_failure_is_not_silently_skipped(self) -> None:
+        failure = subprocess.CalledProcessError(
+            returncode=128,
+            cmd=["git", "ls-files", "-z"],
+            stderr=b"fatal: not a git repository",
+        )
+
+        with mock.patch("subprocess.run", side_effect=failure):
+            with self.assertRaisesRegex(RuntimeError, "git ls-files -z failed"):
+                tracked_workflow_state_paths(REPO_ROOT)
+
+
+class AuthorityMatchedPairClassificationTests(unittest.TestCase):
+    """FR-012/FR-015: only tracked adjacent workflow/state authority pairs qualify."""
+
+    @staticmethod
+    def _write_state(root: Path, rel_path: str, workflow_file: str) -> None:
+        path = root / rel_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps({"workflow_file": workflow_file, "plan": _clean_state_plan()}),
+            encoding="utf-8",
+        )
+
+    def test_exact_tracked_adjacent_authority_match_is_eligible(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._write_state(
+                root,
+                "specs/alpha/autopilot-state.json",
+                "specs/alpha/ART-001-workflow.md",
+            )
+            result = classify_authority_matched_pairs(
+                root,
+                (
+                    "specs/alpha/ART-001-workflow.md",
+                    "specs/alpha/autopilot-state.json",
+                ),
+            )
+
+        self.assertEqual(
+            result,
+            {
+                "eligible": ((
+                    "specs/alpha/ART-001-workflow.md",
+                    "specs/alpha/autopilot-state.json",
+                ),),
+                "excluded": (),
+            },
+        )
+
+    def test_missing_adjacent_state_is_excluded_without_synthesis(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            result = classify_authority_matched_pairs(
+                Path(raw),
+                ("specs/missing/ART-002-workflow.md",),
+            )
+
+        self.assertEqual(result["eligible"], ())
+        self.assertEqual(
+            result["excluded"],
+            ({
+                "workflow": "specs/missing/ART-002-workflow.md",
+                "state": "specs/missing/autopilot-state.json",
+                "reason": "missing-adjacent-state",
+            },),
+        )
+
+    def test_mismatched_authority_is_excluded(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._write_state(
+                root,
+                "specs/mismatch/autopilot-state.json",
+                "specs/other/ART-003-workflow.md",
+            )
+            result = classify_authority_matched_pairs(
+                root,
+                (
+                    "specs/mismatch/ART-003-workflow.md",
+                    "specs/mismatch/autopilot-state.json",
+                ),
+            )
+
+        self.assertEqual(result["eligible"], ())
+        self.assertEqual(
+            result["excluded"],
+            ({
+                "workflow": "specs/mismatch/ART-003-workflow.md",
+                "state": "specs/mismatch/autopilot-state.json",
+                "reason": "workflow-file-mismatch",
+                "workflow_file": "specs/other/ART-003-workflow.md",
+            },),
+        )
+
+    def test_untracked_adjacent_state_is_excluded(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._write_state(
+                root,
+                "specs/untracked/autopilot-state.json",
+                "specs/untracked/ART-004-workflow.md",
+            )
+            result = classify_authority_matched_pairs(
+                root,
+                ("specs/untracked/ART-004-workflow.md",),
+            )
+
+        self.assertEqual(result["eligible"], ())
+        self.assertEqual(
+            result["excluded"],
+            ({
+                "workflow": "specs/untracked/ART-004-workflow.md",
+                "state": "specs/untracked/autopilot-state.json",
+                "reason": "untracked-adjacent-state",
+            },),
+        )
+
+    def test_matching_non_adjacent_state_is_not_synthesized(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._write_state(
+                root,
+                "specs/elsewhere/autopilot-state.json",
+                "specs/synthetic/ART-005-workflow.md",
+            )
+            result = classify_authority_matched_pairs(
+                root,
+                (
+                    "specs/elsewhere/autopilot-state.json",
+                    "specs/synthetic/ART-005-workflow.md",
+                ),
+            )
+
+        self.assertEqual(result["eligible"], ())
+        self.assertEqual(
+            result["excluded"],
+            ({
+                "workflow": "specs/synthetic/ART-005-workflow.md",
+                "state": "specs/synthetic/autopilot-state.json",
+                "reason": "missing-adjacent-state",
+            },),
+        )
+
+    def test_tracked_state_read_failure_is_not_silently_skipped(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            state = root / "specs/read/autopilot-state.json"
+            state.parent.mkdir(parents=True, exist_ok=True)
+            state.mkdir()
+
+            with self.assertRaisesRegex(OSError, "specs/read/autopilot-state.json"):
+                classify_authority_matched_pairs(
+                    root,
+                    (
+                        "specs/read/ART-006-workflow.md",
+                        "specs/read/autopilot-state.json",
+                    ),
+                )
+
+    def test_tracked_state_json_parse_failure_is_not_silently_skipped(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            state = root / "specs/bad-json/autopilot-state.json"
+            state.parent.mkdir(parents=True, exist_ok=True)
+            state.write_text("{not-json", encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "specs/bad-json/autopilot-state.json"):
+                classify_authority_matched_pairs(
+                    root,
+                    (
+                        "specs/bad-json/ART-007-workflow.md",
+                        "specs/bad-json/autopilot-state.json",
+                    ),
+                )
+
+
+class TrackedPairCorpusTests(StatusEvidenceReportAssertions, unittest.TestCase):
+    """FR-012/FR-014: live tracked authority-matched pairs stay valid."""
+
+    def test_tracked_authority_matched_pair_corpus_reconciles_and_passes(self) -> None:
+        tracked_paths = tracked_workflow_state_paths(REPO_ROOT)
+        workflow_candidates = tuple(
+            path for path in tracked_paths if path.endswith("-workflow.md")
+        )
+        classified = classify_authority_matched_pairs(REPO_ROOT, tracked_paths)
+        eligible = classified["eligible"]
+        exclusions = classified["excluded"]
+
+        invoked: list[tuple[str, str]] = []
+        passed: list[tuple[str, str]] = []
+        for workflow_ref, state_ref in eligible:
+            code, report = run_status_evidence_report(REPO_ROOT / workflow_ref, REPO_ROOT / state_ref)
+            invoked.append((workflow_ref, state_ref))
+            self.assertCompleteReport(report)
+            if code == 0:
+                passed.append((workflow_ref, state_ref))
+            else:
+                self.fail(f"tracked pair {workflow_ref} failed status-evidence: {report}")
+
+        self.assertGreater(len(workflow_candidates), 0)
+        self.assertGreater(len(eligible), 0)
+        self.assertEqual(len(invoked), len(eligible))
+        self.assertEqual(len(passed), len(eligible))
+        self.assertEqual(len(eligible) + len(exclusions), len(workflow_candidates))
+        self.assertEqual(
+            {entry["workflow"] for entry in exclusions},
+            set(workflow_candidates) - {workflow for workflow, _state in eligible},
+        )
+        for entry in exclusions:
+            with self.subTest(workflow=entry["workflow"]):
+                self.assertIn("reason", entry)
+                self.assertTrue(entry["reason"])
+
+
+class ART017StatusEvidenceNegativeTests(StatusEvidenceReportAssertions, unittest.TestCase):
+    """ART-017 isolated state-invariant controls for the status-evidence gate."""
+
+    def test_in_progress_errors_isolated_mutation_blocks_status_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            supplied, state = clean_workflow_state_fixture(Path(raw))
+            planted = json.loads(state.read_text(encoding="utf-8"))
+            planted["plan"][0]["status"] = "in_progress"
+            planted["plan"][1]["status"] = "in_progress"
+            state.write_text(json.dumps(planted), encoding="utf-8")
+
+            code, report = run_status_evidence_report(supplied, state)
+
+        self.assertCompleteReport(report)
+        self.assertOnlySelectedProblemKeyPopulated(report, "in_progress_errors")
+        self.assertEqual(code, 1, report)
+
+    def test_duplicate_state_steps_isolated_mutation_blocks_status_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            supplied, state = clean_workflow_state_fixture(Path(raw))
+            planted = json.loads(state.read_text(encoding="utf-8"))
+            planted["plan"].append(dict(planted["plan"][0]))
+            state.write_text(json.dumps(planted), encoding="utf-8")
+
+            code, report = run_status_evidence_report(supplied, state)
+
+        self.assertCompleteReport(report)
+        self.assertOnlySelectedProblemKeyPopulated(report, "duplicate_state_steps")
+        self.assertEqual(code, 1, report)
+
+    def test_state_order_errors_isolated_mutation_blocks_status_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            supplied, state = clean_workflow_state_fixture(Path(raw))
+            planted = json.loads(state.read_text(encoding="utf-8"))
+            planted["plan"][0], planted["plan"][1] = planted["plan"][1], planted["plan"][0]
+            state.write_text(json.dumps(planted), encoding="utf-8")
+
+            code, report = run_status_evidence_report(supplied, state)
+
+        self.assertCompleteReport(report)
+        self.assertOnlySelectedProblemKeyPopulated(report, "state_order_errors")
+        self.assertEqual(code, 1, report)
+
+
 class WorkflowAuthorityTests(unittest.TestCase):
     """`autopilot-state.json.workflow_file` is the authority on which workflow a run may touch.
 
@@ -194,28 +742,9 @@ class WorkflowAuthorityTests(unittest.TestCase):
     @staticmethod
     def _plant(root: Path, state_workflow_ref: str) -> tuple[Path, Path]:
         """Lay out a repository-shaped fixture and return (supplied workflow, state)."""
-        # A *file* marker, not a directory. ``_repository_root`` is satisfied by
-        # either, and a file is what a git worktree carries -- which is what every
-        # real autopilot run for this repository uses. Without a marker the
-        # comparison skips under FR-006 and every control here passes vacuously.
-        (root / ".git").write_text("gitdir: ../elsewhere/.git/worktrees/fixture\n", encoding="utf-8")
-        supplied = root / SUPPLIED_WORKFLOW_REF
-        supplied.parent.mkdir(parents=True, exist_ok=True)
-        # Passes status-evidence; fails coverage, which this rule does not gate on.
-        supplied.write_text(
-            workflow(("Specify", "✅ Complete"), body="G1 gate: PASS"), encoding="utf-8"
-        )
-        state = supplied.parent / "autopilot-state.json"
-        state.write_text(
-            json.dumps({
-                # Repository-relative against this root. An absolute value is
-                # rejected as malformed before the comparison is ever reached.
-                "workflow_file": state_workflow_ref,
-                "plan": [{"step": s, "status": "pending"} for s in PLAN_STEPS],
-            }),
-            encoding="utf-8",
-        )
-        return supplied, state
+        # Repository-relative against this root. An absolute value is rejected
+        # as malformed before the comparison is ever reached.
+        return clean_workflow_state_fixture(root, state_workflow_ref=state_workflow_ref)
 
     def _run(self, state_workflow_ref: str) -> tuple[int, dict]:
         """Invoke the guard exactly as the autopilot does, varying one value.
@@ -477,23 +1006,7 @@ class ProblemKeyClassificationTests(unittest.TestCase):
         root evaluate for real instead of taking their unresolvable-root skip.
         """
         with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            (root / ".git").write_text(
-                "gitdir: ../elsewhere/.git/worktrees/fixture\n", encoding="utf-8"
-            )
-            supplied = root / SUPPLIED_WORKFLOW_REF
-            supplied.parent.mkdir(parents=True, exist_ok=True)
-            supplied.write_text(
-                workflow(("Specify", "✅ Complete"), body="G1 gate: PASS"), encoding="utf-8"
-            )
-            state = supplied.parent / "autopilot-state.json"
-            state.write_text(
-                json.dumps({
-                    "workflow_file": SUPPLIED_WORKFLOW_REF,
-                    "plan": [{"step": s, "status": "pending"} for s in PLAN_STEPS],
-                }),
-                encoding="utf-8",
-            )
+            supplied, state = clean_workflow_state_fixture(Path(raw))
             # The autopilot's own invocation. The full report prints under every
             # rule, so scoping changes the exit code and never the key set.
             completed = subprocess.run(
@@ -590,6 +1103,13 @@ def build_suite() -> unittest.TestSuite:
         WorkflowStatusEvidenceTests,
         StateStatusSchemaTests,
         RuleScopingTests,
+        CleanStatusEvidenceControlTests,
+        LegacyCoverageAdvisoryTests,
+        StatusEvidenceSourceGuidanceTests,
+        TrackedPathEnumerationTests,
+        AuthorityMatchedPairClassificationTests,
+        TrackedPairCorpusTests,
+        ART017StatusEvidenceNegativeTests,
         WorkflowAuthorityTests,
         RepositoryRootResolutionTests,
         ProblemKeyClassificationTests,

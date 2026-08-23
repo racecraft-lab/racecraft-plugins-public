@@ -245,6 +245,9 @@ RULE_PROBLEM_KEYS = {
         "state_status_errors",
         "stage_mirror_errors",
         "workflow_authority_errors",
+        "in_progress_errors",
+        "duplicate_state_steps",
+        "state_order_errors",
     ),
     "coverage": (
         "missing_workflow_sections",
@@ -355,39 +358,25 @@ PROBLEM_KEY_INTENT: dict[str, dict[str, str]] = {
             "post-step list."
         ),
     },
-    # --- advisory-accidental: reported only, and that is a defect. All three come
-    # from ``validate_state``, which also produces two keys that ARE gated under
-    # the coverage rule, so the split is per key rather than per function. The
-    # shipped justification for advisory status is that the existing corpus
-    # predates the check; that holds for the coverage lists and fails here,
-    # because these are invariants of the state file the current run just wrote
-    # and no legacy artifact can violate them. Recorded, not armed: arming is
-    # ART-017's scope. ---
     "in_progress_errors": {
-        "verdict": "advisory-accidental",
+        "verdict": "gated",
         "reason": (
-            "Two plan steps cannot both be in progress in a state file this run just "
-            "wrote, so the corpus-predates justification cannot apply. Measured during "
-            "the ART-014 audit: against a state with two steps in progress the check "
-            "fires and names both, and the run still exits 0 under the scoped "
-            "invocation. ART-014 records the verdict; ART-017 arms it."
+            "A current run can have only one in-progress state step. Multiple active "
+            "steps make the machine-readable phase cursor ambiguous."
         ),
     },
     "duplicate_state_steps": {
-        "verdict": "advisory-accidental",
+        "verdict": "gated",
         "reason": (
-            "A plan step repeated inside a state file this run just wrote is an "
-            "invariant of that file, not a property of any legacy artifact, so the "
-            "corpus-predates justification cannot apply. ART-014 records the verdict; "
-            "ART-017 arms it."
+            "A current-run state plan must name each step once. Duplicate steps create "
+            "competing progress slots for the same phase or post item."
         ),
     },
     "state_order_errors": {
-        "verdict": "advisory-accidental",
+        "verdict": "gated",
         "reason": (
-            "The checkpoint ordering is an invariant of the state file this run just "
-            "wrote, so the corpus-predates justification cannot apply. ART-014 records "
-            "the verdict; ART-017 arms it."
+            "A current-run state plan must preserve phase order. Out-of-order steps "
+            "can make the durable state advance or rewind relative to the workflow."
         ),
     },
     # --- advisory-deliberate: reported only, and correctly so. ---
