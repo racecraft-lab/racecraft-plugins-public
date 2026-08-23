@@ -8,6 +8,7 @@
   Copyright (c) 2026 Anthropic PBC
 -->
 <!--
+  Slot: document-title | Fills: the browser title using the artifact kind, feature identifier, and feature name | Source: spec.md
   Slot: feature-header | Fills: the feature identifier, its name, and the one-line intent; keep id="feature-id" on the identifier and id="feature-name" on the name, because every export reads them to name the feature | Source: spec.md
   Slot: plan-stats | Fills: phase count, file count, projected size, and the flag the work sits behind | Source: plan.md
   Slot: phases | Fills: one entry per planned phase, each with its own anchor and a heading of any rank carrying the phase's visible label | Source: plan.md
@@ -160,7 +161,9 @@
 </script>
 <!-- GALLERY-HEAD:END -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- FILL:document-title:START -->
 <title>Implementation Plan — NIMBUS-101 Offline Draft Sync</title>
+<!-- FILL:document-title:END -->
 <style>
 /* BRAND-KIT:START */
 :root {

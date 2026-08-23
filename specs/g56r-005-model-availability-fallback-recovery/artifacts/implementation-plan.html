@@ -1,0 +1,1636 @@
+<!DOCTYPE html>
+<!--
+  Upstream repository: anthropics/html-effectiveness
+  Upstream file: 16-implementation-plan.html
+  License: MIT
+  License text: UPSTREAM-NOTICE.md
+  Modified derivative: yes — re-skinned with Racecraft brand tokens; not the upstream original
+  Copyright (c) 2026 Anthropic PBC
+-->
+<!--
+  Slot: document-title | Fills: the browser title using the artifact kind, feature identifier, and feature name | Source: spec.md
+  Slot: feature-header | Fills: the feature identifier, its name, and the one-line intent; keep id="feature-id" on the identifier and id="feature-name" on the name, because every export reads them to name the feature | Source: spec.md
+  Slot: plan-stats | Fills: phase count, file count, projected size, and the flag the work sits behind | Source: plan.md
+  Slot: phases | Fills: one entry per planned phase, each with its own anchor and a heading of any rank carrying the phase's visible label | Source: plan.md
+  Slot: data-flow | Fills: the drawing of the data path, its caption, and its text equivalent | Source: plan.md
+  Slot: mockups | Fills: the interface sketches the plan commits to, one panel each | Source: design-concept.md
+  Slot: risk-register | Fills: one row per risk, its severity, and its mitigation | Source: plan.md, research.md
+  Slot: task-inventory | Fills: the task groups, their counts, and what each group covers | Source: tasks.md
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- GALLERY-HEAD:START -->
+<meta http-equiv="Content-Security-Policy" content="base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'none'; connect-src 'none'">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Geist:wght@400;500;600&amp;family=Fira+Code:wght@400;500&amp;display=swap">
+<script>
+(function () {
+  'use strict';
+
+  var LIGHT = 'light';
+  var DARK = 'dark';
+  var STORAGE_KEY = 'speckit-pro:artifact-gallery:theme';
+  var LABEL = 'Dark theme';
+  var root = document.documentElement;
+
+  /* The read is wrapped because a browser may refuse storage to a local file and
+     throw. That catch covers the throw only: the closed set comparison below is
+     what validates the value, so a value written by some other local document is
+     discarded rather than swallowed. */
+  function storedTheme() {
+    var raw = null;
+    try {
+      raw = window.localStorage.getItem(STORAGE_KEY);
+    } catch (unavailable) {
+      raw = null;
+    }
+    if (raw === DARK) {
+      return DARK;
+    }
+    if (raw === LIGHT) {
+      return LIGHT;
+    }
+    return null;
+  }
+
+  function systemTheme() {
+    return window.matchMedia
+      && window.matchMedia('(prefers-color-scheme: dark)').matches ? DARK : LIGHT;
+  }
+
+  /* theme is always one of the two literals above, never the string read back.
+     The scheme is set alongside the attribute so the browser's own surfaces,
+     form widgets and scrollbars, follow the chosen theme rather than the
+     operating system preference. */
+  function applyTheme(theme) {
+    root.setAttribute('data-theme', theme);
+    root.style.setProperty('color-scheme', theme);
+  }
+
+  function rememberTheme(theme) {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, theme);
+    } catch (unavailable) {
+      /* Storage refused: the override still applies for this session and
+         nothing is surfaced to the reader as an error. */
+    }
+  }
+
+  /* Runs while the head is parsing, so the theme is on the root element before
+     first paint and a dark theme reader sees no flash of light.
+
+     data-theme is written on BOTH paths, not only when an override is stored.
+     Leaving it absent by default had two costs: the contract tells a template to
+     read data-theme to learn the current theme, and on the default path there was
+     nothing to read; and `active` held a snapshot of the operating-system theme
+     that nothing kept current. A reader who flipped their system theme after load
+     got a repainted page with a stale control — announced as "not pressed" on a
+     dark page — and a first click that changed nothing visible, so reaching the
+     other theme took two presses. */
+  var override = storedTheme();
+  var active = override || systemTheme();
+  applyTheme(active);
+
+  /* Reassigned once the control exists. A no-op until then, so the media
+     listener below can call it unconditionally — including before the control is
+     built, which is when an early system change would otherwise be lost. */
+  var announce = function () {};
+
+  /* While no override is stored the operating system is still the authority, so
+     a later change to it has to be followed rather than snapshotted. Storing an
+     override ends this: from then on the reader's choice wins, which is why the
+     listener checks `override` on every fire rather than being torn down. */
+  var media = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+  if (media) {
+    var followSystem = function (event) {
+      if (override) {
+        return;
+      }
+      active = event.matches ? DARK : LIGHT;
+      applyTheme(active);
+      announce();
+    };
+    if (media.addEventListener) {
+      media.addEventListener('change', followSystem);
+    } else if (media.addListener) {
+      media.addListener(followSystem);  /* older engines: removed from the platform, still shipped */
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var control = document.createElement('button');
+    control.type = 'button';
+    control.className = 'rc-theme-toggle';
+    /* The name is carried both as the visible label and as an explicit
+       accessible name, identical to each other, so it is stable across theme
+       positions and never derived from an icon glyph. The pressed state is what
+       changes between positions. */
+    control.textContent = LABEL;
+    control.setAttribute('aria-label', LABEL);
+    announce = function () {
+      control.setAttribute('aria-pressed', active === DARK ? 'true' : 'false');
+    };
+    announce();
+    control.addEventListener('click', function () {
+      active = active === DARK ? LIGHT : DARK;
+      /* The reader has now chosen, so the operating system stops being the
+         authority and the media listener above stands down. */
+      override = active;
+      applyTheme(active);
+      rememberTheme(active);
+      announce();
+    });
+    document.body.insertBefore(control, document.body.firstChild);
+
+    /* The Racecraft mark, decided once here so all 21 artifacts carry the same
+       artwork, and mounted only where a template asks for it — a template opts in
+       with an empty element carrying data-rc-brand-mark, so an artifact that has no
+       sensible place for a mark simply does not provide one. The neutral fill is
+       currentColor rather than a literal, so the mark follows the theme; the source
+       artwork hard-codes the light text value, which would be near-invisible on the
+       dark surface. Brand red is kept as-is: it is a primitive, identical in both
+       themes, and a logo mark carries no contrast obligation. */
+    var marks = document.querySelectorAll('[data-rc-brand-mark]');
+    for (var i = 0; i < marks.length; i += 1) {
+      if (!marks[i].firstElementChild) {
+        marks[i].innerHTML = '<svg class="rc-brand-mark" aria-hidden="true" focusable="false" viewBox="0 0 1250 1041" xmlns="http://www.w3.org/2000/svg"><g id="Layer-1"><g id="Group"><path id="Path" fill="none" stroke="none" d="M 469.2146 466.481079 C 475.719025 466.913025 479.789063 467.417053 483.859436 467.419189 C 564.027405 467.459656 644.205872 468.200745 724.358704 467.082886 C 758.932922 466.600647 793.701721 464.031494 827.943237 459.259766 C 887.535583 450.955139 931.979431 421.172302 952.822693 362.165222 C 966.562134 323.269104 955.263794 299.261963 915.212158 290.790527 C 885.175415 284.437683 854.049622 286.777832 823.338196 286.262207 L 551.617859 285.865051 C 547.658691 289.279785 544.522156 294.119812 541.683289 300.907715 C 518.750977 355.742432 494.148651 409.87854 469.2146 466.481079 Z"/><path id="path1" fill="currentColor" stroke="none" d="M 724.358704 467.082886 C 644.205872 468.200745 564.027405 467.459656 483.859436 467.419189 C 479.789063 467.417053 475.719025 466.913025 469.2146 466.481079 C 494.148651 409.87854 518.750977 355.742432 541.683289 300.907715 C 544.522156 294.119812 547.658691 289.279785 551.617859 285.865051 L 342.342896 285.559387 C 260.177399 469.638306 179.055176 654.182251 97.632225 838.592102 C 90.298721 855.201111 83.153061 871.893066 75 890.665649 C 81.568802 890.665649 86.0662 890.665649 90.563942 890.665649 C 149.156647 890.665649 207.754974 890.243164 266.338196 891.003296 C 278.828583 891.165405 283.973541 886.742615 288.748108 875.762939 C 327.223907 787.282959 366.557587 699.17688 405.200134 610.769043 C 409.149872 601.732727 413.847748 598.350708 423.879456 598.412598 C 495.594299 598.855835 567.316162 598.97644 639.028259 598.338074 C 651.588257 598.226196 656.575989 601.980713 660.146179 614.129578 C 686.022888 702.187134 712.782104 789.985413 739.30249 877.853333 C 741.274719 884.387329 741.97821 890.943481 752.262817 890.889709 C 827.716675 890.49646 903.174438 890.596313 978.629028 890.981812 L 868.0047 581.535278 L 827.943237 459.259766 C 793.701721 464.031494 758.932922 466.600647 724.358704 467.082886 Z"/><path id="path2" fill="#dc143c" stroke="none" d="M 1106.95105 175.728577 C 1083.181885 166.424988 1057.712158 158.817505 1032.460938 156.494568 C 977.976929 151.482605 923.15033 148.620117 868.431335 148.060852 C 749.383118 146.844177 630.314148 147.752014 511.253937 147.520203 C 459.6539 147.419922 416.363739 164.23291 387.122986 208.566345 C 371.954071 231.564331 356.125244 254.671082 344.959869 279.677917 C 344.085083 281.637085 343.217316 283.599854 342.342896 285.559387 L 551.617859 285.865051 L 823.338196 286.262207 C 854.049622 286.777832 885.175415 284.437683 915.212158 290.790527 C 955.263794 299.261963 966.562134 323.269104 952.822693 362.165222 C 931.979431 421.172302 887.535583 450.955139 827.943237 459.259766 L 868.0047 581.535278 C 890.488831 576.130737 911.725342 572.328369 932.138062 565.907288 C 1059.137085 525.957703 1144.790894 444.708496 1178.169067 313.813171 C 1195.045044 247.631958 1170.367798 200.550781 1106.95105 175.728577 Z"/></g></g></svg>';
+      }
+    }
+  });
+})();
+</script>
+<!-- GALLERY-HEAD:END -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- FILL:document-title:START -->
+<title>Implementation Plan — G56R-005 Model Availability, Fallback, and Recovery Simulation</title>
+<!-- FILL:document-title:END -->
+<style>
+/* BRAND-KIT:START */
+:root {
+  /* Declares support for both schemes so the browser's own surfaces — form
+   * controls, scrollbars, the default canvas — start from the reader's
+   * operating-system preference. This is NOT sufficient on its own: it
+   * resolves against the OS, not against this document's data-theme. The two
+   * data-theme blocks below therefore set color-scheme explicitly in each
+   * direction (FR-004). */
+  color-scheme: light dark;
+
+  /* ---- Surfaces — the 70% warm neutral, dominant by area ---------------- */
+  --rc-surface: #F7F6F4;
+  --rc-surface-raised: #FFFFFF;
+  --rc-surface-sunken: #F1F0EC;
+  --rc-surface-muted: #EDEBE6;
+
+  /* ---- Borders --------------------------------------------------------- */
+  /* Decorative only. Measures 1.13–1.34 here and 1.50–1.78 dark, so it never
+   * carries meaning — see prohibition rule 1. */
+  --rc-border-subtle: #E0DED9;
+  /* Meaningful non-text: form-control edges, state borders, the focus ring.
+   * Audited to at least 3:1 on all four surfaces in both themes. */
+  --rc-border-strong: #8A8578;
+
+  /* ---- Text ------------------------------------------------------------ */
+  --rc-text: #111827;
+  --rc-text-muted: #4B5563;
+  --rc-link: #2A6A99;
+
+  /* ---- TOKEN CLASSES (FR-025) ------------------------------------------
+   * A FUNCTIONAL token exists to serve a stated purpose, and must clear its
+   * contrast floor against every surface it may pair with. When it does not,
+   * its value is corrected.
+   *
+   * A BRAND PRIMITIVE is not re-valued by engineering to resolve a contrast
+   * failure. The need it cannot serve is routed instead to a functional
+   * sibling that can, and that sibling is named here beside it so an author
+   * reading one sees the other. Any restriction on a primitive is stated as
+   * narrowly as the measurement supports — the failing pairing, in the
+   * failing role, in the failing theme — never as a blanket ban.
+   *
+   * Before either remedy, check the SURFACE. Both classes above describe what
+   * to do about a foreground, and twice in this kit's history the foreground
+   * was not at fault: a raised surface borrowed from navigation chrome held
+   * brand red to 2.94, and a muted surface one step too dark held the accent
+   * to 2.99 and forced --rc-border-strong off its brand value. Correcting each
+   * surface lifted every foreground measured against it at once. Neither
+   * remedy below currently has a live instance, because both causes were
+   * removed at the surface. See corrections 2 and 3 in the header.
+   * -------------------------------------------------------------------- */
+
+  /* Brand primitive. 20% of the palette. Role: large text (at least 24px, or
+   * at least 18.66px bold) and meaningful non-text only — it is not body-safe
+   * in either theme. Clears the 3:1 non-text floor on all four surfaces here
+   * (3.16–3.76), so it carries no prohibition. */
+  --rc-accent: #3C89C6;
+
+  /* Brand primitive. 10% of the palette, punctuation-level emphasis. Role:
+   * large text and meaningful non-text only.
+   *
+   * Permitted on all four surfaces in BOTH themes — 4.19–4.99 light and
+   * 3.11–3.69 dark — so this primitive carries no prohibition of its own. It
+   * once did: against a raised surface of #1F2937 it measured 2.94. That was
+   * resolved by correcting the surface rather than by re-valuing the primitive
+   * or routing around it, which is why no exception is needed here. As a
+   * BACKGROUND carrying #FFFFFF text it measures 4.99 and is available in
+   * both themes. */
+  --rc-brand-red: #dc143c;
+
+  /* Functional sibling of --rc-brand-red: the AA-body-safe red, for red text
+   * at body size and for anywhere brand red cannot go. Re-valued per theme —
+   * that is what makes it functional rather than a primitive. */
+  --rc-danger-text: #C4102F;
+
+  /* ---- USE OF COLOUR (FR-021) ------------------------------------------
+   * A separate obligation from contrast and from the punctuation-level
+   * reservation above, and neither of those discharges it.
+   *
+   * Brand red must never be the SOLE visual means of conveying information,
+   * indicating an action, prompting a response, or distinguishing an element.
+   * Wherever red carries a status or a distinction, that meaning must also be
+   * available without colour — as text, a shape, a glyph, or a position — so
+   * it survives for a reader who cannot perceive the hue and in a monochrome
+   * print or screenshot. A red that clears its ratio still fails this rule if
+   * colour is the only thing setting the element apart.
+   *
+   * The reservation is a rule about HOW MUCH red is used and at what sizes.
+   * This is a rule about what red is allowed to MEAN on its own. Satisfying
+   * one says nothing about the other.
+   * -------------------------------------------------------------------- */
+
+  /* ---- Typefaces (FR-024) ----------------------------------------------
+   * The brand face leads every stack. font-family is a preference list and
+   * the first AVAILABLE face wins, so a system face placed first would shadow
+   * the brand face permanently.
+   *
+   * The display and body brand faces are both sans-serif, so their fallback
+   * stacks name DIFFERENT concrete faces rather than both collapsing onto the
+   * same system face. Where a platform has neither named fallback, hierarchy
+   * still holds: it is carried by semantic heading level, size, and weight
+   * below, never by typeface identity. Offline the rendering degrades in
+   * appearance only, never in structure.
+   * -------------------------------------------------------------------- */
+  --rc-font-display: 'Space Grotesk', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
+  --rc-font-body: 'Geist', 'Helvetica Neue', Arial, system-ui, sans-serif;
+  --rc-font-mono: 'Fira Code', ui-monospace, Menlo, Consolas, monospace;
+}
+
+/* Dark values follow the reader's operating-system preference by default. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --rc-surface: #1A1A1A;
+    --rc-surface-raised: #242424;
+    --rc-surface-sunken: #141414;
+    --rc-surface-muted: #1E1E1E;
+
+    --rc-border-subtle: #404040;
+    --rc-border-strong: #6B7280;
+
+    --rc-text: #E6E6E6;
+    --rc-text-muted: #9CA3AF;
+    --rc-link: #7CB3DD;
+
+    --rc-accent: #3C89C6;
+
+    /* Brand primitive, identical in both themes — a primitive is not
+     * re-valued. Clears the 3:1 non-text floor on all four surfaces here
+     * (3.11–3.69), so it carries no exception. */
+    --rc-brand-red: #dc143c;
+
+    /* Functional token, re-valued for this theme. */
+    --rc-danger-text: #FF6B85;
+  }
+}
+
+/* An explicit reader choice wins over the operating-system preference, and
+ * sets the browser's own scheme with it so native controls follow (FR-004). */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --rc-surface: #1A1A1A;
+  --rc-surface-raised: #242424;
+  --rc-surface-sunken: #141414;
+  --rc-surface-muted: #1E1E1E;
+
+  --rc-border-subtle: #404040;
+  --rc-border-strong: #6B7280;
+
+  --rc-text: #E6E6E6;
+  --rc-text-muted: #9CA3AF;
+  --rc-link: #7CB3DD;
+
+  --rc-accent: #3C89C6;
+
+  /* Brand primitive, identical in both themes. Clears the 3:1 non-text floor
+   * on all four surfaces here (3.11–3.69), so it carries no exception. */
+  --rc-brand-red: #dc143c;
+
+  --rc-danger-text: #FF6B85;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --rc-surface: #F7F6F4;
+  --rc-surface-raised: #FFFFFF;
+  --rc-surface-sunken: #F1F0EC;
+  --rc-surface-muted: #EDEBE6;
+
+  --rc-border-subtle: #E0DED9;
+  --rc-border-strong: #8A8578;
+
+  --rc-text: #111827;
+  --rc-text-muted: #4B5563;
+  --rc-link: #2A6A99;
+
+  --rc-accent: #3C89C6;
+  --rc-brand-red: #dc143c;
+  --rc-danger-text: #C4102F;
+}
+
+/* Hierarchy is carried by level, size, and weight so it survives the brand
+ * faces being unavailable (FR-024). */
+body {
+  background-color: var(--rc-surface);
+  color: var(--rc-text);
+  font-family: var(--rc-font-body);
+  font-size: 1rem;
+  line-height: 1.6;
+  /* The cross-theme colour change — the kit's one animation, and what the
+   * reduced-motion block below exists to neutralise. */
+  transition: background-color 160ms linear, color 160ms linear;
+}
+
+/* The display face carries h1 and h2 only. From h3 down the brand system uses the
+ * body face at a heavier weight, so the geometric display face against the humanist
+ * body face stays a deliberate contrast at the top of the page rather than becoming
+ * the texture of the whole document. Applying the display face to every level was a
+ * fidelity defect, caught against the brand source. */
+h1,
+h2 {
+  font-family: var(--rc-font-display);
+  line-height: 1.25;
+}
+
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--rc-font-body);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+h1 {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+h4,
+h5,
+h6 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+code,
+kbd,
+pre,
+samp {
+  font-family: var(--rc-font-mono);
+  font-size: 0.9375rem;
+}
+
+a {
+  color: var(--rc-link);
+}
+
+/* Every interactive element carries a visible keyboard focus indicator, and
+ * the indicator is never suppressed without an equivalent replacement
+ * (FR-023, WCAG 2.4.7). --rc-link clears the 3:1 non-text floor on every
+ * surface it can appear on in both themes. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+details:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--rc-link);
+  outline-offset: 2px;
+}
+
+/* A reader who asks for reduced motion gets none, including the cross-theme
+ * colour transition above (FR-023). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* The theme control the head block creates at run time.
+ *
+ * The block sets this class on the button it builds, so the kit has to carry the
+ * rule — otherwise the control renders as a browser default in every artifact and
+ * all 21 ports style it independently, which is exactly what embedding a shared
+ * block is meant to prevent. Ports may override; they should not have to.
+ *
+ * It is placed as the first element in the body, so it is positioned rather than
+ * left to sit above the content. Focus is deliberately not restyled here: the
+ * focus-visible rule above already covers `button`, and this control is a real
+ * button. */
+.rc-theme-toggle {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 10;
+  font: inherit;
+  font-size: 0.875rem;
+  line-height: 1;
+  padding: 0.5rem 0.75rem;
+  color: var(--rc-text);
+  background: var(--rc-surface-raised);
+  border: 1px solid var(--rc-border-strong);
+  border-radius: 0.375rem;
+  cursor: pointer;
+}
+
+.rc-theme-toggle:hover {
+  border-color: var(--rc-link);
+}
+
+/* The brand mark the head block mounts. Sized here so a template only supplies a
+ * container; the neutral areas inherit colour via currentColor, so the mark tracks
+ * the theme without a second copy of the artwork. */
+.rc-brand-mark {
+  display: block;
+  width: auto;
+  height: 2rem;
+  color: var(--rc-text);
+}
+/* BRAND-KIT:END */
+
+/* ==========================================================================
+ * Template styling. Everything below is this artifact's own, written outside
+ * the canonical marker pair above and never compared against it.
+ * ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  padding: 3.5rem 1.5rem 6rem;
+}
+
+.page {
+  max-width: 70rem;
+  margin: 0 auto;
+}
+
+/* ---------- header chrome ---------- */
+
+.page-head {
+  margin-bottom: 3.25rem;
+}
+
+.brandline {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  margin-bottom: 1.75rem;
+}
+
+.artifact-kind {
+  margin: 0;
+  font-family: var(--rc-font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rc-text-muted);
+}
+
+.eyebrow {
+  margin: 0 0 0.5rem;
+  font-family: var(--rc-font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rc-text-muted);
+}
+
+h1 {
+  margin: 0 0 0.75rem;
+  max-width: 46rem;
+}
+
+.lede {
+  margin: 0 0 1.25rem;
+  max-width: 46rem;
+  color: var(--rc-text-muted);
+}
+
+.sample-notice {
+  margin: 0;
+  max-width: 46rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--rc-border-strong);
+  border-radius: 0.5rem;
+  background: var(--rc-surface-muted);
+  color: var(--rc-text);
+  font-size: 0.9375rem;
+}
+
+/* ---------- section chrome ---------- */
+
+.section {
+  margin-bottom: 3.5rem;
+}
+
+.section > h2 {
+  margin: 0 0 0.5rem;
+}
+
+.section-intro {
+  margin: 0 0 1.5rem;
+  max-width: 46rem;
+  color: var(--rc-text-muted);
+  font-size: 0.9375rem;
+}
+
+/* ---------- plan stats ---------- */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin: 0;
+}
+
+@media (max-width: 56rem) {
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.stat {
+  background: var(--rc-surface-raised);
+  border: 1px solid var(--rc-border-strong);
+  border-radius: 0.75rem;
+  padding: 1rem 1.125rem;
+}
+
+.stat dt {
+  margin: 0 0 0.375rem;
+  font-family: var(--rc-font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rc-text-muted);
+}
+
+.stat dd {
+  margin: 0;
+  font-family: var(--rc-font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--rc-text);
+}
+
+.stat dd.is-mono {
+  font-family: var(--rc-font-mono);
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+/* ---------- phases ---------- */
+
+.milestone {
+  background: var(--rc-surface-raised);
+  border: 1px solid var(--rc-border-strong);
+  border-left-width: 4px;
+  border-radius: 0.75rem;
+  padding: 1.125rem 1.25rem;
+  margin-top: 1.75rem;
+}
+
+.milestone:first-child {
+  margin-top: 0;
+}
+
+.milestone .when {
+  margin: 0 0 0.25rem;
+  font-family: var(--rc-font-mono);
+  font-size: 0.75rem;
+  color: var(--rc-text-muted);
+}
+
+.milestone h3 {
+  margin: 0 0 0.375rem;
+}
+
+.milestone p.what {
+  margin: 0 0 0.875rem;
+  max-width: 44rem;
+  color: var(--rc-text-muted);
+  font-size: 0.9375rem;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tags li {
+  font-family: var(--rc-font-mono);
+  font-size: 0.75rem;
+  background: var(--rc-surface-muted);
+  border: 1px solid var(--rc-border-strong);
+  border-radius: 0.375rem;
+  padding: 0.125rem 0.5rem;
+  color: var(--rc-text);
+}
+
+/* ---------- objection disclosure, built by the script at load ---------- */
+
+.objection {
+  margin: 0.5rem 0 0 1.25rem;
+  padding: 0.625rem 0.875rem;
+  background: var(--rc-surface-sunken);
+  border: 1px solid var(--rc-border-strong);
+  border-radius: 0.5rem;
+}
+
+.objection-summary {
+  font-size: 0.875rem;
+  color: var(--rc-text);
+  cursor: pointer;
+}
+
+.objection-label {
+  display: block;
+  margin: 0.75rem 0 0.375rem;
+  font-size: 0.8125rem;
+  color: var(--rc-text-muted);
+}
+
+.objection-field {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  font-family: var(--rc-font-body);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--rc-text);
+  background: var(--rc-surface-raised);
+  border: 1px solid var(--rc-border-strong);
+  border-radius: 0.375rem;
+  resize: vertical;
+}
+
+/* ---------- the data-flow drawing ---------- */
+
+.diagram {
+  margin: 0;
+  padding: 1.5rem;
+  background: var(--rc-surface-raised);
+  border: 1px solid var(--rc-border-strong);
+  border-radius: 0.75rem;
+  overflow-x: auto;
+}
+
+.diagram svg {
+  display: block;
+  min-width: 48rem;
+}
+
+.caption {
+  margin-top: 0.875rem;
+  font-size: 0.8125rem;
+  color: var(--rc-text-muted);
+}
+
+/* Class hooks, one rule per role. A blanket selector would flatten the two-tier
+ * text hierarchy and erase the persistence node the drawing distinguishes. */
+
+.df-node {
+  fill: var(--rc-surface-raised);
+  stroke: var(--rc-border-strong);
+  stroke-width: 1.5;
+}
+
+/* The persistence node. Its fill stays one of the four audited surfaces, so the
+ * text on it has an audited row; the distinction is carried by the heavier
+ * boundary and by the STORE tag, never by colour. */
+.df-node-store {
+  fill: var(--rc-surface-sunken);
+  stroke: var(--rc-border-strong);
+  stroke-width: 3;
+}
+
+.df-label {
+  fill: var(--rc-text);
+  font-family: var(--rc-font-mono);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.df-sublabel {
+  fill: var(--rc-text-muted);
+  font-family: var(--rc-font-mono);
+  font-size: 10.5px;
+}
+
+.df-tag {
+  fill: var(--rc-text-muted);
+  font-family: var(--rc-font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+}
+
+.df-edge {
+  fill: none;
+  stroke: var(--rc-border-strong);
+  stroke-width: 1.5;
+}
+
+.df-edge-deferred {
+  fill: none;
+  stroke: var(--rc-accent);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+
+.df-edge-label {
+  fill: var(--rc-text-muted);
+  font-family: var(--rc-font-mono);
+  font-size: 10.5px;
+}
+
+/* An arrowhead renders in its own context and inherits no paint from the
+ * element referencing it, so each marker is painted by its own selector. */
+.df-arrowhead {
+  fill: var(--rc-border-strong);
+}
+
+.df-arrowhead-deferred {
+  fill: var(--rc-accent);
+}
+
+.df-text {
+  margin-top: 1.5rem;
+  max-width: 46rem;
+}
+
+.df-text h3 {
+  margin: 0 0 0.5rem;
+}
+
+.df-text p {
+  margin: 0;
+  color: var(--rc-text-muted);
+  font-size: 0.9375rem;
+}
+
+/* ---------- mockups ---------- */
+
+.mocks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.75rem;
+}
+
+@media (max-width: 56rem) {
+  .mocks {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mock {
+  background: var(--rc-surface-raised);
+  border: 1px solid var(--rc-border-strong);
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.mock h3 {
+  margin: 0;
+  padding: 0.75rem 1.125rem;
+  border-bottom: 1px solid var(--rc-border-strong);
+  background: var(--rc-surface-muted);
+  font-family: var(--rc-font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rc-text-muted);
+}
+
+.mock-body {
+  padding: 1.25rem;
+}
+
+.card-mock {
+  padding: 1rem;
+  background: var(--rc-surface-sunken);
+  border: 1px solid var(--rc-border-strong);
+  border-radius: 0.625rem;
+}
+
+.cm-title {
+  margin: 0 0 0.25rem;
+  font-weight: 600;
+  color: var(--rc-text);
+}
+
+.cm-meta {
+  margin: 0 0 0.875rem;
+  font-family: var(--rc-font-mono);
+  font-size: 0.75rem;
+  color: var(--rc-text-muted);
+}
+
+.cm-banner {
+  margin: 0 0 0.875rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--rc-border-strong);
+  border-radius: 0.375rem;
+  background: var(--rc-surface-muted);
+  font-size: 0.8125rem;
+  color: var(--rc-text);
+}
+
+.cm-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Purely decorative rules standing in for body copy, which is the one role the
+ * deliberately faint boundary token is audited for. */
+.cm-lines li {
+  height: 0.5rem;
+  border-radius: 0.25rem;
+  background: var(--rc-border-subtle);
+}
+
+.cm-lines li.is-short {
+  width: 60%;
+}
+
+.outbox {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.outbox li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.625rem;
+  padding: 0.625rem 0.75rem;
+  background: var(--rc-surface-sunken);
+  border: 1px solid var(--rc-border-strong);
+  border-radius: 0.5rem;
+}
+
+.outbox-state {
+  flex-shrink: 0;
+  font-family: var(--rc-font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rc-text-muted);
+}
+
+.outbox-txt {
+  font-size: 0.8125rem;
+  color: var(--rc-text);
+}
+
+/* ---------- risk register ---------- */
+
+.table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--rc-border-strong);
+  border-radius: 0.75rem;
+  background: var(--rc-surface-raised);
+}
+
+.risks {
+  width: 100%;
+  min-width: 40rem;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.risks th,
+.risks td {
+  padding: 0.875rem 1.125rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--rc-border-strong);
+}
+
+.risks tbody tr:last-child th,
+.risks tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.risks thead th {
+  background: var(--rc-surface-muted);
+  font-family: var(--rc-font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rc-text-muted);
+}
+
+.risks tbody th {
+  font-weight: 400;
+  color: var(--rc-text);
+}
+
+/* Severity: the word carries the meaning, the glyph run repeats it as a shape,
+ * and the column position repeats it again. Colour carries none of it. */
+.sev {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4375rem;
+  font-family: var(--rc-font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sev-bars {
+  letter-spacing: 0.05em;
+}
+
+.sev-high {
+  color: var(--rc-danger-text);
+}
+
+.sev-medium {
+  color: var(--rc-text);
+}
+
+.sev-low {
+  color: var(--rc-text-muted);
+}
+
+/* ---------- task inventory ---------- */
+
+.task-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.75rem;
+}
+
+@media (max-width: 61rem) {
+  .task-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.task-panel {
+  display: flex;
+  flex-direction: column;
+  padding: 1.125rem 1.25rem;
+  background: var(--rc-surface-raised);
+  border: 1px solid var(--rc-border-strong);
+  border-radius: 0.75rem;
+}
+
+.task-panel h3 {
+  margin: 0 0 0.25rem;
+  font-family: var(--rc-font-mono);
+  font-size: 0.8125rem;
+  color: var(--rc-text);
+}
+
+.task-count {
+  margin: 0 0 0.875rem;
+  font-family: var(--rc-font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rc-text-muted);
+}
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+  color: var(--rc-text-muted);
+}
+
+.task-id {
+  display: inline-block;
+  min-width: 3.25rem;
+  font-family: var(--rc-font-mono);
+  font-size: 0.75rem;
+  color: var(--rc-text);
+}
+
+/* ---------- export chrome ---------- */
+
+.takeaway {
+  max-width: 46rem;
+  padding: 1.5rem;
+  background: var(--rc-surface-raised);
+  border: 1px solid var(--rc-border-strong);
+  border-radius: 0.75rem;
+}
+
+.takeaway > h2 {
+  margin: 0 0 0.75rem;
+}
+
+.takeaway p {
+  margin: 0 0 0.625rem;
+  font-size: 0.9375rem;
+  color: var(--rc-text-muted);
+}
+
+.export-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1.25rem 0 0;
+}
+
+.export-button {
+  font-family: var(--rc-font-body);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 0.625rem 1rem;
+  color: var(--rc-text);
+  background: var(--rc-surface-muted);
+  border: 1px solid var(--rc-border-strong);
+  border-radius: 0.375rem;
+  cursor: pointer;
+}
+
+.export-button:hover {
+  border-color: var(--rc-link);
+}
+
+.export-status {
+  margin: 1rem 0 0;
+  min-height: 1.5rem;
+  font-size: 0.875rem;
+  color: var(--rc-text);
+}
+
+.fallback {
+  margin-top: 1rem;
+}
+
+.fallback-label {
+  display: block;
+  margin-bottom: 0.375rem;
+  font-size: 0.8125rem;
+  color: var(--rc-text-muted);
+}
+
+.fallback-field {
+  display: block;
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  font-family: var(--rc-font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--rc-text);
+  background: var(--rc-surface-sunken);
+  border: 1px solid var(--rc-border-strong);
+  border-radius: 0.375rem;
+  resize: vertical;
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="page-head">
+    <div class="brandline">
+      <span data-rc-brand-mark></span>
+      <p class="artifact-kind" id="artifact-title">Implementation Plan</p>
+    </div>
+<!-- FILL:feature-header:START -->
+<p class="eyebrow"><span id="feature-id">G56R-005</span> · draft pull request</p>
+    <h1 id="feature-name">Model Availability, Fallback, and Recovery Simulation</h1>
+    <p class="lede">Build deterministic, repository-local evidence for Codex model-route fallback, service attribution, bounded execution, and fake-home recovery without changing production routing.</p>
+    <p class="sample-notice">Planning artifact for the G56R-005 review boundary. The planned surface is simulation and validation code only.</p>
+<!-- FILL:feature-header:END -->
+  </header>
+
+  <section class="section" aria-labelledby="sec-plan-stats">
+    <h2 id="sec-plan-stats">At a glance</h2>
+    <p class="section-intro">The shape of the change before anyone reads a line of it.</p>
+<!-- FILL:plan-stats:START -->
+<dl class="stats">
+      <div class="stat"><dt>Phases</dt><dd>6</dd></div>
+      <div class="stat"><dt>Files touched</dt><dd>10</dd></div>
+      <div class="stat"><dt>Projected size</dt><dd>385 lines</dd></div>
+      <div class="stat"><dt>Behind flag</dt><dd class="is-mono">none — simulation only</dd></div>
+    </dl>
+<!-- FILL:plan-stats:END -->
+  </section>
+
+  <section class="section" aria-labelledby="sec-phases">
+    <h2 id="sec-phases">Phases</h2>
+    <p class="section-intro">Each phase carries its own anchor, so an objection you record names the phase it attaches to rather than restating it in prose.</p>
+    <div class="milestones" id="plan-phase-list">
+<!-- FILL:phases:START -->
+<div class="milestone" id="phases-foundation">
+        <p class="when">Phase 1 · T001–T004</p>
+        <h3>Foundation</h3>
+        <p class="what">Define the three JSON schemas, seed the deterministic fixture corpus, add the first failing identity and coverage tests, and register the focused test.</p>
+        <ul class="tags"><li>schemas</li><li>fixture corpus</li><li>suite manifest</li></ul>
+      </div>
+      <div class="milestone" id="phases-route-resolution">
+        <p class="when">Phase 2 · T005–T007</p>
+        <h3>Deterministic route resolution</h3>
+        <p class="what">Implement the Codex-local pure resolver with strict-override precedence, ordered route walking, loop-on-arrival detection, fixed diagnostics, and one terminal result.</p>
+        <ul class="tags"><li>pure resolver</li><li>ordered diagnostics</li><li>byte stability</li></ul>
+      </div>
+      <div class="milestone" id="phases-service-attribution">
+        <p class="when">Phase 3 · T008–T011</p>
+        <h3>Service reroute attribution</h3>
+        <p class="what">Keep service-originated reroutes separate from plugin reasons, calculate scoring eligibility, and prove that fallback changes only model and effort.</p>
+        <ul class="tags"><li>origin separation</li><li>score eligibility</li><li>treatment digest</li></ul>
+      </div>
+      <div class="milestone" id="phases-fake-home-recovery">
+        <p class="when">Phase 4 · T012–T016</p>
+        <h3>Fake-home recovery and optional helper</h3>
+        <p class="what">Derive the source roster, isolate the optional helper, identify canonical states, and prove atomic no-write, rollback, cleanup, and previous-known-good restoration.</p>
+        <ul class="tags"><li>fake home</li><li>rollback</li><li>roster identity</li></ul>
+      </div>
+      <div class="milestone" id="phases-bounded-harness">
+        <p class="when">Phase 5 · T017–T019</p>
+        <h3>Bounded sequential harness</h3>
+        <p class="what">Enforce retry, time, fan-out, context, cancellation, and escalation limits in one non-recursive state machine with deterministic counters.</p>
+        <ul class="tags"><li>closed bounds</li><li>no recursion</li><li>no HITL</li></ul>
+      </div>
+      <div class="milestone" id="phases-review-evidence">
+        <p class="when">Phase 6 · T020–T025</p>
+        <h3>Review evidence and verification</h3>
+        <p class="what">Complete FR/SC traceability, focused and full verification, generated-reference checks, scope proof, and the final review packet.</p>
+        <ul class="tags"><li>traceability</li><li>full suite</li><li>scope proof</li></ul>
+      </div>
+<!-- FILL:phases:END -->
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="sec-data-flow">
+    <h2 id="sec-data-flow">Data flow</h2>
+    <p class="section-intro">Where a write goes, and which part of the path is allowed to run late.</p>
+<!-- FILL:data-flow:START -->
+<figure class="diagram" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" aria-label="G56R-005 simulation evidence flow">
+      <svg viewBox="0 0 900 330" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="data-flow-title">
+        <title id="data-flow-title">Fixture policies flow through schema validation, route resolution, service attribution, bounded replay, and canonical route and recovery records</title>
+        <defs>
+          <marker id="df-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path class="df-arrowhead" d="M0,0 L10,5 L0,10 z"/>
+          </marker>
+          <marker id="df-arrow-deferred" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path class="df-arrowhead-deferred" d="M0,0 L10,5 L0,10 z"/>
+          </marker>
+        </defs>
+        <rect class="df-node" x="20" y="35" width="160" height="58" rx="10"/>
+        <text class="df-label" x="100" y="60" text-anchor="middle">Fixture policy</text>
+        <text class="df-sublabel" x="100" y="78" text-anchor="middle">canonical corpus</text>
+        <rect class="df-node" x="210" y="35" width="160" height="58" rx="10"/>
+        <text class="df-label" x="290" y="60" text-anchor="middle">Schema gate</text>
+        <text class="df-sublabel" x="290" y="78" text-anchor="middle">closed contracts</text>
+        <rect class="df-node" x="400" y="35" width="160" height="58" rx="10"/>
+        <text class="df-label" x="480" y="60" text-anchor="middle">Pure resolver</text>
+        <text class="df-sublabel" x="480" y="78" text-anchor="middle">ordered route walk</text>
+        <rect class="df-node" x="590" y="35" width="160" height="58" rx="10"/>
+        <text class="df-label" x="670" y="60" text-anchor="middle">Attribution</text>
+        <text class="df-sublabel" x="670" y="78" text-anchor="middle">service kept separate</text>
+        <rect class="df-node" x="400" y="205" width="160" height="58" rx="10"/>
+        <text class="df-label" x="480" y="230" text-anchor="middle">Fake-home adapter</text>
+        <text class="df-sublabel" x="480" y="248" text-anchor="middle">staged writes + rollback</text>
+        <rect class="df-node" x="590" y="205" width="160" height="58" rx="10"/>
+        <text class="df-label" x="670" y="230" text-anchor="middle">Bounded harness</text>
+        <text class="df-sublabel" x="670" y="248" text-anchor="middle">sequential counters</text>
+        <rect class="df-node df-node-store" x="780" y="112" width="100" height="92" rx="10"/>
+        <text class="df-tag" x="830" y="137" text-anchor="middle">EVIDENCE</text>
+        <text class="df-label" x="830" y="158" text-anchor="middle">Canonical</text>
+        <text class="df-label" x="830" y="177" text-anchor="middle">records</text>
+        <path class="df-edge" d="M180 64 L210 64" marker-end="url(#df-arrow)"/>
+        <path class="df-edge" d="M370 64 L400 64" marker-end="url(#df-arrow)"/>
+        <path class="df-edge" d="M560 64 L590 64" marker-end="url(#df-arrow)"/>
+        <path class="df-edge" d="M750 64 C 790 64, 805 85, 815 112" marker-end="url(#df-arrow)"/>
+        <path class="df-edge-deferred" d="M480 93 L480 205" marker-end="url(#df-arrow-deferred)"/>
+        <path class="df-edge" d="M560 234 L590 234" marker-end="url(#df-arrow)"/>
+        <path class="df-edge" d="M750 234 C 790 234, 805 215, 815 204" marker-end="url(#df-arrow)"/>
+        <text class="df-edge-label" x="485" y="153">qualified route</text>
+      </svg>
+      <figcaption class="caption">The solid top path produces a route report without filesystem writes. The lower path is entered only for qualified fake-home recovery scenarios and produces the Recovery Record after bounded restoration or failure reporting.</figcaption>
+    </figure>
+    <div class="df-text">
+      <h3>What the drawing says</h3>
+      <p>A canonical fixture first passes the closed schemas, then the pure resolver emits plugin diagnostics in fixed order while service reroute evidence stays in its own attribution record. Qualified recovery scenarios may enter the staged fake-home adapter; the bounded sequential harness controls every attempt and emits canonical route and recovery records with no host-specific paths or timestamps.</p>
+    </div>
+<!-- FILL:data-flow:END -->
+  </section>
+
+  <section class="section" aria-labelledby="sec-mockups">
+    <h2 id="sec-mockups">Mockups</h2>
+    <p class="section-intro">Enough to agree on placement and wording. Not pixel-final.</p>
+<!-- FILL:mockups:START -->
+<div class="mocks">
+      <div class="mock">
+        <h3>A · Route replay evidence</h3>
+        <div class="mock-body">
+          <div class="card-mock">
+            <p class="cm-title">preferred-absent-first-fallback-qualified</p>
+            <p class="cm-meta">plugin diagnostics · deterministic order</p>
+            <p class="cm-banner">model_absent → qualified_route</p>
+            <ul class="cm-lines"><li></li><li></li><li class="is-short"></li></ul>
+          </div>
+        </div>
+      </div>
+      <div class="mock">
+        <h3>B · Recovery record</h3>
+        <div class="mock-body">
+          <ul class="outbox">
+            <li><span class="outbox-state">Pre-state</span><span class="outbox-txt">Canonical manifest digest captured</span></li>
+            <li><span class="outbox-state">Rollback</span><span class="outbox-txt">Touched managed files restored in order</span></li>
+            <li><span class="outbox-state">Final</span><span class="outbox-txt">writes_state=false only on exact restoration</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+<!-- FILL:mockups:END -->
+  </section>
+
+  <section class="section" aria-labelledby="sec-risk-register">
+    <h2 id="sec-risk-register">Risks and mitigations</h2>
+    <p class="section-intro">Severity is stated in words as well as marked, so a single row lifted out of the table still reads.</p>
+<!-- FILL:risk-register:START -->
+<div class="table-scroll" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" aria-label="G56R-005 risks and mitigations">
+      <table class="risks">
+        <thead><tr><th scope="col">Risk</th><th scope="col">Severity</th><th scope="col">Mitigation</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Simulation work leaks into production routing, installer, payload, or frozen Claude behavior.</th><td><span class="sev sev-high"><span class="sev-bars" aria-hidden="true">●●●</span>High</span></td><td>Keep every executable change under the repository-only test surface and prove the final changed-file scope against FR-019 and FR-020.</td></tr>
+          <tr><th scope="row">Host paths, timestamps, modes, or traversal make replay evidence unstable or unsafe.</th><td><span class="sev sev-high"><span class="sev-bars" aria-hidden="true">●●●</span>High</span></td><td>Build canonical sorted manifests from fake-home-relative paths, content digests, modes, and classifications; reject traversal and symlink escapes.</td></tr>
+          <tr><th scope="row">A failed required-agent replacement leaves a partial fake-home install.</th><td><span class="sev sev-high"><span class="sev-bars" aria-hidden="true">●●●</span>High</span></td><td>Stage before apply, distinguish atomic no-write from touched-state failure, and require bounded rollback with explicit writes_state evidence.</td></tr>
+          <tr><th scope="row">The bundled Codex roster changes while fixtures silently keep an old count.</th><td><span class="sev sev-medium"><span class="sev-bars" aria-hidden="true">●●</span>Medium</span></td><td>Bind the corpus to a digest of the authoritative source roster and fail closed for fixture re-review on identity drift.</td></tr>
+        </tbody>
+      </table>
+    </div>
+<!-- FILL:risk-register:END -->
+  </section>
+
+  <section class="section" aria-labelledby="sec-task-inventory">
+    <h2 id="sec-task-inventory">Task inventory</h2>
+    <p class="section-intro">What the phases decompose into, grouped as the task list groups them.</p>
+<!-- FILL:task-inventory:START -->
+<div class="task-grid">
+      <div class="task-panel"><h3>Foundation</h3><p class="task-count">4 tasks · T001–T004</p><ul class="task-list"><li><span class="task-id">T001</span>Define route, report, and recovery schemas.</li><li><span class="task-id">T002</span>Seed the fallback and recovery corpus.</li><li><span class="task-id">T003</span>Add failing identity and coverage tests.</li><li><span class="task-id">T004</span>Register the focused suite entry.</li></ul></div>
+      <div class="task-panel"><h3>Route resolution</h3><p class="task-count">3 tasks · T005–T007</p><ul class="task-list"><li><span class="task-id">T005</span>Start with failing route scenarios.</li><li><span class="task-id">T006</span>Implement the pure ordered resolver.</li><li><span class="task-id">T007</span>Prove three-run byte stability.</li></ul></div>
+      <div class="task-panel"><h3>Service attribution</h3><p class="task-count">4 tasks · T008–T011</p><ul class="task-list"><li><span class="task-id">T008</span>Add reroute and scoring failures.</li><li><span class="task-id">T009</span>Separate service attribution.</li><li><span class="task-id">T010</span>Calculate score eligibility.</li><li><span class="task-id">T011</span>Compare treatment digests.</li></ul></div>
+      <div class="task-panel"><h3>Fake-home recovery</h3><p class="task-count">5 tasks · T012–T016</p><ul class="task-list"><li><span class="task-id">T012</span>Exercise helper and roster cases.</li><li><span class="task-id">T013</span>Exercise boundary and rollback cases.</li><li><span class="task-id">T014</span>Identify canonical fake-home states.</li><li><span class="task-id">T015</span>Implement staged recovery records.</li><li><span class="task-id">T016</span>Bind the authoritative source roster.</li></ul></div>
+      <div class="task-panel"><h3>Bounded harness</h3><p class="task-count">3 tasks · T017–T019</p><ul class="task-list"><li><span class="task-id">T017</span>Add budget and rejection failures.</li><li><span class="task-id">T018</span>Implement one sequential state machine.</li><li><span class="task-id">T019</span>Exclude host data from output.</li></ul></div>
+      <div class="task-panel"><h3>Review evidence</h3><p class="task-count">6 tasks · T020–T025</p><ul class="task-list"><li><span class="task-id">T020</span>Complete FR and SC traceability.</li><li><span class="task-id">T021</span>Run focused verification.</li><li><span class="task-id">T022</span>Run Layer 4.</li><li><span class="task-id">T023</span>Run the full suite.</li><li><span class="task-id">T024</span>Run generated and scope checks.</li><li><span class="task-id">T025</span>Prepare the final review packet.</li></ul></div>
+    </div>
+<!-- FILL:task-inventory:END -->
+  </section>
+
+  <section class="takeaway" aria-labelledby="sec-export">
+    <h2 id="sec-export">Take your objections with you</h2>
+    <p>Copy as prompt hands your objections to a coding agent. Copy as Markdown drops them into a pull-request comment.</p>
+    <p>Nothing you type here is saved. Reload this document, or close the tab, and every objection is gone.</p>
+    <p>If a copy does not reach your clipboard, the same text appears in a field below so you can copy it by hand.</p>
+    <div class="export-controls">
+      <button class="export-button" type="button" id="copy-prompt">Copy as prompt</button>
+      <button class="export-button" type="button" id="copy-markdown">Copy as Markdown</button>
+    </div>
+    <p class="export-status" id="export-status" role="status"></p>
+    <div class="fallback" id="fallback" hidden>
+      <label class="fallback-label" for="fallback-field" id="fallback-label">The export text, ready to select and copy by hand</label>
+      <textarea class="fallback-field" id="fallback-field" rows="10" spellcheck="false" aria-describedby="export-status"></textarea>
+    </div>
+  </section>
+
+</div>
+<script>
+(function () {
+  'use strict';
+
+  /* The slot these items belong to. It names the fill region, and an export
+     reference line opens with it. */
+  var SLOT = 'phases';
+
+  /* Template chrome, outside every fill region, so a fill cannot remove it. */
+  var PHASE_LIST_ID = 'plan-phase-list';
+  var ARTIFACT_TITLE_ID = 'artifact-title';
+
+  /* These two are the opposite case and the comment above does NOT cover them:
+     both live INSIDE the feature-header region, so a fill replaces them.
+
+     That is not a misplacement to correct by moving them out. It is forced. The
+     export must name the feature (export-payload-contract.md), it may carry
+     nothing the reader cannot see in the rendered document (FR-023), and a
+     template may not carry feature-specific content outside a slot (FR-015).
+     Those three together mean the only place the feature's identity can be read
+     from is inside the region that renders it.
+
+     So the authoring agent must preserve both identifiers when it fills
+     feature-header. That obligation is recorded where the agent will actually
+     read it: this file's own slot inventory, and spec.md *Dependencies* beside
+     the anchor-integrity and document-title obligations. featureLine() below
+     degrades honestly rather than silently if a fill drops them anyway. */
+  var FEATURE_ID_ID = 'feature-id';
+  var FEATURE_NAME_ID = 'feature-name';
+
+  var STATE_NOTE = 'note recorded';
+  var STATE_NO_NOTE = 'no note recorded';
+
+  /* Pinned in contracts/export-payload-contract.md. Three templates emit these
+     from three separate copies of this routine, so the wording is fixed there
+     rather than left to each of them. */
+  var EMPTY_PROMPT = 'No objection was recorded. There is nothing here to act on. Do not treat this as approval.';
+  var EMPTY_MARKDOWN = 'No objection was recorded. This record is not an approval.';
+  var COPY_FAILED = 'Copy failed. The text is in the field below. Select it and copy it by hand.';
+
+  /* The one line that separates the two kinds when something was recorded. The
+     header lines and the item reference lines are identical across both. */
+  var PROMPT_LEAD = 'Act on each objection recorded below. The value in parentheses is the anchor of the phase it attaches to.';
+  var MARKDOWN_LEAD = 'Objections recorded while reviewing this plan.';
+
+  var ANNOUNCE_DELAY = 60;
+  var FOCUS_DELAY = 120;
+
+  var items = [];
+  var status = document.getElementById('export-status');
+  var fallback = document.getElementById('fallback');
+  var fallbackField = document.getElementById('fallback-field');
+
+  function textOf(identifier) {
+    var element = document.getElementById(identifier);
+    return element ? element.textContent.replace(/\s+/g, ' ').trim() : '';
+  }
+
+  function labelOf(anchor) {
+    /* Any heading rank, not h3 alone. The slot inventory promises each phase an
+       anchor and a heading; it does not promise a rank, and FR-035b lets a
+       filled region choose the ranks it keeps. Reading only h3 would silently
+       degrade an export's item line to the anchor slug for a fill that titled
+       its items with an h4 — restating the anchor where FR-023 requires the
+       item's own visible label. */
+    var heading = anchor.querySelector('h1, h2, h3, h4, h5, h6');
+    var source = heading ? heading.textContent : anchor.textContent || anchor.id;
+    return source.replace(/\s+/g, ' ').trim();
+  }
+
+  function featureLine() {
+    /* The one line whose inputs a fill can delete — see FEATURE_ID_ID above.
+       If the identifiers survive, this is exactly the pinned form. If they do
+       not, fall back to the document's single top-level heading, which FR-035b
+       requires a filled region to keep, rather than emitting a hollow
+       "Feature:" that names nothing and reads as though it did. In the shipped
+       document the two are the same element, so the fallback and the primary
+       path agree by construction. */
+    var identifier = textOf(FEATURE_ID_ID);
+    var name = textOf(FEATURE_NAME_ID);
+    if (!name) {
+      var heading = document.querySelector('h1');
+      name = heading ? heading.textContent.replace(/\s+/g, ' ').trim() : '';
+    }
+    if (!identifier && !name) {
+      return 'Feature: not named in this document';
+    }
+    return 'Feature: ' + (identifier ? identifier + ' ' + name : name).trim();
+  }
+
+  /* An item carries a note when its field holds at least one non-whitespace
+     character, and only then. Whitespace alone is not an objection. */
+  function noteOf(item) {
+    return item.field.value.trim();
+  }
+
+  /* Read afresh on every call, so the state text follows the field value now
+     rather than its value when the disclosure was last collapsed. */
+  function refresh(item) {
+    var state = noteOf(item) === '' ? STATE_NO_NOTE : STATE_NOTE;
+    item.summary.textContent = 'Objection on ' + item.label + ': ' + state;
+  }
+
+  /* Built as document elements: each element created, each attribute set by
+     name, each string set through the text-valued property. No control markup
+     is assembled as a string anywhere in this file. */
+  function mount(anchorId) {
+    var anchor = document.getElementById(anchorId);
+    if (!anchor) {
+      return;
+    }
+
+    var label = labelOf(anchor);
+    var fieldId = anchorId + '-objection';
+
+    var details = document.createElement('details');
+    details.className = 'objection';
+
+    var summary = document.createElement('summary');
+    summary.className = 'objection-summary';
+    details.appendChild(summary);
+
+    var fieldLabel = document.createElement('label');
+    fieldLabel.className = 'objection-label';
+    fieldLabel.setAttribute('for', fieldId);
+    fieldLabel.textContent = 'Your objection to ' + label;
+    details.appendChild(fieldLabel);
+
+    var field = document.createElement('textarea');
+    field.className = 'objection-field';
+    field.setAttribute('id', fieldId);
+    field.setAttribute('rows', '3');
+    details.appendChild(field);
+
+    var item = { anchor: anchorId, label: label, field: field, summary: summary };
+    field.addEventListener('input', function () {
+      refresh(item);
+    });
+    refresh(item);
+
+    /* Immediately after the anchor, so tab order and reading order follow the
+       visible order. No positive tab index is set anywhere. */
+    anchor.parentNode.insertBefore(details, anchor.nextSibling);
+    items.push(item);
+  }
+
+  /* Identifiers are collected first, then each is resolved by identifier
+     lookup. A value is never concatenated into a selector string. */
+  function mountAll() {
+    var list = document.getElementById(PHASE_LIST_ID);
+    if (!list) {
+      return;
+    }
+    var identifiers = [];
+    var children = list.children;
+    var index;
+    for (index = 0; index < children.length; index += 1) {
+      if (children[index].id) {
+        identifiers.push(children[index].id);
+      }
+    }
+    for (index = 0; index < identifiers.length; index += 1) {
+      mount(identifiers[index]);
+    }
+  }
+
+  function recorded() {
+    var found = [];
+    var index;
+    for (index = 0; index < items.length; index += 1) {
+      var note = noteOf(items[index]);
+      if (note !== '') {
+        found.push({ label: items[index].label, anchor: items[index].anchor, note: note });
+      }
+    }
+    return found;
+  }
+
+  /* Every value below is read from the rendered document at the moment of
+     invocation, never from a constant written when this file was authored. */
+  function payload(kind, notes) {
+    var lines = [
+      'Artifact: ' + textOf(ARTIFACT_TITLE_ID),
+      featureLine(),
+      ''
+    ];
+    if (notes.length === 0) {
+      lines.push(kind === 'prompt' ? EMPTY_PROMPT : EMPTY_MARKDOWN);
+      return lines.join('\n');
+    }
+    lines.push(kind === 'prompt' ? PROMPT_LEAD : MARKDOWN_LEAD);
+    var index;
+    for (index = 0; index < notes.length; index += 1) {
+      lines.push('');
+      lines.push(SLOT + ' / ' + notes[index].label + '  (#' + notes[index].anchor + ')');
+      lines.push(notes[index].note);
+    }
+    return lines.join('\n');
+  }
+
+  function successMessage(count) {
+    if (count === 0) {
+      return 'Copied. The text says no objection was recorded.';
+    }
+    if (count === 1) {
+      return 'Copied. 1 objection is on the clipboard.';
+    }
+    return 'Copied. ' + count + ' objections are on the clipboard.';
+  }
+
+  /* Cleared and written afresh, because a status region whose text did not
+     change is not announced a second time. */
+  function announce(message) {
+    if (!status) {
+      return;
+    }
+    status.textContent = '';
+    window.setTimeout(function () {
+      status.textContent = message;
+    }, ANNOUNCE_DELAY);
+  }
+
+  /* One message for every failure mode, asserting no cause: this document
+     cannot tell a refused permission from an unfocused page from a browser
+     policy. The text is placed through the field value, never as markup, and
+     no second copy attempt is made. */
+  function reveal(text) {
+    announce(COPY_FAILED);
+    if (!fallback || !fallbackField) {
+      return;
+    }
+    fallbackField.value = text;
+    fallback.hidden = false;
+    window.setTimeout(function () {
+      fallbackField.focus();
+    }, FOCUS_DELAY);
+  }
+
+  function copy(kind) {
+    var notes = recorded();
+    var text = payload(kind, notes);
+    if (fallback) {
+      fallback.hidden = true;
+    }
+    var clipboard = window.navigator ? window.navigator.clipboard : null;
+    if (clipboard && typeof clipboard.writeText === 'function') {
+      try {
+        clipboard.writeText(text).then(
+          function () {
+            announce(successMessage(notes.length));
+          },
+          function () {
+            reveal(text);
+          }
+        );
+        return;
+      } catch (refused) {
+        reveal(text);
+        return;
+      }
+    }
+    reveal(text);
+  }
+
+  function wire(identifier, kind) {
+    var control = document.getElementById(identifier);
+    if (control) {
+      control.addEventListener('click', function () {
+        copy(kind);
+      });
+    }
+  }
+
+  mountAll();
+  wire('copy-prompt', 'prompt');
+  wire('copy-markdown', 'markdown');
+})();
+</script>
+</body>
+</html>

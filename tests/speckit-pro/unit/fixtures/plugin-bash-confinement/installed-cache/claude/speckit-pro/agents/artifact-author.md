@@ -89,6 +89,10 @@ Rules:
 - Write only between a `START` marker and its matching `END`. Never move,
   delete, or duplicate a marker.
 - Fill every slot the template's inventory declares.
+- Fill `document-title` with one static, HTML-escaped `<title>` element. Never
+  set `document.title` from an inline script: feature identifiers and names are
+  repository-derived data, and the gallery contract forbids interpolating that
+  data into script bodies.
 - Leave no placeholder text behind.
 - Content comes from the planning record. Never invent it.
 

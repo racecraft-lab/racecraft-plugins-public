@@ -178,6 +178,24 @@ only recovery path.
 
 #### Artifact generation: the `artifact-author` dispatch
 
+**Re-check worktree affinity immediately before dispatch.** Resolve the current
+Codex task's repository root with `git rev-parse --show-toplevel` from the
+session's default checkout, then separately resolve the repository root that
+owns the already-validated workflow path. The current task root **must equal the
+workflow-bound repository root** before `spawn_agent` runs. A per-command
+`workdir` or absolute path in the prompt does not repair a mismatch: the spawned
+agent inherits the task's workspace and writable roots, not a shell command's
+working directory.
+
+When the roots differ, this is **not an artifact-content gap**. It is a broken
+write-capable handoff, so STOP before artifact generation or pull-request
+refresh, write no gap sink, and direct the operator to start a Codex task rooted
+at the workflow-bound repository. Do not dispatch the author, commit, push, or
+mutate the pull request from the mismatched task. This boundary re-check is in
+addition to the startup guard: a resumed session or an operator-directed
+continuation must not turn a bypassed startup precondition into a normal
+fail-open page outcome.
+
 Step 1 is a single `spawn_agent` call on the installed `artifact-author` agent,
 followed by a bounded `wait_agent` loop that runs until its outcome list
 arrives. The agent receives the feature's planning record and the shipped
@@ -238,7 +256,10 @@ exhausts without a result, and a reply that cannot be read as an outcome list
 all land the same way: zero generated pages, and one whole-set gap carrying that
 reason. The precondition rule above governs the steps that halt the sequence,
 and generation is not among them, because fail-open below converts every
-shortfall this step can produce into an outcome. Step 2 runs regardless.
+shortfall this step can produce into an outcome. This applies only after the
+worktree-affinity precondition passed; a mismatched task root never reaches the
+dispatch and cannot be downgraded to a whole-set gap. Step 2 runs regardless of
+content-generation outcomes.
 
 #### Strict-mode block: the return happens before generation
 

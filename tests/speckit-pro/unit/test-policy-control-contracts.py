@@ -1014,9 +1014,7 @@ class CodexUnpinnedControlTests(unittest.TestCase):
             self.validate_exact_treatment(request_only)
 
 
-class CodexAdaptiveLadderTests(unittest.TestCase):
-    """G56R-004 FR-010, FR-011, FR-017, and SC-005: frozen Codex ladder."""
-
+class _CodexAdaptiveFixture:
     def setUp(self) -> None:
         self.assertIsNotNone(codex_policy_controls, "codex_policy_controls is not importable")
         self.module = codex_policy_controls
@@ -1024,6 +1022,13 @@ class CodexAdaptiveLadderTests(unittest.TestCase):
         self.registry = load_json(CODEX_REGISTRY_FIXTURE_PATH)
         self.control = control_of_kind(self.registry, "adaptive")
         self.adaptive = self.control["adaptive"]
+
+
+class CodexAdaptiveLadderTests(_CodexAdaptiveFixture, unittest.TestCase):
+    """G56R-004 FR-010, FR-011, FR-017, and SC-005: frozen Codex ladder."""
+
+    def setUp(self) -> None:
+        super().setUp()
         self.freeze = self.successor_freeze()
 
     def validate_ladder(
@@ -1118,16 +1123,8 @@ class CodexAdaptiveLadderTests(unittest.TestCase):
             self.validate_ladder(self.control, drifted_route)
 
 
-class CodexAdaptiveSignalResolutionTests(unittest.TestCase):
+class CodexAdaptiveSignalResolutionTests(_CodexAdaptiveFixture, unittest.TestCase):
     """G56R-004 FR-012, FR-013, and SC-006: Codex adaptive signal resolution."""
-
-    def setUp(self) -> None:
-        self.assertIsNotNone(codex_policy_controls, "codex_policy_controls is not importable")
-        self.module = codex_policy_controls
-        self.error = self.module.ControlContractError
-        self.registry = load_json(CODEX_REGISTRY_FIXTURE_PATH)
-        self.control = control_of_kind(self.registry, "adaptive")
-        self.adaptive = self.control["adaptive"]
 
     def signal_validator(self) -> object:
         self.assertTrue(
@@ -1229,16 +1226,11 @@ class CodexAdaptiveSignalResolutionTests(unittest.TestCase):
                     resolver(self.control, self.clean_row(**seeded))
 
 
-class CodexAdaptiveMovementAndBreachTests(unittest.TestCase):
+class CodexAdaptiveMovementAndBreachTests(_CodexAdaptiveFixture, unittest.TestCase):
     """G56R-004 FR-014 through FR-016 and SC-007: Codex adaptive replay semantics."""
 
     def setUp(self) -> None:
-        self.assertIsNotNone(codex_policy_controls, "codex_policy_controls is not importable")
-        self.module = codex_policy_controls
-        self.error = self.module.ControlContractError
-        self.registry = load_json(CODEX_REGISTRY_FIXTURE_PATH)
-        self.control = control_of_kind(self.registry, "adaptive")
-        self.adaptive = self.control["adaptive"]
+        super().setUp()
         self.ladder = list(self.adaptive["escalation_ladder"])
 
     def state(
