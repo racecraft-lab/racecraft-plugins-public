@@ -93,13 +93,16 @@ Added on the verification pass, which re-assessed the amended requirements
 rather than only confirming the first-pass gaps had closed. Both items are
 about text this remediation introduced.
 
-- [ ] CHK049 Does FR-007e's "every registered line the helper matched" agree with the helper envelope, which reports a singular `matched_line`? If a body carries two registered leads, the requirement removes both while the envelope names one, and the second survives into the analyst payload. [Conflict, Spec §FR-007e vs Contract §Recognition]
+- [x] CHK049 Does FR-007e's "every registered line the helper matched" agree with the helper envelope, which reports a singular `matched_line`? If a body carries two registered leads, the requirement removes both while the envelope names one, and the second survives into the analyst payload. [Resolved, Contract §Recognition — the envelope now reports `matched_lines`]
 - [x] CHK050 Does the FR-012b rule 2 write-time stop specify a report shape, given that FR-017 and FR-019 both fix one for their stops? [Resolved, Plan §Trust Boundary Enforcement 4]
 
-CHK049 is **not** closed here. Its resolution changes either a requirement or
-the helper contract, and the contract sits outside this remediation's edit
-surface, so it routes to consensus with the FR-007e item rather than being
-settled unilaterally.
+CHK049 was **not** closed here, because its resolution changes either a
+requirement or the helper contract, and the contract sat outside this
+remediation's edit surface. It closed later, at implementation task T001, which
+owns the contract: the envelope's singular `matched_line` became
+`matched_lines`, an ascending list of every matched registered line, so the
+requirement and the envelope now agree and no second lead survives into the
+analyst payload.
 
 ## Remediation Record
 

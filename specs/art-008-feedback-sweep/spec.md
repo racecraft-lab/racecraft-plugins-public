@@ -2202,7 +2202,7 @@ proceeds.
      surface before it is written to the file FR-004b passes by path. The
      marker survives by construction, and the reason is where it stands, not
      what it carries: the comment id in it **is** a token-shaped run — a node
-     id such as `IC_kwDOKQ7tDs5vXkZ9` is twenty-plus characters from the class
+     id such as `IC_kwDOKQ7tDs5vXkZ9Aq` is twenty-plus characters from the class
      with digits among them — and what keeps every rule off it is that FR-015
      puts the marker alone on line 1. That line is far under the bound, and no
      deny-set trigger — a PEM header, an `AWS_` key name, `bearer`, `_TOKEN=`

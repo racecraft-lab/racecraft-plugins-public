@@ -84,8 +84,9 @@ it assigns no class.
 | `export.template_id` | string \| null | Null when the matched sentence is shared and the template cannot be determined. |
 | `export.template_ambiguous` | boolean | True when the matched sentence is declared by more than one template (FR-007a). |
 | `export.kind` | enum | `prompt`, `markdown`, or `empty`. |
-| `export.matched_line` | integer | 1-based line number within the ten-line window, for evidence. |
-| `export.anchors` | array of string | Anchors parsed from the body, carried as detail on the row (FR-010). Empty for the `empty` kind. |
+| `export.matched_lines` | array of integer | Every matched registered line, as 1-based line numbers within the ten-line window, in ascending order, for evidence (FR-007f). |
+| `export.anchors` | array of string | Anchors parsed from the body, carried as detail on the row (FR-010). Each entry is the run after the `#` of a value whose whole matches `#[a-z0-9-]{1,64}`; at most sixty-four entries, the first sixty-four in body order (FR-007e). Empty for the `empty` kind. |
+| `export.anchors_dropped` | integer | Count of anchors dropped, whether non-conforming or conforming past the sixty-fourth (FR-007e). |
 
 **Recognition** matches registered whole lines against the body's **first ten
 lines**, after normalizing CRLF and CR to LF and stripping trailing whitespace.
