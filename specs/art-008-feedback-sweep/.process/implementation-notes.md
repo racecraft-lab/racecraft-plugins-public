@@ -582,3 +582,47 @@ were all in the probe, and the detail is worth keeping: the boundary vector used
 30-character run, where the 24-byte placeholder *shrinks* the line. The spec's
 named vector needs a 20-character run, where the placeholder grows it by 4 and
 8189 crosses the bound. Fixing the probe is what exercised the boundary math.
+
+### T048-T050, T052-T054, T087 (US2 consensus and commit documentation)
+
+**Deviations/Edge cases/Surprises:** Two rendering substitutions forced by the
+standing rules, one deliberate partial overlap left rather than rewriting
+committed US1 prose, and three findings.
+
+**144 fact probes, 144 on both sides, zero on one side only.** Nine probes missed
+on a first exact pass and resolved case-insensitively or on a word-order variant,
+which is the same false-gap effect that made the orchestrator's own earlier
+parity scan wrong. Whitespace-normalized comparison is the reliable method here.
+
+**The finding that mattered: a phantom completion the orchestrator created.**
+T051 and T086 were both marked `[x]` on the strength of their code halves, but
+each also owes documentation in both references, and neither had landed. The
+orchestrator's own dispatch caused it, by telling the code worker "the
+documentation half is NOT yours" and then marking the whole task complete.
+Verified independently before acting: `8193`, T086's transport-cut figure, appears
+zero times in either reference, and the only "refused target" hits are T052's
+write-point stop under rule 2 rather than T051's rule-1 classification wording.
+**Both marks were reverted to open.** This is exactly the class of defect the
+post-implementation phantom-completion check exists to catch, found early instead.
+
+T051's outstanding half is rule 1: an out-of-scope request takes `deferred` with
+the refused target named in the disposition and the reply, worded as recorded and
+not acted on, with no implication of future action. T086's is the amendment-leg
+call point beside the commit protocol: the introduced text through the surface
+before the write, the caller writing back what the surface returned, and the
+8192-byte transport cut at the first character boundary at or past byte 8193.
+Both are assigned to the next references wave, which writes the same two files.
+
+**Both stated baselines had drifted upward mid-run**, Layer 1 to 1511/1511 from
+1490 and `validate-codex-parity` to 87/87 from 85, consistent with a concurrent
+worker adding assertions. The worker reported the drift rather than normalizing
+it, which is the right instinct: a silently normalized baseline hides whether the
+delta was yours.
+
+**A preflight worth copying.** This worker asserted its constraints
+programmatically BEFORE splicing, blocking on failure: zero lines over 80
+columns, zero em dashes, zero hardcoded interpreter literals. It also verified
+after the write that the Codex-only runtime regex finds zero hits in the whole
+Codex reference, and that the bare literal `Bash` does not appear in it at all,
+since the Codex text names "a shell, web fetch, web search, and every installed
+MCP server" where the Claude text names the tools.

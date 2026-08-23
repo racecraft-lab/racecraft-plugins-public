@@ -117,6 +117,78 @@ The two readers differ only in the key they match, which is three near-duplicate
 lines rather than a generic scalar-row abstraction — the trade the constitution's
 KISS and YAGNI principle asks for until a third caller exists.
 
+## The Feedback Sweep Log
+
+The pull-request feedback sweep records what it handled in a table of its own,
+under a `Feedback Sweep Log` heading in the workflow file:
+
+```text
+### Feedback Sweep Log
+
+| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | IC_kwDOAAAAAA5vXkZ9Aq | review thread | octocat | amended | Tightened the retry bound in spec.md §4.2 | a1b2c3d | 7 |
+| 2 | IC_kwDOAAAAAA5vXkaB2c | conversation | author unresolved | answered | Answered in the reply; no artifact change |  |  |
+```
+
+**One row per handled comment.** A comment is handled once it has been assigned
+a class. A comment the trust filter dropped, one the self-reply rule dropped,
+and one whose consensus round returned no answer each take no class, so none of
+them gets a row. The row carries the comment id, the surface it was read from,
+its author, its class, its disposition, and the commit that answered it.
+
+**The `Disposition` cell escapes any pipe as `\|` and any newline as a line
+break.** The table readers in this codebase split rows on the bare pipe with no
+escape handling, so one unescaped pipe would shift `CRL #` out of its column
+and make the consensus link read the wrong cell. The comment id sits ahead of
+the disposition, so the skip key survives whatever that prose contains.
+
+**What fills that cell.** The classifier returns a `reason` of at most 512
+bytes as UTF-8, carrying neither a pipe nor a newline. That string crosses the
+redaction surface's `log_row` leg before any use, and what the leg returns is
+the only form that reaches the cell. The escaping above is applied last, to the
+leg's output.
+
+**An author that cannot be resolved is recorded explicitly** rather than left
+blank, because a blank cell is indistinguishable from a cell nobody wrote.
+
+**Every amendment additionally produces a Consensus Resolution Log row**, and
+`CRL #` names it by number. The link runs both ways at no extra column: that
+consensus row's item cell names the comment id. See
+[`consensus-protocol.md`](./consensus-protocol.md) §Logging for the `Sweep` row
+type.
+
+**Creation and placement rules.**
+
+| Rule | Detail |
+| --- | --- |
+| who creates it | the sweep, when the workflow file carries no Feedback Sweep Log: it writes the heading and the header row itself. The scaffold workflow template ships neither and is not changed to ship them |
+| one write | the heading, the header row, and every row that run writes land together in the single bookkeeping commit, never in a commit of their own ahead of it |
+| placement | match `Consensus Resolution Log` by its heading text at any level, and write `Feedback Sweep Log` at the **same** level, so the two are siblings |
+| no anchor | append `## Feedback Sweep Log` at the end of the file |
+| numbering | the leading `#` column starts at 1 and each new row takes one more than the highest number already in the table, so numbering continues across runs and never restarts |
+| sole store | this table is the only place the sweep record is kept; there is **no state-file mirror** |
+
+Creation is not a write of its own because that would put a commit carrying the
+heading and no rows into history. An empty table reads as "nothing has been
+handled", which is indistinguishable from a genuine clean first run, and that
+is the one direction the skip key cannot tolerate.
+
+Placement matches the anchor's level rather than assuming one, because the
+anchor is neither guaranteed to exist nor guaranteed to sit at `###`. Of the 69
+workflow files committed in this repository, 33 carry no Consensus Resolution
+Log heading at all; of the 36 that do, 31 write it at `###` and 5 at `##`. A
+fixed `###` written under a `##` anchor would nest the sweep log inside the
+consensus section, which reads as subordinate to it and is not what the
+`CRL #` cross-reference describes.
+
+**Sole store, deliberately**, following the `Draft PR` rule directly above.
+A second sink would introduce exactly the status-versus-evidence drift the Step
+1.1 coverage guard and the tree-wide CI gate already fail on. It is also what makes the record durable across
+archiving, and what lets a re-run read its own skip set back: the sweep skips
+any comment id that already carries a row here, and it reads that set from this
+table and nowhere else.
+
 ## `workflow_file` State Authority
 
 `autopilot-state.json.workflow_file` names the workflow a run is authorized

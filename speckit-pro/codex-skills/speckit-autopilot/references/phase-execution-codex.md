@@ -1108,6 +1108,171 @@ bounded by a human rather than by a counter, and **no attempt counter is
 introduced**: a per-comment counter would need the state-file mirror the log
 rules forbid.
 
+**Only `amended` routes into consensus.** `answered`, `deferred`, and `no
+action` never invoke it: those three are complete at classification, and a
+consensus round on any of them would spend four calls confirming a disposition
+already reached. **The sweep runs its own consensus.** Per amended item make
+**three** `spawn_agent` calls on `sweep-analyst`, the perspective (codebase,
+spec-context, domain) given **in the prompt rather than by role**, then **one
+more** `sweep-analyst` call in a synthesis prompt: four calls per item, all to
+the same definition.
+
+**Synthesis is not `consensus-synthesizer`.** That agent declares no `tools:`
+allowlist, so it inherits a shell, web fetch, web search, and every installed
+MCP server; routing sanitized reviewer text into it would reopen, one hop
+downstream, the exposure the classifier call above exists to close.
+`sweep-analyst` carries a closed read-only allowlist instead, which is also why
+**the domain perspective runs without web access**: it reasons from the
+repository and the handed block, never from the network.
+
+**What stays untouched is the routing table, not the file that holds it.** The
+sweep emits no category-tagged `Unresolved for consensus` item, so the routing
+table and the three phase-specific flows under it are never reached and
+Clarify, Checklist, and Analyze are unchanged. This slice does edit
+`consensus-protocol.md`, to add the `Sweep` row type, so say routing table
+untouched and never say that file untouched.
+
+**When consensus does not answer, the item goes to human review.** Three ways
+lead there: all three analysts disagreeing after Round 2, a Round-1 escape
+whose Round 2 still cannot resolve, and an analyst that fails its single retry.
+All three land on one behavior; only the report names which occurred. **No
+edit, no class, no sweep row**: `amended` would assert an edit nobody resolved
+and the other three a disposition nobody reached. Writing no Feedback Sweep Log
+row is the load-bearing part, because the skip key is that log's comment-id
+column and nothing else, so the absent row is what makes the comment a
+candidate again once a human has resolved it; a row here would record the
+sweep's own failure as the comment's disposition and make it permanent.
+
+**It surfaces as one Consensus Resolution Log row instead**, `Type` `Sweep`,
+its item cell naming the comment id, and that row **counts** toward the Round-2
+escape-rate metric. That log feeds no skip key, so a row there costs no
+idempotency. **It stops the run whether or not anything was amended**, because
+a run whose only unresolved item took no class would otherwise read as nothing
+to act on and walk into task work; when other items amended in the same run,
+the re-review stop and this one are the same stop and one report, not two.
+**Other items in the batch still complete**: items that resolved are edited,
+committed, recorded, and replied to normally, and the run stops after that.
+
+**One commit per amendment, never one run-wide commit.** A log row names its
+commit, an `amended` reply names the amending commit, and the re-review stop
+reports a commit range, and none of the three survives collapsing every
+amendment into a single blob. **Each amendment commit stages exactly the one
+artifact path it amended, never a directory**, so no stray file rides along.
+The subject is fixed in shape and carries no body:
+
+```text
+docs(<feature-id>): amend <artifact> for <comment-id>
+```
+
+The scope is the feature's roadmap id in lowercase, `<artifact>` is one of the
+three artifacts, and `<comment-id>` is the observation's id for the comment
+being amended. Every slot is an id or an enum, so no byte from a comment or
+from a resolution reaches `git log`, and the subject is **not a redaction
+leg**; the shape also satisfies the release-readiness title regex. **The hazard
+to watch: this is a Phase 7 setup step, and Phase 7 is the one phase whose
+existing commit path uses `git add -A`.** An amendment commit that inherited
+that pattern would stage the whole worktree and defeat the edit-surface
+allowlist at the last step, so name the one path.
+
+**The write point checks the resolved target before any amendment write**, as a
+named surface of the one registered helper operation and never a second
+registered operation. **A refusal is a verdict, not a diagnostic**:
+`allowed: false` is a successful read of that surface rather than an error from
+it, the surface answers and the stop belongs to the parent session, and the
+answer carries a `reason` that is either null or one of `outside_set`,
+`symlink_target`, and `symlink_parent`. **A refused target stops the run under
+the same report contract every stop in this sequence uses**, naming the
+condition, what already landed, and the resume path: name the **refused target
+path** and the **comment id it came from**, and the resume path is to fix the
+classification and re-run. **Reaching this check means classification already
+failed**, so it is a defect report and not a routine path, which is why it
+stops rather than downgrading the item quietly.
+
+**The push is part of the amendment step, not a step after it**: an amendment
+is not finished until its commit is on the remote. **A commit that succeeded
+whose push failed stops the run immediately, before that amendment's
+bookkeeping commit**, naming the unpushed commit's sha and the comment id.
+Ordering does the work: the bookkeeping commit already comes after the
+amendment's own commit, so stopping between them writes no log row, and because
+replies wait on bookkeeping commits landing, it posts no reply. **The local
+commit stands and is not unwound**, because the edit is correct work that
+consensus resolved; with no row written the skip key does not see the comment,
+so it is a candidate again on the next run. **A bookkeeping commit whose push
+fails stops the run the same way**, differing in one consequence: its row is
+already in the local workflow file which the sweep reads locally, so the skip
+key **does** see the comment, and the reply is what would otherwise be lost,
+recovered by reply reconciliation against the pull request. **No automatic
+retry on either push**, because retrying inside the run would multiply the
+window the per-amendment cadence exists to bound.
+
+**Log writes ride a separate bookkeeping commit and are never folded into an
+amendment commit.** The ordering is forced rather than stylistic: a row that
+names its commit cannot exist until that commit's sha does. The bookkeeping
+commit **stages the workflow file path alone, never the directory, and takes a
+`chore:` subject**. **The trigger is rows, not handled comments**: a run takes
+one when it wrote at least one row to **either** log, and takes none when it
+wrote none. Three consequences follow.
+
+- A run with zero amendments but at least one handled comment takes exactly
+  one, carrying every `answered`, `deferred`, and `no action` row.
+- A run that handles no comment but must write Consensus Resolution Log rows
+  also takes exactly one, carrying every such row.
+- A run that wrote no row to either log takes none. An empty commit there would
+  record nothing.
+
+**One bookkeeping commit per amendment, not per run**, which bounds the window
+in which an amendment is pushed but unrecorded to a single item.
+
+**The redaction surface has four legs and the set is closed at four**:
+`amendment`, `log_row`, and `reply` outbound, and `analyst_payload` inbound.
+Anything outside the four returns `invalid_input`. A fifth leg is code this
+feature does not budget for.
+
+**The `log_row` leg runs over every cell the sweep fills with prose** rather
+than with an id, an enum, a sha, or a count: the Feedback Sweep Log
+`Disposition` cell, the disposition text of the Consensus Resolution Log rows
+the sweep writes, and those rows' item cell, which names the comment id and
+then summarizes the item in prose the way every shipped row does. **One call
+per cell**, so an amended item makes three calls on this leg, a human-review
+item two, and any other class one. The classifier's bounded reason, which is
+what becomes the disposition, is capped at 512 bytes and carries neither a pipe
+nor a newline, because the readers of these tables split cells on the bare
+pipe. **The `log_row` call comes before the pipe and newline escaping, never
+after**, and the placeholder the surface writes contains neither character, so
+escaping never splits a placeholder and `CRL #` stays in its column.
+
+**Capture each `log_row` response at the call, before escaping.** Captured
+after escaping, the identity assertion downstream compares the wrong pair and
+passes on a run report the parent session built from its own pre-call copy. The
+order is: call the leg, capture what it returned, then escape the captured
+string on its way into the cell.
+
+**The `reply` leg runs over the filled reply body, marker included**, before
+that body is written to the file the reply write passes by path. The marker
+stands alone on line 1, no rule's trigger appears on that line, and neither
+line-granularity rule reaches a line ahead of its own: the bound replaces only
+the line it measured, and the key-header span runs forward from its own header
+line. The self-reply anchor therefore survives, and an over-bound disposition
+costs line 2 onward and never the marker.
+
+**The run report names, per affected comment, the leg, the rule, and the
+count**, on every path, and nothing else about the match: never the matched
+line, an excerpt of it, a redacted or truncated copy, or any encoded form,
+whether in the report, a log row, a reply, or the surface's own response. The
+disposition the report carries per comment is the `log_row` response for that
+comment's `Disposition` cell, before escaping, never the parent session's copy
+from before the call. The report goes to the operator's sink, the one the
+plan-stage stop report reaches, and never to the pull request.
+
+**Redaction never refuses a write and never discards a row.** A run with no
+amendment batches every row it wrote into one bookkeeping commit, so a refused
+commit would discard them all, and the next run would regenerate the same
+disposition and refuse again: a livelock on ordinary reviewer input. **A run
+with any event stops once every write has landed**, after the last push and the
+last reply, in the re-review report's shape with resume path re-run, one more
+condition under the same one-report contract; the next run finds the rows and
+the replies already in place, fires no event, and proceeds.
+
 **The feedback sweep's byproduct directory ignores itself.** The sweep writes
 its own transport files under `specs/<feature>/.process/feedback-sweep/`, and
 the first write into that
