@@ -80,7 +80,9 @@ JSON_STDOUT_PARITY_HELPERS = {"atomicity-route"}
 # bash-reference record. `helper-registry-dispatch` is the runner's own registry
 # view and never had a script; `resolve-autopilot-stage` is new behaviour with no
 # deleted `.sh` ancestor, and inventing a `source_script` for it would record a
-# lie in a provenance manifest.
+# lie in a provenance manifest. `sweep-pr-feedback` is new behaviour for the same
+# reason: it reads an observation the orchestrator already took, so there was
+# never a script to delete.
 NO_BASH_ANCESTOR = ("helper-registry-dispatch", "resolve-autopilot-stage", "sweep-pr-feedback")
 
 HELPER_CASES: dict[str, dict[str, object]] = {

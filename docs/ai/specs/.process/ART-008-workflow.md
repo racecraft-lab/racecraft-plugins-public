@@ -1259,11 +1259,12 @@ Before starting any task:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - Foundation | | | |
-| 2 - User Story 1 | | | |
-| 3 - User Story 2 | | | |
-| 4 - User Story 3 | | | |
-| 5 - Polish | | | |
+| 1 - Setup (design-artifact corrections) | 7 | 7 | Commit `819eb3547`. Contract and data model corrected: `matched_lines`, bounded anchors with `anchors_dropped`, `self_login` precondition, explicit never-inferred `feature_dir`, and full request/response/diagnostics for both named surfaces. Also closed CHK049, whose deferral expired when the contract edit landed, and lengthened the example node id to twenty-one characters so it meets the token-run floor the spec states for it. T094's contract already existed from the analyze remediation and was marked complete on verification |
+| 2 - Foundational (helper + registration) | 9 | 9 | Commit `ed1691cf4`. **76/76 on the harness.** Helper skeleton, three `read_only.py` touch points, registry entry, harness expectations, fixture-manifest record, canonical request fixture, and the operator's budget decision. **T110 added during implementation**: no shipped task owned the `HELPER_CASES` entry, without which every added helper raises `KeyError`. Two corrections the phase forced: registration row 6 gained its missing third clause, and row 2 was renamed `path_keys_by_helper` and narrowed to real path inputs, because every key it lists is rewritten by `normalize_path_input` and listing a reviewer comment body there would corrupt the bytes the golden envelope pins |
+| 3 - User Story 1 | 28 | | In progress |
+| 4 - User Story 2 | 30 | | |
+| 5 - User Story 3 | 5 | | |
+| 6 - Polish | 13 | | |
 
 ---
 

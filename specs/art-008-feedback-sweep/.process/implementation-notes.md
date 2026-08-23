@@ -217,3 +217,89 @@ remaining worker prompt, with scratchpad copies named as the substitute.
 
 Also recorded: the line-238 mismatch resolving from the ACTUAL side confirms the
 harness executes worktree source rather than the installed plugin cache.
+
+### T010
+
+**Deviations/Edge cases/Surprises:** Four declared deviations, all sequencing
+rather than substance: two module-level constants encoding the contract's closed
+surface set; an interim carry-all where the skeleton yields 2 candidates and 0
+excluded against the finished parse's 1 and 1, recorded in the docstring so no
+reader mistakes sequencing for policy; `check_target` and `redact` refused with
+exit 2 until T051 and T083; and runner-manifest staleness owned by T074/T075/T108.
+
+**The verification was a proof, not a code read.** A `sys.addaudithook` was armed
+before the call, watching `subprocess.Popen`, `os.system/exec/spawn/fork`,
+`socket.*`, `urllib.Request`, any `open` whose mode carried `w`, `a`, `x`, or `+`,
+and `os.remove/rename/mkdir`. Zero events on both the no-network and no-write
+invariants. Determinism was shown by two calls on independent deep copies
+compared byte for byte, and no-class-assigned by asserting none of the four
+vocabulary values appears in the serialized output. 25/25 checks.
+
+**One design decision prevents a tautology.** `observed` is counted from the
+observation, not from `len(candidates) + len(excluded)`. Had it been derived,
+T034's invariant could never fail. Same failure mode the checklist caught
+elsewhere in this spec.
+
+**One contract gap, since closed.** The contract said absence of `named_surface`
+means `parse` but said nothing about an explicit JSON `null`, and `.get()` cannot
+tell them apart. The orchestrator wrote the rule into the contract: explicit null
+reads as absence and routes to `parse`, while the empty string is a value outside
+the three and therefore `invalid_input`. The distinction is stated because the
+natural idiom `inputs.get("named_surface") or "parse"` silently routes `""` into
+the parse. The worker tested `is None`.
+
+### T008 and T013
+
+**Deviations/Edge cases/Surprises:** One deviation, a correctness improvement.
+`failure_classes` is `["invalid_input", "unsupported_path"]` rather than a copy of
+the sibling's four-value list, because all three Diagnostics tables in the
+contract emit only `invalid_input` and explicitly fold "missing required field"
+and "unreadable `workflow_file`" into it. Copying the sibling would have recorded
+failure classes the contract rejects, and nothing asserts that field's contents,
+so it would never have been caught.
+
+The worker also checked `.sh`, which the same test gates on at line 386 and which
+the prompt did not mention. No hit for either substring.
+
+**One masking effect worth knowing when reading a run.** At 75/76, no
+missing-helper failure appeared for T010 or T011, but they were masked rather
+than absent: the `HELPER_CASES` lookup raises before any dispatch reaches the
+helper. The dispatch path was not proven until T110 landed.
+
+Insertion was textual rather than a JSON round-trip, so all 18 existing records
+keep their bytes.
+
+### T011 and T110
+
+**Deviations/Edge cases/Surprises:** No deviations in the code. Phase 2 reached
+**76/76**. T110's counterfactual used a scratchpad `cp` restore rather than
+`git stash`, per the prohibition added after T012.
+
+**The most consequential finding of the phase.** The contract's "allowed-inputs
+entry" is not an allowlist, and no such map exists in the runner. Row 2 actually
+names `path_keys_by_helper` at `read_only.py:247`, and every key it lists is run
+through `request_path_display`, whose `normalize_path_input` is
+`str(raw).replace("\\", "/")`. A listed key is rewritten: backslashes become
+forward slashes, then the value is resolved as a path and re-rendered
+repo-relative.
+
+The hazard is T083, not T011. T083's instruction said it would add "the
+allowed-inputs entry for the surface's fields", and those fields include `text`,
+a raw reviewer comment body, and `lines`, an array of them. Either behind that
+map silently rewrites every backslash a reviewer typed, before the deny-set ever
+runs, corrupting the exact bytes FR-007g's golden envelope pins. The fixture
+would then pin corrupted bytes as correct.
+
+The worker flagged it rather than fixing it out of scope, and verified the two
+non-path keys already named were inert rather than trusting the trace:
+`pr_observation` is skipped by the `isinstance(value, str)` guard, and
+`self_login` round-trips unchanged on every shape that matters including the
+FR-006b whitespace-only case. The orchestrator applied the rule in both places it
+has to live: contract row 2 now reads `path_keys_by_helper` with real path inputs
+only, `{workflow_file, feature_dir}`, and T083's instruction in `tasks.md` now
+forbids `text` and `lines` with the reason attached.
+
+**One sequencing item carried forward.** The test-file edit restales the
+docs-site test reference page; `tests/speckit-pro/AGENTS.md` requires
+`pnpm --dir docs-site reference:generate` after a tracked `.py` change under that
+tree. T076 owns it. Correctly not run mid-phase with other workers in the tree.

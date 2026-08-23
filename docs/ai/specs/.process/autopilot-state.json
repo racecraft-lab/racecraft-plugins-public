@@ -7,7 +7,7 @@
   "stage": "implement",
   "prior_run_note": "completed_archived",
   "updated_at": "2026-08-23T00:00:00Z",
-  "active_step": null,
+  "active_step": "Phase 7: US1 Tests (T015-T024, T081, T082, T088, T095-T097)",
   "reclaimed_from": {
     "workflow_file": "docs/ai/specs/.process/ART-005-workflow.md",
     "spec_id": "ART-005",
@@ -914,5 +914,41 @@
       "the producer capitalizes the first letter of title_description when composing the title, which is also undocumented and made the H1 mismatch twice before it matched",
       "the spec-index checker false-positives while an excluded build artifact sits under specs/; regenerating naively bakes non-existent paths into the committed map, which passes locally and fails on a clean checkout"
     ]
+  },
+  "implementation": {
+    "test_baseline_observed": 7912,
+    "test_baseline_g0": {
+      "passed": 7659,
+      "total": 7659,
+      "toolchain_preflight": "ok",
+      "layers": {
+        "L1": "1469/1469",
+        "L4": "5998/5998",
+        "L5": "192/192"
+      },
+      "captured_at": "2026-08-20",
+      "command": "python3 tests/speckit-pro/run-all.py",
+      "note": "Preserved, never recomputed. A --stage implement run compares its count against this number."
+    },
+    "baseline_note": "G0 stays 7659 verbatim per Step 0.6e; 7912 is a non-blocking drift diagnostic, all of it from merged main.",
+    "groups": [
+      {
+        "group": "Phase 1 Setup",
+        "tasks": 7,
+        "complete": 7,
+        "commit": "819eb3547"
+      },
+      {
+        "group": "Phase 2 Foundational",
+        "tasks": 9,
+        "complete": 9,
+        "commit": "ed1691cf4",
+        "harness": "76/76"
+      }
+    ],
+    "tasks_added_during_implementation": [
+      "T110"
+    ],
+    "notes_record": "specs/art-008-feedback-sweep/.process/implementation-notes.md"
   }
 }
