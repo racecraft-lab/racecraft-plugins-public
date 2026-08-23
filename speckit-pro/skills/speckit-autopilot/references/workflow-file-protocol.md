@@ -184,10 +184,10 @@ consensus section, which reads as subordinate to it and is not what the
 
 **Sole store, deliberately**, following the `Draft PR` rule directly above.
 A second sink would introduce exactly the status-versus-evidence drift the Step
-1.1 coverage guard and the tree-wide CI gate already fail on. It is also what makes the record durable across
-archiving, and what lets a re-run read its own skip set back: the sweep skips
-any comment id that already carries a row here, and it reads that set from this
-table and nowhere else.
+1.1 coverage guard and the tree-wide CI gate already fail on. It is also what
+makes the record durable across archiving, and what lets a re-run read its own
+skip set back: the sweep skips any comment id that already carries a row here,
+and it reads that set from this table and nowhere else.
 
 ## `workflow_file` State Authority
 

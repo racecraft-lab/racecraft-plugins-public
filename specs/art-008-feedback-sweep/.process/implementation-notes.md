@@ -626,3 +626,45 @@ after the write that the Codex-only runtime regex finds zero hits in the whole
 Codex reference, and that the bare literal `Bash` does not appear in it at all,
 since the Codex text names "a shell, web fetch, web search, and every installed
 MCP server" where the Claude text names the tools.
+
+### T055-T058 (Feedback Sweep Log protocol)
+
+**Deviations/Edge cases/Surprises:** Five deviations, four findings. 47 facts,
+zero on one side only. Three initially read as Codex-only misses and were line-wrap
+artifacts, the same false-gap effect seen twice before; normalizing whitespace
+resolved all three.
+
+**Deviation 1 was correct and the orchestrator's brief was wrong.** The dispatch
+allowed two files; T058 names `consensus-protocol.md:617` explicitly, and the
+worker verified the Consensus Resolution Log row schema exists there and nowhere
+else, with the two workflow-file-protocol files only summarizing the column set
+and deferring to it as canonical. Satisfying T058 inside the allowed two would
+have created drift against the canonical schema. It wrote the correct file and
+flagged the conflict rather than silently obeying or silently disobeying.
+
+**Two omissions that improve the shipped prose.** It cut a `Stage` navigational
+contrast it had first written, because the Codex file has no `Stage` entry, so
+mirroring would dangle and keeping it would put one fact on one side only. And it
+omitted "including this feature's own" from the corpus statistic on both sides, on
+the ground that a fact about an in-flight feature does not belong in protocol
+prose that outlives the feature.
+
+**A false stale worth knowing about, and now in project memory.** `cmp` flags the
+Codex `dist/` copy as differing from source, but the diff is three link-prefix
+rewrites: the payload generator strips `../../skills/speckit-autopilot/references/`
+because in the packaged layout the Codex reference sits beside the Claude ones.
+`validate-codex-parity.py:172` calls `removeprefix("../../")` and resolves against
+the plugin root, so `../../` is the enforced convention even though it does not
+resolve as a filesystem path. A future agent would reasonably try to "fix" those
+links and would break both mechanisms.
+
+**One inference flagged rather than presented as fact.** The example row leaves
+`Commit` and `CRL #` empty for a non-amended comment. FR-013 does not say what
+those cells hold; the worker inferred it from T059 (only an `amended` reply names
+a commit) and FR-014 (only an amendment produces a consensus row), and labelled it
+an illustration rather than a normative claim.
+
+**Baselines were stale again**, measured at 1509/1509 before the worker touched
+anything against the 1490 the dispatch stated, and it proved its edits could not
+have moved `validate-codex-parity` by reading that validator's scan scope. Third
+worker in a row to report drift rather than normalize it.
