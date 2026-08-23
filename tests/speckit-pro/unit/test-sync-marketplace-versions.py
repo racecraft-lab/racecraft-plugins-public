@@ -80,13 +80,17 @@ class SyncMarketplaceVersionsTests(unittest.TestCase):
     def tearDown(self) -> None:
         self._tmp.cleanup()
 
+    def _marketplace(self, name: str, content: str) -> Path:
+        root = self.work / name
+        create_marketplace(root, content)
+        return root
+
     def test_sync_marketplace_versions_contract(self) -> None:
         self.assertTrue(SCRIPT.is_file(), f"file not found: {SCRIPT}")
         self.assertTrue(os.access(SCRIPT, os.X_OK), f"file not executable: {SCRIPT}")
 
-        root = self.work / "mismatch"
-        create_marketplace(
-            root,
+        root = self._marketplace(
+            "mismatch",
             """
             {
               "name": "test-marketplace",
@@ -105,8 +109,7 @@ class SyncMarketplaceVersionsTests(unittest.TestCase):
         with self.subTest(msg="Version mismatch — stdout reports the change"):
             self.assertIn("0.6.0", result.stdout)
 
-        root = self.work / "matching"
-        create_marketplace(root, '{"name":"test","plugins":[{"name":"my-plugin","source":"./my-plugin","description":"Test","version":"1.0.0"}]}')
+        root = self._marketplace("matching", '{"name":"test","plugins":[{"name":"my-plugin","source":"./my-plugin","description":"Test","version":"1.0.0"}]}')
         create_plugin(root, "my-plugin", "1.0.0")
         result = run_sync(root)
         with self.subTest(msg="Matching versions — both at 1.0.0, exit 0"):
@@ -116,17 +119,15 @@ class SyncMarketplaceVersionsTests(unittest.TestCase):
         with self.subTest(msg="Matching versions — marketplace.json unchanged"):
             self.assertEqual(marketplace_version(root), "1.0.0")
 
-        root = self.work / "missing-plugin"
-        create_marketplace(root, '{"name":"test","plugins":[{"name":"ghost-plugin","source":"./ghost-plugin","description":"No plugin"}]}')
+        root = self._marketplace("missing-plugin", '{"name":"test","plugins":[{"name":"ghost-plugin","source":"./ghost-plugin","description":"No plugin"}]}')
         result = run_sync(root)
         with self.subTest(msg="Missing plugin.json — exit 1"):
             self.assertEqual(result.returncode, 1)
         with self.subTest(msg="Missing plugin.json — stderr has error message"):
             self.assertIn("not found", result.stderr)
 
-        root = self.work / "multi"
-        create_marketplace(
-            root,
+        root = self._marketplace(
+            "multi",
             '{"name":"test","plugins":[{"name":"plugin-a","source":"./plugin-a","version":"1.0.0"},{"name":"plugin-b","source":"./plugin-b","version":"2.0.0"}]}',
         )
         create_plugin(root, "plugin-a", "1.1.0")
@@ -150,8 +151,7 @@ class SyncMarketplaceVersionsTests(unittest.TestCase):
         with self.subTest(msg="Malformed marketplace.json — exit 1"):
             self.assertEqual(result.returncode, 1)
 
-        root = self.work / "bad-plugin"
-        create_marketplace(root, '{"name":"test","plugins":[{"name":"bad-plugin","source":"./bad-plugin"}]}')
+        root = self._marketplace("bad-plugin", '{"name":"test","plugins":[{"name":"bad-plugin","source":"./bad-plugin"}]}')
         bad_plugin = root / "bad-plugin" / ".claude-plugin" / "plugin.json"
         bad_plugin.parent.mkdir(parents=True)
         bad_plugin.write_text("{ NOT VALID JSON ]\n", encoding="utf-8")
@@ -159,8 +159,7 @@ class SyncMarketplaceVersionsTests(unittest.TestCase):
         with self.subTest(msg="Malformed plugin.json — exit 1"):
             self.assertEqual(result.returncode, 1)
 
-        root = self.work / "no-jq"
-        create_marketplace(root, '{"name":"test","plugins":[{"name":"my-plugin","source":"./my-plugin","version":"0.1.0"}]}')
+        root = self._marketplace("no-jq", '{"name":"test","plugins":[{"name":"my-plugin","source":"./my-plugin","version":"0.1.0"}]}')
         create_plugin(root, "my-plugin", "0.2.0")
         result = run_sync(root, env={"PATH": "/usr/bin:/bin"})
         with self.subTest(msg="No jq dependency — exit 0"):
@@ -176,16 +175,14 @@ class SyncMarketplaceVersionsTests(unittest.TestCase):
         with self.subTest(msg="Wrong cwd — stderr mentions marketplace.json"):
             self.assertIn("marketplace.json", result.stderr)
 
-        root = self.work / "external-source"
-        create_marketplace(root, '{"name":"test","plugins":[{"name":"ext","source":"https://github.com/example/plugin.git"}]}')
+        root = self._marketplace("external-source", '{"name":"test","plugins":[{"name":"ext","source":"https://github.com/example/plugin.git"}]}')
         result = run_sync(root)
         with self.subTest(msg="External git URL source — skipped without error, exit 0"):
             self.assertEqual(result.returncode, 0, result.stderr)
         with self.subTest(msg="Non-relative source — stderr mentions skipping"):
             self.assertIn("Skipping", result.stderr)
 
-        root = self.work / "missing-version"
-        create_marketplace(root, '{"name":"test","plugins":[{"name":"noversion","source":"./noversion"}]}')
+        root = self._marketplace("missing-version", '{"name":"test","plugins":[{"name":"noversion","source":"./noversion"}]}')
         create_plugin(root, "noversion", None)
         result = run_sync(root)
         with self.subTest(msg="No version in plugin.json — exit 1"):
@@ -193,8 +190,7 @@ class SyncMarketplaceVersionsTests(unittest.TestCase):
         with self.subTest(msg="No version in plugin.json — stderr mentions version"):
             self.assertIn("version", result.stderr)
 
-        root = self.work / "bad-semver"
-        create_marketplace(root, '{"name":"test","plugins":[{"name":"twopart","source":"./twopart"}]}')
+        root = self._marketplace("bad-semver", '{"name":"test","plugins":[{"name":"twopart","source":"./twopart"}]}')
         create_plugin(root, "twopart", "1.0")
         result = run_sync(root)
         with self.subTest(msg="Version '1.0' (two-part) — exit 1"):
@@ -202,8 +198,7 @@ class SyncMarketplaceVersionsTests(unittest.TestCase):
         with self.subTest(msg="Version '1.0' — stderr mentions semver"):
             self.assertIn("semver", result.stderr)
 
-        root = self.work / "bad-semver-alpha"
-        create_marketplace(root, '{"name":"test","plugins":[{"name":"alpha","source":"./alpha"}]}')
+        root = self._marketplace("bad-semver-alpha", '{"name":"test","plugins":[{"name":"alpha","source":"./alpha"}]}')
         create_plugin(root, "alpha", "abc")
         result = run_sync(root)
         with self.subTest(msg="Version 'abc' — exit 1"):
@@ -211,22 +206,19 @@ class SyncMarketplaceVersionsTests(unittest.TestCase):
         with self.subTest(msg="Version 'abc' — stderr mentions semver"):
             self.assertIn("semver", result.stderr)
 
-        root = self.work / "error-routing"
-        create_marketplace(root, '{"name":"test","plugins":[{"name":"missing","source":"./missing"}]}')
+        root = self._marketplace("error-routing", '{"name":"test","plugins":[{"name":"missing","source":"./missing"}]}')
         result = run_sync(root)
         with self.subTest(msg="Error scenario (missing plugin.json) — stdout is empty"):
             self.assertEqual(result.stdout, "")
         with self.subTest(msg="Error scenario — stderr has error message"):
             self.assertIn("Error", result.stderr)
 
-        root = self.work / "propagate-missing-plugin"
-        create_marketplace(root, '{"name":"test","plugins":[{"name":"missing","source":"./missing"}]}')
+        root = self._marketplace("propagate-missing-plugin", '{"name":"test","plugins":[{"name":"missing","source":"./missing"}]}')
         result = run_sync(root)
         with self.subTest(msg="Missing plugin.json → exit 1"):
             self.assertEqual(result.returncode, 1)
 
-        root = self.work / "propagate-malformed-marketplace"
-        create_marketplace(root, "{ NOT JSON")
+        root = self._marketplace("propagate-malformed-marketplace", "{ NOT JSON")
         result = run_sync(root)
         with self.subTest(msg="Malformed marketplace → exit 1"):
             self.assertEqual(result.returncode, 1)
@@ -237,24 +229,21 @@ class SyncMarketplaceVersionsTests(unittest.TestCase):
         with self.subTest(msg="No marketplace.json → exit 1"):
             self.assertEqual(result.returncode, 1)
 
-        root = self.work / "missing-source"
-        create_marketplace(root, '{"name":"test","plugins":[{"name":"no-source","description":"No source"}]}')
+        root = self._marketplace("missing-source", '{"name":"test","plugins":[{"name":"no-source","description":"No source"}]}')
         result = run_sync(root)
         with self.subTest(msg="Entry without source field — exit 1"):
             self.assertEqual(result.returncode, 1)
         with self.subTest(msg="Missing source — stderr mentions source"):
             self.assertIn("source", result.stderr)
 
-        root = self.work / "empty-plugins"
-        create_marketplace(root, '{"name":"test","plugins":[]}')
+        root = self._marketplace("empty-plugins", '{"name":"test","plugins":[]}')
         result = run_sync(root)
         with self.subTest(msg="Empty plugins array — exit 0"):
             self.assertEqual(result.returncode, 0, result.stderr)
         with self.subTest(msg="Empty plugins array — stderr has info message"):
             self.assertIn("No plugins", result.stderr)
 
-        root = self.work / "add-version"
-        create_marketplace(root, '{"name":"test","plugins":[{"name":"new-plugin","source":"./new-plugin","description":"Brand new"}]}')
+        root = self._marketplace("add-version", '{"name":"test","plugins":[{"name":"new-plugin","source":"./new-plugin","description":"Brand new"}]}')
         create_plugin(root, "new-plugin", "1.0.0")
         result = run_sync(root)
         with self.subTest(msg="Marketplace entry without version — sync adds version field, exit 0"):
@@ -264,36 +253,31 @@ class SyncMarketplaceVersionsTests(unittest.TestCase):
         with self.subTest(msg="Marketplace entry without version — stdout reports the addition"):
             self.assertIn("1.0.0", result.stdout)
 
-        root = self.work / "traversal"
-        create_marketplace(root, '{"name":"test","plugins":[{"name":"evil","source":"./../etc/passwd"}]}')
+        root = self._marketplace("traversal", '{"name":"test","plugins":[{"name":"evil","source":"./../etc/passwd"}]}')
         result = run_sync(root)
         with self.subTest(msg="Source with .. segment — exit 1"):
             self.assertEqual(result.returncode, 1)
         with self.subTest(msg="Path traversal source — stderr mentions illegal .. segments"):
             self.assertIn("..", result.stderr)
 
-        root = self.work / "nested-traversal"
-        create_marketplace(root, '{"name":"test","plugins":[{"name":"sneaky","source":"./foo/../../../etc"}]}')
+        root = self._marketplace("nested-traversal", '{"name":"test","plugins":[{"name":"sneaky","source":"./foo/../../../etc"}]}')
         result = run_sync(root)
         with self.subTest(msg="Source with nested .. segment — exit 1"):
             self.assertEqual(result.returncode, 1)
 
-        root = self.work / "non-array"
-        create_marketplace(root, '{"name":"test","plugins":"not-an-array"}')
+        root = self._marketplace("non-array", '{"name":"test","plugins":"not-an-array"}')
         result = run_sync(root)
         with self.subTest(msg="plugins field is a string (not array) — exit 1"):
             self.assertEqual(result.returncode, 1)
         with self.subTest(msg="plugins is string — stderr mentions not an array"):
             self.assertIn("not an array", result.stderr)
 
-        root = self.work / "object-plugins"
-        create_marketplace(root, '{"name":"test","plugins":{"foo":"bar"}}')
+        root = self._marketplace("object-plugins", '{"name":"test","plugins":{"foo":"bar"}}')
         result = run_sync(root)
         with self.subTest(msg="plugins field is an object (not array) — exit 1"):
             self.assertEqual(result.returncode, 1)
 
-        root = self.work / "codex"
-        create_marketplace(root, '{"name":"test","plugins":[]}')
+        root = self._marketplace("codex", '{"name":"test","plugins":[]}')
         create_codex_marketplace(
             root,
             '{"name":"test-codex","plugins":[{"name":"codex-plugin","source":{"source":"local","path":"./dist/codex/codex-plugin"},"version":"0.1.0"}]}',
@@ -312,8 +296,7 @@ class SyncMarketplaceVersionsTests(unittest.TestCase):
 
         # Count-neutral hardening checks supplement the 49-entry predecessor
         # inventory without changing its parity total.
-        root = self.work / "nonfinite-json"
-        create_marketplace(root, '{"name":"test","plugins":[],"value":NaN}')
+        root = self._marketplace("nonfinite-json", '{"name":"test","plugins":[],"value":NaN}')
         result = run_sync(root)
         self.assertEqual(result.returncode, 1)
         self.assertIn("invalid JSON", result.stderr)
@@ -327,21 +310,18 @@ class SyncMarketplaceVersionsTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertNotIn("Traceback", result.stderr)
 
-        root = self.work / "unicode"
-        create_marketplace(root, '{"name":"Café","plugins":[{"name":"unicode","source":"./unicode","version":"0.1.0"}]}')
+        root = self._marketplace("unicode", '{"name":"Café","plugins":[{"name":"unicode","source":"./unicode","version":"0.1.0"}]}')
         create_plugin(root, "unicode", "0.2.0")
         result = run_sync(root)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("Café", (root / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
 
-        root = self.work / "empty-relative-source"
-        create_marketplace(root, '{"name":"test","plugins":[{"name":"root","source":"./"}]}')
+        root = self._marketplace("empty-relative-source", '{"name":"test","plugins":[{"name":"root","source":"./"}]}')
         result = run_sync(root)
         self.assertEqual(result.returncode, 1)
         self.assertIn("must identify a plugin directory", result.stderr)
 
-        root = self.work / "non-string-source-path"
-        create_marketplace(root, '{"name":"test","plugins":[{"name":"typed","source":{"path":7}}]}')
+        root = self._marketplace("non-string-source-path", '{"name":"test","plugins":[{"name":"typed","source":{"path":7}}]}')
         result = run_sync(root)
         self.assertEqual(result.returncode, 1)
         self.assertNotIn("Traceback", result.stderr)
