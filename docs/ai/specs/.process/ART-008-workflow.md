@@ -79,8 +79,19 @@ terminal status.
 - G0 gate: PASS — 2026-08-20. Suite 7659/7659 (L1 1469, L4 5998, L5 192), zero
   failures. TYPECHECK, BUILD, and LINT are `N/A` for this repository
 
-- G7 gate: PASS — 2026-08-23. Suite **7983/7983**, zero failures (L1 1511, L4
-  6253, L5 219), against the G0 baseline of 7659. The baseline was preserved
+- G7 gate: PASS — 2026-08-23. Suite **14011/14011**, zero failures (L1 1511, L4
+  12281, L5 219), against the G0 baseline of 7659.
+
+  **The first G7 read 7983 and that number was wrong, in a way worth recording.**
+  `test-feedback-sweep-parse.py` used bare `unittest.main` rather than the house
+  `run_counted`, so it emitted no summary line and the runner reported
+  `PASS test-feedback-sweep-parse (no summary)` and counted **zero** units from
+  it. This feature's entire test surface, 6028 counted units, was invisible to the
+  measurement that exists to prove it. The increase from 7659 to 7983 came
+  entirely from other layers. Failures were never at risk, because a nonzero exit
+  is a FAIL whatever the summary says; the count was. Found by noticing that
+  adding six regression tests did not move the total. Wired to `run_counted`, and
+  the honest figure is 14011. The baseline was preserved
   verbatim rather than recaptured: a baseline taken after planning already
   contains what the run added, which makes the comparison vacuous. The live count
   at the start of this stage was 7912, all of that drift from merged `main`, and

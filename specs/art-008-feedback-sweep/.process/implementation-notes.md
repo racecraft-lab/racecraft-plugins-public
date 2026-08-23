@@ -887,3 +887,91 @@ which is the consolidation working as asked.
 and returned a shell error rather than "no matches". A grep that errors looks
 exactly like a grep that found nothing, which would have made a prose removal
 look safe.
+
+### Post-implementation code review: three blocking findings, all fixed
+
+An independent read-only review found three blocking defects after the feature
+was green at 7983/7983. **Each was reproduced by the orchestrator before being
+accepted**, and each fix is proven by the reviewer's own scenario.
+
+**One correction to my own verification first.** My first reproduction attempt
+returned `input_error` for both the bug case and its control, which would have
+read as "the finding is wrong". The cause was mine: I pointed `PYTHONPATH` at the
+installed plugin cache rather than the worktree source, so the helper was
+unregistered. That is exactly the trap every worker prompt in this run warned
+about. Re-run against `PYTHONPATH=speckit-pro`, the finding reproduced exactly as
+reported.
+
+**Blocking 1: an array entry with an embedded newline bypassed the entire
+deny-set.** Every rule tests a whole entry, the key-header rule using `fullmatch`
+with no `MULTILINE`, and no entry was ever split. A whole private key packed into
+one entry returned `redactions: []` with the key verbatim; the identical key split
+one entry per physical line was fully redacted. The bytes on the `amendment` leg
+are the analyst's replacement text and the push is part of the amendment step, so
+they reach a public remote before any human checkpoint. Enforcement had rested on
+an unenforced caller convention. Fixed by rejecting any entry containing a line
+break, with the reason in a comment.
+
+**Blocking 2: a symlink at an allowlist name approved a fourth file.**
+`allowed_paths` was built by resolving the three names, so the allowed set was
+"whatever those names point at". With `spec.md` a link to `evil.md`, the indirect
+route was refused as `symlink_target` while a request naming `evil.md` directly
+was **approved**. Fixed by requiring the candidate's unresolved form to be one of
+the three names as well as its resolved form to be in the resolved set, so a link
+can neither launder a file in nor be followed.
+
+**Blocking 3: an oversized envelope reported success with no data.** The runner
+captures stdout at 16 KiB and drops `stdout_json` when the truncated JSON will not
+parse, leaving `status: ok`, `exit_code: 0`, and no diagnostics. Reproduced at
+16759 bytes. Reachable without an attacker: four trusted comments each pasting a
+conforming export, or one quote-heavy body whose JSON escaping doubles every
+quote. A caller told to iterate `candidates` and nothing else cannot distinguish
+that from a clean sweep, so the busiest pull requests would look empty. Fixed by
+measuring the envelope against the capture limit and failing closed.
+
+**Two minors, both actioned.** The NUL-byte comment overstated its own necessity:
+`target` is in `PATH_KEYS`, so `validate_bounded_inputs` already checks it before
+the helper is entered. Comment corrected to say defence in depth and unreachable
+through registered dispatch. The Layer 5 Codex assertion is skip-on-missing, which
+`install.py`'s required-names list covers from the other side; left as the
+reviewer characterised it, a shape note.
+
+**Six regression tests added**, because two of the three holes shipped with no
+coverage at all and `symlink_target` and `symlink_parent` had no test anywhere.
+Each carries a positive control so a fix cannot pass by refusing everything.
+
+**What the review did not cover, stated so it is not mistaken for cleared:** the
+full `run-all.py` did not finish inside the reviewer's window, so the Layer 6
+Codex qualification digest chain is unverified by it. The orchestrator re-ran the
+full gate after these fixes.
+
+### The suite count was wrong all run, and the fix found it
+
+**`test-feedback-sweep-parse.py` contributed zero units to the suite total.** It
+used bare `unittest.main` rather than the house `run_counted`, so it printed no
+summary line and `run-all.py` reported
+`PASS test-feedback-sweep-parse (no summary)`, counting nothing from it.
+
+This was invisible for the whole run because the number kept moving for other
+reasons. It surfaced only when adding six regression tests did not change the
+total at all: 7983 before, 7983 after. That is the tell.
+
+**What was actually at risk.** Not failure detection: a nonzero exit is a `FAIL`
+whatever the summary says, so a broken test would always have failed the gate.
+What was broken was the measurement. G7's contract is that the count increases
+against the G0 baseline of 7659, and it did, to 7983, but **none of that increase
+came from this feature**. Its entire test surface, 6028 counted units across 90
+tests, was absent from the number that exists to prove the feature was tested.
+
+A test file that runs, gates correctly, and reports zero is the same defect class
+this spec caught three times internally: coverage that looks present and measures
+nothing. It is worse here, because the thing it fooled was the gate.
+
+Wired to `run_counted`. A named class or method still routes through plain
+unittest, so iterating on one test stays cheap, and the reason sits in a comment
+so it is not reverted as noise. **True total: 14011/14011**, L4 6253 to 12281.
+
+An earlier worker had already noticed the adjacent half of this, that Layer 4
+discovery is not manifest-gated, so the file ran without its manifest row. The
+manifest row supplies the label and baseline; `run_counted` supplies the count.
+Both are needed and neither implies the other.

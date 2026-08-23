@@ -222,14 +222,15 @@
     },
     "G7": {
       "status": "pass",
-      "suite": "7983/7983",
+      "suite": "14011/14011",
       "layers": {
         "L1": "1511/1511",
-        "L4": "6253/6253",
+        "L4": "12281/12281",
         "L5": "219/219"
       },
       "baseline_g0": 7659,
-      "baseline_note": "G0 preserved verbatim per Step 0.6e; live-at-stage-start was 7912, all drift from merged main, recorded as non-blocking.",
+      "baseline_note": "G0 preserved verbatim per Step 0.6e.",
+      "count_correction": "An earlier G7 read 7983 because test-feedback-sweep-parse.py emitted no house summary and counted zero units. Wired to run_counted; its 6028 units now count.",
       "recorded_at": "2026-08-23"
     }
   },
@@ -970,6 +971,11 @@
     ],
     "known_gaps": [
       "T098 binding probe UNRUN: plugin agents load from the versioned cache, not worktree source; stop condition not triggered and not discharged."
+    ],
+    "review_findings_fixed": [
+      "deny-set bypass via an embedded newline in a lines entry",
+      "write-point allowlist resolved through a symlink at an allowlist name",
+      "oversized envelope reported ok with stdout_json dropped"
     ]
   }
 }

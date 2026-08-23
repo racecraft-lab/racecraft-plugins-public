@@ -41,11 +41,16 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import pathlib
 import unittest
 from pathlib import Path
 from typing import Any, Iterator
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+LIB_DIR = Path(__file__).resolve().parent.parent / "lib"
+if str(LIB_DIR) not in sys.path:
+    sys.path.insert(0, str(LIB_DIR))
+from test_result import run_counted  # noqa: E402
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "feedback-sweep"
 CORPUS_PATH = FIXTURE_DIR / "comment-corpus.json"
@@ -1494,6 +1499,159 @@ def scan_in_runs(lines: list[str], comment_id: str) -> tuple[list[dict[str, Any]
         returned.extend(envelope["lines"])
         start = stop
     return fired, returned
+
+
+class ReviewFindingRegressionTest(unittest.TestCase):
+    """Three holes an independent review found after the feature was green.
+
+    Each shipped with no coverage at all, which is why each gets a test rather
+    than only a fix. Two are security-relevant and one is a silent-loss defect.
+    """
+
+    def test_a_lines_entry_carrying_a_line_break_is_refused(self) -> None:
+        """A whole private key in one entry passed all six rules untouched.
+
+        Every rule tests a whole entry: the key-header rule uses ``fullmatch``
+        with no ``MULTILINE``, and the value rules never split. So an entry with
+        embedded newlines was scanned as one opaque string and matched nothing.
+        The bytes on the amendment leg are the analyst's replacement text, and
+        the push is part of the amendment step, so they reach a public remote
+        before any human checkpoint.
+        """
+        key = (
+            "-----BEGIN RSA PRIVATE KEY-----\n"
+            "MIIBOgIBAAJBAKj34GkxAAAA\n"
+            "-----END RSA PRIVATE KEY-----"
+        )
+        for leg in ("amendment", "log_row", "reply"):
+            with self.subTest(leg=leg):
+                response = run_redact(leg, "regression-newline", lines=[key])
+                self.assertEqual(
+                    response["status"],
+                    "input_error",
+                    "an entry carrying a line break must be refused, not scanned whole",
+                )
+
+    def test_the_same_key_split_one_line_per_entry_is_still_redacted(self) -> None:
+        """The control. The refusal above must not be the deny-set going quiet."""
+        envelope = outbound_envelope(run_redact(
+            "reply",
+            "regression-newline-control",
+            lines=[
+                "-----BEGIN RSA PRIVATE KEY-----",
+                "MIIBOgIBAAJBAKj34GkxAAAA",
+                "-----END RSA PRIVATE KEY-----",
+            ],
+        ))
+        self.assertEqual(event_rules(envelope), ["private_key_header"])
+        self.assertTrue(
+            all(line == "[redacted: private_key_header]" for line in envelope["lines"]),
+            f"every line of the span should carry the placeholder: {envelope['lines']!r}",
+        )
+
+    def test_an_envelope_over_the_capture_limit_fails_closed(self) -> None:
+        """Truncation used to read as success with no candidates.
+
+        The runner captures stdout at ``CAPTURE_LIMIT_BYTES`` and drops
+        ``stdout_json`` when the truncated JSON will not parse, leaving
+        ``status: ok``, ``exit_code: 0`` and no diagnostics. A caller told to
+        iterate ``candidates`` and nothing else cannot tell that from a clean
+        sweep, so a busy pull request would look like an empty one.
+        """
+        body = '"' * 8000 + "x" * 190
+        response = run_redact(
+            "analyst_payload",
+            "regression-capture",
+            text=body,
+            truncated=False,
+            matched_lines=[],
+        )
+        self.assertEqual(
+            response["status"],
+            "input_error",
+            "an envelope that cannot survive capture must refuse, never report ok",
+        )
+
+    def test_an_ordinary_payload_still_returns_its_report(self) -> None:
+        """The control for the capture guard, so it cannot pass by refusing everything."""
+        envelope = stdout_json(run_redact(
+            "analyst_payload",
+            "regression-capture-control",
+            text="an ordinary objection about the retry bound",
+            truncated=False,
+            matched_lines=[],
+        ))
+        self.assertIsInstance(envelope, dict)
+        self.assertIn("report", envelope)
+
+
+class WritePointSymlinkTest(unittest.TestCase):
+    """The write-point check against links, which shipped entirely unexercised.
+
+    Neither ``symlink_target`` nor ``symlink_parent`` had a test anywhere, and
+    those are the two branches that make the check security-relevant. A review
+    then found the allowlist itself was built by resolving the three names, so a
+    symlink AT an allowlist name put its destination into the allowed set and a
+    request naming that destination directly was approved.
+    """
+
+    def _check(self, root: pathlib.Path, target: str) -> dict[str, Any]:
+        request = helper_request("symlink-probe", {
+            "named_surface": "check_target",
+            "feature_dir": "specs/feat-x",
+            "comment_id": "c1",
+            "target": target,
+        })
+        completed = subprocess.run(
+            [sys.executable, "-m", "speckit_pro_runner"],
+            input=json.dumps(request),
+            capture_output=True,
+            text=True,
+            cwd=root,
+            env={**os.environ, "PYTHONPATH": "speckit-pro"},
+        )
+        envelope = json.loads(completed.stdout.strip().splitlines()[-1])
+        return envelope.get("data", {}).get("stdout_json") or {}
+
+    def test_a_symlink_at_an_allowlist_name_admits_nothing(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = pathlib.Path(raw)
+            (root / ".specify").mkdir()
+            feature = root / "specs" / "feat-x"
+            feature.mkdir(parents=True)
+            for name in ("plan.md", "tasks.md", "evil.md"):
+                (feature / name).write_text("content\n")
+            os.symlink("evil.md", feature / "spec.md")
+            shutil.copytree(REPO_ROOT / "speckit-pro", root / "speckit-pro")
+
+            indirect = self._check(root, "specs/feat-x/spec.md")
+            self.assertFalse(indirect["allowed"])
+            self.assertEqual(indirect["reason"], "symlink_target")
+
+            direct = self._check(root, "specs/feat-x/evil.md")
+            self.assertFalse(
+                direct["allowed"],
+                "a link at an allowlist name must not admit its destination",
+            )
+            self.assertEqual(direct["reason"], "outside_set")
+
+            genuine = self._check(root, "specs/feat-x/plan.md")
+            self.assertTrue(genuine["allowed"], "a real artifact must still pass")
+            self.assertIsNone(genuine["reason"])
+
+    def test_a_symlinked_parent_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = pathlib.Path(raw)
+            (root / ".specify").mkdir()
+            real = root / "specs" / "real-feature"
+            real.mkdir(parents=True)
+            (real / "plan.md").write_text("content\n")
+            os.symlink("real-feature", root / "specs" / "feat-x")
+            shutil.copytree(REPO_ROOT / "speckit-pro", root / "speckit-pro")
+
+            verdict = self._check(root, "specs/feat-x/plan.md")
+            self.assertFalse(verdict["allowed"])
+            self.assertIn(verdict["reason"], {"symlink_parent", "outside_set"})
 
 
 class CorpusScanTest(unittest.TestCase):
@@ -3011,9 +3169,21 @@ def main(argv: list[str]) -> int:
         finally:
             shutil.rmtree(WORKFLOW_SCRATCH, ignore_errors=True)
     shutil.rmtree(WORKFLOW_SCRATCH, ignore_errors=True)
-    result = unittest.main(argv=[sys.argv[0]] + remaining, exit=False, verbosity=2).result
+    if remaining:
+        # A named class or method: plain unittest, for iterating on one test.
+        result = unittest.main(argv=[sys.argv[0]] + remaining, exit=False, verbosity=2).result
+        shutil.rmtree(WORKFLOW_SCRATCH, ignore_errors=True)
+        return 0 if result.wasSuccessful() else 1
+    # The whole file, through the house counter. Without this the runner reports
+    # "PASS test-feedback-sweep-parse (no summary)" and counts zero units, so
+    # every assertion in this file is invisible to the suite total and to any
+    # baseline comparison. A failure would still fail the run, because a nonzero
+    # exit is a FAIL whatever the summary says, but a silent zero is exactly the
+    # shape of coverage that looks present and measures nothing.
+    suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])
+    code = run_counted(suite, label="test-feedback-sweep-parse")
     shutil.rmtree(WORKFLOW_SCRATCH, ignore_errors=True)
-    return 0 if result.wasSuccessful() else 1
+    return code
 
 
 if __name__ == "__main__":

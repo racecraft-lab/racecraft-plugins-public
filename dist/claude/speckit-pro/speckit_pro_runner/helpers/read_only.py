@@ -1719,6 +1719,34 @@ def sweep_error(message: str) -> dict[str, Any]:
     return make_result("", f"error: {message}\n", 2)
 
 
+def sweep_result(payload: dict[str, Any]) -> dict[str, Any]:
+    """Return one sweep envelope, or fail closed when it would not survive capture.
+
+    The runner captures a helper's stdout at ``CAPTURE_LIMIT_BYTES`` and, when
+    that trips, truncates the JSON mid-string so the parse fails and
+    ``stdout_json`` is dropped from the response. The envelope that reaches the
+    caller then reads ``status: ok`` with ``exit_code: 0`` and no diagnostics,
+    and it carries no ``candidates`` list. A caller told to iterate ``candidates``
+    and nothing else cannot distinguish that from a clean sweep with nothing to
+    do, so a truncated response would silently look like "no reviewer feedback"
+    on exactly the pull requests that carry the most.
+
+    Reachable without an attacker: four trusted comments each pasting a
+    conforming export, or one quote-heavy body whose JSON escaping doubles every
+    quote. So this is measured here and refused, rather than left to the caller
+    to notice.
+    """
+    text = json_text(payload)
+    if len(text.encode("utf-8")) > CAPTURE_LIMIT_BYTES:
+        return sweep_error(
+            "the sweep envelope exceeds the runner's stdout capture of "
+            f"{CAPTURE_LIMIT_BYTES} bytes, so it would reach the caller truncated "
+            "and unparseable while still reporting success; narrow the request "
+            "(fewer comments per call, or a smaller body) and retry"
+        )
+    return make_result(text)
+
+
 def sweep_comment_error(entry: Any) -> str | None:
     """Validate one observed comment, or name what is wrong with it."""
     if not isinstance(entry, dict):
@@ -1950,7 +1978,7 @@ def sweep_parse(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
             "truncated": entry.get("truncated"),
             "export": sweep_export_record(body),
         })
-    return make_result(json_text({
+    return sweep_result(({
         "tool": "sweep-pr-feedback",
         # Both surfaces are read as one all-or-nothing observation (FR-004c), so
         # this reports what the observation covered rather than which of the two
@@ -1990,8 +2018,12 @@ def sweep_check_target(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any
     if not isinstance(target, str) or not target:
         return sweep_error("target is required")
     if "\x00" in feature_dir or "\x00" in target:
-        # `target` is not a `path_keys_by_helper` entry, so nothing upstream has
-        # looked at it, and resolving a NUL byte raises rather than answering. A
+        # Defence in depth, and unreachable through registered dispatch.
+        # `target` is not a `path_keys_by_helper` entry, but it IS in PATH_KEYS,
+        # so validate_bounded_inputs NUL-checks and boundary-checks it before
+        # this helper is entered. Kept because a direct caller has no such
+        # guarantee, and a NUL reaching Path.resolve raises instead of
+        # returning the diagnostic the contract reserves for a bad request.
         # malformed request is `invalid_input`, never a traceback and never a
         # verdict: the check has to be able to run before it can refuse anything.
         return sweep_error("feature_dir and target must not carry a NUL byte")
@@ -2011,8 +2043,16 @@ def sweep_check_target(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any
     allowed_paths = {
         (feature_path / name).resolve(strict=False) for name in SWEEP_EDIT_ALLOWLIST
     }
+    # The allowlist by NAME, unresolved. This is the half that makes the set
+    # actually be the three artifacts. `allowed_paths` above resolves each name,
+    # so on its own it means "whatever those three names happen to point at": a
+    # symlink at `spec.md` aimed at `evil.md` puts `evil.md` into the allowed set,
+    # and a request naming `evil.md` directly would then be approved while the
+    # indirect route through `spec.md` is refused as `symlink_target`. Both tests
+    # must pass, so a link can neither launder a fourth file in nor be followed.
+    allowed_names = {feature_path / name for name in SWEEP_EDIT_ALLOWLIST}
     reason: str | None = None
-    if candidate.resolve(strict=False) not in allowed_paths:
+    if candidate not in allowed_names or candidate.resolve(strict=False) not in allowed_paths:
         # Exact membership over resolved paths, never containment (FR-012c). A
         # containment or prefix test would admit everything beneath the feature
         # directory, its checklists and its contracts included, and comparing
@@ -2022,7 +2062,7 @@ def sweep_check_target(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any
         reason = "symlink_target"
     elif sweep_symlinked_parent(candidate, feature_path):
         reason = "symlink_parent"
-    return make_result(json_text({
+    return sweep_result(({
         "tool": "sweep-pr-feedback",
         "named_surface": "check_target",
         "comment_id": comment_id,
@@ -2070,6 +2110,18 @@ def sweep_redact(inputs: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(lines, list) or any(not isinstance(entry, str) for entry in lines):
         return sweep_error(
             f"lines must be an array of strings on the {leg} leg for comment {comment_id}"
+        )
+    # One physical line per entry, enforced rather than assumed. Every rule below
+    # tests a whole entry: the key-header rule uses fullmatch with no MULTILINE,
+    # and the value rules never split. So an entry carrying an embedded newline
+    # is scanned as one opaque string and matches nothing, and a whole private
+    # key packed into a single entry would pass all six rules untouched. The
+    # caller convention alone cannot be the control here, because these bytes
+    # reach a public remote before any human checkpoint.
+    if any("\n" in entry or "\r" in entry for entry in lines):
+        return sweep_error(
+            f"lines entries carry one physical line each; an entry on the {leg} leg "
+            f"for comment {comment_id} contains a line break"
         )
     for field in ("text", "truncated", "matched_lines"):
         if inputs.get(field) is not None:
@@ -2233,7 +2285,7 @@ def sweep_redact_outbound(leg: str, comment_id: str, lines: list[str]) -> dict[s
             shaped = bound_placeholder
             events.append({"rule": SWEEP_BOUND_RULE, "line": index + 1})
         out[index] = shaped
-    return make_result(json_text({
+    return sweep_result(({
         "tool": "sweep-pr-feedback",
         "named_surface": "redact",
         "leg": leg,
@@ -2411,7 +2463,7 @@ def sweep_analyst_payload(inputs: dict[str, Any], comment_id: str) -> dict[str, 
         shaped,
         SWEEP_END_DELIMITER.format(comment_id=comment_id),
     ])
-    return make_result(json_text({
+    return sweep_result(({
         "tool": "sweep-pr-feedback",
         "named_surface": "redact",
         "leg": "analyst_payload",
