@@ -137,7 +137,18 @@ Each phase requires **human review and approval** before proceeding:
 | III. Semantic Versioning | No hand-edited versions; release-please owns bumps | `git diff` review |
 | IV. Test Coverage Before Merge | Full suite zero failures | `python3 tests/speckit-pro/run-all.py` |
 
-**Constitution Check:** ⏳ (mark before proceeding to G1)
+**Constitution Check:** 🔄 full suite running at pre-flight (2026-08-24); result recorded before G1.
+
+### Pre-flight Record (Step 0, 2026-08-24)
+
+- `check-prerequisites`: all_pass=true; branch `art-008-feedback-sweep-slice-2` (worktree, non-numeric — `.specify/feature.json` written per slice-1 precedent); SpecKit CLI 0.11.8.
+- PROJECT_COMMANDS: FULL_VERIFY=`python3 tests/speckit-pro/run-all.py`; UNIT_TEST same; TYPECHECK/LINT/BUILD=N/A (python stack, test_runner_script evidence).
+- PRESET_CONVENTIONS: `speckit-pro-reviewability` v1.0.0 (spec/plan/tasks templates); 18 hook events configured.
+- Settings: none — defaults (gate-failure=stop, auto-commit on, consensus default). CONFIDENCE_GATE_MODE=advisory (resolver, no flag).
+- Stage resolution: `plan` (argv) — explicit --stage plan. Draft PR corroboration: no_record (no Draft PR row; no observation taken).
+- State slot reclaimed from `docs/ai/specs/.process/ART-008-workflow.md` (prior status: completed).
+- Archive Sweep (report-only): `specs/art-008-feedback-sweep` merged via PR #464 (`8db22a420`) — archival operator-deferred until slice 2 merges; current target excluded; no mutation.
+- AGENT_TEAMS_AVAILABLE=false (no TeamCreate in session surface) — parallel work uses batched background subagents.
 
 ---
 
@@ -153,6 +164,7 @@ Each phase requires **human review and approval** before proceeding:
 | **Dependencies** | ART-007 (shipped, PR #445); ART-008 slice 1 (shipped, PR #464) |
 | **Enables** | The trusted human checkpoint reviews CURRENT pages; closes ART-008 |
 | **Priority** | P1 |
+| **Stage** | plan |
 
 ### Success Criteria Summary
 
