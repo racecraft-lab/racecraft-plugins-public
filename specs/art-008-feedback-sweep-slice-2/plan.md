@@ -687,6 +687,22 @@ not free: on the FR-007a history no commit has ever touched the directory, so
 git holds no copy to restore from and a `git`-only mechanism does not cover the
 case.
 
+Consensus guidance (state-management round, spec-context-analyst, high
+confidence; the codebase analyst was lost to a transient API error, so the
+N=1 high-confidence rule applied): adopt one uniform snapshot-and-replay —
+the orchestrator snapshots the artifacts directory bytes immediately after
+the FR-004 observation and before the artifact-author dispatch, and replays
+the snapshot only when the final verified `generated` count is zero (FR-018's
+own commit gate, never a proxy such as "did a commit land"). A git-restore
+path is redundant beside it and fails the FR-007a no-commit history. FR-003
+is not implicated: a run-scoped, gitignored, always-removed byte holder is
+transport in slice-1 FR-004d's sense, not a store in FR-013's — follow that
+precedent's self-ignoring `.gitignore` plus removal-reported lifecycle if the
+snapshot persists to disk. The FR-012b boundary is disjoint by construction
+(deletion fires only on runs with at least one generated page; replay fires
+only on zero-generated runs); add one Layer 4 fixture proving a run with one
+`generated` page and one per-page gap never triggers replay.
+
 **FR-039's record commit is reused, never redefined.** When the refresh actually
 changes the `Draft PR` cell, that write rides the same separate,
 workflow-file-path-alone `chore:` commit the plan-stage terminal sequence

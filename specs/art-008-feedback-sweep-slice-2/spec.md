@@ -883,11 +883,13 @@ second, worse lever are in `plan.md`.
   older than the newest amendment. A page that regeneration could not produce is
   absent rather than stale, because FR-012b removes the superseded file it left
   behind, so a per-page shortfall subtracts from the set the reviewer sees and
-  never adds a misleading member to it. The one stated exception is the
-  whole-set gap of FR-037, where the run learned nothing about any page and
-  FR-012b deliberately leaves the previous set in place: there the pages are
-  stale for exactly one leg, the join still reads `stale` under FR-038, and the
-  next sweep leg regenerates them.
+  never adds a misleading member to it. The one stated exception is a
+  zero-generated leg (FR-018a): whether reached through the whole-set gap of
+  FR-037 or through every selected page individually converting to a per-page
+  gap, the run learned nothing usable to commit and restoration leaves the
+  pre-regeneration set in place: there the pages are stale for exactly one
+  leg, the join still reads `stale` under FR-038, and the next sweep leg
+  regenerates them.
 - **SC-002**: An operator can determine whether the pages in front of them are
   current in under 30 seconds, reading only the run report, without opening git
   history or comparing page content.

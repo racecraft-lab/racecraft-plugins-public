@@ -346,6 +346,7 @@ if any SKILL.md sentence must change, words must be freed first.
 | 8 | Checklist | CHK044: redaction stop vs regeneration ordering | [codebase] [spec] | 1 | Resolved (high, 2/2 agree) | Regenerate first; redaction stop rides the leg's own stop-or-proceed point (new FR-015d); not a fourth leg — FR-016 evaluation still runs | codebase-analyst, spec-context-analyst |
 | 9 | Checklist | CHK002/016/036: FR-012b delete-superseded-file + FR-037 withholding | [codebase] [spec] | 1 | Upheld (high, 2/2) + refinement | Delete upheld (shipped verification precedent; keep-and-report has no precedent and strands pages); FR-018 gate re-keyed to ≥1 verified `generated` page, closing the verification-zeroed stranding route | codebase-analyst, spec-context-analyst |
 | 10 | Checklist | CHK008: FR-034a unreachable statuses (security keyword) | [security] | 1 | Upheld (high, 3/3) + wording | Fail-closed posture confirmed (OWASP/CWE/RFC-grounded); headline corrected (skipped classifies, one live branch); defensive no_record reported as orchestrator invariant violation | codebase-analyst, spec-context-analyst, domain-researcher |
+| 11 | Checklist | CHK014-017/030: FR-018a restoration mechanism | [codebase] [spec] | 1 | Resolved (high, N=1 — codebase analyst lost to transient API 403) | FR-018a stands unamended; mechanism stays with Plan; uniform snapshot-and-replay recorded as plan.md guidance (slice-1 FR-004d transport precedent, FR-003 untouched); SC-001 exception widened to both zero-generated sub-shapes | spec-context-analyst |
 
 ---
 
@@ -496,6 +497,9 @@ Focus on ART-008 slice 2 requirements:
   FR-015b, FR-015d, FR-034a; amended FR-018, FR-019a, FR-034a, FR-036,
   FR-037, FR-038, FR-039, SC-001). Consensus items 8–10; full suite green at
   the executor's verification (14012/14012).
+- **state-management** (43 items): 9 gaps found, 9 closed (new FR-007b,
+  FR-018a; ancestry/joinable definitions mirrored into data-model.md, plan.md,
+  and the contract's fixture list; spec 51 → 53 FRs). Consensus item 11.
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
