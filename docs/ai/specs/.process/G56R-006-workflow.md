@@ -119,6 +119,7 @@ Capability path: codebase and spec context -> current repository files plus the 
 | **Name** | Capability-aware Resolver, Materializer, Installer, and Strict Override |
 | **Branch** | `g56r-006-resolver-materializer-installer-strict-override` |
 | **Stage** | `plan` |
+| **Draft PR** | [#503](https://github.com/racecraft-lab/racecraft-plugins-public/pull/503) — 4 of 4 artifacts missing after prohibited template sample-banner classes were found; pages deleted |
 | **Dependencies** | G56R-005 complete/archived; consumes G56R-003 materializer and G56R-005 contracts/reason ordering |
 | **Enables** | G56R-007, G56R-008, G56R-009, G56R-010 |
 | **Priority** | P1 |
