@@ -3,11 +3,11 @@
   "spec_id": "ART-008",
   "feature_dir": "specs/art-008-feedback-sweep-slice-2",
   "branch": "art-008-feedback-sweep-slice-2",
-  "status": "in_progress",
+  "status": "completed",
   "stage": "plan",
   "prior_run_note": "completed",
   "updated_at": "2026-08-24T00:00:00Z",
-  "active_step": "Phase 6.5: Confidence Gate",
+  "active_step": null,
   "reclaimed_from": {
     "workflow_file": "docs/ai/specs/.process/ART-008-workflow.md",
     "spec_id": "ART-008",
@@ -71,7 +71,7 @@
     },
     {
       "step": "Phase 6.5: Confidence Gate (advisory)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement",
@@ -174,6 +174,11 @@
     "G6": {
       "pass": true,
       "critical": 0
+    },
+    "G6.5": {
+      "pass": true,
+      "composite": 0.92,
+      "mode": "advisory"
     }
   },
   "budget_warning": {
@@ -200,5 +205,6 @@
     "mode": "deferred",
     "fallback": "setup-warn + estimator-false-zero + hand-derived-690-warn",
     "marker_plan": "not_required"
-  }
+  },
+  "terminal_step": "confidence-gate (stage plan)"
 }

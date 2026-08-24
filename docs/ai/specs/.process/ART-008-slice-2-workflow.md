@@ -89,7 +89,7 @@ Projected reviewable LOC: re-measure at Plan (hand-derived; estimator returns a 
 | Checklist | `/speckit-checklist` | ✅ Complete | 3 domains, 130 items; 34 gaps closed; spec 46→54 FRs; consensus items 8–12; G4 pass |
 | Tasks | `/speckit-tasks` | ✅ Complete | 81 tasks (T001–T081), 54/54 FR coverage both directions, 16 [P]; G5 pass |
 | Analyze | `/speckit-analyze` | ✅ Complete | 5 findings (0C/1H/1M/3L), all remediated; coverage 54/54 bidirectional; constitution 6/6; G6 pass; 📊 0.92 |
-| Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
+| Confidence Gate | G6.5 | ✅ Complete | Composite 0.92 ≥ 0.90, advisory mode — PASS, proceed; plan stage ends here |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 | Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
 
@@ -647,7 +647,9 @@ Focus on:
   recorded supersessions confirmed legitimate; slice-1 inheritance items
   discharged.
 - **G6**: ✅ pass — `validate-gate` exit 0, 0 CRITICAL/HIGH markers.
-- **Synthesizer emit**: 📊 Confidence: 0.92
+- **Synthesizer emit** (standalone line below for the gate reader):
+
+📊 Confidence: 0.92
 
 
 | ID | Severity | Issue | Resolution |
@@ -660,10 +662,14 @@ Focus on:
 
 | Field | Value |
 |-------|-------|
-| Mode | <!-- advisory (default) or strict --> |
-| Composite confidence | |
-| Verdict | |
-| Evidence | |
+| Mode | advisory (resolver default; no flag) |
+| Composite confidence | 0.92 |
+| Verdict | PASS — at or above the 0.90 threshold; recommended_action=proceed |
+| Evidence | `confidence-gate` helper exit 0 against this file's synthesizer emit; per-criteria breakdown not emitted (composite-only form) |
+
+The resolved stage for this run is `plan` (argv), so the run ends at this
+gate. Implement and Post-Implementation were not started; resume with
+`--stage implement` (or `full`) in a fresh invocation.
 
 ---
 
