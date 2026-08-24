@@ -7,7 +7,7 @@
   "stage": "plan",
   "prior_run_note": "completed",
   "updated_at": "2026-08-24T00:00:00Z",
-  "active_step": "pre-flight",
+  "active_step": "Phase 2: Clarify",
   "reclaimed_from": {
     "workflow_file": "docs/ai/specs/.process/ART-008-workflow.md",
     "spec_id": "ART-008",
@@ -47,7 +47,7 @@
     },
     {
       "step": "Phase 1: Specify",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify (3 sessions + consensus)",
@@ -138,5 +138,26 @@
       "status": "pending",
       "note": "out of stage for this run (stage=plan)"
     }
-  ]
+  ],
+  "test_baseline_g0": {
+    "total": 14012,
+    "layers": {
+      "L1": 1511,
+      "L4": 12282,
+      "L5": 219
+    },
+    "captured": "2026-08-24",
+    "phase": "pre-flight"
+  },
+  "prerequisites": {
+    "constitution_check": "pass",
+    "suite": "14012/14012",
+    "date": "2026-08-24"
+  },
+  "gates": {
+    "G1": {
+      "pass": true,
+      "markers": 0
+    }
+  }
 }

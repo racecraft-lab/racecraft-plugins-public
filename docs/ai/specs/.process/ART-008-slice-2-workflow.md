@@ -83,7 +83,7 @@ Projected reviewable LOC: re-measure at Plan (hand-derived; estimator returns a 
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | |
+| Specify | `/speckit-specify` | ✅ Complete | 32 FRs, 3 stories, 13 scenarios, 0 markers; G1 pass |
 | Clarify | `/speckit-clarify` | ⏳ Pending | Sessions seeded from the design concept's Open Questions |
 | Plan | `/speckit-plan` | ⏳ Pending | Hand-size the budget here; estimator is a false zero |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
@@ -137,17 +137,20 @@ Each phase requires **human review and approval** before proceeding:
 | III. Semantic Versioning | No hand-edited versions; release-please owns bumps | `git diff` review |
 | IV. Test Coverage Before Merge | Full suite zero failures | `python3 tests/speckit-pro/run-all.py` |
 
-**Constitution Check:** 🔄 full suite running at pre-flight (2026-08-24); result recorded before G1.
+**Constitution Check:** ✅ PASS (2026-08-24) — full suite 14012/14012 (L1 1511, L4 12282, L5 219), exit 0.
+
+**G0 test-count baseline:** 14012 total (L1 1511, L4 12282, L5 219) — captured pre-planning 2026-08-24; G7 verifies the count increased against this number.
 
 ### Pre-flight Record (Step 0, 2026-08-24)
 
 - `check-prerequisites`: all_pass=true; branch `art-008-feedback-sweep-slice-2` (worktree, non-numeric — `.specify/feature.json` written per slice-1 precedent); SpecKit CLI 0.11.8.
 - PROJECT_COMMANDS: FULL_VERIFY=`python3 tests/speckit-pro/run-all.py`; UNIT_TEST same; TYPECHECK/LINT/BUILD=N/A (python stack, test_runner_script evidence).
 - PRESET_CONVENTIONS: `speckit-pro-reviewability` v1.0.0 (spec/plan/tasks templates); 18 hook events configured.
-- Settings: none — defaults (gate-failure=stop, auto-commit on, consensus default). CONFIDENCE_GATE_MODE=advisory (resolver, no flag).
+- Settings: none — defaults (gate-failure=stop, auto-commit=per-phase, consensus-mode=moderate). CONFIDENCE_GATE_MODE=advisory (resolver, no flag).
 - Stage resolution: `plan` (argv) — explicit --stage plan. Draft PR corroboration: no_record (no Draft PR row; no observation taken).
 - State slot reclaimed from `docs/ai/specs/.process/ART-008-workflow.md` (prior status: completed).
 - Archive Sweep (report-only): `specs/art-008-feedback-sweep` merged via PR #464 (`8db22a420`) — archival operator-deferred until slice 2 merges; current target excluded; no mutation.
+- `before_specify` hooks: git.feature satisfied by the existing feature branch `art-008-feedback-sweep-slice-2` + `.specify/feature.json` (script not run; branch verified unchanged before/after Specify); archive sweep discharged report-only at Step -1.
 - AGENT_TEAMS_AVAILABLE=false (no TeamCreate in session surface) — parallel work uses batched background subagents.
 
 ---
@@ -262,17 +265,18 @@ whether pages are current.
 
 ### Specify Results
 
-<!-- Fill in after running the command -->
-
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | |
-| User Stories | |
-| Acceptance Criteria | |
+| Functional Requirements | 32 (FR-001–FR-032, contiguous; reverse-citation clean) |
+| User Stories | 3 (P1 amended-sweep regeneration, P2 clean-sweep recovery, P3 honest report) |
+| Acceptance Criteria | 13 scenarios (4/4/5); 8 success criteria; 10 edge cases |
+
+G1: ✅ pass — `validate-gate` G1 exit 0, 0 markers (bracket and colon forms both grepped by the orchestrator). Privacy scan clean. Preset sections (Reviewability Budget, PR Review Packet Requirements) filled; zero template placeholders. Zero-marker outcome is deliberate: seven settled interview decisions carried "quote on conflict" standing; residual gaps recorded as Assumptions (8).
 
 ### Files Generated
 
-- [ ] `specs/art-008-feedback-sweep-slice-2/spec.md`
+- `specs/art-008-feedback-sweep-slice-2/spec.md`
+- `specs/art-008-feedback-sweep-slice-2/checklists/requirements.md` (spec-template checklist)
 
 ---
 
