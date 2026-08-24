@@ -909,6 +909,26 @@ deltas match the authored 229 lines exactly, and the runner deltas are the
 already-committed helper catching up. T075 re-runs this after the last source
 edit; running it early neither substitutes for that nor invalidates it.
 
+**Phase 3, User Story 1 — Codex mirror and the promise removal (T046–T049)** —
+complete. `LAYER1` **1511/1511**.
+
+- **T046**: 208 inserted lines on `phase-execution-codex.md`, describing the
+  same behavior in that surface's own vocabulary rather than by copying
+  Claude's sentences.
+- **T048/T049**: both slice-1 promise passages are gone from **both**
+  surfaces. All four greppable fragments now return **zero matches**, verified
+  by the orchestrator. On the Claude surface the removal is `+1/-6`: the
+  stop-report clause was cut and its sentence reflowed to end at "commit
+  range", and the meta-paragraph was removed whole. No orphaned connective, no
+  empty heading, no double blank line.
+- These are the **only two deletions this slice permits**, and slice 1 itself
+  declared them an interface slice 2 replaces. US1 acceptance scenario 4 is
+  discharged.
+- Two invariants re-checked rather than assumed: the shipped sentence "The
+  sweep never writes the `Draft PR` row" survives on both surfaces, and
+  `codex-skills/speckit-autopilot/SKILL.md` is **byte-unchanged**, so its two
+  words of headroom under the 8000-word cap are intact.
+
 
 ### Implement Prompt
 
