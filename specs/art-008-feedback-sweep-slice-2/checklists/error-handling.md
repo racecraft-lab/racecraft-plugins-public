@@ -195,7 +195,7 @@ clarifying questions were resolved from it rather than asked:
   stale. Closed by scoping FR-012b to a run that generated at least one page
   and by requiring FR-037 to leave the directory entirely unmoved, deselection
   removal included. [Conflict, closed by FR-037]
-- [ ] CHK044 - Is the interaction between FR-015a's placement and slice 1's
+- [x] CHK044 - Is the interaction between FR-015a's placement and slice 1's
   **post-publication redaction stop** specified? That stop fires "once every
   commit is pushed and every reply is posted", which FR-015a now places before
   the regeneration sequence, so nothing says whether a run carrying a redaction
@@ -218,7 +218,8 @@ clarifying questions were resolved from it rather than asked:
 
 ## Notes
 
-- CHK044 is the one item left open. It is a genuine interaction question with
+- CHK044 was closed by consensus (2/2 regenerate-first, recorded as FR-015d).
+  Its original framing follows: it was a genuine interaction question with
   no precedent to settle it, and it goes to consensus rather than being decided
   here.
 - **Two fixed items also go to consensus**, under the routing rules rather than
