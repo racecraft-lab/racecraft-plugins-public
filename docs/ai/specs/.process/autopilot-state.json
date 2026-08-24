@@ -3,16 +3,16 @@
   "spec_id": "G56R-006",
   "feature_dir": "specs/g56r-006-resolver-materializer-installer-strict-override",
   "branch": "g56r-006-resolver-materializer-installer-strict-override",
-  "status": "in_progress",
+  "status": "awaiting_review",
   "stage": "plan",
-  "updated_at": "2026-08-24T18:14:09Z",
-  "active_step": "Phase 6.5: Confidence Gate",
+  "updated_at": "2026-08-24T18:31:02Z",
+  "active_step": "plan-stage review boundary",
   "stage_resolution": {
     "source": "argv",
     "basis": "explicit --stage plan",
     "recorded_stage": null,
-    "planning_complete": false,
-    "confidence_gate_status": "⏳ Pending",
+    "planning_complete": true,
+    "confidence_gate_status": "✅ Complete",
     "from_phase": null,
     "corroboration": {
       "status": "no_record",
@@ -396,7 +396,51 @@
       },
       "confidence": 0.94,
       "g6": "pass"
+    },
+    "confidence_gate": {
+      "status": "completed",
+      "mode": "advisory",
+      "composite": 0.94,
+      "threshold": 0.9,
+      "pass": true,
+      "recommended_action": "proceed",
+      "criteria": {
+        "task_understanding": 0.96,
+        "approach_clarity": 0.94,
+        "requirements_alignment": 0.95,
+        "risk_assessment": 0.92,
+        "completeness": 0.94
+      },
+      "remediation_iterations": 0
     }
+  },
+  "artifact_generation": {
+    "status": "completed_with_gaps",
+    "selected": [
+      "implementation-plan",
+      "spec-explainer",
+      "code-approaches",
+      "module-map"
+    ],
+    "generated": [],
+    "gaps": [
+      {
+        "page": "implementation-plan",
+        "reason": "on-disk verification found prohibited class=sample-notice; file deleted"
+      },
+      {
+        "page": "spec-explainer",
+        "reason": "on-disk verification found prohibited class=notice; file deleted"
+      },
+      {
+        "page": "code-approaches",
+        "reason": "on-disk verification found prohibited class=sample-notice; file deleted"
+      },
+      {
+        "page": "module-map",
+        "reason": "on-disk verification found prohibited class=sample-notice; file deleted"
+      }
+    ]
   },
   "tasks_reviewability": {
     "status": "deferred_with_fallback_pass",
@@ -439,7 +483,7 @@
     {"step": "Phase 5: Tasks", "status": "completed"},
     {"step": "Phase 6: Analyze", "status": "completed"},
     {"step": "Phase 6: Analyze - Consensus", "status": "completed"},
-    {"step": "Phase 6.5: Confidence Gate", "status": "in_progress"},
+    {"step": "Phase 6.5: Confidence Gate", "status": "completed"},
     {"step": "Phase 7: Implement - Setup (T001-T005)", "status": "skipped: outside plan stage"},
     {"step": "Phase 7: Implement - Foundation (T006-T011)", "status": "skipped: outside plan stage"},
     {"step": "Phase 7: Implement - User Story 1 (T012-T018)", "status": "skipped: outside plan stage"},

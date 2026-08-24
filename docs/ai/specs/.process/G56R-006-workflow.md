@@ -36,9 +36,9 @@ Re-read it before every phase. Once autopilot begins, later clarifications use `
 | Checklist | `/speckit-checklist` | ✅ Complete | 123 checks across error handling, state management, data integrity, and reliability; zero gaps; G4 passed |
 | Tasks | `/speckit-tasks` | ✅ Complete | 53 dependency-ordered tasks, 14 RED→GREEN pairs, all 29 FRs and 13 scenarios mapped; G5 passed |
 | Analyze | `/speckit-analyze` | ✅ Complete | One medium manifest/data-model naming drift remediated; zero unresolved findings; G6 passed |
-| Confidence Gate | G6.5 | 🔄 In Progress | Advisory composite confidence before implementation |
-| Implement | `/speckit-implement` | ⏳ Pending | Execute tasks with targeted and repository-wide verification |
-| Post | Post-Implementation | ⏳ Pending | Canonical closeout, generated artifacts, PR, UAT boundary, and retrospective |
+| Confidence Gate | G6.5 | ✅ Complete | Advisory PASS: composite 0.94 meets the 0.90 threshold; no remediation iteration required |
+| Implement | `/speckit-implement` | ⏭️ Skipped | Outside `--stage plan`; resume explicitly with `--stage implement` |
+| Post | Post-Implementation | ⏭️ Skipped | Outside `--stage plan` |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
@@ -462,11 +462,11 @@ G6 passed with zero unresolved critical, high, medium, or low findings. Analyze 
 
 📊 Confidence: 0.94
 
-- Task understanding: 0.96 — all four authorities, seven explicit drift classes, and the plan-stage boundary were checked.
-- Approach clarity: 0.94 — the one contract mismatch had a direct, minimal artifact correction.
-- Requirements alignment: 0.95 — all 29 FRs, 13 scenarios, 9 success criteria, Q1-Q14 decisions, and Non-goals remain mapped.
-- Risk assessment: 0.92 — rollback, ownership, strict override, deterministic-only validation, generated artifacts, and downstream roster drift were explicitly audited.
-- Completeness: 0.94 — one medium finding was remediated; marker scan and G6 both report zero unresolved findings.
+- Task understanding: 0.96
+- Approach clarity: 0.94
+- Requirements alignment: 0.95
+- Risk assessment: 0.92
+- Completeness: 0.94
 
 ---
 
@@ -475,9 +475,9 @@ G6 passed with zero unresolved critical, high, medium, or low findings. Analyze 
 | Field | Value |
 |-------|-------|
 | Mode | advisory |
-| Composite confidence | Pending |
-| Verdict | Pending |
-| Evidence | Pending |
+| Composite confidence | 0.94 (threshold 0.90) |
+| Verdict | ✅ PASS — proceed to the plan-stage review boundary |
+| Evidence | `confidence-gate` parsed all five criteria and returned `recommended_action=proceed`; 0 remediation iterations |
 
 ---
 
