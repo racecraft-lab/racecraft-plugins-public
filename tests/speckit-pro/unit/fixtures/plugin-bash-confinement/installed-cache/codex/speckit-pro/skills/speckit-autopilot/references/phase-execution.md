@@ -2105,8 +2105,7 @@ proceed into task work.
 
 **One or more `amended`: stop for re-review before any task work.** Its
 what-landed part names the comments swept, the amendments made, and the commit
-range, and the report **states that the draft artifact pages regenerate once
-slice 2 lands**.
+range.
 
 **No `amended` but at least one comment handled: write the records, post the
 replies, and proceed directly into task execution**, without stopping. Nothing
@@ -2121,10 +2120,6 @@ comments.
 reply is posted.** The resume path is re-run. Where nothing was amended, this
 stop replaces the proceed at that same point. Where the re-review stop or the
 human-review stop also holds, it is the same stop and one report.
-
-The regeneration sentence is an interface slice 2 replaces. Until it does, it
-is the only thing telling a reviewer why the pages they are looking at are
-older than the amendments beside them.
 
 #### Phase 7 Setup: The Sweep's Byproduct Directory Ignores Itself
 
