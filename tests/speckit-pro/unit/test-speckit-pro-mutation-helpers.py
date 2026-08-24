@@ -1049,6 +1049,11 @@ class MutationHelperTests(unittest.TestCase):
                 "optional_helper_mismatch",
             ),
             (
+                "invalid-no-helper-allowed-type",
+                lambda manifest: manifest["optional_helper"]["no_helper"].__setitem__("allowed", "false"),
+                "optional_helper_no_helper_allowed_not_boolean",
+            ),
+            (
                 "source-roster-missing-optional-helper",
                 lambda manifest: manifest["source_roster"].__setitem__(
                     "files",
@@ -1123,6 +1128,32 @@ class MutationHelperTests(unittest.TestCase):
         with tmp:
             manifest = valid_route_policy_manifest()
             manifest["schema_version"] = "2.0.0"
+            finalize_route_policy_manifest(manifest)
+            path = self.write_route_policy_manifest(git_root, manifest)
+            destination = git_root / ".codex" / "agents"
+
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "install-codex-agents",
+                    mode="apply",
+                    inputs={
+                        "destination": ".codex/agents",
+                        "route_policy_manifest": path.relative_to(git_root).as_posix(),
+                    },
+                ),
+                cwd=git_root,
+            )
+
+        self.assertEqual(completed.returncode, 2)
+        self.assert_response(response, "input_error", 2)
+        self.assertEqual([diag["code"] for diag in stderr_records], ["invalid_route_policy_manifest"])
+        self.assertFalse(destination.exists())
+
+    def test_install_codex_agents_rejects_truthy_string_no_helper_authorization(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            manifest = valid_route_policy_manifest()
+            manifest["optional_helper"]["no_helper"]["allowed"] = "false"
             finalize_route_policy_manifest(manifest)
             path = self.write_route_policy_manifest(git_root, manifest)
             destination = git_root / ".codex" / "agents"

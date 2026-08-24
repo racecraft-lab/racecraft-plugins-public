@@ -5,7 +5,7 @@
   "branch": "g56r-006-resolver-materializer-installer-strict-override",
   "status": "in_progress",
   "stage": "implement",
-  "updated_at": "2026-08-24T22:20:00Z",
+  "updated_at": "2026-08-24T22:37:00Z",
   "active_step": "Post: Review Remediation",
   "stage_resolution": {
     "source": "argv",
@@ -517,6 +517,17 @@
         ],
         "important_findings": 1,
         "nits": 0
+      },
+      "re_review_3": {
+        "reviewed_head": "45c271953233433f58cdf4d9bbe5033637de032c",
+        "resolved": [
+          "all six previous findings"
+        ],
+        "remaining_or_new": [
+          "truthy non-boolean no_helper.allowed can authorize helper omission"
+        ],
+        "important_findings": 1,
+        "nits": 0
       }
     },
     "post_review_remediation": {
@@ -547,7 +558,8 @@
         "docs_reference": "current"
       },
       "third_round": {
-        "status": "implemented_pending_commit_and_reverification",
+        "status": "committed_pending_reverification",
+        "remediation_commit": "45c271953233433f58cdf4d9bbe5033637de032c",
         "remediations": [
           "required-policy objects require exact closed keys and non-empty policy IDs",
           "required_capabilities requires a duplicate-free list of non-empty strings"
@@ -555,6 +567,18 @@
         "focused_materializer": "11/11 passed",
         "focused_installer": "82/82 passed",
         "full_suite": "14041/14041 passed (L1 1511, L4 12311, L5 219)",
+        "docs_reference": "current"
+      },
+      "fourth_round": {
+        "status": "implemented_pending_commit_and_reverification",
+        "remediations": [
+          "optional-helper no_helper uses exact allowed and reason keys",
+          "allowed is strictly boolean and reason is a non-empty string",
+          "optional policy identity is typed and required whenever routes exist"
+        ],
+        "focused_materializer": "11/11 passed",
+        "focused_installer": "83/83 passed",
+        "full_suite": "14042/14042 passed (L1 1511, L4 12312, L5 219)",
         "docs_reference": "current"
       }
     }

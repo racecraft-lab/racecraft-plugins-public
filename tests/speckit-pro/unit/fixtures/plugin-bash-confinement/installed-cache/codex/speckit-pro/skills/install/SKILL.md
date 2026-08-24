@@ -116,6 +116,9 @@ candidate and bounded probe used by the run. Every required policy's declared
 non-route contract digest must exactly match canonical materialization of its
 trusted current source TOML. Required-policy objects are closed-schema records,
 and `required_capabilities` must be a duplicate-free list of non-empty strings.
+The optional helper's `no_helper` record is also closed: `allowed` is strictly
+boolean and `reason` is a non-empty string. String truthiness never authorizes
+helper omission.
 
 Route-aware mode returns `data.routing` with:
 

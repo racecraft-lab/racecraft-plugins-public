@@ -79,6 +79,7 @@ ROUTE_POLICY_ROUTE_KEYS = frozenset({"route_id", "model", "model_reasoning_effor
 ROUTE_POLICY_OPTIONAL_HELPER_KEYS = frozenset(
     {"helper_name", "policy_id", "preferred_route", "fallback_routes", "no_helper"}
 )
+ROUTE_POLICY_NO_HELPER_KEYS = frozenset({"allowed", "reason"})
 ROUTE_POLICY_SHA256_IDENTITY = re.compile(r"^sha256:[0-9a-f]{64}$")
 ROUTE_POLICY_SHA256_HEX = re.compile(r"^[0-9a-f]{64}$")
 CODEX_AGENT_STATE_UNSET = object()
@@ -1889,6 +1890,9 @@ def validate_route_policy_optional_helper(raw: Any) -> dict[str, Any]:
             "optional_helper_mismatch",
             details={"expected": CODEX_OPTIONAL_HELPER_NAME, "actual": raw.get("helper_name")},
         )
+    policy_id = raw.get("policy_id")
+    if policy_id is not None and (not isinstance(policy_id, str) or not policy_id):
+        return invalid_route_policy_manifest("optional_helper_policy_id_invalid")
     preferred = raw.get("preferred_route")
     if preferred is not None:
         route_result = validate_route_policy_route(preferred, context="optional_helper.preferred_route")
@@ -1901,8 +1905,24 @@ def validate_route_policy_optional_helper(raw: Any) -> dict[str, Any]:
         route_result = validate_route_policy_route(route, context=f"optional_helper.fallback_routes[{index}]")
         if is_diagnostic(route_result):
             return route_result
-    if not isinstance(raw.get("no_helper"), dict):
+    if policy_id is None and (preferred is not None or fallback_routes):
+        return invalid_route_policy_manifest("optional_helper_policy_id_required_for_routes")
+    no_helper = raw.get("no_helper")
+    if not isinstance(no_helper, dict):
         return invalid_route_policy_manifest("optional_helper_no_helper_not_object")
+    no_helper_keys = set(no_helper)
+    if no_helper_keys != ROUTE_POLICY_NO_HELPER_KEYS:
+        return invalid_route_policy_manifest(
+            "optional_helper_no_helper_schema_mismatch",
+            details={
+                "missing": sorted(ROUTE_POLICY_NO_HELPER_KEYS - no_helper_keys),
+                "unknown": sorted(no_helper_keys - ROUTE_POLICY_NO_HELPER_KEYS),
+            },
+        )
+    if not isinstance(no_helper.get("allowed"), bool):
+        return invalid_route_policy_manifest("optional_helper_no_helper_allowed_not_boolean")
+    if not isinstance(no_helper.get("reason"), str) or not no_helper["reason"]:
+        return invalid_route_policy_manifest("optional_helper_no_helper_reason_invalid")
     return {}
 
 

@@ -178,6 +178,19 @@
       }
     },
     {
+      "case_id": "invalid-no-helper-allowed-type",
+      "category": "invalid_manifest",
+      "overrides": {
+        "manifest.optional_helper.no_helper.allowed": "false"
+      },
+      "expected": {
+        "status": "input_error",
+        "diagnostic_code": "invalid_route_policy_manifest",
+        "snapshot_captured": false,
+        "writes_state": false
+      }
+    },
+    {
       "case_id": "invalid-manifest-path-outside-repository",
       "category": "invalid_manifest_path",
       "overrides": {

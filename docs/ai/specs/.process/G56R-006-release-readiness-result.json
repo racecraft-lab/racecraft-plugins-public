@@ -4,7 +4,7 @@
   "status": "ready_for_post_implementation_review",
   "what_changed": [
     "Added explicit trusted route-policy manifest activation while preserving static no-manifest installation.",
-    "Added one-snapshot preferred/fallback resolution for the 12 required Codex agents, closed required-policy schemas, canonical non-route contract validation, and one optional helper decision.",
+    "Added one-snapshot preferred/fallback resolution for the 12 required Codex agents, closed required-policy and no-helper schemas, canonical non-route contract validation, and one optional helper decision.",
     "Extended canonical materialization to render selected model and effort while binding original source bytes and unchanged non-route fields.",
     "Added strict global override, exact-byte managed-helper removal, caller-provenance rejection, preservation, bounded probes, complete-plan-before-write apply, exact installed-state binding, concurrent-edit refusal, and rollback recovery evidence.",
     "Added deterministic fake-home fixtures/tests, Codex install documentation, generated payload mirrors, installed-cache proofs, runner trust metadata, and docs references."
@@ -56,11 +56,11 @@
   },
   "verification": {
     "focused_materializer": "11/11 passed after review remediation",
-    "focused_installer": "82/82 passed after review remediation",
+    "focused_installer": "83/83 passed after review remediation",
     "layer_1": "1511/1511 passed",
     "layer_4": "12309/12309 passed",
     "layer_5": "219/219 passed",
-    "full_suite": "14041/14041 passed after review remediation",
+    "full_suite": "14042/14042 passed after review remediation",
     "toolchain_preflight": "passed",
     "docs_reference_generate": "7 pages generated",
     "docs_reference_check": "current",

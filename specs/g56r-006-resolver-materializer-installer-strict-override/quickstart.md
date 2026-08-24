@@ -79,6 +79,7 @@ Before marking implementation complete, verify:
 - Manifest paths outside the repository trusted-file boundary, symlinked manifests, unsupported versions, and manifest or source-roster identity mismatches fail before discovery or mutation.
 - Every required policy's non-route contract digest matches canonical materialization of its trusted source TOML.
 - Required-policy objects use the exact closed schema and a duplicate-free string array for required capabilities.
+- Optional-helper `no_helper` authorization uses a closed record with a strict boolean `allowed` value.
 - Every route-aware response has exactly one snapshot ID and all 12 required-agent records cite it.
 - Strict override required misses report complete diagnostics and zero writes.
 - Optional helper removal has exact known rendered-byte digest proof; caller-asserted provenance is rejected as untrusted.

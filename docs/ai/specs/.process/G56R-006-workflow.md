@@ -523,9 +523,9 @@ After focused tests pass, run the relevant Layer 1/4/5 checks, generated runner/
 | Canonical Item | Status | Evidence |
 |---|---|---|
 | Post: Doctor Extension Check | ✅ Complete | 4 PASS, 1 unrelated warning for incomplete brand-001 placeholder artifacts, 0 FAIL; no writes |
-| Post: Verify Implementation | ⏳ Pending — Rerun Required | Final chain must restart after the closed required-policy schema commit |
+| Post: Verify Implementation | ⏳ Pending — Rerun Required | Final chain must restart after strict optional-helper schema commit |
 | Post: Verify Tasks Phantom Check | ⏳ Pending | |
-| Post: Code Review | ✅ Complete — Findings | Two re-review rounds cleared all prior findings; the second exposed one remaining invalid `required_capabilities` type bypass, now remediated |
+| Post: Code Review | ✅ Complete — Findings | Three re-review rounds cleared all prior findings; the latest exposed one truthy-string `no_helper.allowed` bypass, now remediated |
 | Post: Integration Suite | ⏳ Pending | |
 | Post: Reviewability Diff Gate | ⏳ Pending | |
 | Post: Self-Review | ⏳ Pending | |
@@ -534,7 +534,7 @@ After focused tests pass, run the relevant Layer 1/4/5 checks, generated runner/
 | Post: PR Packet/Body Generation | ⏳ Pending | |
 | Post: PR Body Generation | ⏳ Pending | |
 | Post: PR Creation | ⏳ Pending | |
-| Post: Review Remediation | 🔄 In Progress | Required-policy records now use an exact closed schema and duplicate-free string capability arrays; focused 11/11 and 82/82 plus full 14041/14041 pass; awaiting commit and final re-review |
+| Post: Review Remediation | 🔄 In Progress | Optional-helper `no_helper` is now a closed record with strict boolean authorization; focused 11/11 and 83/83 plus full 14042/14042 pass; awaiting commit and final re-review |
 | Post: Retrospective | ⏳ Pending | |
 
 - [x] All tasks complete and every FR mapped.
