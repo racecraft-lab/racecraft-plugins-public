@@ -95,12 +95,13 @@ Per `data-model.md` §3. `pages` echoes the supplied inventory unchanged.
 | `artifacts_observation` absent or not an object | input error, exit 2 |
 | `artifacts_observation.ok` is not the literal `true` | verdict `undeterminable`, exit 0 |
 | `artifacts_dir_state` outside the closed three | input error, exit 2 |
-| `pages` not an array of strings, with `ok` true | input error, exit 2 |
+| `pages` absent or not an array of strings, with `ok` true | input error, exit 2 |
 | `last_artifacts_commit` neither a string nor null, with `ok` true | input error, exit 2 |
-| `amended_commits` not an array, or carrying a non-object | input error, exit 2 |
+| `amended_commits` absent, not an array, or carrying a non-object | input error, exit 2 |
 | a record whose `cell` is not a string, or whose `resolved` is not a boolean | input error, exit 2 |
 | a record `resolved` true whose `is_ancestor_of_artifacts_commit` is not a boolean | input error, exit 2 |
 | a record `resolved` false whose `is_ancestor_of_artifacts_commit` is not null | input error, exit 2 |
+| a record `resolved` true claiming `is_ancestor_of_artifacts_commit` true while `last_artifacts_commit` is null | input error, exit 2 |
 | the serialized envelope exceeds the runner's stdout capture | input error, exit 2 |
 | no `Feedback Sweep Log` heading | zero `amended` rows; verdict decided by directory state alone |
 | a row is malformed | that row is undeterminable and surfaced; the other rows still evaluate |
@@ -110,11 +111,26 @@ and returns exit 2. A failed or unusable *observation* is a fact about the
 world, and FR-023 says it may not block the run, so it returns a verdict that
 acts on nothing.
 
-**The two ancestry refusals enforce FR-007b rather than restate it.** The stale
-test is for the literal `false`, so a record that resolved and left the ancestry
-field null reads as *not stale* and hands a re-reviewer the pre-amendment plan —
-the FR-007a interrupted-run case exactly. A rule the helper only writes down is
-a rule no run enforces, so this one is refused instead of defaulted.
+**The ancestry refusals enforce FR-007b rather than restate it.** The stale test
+is for the literal `false`, so a record that resolved and left the ancestry field
+null reads as *not stale* and hands a re-reviewer the pre-amendment plan — the
+FR-007a interrupted-run case exactly. A rule the helper only writes down is a
+rule no run enforces, so this one is refused instead of defaulted.
+
+**Both directions are refused, because a boolean check alone misses one.** With
+`last_artifacts_commit` null there is no commit for anything to be an ancestor
+of, so a resolved record claiming `true` is not making a weaker claim than
+`false` — it is making a false one, and it passes a type check and then reaches
+the ordinary stale test as *not stale*. That returns `current` on the one case
+this rule exists for, so it is refused alongside the null.
+
+**Absence is refused with the wrong type.** `pages` and `amended_commits` are
+required once `ok` is the literal `true`, and both legally empty states are
+supplied as the empty array. Read as empty instead, an omitted `pages` echoes a
+directory the caller never looked at, and an omitted `amended_commits` makes
+every `amended` row unmatched and returns an `undeterminable` verdict naming
+rows — pointing the operator at the log rather than at the gather. The removal
+surface already refuses absence for exactly this reason.
 
 **An envelope that would not survive capture is refused, never truncated.** The
 runner captures a helper's stdout at 16 KiB and truncates the JSON mid-string

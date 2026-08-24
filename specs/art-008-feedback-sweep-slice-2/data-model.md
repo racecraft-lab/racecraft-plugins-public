@@ -86,8 +86,8 @@ orchestrator, which is the only party that runs `git` (FR-004, FR-004a).
 | `ok` | boolean | MUST be the JSON literal `true` to be read at all. Any other value — including truthy `1` or `"true"` — is an unusable observation and yields the `undeterminable` verdict rather than an input error, because FR-023 forbids a failed gather from blocking the run. This follows `observation_pull_requests` (`read_only.py:1353-1409`) exactly. |
 | `artifacts_dir_state` | closed token | `absent`, `empty`, or `present`. `absent` and `empty` both read as `no_pages` (FR-007). `present` with no `last_artifacts_commit` is the FR-007a case. |
 | `last_artifacts_commit` | string or null | The last commit touching `specs/<feature>/artifacts/`, in whatever form the orchestrator resolved it. Reported back for the operator; **never compared as a string** (FR-008). `null` means no commit has ever touched the directory. |
-| `pages` | array of strings | The pre-regeneration on-disk inventory, by filename stem. The helper **echoes** this; it never selects (FR-004). A value that is not an array of strings, on an observation whose `ok` is the literal `true`, is an input error rather than an echo: a bare string splats into one page per character and reports an inventory nobody supplied. |
-| `amended_commits` | array of records | One per `amended` row, keyed by that row's `Commit` cell text **verbatim**. Not an array, or carrying a non-object, is an input error on an observation that reported success. |
+| `pages` | array of strings | The pre-regeneration on-disk inventory, by filename stem. **Required** once `ok` is the literal `true`; the empty inventory is the empty array. Absent, or not an array of strings, is an input error rather than an echo: a bare string splats into one page per character, and an omission would echo a directory the caller never looked at. |
+| `amended_commits` | array of records | One per `amended` row, keyed by that row's `Commit` cell text **verbatim**. **Required** once `ok` is the literal `true`; a log with no `amended` row supplies the empty array. Absent, not an array, or carrying a non-object is an input error on an observation that reported success. |
 
 **Every type in this table is enforced, not merely declared.** Once `ok` is the
 literal `true`, the helper checks each field against the type above and returns
@@ -103,7 +103,7 @@ an internal failure, which is not a verdict either.
 |---|---|---|
 | `cell` | string | The row's `Commit` cell text verbatim. This is the join key. |
 | `resolved` | boolean | Whether the cell resolved to a commit in this history. |
-| `is_ancestor_of_artifacts_commit` | boolean or null | Whether that commit is an ancestor of `last_artifacts_commit`. `null` when `resolved` is false. **`false` when `resolved` is true and `last_artifacts_commit` is null** (FR-007b): there is no commit to be an ancestor of, and the FR-007a case needs a pinned value for its fixtures to assert. Both halves are refused as input errors when violated — a record that resolved without a boolean here, and an unresolved record carrying a non-null one. |
+| `is_ancestor_of_artifacts_commit` | boolean or null | Whether that commit is an ancestor of `last_artifacts_commit`. `null` when `resolved` is false. **`false` when `resolved` is true and `last_artifacts_commit` is null** (FR-007b): there is no commit to be an ancestor of, and the FR-007a case needs a pinned value for its fixtures to assert. All three halves are refused as input errors when violated: a record that resolved without a boolean here, an unresolved record carrying a non-null one, and a resolved record claiming `true` while `last_artifacts_commit` is null. |
 
 **FR-007b is enforced rather than written down.** The stale test is for the
 literal `false`, so a resolved record leaving this field null reads as *not
@@ -111,6 +111,11 @@ stale* and leaves the pre-amendment plan in front of the re-reviewer, which is
 the FR-007a interrupted-run case exactly. The orchestrator prose states the
 obligation and the helper refuses the request that breaks it, because a rule
 only one side knows is a rule no run enforces.
+
+**A boolean check alone misses one direction.** With no commit for anything to
+be an ancestor of, a resolved record claiming `true` is not a weaker claim than
+`false` but a false one, and it passes a type check before reaching the stale
+test as *not stale*. Both directions are therefore refused.
 
 **Why ancestry and not a comparison.** The `Commit` cell may hold an abbreviated
 sha while `last_artifacts_commit` is full, so string equality would report a

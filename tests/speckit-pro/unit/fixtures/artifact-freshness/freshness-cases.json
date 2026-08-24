@@ -485,6 +485,26 @@
       },
       "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 4 | IC_kwDOaaa004 | pr_conversation | octocat | amended | Narrowed FR-012 in spec.md. | e4f5a6b | 3 |\n\n"
     },
+    "input-error-observation-amended-commits-omitted": {
+      "purpose": "An omitted `amended_commits` read as empty makes every `amended` row unmatched and returns `undeterminable` naming rows, which points the operator at the log instead of at the gather that forgot to supply the records. The legal empty case is the empty array.",
+      "acceptance": [
+        "FR-004a",
+        "FR-006"
+      ],
+      "inputs": {
+        "named_surface": "verdict",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/input-error-observation-amended-commits-omitted.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab",
+          "pages": [
+            "implementation-plan"
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 4 | IC_kwDOaaa004 | pr_conversation | octocat | amended | Narrowed FR-012 in spec.md. | e4f5a6b | 3 |\n\n"
+    },
     "input-error-observation-not-an-object": {
       "purpose": "`artifacts_observation` supplied as an array. A non-object cannot carry `ok`, so it is a malformed request rather than a gather that failed.",
       "acceptance": [
@@ -533,6 +553,50 @@
           "last_artifacts_commit": "9f2c1ab",
           "pages": 7,
           "amended_commits": []
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 4 | IC_kwDOaaa004 | pr_conversation | octocat | amended | Narrowed FR-012 in spec.md. | e4f5a6b | 3 |\n\n"
+    },
+    "input-error-observation-pages-omitted": {
+      "purpose": "An omitted `pages` is the caller's defect, not the empty inventory. Read as empty it would echo a directory the caller never looked at, and the legal empty case is supplied as the empty array. This follows `freshness_page_list`, which already refuses absence on the removal surface for the same reason.",
+      "acceptance": [
+        "FR-004"
+      ],
+      "inputs": {
+        "named_surface": "verdict",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/input-error-observation-pages-omitted.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab",
+          "amended_commits": []
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 4 | IC_kwDOaaa004 | pr_conversation | octocat | amended | Narrowed FR-012 in spec.md. | e4f5a6b | 3 |\n\n"
+    },
+    "input-error-observation-record-claims-ancestry-of-a-null-commit": {
+      "purpose": "The direction of FR-007b a boolean check alone lets through. With `last_artifacts_commit` null there is no commit for anything to be an ancestor of, so `true` is not a weaker claim than `false` but a false one \u2014 and it reaches the ordinary stale test as *not stale*, returning `current` on exactly the interrupted-run case FR-007a exists for. FR-007b pins the value, so the helper pins it too.",
+      "acceptance": [
+        "FR-007a",
+        "FR-007b"
+      ],
+      "inputs": {
+        "named_surface": "verdict",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/input-error-observation-record-claims-ancestry-of-a-null-commit.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": null,
+          "pages": [
+            "implementation-plan"
+          ],
+          "amended_commits": [
+            {
+              "cell": "e4f5a6b",
+              "resolved": true,
+              "is_ancestor_of_artifacts_commit": true
+            }
+          ]
         }
       },
       "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 4 | IC_kwDOaaa004 | pr_conversation | octocat | amended | Narrowed FR-012 in spec.md. | e4f5a6b | 3 |\n\n"

@@ -1344,6 +1344,41 @@ stderr is not cosmetic here: the runner's stderr is a JSON channel, so anything
 that writes a bare line to it breaks callers that parse it. Compile-check under
 the CI interpreter, not only the local one.
 
+### Copilot review remediation (PR #502, first non-draft review)
+
+Three unresolved threads, all three legitimate, all three fixed. Each landed on
+code this session had just written, and each names a gap the session's own
+verification missed.
+
+**C1 — `pages` and `amended_commits` were optional where the contract calls them
+required. Fixed.** The new validator checked their types but accepted their
+absence, so an omitted `pages` echoed as the empty inventory (reporting a
+directory the caller never looked at) and an omitted `amended_commits` made
+every `amended` row unmatched, turning a caller-shape defect into an
+`undeterminable` verdict that pointed the operator at the log instead of at the
+gather. Both are now required once `ok` is the literal `true`, with the legally
+empty state supplied as the empty array — the rule `freshness_page_list` already
+applies on the removal surface.
+
+**C2 — the FR-007b enforcement covered only one direction. Fixed.** A resolved
+record could claim `is_ancestor_of_artifacts_commit: true` while
+`last_artifacts_commit` was null, pass the boolean check, and reach the stale
+test as *not stale*. With no commit for anything to be an ancestor of, `true` is
+not a weaker claim than `false` but a false one, so this returned `current` on
+exactly the interrupted-run case the rule exists for. This is the same hole the
+earlier review found, re-entered through the other side; a type check alone
+cannot close it.
+
+**C3 — the fixture harness could overwrite a real repository file. Fixed.**
+`materialized_workflow` wrote `workflow_content` wherever `workflow_file`
+pointed, while cleanup removed only `.workflow-scratch`. A future case pointing
+at a real path would have overwritten it, left the worktree dirty, and still
+passed, because the runner reads the file the case names. The write target is
+now confined to the scratch directory and anything else is a hard failure.
+
+Three fixtures added for the new refusals and named in `REQUIRED_CASES`; the
+corpus is 60 cases and 183 assertions.
+
 ### Manual UAT results
 
 Run against the worktree source with `PYTHONPATH=speckit-pro`, not the

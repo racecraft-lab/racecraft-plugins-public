@@ -109,6 +109,9 @@ REQUIRED_CASES = (
     "input-error-observation-amended-commits-not-an-array",
     "input-error-observation-record-resolved-without-boolean-ancestry",
     "input-error-observation-record-unresolved-with-non-null-ancestry",
+    "input-error-observation-record-claims-ancestry-of-a-null-commit",
+    "input-error-observation-pages-omitted",
+    "input-error-observation-amended-commits-omitted",
     # Evidence that survives a verdict that had nothing to judge.
     "verdict-no-pages-still-reports-undeterminable-rows",
     # The removal diff, one-way and over stems.
@@ -183,7 +186,14 @@ def run_runner(request: dict[str, Any]) -> dict[str, Any]:
 
 
 class materialized_workflow:
-    """Write a case's `workflow_content` where its `workflow_file` points."""
+    """Write a case's `workflow_content` where its `workflow_file` points.
+
+    The write target is confined to `WORKFLOW_SCRATCH`, and a case pointing
+    anywhere else is a hard failure rather than a write. Cleanup removes that
+    directory and nothing else, so an unconfined write would overwrite a real
+    repository file, leave the worktree dirty, and — because the runner reads
+    the file the case names — do it while the case still passed.
+    """
 
     def __init__(self, case: dict[str, Any]) -> None:
         self.content = case.get("workflow_content")
@@ -195,6 +205,13 @@ class materialized_workflow:
     def __enter__(self) -> None:
         if self.target is None or self.content is None:
             return
+        resolved = self.target.resolve()
+        if not resolved.is_relative_to(WORKFLOW_SCRATCH.resolve()):
+            raise AssertionError(
+                f"a case carrying workflow_content must point workflow_file inside "
+                f"{WORKFLOW_SCRATCH.relative_to(REPO_ROOT)}; this one points at "
+                f"{self.target.relative_to(REPO_ROOT)}, which cleanup would not remove"
+            )
         self.target.parent.mkdir(parents=True, exist_ok=True)
         self.target.write_text(self.content, encoding="utf-8")
 

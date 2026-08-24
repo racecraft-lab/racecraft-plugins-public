@@ -2794,19 +2794,28 @@ def freshness_observation_error(observation: dict[str, Any]) -> str | None:
     reports as `internal_failure` — neither of which is a verdict.
 
     Semantically negative values are data and are not refused here. `resolved`
-    as false and `is_ancestor_of_artifacts_commit` as true both carry meaning
-    the join acts on, and FR-006 owns the row-level reasons they produce.
+    as false carries meaning the join acts on, and FR-006 owns the row-level
+    reason it produces.
+
+    Absence is refused with the wrong type, following `freshness_page_list`
+    below: an omitted `pages` would echo as the empty inventory and report a
+    directory the caller never looked at, and an omitted `amended_commits` would
+    make every `amended` row unmatched and turn a caller-shape defect into an
+    `undeterminable` verdict that names rows rather than the defect. Both states
+    are legally empty and are supplied as the empty array.
     """
+    if "pages" not in observation:
+        return "artifacts_observation.pages is required when ok is true"
     pages = observation.get("pages")
-    if pages is not None and not (
-        isinstance(pages, list) and all(isinstance(entry, str) for entry in pages)
-    ):
+    if not (isinstance(pages, list) and all(isinstance(entry, str) for entry in pages)):
         return "artifacts_observation.pages must be an array of strings"
     last_artifacts_commit = observation.get("last_artifacts_commit")
     if last_artifacts_commit is not None and not isinstance(last_artifacts_commit, str):
         return "artifacts_observation.last_artifacts_commit must be a string or null"
+    if "amended_commits" not in observation:
+        return "artifacts_observation.amended_commits is required when ok is true"
     records = observation.get("amended_commits")
-    if records is not None and not isinstance(records, list):
+    if not isinstance(records, list):
         return "artifacts_observation.amended_commits must be an array of records"
     for record in records or []:
         if not isinstance(record, dict):
@@ -2835,6 +2844,17 @@ def freshness_observation_error(observation: dict[str, Any]) -> str | None:
             return (
                 "an unresolved amended_commits record carries a non-null "
                 f"is_ancestor_of_artifacts_commit: {record.get('cell')}"
+            )
+        if resolved and last_artifacts_commit is None and ancestor is True:
+            # The other direction of the same FR-007b rule, and the one a
+            # boolean check alone lets through. With no commit for anything to
+            # be an ancestor of, `true` is not a weaker claim than `false` — it
+            # is a false one, and it reaches the ordinary test as *not stale*,
+            # returning `current` on exactly the interrupted-run case FR-007a
+            # exists for. FR-007b pins the value, so the helper pins it too.
+            return (
+                "an amended_commits record claims ancestry of a null "
+                f"last_artifacts_commit: {record.get('cell')}"
             )
     return None
 

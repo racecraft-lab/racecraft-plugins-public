@@ -1679,10 +1679,15 @@ front of the re-reviewer, which is the outcome this whole sequence exists to
 prevent.
 
 **The helper now refuses that mistake rather than acting on it**, and refuses
-the rest of the observation's declared shapes with it: `pages` that is not an
-array of strings, a non-array `amended_commits`, a record whose `cell` is not a
-string or whose `resolved` is not a boolean, a resolved record without a boolean
-ancestry field, and an unresolved record carrying a non-null one. Each returns
+the rest of the observation's declared shapes with it: an absent or non-array
+`pages`, an absent or non-array `amended_commits`, a record whose `cell` is not
+a string or whose `resolved` is not a boolean, a resolved record without a
+boolean ancestry field, an unresolved record carrying a non-null one, and a
+resolved record claiming ancestry of a null `last_artifacts_commit` — which is
+the same rule read the other way, because with no commit to be an ancestor of,
+`true` is a false claim rather than a weaker one. **Supply both arrays even when
+they are empty**: an omitted `pages` echoes a directory nothing looked at, and
+an omitted `amended_commits` reports every row as unmatched. Each returns
 exit 2 with a one-line diagnostic naming the offending field. **That refusal is
 scoped to an observation that reported success**, so nothing here weakens the
 rule below it: an observation whose `ok` is short of the literal `true` is a

@@ -340,6 +340,10 @@
       "status": "input_error",
       "error_contains": "artifacts_observation.amended_commits must be an array of records"
     },
+    "input-error-observation-amended-commits-omitted": {
+      "status": "input_error",
+      "error_contains": "artifacts_observation.amended_commits is required when ok is true"
+    },
     "input-error-observation-not-an-object": {
       "status": "input_error",
       "error_contains": "artifacts_observation must be an object"
@@ -351,6 +355,14 @@
     "input-error-observation-pages-not-an-array": {
       "status": "input_error",
       "error_contains": "artifacts_observation.pages must be an array of strings"
+    },
+    "input-error-observation-pages-omitted": {
+      "status": "input_error",
+      "error_contains": "artifacts_observation.pages is required when ok is true"
+    },
+    "input-error-observation-record-claims-ancestry-of-a-null-commit": {
+      "status": "input_error",
+      "error_contains": "claims ancestry of a null last_artifacts_commit"
     },
     "input-error-observation-record-resolved-without-boolean-ancestry": {
       "status": "input_error",
