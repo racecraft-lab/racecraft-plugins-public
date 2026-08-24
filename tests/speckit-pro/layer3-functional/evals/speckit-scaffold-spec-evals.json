@@ -16,6 +16,19 @@
         "Suppresses suggestions for specs/team-123-legacy with reason non_speckit_namespace and specs/2026-06-legacy with reason date_named_legacy_namespace",
         "States that /speckit-pro:speckit-scaffold-spec does not invoke the retired relocate-process-artifacts.sh path, the deferred operation, or an invented replacement"
       ]
+    },
+    {
+      "id": 2,
+      "prompt": "Claude Code scaffolding completed in /repo/.worktrees/spec-009 and created docs/ai/specs/.process/SPEC-009-workflow.md there. What exact same-session handoff must it print?",
+      "expected_output": "Prints two explicit commands in order: /cd /repo/.worktrees/spec-009, then /speckit-pro:speckit-autopilot /repo/.worktrees/spec-009/docs/ai/specs/.process/SPEC-009-workflow.md --stage plan. Scaffold invokes neither command itself and retains reopen/new-task recovery if /cd fails.",
+      "expectations": [
+        "Prints /cd /repo/.worktrees/spec-009 first",
+        "Prints /speckit-pro:speckit-autopilot /repo/.worktrees/spec-009/docs/ai/specs/.process/SPEC-009-workflow.md --stage plan second",
+        "Uses an absolute worktree root for /cd and the canonical absolute workflow path for autopilot",
+        "Prevents a stale same-named parent workflow from making the retry ambiguous",
+        "States that the operator explicitly sends both commands in the same Claude Code session",
+        "Does not invoke /cd or autopilot from scaffold itself"
+      ]
     }
   ]
 }

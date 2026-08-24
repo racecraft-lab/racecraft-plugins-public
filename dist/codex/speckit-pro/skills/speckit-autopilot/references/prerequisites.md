@@ -4,6 +4,7 @@ The autopilot's pre-flight sequence. Run these before Step 1 (Parse Workflow Sta
 
 ## Contents
 
+- [Workflow Worktree Binding](#workflow-worktree-binding) — verify Claude's live checkout after `/cd`
 - [Step -1: Archive Sweep Startup](#step--1-archive-sweep-startup) — archive previously merged specs before workflow execution
 - [Step 0.0: Resolve Script Paths](#step-00-resolve-script-paths) — extract `SKILL_SCRIPTS` from the skill header (plugin path)
 - [Step 0.0b: Claude Agent Package Completeness](#step-00b-claude-agent-package-completeness) — verify bundled plugin agents are present
@@ -14,6 +15,42 @@ The autopilot's pre-flight sequence. Run these before Step 1 (Parse Workflow Sta
 - [Step 0.10: Implementation Agent Detection](#step-010-implementation-agent-detection) — discover `PROJECT_IMPLEMENTATION_AGENT`
 - [Step 0.11: Project Command Discovery](#step-011-project-command-discovery) — `detect-commands` → `PROJECT_COMMANDS`
 - [Step 0.12: Preset and Extension Detection](#step-012-preset-and-extension-detection) — `detect-presets` → `PRESET_CONVENTIONS`
+
+## Workflow Worktree Binding
+
+Run this read-only guard before Step -1, before reading workflow content, and
+before any repository mutation:
+
+1. Invoke the runner helper `resolve-workflow-binding` with the supplied path as
+   `inputs.workflow_file`. Require `binding_status=resolved` and
+   `relation=same`, then bind its canonical `task_root`, `workflow_root`, and
+   `workflow_file` as `TASK_ROOT`, `WORKFLOW_ROOT`, and `WORKFLOW_FILE`.
+2. On `missing`, `ambiguous`, or `invalid`, report the helper's `candidates` and
+   `problems` and STOP. Do not search other revisions or arbitrary filesystem
+   roots.
+3. If the helper resolves `descendant` or `external`, the current Claude Code
+   checkout is still the parent or another worktree. STOP before Archive Sweep
+   and print this retry, using the helper's canonical paths:
+
+   ```text
+   /cd <WORKFLOW_ROOT>
+   /speckit-pro:speckit-autopilot <canonical absolute WORKFLOW_FILE> --stage <requested-stage>
+   ```
+
+   The operator sends the autopilot command only after `/cd` succeeds. Claude
+   Code documents that `/cd` changes the live session's primary directory and
+   reloads directory instructions:
+   <https://code.claude.com/docs/en/commands>.
+4. From the resolved `WORKFLOW_ROOT`, verify the live branch before Archive
+   Sweep. STOP on `main`, a detached HEAD, or any protected integration/release
+   branch. Never mutate the parent checkout as a fallback.
+5. Re-run this guard on resume. Every shell call, helper, filesystem operation,
+   state update, Git action, phase prompt, consensus prompt, and write-capable
+   agent must target `WORKFLOW_ROOT`; validate returned paths before applying
+   edits or committing.
+
+This guard is why the scaffold hand-off is two explicit same-session commands.
+Scaffold never invokes `/cd` or autopilot itself.
 
 ## Step -1: Archive Sweep Startup
 

@@ -727,7 +727,8 @@ Report:
 **Bootstrap:** <commands run, documented health check, or "no documented bootstrap">
 
 **If you stop here, run:**
-/speckit-pro:speckit-autopilot docs/ai/specs/.process/SPEC-009-workflow.md --stage plan
+/cd <absolute-worktree-root>
+/speckit-pro:speckit-autopilot <absolute-workflow-file> --stage plan
 
 **Review both files** — the design concept doc captures the
 decisions you made during grill-me; the workflow file is what the
@@ -760,39 +761,32 @@ Placing it earlier is rejected for a stated reason: a planning stage that fails
 or is interrupted must never leave the roadmap claiming the spec is still Ready.
 Steps 4 through 8 keep their numbers.
 
-**Scaffold never invokes the autopilot. It prints the command; the operator runs
-it.** This is a platform fact rather than a preference. On Claude Code the
+**Scaffold never invokes the autopilot or `/cd`. It prints both commands; the
+operator explicitly sends them in this same session.** On Claude Code the
 autopilot skill carries `disable-model-invocation: true`, which the skills
 documentation defines as "Only you can invoke the skill" — a deliberate setting,
 because a seven-phase autonomous run that commits as it goes is exactly the kind
-of side effect an operator must trigger themselves. On Codex CLI no flag forbids
-it, but a skill body invoking a sibling skill mid-session is unverified, and
-shipping an unverified invocation would be worse than printing a command that
-always works. **Never state that accepting will run the planning phases in this
-session.**
+of side effect an operator must trigger themselves. **Never state that accepting
+will run the planning phases or change directories automatically.**
 
 **Run the hand-off check first. Two read-only tests.** They do not gate the
 hand-off — one is always printed. They select its form and decide whether a
 warning travels with it.
 
 ```text
-1. Resolve the current checkout with `git rev-parse --show-toplevel`.
-2. If the supplied workflow path exists inside that checkout, continue.
-3. Confirm `git status --porcelain` is clean in the same checkout that
-   step 1 resolved.
+1. Resolve the generated worktree with `git -C <absolute-worktree-root>
+   rev-parse --show-toplevel`; require the canonical result to equal that root,
+   and require the canonical absolute workflow file to be a readable regular
+   file contained by it.
+2. Confirm `git -C <absolute-worktree-root> status --porcelain` is clean.
 ```
 
-Step 2 is the Codex autopilot's Workflow Worktree Binding guard's own sentence,
-reproduced word for word. Use those words. Do not paraphrase them as "resolves
-inside", "is under", or "belongs to".
-
-**This is an existence test on the supplied path. It is not a comparison of
-directories.** Do not implement it by canonicalising the workflow path and
-comparing its parent, its repository root, or its worktree root against the
-current checkout root. A stale same-named workflow file in the parent checkout
-passes every such comparison, so an operator following the bare command would run
-planning with its commits landing there — usually main, which this skill may
-never commit to.
+The absolute root and canonical absolute workflow path are deliberately passed
+separately. `/cd` changes Claude Code's live session directory and reloads
+directory-scoped instructions; the absolute autopilot path then identifies
+exactly the generated worktree even if another registered worktree contains a
+stale same-named workflow. That duplicate therefore cannot make the retry
+ambiguous or redirect planning commits to main.
 
 **What the check must NOT test: the most recent commit.** After Step 8 the
 newest commit is the roadmap status flip rather than the workflow-file commit,
@@ -804,9 +798,9 @@ Both commands are read-only, so this check adds no machinery.
 
 | Check result | Effect on the hand-off |
 | ------------ | ---------------------- |
-| Step 2 passes | print the platform's command as written below |
-| Step 2 fails | print it with the rooting instruction, on either platform — the operator is rooted outside the worktree whichever one they are on |
-| Step 3 fails | add one line naming the uncommitted changes as something to resolve first |
+| Step 1 passes | print the two-command same-session hand-off below |
+| Step 1 fails | report the invalid generated worktree/path and retain the existing reopen/new-task recovery; never invite autopilot from the parent checkout |
+| Step 2 fails | add one line naming the uncommitted changes as something to resolve first |
 
 **Print one line before asking.** The question and both option labels name
 "planning", a term the operator has not been shown the meaning of. State three
@@ -837,30 +831,30 @@ print the report — the hand-off does not depend on it.
 reuse-or-recreate question and Step 3.5's bootstrap approval are pre-existing,
 are not counted, and are not removed.
 
-**The hand-off command has one fixed form:**
+**The hand-off has exactly two commands, in this order:**
 
-| Platform | Hand-off command |
-| -------- | ---------------- |
-| Claude Code | `/speckit-pro:speckit-autopilot <workflow-file> --stage plan` |
-| Codex CLI | start a new Codex task rooted at the spec worktree, then `$speckit-autopilot <workflow-file> --stage plan` |
+```text
+/cd <absolute-worktree-root>
+/speckit-pro:speckit-autopilot <absolute-workflow-file> --stage plan
+```
 
-The Codex rooting instruction is **part of the command, not commentary beside
-it**: a Codex task's workspace root is fixed when the task starts, and a scaffold
-run necessarily begins before the worktree exists, so that operator is by
-definition rooted outside it and a bare invocation would hand them a command the
-Workflow Worktree Binding guard stops. **On Codex the printed hand-off is the
-ordinary outcome, not a degraded one.** The Codex CLI row of the table above is
-recorded for cross-platform parity only; never print it from this variant.
+Claude Code documents `/cd` as changing the current working directory for the
+session and loading project instructions from that directory:
+<https://code.claude.com/docs/en/commands>. The operator sends the autopilot
+command only after `/cd` succeeds. If `/cd` fails, STOP the hand-off and use the
+existing reopen/new-task fallback rooted at the generated worktree; never run
+autopilot from the parent checkout.
 
 The stage token is the literal lowercase `plan`, from the closed vocabulary
 `plan`, `implement`, `full`. No aliases, no alternate casing, no long-form
-spellings. The workflow file path is the **sole** hand-off token: never pass a
-state file, branch name, feature directory, or environment variable across the
-boundary.
+spellings. The workflow file is the canonical absolute path in the generated
+worktree, so a stale same-named copy in another registered worktree cannot make
+the retry ambiguous. Never pass a state file, branch name, feature directory,
+or environment variable to autopilot across the boundary.
 
 **Nothing is rolled back on any path.** Everything scaffold owns is committed and
-pushed before this step runs, so the operator who stops here loses one command
-and no work.
+pushed before this step runs, so the operator who stops here defers the two
+hand-off commands and loses no work.
 
 ### 10. Closing Report
 
@@ -886,22 +880,22 @@ The report is **printed, not written to a file.**
 **Artifacts:**
 - <repo-relative path>     (one line each; only paths that exist)
 
-**Next step:** <one command>
+**Next step:**
+<two-command hand-off block>
 ```
 
 **The heading is one fixed string, `## Ready for Planning`.** It is true on all
 three endings: scaffold's own work is finished and pushed, and the planning
-stage is the next command whether the operator runs it now or later. It leads
+stage is the next hand-off whether the operator runs it now or later. It leads
 with what is finished rather than with a negation, because none of the three
 endings is a failure and none is the operator's fault.
 
 **Fixed, conditional, and derived.** The heading and the draft-PR line are
 fixed, except that the draft-PR line is conditional on a URL existing. The
 outcome line, the artifact index, and the next step are **derived** — each has
-its own rule below. `<one command>` denotes one fixed string, not a bare
-invocation: it is the Step 9 hand-off command in the form that step's check
-selected, so its Codex form carries the rooting precondition. The slot stays one
-line.
+its own rule below. `<two-command hand-off block>` is the Step 9 `/cd` command
+followed by the relative autopilot command. It remains one report element even
+though it is rendered on two lines.
 
 **The set-aside findings count MUST NOT appear here.** The list is closed at
 four elements; that count lives in the design concept's header record and in the
@@ -918,7 +912,7 @@ same on all three, because no planning stage ran in any of them:
 
 | Ending | Outcome line states |
 | ------ | ------------------- |
-| The operator is continuing now | everything scaffold owns is committed and pushed, and the planning stage is the next command |
+| The operator is continuing now | everything scaffold owns is committed and pushed, and the planning hand-off is next |
 | The operator stopped here | the run stopped at the operator's request, everything scaffold owns is committed and pushed, and nothing was rolled back |
 | No structured confirmation mechanism was available | the question was not asked because the session exposes none, everything scaffold owns is committed and pushed, and nothing was rolled back |
 
@@ -927,9 +921,9 @@ fact the operator most needs.
 
 **When Step 9's cleanliness test failed, the outcome line carries one added
 clause** naming the uncommitted changes as something to resolve before running
-the next command. It is a clause on an existing element rather than a fifth
-element, and it is the only check result that reaches this report as text — the
-rooting result reaches it inside the next-step command instead.
+the hand-off. It is a clause on an existing element rather than a fifth element,
+and it is the only check result that reaches this report as text — path
+validation determines whether the normal hand-off or recovery is shown.
 
 **The draft-PR line.** Show the URL when the run produced one. Otherwise state
 plainly that there is none:
@@ -975,7 +969,7 @@ convention, and never list a path that was not tested. The pushed branch name is
 the one candidate that is not a path: it is listed from the branch Step 7 pushed
 and needs no read, so the test above never applies to it.
 
-**The next step is the Step 9 hand-off command**, in the form that step's check
-selected. There is one rule because there is one heading. Scaffold names the
-planning stage as the operator's next command, never as its own next action, and
-never asks a second confirmation to offer it.
+**The next step is the Step 9 two-command hand-off**, in the form that step's
+check selected. There is one rule because there is one heading. Scaffold names
+the planning hand-off as the operator's next action, never as its own action,
+and never asks a second confirmation to offer it.

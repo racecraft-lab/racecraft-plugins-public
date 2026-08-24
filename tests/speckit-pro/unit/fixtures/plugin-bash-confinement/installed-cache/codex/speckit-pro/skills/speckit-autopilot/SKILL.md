@@ -549,10 +549,9 @@ resolves it when omitted. Argument order is presentation only — every
 argument is read by name. Stage-bounded execution is specified in
 [phase-execution-codex.md](./references/phase-execution-codex.md#stage-bounded-execution).
 
-Before Step -1, bind the workflow to the current worktree. If the supplied
-path is missing from the current checkout, follow the read-only worktree
-resolution contract in `prerequisites-codex.md`. Never read a workflow from
-one worktree while running phases or mutations against another checkout.
+Before Step -1, use the `resolve-workflow-binding` runner helper exactly as
+specified in `prerequisites-codex.md`. That reference owns the executable-root
+invariant and fail-closed recovery.
 
 `--strict` and `--advisory` override the pre-Implement confidence
 gate (G6.5) mode for this invocation. They beat
@@ -633,7 +632,9 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
 - **Step 0.11: Project Command Discovery** — runner helper `detect-commands` → `PROJECT_COMMANDS`
 - **Step 0.12: Preset and Extension Detection** — runner helper `detect-presets` → `PRESET_CONVENTIONS`
 
-If any check fails, STOP with the error message from the script's JSON output. Pass `PROJECT_COMMANDS` and `PRESET_CONVENTIONS` to every subagent prompt.
+If any check fails, STOP with the error message from the script's JSON output.
+Pass `WORKFLOW_ROOT`, `PROJECT_COMMANDS`, and `PRESET_CONVENTIONS` to every
+subagent prompt.
 
 ## Step 1: Parse Workflow State
 
@@ -873,6 +874,8 @@ For each phase: read the prompt, spawn a subagent, validate.
 Use the phase-specific executor agent with this structure:
 
 ```text
+WORKFLOW_ROOT: <canonical absolute worktree root>
+
 [IF presets detected in Step 0.12]
 PRESET_CONVENTIONS:
   Preset: <name> (priority <N>)
@@ -1109,6 +1112,8 @@ registered helper or gate operation IDs below.
 
 - `check-prerequisites` — Verify CLI, project init, constitution, commands,
   branch detection, and workflow file readiness (JSON).
+- `resolve-workflow-binding` — Canonically bind a workflow to a registered
+  worktree without writes.
 - `validate-gate` — Validate G1-G7 with marker counts and details (JSON).
 - `confidence-gate` — Read the synthesizer's `📊 Confidence: X.XX`
   pre-Implement emit and decide whether Phase 7 may begin.

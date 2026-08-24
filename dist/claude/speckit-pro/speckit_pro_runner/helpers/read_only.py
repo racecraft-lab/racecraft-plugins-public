@@ -189,6 +189,20 @@ def validate_bounded_inputs(
     for key in PATH_KEYS:
         value = inputs.get(key)
         if isinstance(value, str) and value:
+            if helper_id == "resolve-workflow-binding" and key == "workflow_file":
+                if "\x00" in value:
+                    return path_diagnostic(
+                        "invalid_input",
+                        "path contains a NUL byte",
+                        {"helper_id": helper_id, "field": key},
+                    )
+                if looks_like_windows_absolute_path(value) and os.name != "nt":
+                    return path_diagnostic(
+                        "unsupported_path",
+                        "path uses an unsupported absolute-path form",
+                        {"helper_id": helper_id, "field": key, "path": normalize_display(value)},
+                    )
+                continue
             path_diag = validate_path_value(helper_id, key, value, repo_root)
             if path_diag is not None:
                 return path_diag
@@ -315,6 +329,11 @@ def helper_stdin_request(entry: Any, inputs: dict[str, Any]) -> dict[str, Any]:
 
 def explicit_or_derived_args(helper_id: str, inputs: dict[str, Any], repo_root: Path) -> list[str] | dict[str, Any]:
     if helper_id in {"detect-commands", "detect-presets"}:
+        return []
+    if helper_id == "resolve-workflow-binding":
+        workflow_file = inputs.get("workflow_file")
+        if not isinstance(workflow_file, str) or not workflow_file:
+            return invalid_args(helper_id, "workflow_file is required")
         return []
     if helper_id == "check-prerequisites":
         workflow_file = inputs.get("workflow_file")
@@ -540,6 +559,211 @@ def active_feature_directory(repo_root: Path) -> str:
         return ""
     value = payload.get("feature_directory")
     return value.strip() if isinstance(value, str) else ""
+
+
+def registered_worktree_roots(repo_root: Path) -> tuple[list[Path], str | None]:
+    """Return canonical worktree roots registered to ``repo_root``'s repository."""
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(repo_root), "worktree", "list", "--porcelain", "-z"],
+            text=True,
+            capture_output=True,
+            shell=False,
+            check=False,
+            timeout=SUBPROCESS_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return [], f"git worktree list failed: {exc}"
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or f"exit {completed.returncode}"
+        return [], f"git worktree list failed: {detail}"
+
+    roots: list[Path] = []
+    seen: set[Path] = set()
+    for raw_record in completed.stdout.split("\x00\x00"):
+        fields = [field.rstrip("\n") for field in raw_record.split("\x00") if field]
+        if not fields:
+            continue
+        worktree_fields = [field for field in fields if field.startswith("worktree ")]
+        if len(worktree_fields) != 1:
+            return [], "git worktree list returned a malformed registered worktree record"
+        raw_root = worktree_fields[0].removeprefix("worktree ")
+        is_prunable = any(field == "prunable" or field.startswith("prunable ") for field in fields)
+        if is_prunable:
+            continue
+        try:
+            root = Path(raw_root).resolve(strict=True)
+        except (OSError, RuntimeError, ValueError) as exc:
+            return [], f"registered worktree cannot be canonicalized: {raw_root}: {exc}"
+        if not root.is_dir():
+            return [], f"registered worktree is not a readable directory: {root}"
+        if root in seen:
+            continue
+        seen.add(root)
+        roots.append(root)
+    if not roots:
+        return [], "git worktree list returned no readable registered worktrees"
+    return roots, None
+
+
+def workflow_binding_payload(
+    binding_status: str,
+    task_root: Path,
+    *,
+    workflow_root: Path | None = None,
+    workflow_file: Path | None = None,
+    relation: str | None = None,
+    candidates: list[Path] | None = None,
+    problems: list[str] | None = None,
+) -> dict[str, Any]:
+    return {
+        "binding_status": binding_status,
+        "task_root": task_root.as_posix(),
+        "workflow_root": workflow_root.as_posix() if workflow_root is not None else None,
+        "workflow_file": workflow_file.as_posix() if workflow_file is not None else None,
+        "relation": relation,
+        "candidates": [path.as_posix() for path in (candidates or [])],
+        "problems": problems or [],
+    }
+
+
+def resolve_workflow_binding(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+    """Resolve one workflow to its registered Git worktree without mutating either checkout."""
+    raw = inputs.get("workflow_file")
+    if not isinstance(raw, str) or not raw.strip():
+        return make_result(
+            json_text(
+                workflow_binding_payload(
+                    "invalid",
+                    repo_root.resolve(strict=False),
+                    problems=["workflow_file is required"],
+                )
+            ),
+            exit_code=1,
+        )
+
+    task_root = repo_root.resolve(strict=False)
+    roots, worktree_error = registered_worktree_roots(task_root)
+    if worktree_error is not None:
+        return make_result(
+            json_text(
+                workflow_binding_payload(
+                    "invalid",
+                    task_root,
+                    problems=[worktree_error],
+                )
+            ),
+            exit_code=4,
+        )
+    if task_root not in roots:
+        return make_result(
+            json_text(
+                workflow_binding_payload(
+                    "invalid",
+                    task_root,
+                    candidates=roots,
+                    problems=["task root is not a registered Git worktree"],
+                )
+            ),
+            exit_code=1,
+        )
+
+    normalized = normalize_path_input(raw.strip())
+    supplied = Path(normalized)
+    candidates: list[tuple[Path, Path]] = []
+    problems: list[str] = []
+
+    if supplied.is_absolute():
+        try:
+            canonical = supplied.resolve(strict=False)
+        except (OSError, RuntimeError, ValueError) as exc:
+            payload = workflow_binding_payload(
+                "invalid",
+                task_root,
+                problems=[f"workflow path cannot be canonicalized: {exc}"],
+            )
+            return make_result(json_text(payload), exit_code=1)
+
+        canonical_owners = [root for root in roots if is_lexically_relative_to(canonical, root)]
+        lexical_owner = registered_lexical_owner(supplied, roots)
+        canonical_owner = max(canonical_owners, key=lambda root: len(root.parts), default=None)
+        if lexical_owner is None:
+            problems.append("absolute workflow path is outside every registered worktree")
+        elif canonical_owner is None or canonical_owner != lexical_owner:
+            problems.append("workflow path escapes its registered worktree after canonicalization")
+        elif not canonical.exists():
+            payload = workflow_binding_payload(
+                "missing",
+                task_root,
+                candidates=[lexical_owner],
+                problems=[f"workflow file was not found: {normalized}"],
+            )
+            return make_result(json_text(payload), exit_code=1)
+        elif not canonical.is_file() or not os.access(canonical, os.R_OK):
+            problems.append("workflow path is not a readable regular file")
+        else:
+            candidates.append((canonical_owner, canonical))
+    else:
+        escaped = False
+        for root in roots:
+            lexical = Path(os.path.abspath(str(root / supplied)))
+            if not is_lexically_relative_to(lexical, root):
+                escaped = True
+                continue
+            try:
+                canonical = (root / supplied).resolve(strict=False)
+            except (OSError, RuntimeError, ValueError):
+                escaped = True
+                continue
+            if not is_lexically_relative_to(canonical, root):
+                escaped = True
+                continue
+            if canonical.is_file() and os.access(canonical, os.R_OK):
+                candidates.append((root, canonical))
+            elif canonical.exists():
+                problems.append(f"workflow path is not a readable regular file in {root.as_posix()}")
+        if not candidates and escaped:
+            problems.append("workflow path escapes a registered worktree after canonicalization")
+
+    if problems:
+        payload = workflow_binding_payload("invalid", task_root, problems=problems)
+        return make_result(json_text(payload), exit_code=1)
+    if not candidates:
+        payload = workflow_binding_payload(
+            "missing",
+            task_root,
+            problems=[f"workflow file was not found in any registered worktree: {normalized}"],
+        )
+        return make_result(json_text(payload), exit_code=1)
+
+    unique: dict[Path, Path] = {}
+    for root, path in candidates:
+        unique[root] = path
+    if len(unique) != 1:
+        payload = workflow_binding_payload(
+            "ambiguous",
+            task_root,
+            candidates=sorted(unique, key=lambda path: path.as_posix()),
+            problems=["workflow path exists in multiple registered worktrees"],
+        )
+        return make_result(json_text(payload), exit_code=1)
+
+    workflow_root, workflow_file = next(iter(unique.items()))
+    if workflow_root == task_root:
+        relation = "same"
+    elif is_relative_to(workflow_root, task_root):
+        relation = "descendant"
+    else:
+        relation = "external"
+    payload = workflow_binding_payload(
+        "resolved",
+        task_root,
+        workflow_root=workflow_root,
+        workflow_file=workflow_file,
+        relation=relation,
+        candidates=[workflow_root],
+    )
+    return make_result(json_text(payload))
 
 
 def check_prerequisites(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
@@ -4864,6 +5088,34 @@ def is_relative_to(path: Path, root: Path) -> bool:
         return False
 
 
+def is_lexically_relative_to(path: Path, root: Path) -> bool:
+    """Check containment without resolving symlinks in either path."""
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def registered_lexical_owner(path: Path, roots: list[Path]) -> Path | None:
+    """Find the deepest registered root entered before an in-worktree symlink."""
+    normalized = Path(os.path.abspath(str(path)))
+    current = Path(normalized.anchor)
+    entered: list[tuple[int, int, Path]] = []
+    for part in normalized.parts[1:]:
+        current /= part
+        if entered and current.is_symlink():
+            break
+        try:
+            resolved_prefix = current.resolve(strict=False)
+        except (OSError, RuntimeError, ValueError):
+            return None
+        for root in roots:
+            if resolved_prefix == root:
+                entered.append((len(root.parts), -len(current.parts), root))
+    return max(entered)[2] if entered else None
+
+
 def resolve_input_path(raw: Any, repo_root: Path) -> Path:
     value = normalize_path_input(raw)
     path = Path(value)
@@ -5406,6 +5658,7 @@ def rollup_status(statuses: list[str]) -> str:
 
 
 PY_HELPERS: dict[str, Callable[[dict[str, Any], Path], dict[str, Any]]] = {
+    "resolve-workflow-binding": resolve_workflow_binding,
     "check-prerequisites": check_prerequisites,
     "detect-commands": detect_commands,
     "detect-presets": detect_presets,
