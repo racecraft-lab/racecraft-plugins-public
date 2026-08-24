@@ -422,6 +422,18 @@
         "Ties the confidence difference to evidence quality / source directness rather than to which named tool was used",
         "Requires finding B to carry the fallback disclosure naming the missing capability, the fallback used, and the reason"
       ]
+    },
+    {
+      "id": 106,
+      "prompt": "Claude Code is still in the parent checkout when /speckit-pro:speckit-autopilot docs/ai/specs/.process/SPEC-009-workflow.md --stage plan resolves uniquely to a registered child worktree. May autopilot mutate the child from the parent, and what happens after the operator follows the scaffold's /cd handoff?",
+      "expected_output": "Stops before Archive Sweep while relation is descendant or external and prints /cd with the canonical workflow root plus the canonical absolute workflow retry command. After /cd succeeds, autopilot reruns resolve-workflow-binding, requires relation=same, verifies the feature branch, and only then proceeds. It never mutates from the parent checkout.",
+      "expectations": [
+        "Stops before Archive Sweep and mutation when relation is descendant or external",
+        "Prints /cd <canonical WORKFLOW_ROOT> followed by the canonical absolute WORKFLOW_FILE retry",
+        "Reruns resolve-workflow-binding after /cd and requires binding_status=resolved with relation=same",
+        "Verifies the live worktree branch is not main, detached, release, or protected",
+        "Never reads or mutates the workflow worktree from the parent checkout"
+      ]
     }
   ]
 }

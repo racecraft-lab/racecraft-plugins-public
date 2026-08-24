@@ -55,6 +55,7 @@ if str(PLUGIN_ROOT) not in sys.path:
 EXPECTED_HELPERS = [
     "helper-registry-dispatch",
     "check-prerequisites",
+    "resolve-workflow-binding",
     "detect-commands",
     "detect-presets",
     "count-markers",
@@ -83,10 +84,16 @@ JSON_STDOUT_PARITY_HELPERS = {"atomicity-route"}
 # lie in a provenance manifest. `sweep-pr-feedback` is new behaviour for the same
 # reason: it reads an observation the orchestrator already took, so there was
 # never a script to delete.
-NO_BASH_ANCESTOR = ("helper-registry-dispatch", "resolve-autopilot-stage", "sweep-pr-feedback")
+NO_BASH_ANCESTOR = (
+    "helper-registry-dispatch",
+    "resolve-workflow-binding",
+    "resolve-autopilot-stage",
+    "sweep-pr-feedback",
+)
 
 HELPER_CASES: dict[str, dict[str, object]] = {
     "check-prerequisites": {"workflow_file": WORKFLOW_FILE},
+    "resolve-workflow-binding": {"workflow_file": AUTOPILOT_STAGE_WORKFLOW_FILE},
     "detect-commands": {},
     "detect-presets": {},
     "count-markers": {"type": "all", "feature_dir": FEATURE_DIR},
@@ -202,6 +209,76 @@ def command_stdin_fixture(command: str) -> Path:
 
 class ReadOnlyHelperTests(unittest.TestCase):
     helper_filter: str | None = None
+
+    def build_binding_worktrees(self, base: Path) -> tuple[Path, Path, Path]:
+        task_root = base / "repo"
+        descendant_root = task_root / ".worktrees" / "nested"
+        external_root = base / "external"
+        task_root.mkdir()
+        subprocess.run(
+            ["git", "init", "-b", "main", str(task_root)],
+            text=True,
+            capture_output=True,
+            shell=False,
+            check=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(task_root), "config", "user.email", "support@openai.com"],
+            text=True,
+            capture_output=True,
+            shell=False,
+            check=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(task_root), "config", "user.name", "SpecKit Tests"],
+            text=True,
+            capture_output=True,
+            shell=False,
+            check=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(task_root), "config", "commit.gpgsign", "false"],
+            text=True,
+            capture_output=True,
+            shell=False,
+            check=True,
+        )
+        (task_root / "seed.txt").write_text("seed\n", encoding="utf-8")
+        subprocess.run(
+            ["git", "-C", str(task_root), "add", "seed.txt"],
+            text=True,
+            capture_output=True,
+            shell=False,
+            check=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(task_root), "commit", "-m", "seed"],
+            text=True,
+            capture_output=True,
+            shell=False,
+            check=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(task_root), "worktree", "add", "-b", "nested", str(descendant_root)],
+            text=True,
+            capture_output=True,
+            shell=False,
+            check=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(task_root), "worktree", "add", "-b", "external", str(external_root)],
+            text=True,
+            capture_output=True,
+            shell=False,
+            check=True,
+        )
+        return task_root, descendant_root, external_root
+
+    def binding_result(self, task_root: Path, workflow_file: str) -> tuple[dict[str, object], int]:
+        from speckit_pro_runner.helpers.read_only import resolve_workflow_binding
+
+        result = resolve_workflow_binding({"workflow_file": workflow_file}, task_root)
+        return json.loads(result["stdout"]), int(result["exit_code"])
 
     def assert_response(self, response: dict[str, object], status: str, exit_code: int) -> None:
         self.assertEqual(response["schema_version"], "1.0")
@@ -459,6 +536,237 @@ class ReadOnlyHelperTests(unittest.TestCase):
                     self.assert_response(response, "input_error", 2)
                     self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["unsupported_path"])
                     self.assertEqual([diag["code"] for diag in stderr_records], ["unsupported_path"])
+
+    def test_resolve_workflow_binding_covers_registered_worktree_relations(self) -> None:
+        if self.helper_filter and self.helper_filter != "resolve-workflow-binding":
+            self.skipTest("workflow-binding cases use resolve-workflow-binding")
+        with tempfile.TemporaryDirectory() as temp:
+            task_root, descendant_root, external_root = self.build_binding_worktrees(Path(temp))
+
+            same_file = task_root / "same-workflow.md"
+            same_file.write_text("# same\n", encoding="utf-8")
+            payload, exit_code = self.binding_result(task_root, same_file.name)
+            self.assertEqual((payload["binding_status"], payload["relation"], exit_code), ("resolved", "same", 0))
+            self.assertEqual(payload["workflow_root"], task_root.resolve().as_posix())
+
+            nested_file = descendant_root / "nested-workflow.md"
+            nested_file.write_text("# nested\n", encoding="utf-8")
+            payload, exit_code = self.binding_result(task_root, nested_file.name)
+            self.assertEqual(
+                (payload["binding_status"], payload["relation"], exit_code),
+                ("resolved", "descendant", 0),
+            )
+            self.assertEqual(payload["workflow_root"], descendant_root.resolve().as_posix())
+
+            rebound, exit_code = self.binding_result(descendant_root, str(nested_file))
+            self.assertEqual(
+                (rebound["binding_status"], rebound["relation"], exit_code),
+                ("resolved", "same", 0),
+            )
+            self.assertEqual(rebound["task_root"], descendant_root.resolve().as_posix())
+            self.assertEqual(rebound["workflow_root"], descendant_root.resolve().as_posix())
+            self.assertEqual(rebound["workflow_file"], nested_file.resolve().as_posix())
+
+            external_file = external_root / "external-workflow.md"
+            external_file.write_text("# external\n", encoding="utf-8")
+            payload, exit_code = self.binding_result(task_root, external_file.name)
+            self.assertEqual(
+                (payload["binding_status"], payload["relation"], exit_code),
+                ("resolved", "external", 0),
+            )
+            self.assertEqual(payload["workflow_root"], external_root.resolve().as_posix())
+
+    def test_registered_worktree_roots_ignores_only_explicitly_prunable_entries(self) -> None:
+        if self.helper_filter and self.helper_filter != "resolve-workflow-binding":
+            self.skipTest("workflow-binding cases use resolve-workflow-binding")
+        from speckit_pro_runner.helpers import read_only
+
+        canonical_root = REPO_ROOT.resolve()
+        missing_root = Path("/missing-prunable-worktree")
+        output = (
+            f"worktree {canonical_root}\0HEAD abc\0branch refs/heads/main\0\0"
+            f"worktree {missing_root}\0HEAD def\0prunable gitdir file points to a missing location\0\0"
+        )
+        original_resolve = Path.resolve
+
+        def guarded_resolve(path: Path, strict: bool = False) -> Path:
+            if path == missing_root:
+                raise AssertionError("prunable roots must not be canonicalized")
+            return original_resolve(path, strict=strict)
+
+        completed = SimpleNamespace(returncode=0, stdout=output, stderr="")
+        with patch.object(read_only.subprocess, "run", return_value=completed), patch.object(
+            Path, "resolve", guarded_resolve
+        ):
+            roots, error = read_only.registered_worktree_roots(canonical_root)
+
+        self.assertEqual(roots, [canonical_root])
+        self.assertIsNone(error)
+
+    def test_registered_worktree_roots_fails_closed_on_unreadable_registered_entry(self) -> None:
+        if self.helper_filter and self.helper_filter != "resolve-workflow-binding":
+            self.skipTest("workflow-binding cases use resolve-workflow-binding")
+        from speckit_pro_runner.helpers import read_only
+
+        canonical_root = REPO_ROOT.resolve()
+        denied_root = Path("/denied-registered-worktree")
+        output = (
+            f"worktree {canonical_root}\0HEAD abc\0branch refs/heads/main\0\0"
+            f"worktree {denied_root}\0HEAD def\0branch refs/heads/feature\0\0"
+        )
+        original_resolve = Path.resolve
+
+        def guarded_resolve(path: Path, strict: bool = False) -> Path:
+            if path == denied_root:
+                raise PermissionError("sandbox denied")
+            return original_resolve(path, strict=strict)
+
+        completed = SimpleNamespace(returncode=0, stdout=output, stderr="")
+        with patch.object(read_only.subprocess, "run", return_value=completed), patch.object(
+            Path, "resolve", guarded_resolve
+        ):
+            roots, error = read_only.registered_worktree_roots(canonical_root)
+
+        self.assertEqual(roots, [])
+        self.assertIn("registered worktree cannot be canonicalized", error or "")
+        self.assertIn(denied_root.as_posix(), error or "")
+        self.assertIn("sandbox denied", error or "")
+
+    def test_resolve_workflow_binding_absolute_path_uses_longest_registered_root(self) -> None:
+        if self.helper_filter and self.helper_filter != "resolve-workflow-binding":
+            self.skipTest("workflow-binding cases use resolve-workflow-binding")
+        with tempfile.TemporaryDirectory() as temp:
+            task_root, descendant_root, _ = self.build_binding_worktrees(Path(temp))
+            relative = Path("specs") / "workflow.md"
+            (task_root / relative).parent.mkdir()
+            (descendant_root / relative).parent.mkdir()
+            (task_root / relative).write_text("# stale parent copy\n", encoding="utf-8")
+            (descendant_root / relative).write_text("# nested owner\n", encoding="utf-8")
+
+            payload, exit_code = self.binding_result(task_root, str(descendant_root / relative))
+            self.assertEqual(
+                (payload["binding_status"], payload["relation"], exit_code),
+                ("resolved", "descendant", 0),
+            )
+            self.assertEqual(payload["workflow_root"], descendant_root.resolve().as_posix())
+            self.assertEqual(payload["workflow_file"], (descendant_root / relative).resolve().as_posix())
+
+            rebound, exit_code = self.binding_result(descendant_root, str(descendant_root / relative))
+            self.assertEqual(
+                (rebound["binding_status"], rebound["relation"], exit_code),
+                ("resolved", "same", 0),
+            )
+            self.assertEqual(rebound["workflow_root"], descendant_root.resolve().as_posix())
+            self.assertEqual(rebound["workflow_file"], (descendant_root / relative).resolve().as_posix())
+
+    def test_resolve_workflow_binding_rejects_external_symlink_alias_into_worktree(self) -> None:
+        if self.helper_filter and self.helper_filter != "resolve-workflow-binding":
+            self.skipTest("workflow-binding cases use resolve-workflow-binding")
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            task_root, descendant_root, _ = self.build_binding_worktrees(base)
+            workflow = descendant_root / "aliased-workflow.md"
+            workflow.write_text("# registered target\n", encoding="utf-8")
+            alias = base / "workflow-link"
+            try:
+                alias.symlink_to(descendant_root, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symlinks unavailable: {exc}")
+
+            payload, exit_code = self.binding_result(task_root, str(alias / workflow.name))
+
+            self.assertEqual((payload["binding_status"], exit_code), ("invalid", 1))
+            self.assertIsNone(payload["relation"])
+            self.assertEqual(payload["candidates"], [])
+            self.assertIn("outside every registered worktree", payload["problems"][0])
+
+    def test_resolve_workflow_binding_allows_in_worktree_symlink_with_same_owner(self) -> None:
+        if self.helper_filter and self.helper_filter != "resolve-workflow-binding":
+            self.skipTest("workflow-binding cases use resolve-workflow-binding")
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            task_root, descendant_root, _ = self.build_binding_worktrees(base)
+            target_dir = descendant_root / "workflow-target"
+            target_dir.mkdir()
+            workflow = target_dir / "workflow.md"
+            workflow.write_text("# same owner\n", encoding="utf-8")
+            alias = descendant_root / "workflow-link"
+            try:
+                alias.symlink_to(target_dir, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symlinks unavailable: {exc}")
+
+            payload, exit_code = self.binding_result(task_root, str(alias / workflow.name))
+
+            self.assertEqual(
+                (payload["binding_status"], payload["relation"], exit_code),
+                ("resolved", "descendant", 0),
+            )
+            self.assertEqual(payload["workflow_root"], descendant_root.resolve().as_posix())
+            self.assertEqual(payload["workflow_file"], workflow.resolve().as_posix())
+
+    def test_resolve_workflow_binding_rejects_ambiguous_missing_and_unregistered_paths(self) -> None:
+        if self.helper_filter and self.helper_filter != "resolve-workflow-binding":
+            self.skipTest("workflow-binding cases use resolve-workflow-binding")
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            task_root, descendant_root, _ = self.build_binding_worktrees(base)
+            duplicate = Path("duplicate-workflow.md")
+            (task_root / duplicate).write_text("# parent\n", encoding="utf-8")
+            (descendant_root / duplicate).write_text("# nested\n", encoding="utf-8")
+
+            payload, exit_code = self.binding_result(task_root, duplicate.as_posix())
+            self.assertEqual((payload["binding_status"], exit_code), ("ambiguous", 1))
+            self.assertEqual(
+                payload["candidates"],
+                [task_root.resolve().as_posix(), descendant_root.resolve().as_posix()],
+            )
+
+            payload, exit_code = self.binding_result(task_root, "missing-workflow.md")
+            self.assertEqual((payload["binding_status"], exit_code), ("missing", 1))
+
+            payload, exit_code = self.binding_result(task_root, str(descendant_root / "missing-absolute.md"))
+            self.assertEqual((payload["binding_status"], exit_code), ("missing", 1))
+
+            invalid_directory = descendant_root / "not-a-workflow.md"
+            invalid_directory.mkdir()
+            payload, exit_code = self.binding_result(task_root, invalid_directory.name)
+            self.assertEqual((payload["binding_status"], exit_code), ("invalid", 1))
+
+            unregistered = base / "unregistered" / "workflow.md"
+            unregistered.parent.mkdir()
+            unregistered.write_text("# unregistered\n", encoding="utf-8")
+            payload, exit_code = self.binding_result(task_root, str(unregistered))
+            self.assertEqual((payload["binding_status"], exit_code), ("invalid", 1))
+
+    def test_resolve_workflow_binding_rejects_symlink_escape(self) -> None:
+        if self.helper_filter and self.helper_filter != "resolve-workflow-binding":
+            self.skipTest("workflow-binding cases use resolve-workflow-binding")
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            task_root, descendant_root, external_root = self.build_binding_worktrees(base)
+            outside = base / "outside-workflow.md"
+            outside.write_text("# outside\n", encoding="utf-8")
+            parent = task_root / "parent-workflow.md"
+            parent.write_text("# parent\n", encoding="utf-8")
+            sibling = external_root / "sibling-workflow.md"
+            sibling.write_text("# sibling\n", encoding="utf-8")
+            links = [
+                (descendant_root / "outside-escape-workflow.md", outside),
+                (descendant_root / "parent-escape-workflow.md", parent),
+                (descendant_root / "sibling-escape-workflow.md", sibling),
+            ]
+            try:
+                for link, target in links:
+                    link.symlink_to(target)
+            except OSError as exc:
+                self.skipTest(f"symlinks unavailable: {exc}")
+
+            for link, _ in links:
+                with self.subTest(link=link.name):
+                    payload, exit_code = self.binding_result(task_root, str(link))
+                    self.assertEqual((payload["binding_status"], exit_code), ("invalid", 1))
+                    self.assertTrue(payload["problems"])
 
     def test_windows_style_relative_paths_are_normalized_before_execution(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":

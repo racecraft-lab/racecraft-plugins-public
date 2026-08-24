@@ -699,12 +699,13 @@ Finish with a concise scaffold report that includes:
   `no documented bootstrap`
 - the absolute worktree root from `git rev-parse --show-toplevel` run inside
   the worktree
-- the exact next step: start a new Codex task rooted at that worktree, then run
-  the hand-off command the section below defines
+- the exact next step: continue in this same Codex task by running the hand-off
+  command below with the absolute workflow path
 
-Never hand off only the inner workflow path from the parent checkout. Do not
-suggest running autopilot from main, a detached checkout, or any workspace root
-other than the generated spec worktree.
+Never hand off only the inner workflow path from the parent checkout. The
+absolute workflow path identifies the generated spec worktree; autopilot binds
+all execution there and never treats main, a detached checkout, or the parent
+checkout as its mutation root.
 
 **The hand-off to the planning stage.** It extends this section rather than
 becoming a new numbered step, and it sits after step 8, once the design concept,
@@ -714,36 +715,32 @@ planning stage that fails or is interrupted must never leave the roadmap
 claiming the spec is still Ready.
 
 **Scaffold never invokes the autopilot. It prints the command; the operator runs
-it.** This is a platform fact rather than a preference. A skill body invoking a
-sibling skill mid-session is unverified on Codex, and on Claude Code the
+it as the next message in the same task.** A skill body invoking a sibling skill
+mid-session is unverified on Codex, and on Claude Code the
 autopilot skill carries `disable-model-invocation: true`, documented as "Only
 you can invoke the skill" — a deliberate setting, because a seven-phase
 autonomous run that commits as it goes is exactly the kind of side effect an
 operator must trigger themselves. Printing a command that always works beats
-shipping an invocation that may not. **Never state that accepting will run the
-planning phases in this session.**
+shipping an invocation that may not. **Never state that accepting silently runs
+the planning phases; the operator explicitly starts them with the printed
+command.**
 
 **Run the hand-off check first. Two read-only tests.** They do not gate the
 hand-off — one is always printed. They select its form and decide whether a
 warning travels with it.
 
 ```text
-1. Resolve the current checkout with `git rev-parse --show-toplevel`.
-2. If the supplied workflow path exists inside that checkout, continue.
-3. Confirm `git status --porcelain` is clean in the same checkout that
-   step 1 resolved.
+1. Invoke the read-only `resolve-workflow-binding` runner helper with the
+   canonical absolute generated workflow path. Require `binding_status=resolved`,
+   the generated worktree as `workflow_root`, and `relation=descendant` (or
+   `same` only when scaffold was already running from that worktree).
+2. Confirm `git status --porcelain` is clean in the returned `workflow_root`.
 ```
 
-Step 2 is the Workflow Worktree Binding guard's own sentence, reproduced word for
-word. Use those words. Do not paraphrase them as "resolves inside", "is under",
-or "belongs to".
-
-**This is an existence test on the supplied path. It is not a comparison of
-directories.** Do not implement it by canonicalising the workflow path and
-comparing its parent, its repository root, or its worktree root against the
-current checkout root. A stale same-named workflow file in the parent checkout
-passes every such comparison, so an operator following the bare command would
-commit planning work there — usually main, which this skill may never touch.
+Step 1 uses the same authoritative helper as autopilot. The absolute path is
+required even when the same relative path exists in the parent checkout: a
+stale parent copy must not win resolution and redirect planning commits to
+main.
 
 **What the check must NOT test: the most recent commit.** After step 8 the newest
 commit is the roadmap status flip rather than the workflow-file commit, so a
@@ -754,9 +751,9 @@ this check adds no machinery.
 
 | Check result | Effect on the hand-off |
 | ------------ | ---------------------- |
-| Step 2 passes | print the platform's command as written below |
-| Step 2 fails | print it with the rooting instruction, on either platform — the operator is rooted outside the worktree whichever one they are on |
-| Step 3 fails | add one line naming the uncommitted changes as something to resolve first |
+| Step 1 passes | print the same-task absolute command below |
+| Step 1 fails | print the Codex Handoff/reopen recovery; never claim same-task execution is safe |
+| Step 2 fails | add one line naming the uncommitted changes as something to resolve first |
 
 **Print one line before asking.** The question and both option labels name
 "planning", a term the operator has not been shown the meaning of. State three
@@ -789,25 +786,31 @@ grill-me questions are pre-existing, are not counted, and are not removed.
 
 | Platform | Hand-off command |
 | -------- | ---------------- |
-| Claude Code | `/speckit-pro:speckit-autopilot <workflow-file> --stage plan` |
-| Codex CLI | start a new Codex task rooted at the spec worktree, then `$speckit-autopilot <workflow-file> --stage plan` |
+| Claude Code | `/cd <absolute-worktree-root>`, then `/speckit-pro:speckit-autopilot <relative-workflow-file> --stage plan` |
+| Codex CLI | `$speckit-autopilot <absolute-workflow-file> --stage plan` |
 
-The Codex rooting instruction is **part of the command, not commentary beside
-it**: a Codex task's workspace root is fixed when the task starts, and a scaffold
-run necessarily begins before the worktree exists, so that operator is by
-definition rooted outside it and a bare invocation would hand them a command the
-Workflow Worktree Binding guard stops. **On Codex the printed hand-off is the
-ordinary outcome, not a degraded one.** The leading `$speckit-autopilot` token is
-the invocation form this whole skill set already uses: Codex skills are invoked
-via `$skill-name`, never via any `/<plugin>:<skill>` slash command — see
-openai/codex#7480. The Claude Code row of the table above is recorded for
+The Codex form is the ordinary same-task outcome. OpenAI documents worktrees as
+separate checkouts and Handoff as the way to move a task between Local and
+Worktree contexts:
+<https://learn.chatgpt.com/docs/environments/git-worktrees>. This hand-off does
+not pretend to move the task or change its checkout. Autopilot instead binds
+every operation and agent explicitly to the registered nested `WORKFLOW_ROOT`.
+If Step 1 cannot prove that binding, print this recovery instruction instead:
+
+```text
+Use Codex Handoff to move this task to <worktree>, then run $speckit-autopilot <absolute-workflow-file> --stage plan. If Handoff is unavailable, reopen Codex at <worktree>.
+```
+
+The leading `$speckit-autopilot` token is the invocation form this skill set
+uses: Codex skills are invoked via `$skill-name`, never via a
+`/<plugin>:<skill>` slash command. The Claude Code row above is recorded for
 cross-platform parity only; never print it from this variant.
 
 The stage token is the literal lowercase `plan`, from the closed vocabulary
 `plan`, `implement`, `full`. No aliases, no alternate casing, no long-form
-spellings. The workflow file path is the **sole** hand-off token: never pass a
-state file, branch name, feature directory, or environment variable across the
-boundary.
+spellings. The workflow file path is the **sole** hand-off token and is absolute
+in the Codex form: never pass a state file, branch name, feature directory, or
+environment variable across the boundary.
 
 **Nothing is rolled back on any path.** Everything scaffold owns is committed and
 pushed before this step runs, so the operator who stops here loses one command

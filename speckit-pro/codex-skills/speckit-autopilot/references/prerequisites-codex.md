@@ -6,7 +6,7 @@ This is the Codex-specific mirror of `../../skills/speckit-autopilot/references/
 
 ## Contents
 
-- [Workflow Worktree Binding](#workflow-worktree-binding) — fail closed when the workflow belongs to a different checkout
+- [Workflow Worktree Binding](#workflow-worktree-binding) — bind one safe execution worktree before any phase work
 - [Step -1: Archive Sweep Startup](#step--1-archive-sweep-startup) — archive previously merged specs before workflow execution
 - [Step 0.0: Resolve Script Paths](#step-00-resolve-script-paths) — locate the plugin's `SKILL_SCRIPTS` directory
 - [Step 0.1–0.7: Environment Checks](#step-01-07-environment-checks) — `check-prerequisites` JSON parsing, branch detection
@@ -20,29 +20,65 @@ This is the Codex-specific mirror of `../../skills/speckit-autopilot/references/
 
 ## Workflow Worktree Binding
 
-Run this read-only guard before Step -1, before reading workflow content, and
-before any repository mutation:
+Run this guard before Step -1, before reading workflow content, and before any
+repository mutation. It binds execution; it does not change the Codex task's
+checkout.
 
-1. Resolve the current checkout with `git rev-parse --show-toplevel`.
-2. If the supplied workflow path exists inside that checkout, continue.
-3. If a relative workflow path is missing, parse `git worktree list
-   --porcelain` and test that same relative path under each registered
-   worktree. Do not search commits, branches, or arbitrary filesystem roots.
-4. If exactly one other worktree contains the workflow, STOP before Archive
-   Sweep and report:
+1. Invoke the read-only runner helper `resolve-workflow-binding` with the
+   supplied path as `inputs.workflow_file`. The helper returns canonical
+   `task_root`, `workflow_root`, and `workflow_file`, plus `binding_status`,
+   `relation`, `candidates`, and `problems`. Do not reproduce its worktree or
+   canonical-path resolution with ad hoc shell logic.
+2. Require `binding_status=resolved`. On `missing`, report the missing path and
+   STOP. On `ambiguous`, list `candidates` and STOP. On `invalid`, report
+   `problems` and STOP. Do not search commits, branches, revisions, or arbitrary
+   filesystem roots to manufacture another candidate.
+3. Bind `TASK_ROOT`, `WORKFLOW_ROOT`, and `WORKFLOW_FILE` from the returned
+   canonical paths. Continue in this Codex task only when `relation=same` or
+   `relation=descendant`. A descendant is eligible only because the helper has
+   proved that it is a registered strict-descendant worktree and that the
+   workflow is a readable regular file canonically contained by it.
+4. On `relation=external`, STOP before Archive Sweep and report:
 
    ```text
-   STOP: Workflow file is not in the current checkout. Start a new Codex task rooted at <worktree>, then run $speckit-autopilot <relative-workflow-path>.
+   STOP: Workflow worktree is outside the current task workspace. Use Codex Handoff to move this task to <workflow_root>, then run $speckit-autopilot <workflow_file>. If Handoff is unavailable, reopen Codex at <workflow_root>.
    ```
 
-5. If multiple worktrees contain it, STOP and list the candidate worktree
-   roots. If none contains it, report the original missing path and STOP.
-6. Treat an absolute workflow path outside the current checkout the same way:
-   identify its registered worktree, then require a task rooted there.
+   This is also the recovery for a sibling worktree or a scaffold created with
+   an explicit external worktree-root override. OpenAI documents worktrees as
+   separate checkouts and Handoff as the supported way to move a task between
+   Local and Worktree contexts:
+   <https://learn.chatgpt.com/docs/environments/git-worktrees>.
+5. From `WORKFLOW_ROOT`, verify the live branch before Archive Sweep. STOP on
+   `main`, a detached HEAD, or any protected integration/release branch; never
+   reinterpret `TASK_ROOT` as a safer mutation target.
+6. Re-run `resolve-workflow-binding` on every resume and immediately before any
+   write-capable agent dispatch, with the helper invoked from `WORKFLOW_ROOT`.
+   The result must still be `resolved`; its returned `task_root` and
+   `workflow_root` must both equal the established `WORKFLOW_ROOT`; its
+   `workflow_file` must equal the established `WORKFLOW_FILE`; and its relation
+   must be `same`. Keep the original `TASK_ROOT` as immutable discovery context,
+   but do not compare it with the helper's cwd-derived `task_root` during this
+   revalidation. STOP on registration drift, path drift, ambiguity, external
+   reclassification, or sandbox denial.
+7. Enforce one execution-root invariant for the rest of the run:
+   - every shell tool call sets `workdir` to `WORKFLOW_ROOT`; invoke runner
+     helpers from that directory so their repository root is the bound root;
+   - every read, write, patch, state update, and Git operation uses a path
+     canonically contained by `WORKFLOW_ROOT` (use absolute paths when the tool
+     has no `workdir`);
+   - every phase, consensus, implementation, Post, and other write-capable agent
+     prompt starts with the exact `WORKFLOW_ROOT` and directs the agent to use
+     it as the workdir for every shell call and the base for every filesystem
+     path; and
+   - validate every returned path against `WORKFLOW_ROOT` before applying an
+     edit, updating state, staging, or committing. If any tool or agent cannot
+     honor the binding, STOP instead of falling back to `TASK_ROOT`.
 
-Never copy, move, check out, rebase, or reconstruct the workflow to make the
-current checkout pass. Never execute a workflow from one worktree while phase
-commands, agents, gates, or commits target another.
+`TASK_ROOT` is discovery context only after a different `WORKFLOW_ROOT` is
+bound. Never copy, move, check out, rebase, or reconstruct the workflow to make
+the invocation checkout pass. Never execute a workflow from one worktree while
+phase commands, agents, gates, state, or commits target another.
 
 ## Step -1: Archive Sweep Startup
 

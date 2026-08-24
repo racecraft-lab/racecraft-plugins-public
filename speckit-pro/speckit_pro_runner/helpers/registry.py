@@ -120,6 +120,14 @@ HELPERS: dict[str, HelperEntry] = {
         "bash_reference",
         authoritative_request("check-prerequisites"),
     ),
+    "resolve-workflow-binding": HelperEntry(
+        "resolve-workflow-binding",
+        "resolve-workflow-binding",
+        None,
+        "python_authoritative",
+        "python_contract",
+        authoritative_request("resolve-workflow-binding"),
+    ),
     "detect-commands": HelperEntry(
         "detect-commands",
         "detect-commands",
