@@ -30,8 +30,8 @@ Re-read it before every phase. Once autopilot begins, later clarifications use `
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | Define four independently testable installer stories and closed behavior contracts |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Reconcile the downstream roster gap and validate manifest, ownership, and response boundaries |
+| Specify | `/speckit-specify` | ✅ Complete | 4 stories, 29 FRs, 9 success criteria, 13 acceptance scenarios, and 0 clarification markers |
+| Clarify | `/speckit-clarify` | 🔄 In Progress | Reconcile the downstream roster gap and validate manifest, ownership, and response boundaries |
 | Plan | `/speckit-plan` | ⏳ Pending | Design the materializer extension, observation adapter, resolver plan, and rollback batch |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Error handling, state management, data integrity, and reliability |
 | Tasks | `/speckit-tasks` | ⏳ Pending | Vertical, TDD-first ordering with explicit RED→GREEN pairs |
@@ -98,14 +98,14 @@ Capability path: codebase and spec context -> current repository files plus the 
 
 | Principle | Requirement for G56R-006 | Verification |
 |-----------|---------------------------|--------------|
-| I. Plugin structure | Runtime stays under `speckit-pro/`; repository-only tests stay under `tests/speckit-pro/` | `python3 tests/speckit-pro/run-all.py --layer 1` |
-| II. Cross-platform runtime | Python 3.11+ stdlib, structured JSON/TOML parsing, path APIs, argv arrays, no active Bash or `jq` | Layer 4 active-path and Bash-confinement gates |
-| III. Semantic versioning | No manual manifest or version edit | Layer 1 manifest checks and diff review |
-| IV. Test coverage | Focused unit coverage plus full Python-authoritative suite | `python3 tests/speckit-pro/run-all.py` |
-| V. Conventional commits | Lowercase scope and plain-English description | release-readiness gate before PR |
-| VI. KISS/YAGNI | Extend the existing materializer and installer; no parallel resolver or speculative qualification layer | Plan and Analyze review |
+| I. Plugin structure | Runtime stays under `speckit-pro/`; repository-only tests stay under `tests/speckit-pro/` | ✅ Verified — Layer 1 passed 1511/1511 |
+| II. Cross-platform runtime | Python 3.11+ stdlib, structured JSON/TOML parsing, path APIs, argv arrays, no active Bash or `jq` | ✅ Verified — Layer 4 passed 12282/12282, including active-path and Bash-confinement gates |
+| III. Semantic versioning | No manual manifest or version edit | ✅ Verified — Layer 1 manifest checks passed; no version edit is in scope |
+| IV. Test coverage | Focused unit coverage plus full Python-authoritative suite | ✅ Verified — full baseline passed 14012/14012 |
+| V. Conventional commits | Lowercase scope and plain-English description | ✅ Verified for planning checkpoints; exact PR-title validation remains a later release-readiness gate |
+| VI. KISS/YAGNI | Extend the existing materializer and installer; no parallel resolver or speculative qualification layer | ✅ Verified for G0; Plan and Analyze must re-check the one-framework boundary |
 
-**Constitution Check:** Pending planning-stage verification.
+**Constitution Check:** ✅ Verified — G0 baseline 14012/14012, reviewability setup `warn` with `pass=true`, and no reviewability blockers.
 
 ---
 
@@ -118,6 +118,7 @@ Capability path: codebase and spec context -> current repository files plus the 
 | **Spec ID** | G56R-006 |
 | **Name** | Capability-aware Resolver, Materializer, Installer, and Strict Override |
 | **Branch** | `g56r-006-resolver-materializer-installer-strict-override` |
+| **Stage** | `plan` |
 | **Dependencies** | G56R-005 complete/archived; consumes G56R-003 materializer and G56R-005 contracts/reason ordering |
 | **Enables** | G56R-007, G56R-008, G56R-009, G56R-010 |
 | **Priority** | P1 |
@@ -168,13 +169,13 @@ Make every requirement and acceptance scenario objective. Keep final route quali
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | Pending |
-| User Stories | Target 4 |
-| Acceptance Criteria | Pending |
+| Functional Requirements | 29 |
+| User Stories | 4 |
+| Acceptance Criteria | 13 scenarios |
 
 ### Files Generated
 
-- [ ] `specs/g56r-006-resolver-materializer-installer-strict-override/spec.md`
+- [x] `specs/g56r-006-resolver-materializer-installer-strict-override/spec.md`
 
 ---
 
