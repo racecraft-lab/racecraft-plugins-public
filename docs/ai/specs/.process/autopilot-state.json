@@ -5,8 +5,8 @@
   "branch": "g56r-006-resolver-materializer-installer-strict-override",
   "status": "in_progress",
   "stage": "plan",
-  "updated_at": "2026-08-24T18:07:14Z",
-  "active_step": "Phase 6: Analyze",
+  "updated_at": "2026-08-24T18:14:09Z",
+  "active_step": "Phase 6.5: Confidence Gate",
   "stage_resolution": {
     "source": "argv",
     "basis": "explicit --stage plan",
@@ -171,6 +171,12 @@
       "markers": 0,
       "task_count": 53,
       "reason": "53 tasks found with all 29 functional requirements mapped"
+    },
+    "G6": {
+      "gate": "6",
+      "pass": true,
+      "markers": 0,
+      "reason": "0 CRITICAL/HIGH findings and 0 unresolved findings at every severity"
     }
   },
   "phase_results": {
@@ -364,6 +370,32 @@
       "red_green_pairs": 14,
       "markers": 0,
       "g5": "pass"
+    },
+    "analyze": {
+      "status": "completed",
+      "findings_before": {
+        "critical": 0,
+        "high": 0,
+        "medium": 1,
+        "low": 0
+      },
+      "findings_after": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "remediation_loops": 1,
+      "files_modified": [
+        "specs/g56r-006-resolver-materializer-installer-strict-override/data-model.md"
+      ],
+      "consensus": {
+        "status": "completed",
+        "items": 0,
+        "outcome": "not_needed"
+      },
+      "confidence": 0.94,
+      "g6": "pass"
     }
   },
   "tasks_reviewability": {
@@ -405,9 +437,9 @@
     {"step": "Phase 4: Checklist - Reliability", "status": "completed"},
     {"step": "Phase 4: Checklist - Reliability Consensus", "status": "completed"},
     {"step": "Phase 5: Tasks", "status": "completed"},
-    {"step": "Phase 6: Analyze", "status": "in_progress"},
-    {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
-    {"step": "Phase 6.5: Confidence Gate", "status": "pending"},
+    {"step": "Phase 6: Analyze", "status": "completed"},
+    {"step": "Phase 6: Analyze - Consensus", "status": "completed"},
+    {"step": "Phase 6.5: Confidence Gate", "status": "in_progress"},
     {"step": "Phase 7: Implement - Setup (T001-T005)", "status": "skipped: outside plan stage"},
     {"step": "Phase 7: Implement - Foundation (T006-T011)", "status": "skipped: outside plan stage"},
     {"step": "Phase 7: Implement - User Story 1 (T012-T018)", "status": "skipped: outside plan stage"},

@@ -11,7 +11,7 @@
 - `provenance_id`: identity for the trusted policy provenance record.
 - `source_roster`: strict canonical 13-record source inventory containing each filename and original-byte digest plus its recomputed roster identity.
 - `required_agent_policies`: exactly 12 records keyed by canonical required agent name.
-- `optional_helper_policy`: policy for `autopilot-fast-helper`, or explicit no-helper policy state.
+- `optional_helper`: object containing the `autopilot-fast-helper` policy fields, or an explicit no-helper policy state.
 - `bounded_probes`: manifest-admitted probe definitions keyed by candidate/probe ID.
 
 **Validation rules**:
@@ -34,7 +34,7 @@
 - `preferred_route`: explicit model and effort tuple plus required capabilities.
 - `fallback_routes`: ordered explicit model and effort tuples plus required capabilities.
 - `non_route_contract_digest`: digest of instructions, tools, skills, MCP bindings, sandbox, mutation policy, and output contract expected to remain invariant.
-- `no_helper_allowed`: optional-helper-only boolean or record proving validated no-helper continuation.
+- `no_helper`: optional-helper-only record proving validated no-helper continuation.
 
 **Validation rules**:
 
