@@ -1069,6 +1069,12 @@ freshness contribution collapses to a single line** naming the commit the pages
 are current as of, with no per-page outcome list. That collapse scopes the
 freshness lines alone; the report's other mandatory parts are unchanged.
 
+**When the verdict is `current` and `last_artifacts_commit` is null, the same
+line names no commit** and instead says the pages are current with no artifacts
+commit and no `amended` row to join against. A present directory that no commit
+has ever touched reaches `current` legitimately whenever the log carries no
+`amended` row, and a line required to name a commit would have to invent one.
+
 **Every shortfall regeneration produces still reaches the reused machinery's
 three sinks**: the description's gap rows, the `Draft PR` row's note, and the
 run report. One substitution is named explicitly. At this Phase 7 call site the
@@ -1182,8 +1188,12 @@ own. No status falls to a default, and no two share a behaviour by accident.
 **That reading scopes the entry gate's sweep-or-not decision alone**, the one
 decision Step 0.6c's pre-phase observation was taken for. It does not forbid
 the refresh's own live observation deeper inside Phase 7, which is taken only
-after this gate has passed and the sweep has already amended. Nor is that a new
-kind of observation: the create-or-refresh terminal step above already takes a
+after this gate has passed and the run has reached the refresh step of the
+regeneration sequence below. **That condition is the sequence, not the
+classifications.** The stale-recovery leg reaches the same refresh having
+amended nothing, so scoping the observation to a leg that amended would let an
+orchestrator skip it on exactly the runs the recovery path exists for. Nor is
+that a new kind of observation: the create-or-refresh terminal step above already takes a
 second live read distinct from Step 0.6c's, on the documented principle that
 the two reads are separate and the later one is the current evidence.
 
@@ -1668,6 +1678,18 @@ never committed — and getting it wrong puts the pre-amendment plan back in
 front of the re-reviewer, which is the outcome this whole sequence exists to
 prevent.
 
+**The helper now refuses that mistake rather than acting on it**, and refuses
+the rest of the observation's declared shapes with it: `pages` that is not an
+array of strings, a non-array `amended_commits`, a record whose `cell` is not a
+string or whose `resolved` is not a boolean, a resolved record without a boolean
+ancestry field, and an unresolved record carrying a non-null one. Each returns
+exit 2 with a one-line diagnostic naming the offending field. **That refusal is
+scoped to an observation that reported success**, so nothing here weakens the
+rule below it: an observation whose `ok` is short of the literal `true` is a
+failed gather, still yields `undeterminable`, and still never blocks the run.
+Treat an exit 2 here as the orchestrator's own defect and fix the gather; do not
+retry it and do not route it into the report as a freshness outcome.
+
 **On `stale`, regenerate through the installed `artifact-author` agent**, and
 run the rest of the sequence:
 
@@ -1746,7 +1768,7 @@ leave the superseded file in the tree.
 
 | Commit | Stages | Type | When it is taken |
 | --- | --- | --- | --- |
-| Regeneration | `specs/<feature>/artifacts/` and nothing else | `docs` | the run's final post-verification outcome set carries at least one `generated` page |
+| Regeneration | `specs/<feature>/artifacts/` and nothing else | `docs` | the run's final post-verification outcome set carries at least one `generated` page **or** at least one deselection `removed` |
 | Record | the workflow file path alone | `chore` | the refresh actually changed the `Draft PR` cell |
 | Bookkeeping | the workflow file path alone | `chore` | unchanged, exactly as the sweep already takes it above |
 
@@ -1755,7 +1777,15 @@ directory alone because that is what keeps the freshness join exact: any other
 staged path would move the directory's last-touched commit for reasons
 unrelated to page content. **An empty regeneration commit is never taken**, it
 records nothing and cannot move the join, which is why the gate above is the
-outcome set rather than the fact that the step ran. **The record commit is the
+outcome set rather than the fact that the step ran. **The gate counts removals
+because a removal is a change to the directory**: a run whose re-selection
+dropped a page and whose authoring produced nothing still leaves the directory
+one page lighter, and the shortfall table above already says that removal lands
+and takes a commit. A gate reading `generated` alone would refuse the commit on
+exactly that leg, leaving the directory changed and uncommitted while the report
+said the removal landed, which is a false report and an uncommitted change the
+next Phase 7 whole-worktree commit would sweep into a commit touching the
+artifacts directory for unrelated reasons. **The record commit is the
 plan-stage terminal step's own commit, reused verbatim** rather than redefined
 here: the refresh changes the `Draft PR` cell through the emission machinery
 and this commit carries that change, while the sweep still writes no row of its
@@ -1782,7 +1812,25 @@ retry that would otherwise repair it never fires.
 bytes immediately after the artifacts observation above and before the author
 dispatch, and replay that snapshot only when the run's final verified
 `generated` count is zero — the regeneration commit's own gate, never a proxy
-such as whether a commit landed. **A git-restore path is rejected**: the
+such as whether a commit landed.
+
+**The replay restores the snapshot minus every page the removal set names.** A
+deselection removal is not damage the replay exists to undo: the manifest
+re-selection no longer justifies that page, and Q5 forbids carrying a page the
+manifest no longer justifies. Restoring it would undo the one piece of work the
+run completed and repeat that undoing on every later run, because the
+deselection is durable and the authoring failure may not be. So the two
+decisions are read apart: the `generated` count decides *whether* to replay, and
+the removal set decides *what the replay leaves out*.
+
+**The two shortfall rows follow from that, and do not contradict the gate.** A
+whole-set gap with no removal replays the whole snapshot, leaves the directory
+unmoved, and takes no commit. A whole-set gap beside a deselection removal
+replays every selected page, leaves the directory lighter by exactly that
+removal, and takes the commit the gate above now allows. Both match what the
+shortfall table already told the operator to expect.
+
+**A git-restore path is rejected**: the
 history this case arises on is one where no commit has ever touched the
 directory, so git holds no copy to restore from.
 

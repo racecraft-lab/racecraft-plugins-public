@@ -86,8 +86,16 @@ orchestrator, which is the only party that runs `git` (FR-004, FR-004a).
 | `ok` | boolean | MUST be the JSON literal `true` to be read at all. Any other value — including truthy `1` or `"true"` — is an unusable observation and yields the `undeterminable` verdict rather than an input error, because FR-023 forbids a failed gather from blocking the run. This follows `observation_pull_requests` (`read_only.py:1353-1409`) exactly. |
 | `artifacts_dir_state` | closed token | `absent`, `empty`, or `present`. `absent` and `empty` both read as `no_pages` (FR-007). `present` with no `last_artifacts_commit` is the FR-007a case. |
 | `last_artifacts_commit` | string or null | The last commit touching `specs/<feature>/artifacts/`, in whatever form the orchestrator resolved it. Reported back for the operator; **never compared as a string** (FR-008). `null` means no commit has ever touched the directory. |
-| `pages` | array of strings | The pre-regeneration on-disk inventory, by filename stem. The helper **echoes** this; it never selects (FR-004). |
-| `amended_commits` | array of records | One per `amended` row, keyed by that row's `Commit` cell text **verbatim**. |
+| `pages` | array of strings | The pre-regeneration on-disk inventory, by filename stem. The helper **echoes** this; it never selects (FR-004). A value that is not an array of strings, on an observation whose `ok` is the literal `true`, is an input error rather than an echo: a bare string splats into one page per character and reports an inventory nobody supplied. |
+| `amended_commits` | array of records | One per `amended` row, keyed by that row's `Commit` cell text **verbatim**. Not an array, or carrying a non-object, is an input error on an observation that reported success. |
+
+**Every type in this table is enforced, not merely declared.** Once `ok` is the
+literal `true`, the helper checks each field against the type above and returns
+an input error on a violation. The asymmetry with `ok` is the contract's own: a
+failed gather is a fact about the world FR-023 forbids from blocking the run,
+while a gather that reported success and then handed over the wrong shape is the
+caller's defect. Unchecked, the echo raises a `TypeError` the runner reports as
+an internal failure, which is not a verdict either.
 
 ### Ancestry record
 
@@ -95,7 +103,14 @@ orchestrator, which is the only party that runs `git` (FR-004, FR-004a).
 |---|---|---|
 | `cell` | string | The row's `Commit` cell text verbatim. This is the join key. |
 | `resolved` | boolean | Whether the cell resolved to a commit in this history. |
-| `is_ancestor_of_artifacts_commit` | boolean or null | Whether that commit is an ancestor of `last_artifacts_commit`. `null` when `resolved` is false. **`false` when `resolved` is true and `last_artifacts_commit` is null** (FR-007b): there is no commit to be an ancestor of, and the FR-007a case needs a pinned value for its fixtures to assert. |
+| `is_ancestor_of_artifacts_commit` | boolean or null | Whether that commit is an ancestor of `last_artifacts_commit`. `null` when `resolved` is false. **`false` when `resolved` is true and `last_artifacts_commit` is null** (FR-007b): there is no commit to be an ancestor of, and the FR-007a case needs a pinned value for its fixtures to assert. Both halves are refused as input errors when violated — a record that resolved without a boolean here, and an unresolved record carrying a non-null one. |
+
+**FR-007b is enforced rather than written down.** The stale test is for the
+literal `false`, so a resolved record leaving this field null reads as *not
+stale* and leaves the pre-amendment plan in front of the re-reviewer, which is
+the FR-007a interrupted-run case exactly. The orchestrator prose states the
+obligation and the helper refuses the request that breaks it, because a rule
+only one side knows is a rule no run enforces.
 
 **Why ancestry and not a comparison.** The `Commit` cell may hold an abbreviated
 sha while `last_artifacts_commit` is full, so string equality would report a
@@ -146,7 +161,7 @@ order (FR-005):
 | `verdict` | One of the four literals. The set is closed. |
 | `reason` | Present on every verdict, `null` unless the observation was unusable, where it is `unusable_observation`. That token names a fact about the request rather than about a row, so it has no home in `undeterminable_rows`. Every key is present on every response, `null` where a verdict has nothing to say, following `corroboration_record`'s shipped rule. |
 | `deciding_rows` | Present on `stale`; every row that proved it, so the operator sees the evidence rather than a bare token. |
-| `undeterminable_rows` | Each carries the row's `#` cell value and a reason from a closed set: `missing_commit_cell`, `empty_commit_cell`, `unresolvable_commit`, `no_matching_observation_record`, `malformed_row`. Present on any verdict, because FR-006 requires surfacing such a row even when `stale` already decided the verdict. |
+| `undeterminable_rows` | Each carries the row's `#` cell value and a reason from a closed set: `missing_commit_cell`, `empty_commit_cell`, `unresolvable_commit`, `no_matching_observation_record`, `malformed_row`. Present on any verdict, because FR-006 requires surfacing such a row even when `stale` already decided the verdict — `no_pages` included, where `deciding_rows` is empty because nothing was judged but the rows the join could not read were still read. Empty on the unusable-observation verdict alone, where the log was never joined. |
 | `pages` | The supplied inventory, echoed. Never a selection. |
 
 **An unusable observation echoes nothing.** §2 requires `ok` to be the literal

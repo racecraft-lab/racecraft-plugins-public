@@ -2754,6 +2754,91 @@ def freshness_error(message: str) -> dict[str, Any]:
     return make_result("", f"error: {message}\n", 2)
 
 
+def freshness_result(payload: dict[str, Any]) -> dict[str, Any]:
+    """Return one freshness envelope, or fail closed when it would not survive capture.
+
+    The same failure `sweep_result` above refuses, for the same reason. The
+    runner captures a helper's stdout at ``CAPTURE_LIMIT_BYTES`` and truncates
+    the JSON mid-string when that trips, so the parse fails and ``stdout_json``
+    is dropped. What reaches the caller then reads ``status: ok`` with
+    ``exit_code: 0`` and no diagnostics, and carries no ``verdict`` at all — and
+    an orchestrator told to branch on the verdict cannot tell that from a
+    surface it never called.
+
+    Reachable without an attacker: a long-lived feature whose Feedback Sweep Log
+    has accumulated `amended` rows across many runs, since every unmatched row
+    is echoed in ``undeterminable_rows`` by design, or a removal diff over a
+    large observed inventory. So this is measured here and refused rather than
+    left to the caller to notice.
+    """
+    text = json_text(payload)
+    if len(text.encode("utf-8")) > CAPTURE_LIMIT_BYTES:
+        return freshness_error(
+            "the freshness envelope exceeds the runner's stdout capture of "
+            f"{CAPTURE_LIMIT_BYTES} bytes, so it would reach the caller truncated "
+            "and unparseable while still reporting success; narrow the request "
+            "(a shorter log, or a smaller page inventory) and retry"
+        )
+    return make_result(text)
+
+
+def freshness_observation_error(observation: dict[str, Any]) -> str | None:
+    """Name what is malformed in an observation that reported success, or None.
+
+    Scoped to a gather that already claimed `ok` as the literal `true`. A failed
+    gather never reaches here, so nothing this function refuses is the failed
+    gather FR-023 protects: these are shape defects in data the caller said it
+    had, which the contract calls the caller's own defect and answers with exit
+    2. Without this, `pages` as a bare string splats into one page per
+    character, and a non-list `amended_commits` raises a `TypeError` the runner
+    reports as `internal_failure` — neither of which is a verdict.
+
+    Semantically negative values are data and are not refused here. `resolved`
+    as false and `is_ancestor_of_artifacts_commit` as true both carry meaning
+    the join acts on, and FR-006 owns the row-level reasons they produce.
+    """
+    pages = observation.get("pages")
+    if pages is not None and not (
+        isinstance(pages, list) and all(isinstance(entry, str) for entry in pages)
+    ):
+        return "artifacts_observation.pages must be an array of strings"
+    last_artifacts_commit = observation.get("last_artifacts_commit")
+    if last_artifacts_commit is not None and not isinstance(last_artifacts_commit, str):
+        return "artifacts_observation.last_artifacts_commit must be a string or null"
+    records = observation.get("amended_commits")
+    if records is not None and not isinstance(records, list):
+        return "artifacts_observation.amended_commits must be an array of records"
+    for record in records or []:
+        if not isinstance(record, dict):
+            return "artifacts_observation.amended_commits carries an entry that is not an object"
+        if not isinstance(record.get("cell"), str):
+            return "an amended_commits record carries no string cell"
+        resolved = record.get("resolved")
+        if not isinstance(resolved, bool):
+            return (
+                "an amended_commits record carries a non-boolean resolved: "
+                f"{record.get('cell')}"
+            )
+        ancestor = record.get("is_ancestor_of_artifacts_commit")
+        if resolved and not isinstance(ancestor, bool):
+            # FR-007b's caller obligation, enforced rather than merely written
+            # down. The stale test is for the literal `false`, so a resolved
+            # record leaving this field null or omitted reads as *not stale* and
+            # hands a re-reviewer the pre-amendment plan. That is the FR-007a
+            # interrupted-run case, and it is the one shape where a silent
+            # default is worse than a refusal.
+            return (
+                "an amended_commits record resolved without a boolean "
+                f"is_ancestor_of_artifacts_commit: {record.get('cell')}"
+            )
+        if not resolved and ancestor is not None:
+            return (
+                "an unresolved amended_commits record carries a non-null "
+                f"is_ancestor_of_artifacts_commit: {record.get('cell')}"
+            )
+    return None
+
+
 def freshness_envelope(
     verdict: str,
     *,
@@ -2899,16 +2984,19 @@ def freshness_verdict(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]
         # `observation_pull_requests`: `1 == True` in Python, so a truthiness
         # test would accept `ok: 1` as a successful gather. Nothing else in the
         # observation is echoed, because none of it was read.
-        return make_result(json_text(freshness_envelope(
+        return freshness_result(freshness_envelope(
             FRESHNESS_UNDETERMINABLE,
             reason=FRESHNESS_UNUSABLE_REASON,
-        )))
+        ))
     dir_state = observation.get("artifacts_dir_state")
     if dir_state not in FRESHNESS_DIR_STATES:
         return freshness_error(
             "artifacts_dir_state must be one of"
             f" {', '.join(FRESHNESS_DIR_STATES)}: {dir_state}"
         )
+    observation_error = freshness_observation_error(observation)
+    if observation_error is not None:
+        return freshness_error(observation_error)
     last_artifacts_commit = observation.get("last_artifacts_commit")
     pages = observation.get("pages") or []
     records = observation.get("amended_commits") or []
@@ -2949,21 +3037,25 @@ def freshness_verdict(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]
             deciding_rows.append({"row": reading["row"], "cell": cell})
 
     if dir_state in FRESHNESS_NO_PAGES_STATES:
-        # Nothing to judge, so no row decided anything and no row's unreadability
-        # matters. The count is still reported, because the log was read.
-        return make_result(json_text(freshness_envelope(
+        # Nothing to judge, so no row decides anything and `deciding_rows` stays
+        # empty. The rows that could not be read are still reported: FR-006
+        # requires surfacing such a row on any verdict, and reporting the count
+        # while hiding the rows behind it would tell an operator that the log
+        # was read without telling them what it could not read.
+        return freshness_result(freshness_envelope(
             FRESHNESS_NO_PAGES,
             last_artifacts_commit=last_artifacts_commit,
             amended_rows_read=amended_rows_read,
+            undeterminable_rows=undeterminable_rows,
             pages=pages,
-        )))
+        ))
     if deciding_rows:
         verdict = FRESHNESS_STALE
     elif undeterminable_rows:
         verdict = FRESHNESS_UNDETERMINABLE
     else:
         verdict = FRESHNESS_CURRENT
-    return make_result(json_text(freshness_envelope(
+    return freshness_result(freshness_envelope(
         verdict,
         last_artifacts_commit=last_artifacts_commit,
         amended_rows_read=amended_rows_read,
@@ -2972,7 +3064,7 @@ def freshness_verdict(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]
         # even when a deciding row already settled the verdict.
         undeterminable_rows=undeterminable_rows,
         pages=pages,
-    )))
+    ))
 
 
 def freshness_page_list(inputs: dict[str, Any], key: str) -> list[str] | None:
@@ -3013,7 +3105,7 @@ def freshness_removal_diff(inputs: dict[str, Any]) -> dict[str, Any]:
     if reselected is None:
         return freshness_error("reselected_pages must be an array of strings")
     selected = set(reselected)
-    return make_result(json_text({
+    return freshness_result({
         "tool": FRESHNESS_TOOL,
         "named_surface": "removal_diff",
         # `observed_pages` order rather than a sorted or set order, so two runs
@@ -3022,7 +3114,7 @@ def freshness_removal_diff(inputs: dict[str, Any]) -> dict[str, Any]:
         "removals": [stem for stem in observed if stem not in selected],
         "observed": observed,
         "reselected": reselected,
-    }))
+    })
 
 
 def freshness_corroborate_refresh(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
@@ -3050,11 +3142,11 @@ def freshness_corroborate_refresh(inputs: dict[str, Any], repo_root: Path) -> di
     corroboration = corroborate_draft_pr(
         workflow_draft_pr_row(lines), inputs.get("pr_observation")
     )
-    return make_result(json_text({
+    return freshness_result({
         "tool": FRESHNESS_TOOL,
         "named_surface": "corroborate_refresh",
         "corroboration": corroboration,
-    }))
+    })
 
 
 def resolve_confidence_mode(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:

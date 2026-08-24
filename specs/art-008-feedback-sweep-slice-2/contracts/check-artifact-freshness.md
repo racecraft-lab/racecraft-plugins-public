@@ -69,6 +69,10 @@ a surface to discover: the set is closed in the module.
    Any other value is an unusable observation and returns the
    `undeterminable` verdict with reason `unusable_observation` — **not** an
    input error, because FR-023 forbids a failed gather from blocking the run.
+   Once `ok` is that literal, the rest of the observation is checked against the
+   types `data-model.md` §2 declares, and a violation **is** an input error: a
+   gather that reported success and then handed over a non-array `pages` is the
+   caller's own defect, not the failed gather FR-023 protects.
 3. Read the `Feedback Sweep Log` through the shipped heading-anchored table
    read: anchor on the heading text, break `inside` on any line starting with
    `#`, find the header row by column name, skip the table rule row.
@@ -91,6 +95,13 @@ Per `data-model.md` §3. `pages` echoes the supplied inventory unchanged.
 | `artifacts_observation` absent or not an object | input error, exit 2 |
 | `artifacts_observation.ok` is not the literal `true` | verdict `undeterminable`, exit 0 |
 | `artifacts_dir_state` outside the closed three | input error, exit 2 |
+| `pages` not an array of strings, with `ok` true | input error, exit 2 |
+| `last_artifacts_commit` neither a string nor null, with `ok` true | input error, exit 2 |
+| `amended_commits` not an array, or carrying a non-object | input error, exit 2 |
+| a record whose `cell` is not a string, or whose `resolved` is not a boolean | input error, exit 2 |
+| a record `resolved` true whose `is_ancestor_of_artifacts_commit` is not a boolean | input error, exit 2 |
+| a record `resolved` false whose `is_ancestor_of_artifacts_commit` is not null | input error, exit 2 |
+| the serialized envelope exceeds the runner's stdout capture | input error, exit 2 |
 | no `Feedback Sweep Log` heading | zero `amended` rows; verdict decided by directory state alone |
 | a row is malformed | that row is undeterminable and surfaced; the other rows still evaluate |
 
@@ -98,6 +109,20 @@ Per `data-model.md` §3. `pages` echoes the supplied inventory unchanged.
 and returns exit 2. A failed or unusable *observation* is a fact about the
 world, and FR-023 says it may not block the run, so it returns a verdict that
 acts on nothing.
+
+**The two ancestry refusals enforce FR-007b rather than restate it.** The stale
+test is for the literal `false`, so a record that resolved and left the ancestry
+field null reads as *not stale* and hands a re-reviewer the pre-amendment plan —
+the FR-007a interrupted-run case exactly. A rule the helper only writes down is
+a rule no run enforces, so this one is refused instead of defaulted.
+
+**An envelope that would not survive capture is refused, never truncated.** The
+runner captures a helper's stdout at 16 KiB and truncates the JSON mid-string
+when that trips, so the parse fails and `stdout_json` is dropped while the
+response still reads `status: ok` with `exit_code: 0` and no diagnostics. An
+orchestrator told to branch on the verdict cannot tell that from a surface it
+never called, so every surface here measures its serialized envelope and fails
+closed, exactly as the shipped `sweep_result` already does for the same reason.
 
 ---
 
@@ -124,6 +149,7 @@ Order is the order of `observed_pages`, so the output is stable and diffable.
 | Condition | Result |
 |---|---|
 | either array absent, not an array, or carrying a non-string | input error, exit 2 |
+| the serialized envelope exceeds the runner's stdout capture | input error, exit 2 |
 | `reselected_pages` empty | legal: every observed page is a removal. This is the whole-set-gap case, and FR-023 keeps it from blocking. |
 | a stem appears in `reselected_pages` and not in `observed_pages` | ignored; that is a new page the author dispatch writes |
 

@@ -433,6 +433,27 @@
       },
       "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 91 | IC_kwDOaaa091 | pr_conversation | octocat | amended | Ordinary amendment. | a1b2c3d | 25 |\n\n"
     },
+    "input-error-corroborate-workflow-file-absent": {
+      "purpose": "The corroboration surface reads the same single path the verdict surface does, so its absence is the caller's defect here too. Pins that the shared prologue governs every surface rather than the default one alone.",
+      "acceptance": [
+        "FR-004",
+        "FR-033a"
+      ],
+      "inputs": {
+        "named_surface": "corroborate_refresh"
+      }
+    },
+    "input-error-corroborate-workflow-file-unreadable": {
+      "purpose": "A `workflow_file` naming no readable file. Unreadable is an input error on this surface, unlike an unusable observation, which reports without blocking.",
+      "acceptance": [
+        "FR-004",
+        "FR-033a"
+      ],
+      "inputs": {
+        "named_surface": "corroborate_refresh",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/no-such-workflow-file.md"
+      }
+    },
     "input-error-observation-absent": {
       "purpose": "A readable workflow file and no `artifacts_observation` at all. Absence is not an unusable observation: there is no observation to judge usable, so this is a malformed request.",
       "acceptance": [
@@ -443,6 +464,26 @@
         "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/input-error-observation-absent.md"
       },
       "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 91 | IC_kwDOaaa091 | pr_conversation | octocat | amended | Ordinary amendment. | a1b2c3d | 25 |\n\n"
+    },
+    "input-error-observation-amended-commits-not-an-array": {
+      "purpose": "The join iterates the records, so a non-array raises before any row is read. Refused as the caller's defect rather than crashing partway through the log.",
+      "acceptance": [
+        "FR-004a"
+      ],
+      "inputs": {
+        "named_surface": "verdict",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/input-error-observation-amended-commits-not-an-array.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab",
+          "pages": [
+            "implementation-plan"
+          ],
+          "amended_commits": 7
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 4 | IC_kwDOaaa004 | pr_conversation | octocat | amended | Narrowed FR-012 in spec.md. | e4f5a6b | 3 |\n\n"
     },
     "input-error-observation-not-an-object": {
       "purpose": "`artifacts_observation` supplied as an array. A non-object cannot carry `ok`, so it is a malformed request rather than a gather that failed.",
@@ -455,6 +496,100 @@
         "artifacts_observation": []
       },
       "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 91 | IC_kwDOaaa091 | pr_conversation | octocat | amended | Ordinary amendment. | a1b2c3d | 25 |\n\n"
+    },
+    "input-error-observation-pages-non-string-member": {
+      "purpose": "A bare string in place of the array is the sharpest form: `list(\"impl\")` splats one page per character and reports an inventory nobody supplied, at exit 0. A non-string member is the same class and is refused with it.",
+      "acceptance": [
+        "FR-004"
+      ],
+      "inputs": {
+        "named_surface": "verdict",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/input-error-observation-pages-non-string-member.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab",
+          "pages": [
+            "implementation-plan",
+            7
+          ],
+          "amended_commits": []
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 4 | IC_kwDOaaa004 | pr_conversation | octocat | amended | Narrowed FR-012 in spec.md. | e4f5a6b | 3 |\n\n"
+    },
+    "input-error-observation-pages-not-an-array": {
+      "purpose": "A gather that reported `ok` as the literal `true` and then handed over a non-array `pages` is the caller's own defect, not the failed gather FR-023 protects. Without the refusal the echo raises a `TypeError` the runner reports as an internal failure, which is not a verdict.",
+      "acceptance": [
+        "FR-004",
+        "FR-023"
+      ],
+      "inputs": {
+        "named_surface": "verdict",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/input-error-observation-pages-not-an-array.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab",
+          "pages": 7,
+          "amended_commits": []
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 4 | IC_kwDOaaa004 | pr_conversation | octocat | amended | Narrowed FR-012 in spec.md. | e4f5a6b | 3 |\n\n"
+    },
+    "input-error-observation-record-resolved-without-boolean-ancestry": {
+      "purpose": "FR-007b's caller obligation, enforced. The stale test is for the literal `false`, so a resolved record leaving the ancestry field null reads as *not stale* and hands the re-reviewer the pre-amendment plan. That is exactly the FR-007a interrupted-run case, so a silent default is worse here than a refusal.",
+      "acceptance": [
+        "FR-007a",
+        "FR-007b"
+      ],
+      "inputs": {
+        "named_surface": "verdict",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/input-error-observation-record-resolved-without-boolean-ancestry.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": null,
+          "pages": [
+            "implementation-plan"
+          ],
+          "amended_commits": [
+            {
+              "cell": "e4f5a6b",
+              "resolved": true,
+              "is_ancestor_of_artifacts_commit": null
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 4 | IC_kwDOaaa004 | pr_conversation | octocat | amended | Narrowed FR-012 in spec.md. | e4f5a6b | 3 |\n\n"
+    },
+    "input-error-observation-record-unresolved-with-non-null-ancestry": {
+      "purpose": "The other half of the same declared rule: the ancestry field is null when `resolved` is false, because an unresolved cell names no commit that could be anyone's ancestor. A record asserting both at once contradicts itself and is refused.",
+      "acceptance": [
+        "FR-006",
+        "FR-007b"
+      ],
+      "inputs": {
+        "named_surface": "verdict",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/input-error-observation-record-unresolved-with-non-null-ancestry.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab",
+          "pages": [
+            "implementation-plan"
+          ],
+          "amended_commits": [
+            {
+              "cell": "e4f5a6b",
+              "resolved": false,
+              "is_ancestor_of_artifacts_commit": true
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 4 | IC_kwDOaaa004 | pr_conversation | octocat | amended | Narrowed FR-012 in spec.md. | e4f5a6b | 3 |\n\n"
     },
     "input-error-observed-pages-absent": {
       "purpose": "`observed_pages` omitted. Both arrays are required, and an absent inventory is a malformed request rather than an empty one: reading it as empty would report no removals for a run that observed pages.",
@@ -1048,6 +1183,26 @@
       },
       "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 11 | IC_kwDOaaa001 | pr_conversation | octocat | acknowledged | Wording only; no code change. |  | 1 |\n\n"
     },
+    "verdict-no-pages-still-reports-undeterminable-rows": {
+      "purpose": "`no_pages` wins the precedence and leaves `deciding_rows` empty, but the rows the join could not read are still surfaced: FR-006 requires that on any verdict, and reporting `amended_rows_read` while hiding the rows behind it would tell an operator the log was read without telling them what it could not read.",
+      "acceptance": [
+        "FR-005",
+        "FR-006",
+        "FR-007"
+      ],
+      "inputs": {
+        "named_surface": "verdict",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/verdict-no-pages-still-reports-undeterminable-rows.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "empty",
+          "last_artifacts_commit": "9f2c1ab",
+          "pages": [],
+          "amended_commits": []
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 4 | IC_kwDOaaa004 | pr_conversation | octocat | amended | Narrowed FR-012 in spec.md. | e4f5a6b | 3 |\n\n"
+    },
     "verdict-stale-newer-amended-row": {
       "purpose": "One `amended` row that resolved and is not an ancestor of the artifacts commit is `stale`, and the row that proved it is carried in `deciding_rows` so the operator sees the evidence rather than a bare token.",
       "acceptance": [
@@ -1098,27 +1253,6 @@
         }
       },
       "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 13 | IC_kwDOaaa003 | pr_conversation | octocat | amended | Tightened the boundary check. | c0ffee1 | 3 |\n\n"
-    },
-    "input-error-corroborate-workflow-file-absent": {
-      "purpose": "The corroboration surface reads the same single path the verdict surface does, so its absence is the caller's defect here too. Pins that the shared prologue governs every surface rather than the default one alone.",
-      "acceptance": [
-        "FR-004",
-        "FR-033a"
-      ],
-      "inputs": {
-        "named_surface": "corroborate_refresh"
-      }
-    },
-    "input-error-corroborate-workflow-file-unreadable": {
-      "purpose": "A `workflow_file` naming no readable file. Unreadable is an input error on this surface, unlike an unusable observation, which reports without blocking.",
-      "acceptance": [
-        "FR-004",
-        "FR-033a"
-      ],
-      "inputs": {
-        "named_surface": "corroborate_refresh",
-        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/no-such-workflow-file.md"
-      }
     }
   }
 }

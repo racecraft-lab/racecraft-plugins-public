@@ -28,7 +28,12 @@ python3 tests/speckit-pro/run-all.py --layer 4
 ```
 
 **Expected**: `test-artifact-freshness` passes, covering all four verdicts,
-the precedence order, and every undeterminable reason.
+the precedence order, every undeterminable reason, the input-error shapes a
+successful gather can still get wrong, and the capture-limit refusal.
+
+The corpus also carries a `REQUIRED_CASES` guard naming one case per
+behavioural obligation. Deleting cases to make a run green is a failure rather
+than a smaller run.
 
 To exercise one surface by hand:
 
@@ -45,8 +50,19 @@ JSON
 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < /tmp/freshness-request.json
 ```
 
-**Expected**: `"verdict":"current"` with `"amended_rows_read":0`. Run it twice;
-the envelope is byte-identical. That reproducibility is SC-005.
+**Expected**: `"verdict":"current"` with `"amended_rows_read":0`. Run it twice
+and the helper's own payload — the `stdout` text and the `stdout_json` object —
+is byte-identical. That reproducibility is SC-005.
+
+**Compare the payload, not the whole response.** The runner's envelope wraps the
+payload in execution metadata including `duration_ms`, which is wall-clock and
+differs between runs, so `cmp` over two raw responses reports a difference on a
+perfectly reproducible helper. Compare the payload instead:
+
+```bash
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < /tmp/freshness-request.json \
+  | python3 -c 'import json,sys; print(json.load(sys.stdin)["data"]["stdout"]["text"], end="")'
+```
 
 **Falsifiable**: the request above names a workflow file carrying **no**
 `Feedback Sweep Log` rows, so `amended_rows_read` is 0 and no join happens.

@@ -26,10 +26,17 @@ envelope field by field and a reader can check it against
 Nothing in this file is captured from the helper's own output: a test that
 compares a helper's output to itself executes nothing.
 
-The pair starts empty. The harness therefore asserts the two files name the same
-cases and runs whichever cases exist, rather than asserting the corpus is
-non-empty — an emptiness assertion would be red before the first case lands and
-would say nothing about the helper.
+The pair started empty, so the harness asserts the two files name the same cases
+and runs whichever cases exist rather than asserting the corpus is non-empty: an
+emptiness assertion would have been red before the first case landed and would
+say nothing about the helper.
+
+That is no longer sufficient on its own. Once the corpus is established, a
+name-agreement check alone stays green after every case is deleted from both
+files, so a suite that pins nothing looks exactly like a suite that pins
+everything. `REQUIRED_CASES` closes that: it names one case per behavioural
+obligation the contract fixes, and removing any of them is a failure rather
+than a smaller run.
 
 Run it directly:
 
@@ -64,6 +71,59 @@ EXPECTED_PATH = FIXTURE_DIR / "expected-envelopes.json"
 WORKFLOW_SCRATCH = FIXTURE_DIR / ".workflow-scratch"
 
 HELPER_ID = "check-artifact-freshness"
+
+# One case per behavioural obligation, not the whole corpus: a list of all 57
+# would have to be edited for every case added, which turns the guard into
+# bookkeeping and invites deleting a line to make a run green. These are the
+# obligations whose loss would not be visible any other way.
+REQUIRED_CASES = (
+    # The four verdicts and their precedence.
+    "verdict-current-ancestor-row",
+    "verdict-stale-newer-amended-row",
+    "verdict-undeterminable-unmatched-row",
+    "verdict-no-pages-directory-absent",
+    "precedence-no-pages-over-amended-rows",
+    "precedence-stale-over-undeterminable-row",
+    # Every closed undeterminable reason.
+    "reason-empty-commit-cell",
+    "reason-malformed-row",
+    "reason-missing-commit-cell",
+    "reason-no-matching-observation-record",
+    "reason-unresolvable-commit",
+    # The dual anchoring, which is the one place a naive read is silently wrong.
+    "dual-anchoring-escaped-pipe-in-disposition",
+    "structural-short-row-does-not-stop-the-other-rows",
+    "structural-no-feedback-sweep-log-heading",
+    # Ancestry rather than comparison, and the FR-007a interrupted-run case.
+    "fr007a-null-artifacts-commit-with-joinable-row-is-stale",
+    "fr007b-null-artifacts-commit-with-unresolved-row-is-undeterminable",
+    "fr007b-pinned-false-ancestor-reaches-stale-through-the-ordinary-test",
+    "fr008-abbreviated-cell-against-full-sha-is-current",
+    # `ok` read as the JSON literal `true`, which a truthiness test would lose.
+    "observation-ok-integer-one-is-undeterminable",
+    "observation-ok-string-true-is-undeterminable",
+    "observation-ok-absent-is-undeterminable",
+    # A successful gather whose shape is the caller's own defect.
+    "input-error-observation-pages-not-an-array",
+    "input-error-observation-pages-non-string-member",
+    "input-error-observation-amended-commits-not-an-array",
+    "input-error-observation-record-resolved-without-boolean-ancestry",
+    "input-error-observation-record-unresolved-with-non-null-ancestry",
+    # Evidence that survives a verdict that had nothing to judge.
+    "verdict-no-pages-still-reports-undeterminable-rows",
+    # The removal diff, one-way and over stems.
+    "removal-deselected-page-yields-one-removal",
+    "removal-gap-page-in-reselected-is-not-removed",
+    "removal-stem-only-in-reselected-is-ignored",
+    "removal-empty-reselected-removes-every-observed-page",
+    # The six corroboration statuses, reused verbatim rather than re-decided.
+    "corroborate-match",
+    "corroborate-no-record-absent-draft-pr-row",
+    "corroborate-skipped-observation-absent",
+    "corroborate-pr-closed",
+    "corroborate-pr-missing",
+    "corroborate-identity-mismatch",
+)
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -185,6 +245,21 @@ class FreshnessEnvelopeTest(unittest.TestCase):
             "freshness-cases.json and expected-envelopes.json must name the same cases",
         )
 
+    def test_every_required_obligation_still_has_a_case(self) -> None:
+        # Without this, deleting every case from both fixture files leaves the
+        # name-agreement check above green and every assertion below iterating
+        # nothing, so a corpus that pins nothing is indistinguishable from one
+        # that pins everything.
+        present = set(cases())
+        missing = [name for name in REQUIRED_CASES if name not in present]
+        self.assertEqual(
+            missing,
+            [],
+            "the corpus no longer covers these obligations; rename the guard "
+            "entry deliberately or restore the case, never delete the line to "
+            "make a run green",
+        )
+
     def test_every_case_declares_its_purpose(self) -> None:
         for name in case_names():
             with self.subTest(case=name):
@@ -242,6 +317,38 @@ class FreshnessEnvelopeTest(unittest.TestCase):
                         f"{name} returned a diagnostic that is not the one-line error shape: {text!r}",
                     )
                     self.assertIn(want["error_contains"], text)
+
+    def test_an_oversize_envelope_fails_closed(self) -> None:
+        """A verdict too large for the runner's capture is refused, not truncated.
+
+        Built here rather than stored as a case, because the input that trips it
+        is 16 KiB of filler that would say nothing to a reader of the corpus.
+        The runner truncates stdout at the capture limit and derives status from
+        the exit code alone, so without the guard this returns `status: ok`,
+        `exit_code: 0`, no diagnostics, and no `stdout_json` at all — which an
+        orchestrator told to branch on the verdict cannot tell apart from a
+        surface it never called.
+        """
+        pages = [f"page-{index:05d}-{'a' * 30}" for index in range(600)]
+        inputs = {
+            "named_surface": "verdict",
+            "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness"
+            "/.workflow-scratch/oversize-envelope.md",
+            "artifacts_observation": {
+                "ok": True,
+                "artifacts_dir_state": "present",
+                "last_artifacts_commit": "9f2c1ab",
+                "pages": pages,
+                "amended_commits": [],
+            },
+        }
+        case = {"inputs": inputs, "workflow_content": "# oversize\n"}
+        with materialized_workflow(case):
+            response = run_runner(helper_request("oversize-envelope", inputs))
+        self.assertEqual(response.get("status"), "input_error")
+        self.assertEqual(response.get("exit_code"), 2)
+        self.assertIn("exceeds the runner's stdout capture", stderr_text(response))
+
 
 
 def main(argv: list[str]) -> int:

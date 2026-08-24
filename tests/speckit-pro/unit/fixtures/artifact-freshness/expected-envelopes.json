@@ -324,13 +324,41 @@
       "status": "input_error",
       "error_contains": "artifacts_dir_state must be one of"
     },
+    "input-error-corroborate-workflow-file-absent": {
+      "status": "input_error",
+      "error_contains": "workflow_file is required"
+    },
+    "input-error-corroborate-workflow-file-unreadable": {
+      "status": "input_error",
+      "error_contains": "workflow file cannot be read"
+    },
     "input-error-observation-absent": {
       "status": "input_error",
       "error_contains": "artifacts_observation is required"
     },
+    "input-error-observation-amended-commits-not-an-array": {
+      "status": "input_error",
+      "error_contains": "artifacts_observation.amended_commits must be an array of records"
+    },
     "input-error-observation-not-an-object": {
       "status": "input_error",
       "error_contains": "artifacts_observation must be an object"
+    },
+    "input-error-observation-pages-non-string-member": {
+      "status": "input_error",
+      "error_contains": "artifacts_observation.pages must be an array of strings"
+    },
+    "input-error-observation-pages-not-an-array": {
+      "status": "input_error",
+      "error_contains": "artifacts_observation.pages must be an array of strings"
+    },
+    "input-error-observation-record-resolved-without-boolean-ancestry": {
+      "status": "input_error",
+      "error_contains": "resolved without a boolean is_ancestor_of_artifacts_commit"
+    },
+    "input-error-observation-record-unresolved-with-non-null-ancestry": {
+      "status": "input_error",
+      "error_contains": "non-null is_ancestor_of_artifacts_commit"
     },
     "input-error-observed-pages-absent": {
       "status": "input_error",
@@ -704,6 +732,26 @@
         "pages": []
       }
     },
+    "verdict-no-pages-still-reports-undeterminable-rows": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "verdict",
+        "verdict": "no_pages",
+        "reason": null,
+        "last_artifacts_commit": "9f2c1ab",
+        "amended_rows_read": 1,
+        "deciding_rows": [],
+        "undeterminable_rows": [
+          {
+            "row": "4",
+            "cell": "e4f5a6b",
+            "reason": "no_matching_observation_record"
+          }
+        ],
+        "pages": []
+      }
+    },
     "verdict-stale-newer-amended-row": {
       "status": "ok",
       "envelope": {
@@ -748,14 +796,6 @@
           "spec-explainer"
         ]
       }
-    },
-    "input-error-corroborate-workflow-file-absent": {
-      "status": "input_error",
-      "error_contains": "workflow_file is required"
-    },
-    "input-error-corroborate-workflow-file-unreadable": {
-      "status": "input_error",
-      "error_contains": "workflow file cannot be read"
     }
   }
 }

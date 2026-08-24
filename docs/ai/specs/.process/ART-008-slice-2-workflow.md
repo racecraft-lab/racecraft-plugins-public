@@ -1256,12 +1256,112 @@ substance present on the Codex surface; the difference is paragraph packing.
 Finding 1 was shared by both surfaces, so it was a shared gap rather than a
 parity break, and the fix landed on both.
 
+### Second review pass and manual UAT (rp-review-cli, 2026-08-24)
+
+A second, independent review was run through `rpce-cli`'s context builder in
+`review` mode over the same `origin/main...HEAD` scope, followed by a manual
+UAT of the offline quickstart scenarios. Six findings were raised, **all six
+verified against source before any edit**, and all six remediated. Two were
+behavioural defects the first review missed.
+
+**R1 — a successful gather with a malformed shape crashed the runner. Fixed.**
+After `ok` was read as the literal `true`, nothing checked the rest of the
+observation against the types `data-model.md` §2 declares. Reproduced against
+the worktree runner: `pages: 7` and `amended_commits: 7` both returned
+`status: internal_failure`, `exit_code: 5`, `exception_type: TypeError` — which
+is neither the exit-2 input error the contract promises nor the verdict FR-023
+protects. Worse, `pages: "implementation-plan"` returned **exit 0** with an
+inventory of sixteen single-character pages nobody supplied. `freshness_observation_error`
+now checks every declared type and returns exit 2 with a one-line diagnostic
+naming the field. The `ok`-short-of-literal-`true` path is untouched and still
+degrades to `undeterminable` at exit 0, re-verified.
+
+**R2 — a large verdict was silently truncated into a success. Fixed.** The
+runner captures stdout at 16 KiB and derives status from the exit code alone,
+so an oversized envelope reached the caller as `status: ok`, `exit_code: 0`, no
+diagnostics, and **no `stdout_json` at all**. Reproduced: a 600-page inventory
+returned exactly that. An orchestrator told to branch on the verdict cannot
+tell that from a surface it never called. The shipped `sweep_result` already
+guards this for the same reason; `freshness_result` now does the same for all
+three surfaces.
+
+**R3 — the removal-only regeneration leg contradicted itself across three
+passages. Fixed on both platforms.** The shortfall table said a deselection
+removal landing alone moves the directory and takes a commit; the commit gate
+required at least one `generated` page; and the replay rule restored the
+snapshot whenever the `generated` count was zero. A run that only deselects a
+page while authoring fails therefore restored the deselected page **and** took
+no commit, while the report said the removal landed. The gate now counts
+removals, and the replay restores the snapshot minus every page the removal set
+names — which also keeps Q5's rule that no page the manifest no longer
+justifies is carried.
+
+**R4 — `no_pages` suppressed the undeterminable rows the contract requires.
+Fixed.** `data-model.md` §3 says `undeterminable_rows` is "present on any
+verdict"; the `no_pages` branch omitted it while still reporting
+`amended_rows_read`, telling an operator the log was read without telling them
+what it could not read.
+
+**R5 — both references scoped the refresh's live observation to a sweep that
+"has already amended". Fixed on both platforms.** The same documents require
+regeneration and refresh on the stale-recovery leg, which amends nothing, so
+the earlier wording licensed skipping the observation on exactly the runs the
+recovery path exists for. The condition is now reaching the refresh step of the
+regeneration sequence.
+
+**R6 — the `current` report line could not be rendered with no artifacts
+commit. Fixed on both platforms.** A present directory no commit has touched
+reaches `current` legitimately when the log carries no `amended` row; the line
+required naming "the commit the pages are current as of" and would have had to
+invent one. A null-safe form is now specified.
+
+**R7 (test strength) — the corpus could lose every case and stay green.
+Fixed.** Every behavioural assertion iterated the fixture names, so deleting
+both files' cases left all methods passing. `REQUIRED_CASES` now names one case
+per behavioural obligation and fails when one goes missing. Six fixtures were
+added for the new refusals and for `no_pages` carrying evidence, plus a
+constructed oversize test. Suite: 154 → 174 assertions.
+
+**R8 (budget) — no action.** The realized overrun (about 355 executable lines
+against about 906 of reference prose) is already recorded as a diagnostic in
+the pull-request body; this pass adds to the prose side and does not change the
+character of the overrun.
+
+### Manual UAT results
+
+Run against the worktree source with `PYTHONPATH=speckit-pro`, not the
+installed cache.
+
+| Scenario | Result | Evidence |
+|---|---|---|
+| 1 — verdict reproducible offline | **pass, with a doc defect found** | `verdict: current`, `amended_rows_read: 0`; the helper payload is byte-identical across runs |
+| 2 — dual-anchored `Commit` survives a piped disposition | **pass** | `Commit` read as `e4f5a6b`, verdict `stale`; the negative control keyed on the left-anchored `B in spec.md` returns `undeterminable` with `no_matching_observation_record`, so the anchoring is load-bearing rather than incidental |
+| 3 — amended sweep leaves current pages | **not run** | needs a live sweep on a draft pull request from a released plugin; see the discharge note below |
+| 4 — clean sweep repairs stale pages | **not run** | same limit |
+| 5 — nothing blocks the run | **not run** | same limit |
+| 6 — both platforms describe the same behaviour | **pass** | Layer 1 1511/1511; Codex pins present (`estimate-reviewable-loc` 4, `over_budget` 3, `not_estimated` 2); Codex SKILL.md body 7996 words and byte-identical to `main`; `Agent(` count 0 in the Codex mirror |
+| 7 — generated-artifact contract discharged | **pass** | `refresh-release-artifacts.py` then `reference:generate` twice in a row produce no further change |
+
+**UAT finding — Scenario 1's own expected result was wrong. Fixed.** It said
+"run it twice; the envelope is byte-identical." The runner envelope carries
+`duration_ms`, which is wall-clock, so `cmp` over two raw responses reports a
+difference at character 395 on a perfectly reproducible helper — a false
+failure for anyone following the documented check. The quickstart now says to
+compare the payload and shows how.
+
+**Scenarios 3, 4, and 5 are declared gaps, not silent omissions.** Each needs a
+live sweep against a draft pull request, which the autopilot runs from the
+cached plugin, so they cannot execute against the working tree. This is the
+same limit slice 1 recorded at T098 and is stated in the pull-request body.
+
 - [x] All tasks marked complete in tasks.md — 81/81
-- [x] Full suite passes: `python3 tests/speckit-pro/run-all.py` — 14179/14179, exit 0
+- [x] Full suite passes: `python3 tests/speckit-pro/run-all.py` — 14199/14199, exit 0
 - [x] Payload + proofs regenerated: `python3 scripts/refresh-release-artifacts.py` — idempotent on a second run
 - [x] Docs reference regenerated: `pnpm --dir docs-site reference:generate`
 - [x] Codex parity validators pass (Layer 1) — `validate-codex-skills` and `validate-codex-parity` green
-- [x] PR refreshed — draft #502, **not** a second pull request; awaiting human review
+- [x] PR refreshed — #502, **not** a second pull request
+- [x] Second review pass + manual UAT complete; all findings remediated
+- [x] Pull request marked ready for review at the operator's explicit request
 - [ ] Merged to main branch — **human action, never the autopilot's**
 
 **Discharge note carried from slice 1:** the end-to-end sweep→regenerate loop
