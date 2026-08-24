@@ -91,7 +91,7 @@ Projected reviewable LOC: re-measure at Plan (hand-derived; estimator returns a 
 | Analyze | `/speckit-analyze` | ✅ Complete | 5 findings (0C/1H/1M/3L), all remediated; coverage 54/54 bidirectional; constitution 6/6; G6 pass; 📊 0.92 |
 | Confidence Gate | G6.5 | ✅ Complete | Composite 0.92 ≥ 0.90, advisory mode — PASS, proceed; plan stage ends here |
 | Implement | `/speckit-implement` | ✅ Complete | 81/81 tasks; full suite 14179/14179 exit 0; G7 pass (+167 over the 14012 baseline) |
-| Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
+| Post | Post-Implementation | ✅ Complete | 12/12: 10 complete, UAT skeleton skipped (deferred helper), review remediation deferred until the draft is flipped to ready |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
@@ -1166,26 +1166,54 @@ The canonical closeout. Every row must reach Complete or an explicit
 
 | Canonical Item | Status | Evidence |
 |---|---|---|
-| Post: Doctor Extension Check | ⏳ Pending | |
-| Post: Verify Implementation | ⏳ Pending | |
-| Post: Verify Tasks Phantom Check | ⏳ Pending | |
-| Post: Code Review | ⏳ Pending | |
-| Post: Integration Suite | ⏳ Pending | |
-| Post: Reviewability Diff Gate | ⏳ Pending | |
-| Post: Self-Review | ⏳ Pending | |
-| Post: UAT Runbook Generation | ⏳ Pending | |
-| Post: PR Body Generation | ⏳ Pending | |
-| Post: PR Creation | ⏳ Pending | |
-| Post: Review Remediation | ⏳ Pending | |
-| Post: Retrospective | ⏳ Pending | |
+| Post: Doctor Extension Check | ✅ Complete | 8 extensions registered and enabled; none required by this slice |
+| Post: Verify Implementation | ✅ Complete | 55 FRs, all cited by a task; zero tasks citing an undefined FR; 8/8 SCs mapped in `quickstart.md` §Traceability. `FR-015c` is the known never-assigned identifier, recorded as a numbering note |
+| Post: Verify Tasks Phantom Check | ✅ Complete | 81/81 tasks checked; all 25 distinct file paths cited by `tasks.md` exist on disk; no phantom task |
+| Post: Code Review | ✅ Complete | Independent review of the `origin/main...HEAD` diff against the repository's blocking categories and this slice's eight stated invariants |
+| Post: Integration Suite | ✅ Complete | Full suite 14179/14179, exit 0 (T078) |
+| Post: Reviewability Diff Gate | ✅ Complete | **Realized overrun**: production 1226 added / 19 removed against a declared ~730 midpoint, 800 block. No gate produced a block verdict; `final-reviewability-backstop` is deferred, and the governing evidence is the committed WARN chain from T014 |
+| Post: Self-Review | ✅ Complete | Four answers recorded below |
+| Post: UAT Runbook Generation | ⏭️ Skipped | `generate-uat-skeleton` is **deferred on the installed runner**, and no committed source-derived skeleton exists for this slice. Fail-open and logged: `uat-runbook-author` was **not** spawned, per the rule that the author runs only when a skeleton exists |
+| Post: PR Body Generation | ✅ Complete | `pr-packet-output` single mode, dry-run then apply; read-only validation `status=passed`, `pr_blocked=false`, `writes_state=false`; write-mode validation persisted. Exactly one non-empty `release-note` fence |
+| Post: PR Creation | ✅ Complete | **Refreshed draft #502 — no second pull request was opened.** `validate-pr-workflow-contract` passed on the title and changed-file scope before the update. CI `PR Checks` completed **success** against head `2b3de7ae8` |
+| Post: Review Remediation | ⏭️ Deferred | The pull request is a **draft** carrying 0 reviews and 0 comments, and the repository's review gates skip on draft. A five-minute polling loop would poll nothing. The remediation loop belongs after the operator flips the pull request to ready, which is their decision at this checkpoint |
+| Post: Retrospective | ✅ Complete | `specs/art-008-feedback-sweep-slice-2/.process/retrospective.md` |
 
-- [ ] All tasks marked complete in tasks.md
-- [ ] Full suite passes: `python3 tests/speckit-pro/run-all.py` (zero failures)
-- [ ] Payload + proofs regenerated: `python3 scripts/refresh-release-artifacts.py`
-- [ ] Docs reference regenerated: `pnpm --dir docs-site reference:generate`
-- [ ] Codex parity validators pass (Layer 1)
-- [ ] PR created and reviewed
-- [ ] Merged to main branch
+### Self-Review (four answers)
+
+**Tests executed.** `python3 tests/speckit-pro/run-all.py` ran at T078 and
+exited zero: **14179/14179** (L1 1511, L4 12449, L5 219). `TYPECHECK`, `LINT`,
+and `BUILD` are `N/A` on this Python-stdlib stack, per the `detect-commands`
+evidence recorded at pre-flight. Evidence: the Phase 6 Polish log above.
+
+**Edge cases.** Every closed set in the slice has a fixture reaching each of its
+members on its own condition: all four verdicts, both precedence pairs, all five
+`undeterminable` reasons, all six corroboration statuses, the three
+unusable-observation shapes, and six input errors. The two non-happy paths that
+would fail silently rather than loudly — the escaped-pipe row and the short row
+whose `cells[-2]` is the `amended` token — each have a dedicated regression case.
+No `[edge-case-gap]` markers.
+
+**Requirements matched.** 55 FRs, every one cited by at least one task, and no
+task citing an FR the spec does not define. Checked in **both** directions,
+because a forward-only sweep passes while a task cites a requirement nobody
+wrote. `FR-015c` is the one identifier with no task, and it is the known
+never-assigned number recorded as a numbering note in `spec.md`.
+
+**Follow-up and tidiness.** Four deferrals, all declared in the pull-request body
+under Known Gaps rather than dropped: the realized budget overrun; quickstart
+scenarios 3, 4, and 5, which need a released plugin; the absent feedback sweep on
+this pull request, caused by the installed plugin predating slice 1; and the two
+quickstart scenarios corrected during validation. No leftover scaffolding, debug
+statement, or `TODO` appears anywhere in the diff.
+
+- [x] All tasks marked complete in tasks.md — 81/81
+- [x] Full suite passes: `python3 tests/speckit-pro/run-all.py` — 14179/14179, exit 0
+- [x] Payload + proofs regenerated: `python3 scripts/refresh-release-artifacts.py` — idempotent on a second run
+- [x] Docs reference regenerated: `pnpm --dir docs-site reference:generate`
+- [x] Codex parity validators pass (Layer 1) — `validate-codex-skills` and `validate-codex-parity` green
+- [x] PR refreshed — draft #502, **not** a second pull request; awaiting human review
+- [ ] Merged to main branch — **human action, never the autopilot's**
 
 **Discharge note carried from slice 1:** the end-to-end sweep→regenerate loop
 is prompt-level orchestrator behavior with no automated eval; live evidence

@@ -3,11 +3,11 @@
   "spec_id": "ART-008",
   "feature_dir": "specs/art-008-feedback-sweep-slice-2",
   "branch": "art-008-feedback-sweep-slice-2",
-  "status": "in_progress",
+  "status": "completed",
   "stage": "implement",
   "prior_run_note": "completed",
   "updated_at": "2026-08-24T00:00:00Z",
-  "active_step": "Post-Implementation",
+  "active_step": null,
   "reclaimed_from": {
     "workflow_file": "docs/ai/specs/.process/ART-008-workflow.md",
     "spec_id": "ART-008",
@@ -81,63 +81,53 @@
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "pending",
-      "note": "post-implementation closeout, in stage for this run"
+      "status": "completed"
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "pending",
-      "note": "post-implementation closeout, in stage for this run"
+      "status": "completed"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "pending",
-      "note": "post-implementation closeout, in stage for this run"
+      "status": "completed"
     },
     {
       "step": "Post: Code Review",
-      "status": "pending",
-      "note": "post-implementation closeout, in stage for this run"
+      "status": "completed"
     },
     {
       "step": "Post: Integration Suite",
-      "status": "pending",
-      "note": "post-implementation closeout, in stage for this run"
+      "status": "completed"
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "pending",
-      "note": "post-implementation closeout, in stage for this run"
+      "status": "completed"
     },
     {
       "step": "Post: Self-Review",
-      "status": "pending",
-      "note": "post-implementation closeout, in stage for this run"
+      "status": "completed"
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "pending",
-      "note": "post-implementation closeout, in stage for this run"
+      "status": "completed",
+      "note": "skipped: generate-uat-skeleton deferred on the installed runner and no committed skeleton exists; uat-runbook-author not spawned"
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "pending",
-      "note": "post-implementation closeout, in stage for this run"
+      "status": "completed"
     },
     {
       "step": "Post: PR Creation",
-      "status": "pending",
-      "note": "post-implementation closeout, in stage for this run"
+      "status": "completed"
     },
     {
       "step": "Post: Review Remediation",
-      "status": "pending",
-      "note": "post-implementation closeout, in stage for this run"
+      "status": "completed",
+      "note": "deferred: draft PR carries 0 reviews and 0 comments and review gates skip on draft; loop belongs after the operator flips it to ready"
     },
     {
       "step": "Post: Retrospective",
-      "status": "pending",
-      "note": "post-implementation closeout, in stage for this run"
+      "status": "completed"
     }
   ],
   "test_baseline_g0": {
@@ -272,5 +262,13 @@
       ],
       "note": "executable surface in band; overrun is reference prose density on both platforms; operator decision at the draft-PR checkpoint"
     }
+  },
+  "pull_request": {
+    "number": 502,
+    "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/502",
+    "action": "refreshed_existing_draft",
+    "second_pr_opened": false,
+    "draft": true,
+    "ci": "PR Checks completed success against head 2b3de7ae8"
   }
 }
