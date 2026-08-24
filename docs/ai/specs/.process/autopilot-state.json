@@ -3,11 +3,11 @@
   "spec_id": "ART-008",
   "feature_dir": "specs/art-008-feedback-sweep",
   "branch": "art-008-feedback-sweep",
-  "status": "in_progress",
+  "status": "completed",
   "stage": "implement",
   "prior_run_note": "completed_archived",
   "updated_at": "2026-08-23T00:00:00Z",
-  "active_step": "Post-Implementation",
+  "active_step": null,
   "reclaimed_from": {
     "workflow_file": "docs/ai/specs/.process/ART-005-workflow.md",
     "spec_id": "ART-005",
@@ -886,47 +886,11 @@
     "marker_plan_reason": "house precedent: pass-or-warn evidence without a split demand creates no marker state, and the route is one-navigable-PR"
   },
   "terminal_step": {
-    "artifacts": {
-      "generated": 4,
-      "gaps": 0,
-      "pages": [
-        "implementation-plan",
-        "spec-explainer",
-        "code-approaches",
-        "module-map"
-      ],
-      "as_first_recorded": {
-        "claim": "generated 4, gaps 0, all 21 fill regions verified populated",
-        "corrected_on": "2026-08-21",
-        "what_was_true": "one page of four was filled. implementation-plan, code-approaches, and module-map were written to specs/art-008-feedback-sweep/artifacts/ byte-identical to their shipped templates and committed that way, still titled NIMBUS-101 Offline Draft Sync and still carrying the sample-content notice. Only spec-explainer was real.",
-        "why_the_check_passed": "the shipped gallery templates are complete worked examples, not blank scaffolds, so a fill region is populated prose on a page nobody touched. An emptiness check cannot distinguish an unfilled page; the test has to be positive.",
-        "why_the_count_was_wrong": "the artifact-author agent exhausted its budget composing its summary. The returned fragment was recorded as gaps: 0 when the honest reading was unknown. phase-execution.md already ruled that a report which cannot be read as an outcome list is a whole-set gap; the run did not apply it."
-      },
-      "repaired_by": "e621c5fc7 fix(art-008): fill the three draft artifact pages that shipped as templates",
-      "verification": "positive, per page: differs from speckit-pro/artifact-gallery/templates/<id>.html; carries no class=\"sample-notice\" element; names ART-008; anchors and headings intact; test-artifact-gallery 587/587"
-    },
-    "boundary_commit": "2e3641fa6 chore(art-008): close the plan stage boundary",
-    "push": "origin/art-008-feedback-sweep",
-    "existence_test": "two-way, both negative: no Draft PR row recorded and no open pull request on the head branch, so this created rather than refreshed",
-    "packet": {
-      "emitted": true,
-      "mode": "draft",
-      "validation": "passed, pr_blocked false, writes_state false",
-      "note": "the packet directory is excluded via .git/info/exclude, so it is a build artifact for the body rather than a committed file"
-    },
-    "draft_pr": {
-      "number": 464,
-      "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/464",
-      "state": "OPEN",
-      "isDraft": true
-    },
-    "record_commit": "a54ca9d60 chore(art-008): record the draft pull request, staging the workflow file alone",
-    "corroboration_after": "match — recorded #464, observed #464",
-    "undocumented_behavior_found": [
-      "a draft body MUST carry an H1 matching generated_title.value; the reference says the description carries exactly two blocks and never mentions it, so a first-time body fails validation",
-      "the producer capitalizes the first letter of title_description when composing the title, which is also undocumented and made the H1 mismatch twice before it matched",
-      "the spec-index checker false-positives while an excluded build artifact sits under specs/; regenerating naively bakes non-existent paths into the committed map, which passes locally and fails on a clean checkout"
-    ]
+    "pr": 464,
+    "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/464",
+    "state": "OPEN",
+    "draft": false,
+    "ready_for_review": true
   },
   "implementation": {
     "test_baseline_observed": 7912,

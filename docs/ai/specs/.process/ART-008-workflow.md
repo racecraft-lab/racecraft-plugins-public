@@ -1518,17 +1518,17 @@ The canonical closeout. Every row must reach Complete or an explicit
 | Canonical Item | Status | Evidence |
 |---|---|---|
 | Post: Doctor Extension Check | ✅ Complete | check-prerequisites all_pass true, 8/8 checks green |
-| Post: Verify Implementation | ⏳ Pending | |
-| Post: Verify Tasks Phantom Check | ⏳ Pending | |
-| Post: Code Review | ⏳ Pending | |
-| Post: Integration Suite | ⏳ Pending | |
+| Post: Verify Implementation | ✅ Complete | FR/SC closure clean both directions, every non-goal confirmed absent by positive check |
+| Post: Verify Tasks Phantom Check | ✅ Complete | all 111 verified against artifacts, not checkboxes; one open clause found (T098's Codex mirror) and since closed |
+| Post: Code Review | ✅ Complete | 3 blocking + 2 minor, all reproduced then fixed, 6 regression tests added |
+| Post: Integration Suite | ✅ Complete | 14011/14011 after the count fix |
 | Post: Reviewability Diff Gate | ✅ Complete | backstop deferred (`helper_not_promoted`); committed evidence: 1663 LOC / 13 files against the accepted 1120-1720 / 12 |
 | Post: Self-Review | ✅ Complete | four-question audit recorded above |
 | Post: UAT Runbook Generation | ⏭️ Skipped | `generate-uat-skeleton` deferred, no committed skeleton; author agent correctly not spawned |
-| Post: PR Body Generation | ⏳ Pending | |
-| Post: PR Creation | ⏳ Pending | |
-| Post: Review Remediation | ⏳ Pending | |
-| Post: Retrospective | ⏳ Pending | |
+| Post: PR Body Generation | ✅ Complete | one release-note fence, scope budget vs accepted, 4 known gaps stated |
+| Post: PR Creation | ✅ Complete | #464 ready for review, not draft |
+| Post: Review Remediation | ✅ Complete | 3 blocking findings remediated in-run rather than deferred to a loop |
+| Post: Retrospective | ✅ Complete | `specs/art-008-feedback-sweep/.process/retrospective.md` |
 
 - [ ] All tasks marked complete in tasks.md
 - [ ] Full suite passes above the recorded baseline:
