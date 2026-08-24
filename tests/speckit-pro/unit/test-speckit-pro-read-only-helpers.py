@@ -659,6 +659,52 @@ class ReadOnlyHelperTests(unittest.TestCase):
             self.assertEqual(rebound["workflow_root"], descendant_root.resolve().as_posix())
             self.assertEqual(rebound["workflow_file"], (descendant_root / relative).resolve().as_posix())
 
+    def test_resolve_workflow_binding_rejects_external_symlink_alias_into_worktree(self) -> None:
+        if self.helper_filter and self.helper_filter != "resolve-workflow-binding":
+            self.skipTest("workflow-binding cases use resolve-workflow-binding")
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            task_root, descendant_root, _ = self.build_binding_worktrees(base)
+            workflow = descendant_root / "aliased-workflow.md"
+            workflow.write_text("# registered target\n", encoding="utf-8")
+            alias = base / "workflow-link"
+            try:
+                alias.symlink_to(descendant_root, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symlinks unavailable: {exc}")
+
+            payload, exit_code = self.binding_result(task_root, str(alias / workflow.name))
+
+            self.assertEqual((payload["binding_status"], exit_code), ("invalid", 1))
+            self.assertIsNone(payload["relation"])
+            self.assertEqual(payload["candidates"], [])
+            self.assertIn("outside every registered worktree", payload["problems"][0])
+
+    def test_resolve_workflow_binding_allows_in_worktree_symlink_with_same_owner(self) -> None:
+        if self.helper_filter and self.helper_filter != "resolve-workflow-binding":
+            self.skipTest("workflow-binding cases use resolve-workflow-binding")
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            task_root, descendant_root, _ = self.build_binding_worktrees(base)
+            target_dir = descendant_root / "workflow-target"
+            target_dir.mkdir()
+            workflow = target_dir / "workflow.md"
+            workflow.write_text("# same owner\n", encoding="utf-8")
+            alias = descendant_root / "workflow-link"
+            try:
+                alias.symlink_to(target_dir, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symlinks unavailable: {exc}")
+
+            payload, exit_code = self.binding_result(task_root, str(alias / workflow.name))
+
+            self.assertEqual(
+                (payload["binding_status"], payload["relation"], exit_code),
+                ("resolved", "descendant", 0),
+            )
+            self.assertEqual(payload["workflow_root"], descendant_root.resolve().as_posix())
+            self.assertEqual(payload["workflow_file"], workflow.resolve().as_posix())
+
     def test_resolve_workflow_binding_rejects_ambiguous_missing_and_unregistered_paths(self) -> None:
         if self.helper_filter and self.helper_filter != "resolve-workflow-binding":
             self.skipTest("workflow-binding cases use resolve-workflow-binding")

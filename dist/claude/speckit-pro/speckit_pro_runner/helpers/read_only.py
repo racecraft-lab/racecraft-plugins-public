@@ -561,8 +561,8 @@ def active_feature_directory(repo_root: Path) -> str:
     return value.strip() if isinstance(value, str) else ""
 
 
-def registered_worktree_roots(repo_root: Path) -> tuple[list[Path], str | None]:
-    """Return canonical worktree roots registered to ``repo_root``'s repository."""
+def registered_worktree_entries(repo_root: Path) -> tuple[list[tuple[Path, Path]], str | None]:
+    """Return registered worktree roots as lexical and canonical path pairs."""
     try:
         completed = subprocess.run(
             ["git", "-C", str(repo_root), "worktree", "list", "--porcelain", "-z"],
@@ -578,7 +578,7 @@ def registered_worktree_roots(repo_root: Path) -> tuple[list[Path], str | None]:
         detail = completed.stderr.strip() or f"exit {completed.returncode}"
         return [], f"git worktree list failed: {detail}"
 
-    roots: list[Path] = []
+    entries: list[tuple[Path, Path]] = []
     seen: set[Path] = set()
     for raw_record in completed.stdout.split("\x00\x00"):
         fields = [field.rstrip("\n") for field in raw_record.split("\x00") if field]
@@ -591,8 +591,9 @@ def registered_worktree_roots(repo_root: Path) -> tuple[list[Path], str | None]:
         is_prunable = any(field == "prunable" or field.startswith("prunable ") for field in fields)
         if is_prunable:
             continue
+        lexical_root = Path(os.path.abspath(raw_root))
         try:
-            root = Path(raw_root).resolve(strict=True)
+            root = lexical_root.resolve(strict=True)
         except (OSError, RuntimeError, ValueError) as exc:
             return [], f"registered worktree cannot be canonicalized: {raw_root}: {exc}"
         if not root.is_dir():
@@ -600,10 +601,16 @@ def registered_worktree_roots(repo_root: Path) -> tuple[list[Path], str | None]:
         if root in seen:
             continue
         seen.add(root)
-        roots.append(root)
-    if not roots:
+        entries.append((lexical_root, root))
+    if not entries:
         return [], "git worktree list returned no readable registered worktrees"
-    return roots, None
+    return entries, None
+
+
+def registered_worktree_roots(repo_root: Path) -> tuple[list[Path], str | None]:
+    """Return canonical worktree roots registered to ``repo_root``'s repository."""
+    entries, error = registered_worktree_entries(repo_root)
+    return [canonical for _, canonical in entries], error
 
 
 def workflow_binding_payload(
@@ -642,8 +649,10 @@ def resolve_workflow_binding(inputs: dict[str, Any], repo_root: Path) -> dict[st
             exit_code=1,
         )
 
+    lexical_task_root = Path(os.path.abspath(str(repo_root)))
     task_root = repo_root.resolve(strict=False)
-    roots, worktree_error = registered_worktree_roots(task_root)
+    worktrees, worktree_error = registered_worktree_entries(task_root)
+    roots = [canonical for _, canonical in worktrees]
     if worktree_error is not None:
         return make_result(
             json_text(
@@ -685,7 +694,12 @@ def resolve_workflow_binding(inputs: dict[str, Any], repo_root: Path) -> dict[st
             return make_result(json_text(payload), exit_code=1)
 
         canonical_owners = [root for root in roots if is_lexically_relative_to(canonical, root)]
-        lexical_owner = registered_lexical_owner(supplied, roots)
+        lexical_worktrees = list(worktrees)
+        if lexical_task_root != task_root:
+            for _, root in worktrees:
+                if is_lexically_relative_to(root, task_root):
+                    lexical_worktrees.append((lexical_task_root / root.relative_to(task_root), root))
+        lexical_owner = registered_lexical_owner(supplied, lexical_worktrees)
         canonical_owner = max(canonical_owners, key=lambda root: len(root.parts), default=None)
         if lexical_owner is None:
             problems.append("absolute workflow path is outside every registered worktree")
@@ -5097,23 +5111,15 @@ def is_lexically_relative_to(path: Path, root: Path) -> bool:
         return False
 
 
-def registered_lexical_owner(path: Path, roots: list[Path]) -> Path | None:
-    """Find the deepest registered root entered before an in-worktree symlink."""
+def registered_lexical_owner(path: Path, worktrees: list[tuple[Path, Path]]) -> Path | None:
+    """Return the deepest canonical root whose registered spelling contains ``path``."""
     normalized = Path(os.path.abspath(str(path)))
-    current = Path(normalized.anchor)
-    entered: list[tuple[int, int, Path]] = []
-    for part in normalized.parts[1:]:
-        current /= part
-        if entered and current.is_symlink():
-            break
-        try:
-            resolved_prefix = current.resolve(strict=False)
-        except (OSError, RuntimeError, ValueError):
-            return None
-        for root in roots:
-            if resolved_prefix == root:
-                entered.append((len(root.parts), -len(current.parts), root))
-    return max(entered)[2] if entered else None
+    owners = [
+        canonical
+        for lexical, canonical in worktrees
+        if is_lexically_relative_to(normalized, lexical)
+    ]
+    return max(owners, key=lambda root: len(root.parts), default=None)
 
 
 def resolve_input_path(raw: Any, repo_root: Path) -> Path:
