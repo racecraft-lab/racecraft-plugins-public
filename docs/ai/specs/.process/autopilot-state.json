@@ -19,7 +19,9 @@
     "source": "argv",
     "basis": "explicit --stage plan",
     "corroboration": {
-      "status": "no_record"
+      "status": "match",
+      "recorded": 502,
+      "observed": 502
     }
   },
   "archive_sweep": {
@@ -206,5 +208,5 @@
     "fallback": "setup-warn + estimator-false-zero + hand-derived-690-warn",
     "marker_plan": "not_required"
   },
-  "terminal_step": "confidence-gate (stage plan)"
+  "terminal_step": "plan-stage emission complete: draft PR #502 created, Draft PR row recorded"
 }
