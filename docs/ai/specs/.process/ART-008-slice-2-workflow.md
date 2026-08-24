@@ -964,6 +964,45 @@ the Codex mirror, 0 deletions on either**, verified by `git diff --numstat`.
   proceed moved later the stop moved with it. It adds no stop condition and
   changes no decision.
 
+**Phase 5, User Story 3 — the report (T057–T069)** — complete on the Claude
+surface. `LAYER1` **1511/1511**. **110 insertions on the reference, 4 on
+`SKILL.md`, 0 deletions on either.**
+
+- The what-already-landed enumeration is extended **once, in the shared
+  report-shape section**, so page outcomes are stated in one place rather than
+  per leg. `removed` is in the outcome enum, and every removal is named as its
+  own outcome and never silent.
+- Run-level lines carry the regeneration commit's short sha and the refresh
+  outcome, with the manual resume path below a failure. The freshness
+  contribution **collapses to a single line** on a sweep that amended nothing
+  and found the pages already current.
+- Two gap shapes are tabled apart because they differ in **repairability**, not
+  severity. Resume paths are **per stopping status**, not one shared line.
+- `undeterminable` triggers no regeneration, no refresh, no commit, and moves
+  stop-or-proceed in neither direction. A record-commit failure is reported
+  through the refresh outcome and never blocks the run.
+
+#### The four scoping edits leave every shipped sentence verbatim
+
+Each shipped sentence still matches exactly once and gained a paragraph beside
+it. The orchestrator read all four rather than accepting the claim.
+
+- **FR-022** — "The sweep never writes the `Draft PR` row on any path" stands
+  untouched. Beside it: that invariant is about the sweep's **own** writes; the
+  refresh changes the cell through the emission machinery, which keeps exactly
+  one writer, and this slice supplies only the trigger and the timing. Its
+  ground is restated unchanged — a run must not repair a record it just failed
+  to corroborate.
+- **FR-024a** — the one-line-report characterization is scoped to the
+  per-comment dispositions its own paragraph is about, leaving the freshness
+  lines free to contribute to the same leg's report.
+- **FR-033b** — the sweep's reuse of Step 0.6c's report is scoped to the entry
+  gate's sweep-or-not decision, which is the decision that observation was
+  taken for, and does not forbid the refresh's own later live read.
+- **FR-033b in `SKILL.md`** — "one read-only observation per run" is scoped to
+  Step 0.6c's own step rather than read as a cap on every corroboration read a
+  run may take.
+
 
 ### Implement Prompt
 

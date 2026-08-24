@@ -1307,6 +1307,76 @@ line of substance.
 happens before any write. An absent part reads as an oversight, while "no
 commit, no row, no reply" reads as a fact an operator can act on.
 
+**The what-already-landed part also carries one outcome line per page**, each
+reading `generated`, `gap`, or `removed`, with every gap naming what was
+missing and why. These lines extend that part's enumeration once, here in the
+shared shape rather than in the amended-leg bullet below, because the
+freshness evaluation runs on every leg and an extension made in that bullet
+alone would miss the recovery leg entirely.
+
+**Two run-level lines sit beside them**: the regeneration commit's short sha,
+and the outcome of the description refresh. A failure's manual resume path
+belongs to the resume-path part instead, never to these lines. Any restoration
+the run performed is a further run-level line beside the commit sha, and is
+not a fourth page outcome.
+
+**On a sweep that amended nothing and found the pages already current, the
+freshness contribution collapses to a single line** naming the commit the
+pages are current as of, with no per-page outcome list. That collapse scopes
+the freshness lines alone; the report's other mandatory parts are unchanged.
+
+**Every shortfall regeneration produces still reaches the reused machinery's
+three sinks**: the description's gap rows, the `Draft PR` row's note, and the run
+report. One substitution is named explicitly. At this Phase 7 call site the
+third sink is the **run report**, on both the stop and the proceed legs,
+because the plan-stage stop report the shipped sink table names does not exist
+here.
+
+**The two gap shapes are reported apart, because they differ in
+repairability rather than in severity.**
+
+| Shortfall | The directory | The commit | The next leg |
+| --- | --- | --- | --- |
+| per-page gap beside a generated page | moved | taken | does not retry; the gap is the operator's |
+| whole-set gap | unmoved | not taken | regenerates the set again |
+| deselection removal landing alone | moved | taken | does not retry; the report names the removal as the reason |
+
+A report calling the first two both "gap" and stopping there would leave an
+operator unable to tell work that will be retried from work that will not.
+
+**Every removal is named, and none is silent.** A deselection removal is named
+as its own `removed` outcome; the superseded file behind a per-page gap is
+named inside that page's own `gap` outcome, as the section on it below
+requires.
+
+**A failed description refresh is its own outcome**, distinct from the
+regeneration outcome. The report states in as many words that once the
+regeneration commit has landed, a re-run does **not** retry the failed
+refresh: the join then reads the artifacts directory as current, so a later
+sweep regenerates nothing and refreshes nothing. It names the operator's
+manual resume path, and the resume-path part below names which one.
+
+**An `undeterminable` verdict is reported and acted on nowhere else.** It
+triggers no regeneration, no refresh, and no commit, and it moves the
+stop-or-proceed decision in neither direction — on a sweep that amended, the
+re-review stop still fires on its own independent ground. The report names the
+verdict, each affected row's `#` and its reason, and the operator's manual
+resume path, through the run report **alone**: the three sinks do not apply,
+because no regeneration occurred to produce a shortfall for them to carry.
+Nothing in scope can ever clear the condition, since this slice writes no log
+row and permits no second store, so an action keyed to it would repeat on
+every later clean sweep without end.
+
+**A failed record commit, or a failed push of it, is reported through the
+refresh outcome and never blocks the run.** The report **must not** claim the
+row repairs itself on a later sweep. The machinery's repair rule recovers an
+unwritten row only on a later refresh that reaches that step, and no later
+sweep reaches it once the regeneration commit has landed. Its resume path is
+named the way a failed refresh's is: the pull request is correct on the
+remote and only the record is unwritten, so the row is repaired by hand, or by
+a later run reaching the plan-stage create-or-refresh step, which this slice
+never schedules.
+
 **The per-comment dispositions sit inside that one report.** Report each
 observed comment, candidate and exclusion alike, and name a reason on every
 exclusion: the trust filter reports `not swept: untrusted author`, and every
@@ -1315,6 +1385,16 @@ a run that swept nothing but untrusted comments lands, and a silent proceed
 there would leave an operator no way to tell it from a run that saw nothing. A
 run that observed no comment at all reports that, as a one-line report rather
 than an absent one.
+
+**That one-line characterization belongs to the per-comment dispositions this
+paragraph is about**: a run seeing no comment still says so in one line
+instead of omitting the part. The freshness evaluation contributes its own
+lines to the what-already-landed part on that same leg, so a report there is
+one line of dispositions plus however many lines the freshness outcome
+requires. Reading the shipped sentence as a promise about the whole report
+would also conflict with the restoration line above, which lands in that same
+part on a leg that generated nothing. This adds no member to either
+enumeration and changes no report part's contents.
 
 **Every redaction event goes in, on every path, stopping or proceeding**: per
 affected comment the comment id, the leg, the rule, and the count, and nothing
@@ -1346,12 +1426,34 @@ resume path names **both** operator actions, resolve the substance and re-run
 **or** resolve the thread, because it is the only stop whose resume path a
 re-run alone does not satisfy.
 
+**A failed description refresh names its resume path per stopping status**,
+one line per status rather than one shared line, for the reason the
+corroboration gate below already gives: the stopping statuses have different
+fixes, and one shared path would send an operator to the wrong repair.
+`skipped` names fixing the tool. `pr_closed` names reopening the pull request.
+`pr_missing` names correcting or clearing the `Draft PR` row. A refresh that
+failed against a reachable pull request names refreshing the description
+directly, outside the automated sequence. Neither `pr_closed` nor `pr_missing`
+is repaired by refreshing a description, which is why the generic path may not
+stand in for them. Where the failure traces to the recorded and live
+identities disagreeing, the report names **both** identities, the one recorded
+and the one observed.
+
 #### Phase 7 Setup: The Corroboration Gate
 
 **The six corroboration statuses are exhaustive, and each maps to exactly one
 outcome.** Step 0.6c classifies the recorded `Draft PR` row and reports one of
 them, and the sweep reads that report rather than taking an observation of its
 own. No status falls to a default, and no two share a behaviour by accident.
+
+**That reading scopes the entry gate's sweep-or-not decision alone**, the one
+decision Step 0.6c's pre-phase observation was taken for. It does not forbid
+the refresh's own live observation deeper inside Phase 7, which is taken only
+after this gate has passed and the sweep has already amended. Nor is that a
+new kind of observation: the create-or-refresh terminal step above already
+takes a second live read distinct from Step 0.6c's, on the documented
+principle that the two reads are separate and the later one is the current
+evidence.
 
 | Status | What the sweep does | Resume path |
 | --- | --- | --- |
@@ -1371,6 +1473,14 @@ the row's absence would match reality.
 included. A run that repaired the record it had just failed to corroborate
 would destroy the evidence of the discrepancy, and the next reader would find a
 healthy row where a stop had been.
+
+**That invariant is about the sweep's own writes.** The description refresh
+below changes the `Draft PR` cell through the emission machinery, which keeps
+exactly one writer; this slice supplies only the trigger and the timing, and
+the commit carrying that change is the machinery's own record commit. Its
+ground stands unchanged: the sentence exists so a run cannot repair a record
+it just failed to corroborate, and the refresh is reached only after an
+entry-gate `match`.
 
 **A value outside the six is a malformed record and stops.** Do not map it onto
 one of the six, and do not read it as absence. Exactly one status proceeds, so
