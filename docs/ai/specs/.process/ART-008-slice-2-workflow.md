@@ -90,7 +90,7 @@ Projected reviewable LOC: re-measure at Plan (hand-derived; estimator returns a 
 | Tasks | `/speckit-tasks` | ✅ Complete | 81 tasks (T001–T081), 54/54 FR coverage both directions, 16 [P]; G5 pass |
 | Analyze | `/speckit-analyze` | ✅ Complete | 5 findings (0C/1H/1M/3L), all remediated; coverage 54/54 bidirectional; constitution 6/6; G6 pass; 📊 0.92 |
 | Confidence Gate | G6.5 | ✅ Complete | Composite 0.92 ≥ 0.90, advisory mode — PASS, proceed; plan stage ends here |
-| Implement | `/speckit-implement` | ⏳ Pending | |
+| Implement | `/speckit-implement` | 🔄 In Progress | 81 tasks (T001–T081); TDD; started 2026-08-24 |
 | Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -153,6 +153,32 @@ Each phase requires **human review and approval** before proceeding:
 - `before_specify` hooks: git.feature satisfied by the existing feature branch `art-008-feedback-sweep-slice-2` + `.specify/feature.json` (script not run; branch verified unchanged before/after Specify); archive sweep discharged report-only at Step -1.
 - AGENT_TEAMS_AVAILABLE=false (no TeamCreate in session surface) — parallel work uses batched background subagents.
 
+### Pre-flight Record (Step 0, implement stage, 2026-08-24)
+
+- Stage resolution: `implement` (argv) — explicit --stage implement. Draft PR
+  corroboration: **match** — #502 recorded, #502 observed (OPEN, draft).
+- `check-prerequisites`: all_pass=true; branch `art-008-feedback-sweep-slice-2`
+  (worktree, feature=true); SpecKit CLI 0.11.8. PROJECT_COMMANDS and
+  PRESET_CONVENTIONS unchanged from the plan-stage record.
+- CONFIDENCE_GATE_MODE=advisory (resolver, no flag). G6.5 already recorded
+  PASS at 0.92; it is not re-run.
+- **G0 baseline preserved, not recomputed** (Step 0.6e): the recorded 14012
+  stands. Any newly observed count is a non-blocking drift diagnostic.
+- **Installed plugin version: 2.27.0.** As the Installed-plugin note above
+  anticipated, 2.27.0 carries ART-007's draft-PR emission but **not** slice
+  1's feedback sweep, which merged after 2.27.0 was cut. This implement stage
+  therefore opens the pre-ART-008 way: **no automated feedback sweep of #502
+  ran.** Substituted a read-only observation in its place —
+  `gh pr view 502 --json reviews,comments` returned **0 reviews, 0 comments**,
+  so there was no feedback to sweep and nothing to amend. Report-only; no
+  sweep machinery was invoked and no artifact was amended on its account.
+- Synced `origin/main` before implementing (3 commits: #499, #500, #501). One
+  conflict, in `html-artifacts-technical-roadmap.md` §Progress Tracking, whose
+  two sides each carried facts the other lacked; resolved by combining them and
+  advancing the Next cell to the implement stage. `refresh-release-artifacts.py`
+  reported the generated tree already consistent after the merge.
+- State slot: already this workflow; no reclaim.
+
 ---
 
 ## Specification Context
@@ -167,7 +193,7 @@ Each phase requires **human review and approval** before proceeding:
 | **Dependencies** | ART-007 (shipped, PR #445); ART-008 slice 1 (shipped, PR #464) |
 | **Enables** | The trusted human checkpoint reviews CURRENT pages; closes ART-008 |
 | **Priority** | P1 |
-| **Stage** | plan |
+| **Stage** | implement |
 | **Draft PR** | [#502](https://github.com/racecraft-lab/racecraft-plugins-public/pull/502) — draft; 4/4 pages generated (implementation-plan, spec-explainer, code-approaches, module-map), no gaps |
 
 ### Success Criteria Summary
@@ -675,6 +701,33 @@ gate. Implement and Post-Implementation were not started; resume with
 ---
 
 ## Phase 7: Implement
+
+### T014 — Reviewability checkpoint, recorded before task work
+
+The binding figure is `plan.md` §"Reviewability Budget, derived by hand":
+
+| Dimension | Declared | Threshold | Verdict |
+|---|---|---|---|
+| Production reviewable LOC | **~690** (range 556–825, ~730 midpoint after the checklist deltas) | 400 warn / 800 block | **WARN** |
+| Production files | 5 | 6 warn | within |
+| Authored files | 12 | 15 warn | within |
+| Primary surfaces | 1 | — | within |
+
+**One warn, no block.** The plan-phase `estimate-reviewable-loc` result
+(`{"status":"pass","projected":0}`) is an **absent measurement**, not evidence
+of fitness, and is not cited as one anywhere in this run. The estimator
+classifies none of this slice's paths as production and false-zeroed the same
+way on slice 1, which shipped 515–830 measured against a whole-spec estimate of
+452.
+
+The route recorded at G5 is `one-navigable-PR`, so the WARN is a marker-planning
+input that keeps a single pull request; no `pr_marker_plan` is persisted. The
+split lever, if the realized diff approaches the 800 block, is named in
+`plan.md`: the US3 report prose (T057–T071) separates cleanly from the helper
+and its US1/US2 trigger sites.
+
+Recorded 2026-08-24, before the first implementation task ran.
+
 
 ### Implement Prompt
 

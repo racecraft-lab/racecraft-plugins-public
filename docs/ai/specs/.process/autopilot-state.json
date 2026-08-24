@@ -3,11 +3,11 @@
   "spec_id": "ART-008",
   "feature_dir": "specs/art-008-feedback-sweep-slice-2",
   "branch": "art-008-feedback-sweep-slice-2",
-  "status": "completed",
-  "stage": "plan",
+  "status": "in_progress",
+  "stage": "implement",
   "prior_run_note": "completed",
   "updated_at": "2026-08-24T00:00:00Z",
-  "active_step": null,
+  "active_step": "Phase 7: Implement",
   "reclaimed_from": {
     "workflow_file": "docs/ai/specs/.process/ART-008-workflow.md",
     "spec_id": "ART-008",
@@ -15,9 +15,9 @@
     "note": "Slice 1 run; one state slot, many specs. Reclaiming is normal operation, not an error."
   },
   "stage_resolution": {
-    "stage": "plan",
+    "stage": "implement",
     "source": "argv",
-    "basis": "explicit --stage plan",
+    "basis": "explicit --stage implement",
     "corroboration": {
       "status": "match",
       "recorded": 502,
@@ -77,68 +77,67 @@
     },
     {
       "step": "Phase 7: Implement",
-      "status": "pending",
-      "note": "out of stage for this run (stage=plan)"
+      "status": "in_progress"
     },
     {
       "step": "Post: Doctor Extension Check",
       "status": "pending",
-      "note": "out of stage for this run (stage=plan)"
+      "note": "post-implementation closeout, in stage for this run"
     },
     {
       "step": "Post: Verify Implementation",
       "status": "pending",
-      "note": "out of stage for this run (stage=plan)"
+      "note": "post-implementation closeout, in stage for this run"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
       "status": "pending",
-      "note": "out of stage for this run (stage=plan)"
+      "note": "post-implementation closeout, in stage for this run"
     },
     {
       "step": "Post: Code Review",
       "status": "pending",
-      "note": "out of stage for this run (stage=plan)"
+      "note": "post-implementation closeout, in stage for this run"
     },
     {
       "step": "Post: Integration Suite",
       "status": "pending",
-      "note": "out of stage for this run (stage=plan)"
+      "note": "post-implementation closeout, in stage for this run"
     },
     {
       "step": "Post: Reviewability Diff Gate",
       "status": "pending",
-      "note": "out of stage for this run (stage=plan)"
+      "note": "post-implementation closeout, in stage for this run"
     },
     {
       "step": "Post: Self-Review",
       "status": "pending",
-      "note": "out of stage for this run (stage=plan)"
+      "note": "post-implementation closeout, in stage for this run"
     },
     {
       "step": "Post: UAT Runbook Generation",
       "status": "pending",
-      "note": "out of stage for this run (stage=plan)"
+      "note": "post-implementation closeout, in stage for this run"
     },
     {
       "step": "Post: PR Body Generation",
       "status": "pending",
-      "note": "out of stage for this run (stage=plan)"
+      "note": "post-implementation closeout, in stage for this run"
     },
     {
       "step": "Post: PR Creation",
       "status": "pending",
-      "note": "out of stage for this run (stage=plan)"
+      "note": "post-implementation closeout, in stage for this run"
     },
     {
       "step": "Post: Review Remediation",
       "status": "pending",
-      "note": "out of stage for this run (stage=plan)"
+      "note": "post-implementation closeout, in stage for this run"
     },
     {
       "step": "Post: Retrospective",
       "status": "pending",
-      "note": "out of stage for this run (stage=plan)"
+      "note": "post-implementation closeout, in stage for this run"
     }
   ],
   "test_baseline_g0": {
@@ -208,5 +207,28 @@
     "fallback": "setup-warn + estimator-false-zero + hand-derived-690-warn",
     "marker_plan": "not_required"
   },
-  "terminal_step": "plan-stage emission complete: draft PR #502 created, Draft PR row recorded"
+  "terminal_step": "plan-stage emission complete: draft PR #502 created, Draft PR row recorded",
+  "installed_plugin_version": "2.27.0",
+  "feedback_sweep": {
+    "ran": false,
+    "reason": "installed plugin 2.27.0 predates ART-008 slice 1",
+    "substitute_observation": {
+      "pr": 502,
+      "reviews": 0,
+      "comments": 0,
+      "mode": "read_only_report_only"
+    }
+  },
+  "main_sync": {
+    "merged": "origin/main",
+    "commits": [
+      "#499",
+      "#500",
+      "#501"
+    ],
+    "conflicts": [
+      "docs/ai/specs/html-artifacts-technical-roadmap.md"
+    ],
+    "regenerated": "already consistent"
+  }
 }
