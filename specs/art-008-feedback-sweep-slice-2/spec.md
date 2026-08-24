@@ -29,6 +29,22 @@
   helper registration.
 - **Q: Refresh-failure semantics, `Draft PR` cell carrier, artifacts-commit
   push** → settled in session 1 as FR-033 through FR-039 and FR-019a.
+- **Q: Where do the outcome lines land?** → In the single run report every leg
+  already emits: page outcomes in the what-already-landed part (its closed
+  enumeration extended once, in the shared report-shape section), manual
+  resume paths in the resume-path part. There is no separate proceed report,
+  and at this call site the three-sink table's second sink is the run report.
+- **Q: What query shape and classifier serve FR-033's fresh observation?** →
+  The entry gate's own `--state all` five-field query, classified through the
+  same six-status logic reused verbatim (FR-033a); the two shipped
+  single-observation sentences get an entry-gate scoping (FR-033b). Which
+  registration hosts the reused logic is Plan's decision.
+- **Q: Which codex-skills/ files must change for parity?** → None for the
+  parity validator, which compares file-level structure only; the real
+  constraints are the Claude-only-vocabulary regex over the concatenated
+  Codex runtime docs and three pinned helper strings in the phase-execution
+  mirror (FR-029). Both promise passages (clause and meta-paragraph) come out
+  on both surfaces (FR-027).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -149,8 +165,8 @@ result, with the already-current case collapsing to one line.
 **Acceptance Scenarios**:
 
 1. **Given** a run that regenerated pages, **When** the report is emitted,
-   **Then** it carries one outcome line per page, each reading `generated` or
-   `gap`, and each gap names what was missing and why.
+   **Then** it carries one outcome line per page, each reading `generated`,
+   `gap`, or `removed`, and each gap names what was missing and why.
 2. **Given** a run that regenerated pages, **When** the report is emitted,
    **Then** it names the regeneration commit's short sha and the outcome of the
    description refresh.
@@ -385,7 +401,11 @@ result, with the already-current case collapsing to one line.
 
 - **FR-021**: Every shortfall produced by regeneration MUST be reported through
   the same three sinks the ART-007 emission machinery already owns: the
-  description's gap rows, the `Draft PR` row's note, and the run report.
+  description's gap rows, the `Draft PR` row's note, and the run report. At
+  this Phase 7 call site the third sink is the run report every leg already
+  emits — the plan-stage stop report the shipped sink table names does not
+  exist here, and the run report takes its place on both the stop and proceed
+  legs.
 - **FR-022**: The sweep MUST NOT write the workflow file's `Draft PR` row. That
   row has exactly one writer, the emission machinery, and this slice MUST NOT
   add a second. The emission machinery remains the row's sole writer; this
@@ -395,25 +415,40 @@ result, with the already-current case collapsing to one line.
   its stop-or-proceed decision, or prevent a regeneration commit that has
   content from landing.
 - **FR-024**: The run report MUST carry one outcome line per page, each reading
-  `generated` or `gap`, with every gap naming what was missing and why.
+  `generated`, `gap`, or `removed`, with every gap naming what was missing and
+  why. The page outcome lines land in the report's what-already-landed part,
+  extending that closed enumeration once in the shared report-shape section so
+  every sweep leg inherits them.
 - **FR-025**: The run report MUST name the regeneration commit's sha and the
-  outcome of the description refresh.
+  outcome of the description refresh, in the what-already-landed part; a
+  failure's manual resume path (FR-036, FR-005a) belongs in the resume-path
+  part.
 - **FR-026**: On a sweep that amended nothing and found the pages already
-  current, the run report MUST collapse to a single line stating that the pages
-  are current as of the named commit.
-- **FR-027**: The slice-1 sentence stating that draft artifact pages regenerate
-  once slice 2 lands MUST be removed and replaced by the outcome lines above, on
-  both platform reference surfaces.
+  current, the freshness contribution to the run report MUST collapse to a
+  single line stating that the pages are current as of the named commit. The
+  report's other mandatory parts are unchanged; this scopes the freshness
+  lines, not the report.
+- **FR-027**: Both slice-1 promise passages MUST be removed on both platform
+  reference surfaces: the stop-report clause stating that draft artifact pages
+  regenerate once slice 2 lands, and the meta-paragraph calling that sentence
+  an interface slice 2 replaces. The outcome lines above replace them, landing
+  once in the shared report-shape section rather than in the amended-leg
+  bullet, because FR-016 runs the evaluation on every leg.
 
 #### Platform and packaging
 
 - **FR-028**: Runner code MUST use only the Python 3.11+ standard library, and
   MUST NOT add a Bash or `jq` dependency.
 - **FR-029**: The Claude autopilot references and their Codex mirrors MUST
-  describe the same behavior and stay in step with each other.
+  describe the same behavior and stay in step with each other. New Codex
+  mirror prose MUST avoid the Claude-only runtime vocabulary the structural
+  validator rejects across the concatenated runtime documents, and edits to
+  the Codex phase-execution mirror MUST NOT disturb its three pinned helper
+  strings.
 - **FR-030**: New behavior MUST land in the autopilot `references/` files rather
-  than in the Codex autopilot `SKILL.md` body, whose word budget is fully
-  consumed. Adding to that body is permitted only after words are freed first.
+  than in the Codex autopilot `SKILL.md` body, measured at 7998 of its
+  8000-word cap. Adding to that body is permitted only after words are freed
+  first.
 - **FR-031**: The freshness helper MUST carry Layer 4 unit coverage driven by
   fixtures, following the pattern the existing pull-request feedback sweep
   helper established, and MUST be declared in the test suite manifest.
@@ -428,6 +463,40 @@ result, with the already-current case collapsing to one line.
   corroboration observation the sweep's entry gate read. A pull request can be
   closed or replaced while the sweep runs, and the later read is the current
   evidence.
+- **FR-033a**: The refresh call site's observation MUST take the same query
+  shape Step 0.6c's entry-gate observation already takes — a `gh pr list`
+  scoped to the feature's head branch with `--state all`, returning
+  `number,url,state,isDraft,headRefName` — because `--state all` is what makes
+  a closed pull request distinguishable from an absent one, and the reused
+  create-or-refresh machinery's own existence test alone cannot produce that
+  distinction. The refresh call site MUST classify that observation through
+  the same closed six-status vocabulary and precedence rules the entry gate
+  already applies, reused verbatim rather than re-implemented: FR-034 requires
+  the refresh call site to take the exact behavior the ART-007 contract already
+  assigns each status, and that guarantee holds only when the same
+  classification logic decides it in both places. The classification MUST stay
+  read-only and deterministic, taking the observation as supplied data under
+  the same explicit `ok: true` literal-success shape the entry gate's
+  observation already requires, and MUST carry Layer 4 fixture coverage.
+  Which runner-helper registration exposes this reused logic to the new call
+  site is a Plan-phase decision; this requirement pins only that the
+  vocabulary, precedence rules, and observation-as-data contract are shared,
+  never re-derived.
+- **FR-033b**: The existing sentence stating that the sweep reads Step 0.6c's
+  report "rather than taking an observation of its own", under "Phase 7
+  Setup: The Corroboration Gate" on both platform reference surfaces, MUST be
+  scoped by an added sentence to the entry gate's sweep-or-not decision alone
+  — the one decision Step 0.6c's pre-phase observation was taken for. It MUST
+  NOT be read as forbidding the refresh call site FR-033a adds deeper inside
+  Phase 7, which runs only after the entry gate has already passed and the
+  sweep has already amended. The neighboring "one read-only observation per
+  run" wording in the same skill file MUST receive the same scoping, to
+  Step 0.6c's own step rather than every corroboration read a run may take.
+  Neither edit contradicts ART-007's own precedent: its create-or-refresh
+  terminal step already takes a second live read distinct from Step 0.6c's,
+  on the documented principle that the two reads are separate and the later
+  one is the current evidence. FR-033 extends that same, already-shipped
+  principle to a third read; it does not introduce a new kind of observation.
 - **FR-034**: Each corroboration status at the refresh call site MUST take the
   behavior the ART-007 create-or-refresh contract already assigns it at its
   terminal step: `match` refreshes; `no_record` falls through to the live
@@ -565,11 +634,13 @@ result, with the already-current case collapsing to one line.
   produces the same verdict every time it is evaluated, so the decision can be
   covered by fixtures rather than by running a live sweep.
 - **SC-006**: A sweep that amends nothing and finds the pages current does zero
-  regeneration work and emits one line about it.
+  regeneration work, and the freshness contribution to its run report is one
+  line.
 - **SC-007**: No run report anywhere states that pages will regenerate in a
   future slice.
-- **SC-008**: The two platform surfaces describe identical behavior, verified by
-  the repository's existing platform-parity checks.
+- **SC-008**: The two platform surfaces describe identical behavior. The
+  repository's structural parity checks confirm file-level coverage only;
+  prose equivalence is verified by review against FR-029's authoring rules.
 
 ## Assumptions
 

@@ -84,7 +84,7 @@ Projected reviewable LOC: re-measure at Plan (hand-derived; estimator returns a 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 32 FRs, 3 stories, 13 scenarios, 0 markers; G1 pass |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Sessions seeded from the design concept's Open Questions |
+| Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 15 questions; 7 consensus items resolved (all Round 1); spec 32→46 FRs; G2 pass, 0 markers |
 | Plan | `/speckit-plan` | ⏳ Pending | Hand-size the budget here; estimator is a false zero |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
@@ -330,7 +330,7 @@ if any SKILL.md sentence must change, words must be freed first.
 |---------|------------|-----------|--------------|
 | 1 | Refresh-failure semantics | 5 | Fresh live observation at the refresh call site (FR-033); six statuses mapped to ART-007 terminal-step behavior (FR-034); refresh failure ends the attempt only, never stop-or-proceed (FR-035); refresh-only failure is manual recovery, report must say so (FR-036); whole-set gap still refreshes (FR-037); join repairs interrupted not gapped runs (FR-038); Draft PR cell rides the machinery's own record commit (FR-039); artifacts-commit push leg-split (FR-019a); FR-014 false premise corrected (first Phase 7 caller); FR-016/018/022/023 amended. Spec now 40 FRs, reverse-citation clean, 0 markers |
 | 2 | Helper contract | 5 | Helper reads the workflow file itself via the shipped heading-anchored table read; git facts + page inventory supplied as data (FR-004 revised, 2/2 analysts). Ancestry encoding, never sha strings or timestamps (FR-004a, FR-008, FR-009). Closed 4-verdict set with fixed precedence (FR-005); undeterminable reports and never acts (FR-005a). Pages-on-disk-no-commit reads stale (FR-007a). Removal diff = second named surface, subtrahend includes gap outcomes (FR-012a). Clarifications section added. Spec now 44 FRs |
-| 3 | Report & parity | | |
+| 3 | Report & parity | 5 | One run report on every leg — no separate proceed report; page outcomes land in the what-already-landed part, resume paths in the resume-path part (FR-024/025/026 amended); `removed` added to the outcome enum (FR-024, US3); FR-026/SC-006 collapse scoped to the freshness line; sink #2 at Phase 7 = the run report (FR-021); BOTH promise passages removed on both surfaces (FR-027); parity validator binds nothing at prose level — SC-008 reworded, Claude-only-vocab + pinned-strings authoring rule added (FR-029); Codex SKILL.md measured 7998/8000 (FR-030); fresh `--state all` observation + verbatim classifier reuse (FR-033a/b). Spec now 46 FRs |
 
 ### Consensus Resolution Log
 
@@ -342,6 +342,7 @@ if any SKILL.md sentence must change, words must be freed first.
 | 4 | Clarify | Helper reads workflow file vs orchestrator passes rows as data | [spec] [codebase] | 1 | Resolved (high, 2/2 agree) | Helper reads the file (FR-004 revised); shipped sweep-parse precedent + FR-031 fixture mandate; Commit cell must anchor from row end (write-time note for Plan) | spec-context-analyst, codebase-analyst |
 | 5 | Clarify | What does `undeterminable` trigger? | [spec] | 1 | Resolved (high) | Report loudly, act never (FR-005a); regeneration on undeterminable livelocks — unjoinable rows never self-repair | spec-context-analyst |
 | 6 | Clarify | What "page set" does the helper return? | [spec] [codebase] | 1 | Resolved (high, 2/2 agree) | Echo supplied inventory; selection stays with emission machinery; removal diff = second named surface, gap outcomes stay selected (FR-004, FR-012a, Key Entities) | spec-context-analyst, codebase-analyst |
+| 7 | Clarify | FR-033 observation query shape + classifying surface | [spec] [codebase] | 1 | Resolved (high, 2/2 agree) | Entry-gate `--state all` five-field query; six-status classification reused verbatim (pure function already shipped); registration homing left to Plan; entry-gate sentences scoped (FR-033a, FR-033b) | spec-context-analyst, codebase-analyst |
 
 ---
 

@@ -7,7 +7,7 @@
   "stage": "plan",
   "prior_run_note": "completed",
   "updated_at": "2026-08-24T00:00:00Z",
-  "active_step": "Phase 2: Clarify",
+  "active_step": "Phase 3: Plan",
   "reclaimed_from": {
     "workflow_file": "docs/ai/specs/.process/ART-008-workflow.md",
     "spec_id": "ART-008",
@@ -51,7 +51,7 @@
     },
     {
       "step": "Phase 2: Clarify (3 sessions + consensus)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 3: Plan",
@@ -156,6 +156,10 @@
   },
   "gates": {
     "G1": {
+      "pass": true,
+      "markers": 0
+    },
+    "G2": {
       "pass": true,
       "markers": 0
     }
