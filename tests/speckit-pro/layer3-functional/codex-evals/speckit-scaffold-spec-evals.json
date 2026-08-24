@@ -104,13 +104,14 @@
     {
       "id": 9,
       "prompt": "Scaffolding G56R-001 succeeded in a dedicated worktree at /repo/.worktrees/g56r-001-candidate-route-baseline, and the workflow is docs/ai/specs/.process/G56R-001-workflow.md inside that worktree. What exact Codex handoff should the scaffold report give me?",
-      "expected_output": "Reports the absolute generated worktree root and tells the operator to start a new Codex task rooted there before invoking $speckit-autopilot with the workflow path relative to that worktree. It never hands off only the inner path from the parent checkout or suggests running from main or a detached checkout.",
+      "expected_output": "Reports the absolute generated worktree root and the same-task command $speckit-autopilot /repo/.worktrees/g56r-001-candidate-route-baseline/docs/ai/specs/.process/G56R-001-workflow.md --stage plan. It explains that autopilot binds all execution to the registered descendant worktree and preserves Handoff/reopen as the fallback when that binding cannot be proved.",
       "expectations": [
         "Reports /repo/.worktrees/g56r-001-candidate-route-baseline as the absolute worktree root",
-        "Tells the operator to start a new Codex task rooted at that worktree",
-        "Uses $speckit-autopilot docs/ai/specs/.process/G56R-001-workflow.md only after the worktree-rooted task handoff",
-        "Does not suggest running autopilot from the parent checkout, main, or a detached checkout",
-        "Does not hand off only the relative workflow path without the worktree-root requirement"
+        "Prints $speckit-autopilot with the absolute workflow file and literal --stage plan",
+        "States that the operator sends the printed command explicitly in the same Codex task",
+        "Does not invoke autopilot from scaffold itself",
+        "Does not hand off only the relative workflow path from the parent checkout",
+        "Uses Codex Handoff or reopen at the worktree only as the fail-closed fallback"
       ]
     }
   ]

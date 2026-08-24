@@ -653,16 +653,51 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         phase_execution_normalized = " ".join(phase_execution.split())
 
-        self.assertIn("start a new Codex task rooted at that worktree", scaffold)
-        self.assertIn("Never hand off only the inner workflow path from the parent checkout", scaffold)
-        self.assertIn("bind the workflow to the current worktree", autopilot)
-        self.assertIn("git worktree list\n   --porcelain", prerequisites)
-        self.assertIn("STOP: Workflow file is not in the current checkout", prerequisites)
+        normalized_prerequisites = " ".join(prerequisites.split())
+
+        self.assertIn("continue in this same Codex task", scaffold)
+        self.assertIn("$speckit-autopilot <absolute-workflow-file> --stage plan", scaffold)
+        self.assertNotIn("start a new Codex task rooted", scaffold)
+        self.assertIn("`resolve-workflow-binding` runner helper", autopilot)
+        self.assertIn("`binding_status`", prerequisites)
+        self.assertIn("`relation=same` or `relation=descendant`", normalized_prerequisites)
+        self.assertIn("registered strict-descendant worktree", normalized_prerequisites)
+        self.assertIn("every shell tool call sets `workdir` to `WORKFLOW_ROOT`", prerequisites)
+        self.assertIn("validate every returned path against `WORKFLOW_ROOT`", prerequisites)
+        self.assertIn("Use Codex Handoff", prerequisites)
         self.assertIn("Never copy, move, check out, rebase, or reconstruct the workflow", prerequisites)
-        self.assertIn("Re-check worktree affinity immediately before dispatch", phase_execution_normalized)
-        self.assertIn("must equal the workflow-bound repository root", phase_execution_normalized)
-        self.assertIn("not an artifact-content gap", phase_execution_normalized)
+        self.assertIn("Revalidate the established workflow binding immediately before dispatch", phase_execution_normalized)
+        self.assertIn(
+            "returned `task_root` and `workflow_root` both to equal the established `WORKFLOW_ROOT`",
+            phase_execution_normalized,
+        )
+        self.assertIn("require `relation=same`", phase_execution_normalized)
+        self.assertIn("Registration drift, path drift, ambiguity, external reclassification", phase_execution_normalized)
+        self.assertIn("not artifact-content gaps", phase_execution_normalized)
         self.assertIn("STOP before artifact generation or pull-request refresh", phase_execution_normalized)
+
+    def test_claude_autopilot_same_session_cd_handoff_contract(self) -> None:
+        scaffold = (PLUGIN_ROOT / "skills/speckit-scaffold-spec/SKILL.md").read_text(encoding="utf-8")
+        autopilot = (PLUGIN_ROOT / "skills/speckit-autopilot/SKILL.md").read_text(encoding="utf-8")
+        prerequisites = (PLUGIN_ROOT / "skills/speckit-autopilot/references/prerequisites.md").read_text(
+            encoding="utf-8"
+        )
+        autopilot_normalized = " ".join(autopilot.split())
+
+        self.assertIn("/cd <absolute-worktree-root>", scaffold)
+        self.assertIn(
+            "/speckit-pro:speckit-autopilot <absolute-workflow-file> --stage plan",
+            scaffold,
+        )
+        self.assertNotIn("relative autopilot path", scaffold)
+        self.assertIn("canonical absolute workflow path", scaffold)
+        self.assertIn("stale same-named copy in another registered worktree", scaffold)
+        self.assertIn("Scaffold never invokes the autopilot or `/cd`", scaffold)
+        self.assertIn("Continue only for `binding_status=resolved` with `relation=same`", autopilot_normalized)
+        self.assertIn("STOP before Archive Sweep", prerequisites)
+        self.assertIn("If the helper resolves `descendant` or `external`", prerequisites)
+        self.assertIn("<canonical absolute WORKFLOW_FILE>", prerequisites)
+        self.assertIn("Never mutate the parent checkout as a fallback", prerequisites)
 
     def test_post_implementation_outcome_negative_canaries(self) -> None:
         claude = (PLUGIN_ROOT / "skills/speckit-autopilot/references/post-implementation.md").read_text(encoding="utf-8")

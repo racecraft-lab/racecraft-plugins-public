@@ -88,6 +88,38 @@ Write one finished page per selected entry to
 `specs/<branch>/artifacts/<entry-id>.html`, keeping the manifest entry's `id` as
 the filename stem.
 
+### Publish last, one page at a time
+
+Process selected entries in manifest order and finish one page before reading
+or writing the next template. Never pre-copy raw templates to their final
+artifact paths and never create all destination files up front.
+
+For the current page, build a replacement map whose keys equal the template's
+declared slot inventory exactly: no missing slot, extra slot, or duplicate
+replacement. Render the complete page in memory. Before exposing it at the
+final path, verify that every rendered region equals its planned replacement
+and differs byte-for-byte from the corresponding shipped-template region.
+
+Write the rendered page to a uniquely named sibling
+`.artifact-author-<entry-id>.<nonce>.tmp` file, close it, and validate that
+temporary file. Require all of these conditions:
+
+1. its bytes differ from the shipped template;
+2. it contains no sample-banner element using any recognized template class:
+   `sample-notice`, `notice`, or `note`;
+3. every declared `FILL` marker pair still appears exactly once and in order;
+4. its slot set equals the inventory exactly, and every marked region matches
+   the replacement map rather than the shipped-template region.
+
+Only after every check passes, atomically replace the final `.html` with that
+closed sibling file, re-read the final file, and confirm the same checks before
+reporting `generated`. On any recoverable failure, delete the owned temporary
+file and the page written by this attempt, report its gap, and continue. Never
+publish by writing directly to the final path. This order is load-bearing: an
+interrupted author can leave an owned temporary file, but never a partial page
+at the final path; the orchestrator removes owned temporaries and any final page
+without a complete current-run `generated` outcome before its boundary commit.
+
 ## Result — one outcome per selected page
 
 Return a list of per-entry outcomes to the orchestrator, each either

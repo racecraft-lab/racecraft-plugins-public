@@ -300,6 +300,13 @@ path/to/workflow-file.md [--from-phase specify|clarify|plan|checklist|tasks|anal
 Step 0.6c resolves the stage from the workflow file's own status table.
 Argument order is presentation only — every argument is read by name.
 
+Before Step -1, use the read-only `resolve-workflow-binding` runner helper to
+verify that Claude Code's live checkout already owns the workflow. Continue
+only for `binding_status=resolved` with `relation=same`. If scaffold was run
+from a parent checkout, follow the printed `/cd <absolute-worktree-root>` and
+then retry the relative autopilot command. Never run Archive Sweep or mutate
+the workflow's worktree from the parent checkout.
+
 ## Step -1 + Step 0: Pre-flight (Archive Sweep + Prerequisites)
 
 Run the pre-flight sequence before any phase work. STOP on failure.
@@ -895,6 +902,8 @@ registered helper or gate operation IDs below.
 
 - `check-prerequisites` — Verify CLI, project init, constitution, commands,
   branch detection, and workflow file readiness (JSON).
+- `resolve-workflow-binding` — Resolve one workflow to its canonical registered
+  Git worktree and classify the task-root relationship without writing state.
 - `validate-gate` — Validate G1-G7 with marker counts and details (JSON).
 - `confidence-gate` — Read the synthesizer's `📊 Confidence: X.XX`
   pre-Implement emit and decide whether Phase 7 may begin.

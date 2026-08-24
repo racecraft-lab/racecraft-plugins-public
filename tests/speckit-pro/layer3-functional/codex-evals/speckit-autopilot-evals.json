@@ -488,15 +488,15 @@
     },
     {
       "id": 34,
-      "prompt": "I invoked $speckit-autopilot docs/ai/specs/.process/G56R-001-workflow.md, but that relative path is absent from this checkout. git worktree list shows exactly one other registered worktree containing the same path. Should Codex search commits or read the workflow there while continuing in this checkout?",
-      "expected_output": "Stops before Archive Sweep or any mutation, does not search revisions or execute across worktrees, and tells the operator to start a new Codex task rooted at the one matching worktree before running the same relative $speckit-autopilot invocation.",
+      "prompt": "I invoked $speckit-autopilot /repo/.worktrees/g56r-001/docs/ai/specs/.process/G56R-001-workflow.md --stage plan from a Codex task rooted at /repo. The helper returns binding_status=resolved, task_root=/repo, workflow_root=/repo/.worktrees/g56r-001, relation=descendant. May planning continue in this same task?",
+      "expected_output": "Yes. Binds the canonical workflow and every operation to /repo/.worktrees/g56r-001, verifies the feature branch, then permits Archive Sweep and planning in the same Codex task. Every shell workdir, helper, filesystem/state/Git operation, phase/consensus prompt, and write-capable agent targets WORKFLOW_ROOT; returned paths are validated before use.",
       "expectations": [
-        "Stops before Archive Sweep, Phase 0, and repository mutation",
-        "Uses git worktree list --porcelain only to locate the same relative path",
-        "Does not search commits, branches, revisions, or arbitrary filesystem roots",
-        "Does not read a workflow from one worktree while mutating another",
-        "Reports the matching absolute worktree root and requires a new Codex task rooted there",
-        "Repeats $speckit-autopilot with the workflow path relative to the matching worktree"
+        "Accepts resolved relation=descendant as eligible for same-task execution",
+        "Binds WORKFLOW_ROOT to /repo/.worktrees/g56r-001 and WORKFLOW_FILE to the canonical absolute file",
+        "Verifies the live workflow branch is not main, detached, release, or protected before Archive Sweep",
+        "Sets every shell workdir and helper invocation to WORKFLOW_ROOT",
+        "Passes the exact WORKFLOW_ROOT to phase, consensus, implementation, Post, and write-capable agent prompts",
+        "Validates returned paths against WORKFLOW_ROOT before editing, state updates, staging, or commits"
       ]
     },
     {
@@ -580,6 +580,43 @@
         "States the high-fit finding (A) may carry high confidence because a direct authoritative source backed it",
         "Ties the confidence difference to evidence quality / source directness rather than to which named tool was used",
         "Requires finding B to carry the fallback disclosure naming the missing capability, the fallback used, and the reason"
+      ]
+    },
+    {
+      "id": 106,
+      "prompt": "Codex resolves an absolute workflow to a registered sibling worktree /external/spec, so resolve-workflow-binding returns binding_status=resolved and relation=external. May it run Archive Sweep or use absolute paths to mutate that sibling?",
+      "expected_output": "No. Stops before Archive Sweep and all mutation because external worktrees are outside the original task workspace. It prints the Codex Handoff/reopen fallback rooted at /external/spec and never treats absolute paths, workdir, or a child agent as permission to escape the task workspace.",
+      "expectations": [
+        "Stops before Archive Sweep, Phase 0, and any repository mutation",
+        "Treats relation=external as non-executable in the original Codex task",
+        "Prints Codex Handoff to /external/spec with reopen as the fallback",
+        "Does not copy, reconstruct, or search revisions for the workflow",
+        "Does not dispatch a write-capable agent into the external worktree"
+      ]
+    },
+    {
+      "id": 107,
+      "prompt": "A relative autopilot workflow path exists in both the parent checkout and a registered nested feature worktree. resolve-workflow-binding returns binding_status=ambiguous with both candidate roots. Which copy wins?",
+      "expected_output": "Neither. Stops before reading workflow content, Archive Sweep, or mutation, lists both canonical candidates, and asks for an unambiguous absolute workflow path. It never lets the parent copy win merely because it is the current checkout.",
+      "expectations": [
+        "Treats binding_status=ambiguous as a hard pre-flight stop",
+        "Lists both canonical candidate worktree roots",
+        "Does not prefer TASK_ROOT or the first git worktree entry",
+        "Requests an absolute workflow path to disambiguate",
+        "Performs no Archive Sweep, phase dispatch, state update, or Git mutation"
+      ]
+    },
+    {
+      "id": 108,
+      "prompt": "A Codex run established a descendant WORKFLOW_ROOT at startup. Immediately before artifact-author dispatch, revalidation now reports that the worktree is unregistered, the canonical workflow path changed, or the sandbox denies that root. Can this become a fail-open artifact gap?",
+      "expected_output": "No. Treats registration drift, path drift, ambiguity, external reclassification, and sandbox denial as broken write-capable bindings. It stops before artifact-author, artifact writes, PR refresh, commit, or push and does not record a content-generation gap.",
+      "expectations": [
+        "Re-runs resolve-workflow-binding immediately before artifact-author dispatch",
+        "Invokes the helper from WORKFLOW_ROOT and requires returned task_root and workflow_root to equal the established WORKFLOW_ROOT",
+        "Requires the same canonical WORKFLOW_FILE with relation same",
+        "Stops on worktree-registration drift, path drift, ambiguity, external reclassification, or sandbox denial",
+        "Does not downgrade binding failure to an artifact-content gap",
+        "Does not dispatch artifact-author, refresh the PR, commit, or push"
       ]
     }
   ]

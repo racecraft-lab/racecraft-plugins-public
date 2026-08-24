@@ -238,7 +238,7 @@
         "active_role": "installed_skill",
         "category": "bash",
         "classification": "negative_policy",
-        "line": 922,
+        "line": 925,
         "path": "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
         "pattern": "Bash",
         "reason": "Bash dependency",
