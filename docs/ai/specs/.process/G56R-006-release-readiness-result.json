@@ -6,7 +6,7 @@
     "Added explicit trusted route-policy manifest activation while preserving static no-manifest installation.",
     "Added one-snapshot preferred/fallback resolution for the 12 required Codex agents and one optional helper decision.",
     "Extended canonical materialization to render selected model and effort while binding original source bytes and unchanged non-route fields.",
-    "Added strict global override, managed-helper ownership/removal, preservation, bounded probes, complete-plan-before-write apply, and rollback recovery evidence.",
+    "Added strict global override, exact-byte managed-helper removal, caller-provenance rejection, preservation, bounded probes, complete-plan-before-write apply, concurrent-edit refusal, and rollback recovery evidence.",
     "Added deterministic fake-home fixtures/tests, Codex install documentation, generated payload mirrors, installed-cache proofs, runner trust metadata, and docs references."
   ],
   "why": "Provide the reusable resolver/materializer/installer framework required before downstream G56R-007 through G56R-010 can qualify production route policies.",
@@ -55,12 +55,12 @@
     ]
   },
   "verification": {
-    "focused_materializer": "10/10 passed",
-    "focused_installer": "80/80 passed",
+    "focused_materializer": "11/11 passed after review remediation",
+    "focused_installer": "82/82 passed after review remediation",
     "layer_1": "1511/1511 passed",
     "layer_4": "12309/12309 passed",
     "layer_5": "219/219 passed",
-    "full_suite": "14039/14039 passed",
+    "full_suite": "14041/14041 passed after review remediation",
     "toolchain_preflight": "passed",
     "docs_reference_generate": "7 pages generated",
     "docs_reference_check": "current",
@@ -75,6 +75,7 @@
   "rollback_or_feature_flag": {
     "activation": "Route-aware behavior activates only when route_policy_manifest is explicitly supplied and validated.",
     "fallback": "Omitting route_policy_manifest retains the prior static 13-file installer behavior and response shape.",
-    "apply_recovery": "Route-aware apply captures prior bytes/modes and reports restored or unrestored recovery evidence with restart guidance."
+    "apply_recovery": "Route-aware apply captures prior bytes, modes, and file identities; it refuses concurrent-edit overwrite and reports restored or unrestored recovery evidence with restart guidance.",
+    "helper_removal": "Caller-asserted provenance is not trusted; removal requires exact bytes rendered from the trusted current helper source and manifest."
   }
 }

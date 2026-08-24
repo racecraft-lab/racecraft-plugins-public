@@ -5,8 +5,8 @@
   "branch": "g56r-006-resolver-materializer-installer-strict-override",
   "status": "in_progress",
   "stage": "implement",
-  "updated_at": "2026-08-24T21:02:00Z",
-  "active_step": "Post: Doctor Extension Check",
+  "updated_at": "2026-08-24T21:39:00Z",
+  "active_step": "Post: Review Remediation",
   "stage_resolution": {
     "source": "argv",
     "basis": "explicit --stage implement",
@@ -473,6 +473,40 @@
       "full_suite": "14039/14039 passed",
       "docs_reference": "current",
       "reviewability_budget_status": "over_plan_pending_post_review"
+    },
+    "post_doctor": {
+      "status": "completed_with_warning",
+      "pass": 4,
+      "warnings": 1,
+      "failures": 0,
+      "warning": "specs/brand-001-racecraft-identity-system has only SPEC-MOC.md and lacks spec.md, plan.md, and tasks.md",
+      "writes_state": false
+    },
+    "post_code_review": {
+      "status": "completed_with_findings",
+      "reviewed_head": "84cba452c6db320e8f8508e07aa672fa2876839b",
+      "important_findings": 3,
+      "nits": 0,
+      "findings": [
+        "caller-supplied optional-helper provenance is forgeable",
+        "batch apply and rollback do not refuse concurrent regular-file changes",
+        "installer duplicates and bypasses the canonical agent materializer"
+      ],
+      "remediation_required": true
+    },
+    "post_review_remediation": {
+      "status": "implemented_pending_independent_reverification",
+      "remediations": [
+        "caller-supplied helper provenance rejected; exact trusted rendered bytes required",
+        "apply and rollback revalidate bytes, mode, device, and inode and preserve concurrent edits",
+        "installer materialization and proof generation delegate to canonical agent_materialization.py"
+      ],
+      "focused_materializer": "11/11 passed",
+      "focused_installer": "82/82 passed",
+      "full_suite": "14041/14041 passed (L1 1511, L4 12311, L5 219)",
+      "docs_reference": "current",
+      "diff_check": "passed",
+      "independent_reverification_required": true
     }
     ,
     "G7": {
@@ -561,10 +595,10 @@
     {"step": "Phase 7: Implement - User Story 3 (T024-T030)", "status": "completed"},
     {"step": "Phase 7: Implement - User Story 4 (T031-T039)", "status": "completed"},
     {"step": "Phase 7: Implement - Polish and verification (T040-T053)", "status": "completed"},
-    {"step": "Post: Doctor Extension Check", "status": "in_progress"},
+    {"step": "Post: Doctor Extension Check", "status": "completed"},
     {"step": "Post: Verify Implementation", "status": "pending"},
     {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
-    {"step": "Post: Code Review", "status": "pending"},
+    {"step": "Post: Code Review", "status": "completed"},
     {"step": "Post: Integration Suite", "status": "pending"},
     {"step": "Post: Reviewability Diff Gate", "status": "pending"},
     {"step": "Post: Self-Review", "status": "pending"},
@@ -573,7 +607,7 @@
     {"step": "Post: PR Packet/Body Generation", "status": "pending"},
     {"step": "Post: PR Body Generation", "status": "pending"},
     {"step": "Post: PR Creation", "status": "pending"},
-    {"step": "Post: Review Remediation", "status": "pending"},
+    {"step": "Post: Review Remediation", "status": "in_progress"},
     {"step": "Post: Retrospective", "status": "pending"}
   ]
 }

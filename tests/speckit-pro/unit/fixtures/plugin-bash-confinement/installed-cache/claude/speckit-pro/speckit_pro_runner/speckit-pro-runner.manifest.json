@@ -32,7 +32,7 @@
         "value": "speckit_pro_runner/agent_materialization.py",
         "display": "speckit_pro_runner/agent_materialization.py"
       },
-      "sha256": "54644cf38d0864b3c4c79b95297158eb4642317f406b3adf2b92d77fdec4e1fb"
+      "sha256": "257338f3cb22e2dc392f0ab9ccf0107b53cc09e05b4a3be00954d1a8a8de095d"
     },
     {
       "path": {
@@ -112,7 +112,7 @@
         "value": "speckit_pro_runner/helpers/install.py",
         "display": "speckit_pro_runner/helpers/install.py"
       },
-      "sha256": "0909f018b28d00ef8a6b02e88dd3bce8316cf7fb1342619074d2e63057ed5caa"
+      "sha256": "479bc039afc20c1a4184938bfe7cca4022324ad86cb76544a8821c58c3e96beb"
     },
     {
       "path": {

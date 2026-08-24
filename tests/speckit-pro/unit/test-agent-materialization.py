@@ -200,6 +200,26 @@ class AgentMaterializationTests(unittest.TestCase):
         self.assertNotEqual(result.source_binding["digest"], result.destination_bytes_digest)
         self.assertEqual(result.candidate_route, SELECTED_ROUTE)
 
+    def test_inserts_explicit_effort_when_source_omits_optional_route_field(self) -> None:
+        module = self.materializer()
+        source_bytes = ROUTE_SOURCE_BYTES.replace(
+            b'model_reasoning_effort = "xhigh"\n',
+            b'',
+        )
+
+        result = module.materialize_agent_policy(
+            source_relative_path=SOURCE_PATH,
+            source_bytes=source_bytes,
+            candidate_route=copy.deepcopy(SELECTED_ROUTE),
+            parent_controls=copy.deepcopy(EXPECTED_PARENT_CONTROLS),
+        )
+
+        self.assertIn(
+            b'model = "gpt-5.4"\nmodel_reasoning_effort = "high"\n',
+            result.destination_bytes,
+        )
+        self.assertTrue(result.non_route_fields_unchanged)
+
     def test_route_materialization_preserves_non_route_fields(self) -> None:
         result = self.materialize_selected_route()
         source_policy = tomllib.loads(ROUTE_SOURCE_BYTES.decode("utf-8"))

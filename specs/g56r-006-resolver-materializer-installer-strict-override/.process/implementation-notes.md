@@ -110,7 +110,7 @@
 
 ### T027
 
-**Deviations/Edge cases/Surprises:** The known-digest case intentionally uses exact route-rendered helper bytes, not raw source bytes. Only trusted provenance and exact rendered-byte proof permit removal. Focused validation passed 74/74.
+**Deviations/Edge cases/Surprises:** The known-digest case intentionally uses exact route-rendered helper bytes, not raw source bytes. Post-review hardening removed caller-asserted provenance as an ownership authority; exact trusted rendered bytes now provide the removal path. Focused validation originally passed 74/74.
 
 ### T028
 
@@ -215,3 +215,11 @@
 ### T053
 
 **Deviations/Edge cases/Surprises:** None. Both the final spec and Design Concept name artifact-author, sweep-analyst, sweep-classifier, consensus-synthesizer, and gate-validator as downstream reconciliation inputs without assigning cohorts.
+
+## Post-Implementation Review Remediation
+
+- Rejected caller-supplied `managed_helper_provenance`; arbitrary bytes with self-asserted fields are preserved, while exact bytes rendered from the trusted current helper source and manifest remain removable.
+- Replaced the installer-local renderer and proof identity with calls to the canonical `agent_materialization.py` authority. The canonical materializer now inserts an explicit effort when the original optional-helper source omits that route field.
+- Captured file device/inode identity in addition to bytes and mode. Apply revalidates each target before mutation and immediately before replacement/removal; rollback revalidates the installer-written state and refuses to overwrite subsequent external edits.
+- Added regression coverage for forged provenance, canonical optional-field insertion, concurrent edits before writes, and concurrent edits before rollback. Post-refresh focused validation passed materializer 11/11 and installer 82/82.
+- The post-remediation repository suite passed 14041/14041: L1 1511, L4 12311, and L5 219.

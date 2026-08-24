@@ -13,9 +13,11 @@ import subprocess
 import sys
 import tempfile
 import tomllib
+from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
 
+from ..agent_materialization import materialize_agent_policy
 from ..envelope import diagnostic, is_diagnostic, response
 from ..merge_utils import deep_merge
 from ..path_utils import resolves_to_current_python, sha256_text
@@ -79,6 +81,15 @@ ROUTE_POLICY_OPTIONAL_HELPER_KEYS = frozenset(
 )
 ROUTE_POLICY_SHA256_IDENTITY = re.compile(r"^sha256:[0-9a-f]{64}$")
 ROUTE_POLICY_SHA256_HEX = re.compile(r"^[0-9a-f]{64}$")
+CODEX_AGENT_STATE_UNSET = object()
+
+
+@dataclass(frozen=True)
+class CodexAgentFileState:
+    content: bytes
+    mode: int
+    device: int
+    inode: int
 
 
 def run_runner_invocation_gate(entry: Any, request: Any) -> dict[str, Any]:
@@ -309,7 +320,7 @@ def run_codex_agent_install(entry: Any, request: Any) -> dict[str, Any]:
                     )
                 ],
             )
-        current = previous_state[0] if previous_state is not None else None
+        current = previous_state.content if previous_state is not None else None
         if current == content:
             mutation["no_op_operations"].append(operation_record(operation))
             continue
@@ -346,7 +357,9 @@ def run_codex_agent_install(entry: Any, request: Any) -> dict[str, Any]:
         if source_immutability_diag is not None:
             return response("input_error", request_id=request.request_id, data=data, diagnostics=[source_immutability_diag])
 
-    previous: dict[str, tuple[bytes, int] | None] = {}
+    previous: dict[str, CodexAgentFileState | None] = {}
+    applied_previous: dict[str, CodexAgentFileState | None] = {}
+    applied_states: dict[str, CodexAgentFileState | None] = {}
     destination_existed = destination.exists()
     destination_parent_existed = destination.parent.exists()
     destination_identity: tuple[int, int] | None = None
@@ -366,13 +379,28 @@ def run_codex_agent_install(entry: Any, request: Any) -> dict[str, Any]:
             failed_name = name
             if not codex_agent_target_is_safe(target, destination, destination_identity):
                 raise OSError(f"unsafe destination entry: {name}")
+            if not codex_agent_state_matches(target, previous[name]):
+                raise OSError(f"destination entry changed after snapshot: {name}")
             if content is None:
                 if previous[name] is not None:
-                    target.unlink()
+                    remove_codex_agent_if_unchanged(
+                        target,
+                        previous[name],
+                        destination,
+                        destination_identity,
+                    )
                 operation = {"operation_id": f"remove-codex-agent:{name}", "kind": "remove_file", "target": target.as_posix()}
             else:
-                write_codex_agent_atomic(target, content, destination, destination_identity)
+                write_codex_agent_atomic(
+                    target,
+                    content,
+                    destination,
+                    destination_identity,
+                    expected_state=previous[name],
+                )
                 operation = {"operation_id": f"install-codex-agent:{name}", "kind": "write_file", "target": target.as_posix()}
+            applied_previous[name] = previous[name]
+            applied_states[name] = codex_agent_previous_state(target)
             mutation["applied_operations"].append(dict(operation) if operation["kind"] == "remove_file" else operation_record(operation))
             mutation["touched_paths"].append(target.as_posix())
 
@@ -380,7 +408,16 @@ def run_codex_agent_install(entry: Any, request: Any) -> dict[str, Any]:
         if mismatches:
             raise OSError(f"post-copy verification failed: {', '.join(mismatches)}")
     except OSError as exc:
-        rollback_failures = rollback_codex_agent_install(destination, previous, destination_identity)
+        rollback_failures = rollback_codex_agent_install(
+            destination,
+            applied_previous,
+            destination_identity,
+            expected_current=applied_states,
+        )
+        if failed_name is not None and failed_name not in applied_states:
+            failed_target = destination / failed_name
+            if not codex_agent_state_matches(failed_target, previous.get(failed_name)):
+                rollback_failures = sorted({*rollback_failures, failed_name})
         cleanup_codex_agent_destination(
             destination,
             destination_existed=destination_existed,
@@ -826,7 +863,6 @@ def codex_route_aware_optional_helper(
             route_manifest,
             source_dir,
             destination,
-            inputs,
         )
         if managed_ownership_proof is None:
             preservation = codex_route_aware_unmanaged_helper_preservation(destination)
@@ -959,7 +995,6 @@ def codex_route_aware_managed_helper_ownership_proof(
     route_manifest: dict[str, Any],
     source_dir: Path,
     destination: Path,
-    inputs: dict[str, Any],
 ) -> dict[str, Any] | None:
     helper_target = destination / f"{CODEX_OPTIONAL_HELPER_NAME}.toml"
     try:
@@ -969,23 +1004,8 @@ def codex_route_aware_managed_helper_ownership_proof(
     if existing_state is None:
         return None
 
-    existing_bytes = existing_state[0]
+    existing_bytes = existing_state.content
     existing_digest = f"sha256:{hashlib.sha256(existing_bytes).hexdigest()}"
-    provenance = codex_route_aware_trusted_helper_provenance(
-        inputs.get("managed_helper_provenance"),
-        route_manifest,
-        helper_target,
-        existing_digest,
-    )
-    if provenance is not None:
-        return {
-            "status": "trusted_provenance",
-            "helper_name": CODEX_OPTIONAL_HELPER_NAME,
-            "existing_digest": existing_digest,
-            "destination": helper_target.as_posix(),
-            "provenance": provenance,
-        }
-
     known_digest = codex_route_aware_known_helper_rendered_digest(source_dir, route_manifest)
     if existing_digest == known_digest:
         return {
@@ -1019,7 +1039,7 @@ def codex_route_aware_unmanaged_helper_preservation(destination: Path) -> dict[s
     if existing_state is None:
         return None
 
-    existing_bytes = existing_state[0]
+    existing_bytes = existing_state.content
     existing_digest = f"sha256:{hashlib.sha256(existing_bytes).hexdigest()}"
     return {
         "managed_ownership_proof": {
@@ -1053,27 +1073,6 @@ def codex_route_aware_unmanaged_helper_manual_remediation(
     return action
 
 
-def codex_route_aware_trusted_helper_provenance(
-    raw: Any,
-    route_manifest: dict[str, Any],
-    helper_target: Path,
-    existing_digest: str,
-) -> dict[str, Any] | None:
-    if not isinstance(raw, dict):
-        return None
-    expected = {
-        "helper_name": CODEX_OPTIONAL_HELPER_NAME,
-        "destination": ".codex/agents/autopilot-fast-helper.toml",
-        "installer_id": "install-codex-agents",
-        "source_roster_id": route_manifest["source_roster_id"],
-        "manifest_id": route_manifest["manifest_id"],
-        "destination_digest": existing_digest,
-    }
-    if any(raw.get(key) != value for key, value in expected.items()):
-        return None
-    return {key: raw[key] for key in expected}
-
-
 def codex_route_aware_known_helper_rendered_digest(source_dir: Path, route_manifest: dict[str, Any]) -> str | None:
     policy = route_manifest["optional_helper_policy"]
     route = policy.get("preferred_route")
@@ -1083,6 +1082,7 @@ def codex_route_aware_known_helper_rendered_digest(source_dir: Path, route_manif
         rendered = codex_route_aware_render_destination_bytes(
             (source_dir / f"{CODEX_OPTIONAL_HELPER_NAME}.toml").read_bytes(),
             route,
+            agent_name=CODEX_OPTIONAL_HELPER_NAME,
         )
     except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError, ValueError):
         return None
@@ -1268,25 +1268,24 @@ def codex_route_aware_materialization_proof(
 ) -> dict[str, Any]:
     source_path = source_dir / f"{agent_name}.toml"
     source_bytes = source_path.read_bytes()
-    destination_bytes = codex_route_aware_render_destination_bytes(source_bytes, selected_route)
-    source_digest = f"sha256:{hashlib.sha256(source_bytes).hexdigest()}"
-    destination_digest = f"sha256:{hashlib.sha256(destination_bytes).hexdigest()}"
-    binding = {
-        "path": "speckit-pro/speckit_pro_runner/helpers/install.py",
-        "digest": f"sha256:{hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}",
-    }
-    identity = {
-        "source_path": f"speckit-pro/codex-agents/{agent_name}.toml",
-        "source_bytes_digest": source_digest,
-        "destination_bytes_digest": destination_digest,
-        "selected_model": selected_route["model"],
-        "selected_model_reasoning_effort": selected_route["model_reasoning_effort"],
-        "materializer_binding": binding,
-    }
+    materialization = materialize_agent_policy(
+        source_relative_path=f"speckit-pro/codex-agents/{agent_name}.toml",
+        source_bytes=source_bytes,
+        candidate_route={
+            "agent_name": agent_name,
+            "model": selected_route["model"],
+            "model_reasoning_effort": selected_route["model_reasoning_effort"],
+        },
+    )
     return {
-        "materialization_id": route_policy_digest(identity),
-        **identity,
-        "non_route_fields_unchanged": codex_route_aware_non_route_fields_unchanged(source_bytes, destination_bytes),
+        "materialization_id": materialization.materialization_id,
+        "source_path": materialization.source_binding["path"],
+        "source_bytes_digest": materialization.source_binding["digest"],
+        "destination_bytes_digest": materialization.destination_bytes_digest,
+        "selected_model": materialization.selected_model,
+        "selected_model_reasoning_effort": materialization.selected_model_reasoning_effort,
+        "materializer_binding": materialization.materializer_binding,
+        "non_route_fields_unchanged": materialization.non_route_fields_unchanged,
     }
 
 
@@ -1324,8 +1323,13 @@ def codex_route_aware_rendered_destination_bytes(routing: dict[str, Any], source
 
 
 def codex_route_aware_rendered_record_bytes(source_dir: Path, record: dict[str, Any]) -> bytes:
-    source_path = source_dir / f"{record['agent_name'] if 'agent_name' in record else record['helper_name']}.toml"
-    rendered_bytes = codex_route_aware_render_destination_bytes(source_path.read_bytes(), record["selected_route"])
+    agent_name = record["agent_name"] if "agent_name" in record else record["helper_name"]
+    source_path = source_dir / f"{agent_name}.toml"
+    rendered_bytes = codex_route_aware_render_destination_bytes(
+        source_path.read_bytes(),
+        record["selected_route"],
+        agent_name=agent_name,
+    )
     expected_digest = record["materialization_proof"]["destination_bytes_digest"]
     actual_digest = f"sha256:{hashlib.sha256(rendered_bytes).hexdigest()}"
     if actual_digest != expected_digest:
@@ -1333,53 +1337,21 @@ def codex_route_aware_rendered_record_bytes(source_dir: Path, record: dict[str, 
     return rendered_bytes
 
 
-def codex_route_aware_render_destination_bytes(source_bytes: bytes, selected_route: dict[str, Any]) -> bytes:
-    source_text = source_bytes.decode("utf-8")
-    source_policy = tomllib.loads(source_text)
-    rendered_text = source_text
-    if source_policy.get("model") != selected_route["model"]:
-        rendered_text, count = re.subn(
-            r'^model = "[^"]+"$',
-            f'model = "{selected_route["model"]}"',
-            rendered_text,
-            count=1,
-            flags=re.MULTILINE,
-        )
-        if count != 1:
-            raise ValueError("expected exactly one model field")
-    if source_policy.get("model_reasoning_effort") != selected_route["model_reasoning_effort"]:
-        rendered_text, count = re.subn(
-            r'^model_reasoning_effort = "[^"]+"$',
-            f'model_reasoning_effort = "{selected_route["model_reasoning_effort"]}"',
-            rendered_text,
-            count=1,
-            flags=re.MULTILINE,
-        )
-        if count == 0:
-            rendered_text, count = re.subn(
-                r'^(model = "[^"]+"\n)',
-                rf'\1model_reasoning_effort = "{selected_route["model_reasoning_effort"]}"' + "\n",
-                rendered_text,
-                count=1,
-                flags=re.MULTILINE,
-            )
-        if count != 1:
-            raise ValueError("expected one model_reasoning_effort field to render or insert")
-    rendered_policy = tomllib.loads(rendered_text)
-    if rendered_policy.get("model") != selected_route["model"]:
-        raise ValueError("rendered model did not validate")
-    if rendered_policy.get("model_reasoning_effort") != selected_route["model_reasoning_effort"]:
-        raise ValueError("rendered model_reasoning_effort did not validate")
-    return rendered_text.encode("utf-8")
-
-
-def codex_route_aware_non_route_fields_unchanged(source_bytes: bytes, destination_bytes: bytes) -> bool:
-    source_policy = tomllib.loads(source_bytes.decode("utf-8"))
-    destination_policy = tomllib.loads(destination_bytes.decode("utf-8"))
-    for route_field in ("model", "model_reasoning_effort"):
-        source_policy.pop(route_field, None)
-        destination_policy.pop(route_field, None)
-    return source_policy == destination_policy
+def codex_route_aware_render_destination_bytes(
+    source_bytes: bytes,
+    selected_route: dict[str, Any],
+    *,
+    agent_name: str,
+) -> bytes:
+    return materialize_agent_policy(
+        source_relative_path=f"speckit-pro/codex-agents/{agent_name}.toml",
+        source_bytes=source_bytes,
+        candidate_route={
+            "agent_name": agent_name,
+            "model": selected_route["model"],
+            "model_reasoning_effort": selected_route["model_reasoning_effort"],
+        },
+    ).destination_bytes
 
 
 def codex_route_aware_source_immutability_diagnostic(source_dir: Path, route_manifest: dict[str, Any]) -> dict[str, Any] | None:
@@ -1517,7 +1489,7 @@ def codex_route_aware_recovery_or_mutation(
 def codex_route_aware_recovery_after_apply_failure(
     mutation: dict[str, Any],
     destination: Path,
-    previous: dict[str, tuple[bytes, int] | None],
+    previous: dict[str, CodexAgentFileState | None],
     rollback_failures: list[str],
 ) -> dict[str, Any]:
     planned_operations = mutation.get("planned_operations", [])
@@ -1575,7 +1547,7 @@ def codex_route_aware_recovery_after_apply_failure(
 
 def codex_route_aware_state_records(
     destination: Path,
-    states: dict[str, tuple[bytes, int] | None],
+    states: dict[str, CodexAgentFileState | None],
 ) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
     for name, state in states.items():
@@ -1608,7 +1580,7 @@ def codex_route_aware_destination_state_records(destination: Path, names: list[s
 def codex_route_aware_state_record(
     target: Path,
     name: str,
-    state: tuple[bytes, int] | None,
+    state: CodexAgentFileState | None,
 ) -> dict[str, Any]:
     record: dict[str, Any] = {
         "name": name,
@@ -1618,9 +1590,8 @@ def codex_route_aware_state_record(
         "mode": None,
     }
     if state is not None:
-        content, mode = state
-        record["digest"] = f"sha256:{hashlib.sha256(content).hexdigest()}"
-        record["mode"] = oct(mode & 0o7777)
+        record["digest"] = f"sha256:{hashlib.sha256(state.content).hexdigest()}"
+        record["mode"] = oct(state.mode & 0o7777)
     return record
 
 
@@ -2009,7 +1980,7 @@ def codex_agent_destination_identity(destination: Path) -> tuple[int, int]:
     return metadata.st_dev, metadata.st_ino
 
 
-def codex_agent_previous_state(target: Path) -> tuple[bytes, int] | None:
+def codex_agent_previous_state(target: Path) -> CodexAgentFileState | None:
     try:
         metadata = target.lstat()
     except FileNotFoundError:
@@ -2033,26 +2004,53 @@ def codex_agent_previous_state(target: Path) -> tuple[bytes, int] | None:
     finally:
         if descriptor is not None:
             os.close(descriptor)
-    return content, opened_metadata.st_mode
+    return CodexAgentFileState(
+        content=content,
+        mode=opened_metadata.st_mode,
+        device=opened_metadata.st_dev,
+        inode=opened_metadata.st_ino,
+    )
+
+
+def codex_agent_state_matches(target: Path, expected: CodexAgentFileState | None) -> bool:
+    try:
+        return codex_agent_previous_state(target) == expected
+    except OSError:
+        return False
 
 
 def rollback_codex_agent_install(
     destination: Path,
-    previous: dict[str, tuple[bytes, int] | None],
+    previous: dict[str, CodexAgentFileState | None],
     destination_identity: tuple[int, int] | None,
+    *,
+    expected_current: dict[str, CodexAgentFileState | None],
 ) -> list[str]:
     failures: list[str] = []
     for name, state in reversed(list(previous.items())):
         target = destination / name
         try:
+            if not codex_agent_state_matches(target, expected_current[name]):
+                raise OSError("rollback target changed after installer mutation")
             if state is None:
                 if not codex_agent_target_is_safe(target, destination, destination_identity):
                     raise OSError("rollback target became unsafe")
                 if target.exists():
-                    target.unlink()
+                    remove_codex_agent_if_unchanged(
+                        target,
+                        expected_current[name],
+                        destination,
+                        destination_identity,
+                    )
             else:
-                content, mode = state
-                write_codex_agent_atomic(target, content, destination, destination_identity, mode=mode)
+                write_codex_agent_atomic(
+                    target,
+                    state.content,
+                    destination,
+                    destination_identity,
+                    mode=state.mode,
+                    expected_state=expected_current[name],
+                )
         except OSError:
             failures.append(name)
     return sorted(failures)
@@ -2081,6 +2079,7 @@ def write_codex_agent_atomic(
     destination_identity: tuple[int, int] | None,
     *,
     mode: int | None = None,
+    expected_state: CodexAgentFileState | None | object = CODEX_AGENT_STATE_UNSET,
 ) -> None:
     if not codex_agent_target_is_safe(target, destination, destination_identity):
         raise OSError("unsafe target path")
@@ -2106,14 +2105,16 @@ def write_codex_agent_atomic(
             raise OSError("destination changed after temporary file creation")
         if not codex_agent_target_is_safe(target, destination, destination_identity):
             raise OSError("target path changed before replace")
+        if expected_state is not CODEX_AGENT_STATE_UNSET and not codex_agent_state_matches(target, expected_state):
+            raise OSError("target changed immediately before replace")
         os.replace(tmp_path, target)
         tmp_path = None
         if codex_agent_destination_identity(destination) != destination_identity:
             raise OSError("destination changed during replace")
         installed_state = codex_agent_previous_state(target)
-        if installed_state is None or installed_state[0] != content:
+        if installed_state is None or installed_state.content != content:
             raise OSError("target changed after replace")
-        if mode is not None and (installed_state[1] & 0o7777) != (mode & 0o7777):
+        if mode is not None and (installed_state.mode & 0o7777) != (mode & 0o7777):
             raise OSError("target mode changed after replace")
     finally:
         if tmp_path is not None:
@@ -2121,6 +2122,24 @@ def write_codex_agent_atomic(
                 tmp_path.unlink()
             except OSError:
                 pass
+
+
+def remove_codex_agent_if_unchanged(
+    target: Path,
+    expected_state: CodexAgentFileState | None,
+    destination: Path,
+    destination_identity: tuple[int, int] | None,
+) -> None:
+    if expected_state is None:
+        raise OSError("removal requires a captured file state")
+    if not codex_agent_target_is_safe(target, destination, destination_identity):
+        raise OSError("unsafe removal target")
+    metadata = target.lstat()
+    if (metadata.st_dev, metadata.st_ino) != (expected_state.device, expected_state.inode):
+        raise OSError("removal target identity changed")
+    if not codex_agent_state_matches(target, expected_state):
+        raise OSError("removal target changed immediately before unlink")
+    target.unlink()
 
 
 def codex_agent_target_is_safe(
@@ -2149,7 +2168,7 @@ def verify_codex_agent_install(destination: Path, rendered: dict[str, bytes]) ->
         target = destination / name
         try:
             state = codex_agent_previous_state(target)
-            if state is None or state[0] != content:
+            if state is None or state.content != content:
                 mismatches.append(name)
         except OSError:
             mismatches.append(name)

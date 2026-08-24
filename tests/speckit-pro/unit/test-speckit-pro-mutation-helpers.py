@@ -279,10 +279,11 @@ class MutationHelperTests(unittest.TestCase):
             identity: tuple[int, int] | None,
             *,
             mode: int | None = None,
+            expected_state: object = None,
         ) -> None:
             if target.name == "autopilot-fast-helper.toml":
                 raise OSError("injected test failure")
-            real_write(target, content, target_dir, identity, mode=mode)
+            real_write(target, content, target_dir, identity, mode=mode, expected_state=expected_state)
 
         return fail_write
 
@@ -426,7 +427,10 @@ class MutationHelperTests(unittest.TestCase):
                 self.assertEqual(proof["selected_model"], record["selected_route"]["model"])
                 self.assertEqual(proof["selected_model_reasoning_effort"], "xhigh")
                 self.assertTrue(proof["non_route_fields_unchanged"])
-                self.assertEqual(proof["materializer_binding"]["path"], "speckit-pro/speckit_pro_runner/helpers/install.py")
+                self.assertEqual(
+                    proof["materializer_binding"]["path"],
+                    "speckit-pro/speckit_pro_runner/agent_materialization.py",
+                )
 
     def assert_route_aware_helper_installed(self, response: dict[str, object], *, expected_snapshot: dict[str, object]) -> None:
         helper = response["data"]["routing"]["optional_helper_decision"]
@@ -1435,12 +1439,13 @@ class MutationHelperTests(unittest.TestCase):
                 identity: tuple[int, int] | None,
                 *,
                 mode: int | None = None,
+                expected_state: object = None,
             ) -> None:
                 nonlocal failed_once
                 if target.name == f"{failed_agent_name}.toml" and not failed_once:
                     failed_once = True
                     raise OSError("injected route-aware write failure")
-                real_write(target, content, target_dir, identity, mode=mode)
+                real_write(target, content, target_dir, identity, mode=mode, expected_state=expected_state)
 
             request = SimpleNamespace(
                 request_id="test-route-aware-rollback-success",
@@ -1511,6 +1516,7 @@ class MutationHelperTests(unittest.TestCase):
                 identity: tuple[int, int] | None,
                 *,
                 mode: int | None = None,
+                expected_state: object = None,
             ) -> None:
                 nonlocal failed_once
                 if target.name == f"{failed_agent_name}.toml" and not failed_once:
@@ -1518,7 +1524,7 @@ class MutationHelperTests(unittest.TestCase):
                     raise OSError("injected route-aware write failure")
                 if target.name == f"{unrestored_agent_name}.toml" and failed_once and mode is not None:
                     raise OSError("injected route-aware rollback failure")
-                real_write(target, content, target_dir, identity, mode=mode)
+                real_write(target, content, target_dir, identity, mode=mode, expected_state=expected_state)
 
             request = SimpleNamespace(
                 request_id="test-route-aware-rollback-failure",
@@ -1555,6 +1561,133 @@ class MutationHelperTests(unittest.TestCase):
                 prior_mode,
                 failed_agent_name,
                 unrestored_agent_name,
+            )
+
+    def test_install_codex_agents_route_aware_refuses_concurrent_edit_before_write(self) -> None:
+        from speckit_pro_runner.helpers import install
+        from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp, tempfile.TemporaryDirectory() as home_tmp:
+            fake_home = Path(home_tmp).resolve()
+            manifest_path = self.write_valid_route_policy_manifest(git_root)
+            expected_snapshot = routing_capability_snapshot()
+            expected_snapshot["available_routes"] = ["required-primary", "required-fallback"]
+            destination = fake_home / ".codex" / "agents"
+            destination.mkdir(parents=True)
+            agent_names = routing_required_agents()
+            prior = {
+                name: f"prior {name}\n".encode("utf-8")
+                for name in agent_names
+            }
+            for name, content in prior.items():
+                (destination / f"{name}.toml").write_bytes(content)
+            changed_name = agent_names[1]
+            changed_target = destination / f"{changed_name}.toml"
+            concurrent_bytes = b"concurrent user edit before installer write\n"
+            real_matches = install.codex_agent_state_matches
+            changed = False
+
+            def change_before_match(target: Path, expected: object) -> bool:
+                nonlocal changed
+                if target == changed_target and not changed:
+                    changed = True
+                    target.write_bytes(concurrent_bytes)
+                return real_matches(target, expected)
+
+            request = SimpleNamespace(
+                request_id="test-route-aware-concurrent-pre-write",
+                helper_id="install-codex-agents",
+                operation="install-codex-agents",
+                mode="apply",
+                inputs=self.route_aware_inputs(manifest_path, git_root, destination=None),
+            )
+            request.inputs["test_overrides"] = {"codex_capability_snapshot": expected_snapshot}
+            old_cwd = Path.cwd()
+            os.chdir(git_root)
+            try:
+                with (
+                    patch.dict(os.environ, {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}),
+                    patch.object(install, "codex_agent_state_matches", side_effect=change_before_match),
+                ):
+                    response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
+            finally:
+                os.chdir(old_cwd)
+
+            self.assert_response(response, "expected_failure", 1)
+            self.assertFalse(response["data"]["rollback_succeeded"])
+            self.assertTrue(response["data"]["writes_state"])
+            self.assertEqual(changed_target.read_bytes(), concurrent_bytes)
+            self.assertEqual((destination / f"{agent_names[0]}.toml").read_bytes(), prior[agent_names[0]])
+            self.assertIn(
+                f"{changed_name}.toml",
+                response["data"]["routing"]["recovery_or_mutation"]["recovery_record"]["rollback_failures"],
+            )
+
+    def test_install_codex_agents_route_aware_rollback_preserves_concurrent_edit(self) -> None:
+        from speckit_pro_runner.helpers import install
+        from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp, tempfile.TemporaryDirectory() as home_tmp:
+            fake_home = Path(home_tmp).resolve()
+            manifest_path = self.write_valid_route_policy_manifest(git_root)
+            expected_snapshot = routing_capability_snapshot()
+            expected_snapshot["available_routes"] = ["required-primary", "required-fallback"]
+            destination = fake_home / ".codex" / "agents"
+            destination.mkdir(parents=True)
+            agent_names = routing_required_agents()
+            for name in agent_names:
+                (destination / f"{name}.toml").write_bytes(f"prior {name}\n".encode("utf-8"))
+            installed_then_changed = agent_names[0]
+            failed_name = agent_names[1]
+            changed_target = destination / f"{installed_then_changed}.toml"
+            concurrent_bytes = b"concurrent user edit after installer write\n"
+            real_write = install.write_codex_agent_atomic
+            failed_once = False
+
+            def fail_after_concurrent_edit(
+                target: Path,
+                content: bytes,
+                target_dir: Path,
+                identity: tuple[int, int] | None,
+                *,
+                mode: int | None = None,
+                expected_state: object = None,
+            ) -> None:
+                nonlocal failed_once
+                if target.name == f"{failed_name}.toml" and not failed_once:
+                    failed_once = True
+                    changed_target.write_bytes(concurrent_bytes)
+                    raise OSError("injected failure after concurrent edit")
+                real_write(target, content, target_dir, identity, mode=mode, expected_state=expected_state)
+
+            request = SimpleNamespace(
+                request_id="test-route-aware-concurrent-rollback",
+                helper_id="install-codex-agents",
+                operation="install-codex-agents",
+                mode="apply",
+                inputs=self.route_aware_inputs(manifest_path, git_root, destination=None),
+            )
+            request.inputs["test_overrides"] = {"codex_capability_snapshot": expected_snapshot}
+            old_cwd = Path.cwd()
+            os.chdir(git_root)
+            try:
+                with (
+                    patch.dict(os.environ, {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}),
+                    patch.object(install, "write_codex_agent_atomic", side_effect=fail_after_concurrent_edit),
+                ):
+                    response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
+            finally:
+                os.chdir(old_cwd)
+
+            self.assert_response(response, "expected_failure", 1)
+            self.assertFalse(response["data"]["rollback_succeeded"])
+            self.assertTrue(response["data"]["writes_state"])
+            self.assertEqual(changed_target.read_bytes(), concurrent_bytes)
+            self.assertIn(
+                f"{installed_then_changed}.toml",
+                response["data"]["routing"]["recovery_or_mutation"]["recovery_record"]["rollback_failures"],
             )
 
     def test_install_codex_agents_route_aware_dry_run_omits_unavailable_helper_when_no_file_exists(self) -> None:
@@ -1610,7 +1743,7 @@ class MutationHelperTests(unittest.TestCase):
             self.assert_route_aware_required_destination_bytes(response, destination)
             self.assertEqual(len(response["data"]["mutation"]["applied_operations"]), 12)
 
-    def test_install_codex_agents_route_aware_dry_run_removes_managed_helper_by_trusted_provenance(self) -> None:
+    def test_install_codex_agents_route_aware_rejects_caller_asserted_helper_provenance(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
             manifest_path = self.write_valid_route_policy_manifest(git_root)
@@ -1641,8 +1774,8 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(stderr_records, [])
             self.assert_response(response, "ok", 0)
             self.assert_route_aware_required_resolution(response, expected_snapshot=expected_snapshot)
-            self.assert_route_aware_managed_helper_removal(response, proof_status="trusted_provenance")
-            self.assert_route_aware_helper_removal_evidence(response, destination)
+            self.assert_route_aware_unmanaged_helper_preserved(response, destination)
+            self.assert_route_aware_helper_preserved_without_removal(response, destination, helper_bytes)
             self.assertTrue(helper_path.exists())
 
     def test_install_codex_agents_route_aware_apply_removes_managed_helper_by_known_rendered_digest(self) -> None:
@@ -2266,8 +2399,8 @@ class MutationHelperTests(unittest.TestCase):
 
             self.assertIsNotNone(state)
             assert state is not None
-            self.assertEqual(state[0], b"existing\n")
-            self.assertEqual(state[1] & 0o7777, 0o640)
+            self.assertEqual(state.content, b"existing\n")
+            self.assertEqual(state.mode & 0o7777, 0o640)
 
     def test_install_codex_agents_rollback_never_chmods_swapped_symlink_target(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()

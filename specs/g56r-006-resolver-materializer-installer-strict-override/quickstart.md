@@ -79,7 +79,8 @@ Before marking implementation complete, verify:
 - Manifest paths outside the repository trusted-file boundary, symlinked manifests, unsupported versions, and manifest or source-roster identity mismatches fail before discovery or mutation.
 - Every route-aware response has exactly one snapshot ID and all 12 required-agent records cite it.
 - Strict override required misses report complete diagnostics and zero writes.
-- Optional helper removal has either trusted provenance binding or exact known rendered-byte digest proof.
+- Optional helper removal has exact known rendered-byte digest proof; caller-asserted provenance is rejected as untrusted.
+- Apply and rollback refuse to overwrite a destination changed after its captured snapshot.
 - Successful rollback restores bytes and modes or removes newly created files and reports no restart.
 - Rollback uncertainty sets restart guidance and does not claim verification success.
 - Fake-home cases use a temporary HOME/USERPROFILE or temporary repository `.codex/agents` destination; they do not add a test-only installer input or touch the operator's real home.

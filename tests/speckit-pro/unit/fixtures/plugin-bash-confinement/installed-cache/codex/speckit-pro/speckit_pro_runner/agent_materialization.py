@@ -232,16 +232,16 @@ def _selected_route_from_policy(
     policy: Mapping[str, Any],
     provided: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
-    expected = _route_from_policy(policy)
     if provided is None:
-        return expected
+        return _route_from_policy(policy)
     if not isinstance(provided, Mapping):
         raise AgentMaterializationError("candidate route must be a mapping")
-    agent_name = provided.get("agent_name", expected["agent_name"])
-    if agent_name != expected["agent_name"]:
+    expected_agent_name = _need_string(policy, "name")
+    agent_name = provided.get("agent_name", expected_agent_name)
+    if agent_name != expected_agent_name:
         raise AgentMaterializationError("candidate route does not match source policy")
     return {
-        "agent_name": expected["agent_name"],
+        "agent_name": expected_agent_name,
         "model": _need_mapping_string(provided, "model", "candidate route"),
         "model_reasoning_effort": _need_mapping_string(
             provided,
@@ -264,13 +264,25 @@ def _render_selected_route(
     route: Mapping[str, Any],
 ) -> str:
     _need_string(source_policy, "model")
-    _need_string(source_policy, "model_reasoning_effort")
     rendered = _replace_top_level_string_field(source_text, "model", route["model"])
-    rendered = _replace_top_level_string_field(
-        rendered,
-        "model_reasoning_effort",
-        route["model_reasoning_effort"],
-    )
+    if "model_reasoning_effort" in source_policy:
+        _need_string(source_policy, "model_reasoning_effort")
+        rendered = _replace_top_level_string_field(
+            rendered,
+            "model_reasoning_effort",
+            route["model_reasoning_effort"],
+        )
+    else:
+        rendered, insertion_count = re.subn(
+            r"(?m)^(model\s*=.*)$",
+            rf'\1\nmodel_reasoning_effort = {json.dumps(route["model_reasoning_effort"], ensure_ascii=False)}',
+            rendered,
+            count=1,
+        )
+        if insertion_count != 1:
+            raise AgentMaterializationError(
+                "source policy requires one model field for model_reasoning_effort insertion"
+            )
     destination_policy = _parse_toml(rendered)
     if destination_policy.get("model") != route["model"]:
         raise AgentMaterializationError("destination model did not render selected route")

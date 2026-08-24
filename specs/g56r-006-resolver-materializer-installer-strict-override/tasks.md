@@ -93,8 +93,8 @@
 
 - [X] T024 [US3] RED for T025: add failing helper-unavailable tests for no helper present, helper omitted with validated no-helper continuation, and required roster success in `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` (FR-023; US3-S1)
 - [X] T025 [US3] GREEN for T024: implement optional-helper omitted state and validated no-helper continuation in `speckit-pro/speckit_pro_runner/helpers/install.py`
-- [X] T026 [US3] RED for T027: add failing managed-helper removal tests for trusted runner-owned install provenance and exact known rendered-byte digest match in `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` (FR-024; US3-S2)
-- [X] T027 [US3] GREEN for T026: implement managed-helper ownership proof using trusted runner provenance and exact known rendered-byte digest matching in `speckit-pro/speckit_pro_runner/helpers/install.py` and `speckit-pro/speckit_pro_runner/helpers/registry.py`
+- [X] T026 [US3] RED for T027: add managed-helper tests proving caller-asserted provenance is rejected and exact known rendered-byte digest matching authorizes removal in `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` (FR-024; US3-S2)
+- [X] T027 [US3] GREEN for T026: implement managed-helper ownership proof using exact known rendered-byte digest matching while refusing caller-asserted provenance in `speckit-pro/speckit_pro_runner/helpers/install.py` and `speckit-pro/speckit_pro_runner/helpers/registry.py`
 - [X] T028 [US3] RED for T029: add failing helper preservation tests for filename-only, syntactic TOML, parsed-equivalent, normalized-content, and user-modified same-name helpers with manual-remediation evidence in `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` (FR-025; US3-S3)
 - [X] T029 [US3] GREEN for T028: implement helper preservation and bounded manual-remediation evidence when managed ownership proof is absent in `speckit-pro/speckit_pro_runner/helpers/install.py`
 - [X] T030 [US3] Run the US3 focused RED->GREEN validation with `python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` for `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py`

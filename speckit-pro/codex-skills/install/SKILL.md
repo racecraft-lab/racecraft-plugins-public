@@ -152,8 +152,8 @@ Route-aware optional-helper outcomes are:
 - `installed`: a manifest-admitted helper route resolves and materializes
 - `omitted`: no helper route is available, no existing helper file is present,
   and no-helper continuation validates
-- `removed`: an existing helper is removed only with trusted runner-owned
-  provenance or exact known rendered-byte digest proof
+- `removed`: an existing helper is removed only when its bytes exactly match a
+  known rendered helper derived from the trusted current source and manifest
 - `preserved`: an existing same-named helper lacks managed ownership proof and
   is left in place with bounded manual-remediation evidence
 - `unresolved`: neither a compatible helper nor validated no-helper
@@ -161,12 +161,17 @@ Route-aware optional-helper outcomes are:
 
 Filename, location, syntactic TOML validity, parsed equivalence, and normalized
 content do not prove helper ownership.
+Caller-supplied provenance is not an ownership authority and cannot authorize
+helper removal.
 
 ### Recovery evidence
 
 Route-aware apply plans all required writes and managed-helper removals as one
 rollback-backed batch. Before mutation, it captures prior bytes and file modes
-for each planned destination action. On failure:
+for each planned destination action. It rechecks bytes, mode, and file identity
+immediately before each mutation and before rollback, preserving concurrent
+external edits and reporting uncertain state instead of overwriting them. On
+failure:
 
 - successful rollback reports `rollback_outcome=restored`,
   `writes_state=false`, `restart_required=false`, and no verification success

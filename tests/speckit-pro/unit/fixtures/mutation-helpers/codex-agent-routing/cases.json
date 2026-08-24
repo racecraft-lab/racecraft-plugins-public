@@ -261,20 +261,20 @@
       }
     },
     {
-      "case_id": "helper-unavailable-managed-provenance",
+      "case_id": "helper-unavailable-forged-caller-provenance",
       "category": "optional_helper",
       "overrides": {
         "capability_snapshot.available_routes": [
           "required-primary",
           "required-fallback"
         ],
-        "destination.existing_files.autopilot-fast-helper.toml": "runner_provenance_match"
+        "destination.existing_files.autopilot-fast-helper.toml": "caller_asserted_provenance"
       },
       "expected": {
         "status": "ok",
-        "helper_outcome": "removed",
-        "ownership_proof": "trusted_provenance",
-        "planned_removals": 1
+        "helper_outcome": "preserved",
+        "ownership_proof": "absent",
+        "planned_removals": 0
       }
     },
     {
