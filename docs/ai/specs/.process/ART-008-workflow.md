@@ -1510,6 +1510,71 @@ recorded as **skipped** rather than satisfied.
 
 ---
 
+## Manual UAT: executed 2026-08-24, against PR #464
+
+Operator-requested manual acceptance run over `quickstart.md`, performed after
+the pull request was already open and out of draft. It found two real defects
+that the in-run T079 pass had missed, one of them holding CI red.
+
+**How each scenario was verified, stated plainly.** Offline execution is the
+ceiling here: the sweep's commit ordering and reply posting are orchestrator
+prose rather than executable code, so no scenario below was proven against a
+live pull request.
+
+| Scenario | Method | Result |
+|---|---|---|
+| 1 — read, filter, recognize | Independent black-box replay: every one of the 163 corpus cases driven through `python3 -m speckit_pro_runner` as a subprocess and compared at envelope level against `expected-envelopes.json`, outside the shipped test harness | 163/163 match |
+| 2 — registry stays honest | Derive test plus direct read of the pinned skip list, which is exactly `["uat-walkthrough"]` | Pass |
+| 3 — amend, record, stop | Corpus `outcome` records plus shipped prose; FR-016 "never resolves a review thread" confirmed by direct reading | Pass, offline |
+| 4 — reply shape | Captured payload fixtures plus prose confirming every body is passed by file path and the marker owns line 1 | Pass, offline |
+| 5 — unreadable pull request | All six corroboration statuses present as corpus cases, plus a malformed seventh; `skipped` resumes `re-run` while `pr_missing` resumes `operator`, so the two reports stay distinguishable | Pass |
+| 6 — log survives reviewer prose | Corpus escaping cases inside the 163 | Pass |
+| 7 — cross-platform parity | `--layer 1`: `validate-codex-skills` 163/163, `validate-codex-parity` 87/87 | Pass, but see finding 2 |
+
+**Full gate: 14011/14011** (L1 1511, L4 12281, L5 219), and
+`refresh-release-artifacts.py` reports the artifacts already consistent.
+
+### Finding 1 (blocking, now fixed): CI was red on a dangling committed backlink
+
+`gh pr checks 464` showed six failing jobs. The cause was one unit:
+`validate-moc-stale-index` at 10/11, which passes in this worktree and fails on
+a clean checkout. Reproduced by cloning the branch fresh and running the
+validator there.
+
+`specs/art-008-feedback-sweep/SPEC-MOC.md` carried two backlinks to
+`.process/pr-packets/` files. Those files exist locally but are excluded by a
+**per-clone** `.git/info/exclude` rule, so they were never committed. The
+spec-index generator scans the filesystem rather than the git index, so it saw
+them and wrote both links into the committed map, where CI then found them
+dangling.
+
+Fixed by regenerating the index with the packets moved aside. That removed the
+two dangling links and, separately, **added three real tracked artifacts the
+committed map had been missing**: the implementation notes, the review packet,
+and the retrospective. The committed map was wrong in both directions.
+
+The per-clone exclusion is now tracked in `.gitignore` instead, alongside the
+sibling `specs/*/.process/feedback-sweep/` rule, so no other clone can rebake
+the same backlink.
+
+### Finding 2 (minor, now fixed): the quickstart stated a false word count
+
+Scenario 7 claimed the Codex `SKILL.md` body sat at 7997 words with three words
+of headroom, and that this slice adds nothing to either `SKILL.md`. Measured
+with the validator's own body extraction, it is **7998, two words of headroom**,
+and this slice did change that file: T098's mirror clause rewrote one sentence
+word-negatively from a body that measured exactly 8000. Both sentences corrected.
+
+### Still open, unchanged by this run
+
+T098's binding probe remains **unrun**: not triggered, not discharged. Plugin
+agents load from the versioned cache, so the new agents cannot be dispatched
+from this branch, and staging them into the cache is correctly refused as
+agent-config self-modification. The discharge path is after release and cache
+refresh.
+
+---
+
 ## Post-Implementation Checklist
 
 The canonical closeout. Every row must reach Complete or an explicit
@@ -1524,7 +1589,7 @@ The canonical closeout. Every row must reach Complete or an explicit
 | Post: Integration Suite | ✅ Complete | 14011/14011 after the count fix |
 | Post: Reviewability Diff Gate | ✅ Complete | backstop deferred (`helper_not_promoted`); committed evidence: 1663 LOC / 13 files against the accepted 1120-1720 / 12 |
 | Post: Self-Review | ✅ Complete | four-question audit recorded above |
-| Post: UAT Runbook Generation | ⏭️ Skipped | `generate-uat-skeleton` deferred, no committed skeleton; author agent correctly not spawned |
+| Post: UAT Runbook Generation | ⏭️ Skipped | `generate-uat-skeleton` deferred, no committed skeleton; author agent correctly not spawned. A manual UAT over `quickstart.md` ran 2026-08-24 and is recorded above |
 | Post: PR Body Generation | ✅ Complete | one release-note fence, scope budget vs accepted, 4 known gaps stated |
 | Post: PR Creation | ✅ Complete | #464 ready for review, not draft |
 | Post: Review Remediation | ✅ Complete | 3 blocking findings remediated in-run rather than deferred to a loop |

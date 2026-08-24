@@ -182,10 +182,11 @@ python3 tests/speckit-pro/run-all.py --layer 1
 phase-execution references and both workflow-file-protocol files describe the
 same sequence.
 
-**Watch the word cap.** The Codex autopilot `SKILL.md` body is **7997 words
-against a hard 8000-word limit — three words of headroom.** This slice adds
-nothing to either `SKILL.md` for that reason. If a later change needs a line
-there, it must free words first.
+**Watch the word cap.** The Codex autopilot `SKILL.md` body is **7998 words
+against a hard 8000-word limit: two words of headroom.** This slice adds no
+words to either `SKILL.md`. Its one change there rewrote an existing sentence
+word-negatively, from a body that measured exactly 8000. If a later change
+needs a line there, it must free words first.
 
 ---
 

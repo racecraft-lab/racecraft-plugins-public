@@ -24,3 +24,8 @@ tests/speckit-pro/layer7-integration/**/transcript.jsonl
 
 # Feedback-sweep transport byproducts: written and removed by the sweep, never committed
 specs/*/.process/feedback-sweep/
+
+# PR packets are local process exhaust; no spec in this repo tracks one. Tracked
+# here rather than per-clone so the spec-index generator cannot bake a backlink
+# to one into a committed SPEC-MOC.md.
+specs/*/.process/pr-packets/
