@@ -182,7 +182,10 @@ replacement and restoration use exclusive no-clobber links so an entry created
 in the final mutation window is preserved. A collision retains both the moved
 prior entry and the concurrent target, reports every preserved path, and fails
 with bounded manual remediation. Temporary-file and backup cleanup failures are
-also explicit recovery errors rather than successful outcomes. On failure:
+also explicit recovery errors rather than successful outcomes. After destructive
+backup cleanup, the installer recaptures the target; a cleanup-window race
+recreates the captured prior bytes and mode under a fresh exclusive backup path
+and reports both surviving entries. On failure:
 
 - recovery distinguishes staged actions from actions actually applied and
   rolled back, reports the exact failed write or removal, and records real

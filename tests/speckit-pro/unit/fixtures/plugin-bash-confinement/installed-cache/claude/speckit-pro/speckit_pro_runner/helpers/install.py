@@ -2361,6 +2361,7 @@ def write_codex_agent_atomic(
         raise OSError("unsafe target path")
     tmp_path: Path | None = None
     backup_path: Path | None = None
+    moved_state: CodexAgentFileState | None = None
     try:
         with tempfile.NamedTemporaryFile(
             mode="wb",
@@ -2433,14 +2434,24 @@ def write_codex_agent_atomic(
                     [backup_path.as_posix(), target.as_posix()],
                 ) from None
             backup_path = None
+        if not codex_agent_state_matches(target, prepared_state):
+            paths = [target.as_posix()]
+            if moved_state is not None:
+                preserved = codex_agent_preserve_state_as_backup(moved_state, target)
+                paths.insert(0, preserved.as_posix())
+            raise CodexAgentNoClobberConflict("target changed during backup cleanup", paths)
         return installed_state
     except OSError as exc:
         preserved_paths = list(exc.preserved_paths) if isinstance(exc, CodexAgentNoClobberConflict) else []
         if tmp_path is not None:
+            tmp_path_text = tmp_path.as_posix()
             try:
                 tmp_path.unlink()
             except OSError:
-                preserved_paths.append(tmp_path.as_posix())
+                if os.path.lexists(tmp_path):
+                    preserved_paths.append(tmp_path_text)
+            else:
+                preserved_paths = [path for path in preserved_paths if path != tmp_path_text]
         if backup_path is not None:
             if isinstance(exc, CodexAgentNoClobberConflict):
                 preserved_paths.append(backup_path.as_posix())
@@ -2470,6 +2481,7 @@ def remove_codex_agent_if_unchanged(
     if not codex_agent_target_is_safe(target, destination, destination_identity):
         raise OSError("unsafe removal target")
     backup_path = codex_agent_move_target_to_backup(target, destination)
+    moved_state: CodexAgentFileState | None = None
     try:
         moved_state = codex_agent_previous_state(backup_path)
         if moved_state != expected_state:
@@ -2489,10 +2501,13 @@ def remove_codex_agent_if_unchanged(
                 [backup_path.as_posix()],
             ) from None
         backup_path = None
-        if os.path.lexists(target):
+        if not codex_agent_state_matches(target, None):
+            if moved_state is None:
+                raise OSError("moved removal state disappeared")
+            preserved = codex_agent_preserve_state_as_backup(moved_state, target)
             raise CodexAgentNoClobberConflict(
                 "target appeared before no-clobber removal completed",
-                [target.as_posix()],
+                [preserved.as_posix(), target.as_posix()],
             )
     except OSError as exc:
         preserved_paths = list(exc.preserved_paths) if isinstance(exc, CodexAgentNoClobberConflict) else []
@@ -2531,6 +2546,9 @@ def codex_agent_move_target_to_backup(target: Path, destination: Path) -> Path:
 
 
 def codex_agent_restore_backup_no_clobber(backup: Path, target: Path) -> None:
+    backup_state = codex_agent_previous_state(backup)
+    if backup_state is None:
+        raise OSError(f"preserved backup disappeared before restore: {backup.name}")
     try:
         os.link(backup, target, follow_symlinks=False)
     except OSError:
@@ -2545,6 +2563,45 @@ def codex_agent_restore_backup_no_clobber(backup: Path, target: Path) -> None:
             f"restored target but could not remove preserved backup: {backup.name}",
             [backup.as_posix(), target.as_posix()],
         ) from None
+    if not codex_agent_state_matches(target, backup_state):
+        preserved = codex_agent_preserve_state_as_backup(backup_state, target)
+        raise CodexAgentNoClobberConflict(
+            f"restored target changed during backup cleanup: {backup.name}",
+            [preserved.as_posix(), target.as_posix()],
+        )
+
+
+def codex_agent_preserve_state_as_backup(state: CodexAgentFileState, target: Path) -> Path:
+    preserved_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="wb",
+            prefix=f".{target.name}.",
+            suffix=".bak",
+            dir=target.parent,
+            delete=False,
+        ) as handle:
+            preserved_path = Path(handle.name)
+            handle.write(state.content)
+            descriptor_chmod = getattr(os, "fchmod", None)
+            if not callable(descriptor_chmod):
+                raise OSError("safe descriptor-based mode preservation is unavailable")
+            descriptor_chmod(handle.fileno(), state.mode & 0o7777)
+            handle.flush()
+            os.fsync(handle.fileno())
+        preserved_state = codex_agent_previous_state(preserved_path)
+        if (
+            preserved_state is None
+            or preserved_state.content != state.content
+            or stat.S_IMODE(preserved_state.mode) != stat.S_IMODE(state.mode)
+        ):
+            raise OSError("preserved prior-state backup verification failed")
+        return preserved_path
+    except OSError as exc:
+        paths = [target.as_posix()]
+        if preserved_path is not None and os.path.lexists(preserved_path):
+            paths.insert(0, preserved_path.as_posix())
+        raise CodexAgentNoClobberConflict("could not preserve prior state after cleanup race", paths) from exc
 
 
 def codex_agent_target_is_safe(

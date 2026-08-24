@@ -2012,6 +2012,146 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(backups[0].read_bytes(), b"captured prior\n")
             self.assertEqual(raised.exception.preserved_paths, [backups[0].as_posix(), target.as_posix()])
 
+    def test_install_codex_agents_write_cleanup_race_recreates_prior_backup(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve() / "agents"
+            destination.mkdir()
+            target = destination / "analyze-executor.toml"
+            target.write_bytes(b"captured prior\n")
+            expected = install.codex_agent_previous_state(target)
+            identity = install.codex_agent_destination_identity(destination)
+            concurrent = destination / ".concurrent-write"
+            concurrent.write_bytes(b"concurrent cleanup-window edit\n")
+            real_unlink = Path.unlink
+            real_replace = os.replace
+            injected = False
+
+            def replace_during_backup_cleanup(path: Path, *args: object, **kwargs: object) -> None:
+                nonlocal injected
+                if (
+                    path.suffix == ".bak"
+                    and target.exists()
+                    and target.read_bytes() == b"installer bytes\n"
+                    and not injected
+                ):
+                    injected = True
+                    real_replace(concurrent, target)
+                real_unlink(path, *args, **kwargs)
+
+            with patch.object(Path, "unlink", autospec=True, side_effect=replace_during_backup_cleanup):
+                with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
+                    install.write_codex_agent_atomic(
+                        target,
+                        b"installer bytes\n",
+                        destination,
+                        identity,
+                        expected_state=expected,
+                    )
+
+            self.assertEqual(target.read_bytes(), b"concurrent cleanup-window edit\n")
+            backups = list(destination.glob(".*.bak"))
+            self.assertEqual(len(backups), 1)
+            self.assertEqual(backups[0].read_bytes(), b"captured prior\n")
+            self.assertEqual(raised.exception.preserved_paths, [backups[0].as_posix(), target.as_posix()])
+
+    def test_install_codex_agents_removal_cleanup_race_recreates_prior_backup(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve() / "agents"
+            destination.mkdir()
+            target = destination / "autopilot-fast-helper.toml"
+            target.write_bytes(b"captured helper\n")
+            expected = install.codex_agent_previous_state(target)
+            assert expected is not None
+            identity = install.codex_agent_destination_identity(destination)
+            real_unlink = Path.unlink
+            injected = False
+
+            def create_during_backup_cleanup(path: Path, *args: object, **kwargs: object) -> None:
+                nonlocal injected
+                if path.suffix == ".bak" and not target.exists() and not injected:
+                    injected = True
+                    target.write_bytes(b"concurrent removal-window edit\n")
+                real_unlink(path, *args, **kwargs)
+
+            with patch.object(Path, "unlink", autospec=True, side_effect=create_during_backup_cleanup):
+                with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
+                    install.remove_codex_agent_if_unchanged(target, expected, destination, identity)
+
+            self.assertEqual(target.read_bytes(), b"concurrent removal-window edit\n")
+            backups = list(destination.glob(".*.bak"))
+            self.assertEqual(len(backups), 1)
+            self.assertEqual(backups[0].read_bytes(), b"captured helper\n")
+            self.assertEqual(raised.exception.preserved_paths, [backups[0].as_posix(), target.as_posix()])
+
+    def test_install_codex_agents_restore_cleanup_race_recreates_prior_backup(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            backup = destination / ".agent.toml.initial.bak"
+            target = destination / "agent.toml"
+            backup.write_bytes(b"captured rollback state\n")
+            concurrent = destination / ".concurrent-restore"
+            concurrent.write_bytes(b"concurrent restore-window edit\n")
+            real_unlink = Path.unlink
+            real_replace = os.replace
+            injected = False
+
+            def replace_during_backup_cleanup(path: Path, *args: object, **kwargs: object) -> None:
+                nonlocal injected
+                if path == backup and not injected:
+                    injected = True
+                    real_replace(concurrent, target)
+                real_unlink(path, *args, **kwargs)
+
+            with patch.object(Path, "unlink", autospec=True, side_effect=replace_during_backup_cleanup):
+                with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
+                    install.codex_agent_restore_backup_no_clobber(backup, target)
+
+            self.assertEqual(target.read_bytes(), b"concurrent restore-window edit\n")
+            backups = list(destination.glob(".*.bak"))
+            self.assertEqual(len(backups), 1)
+            self.assertEqual(backups[0].read_bytes(), b"captured rollback state\n")
+            self.assertEqual(raised.exception.preserved_paths, [backups[0].as_posix(), target.as_posix()])
+
+    def test_install_codex_agents_transient_temp_cleanup_does_not_report_removed_path(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve() / "agents"
+            destination.mkdir()
+            target = destination / "analyze-executor.toml"
+            target.write_bytes(b"captured prior\n")
+            expected = install.codex_agent_previous_state(target)
+            identity = install.codex_agent_destination_identity(destination)
+            real_unlink = Path.unlink
+            rejected = False
+
+            def reject_first_temp_cleanup(path: Path, *args: object, **kwargs: object) -> None:
+                nonlocal rejected
+                if path.suffix == ".tmp" and not rejected:
+                    rejected = True
+                    raise OSError("transient temp cleanup failure")
+                real_unlink(path, *args, **kwargs)
+
+            with patch.object(Path, "unlink", autospec=True, side_effect=reject_first_temp_cleanup):
+                with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
+                    install.write_codex_agent_atomic(
+                        target,
+                        b"installer bytes\n",
+                        destination,
+                        identity,
+                        expected_state=expected,
+                    )
+
+            self.assertEqual(list(destination.glob(".*.tmp")), [])
+            self.assertTrue(all(Path(path).exists() for path in raised.exception.preserved_paths))
+            self.assertTrue(all(not path.endswith(".tmp") for path in raised.exception.preserved_paths))
+
     def test_install_codex_agents_cleanup_reports_directory_removal_errors(self) -> None:
         from speckit_pro_runner.helpers import install
 
