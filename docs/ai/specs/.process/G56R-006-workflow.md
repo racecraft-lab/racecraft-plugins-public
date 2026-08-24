@@ -33,8 +33,8 @@ Re-read it before every phase. Once autopilot begins, later clarifications use `
 | Specify | `/speckit-specify` | ✅ Complete | 4 stories, 29 FRs, 9 success criteria, 13 acceptance scenarios, and 0 clarification markers |
 | Clarify | `/speckit-clarify` | ✅ Complete | 15 questions resolved across roster, route, override, ownership, rollback, compatibility, and response boundaries; G2 passed with 0 markers |
 | Plan | `/speckit-plan` | ✅ Complete | Six planning artifacts, two closed contracts, exact 8-authored/41-generated implementation path accounting, and G3 with 0 unresolved markers |
-| Checklist | `/speckit-checklist` | 🔄 In Progress | Error handling, state management, data integrity, and reliability |
-| Tasks | `/speckit-tasks` | ⏳ Pending | Vertical, TDD-first ordering with explicit RED→GREEN pairs |
+| Checklist | `/speckit-checklist` | ✅ Complete | 123 checks across error handling, state management, data integrity, and reliability; zero gaps; G4 passed |
+| Tasks | `/speckit-tasks` | 🔄 In Progress | Vertical, TDD-first ordering with explicit RED→GREEN pairs |
 | Analyze | `/speckit-analyze` | ⏳ Pending | Cross-check spec, plan, tasks, and Design Concept |
 | Confidence Gate | G6.5 | ⏳ Pending | Advisory composite confidence before implementation |
 | Implement | `/speckit-implement` | ⏳ Pending | Execute tasks with targeted and repository-wide verification |
@@ -348,11 +348,11 @@ Focus on G56R-006 requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| error-handling | Pending | Pending | Pending |
-| state-management | Pending | Pending | Pending |
-| data-integrity | Pending | Pending | Pending |
-| reliability | Pending | Pending | Pending |
-| **Total** | Pending | Pending | Pending |
+| error-handling | 28 | 0 | Spec, plan, data model, contracts, quickstart, constitution, roadmap, and existing-test references all resolved; no remediation required |
+| state-management | 28 | 0 | Spec, plan, data model, contracts, quickstart, Design Concept, roadmap, constitution, and existing-test references all resolved; no remediation required |
+| data-integrity | 36 | 0 | Spec, plan, data model, contracts, quickstart, Design Concept, constitution, source, and test references all resolved; no remediation required |
+| reliability | 31 | 0 | Spec, plan, research, data model, contracts, quickstart, constitution, source, and test references all resolved; no remediation required |
+| **Total** | **123** | **0** | All four domains resolved with no remediation or routed consensus required; G4 passed |
 
 ---
 

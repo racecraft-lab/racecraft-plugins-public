@@ -36,6 +36,10 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [research.md](research.md)
 - [contracts/install-codex-agents-route-aware.md](contracts/install-codex-agents-route-aware.md)
 - [contracts/route-policy-manifest.schema.md](contracts/route-policy-manifest.schema.md)
+- [checklists/data-integrity.md](checklists/data-integrity.md)
+- [checklists/error-handling.md](checklists/error-handling.md)
+- [checklists/reliability.md](checklists/reliability.md)
 - [checklists/requirements.md](checklists/requirements.md)
+- [checklists/state-management.md](checklists/state-management.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->
