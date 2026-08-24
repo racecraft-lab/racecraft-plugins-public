@@ -1335,6 +1335,12 @@ requiring human review, one or more amendments requiring re-review, and one or
 more redaction events reported once every write landed. The last two are the
 only ones that are not failures.
 
+**The failed push in that list is the amendment push above.** The
+regeneration sequence's own artifacts push ends the run only on the leg that
+amended; on the leg that amended nothing it is reported and the run proceeds,
+so it is not among the conditions this list names. Which push the member
+means is all that is settled here; the members themselves stand as written.
+
 **One condition needs more than the shared shape.** The human-review stop's
 resume path names **both** operator actions, resolve the substance and re-run
 **or** resolve the thread, because it is the only stop whose resume path a
@@ -1846,6 +1852,13 @@ failed observation, an unreadable log row, a refused edit target, and a failed
 push. Never write a blanket rule that a stopping run first posts what it owes,
 which would contradict all six.
 
+**The failed push named among those six is the amendment push above.** The
+regeneration sequence's artifacts push is not one of them, because it happens
+after the reply point. Its own stop belongs on the after-reply-point side
+beside the three named there: a run that reaches it has already posted every
+reply it owes. Saying where that stop falls settles nothing about either
+list's membership, which stands as written.
+
 **The sweep never resolves a review thread.** Not on any class, not on any
 path, and not after a reply. Resolution is the reviewer's, and a swept thread
 stays open until they close it.
@@ -1921,6 +1934,27 @@ partially updated, and this slice introduces no second page-authoring path:
 the dispatch, its per-page `generated` and `gap` outcomes, and its on-disk
 verification are the ones the draft-PR emission sequence above already
 describes.
+
+#### Phase 7 Setup: Every Leg Evaluates Freshness
+
+**The verdict is evaluated on every sweep leg the run reaches**, including
+the leg that amends nothing and the leg that handles no comment at all. The
+recovery case, pages a previous run left stale, surfaces only on those legs,
+so an evaluation reached on the amended leg alone would never repair them.
+
+**The evaluation runs inside the sweep, so the entry gate scopes it.** It is
+reached only on corroboration status `match`. On `no_record` the sweep does
+not run and there is no pull request to refresh. On the four statuses that
+stop the sweep no evaluation occurs and stale pages stay stale.
+
+**That is a deferral, not a lost repair.** The join is durable and reads the
+same `amended` rows on the first `match` run after the operator resolves the
+gate, so the repair happens there.
+
+**On a `stale` verdict the leg that amended nothing regenerates, refreshes,
+and then proceeds without stopping.** Repairing stale pages never converts a
+proceed into a stop. Nothing new was amended, so there is nothing new to
+re-review.
 
 #### Phase 7 Setup: The Superseded File Behind a Per-Page Gap
 
@@ -2020,6 +2054,46 @@ every path.
 sha**, and is not a fourth page outcome: a restored page's own outcome is the
 `gap` explaining why it was not regenerated.
 
+#### Phase 7 Setup: A Whole-Set Gap Still Refreshes
+
+**A whole-set regeneration failure still runs the description refresh**,
+which carries the whole-set gap as a single row through the same three-sink
+contract every other outcome uses, and leaves the stop-or-proceed decision
+below unchanged.
+
+**It leaves the artifacts directory entirely unmoved.** No page is deleted:
+step 3b's per-page deletion is excluded, and step 3's deselection removal is
+withheld as well, even though the removal set is otherwise computable.
+
+**Withholding that removal is what keeps the commit from being taken**, and
+the untaken commit is the only thing keeping the join reading `stale` so the
+next leg retries. A removal landing alone here would move the directory, mark
+the whole set current, and strand every gapped page permanently stale for the
+sake of deleting one file.
+
+**Nothing is lost by waiting.** Re-selection reads the manifest again on the
+retry, so the same deselection is recomputed and the removal lands in the run
+that also regenerates.
+
+#### Phase 7 Setup: What the Join Repairs, and What It Does Not
+
+**The join repairs an interrupted run, never a gapped one.** Any commit
+touching the artifacts directory marks the set current on the next join,
+including a commit carrying only removals and a commit carrying only a subset
+of the selected pages. Per-page gaps inside a run that took that commit are
+the operator's to act on from the report, and no later run re-attempts them.
+
+**What decides whether a later leg retries is whether the artifacts commit
+was taken, never the shape of the shortfall.** A whole-set gap generated
+nothing, takes no commit, moves nothing, and is retried by the next sweep
+leg; a per-page gap beside at least one generated page rides a commit that
+marks the whole set current and is retried by nothing.
+
+**Recovery takes exactly one subsequent run, and the repair is never
+repeated.** After a `stale` run regenerates and commits, the directory's last
+commit is newer than every `amended` row that existed, so the next join reads
+the set as current.
+
 #### Phase 7 Setup: The Push Is Inside the Regeneration Step
 
 **The push at step 6 is part of that step, not a step after it.** The
@@ -2101,6 +2175,43 @@ already landed, and is never reported as a page failure. The terminal step
 sits at a stage boundary the run stops at regardless, while the sweep may
 proceed into task work.
 
+#### Phase 7 Setup: When the Redaction Stop Is Evaluated
+
+**On the leg that handled at least one comment and classified nothing
+`amended`, the regeneration sequence reaches its own terminal outcome before
+the redaction stop below evaluates whether to fire.** Terminal outcome
+carries the fail-open meaning used throughout this sequence rather than
+success: a per-page gap, a whole-set gap, or a failed artifacts push each end
+the sequence at their own reported outcome, and the stop's evaluation follows
+immediately once any of them is reached.
+
+**This adds no stop condition and changes no decision.** The stop still fires
+on the same ground, one or more redaction events on this leg, with the same
+report shape and the same resume path.
+
+**The reason is the trigger's own wording.** The stop fires once every write
+the run owes has landed, and this leg now owes the artifacts commit, its
+push, and the description refresh. Evaluating from the reply point alone,
+ahead of those writes, would falsify the sentence that this stop replaces the
+proceed at that same point, because the proceed already moved later and the
+stop has to move with it to stay at the same point. It would also turn a stop
+defined as notification after publication into a gate blocking writes this
+leg owes, on the strength of an unrelated redaction event.
+
+**Where the push failed and left the artifacts commit local**, the stop still
+fires on this leg's coincident redaction event, and its report carries the
+manual resume path above beside the redaction report.
+
+**The leg that amended needs no separate rule.** The sequence already runs
+before any stop that leg emits, so a coincident redaction event coalesces
+into that stop under the coalescing rule below. **The leg that handled no
+comment at all is vacuous here**: the redaction surface fires only on this
+run's amendment, log-row, and reply writes, and none of those exists when
+nothing was handled.
+
+**A run the redaction stop fires on is still a run the freshness evaluation
+is required on.** That stop is not a fourth sweep leg.
+
 #### Phase 7 Setup: Stop or Proceed
 
 **One or more `amended`: stop for re-review before any task work.** Its
@@ -2120,6 +2231,11 @@ comments.
 reply is posted.** The resume path is re-run. Where nothing was amended, this
 stop replaces the proceed at that same point. Where the re-review stop or the
 human-review stop also holds, it is the same stop and one report.
+
+**On the leg that handled a comment and amended nothing, the writes this run
+owes include the regeneration sequence's terminal outcome**, so that stop is
+evaluated once the sequence above has ended at its own reported outcome,
+rather than from the reply point alone.
 
 #### Phase 7 Setup: The Sweep's Byproduct Directory Ignores Itself
 

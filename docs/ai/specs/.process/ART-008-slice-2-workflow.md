@@ -929,6 +929,41 @@ complete. `LAYER1` **1511/1511**.
   `codex-skills/speckit-autopilot/SKILL.md` is **byte-unchanged**, so its two
   words of headroom under the 8000-word cap are intact.
 
+**Phase 4, User Story 2 — the clean sweep repairs stale pages (T050–T056)** —
+complete. `LAYER1` **1511/1511**. **116 insertions on the Claude surface, 93 on
+the Codex mirror, 0 deletions on either**, verified by `git diff --numstat`.
+
+- **T052 scopes rather than rewrites, which was the whole point.** Both shipped
+  enumerations survive verbatim — the reply-point dichotomy and the six
+  run-ending conditions — and each gained a sentence saying only *which* push
+  its "failed push" member means. Each closes by disclaiming any effect on
+  membership: "the members themselves stand as written." This is what resolves
+  the tension US1's T043 deliberately left standing.
+- **T050** pins that the verdict is evaluated on every leg the run reaches,
+  then scopes that claim honestly: the evaluation sits inside the sweep, so the
+  entry gate governs it. On the four statuses that stop the sweep, no
+  evaluation occurs and stale pages stay stale — recorded as a **deferral, not
+  a lost repair**, because the join is durable and reads the same `amended`
+  rows on the first `match` run after the operator clears the gate.
+- **T051** carries slice-1 Q8: on `stale`, the leg that amended nothing
+  regenerates, refreshes, and proceeds. Repairing stale pages never converts a
+  proceed into a stop.
+- **T054** records why a whole-set gap **withholds the deselection removal**
+  even though it is computable: withholding is what keeps the commit untaken,
+  and the untaken commit is the only thing keeping the join reading `stale` so
+  the next leg retries. A removal landing alone would mark the whole set
+  current and strand every gapped page permanently, to delete one file.
+- **T055** states the repairability line exactly: what decides whether a later
+  leg retries is **whether the artifacts commit was taken, never the shape of
+  the shortfall**. A whole-set gap takes no commit and is retried; a per-page
+  gap rides a commit that marks the set current and is retried by nothing, so
+  it is the operator's to act on from the report.
+- **T053** places the redaction stop after the sequence's terminal outcome on
+  the amended-nothing leg, and argues it from the shipped trigger's own
+  wording: the stop replaces the proceed *at the same point*, so when the
+  proceed moved later the stop moved with it. It adds no stop condition and
+  changes no decision.
+
 
 ### Implement Prompt
 
