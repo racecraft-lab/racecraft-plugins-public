@@ -192,7 +192,7 @@ The only notable execution deviation was orchestrator-directed implementation in
 | `tests/speckit-pro/suite-manifest.json` | Layer 4 registration for focused tests. |
 | `specs/g56r-005-model-availability-fallback-recovery/.process/pr-packets/g56r-005-draft/body.md` | PR packet summary, review order, verification, scope, UAT, and known gaps. |
 | `specs/g56r-005-model-availability-fallback-recovery/artifacts/*.html` | Generated HTML review artifacts for plan, explainer, approach, and module-map review. |
-| `specs/g56r-005-model-availability-fallback-recovery/.process/uat-runbook.md` | Manual browser and deterministic behavioral UAT evidence, finding, remediation, and retest result. |
+| `docs/ai/specs/.process/G56R-005-manual-uat.md` | Manual browser and deterministic behavioral UAT evidence, finding, remediation, and retest result. |
 
 ## Self-Assessment Checklist
 

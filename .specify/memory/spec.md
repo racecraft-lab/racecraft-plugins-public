@@ -3077,3 +3077,47 @@ tracked byte remains recoverable from the final cumulative merge commit
 `c133211f630c3c2214d05ed22f5185e0e3202424`. Canonical templates, manifest,
 tests, generated payloads/proofs, workflow and design concept remain outside
 `specs/**`.
+
+---
+
+## Revision 2026-08-24 - G56R-005 Model Availability, Fallback, and Recovery Simulation Archived
+
+[Source: specs/g56r-005-model-availability-fallback-recovery] — archived after
+PR #487 merged at `85762d5a7033981da1fdf6a18b5913c83fc6d9a5`.
+Revision reason: merged-spec archival into project memory.
+
+### User Outcomes
+
+- Repository-local simulation now proves preferred-model absence, unsupported
+  effort, probe failure, service reroute attribution, strict-override rejection,
+  optional-helper degradation, bounded execution, and required-agent recovery.
+- Route Resolution Reports and Recovery Records are deterministic and schema
+  validated; fake-home recovery never mutates a real user installation.
+- The simulation remains evidence-only: it does not claim live model
+  availability or change production routing, payloads, versions, or releases.
+
+### Shipped Behaviour
+
+G56R-005 added three closed schemas, a roster-bound fallback/recovery corpus, a
+Python 3.11+ standard-library resolver and recovery harness, one focused unit
+owner, and Layer 4 registration. The resolver evaluates ordered compatible
+routes, emits bounded reason chains, attributes service reroutes separately from
+policy fallback, rejects unavailable strict overrides, degrades cleanly when the
+optional helper has no qualified route, and restores required agents atomically
+inside a temporary fake home.
+
+All 25 tasks, 22 functional requirements, and 9 success criteria completed.
+The final focused suite passed 35/35 and the authoritative repository suite
+passed 7663/7663 before merge. Manual UAT found one unsafe dynamic-title path;
+the fix was retested and the result is preserved at
+`docs/ai/specs/.process/G56R-005-manual-uat.md`.
+
+### Cleanup Note
+
+The workflow, design concept, manual UAT runbook, and retrospective remain under
+`docs/ai/specs/.process/`. Planning documents, checklists, contracts, generated
+review pages, implementation notes, and PR-packet exhaust were removed with the
+active folder; every tracked byte remains recoverable from merge commit
+`85762d5a7033981da1fdf6a18b5913c83fc6d9a5`. Canonical schemas, corpus,
+harness, tests, docs reference, generated payload evidence, and process records
+remain outside `specs/**`.

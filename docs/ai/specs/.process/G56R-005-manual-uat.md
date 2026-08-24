@@ -4,7 +4,7 @@
 **Date:** 2026-08-22  
 **Baseline head:** `231270a16d02ff9cbeca350be27ede94b4f2970d`  
 **Remediation commit:** `3d16d4aeb`
-**Worktree:** `.worktrees/g56r-005-model-availability-fallback-recovery`
+**Archived from:** `specs/g56r-005-model-availability-fallback-recovery/.process/uat-runbook.md`
 
 ## Scope and setup
 
