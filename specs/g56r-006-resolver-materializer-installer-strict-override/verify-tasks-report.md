@@ -51,8 +51,8 @@ No flagged items.
 | T023 | ✅ VERIFIED | US2 safety-net validation passed 70/70. |
 | T024 | ✅ VERIFIED | RED helper-unavailable tests were added and failed as intended. |
 | T025 | ✅ VERIFIED | Helper omitted state and no-helper continuation implemented; installer tests passed 72/72. |
-| T026 | ✅ VERIFIED | RED managed-helper removal tests were added and failed as intended. |
-| T027 | ✅ VERIFIED | Managed-helper proof and exact rendered-byte removal implemented; installer tests passed 74/74. |
+| T026 | ✅ VERIFIED | RED managed-helper tests proving caller-asserted provenance rejection and exact rendered-byte authorization were added and failed as intended. |
+| T027 | ✅ VERIFIED | Exact rendered-byte helper ownership proof implemented while refusing caller-asserted provenance; installer tests passed 74/74. |
 | T028 | ✅ VERIFIED | RED helper-preservation tests were added and failed as intended. |
 | T029 | ✅ VERIFIED | Helper preservation and manual-remediation evidence implemented; installer tests passed 75/75. |
 | T030 | ✅ VERIFIED | US3 safety-net validation passed 75/75. |

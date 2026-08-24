@@ -4,9 +4,9 @@
   "status": "ready_for_post_implementation_review",
   "what_changed": [
     "Added explicit trusted route-policy manifest activation while preserving static no-manifest installation.",
-    "Added one-snapshot preferred/fallback resolution for the 12 required Codex agents and one optional helper decision.",
+    "Added one-snapshot preferred/fallback resolution for the 12 required Codex agents, canonical non-route contract validation, and one optional helper decision.",
     "Extended canonical materialization to render selected model and effort while binding original source bytes and unchanged non-route fields.",
-    "Added strict global override, exact-byte managed-helper removal, caller-provenance rejection, preservation, bounded probes, complete-plan-before-write apply, concurrent-edit refusal, and rollback recovery evidence.",
+    "Added strict global override, exact-byte managed-helper removal, caller-provenance rejection, preservation, bounded probes, complete-plan-before-write apply, exact installed-state binding, concurrent-edit refusal, and rollback recovery evidence.",
     "Added deterministic fake-home fixtures/tests, Codex install documentation, generated payload mirrors, installed-cache proofs, runner trust metadata, and docs references."
   ],
   "why": "Provide the reusable resolver/materializer/installer framework required before downstream G56R-007 through G56R-010 can qualify production route policies.",

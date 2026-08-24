@@ -5,7 +5,7 @@
   "branch": "g56r-006-resolver-materializer-installer-strict-override",
   "status": "in_progress",
   "stage": "implement",
-  "updated_at": "2026-08-24T21:39:00Z",
+  "updated_at": "2026-08-24T22:02:00Z",
   "active_step": "Post: Review Remediation",
   "stage_resolution": {
     "source": "argv",
@@ -493,6 +493,20 @@
         "installer duplicates and bypasses the canonical agent materializer"
       ],
       "remediation_required": true
+      ,
+      "re_review_1": {
+        "reviewed_head": "0c983fd67ba485a323047819d14cf27947a07b39",
+        "resolved": [
+          "caller-supplied helper provenance",
+          "canonical materializer bypass and duplication"
+        ],
+        "remaining_or_new": [
+          "rollback path recapture can absorb and overwrite a concurrent edit",
+          "required-policy non-route contract digest is not validated against canonical source"
+        ],
+        "important_findings": 2,
+        "nits": 0
+      }
     },
     "post_review_remediation": {
       "status": "implemented_pending_independent_reverification",
@@ -506,7 +520,20 @@
       "full_suite": "14041/14041 passed (L1 1511, L4 12311, L5 219)",
       "docs_reference": "current",
       "diff_check": "passed",
+      "remediation_commit": "0c983fd67ba485a323047819d14cf27947a07b39",
       "independent_reverification_required": true
+      ,
+      "second_round": {
+        "status": "implemented_pending_commit_and_reverification",
+        "remediations": [
+          "atomic write returns the exact installed state so caller recapture cannot absorb concurrent bytes",
+          "required-policy non-route contract digests are syntax-checked and matched to canonical source materialization"
+        ],
+        "focused_materializer": "11/11 passed",
+        "focused_installer": "82/82 passed",
+        "full_suite": "14041/14041 passed (L1 1511, L4 12311, L5 219)",
+        "docs_reference": "current"
+      }
     }
     ,
     "G7": {

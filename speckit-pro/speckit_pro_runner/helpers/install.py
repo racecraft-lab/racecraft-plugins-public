@@ -391,7 +391,7 @@ def run_codex_agent_install(entry: Any, request: Any) -> dict[str, Any]:
                     )
                 operation = {"operation_id": f"remove-codex-agent:{name}", "kind": "remove_file", "target": target.as_posix()}
             else:
-                write_codex_agent_atomic(
+                applied_state = write_codex_agent_atomic(
                     target,
                     content,
                     destination,
@@ -400,7 +400,7 @@ def run_codex_agent_install(entry: Any, request: Any) -> dict[str, Any]:
                 )
                 operation = {"operation_id": f"install-codex-agent:{name}", "kind": "write_file", "target": target.as_posix()}
             applied_previous[name] = previous[name]
-            applied_states[name] = codex_agent_previous_state(target)
+            applied_states[name] = None if content is None else applied_state
             mutation["applied_operations"].append(dict(operation) if operation["kind"] == "remove_file" else operation_record(operation))
             mutation["touched_paths"].append(target.as_posix())
 
@@ -1709,7 +1709,10 @@ def validate_codex_route_policy_manifest(manifest: dict[str, Any], source_dir: P
     source_result = validate_route_policy_source_roster(manifest.get("source_roster"), source_dir)
     if is_diagnostic(source_result):
         return source_result
-    policies_result = validate_route_policy_required_policies(manifest.get("required_agent_policies"))
+    policies_result = validate_route_policy_required_policies(
+        manifest.get("required_agent_policies"),
+        source_dir,
+    )
     if is_diagnostic(policies_result):
         return policies_result
     helper_result = validate_route_policy_optional_helper(manifest.get("optional_helper"))
@@ -1784,7 +1787,7 @@ def validate_route_policy_source_roster(raw: Any, source_dir: Path) -> dict[str,
     return {}
 
 
-def validate_route_policy_required_policies(raw: Any) -> dict[str, Any]:
+def validate_route_policy_required_policies(raw: Any, source_dir: Path) -> dict[str, Any]:
     if not isinstance(raw, dict):
         return invalid_route_policy_manifest("required_agent_policies_not_object")
     keys = set(raw)
@@ -1808,6 +1811,34 @@ def validate_route_policy_required_policies(raw: Any) -> dict[str, Any]:
             return invalid_route_policy_manifest(
                 "required_agent_policy_name_mismatch",
                 details={"agent_name": agent_name, "policy_agent_name": policy.get("agent_name")},
+            )
+        declared_non_route_digest = policy.get("non_route_contract_digest")
+        if (
+            not isinstance(declared_non_route_digest, str)
+            or ROUTE_POLICY_SHA256_IDENTITY.fullmatch(declared_non_route_digest) is None
+        ):
+            return invalid_route_policy_manifest(
+                "required_agent_non_route_contract_digest_invalid",
+                details={"agent_name": agent_name},
+            )
+        try:
+            canonical_non_route_digest = materialize_agent_policy(
+                source_relative_path=f"speckit-pro/codex-agents/{agent_name}.toml",
+                source_bytes=(source_dir / f"{agent_name}.toml").read_bytes(),
+            ).non_route_fields_digest
+        except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError, ValueError) as exc:
+            return invalid_route_policy_manifest(
+                "required_agent_non_route_contract_unavailable",
+                details={"agent_name": agent_name, "error": type(exc).__name__},
+            )
+        if declared_non_route_digest != canonical_non_route_digest:
+            return invalid_route_policy_manifest(
+                "required_agent_non_route_contract_digest_mismatch",
+                details={
+                    "agent_name": agent_name,
+                    "expected_digest": canonical_non_route_digest,
+                    "actual_digest": declared_non_route_digest,
+                },
             )
         route_result = validate_route_policy_route(policy.get("preferred_route"), context=f"{agent_name}.preferred_route")
         if is_diagnostic(route_result):
@@ -2080,7 +2111,7 @@ def write_codex_agent_atomic(
     *,
     mode: int | None = None,
     expected_state: CodexAgentFileState | None | object = CODEX_AGENT_STATE_UNSET,
-) -> None:
+) -> CodexAgentFileState:
     if not codex_agent_target_is_safe(target, destination, destination_identity):
         raise OSError("unsafe target path")
     tmp_path: Path | None = None
@@ -2116,6 +2147,7 @@ def write_codex_agent_atomic(
             raise OSError("target changed after replace")
         if mode is not None and (installed_state.mode & 0o7777) != (mode & 0o7777):
             raise OSError("target mode changed after replace")
+        return installed_state
     finally:
         if tmp_path is not None:
             try:

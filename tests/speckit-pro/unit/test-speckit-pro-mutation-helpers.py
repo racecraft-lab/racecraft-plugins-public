@@ -31,6 +31,7 @@ if str(PLUGIN_ROOT) not in sys.path:
 
 
 from speckit_pro_runner.envelope import RunnerRequest
+from speckit_pro_runner.agent_materialization import materialize_agent_policy
 from speckit_pro_runner.helpers import mutation, registry
 
 
@@ -164,6 +165,14 @@ def codex_agent_source_digests() -> dict[str, str]:
     }
 
 
+def codex_agent_non_route_contract_digest(agent_name: str) -> str:
+    source = PLUGIN_ROOT / "codex-agents" / f"{agent_name}.toml"
+    return materialize_agent_policy(
+        source_relative_path=f"speckit-pro/codex-agents/{agent_name}.toml",
+        source_bytes=source.read_bytes(),
+    ).non_route_fields_digest
+
+
 def route_policy_route(raw: dict[str, object]) -> dict[str, object]:
     return {
         "route_id": raw["route_id"],
@@ -198,7 +207,7 @@ def valid_route_policy_manifest() -> dict[str, object]:
             "preferred_route": dict(required_route),
             "fallback_routes": [dict(required_fallback)],
             "required_capabilities": list(required_route["capabilities"]),
-            "non_route_contract_digest": f"sha256:{'1' * 64}",
+            "non_route_contract_digest": codex_agent_non_route_contract_digest(agent),
         }
     manifest = {
         "schema_version": base_manifest["schema_version"],
@@ -280,10 +289,10 @@ class MutationHelperTests(unittest.TestCase):
             *,
             mode: int | None = None,
             expected_state: object = None,
-        ) -> None:
+        ) -> object:
             if target.name == "autopilot-fast-helper.toml":
                 raise OSError("injected test failure")
-            real_write(target, content, target_dir, identity, mode=mode, expected_state=expected_state)
+            return real_write(target, content, target_dir, identity, mode=mode, expected_state=expected_state)
 
         return fail_write
 
@@ -1003,6 +1012,22 @@ class MutationHelperTests(unittest.TestCase):
                 "required_agent_policy_roster_mismatch",
             ),
             (
+                "invalid-non-route-contract-digest",
+                lambda manifest: manifest["required_agent_policies"]["analyze-executor"].__setitem__(
+                    "non_route_contract_digest",
+                    "not-a-digest",
+                ),
+                "required_agent_non_route_contract_digest_invalid",
+            ),
+            (
+                "mismatched-non-route-contract-digest",
+                lambda manifest: manifest["required_agent_policies"]["analyze-executor"].__setitem__(
+                    "non_route_contract_digest",
+                    f"sha256:{'1' * 64}",
+                ),
+                "required_agent_non_route_contract_digest_mismatch",
+            ),
+            (
                 "wrong-optional-helper",
                 lambda manifest: manifest["optional_helper"].__setitem__("helper_name", "not-the-helper"),
                 "optional_helper_mismatch",
@@ -1440,12 +1465,12 @@ class MutationHelperTests(unittest.TestCase):
                 *,
                 mode: int | None = None,
                 expected_state: object = None,
-            ) -> None:
+            ) -> object:
                 nonlocal failed_once
                 if target.name == f"{failed_agent_name}.toml" and not failed_once:
                     failed_once = True
                     raise OSError("injected route-aware write failure")
-                real_write(target, content, target_dir, identity, mode=mode, expected_state=expected_state)
+                return real_write(target, content, target_dir, identity, mode=mode, expected_state=expected_state)
 
             request = SimpleNamespace(
                 request_id="test-route-aware-rollback-success",
@@ -1517,14 +1542,14 @@ class MutationHelperTests(unittest.TestCase):
                 *,
                 mode: int | None = None,
                 expected_state: object = None,
-            ) -> None:
+            ) -> object:
                 nonlocal failed_once
                 if target.name == f"{failed_agent_name}.toml" and not failed_once:
                     failed_once = True
                     raise OSError("injected route-aware write failure")
                 if target.name == f"{unrestored_agent_name}.toml" and failed_once and mode is not None:
                     raise OSError("injected route-aware rollback failure")
-                real_write(target, content, target_dir, identity, mode=mode, expected_state=expected_state)
+                return real_write(target, content, target_dir, identity, mode=mode, expected_state=expected_state)
 
             request = SimpleNamespace(
                 request_id="test-route-aware-rollback-failure",
@@ -1645,6 +1670,7 @@ class MutationHelperTests(unittest.TestCase):
             concurrent_bytes = b"concurrent user edit after installer write\n"
             real_write = install.write_codex_agent_atomic
             failed_once = False
+            changed_once = False
 
             def fail_after_concurrent_edit(
                 target: Path,
@@ -1654,13 +1680,23 @@ class MutationHelperTests(unittest.TestCase):
                 *,
                 mode: int | None = None,
                 expected_state: object = None,
-            ) -> None:
-                nonlocal failed_once
+            ) -> object:
+                nonlocal failed_once, changed_once
                 if target.name == f"{failed_name}.toml" and not failed_once:
                     failed_once = True
-                    changed_target.write_bytes(concurrent_bytes)
                     raise OSError("injected failure after concurrent edit")
-                real_write(target, content, target_dir, identity, mode=mode, expected_state=expected_state)
+                installed_state = real_write(
+                    target,
+                    content,
+                    target_dir,
+                    identity,
+                    mode=mode,
+                    expected_state=expected_state,
+                )
+                if target == changed_target and not changed_once:
+                    changed_once = True
+                    changed_target.write_bytes(concurrent_bytes)
+                return installed_state
 
             request = SimpleNamespace(
                 request_id="test-route-aware-concurrent-rollback",

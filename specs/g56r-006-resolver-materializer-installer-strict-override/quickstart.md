@@ -77,6 +77,7 @@ Before marking implementation complete, verify:
 - Requests with no `route_policy_manifest` omit `data.routing`.
 - Requests with an invalid supplied manifest fail route-aware activation rather than silently falling back to static mode.
 - Manifest paths outside the repository trusted-file boundary, symlinked manifests, unsupported versions, and manifest or source-roster identity mismatches fail before discovery or mutation.
+- Every required policy's non-route contract digest matches canonical materialization of its trusted source TOML.
 - Every route-aware response has exactly one snapshot ID and all 12 required-agent records cite it.
 - Strict override required misses report complete diagnostics and zero writes.
 - Optional helper removal has exact known rendered-byte digest proof; caller-asserted provenance is rejected as untrusted.

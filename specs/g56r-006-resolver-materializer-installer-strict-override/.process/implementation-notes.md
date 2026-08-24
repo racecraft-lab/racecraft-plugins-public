@@ -223,3 +223,5 @@
 - Captured file device/inode identity in addition to bytes and mode. Apply revalidates each target before mutation and immediately before replacement/removal; rollback revalidates the installer-written state and refuses to overwrite subsequent external edits.
 - Added regression coverage for forged provenance, canonical optional-field insertion, concurrent edits before writes, and concurrent edits before rollback. Post-refresh focused validation passed materializer 11/11 and installer 82/82.
 - The post-remediation repository suite passed 14041/14041: L1 1511, L4 12311, and L5 219.
+- First independent re-review cleared forged provenance and canonical materializer duplication, then reproduced a return-to-recapture rollback race and found unchecked required-policy non-route contract digests.
+- Second remediation makes atomic writes return their captured installed state directly, so rollback never trusts a later path recapture. It also rejects invalid or mismatched non-route contract digests against canonical source materialization. Focused validation remained 11/11 and 82/82; the full suite again passed 14041/14041.

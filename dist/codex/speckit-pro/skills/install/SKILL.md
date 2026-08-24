@@ -112,7 +112,9 @@ or a vague "use routing" request must not activate route-aware mode. The
 manifest must be a supported, closed, repository-local document that binds the
 current 13-TOML source roster, declares exactly 12 required policies, declares
 the `autopilot-fast-helper` policy/no-helper state, and admits every route
-candidate and bounded probe used by the run.
+candidate and bounded probe used by the run. Every required policy's declared
+non-route contract digest must exactly match canonical materialization of its
+trusted current source TOML.
 
 Route-aware mode returns `data.routing` with:
 
