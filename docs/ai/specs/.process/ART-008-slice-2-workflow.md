@@ -1003,6 +1003,27 @@ it. The orchestrator read all four rather than accepting the claim.
   Step 0.6c's own step rather than read as a cap on every corroboration read a
   run may take.
 
+**Phase 5, User Story 3 — the Codex mirror (T070–T071)** — complete.
+**107 insertions, 0 deletions.** `LAYER1` **1511/1511**, with
+`validate-codex-skills` 163/163 and `validate-codex-parity` 87/87. The Codex
+`SKILL.md` is byte-unchanged: T069 has no Codex counterpart, because that file
+already carries the scoping FR-033b asks for inside its own Step 0.6c bullet,
+and its body has two words of headroom.
+
+All three shipped sentences the scoping edits sit beside still match exactly
+once on this surface too.
+
+#### T071 semantic parity, checked by the orchestrator
+
+The structural validators confirm file-level parity only, so SC-008's claim
+needed a separate check. Every load-bearing concept in this slice was counted
+on both surfaces and the occurrence counts agree: the three helper surface
+names, all four verdict tokens, the snapshot and replay mechanism, the removal
+outcome, the repairability rule, the whole-set gap, the record commit, the
+pinned `--state all` query, and the `artifact-author` dispatch. One phrasing
+difference is benign — "three sinks" reads 7 times on Claude and 6 on Codex,
+which is wording density rather than a missing behavior.
+
 
 ### Implement Prompt
 
