@@ -230,5 +230,13 @@
       "docs/ai/specs/html-artifacts-technical-roadmap.md"
     ],
     "regenerated": "already consistent"
+  },
+  "test_baseline_drift": {
+    "observed_total": 14025,
+    "recorded_baseline": 14012,
+    "delta": 13,
+    "cause": "origin/main merge brought #501's new Layer 4 cases",
+    "blocking": false,
+    "note": "diagnostic only; the recorded G0 baseline is preserved per Step 0.6e"
   }
 }

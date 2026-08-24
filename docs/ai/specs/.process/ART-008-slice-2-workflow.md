@@ -178,6 +178,13 @@ Each phase requires **human review and approval** before proceeding:
   advancing the Next cell to the implement stage. `refresh-release-artifacts.py`
   reported the generated tree already consistent after the merge.
 - State slot: already this workflow; no reclaim.
+- **T001 baseline (post-merge): 14025/14025, exit 0** (L1 1511, L4 12295,
+  L5 219). Non-blocking **drift diagnostic**: +13 against the recorded G0
+  baseline of 14012, all in Layer 4, from the cases PR #501 brought in on the
+  `origin/main` merge. The recorded baseline is **preserved**, not replaced —
+  G7 verifies the count increased against 14012.
+- T002 `pnpm --dir docs-site install --frozen-lockfile`: exit 0.
+- T003 generated-artifact merge driver configured for this clone.
 
 ---
 
@@ -727,6 +734,44 @@ split lever, if the realized diff approaches the 800 block, is named in
 and its US1/US2 trigger sites.
 
 Recorded 2026-08-24, before the first implementation task ran.
+
+### Implementation log
+
+**Phase 1, Setup (T001–T003)** — complete. Baseline 14025/14025 exit 0; the
+recorded G0 baseline of 14012 preserved with the +13 drift recorded above.
+
+**Phase 2, Foundational (T004–T013)** — complete. Registered
+`check-artifact-freshness` as one read-only, `python_authoritative`,
+`python_only` helper and stood up its Layer 4 harness.
+
+- New: the request fixture, `test-artifact-freshness.py` (264 lines, harness
+  only), and the empty-but-valid `freshness-cases.json` /
+  `expected-envelopes.json` pair.
+- Modified: `EXPECTED_HELPERS` + `NO_BASH_ANCESTOR` + `HELPER_CASES`, the
+  fixture manifest at the **same index**, the suite manifest Layer 4 entry, the
+  registry entry beside `sweep-pr-feedback`, and `read_only.py`'s four touch
+  points with a surface-routing stub.
+- **T010 red, measured**: 82/84 — `test_registry_dispatch_lists_only_read_only_helpers`
+  (id absent from the dispatch listing) and
+  `test_helper_python_authoritative_records` (KeyError `shell`, no helper
+  record for an unregistered id).
+- **T013 green**: 84/84, `test_fixture_manifests_cover_registered_helpers`
+  included. **No expected remaining failure.** `tasks.md` predicted
+  `test_helper_python_authoritative_records` would stay red until T028; it
+  passes, because that test asserts response plumbing (`shell`, argv tail,
+  `python_operation`, capture limits, exit-code/status parity) and never
+  verdict content, all of which a well-formed exit-0 stub satisfies. Recorded
+  as measured rather than as predicted.
+- Surface routing verified against the **source tree**
+  (`PYTHONPATH=speckit-pro`): absent and explicit-null both reach `verdict`;
+  `removal_diff` and `corroborate_refresh` reach their own; `""` and a fourth
+  value are input errors at exit 2. The default is decided with `is None`, so
+  the empty string stays an error rather than a silent default.
+- One deliberate deviation: the T005 harness omits the parse test's
+  non-empty-corpus assertion, which would be red before T015 while saying
+  nothing about the helper. Both comparison paths (ok-envelope and exit-2
+  `error:` line) are already in place, since T015–T024 are fixture-only.
+- Privacy scan clean across every created and modified path.
 
 
 ### Implement Prompt

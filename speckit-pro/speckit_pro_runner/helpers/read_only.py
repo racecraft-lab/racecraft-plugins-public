@@ -272,6 +272,9 @@ def canonicalize_inputs(helper_id: str, inputs: dict[str, Any], repo_root: Path)
         # whose normalize_path_input rewrites each backslash, so a reviewer comment
         # body listed here would be corrupted before the deny-set ever runs.
         "sweep-pr-feedback": {"workflow_file", "feature_dir"},
+        # The freshness helper reads one path and only one: every git fact it
+        # needs arrives as request data (FR-004, FR-004a).
+        "check-artifact-freshness": {"workflow_file"},
         "confidence-gate": {"workflow_file"},
         "generate-spec-index-check": {"repo_root"},
         "o5-topology": {"target"},
@@ -375,6 +378,10 @@ def explicit_or_derived_args(helper_id: str, inputs: dict[str, Any], repo_root: 
     if helper_id == "sweep-pr-feedback":
         # The observation arrives as request data on stdin, so there are no
         # derived CLI args and no field is interpolated into a command (FR-004b).
+        return []
+    if helper_id == "check-artifact-freshness":
+        # Same reason: the whole request arrives on stdin and no field is
+        # interpolated into a command (FR-004).
         return []
     if helper_id == "confidence-gate":
         workflow_file = inputs.get("workflow_file")
@@ -2708,6 +2715,77 @@ def sweep_analyst_payload(inputs: dict[str, Any], comment_id: str) -> dict[str, 
         "comment_id": comment_id,
         "text": block,
         "report": report,
+    }))
+
+
+FRESHNESS_TOOL = "check-artifact-freshness"
+FRESHNESS_VERDICT_SURFACE = "verdict"
+# The closed three. A fourth value is a malformed request rather than a surface
+# to discover, so the set lives here and not in the caller.
+FRESHNESS_NAMED_SURFACES = (
+    FRESHNESS_VERDICT_SURFACE,
+    "removal_diff",
+    "corroborate_refresh",
+)
+
+
+def freshness_error(message: str) -> dict[str, Any]:
+    return make_result("", f"error: {message}\n", 2)
+
+
+def check_artifact_freshness(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+    """Route one request to the named surface it asks for.
+
+    Reports; never decides and never selects. Page selection stays with the
+    emission machinery and the stop-or-proceed decision stays with the
+    orchestrator, so this helper writes no file, runs no `git`, runs no `gh`, and
+    reaches no network: every git fact arrives as request data (FR-004,
+    FR-004a).
+
+    An explicit JSON null reads as absence and routes to the verdict surface,
+    because a caller assembling the object programmatically writes the key with a
+    null value where a caller writing it by hand omits the key. The empty string
+    is a value outside the three and is an input error, so the test is `is None`
+    rather than truthiness, following `sweep_pr_feedback`.
+    """
+    named_surface = inputs.get("named_surface")
+    if named_surface is None:
+        named_surface = FRESHNESS_VERDICT_SURFACE
+    if named_surface not in FRESHNESS_NAMED_SURFACES:
+        return freshness_error(f"unknown named_surface: {named_surface}")
+    if named_surface == "removal_diff":
+        return freshness_removal_diff(inputs)
+    if named_surface == "corroborate_refresh":
+        return freshness_corroborate_refresh(inputs, repo_root)
+    return freshness_verdict(inputs, repo_root)
+
+
+def freshness_verdict(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+    """Report the freshness verdict of one supplied artifacts observation."""
+    # Stub: the router and its closed surface set land first, so the registration
+    # is testable before any surface reads a table. The verdict logic lands with
+    # the fixture cases that prove it.
+    return make_result(json_text({
+        "tool": FRESHNESS_TOOL,
+        "named_surface": FRESHNESS_VERDICT_SURFACE,
+    }))
+
+
+def freshness_removal_diff(inputs: dict[str, Any]) -> dict[str, Any]:
+    """Report the observed pages the re-selection dropped. Deletes nothing."""
+    # Stub, as above.
+    return make_result(json_text({
+        "tool": FRESHNESS_TOOL,
+        "named_surface": "removal_diff",
+    }))
+
+
+def freshness_corroborate_refresh(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+    """Classify the recorded `Draft PR` row against a supplied observation."""
+    # Stub, as above.
+    return make_result(json_text({
+        "tool": FRESHNESS_TOOL,
+        "named_surface": "corroborate_refresh",
     }))
 
 
@@ -5676,6 +5754,7 @@ PY_HELPERS: dict[str, Callable[[dict[str, Any], Path], dict[str, Any]]] = {
     "resolve-confidence-mode": resolve_confidence_mode,
     "resolve-autopilot-stage": resolve_autopilot_stage,
     "sweep-pr-feedback": sweep_pr_feedback,
+    "check-artifact-freshness": check_artifact_freshness,
     "confidence-gate": confidence_gate,
     "generate-spec-index-check": generate_spec_index_check,
     "o5-topology": o5_topology,
