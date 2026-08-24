@@ -230,6 +230,7 @@ def valid_route_policy_manifest() -> dict[str, object]:
 def strict_override_required_miss_manifest(agent_name: str = "analyze-executor") -> dict[str, object]:
     manifest = valid_route_policy_manifest()
     policy = manifest["required_agent_policies"][agent_name]
+    policy["fallback_routes"][0]["route_id"] = f"required-fallback-miss:{agent_name}"
     policy["fallback_routes"][0]["model"] = "gpt-5.3-codex-spark"
     return finalize_route_policy_manifest(manifest)
 
@@ -257,6 +258,11 @@ def strict_override_helper_compatible_manifest() -> dict[str, object]:
 
 def bounded_probe_required_manifest() -> dict[str, object]:
     manifest = valid_route_policy_manifest()
+    bind_required_primary_probe(manifest)
+    return finalize_route_policy_manifest(manifest)
+
+
+def bind_required_primary_probe(manifest: dict[str, object]) -> None:
     for policy in manifest["required_agent_policies"].values():
         policy["preferred_route"]["probe_id"] = "probe-required-primary"
     manifest["bounded_probes"] = {
@@ -268,7 +274,6 @@ def bounded_probe_required_manifest() -> dict[str, object]:
             "expected_result_shape": {"available": "boolean"},
         }
     }
-    return finalize_route_policy_manifest(manifest)
 
 
 class MutationHelperTests(unittest.TestCase):
@@ -1057,10 +1062,7 @@ class MutationHelperTests(unittest.TestCase):
             (
                 "partial-bounded-probe",
                 lambda manifest: (
-                    manifest["required_agent_policies"]["analyze-executor"]["preferred_route"].__setitem__(
-                        "probe_id",
-                        "probe-required-primary",
-                    ),
+                    bind_required_primary_probe(manifest),
                     manifest["bounded_probes"].__setitem__(
                         "probe-required-primary",
                         {
@@ -1074,10 +1076,7 @@ class MutationHelperTests(unittest.TestCase):
             (
                 "bounded-probe-id-mismatch",
                 lambda manifest: (
-                    manifest["required_agent_policies"]["analyze-executor"]["preferred_route"].__setitem__(
-                        "probe_id",
-                        "probe-required-primary",
-                    ),
+                    bind_required_primary_probe(manifest),
                     manifest["bounded_probes"].__setitem__(
                         "probe-required-primary",
                         {
@@ -1094,10 +1093,7 @@ class MutationHelperTests(unittest.TestCase):
             (
                 "bounded-probe-route-binding-mismatch",
                 lambda manifest: (
-                    manifest["required_agent_policies"]["analyze-executor"]["preferred_route"].__setitem__(
-                        "probe_id",
-                        "probe-required-primary",
-                    ),
+                    bind_required_primary_probe(manifest),
                     manifest["bounded_probes"].__setitem__(
                         "probe-required-primary",
                         {
@@ -1110,6 +1106,14 @@ class MutationHelperTests(unittest.TestCase):
                     ),
                 ),
                 "bounded_probe_route_binding_mismatch",
+            ),
+            (
+                "reused-route-id-definition-mismatch",
+                lambda manifest: manifest["required_agent_policies"]["analyze-executor"]["preferred_route"].__setitem__(
+                    "model",
+                    "model-not-observed-by-route-id",
+                ),
+                "route_id_definition_mismatch",
             ),
             (
                 "source-roster-missing-optional-helper",
@@ -1796,6 +1800,178 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(failed[0]["name"], helper_name)
             self.assertTrue(helper_path.exists())
 
+    def test_install_codex_agents_route_aware_reports_post_copy_verification_failure_action(self) -> None:
+        from speckit_pro_runner.helpers import install
+        from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp, tempfile.TemporaryDirectory() as home_tmp:
+            fake_home = Path(home_tmp).resolve()
+            manifest_path = self.write_valid_route_policy_manifest(git_root)
+            expected_snapshot = routing_capability_snapshot()
+            expected_snapshot["available_routes"] = ["required-primary", "required-fallback"]
+            request = SimpleNamespace(
+                request_id="test-route-aware-post-copy-verification-failure",
+                helper_id="install-codex-agents",
+                operation="install-codex-agents",
+                mode="apply",
+                inputs=self.route_aware_inputs(manifest_path, git_root, destination=None),
+            )
+            request.inputs["test_overrides"] = {"codex_capability_snapshot": expected_snapshot}
+            mismatch = "analyze-executor.toml"
+            old_cwd = Path.cwd()
+            os.chdir(git_root)
+            try:
+                with (
+                    patch.dict(os.environ, {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}),
+                    patch.object(install, "verify_codex_agent_install", return_value=[mismatch]),
+                ):
+                    response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
+            finally:
+                os.chdir(old_cwd)
+
+            mutation = response["data"]["mutation"]
+            record = response["data"]["routing"]["recovery_or_mutation"]["recovery_record"]
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual(mutation["failure_operation"]["kind"], "verify_files")
+            self.assertEqual(mutation["failure_operation"]["operation_id"], "verify-codex-agent-install")
+            self.assertEqual(
+                record["failed_actions"],
+                [{
+                    "operation_id": "verify-codex-agent-install",
+                    "kind": "verify_files",
+                    "targets": [(fake_home / ".codex" / "agents" / mismatch).as_posix()],
+                }],
+            )
+            self.assertEqual(len(record["applied_actions"]), 12)
+            self.assertEqual(len(record["rolled_back_actions"]), 12)
+            self.assertFalse(response["data"]["writes_state"])
+
+    def test_install_codex_agents_no_clobber_write_preserves_final_window_edit(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve() / "agents"
+            destination.mkdir()
+            target = destination / "analyze-executor.toml"
+            target.write_bytes(b"captured\n")
+            expected = install.codex_agent_previous_state(target)
+            identity = install.codex_agent_destination_identity(destination)
+            concurrent = b"concurrent final-window edit\n"
+            real_replace = install.os.replace
+            injected = False
+
+            def edit_before_move(source: object, backup: object) -> None:
+                nonlocal injected
+                if Path(source) == target and not injected:
+                    injected = True
+                    target.write_bytes(concurrent)
+                real_replace(source, backup)
+
+            with patch.object(install.os, "replace", side_effect=edit_before_move):
+                with self.assertRaisesRegex(OSError, "target changed before no-clobber install"):
+                    install.write_codex_agent_atomic(
+                        target,
+                        b"installer bytes\n",
+                        destination,
+                        identity,
+                        expected_state=expected,
+                    )
+
+            self.assertEqual(target.read_bytes(), concurrent)
+            self.assertEqual(list(destination.glob(".*.bak")), [])
+
+    def test_install_codex_agents_no_clobber_removal_preserves_final_window_edit(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve() / "agents"
+            destination.mkdir()
+            target = destination / "autopilot-fast-helper.toml"
+            target.write_bytes(b"captured helper\n")
+            expected = install.codex_agent_previous_state(target)
+            assert expected is not None
+            identity = install.codex_agent_destination_identity(destination)
+            concurrent = b"concurrent helper edit\n"
+            real_replace = install.os.replace
+            injected = False
+
+            def edit_before_move(source: object, backup: object) -> None:
+                nonlocal injected
+                if Path(source) == target and not injected:
+                    injected = True
+                    target.write_bytes(concurrent)
+                real_replace(source, backup)
+
+            with patch.object(install.os, "replace", side_effect=edit_before_move):
+                with self.assertRaisesRegex(OSError, "removal target changed before no-clobber removal"):
+                    install.remove_codex_agent_if_unchanged(target, expected, destination, identity)
+
+            self.assertEqual(target.read_bytes(), concurrent)
+            self.assertEqual(list(destination.glob(".*.bak")), [])
+
+    def test_install_codex_agents_no_clobber_write_preserves_entry_created_after_move(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve() / "agents"
+            destination.mkdir()
+            target = destination / "analyze-executor.toml"
+            target.write_bytes(b"captured\n")
+            expected = install.codex_agent_previous_state(target)
+            identity = install.codex_agent_destination_identity(destination)
+            concurrent = b"concurrent entry after move\n"
+            real_link = install.os.link
+            injected = False
+
+            def create_before_link(source: object, link_target: object, **kwargs: object) -> None:
+                nonlocal injected
+                if Path(link_target) == target and str(source).endswith(".tmp") and not injected:
+                    injected = True
+                    target.write_bytes(concurrent)
+                real_link(source, link_target, **kwargs)
+
+            with patch.object(install.os, "link", side_effect=create_before_link):
+                with self.assertRaisesRegex(OSError, "target changed during no-clobber install"):
+                    install.write_codex_agent_atomic(
+                        target,
+                        b"installer bytes\n",
+                        destination,
+                        identity,
+                        expected_state=expected,
+                    )
+
+            self.assertEqual(target.read_bytes(), concurrent)
+            self.assertEqual(list(destination.glob(".*.bak")), [])
+
+    def test_install_codex_agents_no_clobber_removal_preserves_entry_created_after_move(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve() / "agents"
+            destination.mkdir()
+            target = destination / "autopilot-fast-helper.toml"
+            target.write_bytes(b"captured helper\n")
+            expected = install.codex_agent_previous_state(target)
+            assert expected is not None
+            identity = install.codex_agent_destination_identity(destination)
+            concurrent = b"concurrent helper after move\n"
+            real_replace = install.os.replace
+            injected = False
+
+            def create_after_move(source: object, backup: object) -> None:
+                nonlocal injected
+                real_replace(source, backup)
+                if Path(source) == target and not injected:
+                    injected = True
+                    target.write_bytes(concurrent)
+
+            with patch.object(install.os, "replace", side_effect=create_after_move):
+                install.remove_codex_agent_if_unchanged(target, expected, destination, identity)
+
+            self.assertEqual(target.read_bytes(), concurrent)
+            self.assertEqual(list(destination.glob(".*.bak")), [])
+
     def test_install_codex_agents_cleanup_reports_directory_removal_errors(self) -> None:
         from speckit_pro_runner.helpers import install
 
@@ -1819,6 +1995,31 @@ class MutationHelperTests(unittest.TestCase):
                 install.codex_route_aware_cleanup_manual_remediation(errors)[0]["paths"],
                 [destination.as_posix(), destination.parent.as_posix()],
             )
+
+    def test_install_codex_agents_no_clobber_restore_reports_both_preserved_entries(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            backup = root / ".agent.toml.conflict.bak"
+            target = root / "agent.toml"
+            backup.write_bytes(b"first concurrent version\n")
+            target.write_bytes(b"second concurrent version\n")
+
+            with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
+                install.codex_agent_restore_backup_no_clobber(backup, target)
+
+            self.assertEqual(raised.exception.preserved_paths, [backup.as_posix(), target.as_posix()])
+            self.assertEqual(backup.read_bytes(), b"first concurrent version\n")
+            self.assertEqual(target.read_bytes(), b"second concurrent version\n")
+            actions = install.codex_route_aware_cleanup_manual_remediation(
+                [
+                    {"kind": "preserved_concurrent_file", "target": path, "error": "no_clobber_conflict"}
+                    for path in raised.exception.preserved_paths
+                ]
+            )
+            self.assertEqual(actions[0]["reason"], "concurrent_file_preserved")
+            self.assertEqual(actions[0]["paths"], [backup.as_posix(), target.as_posix()])
 
     def test_install_codex_agents_route_aware_refuses_concurrent_edit_before_write(self) -> None:
         from speckit_pro_runner.helpers import install

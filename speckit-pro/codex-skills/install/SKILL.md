@@ -176,7 +176,10 @@ Route-aware apply plans all required writes and managed-helper removals as one
 rollback-backed batch. Before mutation, it captures prior bytes and file modes
 for each planned destination action. It rechecks bytes, mode, and file identity
 immediately before each mutation and before rollback, preserving concurrent
-external edits and reporting uncertain state instead of overwriting them. On
+external edits and reporting uncertain state instead of overwriting them.
+Existing targets are moved aside and validated before installation or removal;
+replacement and restoration use exclusive no-clobber links so an entry created
+in the final mutation window is preserved. On
 failure:
 
 - recovery distinguishes staged actions from actions actually applied and
@@ -194,7 +197,8 @@ Bounded probe declarations use the closed manifest schema `probe_id`,
 `candidate_route_id`, `purpose`, `bounds`, and `expected_result_shape`. Each
 declaration must be keyed by its exact probe ID and bind to an admitted route
 that declares the same probe; aliases and partial records are rejected before
-capability discovery.
+capability discovery. A route ID may be reused only for the same normalized
+model, effort, capabilities, and probe binding.
 
 ## Hard Constraints
 

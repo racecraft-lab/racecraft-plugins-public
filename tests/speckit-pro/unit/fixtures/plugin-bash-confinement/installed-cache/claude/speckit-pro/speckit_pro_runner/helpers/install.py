@@ -96,6 +96,12 @@ class CodexAgentFileState:
     inode: int
 
 
+class CodexAgentNoClobberConflict(OSError):
+    def __init__(self, message: str, preserved_paths: list[str]) -> None:
+        super().__init__(message)
+        self.preserved_paths = preserved_paths
+
+
 def run_runner_invocation_gate(entry: Any, request: Any) -> dict[str, Any]:
     repo_root = find_repo_root(Path.cwd())
     if repo_root is None:
@@ -433,6 +439,11 @@ def run_codex_agent_install(entry: Any, request: Any) -> dict[str, Any]:
         failed_operation = None
         mismatches = verify_codex_agent_install(destination, install_rendered)
         if mismatches:
+            failed_operation = {
+                "operation_id": "verify-codex-agent-install",
+                "kind": "verify_files",
+                "targets": [(destination / name).as_posix() for name in mismatches],
+            }
             raise OSError(f"post-copy verification failed: {', '.join(mismatches)}")
     except OSError as exc:
         rollback_failures = rollback_codex_agent_install(
@@ -450,6 +461,15 @@ def run_codex_agent_install(entry: Any, request: Any) -> dict[str, Any]:
             destination_existed=destination_existed,
             destination_parent_existed=destination_parent_existed,
         )
+        if isinstance(exc, CodexAgentNoClobberConflict):
+            cleanup_errors.extend(
+                {
+                    "kind": "preserved_concurrent_file",
+                    "target": path,
+                    "error": "no_clobber_conflict",
+                }
+                for path in exc.preserved_paths
+            )
         recovery_failed = bool(rollback_failures or cleanup_errors)
         mutation["mutation_status"] = "partial_failure" if recovery_failed else "blocked"
         mutation["failure_operation"] = failed_operation
@@ -1715,22 +1735,42 @@ def codex_route_aware_rollback_manual_remediation(
 def codex_route_aware_cleanup_manual_remediation(
     cleanup_errors: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    paths = [error["target"] for error in cleanup_errors if isinstance(error.get("target"), str)]
-    if not paths:
-        return []
-    return [
-        {
+    directory_paths = [
+        error["target"]
+        for error in cleanup_errors
+        if error.get("kind") == "remove_directory" and isinstance(error.get("target"), str)
+    ]
+    preserved_paths = [
+        error["target"]
+        for error in cleanup_errors
+        if error.get("kind") == "preserved_concurrent_file" and isinstance(error.get("target"), str)
+    ]
+    actions: list[dict[str, Any]] = []
+    if directory_paths:
+        actions.append({
             "action_type": "manual_remediation",
             "reason": "cleanup_incomplete",
-            "paths": paths,
+            "paths": directory_paths,
             "summary": "Inspect and remove installer-created destination directories when they are empty and safe to remove.",
             "recommended_actions": [
                 "Inspect each reported directory without following symlinks.",
                 "Remove only empty directories created by this install attempt.",
                 "Retry the install after the destination state is understood.",
             ],
-        }
-    ]
+        })
+    if preserved_paths:
+        actions.append({
+            "action_type": "manual_remediation",
+            "reason": "concurrent_file_preserved",
+            "paths": preserved_paths,
+            "summary": "Inspect both preserved files and keep the intended concurrent version before retrying.",
+            "recommended_actions": [
+                "Compare the reported target and backup bytes without following symlinks.",
+                "Keep or restore the intended user-owned version before removing the other file.",
+                "Retry only after the destination has stopped changing.",
+            ],
+        })
+    return actions
 
 
 def codex_route_aware_remediation_action_summaries(raw_actions: Any) -> list[str]:
@@ -1805,6 +1845,7 @@ def validate_route_policy_bounded_probes(
 
     route_probe_pairs: set[tuple[str, str]] = set()
     admitted_route_ids: set[str] = set()
+    route_definitions: dict[str, tuple[str, str, tuple[str, ...], str | None]] = {}
     route_groups = [
         *required_policies.values(),
         optional_helper,
@@ -1817,6 +1858,19 @@ def validate_route_policy_bounded_probes(
             route_id = route.get("route_id")
             probe_id = route.get("probe_id")
             if isinstance(route_id, str):
+                definition = (
+                    route["model"],
+                    route["model_reasoning_effort"],
+                    tuple(sorted(route["capabilities"])),
+                    probe_id,
+                )
+                existing_definition = route_definitions.get(route_id)
+                if existing_definition is not None and existing_definition != definition:
+                    return invalid_route_policy_manifest(
+                        "route_id_definition_mismatch",
+                        details={"route_id": route_id},
+                    )
+                route_definitions[route_id] = definition
                 admitted_route_ids.add(route_id)
                 if isinstance(probe_id, str):
                     route_probe_pairs.add((probe_id, route_id))
@@ -2306,6 +2360,7 @@ def write_codex_agent_atomic(
     if not codex_agent_target_is_safe(target, destination, destination_identity):
         raise OSError("unsafe target path")
     tmp_path: Path | None = None
+    backup_path: Path | None = None
     try:
         with tempfile.NamedTemporaryFile(
             mode="wb",
@@ -2326,13 +2381,35 @@ def write_codex_agent_atomic(
         if codex_agent_destination_identity(destination) != destination_identity:
             raise OSError("destination changed after temporary file creation")
         if not codex_agent_target_is_safe(target, destination, destination_identity):
-            raise OSError("target path changed before replace")
-        if expected_state is not CODEX_AGENT_STATE_UNSET and not codex_agent_state_matches(target, expected_state):
-            raise OSError("target changed immediately before replace")
-        os.replace(tmp_path, target)
+            raise OSError("target path changed before no-clobber install")
+        if expected_state is CODEX_AGENT_STATE_UNSET:
+            expected_state = codex_agent_previous_state(target)
+        if expected_state is not None:
+            backup_path = codex_agent_move_target_to_backup(target, destination)
+            moved_state = codex_agent_previous_state(backup_path)
+            if moved_state != expected_state:
+                codex_agent_restore_backup_no_clobber(backup_path, target)
+                backup_path = None if not backup_path.exists() else backup_path
+                raise OSError("target changed before no-clobber install")
+        elif os.path.lexists(target):
+            raise OSError("target appeared before no-clobber install")
+        try:
+            os.link(tmp_path, target, follow_symlinks=False)
+        except OSError:
+            if backup_path is not None:
+                if os.path.lexists(target):
+                    backup_path.unlink()
+                else:
+                    codex_agent_restore_backup_no_clobber(backup_path, target)
+                backup_path = None if not backup_path.exists() else backup_path
+            raise OSError("target changed during no-clobber install") from None
+        tmp_path.unlink()
         tmp_path = None
+        if backup_path is not None:
+            backup_path.unlink()
+            backup_path = None
         if codex_agent_destination_identity(destination) != destination_identity:
-            raise OSError("destination changed during replace")
+            raise OSError("destination changed during no-clobber install")
         installed_state = codex_agent_previous_state(target)
         if installed_state is None or installed_state.content != content:
             raise OSError("target changed after replace")
@@ -2343,6 +2420,14 @@ def write_codex_agent_atomic(
         if tmp_path is not None:
             try:
                 tmp_path.unlink()
+            except OSError:
+                pass
+        if backup_path is not None:
+            try:
+                if not os.path.lexists(target):
+                    codex_agent_restore_backup_no_clobber(backup_path, target)
+                elif codex_agent_previous_state(backup_path) == expected_state:
+                    backup_path.unlink()
             except OSError:
                 pass
 
@@ -2357,12 +2442,51 @@ def remove_codex_agent_if_unchanged(
         raise OSError("removal requires a captured file state")
     if not codex_agent_target_is_safe(target, destination, destination_identity):
         raise OSError("unsafe removal target")
-    metadata = target.lstat()
-    if (metadata.st_dev, metadata.st_ino) != (expected_state.device, expected_state.inode):
-        raise OSError("removal target identity changed")
-    if not codex_agent_state_matches(target, expected_state):
-        raise OSError("removal target changed immediately before unlink")
-    target.unlink()
+    backup_path = codex_agent_move_target_to_backup(target, destination)
+    try:
+        moved_state = codex_agent_previous_state(backup_path)
+        if moved_state != expected_state:
+            codex_agent_restore_backup_no_clobber(backup_path, target)
+            backup_path = None if not backup_path.exists() else backup_path
+            raise OSError("removal target changed before no-clobber removal")
+        backup_path.unlink()
+        backup_path = None
+    finally:
+        if backup_path is not None:
+            try:
+                if not os.path.lexists(target):
+                    codex_agent_restore_backup_no_clobber(backup_path, target)
+                elif codex_agent_previous_state(backup_path) == expected_state:
+                    backup_path.unlink()
+            except OSError:
+                pass
+
+
+def codex_agent_move_target_to_backup(target: Path, destination: Path) -> Path:
+    descriptor, raw_backup = tempfile.mkstemp(prefix=f".{target.name}.", suffix=".bak", dir=destination)
+    os.close(descriptor)
+    backup = Path(raw_backup)
+    backup.unlink()
+    try:
+        os.replace(target, backup)
+    except OSError:
+        try:
+            backup.unlink()
+        except OSError:
+            pass
+        raise
+    return backup
+
+
+def codex_agent_restore_backup_no_clobber(backup: Path, target: Path) -> None:
+    try:
+        os.link(backup, target, follow_symlinks=False)
+    except OSError:
+        raise CodexAgentNoClobberConflict(
+            f"could not restore moved target without clobbering concurrent state: {backup.name}",
+            [backup.as_posix(), target.as_posix()],
+        ) from None
+    backup.unlink()
 
 
 def codex_agent_target_is_safe(

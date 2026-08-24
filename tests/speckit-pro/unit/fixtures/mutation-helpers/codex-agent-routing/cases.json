@@ -208,6 +208,19 @@
       }
     },
     {
+      "case_id": "invalid-reused-route-id-definition-mismatch",
+      "category": "invalid_manifest",
+      "overrides": {
+        "manifest.required_agent_policies.analyze-executor.preferred_route.model": "model-not-observed-by-route-id"
+      },
+      "expected": {
+        "status": "input_error",
+        "diagnostic_code": "invalid_route_policy_manifest",
+        "snapshot_captured": false,
+        "writes_state": false
+      }
+    },
+    {
       "case_id": "invalid-manifest-path-outside-repository",
       "category": "invalid_manifest_path",
       "overrides": {
