@@ -87,7 +87,7 @@ Projected reviewable LOC: re-measure at Plan (hand-derived; estimator returns a 
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 15 questions; 7 consensus items resolved (all Round 1); spec 32→46 FRs; G2 pass, 0 markers |
 | Plan | `/speckit-plan` | ✅ Complete | plan.md + research + data-model + quickstart + contract; hand-sized ~690 LOC (556–825) WARN, split lever named; G3 pass |
 | Checklist | `/speckit-checklist` | ✅ Complete | 3 domains, 130 items; 34 gaps closed; spec 46→54 FRs; consensus items 8–12; G4 pass |
-| Tasks | `/speckit-tasks` | ⏳ Pending | |
+| Tasks | `/speckit-tasks` | ✅ Complete | 81 tasks (T001–T081), 54/54 FR coverage both directions, 16 [P]; G5 pass |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
@@ -546,6 +546,38 @@ Focus on ART-008 slice 2 requirements:
 ```
 
 ### Tasks Results
+
+- **tasks.md**: 81 tasks — Setup 3, Foundational 11, US1 35, US2 7, US3 15,
+  Polish 10; 16 `[P]`; TDD throughout (17 fixture tasks + 9 red/green runs).
+  Coverage 54/54 FRs forward, zero dangling reverse. Generated-artifact tail
+  present as T075–T078. Non-goals guard table with per-task citations. Five
+  named ordering hazards, including the mid-phase full-suite ban.
+- **G5**: ✅ pass — `validate-gate` exit 0, 81 tasks, 0 markers.
+- **Step 8, tasks-phase reviewability boundary**: runner `reviewability-gate`
+  tasks mode is deferred on the installed runner — not invoked. Deferral
+  diagnostics: helper_id=reviewability-gate, requested mode=tasks,
+  reason=deferred for installed workflows (setup mode only). Fallback
+  evidence chain: (1) scaffold setup-mode gate — warnings only, no blockers
+  (roadmap-wide primary-surfaces warning is a known false positive);
+  (2) plan-phase `estimate-reviewable-loc` — projected=0 status=pass, the
+  recorded false zero, an absent measurement; (3) hand-derived budget ~690
+  (556–825, ~730 midpoint after checklist deltas) = **WARN**, under the 800
+  block; (4) no operator split decision — slice ratified as slice 2 of an
+  operator-approved two-slice split. WARN is a marker-planning input but the
+  route below keeps a single PR, so no `pr_marker_plan` is persisted; T014 is
+  the binding pre-implementation checkpoint.
+
+## Atomicity Route
+
+- `atomicity-route` (read-only, advisory): **route=one-navigable-PR**,
+  releasable=true, signals=[change-shape:modify-heavy], no hints, no
+  warnings. Recorded 2026-08-24.
+
+## Layer Plan
+
+- `layer_plan.status=skipped` — route is one-navigable-PR, not split-PR; the
+  planner runs only on split routes.
+
 
 | Metric | Value |
 |--------|-------|

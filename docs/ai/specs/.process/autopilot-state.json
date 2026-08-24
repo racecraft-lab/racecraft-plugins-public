@@ -7,7 +7,7 @@
   "stage": "plan",
   "prior_run_note": "completed",
   "updated_at": "2026-08-24T00:00:00Z",
-  "active_step": "Phase 5: Tasks",
+  "active_step": "Phase 6: Analyze",
   "reclaimed_from": {
     "workflow_file": "docs/ai/specs/.process/ART-008-workflow.md",
     "spec_id": "ART-008",
@@ -63,7 +63,7 @@
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze",
@@ -166,6 +166,10 @@
     "G3": {
       "pass": true,
       "markers": 0
+    },
+    "G5": {
+      "pass": true,
+      "task_count": 81
     }
   },
   "budget_warning": {
@@ -176,5 +180,21 @@
     ],
     "status": "warn",
     "estimator": "false_zero_recorded"
+  },
+  "atomicity_route": {
+    "route": "one-navigable-PR",
+    "releasable": true,
+    "signals": [
+      "change-shape:modify-heavy"
+    ]
+  },
+  "layer_plan": {
+    "status": "skipped",
+    "reason": "route one-navigable-PR"
+  },
+  "task_reviewability": {
+    "mode": "deferred",
+    "fallback": "setup-warn + estimator-false-zero + hand-derived-690-warn",
+    "marker_plan": "not_required"
   }
 }
