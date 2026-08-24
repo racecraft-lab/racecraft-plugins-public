@@ -1656,6 +1656,18 @@ verbatim. **The verdict joins on those supplied records, never on page bytes.**
 The pages are agent-authored prose, so identical inputs produce different bytes
 and a content comparison would read every page as stale on every run.
 
+**When the artifacts directory has never been committed, pin the ancestry field
+to `false` rather than leaving it null.** With `last_artifacts_commit` null
+there is no commit for an amended row to be an ancestor of, so every row that
+resolved is supplied as
+`{"resolved": true, "is_ancestor_of_artifacts_commit": false}`. The helper
+tests that field for the literal `false` and has no branch of its own for this
+case, so a `null` or an omitted field reads as *not stale* and the run leaves
+the pages alone. That is the interrupted-run case exactly — pages written and
+never committed — and getting it wrong puts the pre-amendment plan back in
+front of the re-reviewer, which is the outcome this whole sequence exists to
+prevent.
+
 **On `stale`, regenerate through the installed `artifact-author` agent**, and
 run the rest of the sequence:
 

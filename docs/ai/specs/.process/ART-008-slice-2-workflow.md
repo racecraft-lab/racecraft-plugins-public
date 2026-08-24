@@ -1169,7 +1169,7 @@ The canonical closeout. Every row must reach Complete or an explicit
 | Post: Doctor Extension Check | ✅ Complete | 8 extensions registered and enabled; none required by this slice |
 | Post: Verify Implementation | ✅ Complete | 55 FRs, all cited by a task; zero tasks citing an undefined FR; 8/8 SCs mapped in `quickstart.md` §Traceability. `FR-015c` is the known never-assigned identifier, recorded as a numbering note |
 | Post: Verify Tasks Phantom Check | ✅ Complete | 81/81 tasks checked; all 25 distinct file paths cited by `tasks.md` exist on disk; no phantom task |
-| Post: Code Review | ✅ Complete | Independent review of the `origin/main...HEAD` diff against the repository's blocking categories and this slice's eight stated invariants |
+| Post: Code Review | ✅ Complete | 3 findings, **0 blocking**; all eight invariants verified from source. Findings 1 and 2 were **remediated**, finding 3 recorded as a documented residual. See below |
 | Post: Integration Suite | ✅ Complete | Full suite 14179/14179, exit 0 (T078) |
 | Post: Reviewability Diff Gate | ✅ Complete | **Realized overrun**: production 1226 added / 19 removed against a declared ~730 midpoint, 800 block. No gate produced a block verdict; `final-reviewability-backstop` is deferred, and the governing evidence is the committed WARN chain from T014 |
 | Post: Self-Review | ✅ Complete | Four answers recorded below |
@@ -1206,6 +1206,55 @@ scenarios 3, 4, and 5, which need a released plugin; the absent feedback sweep o
 this pull request, caused by the installed plugin predating slice 1; and the two
 quickstart scenarios corrected during validation. No leftover scaffolding, debug
 statement, or `TODO` appears anywhere in the diff.
+
+### Code Review findings and remediation
+
+An independent review of the `origin/main...HEAD` diff found **nothing
+blocking** — no finding falls in the repository's six blocking categories — and
+verified all eight of the slice's stated invariants from source, with
+`file:line` citations for each. Two findings were remediated before the
+pull-request body was finalized.
+
+**Finding 1 — the FR-007b caller obligation was never shipped. Fixed.**
+Both reference surfaces told the orchestrator to supply "one ancestry record
+per `amended` row, keyed by that row's `Commit` cell text verbatim" and stopped
+there. Neither stated the rule the helper's correctness depends on: when
+`last_artifacts_commit` is null, every `resolved: true` row **must** carry
+`is_ancestor_of_artifacts_commit: false`. That rule existed only in `spec.md`
+FR-007b and `data-model.md`, neither of which ships. Greps for
+`last_artifacts_commit`, `is_ancestor_of_artifacts_commit`, and
+`never been committed` returned **zero** on both platform surfaces.
+
+The failure it opens is the exact case FR-007a exists for. An interrupted run
+leaves pages written and never committed; an orchestrator following only the
+shipped prose supplies `null` or omits the field; the helper tests for the
+literal `False` (`read_only.py`), finds neither a deciding row nor an
+undeterminable one, and returns **`current`** — leaving the pre-amendment plan
+in front of the re-reviewer. **Remediated**: the caller obligation, its reason,
+and its consequence now ship on both surfaces.
+
+This is why the review was worth running. The helper cannot enforce a rule
+about what its caller supplies, and every fixture already supplied the field
+correctly, so no test could have caught it.
+
+**Finding 2 — the three unusable-observation fixtures pinned the literal-`true`
+rule only through envelope detail. Strengthened.** Each supplied
+`amended_commits: []`, so under a truthiness test the row would go unmatched
+and the verdict would still read `undeterminable` — the cases survived only on
+`reason`, `pages`, and `amended_rows_read`. Each now carries a matching
+resolved, non-ancestor record, so a truthiness test flips the **verdict** to
+`stale`. Proven by mutation: replacing `is not True` with a truthiness test
+drops the suite to 152/154. The third case, `ok` absent, correctly does not
+move, because an absent key is falsy under both readings.
+
+**Finding 3 — a pipe in the `CRL #` cell would break the `-2` read. Recorded,
+not changed.** `data-model.md` scopes free prose to `Disposition` alone, so
+this is consistent with the design rather than a defect.
+
+**Platform parity was checked and is clean.** Every Claude bold lead-in has its
+substance present on the Codex surface; the difference is paragraph packing.
+Finding 1 was shared by both surfaces, so it was a shared gap rather than a
+parity break, and the fix landed on both.
 
 - [x] All tasks marked complete in tasks.md — 81/81
 - [x] Full suite passes: `python3 tests/speckit-pro/run-all.py` — 14179/14179, exit 0

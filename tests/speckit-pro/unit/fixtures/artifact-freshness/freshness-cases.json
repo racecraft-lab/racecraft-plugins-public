@@ -638,7 +638,13 @@
             "implementation-plan",
             "spec-explainer"
           ],
-          "amended_commits": []
+          "amended_commits": [
+            {
+              "cell": "e4f5a6b",
+              "resolved": true,
+              "is_ancestor_of_artifacts_commit": false
+            }
+          ]
         }
       },
       "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 71 | IC_kwDOaaa071 | pr_conversation | octocat | amended | Would otherwise prove staleness. | e4f5a6b | 22 |\n\n"
@@ -659,7 +665,13 @@
             "implementation-plan",
             "spec-explainer"
           ],
-          "amended_commits": []
+          "amended_commits": [
+            {
+              "cell": "e4f5a6b",
+              "resolved": true,
+              "is_ancestor_of_artifacts_commit": false
+            }
+          ]
         }
       },
       "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 71 | IC_kwDOaaa071 | pr_conversation | octocat | amended | Would otherwise prove staleness. | e4f5a6b | 22 |\n\n"
@@ -680,7 +692,13 @@
             "implementation-plan",
             "spec-explainer"
           ],
-          "amended_commits": []
+          "amended_commits": [
+            {
+              "cell": "e4f5a6b",
+              "resolved": true,
+              "is_ancestor_of_artifacts_commit": false
+            }
+          ]
         }
       },
       "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 71 | IC_kwDOaaa071 | pr_conversation | octocat | amended | Would otherwise prove staleness. | e4f5a6b | 22 |\n\n"
