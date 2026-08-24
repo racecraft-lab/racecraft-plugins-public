@@ -423,6 +423,12 @@ result, with the already-current case collapsing to one line.
   non-run-ending on the leg that amended nothing, while the shipped list names
   a failed push unconditionally. Neither edit may add to or remove from the
   members those enumerations already carry.
+- *Numbering note: there is no FR-015c.* The identifier was never assigned and
+  nothing was withdrawn. The sequence is deliberately left as it stands rather
+  than closed up, because `checklists/error-handling.md` and
+  `checklists/state-management.md` both cite FR-015d by that identifier in
+  their remediation logs and notes, and renumbering would break those citations
+  to buy nothing.
 - **FR-015d**: On the leg FR-017 governs, where at least one comment was
   handled and nothing was classified `amended`, the regeneration sequence
   MUST reach its own terminal outcome, in FR-023's fail-open sense, before
@@ -635,7 +641,15 @@ result, with the already-current case collapsing to one line.
 - **FR-030**: New behavior MUST land in the autopilot `references/` files rather
   than in the Codex autopilot `SKILL.md` body, measured at 7998 of its
   8000-word cap. Adding to that body is permitted only after words are freed
-  first.
+  first. *Revision note — the design concept's figure is superseded.* Its
+  Codex-parity open question records that body as 8000 of 8000 with zero
+  headroom. Measured in this worktree with the Layer 1 validator's own `_body`
+  helper (`tests/speckit-pro/layer1-structural/validate-codex-skills.py:29,177-181`),
+  which is the only counter that governs the gate, the body is 7998 words and
+  two are free. The 7998 figure is the binding one and `plan.md` §"Four files
+  deliberately absent from this block", T070, and T073 all state it. The
+  behavioral rule is unchanged by the correction: two words are not room for
+  new behavior, so nothing this slice writes goes into that body.
 - **FR-031**: The freshness helper MUST carry Layer 4 unit coverage driven by
   fixtures, following the pattern the existing pull-request feedback sweep
   helper established, and MUST be declared in the test suite manifest.

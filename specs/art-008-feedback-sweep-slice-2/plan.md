@@ -715,6 +715,33 @@ snapshot persists to disk. The FR-012b boundary is disjoint by construction
 only on zero-generated runs); add one Layer 4 fixture proving a run with one
 `generated` page and one per-page gap never triggers replay.
 
+**Where the snapshot lives, and when it may be removed.** The precedent the
+guidance points at already settles the path, so this slice invents none. Slice
+1's byproduct rule states that the sweep writes its transport files under
+`specs/<feature>/.process/feedback-sweep/` (`phase-execution.md:1880-1881`)
+and that **every** such file "goes there and nowhere else", naming "any
+scratch the run needs" among its members (`phase-execution.md:1887-1890`). The
+snapshot is that scratch, so it goes there, under the self-ignoring
+`.gitignore` slice 1 already writes first.
+
+It MUST NOT live under `specs/<feature>/artifacts/`, the obvious alternative.
+That directory is the page set FR-004 observes, and FR-012a computes removals
+by filename stem against it, so a snapshot held beside the pages would be
+observed as a page and then computed as a deselection removal — the mechanism
+would delete its own restore copy. FR-018a's own exclusivity rule forbids it
+independently: no commit but FR-018's may stage a path under that directory.
+
+The ordering is load-bearing in the other direction. Slice 1 removes the
+byproduct directory "before it proceeds into task work or stops, on every
+path" (`phase-execution.md:1907-1908`), and the regeneration sequence now sits
+between the reply point and that proceed-or-stop. **The replay decision MUST
+therefore complete before the byproduct removal**, not after it. Replay fires
+only on the zero-generated path, so a removal ordered first would destroy the
+bytes FR-018a exists to restore on exactly the failure path it was written
+for, and the directory would be left as the emptied set FR-018a forbids. The
+removal itself is unchanged and still runs on every path; only its position
+relative to the replay is fixed here.
+
 **FR-039's record commit is reused, never redefined.** When the refresh actually
 changes the `Draft PR` cell, that write rides the same separate,
 workflow-file-path-alone `chore:` commit the plan-stage terminal sequence

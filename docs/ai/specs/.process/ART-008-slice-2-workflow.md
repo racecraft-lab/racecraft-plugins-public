@@ -88,7 +88,7 @@ Projected reviewable LOC: re-measure at Plan (hand-derived; estimator returns a 
 | Plan | `/speckit-plan` | ✅ Complete | plan.md + research + data-model + quickstart + contract; hand-sized ~690 LOC (556–825) WARN, split lever named; G3 pass |
 | Checklist | `/speckit-checklist` | ✅ Complete | 3 domains, 130 items; 34 gaps closed; spec 46→54 FRs; consensus items 8–12; G4 pass |
 | Tasks | `/speckit-tasks` | ✅ Complete | 81 tasks (T001–T081), 54/54 FR coverage both directions, 16 [P]; G5 pass |
-| Analyze | `/speckit-analyze` | ⏳ Pending | |
+| Analyze | `/speckit-analyze` | ✅ Complete | 5 findings (0C/1H/1M/3L), all remediated; coverage 54/54 bidirectional; constitution 6/6; G6 pass; 📊 0.92 |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 | Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
@@ -629,6 +629,26 @@ Focus on:
 ```
 
 ### Analysis Results
+
+- **Findings**: 5 (0 CRITICAL, 1 HIGH, 1 MEDIUM, 3 LOW) — all remediated in
+  the same pass; zero unresolved for consensus.
+  - F1 HIGH: FR-018a snapshot location + lifecycle vs slice-1 byproduct
+    removal — pinned to the `.process/feedback-sweep/` transport precedent,
+    replay ordered before removal (plan.md + T042 + ordering hazard 7).
+  - F2 MEDIUM: shipped prose is hard-wrapped, quoted-sentence greps return
+    zero — fragment table added to tasks.md for the 8 affected tasks.
+  - F3 LOW: design-concept 8000/8000 figure superseded by measured 7998/8000
+    — revision note on FR-030.
+  - F4 LOW: FR-015c never existed — numbering note added, no renumbering.
+  - F5 LOW: SC traceability — SC-003/SC-008 cited on T055/T071, preamble
+    points at quickstart §Traceability.
+- **Coverage**: FRs 54/54 bidirectional; stories 3/3; both report paths;
+  constitution 6/6 PASS; all 7 settled + 4 carried decisions honored, 2
+  recorded supersessions confirmed legitimate; slice-1 inheritance items
+  discharged.
+- **G6**: ✅ pass — `validate-gate` exit 0, 0 CRITICAL/HIGH markers.
+- **Synthesizer emit**: 📊 Confidence: 0.92
+
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
