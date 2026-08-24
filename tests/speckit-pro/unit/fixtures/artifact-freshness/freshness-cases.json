@@ -1,7 +1,196 @@
 {
   "cases": {
+    "corroborate-identity-mismatch": {
+      "purpose": "The branch grew a second, open pull request under a different number. That conflict is reported ahead of every later rule and independent of array order, and both identities are named. The refresh attempt ends, nothing is created, and the row is left exactly as found.",
+      "acceptance": [
+        "FR-033a",
+        "FR-034"
+      ],
+      "inputs": {
+        "named_surface": "corroborate_refresh",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/corroborate-identity-mismatch.md",
+        "pr_observation": {
+          "ok": true,
+          "pull_requests": [
+            {
+              "number": 508,
+              "url": "https://github.com/octo-org/octo-repo/pull/508",
+              "state": "open",
+              "isDraft": true,
+              "headRefName": "art-008-feedback-sweep-slice-2"
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n### Basic Information\n\n| Field | Value |\n|---|---|\n| Stage | implement |\n| Draft PR | [#471](https://github.com/octo-org/octo-repo/pull/471) |\n\n"
+    },
+    "corroborate-match": {
+      "purpose": "The recorded `Draft PR` row and the observation agree on number, url, and an open state, so the shipped classifier returns `match` and the refresh call site refreshes that pull request's description.",
+      "acceptance": [
+        "FR-033a",
+        "FR-034"
+      ],
+      "inputs": {
+        "named_surface": "corroborate_refresh",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/corroborate-match.md",
+        "pr_observation": {
+          "ok": true,
+          "pull_requests": [
+            {
+              "number": 471,
+              "url": "https://github.com/octo-org/octo-repo/pull/471",
+              "state": "open",
+              "isDraft": true,
+              "headRefName": "art-008-feedback-sweep-slice-2"
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n### Basic Information\n\n| Field | Value |\n|---|---|\n| Stage | implement |\n| Draft PR | [#471](https://github.com/octo-org/octo-repo/pull/471) |\n\n"
+    },
+    "corroborate-no-record-absent-draft-pr-row": {
+      "purpose": "A `### Basic Information` table carrying no `Draft PR` row. The row's presence is what triggers the observation, so a run without one has nothing to corroborate and the supplied observation is never read.",
+      "acceptance": [
+        "FR-033a",
+        "FR-034"
+      ],
+      "inputs": {
+        "named_surface": "corroborate_refresh",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/corroborate-no-record-absent-draft-pr-row.md",
+        "pr_observation": {
+          "ok": true,
+          "pull_requests": [
+            {
+              "number": 471,
+              "url": "https://github.com/octo-org/octo-repo/pull/471",
+              "state": "open",
+              "isDraft": true,
+              "headRefName": "art-008-feedback-sweep-slice-2"
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n### Basic Information\n\n| Field | Value |\n|---|---|\n| Stage | implement |\n\n"
+    },
+    "corroborate-no-record-draft-pr-row-inside-html-comment": {
+      "purpose": "A well-formed `Draft PR` row sitting inside an HTML comment span. The comment is blanked before the row is read, exactly as the shipped call site blanks it, so a commented-out row never becomes evidence. Without the blanking this case would classify `match` off text the file does not assert, and the run would refresh a pull request nobody recorded.",
+      "acceptance": [
+        "FR-033a",
+        "FR-034",
+        "FR-004"
+      ],
+      "inputs": {
+        "named_surface": "corroborate_refresh",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/corroborate-no-record-draft-pr-row-inside-html-comment.md",
+        "pr_observation": {
+          "ok": true,
+          "pull_requests": [
+            {
+              "number": 471,
+              "url": "https://github.com/octo-org/octo-repo/pull/471",
+              "state": "open",
+              "isDraft": true,
+              "headRefName": "art-008-feedback-sweep-slice-2"
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n<!--\n### Basic Information\n\n| Field | Value |\n|---|---|\n| Stage | implement |\n| Draft PR | [#471](https://github.com/octo-org/octo-repo/pull/471) |\n-->\n\n"
+    },
+    "corroborate-no-record-malformed-draft-pr-row": {
+      "purpose": "A `Draft PR` row whose value is prose rather than a numbered link. The shipped reader returns None on a malformed value rather than raising, because the workflow file is operator-edited prose and a traceback there would stop a run over a typo.",
+      "acceptance": [
+        "FR-033a",
+        "FR-034"
+      ],
+      "inputs": {
+        "named_surface": "corroborate_refresh",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/corroborate-no-record-malformed-draft-pr-row.md",
+        "pr_observation": {
+          "ok": true,
+          "pull_requests": [
+            {
+              "number": 471,
+              "url": "https://github.com/octo-org/octo-repo/pull/471",
+              "state": "open",
+              "isDraft": true,
+              "headRefName": "art-008-feedback-sweep-slice-2"
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n### Basic Information\n\n| Field | Value |\n|---|---|\n| Stage | implement |\n| Draft PR | pull request 471 |\n\n"
+    },
+    "corroborate-pr-closed": {
+      "purpose": "The recorded pull request resolves and its state is `closed`. The refresh attempt ends, nothing is created, and the row is left exactly as found. `merged` is false because the closed state says so and the query carries no separate merged field.",
+      "acceptance": [
+        "FR-033a",
+        "FR-034"
+      ],
+      "inputs": {
+        "named_surface": "corroborate_refresh",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/corroborate-pr-closed.md",
+        "pr_observation": {
+          "ok": true,
+          "pull_requests": [
+            {
+              "number": 471,
+              "url": "https://github.com/octo-org/octo-repo/pull/471",
+              "state": "closed",
+              "isDraft": false,
+              "headRefName": "art-008-feedback-sweep-slice-2"
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n### Basic Information\n\n| Field | Value |\n|---|---|\n| Stage | implement |\n| Draft PR | [#471](https://github.com/octo-org/octo-repo/pull/471) |\n\n"
+    },
+    "corroborate-pr-missing": {
+      "purpose": "A successful query returning an empty array. The empty array is a usable answer rather than a malformed one, and it is how a branch with no pull request answers, so the recorded number is missing. The refresh attempt ends and nothing is created; `--state all` is what makes this distinguishable from a closed pull request.",
+      "acceptance": [
+        "FR-033a",
+        "FR-034"
+      ],
+      "inputs": {
+        "named_surface": "corroborate_refresh",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/corroborate-pr-missing.md",
+        "pr_observation": {
+          "ok": true,
+          "pull_requests": []
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n### Basic Information\n\n| Field | Value |\n|---|---|\n| Stage | implement |\n| Draft PR | [#471](https://github.com/octo-org/octo-repo/pull/471) |\n\n"
+    },
+    "corroborate-skipped-observation-absent": {
+      "purpose": "A recorded row with no `pr_observation` at all. The row is present, so a skipped run still knows which pull request it failed to reach, and the reason is the one this operation supplies for itself. `skipped` is never grounds to open a second pull request.",
+      "acceptance": [
+        "FR-033a",
+        "FR-034"
+      ],
+      "inputs": {
+        "named_surface": "corroborate_refresh",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/corroborate-skipped-observation-absent.md"
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n### Basic Information\n\n| Field | Value |\n|---|---|\n| Stage | implement |\n| Draft PR | [#471](https://github.com/octo-org/octo-repo/pull/471) |\n\n"
+    },
+    "corroborate-skipped-ok-short-of-literal-true-preserves-request-reason": {
+      "purpose": "`ok` supplied as the integer 1. Python reads `1 == True`, so a truthiness test would accept the gather as a success and let a stale array report a discrepancy. The literal test rejects it, and the reason the request carried is preserved verbatim rather than replaced by this operation's own default, because the operator acts on which failure it was.",
+      "acceptance": [
+        "FR-033a",
+        "FR-034"
+      ],
+      "inputs": {
+        "named_surface": "corroborate_refresh",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/corroborate-skipped-ok-short-of-literal-true-preserves-request-reason.md",
+        "pr_observation": {
+          "ok": 1,
+          "reason": "gh is not authenticated on this runner"
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n### Basic Information\n\n| Field | Value |\n|---|---|\n| Stage | implement |\n| Draft PR | [#471](https://github.com/octo-org/octo-repo/pull/471) |\n\n"
+    },
     "dual-anchoring-escaped-pipe-in-disposition": {
-      "purpose": "A `Disposition` carrying an escaped `\\|`, so the row splits into nine cells against an eight-cell header. `Class` keeps its left-hand header index and still reads `amended`; `Commit` is anchored at `-2` from the row's end and still reads `a1b2c3d`. A left-anchored `Commit` read takes the disposition's second half instead, finds no matching record, and returns `undeterminable` — which leaves a genuinely stale page set unregenerated. That is the silent, wrong-direction failure this case exists to catch.",
+      "purpose": "A `Disposition` carrying an escaped `\\|`, so the row splits into nine cells against an eight-cell header. `Class` keeps its left-hand header index and still reads `amended`; `Commit` is anchored at `-2` from the row's end and still reads `a1b2c3d`. A left-anchored `Commit` read takes the disposition's second half instead, finds no matching record, and returns `undeterminable` \u2014 which leaves a genuinely stale page set unregenerated. That is the silent, wrong-direction failure this case exists to catch.",
       "acceptance": [
         "FR-004",
         "FR-006"
@@ -198,6 +387,25 @@
       },
       "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 54 | IC_kwDOaaa054 | pr_conversation | octocat | amended | Landed before the artifacts commit. | a1b2c3d | 16 |\n| 55 | IC_kwDOaaa055 | pr_conversation | octocat | amended | Also landed before it. | b2c3d4e | 17 |\n\n"
     },
+    "fr012b-generated-and-gap-page-disjoint-from-removal-set": {
+      "purpose": "The FR-012b/FR-018a disjointness case. One re-selected page came back `generated` and one came back as a per-page `gap`, and a third observed page was deselected. The removal set holds the deselected page alone and excludes the gapped one, so the per-page deletion path and the zero-generated replay path never co-fire over the same page.",
+      "acceptance": [
+        "FR-012b",
+        "FR-018a"
+      ],
+      "inputs": {
+        "named_surface": "removal_diff",
+        "observed_pages": [
+          "spec-explainer",
+          "implementation-plan",
+          "module-map"
+        ],
+        "reselected_pages": [
+          "implementation-plan",
+          "module-map"
+        ]
+      }
+    },
     "input-error-artifacts-dir-state-outside-the-closed-three": {
       "purpose": "`artifacts_dir_state` outside `absent`, `empty`, and `present`. The set is closed, so a fourth token is a malformed request and not a state to discover.",
       "acceptance": [
@@ -247,6 +455,96 @@
         "artifacts_observation": []
       },
       "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 91 | IC_kwDOaaa091 | pr_conversation | octocat | amended | Ordinary amendment. | a1b2c3d | 25 |\n\n"
+    },
+    "input-error-observed-pages-absent": {
+      "purpose": "`observed_pages` omitted. Both arrays are required, and an absent inventory is a malformed request rather than an empty one: reading it as empty would report no removals for a run that observed pages.",
+      "acceptance": [
+        "FR-012a",
+        "FR-023"
+      ],
+      "inputs": {
+        "named_surface": "removal_diff",
+        "reselected_pages": [
+          "implementation-plan"
+        ]
+      }
+    },
+    "input-error-observed-pages-non-string-member": {
+      "purpose": "`observed_pages` carrying a non-string member. A stem is a filename stem, and a number compared against strings would never match and would report a removal that has no file behind it.",
+      "acceptance": [
+        "FR-012a",
+        "FR-023"
+      ],
+      "inputs": {
+        "named_surface": "removal_diff",
+        "observed_pages": [
+          "implementation-plan",
+          7
+        ],
+        "reselected_pages": [
+          "implementation-plan"
+        ]
+      }
+    },
+    "input-error-observed-pages-not-an-array": {
+      "purpose": "`observed_pages` supplied as a string. A bare string is iterable in Python and would diff character by character, so the type is checked rather than assumed.",
+      "acceptance": [
+        "FR-012a",
+        "FR-023"
+      ],
+      "inputs": {
+        "named_surface": "removal_diff",
+        "observed_pages": "implementation-plan",
+        "reselected_pages": [
+          "implementation-plan"
+        ]
+      }
+    },
+    "input-error-reselected-pages-absent": {
+      "purpose": "`reselected_pages` omitted. Absent is not the same as empty: the empty array is the legal whole-set-gap case, so reading an omission as empty would delete every observed page on a malformed request.",
+      "acceptance": [
+        "FR-012a",
+        "FR-023"
+      ],
+      "inputs": {
+        "named_surface": "removal_diff",
+        "observed_pages": [
+          "implementation-plan"
+        ]
+      }
+    },
+    "input-error-reselected-pages-non-string-member": {
+      "purpose": "`reselected_pages` carrying a non-string member. A null member would match no observed stem and would silently widen the removal set.",
+      "acceptance": [
+        "FR-012a",
+        "FR-023"
+      ],
+      "inputs": {
+        "named_surface": "removal_diff",
+        "observed_pages": [
+          "implementation-plan"
+        ],
+        "reselected_pages": [
+          "implementation-plan",
+          null
+        ]
+      }
+    },
+    "input-error-reselected-pages-not-an-array": {
+      "purpose": "`reselected_pages` supplied as an object. The re-selection returns a list of page ids, and any other shape is the caller's defect.",
+      "acceptance": [
+        "FR-012a",
+        "FR-023"
+      ],
+      "inputs": {
+        "named_surface": "removal_diff",
+        "observed_pages": [
+          "implementation-plan"
+        ],
+        "reselected_pages": {
+          "implementation-plan": "generated"
+        }
+      }
     },
     "input-error-workflow-file-absent": {
       "purpose": "No `workflow_file` key. The one read path is required, and its absence is the caller's defect.",
@@ -571,6 +869,73 @@
       },
       "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 63 | IC_kwDOaaa063 | pr_conversation | octocat | amended | Recorded a commit that was later rewritten. | deadbee | 20 |\n\n"
     },
+    "removal-deselected-page-yields-one-removal": {
+      "purpose": "The ordinary removal. Three pages were observed on disk and the manifest re-selection returned two of them, so the third is a removal. The surface reports it; the system performs the deletion and stages it in the FR-018 commit, because this helper deletes nothing.",
+      "acceptance": [
+        "FR-012",
+        "FR-012a"
+      ],
+      "inputs": {
+        "named_surface": "removal_diff",
+        "observed_pages": [
+          "implementation-plan",
+          "spec-explainer",
+          "module-map"
+        ],
+        "reselected_pages": [
+          "implementation-plan",
+          "spec-explainer"
+        ]
+      }
+    },
+    "removal-empty-reselected-removes-every-observed-page": {
+      "purpose": "An empty `reselected_pages`, the whole-set-gap case. It is legal rather than an input error, so every observed page is a removal and FR-023 keeps the run from blocking. The removals keep `observed_pages` order rather than a sorted order, which is what makes the output diffable.",
+      "acceptance": [
+        "FR-012a",
+        "FR-023"
+      ],
+      "inputs": {
+        "named_surface": "removal_diff",
+        "observed_pages": [
+          "spec-explainer",
+          "implementation-plan"
+        ],
+        "reselected_pages": []
+      }
+    },
+    "removal-gap-page-in-reselected-is-not-removed": {
+      "purpose": "A page the re-selection returned as a `gap` rather than as `generated`. `reselected_pages` carries both outcomes, so the gapped page is still selected and is not a removal. Dropping gapped ids from the input would delete a page the run merely failed to author.",
+      "acceptance": [
+        "FR-012a"
+      ],
+      "inputs": {
+        "named_surface": "removal_diff",
+        "observed_pages": [
+          "implementation-plan",
+          "module-map"
+        ],
+        "reselected_pages": [
+          "implementation-plan",
+          "module-map"
+        ]
+      }
+    },
+    "removal-stem-only-in-reselected-is-ignored": {
+      "purpose": "A stem present in `reselected_pages` and absent from `observed_pages`. The direction is one-way, so it is a new page the author dispatch writes and never a removal. A set symmetric difference would report it and the system would then try to delete a file that does not exist.",
+      "acceptance": [
+        "FR-012a"
+      ],
+      "inputs": {
+        "named_surface": "removal_diff",
+        "observed_pages": [
+          "implementation-plan"
+        ],
+        "reselected_pages": [
+          "implementation-plan",
+          "module-map"
+        ]
+      }
+    },
     "structural-no-feedback-sweep-log-heading": {
       "purpose": "A workflow file with no `Feedback Sweep Log` heading at all. Zero `amended` rows are read and the verdict falls to the directory state alone; the absent log is not an error and not undeterminable.",
       "acceptance": [
@@ -593,7 +958,7 @@
       "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Notes\n\nNo sweep has run against this branch yet.\n\n"
     },
     "structural-short-row-does-not-stop-the-other-rows": {
-      "purpose": "A short row alongside a well-formed one. The short row is malformed and undeterminable rather than an error, and the well-formed row still evaluates — so a malformed row degrades the verdict without aborting the read.",
+      "purpose": "A short row alongside a well-formed one. The short row is malformed and undeterminable rather than an error, and the well-formed row still evaluates \u2014 so a malformed row degrades the verdict without aborting the read.",
       "acceptance": [
         "FR-006"
       ],
@@ -715,6 +1080,27 @@
         }
       },
       "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 13 | IC_kwDOaaa003 | pr_conversation | octocat | amended | Tightened the boundary check. | c0ffee1 | 3 |\n\n"
+    },
+    "input-error-corroborate-workflow-file-absent": {
+      "purpose": "The corroboration surface reads the same single path the verdict surface does, so its absence is the caller's defect here too. Pins that the shared prologue governs every surface rather than the default one alone.",
+      "acceptance": [
+        "FR-004",
+        "FR-033a"
+      ],
+      "inputs": {
+        "named_surface": "corroborate_refresh"
+      }
+    },
+    "input-error-corroborate-workflow-file-unreadable": {
+      "purpose": "A `workflow_file` naming no readable file. Unreadable is an input error on this surface, unlike an unusable observation, which reports without blocking.",
+      "acceptance": [
+        "FR-004",
+        "FR-033a"
+      ],
+      "inputs": {
+        "named_surface": "corroborate_refresh",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/no-such-workflow-file.md"
+      }
     }
   }
 }

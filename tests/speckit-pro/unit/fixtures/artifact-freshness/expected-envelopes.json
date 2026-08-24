@@ -1,5 +1,161 @@
 {
   "cases": {
+    "corroborate-identity-mismatch": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "corroborate_refresh",
+        "corroboration": {
+          "status": "identity_mismatch",
+          "recorded": {
+            "number": 471,
+            "url": "https://github.com/octo-org/octo-repo/pull/471"
+          },
+          "observed": {
+            "number": 508,
+            "url": "https://github.com/octo-org/octo-repo/pull/508",
+            "state": "open"
+          },
+          "merged": null,
+          "reason": null
+        }
+      }
+    },
+    "corroborate-match": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "corroborate_refresh",
+        "corroboration": {
+          "status": "match",
+          "recorded": {
+            "number": 471,
+            "url": "https://github.com/octo-org/octo-repo/pull/471"
+          },
+          "observed": {
+            "number": 471,
+            "url": "https://github.com/octo-org/octo-repo/pull/471",
+            "state": "open"
+          },
+          "merged": null,
+          "reason": null
+        }
+      }
+    },
+    "corroborate-no-record-absent-draft-pr-row": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "corroborate_refresh",
+        "corroboration": {
+          "status": "no_record",
+          "recorded": null,
+          "observed": null,
+          "merged": null,
+          "reason": null
+        }
+      }
+    },
+    "corroborate-no-record-draft-pr-row-inside-html-comment": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "corroborate_refresh",
+        "corroboration": {
+          "status": "no_record",
+          "recorded": null,
+          "observed": null,
+          "merged": null,
+          "reason": null
+        }
+      }
+    },
+    "corroborate-no-record-malformed-draft-pr-row": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "corroborate_refresh",
+        "corroboration": {
+          "status": "no_record",
+          "recorded": null,
+          "observed": null,
+          "merged": null,
+          "reason": null
+        }
+      }
+    },
+    "corroborate-pr-closed": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "corroborate_refresh",
+        "corroboration": {
+          "status": "pr_closed",
+          "recorded": {
+            "number": 471,
+            "url": "https://github.com/octo-org/octo-repo/pull/471"
+          },
+          "observed": {
+            "number": 471,
+            "url": "https://github.com/octo-org/octo-repo/pull/471",
+            "state": "closed"
+          },
+          "merged": false,
+          "reason": null
+        }
+      }
+    },
+    "corroborate-pr-missing": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "corroborate_refresh",
+        "corroboration": {
+          "status": "pr_missing",
+          "recorded": {
+            "number": 471,
+            "url": "https://github.com/octo-org/octo-repo/pull/471"
+          },
+          "observed": null,
+          "merged": null,
+          "reason": null
+        }
+      }
+    },
+    "corroborate-skipped-observation-absent": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "corroborate_refresh",
+        "corroboration": {
+          "status": "skipped",
+          "recorded": {
+            "number": 471,
+            "url": "https://github.com/octo-org/octo-repo/pull/471"
+          },
+          "observed": null,
+          "merged": null,
+          "reason": "no observation supplied"
+        }
+      }
+    },
+    "corroborate-skipped-ok-short-of-literal-true-preserves-request-reason": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "corroborate_refresh",
+        "corroboration": {
+          "status": "skipped",
+          "recorded": {
+            "number": 471,
+            "url": "https://github.com/octo-org/octo-repo/pull/471"
+          },
+          "observed": null,
+          "merged": null,
+          "reason": "gh is not authenticated on this runner"
+        }
+      }
+    },
     "dual-anchoring-escaped-pipe-in-disposition": {
       "status": "ok",
       "envelope": {
@@ -145,6 +301,25 @@
         ]
       }
     },
+    "fr012b-generated-and-gap-page-disjoint-from-removal-set": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "removal_diff",
+        "removals": [
+          "spec-explainer"
+        ],
+        "observed": [
+          "spec-explainer",
+          "implementation-plan",
+          "module-map"
+        ],
+        "reselected": [
+          "implementation-plan",
+          "module-map"
+        ]
+      }
+    },
     "input-error-artifacts-dir-state-outside-the-closed-three": {
       "status": "input_error",
       "error_contains": "artifacts_dir_state must be one of"
@@ -156,6 +331,30 @@
     "input-error-observation-not-an-object": {
       "status": "input_error",
       "error_contains": "artifacts_observation must be an object"
+    },
+    "input-error-observed-pages-absent": {
+      "status": "input_error",
+      "error_contains": "observed_pages must be an array of strings"
+    },
+    "input-error-observed-pages-non-string-member": {
+      "status": "input_error",
+      "error_contains": "observed_pages must be an array of strings"
+    },
+    "input-error-observed-pages-not-an-array": {
+      "status": "input_error",
+      "error_contains": "observed_pages must be an array of strings"
+    },
+    "input-error-reselected-pages-absent": {
+      "status": "input_error",
+      "error_contains": "reselected_pages must be an array of strings"
+    },
+    "input-error-reselected-pages-non-string-member": {
+      "status": "input_error",
+      "error_contains": "reselected_pages must be an array of strings"
+    },
+    "input-error-reselected-pages-not-an-array": {
+      "status": "input_error",
+      "error_contains": "reselected_pages must be an array of strings"
     },
     "input-error-workflow-file-absent": {
       "status": "input_error",
@@ -368,6 +567,72 @@
         ]
       }
     },
+    "removal-deselected-page-yields-one-removal": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "removal_diff",
+        "removals": [
+          "module-map"
+        ],
+        "observed": [
+          "implementation-plan",
+          "spec-explainer",
+          "module-map"
+        ],
+        "reselected": [
+          "implementation-plan",
+          "spec-explainer"
+        ]
+      }
+    },
+    "removal-empty-reselected-removes-every-observed-page": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "removal_diff",
+        "removals": [
+          "spec-explainer",
+          "implementation-plan"
+        ],
+        "observed": [
+          "spec-explainer",
+          "implementation-plan"
+        ],
+        "reselected": []
+      }
+    },
+    "removal-gap-page-in-reselected-is-not-removed": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "removal_diff",
+        "removals": [],
+        "observed": [
+          "implementation-plan",
+          "module-map"
+        ],
+        "reselected": [
+          "implementation-plan",
+          "module-map"
+        ]
+      }
+    },
+    "removal-stem-only-in-reselected-is-ignored": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "removal_diff",
+        "removals": [],
+        "observed": [
+          "implementation-plan"
+        ],
+        "reselected": [
+          "implementation-plan",
+          "module-map"
+        ]
+      }
+    },
     "structural-no-feedback-sweep-log-heading": {
       "status": "ok",
       "envelope": {
@@ -483,6 +748,14 @@
           "spec-explainer"
         ]
       }
+    },
+    "input-error-corroborate-workflow-file-absent": {
+      "status": "input_error",
+      "error_contains": "workflow_file is required"
+    },
+    "input-error-corroborate-workflow-file-unreadable": {
+      "status": "input_error",
+      "error_contains": "workflow file cannot be read"
     }
   }
 }

@@ -822,6 +822,46 @@ is drift.
   failure that leaves stale pages unregenerated. This is the regression the
   dual-anchoring rule exists for.
 
+**Phase 3, User Story 1 — removal-diff and corroboration surfaces (T030–T038)**
+— complete. `FRESHNESS_TEST` **154/154** over 51 cases, `HELPER_TEST`
+**84/84**, both re-run by the orchestrator.
+
+- **Removal diff** is a pure set difference over the supplied stems, ordered by
+  `observed_pages` so the output is stable and diffable. It reads no file and
+  deletes nothing. The FR-012b disjointness case pins the point the surface
+  exists for: a page whose regeneration returned a `gap` is still selected, so
+  it must **not** appear in the removal set.
+- **Corroboration** calls the two shipped pure functions verbatim —
+  `workflow_draft_pr_row` and `corroborate_draft_pr` — behind the same
+  HTML-comment blanking the shipped call site uses, with **zero added
+  branches**. The orchestrator inspected the function body to confirm this
+  rather than accepting the claim: literal reuse is the requirement, because
+  FR-034's guarantee that each status keeps its ART-007 behavior holds only
+  while the same code decides the status in both places.
+- **T032 red**: 110/121, exactly the 11 new removal cases. **T036 red**:
+  139/148, exactly the 9 new corroboration cases. No existing verdict case
+  moved at any point in either cycle.
+- **T038 LAYER4**: `test-artifact-freshness` passes; the suite carries **7
+  known stale-payload failures** — one runner sha256 manifest case and six
+  installed-release payload/readiness cases, one of them named
+  `current_dist_passes_after_runner_rebuild`. Every one is the predicted
+  consequence of editing `speckit-pro/` source before the generated tail runs,
+  none touches a freshness surface, and all seven must clear at T075.
+- **Coverage gap closed by the orchestrator**: the contract's Surface 3
+  failure-mode table makes a missing or unreadable `workflow_file` an input
+  error, but its Layer 4 list did not enumerate a case for it, so the shared
+  prologue's reach across surfaces was asserted nowhere. Two cases were added
+  and passed immediately, which is the evidence that the prologue governs every
+  surface rather than the default one alone.
+- Underdetermined points settled: one diagnostic per key rather than per
+  condition (three conditions still exercised separately per key); `observed`
+  is validated before `reselected`; the echo keys follow `data-model.md` §4's
+  `observed` / `reselected` spelling; removal cases carry no `workflow_file`,
+  because routing reaches the surface before any path read and the surface
+  reads nothing; and both `skipped` cases carry a well-formed `Draft PR` row,
+  since the shipped classifier short-circuits to `no_record` on an absent row
+  before any observation is read.
+
 
 ### Implement Prompt
 

@@ -2975,21 +2975,85 @@ def freshness_verdict(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]
     )))
 
 
+def freshness_page_list(inputs: dict[str, Any], key: str) -> list[str] | None:
+    """One required array-of-strings input, or None when it is malformed.
+
+    Absent, not an array, and carrying a non-string are one class: each is the
+    caller's defect and none is a page list this surface can diff. Absent is
+    kept apart from empty deliberately, because the empty array is the legal
+    whole-set-gap case and reading an omission as empty would report every
+    observed page as a removal on a malformed request.
+    """
+    value = inputs.get(key)
+    if not isinstance(value, list):
+        return None
+    if not all(isinstance(entry, str) for entry in value):
+        return None
+    return value
+
+
 def freshness_removal_diff(inputs: dict[str, Any]) -> dict[str, Any]:
-    """Report the observed pages the re-selection dropped. Deletes nothing."""
-    # Stub, as above.
+    """Report the observed pages the re-selection dropped. Deletes nothing.
+
+    A pure set difference over the manifest entry id the emission machinery
+    keeps as the filename stem, one-way: present in `observed_pages` and absent
+    from `reselected_pages`. Never the reverse, because a stem the re-selection
+    returned and the directory does not hold is a new page the author dispatch
+    writes. `reselected_pages` carries both `generated` and `gap` outcomes, so a
+    gapped page is still selected and is not a removal (FR-012a).
+
+    Reads no file and deletes nothing: the system performs the deletion, stages
+    it in the FR-018 commit, and reports each removal as its own outcome
+    (FR-012).
+    """
+    observed = freshness_page_list(inputs, "observed_pages")
+    if observed is None:
+        return freshness_error("observed_pages must be an array of strings")
+    reselected = freshness_page_list(inputs, "reselected_pages")
+    if reselected is None:
+        return freshness_error("reselected_pages must be an array of strings")
+    selected = set(reselected)
     return make_result(json_text({
         "tool": FRESHNESS_TOOL,
         "named_surface": "removal_diff",
+        # `observed_pages` order rather than a sorted or set order, so two runs
+        # over the same inventory produce the same list and a reviewer can diff
+        # it. Both inputs are echoed so that difference need not be re-derived.
+        "removals": [stem for stem in observed if stem not in selected],
+        "observed": observed,
+        "reselected": reselected,
     }))
 
 
 def freshness_corroborate_refresh(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
-    """Classify the recorded `Draft PR` row against a supplied observation."""
-    # Stub, as above.
+    """Classify the recorded `Draft PR` row against a supplied observation.
+
+    The two shipped pure functions are called verbatim, the same pair
+    `resolve_autopilot_stage` calls, and this surface adds no branch of its own.
+    The literal reuse is the requirement: FR-034 assigns each of the six
+    statuses the behavior the ART-007 contract already gives it, and that
+    guarantee holds only while the same code decides the status in both places.
+    A second implementation would drift, and the drift would be silent.
+
+    Stays on this registration's single read path, the workflow file (FR-004).
+    """
+    workflow_file = inputs.get("workflow_file")
+    if not isinstance(workflow_file, str) or not workflow_file:
+        return freshness_error("workflow_file is required")
+    workflow_display = request_path_display(workflow_file, repo_root)
+    workflow_text = trusted_text(resolve_input_path(workflow_display, repo_root), repo_root)
+    if workflow_text is None:
+        return freshness_error(f"workflow file cannot be read: {workflow_display}")
+    # Blanked the way the shipped call site blanks them, and for the reason it
+    # records: a commented-out row must never become evidence.
+    lines = HTML_COMMENT_RE.sub("", workflow_text).splitlines()
+    corroboration = corroborate_draft_pr(
+        workflow_draft_pr_row(lines), inputs.get("pr_observation")
+    )
     return make_result(json_text({
         "tool": FRESHNESS_TOOL,
         "named_surface": "corroborate_refresh",
+        "corroboration": corroboration,
     }))
 
 
