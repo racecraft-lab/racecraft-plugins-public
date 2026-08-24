@@ -8,6 +8,28 @@
 
 **Input**: User description: "ART-008 slice 2 — Artifact Freshness. Slice 1 sweeps draft-PR feedback and amends planning artifacts through consensus, but the draft artifact pages and the draft pull-request description still describe the pre-amendment plan. Its stop report apologizes with a promise: 'draft artifact pages regenerate once slice 2 lands'. This slice replaces that promise: the re-reviewer at the checkpoint must read pages that match the amendments beside them."
 
+## Clarifications
+
+### Session 2026-08-24 — autopilot Clarify, sessions 1-2
+
+- **Q: Does the freshness helper read the workflow file itself, or does the
+  orchestrator parse the `Feedback Sweep Log` rows and pass them as data?** →
+  The helper reads the file, through the same heading-anchored table read the
+  sweep already ships. Only facts the helper cannot derive from that one file
+  — git ancestry and artifacts-directory state — arrive as supplied data. This
+  completes the mirror of the shipped sweep helper (path input, in-helper
+  table read, network-sourced observation as data) and lets FR-031's fixture
+  reuse mandate apply literally. Recorded as FR-004 (revised); FR-004a
+  unchanged.
+- **Q: What does `undeterminable` do?** → Reports loudly, acts never; FR-005a
+  carries the non-convergence rationale.
+- **Q: What page set does the helper return?** → The pre-regeneration on-disk
+  inventory it was given, echoed; selection stays with the emission machinery
+  (FR-004), and the FR-012a removal diff is a second named surface of the same
+  helper registration.
+- **Q: Refresh-failure semantics, `Draft PR` cell carrier, artifacts-commit
+  push** → settled in session 1 as FR-033 through FR-039 and FR-019a.
+
 ## User Scenarios & Testing *(mandatory)*
 
 Slice 1 of ART-008 (merged) gave the autopilot run a pull-request feedback
@@ -151,6 +173,11 @@ result, with the already-current case collapsing to one line.
   evaluation must treat a missing artifacts directory as "no pages to judge" and
   do nothing, rather than reading the absent directory as maximally stale and
   attempting a regeneration with no pull request to attach it to.
+- **Pages on disk, no commit ever touched the directory.** The emission
+  machinery wrote and verified pages and the run died before the dedicated
+  commit. These are real pages describing the pre-amendment plan, not an empty
+  directory: the evaluation reads them as stale when a joinable `amended` row
+  exists, and one regeneration converges.
 - **An `amended` row carries an empty or unreadable `Commit` cell.** A row that
   names no commit cannot be joined against history. The evaluation must treat
   such a row as unable to prove freshness either way and report it, rather than
@@ -202,21 +229,81 @@ result, with the already-current case collapsing to one line.
   of what was amended, and MUST NOT introduce any additional bookkeeping store,
   state file, or mirror to track page freshness.
 - **FR-004**: The freshness decision MUST be implemented as a runner helper that
-  is read-only and deterministic: it takes an observation of the log rows and
-  the git facts as input, and returns a verdict plus the page set as output,
-  without reading the repository or invoking git itself.
-- **FR-005**: The helper MUST return a verdict distinguishing at least: pages
-  current, pages stale, and freshness undeterminable, and MUST name the reason
-  for an undeterminable verdict.
+  is read-only and deterministic: it reads the `amended` rows from the workflow
+  file it is given, through the same heading-anchored `Feedback Sweep Log`
+  table read the sweep already ships rather than a second independent parser of
+  that table, takes every git fact and the pre-regeneration Artifact page set
+  as supplied request data, and returns a verdict over that set as output. The
+  helper MUST NOT select which pages to regenerate; manifest-driven page
+  selection remains FR-010's, unchanged inside the reused ART-007 emission
+  machinery. The workflow file is the only path the helper reads; it MUST NOT
+  invoke git and MUST NOT reach the network.
+- **FR-004a**: Commit recency MUST be encoded in the observation as ancestry,
+  never as a timestamp comparison and never as a sha string comparison. For
+  each `amended` row the orchestrator supplies one record keyed by that row's
+  `Commit` cell text verbatim, carrying whether the cell resolved to a commit
+  and, when it resolved, whether that commit is an ancestor of the last commit
+  touching the artifacts directory. A row whose cell text matches no supplied
+  record is undeterminable under FR-006. The observation MUST carry an
+  explicit success flag as a literal true to be read at all, following the
+  shape the sweep's pull-request observation already uses; any other value is
+  an unusable observation and returns the undeterminable verdict rather than
+  an input error, because FR-023 forbids a failed gather from blocking the
+  run.
+- **FR-005**: The helper MUST return exactly one verdict from a closed set of
+  four — `no_pages`, `stale`, `undeterminable`, `current` — evaluated in that
+  precedence order: a missing or empty artifacts directory reads `no_pages`
+  regardless of the log (FR-007, FR-007a); failing that, any `amended` row
+  that resolves to a commit and is not an ancestor of the last artifacts
+  commit reads `stale` (FR-008, FR-009) regardless of any other row's
+  condition; failing that, any `amended` row that is missing, empty,
+  unresolvable, or matches no supplied observation record (FR-004a, FR-006)
+  reads `undeterminable`, and the verdict MUST name each such row's `#` (the
+  log's existing 1-based row number) and its reason; only when neither `stale`
+  nor `undeterminable` applies to any row is the verdict `current`.
+- **FR-005a**: An `undeterminable` verdict MUST NOT by itself trigger
+  regeneration, the description refresh, or any commit, and MUST NOT change
+  the run's stop-or-proceed decision in either direction: it does not force a
+  stop, and on a sweep that amended something this run, FR-015's stop still
+  fires on that independent ground. The run report MUST name the verdict, each
+  affected row's `#` and reason, and the operator's manual resume path — the
+  same shape FR-036 names for an unrecoverable refresh failure — through the
+  run report alone; FR-021's three sinks do not apply, since no regeneration
+  occurred to produce a shortfall for them to carry. This slice never writes a
+  `Feedback Sweep Log` row and FR-003 forbids any second store, so nothing in
+  scope can ever clear the condition that produced `undeterminable`; an action
+  keyed to it would repeat on every later clean sweep without end, the same
+  non-convergence slice 1's self-reply exclusion exists to prevent. Because
+  `stale` is evaluated before `undeterminable`, any row that actually proves
+  staleness already regenerates through the ordinary stale path, so no
+  genuinely stale page stands behind only a report line.
 - **FR-006**: The helper MUST treat an `amended` row with a missing, empty, or
   unresolvable `Commit` as undeterminable for that row, and MUST surface it
   rather than dropping it.
 - **FR-007**: The helper MUST treat a missing or empty artifacts directory as
   "no pages to judge" and return a verdict that triggers no regeneration.
+- **FR-007a**: A feature whose artifacts directory holds pages but whose
+  history shows no commit touching that directory MUST read as `stale` when at
+  least one joinable `amended` row exists. FR-007's "no pages to judge" is
+  reserved for a directory that is absent or empty. Pages written and never
+  committed are the interrupted run FR-038 repairs; they converge in exactly
+  one regeneration, and reading them as current would leave the pre-amendment
+  plan in front of the re-reviewer, which SC-001 forbids.
 - **FR-008**: The helper MUST treat an `amended` commit equal to the last
-  artifacts commit as not newer, so the pages read as current.
-- **FR-009**: The helper MUST compare against the newest `amended` commit when
-  several exist, rather than evaluating each row independently.
+  artifacts commit as not newer, so the pages read as current. The helper MUST
+  NOT implement this by comparing sha strings. The `Commit` cell may hold an
+  abbreviated sha while the artifacts commit is supplied in full, so string
+  equality would report a matching commit as stale. Under FR-004a's encoding
+  the rule needs no separate test: a commit is its own ancestor, so an equal
+  commit already reads as not newer.
+- **FR-009**: The helper MUST read the pages as stale when any `amended` row's
+  commit is not an ancestor of the last artifacts commit, and MUST NOT require
+  the rows to be ordered against one another. On the linear branch history
+  this join runs against, that disjunction is the comparison against the
+  newest `amended` commit: a row older than the artifacts commit contributes
+  nothing to the verdict, and one newer decides it alone. What FR-009 forbids
+  is a rule that requires every row to be older before reading the pages as
+  current.
 
 #### Regeneration
 
@@ -229,6 +316,16 @@ result, with the already-current case collapsing to one line.
 - **FR-012**: The system MUST remove from disk any page that re-selection no
   longer selects, and MUST report each removal as its own outcome. A removal
   MUST never be silent.
+- **FR-012a**: The removal set FR-012 acts on MUST be computed by a second
+  named surface of the same freshness-helper registration, read-only and
+  deterministic: given the pre-regeneration Artifact page set FR-004 observed
+  and the manifest re-selection's page-id list — both `generated` and `gap`
+  outcomes, since a gapped page is still selected and MUST NOT be removed for
+  that reason alone — it returns the set present in the former and absent from
+  the latter, matched by the manifest entry id kept as the filename stem. The
+  surface MUST NOT delete a file; the system performs the deletion, stages it
+  in the FR-018 commit, and reports each removal as its own outcome per
+  FR-012.
 - **FR-013**: Regeneration MUST reuse the existing ART-007 draft-artifact
   emission machinery, including its per-page `generated` or `gap` outcomes and
   its on-disk verification of written pages. This slice MUST NOT introduce a
@@ -434,9 +531,14 @@ result, with the already-current case collapsing to one line.
   carrying the stage it belongs to and the trigger that selects it. Re-selection
   reads the draft-stage entries and evaluates each trigger against the amended
   planning record.
-- **Freshness verdict**: The helper's output. Names whether the pages are
-  current, stale, or undeterminable, the commits the decision rests on, and the
-  page set the decision applies to.
+- **Freshness verdict**: The helper's output. Names one of the four closed
+  verdicts, the commits the decision rests on, and the pre-regeneration
+  Artifact page set it was computed over, echoed from the observation rather
+  than selected by the helper.
+- **Removal set**: The FR-012a surface's output — members of the
+  pre-regeneration Artifact page set absent from the manifest re-selection,
+  matched by filename stem. Each becomes a `removed` page outcome once the
+  system deletes it.
 - **Regeneration commit**: The one dedicated commit that carries the
   regenerated pages and stages the artifacts directory alone. Its sha is what
   the report names and what the next run's join reads.
