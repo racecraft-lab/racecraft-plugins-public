@@ -573,6 +573,56 @@ result, with the already-current case collapsing to one line.
   separate the freshness decision from the regeneration it exists to trigger,
   leaving a helper nothing calls.
 
+#### Superseding note — Plan corrects three of these figures by hand
+
+The bullets above are the spec-time projection. `plan.md`'s "Reviewability
+Budget, derived by hand" is the live figure, derived line by line from the
+plan's own Declared File Operations block against measured shipped clusters.
+Read that section, not these bullets, for the binding number.
+
+The estimator cannot supply one. Run against the plan it returned
+`{"status":"pass","projected":0,"declared_files":{"production":0,...,"total_entries":30}}`:
+it parsed all thirty entries correctly and recognized **none** of them as
+production, because it counts a file as production only under `src/`, `app/`,
+`lib/`, or `scripts/`, or by a JavaScript, TypeScript, or SQL extension. Every
+production path here is a runner helper under `speckit-pro/speckit_pro_runner/`
+or a Markdown reference. That `pass` is an **absent measurement** and MUST NOT
+be cited as evidence this slice is within budget.
+
+**Three corrections:**
+
+1. **Projected reviewable LOC**: ~450 is low by roughly a factor of four.
+   Corrected to **556 to 825 production-only, midpoint ~690**, and **1350 to
+   2345 including tests and fixtures**. Two bases are now stated apart, because
+   mixing them makes the figure meaningless: production-only is what the gate's
+   estimator scores and what slice 1 recorded against, and it is the binding
+   declaration; the with-verification figure is the basis this bullet stated.
+   Slice 1's realized density applied to the same file list gives a risk band of
+   741 to 1100, recorded in the plan as derivation B.
+2. **Budget result**: "within budget" does not survive. Corrected to **WARN on
+   reviewable LOC** (690 against a 400 warn), with no block: 5 production files
+   against a 6 warn, 12 authored files against a 15 warn, one primary surface.
+3. **Projected total files**: ~10 is corrected to **12** — 5 production and 7
+   test and fixture.
+
+**Two figures stand.** Production files remain **5**, though the membership
+changes: the test suite manifest is verification rather than production, and
+`speckit-pro/skills/speckit-autopilot/SKILL.md` takes its place, because
+FR-033b's second scoping edit binds the literal phrase "one read-only
+observation per run", which occurs exactly once in the tree and occurs there.
+Primary surfaces remain **1**.
+
+**The split lever, named because the high end reaches 800.** The one clean seam
+is deferring the description-refresh half (FR-014, FR-019a's refresh leg, and
+FR-033 through FR-039) into a stacked slice 3. It saves 147 to 245 production
+lines, taking the midpoint to roughly 495 — still a warn, still above 400. It is
+**rejected**: it would ship a pull request whose description describes the plan
+that was amended away while linking to pages that describe the plan that
+replaced it, and FR-001's join would read the artifacts directory as current the
+moment the regeneration commit landed, leaving the deferred refresh with no
+trigger to fire on and therefore no repair path. The full derivation and the
+second, worse lever are in `plan.md`.
+
 ### PR Review Packet Requirements *(mandatory)*
 
 - PR description MUST include: what changed, why, non-goals, review order,

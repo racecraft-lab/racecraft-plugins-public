@@ -85,7 +85,7 @@ Projected reviewable LOC: re-measure at Plan (hand-derived; estimator returns a 
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 32 FRs, 3 stories, 13 scenarios, 0 markers; G1 pass |
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 15 questions; 7 consensus items resolved (all Round 1); spec 32→46 FRs; G2 pass, 0 markers |
-| Plan | `/speckit-plan` | ⏳ Pending | Hand-size the budget here; estimator is a false zero |
+| Plan | `/speckit-plan` | ✅ Complete | plan.md + research + data-model + quickstart + contract; hand-sized ~690 LOC (556–825) WARN, split lever named; G3 pass |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
@@ -393,6 +393,27 @@ if any SKILL.md sentence must change, words must be freed first.
 ```
 
 ### Plan Results
+
+- **Files**: plan.md (834 lines), research.md, data-model.md, quickstart.md,
+  contracts/check-artifact-freshness.md; spec.md §Reviewability Budget
+  corrected to the hand-derived figure.
+- **Budget (hand-derived, step 7b)**: ~690 production-only reviewable LOC
+  (range 556–825) — **WARN** (over 400, under the 800 block); the split lever
+  is named in plan.md §"The split lever" should the high end be realized.
+  Two derivations (shipped-analogue anchoring; slice-1 realized density)
+  corroborate. `estimate-reviewable-loc` returned projected=0 production=0
+  status=pass — the known false zero on non-production-classified paths;
+  recorded as an absent measurement, advisory only, hand figure governs.
+- **Architecture**: one new registration `check-artifact-freshness` with three
+  named surfaces (freshness verdict; removal diff per FR-012a; refresh-site
+  corroboration classification per FR-033a reusing the shipped pure
+  classifier). Dual-anchored Commit-cell read (row-end anchoring) for the
+  Disposition pipe hazard. Three commit shapes kept disjoint (artifacts /
+  bookkeeping / record).
+- **Gate G3**: ✅ pass — `validate-gate` exit 0, 0 markers; privacy scan
+  clean; executor hit its tool-use ceiling during the final verification
+  sweep, so the orchestrator ran it: markers 0, no absolute paths, contract
+  file present.
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
