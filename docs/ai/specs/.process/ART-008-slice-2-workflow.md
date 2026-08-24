@@ -328,9 +328,17 @@ if any SKILL.md sentence must change, words must be freed first.
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Refresh-failure semantics | | |
+| 1 | Refresh-failure semantics | 5 | Fresh live observation at the refresh call site (FR-033); six statuses mapped to ART-007 terminal-step behavior (FR-034); refresh failure ends the attempt only, never stop-or-proceed (FR-035); refresh-only failure is manual recovery, report must say so (FR-036); whole-set gap still refreshes (FR-037); join repairs interrupted not gapped runs (FR-038); Draft PR cell rides the machinery's own record commit (FR-039); artifacts-commit push leg-split (FR-019a); FR-014 false premise corrected (first Phase 7 caller); FR-016/018/022/023 amended. Spec now 40 FRs, reverse-citation clean, 0 markers |
 | 2 | Helper contract | | |
 | 3 | Report & parity | | |
+
+### Consensus Resolution Log
+
+| # | Type | Question/Gap/Finding | Categories | Round | Outcome | Resolution | Analysts Used |
+|---|------|----------------------|------------|-------|---------|------------|----------------|
+| 1 | Clarify | Refresh-only failure never self-repairs — which record is right? | [spec] | 1 | Resolved (high) | Manual recovery; design concept's Open-Question expectation superseded by spec mechanics; FR-036 with tightened report text | spec-context-analyst |
+| 2 | Clarify | Which commit carries a `Draft PR` cell change post-refresh? | [spec] | 1 | Resolved (high) | Reuse the plan-stage record commit verbatim (FR-039); "bookkeeping commit" lexical collision identified; FR-020 unchanged | spec-context-analyst |
+| 3 | Clarify | Artifacts-commit push semantics unspecified | [spec] | 1 | Resolved (medium; executor + analyst convergent) | Settle now as FR-019a: push is part of the step; failed push ends emission sequence on both legs; amended leg stops (SC-001), clean leg proceeds (FR-017) | spec-context-analyst |
 
 ---
 

@@ -171,9 +171,16 @@ result, with the already-current case collapsing to one line.
   changes whether the run stops.
 - **No draft pull request exists at sweep time.** There is nothing to refresh.
   The evaluation reports that and does not treat it as a page failure.
+- **The entry gate stops the sweep.** Four corroboration statuses stop before
+  the sweep reads anything, so the freshness evaluation is never reached and
+  pages a prior run left stale stay stale. That is not a lost repair: the join
+  reads the same `amended` rows on the next `match` run.
 - **The description refresh fails while regeneration succeeded.** The pages are
   still committed and the refresh failure is reported as its own outcome. One
-  half working is reported as one half working.
+  half working is reported as one half working. The failure does not
+  self-repair on a later run: once the regeneration commit lands, FR-001's
+  join reads the pages as current and no later sweep re-attempts the refresh,
+  so FR-036 governs what the report must say.
 - **Multiple `amended` rows across several prior runs.** The join compares the
   artifacts directory against the newest of them, not against each in turn.
 
@@ -227,8 +234,10 @@ result, with the already-current case collapsing to one line.
   its on-disk verification of written pages. This slice MUST NOT introduce a
   second, parallel page-authoring path.
 - **FR-014**: After regenerating, the system MUST refresh the draft
-  pull-request description through the same emission machinery slice 1 already
-  uses for that refresh.
+  pull-request description through the ART-007 create-or-refresh machinery the
+  plan stage already uses, invoked from a new call site inside the Phase 7
+  sweep. Slice 1 makes no write to the pull-request description, so this slice
+  is that machinery's first caller from Phase 7, not a reuse of a slice-1 path.
 
 #### Ordering and commit shape
 
@@ -238,16 +247,38 @@ result, with the already-current case collapsing to one line.
 - **FR-016**: The system MUST evaluate freshness on every sweep leg it reaches,
   including the leg that amends nothing and the leg that handles no comment at
   all, because the recovery case in User Story 2 surfaces only on those legs.
+  The evaluation runs inside the sweep, so it is reached only when the entry
+  gate's corroboration status is `match`. On `no_record` the sweep does not
+  run and there is no pull request to refresh; on the four statuses that stop
+  the sweep, no evaluation occurs and stale pages stay stale. The FR-001 join
+  is durable, so the repair happens on the first `match` run after the operator
+  resolves the gate.
 - **FR-017**: On a leg that amended nothing, the system MUST regenerate and
   refresh when the verdict is stale, and MUST then proceed without stopping.
   Repairing stale pages MUST NOT convert a proceed into a stop.
 - **FR-018**: The system MUST write the regenerated pages in one dedicated
   commit that stages `specs/<feature>/artifacts/` and nothing else, using the
-  `docs` conventional-commit type.
+  `docs` conventional-commit type. The commit is taken only when regeneration
+  produced a change under that directory; a run that produced no change takes
+  no commit, because an empty commit records nothing and cannot move the FR-001
+  join.
 - **FR-019**: That commit MUST be separate from the sweep's bookkeeping commit.
   Keeping the artifacts directory in a commit of its own is what makes the
   FR-001 join exact, because any other staged path would move the directory's
   last-touched commit for reasons unrelated to page content.
+- **FR-019a**: The push MUST be part of the regeneration step, not a step
+  after it: the dedicated artifacts commit is not complete until it is on the
+  remote. A push that fails MUST end the emission sequence at that point: the
+  refresh step MUST NOT run against pages the remote does not yet show, the
+  same sequencing the reused ART-007 emission machinery already applies
+  between its own push and its create-or-refresh step. Because refresh never
+  ran, the shortfall reaches the run report alone, naming the unpushed
+  commit's sha, exactly as the reused machinery's own unreached-sink rule
+  already treats a failed branch push. On a sweep that amended (FR-015), this
+  MUST stop the run immediately, because SC-001 requires the pages the
+  re-review stop's pull request shows to already be current. On a leg that
+  amended nothing (FR-017), this MUST NOT convert the proceed into a stop;
+  the local commit stands and rides up with the branch's next push.
 - **FR-020**: The dedicated artifacts commit MUST NOT be read as the
   bookkeeping commit that slice 1 declines to write on the leg where no comment
   was handled. Slice 1's rule that the no-comment leg writes no bookkeeping
@@ -260,10 +291,12 @@ result, with the already-current case collapsing to one line.
   description's gap rows, the `Draft PR` row's note, and the run report.
 - **FR-022**: The sweep MUST NOT write the workflow file's `Draft PR` row. That
   row has exactly one writer, the emission machinery, and this slice MUST NOT
-  add a second.
+  add a second. The emission machinery remains the row's sole writer; this
+  slice supplies only the commit that carries what the machinery wrote.
 - **FR-023**: Page generation MUST be fail-open. No page shortfall, no
   whole-set gap, and no description-refresh failure may block the run, change
-  its stop-or-proceed decision, or prevent the dedicated commit from landing.
+  its stop-or-proceed decision, or prevent a regeneration commit that has
+  content from landing.
 - **FR-024**: The run report MUST carry one outcome line per page, each reading
   `generated` or `gap`, with every gap naming what was missing and why.
 - **FR-025**: The run report MUST name the regeneration commit's sha and the
@@ -290,6 +323,62 @@ result, with the already-current case collapsing to one line.
 - **FR-032**: Any change to shipped plugin source MUST be followed by
   regeneration of the generated payload and proof artifacts before the work is
   considered complete.
+
+#### Failure semantics
+
+- **FR-033**: The refresh MUST take its own live read-only observation of the
+  pull request at the moment of the refresh, and MUST NOT reuse the
+  corroboration observation the sweep's entry gate read. A pull request can be
+  closed or replaced while the sweep runs, and the later read is the current
+  evidence.
+- **FR-034**: Each corroboration status at the refresh call site MUST take the
+  behavior the ART-007 create-or-refresh contract already assigns it at its
+  terminal step: `match` refreshes; `no_record` falls through to the live
+  by-branch existence test; `skipped` never creates and reports through the
+  could-not-be-opened shape, naming which of the four causes occurred;
+  `pr_closed`, `pr_missing`, and `identity_mismatch` each end the refresh
+  attempt, create nothing, and leave the `Draft PR` row exactly as found. No
+  status opens a second pull request.
+- **FR-035**: A discrepancy or an unreachable tool at the refresh call site MUST
+  end the refresh attempt only. It MUST NOT change the run's stop-or-proceed
+  decision, MUST NOT unwind a regeneration commit that already landed, and MUST
+  NOT be reported as a page failure. This is where slice 2 diverges from
+  ART-007: ART-007's terminal step sits at a stage boundary the run stops at
+  regardless, while the sweep may proceed into task work.
+- **FR-036**: When the description refresh fails, the run report MUST name
+  that failure as its own outcome, distinct from the regeneration outcome.
+  The report MUST state that once the regeneration commit has landed, a
+  re-run does NOT retry the failed refresh: the FR-001 join then reads the
+  artifacts directory as current, so a later sweep regenerates nothing and
+  refreshes nothing. The report MUST name the operator's manual resume path:
+  refresh the pull-request description directly, outside the automated
+  sequence. When the failure traces to the recorded and live pull-request
+  identities disagreeing, the report MUST name both identities, the one
+  recorded and the one observed.
+- **FR-037**: A whole-set regeneration failure MUST still run the description
+  refresh, which carries the whole-set gap as a single row through the ART-007
+  three-sink contract, and MUST leave the stop-or-proceed decision unchanged.
+- **FR-038**: The FR-001 join repairs an interrupted run, never a gapped one.
+  Any commit touching the artifacts directory marks the set current on the next
+  run's join, including a commit carrying only removals and a commit carrying
+  only a subset of the selected pages. Per-page gaps are therefore the
+  operator's to act on from the report, and no later run re-attempts them.
+- **FR-039**: When FR-014's refresh actually changes the `Draft PR` row's
+  cell, the write MUST ride the emission machinery's own record commit — the
+  same separate, workflow-file-path-alone `chore:` commit the plan-stage
+  terminal sequence already takes when it records the draft pull request —
+  reused verbatim rather than a new commit shape this slice defines. The
+  commit is taken only when the cell actually changed; a refresh that leaves
+  the cell as found stages nothing and takes no commit, the same no-op the
+  machinery already applies whenever a re-run finds nothing left to stage.
+  This commit MUST NOT be read as the sweep's bookkeeping commit under
+  FR-020, which stands unchanged: a leg that logs no Feedback Sweep Log or
+  Consensus Resolution Log row still takes none of those. It MUST NOT be
+  folded into the dedicated artifacts commit under FR-018 and FR-019 either.
+  A failure of this commit or its push MUST be reported through the refresh
+  outcome (FR-025) and MUST NOT block the run (FR-023); the row's existing
+  repair rule recovers an unwritten row on the next refresh that reaches this
+  step, so the failure is reported, never fatal.
 
 ### Reviewability Notes *(if applicable)*
 
@@ -388,6 +477,10 @@ result, with the already-current case collapsing to one line.
   the leg that handles no comment at all. That leg is precisely where the
   recovery case in User Story 2 becomes visible, since an interrupted run's
   comments are already in the log and therefore already skipped.
+- A `Draft PR` cell change rides the emission machinery's own record commit
+  for the same reason the artifacts commit rides one of its own: slice 1's
+  bookkeeping commits land per amendment, strictly before the refresh whose
+  outcome the cell records, so no existing commit can legally carry it.
 - The dedicated artifacts commit is a commit of this slice's own, distinct from
   slice 1's bookkeeping commit. Writing it on a leg where slice 1 writes no
   bookkeeping commit does not contradict slice 1's rule, which governs the
@@ -396,6 +489,10 @@ result, with the already-current case collapsing to one line.
   manifest-driven selection, its per-page outcomes, its on-disk verification of
   written pages, its three shortfall sinks, and its fail-open posture. This
   slice supplies the trigger and the timing, not a new authoring path.
+  The refresh recomposes the description body for the implement stage rather
+  than reusing the plan-stage body: a draft description is fully
+  fingerprint-protected with no editable region, so the refresh rewrites it
+  whole through the same draft-mode packet path.
 - The gallery manifest's draft-stage filter and trigger evaluation are not
   modified by this slice. Re-selection differs from first selection only in that
   it reads the amended planning record.
