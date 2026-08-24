@@ -5,8 +5,8 @@
   "branch": "g56r-006-resolver-materializer-installer-strict-override",
   "status": "in_progress",
   "stage": "plan",
-  "updated_at": "2026-08-24T17:54:35Z",
-  "active_step": "Phase 5: Tasks",
+  "updated_at": "2026-08-24T18:07:14Z",
+  "active_step": "Phase 6: Analyze",
   "stage_resolution": {
     "source": "argv",
     "basis": "explicit --stage plan",
@@ -164,6 +164,13 @@
       "pass": true,
       "markers": 0,
       "reason": "0 [Gap] markers across 123 checklist items"
+    },
+    "G5": {
+      "gate": "5",
+      "pass": true,
+      "markers": 0,
+      "task_count": 53,
+      "reason": "53 tasks found with all 29 functional requirements mapped"
     }
   },
   "phase_results": {
@@ -343,7 +350,40 @@
       "gaps_after": 0,
       "consensus_items": 0,
       "g4": "pass"
+    },
+    "tasks": {
+      "status": "completed",
+      "file": "specs/g56r-006-resolver-materializer-installer-strict-override/tasks.md",
+      "tasks": 53,
+      "phases": 7,
+      "parallel_tasks": 4,
+      "user_stories": 4,
+      "functional_requirements": 29,
+      "acceptance_scenarios": 13,
+      "success_criteria": 9,
+      "red_green_pairs": 14,
+      "markers": 0,
+      "g5": "pass"
     }
+  },
+  "tasks_reviewability": {
+    "status": "deferred_with_fallback_pass",
+    "helper_id": "reviewability-gate",
+    "requested_mode": "tasks",
+    "deferral_reason": "the installed runner supports setup mode only; tasks mode is deferred by contract",
+    "fallback_evidence": {
+      "setup": "warn with pass=true and no blockers",
+      "plan_estimator": "pass",
+      "operator_split_decision": "one vertical slice"
+    },
+    "correctness_or_safety_block": false,
+    "fingerprints": "current",
+    "decision": "proceed",
+    "marker_plan_required": false
+  },
+  "layer_plan": {
+    "status": "skipped",
+    "reason": "atomicity route one-navigable-PR is not split-PR; plan-layers-feature-dir was not invoked"
   },
   "plan": [
     {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
@@ -364,11 +404,17 @@
     {"step": "Phase 4: Checklist - Data Integrity Consensus", "status": "completed"},
     {"step": "Phase 4: Checklist - Reliability", "status": "completed"},
     {"step": "Phase 4: Checklist - Reliability Consensus", "status": "completed"},
-    {"step": "Phase 5: Tasks", "status": "in_progress"},
-    {"step": "Phase 6: Analyze", "status": "pending"},
+    {"step": "Phase 5: Tasks", "status": "completed"},
+    {"step": "Phase 6: Analyze", "status": "in_progress"},
     {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
     {"step": "Phase 6.5: Confidence Gate", "status": "pending"},
-    {"step": "Phase 7: Implement - Pending task decomposition", "status": "skipped: outside plan stage"},
+    {"step": "Phase 7: Implement - Setup (T001-T005)", "status": "skipped: outside plan stage"},
+    {"step": "Phase 7: Implement - Foundation (T006-T011)", "status": "skipped: outside plan stage"},
+    {"step": "Phase 7: Implement - User Story 1 (T012-T018)", "status": "skipped: outside plan stage"},
+    {"step": "Phase 7: Implement - User Story 2 (T019-T023)", "status": "skipped: outside plan stage"},
+    {"step": "Phase 7: Implement - User Story 3 (T024-T030)", "status": "skipped: outside plan stage"},
+    {"step": "Phase 7: Implement - User Story 4 (T031-T039)", "status": "skipped: outside plan stage"},
+    {"step": "Phase 7: Implement - Polish and verification (T040-T053)", "status": "skipped: outside plan stage"},
     {"step": "Post: Doctor Extension Check", "status": "skipped: outside plan stage"},
     {"step": "Post: Verify Implementation", "status": "skipped: outside plan stage"},
     {"step": "Post: Verify Tasks Phantom Check", "status": "skipped: outside plan stage"},

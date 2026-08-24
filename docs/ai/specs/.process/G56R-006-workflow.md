@@ -34,8 +34,8 @@ Re-read it before every phase. Once autopilot begins, later clarifications use `
 | Clarify | `/speckit-clarify` | ✅ Complete | 15 questions resolved across roster, route, override, ownership, rollback, compatibility, and response boundaries; G2 passed with 0 markers |
 | Plan | `/speckit-plan` | ✅ Complete | Six planning artifacts, two closed contracts, exact 8-authored/41-generated implementation path accounting, and G3 with 0 unresolved markers |
 | Checklist | `/speckit-checklist` | ✅ Complete | 123 checks across error handling, state management, data integrity, and reliability; zero gaps; G4 passed |
-| Tasks | `/speckit-tasks` | 🔄 In Progress | Vertical, TDD-first ordering with explicit RED→GREEN pairs |
-| Analyze | `/speckit-analyze` | ⏳ Pending | Cross-check spec, plan, tasks, and Design Concept |
+| Tasks | `/speckit-tasks` | ✅ Complete | 53 dependency-ordered tasks, 14 RED→GREEN pairs, all 29 FRs and 13 scenarios mapped; G5 passed |
+| Analyze | `/speckit-analyze` | 🔄 In Progress | Cross-check spec, plan, tasks, and Design Concept |
 | Confidence Gate | G6.5 | ⏳ Pending | Advisory composite confidence before implementation |
 | Implement | `/speckit-implement` | ⏳ Pending | Execute tasks with targeted and repository-wide verification |
 | Post | Post-Implementation | ⏳ Pending | Canonical closeout, generated artifacts, PR, UAT boundary, and retrospective |
@@ -386,10 +386,14 @@ Requirements:
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | Pending |
-| **Phases** | Pending |
-| **Parallel Opportunities** | Pending |
-| **User Stories Covered** | Target 4 |
+| **Total Tasks** | 53 |
+| **Phases** | 7 |
+| **Parallel Opportunities** | 4 setup-only `[P]` tasks |
+| **User Stories Covered** | 4 of 4 |
+
+**G5 gate:** ✅ PASS — `validate-gate G5`, 53 tasks found, 0 markers. All 29 functional requirements, 13 acceptance scenarios, and 9 success criteria are mapped; 14 focused RED→GREEN pairs are explicit.
+
+**Tasks-mode reviewability:** deferred by the installed runner contract (`helper_id=reviewability-gate`, `requested_mode=tasks`). Fallback evidence proceeds: scaffold setup was `warn` with `pass=true` and no blockers; the plan estimator was `pass`; the operator-ratified workflow decision remains one vertical slice. No correctness or safety block exists, fingerprints are current, and no marker plan is required.
 
 ---
 
@@ -399,16 +403,25 @@ The tasks-phase classifier fills this section after G5. The scaffold decision is
 
 | Field | Value |
 |-------|-------|
-| **Route** | Pending |
-| **Releasable** | Pending |
-| **Signals** | Pending |
-| **Warnings** | Pending |
+| **Route** | `one-navigable-PR` |
+| **Releasable** | `true` |
+| **Signals** | `change-shape:modify-heavy` |
+| **Warnings** | None |
 
 Run:
 
 ```text
 runner helper atomicity-route specs/g56r-006-resolver-materializer-installer-strict-override
 ```
+
+---
+
+## Layer Plan
+
+| Field | Value |
+|-------|-------|
+| **Status** | Skipped |
+| **Reason** | Atomicity route is `one-navigable-PR`, not `split-PR`; `plan-layers-feature-dir` was not invoked |
 
 ---
 
