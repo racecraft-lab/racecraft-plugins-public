@@ -305,6 +305,19 @@ result, with the already-current case collapsing to one line.
   committed are the interrupted run FR-038 repairs; they converge in exactly
   one regeneration, and reading them as current would leave the pre-amendment
   plan in front of the re-reviewer, which SC-001 forbids.
+- **FR-007b**: A row is *joinable* when its `Commit` cell text matched a
+  supplied ancestry record and that record carries `resolved` as true. A row
+  that matched no record, or matched one that did not resolve, is not joinable
+  and is undeterminable under FR-006. FR-007a's stale reading therefore
+  requires at least one row that actually resolved: the other reading would let
+  an unresolvable row prove staleness, which FR-006 forbids by making that same
+  row unable to prove freshness either way. When `last_artifacts_commit` is
+  null, every resolved row's ancestry MUST be supplied as not-an-ancestor,
+  because there is no commit for it to be an ancestor of and an unstated value
+  in the one case FR-007a exists to govern would leave FR-031's fixtures
+  nothing to pin. Under that encoding FR-005's stale test already decides the
+  FR-007a case on its own terms, so the null-commit disjunct is a restatement
+  of the rule rather than a second, independently-implementable one.
 - **FR-008**: The helper MUST treat an `amended` commit equal to the last
   artifacts commit as not newer, so the pages read as current. The helper MUST
   NOT implement this by comparing sha strings. The `Commit` cell may hold an
@@ -469,6 +482,44 @@ result, with the already-current case collapsing to one line.
   written page to a per-page gap — takes no commit and leaves the artifacts
   directory unmoved, because a commit there records nothing generated and
   would move the FR-001 join past pages the run failed to produce.
+- **FR-018a**: A run that takes no FR-018 commit MUST leave the artifacts
+  directory's working-tree content as the pre-regeneration inventory FR-004
+  observed — the same set FR-012a takes as its observed page input — and
+  MUST report any restoration it performed. That report is a run-level line
+  in the what-already-landed part, beside the commit sha FR-025 already
+  requires there; it is NOT a fourth member of FR-024's closed page-outcome
+  vocabulary, which stays the three it names. A restored page's own outcome
+  is the `gap` that describes why it was not regenerated. FR-018 and FR-037
+  both promise the directory is left unmoved, but they promise it of the
+  commit, and by the time that promise is evaluated the reused emission
+  machinery has already moved the working tree: it writes each page directly
+  into `specs/<feature>/artifacts/` and deletes every written page that
+  fails its on-disk verification, and FR-011 makes those writes whole-file,
+  so a pre-existing page is overwritten and then deleted before the commit
+  decision is reached. Both zero-generated paths are covered — the whole-set
+  gap of FR-037, and the run whose every written page the verification
+  converted to a per-page gap — and FR-037's withheld deselection removal is
+  the whole-set instance of this rule rather than a separate one. Without it
+  a run can empty the very directory it promised not to move, and FR-005's
+  precedence then reads `no_pages` on the next join, which FR-007 says
+  triggers nothing: the retry FR-038 promises never fires, and the pages are
+  gone rather than stale. From the sweep onward, FR-018's dedicated commit
+  MUST also be the only commit that stages any path under
+  `specs/<feature>/artifacts/`. The scope is deliberate and does not reach
+  backward: the shipped plan-stage boundary commit legitimately carries the
+  first artifact generation through its own `specs/` path set, and that
+  sequence is untouched. What the rule governs is the phase that hosts the
+  sweep, which ends in a commit that stages the whole worktree, so any
+  change the sweep left uncommitted under that directory would ride into a
+  commit touching it, move the FR-001 join, and mark as current a set the
+  run never produced. Both platform reference surfaces MUST scope that
+  terminal commit by an added sentence, in the manner FR-015b already uses
+  rather than by rewriting or deleting shipped text, stating that the sweep
+  leaves nothing uncommitted under the artifacts directory for it to stage.
+  How the working tree is restored is a Plan-phase decision, and it is not
+  free: on the FR-007a history, where no commit has ever touched the
+  directory, git holds no copy to restore from, so the mechanism MUST NOT
+  assume one.
 - **FR-019**: That commit MUST be separate from the sweep's bookkeeping commit.
   Keeping the artifacts directory in a commit of its own is what makes the
   FR-001 join exact, because any other staged path would move the directory's

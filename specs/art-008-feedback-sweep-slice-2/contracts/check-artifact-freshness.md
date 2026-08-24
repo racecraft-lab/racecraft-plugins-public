@@ -205,6 +205,11 @@ below must be able to fail:
 - precedence: `no_pages` over a log full of `amended` rows; `stale` over a
   co-occurring undeterminable row
 - FR-007a: pages present, `last_artifacts_commit` null, one joinable row → `stale`
+- FR-007b: pages present, `last_artifacts_commit` null, and the only `amended`
+  row unresolved — **not** joinable → `undeterminable`, never `stale`
+- FR-007b: a resolved row supplied with `is_ancestor_of_artifacts_commit` as
+  `false` because `last_artifacts_commit` is null, proving the pinned encoding
+  reaches `stale` through the ordinary test rather than a special branch
 - FR-008: an `amended` commit equal to the artifacts commit → `current`, with
   the abbreviated-cell / full-sha pairing that string equality would get wrong
 - FR-009: an older row plus a newer row → `stale`; two older rows → `current`

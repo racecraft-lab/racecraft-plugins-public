@@ -558,6 +558,18 @@ naming the artifacts commit itself already reads as not-newer under this
 encoding. FR-008's requirement is satisfied by construction rather than by a
 branch that could be written wrong.
 
+**Two encoding facts FR-007b pins, because FR-007a's reading turns on them.**
+A row is *joinable* only when its cell matched a supplied record **and** that
+record resolved; a matched-but-unresolved row is not joinable, because FR-006
+already makes it unable to prove freshness either way and the other reading
+would let it prove staleness instead. And when `last_artifacts_commit` is null,
+every resolved row's `is_ancestor_of_artifacts_commit` is supplied as `false`:
+there is no commit for it to be an ancestor of, so without a pinned value the
+one case FR-007a exists to govern would leave the Layer 4 fixtures nothing to
+assert. With it pinned, the ordinary `stale` test decides that case directly and
+the null-commit disjunct in the verdict table restates the rule rather than
+adding a second branch to implement.
+
 ### Verdict precedence, and why `undeterminable` acts on nothing
 
 Four verdicts, evaluated in this order (FR-005):
@@ -650,6 +662,30 @@ regeneration produced a change under that directory — an empty commit records
 nothing and cannot move the join. It is **not** the bookkeeping commit slice 1
 declines to write on the no-comment leg, and writing it there does not
 contradict slice 1's rule, which governs the bookkeeping commit only (FR-020).
+
+**FR-018a extends both halves of that guarantee, because neither held on its
+own.** The first half is exclusivity in the other direction: from the sweep
+onward the regeneration commit must be the only commit that stages a path under
+the artifacts directory, not merely a commit that stages nothing else. The rule
+does not reach backward to the plan-stage boundary commit, which legitimately
+carries the first generation through its own `specs/` path set
+(`phase-execution.md:788-805`, "plan stage only"). Phase 7 ends in
+`git add -A && git commit` (`phase-execution.md:2219`), which runs on the
+proceed leg after the sweep, so anything the sweep left uncommitted under the
+directory rides into a commit touching it and moves the join. The second half
+is that "unmoved" has to bind the working tree, not the commit. The reused
+machinery writes each page directly into `specs/<feature>/artifacts/`
+(`phase-execution.md:924`) and deletes every written page that fails its two
+tests (`phase-execution.md:937-938`), and FR-011 makes those writes whole-file,
+so a pre-existing page is overwritten and then deleted **before** the commit
+decision exists. On either zero-generated path the directory can therefore end
+changed, or empty; an emptied directory reads `no_pages` on the next join,
+which outranks `stale`, and the retry FR-038 promises never fires. FR-018a's
+obligation is to leave the directory as the pre-regeneration inventory FR-004
+observed and to report any restoration performed. The mechanism is open and is
+not free: on the FR-007a history no commit has ever touched the directory, so
+git holds no copy to restore from and a `git`-only mechanism does not cover the
+case.
 
 **FR-039's record commit is reused, never redefined.** When the refresh actually
 changes the `Draft PR` cell, that write rides the same separate,

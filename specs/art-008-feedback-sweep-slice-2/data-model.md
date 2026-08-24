@@ -94,7 +94,7 @@ orchestrator, which is the only party that runs `git` (FR-004, FR-004a).
 |---|---|---|
 | `cell` | string | The row's `Commit` cell text verbatim. This is the join key. |
 | `resolved` | boolean | Whether the cell resolved to a commit in this history. |
-| `is_ancestor_of_artifacts_commit` | boolean or null | Whether that commit is an ancestor of `last_artifacts_commit`. `null` when `resolved` is false. |
+| `is_ancestor_of_artifacts_commit` | boolean or null | Whether that commit is an ancestor of `last_artifacts_commit`. `null` when `resolved` is false. **`false` when `resolved` is true and `last_artifacts_commit` is null** (FR-007b): there is no commit to be an ancestor of, and the FR-007a case needs a pinned value for its fixtures to assert. |
 
 **Why ancestry and not a comparison.** The `Commit` cell may hold an abbreviated
 sha while `last_artifacts_commit` is full, so string equality would report a
@@ -105,6 +105,12 @@ rule and cannot be written wrong.
 **Unmatched rows.** A row whose `Commit` cell text matches no supplied `cell` is
 undeterminable (FR-004a). It is never silently skipped, because skipping would
 read the pages as current.
+
+**Joinable, defined.** A row is *joinable* when its cell matched a supplied
+record **and** that record carries `resolved` as true (FR-007b). A matched but
+unresolved row is not joinable: FR-006 already makes it unable to prove
+freshness either way, so letting it prove staleness instead would contradict
+that rule. This is the term FR-007a's stale reading turns on.
 
 ---
 
@@ -253,6 +259,17 @@ directory alone because any other staged path would move the directory's
 last-touched commit for reasons unrelated to page content, which is what makes
 FR-001's join exact. An empty regeneration commit is never taken, because it
 records nothing and cannot move the join.
+
+**And no other commit stages the directory** (FR-018a). Exclusivity has to run
+in both directions: the phase hosting the sweep ends in a commit that stages the
+whole worktree, so anything the sweep leaves uncommitted under
+`specs/<feature>/artifacts/` would ride into a commit touching it and move the
+join just as surely. That is why the working tree, not only the commit, carries
+the "unmoved" obligation on every path that takes no regeneration commit — the
+emission machinery writes pages into the directory and deletes the ones that
+fail verification before the commit decision is ever reached, so a run can empty
+a directory it promised not to move. Such a directory reads `no_pages` on the
+next join, which outranks `stale`, and the retry FR-038 promises never fires.
 
 **The push is part of the regeneration step, not a step after it** (FR-019a).
 The commit is not complete until it is on the remote, and a failed push ends the
