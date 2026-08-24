@@ -10,7 +10,7 @@
 
 ## Clarifications
 
-### Session 2026-08-24 — autopilot Clarify, sessions 1-2
+### Session 2026-08-24 — autopilot Clarify, sessions 1-3
 
 - **Q: Does the freshness helper read the workflow file itself, or does the
   orchestrator parse the `Feedback Sweep Log` rows and pass them as data?** →

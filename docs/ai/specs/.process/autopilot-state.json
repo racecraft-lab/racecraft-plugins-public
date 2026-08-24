@@ -7,7 +7,7 @@
   "stage": "plan",
   "prior_run_note": "completed",
   "updated_at": "2026-08-24T00:00:00Z",
-  "active_step": "Phase 4: Checklist",
+  "active_step": "Phase 5: Tasks",
   "reclaimed_from": {
     "workflow_file": "docs/ai/specs/.process/ART-008-workflow.md",
     "spec_id": "ART-008",
@@ -59,7 +59,7 @@
     },
     {
       "step": "Phase 4: Checklist (error-handling, state-management, requirements)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 5: Tasks",

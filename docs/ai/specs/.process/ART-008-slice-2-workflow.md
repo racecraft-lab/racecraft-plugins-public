@@ -86,7 +86,7 @@ Projected reviewable LOC: re-measure at Plan (hand-derived; estimator returns a 
 | Specify | `/speckit-specify` | ✅ Complete | 32 FRs, 3 stories, 13 scenarios, 0 markers; G1 pass |
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 15 questions; 7 consensus items resolved (all Round 1); spec 32→46 FRs; G2 pass, 0 markers |
 | Plan | `/speckit-plan` | ✅ Complete | plan.md + research + data-model + quickstart + contract; hand-sized ~690 LOC (556–825) WARN, split lever named; G3 pass |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
+| Checklist | `/speckit-checklist` | ✅ Complete | 3 domains, 130 items; 34 gaps closed; spec 46→54 FRs; consensus items 8–12; G4 pass |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
@@ -347,6 +347,7 @@ if any SKILL.md sentence must change, words must be freed first.
 | 9 | Checklist | CHK002/016/036: FR-012b delete-superseded-file + FR-037 withholding | [codebase] [spec] | 1 | Upheld (high, 2/2) + refinement | Delete upheld (shipped verification precedent; keep-and-report has no precedent and strands pages); FR-018 gate re-keyed to ≥1 verified `generated` page, closing the verification-zeroed stranding route | codebase-analyst, spec-context-analyst |
 | 10 | Checklist | CHK008: FR-034a unreachable statuses (security keyword) | [security] | 1 | Upheld (high, 3/3) + wording | Fail-closed posture confirmed (OWASP/CWE/RFC-grounded); headline corrected (skipped classifies, one live branch); defensive no_record reported as orchestrator invariant violation | codebase-analyst, spec-context-analyst, domain-researcher |
 | 11 | Checklist | CHK014-017/030: FR-018a restoration mechanism | [codebase] [spec] | 1 | Resolved (high, N=1 — codebase analyst lost to transient API 403) | FR-018a stands unamended; mechanism stays with Plan; uniform snapshot-and-replay recorded as plan.md guidance (slice-1 FR-004d transport precedent, FR-003 untouched); SC-001 exception widened to both zero-generated sub-shapes | spec-context-analyst |
+| 12 | Checklist | CHK019/020: FR-024a "one-line report" scope reading | [codebase] [spec] | 1 | Resolved (high, 2/2 agree) | Narrow reading upheld — the shipped sentence scopes to per-comment dispositions (paragraph topic-sentence structure; the shipped three-part report was never one line); FR-024a unmodified; FR-026's Clarify amendment is the in-document precedent | codebase-analyst, spec-context-analyst |
 
 ---
 
@@ -500,6 +501,12 @@ Focus on ART-008 slice 2 requirements:
 - **state-management** (43 items): 9 gaps found, 9 closed (new FR-007b,
   FR-018a; ancestry/joinable definitions mirrored into data-model.md, plan.md,
   and the contract's fixture list; spec 51 → 53 FRs). Consensus item 11.
+- **requirements** (43 items, written to requirements-domain.md — the
+  spec-template checklist owns requirements.md): 10 gaps found, 10 closed
+  (new FR-024a; FR-022 revised — the shipped sole-writer sentence survives
+  verbatim with an added scoping sentence; slice-1 SC-008 inheritance
+  recorded in Assumptions; spec 53 → 54 FRs). Consensus item 12 (narrow
+  reading upheld 2/2). Clarifications header corrected to sessions 1-3.
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
