@@ -2809,3 +2809,29 @@ verify-tasks report to durable `docs/ai/specs/.process/ART-005-*` paths, updated
 roadmap and process state, regenerated the SpecKit index, and removed only the
 completed active spec folder. Recovery and the complete validation record live
 in `.specify/memory/archive-reports/2026-08-20-art-005-post-merge-hygiene.md`.
+
+---
+
+## 2026-08-24 - G56R-005 Post-Merge Archive Cleanup
+
+### G56R-005
+
+- PR: https://github.com/racecraft-lab/racecraft-plugins-public/pull/487
+- Title: `feat(g56r-005): Add model availability fallback and recovery simulation`
+- Merged at: `2026-08-23T01:31:23Z`
+- Merge commit: `85762d5a7033981da1fdf6a18b5913c83fc6d9a5`
+- Source: `specs/g56r-005-model-availability-fallback-recovery`
+- Branch: `g56r-005-model-availability-fallback-recovery`
+- Completion: 25/25 tasks, 22/22 functional requirements, 9/9 success criteria
+
+G56R-005 shipped deterministic Codex model-availability, ordered-fallback,
+service-reroute, strict-override, optional-helper, bounded-harness, and fake-home
+recovery evidence. Canonical behavior now lives in the three fallback schemas,
+the roster-bound corpus, `codex_route_fallback.py`, the focused 35-test owner,
+and Layer 4 suite registration.
+
+The cleanup preserved the workflow, design concept, manual UAT runbook, and
+retrospective under `docs/ai/specs/.process/`, marked G56R-005 complete and
+G56R-006 ready, removed only the completed active spec folder, and regenerated
+the SpecKit index. Recovery commands and the complete verification record live
+in `.specify/memory/archive-reports/2026-08-24-g56r-005-post-merge-hygiene.md`.
