@@ -2378,6 +2378,9 @@ def write_codex_agent_atomic(
                 descriptor_chmod(handle.fileno(), mode & 0o7777)
             handle.flush()
             os.fsync(handle.fileno())
+        prepared_state = codex_agent_previous_state(tmp_path)
+        if prepared_state is None:
+            raise OSError("temporary install file disappeared")
         if codex_agent_destination_identity(destination) != destination_identity:
             raise OSError("destination changed after temporary file creation")
         if not codex_agent_target_is_safe(target, destination, destination_identity):
@@ -2389,47 +2392,71 @@ def write_codex_agent_atomic(
             moved_state = codex_agent_previous_state(backup_path)
             if moved_state != expected_state:
                 codex_agent_restore_backup_no_clobber(backup_path, target)
-                backup_path = None if not backup_path.exists() else backup_path
+                backup_path = None
                 raise OSError("target changed before no-clobber install")
         elif os.path.lexists(target):
             raise OSError("target appeared before no-clobber install")
         try:
             os.link(tmp_path, target, follow_symlinks=False)
         except OSError:
+            paths = [target.as_posix()]
             if backup_path is not None:
-                if os.path.lexists(target):
-                    backup_path.unlink()
-                else:
-                    codex_agent_restore_backup_no_clobber(backup_path, target)
-                backup_path = None if not backup_path.exists() else backup_path
-            raise OSError("target changed during no-clobber install") from None
-        tmp_path.unlink()
+                paths.insert(0, backup_path.as_posix())
+            raise CodexAgentNoClobberConflict("target changed during no-clobber install", paths) from None
+        installed_state = codex_agent_previous_state(target)
+        if installed_state != prepared_state:
+            paths = [target.as_posix()]
+            if backup_path is not None:
+                paths.insert(0, backup_path.as_posix())
+            raise CodexAgentNoClobberConflict("target changed after no-clobber link", paths)
+        try:
+            tmp_path.unlink()
+        except OSError:
+            paths = [tmp_path.as_posix(), target.as_posix()]
+            if backup_path is not None:
+                paths.append(backup_path.as_posix())
+            raise CodexAgentNoClobberConflict("temporary install file cleanup failed", paths) from None
         tmp_path = None
-        if backup_path is not None:
-            backup_path.unlink()
-            backup_path = None
         if codex_agent_destination_identity(destination) != destination_identity:
             raise OSError("destination changed during no-clobber install")
-        installed_state = codex_agent_previous_state(target)
-        if installed_state is None or installed_state.content != content:
-            raise OSError("target changed after replace")
-        if mode is not None and (installed_state.mode & 0o7777) != (mode & 0o7777):
-            raise OSError("target mode changed after replace")
+        if not codex_agent_state_matches(target, prepared_state):
+            paths = [target.as_posix()]
+            if backup_path is not None:
+                paths.insert(0, backup_path.as_posix())
+            raise CodexAgentNoClobberConflict("target changed before backup cleanup", paths)
+        if backup_path is not None:
+            try:
+                backup_path.unlink()
+            except OSError:
+                raise CodexAgentNoClobberConflict(
+                    "prior-state backup cleanup failed",
+                    [backup_path.as_posix(), target.as_posix()],
+                ) from None
+            backup_path = None
         return installed_state
-    finally:
+    except OSError as exc:
+        preserved_paths = list(exc.preserved_paths) if isinstance(exc, CodexAgentNoClobberConflict) else []
         if tmp_path is not None:
             try:
                 tmp_path.unlink()
             except OSError:
-                pass
+                preserved_paths.append(tmp_path.as_posix())
         if backup_path is not None:
-            try:
-                if not os.path.lexists(target):
+            if isinstance(exc, CodexAgentNoClobberConflict):
+                preserved_paths.append(backup_path.as_posix())
+                if os.path.lexists(target):
+                    preserved_paths.append(target.as_posix())
+            elif not os.path.lexists(target):
+                try:
                     codex_agent_restore_backup_no_clobber(backup_path, target)
-                elif codex_agent_previous_state(backup_path) == expected_state:
-                    backup_path.unlink()
-            except OSError:
-                pass
+                    backup_path = None
+                except CodexAgentNoClobberConflict as restore_exc:
+                    preserved_paths.extend(restore_exc.preserved_paths)
+            else:
+                preserved_paths.extend([backup_path.as_posix(), target.as_posix()])
+        if preserved_paths:
+            raise CodexAgentNoClobberConflict(str(exc), list(dict.fromkeys(preserved_paths))) from exc
+        raise
 
 
 def remove_codex_agent_if_unchanged(
@@ -2447,19 +2474,44 @@ def remove_codex_agent_if_unchanged(
         moved_state = codex_agent_previous_state(backup_path)
         if moved_state != expected_state:
             codex_agent_restore_backup_no_clobber(backup_path, target)
-            backup_path = None if not backup_path.exists() else backup_path
+            backup_path = None
             raise OSError("removal target changed before no-clobber removal")
-        backup_path.unlink()
+        if os.path.lexists(target):
+            raise CodexAgentNoClobberConflict(
+                "target appeared during no-clobber removal",
+                [backup_path.as_posix(), target.as_posix()],
+            )
+        try:
+            backup_path.unlink()
+        except OSError:
+            raise CodexAgentNoClobberConflict(
+                "prior-state backup cleanup failed during removal",
+                [backup_path.as_posix()],
+            ) from None
         backup_path = None
-    finally:
+        if os.path.lexists(target):
+            raise CodexAgentNoClobberConflict(
+                "target appeared before no-clobber removal completed",
+                [target.as_posix()],
+            )
+    except OSError as exc:
+        preserved_paths = list(exc.preserved_paths) if isinstance(exc, CodexAgentNoClobberConflict) else []
         if backup_path is not None:
-            try:
-                if not os.path.lexists(target):
+            if isinstance(exc, CodexAgentNoClobberConflict):
+                preserved_paths.append(backup_path.as_posix())
+                if os.path.lexists(target):
+                    preserved_paths.append(target.as_posix())
+            elif not os.path.lexists(target):
+                try:
                     codex_agent_restore_backup_no_clobber(backup_path, target)
-                elif codex_agent_previous_state(backup_path) == expected_state:
-                    backup_path.unlink()
-            except OSError:
-                pass
+                    backup_path = None
+                except CodexAgentNoClobberConflict as restore_exc:
+                    preserved_paths.extend(restore_exc.preserved_paths)
+            else:
+                preserved_paths.extend([backup_path.as_posix(), target.as_posix()])
+        if preserved_paths:
+            raise CodexAgentNoClobberConflict(str(exc), list(dict.fromkeys(preserved_paths))) from exc
+        raise
 
 
 def codex_agent_move_target_to_backup(target: Path, destination: Path) -> Path:
@@ -2486,7 +2538,13 @@ def codex_agent_restore_backup_no_clobber(backup: Path, target: Path) -> None:
             f"could not restore moved target without clobbering concurrent state: {backup.name}",
             [backup.as_posix(), target.as_posix()],
         ) from None
-    backup.unlink()
+    try:
+        backup.unlink()
+    except OSError:
+        raise CodexAgentNoClobberConflict(
+            f"restored target but could not remove preserved backup: {backup.name}",
+            [backup.as_posix(), target.as_posix()],
+        ) from None
 
 
 def codex_agent_target_is_safe(

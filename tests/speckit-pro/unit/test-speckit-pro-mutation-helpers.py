@@ -1932,7 +1932,7 @@ class MutationHelperTests(unittest.TestCase):
                 real_link(source, link_target, **kwargs)
 
             with patch.object(install.os, "link", side_effect=create_before_link):
-                with self.assertRaisesRegex(OSError, "target changed during no-clobber install"):
+                with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
                     install.write_codex_agent_atomic(
                         target,
                         b"installer bytes\n",
@@ -1942,7 +1942,10 @@ class MutationHelperTests(unittest.TestCase):
                     )
 
             self.assertEqual(target.read_bytes(), concurrent)
-            self.assertEqual(list(destination.glob(".*.bak")), [])
+            backups = list(destination.glob(".*.bak"))
+            self.assertEqual(len(backups), 1)
+            self.assertEqual(backups[0].read_bytes(), b"captured\n")
+            self.assertEqual(raised.exception.preserved_paths, [backups[0].as_posix(), target.as_posix()])
 
     def test_install_codex_agents_no_clobber_removal_preserves_entry_created_after_move(self) -> None:
         from speckit_pro_runner.helpers import install
@@ -1967,10 +1970,47 @@ class MutationHelperTests(unittest.TestCase):
                     target.write_bytes(concurrent)
 
             with patch.object(install.os, "replace", side_effect=create_after_move):
-                install.remove_codex_agent_if_unchanged(target, expected, destination, identity)
+                with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
+                    install.remove_codex_agent_if_unchanged(target, expected, destination, identity)
 
             self.assertEqual(target.read_bytes(), concurrent)
-            self.assertEqual(list(destination.glob(".*.bak")), [])
+            backups = list(destination.glob(".*.bak"))
+            self.assertEqual(len(backups), 1)
+            self.assertEqual(backups[0].read_bytes(), b"captured helper\n")
+            self.assertEqual(raised.exception.preserved_paths, [backups[0].as_posix(), target.as_posix()])
+
+    def test_install_codex_agents_reports_persistent_backup_cleanup_failure(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve() / "agents"
+            destination.mkdir()
+            target = destination / "analyze-executor.toml"
+            target.write_bytes(b"captured prior\n")
+            expected = install.codex_agent_previous_state(target)
+            identity = install.codex_agent_destination_identity(destination)
+            real_unlink = Path.unlink
+
+            def reject_backup_cleanup(path: Path, *args: object, **kwargs: object) -> None:
+                if path.suffix == ".bak" and target.exists() and target.read_bytes() == b"installer bytes\n":
+                    raise OSError("persistent backup cleanup failure")
+                real_unlink(path, *args, **kwargs)
+
+            with patch.object(Path, "unlink", autospec=True, side_effect=reject_backup_cleanup):
+                with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
+                    install.write_codex_agent_atomic(
+                        target,
+                        b"installer bytes\n",
+                        destination,
+                        identity,
+                        expected_state=expected,
+                    )
+
+            self.assertEqual(target.read_bytes(), b"installer bytes\n")
+            backups = list(destination.glob(".*.bak"))
+            self.assertEqual(len(backups), 1)
+            self.assertEqual(backups[0].read_bytes(), b"captured prior\n")
+            self.assertEqual(raised.exception.preserved_paths, [backups[0].as_posix(), target.as_posix()])
 
     def test_install_codex_agents_cleanup_reports_directory_removal_errors(self) -> None:
         from speckit_pro_runner.helpers import install
@@ -2273,6 +2313,80 @@ class MutationHelperTests(unittest.TestCase):
             self.assert_route_aware_apply_mutation_evidence(response)
             self.assert_route_aware_required_destination_bytes(response, destination)
             self.assertFalse(helper_path.exists())
+
+    def test_install_codex_agents_route_aware_helper_removal_collision_fails_with_preserved_paths(self) -> None:
+        from speckit_pro_runner.helpers import install
+        from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            manifest_path = self.write_valid_route_policy_manifest(git_root)
+            destination = git_root / ".codex" / "agents"
+            initial_snapshot = routing_capability_snapshot()
+            initial_request = SimpleNamespace(
+                request_id="test-route-aware-helper-removal-collision-setup",
+                helper_id="install-codex-agents",
+                operation="install-codex-agents",
+                mode="apply",
+                inputs=self.route_aware_inputs(manifest_path, git_root),
+            )
+            initial_request.inputs["test_overrides"] = {"codex_capability_snapshot": initial_snapshot}
+            old_cwd = Path.cwd()
+            os.chdir(git_root)
+            try:
+                initial_response = install.run_codex_agent_install(
+                    MUTATION_HELPERS["install-codex-agents"],
+                    initial_request,
+                )
+            finally:
+                os.chdir(old_cwd)
+            self.assert_response(initial_response, "ok", 0)
+
+            helper_path = destination / f"{routing_optional_helper()}.toml"
+            prior_helper = helper_path.read_bytes()
+            required_only_snapshot = routing_capability_snapshot()
+            required_only_snapshot["available_routes"] = ["required-primary", "required-fallback"]
+            collision_request = SimpleNamespace(
+                request_id="test-route-aware-helper-removal-collision",
+                helper_id="install-codex-agents",
+                operation="install-codex-agents",
+                mode="apply",
+                inputs=self.route_aware_inputs(manifest_path, git_root),
+            )
+            collision_request.inputs["test_overrides"] = {"codex_capability_snapshot": required_only_snapshot}
+            concurrent_helper = b"concurrent user helper\n"
+            real_replace = install.os.replace
+            injected = False
+
+            def create_after_helper_move(source: object, backup: object) -> None:
+                nonlocal injected
+                real_replace(source, backup)
+                if Path(source).name == helper_path.name and not injected:
+                    injected = True
+                    helper_path.write_bytes(concurrent_helper)
+
+            os.chdir(git_root)
+            try:
+                with patch.object(install.os, "replace", side_effect=create_after_helper_move):
+                    response = install.run_codex_agent_install(
+                        MUTATION_HELPERS["install-codex-agents"],
+                        collision_request,
+                    )
+            finally:
+                os.chdir(old_cwd)
+
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual(response["data"]["mutation"]["failure_operation"]["kind"], "remove_file")
+            self.assertEqual(helper_path.read_bytes(), concurrent_helper)
+            backups = list(destination.glob(f".{helper_path.name}.*.bak"))
+            self.assertEqual(len(backups), 1)
+            self.assertEqual(backups[0].read_bytes(), prior_helper)
+            recovery = response["data"]["routing"]["recovery_or_mutation"]["recovery_record"]
+            self.assertEqual(
+                [error["target"] for error in recovery["cleanup_errors"] if error["kind"] == "preserved_concurrent_file"],
+                [backups[0].resolve().as_posix(), helper_path.resolve().as_posix()],
+            )
+            self.assertIn("concurrent_file_preserved", [action["reason"] for action in recovery["manual_remediation"]])
 
     def test_install_codex_agents_route_aware_apply_preserves_unmanaged_same_name_helpers(self) -> None:
         rendered_helper = route_rendered_optional_helper_bytes()
