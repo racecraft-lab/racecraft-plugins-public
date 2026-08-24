@@ -31,8 +31,8 @@ Re-read it before every phase. Once autopilot begins, later clarifications use `
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 4 stories, 29 FRs, 9 success criteria, 13 acceptance scenarios, and 0 clarification markers |
-| Clarify | `/speckit-clarify` | 🔄 In Progress | Reconcile the downstream roster gap and validate manifest, ownership, and response boundaries |
-| Plan | `/speckit-plan` | ⏳ Pending | Design the materializer extension, observation adapter, resolver plan, and rollback batch |
+| Clarify | `/speckit-clarify` | ✅ Complete | 15 questions resolved across roster, route, override, ownership, rollback, compatibility, and response boundaries; G2 passed with 0 markers |
+| Plan | `/speckit-plan` | 🔄 In Progress | Design the materializer extension, observation adapter, resolver plan, and rollback batch |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Error handling, state management, data integrity, and reliability |
 | Tasks | `/speckit-tasks` | ⏳ Pending | Vertical, TDD-first ordering with explicit RED→GREEN pairs |
 | Analyze | `/speckit-analyze` | ⏳ Pending | Cross-check spec, plan, tasks, and Design Concept |
@@ -220,9 +220,17 @@ Clarify managed-helper ownership proof, static-mode compatibility, manifest trus
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Roster and cross-spec boundary | Pending | |
-| 2 | Resolution and override semantics | Pending | |
-| 3 | State, ownership, and evidence | Pending | |
+| 1 | Roster and cross-spec boundary | 5 | Current 13-file static installer behavior is authoritative; route-aware policy separates 12 required agents from one optional helper; the named downstream cohort mismatch remains explicit and deferred; static responses omit policy-dependent routing data. |
+| 2 | Resolution and override semantics | 5 | All 12 required agents receive complete ordered diagnostics from one snapshot; bounded probes remain child evidence; strict override evaluates one tuple per agent with no fallback; helper override requires a validated no-helper continuation; required misses have an exact zero-mutation response. |
+| 3 | State, ownership, and evidence | 5 | Closed managed-helper proof, trusted-manifest activation, static response and restart compatibility, byte/mode rollback proof, and the exact top-level route-aware `routing` object; no item required routed consensus. |
+
+### Consensus Resolution Log
+
+| # | Type | Question/Gap/Finding | Categories | Round | Outcome | Resolution | Analysts Used |
+|---|------|----------------------|------------|-------|---------|------------|---------------|
+| 1 | Clarify | Which authority defines no-manifest static compatibility: the current 13-file installer or the older 10-file prose roster? | codebase, spec | 1 | both-agree | Preserve the current Python installer's route-agnostic 13-file copy/verify behavior; treat the older 10-file prose roster as stale, keep helper optionality route-aware only, and omit the policy-dependent routing block in static responses. | codebase-analyst, spec-context-analyst |
+| 2 | Clarify | How should G56R-006 record the stale downstream 11-agent cohort without resolving downstream qualification here? | spec, codebase | 1 | both-agree | Name `artifact-author`, `sweep-analyst`, `sweep-classifier`, proposed `consensus-synthesizer`, and proposed `gate-validator` as downstream reconciliation inputs without assigning cohorts, changing aggregate counts, or qualifying routes. | codebase-analyst, spec-context-analyst |
+| 3 | Clarify | If the strict helper override is incompatible and the no-helper continuation does not validate, may the required batch still mutate? | spec | 1 | agree | Fail the whole route-aware batch before mutation; helper omission is safe only through a validated no-helper continuation, and no alternate helper fallback may follow an explicit override miss. | spec-context-analyst |
 
 ---
 

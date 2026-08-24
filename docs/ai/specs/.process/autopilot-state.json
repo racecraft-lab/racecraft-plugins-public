@@ -5,8 +5,8 @@
   "branch": "g56r-006-resolver-materializer-installer-strict-override",
   "status": "in_progress",
   "stage": "plan",
-  "updated_at": "2026-08-24T16:35:48Z",
-  "active_step": "Phase 2: Clarify - Roster and Cross-spec Boundary",
+  "updated_at": "2026-08-24T17:01:08Z",
+  "active_step": "Phase 3: Plan",
   "stage_resolution": {
     "source": "argv",
     "basis": "explicit --stage plan",
@@ -146,6 +146,12 @@
       "route": "clarify",
       "markers": 0,
       "reason": "workflow defines three mandatory clarify sessions despite the clean marker count"
+    },
+    "G2": {
+      "gate": "2",
+      "pass": true,
+      "markers": 0,
+      "reason": "0 [NEEDS CLARIFICATION] markers"
     }
   },
   "phase_results": {
@@ -170,19 +176,78 @@
         "in-flight feature directories are expected to have incomplete plan/tasks artifacts"
       ],
       "writes_state": false
+    },
+    "clarify_session_1": {
+      "status": "completed",
+      "questions": 5,
+      "consensus": {
+        "status": "completed",
+        "round": 1,
+        "items": 2,
+        "outcome": "both-agree",
+        "confidence": "high"
+      },
+      "decisions": [
+        "the current 13-file route-agnostic installer is the no-manifest compatibility authority",
+        "route-aware policy distinguishes 12 required agents from one optional helper while source inventory remains exactly 13 TOMLs",
+        "the downstream cohort mismatch is named and deferred without changing qualification scope or aggregate counts",
+        "static responses omit the policy-dependent top-level routing block"
+      ]
+    },
+    "clarify_session_2": {
+      "status": "completed",
+      "questions": 5,
+      "consensus": {
+        "status": "completed",
+        "round": 1,
+        "items": 1,
+        "outcome": "agree",
+        "confidence": "high"
+      },
+      "decisions": [
+        "all required agents receive complete ordered diagnostics even after a required miss",
+        "one snapshot identity binds every resolution and any bounded probe child evidence",
+        "strict override evaluates only one override-derived tuple per agent and never silently falls back",
+        "an incompatible helper override requires a validated no-helper continuation or the batch fails before mutation",
+        "required misses report zero planned or applied mutation, writes_state false, and no restart requirement"
+      ]
+    },
+    "clarify_session_3": {
+      "status": "completed",
+      "questions": 5,
+      "consensus": {
+        "status": "completed",
+        "items": 0,
+        "outcome": "not_needed",
+        "confidence": "high"
+      },
+      "decisions": [
+        "managed helper removal requires trusted provenance binding or an exact known rendered-byte digest match",
+        "route-aware activation requires a closed supported-version manifest with identity, provenance, source-roster, roster, candidate, and probe bindings",
+        "static responses preserve current fields and omit the routing object",
+        "rollback proves restoration through prior bytes and modes plus matching pre-state and final-state identities",
+        "route-aware responses use the closed top-level routing object defined in FR-015"
+      ]
+    },
+    "clarify": {
+      "status": "completed",
+      "sessions": 3,
+      "questions": 15,
+      "unresolved_markers": 0,
+      "g2": "pass"
     }
   },
   "plan": [
     {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
     {"step": "Phase 0: Prerequisites", "status": "completed"},
     {"step": "Phase 1: Specify", "status": "completed"},
-    {"step": "Phase 2: Clarify - Roster and Cross-spec Boundary", "status": "in_progress"},
-    {"step": "Phase 2: Clarify - Roster and Cross-spec Boundary Consensus", "status": "pending"},
-    {"step": "Phase 2: Clarify - Resolution and Override Semantics", "status": "pending"},
-    {"step": "Phase 2: Clarify - Resolution and Override Semantics Consensus", "status": "pending"},
-    {"step": "Phase 2: Clarify - State, Ownership, and Evidence", "status": "pending"},
-    {"step": "Phase 2: Clarify - State, Ownership, and Evidence Consensus", "status": "pending"},
-    {"step": "Phase 3: Plan", "status": "pending"},
+    {"step": "Phase 2: Clarify - Roster and Cross-spec Boundary", "status": "completed"},
+    {"step": "Phase 2: Clarify - Roster and Cross-spec Boundary Consensus", "status": "completed"},
+    {"step": "Phase 2: Clarify - Resolution and Override Semantics", "status": "completed"},
+    {"step": "Phase 2: Clarify - Resolution and Override Semantics Consensus", "status": "completed"},
+    {"step": "Phase 2: Clarify - State, Ownership, and Evidence", "status": "completed"},
+    {"step": "Phase 2: Clarify - State, Ownership, and Evidence Consensus", "status": "completed"},
+    {"step": "Phase 3: Plan", "status": "in_progress"},
     {"step": "Phase 4: Checklist - Error Handling", "status": "pending"},
     {"step": "Phase 4: Checklist - Error Handling Consensus", "status": "pending"},
     {"step": "Phase 4: Checklist - State Management", "status": "pending"},
