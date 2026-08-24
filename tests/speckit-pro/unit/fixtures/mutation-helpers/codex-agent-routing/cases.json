@@ -165,6 +165,19 @@
       }
     },
     {
+      "case_id": "invalid-required-capabilities-type",
+      "category": "invalid_manifest",
+      "overrides": {
+        "manifest.required_agent_policies.analyze-executor.required_capabilities": "capability-that-route-does-not-have"
+      },
+      "expected": {
+        "status": "input_error",
+        "diagnostic_code": "invalid_route_policy_manifest",
+        "snapshot_captured": false,
+        "writes_state": false
+      }
+    },
+    {
       "case_id": "invalid-manifest-path-outside-repository",
       "category": "invalid_manifest_path",
       "overrides": {

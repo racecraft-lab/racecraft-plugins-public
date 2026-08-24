@@ -1012,6 +1012,22 @@ class MutationHelperTests(unittest.TestCase):
                 "required_agent_policy_roster_mismatch",
             ),
             (
+                "unknown-required-policy-key",
+                lambda manifest: manifest["required_agent_policies"]["analyze-executor"].__setitem__(
+                    "unknown_key",
+                    True,
+                ),
+                "required_agent_policy_schema_mismatch",
+            ),
+            (
+                "invalid-required-capabilities-type",
+                lambda manifest: manifest["required_agent_policies"]["analyze-executor"].__setitem__(
+                    "required_capabilities",
+                    "capability-that-route-does-not-have",
+                ),
+                "required_agent_capabilities_invalid",
+            ),
+            (
                 "invalid-non-route-contract-digest",
                 lambda manifest: manifest["required_agent_policies"]["analyze-executor"].__setitem__(
                     "non_route_contract_digest",

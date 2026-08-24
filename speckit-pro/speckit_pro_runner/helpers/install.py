@@ -1802,15 +1802,34 @@ def validate_route_policy_required_policies(raw: Any, source_dir: Path) -> dict[
         if not isinstance(policy, dict):
             return invalid_route_policy_manifest("required_agent_policy_not_object", details={"agent_name": agent_name})
         policy_keys = set(policy)
-        if not ROUTE_POLICY_REQUIRED_POLICY_KEYS <= policy_keys:
+        if policy_keys != ROUTE_POLICY_REQUIRED_POLICY_KEYS:
             return invalid_route_policy_manifest(
-                "required_agent_policy_missing_keys",
-                details={"agent_name": agent_name, "missing": sorted(ROUTE_POLICY_REQUIRED_POLICY_KEYS - policy_keys)},
+                "required_agent_policy_schema_mismatch",
+                details={
+                    "agent_name": agent_name,
+                    "missing": sorted(ROUTE_POLICY_REQUIRED_POLICY_KEYS - policy_keys),
+                    "unknown": sorted(policy_keys - ROUTE_POLICY_REQUIRED_POLICY_KEYS),
+                },
+            )
+        if not isinstance(policy.get("policy_id"), str) or not policy["policy_id"]:
+            return invalid_route_policy_manifest(
+                "required_agent_policy_id_invalid",
+                details={"agent_name": agent_name},
             )
         if policy.get("agent_name") != agent_name:
             return invalid_route_policy_manifest(
                 "required_agent_policy_name_mismatch",
                 details={"agent_name": agent_name, "policy_agent_name": policy.get("agent_name")},
+            )
+        required_capabilities = policy.get("required_capabilities")
+        if (
+            not isinstance(required_capabilities, list)
+            or any(not isinstance(item, str) or not item for item in required_capabilities)
+            or len(set(required_capabilities)) != len(required_capabilities)
+        ):
+            return invalid_route_policy_manifest(
+                "required_agent_capabilities_invalid",
+                details={"agent_name": agent_name},
             )
         declared_non_route_digest = policy.get("non_route_contract_digest")
         if (

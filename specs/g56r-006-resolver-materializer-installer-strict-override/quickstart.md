@@ -78,6 +78,7 @@ Before marking implementation complete, verify:
 - Requests with an invalid supplied manifest fail route-aware activation rather than silently falling back to static mode.
 - Manifest paths outside the repository trusted-file boundary, symlinked manifests, unsupported versions, and manifest or source-roster identity mismatches fail before discovery or mutation.
 - Every required policy's non-route contract digest matches canonical materialization of its trusted source TOML.
+- Required-policy objects use the exact closed schema and a duplicate-free string array for required capabilities.
 - Every route-aware response has exactly one snapshot ID and all 12 required-agent records cite it.
 - Strict override required misses report complete diagnostics and zero writes.
 - Optional helper removal has exact known rendered-byte digest proof; caller-asserted provenance is rejected as untrusted.

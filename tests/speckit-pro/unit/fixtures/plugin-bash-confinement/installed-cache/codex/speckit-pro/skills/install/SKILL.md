@@ -114,7 +114,8 @@ current 13-TOML source roster, declares exactly 12 required policies, declares
 the `autopilot-fast-helper` policy/no-helper state, and admits every route
 candidate and bounded probe used by the run. Every required policy's declared
 non-route contract digest must exactly match canonical materialization of its
-trusted current source TOML.
+trusted current source TOML. Required-policy objects are closed-schema records,
+and `required_capabilities` must be a duplicate-free list of non-empty strings.
 
 Route-aware mode returns `data.routing` with:
 

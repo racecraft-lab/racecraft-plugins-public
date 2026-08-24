@@ -5,7 +5,7 @@
   "branch": "g56r-006-resolver-materializer-installer-strict-override",
   "status": "in_progress",
   "stage": "implement",
-  "updated_at": "2026-08-24T22:02:00Z",
+  "updated_at": "2026-08-24T22:20:00Z",
   "active_step": "Post: Review Remediation",
   "stage_resolution": {
     "source": "argv",
@@ -506,6 +506,17 @@
         ],
         "important_findings": 2,
         "nits": 0
+      },
+      "re_review_2": {
+        "reviewed_head": "89b9162653f1b4acaf94632a88c9c208a01b69e2",
+        "resolved": [
+          "all five previous findings"
+        ],
+        "remaining_or_new": [
+          "invalid required_capabilities types bypass compatibility enforcement"
+        ],
+        "important_findings": 1,
+        "nits": 0
       }
     },
     "post_review_remediation": {
@@ -524,10 +535,22 @@
       "independent_reverification_required": true
       ,
       "second_round": {
-        "status": "implemented_pending_commit_and_reverification",
+        "status": "committed_pending_reverification",
+        "remediation_commit": "89b9162653f1b4acaf94632a88c9c208a01b69e2",
         "remediations": [
           "atomic write returns the exact installed state so caller recapture cannot absorb concurrent bytes",
           "required-policy non-route contract digests are syntax-checked and matched to canonical source materialization"
+        ],
+        "focused_materializer": "11/11 passed",
+        "focused_installer": "82/82 passed",
+        "full_suite": "14041/14041 passed (L1 1511, L4 12311, L5 219)",
+        "docs_reference": "current"
+      },
+      "third_round": {
+        "status": "implemented_pending_commit_and_reverification",
+        "remediations": [
+          "required-policy objects require exact closed keys and non-empty policy IDs",
+          "required_capabilities requires a duplicate-free list of non-empty strings"
         ],
         "focused_materializer": "11/11 passed",
         "focused_installer": "82/82 passed",

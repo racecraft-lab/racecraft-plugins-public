@@ -523,9 +523,9 @@ After focused tests pass, run the relevant Layer 1/4/5 checks, generated runner/
 | Canonical Item | Status | Evidence |
 |---|---|---|
 | Post: Doctor Extension Check | ✅ Complete | 4 PASS, 1 unrelated warning for incomplete brand-001 placeholder artifacts, 0 FAIL; no writes |
-| Post: Verify Implementation | ⏳ Pending — Rerun Required | Exact-commit chain must restart after the second remediation commit |
+| Post: Verify Implementation | ⏳ Pending — Rerun Required | Final chain must restart after the closed required-policy schema commit |
 | Post: Verify Tasks Phantom Check | ⏳ Pending | |
-| Post: Code Review | ✅ Complete — Findings | Initial review found 3 important issues; first re-review cleared provenance and canonical materialization but exposed a rollback recapture race and an unchecked non-route contract digest |
+| Post: Code Review | ✅ Complete — Findings | Two re-review rounds cleared all prior findings; the second exposed one remaining invalid `required_capabilities` type bypass, now remediated |
 | Post: Integration Suite | ⏳ Pending | |
 | Post: Reviewability Diff Gate | ⏳ Pending | |
 | Post: Self-Review | ⏳ Pending | |
@@ -534,7 +534,7 @@ After focused tests pass, run the relevant Layer 1/4/5 checks, generated runner/
 | Post: PR Packet/Body Generation | ⏳ Pending | |
 | Post: PR Body Generation | ⏳ Pending | |
 | Post: PR Creation | ⏳ Pending | |
-| Post: Review Remediation | 🔄 In Progress | Second remediation fixes the rollback recapture race and validates canonical non-route contract digests; focused 11/11 and 82/82 plus full 14041/14041 pass; awaiting commit and re-review |
+| Post: Review Remediation | 🔄 In Progress | Required-policy records now use an exact closed schema and duplicate-free string capability arrays; focused 11/11 and 82/82 plus full 14041/14041 pass; awaiting commit and final re-review |
 | Post: Retrospective | ⏳ Pending | |
 
 - [x] All tasks complete and every FR mapped.
