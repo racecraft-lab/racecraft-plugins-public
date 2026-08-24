@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import os
 import platform as platform_module
@@ -28,24 +29,56 @@ DEFAULT_RUNNER_INVOCATION_CASES = XPLAT_008_FIXTURE_ROOT / "runner-invocation-ca
 XPLAT_008_PROMOTION_RECORDS = XPLAT_008_FIXTURE_ROOT / "promotion-records.json"
 DEFAULT_INSTALL_HEALTH_CASES = XPLAT_008_FIXTURE_ROOT / "install-health-repair-cases.json"
 MINIMUM_PYTHON = (3, 11, 0)
-REQUIRED_CODEX_AGENT_NAMES = frozenset(
+CODEX_OPTIONAL_HELPER_NAME = "autopilot-fast-helper"
+CODEX_REQUIRED_AGENT_NAMES = (
+    "analyze-executor",
+    "artifact-author",
+    "checklist-executor",
+    "clarify-executor",
+    "codebase-analyst",
+    "domain-researcher",
+    "implement-executor",
+    "phase-executor",
+    "spec-context-analyst",
+    "sweep-analyst",
+    "sweep-classifier",
+    "uat-runbook-author",
+)
+CODEX_SOURCE_AGENT_TOML_NAMES = tuple(
+    sorted((*[f"{name}.toml" for name in CODEX_REQUIRED_AGENT_NAMES], f"{CODEX_OPTIONAL_HELPER_NAME}.toml"))
+)
+REQUIRED_CODEX_AGENT_NAMES = frozenset(CODEX_SOURCE_AGENT_TOML_NAMES)
+SUPPORTED_CODEX_AGENT_MODELS = frozenset({"gpt-5.5", "gpt-5.4"})
+ROUTE_POLICY_MANIFEST_SCHEMA_VERSION = "1.0.0"
+ROUTE_POLICY_MANIFEST_TOP_LEVEL_KEYS = frozenset(
     {
-        "analyze-executor.toml",
-        "artifact-author.toml",
-        "autopilot-fast-helper.toml",
-        "checklist-executor.toml",
-        "clarify-executor.toml",
-        "codebase-analyst.toml",
-        "domain-researcher.toml",
-        "implement-executor.toml",
-        "phase-executor.toml",
-        "spec-context-analyst.toml",
-        "sweep-analyst.toml",
-        "sweep-classifier.toml",
-        "uat-runbook-author.toml",
+        "schema_version",
+        "manifest_id",
+        "provenance_id",
+        "source_roster",
+        "required_agent_policies",
+        "optional_helper",
+        "bounded_probes",
     }
 )
-SUPPORTED_CODEX_AGENT_MODELS = frozenset({"gpt-5.5", "gpt-5.4"})
+ROUTE_POLICY_SOURCE_ROSTER_KEYS = frozenset({"schema_version", "source_roster_id", "files"})
+ROUTE_POLICY_SOURCE_FILE_KEYS = frozenset({"name", "sha256"})
+ROUTE_POLICY_REQUIRED_POLICY_KEYS = frozenset(
+    {
+        "policy_id",
+        "agent_name",
+        "preferred_route",
+        "fallback_routes",
+        "required_capabilities",
+        "non_route_contract_digest",
+    }
+)
+ROUTE_POLICY_ROUTE_KEYS = frozenset({"route_id", "model", "model_reasoning_effort", "capabilities", "probe_id"})
+ROUTE_POLICY_OPTIONAL_HELPER_KEYS = frozenset(
+    {"helper_name", "policy_id", "preferred_route", "fallback_routes", "no_helper"}
+)
+ROUTE_POLICY_SHA256_IDENTITY = re.compile(r"^sha256:[0-9a-f]{64}$")
+ROUTE_POLICY_SHA256_HEX = re.compile(r"^[0-9a-f]{64}$")
 
 
 def run_runner_invocation_gate(entry: Any, request: Any) -> dict[str, Any]:
@@ -165,6 +198,44 @@ def run_codex_agent_install(entry: Any, request: Any) -> dict[str, Any]:
         return response("input_error", request_id=request.request_id, diagnostics=[source_result])
     rendered, model = source_result
 
+    route_manifest: dict[str, Any] | None = None
+    route_snapshot: dict[str, Any] | None = None
+    strict_model_override = request.inputs.get("strict_model_override")
+    if "route_policy_manifest" in request.inputs:
+        if strict_model_override is not None and (not isinstance(strict_model_override, str) or not strict_model_override.strip()):
+            return response(
+                "input_error",
+                request_id=request.request_id,
+                diagnostics=[
+                    diagnostic(
+                        "invalid_strict_model_override",
+                        "strict_model_override must be a non-empty model string",
+                        remediation_summary="Use one explicit model string for strict route-aware override validation.",
+                        remediation_actions=["Set inputs.strict_model_override to a supported manifest-admitted model."],
+                    )
+                ],
+            )
+        repo_root = find_repo_root(Path.cwd())
+        if repo_root is None:
+            return response(
+                "missing_prerequisite",
+                request_id=request.request_id,
+                diagnostics=[diagnostic("missing_prerequisite", "could not locate repository root for route-aware Codex agent install")],
+            )
+        route_manifest = load_codex_route_policy_manifest(
+            request.inputs.get("route_policy_manifest"),
+            repo_root,
+            source_dir,
+        )
+        if is_diagnostic(route_manifest):
+            return response("input_error", request_id=request.request_id, diagnostics=[route_manifest])
+        captured_snapshot = capture_codex_runtime_capabilities(request.inputs, route_manifest)
+        if is_diagnostic(captured_snapshot):
+            return response("input_error", request_id=request.request_id, diagnostics=[captured_snapshot])
+        route_snapshot = normalize_codex_runtime_capability_snapshot(captured_snapshot, source="adapter")
+        if is_diagnostic(route_snapshot):
+            return response("input_error", request_id=request.request_id, diagnostics=[route_snapshot])
+
     destination_result = codex_agent_destination(request.inputs)
     if is_diagnostic(destination_result):
         return response("input_error", request_id=request.request_id, diagnostics=[destination_result])
@@ -174,8 +245,54 @@ def run_codex_agent_install(entry: Any, request: Any) -> dict[str, Any]:
         return response("input_error", request_id=request.request_id, diagnostics=[unsafe])
 
     mutation = empty_mutation(request.mode)
-    planned: list[tuple[str, Path, bytes]] = []
-    for name, content in rendered.items():
+    install_rendered = rendered
+    route_routing: dict[str, Any] | None = None
+    if route_manifest is not None and route_snapshot is not None:
+        source_immutability_diag = codex_route_aware_source_immutability_diagnostic(source_dir, route_manifest)
+        if source_immutability_diag is not None:
+            return response("input_error", request_id=request.request_id, diagnostics=[source_immutability_diag])
+        route_routing = codex_route_aware_adapter_routing(
+            route_manifest,
+            route_snapshot,
+            mutation,
+            source_dir,
+            destination,
+            request.inputs,
+            strict_model_override=strict_model_override,
+        )
+        if codex_route_aware_has_required_miss(route_routing):
+            mutation["mutation_status"] = "blocked"
+            route_routing["recovery_or_mutation"] = codex_route_aware_recovery_or_mutation(
+                mutation,
+                no_mutation_reason="required_route_unresolved",
+            )
+            data = codex_agent_install_data(entry, request, mutation, source_dir, destination, model, install_rendered)
+            data["routing"] = route_routing
+            data["restart_required"] = False
+            miss_diag = codex_route_aware_required_miss_diagnostic(route_routing)
+            return response(
+                "expected_failure",
+                request_id=request.request_id,
+                data=data,
+                diagnostics=[miss_diag],
+            )
+        if codex_route_aware_has_unresolved_helper(route_routing):
+            data = codex_agent_install_data(entry, request, mutation, source_dir, destination, model, install_rendered)
+            data["routing"] = route_routing
+            data["restart_required"] = False
+            return response(
+                "expected_failure",
+                request_id=request.request_id,
+                data=data,
+                diagnostics=[codex_route_aware_helper_unresolved_diagnostic(route_routing)],
+            )
+        route_rendered = codex_route_aware_rendered_destination_bytes(route_routing, source_dir)
+        if is_diagnostic(route_rendered):
+            return response("input_error", request_id=request.request_id, diagnostics=[route_rendered])
+        install_rendered = route_rendered
+
+    planned: list[tuple[str, Path, bytes | None]] = []
+    for name, content in install_rendered.items():
         target = destination / name
         operation = {"operation_id": f"install-codex-agent:{name}", "kind": "write_file", "target": target.as_posix()}
         try:
@@ -199,9 +316,19 @@ def run_codex_agent_install(entry: Any, request: Any) -> dict[str, Any]:
         planned.append((name, target, content))
         mutation["planned_operations"].append(operation_record(operation))
         mutation["planned_paths"].append(target.as_posix())
+    if route_routing is not None:
+        helper_removal = codex_route_aware_helper_removal_action(route_routing, destination)
+        if helper_removal is not None:
+            name, target = helper_removal
+            operation = {"operation_id": f"remove-codex-agent:{name}", "kind": "remove_file", "target": target.as_posix()}
+            planned.append((name, target, None))
+            mutation["planned_operations"].append(dict(operation))
 
     mutation["live_mutation"] = request.mode == "apply" and bool(planned)
-    data = codex_agent_install_data(entry, request, mutation, source_dir, destination, model, rendered)
+    data = codex_agent_install_data(entry, request, mutation, source_dir, destination, model, install_rendered)
+    if route_routing is not None:
+        route_routing["recovery_or_mutation"] = codex_route_aware_recovery_or_mutation(mutation)
+        data["routing"] = route_routing
     if request.mode == "dry_run":
         mutation["mutation_status"] = "planned" if planned else "no_op"
         return response("ok", request_id=request.request_id, data=data)
@@ -209,8 +336,15 @@ def run_codex_agent_install(entry: Any, request: Any) -> dict[str, Any]:
     if not planned:
         mutation["mutation_status"] = "no_op"
         data["restart_required"] = False
-        data["verification"] = {"status": "verified", "matched_files": sorted(rendered)}
+        data["verification"] = {"status": "verified", "matched_files": sorted(install_rendered)}
+        if route_routing is not None:
+            data["routing"]["recovery_or_mutation"] = codex_route_aware_recovery_or_mutation(mutation)
         return response("ok", request_id=request.request_id, data=data)
+
+    if route_manifest is not None:
+        source_immutability_diag = codex_route_aware_source_immutability_diagnostic(source_dir, route_manifest)
+        if source_immutability_diag is not None:
+            return response("input_error", request_id=request.request_id, data=data, diagnostics=[source_immutability_diag])
 
     previous: dict[str, tuple[bytes, int] | None] = {}
     destination_existed = destination.exists()
@@ -223,17 +357,26 @@ def run_codex_agent_install(entry: Any, request: Any) -> dict[str, Any]:
         if unsafe is not None:
             raise OSError("destination changed before apply")
         destination_identity = codex_agent_destination_identity(destination)
-        for index, (name, target, content) in enumerate(planned):
+        for name, target, _content in planned:
             failed_name = name
             if not codex_agent_target_is_safe(target, destination, destination_identity):
                 raise OSError(f"unsafe destination entry: {name}")
             previous[name] = codex_agent_previous_state(target)
-            write_codex_agent_atomic(target, content, destination, destination_identity)
-            operation = {"operation_id": f"install-codex-agent:{name}", "kind": "write_file", "target": target.as_posix()}
-            mutation["applied_operations"].append(operation_record(operation))
+        for index, (name, target, content) in enumerate(planned):
+            failed_name = name
+            if not codex_agent_target_is_safe(target, destination, destination_identity):
+                raise OSError(f"unsafe destination entry: {name}")
+            if content is None:
+                if previous[name] is not None:
+                    target.unlink()
+                operation = {"operation_id": f"remove-codex-agent:{name}", "kind": "remove_file", "target": target.as_posix()}
+            else:
+                write_codex_agent_atomic(target, content, destination, destination_identity)
+                operation = {"operation_id": f"install-codex-agent:{name}", "kind": "write_file", "target": target.as_posix()}
+            mutation["applied_operations"].append(dict(operation) if operation["kind"] == "remove_file" else operation_record(operation))
             mutation["touched_paths"].append(target.as_posix())
 
-        mismatches = verify_codex_agent_install(destination, rendered)
+        mismatches = verify_codex_agent_install(destination, install_rendered)
         if mismatches:
             raise OSError(f"post-copy verification failed: {', '.join(mismatches)}")
     except OSError as exc:
@@ -254,12 +397,19 @@ def run_codex_agent_install(entry: Any, request: Any) -> dict[str, Any]:
                 }
             )
         mutation["manual_remediation"] = (
-            ["Restore the reported files manually before retrying."] if rollback_failures else []
+            codex_route_aware_rollback_manual_remediation(destination, rollback_failures) if rollback_failures else []
         )
         data["writes_state"] = bool(rollback_failures)
         data["rollback_succeeded"] = not rollback_failures
         data["restart_required"] = bool(rollback_failures)
         data["verification"] = {"status": "failed", "matched_files": []}
+        if route_routing is not None:
+            data["routing"]["recovery_or_mutation"] = codex_route_aware_recovery_after_apply_failure(
+                mutation,
+                destination,
+                previous,
+                rollback_failures,
+            )
         return response(
             "expected_failure",
             request_id=request.request_id,
@@ -270,19 +420,1492 @@ def run_codex_agent_install(entry: Any, request: Any) -> dict[str, Any]:
                     "Codex agent installation failed and rollback was attempted",
                     details={"error": str(exc), "rollback_failures": rollback_failures},
                     remediation_summary="Inspect the destination and retry after resolving the reported failure.",
-                    remediation_actions=mutation["manual_remediation"] or ["Retry the same request in dry_run mode."],
+                    remediation_actions=codex_route_aware_remediation_action_summaries(mutation["manual_remediation"])
+                    or ["Retry the same request in dry_run mode."],
                 )
             ],
         )
 
     mutation["mutation_status"] = "applied"
     data["writes_state"] = True
-    data["verification"] = {"status": "verified", "matched_files": sorted(rendered)}
+    data["verification"] = {"status": "verified", "matched_files": sorted(install_rendered)}
+    if route_routing is not None:
+        data["routing"]["recovery_or_mutation"] = codex_route_aware_recovery_or_mutation(mutation)
     return response("ok", request_id=request.request_id, data=data)
 
 
 def codex_plugin_root() -> Path:
     return Path(__file__).resolve().parents[2]
+
+
+def route_policy_canonical_bytes(value: Any) -> bytes:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8")
+
+
+def route_policy_digest(value: Any) -> str:
+    return f"sha256:{hashlib.sha256(route_policy_canonical_bytes(value)).hexdigest()}"
+
+
+def invalid_route_policy_manifest(reason: str, *, details: dict[str, Any] | None = None) -> dict[str, Any]:
+    payload = {"reason": reason}
+    if details:
+        payload.update(details)
+    return diagnostic(
+        "invalid_route_policy_manifest",
+        "route policy manifest is invalid",
+        details=payload,
+        remediation_summary="Provide a supported closed route-policy manifest bound to the bundled Codex agent roster.",
+        remediation_actions=["Regenerate the route-policy manifest from the current bundled Codex agent source roster."],
+    )
+
+
+def invalid_route_policy_manifest_path(
+    raw: Any,
+    *,
+    reason: str,
+    path: str | None = None,
+    details: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {"reason": reason, "path": path or str(raw)}
+    if details:
+        payload.update(details)
+    return diagnostic(
+        "invalid_route_policy_manifest_path",
+        "route_policy_manifest must point to a trusted regular file inside the current repository",
+        details=payload,
+        remediation_summary="Use a repository-local manifest file, not inline policy data or an external path.",
+        remediation_actions=["Set inputs.route_policy_manifest to a non-symlink JSON file inside the repository."],
+    )
+
+
+def codex_agent_source_roster(source_dir: Path) -> dict[str, Any]:
+    if not source_dir.is_dir() or source_dir.is_symlink():
+        return diagnostic("missing_agent_bundle", "bundled codex-agents directory is missing or unsafe")
+    if any(source_dir.glob("*.md")):
+        return diagnostic("legacy_agent_bundle", "bundled codex-agents directory contains legacy Markdown agents")
+
+    source_files = sorted(source_dir.glob("*.toml"), key=lambda path: path.name)
+    source_names = [path.name for path in source_files]
+    missing = sorted(REQUIRED_CODEX_AGENT_NAMES - set(source_names))
+    unexpected = sorted(set(source_names) - REQUIRED_CODEX_AGENT_NAMES)
+    if missing or unexpected:
+        return diagnostic(
+            "incomplete_agent_bundle",
+            "bundled Codex agent set does not match the required inventory",
+            details={"missing_files": missing, "unexpected_files": unexpected},
+            remediation_summary="Restore the complete bundled agent set before installing.",
+            remediation_actions=["Repair or reinstall the SpecKit Pro plugin."],
+        )
+
+    records: list[dict[str, str]] = []
+    try:
+        for path in source_files:
+            if path.is_symlink() or not path.is_file():
+                raise OSError(path.name)
+            records.append({"name": path.name, "sha256": hashlib.sha256(path.read_bytes()).hexdigest()})
+    except OSError as exc:
+        return diagnostic(
+            "unsafe_agent_bundle",
+            "bundled Codex agent templates could not be read safely",
+            details={"error": type(exc).__name__, "message": str(exc)},
+        )
+
+    return {
+        "schema_version": ROUTE_POLICY_MANIFEST_SCHEMA_VERSION,
+        "source_roster_id": route_policy_digest(records),
+        "files": records,
+    }
+
+
+def trusted_route_policy_manifest_path(raw: Any, repo_root: Path) -> Path | dict[str, Any]:
+    if not isinstance(raw, str) or not raw.strip():
+        return invalid_route_policy_manifest_path(raw, reason="manifest_path_required")
+    candidate = resolve_input_path(raw, repo_root)
+    try:
+        metadata = candidate.lstat()
+    except OSError as exc:
+        return invalid_route_policy_manifest_path(
+            raw,
+            reason="manifest_unreadable",
+            path=candidate.as_posix(),
+            details={"error": type(exc).__name__},
+        )
+    if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISREG(metadata.st_mode):
+        return invalid_route_policy_manifest_path(raw, reason="manifest_not_regular_file", path=candidate.as_posix())
+    resolved = candidate.resolve(strict=False)
+    if not is_relative_to(resolved, repo_root):
+        return invalid_route_policy_manifest_path(raw, reason="manifest_outside_repository", path=candidate.as_posix())
+    return candidate
+
+
+def load_codex_route_policy_manifest(raw: Any, repo_root: Path, source_dir: Path) -> dict[str, Any]:
+    path_result = trusted_route_policy_manifest_path(raw, repo_root)
+    if is_diagnostic(path_result):
+        return path_result
+    manifest_path = path_result
+
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        return invalid_route_policy_manifest("manifest_unreadable_or_malformed", details={"error": type(exc).__name__})
+    if not isinstance(manifest, dict):
+        return invalid_route_policy_manifest("manifest_not_object")
+
+    validation_result = validate_codex_route_policy_manifest(manifest, source_dir)
+    if is_diagnostic(validation_result):
+        return validation_result
+
+    source_roster = manifest["source_roster"]
+    return {
+        "path": repo_relative(manifest_path, repo_root),
+        "schema_version": manifest["schema_version"],
+        "manifest_id": manifest["manifest_id"],
+        "source_roster_id": source_roster["source_roster_id"],
+        "provenance_id": manifest["provenance_id"],
+        "required_agents": list(CODEX_REQUIRED_AGENT_NAMES),
+        "optional_helper": CODEX_OPTIONAL_HELPER_NAME,
+        "source_files": [record["name"] for record in source_roster["files"]],
+        "required_agent_policies": copy.deepcopy(manifest["required_agent_policies"]),
+        "optional_helper_policy": copy.deepcopy(manifest["optional_helper"]),
+        "bounded_probes": copy.deepcopy(manifest["bounded_probes"]),
+    }
+
+
+def capture_codex_runtime_capabilities(
+    inputs: dict[str, Any],
+    route_manifest: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    overrides = inputs.get("test_overrides")
+    if overrides is None:
+        raw_snapshot: dict[str, Any] = {
+            "snapshot_id": "snapshot:codex-runtime:unavailable",
+            "adapter_id": "codex-runtime-observation.v1",
+            "native_discovery": False,
+            "available_routes": [],
+            "child_probe_results": [],
+        }
+        return normalize_codex_runtime_capability_snapshot(raw_snapshot, source="default_adapter")
+    if not isinstance(overrides, dict):
+        return diagnostic(
+            "invalid_route_capability_snapshot",
+            "test_overrides must be an object when supplied",
+            details={"reason": "test_overrides_not_object"},
+        )
+    raw_snapshot = overrides.get("codex_capability_snapshot")
+    if raw_snapshot is None:
+        return diagnostic(
+            "invalid_route_capability_snapshot",
+            "route-aware tests must inject a deterministic Codex capability snapshot",
+            details={"reason": "missing_test_snapshot"},
+            remediation_summary="Use test_overrides.codex_capability_snapshot for deterministic route-aware tests.",
+            remediation_actions=["Inject a fixture snapshot instead of running live discovery."],
+        )
+    snapshot = normalize_codex_runtime_capability_snapshot(raw_snapshot, source="test_override")
+    if is_diagnostic(snapshot):
+        return snapshot
+    observation = snapshot.get("observation_evidence")
+    native_discovery = observation.get("native_discovery") if isinstance(observation, dict) else True
+    if native_discovery is False and route_manifest is not None:
+        raw_probe_results = overrides.get("codex_probe_results", snapshot.get("child_probe_results", []))
+        probe_results = codex_route_aware_bounded_child_probe_results(raw_probe_results, route_manifest)
+        if is_diagnostic(probe_results):
+            return probe_results
+        snapshot["child_probe_results"] = probe_results
+    return snapshot
+
+
+def codex_route_aware_bounded_child_probe_results(
+    raw_probe_results: Any,
+    route_manifest: dict[str, Any],
+) -> list[dict[str, Any]] | dict[str, Any]:
+    if raw_probe_results is None:
+        return []
+    if not isinstance(raw_probe_results, list):
+        return invalid_capability_snapshot("probe_results_not_array")
+    admitted = codex_route_aware_admitted_probe_pairs(route_manifest)
+    results: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+    for raw in raw_probe_results:
+        if not isinstance(raw, dict):
+            continue
+        probe_id = raw.get("probe_id")
+        route_id = raw.get("route_id")
+        if not isinstance(probe_id, str) or not isinstance(route_id, str):
+            continue
+        if (probe_id, route_id) not in admitted or (probe_id, route_id) in seen:
+            continue
+        seen.add((probe_id, route_id))
+        result = {"probe_id": probe_id, "route_id": route_id}
+        for field in ("status", "available", "evidence_id", "error"):
+            if field in raw:
+                result[field] = copy.deepcopy(raw[field])
+        results.append(result)
+    return results
+
+
+def codex_route_aware_admitted_probe_pairs(route_manifest: dict[str, Any]) -> set[tuple[str, str]]:
+    bounded_probes = route_manifest.get("bounded_probes")
+    if not isinstance(bounded_probes, dict):
+        return set()
+    pairs: set[tuple[str, str]] = set()
+    for key, raw in bounded_probes.items():
+        if not isinstance(raw, dict):
+            continue
+        probe_id = raw.get("probe_id", key)
+        route_id = raw.get("route_id") or raw.get("candidate_route_id")
+        if isinstance(probe_id, str) and isinstance(route_id, str):
+            pairs.add((probe_id, route_id))
+    return pairs
+
+
+def normalize_codex_runtime_capability_snapshot(raw: Any, *, source: str) -> dict[str, Any]:
+    if not isinstance(raw, dict):
+        return diagnostic(
+            "invalid_route_capability_snapshot",
+            "Codex capability snapshot must be an object",
+            details={"reason": "snapshot_not_object"},
+        )
+    if isinstance(raw.get("observation_evidence"), dict):
+        return validate_normalized_codex_runtime_capability_snapshot(raw)
+
+    snapshot_id = raw.get("snapshot_id")
+    adapter_id = raw.get("adapter_id")
+    child_probe_results = raw.get("child_probe_results", [])
+    available_routes = raw.get("available_routes", [])
+    if not isinstance(snapshot_id, str) or not snapshot_id:
+        return invalid_capability_snapshot("snapshot_id_invalid")
+    if not isinstance(adapter_id, str) or not adapter_id:
+        return invalid_capability_snapshot("adapter_id_invalid")
+    if not isinstance(child_probe_results, list):
+        return invalid_capability_snapshot("child_probe_results_not_array")
+    if not isinstance(available_routes, list) or any(not isinstance(route, str) or not route for route in available_routes):
+        return invalid_capability_snapshot("available_routes_invalid")
+    return {
+        "snapshot_id": snapshot_id,
+        "adapter_id": adapter_id,
+        "observation_evidence": {
+            "source": source,
+            "native_discovery": bool(raw.get("native_discovery")),
+            "available_routes": list(available_routes),
+        },
+        "child_probe_results": copy.deepcopy(child_probe_results),
+    }
+
+
+def validate_normalized_codex_runtime_capability_snapshot(raw: dict[str, Any]) -> dict[str, Any]:
+    snapshot_id = raw.get("snapshot_id")
+    adapter_id = raw.get("adapter_id")
+    observation_evidence = raw.get("observation_evidence")
+    child_probe_results = raw.get("child_probe_results")
+    if not isinstance(snapshot_id, str) or not snapshot_id:
+        return invalid_capability_snapshot("snapshot_id_invalid")
+    if not isinstance(adapter_id, str) or not adapter_id:
+        return invalid_capability_snapshot("adapter_id_invalid")
+    if not isinstance(observation_evidence, dict):
+        return invalid_capability_snapshot("observation_evidence_not_object")
+    if not isinstance(child_probe_results, list):
+        return invalid_capability_snapshot("child_probe_results_not_array")
+    return {
+        "snapshot_id": snapshot_id,
+        "adapter_id": adapter_id,
+        "observation_evidence": copy.deepcopy(observation_evidence),
+        "child_probe_results": copy.deepcopy(child_probe_results),
+    }
+
+
+def invalid_capability_snapshot(reason: str) -> dict[str, Any]:
+    return diagnostic(
+        "invalid_route_capability_snapshot",
+        "Codex capability snapshot is invalid",
+        details={"reason": reason},
+        remediation_summary="Use one deterministic runner-owned capability snapshot for the route-aware invocation.",
+        remediation_actions=["Inject a valid fake snapshot in tests; do not run live discovery for G56R-006."],
+    )
+
+
+def codex_route_aware_adapter_routing(
+    route_manifest: dict[str, Any],
+    route_snapshot: dict[str, Any],
+    mutation: dict[str, Any],
+    source_dir: Path,
+    destination: Path,
+    inputs: dict[str, Any],
+    *,
+    strict_model_override: Any = None,
+) -> dict[str, Any]:
+    required_agents = codex_route_aware_required_agents(
+        route_manifest,
+        route_snapshot,
+        source_dir,
+        strict_model_override=strict_model_override,
+    )
+    optional_helper_decision = codex_route_aware_optional_helper(
+        route_manifest,
+        route_snapshot,
+        source_dir,
+        destination,
+        inputs,
+        strict_model_override=strict_model_override,
+    )
+    return {
+        "schema_version": "1.0",
+        "mode": "route_aware",
+        "manifest": {
+            "path": route_manifest["path"],
+            "manifest_id": route_manifest["manifest_id"],
+            "schema_version": route_manifest["schema_version"],
+            "source_roster_id": route_manifest["source_roster_id"],
+            "provenance_id": route_manifest["provenance_id"],
+        },
+        "runtime_capability_snapshot": route_snapshot,
+        "required_agents": required_agents,
+        "optional_helper_decision": optional_helper_decision,
+        "strict_override": codex_route_aware_strict_override_evidence(
+            strict_model_override,
+            required_agents,
+            optional_helper_decision,
+        ),
+        "recovery_or_mutation": codex_route_aware_recovery_or_mutation(mutation),
+    }
+
+
+def codex_route_aware_required_agents(
+    route_manifest: dict[str, Any],
+    route_snapshot: dict[str, Any],
+    source_dir: Path,
+    *,
+    strict_model_override: Any = None,
+) -> list[dict[str, Any]]:
+    policies = route_manifest["required_agent_policies"]
+    records: list[dict[str, Any]] = []
+    for agent_name in CODEX_REQUIRED_AGENT_NAMES:
+        policy = policies[agent_name]
+        records.append(
+            codex_route_aware_resolve_agent(
+                agent_name,
+                policy,
+                route_snapshot,
+                source_dir,
+                strict_model_override=strict_model_override if isinstance(strict_model_override, str) else None,
+            )
+        )
+    return records
+
+
+def codex_route_aware_optional_helper(
+    route_manifest: dict[str, Any],
+    route_snapshot: dict[str, Any],
+    source_dir: Path,
+    destination: Path,
+    inputs: dict[str, Any],
+    *,
+    strict_model_override: Any = None,
+) -> dict[str, Any]:
+    policy = route_manifest["optional_helper_policy"]
+    resolution = codex_route_aware_resolve_agent(
+        CODEX_OPTIONAL_HELPER_NAME,
+        policy,
+        route_snapshot,
+        source_dir,
+        strict_model_override=strict_model_override if isinstance(strict_model_override, str) else None,
+    )
+    no_helper = policy.get("no_helper") if isinstance(policy.get("no_helper"), dict) else {}
+    no_helper_validation = {
+        "allowed": bool(no_helper.get("allowed")),
+        "selected": False,
+        "reason": no_helper.get("reason") if isinstance(no_helper.get("reason"), str) else None,
+        "existing_helper_state": None,
+    }
+    managed_ownership_proof = None
+    manual_remediation: list[dict[str, Any]] = []
+    if resolution["terminal_outcome"] == "resolved":
+        outcome = "installed"
+    elif no_helper_validation["allowed"]:
+        no_helper_validation["selected"] = True
+        managed_ownership_proof = codex_route_aware_managed_helper_ownership_proof(
+            route_manifest,
+            source_dir,
+            destination,
+            inputs,
+        )
+        if managed_ownership_proof is None:
+            preservation = codex_route_aware_unmanaged_helper_preservation(destination)
+            if preservation is None:
+                outcome = "omitted"
+                no_helper_validation["existing_helper_state"] = "absent"
+                managed_ownership_proof = {"status": "not_required", "reason": "helper_absent"}
+            else:
+                outcome = "preserved"
+                no_helper_validation["existing_helper_state"] = "unmanaged"
+                managed_ownership_proof = preservation["managed_ownership_proof"]
+                manual_remediation = preservation["manual_remediation"]
+        else:
+            outcome = "removed"
+            no_helper_validation["existing_helper_state"] = "managed"
+    else:
+        outcome = "unresolved"
+        no_helper_validation["existing_helper_state"] = "unknown"
+        managed_ownership_proof = None
+
+    return {
+        "helper_name": CODEX_OPTIONAL_HELPER_NAME,
+        "outcome": outcome,
+        "policy_id": resolution["policy_id"],
+        "route_resolution_id": resolution["route_resolution_id"],
+        "resolved_agent_policy_id": resolution["resolved_agent_policy_id"] if outcome == "installed" else None,
+        "materialization_id": resolution["materialization_id"] if outcome == "installed" else None,
+        "materialization_proof": resolution["materialization_proof"] if outcome == "installed" else None,
+        "snapshot_id": resolution["snapshot_id"],
+        "attempted_routes": resolution["attempted_routes"],
+        "rejection_reasons": resolution["rejection_reasons"],
+        "terminal_outcome": resolution["terminal_outcome"] if outcome == "installed" else outcome,
+        "selected_route": resolution["selected_route"] if outcome == "installed" else None,
+        "no_helper_validation": no_helper_validation,
+        "managed_ownership_proof": managed_ownership_proof,
+        "manual_remediation": manual_remediation,
+    }
+
+
+def codex_route_aware_resolve_agent(
+    agent_name: str,
+    policy: dict[str, Any],
+    route_snapshot: dict[str, Any],
+    source_dir: Path,
+    *,
+    strict_model_override: str | None = None,
+) -> dict[str, Any]:
+    snapshot_id = route_snapshot["snapshot_id"]
+    attempted_routes: list[dict[str, Any]] = []
+    rejection_reasons: list[str] = []
+    selected_route: dict[str, Any] | None = None
+    materialization_proof: dict[str, Any] | None = None
+    materialization_failure: str | None = None
+
+    routes = (
+        [codex_route_aware_strict_override_route(policy, strict_model_override, agent_name=agent_name)]
+        if strict_model_override is not None
+        else codex_route_aware_policy_routes(policy)
+    )
+    for route in routes:
+        normalized_route = codex_route_aware_normalize_route(route)
+        rejection = (
+            "strict_override_route_missing"
+            if route.get("strict_override_missing") is True
+            else codex_route_aware_route_rejection(policy, normalized_route, route_snapshot)
+        )
+        if rejection is None:
+            try:
+                materialization_proof = codex_route_aware_materialization_proof(source_dir, agent_name, normalized_route)
+            except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError, ValueError) as exc:
+                materialization_failure = f"materialization_failed:{type(exc).__name__}"
+                attempted_routes.append({**normalized_route, "outcome": "rejected", "reason": materialization_failure})
+                rejection_reasons.append(f"{normalized_route['route_id']}: {materialization_failure}")
+                continue
+            attempted_routes.append({**normalized_route, "outcome": "selected"})
+            selected_route = normalized_route
+            break
+        attempted_routes.append({**normalized_route, "outcome": "rejected", "reason": rejection})
+        rejection_reasons.append(f"{normalized_route['route_id']}: {rejection}")
+
+    route_resolution_id = route_policy_digest(
+        {
+            "agent_name": agent_name,
+            "policy_id": policy.get("policy_id"),
+            "snapshot_id": snapshot_id,
+            "attempted_routes": attempted_routes,
+            "selected_route": selected_route,
+        }
+    )
+    if selected_route is None or materialization_proof is None:
+        return {
+            "agent_name": agent_name,
+            "route_resolution_id": route_resolution_id,
+            "policy_id": policy.get("policy_id"),
+            "resolved_agent_policy_id": None,
+            "materialization_id": None,
+            "materialization_proof": None,
+            "snapshot_id": snapshot_id,
+            "attempted_routes": attempted_routes,
+            "rejection_reasons": rejection_reasons,
+            "selected_route": None,
+            "terminal_outcome": materialization_failure or "unresolved",
+        }
+
+    resolved_agent_policy_id = route_policy_digest(
+        {
+            "agent_name": agent_name,
+            "policy_id": policy.get("policy_id"),
+            "selected_route": selected_route,
+            "materialization_id": materialization_proof["materialization_id"],
+            "non_route_contract_digest": policy.get("non_route_contract_digest"),
+        }
+    )
+    return {
+        "agent_name": agent_name,
+        "route_resolution_id": route_resolution_id,
+        "policy_id": policy.get("policy_id"),
+        "resolved_agent_policy_id": resolved_agent_policy_id,
+        "materialization_id": materialization_proof["materialization_id"],
+        "materialization_proof": materialization_proof,
+        "snapshot_id": snapshot_id,
+        "attempted_routes": attempted_routes,
+        "rejection_reasons": rejection_reasons,
+        "selected_route": selected_route,
+        "terminal_outcome": "resolved",
+    }
+
+
+def codex_route_aware_managed_helper_ownership_proof(
+    route_manifest: dict[str, Any],
+    source_dir: Path,
+    destination: Path,
+    inputs: dict[str, Any],
+) -> dict[str, Any] | None:
+    helper_target = destination / f"{CODEX_OPTIONAL_HELPER_NAME}.toml"
+    try:
+        existing_state = codex_agent_previous_state(helper_target)
+    except OSError:
+        return None
+    if existing_state is None:
+        return None
+
+    existing_bytes = existing_state[0]
+    existing_digest = f"sha256:{hashlib.sha256(existing_bytes).hexdigest()}"
+    provenance = codex_route_aware_trusted_helper_provenance(
+        inputs.get("managed_helper_provenance"),
+        route_manifest,
+        helper_target,
+        existing_digest,
+    )
+    if provenance is not None:
+        return {
+            "status": "trusted_provenance",
+            "helper_name": CODEX_OPTIONAL_HELPER_NAME,
+            "existing_digest": existing_digest,
+            "destination": helper_target.as_posix(),
+            "provenance": provenance,
+        }
+
+    known_digest = codex_route_aware_known_helper_rendered_digest(source_dir, route_manifest)
+    if existing_digest == known_digest:
+        return {
+            "status": "known_rendered_digest",
+            "helper_name": CODEX_OPTIONAL_HELPER_NAME,
+            "existing_digest": existing_digest,
+            "destination": helper_target.as_posix(),
+            "known_rendered_digest": known_digest,
+        }
+    return None
+
+
+def codex_route_aware_unmanaged_helper_preservation(destination: Path) -> dict[str, Any] | None:
+    helper_target = destination / f"{CODEX_OPTIONAL_HELPER_NAME}.toml"
+    try:
+        existing_state = codex_agent_previous_state(helper_target)
+    except OSError as exc:
+        return {
+            "managed_ownership_proof": {
+                "status": "absent",
+                "reason": "ownership_proof_absent",
+                "helper_name": CODEX_OPTIONAL_HELPER_NAME,
+                "destination": helper_target.as_posix(),
+                "existing_digest": None,
+                "read_error": type(exc).__name__,
+            },
+            "manual_remediation": [
+                codex_route_aware_unmanaged_helper_manual_remediation(helper_target, read_error=type(exc).__name__)
+            ],
+        }
+    if existing_state is None:
+        return None
+
+    existing_bytes = existing_state[0]
+    existing_digest = f"sha256:{hashlib.sha256(existing_bytes).hexdigest()}"
+    return {
+        "managed_ownership_proof": {
+            "status": "absent",
+            "reason": "ownership_proof_absent",
+            "helper_name": CODEX_OPTIONAL_HELPER_NAME,
+            "destination": helper_target.as_posix(),
+            "existing_digest": existing_digest,
+        },
+        "manual_remediation": [codex_route_aware_unmanaged_helper_manual_remediation(helper_target)],
+    }
+
+
+def codex_route_aware_unmanaged_helper_manual_remediation(
+    helper_target: Path,
+    *,
+    read_error: str | None = None,
+) -> dict[str, Any]:
+    action = {
+        "action_type": "manual_remediation",
+        "reason": "unmanaged_helper_preserved",
+        "path": helper_target.as_posix(),
+        "summary": "Existing same-named optional helper was preserved because managed ownership proof is absent.",
+        "recommended_actions": [
+            "Review the preserved helper file manually.",
+            "Remove or rename it only after confirming it is not user-owned.",
+        ],
+    }
+    if read_error is not None:
+        action["read_error"] = read_error
+    return action
+
+
+def codex_route_aware_trusted_helper_provenance(
+    raw: Any,
+    route_manifest: dict[str, Any],
+    helper_target: Path,
+    existing_digest: str,
+) -> dict[str, Any] | None:
+    if not isinstance(raw, dict):
+        return None
+    expected = {
+        "helper_name": CODEX_OPTIONAL_HELPER_NAME,
+        "destination": ".codex/agents/autopilot-fast-helper.toml",
+        "installer_id": "install-codex-agents",
+        "source_roster_id": route_manifest["source_roster_id"],
+        "manifest_id": route_manifest["manifest_id"],
+        "destination_digest": existing_digest,
+    }
+    if any(raw.get(key) != value for key, value in expected.items()):
+        return None
+    return {key: raw[key] for key in expected}
+
+
+def codex_route_aware_known_helper_rendered_digest(source_dir: Path, route_manifest: dict[str, Any]) -> str | None:
+    policy = route_manifest["optional_helper_policy"]
+    route = policy.get("preferred_route")
+    if not isinstance(route, dict):
+        return None
+    try:
+        rendered = codex_route_aware_render_destination_bytes(
+            (source_dir / f"{CODEX_OPTIONAL_HELPER_NAME}.toml").read_bytes(),
+            route,
+        )
+    except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError, ValueError):
+        return None
+    return f"sha256:{hashlib.sha256(rendered).hexdigest()}"
+
+
+def codex_route_aware_helper_removal_action(routing: dict[str, Any], destination: Path) -> tuple[str, Path] | None:
+    helper = routing.get("optional_helper_decision")
+    if not isinstance(helper, dict) or helper.get("outcome") != "removed":
+        return None
+    name = f"{CODEX_OPTIONAL_HELPER_NAME}.toml"
+    return name, destination / name
+
+
+def codex_route_aware_policy_routes(policy: dict[str, Any]) -> list[dict[str, Any]]:
+    routes: list[dict[str, Any]] = []
+    preferred = policy.get("preferred_route")
+    if isinstance(preferred, dict):
+        routes.append(preferred)
+    fallbacks = policy.get("fallback_routes")
+    if isinstance(fallbacks, list):
+        routes.extend(route for route in fallbacks if isinstance(route, dict))
+    return routes
+
+
+def codex_route_aware_strict_override_route(policy: dict[str, Any], model: str, *, agent_name: str) -> dict[str, Any]:
+    routes = codex_route_aware_policy_routes(policy)
+    for route in routes:
+        if route.get("model") == model:
+            strict_route = dict(route)
+            strict_route["route_id"] = f"strict-override:{agent_name}:{model}"
+            strict_route["source_route_id"] = route["route_id"]
+            return strict_route
+
+    fallback = routes[0] if routes else {}
+    return {
+        "route_id": f"strict-override:{agent_name}:{model}",
+        "model": model,
+        "model_reasoning_effort": fallback.get("model_reasoning_effort") or "",
+        "capabilities": list(fallback.get("capabilities") if isinstance(fallback.get("capabilities"), list) else []),
+        "probe_id": fallback.get("probe_id"),
+        "strict_override_missing": True,
+    }
+
+
+def codex_route_aware_normalize_route(route: dict[str, Any]) -> dict[str, Any]:
+    normalized = {
+        "route_id": route["route_id"],
+        "model": route["model"],
+        "model_reasoning_effort": route["model_reasoning_effort"],
+        "capabilities": list(route["capabilities"]),
+        "probe_id": route.get("probe_id"),
+    }
+    if isinstance(route.get("source_route_id"), str):
+        normalized["source_route_id"] = route["source_route_id"]
+    return normalized
+
+
+def codex_route_aware_route_rejection(
+    policy: dict[str, Any],
+    route: dict[str, Any],
+    route_snapshot: dict[str, Any],
+) -> str | None:
+    observation = route_snapshot.get("observation_evidence")
+    available_routes = observation.get("available_routes") if isinstance(observation, dict) else []
+    native_discovery = observation.get("native_discovery") if isinstance(observation, dict) else True
+    availability_route_id = route.get("source_route_id") if isinstance(route.get("source_route_id"), str) else route["route_id"]
+    observed_routes = set(available_routes if isinstance(available_routes, list) and native_discovery is not False else [])
+    if availability_route_id not in observed_routes:
+        if native_discovery is False and isinstance(route.get("probe_id"), str):
+            probe_rejection = codex_route_aware_probe_route_rejection(route, route_snapshot, availability_route_id)
+            if probe_rejection is not None:
+                return probe_rejection
+        else:
+            return "route_unavailable"
+    required_capabilities = policy.get("required_capabilities")
+    if isinstance(required_capabilities, list) and not set(required_capabilities) <= set(route["capabilities"]):
+        return "required_capability_missing"
+    return None
+
+
+def codex_route_aware_probe_route_rejection(
+    route: dict[str, Any],
+    route_snapshot: dict[str, Any],
+    availability_route_id: str,
+) -> str | None:
+    probe_id = route.get("probe_id")
+    child_results = route_snapshot.get("child_probe_results")
+    if not isinstance(probe_id, str) or not isinstance(child_results, list):
+        return "probe_result_missing"
+    matches = [
+        result
+        for result in child_results
+        if isinstance(result, dict)
+        and result.get("probe_id") == probe_id
+        and result.get("route_id") == availability_route_id
+    ]
+    if not matches:
+        return "probe_result_missing"
+    result = matches[0]
+    status = result.get("status")
+    available = result.get("available")
+    if available is True and status in {"success", "available"}:
+        return None
+    if available is False or status in {"failed", "unavailable"}:
+        return "probe_failed"
+    return "probe_insufficient_result"
+
+
+def codex_route_aware_strict_override_evidence(
+    strict_model_override: Any,
+    required_agents: list[dict[str, Any]],
+    optional_helper_decision: dict[str, Any],
+) -> dict[str, Any]:
+    requested = isinstance(strict_model_override, str) and bool(strict_model_override.strip())
+    if not requested:
+        return {
+            "requested": False,
+            "status": "absent",
+            "model": None,
+            "evaluated_tuples": [],
+            "required_agents_evaluated": 0,
+            "helper_evaluated": False,
+            "helper_tuple": None,
+            "fallback_suppressed": False,
+        }
+
+    evaluated_tuples: list[dict[str, Any]] = []
+    for record in required_agents:
+        attempt = record["attempted_routes"][0] if record.get("attempted_routes") else {}
+        evaluated_tuples.append(
+            {
+                "agent_name": record["agent_name"],
+                "route_id": attempt.get("route_id"),
+                "model": attempt.get("model"),
+                "model_reasoning_effort": attempt.get("model_reasoning_effort"),
+                "outcome": attempt.get("outcome"),
+                "reason": attempt.get("reason"),
+            }
+        )
+    compatible = all(record.get("terminal_outcome") == "resolved" for record in required_agents)
+    helper_tuple = codex_route_aware_strict_helper_tuple(strict_model_override, optional_helper_decision)
+    return {
+        "requested": True,
+        "status": "compatible" if compatible else "incompatible",
+        "model": strict_model_override,
+        "evaluated_tuples": evaluated_tuples,
+        "required_agents_evaluated": len(required_agents),
+        "helper_evaluated": True,
+        "helper_tuple": helper_tuple,
+        "fallback_suppressed": True,
+    }
+
+
+def codex_route_aware_strict_helper_tuple(
+    strict_model_override: str,
+    optional_helper_decision: dict[str, Any],
+) -> dict[str, Any]:
+    attempts = optional_helper_decision.get("attempted_routes")
+    attempt = attempts[0] if isinstance(attempts, list) and attempts and isinstance(attempts[0], dict) else {}
+    outcome = optional_helper_decision.get("outcome")
+    if outcome == "installed":
+        status = "compatible"
+    elif outcome == "omitted" and optional_helper_decision.get("no_helper_validation", {}).get("selected") is True:
+        status = "incompatible_no_helper"
+    else:
+        status = "unresolved"
+    return {
+        "helper_name": optional_helper_decision.get("helper_name"),
+        "route_id": attempt.get("route_id"),
+        "model": attempt.get("model", strict_model_override),
+        "model_reasoning_effort": attempt.get("model_reasoning_effort"),
+        "outcome": attempt.get("outcome"),
+        "reason": attempt.get("reason"),
+        "status": status,
+    }
+
+
+def codex_route_aware_materialization_proof(
+    source_dir: Path,
+    agent_name: str,
+    selected_route: dict[str, Any],
+) -> dict[str, Any]:
+    source_path = source_dir / f"{agent_name}.toml"
+    source_bytes = source_path.read_bytes()
+    destination_bytes = codex_route_aware_render_destination_bytes(source_bytes, selected_route)
+    source_digest = f"sha256:{hashlib.sha256(source_bytes).hexdigest()}"
+    destination_digest = f"sha256:{hashlib.sha256(destination_bytes).hexdigest()}"
+    binding = {
+        "path": "speckit-pro/speckit_pro_runner/helpers/install.py",
+        "digest": f"sha256:{hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}",
+    }
+    identity = {
+        "source_path": f"speckit-pro/codex-agents/{agent_name}.toml",
+        "source_bytes_digest": source_digest,
+        "destination_bytes_digest": destination_digest,
+        "selected_model": selected_route["model"],
+        "selected_model_reasoning_effort": selected_route["model_reasoning_effort"],
+        "materializer_binding": binding,
+    }
+    return {
+        "materialization_id": route_policy_digest(identity),
+        **identity,
+        "non_route_fields_unchanged": codex_route_aware_non_route_fields_unchanged(source_bytes, destination_bytes),
+    }
+
+
+def codex_route_aware_rendered_destination_bytes(routing: dict[str, Any], source_dir: Path) -> dict[str, bytes] | dict[str, Any]:
+    rendered: dict[str, bytes] = {}
+    try:
+        for record in routing["required_agents"]:
+            if record["terminal_outcome"] != "resolved" or not isinstance(record.get("selected_route"), dict):
+                continue
+            name = f"{record['agent_name']}.toml"
+            rendered[name] = codex_route_aware_rendered_record_bytes(source_dir, record)
+
+        helper = routing["optional_helper_decision"]
+        if helper["outcome"] == "installed" and isinstance(helper.get("selected_route"), dict):
+            rendered[f"{helper['helper_name']}.toml"] = codex_route_aware_rendered_record_bytes(source_dir, helper)
+    except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError, ValueError, KeyError) as exc:
+        return diagnostic(
+            "codex_route_materialization_failed",
+            "route-aware Codex agent plan could not render exact destination bytes",
+            details={"error": type(exc).__name__, "message": str(exc)},
+            remediation_summary="Inspect data.routing materialization records and retry with valid source TOMLs.",
+            remediation_actions=["Restore the bundled Codex agent source files and rerun dry_run."],
+        )
+
+    missing_required = sorted(f"{agent}.toml" for agent in CODEX_REQUIRED_AGENT_NAMES if f"{agent}.toml" not in rendered)
+    if missing_required:
+        return diagnostic(
+            "codex_route_materialization_failed",
+            "route-aware Codex agent plan did not render every required destination file",
+            details={"missing_required_files": missing_required},
+            remediation_summary="Every required route must materialize before route-aware mutation planning.",
+            remediation_actions=["Inspect data.routing.required_agents and fix unresolved route records."],
+        )
+    return rendered
+
+
+def codex_route_aware_rendered_record_bytes(source_dir: Path, record: dict[str, Any]) -> bytes:
+    source_path = source_dir / f"{record['agent_name'] if 'agent_name' in record else record['helper_name']}.toml"
+    rendered_bytes = codex_route_aware_render_destination_bytes(source_path.read_bytes(), record["selected_route"])
+    expected_digest = record["materialization_proof"]["destination_bytes_digest"]
+    actual_digest = f"sha256:{hashlib.sha256(rendered_bytes).hexdigest()}"
+    if actual_digest != expected_digest:
+        raise ValueError("rendered bytes do not match materialization proof")
+    return rendered_bytes
+
+
+def codex_route_aware_render_destination_bytes(source_bytes: bytes, selected_route: dict[str, Any]) -> bytes:
+    source_text = source_bytes.decode("utf-8")
+    source_policy = tomllib.loads(source_text)
+    rendered_text = source_text
+    if source_policy.get("model") != selected_route["model"]:
+        rendered_text, count = re.subn(
+            r'^model = "[^"]+"$',
+            f'model = "{selected_route["model"]}"',
+            rendered_text,
+            count=1,
+            flags=re.MULTILINE,
+        )
+        if count != 1:
+            raise ValueError("expected exactly one model field")
+    if source_policy.get("model_reasoning_effort") != selected_route["model_reasoning_effort"]:
+        rendered_text, count = re.subn(
+            r'^model_reasoning_effort = "[^"]+"$',
+            f'model_reasoning_effort = "{selected_route["model_reasoning_effort"]}"',
+            rendered_text,
+            count=1,
+            flags=re.MULTILINE,
+        )
+        if count == 0:
+            rendered_text, count = re.subn(
+                r'^(model = "[^"]+"\n)',
+                rf'\1model_reasoning_effort = "{selected_route["model_reasoning_effort"]}"' + "\n",
+                rendered_text,
+                count=1,
+                flags=re.MULTILINE,
+            )
+        if count != 1:
+            raise ValueError("expected one model_reasoning_effort field to render or insert")
+    rendered_policy = tomllib.loads(rendered_text)
+    if rendered_policy.get("model") != selected_route["model"]:
+        raise ValueError("rendered model did not validate")
+    if rendered_policy.get("model_reasoning_effort") != selected_route["model_reasoning_effort"]:
+        raise ValueError("rendered model_reasoning_effort did not validate")
+    return rendered_text.encode("utf-8")
+
+
+def codex_route_aware_non_route_fields_unchanged(source_bytes: bytes, destination_bytes: bytes) -> bool:
+    source_policy = tomllib.loads(source_bytes.decode("utf-8"))
+    destination_policy = tomllib.loads(destination_bytes.decode("utf-8"))
+    for route_field in ("model", "model_reasoning_effort"):
+        source_policy.pop(route_field, None)
+        destination_policy.pop(route_field, None)
+    return source_policy == destination_policy
+
+
+def codex_route_aware_source_immutability_diagnostic(source_dir: Path, route_manifest: dict[str, Any]) -> dict[str, Any] | None:
+    roster = codex_agent_source_roster(source_dir)
+    if is_diagnostic(roster):
+        return roster
+    if roster["source_roster_id"] != route_manifest["source_roster_id"]:
+        return diagnostic(
+            "codex_agent_source_changed",
+            "bundled Codex agent source roster changed during route-aware install planning",
+            details={
+                "expected_source_roster_id": route_manifest["source_roster_id"],
+                "actual_source_roster_id": roster["source_roster_id"],
+            },
+            remediation_summary="Retry from a stable plugin source bundle.",
+            remediation_actions=["Restore the bundled Codex agent source files before applying route-aware installation."],
+        )
+    return None
+
+
+def codex_route_aware_has_required_miss(routing: dict[str, Any]) -> bool:
+    required_agents = routing.get("required_agents")
+    if not isinstance(required_agents, list):
+        return True
+    return any(record.get("terminal_outcome") != "resolved" for record in required_agents if isinstance(record, dict))
+
+
+def codex_route_aware_has_unresolved_helper(routing: dict[str, Any]) -> bool:
+    helper = routing.get("optional_helper_decision")
+    return isinstance(helper, dict) and helper.get("outcome") == "unresolved"
+
+
+def codex_route_aware_required_miss_diagnostic(routing: dict[str, Any]) -> dict[str, Any]:
+    strict = routing.get("strict_override") if isinstance(routing.get("strict_override"), dict) else {}
+    if strict.get("status") == "incompatible":
+        return diagnostic(
+            "codex_strict_override_required_unresolved",
+            "strict route-aware override could not resolve every required Codex agent",
+            remediation_summary="Inspect data.routing.required_agents and strict_override.evaluated_tuples.",
+            remediation_actions=["Retry with an override model that every required policy admits."],
+        )
+    return diagnostic(
+        "codex_route_required_agent_unresolved",
+        "route-aware Codex agent install could not resolve every required agent",
+        remediation_summary="Inspect data.routing.required_agents and provide manifest-admitted available routes.",
+        remediation_actions=["Retry with a compatible route-policy manifest and capability snapshot."],
+    )
+
+
+def codex_route_aware_helper_unresolved_diagnostic(routing: dict[str, Any]) -> dict[str, Any]:
+    strict = routing.get("strict_override") if isinstance(routing.get("strict_override"), dict) else {}
+    if strict.get("helper_tuple", {}).get("status") == "unresolved":
+        return diagnostic(
+            "codex_strict_override_helper_unresolved",
+            "strict route-aware override could not resolve the optional helper or validate no-helper continuation",
+            remediation_summary="Inspect data.routing.optional_helper_decision and strict_override.helper_tuple.",
+            remediation_actions=["Permit validated no-helper continuation or use an override model compatible with the helper policy."],
+        )
+    return diagnostic(
+        "codex_route_helper_unresolved",
+        "route-aware Codex agent install could not resolve the optional helper or validate no-helper continuation",
+        remediation_summary="Inspect data.routing.optional_helper_decision.",
+        remediation_actions=["Provide a helper route or a validated no-helper policy."],
+    )
+
+
+def codex_route_aware_recovery_or_mutation(
+    mutation: dict[str, Any],
+    *,
+    no_mutation_reason: str | None = None,
+) -> dict[str, Any]:
+    planned_operations = mutation.get("planned_operations", [])
+    applied_operations = mutation.get("applied_operations", [])
+    planned_writes = list(mutation.get("planned_paths", []))
+    planned_removals = [
+        operation["target"]
+        for operation in planned_operations
+        if isinstance(operation, dict) and operation.get("kind") == "remove_file" and isinstance(operation.get("target"), str)
+    ]
+    applied_removals = [
+        operation["target"]
+        for operation in applied_operations
+        if isinstance(operation, dict) and operation.get("kind") == "remove_file" and isinstance(operation.get("target"), str)
+    ]
+    touched_paths = list(mutation.get("touched_paths", []))
+    applied_writes = [path for path in touched_paths if path not in set(applied_removals)]
+    writes_state = bool(applied_writes or applied_removals)
+    terminal_outcome = "planned" if (planned_writes or planned_removals) and not (applied_writes or applied_removals) else "no_mutation"
+    state_identity = route_policy_digest(
+        {
+            "terminal_outcome": terminal_outcome,
+            "planned_writes": planned_writes,
+            "planned_removals": planned_removals,
+            "applied_writes": applied_writes,
+            "applied_removals": applied_removals,
+            "writes_state": writes_state,
+        }
+    )
+    final_state_identity = (
+        state_identity
+        if not writes_state
+        else route_policy_digest(
+            {
+                "terminal_outcome": terminal_outcome,
+                "applied_writes": applied_writes,
+                "applied_removals": applied_removals,
+                "writes_state": writes_state,
+            }
+        )
+    )
+    return {
+        "planned_writes": planned_writes,
+        "planned_removals": planned_removals,
+        "applied_writes": applied_writes,
+        "applied_removals": applied_removals,
+        "recovery_record": {
+            "pre_state_id": state_identity,
+            "final_state_id": final_state_identity,
+            "staged_actions": list(planned_operations if isinstance(planned_operations, list) else []),
+            "applied_actions": list(applied_operations if isinstance(applied_operations, list) else []),
+            "rolled_back_actions": [],
+            "cleanup_actions": [],
+            "cleanup_errors": [],
+            "failed_actions": [],
+            "rollback_outcome": "not_required",
+            "manual_remediation": [],
+            "terminal_outcome": terminal_outcome,
+            "no_mutation_reason": no_mutation_reason if terminal_outcome == "no_mutation" else None,
+        },
+        "writes_state": writes_state,
+        "restart_required": writes_state,
+    }
+
+
+def codex_route_aware_recovery_after_apply_failure(
+    mutation: dict[str, Any],
+    destination: Path,
+    previous: dict[str, tuple[bytes, int] | None],
+    rollback_failures: list[str],
+) -> dict[str, Any]:
+    planned_operations = mutation.get("planned_operations", [])
+    applied_operations = mutation.get("applied_operations", [])
+    applied_removals = [
+        operation["target"]
+        for operation in applied_operations
+        if isinstance(operation, dict) and operation.get("kind") == "remove_file" and isinstance(operation.get("target"), str)
+    ]
+    touched_paths = list(mutation.get("touched_paths", []))
+    applied_writes = [path for path in touched_paths if path not in set(applied_removals)]
+    prior_state = codex_route_aware_state_records(destination, previous)
+    final_state = codex_route_aware_destination_state_records(destination, list(previous))
+    pre_state_id = route_policy_digest(prior_state)
+    final_state_id = route_policy_digest(final_state)
+    writes_state = bool(rollback_failures) or pre_state_id != final_state_id
+    rollback_outcome = "unrestored" if rollback_failures else "restored"
+    failure_operation = mutation.get("failure_operation")
+    rollback_error_records = codex_route_aware_rollback_error_records(destination, rollback_failures)
+    unrestored_actions = codex_route_aware_unrestored_actions(destination, rollback_failures)
+    terminal_outcome = "uncertain_state" if writes_state else "restored"
+    return {
+        "planned_writes": list(mutation.get("planned_paths", [])),
+        "planned_removals": [
+            operation["target"]
+            for operation in planned_operations
+            if isinstance(operation, dict) and operation.get("kind") == "remove_file" and isinstance(operation.get("target"), str)
+        ],
+        "applied_writes": applied_writes,
+        "applied_removals": applied_removals,
+        "recovery_record": {
+            "pre_state_id": pre_state_id,
+            "final_state_id": final_state_id,
+            "prior_state": prior_state,
+            "final_state": final_state,
+            "staged_actions": list(planned_operations if isinstance(planned_operations, list) else []),
+            "applied_actions": list(applied_operations if isinstance(applied_operations, list) else []),
+            "rolled_back_actions": codex_route_aware_rolled_back_actions(destination, previous),
+            "cleanup_actions": [],
+            "cleanup_errors": [],
+            "failed_actions": codex_route_aware_failed_actions(destination, failure_operation),
+            "rollback_outcome": rollback_outcome,
+            "rollback_failures": list(rollback_failures),
+            "rollback_errors": rollback_error_records,
+            "unrestored_actions": unrestored_actions,
+            "state_status": "uncertain" if writes_state else "restored",
+            "manual_remediation": list(mutation.get("manual_remediation", [])),
+            "terminal_outcome": terminal_outcome,
+            "no_mutation_reason": None,
+        },
+        "writes_state": writes_state,
+        "restart_required": writes_state,
+    }
+
+
+def codex_route_aware_state_records(
+    destination: Path,
+    states: dict[str, tuple[bytes, int] | None],
+) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    for name, state in states.items():
+        records.append(codex_route_aware_state_record(destination / name, name, state))
+    return records
+
+
+def codex_route_aware_destination_state_records(destination: Path, names: list[str]) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    for name in names:
+        target = destination / name
+        try:
+            state = codex_agent_previous_state(target)
+        except OSError as exc:
+            records.append(
+                {
+                    "name": name,
+                    "target": target.as_posix(),
+                    "existed": "unknown",
+                    "digest": None,
+                    "mode": None,
+                    "error": type(exc).__name__,
+                }
+            )
+            continue
+        records.append(codex_route_aware_state_record(target, name, state))
+    return records
+
+
+def codex_route_aware_state_record(
+    target: Path,
+    name: str,
+    state: tuple[bytes, int] | None,
+) -> dict[str, Any]:
+    record: dict[str, Any] = {
+        "name": name,
+        "target": target.as_posix(),
+        "existed": state is not None,
+        "digest": None,
+        "mode": None,
+    }
+    if state is not None:
+        content, mode = state
+        record["digest"] = f"sha256:{hashlib.sha256(content).hexdigest()}"
+        record["mode"] = oct(mode & 0o7777)
+    return record
+
+
+def codex_route_aware_rolled_back_actions(
+    destination: Path,
+    previous: dict[str, tuple[bytes, int] | None],
+) -> list[dict[str, Any]]:
+    actions: list[dict[str, Any]] = []
+    for name, state in previous.items():
+        actions.append(
+            {
+                "operation_id": f"rollback-codex-agent:{name}",
+                "kind": "restore_file" if state is not None else "remove_file",
+                "name": name,
+                "target": (destination / name).as_posix(),
+            }
+        )
+    return actions
+
+
+def codex_route_aware_failed_actions(destination: Path, failure_operation: Any) -> list[dict[str, Any]]:
+    if not isinstance(failure_operation, dict):
+        return []
+    operation_id = failure_operation.get("operation_id")
+    if not isinstance(operation_id, str):
+        return [dict(failure_operation)]
+    name = operation_id.removeprefix("install-codex-agent:")
+    if name == operation_id:
+        return [dict(failure_operation)]
+    return [
+        {
+            **failure_operation,
+            "name": name,
+            "target": (destination / name).as_posix(),
+        }
+    ]
+
+
+def codex_route_aware_rollback_error_records(
+    destination: Path,
+    rollback_failures: list[str],
+) -> list[dict[str, Any]]:
+    return [{"name": name, "target": (destination / name).as_posix(), "error": "OSError"} for name in rollback_failures]
+
+
+def codex_route_aware_unrestored_actions(
+    destination: Path,
+    rollback_failures: list[str],
+) -> list[dict[str, Any]]:
+    return [{"name": name, "target": (destination / name).as_posix()} for name in rollback_failures]
+
+
+def codex_route_aware_rollback_manual_remediation(
+    destination: Path,
+    rollback_failures: list[str],
+) -> list[dict[str, Any]]:
+    if not rollback_failures:
+        return []
+    paths = [(destination / name).as_posix() for name in rollback_failures]
+    return [
+        {
+            "action_type": "manual_remediation",
+            "reason": "rollback_unrestored",
+            "paths": paths,
+            "summary": "Restart Codex after manually restoring or reviewing unrestored agent files.",
+            "recommended_actions": [
+                "Restore each unrestored file from the previous known-good bytes when available.",
+                "Review the route-aware recovery record before retrying apply.",
+                "Restart Codex after correcting the reported destination state.",
+            ],
+        }
+    ]
+
+
+def codex_route_aware_remediation_action_summaries(raw_actions: Any) -> list[str]:
+    if not isinstance(raw_actions, list):
+        return []
+    summaries: list[str] = []
+    for action in raw_actions:
+        if isinstance(action, str):
+            summaries.append(action)
+        elif isinstance(action, dict) and isinstance(action.get("summary"), str):
+            summaries.append(action["summary"])
+    return summaries
+
+
+def validate_codex_route_policy_manifest(manifest: dict[str, Any], source_dir: Path) -> dict[str, Any]:
+    keys = set(manifest)
+    missing = sorted(ROUTE_POLICY_MANIFEST_TOP_LEVEL_KEYS - keys)
+    if missing:
+        return invalid_route_policy_manifest("missing_top_level_keys", details={"missing": missing})
+    unknown = sorted(keys - ROUTE_POLICY_MANIFEST_TOP_LEVEL_KEYS)
+    if unknown:
+        return invalid_route_policy_manifest("unknown_top_level_keys", details={"unknown": unknown})
+
+    if manifest.get("schema_version") != ROUTE_POLICY_MANIFEST_SCHEMA_VERSION:
+        return invalid_route_policy_manifest(
+            "unsupported_schema_version",
+            details={"schema_version": manifest.get("schema_version")},
+        )
+    manifest_id = manifest.get("manifest_id")
+    if not isinstance(manifest_id, str) or ROUTE_POLICY_SHA256_IDENTITY.fullmatch(manifest_id) is None:
+        return invalid_route_policy_manifest("manifest_id_invalid")
+    recomputed_manifest_id = route_policy_digest(
+        {key: value for key, value in manifest.items() if key != "manifest_id"}
+    )
+    if manifest_id != recomputed_manifest_id:
+        return invalid_route_policy_manifest(
+            "manifest_id_mismatch",
+            details={"expected_manifest_id": recomputed_manifest_id, "actual_manifest_id": manifest_id},
+        )
+    if not isinstance(manifest.get("provenance_id"), str) or not manifest["provenance_id"]:
+        return invalid_route_policy_manifest("provenance_id_invalid")
+
+    source_result = validate_route_policy_source_roster(manifest.get("source_roster"), source_dir)
+    if is_diagnostic(source_result):
+        return source_result
+    policies_result = validate_route_policy_required_policies(manifest.get("required_agent_policies"))
+    if is_diagnostic(policies_result):
+        return policies_result
+    helper_result = validate_route_policy_optional_helper(manifest.get("optional_helper"))
+    if is_diagnostic(helper_result):
+        return helper_result
+    if not isinstance(manifest.get("bounded_probes"), dict):
+        return invalid_route_policy_manifest("bounded_probes_not_object")
+    return {}
+
+
+def validate_route_policy_source_roster(raw: Any, source_dir: Path) -> dict[str, Any]:
+    if not isinstance(raw, dict):
+        return invalid_route_policy_manifest("source_roster_not_object")
+    keys = set(raw)
+    if keys != ROUTE_POLICY_SOURCE_ROSTER_KEYS:
+        return invalid_route_policy_manifest(
+            "source_roster_schema_mismatch",
+            details={
+                "missing": sorted(ROUTE_POLICY_SOURCE_ROSTER_KEYS - keys),
+                "unknown": sorted(keys - ROUTE_POLICY_SOURCE_ROSTER_KEYS),
+            },
+        )
+    if raw.get("schema_version") != ROUTE_POLICY_MANIFEST_SCHEMA_VERSION:
+        return invalid_route_policy_manifest(
+            "source_roster_schema_version_mismatch",
+            details={"schema_version": raw.get("schema_version")},
+        )
+    files = raw.get("files")
+    if not isinstance(files, list):
+        return invalid_route_policy_manifest("source_roster_files_not_array")
+    normalized: list[dict[str, str]] = []
+    for index, item in enumerate(files):
+        if not isinstance(item, dict):
+            return invalid_route_policy_manifest("source_roster_file_not_object", details={"index": index})
+        item_keys = set(item)
+        if item_keys != ROUTE_POLICY_SOURCE_FILE_KEYS:
+            return invalid_route_policy_manifest(
+                "source_roster_file_schema_mismatch",
+                details={
+                    "index": index,
+                    "missing": sorted(ROUTE_POLICY_SOURCE_FILE_KEYS - item_keys),
+                    "unknown": sorted(item_keys - ROUTE_POLICY_SOURCE_FILE_KEYS),
+                },
+            )
+        name = item.get("name")
+        digest = item.get("sha256")
+        if not isinstance(name, str) or not name:
+            return invalid_route_policy_manifest("source_roster_file_name_invalid", details={"index": index})
+        if not isinstance(digest, str) or ROUTE_POLICY_SHA256_HEX.fullmatch(digest) is None:
+            return invalid_route_policy_manifest("source_roster_file_digest_invalid", details={"index": index})
+        normalized.append({"name": name, "sha256": digest})
+    source_roster_id = raw.get("source_roster_id")
+    recomputed_source_roster_id = route_policy_digest(normalized)
+    if source_roster_id != recomputed_source_roster_id:
+        return invalid_route_policy_manifest(
+            "source_roster_id_mismatch",
+            details={"expected_source_roster_id": recomputed_source_roster_id, "actual_source_roster_id": source_roster_id},
+        )
+
+    current_roster = codex_agent_source_roster(source_dir)
+    if is_diagnostic(current_roster):
+        return current_roster
+    current_files = current_roster["files"]
+    if normalized != current_files:
+        return invalid_route_policy_manifest(
+            "source_roster_files_mismatch",
+            details={
+                "expected_files": [record["name"] for record in current_files],
+                "actual_files": [record["name"] for record in normalized],
+            },
+        )
+    return {}
+
+
+def validate_route_policy_required_policies(raw: Any) -> dict[str, Any]:
+    if not isinstance(raw, dict):
+        return invalid_route_policy_manifest("required_agent_policies_not_object")
+    keys = set(raw)
+    expected = set(CODEX_REQUIRED_AGENT_NAMES)
+    if keys != expected:
+        return invalid_route_policy_manifest(
+            "required_agent_policy_roster_mismatch",
+            details={"missing": sorted(expected - keys), "unexpected": sorted(keys - expected)},
+        )
+    for agent_name in CODEX_REQUIRED_AGENT_NAMES:
+        policy = raw.get(agent_name)
+        if not isinstance(policy, dict):
+            return invalid_route_policy_manifest("required_agent_policy_not_object", details={"agent_name": agent_name})
+        policy_keys = set(policy)
+        if not ROUTE_POLICY_REQUIRED_POLICY_KEYS <= policy_keys:
+            return invalid_route_policy_manifest(
+                "required_agent_policy_missing_keys",
+                details={"agent_name": agent_name, "missing": sorted(ROUTE_POLICY_REQUIRED_POLICY_KEYS - policy_keys)},
+            )
+        if policy.get("agent_name") != agent_name:
+            return invalid_route_policy_manifest(
+                "required_agent_policy_name_mismatch",
+                details={"agent_name": agent_name, "policy_agent_name": policy.get("agent_name")},
+            )
+        route_result = validate_route_policy_route(policy.get("preferred_route"), context=f"{agent_name}.preferred_route")
+        if is_diagnostic(route_result):
+            return route_result
+        fallback_routes = policy.get("fallback_routes")
+        if not isinstance(fallback_routes, list):
+            return invalid_route_policy_manifest("required_agent_policy_fallback_routes_not_array", details={"agent_name": agent_name})
+        for index, route in enumerate(fallback_routes):
+            route_result = validate_route_policy_route(route, context=f"{agent_name}.fallback_routes[{index}]")
+            if is_diagnostic(route_result):
+                return route_result
+    return {}
+
+
+def validate_route_policy_optional_helper(raw: Any) -> dict[str, Any]:
+    if not isinstance(raw, dict):
+        return invalid_route_policy_manifest("optional_helper_not_object")
+    keys = set(raw)
+    if keys != ROUTE_POLICY_OPTIONAL_HELPER_KEYS:
+        return invalid_route_policy_manifest(
+            "optional_helper_schema_mismatch",
+            details={
+                "missing": sorted(ROUTE_POLICY_OPTIONAL_HELPER_KEYS - keys),
+                "unknown": sorted(keys - ROUTE_POLICY_OPTIONAL_HELPER_KEYS),
+            },
+        )
+    if raw.get("helper_name") != CODEX_OPTIONAL_HELPER_NAME:
+        return invalid_route_policy_manifest(
+            "optional_helper_mismatch",
+            details={"expected": CODEX_OPTIONAL_HELPER_NAME, "actual": raw.get("helper_name")},
+        )
+    preferred = raw.get("preferred_route")
+    if preferred is not None:
+        route_result = validate_route_policy_route(preferred, context="optional_helper.preferred_route")
+        if is_diagnostic(route_result):
+            return route_result
+    fallback_routes = raw.get("fallback_routes")
+    if not isinstance(fallback_routes, list):
+        return invalid_route_policy_manifest("optional_helper_fallback_routes_not_array")
+    for index, route in enumerate(fallback_routes):
+        route_result = validate_route_policy_route(route, context=f"optional_helper.fallback_routes[{index}]")
+        if is_diagnostic(route_result):
+            return route_result
+    if not isinstance(raw.get("no_helper"), dict):
+        return invalid_route_policy_manifest("optional_helper_no_helper_not_object")
+    return {}
+
+
+def validate_route_policy_route(raw: Any, *, context: str) -> dict[str, Any]:
+    if not isinstance(raw, dict):
+        return invalid_route_policy_manifest("route_not_object", details={"route": context})
+    keys = set(raw)
+    if keys != ROUTE_POLICY_ROUTE_KEYS:
+        return invalid_route_policy_manifest(
+            "route_schema_mismatch",
+            details={
+                "route": context,
+                "missing": sorted(ROUTE_POLICY_ROUTE_KEYS - keys),
+                "unknown": sorted(keys - ROUTE_POLICY_ROUTE_KEYS),
+            },
+        )
+    for field in ("route_id", "model", "model_reasoning_effort"):
+        if not isinstance(raw.get(field), str) or not raw[field]:
+            return invalid_route_policy_manifest("route_field_invalid", details={"route": context, "field": field})
+    if not isinstance(raw.get("capabilities"), list) or any(not isinstance(item, str) or not item for item in raw["capabilities"]):
+        return invalid_route_policy_manifest("route_capabilities_invalid", details={"route": context})
+    if raw.get("probe_id") is not None and (not isinstance(raw.get("probe_id"), str) or not raw["probe_id"]):
+        return invalid_route_policy_manifest("route_probe_id_invalid", details={"route": context})
+    return {}
 
 
 def load_codex_agent_bundle(source_dir: Path, inputs: dict[str, Any]) -> tuple[dict[str, bytes], str] | dict[str, Any]:
@@ -295,22 +1918,10 @@ def load_codex_agent_bundle(source_dir: Path, inputs: dict[str, Any]) -> tuple[d
             remediation_summary="Choose a supported explicit Codex agent model.",
             remediation_actions=["Set inputs.model to gpt-5.5 or gpt-5.4."],
         )
-    if not source_dir.is_dir() or source_dir.is_symlink():
-        return diagnostic("missing_agent_bundle", "bundled codex-agents directory is missing or unsafe")
-    if any(source_dir.glob("*.md")):
-        return diagnostic("legacy_agent_bundle", "bundled codex-agents directory contains legacy Markdown agents")
+    roster_result = codex_agent_source_roster(source_dir)
+    if is_diagnostic(roster_result):
+        return roster_result
     source_files = sorted(source_dir.glob("*.toml"), key=lambda path: path.name)
-    source_names = {path.name for path in source_files}
-    missing = sorted(REQUIRED_CODEX_AGENT_NAMES - source_names)
-    unexpected = sorted(source_names - REQUIRED_CODEX_AGENT_NAMES)
-    if missing or unexpected:
-        return diagnostic(
-            "incomplete_agent_bundle",
-            "bundled Codex agent set does not match the required inventory",
-            details={"missing_files": missing, "unexpected_files": unexpected},
-            remediation_summary="Restore the complete bundled agent set before installing.",
-            remediation_actions=["Repair or reinstall the SpecKit Pro plugin."],
-        )
     rendered: dict[str, bytes] = {}
     try:
         for path in source_files:

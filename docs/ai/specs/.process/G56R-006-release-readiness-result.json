@@ -1,0 +1,80 @@
+{
+  "schema_version": "1.0",
+  "feature_id": "G56R-006",
+  "status": "ready_for_post_implementation_review",
+  "what_changed": [
+    "Added explicit trusted route-policy manifest activation while preserving static no-manifest installation.",
+    "Added one-snapshot preferred/fallback resolution for the 12 required Codex agents and one optional helper decision.",
+    "Extended canonical materialization to render selected model and effort while binding original source bytes and unchanged non-route fields.",
+    "Added strict global override, managed-helper ownership/removal, preservation, bounded probes, complete-plan-before-write apply, and rollback recovery evidence.",
+    "Added deterministic fake-home fixtures/tests, Codex install documentation, generated payload mirrors, installed-cache proofs, runner trust metadata, and docs references."
+  ],
+  "why": "Provide the reusable resolver/materializer/installer framework required before downstream G56R-007 through G56R-010 can qualify production route policies.",
+  "non_goals": [
+    "No production route qualification or default route-policy activation.",
+    "No live model calls or real-user-home acceptance writes.",
+    "No Claude agent installation behavior.",
+    "No per-agent override map or arbitrary effort override map.",
+    "No downstream cohort assignment or G56R-011 final roster composition."
+  ],
+  "review_order": [
+    "Manifest and response contracts plus fixture corpus.",
+    "Canonical materializer route rendering and proof fields.",
+    "Installer manifest trust and single-snapshot resolution.",
+    "Strict override and optional-helper decision/ownership behavior.",
+    "Apply planning, verification, rollback, and recovery evidence.",
+    "Focused tests, generated payload/trust artifacts, and docs."
+  ],
+  "scope_budget": {
+    "planned_reviewable_loc": 385,
+    "planned_production_files": 4,
+    "planned_authored_implementation_files": 8,
+    "observed_authored_added_lines": 4170,
+    "observed_note": "Observed added lines include the 476-line deterministic fixture corpus and 1706 added mutation-helper test lines; generated mirrors, proof payloads, planning artifacts, and implementation notes are excluded.",
+    "status": "over_plan",
+    "required_follow_up": "Mandatory post reviewability and code-review tracks must determine whether the vertical slice remains acceptably reviewable or requires behavior-preserving reduction."
+  },
+  "traceability": {
+    "FR-001_to_FR-010": [
+      "speckit-pro/speckit_pro_runner/helpers/install.py",
+      "speckit-pro/speckit_pro_runner/helpers/registry.py",
+      "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py"
+    ],
+    "FR-011_to_FR-014": [
+      "speckit-pro/speckit_pro_runner/agent_materialization.py",
+      "tests/speckit-pro/unit/test-agent-materialization.py"
+    ],
+    "FR-015_to_FR-028": [
+      "speckit-pro/speckit_pro_runner/helpers/install.py",
+      "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py",
+      "tests/speckit-pro/unit/fixtures/mutation-helpers/codex-agent-routing/cases.json"
+    ],
+    "FR-029": [
+      "specs/g56r-006-resolver-materializer-installer-strict-override/spec.md",
+      "docs/ai/specs/.process/G56R-006-design-concept.md"
+    ]
+  },
+  "verification": {
+    "focused_materializer": "10/10 passed",
+    "focused_installer": "80/80 passed",
+    "layer_1": "1511/1511 passed",
+    "layer_4": "12309/12309 passed",
+    "layer_5": "219/219 passed",
+    "full_suite": "14039/14039 passed",
+    "toolchain_preflight": "passed",
+    "docs_reference_generate": "7 pages generated",
+    "docs_reference_check": "current",
+    "diff_check": "passed"
+  },
+  "known_gaps": [
+    "Downstream G56R-007 through G56R-011 roster reconciliation remains unresolved by design.",
+    "artifact-author, sweep-analyst, sweep-classifier, consensus-synthesizer, and gate-validator remain reconciliation inputs without cohort assignment here.",
+    "No production route policy is qualified or enabled by default.",
+    "The authored implementation exceeds the planning estimate and requires the mandatory post reviewability decision."
+  ],
+  "rollback_or_feature_flag": {
+    "activation": "Route-aware behavior activates only when route_policy_manifest is explicitly supplied and validated.",
+    "fallback": "Omitting route_policy_manifest retains the prior static 13-file installer behavior and response shape.",
+    "apply_recovery": "Route-aware apply captures prior bytes/modes and reports restored or unrestored recovery evidence with restart guidance."
+  }
+}

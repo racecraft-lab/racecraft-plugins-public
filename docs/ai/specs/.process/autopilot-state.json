@@ -3,21 +3,28 @@
   "spec_id": "G56R-006",
   "feature_dir": "specs/g56r-006-resolver-materializer-installer-strict-override",
   "branch": "g56r-006-resolver-materializer-installer-strict-override",
-  "status": "awaiting_review",
-  "stage": "plan",
-  "updated_at": "2026-08-24T18:31:02Z",
-  "active_step": "plan-stage review boundary",
+  "status": "in_progress",
+  "stage": "implement",
+  "updated_at": "2026-08-24T21:02:00Z",
+  "active_step": "Post: Doctor Extension Check",
   "stage_resolution": {
     "source": "argv",
-    "basis": "explicit --stage plan",
-    "recorded_stage": null,
+    "basis": "explicit --stage implement",
+    "recorded_stage": "plan",
     "planning_complete": true,
     "confidence_gate_status": "✅ Complete",
     "from_phase": null,
     "corroboration": {
-      "status": "no_record",
-      "recorded": null,
-      "observed": null,
+      "status": "match",
+      "recorded": {
+        "number": 503,
+        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/503"
+      },
+      "observed": {
+        "number": 503,
+        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/503",
+        "state": "OPEN"
+      },
       "merged": null,
       "reason": null
     }
@@ -37,8 +44,8 @@
     "runner_speckit_detail": "specify 0.11.8",
     "is_worktree": true,
     "workflow_branch_match": true,
-    "runner_on_feature_branch_heuristic": false,
-    "worktree_binding": "operator-authorized same-session binding; every command and agent targets the registered G56R-006 worktree",
+    "runner_on_feature_branch_heuristic": true,
+    "worktree_binding": "resolve-workflow-binding returned resolved with descendant relation; every command and agent targets the registered G56R-006 worktree",
     "codex_agents": "no_op across 13 installed TOMLs at user scope with gpt-5.5",
     "project_implementation_agent": "implement-executor",
     "full_suite": "14012/14012 passed (L1 1511, L4 12282, L5 219)"
@@ -412,6 +419,69 @@
         "completeness": 0.94
       },
       "remediation_iterations": 0
+    },
+    "implementation_feedback_sweep": {
+      "status": "completed",
+      "pull_request": 503,
+      "surfaces_read": ["review_thread", "pr_conversation"],
+      "observed": 0,
+      "candidates": 0,
+      "excluded": 0,
+      "temporary_directory_removed": true
+    },
+    "implementation_setup": {
+      "status": "completed",
+      "tasks": ["T001", "T002", "T003", "T004", "T005"],
+      "baseline_test": "test-speckit-pro-mutation-helpers: 53/53 passed"
+    },
+    "implementation_foundation": {
+      "status": "completed",
+      "tasks": ["T006", "T007", "T008", "T009", "T010", "T011"],
+      "focused_test": "test-speckit-pro-mutation-helpers: 61/61 passed"
+    },
+    "implementation_user_story_1": {
+      "status": "completed",
+      "tasks": ["T012", "T013", "T014", "T015", "T016", "T017", "T018"],
+      "focused_tests": [
+        "test-agent-materialization: 10/10 passed",
+        "test-speckit-pro-mutation-helpers: 65/65 passed"
+      ]
+    },
+    "implementation_user_story_2": {
+      "status": "completed",
+      "tasks": ["T019", "T020", "T021", "T022", "T023"],
+      "focused_test": "test-speckit-pro-mutation-helpers: 70/70 passed"
+    },
+    "implementation_user_story_3": {
+      "status": "completed",
+      "tasks": ["T024", "T025", "T026", "T027", "T028", "T029", "T030"],
+      "focused_test": "test-speckit-pro-mutation-helpers: 75/75 passed"
+    },
+    "implementation_user_story_4": {
+      "status": "completed",
+      "tasks": ["T031", "T032", "T033", "T034", "T035", "T036", "T037", "T038", "T039"],
+      "focused_test": "test-speckit-pro-mutation-helpers: 80/80 passed"
+    },
+    "implementation_polish": {
+      "status": "completed",
+      "tasks": ["T040", "T041", "T042", "T043", "T044", "T045", "T046", "T047", "T048", "T049", "T050", "T051", "T052", "T053"],
+      "focused_materializer": "10/10 passed",
+      "focused_installer": "80/80 passed",
+      "layer_1": "1511/1511 passed",
+      "layer_4": "12309/12309 passed",
+      "layer_5": "219/219 passed",
+      "full_suite": "14039/14039 passed",
+      "docs_reference": "current",
+      "reviewability_budget_status": "over_plan_pending_post_review"
+    }
+    ,
+    "G7": {
+      "gate": "G7",
+      "pass": true,
+      "done": 53,
+      "total": 53,
+      "markers": 0,
+      "reason": "All 53 tasks complete"
     }
   },
   "artifact_generation": {
@@ -484,26 +554,26 @@
     {"step": "Phase 6: Analyze", "status": "completed"},
     {"step": "Phase 6: Analyze - Consensus", "status": "completed"},
     {"step": "Phase 6.5: Confidence Gate", "status": "completed"},
-    {"step": "Phase 7: Implement - Setup (T001-T005)", "status": "skipped: outside plan stage"},
-    {"step": "Phase 7: Implement - Foundation (T006-T011)", "status": "skipped: outside plan stage"},
-    {"step": "Phase 7: Implement - User Story 1 (T012-T018)", "status": "skipped: outside plan stage"},
-    {"step": "Phase 7: Implement - User Story 2 (T019-T023)", "status": "skipped: outside plan stage"},
-    {"step": "Phase 7: Implement - User Story 3 (T024-T030)", "status": "skipped: outside plan stage"},
-    {"step": "Phase 7: Implement - User Story 4 (T031-T039)", "status": "skipped: outside plan stage"},
-    {"step": "Phase 7: Implement - Polish and verification (T040-T053)", "status": "skipped: outside plan stage"},
-    {"step": "Post: Doctor Extension Check", "status": "skipped: outside plan stage"},
-    {"step": "Post: Verify Implementation", "status": "skipped: outside plan stage"},
-    {"step": "Post: Verify Tasks Phantom Check", "status": "skipped: outside plan stage"},
-    {"step": "Post: Code Review", "status": "skipped: outside plan stage"},
-    {"step": "Post: Integration Suite", "status": "skipped: outside plan stage"},
-    {"step": "Post: Reviewability Diff Gate", "status": "skipped: outside plan stage"},
-    {"step": "Post: Self-Review", "status": "skipped: outside plan stage"},
-    {"step": "Post: UAT Runbook Generation", "status": "skipped: outside plan stage"},
-    {"step": "Post: Final Reviewability Backstop", "status": "skipped: outside plan stage"},
-    {"step": "Post: PR Packet/Body Generation", "status": "skipped: outside plan stage"},
-    {"step": "Post: PR Body Generation", "status": "skipped: outside plan stage"},
-    {"step": "Post: PR Creation", "status": "skipped: outside plan stage"},
-    {"step": "Post: Review Remediation", "status": "skipped: outside plan stage"},
-    {"step": "Post: Retrospective", "status": "skipped: outside plan stage"}
+    {"step": "Phase 7: Implement - Setup (T001-T005)", "status": "completed"},
+    {"step": "Phase 7: Implement - Foundation (T006-T011)", "status": "completed"},
+    {"step": "Phase 7: Implement - User Story 1 (T012-T018)", "status": "completed"},
+    {"step": "Phase 7: Implement - User Story 2 (T019-T023)", "status": "completed"},
+    {"step": "Phase 7: Implement - User Story 3 (T024-T030)", "status": "completed"},
+    {"step": "Phase 7: Implement - User Story 4 (T031-T039)", "status": "completed"},
+    {"step": "Phase 7: Implement - Polish and verification (T040-T053)", "status": "completed"},
+    {"step": "Post: Doctor Extension Check", "status": "in_progress"},
+    {"step": "Post: Verify Implementation", "status": "pending"},
+    {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
+    {"step": "Post: Code Review", "status": "pending"},
+    {"step": "Post: Integration Suite", "status": "pending"},
+    {"step": "Post: Reviewability Diff Gate", "status": "pending"},
+    {"step": "Post: Self-Review", "status": "pending"},
+    {"step": "Post: UAT Runbook Generation", "status": "pending"},
+    {"step": "Post: Final Reviewability Backstop", "status": "pending"},
+    {"step": "Post: PR Packet/Body Generation", "status": "pending"},
+    {"step": "Post: PR Body Generation", "status": "pending"},
+    {"step": "Post: PR Creation", "status": "pending"},
+    {"step": "Post: Review Remediation", "status": "pending"},
+    {"step": "Post: Retrospective", "status": "pending"}
   ]
 }

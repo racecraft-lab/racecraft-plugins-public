@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from ..envelope import diagnostic, response
-from .install import run_install_helper
+from .install import CODEX_OPTIONAL_HELPER_NAME, CODEX_REQUIRED_AGENT_NAMES, run_install_helper
 from .mutation import empty_mutation, run_mutation_helper, run_spec_index_write
 from .pr_emission import run_pr_emission_helper
 from .promotion import promotion_record
@@ -81,6 +81,14 @@ SCRIPT_BASE = "speckit-pro/skills/speckit-autopilot/scripts"
 REQUEST_FIXTURE_BASE = "tests/speckit-pro/unit/fixtures/read-only-helpers/requests"
 MUTATION_REQUEST_FIXTURE_BASE = "tests/speckit-pro/unit/fixtures/mutation-helpers/requests"
 DISPATCHABLE_MUTATION_PROMOTION_STATUSES = frozenset({"golden_only", "bash_compared"})
+CODEX_MANAGED_HELPER_PROVENANCE_KEYS = (
+    "helper_name",
+    "destination",
+    "installer_id",
+    "source_roster_id",
+    "manifest_id",
+    "destination_digest",
+)
 
 
 def authoritative_request(helper_id: str) -> str:

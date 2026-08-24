@@ -37,8 +37,8 @@ Re-read it before every phase. Once autopilot begins, later clarifications use `
 | Tasks | `/speckit-tasks` | ✅ Complete | 53 dependency-ordered tasks, 14 RED→GREEN pairs, all 29 FRs and 13 scenarios mapped; G5 passed |
 | Analyze | `/speckit-analyze` | ✅ Complete | One medium manifest/data-model naming drift remediated; zero unresolved findings; G6 passed |
 | Confidence Gate | G6.5 | ✅ Complete | Advisory PASS: composite 0.94 meets the 0.90 threshold; no remediation iteration required |
-| Implement | `/speckit-implement` | ⏭️ Skipped | Outside `--stage plan`; resume explicitly with `--stage implement` |
-| Post | Post-Implementation | ⏭️ Skipped | Outside `--stage plan` |
+| Implement | `/speckit-implement` | ✅ Complete | 53/53 tasks complete; G7 passed; full suite 14039/14039; generated payload, trust, proof, and docs reference artifacts current |
+| Post | Post-Implementation | 🔄 In Progress | Doctor, code-review, and verify-chain tracks begin from the exact Phase 7 commit |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
@@ -118,7 +118,7 @@ Capability path: codebase and spec context -> current repository files plus the 
 | **Spec ID** | G56R-006 |
 | **Name** | Capability-aware Resolver, Materializer, Installer, and Strict Override |
 | **Branch** | `g56r-006-resolver-materializer-installer-strict-override` |
-| **Stage** | `plan` |
+| **Stage** | `implement` |
 | **Draft PR** | [#503](https://github.com/racecraft-lab/racecraft-plugins-public/pull/503) — 4 of 4 artifacts missing after prohibited template sample-banner classes were found; pages deleted |
 | **Dependencies** | G56R-005 complete/archived; consumes G56R-003 materializer and G56R-005 contracts/reason ordering |
 | **Enables** | G56R-007, G56R-008, G56R-009, G56R-010 |
@@ -126,16 +126,16 @@ Capability path: codebase and spec context -> current repository files plus the 
 
 ### Success Criteria Summary
 
-- [ ] A trusted versioned manifest explicitly activates route-aware mode; no-manifest calls preserve current static install behavior.
-- [ ] The source bundle remains exactly 13 TOMLs; the route-aware destination requires 12 core agents and treats only `autopilot-fast-helper` as optional.
-- [ ] One fresh batch snapshot and any bounded fallback probes join to every ordered per-agent resolution record.
-- [ ] The canonical materializer emits exact final TOML for explicit model and effort while proving instructions, tools, skills, MCP, sandbox, mutation, and output contracts unchanged.
-- [ ] Every required agent resolves and materializes before any write; any required miss yields complete attempts for all agents and zero mutation.
-- [ ] A strict global override never falls back for required agents. A compatible helper override installs; an incompatible helper uses only a validated no-helper path.
-- [ ] Optional-helper removal occurs only with managed-file proof and participates in the rollback-backed batch.
-- [ ] The helper response contains a deterministic top-level routing block with snapshot, attempts, rejection reasons, route resolutions, and resolved policy IDs.
-- [ ] Fake-home tests prove dry-run/no-op, apply, verification, rollback, previous-known-good preservation, managed removal, manual remediation, and restart guidance.
-- [ ] No live model call, real-user-home write, final route aggregate, route qualification, plugin version change, or downstream cohort expansion enters this slice.
+- [x] A trusted versioned manifest explicitly activates route-aware mode; no-manifest calls preserve current static install behavior.
+- [x] The source bundle remains exactly 13 TOMLs; the route-aware destination requires 12 core agents and treats only `autopilot-fast-helper` as optional.
+- [x] One fresh batch snapshot and any bounded fallback probes join to every ordered per-agent resolution record.
+- [x] The canonical materializer emits exact final TOML for explicit model and effort while proving instructions, tools, skills, MCP, sandbox, mutation, and output contracts unchanged.
+- [x] Every required agent resolves and materializes before any write; any required miss yields complete attempts for all agents and zero mutation.
+- [x] A strict global override never falls back for required agents. A compatible helper override installs; an incompatible helper uses only a validated no-helper path.
+- [x] Optional-helper removal occurs only with managed-file proof and participates in the rollback-backed batch.
+- [x] The helper response contains a deterministic top-level routing block with snapshot, attempts, rejection reasons, route resolutions, and resolved policy IDs.
+- [x] Fake-home tests prove dry-run/no-op, apply, verification, rollback, previous-known-good preservation, managed removal, manual remediation, and restart guidance.
+- [x] No live model call, real-user-home write, final route aggregate, route qualification, plugin version change, or downstream cohort expansion enters this slice.
 
 ---
 
@@ -509,12 +509,12 @@ After focused tests pass, run the relevant Layer 1/4/5 checks, generated runner/
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| Foundation | Pending | 0 | |
-| User Story 1 | Pending | 0 | |
-| User Story 2 | Pending | 0 | |
-| User Story 3 | Pending | 0 | |
-| User Story 4 | Pending | 0 | |
-| Polish and verification | Pending | 0 | |
+| Foundation | Complete | 11 | T001-T011; pre-change baseline 53/53 and foundation safety net 61/61 |
+| User Story 1 | Complete | 7 | Materializer 10/10 and installer 65/65 |
+| User Story 2 | Complete | 5 | Strict override safety net 70/70 |
+| User Story 3 | Complete | 7 | Optional-helper safety net 75/75 |
+| User Story 4 | Complete | 9 | Failure/recovery safety net 80/80 |
+| Polish and verification | Complete | 14 | L1 1511, L4 12309, L5 219, full 14039; docs references current |
 
 ---
 
@@ -522,7 +522,7 @@ After focused tests pass, run the relevant Layer 1/4/5 checks, generated runner/
 
 | Canonical Item | Status | Evidence |
 |---|---|---|
-| Post: Doctor Extension Check | ⏳ Pending | |
+| Post: Doctor Extension Check | 🔄 In Progress | Begins from the exact Phase 7 commit |
 | Post: Verify Implementation | ⏳ Pending | |
 | Post: Verify Tasks Phantom Check | ⏳ Pending | |
 | Post: Code Review | ⏳ Pending | |
@@ -530,17 +530,19 @@ After focused tests pass, run the relevant Layer 1/4/5 checks, generated runner/
 | Post: Reviewability Diff Gate | ⏳ Pending | |
 | Post: Self-Review | ⏳ Pending | |
 | Post: UAT Runbook Generation | ⏳ Pending | |
+| Post: Final Reviewability Backstop | ⏳ Pending | |
+| Post: PR Packet/Body Generation | ⏳ Pending | |
 | Post: PR Body Generation | ⏳ Pending | |
 | Post: PR Creation | ⏳ Pending | |
 | Post: Review Remediation | ⏳ Pending | |
 | Post: Retrospective | ⏳ Pending | |
 
-- [ ] All tasks complete and every FR mapped.
-- [ ] Focused tests pass with explicit RED→GREEN evidence.
-- [ ] Layer 1 and relevant Layer 4/5 gates pass.
-- [ ] Full `python3 tests/speckit-pro/run-all.py` suite passes.
-- [ ] Runner manifest/checksum, release payload, docs reference, and Layer 6 corpus contracts are current for every changed input.
-- [ ] Fake-home manual/deterministic verification is complete; live installed UAT is explicitly deferred to G56R-011.
+- [x] All tasks complete and every FR mapped.
+- [x] Focused tests pass with explicit RED→GREEN evidence.
+- [x] Layer 1 and relevant Layer 4/5 gates pass.
+- [x] Full `python3 tests/speckit-pro/run-all.py` suite passes.
+- [x] Runner manifest/checksum, release payload, docs reference, and Layer 6 corpus contracts are current for every changed input.
+- [x] Fake-home manual/deterministic verification is complete; live installed UAT is explicitly deferred to G56R-011.
 - [ ] Exact PR title passes the release-readiness gate.
 - [ ] Draft/final PR packet, review remediation, and retrospective are complete.
 

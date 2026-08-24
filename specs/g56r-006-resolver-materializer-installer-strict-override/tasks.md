@@ -20,11 +20,11 @@
 
 **Purpose**: Confirm scope, source-of-truth files, and the deterministic fake-home acceptance boundary before edits.
 
-- [ ] T001 [P] Reconfirm the G56R-006 requirements, non-goals, Q&A decisions, and downstream roster-reconciliation note in `specs/g56r-006-resolver-materializer-installer-strict-override/spec.md`
-- [ ] T002 [P] Reconfirm implementation surfaces, generated-artifact follow-through, and reviewability budget in `specs/g56r-006-resolver-materializer-installer-strict-override/plan.md`
-- [ ] T003 [P] Reconfirm manifest and route-aware response contracts in `specs/g56r-006-resolver-materializer-installer-strict-override/contracts/route-policy-manifest.schema.md` and `specs/g56r-006-resolver-materializer-installer-strict-override/contracts/install-codex-agents-route-aware.md`
-- [ ] T004 [P] Reconfirm deterministic-only validation commands and fake-home constraints in `specs/g56r-006-resolver-materializer-installer-strict-override/quickstart.md`
-- [ ] T005 Verify the current static installer baseline and strict bundled source inventory by running `python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` against `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py`
+- [X] T001 [P] Reconfirm the G56R-006 requirements, non-goals, Q&A decisions, and downstream roster-reconciliation note in `specs/g56r-006-resolver-materializer-installer-strict-override/spec.md`
+- [X] T002 [P] Reconfirm implementation surfaces, generated-artifact follow-through, and reviewability budget in `specs/g56r-006-resolver-materializer-installer-strict-override/plan.md`
+- [X] T003 [P] Reconfirm manifest and route-aware response contracts in `specs/g56r-006-resolver-materializer-installer-strict-override/contracts/route-policy-manifest.schema.md` and `specs/g56r-006-resolver-materializer-installer-strict-override/contracts/install-codex-agents-route-aware.md`
+- [X] T004 [P] Reconfirm deterministic-only validation commands and fake-home constraints in `specs/g56r-006-resolver-materializer-installer-strict-override/quickstart.md`
+- [X] T005 Verify the current static installer baseline and strict bundled source inventory by running `python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` against `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py`
 
 ---
 
@@ -34,12 +34,12 @@
 
 **CRITICAL**: No user story implementation begins until this phase is complete.
 
-- [ ] T006 Add the shared deterministic route-policy fixture corpus for valid, invalid, strict-override, helper, probe, filesystem-failure, and rollback cases in `tests/speckit-pro/unit/fixtures/mutation-helpers/codex-agent-routing/cases.json`
-- [ ] T007 RED for T008: add failing strict 13-source inventory, closed manifest schema, supported-version, trusted-path, source-roster digest, and exact 12-required-plus-one-optional roster validation tests in `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` (FR-001, FR-003, FR-004, FR-005, FR-006)
-- [ ] T008 GREEN for T007: implement manifest loading, trusted safe-file validation, source-roster digest binding, closed schema rejection, required roster constants, and optional-helper metadata in `speckit-pro/speckit_pro_runner/helpers/install.py` and `speckit-pro/speckit_pro_runner/helpers/registry.py`
-- [ ] T009 RED for T010: add failing shared fake-home, capability adapter injection, manifest writer, routing-response assertion, and no-real-home guard tests in `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` (FR-008, FR-028)
-- [ ] T010 GREEN for T009: add the injectable observation adapter boundary and test-only injection plumbing through existing runner-owned helpers in `speckit-pro/speckit_pro_runner/helpers/install.py`
-- [ ] T011 Run focused foundation validation with `python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` for `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py`
+- [X] T006 Add the shared deterministic route-policy fixture corpus for valid, invalid, strict-override, helper, probe, filesystem-failure, and rollback cases in `tests/speckit-pro/unit/fixtures/mutation-helpers/codex-agent-routing/cases.json`
+- [X] T007 RED for T008: add failing strict 13-source inventory, closed manifest schema, supported-version, trusted-path, source-roster digest, and exact 12-required-plus-one-optional roster validation tests in `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` (FR-001, FR-003, FR-004, FR-005, FR-006)
+- [X] T008 GREEN for T007: implement manifest loading, trusted safe-file validation, source-roster digest binding, closed schema rejection, required roster constants, and optional-helper metadata in `speckit-pro/speckit_pro_runner/helpers/install.py` and `speckit-pro/speckit_pro_runner/helpers/registry.py`
+- [X] T009 RED for T010: add failing shared fake-home, capability adapter injection, manifest writer, routing-response assertion, and no-real-home guard tests in `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` (FR-008, FR-028)
+- [X] T010 GREEN for T009: add the injectable observation adapter boundary and test-only injection plumbing through existing runner-owned helpers in `speckit-pro/speckit_pro_runner/helpers/install.py`
+- [X] T011 Run focused foundation validation with `python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` for `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py`
 
 **Checkpoint**: Foundation ready. User-story work can proceed, but shared installer, materializer, registry, fixture, suite manifest, generated payload, runner metadata, and docs-reference changes stay serialized.
 
@@ -53,13 +53,13 @@
 
 ### RED->GREEN Tasks for User Story 1
 
-- [ ] T012 [US1] RED for T013: add failing materializer tests for explicit model/effort rendering, original source byte digest binding, destination byte digest proof, and unchanged non-route fields in `tests/speckit-pro/unit/test-agent-materialization.py` (FR-011, FR-012, FR-013, FR-014; US1-S1)
-- [ ] T013 [US1] GREEN for T012: extend canonical materialization to render selected explicit model and effort while proving source-byte binding and non-route field immutability in `speckit-pro/speckit_pro_runner/agent_materialization.py`
-- [ ] T014 [US1] RED for T015: add failing route-aware dry-run success and static no-manifest compatibility tests in `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` (FR-002, FR-007, FR-010, FR-015, FR-016, FR-017; US1-S1, US1-S3)
-- [ ] T015 [US1] GREEN for T014: implement route-aware activation, one fresh runtime snapshot, normal preferred-then-fallback required-agent resolution, complete top-level `routing` evidence, and static response omission of `routing` in `speckit-pro/speckit_pro_runner/helpers/install.py`
-- [ ] T016 [US1] RED for T017: add failing route-aware apply success tests for missing and stale required destination TOMLs in a fake home in `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` (FR-017; US1-S2)
-- [ ] T017 [US1] GREEN for T016: implement complete-plan-before-write dry-run/apply planning, required destination byte verification, and no bundled-source mutation checks in `speckit-pro/speckit_pro_runner/helpers/install.py`
-- [ ] T018 [US1] Run the US1 focused RED->GREEN validation with `python3 tests/speckit-pro/unit/test-agent-materialization.py` and `python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` for `tests/speckit-pro/unit/test-agent-materialization.py` and `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py`
+- [X] T012 [US1] RED for T013: add failing materializer tests for explicit model/effort rendering, original source byte digest binding, destination byte digest proof, and unchanged non-route fields in `tests/speckit-pro/unit/test-agent-materialization.py` (FR-011, FR-012, FR-013, FR-014; US1-S1)
+- [X] T013 [US1] GREEN for T012: extend canonical materialization to render selected explicit model and effort while proving source-byte binding and non-route field immutability in `speckit-pro/speckit_pro_runner/agent_materialization.py`
+- [X] T014 [US1] RED for T015: add failing route-aware dry-run success and static no-manifest compatibility tests in `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` (FR-002, FR-007, FR-010, FR-015, FR-016, FR-017; US1-S1, US1-S3)
+- [X] T015 [US1] GREEN for T014: implement route-aware activation, one fresh runtime snapshot, normal preferred-then-fallback required-agent resolution, complete top-level `routing` evidence, and static response omission of `routing` in `speckit-pro/speckit_pro_runner/helpers/install.py`
+- [X] T016 [US1] RED for T017: add failing route-aware apply success tests for missing and stale required destination TOMLs in a fake home in `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` (FR-017; US1-S2)
+- [X] T017 [US1] GREEN for T016: implement complete-plan-before-write dry-run/apply planning, required destination byte verification, and no bundled-source mutation checks in `speckit-pro/speckit_pro_runner/helpers/install.py`
+- [X] T018 [US1] Run the US1 focused RED->GREEN validation with `python3 tests/speckit-pro/unit/test-agent-materialization.py` and `python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` for `tests/speckit-pro/unit/test-agent-materialization.py` and `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py`
 
 **Checkpoint**: US1 independently proves acceptance scenarios 1.1, 1.2, and 1.3.
 
@@ -73,11 +73,11 @@
 
 ### RED->GREEN Tasks for User Story 2
 
-- [ ] T019 [US2] RED for T020: add failing strict required-override tests that verify exactly one override-derived tuple per required agent, complete diagnostics for all 12 required agents, suppressed fallback, zero writes on required miss, `writes_state=false`, and `restart_required=false` in `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` (FR-019, FR-020; US2-S1, US2-S2)
-- [ ] T020 [US2] GREEN for T019: implement strict global override required-agent resolution, evaluated tuple evidence, fallback suppression, and pre-mutation required-miss failure handling in `speckit-pro/speckit_pro_runner/helpers/install.py`
-- [ ] T021 [US2] RED for T022: add failing optional-helper strict-override tests for compatible helper install, incompatible helper validated no-helper continuation, and incompatible helper unresolved pre-mutation failure in `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` (FR-021, FR-022, FR-023; US2-S3, US2-S4)
-- [ ] T022 [US2] GREEN for T021: implement optional-helper strict-override compatibility handling, no-helper validation, unresolved helper failure, and `strict_override` helper evidence in `speckit-pro/speckit_pro_runner/helpers/install.py`
-- [ ] T023 [US2] Run the US2 focused RED->GREEN validation with `python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` for `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py`
+- [X] T019 [US2] RED for T020: add failing strict required-override tests that verify exactly one override-derived tuple per required agent, complete diagnostics for all 12 required agents, suppressed fallback, zero writes on required miss, `writes_state=false`, and `restart_required=false` in `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` (FR-019, FR-020; US2-S1, US2-S2)
+- [X] T020 [US2] GREEN for T019: implement strict global override required-agent resolution, evaluated tuple evidence, fallback suppression, and pre-mutation required-miss failure handling in `speckit-pro/speckit_pro_runner/helpers/install.py`
+- [X] T021 [US2] RED for T022: add failing optional-helper strict-override tests for compatible helper install, incompatible helper validated no-helper continuation, and incompatible helper unresolved pre-mutation failure in `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` (FR-021, FR-022, FR-023; US2-S3, US2-S4)
+- [X] T022 [US2] GREEN for T021: implement optional-helper strict-override compatibility handling, no-helper validation, unresolved helper failure, and `strict_override` helper evidence in `speckit-pro/speckit_pro_runner/helpers/install.py`
+- [X] T023 [US2] Run the US2 focused RED->GREEN validation with `python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` for `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py`
 
 **Checkpoint**: US2 independently proves acceptance scenarios 2.1, 2.2, 2.3, and 2.4.
 
@@ -91,13 +91,13 @@
 
 ### RED->GREEN Tasks for User Story 3
 
-- [ ] T024 [US3] RED for T025: add failing helper-unavailable tests for no helper present, helper omitted with validated no-helper continuation, and required roster success in `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` (FR-023; US3-S1)
-- [ ] T025 [US3] GREEN for T024: implement optional-helper omitted state and validated no-helper continuation in `speckit-pro/speckit_pro_runner/helpers/install.py`
-- [ ] T026 [US3] RED for T027: add failing managed-helper removal tests for trusted runner-owned install provenance and exact known rendered-byte digest match in `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` (FR-024; US3-S2)
-- [ ] T027 [US3] GREEN for T026: implement managed-helper ownership proof using trusted runner provenance and exact known rendered-byte digest matching in `speckit-pro/speckit_pro_runner/helpers/install.py` and `speckit-pro/speckit_pro_runner/helpers/registry.py`
-- [ ] T028 [US3] RED for T029: add failing helper preservation tests for filename-only, syntactic TOML, parsed-equivalent, normalized-content, and user-modified same-name helpers with manual-remediation evidence in `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` (FR-025; US3-S3)
-- [ ] T029 [US3] GREEN for T028: implement helper preservation and bounded manual-remediation evidence when managed ownership proof is absent in `speckit-pro/speckit_pro_runner/helpers/install.py`
-- [ ] T030 [US3] Run the US3 focused RED->GREEN validation with `python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` for `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py`
+- [X] T024 [US3] RED for T025: add failing helper-unavailable tests for no helper present, helper omitted with validated no-helper continuation, and required roster success in `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` (FR-023; US3-S1)
+- [X] T025 [US3] GREEN for T024: implement optional-helper omitted state and validated no-helper continuation in `speckit-pro/speckit_pro_runner/helpers/install.py`
+- [X] T026 [US3] RED for T027: add failing managed-helper removal tests for trusted runner-owned install provenance and exact known rendered-byte digest match in `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` (FR-024; US3-S2)
+- [X] T027 [US3] GREEN for T026: implement managed-helper ownership proof using trusted runner provenance and exact known rendered-byte digest matching in `speckit-pro/speckit_pro_runner/helpers/install.py` and `speckit-pro/speckit_pro_runner/helpers/registry.py`
+- [X] T028 [US3] RED for T029: add failing helper preservation tests for filename-only, syntactic TOML, parsed-equivalent, normalized-content, and user-modified same-name helpers with manual-remediation evidence in `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` (FR-025; US3-S3)
+- [X] T029 [US3] GREEN for T028: implement helper preservation and bounded manual-remediation evidence when managed ownership proof is absent in `speckit-pro/speckit_pro_runner/helpers/install.py`
+- [X] T030 [US3] Run the US3 focused RED->GREEN validation with `python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` for `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py`
 
 **Checkpoint**: US3 independently proves acceptance scenarios 3.1, 3.2, and 3.3.
 
@@ -111,15 +111,15 @@
 
 ### RED->GREEN Tasks for User Story 4
 
-- [ ] T031 [US4] RED for T032: add failing required-route-miss tests that keep resolving all 12 required agents in stable canonical order, return all attempts and rejection reasons, report zero planned/applied writes and removals, set `writes_state=false`, set `restart_required=false`, and preserve previous known-good fake-home state in `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` (FR-010, FR-018, FR-027; US4-S1)
-- [ ] T032 [US4] GREEN for T031: implement required-route-miss zero-write diagnostics, stable canonical roster ordering, complete attempt evidence, and no-mutation recovery evidence in `speckit-pro/speckit_pro_runner/helpers/install.py`
-- [ ] T033 [US4] RED for T034: add failing bounded discovery/probe failure tests for native discovery unavailable, manifest-admitted probe success/failure, insufficient probe result, no candidate widening, and one snapshot child-probe evidence in `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` (FR-007, FR-008, FR-009; US4-S1)
-- [ ] T034 [US4] GREEN for T033: implement bounded native-discovery fallback probing as child evidence of the one runtime capability snapshot without widening manifest-admitted candidates in `speckit-pro/speckit_pro_runner/helpers/install.py`
-- [ ] T035 [US4] RED for T036: add failing apply-failure rollback-success tests that capture prior bytes and file modes, record staged/applied/rolled-back/cleanup actions, prove pre/final state identities, set `rollback_outcome=restored`, `writes_state=false`, and `restart_required=false`, and avoid verification success in `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` (FR-026, FR-027; US4-S2)
-- [ ] T036 [US4] GREEN for T035: implement one rollback-backed apply batch with prior bytes/modes capture, restored-state verification, cleanup action evidence, and failed-apply verification suppression in `speckit-pro/speckit_pro_runner/helpers/install.py`
-- [ ] T037 [US4] RED for T038: add failing rollback-failure tests that report every unrestored action and error, mark `writes_state` true or uncertain, set `restart_required=true`, include bounded manual remediation, and avoid verification success in `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` (FR-026, FR-027; US4-S3)
-- [ ] T038 [US4] GREEN for T037: implement rollback-failure recovery evidence, restart guidance, failed/cleanup/manual-remediation records, and uncertain state reporting in `speckit-pro/speckit_pro_runner/helpers/install.py`
-- [ ] T039 [US4] Run the US4 focused RED->GREEN validation with `python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` for `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py`
+- [X] T031 [US4] RED for T032: add failing required-route-miss tests that keep resolving all 12 required agents in stable canonical order, return all attempts and rejection reasons, report zero planned/applied writes and removals, set `writes_state=false`, set `restart_required=false`, and preserve previous known-good fake-home state in `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` (FR-010, FR-018, FR-027; US4-S1)
+- [X] T032 [US4] GREEN for T031: implement required-route-miss zero-write diagnostics, stable canonical roster ordering, complete attempt evidence, and no-mutation recovery evidence in `speckit-pro/speckit_pro_runner/helpers/install.py`
+- [X] T033 [US4] RED for T034: add failing bounded discovery/probe failure tests for native discovery unavailable, manifest-admitted probe success/failure, insufficient probe result, no candidate widening, and one snapshot child-probe evidence in `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` (FR-007, FR-008, FR-009; US4-S1)
+- [X] T034 [US4] GREEN for T033: implement bounded native-discovery fallback probing as child evidence of the one runtime capability snapshot without widening manifest-admitted candidates in `speckit-pro/speckit_pro_runner/helpers/install.py`
+- [X] T035 [US4] RED for T036: add failing apply-failure rollback-success tests that capture prior bytes and file modes, record staged/applied/rolled-back/cleanup actions, prove pre/final state identities, set `rollback_outcome=restored`, `writes_state=false`, and `restart_required=false`, and avoid verification success in `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` (FR-026, FR-027; US4-S2)
+- [X] T036 [US4] GREEN for T035: implement one rollback-backed apply batch with prior bytes/modes capture, restored-state verification, cleanup action evidence, and failed-apply verification suppression in `speckit-pro/speckit_pro_runner/helpers/install.py`
+- [X] T037 [US4] RED for T038: add failing rollback-failure tests that report every unrestored action and error, mark `writes_state` true or uncertain, set `restart_required=true`, include bounded manual remediation, and avoid verification success in `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` (FR-026, FR-027; US4-S3)
+- [X] T038 [US4] GREEN for T037: implement rollback-failure recovery evidence, restart guidance, failed/cleanup/manual-remediation records, and uncertain state reporting in `speckit-pro/speckit_pro_runner/helpers/install.py`
+- [X] T039 [US4] Run the US4 focused RED->GREEN validation with `python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` for `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py`
 
 **Checkpoint**: US4 independently proves acceptance scenarios 4.1, 4.2, and 4.3.
 
@@ -129,20 +129,20 @@
 
 **Purpose**: Refresh generated artifacts, docs, metadata, and release evidence after all independently testable story slices pass.
 
-- [ ] T040 Update the Codex install skill documentation for explicit route-policy manifest activation, static no-manifest compatibility, deterministic-only G56R-006 evidence, and no real-home writes in `speckit-pro/codex-skills/install/SKILL.md`
-- [ ] T041 Regenerate payload mirrors and runner trust metadata with `python3 scripts/refresh-release-artifacts.py`, updating `dist/codex/speckit-pro/`, `dist/claude/speckit-pro/`, and `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json`
-- [ ] T042 Regenerate installed-cache fixture mirrors and proof evidence through the payload refresh, updating `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/` and `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof*.json`
-- [ ] T043 Run focused materializer tests with `python3 tests/speckit-pro/unit/test-agent-materialization.py` for `tests/speckit-pro/unit/test-agent-materialization.py`
-- [ ] T044 Run focused installer tests with `python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` for `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py`
-- [ ] T045 Run Layer 4 runtime and script-safety validation with `python3 tests/speckit-pro/run-all.py --layer 4` for `tests/speckit-pro/suite-manifest.json`
-- [ ] T046 Run Layer 5 tool-scoping validation with `python3 tests/speckit-pro/run-all.py --layer 5` for `tests/speckit-pro/suite-manifest.json`
-- [ ] T047 Run Layer 1 structural validation after generated payload refresh with `python3 tests/speckit-pro/run-all.py --layer 1` for `tests/speckit-pro/suite-manifest.json`
-- [ ] T048 Install docs-site dependencies if needed with `pnpm --dir docs-site install --frozen-lockfile` for `docs-site/pnpm-lock.yaml`
-- [ ] T049 Regenerate docs reference output with `pnpm --dir docs-site reference:generate`, updating `docs-site/src/content/docs/reference/tests.md`
-- [ ] T050 Check docs reference output with `pnpm --dir docs-site reference:check` for `docs-site/src/content/docs/reference/tests.md`
-- [ ] T051 Run the full Python-authoritative suite with `python3 tests/speckit-pro/run-all.py` for `tests/speckit-pro/suite-manifest.json`
-- [ ] T052 Record release-readiness evidence and PR review packet inputs covering what changed, why, non-goals, review order, scope budget, traceability, verification, known gaps, and rollback or feature-flag notes in `docs/ai/specs/.process/G56R-006-release-readiness-result.json`
-- [ ] T053 Verify the final implementation references the downstream roster reconciliation inputs without assigning cohorts by checking `specs/g56r-006-resolver-materializer-installer-strict-override/spec.md` and `docs/ai/specs/.process/G56R-006-design-concept.md`
+- [X] T040 Update the Codex install skill documentation for explicit route-policy manifest activation, static no-manifest compatibility, deterministic-only G56R-006 evidence, and no real-home writes in `speckit-pro/codex-skills/install/SKILL.md`
+- [X] T041 Regenerate payload mirrors and runner trust metadata with `python3 scripts/refresh-release-artifacts.py`, updating `dist/codex/speckit-pro/`, `dist/claude/speckit-pro/`, and `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json`
+- [X] T042 Regenerate installed-cache fixture mirrors and proof evidence through the payload refresh, updating `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/` and `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof*.json`
+- [X] T043 Run focused materializer tests with `python3 tests/speckit-pro/unit/test-agent-materialization.py` for `tests/speckit-pro/unit/test-agent-materialization.py`
+- [X] T044 Run focused installer tests with `python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` for `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py`
+- [X] T045 Run Layer 4 runtime and script-safety validation with `python3 tests/speckit-pro/run-all.py --layer 4` for `tests/speckit-pro/suite-manifest.json`
+- [X] T046 Run Layer 5 tool-scoping validation with `python3 tests/speckit-pro/run-all.py --layer 5` for `tests/speckit-pro/suite-manifest.json`
+- [X] T047 Run Layer 1 structural validation after generated payload refresh with `python3 tests/speckit-pro/run-all.py --layer 1` for `tests/speckit-pro/suite-manifest.json`
+- [X] T048 Install docs-site dependencies if needed with `pnpm --dir docs-site install --frozen-lockfile` for `docs-site/pnpm-lock.yaml`
+- [X] T049 Regenerate docs reference output with `pnpm --dir docs-site reference:generate`, updating `docs-site/src/content/docs/reference/tests.md`
+- [X] T050 Check docs reference output with `pnpm --dir docs-site reference:check` for `docs-site/src/content/docs/reference/tests.md`
+- [X] T051 Run the full Python-authoritative suite with `python3 tests/speckit-pro/run-all.py` for `tests/speckit-pro/suite-manifest.json`
+- [X] T052 Record release-readiness evidence and PR review packet inputs covering what changed, why, non-goals, review order, scope budget, traceability, verification, known gaps, and rollback or feature-flag notes in `docs/ai/specs/.process/G56R-006-release-readiness-result.json`
+- [X] T053 Verify the final implementation references the downstream roster reconciliation inputs without assigning cohorts by checking `specs/g56r-006-resolver-materializer-installer-strict-override/spec.md` and `docs/ai/specs/.process/G56R-006-design-concept.md`
 
 ---
 

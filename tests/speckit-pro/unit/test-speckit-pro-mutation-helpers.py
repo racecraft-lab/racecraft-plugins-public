@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import tomllib
 import unittest
 import hashlib
 from pathlib import Path
@@ -23,6 +24,7 @@ CONTRACT_DIR = FIXTURE_DIR / "contracts"
 REQUEST_SCHEMA = CONTRACT_DIR / "mutation-helper-request.schema.json"
 RESULT_SCHEMA = CONTRACT_DIR / "mutation-helper-result.schema.json"
 PROMOTION_SCHEMA = CONTRACT_DIR / "helper-promotion-record.schema.json"
+CODEX_AGENT_ROUTING_CASES = FIXTURE_DIR / "codex-agent-routing" / "cases.json"
 
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
@@ -87,6 +89,176 @@ def command_stdin_fixture(command: str) -> Path:
     if not stdin_path or any(char.isspace() for char in stdin_path):
         raise AssertionError(f"authoritative_command must use one stdin fixture path: {command}")
     return REPO_ROOT / stdin_path
+
+
+def canonical_json_bytes(value: object) -> bytes:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8")
+
+
+def route_policy_digest(value: object) -> str:
+    return f"sha256:{hashlib.sha256(canonical_json_bytes(value)).hexdigest()}"
+
+
+def routing_fixture_document() -> dict[str, object]:
+    return json.loads(CODEX_AGENT_ROUTING_CASES.read_text(encoding="utf-8"))
+
+
+def routing_required_agents() -> list[str]:
+    document = routing_fixture_document()
+    required = document["required_agents"]
+    if not isinstance(required, list):
+        raise AssertionError("routing fixture required_agents must be a list")
+    return [str(agent) for agent in required]
+
+
+def routing_optional_helper() -> str:
+    helper = routing_fixture_document()["optional_helper"]
+    if not isinstance(helper, str):
+        raise AssertionError("routing fixture optional_helper must be a string")
+    return helper
+
+
+def route_rendered_optional_helper_bytes() -> bytes:
+    helper_source = (PLUGIN_ROOT / "codex-agents" / f"{routing_optional_helper()}.toml").read_text(encoding="utf-8")
+    return helper_source.replace(
+        'model = "gpt-5.3-codex-spark"\n',
+        'model = "gpt-5.3-codex-spark"\nmodel_reasoning_effort = "high"\n',
+        1,
+    ).encode("utf-8")
+
+
+def routing_capability_snapshot() -> dict[str, object]:
+    document = routing_fixture_document()
+    base_case = document["base_case"]
+    if not isinstance(base_case, dict) or not isinstance(base_case.get("capability_snapshot"), dict):
+        raise AssertionError("routing fixture capability_snapshot must be an object")
+    return dict(base_case["capability_snapshot"])
+
+
+def routing_native_unavailable_snapshot(label: str) -> dict[str, object]:
+    snapshot = routing_capability_snapshot()
+    snapshot["snapshot_id"] = f"snapshot:g56r-006:{label}"
+    snapshot["native_discovery"] = False
+    snapshot["available_routes"] = []
+    snapshot["child_probe_results"] = []
+    return snapshot
+
+
+def codex_agent_source_roster_document(source_dir: Path | None = None) -> dict[str, object]:
+    root = source_dir or PLUGIN_ROOT / "codex-agents"
+    files = [
+        {"name": path.name, "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+        for path in sorted(root.glob("*.toml"), key=lambda item: item.name)
+    ]
+    return {
+        "schema_version": "1.0.0",
+        "source_roster_id": route_policy_digest(files),
+        "files": files,
+    }
+
+
+def codex_agent_source_digests() -> dict[str, str]:
+    return {
+        path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in sorted((PLUGIN_ROOT / "codex-agents").glob("*.toml"), key=lambda item: item.name)
+    }
+
+
+def route_policy_route(raw: dict[str, object]) -> dict[str, object]:
+    return {
+        "route_id": raw["route_id"],
+        "model": raw["model"],
+        "model_reasoning_effort": raw["model_reasoning_effort"],
+        "capabilities": list(raw["capabilities"]),
+        "probe_id": raw.get("probe_id"),
+    }
+
+
+def finalize_route_policy_manifest(manifest: dict[str, object]) -> dict[str, object]:
+    manifest["manifest_id"] = route_policy_digest(
+        {key: value for key, value in manifest.items() if key != "manifest_id"}
+    )
+    return manifest
+
+
+def valid_route_policy_manifest() -> dict[str, object]:
+    document = routing_fixture_document()
+    base_case = document["base_case"]
+    if not isinstance(base_case, dict) or not isinstance(base_case.get("manifest"), dict):
+        raise AssertionError("routing fixture base manifest must be an object")
+    base_manifest = base_case["manifest"]
+    required_route = route_policy_route(base_manifest["required_route"])
+    required_fallback = route_policy_route(base_manifest["required_fallback"])
+    helper_route = route_policy_route(base_manifest["helper_route"])
+    required_policies = {}
+    for agent in routing_required_agents():
+        required_policies[agent] = {
+            "policy_id": f"policy:{agent}",
+            "agent_name": agent,
+            "preferred_route": dict(required_route),
+            "fallback_routes": [dict(required_fallback)],
+            "required_capabilities": list(required_route["capabilities"]),
+            "non_route_contract_digest": f"sha256:{'1' * 64}",
+        }
+    manifest = {
+        "schema_version": base_manifest["schema_version"],
+        "manifest_id": "",
+        "provenance_id": base_manifest["provenance_id"],
+        "source_roster": codex_agent_source_roster_document(),
+        "required_agent_policies": required_policies,
+        "optional_helper": {
+            "helper_name": routing_optional_helper(),
+            "policy_id": f"policy:{routing_optional_helper()}",
+            "preferred_route": helper_route,
+            "fallback_routes": [],
+            "no_helper": dict(base_manifest["no_helper"]),
+        },
+        "bounded_probes": dict(base_manifest["bounded_probes"]),
+    }
+    return finalize_route_policy_manifest(manifest)
+
+
+def strict_override_required_miss_manifest(agent_name: str = "analyze-executor") -> dict[str, object]:
+    manifest = valid_route_policy_manifest()
+    policy = manifest["required_agent_policies"][agent_name]
+    policy["fallback_routes"][0]["model"] = "gpt-5.3-codex-spark"
+    return finalize_route_policy_manifest(manifest)
+
+
+def strict_override_invalid_no_helper_manifest() -> dict[str, object]:
+    manifest = valid_route_policy_manifest()
+    manifest["optional_helper"]["no_helper"]["allowed"] = False
+    manifest["optional_helper"]["no_helper"]["reason"] = "fixture rejects required-only continuation"
+    return finalize_route_policy_manifest(manifest)
+
+
+def strict_override_helper_compatible_manifest() -> dict[str, object]:
+    manifest = valid_route_policy_manifest()
+    helper_compatible_required_route = {
+        "route_id": "required-helper-compatible",
+        "model": "gpt-5.3-codex-spark",
+        "model_reasoning_effort": "xhigh",
+        "capabilities": ["reasoning", "tools"],
+        "probe_id": None,
+    }
+    for policy in manifest["required_agent_policies"].values():
+        policy["fallback_routes"].append(dict(helper_compatible_required_route))
+    return finalize_route_policy_manifest(manifest)
+
+
+def bounded_probe_required_manifest() -> dict[str, object]:
+    manifest = valid_route_policy_manifest()
+    for policy in manifest["required_agent_policies"].values():
+        policy["preferred_route"]["probe_id"] = "probe-required-primary"
+    manifest["bounded_probes"] = {
+        "probe-required-primary": {
+            "probe_id": "probe-required-primary",
+            "route_id": "required-primary",
+            "candidate_route_id": "required-primary",
+            "evidence_id": "fixture:required-primary",
+        }
+    }
+    return finalize_route_policy_manifest(manifest)
 
 
 class MutationHelperTests(unittest.TestCase):
@@ -167,6 +339,483 @@ class MutationHelperTests(unittest.TestCase):
             capture_output=True,
             shell=False,
             check=True,
+        )
+
+    def write_route_policy_manifest(self, root: Path, manifest: dict[str, object], name: str = "route-policy.json") -> Path:
+        path = root / ".codex" / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        return path
+
+    def write_valid_route_policy_manifest(self, root: Path, name: str = "route-policy.json") -> Path:
+        return self.write_route_policy_manifest(root, valid_route_policy_manifest(), name=name)
+
+    def route_aware_inputs(self, manifest_path: Path, git_root: Path, *, destination: str | None = ".codex/agents") -> dict[str, object]:
+        inputs: dict[str, object] = {
+            "route_policy_manifest": manifest_path.relative_to(git_root).as_posix(),
+            "test_overrides": {"codex_capability_snapshot": routing_capability_snapshot()},
+        }
+        if destination is not None:
+            inputs["destination"] = destination
+        return inputs
+
+    def assert_route_aware_snapshot_response(
+        self,
+        response: dict[str, object],
+        *,
+        manifest_path: Path,
+        git_root: Path,
+        expected_snapshot: dict[str, object],
+        expected_manifest: dict[str, object] | None = None,
+    ) -> None:
+        manifest = expected_manifest or valid_route_policy_manifest()
+        routing = response["data"]["routing"]
+        self.assertEqual(routing["schema_version"], "1.0")
+        self.assertEqual(routing["mode"], "route_aware")
+        self.assertEqual(routing["manifest"]["path"], manifest_path.relative_to(git_root).as_posix())
+        self.assertEqual(routing["manifest"]["manifest_id"], manifest["manifest_id"])
+        snapshot = routing["runtime_capability_snapshot"]
+        self.assertEqual(snapshot["snapshot_id"], expected_snapshot["snapshot_id"])
+        self.assertEqual(snapshot["adapter_id"], expected_snapshot["adapter_id"])
+        self.assertEqual(snapshot["child_probe_results"], expected_snapshot["child_probe_results"])
+        self.assertEqual(snapshot["observation_evidence"]["available_routes"], expected_snapshot["available_routes"])
+        self.assertEqual(snapshot["observation_evidence"]["native_discovery"], expected_snapshot["native_discovery"])
+
+    def assert_route_aware_required_resolution(
+        self,
+        response: dict[str, object],
+        *,
+        expected_snapshot: dict[str, object],
+        selected_route_id: str = "required-primary",
+        expected_attempt_count: int = 1,
+    ) -> None:
+        routing = response["data"]["routing"]
+        required_records = routing["required_agents"]
+        required_agents = routing_required_agents()
+        self.assertEqual([record["agent_name"] for record in required_records], required_agents)
+        self.assertEqual(len(required_records), 12)
+        self.assertEqual(routing["strict_override"]["status"], "absent")
+        self.assertFalse(routing["strict_override"]["requested"])
+        self.assertEqual(routing["strict_override"]["required_agents_evaluated"], 0)
+        self.assertFalse(routing["strict_override"]["fallback_suppressed"])
+
+        for agent_name, record in zip(required_agents, required_records, strict=True):
+            with self.subTest(agent_name=agent_name):
+                self.assertEqual(record["snapshot_id"], expected_snapshot["snapshot_id"])
+                self.assertEqual(record["policy_id"], f"policy:{agent_name}")
+                self.assertEqual(record["terminal_outcome"], "resolved")
+                self.assertEqual(record["selected_route"]["route_id"], selected_route_id)
+                self.assertEqual(record["selected_route"]["model"], "gpt-5.5" if selected_route_id == "required-primary" else "gpt-5.4")
+                self.assertEqual(record["selected_route"]["model_reasoning_effort"], "xhigh")
+                self.assertEqual(len(record["attempted_routes"]), expected_attempt_count)
+                self.assertEqual(record["attempted_routes"][0]["route_id"], "required-primary")
+                self.assertEqual(record["attempted_routes"][-1]["outcome"], "selected")
+                if expected_attempt_count == 2:
+                    self.assertEqual(record["attempted_routes"][0]["outcome"], "rejected")
+                    self.assertEqual(record["attempted_routes"][0]["reason"], "route_unavailable")
+                    self.assertEqual(record["attempted_routes"][1]["route_id"], "required-fallback")
+                self.assertEqual(record["rejection_reasons"], [] if expected_attempt_count == 1 else ["required-primary: route_unavailable"])
+                self.assertRegex(record["route_resolution_id"], r"^sha256:[0-9a-f]{64}$")
+                self.assertRegex(record["resolved_agent_policy_id"], r"^sha256:[0-9a-f]{64}$")
+                self.assertRegex(record["materialization_id"], r"^sha256:[0-9a-f]{64}$")
+                proof = record["materialization_proof"]
+                source_path = PLUGIN_ROOT / "codex-agents" / f"{agent_name}.toml"
+                self.assertEqual(proof["source_path"], f"speckit-pro/codex-agents/{agent_name}.toml")
+                self.assertEqual(proof["source_bytes_digest"], f"sha256:{hashlib.sha256(source_path.read_bytes()).hexdigest()}")
+                self.assertRegex(proof["destination_bytes_digest"], r"^sha256:[0-9a-f]{64}$")
+                self.assertEqual(proof["selected_model"], record["selected_route"]["model"])
+                self.assertEqual(proof["selected_model_reasoning_effort"], "xhigh")
+                self.assertTrue(proof["non_route_fields_unchanged"])
+                self.assertEqual(proof["materializer_binding"]["path"], "speckit-pro/speckit_pro_runner/helpers/install.py")
+
+    def assert_route_aware_helper_installed(self, response: dict[str, object], *, expected_snapshot: dict[str, object]) -> None:
+        helper = response["data"]["routing"]["optional_helper_decision"]
+        self.assertEqual(helper["helper_name"], routing_optional_helper())
+        self.assertEqual(helper["outcome"], "installed")
+        self.assertEqual(helper["terminal_outcome"], "resolved")
+        self.assertEqual(helper["snapshot_id"], expected_snapshot["snapshot_id"])
+        self.assertEqual(helper["policy_id"], f"policy:{routing_optional_helper()}")
+        self.assertEqual(helper["selected_route"]["route_id"], "helper-primary")
+        self.assertEqual(helper["selected_route"]["model"], "gpt-5.3-codex-spark")
+        self.assertEqual(helper["selected_route"]["model_reasoning_effort"], "high")
+        self.assertEqual([attempt["route_id"] for attempt in helper["attempted_routes"]], ["helper-primary"])
+        self.assertEqual(helper["rejection_reasons"], [])
+        self.assertFalse(helper["no_helper_validation"]["selected"])
+        self.assertIsNone(helper["managed_ownership_proof"])
+        self.assertEqual(helper["manual_remediation"], [])
+        self.assertRegex(helper["route_resolution_id"], r"^sha256:[0-9a-f]{64}$")
+        self.assertRegex(helper["resolved_agent_policy_id"], r"^sha256:[0-9a-f]{64}$")
+        self.assertRegex(helper["materialization_id"], r"^sha256:[0-9a-f]{64}$")
+
+    def assert_route_aware_no_mutation_yet(self, response: dict[str, object]) -> None:
+        recovery = response["data"]["routing"]["recovery_or_mutation"]
+        mutation = response["data"]["mutation"]
+        self.assertEqual(recovery["planned_writes"], mutation["planned_paths"])
+        self.assertEqual(recovery["planned_removals"], [])
+        self.assertEqual(recovery["applied_writes"], [])
+        self.assertEqual(recovery["applied_removals"], [])
+        self.assertEqual(recovery["recovery_record"]["rollback_outcome"], "not_required")
+        self.assertFalse(recovery["writes_state"])
+        self.assertFalse(recovery["restart_required"])
+
+    def assert_route_aware_required_destination_bytes(self, response: dict[str, object], destination: Path) -> None:
+        required_records = response["data"]["routing"]["required_agents"]
+        for record in required_records:
+            agent_name = record["agent_name"]
+            target = destination / f"{agent_name}.toml"
+            with self.subTest(agent_name=agent_name):
+                target_bytes = target.read_bytes()
+                target_digest = f"sha256:{hashlib.sha256(target_bytes).hexdigest()}"
+                self.assertEqual(target_digest, record["materialization_proof"]["destination_bytes_digest"])
+                parsed = tomllib.loads(target_bytes.decode("utf-8"))
+                self.assertEqual(parsed["model"], record["selected_route"]["model"])
+                self.assertEqual(parsed["model_reasoning_effort"], record["selected_route"]["model_reasoning_effort"])
+
+    def assert_route_aware_rollback_success_evidence(
+        self,
+        response: dict[str, object],
+        destination: Path,
+        prior_agent_bytes: dict[str, bytes],
+        prior_mode: int,
+        failed_agent_name: str,
+    ) -> None:
+        mutation = response["data"]["mutation"]
+        recovery = response["data"]["routing"]["recovery_or_mutation"]
+        record = recovery["recovery_record"]
+        required_files = [f"{agent_name}.toml" for agent_name in routing_required_agents()]
+        failed_target = (destination / f"{failed_agent_name}.toml").resolve().as_posix()
+
+        self.assertEqual(mutation["mutation_status"], "blocked")
+        self.assertEqual(response["data"]["verification"], {"status": "failed", "matched_files": []})
+        self.assertTrue(response["data"]["rollback_succeeded"])
+        self.assertFalse(response["data"]["writes_state"])
+        self.assertFalse(response["data"]["restart_required"])
+        self.assertFalse(recovery["writes_state"])
+        self.assertFalse(recovery["restart_required"])
+        self.assertRegex(record["pre_state_id"], r"^sha256:[0-9a-f]{64}$")
+        self.assertEqual(record["pre_state_id"], record["final_state_id"])
+        self.assertEqual(record["rollback_outcome"], "restored")
+        self.assertEqual(record["terminal_outcome"], "restored")
+        self.assertEqual(record["manual_remediation"], [])
+        self.assertEqual([action["name"] for action in record["prior_state"]], required_files)
+        for state in record["prior_state"]:
+            agent_name = state["name"].removesuffix(".toml")
+            self.assertTrue(state["existed"])
+            self.assertEqual(state["mode"], oct(prior_mode))
+            self.assertEqual(state["digest"], f"sha256:{hashlib.sha256(prior_agent_bytes[agent_name]).hexdigest()}")
+
+        self.assertEqual(len(record["staged_actions"]), 12)
+        self.assertEqual(len(record["applied_actions"]), 1)
+        self.assertEqual(record["failed_actions"][0]["operation_id"], mutation["failure_operation"]["operation_id"])
+        self.assertEqual(record["failed_actions"][0]["target"], failed_target)
+        self.assertEqual([action["name"] for action in record["rolled_back_actions"]], required_files)
+        self.assertEqual(record["cleanup_errors"], [])
+        self.assertEqual(record["cleanup_actions"], [])
+        self.assertEqual(recovery["planned_writes"], mutation["planned_paths"])
+        self.assertEqual(recovery["applied_writes"], mutation["touched_paths"])
+        self.assertEqual(recovery["planned_removals"], [])
+        self.assertEqual(recovery["applied_removals"], [])
+
+        for agent_name, content in prior_agent_bytes.items():
+            target = destination / f"{agent_name}.toml"
+            with self.subTest(restored_agent=agent_name):
+                self.assertEqual(target.read_bytes(), content)
+                self.assertEqual(target.stat().st_mode & 0o7777, prior_mode)
+
+    def assert_route_aware_rollback_failure_evidence(
+        self,
+        response: dict[str, object],
+        destination: Path,
+        prior_agent_bytes: dict[str, bytes],
+        prior_mode: int,
+        failed_agent_name: str,
+        unrestored_agent_name: str,
+    ) -> None:
+        mutation = response["data"]["mutation"]
+        recovery = response["data"]["routing"]["recovery_or_mutation"]
+        record = recovery["recovery_record"]
+        failed_target = (destination / f"{failed_agent_name}.toml").resolve().as_posix()
+        unrestored_target = (destination / f"{unrestored_agent_name}.toml").resolve().as_posix()
+
+        self.assertEqual(mutation["mutation_status"], "partial_failure")
+        self.assertEqual(response["data"]["verification"], {"status": "failed", "matched_files": []})
+        self.assertFalse(response["data"]["rollback_succeeded"])
+        self.assertTrue(response["data"]["writes_state"])
+        self.assertTrue(response["data"]["restart_required"])
+        self.assertTrue(recovery["writes_state"])
+        self.assertTrue(recovery["restart_required"])
+        self.assertRegex(record["pre_state_id"], r"^sha256:[0-9a-f]{64}$")
+        self.assertRegex(record["final_state_id"], r"^sha256:[0-9a-f]{64}$")
+        self.assertNotEqual(record["pre_state_id"], record["final_state_id"])
+        self.assertEqual(record["rollback_outcome"], "unrestored")
+        self.assertEqual(record["terminal_outcome"], "uncertain_state")
+        self.assertEqual(record["state_status"], "uncertain")
+        self.assertEqual(record["failed_actions"][0]["operation_id"], mutation["failure_operation"]["operation_id"])
+        self.assertEqual(record["failed_actions"][0]["target"], failed_target)
+        self.assertEqual(record["unrestored_actions"], [{"name": f"{unrestored_agent_name}.toml", "target": unrestored_target}])
+        self.assertEqual(
+            record["rollback_errors"],
+            [{"name": f"{unrestored_agent_name}.toml", "target": unrestored_target, "error": "OSError"}],
+        )
+        self.assertEqual(len(record["manual_remediation"]), 1)
+        remediation = record["manual_remediation"][0]
+        self.assertEqual(remediation["action_type"], "manual_remediation")
+        self.assertEqual(remediation["reason"], "rollback_unrestored")
+        self.assertEqual(remediation["paths"], [unrestored_target])
+        self.assertIn("Restart", remediation["summary"])
+        self.assertEqual(recovery["planned_writes"], mutation["planned_paths"])
+        self.assertEqual(recovery["applied_writes"], mutation["touched_paths"])
+        self.assertEqual(recovery["planned_removals"], [])
+        self.assertEqual(recovery["applied_removals"], [])
+
+        for agent_name, content in prior_agent_bytes.items():
+            target = destination / f"{agent_name}.toml"
+            with self.subTest(rollback_failure_agent=agent_name):
+                if agent_name == unrestored_agent_name:
+                    self.assertNotEqual(target.read_bytes(), content)
+                else:
+                    self.assertEqual(target.read_bytes(), content)
+                    self.assertEqual(target.stat().st_mode & 0o7777, prior_mode)
+
+    def assert_route_aware_apply_mutation_evidence(self, response: dict[str, object]) -> None:
+        mutation = response["data"]["mutation"]
+        recovery = response["data"]["routing"]["recovery_or_mutation"]
+        self.assertEqual(mutation["mutation_status"], "applied")
+        self.assertEqual(recovery["planned_writes"], mutation["planned_paths"])
+        self.assertEqual(
+            sorted([*recovery["applied_writes"], *recovery["applied_removals"]]),
+            sorted(mutation["touched_paths"]),
+        )
+        self.assertTrue(recovery["writes_state"])
+        self.assertTrue(recovery["restart_required"])
+        self.assertTrue(response["data"]["writes_state"])
+        self.assertTrue(response["data"]["restart_required"])
+
+    def assert_strict_required_override_evidence(
+        self,
+        response: dict[str, object],
+        *,
+        model: str,
+        expected_status: str,
+    ) -> None:
+        routing = response["data"]["routing"]
+        strict = routing["strict_override"]
+        self.assertTrue(strict["requested"])
+        self.assertEqual(strict["status"], expected_status)
+        self.assertEqual(strict["model"], model)
+        self.assertEqual(strict["required_agents_evaluated"], 12)
+        self.assertTrue(strict["fallback_suppressed"])
+        self.assertEqual(len(strict["evaluated_tuples"]), 12)
+
+        required_agents = routing_required_agents()
+        self.assertEqual([item["agent_name"] for item in strict["evaluated_tuples"]], required_agents)
+        self.assertEqual([record["agent_name"] for record in routing["required_agents"]], required_agents)
+        for record in routing["required_agents"]:
+            with self.subTest(agent_name=record["agent_name"]):
+                self.assertEqual(len(record["attempted_routes"]), 1)
+                attempt = record["attempted_routes"][0]
+                self.assertEqual(attempt["model"], model)
+                self.assertEqual(attempt["model_reasoning_effort"], "xhigh")
+                self.assertTrue(attempt["route_id"].startswith(f"strict-override:{record['agent_name']}:"))
+                if record["terminal_outcome"] == "resolved":
+                    self.assertEqual(attempt["outcome"], "selected")
+                    self.assertEqual(record["selected_route"]["route_id"], attempt["route_id"])
+                    self.assertEqual(record["selected_route"]["model"], model)
+
+    def assert_strict_required_override_zero_mutation(self, response: dict[str, object]) -> None:
+        mutation = response["data"]["mutation"]
+        recovery = response["data"]["routing"]["recovery_or_mutation"]
+        self.assertEqual(mutation["planned_operations"], [])
+        self.assertEqual(mutation["applied_operations"], [])
+        self.assertEqual(mutation["planned_paths"], [])
+        self.assertEqual(mutation["touched_paths"], [])
+        self.assertFalse(mutation["live_mutation"])
+        self.assertEqual(recovery["planned_writes"], [])
+        self.assertEqual(recovery["planned_removals"], [])
+        self.assertEqual(recovery["applied_writes"], [])
+        self.assertEqual(recovery["applied_removals"], [])
+        self.assertFalse(recovery["writes_state"])
+        self.assertFalse(recovery["restart_required"])
+        self.assertFalse(response["data"]["writes_state"])
+        self.assertFalse(response["data"]["restart_required"])
+
+    def assert_route_aware_required_miss_zero_mutation(
+        self,
+        response: dict[str, object],
+        *,
+        expected_snapshot: dict[str, object],
+        prior_agent_bytes: dict[str, bytes],
+        destination: Path,
+    ) -> None:
+        mutation = response["data"]["mutation"]
+        recovery = response["data"]["routing"]["recovery_or_mutation"]
+        record = recovery["recovery_record"]
+        self.assertEqual(mutation["mutation_status"], "blocked")
+        self.assertEqual(mutation["planned_operations"], [])
+        self.assertEqual(mutation["applied_operations"], [])
+        self.assertEqual(mutation["planned_paths"], [])
+        self.assertEqual(mutation["touched_paths"], [])
+        self.assertFalse(mutation["live_mutation"])
+        self.assertEqual(recovery["planned_writes"], [])
+        self.assertEqual(recovery["planned_removals"], [])
+        self.assertEqual(recovery["applied_writes"], [])
+        self.assertEqual(recovery["applied_removals"], [])
+        self.assertFalse(recovery["writes_state"])
+        self.assertFalse(recovery["restart_required"])
+        self.assertFalse(response["data"]["writes_state"])
+        self.assertFalse(response["data"]["restart_required"])
+        self.assertEqual(record["terminal_outcome"], "no_mutation")
+        self.assertEqual(record["no_mutation_reason"], "required_route_unresolved")
+        self.assertEqual(record["rollback_outcome"], "not_required")
+        self.assertEqual(record["manual_remediation"], [])
+        self.assertEqual(record["staged_actions"], [])
+        self.assertEqual(record["applied_actions"], [])
+        self.assertEqual(record["rolled_back_actions"], [])
+        self.assertEqual(record["cleanup_actions"], [])
+        self.assertEqual(record["cleanup_errors"], [])
+        self.assertEqual(record["failed_actions"], [])
+        self.assertRegex(record["pre_state_id"], r"^sha256:[0-9a-f]{64}$")
+        self.assertEqual(record["pre_state_id"], record["final_state_id"])
+
+        records = response["data"]["routing"]["required_agents"]
+        self.assertEqual([item["agent_name"] for item in records], routing_required_agents())
+        for item in records:
+            agent_name = item["agent_name"]
+            with self.subTest(agent_name=agent_name):
+                self.assertEqual(item["snapshot_id"], expected_snapshot["snapshot_id"])
+                self.assertEqual(item["terminal_outcome"], "unresolved")
+                self.assertIsNone(item["selected_route"])
+                self.assertIsNone(item["resolved_agent_policy_id"])
+                self.assertIsNone(item["materialization_id"])
+                self.assertIsNone(item["materialization_proof"])
+                self.assertEqual([attempt["route_id"] for attempt in item["attempted_routes"]], ["required-primary", "required-fallback"])
+                self.assertEqual([attempt["outcome"] for attempt in item["attempted_routes"]], ["rejected", "rejected"])
+                self.assertEqual([attempt["reason"] for attempt in item["attempted_routes"]], ["route_unavailable", "route_unavailable"])
+                self.assertEqual(
+                    item["rejection_reasons"],
+                    ["required-primary: route_unavailable", "required-fallback: route_unavailable"],
+                )
+                self.assertEqual((destination / f"{agent_name}.toml").read_bytes(), prior_agent_bytes[agent_name])
+
+    def assert_strict_helper_override_evidence(
+        self,
+        response: dict[str, object],
+        *,
+        model: str,
+        helper_status: str,
+        helper_outcome: str,
+    ) -> None:
+        strict = response["data"]["routing"]["strict_override"]
+        helper = response["data"]["routing"]["optional_helper_decision"]
+        self.assertTrue(strict["requested"])
+        self.assertEqual(strict["model"], model)
+        self.assertTrue(strict["helper_evaluated"])
+        helper_evidence = strict["helper_tuple"]
+        self.assertEqual(helper_evidence["helper_name"], routing_optional_helper())
+        self.assertEqual(helper_evidence["model"], model)
+        self.assertEqual(helper_evidence["status"], helper_status)
+        self.assertEqual(helper["outcome"], helper_outcome)
+        self.assertEqual(len(helper["attempted_routes"]), 1)
+        self.assertEqual(helper["attempted_routes"][0]["model"], model)
+        self.assertTrue(helper["attempted_routes"][0]["route_id"].startswith(f"strict-override:{routing_optional_helper()}:"))
+
+    def assert_route_aware_helper_omitted_no_file(self, response: dict[str, object], destination: Path) -> None:
+        helper = response["data"]["routing"]["optional_helper_decision"]
+        self.assertEqual(helper["helper_name"], routing_optional_helper())
+        self.assertEqual(helper["outcome"], "omitted")
+        self.assertEqual(helper["terminal_outcome"], "omitted")
+        self.assertIsNone(helper["selected_route"])
+        self.assertIsNone(helper["resolved_agent_policy_id"])
+        self.assertIsNone(helper["materialization_id"])
+        self.assertIsNone(helper["materialization_proof"])
+        self.assertTrue(helper["no_helper_validation"]["allowed"])
+        self.assertTrue(helper["no_helper_validation"]["selected"])
+        self.assertEqual(helper["no_helper_validation"]["existing_helper_state"], "absent")
+        self.assertEqual(helper["managed_ownership_proof"], {"status": "not_required", "reason": "helper_absent"})
+        self.assertEqual(helper["manual_remediation"], [])
+        self.assertEqual(len(helper["attempted_routes"]), 1)
+        self.assertEqual(helper["attempted_routes"][0]["route_id"], "helper-primary")
+        self.assertEqual(helper["attempted_routes"][0]["outcome"], "rejected")
+        self.assertEqual(helper["attempted_routes"][0]["reason"], "route_unavailable")
+        self.assertEqual(helper["rejection_reasons"], ["helper-primary: route_unavailable"])
+        self.assertFalse((destination / f"{routing_optional_helper()}.toml").exists())
+
+    def assert_route_aware_managed_helper_removal(
+        self,
+        response: dict[str, object],
+        *,
+        proof_status: str,
+    ) -> None:
+        helper = response["data"]["routing"]["optional_helper_decision"]
+        self.assertEqual(helper["outcome"], "removed")
+        self.assertEqual(helper["terminal_outcome"], "removed")
+        self.assertTrue(helper["no_helper_validation"]["allowed"])
+        self.assertTrue(helper["no_helper_validation"]["selected"])
+        self.assertEqual(helper["no_helper_validation"]["existing_helper_state"], "managed")
+        proof = helper["managed_ownership_proof"]
+        self.assertEqual(proof["status"], proof_status)
+        self.assertEqual(proof["helper_name"], routing_optional_helper())
+        self.assertRegex(proof["existing_digest"], r"^sha256:[0-9a-f]{64}$")
+        self.assertEqual(helper["manual_remediation"], [])
+
+    def assert_route_aware_helper_removal_evidence(self, response: dict[str, object], destination: Path) -> None:
+        mutation = response["data"]["mutation"]
+        recovery = response["data"]["routing"]["recovery_or_mutation"]
+        helper_path = (destination / f"{routing_optional_helper()}.toml").resolve().as_posix()
+        self.assertIn(helper_path, recovery["planned_removals"])
+        self.assertNotIn(helper_path, recovery["planned_writes"])
+        for operation in mutation["planned_operations"]:
+            if operation.get("target") == helper_path:
+                self.assertEqual(operation["kind"], "remove_file")
+                break
+        else:
+            raise AssertionError("helper removal operation was not planned")
+
+    def assert_route_aware_unmanaged_helper_preserved(
+        self,
+        response: dict[str, object],
+        destination: Path,
+    ) -> None:
+        helper_path = (destination / f"{routing_optional_helper()}.toml").resolve().as_posix()
+        helper = response["data"]["routing"]["optional_helper_decision"]
+        self.assertEqual(helper["outcome"], "preserved")
+        self.assertEqual(helper["terminal_outcome"], "preserved")
+        self.assertTrue(helper["no_helper_validation"]["allowed"])
+        self.assertTrue(helper["no_helper_validation"]["selected"])
+        self.assertEqual(helper["no_helper_validation"]["existing_helper_state"], "unmanaged")
+        proof = helper["managed_ownership_proof"]
+        self.assertEqual(proof["status"], "absent")
+        self.assertEqual(proof["reason"], "ownership_proof_absent")
+        self.assertEqual(proof["helper_name"], routing_optional_helper())
+        self.assertEqual(proof["destination"], helper_path)
+        self.assertRegex(proof["existing_digest"], r"^sha256:[0-9a-f]{64}$")
+        self.assertEqual(len(helper["manual_remediation"]), 1)
+        remediation = helper["manual_remediation"][0]
+        self.assertEqual(remediation["action_type"], "manual_remediation")
+        self.assertEqual(remediation["reason"], "unmanaged_helper_preserved")
+        self.assertEqual(remediation["path"], helper_path)
+        self.assertIn("preserved", remediation["summary"])
+
+    def assert_route_aware_helper_preserved_without_removal(
+        self,
+        response: dict[str, object],
+        destination: Path,
+        helper_bytes: bytes,
+    ) -> None:
+        mutation = response["data"]["mutation"]
+        recovery = response["data"]["routing"]["recovery_or_mutation"]
+        helper_path = destination / f"{routing_optional_helper()}.toml"
+        helper_path_text = helper_path.resolve().as_posix()
+        self.assertEqual(helper_path.read_bytes(), helper_bytes)
+        self.assertNotIn(helper_path_text, recovery["planned_removals"])
+        self.assertNotIn(helper_path_text, recovery["applied_removals"])
+        self.assertNotIn(helper_path_text, recovery["planned_writes"])
+        self.assertNotIn(helper_path_text, recovery["applied_writes"])
+        self.assertFalse(
+            any(
+                operation.get("target") == helper_path_text
+                for operation in [*mutation["planned_operations"], *mutation["applied_operations"]]
+            )
         )
 
     def assert_schema_contract_response(self, response: dict[str, object], result_schema: dict[str, object]) -> None:
@@ -256,6 +905,1063 @@ class MutationHelperTests(unittest.TestCase):
             rollbacks["multi-pr-emission"],
             "Keep live PR mutation deferred; use the registered multi-pr-emission operation only for command-plan capture.",
         )
+
+    def test_codex_source_roster_requires_exact_13_tomls_including_optional_helper(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        roster = install.codex_agent_source_roster(PLUGIN_ROOT / "codex-agents")
+        self.assertNotIn("code", roster)
+        source_names = [record["name"] for record in roster["files"]]
+        self.assertEqual(source_names, list(install.CODEX_SOURCE_AGENT_TOML_NAMES))
+        self.assertEqual(len(source_names), 13)
+        self.assertIn(f"{install.CODEX_OPTIONAL_HELPER_NAME}.toml", source_names)
+        self.assertEqual(registry.CODEX_REQUIRED_AGENT_NAMES, tuple(routing_required_agents()))
+        self.assertEqual(registry.CODEX_OPTIONAL_HELPER_NAME, routing_optional_helper())
+
+        with tempfile.TemporaryDirectory() as source_tmp:
+            fake_plugin = Path(source_tmp) / "speckit-pro"
+            shutil.copytree(PLUGIN_ROOT / "codex-agents", fake_plugin / "codex-agents")
+            (fake_plugin / "codex-agents" / "autopilot-fast-helper.toml").unlink()
+
+            missing_helper = install.codex_agent_source_roster(fake_plugin / "codex-agents")
+
+        self.assertEqual(missing_helper["code"], "incomplete_agent_bundle")
+        self.assertEqual(missing_helper["details"]["missing_files"], ["autopilot-fast-helper.toml"])
+
+    def test_codex_route_policy_manifest_loads_strict_roster_metadata(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            manifest = valid_route_policy_manifest()
+            manifest_path = self.write_route_policy_manifest(git_root, manifest)
+
+            loaded = install.load_codex_route_policy_manifest(
+                manifest_path.relative_to(git_root).as_posix(),
+                git_root,
+                PLUGIN_ROOT / "codex-agents",
+            )
+
+        self.assertNotIn("code", loaded)
+        self.assertEqual(loaded["path"], ".codex/route-policy.json")
+        self.assertEqual(loaded["schema_version"], "1.0.0")
+        self.assertEqual(loaded["manifest_id"], manifest["manifest_id"])
+        self.assertEqual(loaded["source_roster_id"], manifest["source_roster"]["source_roster_id"])
+        self.assertEqual(loaded["provenance_id"], manifest["provenance_id"])
+        self.assertEqual(loaded["required_agents"], routing_required_agents())
+        self.assertEqual(loaded["optional_helper"], routing_optional_helper())
+        self.assertEqual(loaded["source_files"], [record["name"] for record in manifest["source_roster"]["files"]])
+
+    def test_codex_route_policy_manifest_rejects_closed_schema_version_digest_and_rosters(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        def mutated_manifest(
+            edit: object,
+            *,
+            refresh_source_roster_id: bool = False,
+            refresh_manifest_id: bool = True,
+        ) -> dict[str, object]:
+            manifest = valid_route_policy_manifest()
+            edit(manifest)
+            if refresh_source_roster_id:
+                source_roster = manifest["source_roster"]
+                source_roster["source_roster_id"] = route_policy_digest(source_roster["files"])
+            if refresh_manifest_id:
+                finalize_route_policy_manifest(manifest)
+            return manifest
+
+        cases = [
+            (
+                "unsupported-version",
+                lambda manifest: manifest.__setitem__("schema_version", "2.0.0"),
+                "unsupported_schema_version",
+            ),
+            (
+                "unknown-top-level-key",
+                lambda manifest: manifest.__setitem__("unknown_key", True),
+                "unknown_top_level_keys",
+            ),
+            (
+                "manifest-id",
+                lambda manifest: manifest.__setitem__("manifest_id", f"sha256:{'0' * 64}"),
+                "manifest_id_mismatch",
+                False,
+                False,
+            ),
+            (
+                "source-roster-digest",
+                lambda manifest: manifest["source_roster"].__setitem__("source_roster_id", f"sha256:{'0' * 64}"),
+                "source_roster_id_mismatch",
+            ),
+            (
+                "missing-required-agent",
+                lambda manifest: manifest["required_agent_policies"].pop("uat-runbook-author"),
+                "required_agent_policy_roster_mismatch",
+            ),
+            (
+                "wrong-optional-helper",
+                lambda manifest: manifest["optional_helper"].__setitem__("helper_name", "not-the-helper"),
+                "optional_helper_mismatch",
+            ),
+            (
+                "source-roster-missing-optional-helper",
+                lambda manifest: manifest["source_roster"].__setitem__(
+                    "files",
+                    [
+                        record
+                        for record in manifest["source_roster"]["files"]
+                        if record["name"] != "autopilot-fast-helper.toml"
+                    ],
+                ),
+                "source_roster_files_mismatch",
+                True,
+            ),
+        ]
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            for case in cases:
+                label, edit, reason, *flags = case
+                refresh_source_roster_id = bool(flags[0]) if flags else False
+                refresh_manifest_id = bool(flags[1]) if len(flags) > 1 else True
+                with self.subTest(label=label):
+                    path = self.write_route_policy_manifest(
+                        git_root,
+                        mutated_manifest(
+                            edit,
+                            refresh_source_roster_id=refresh_source_roster_id,
+                            refresh_manifest_id=refresh_manifest_id,
+                        ),
+                        name=f"{label}.json",
+                    )
+
+                    result = install.load_codex_route_policy_manifest(
+                        path.relative_to(git_root).as_posix(),
+                        git_root,
+                        PLUGIN_ROOT / "codex-agents",
+                    )
+
+                    self.assertEqual(result["code"], "invalid_route_policy_manifest")
+                    self.assertEqual(result["details"]["reason"], reason)
+
+    def test_codex_route_policy_manifest_path_must_be_trusted_regular_repo_file(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp, tempfile.TemporaryDirectory() as outside_tmp:
+            outside_path = Path(outside_tmp) / "route-policy.json"
+            outside_path.write_text(json.dumps(valid_route_policy_manifest()), encoding="utf-8")
+
+            outside = install.load_codex_route_policy_manifest(
+                outside_path.as_posix(),
+                git_root,
+                PLUGIN_ROOT / "codex-agents",
+            )
+            self.assertEqual(outside["code"], "invalid_route_policy_manifest_path")
+
+            link = git_root / ".codex" / "route-policy-link.json"
+            link.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                link.symlink_to(outside_path)
+            except OSError:
+                self.skipTest("symlink creation is unavailable")
+
+            linked = install.load_codex_route_policy_manifest(
+                link.relative_to(git_root).as_posix(),
+                git_root,
+                PLUGIN_ROOT / "codex-agents",
+            )
+            self.assertEqual(linked["code"], "invalid_route_policy_manifest_path")
+
+    def test_install_codex_agents_rejects_supplied_invalid_route_policy_manifest_before_static_writes(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            manifest = valid_route_policy_manifest()
+            manifest["schema_version"] = "2.0.0"
+            finalize_route_policy_manifest(manifest)
+            path = self.write_route_policy_manifest(git_root, manifest)
+            destination = git_root / ".codex" / "agents"
+
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "install-codex-agents",
+                    mode="apply",
+                    inputs={
+                        "destination": ".codex/agents",
+                        "route_policy_manifest": path.relative_to(git_root).as_posix(),
+                    },
+                ),
+                cwd=git_root,
+            )
+
+        self.assertEqual(completed.returncode, 2)
+        self.assert_response(response, "input_error", 2)
+        self.assertEqual([diag["code"] for diag in stderr_records], ["invalid_route_policy_manifest"])
+        self.assertFalse(destination.exists())
+
+    def test_install_codex_agents_route_aware_captures_injected_snapshot_once(self) -> None:
+        from speckit_pro_runner.helpers import install
+        from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            manifest_path = self.write_valid_route_policy_manifest(git_root)
+            expected_snapshot = routing_capability_snapshot()
+            request = SimpleNamespace(
+                request_id="test-route-aware-captures-snapshot-once",
+                helper_id="install-codex-agents",
+                operation="install-codex-agents",
+                mode="dry_run",
+                inputs=self.route_aware_inputs(manifest_path, git_root),
+            )
+            old_cwd = Path.cwd()
+            os.chdir(git_root)
+            try:
+                with patch.object(install, "capture_codex_runtime_capabilities", return_value=expected_snapshot) as adapter:
+                    response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
+            finally:
+                os.chdir(old_cwd)
+
+        self.assert_response(response, "ok", 0)
+        self.assertEqual(adapter.call_count, 1)
+        self.assert_route_aware_snapshot_response(
+            response,
+            manifest_path=manifest_path,
+            git_root=git_root,
+            expected_snapshot=expected_snapshot,
+        )
+
+    def test_install_codex_agents_route_aware_uses_manifest_admitted_probe_when_native_discovery_unavailable(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            manifest = bounded_probe_required_manifest()
+            manifest_path = self.write_route_policy_manifest(git_root, manifest)
+            base_snapshot = routing_native_unavailable_snapshot("probe-success")
+            admitted_probe = {
+                "probe_id": "probe-required-primary",
+                "route_id": "required-primary",
+                "status": "success",
+                "available": True,
+            }
+            rogue_probe = {
+                "probe_id": "probe-rogue",
+                "route_id": "required-fallback",
+                "status": "success",
+                "available": True,
+            }
+            expected_snapshot = dict(base_snapshot)
+            expected_snapshot["child_probe_results"] = [admitted_probe]
+            inputs = self.route_aware_inputs(manifest_path, git_root)
+            inputs["test_overrides"] = {
+                "codex_capability_snapshot": base_snapshot,
+                "codex_probe_results": [admitted_probe, rogue_probe],
+            }
+
+            completed, response, stderr_records = run_runner(
+                helper_request("install-codex-agents", inputs=inputs),
+                cwd=git_root,
+            )
+
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(stderr_records, [])
+        self.assert_response(response, "ok", 0)
+        self.assert_route_aware_snapshot_response(
+            response,
+            manifest_path=manifest_path,
+            git_root=git_root,
+            expected_snapshot=expected_snapshot,
+            expected_manifest=manifest,
+        )
+        self.assert_route_aware_required_resolution(response, expected_snapshot=expected_snapshot)
+        self.assert_route_aware_helper_omitted_no_file(response, git_root / ".codex" / "agents")
+        self.assert_route_aware_no_mutation_yet(response)
+        self.assertTrue(
+            all(record["snapshot_id"] == expected_snapshot["snapshot_id"] for record in response["data"]["routing"]["required_agents"])
+        )
+
+    def test_install_codex_agents_route_aware_probe_failure_and_insufficient_results_do_not_widen_candidates(self) -> None:
+        cases = [
+            (
+                "probe-failed",
+                [{"probe_id": "probe-required-primary", "route_id": "required-primary", "status": "failed", "available": False}],
+                "probe_failed",
+            ),
+            (
+                "probe-insufficient",
+                [{"probe_id": "probe-required-primary", "route_id": "required-primary", "status": "success"}],
+                "probe_insufficient_result",
+            ),
+            (
+                "unmanifested-probe-success",
+                [{"probe_id": "probe-rogue", "route_id": "required-primary", "status": "success", "available": True}],
+                "probe_result_missing",
+            ),
+        ]
+        for label, probe_results, expected_reason in cases:
+            with self.subTest(label=label):
+                tmp, git_root = self.temp_clean_git_repo()
+                with tmp, tempfile.TemporaryDirectory() as home_tmp:
+                    fake_home = Path(home_tmp).resolve()
+                    manifest = bounded_probe_required_manifest()
+                    manifest_path = self.write_route_policy_manifest(git_root, manifest)
+                    base_snapshot = routing_native_unavailable_snapshot(label)
+                    inputs = self.route_aware_inputs(manifest_path, git_root, destination=None)
+                    inputs["test_overrides"] = {
+                        "codex_capability_snapshot": base_snapshot,
+                        "codex_probe_results": probe_results,
+                    }
+                    env = {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}
+
+                    completed, response, stderr_records = run_runner(
+                        helper_request("install-codex-agents", mode="apply", inputs=inputs),
+                        cwd=git_root,
+                        env_overrides=env,
+                    )
+
+                    self.assertEqual(completed.returncode, 1)
+                    self.assertEqual([diag["code"] for diag in stderr_records], ["codex_route_required_agent_unresolved"])
+                    self.assert_response(response, "expected_failure", 1)
+                    routing = response["data"]["routing"]
+                    snapshot = routing["runtime_capability_snapshot"]
+                    self.assertEqual(snapshot["snapshot_id"], base_snapshot["snapshot_id"])
+                    self.assertFalse(snapshot["observation_evidence"]["native_discovery"])
+                    self.assertEqual(snapshot["observation_evidence"]["available_routes"], [])
+                    self.assertEqual(
+                        [result["probe_id"] for result in snapshot["child_probe_results"]],
+                        ["probe-required-primary"] if label != "unmanifested-probe-success" else [],
+                    )
+                    self.assertEqual([record["agent_name"] for record in routing["required_agents"]], routing_required_agents())
+                    for record in routing["required_agents"]:
+                        self.assertEqual(record["snapshot_id"], base_snapshot["snapshot_id"])
+                        self.assertEqual(record["terminal_outcome"], "unresolved")
+                        self.assertEqual(record["attempted_routes"][0]["route_id"], "required-primary")
+                        self.assertEqual(record["attempted_routes"][0]["reason"], expected_reason)
+                    self.assert_strict_required_override_zero_mutation(response)
+                    self.assertFalse((fake_home / ".codex" / "agents").exists())
+
+    def test_install_codex_agents_route_aware_dry_run_uses_fake_home_and_routing_response(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp, tempfile.TemporaryDirectory() as home_tmp:
+            fake_home = Path(home_tmp).resolve()
+            manifest_path = self.write_valid_route_policy_manifest(git_root)
+            expected_snapshot = routing_capability_snapshot()
+            env = {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}
+
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "install-codex-agents",
+                    inputs=self.route_aware_inputs(manifest_path, git_root, destination=None),
+                ),
+                cwd=git_root,
+                env_overrides=env,
+            )
+
+            self.assertEqual(completed.returncode, 0)
+            self.assertEqual(stderr_records, [])
+            self.assert_response(response, "ok", 0)
+            self.assertEqual(response["data"]["destination"], (fake_home / ".codex" / "agents").as_posix())
+            self.assertFalse((fake_home / ".codex" / "agents").exists())
+            self.assertNotEqual(response["data"]["destination"], (Path.home() / ".codex" / "agents").as_posix())
+            self.assert_route_aware_snapshot_response(
+                response,
+                manifest_path=manifest_path,
+                git_root=git_root,
+                expected_snapshot=expected_snapshot,
+            )
+
+    def test_install_codex_agents_route_aware_dry_run_resolves_required_roster_before_writes(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            manifest_path = self.write_valid_route_policy_manifest(git_root)
+            expected_snapshot = routing_capability_snapshot()
+
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "install-codex-agents",
+                    inputs=self.route_aware_inputs(manifest_path, git_root),
+                ),
+                cwd=git_root,
+            )
+
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(stderr_records, [])
+        self.assert_response(response, "ok", 0)
+        self.assertEqual(response["data"]["mutation"]["mutation_status"], "planned")
+        self.assertEqual(len(response["data"]["mutation"]["planned_operations"]), 13)
+        self.assert_route_aware_snapshot_response(
+            response,
+            manifest_path=manifest_path,
+            git_root=git_root,
+            expected_snapshot=expected_snapshot,
+        )
+        self.assert_route_aware_required_resolution(response, expected_snapshot=expected_snapshot)
+        self.assert_route_aware_helper_installed(response, expected_snapshot=expected_snapshot)
+        self.assert_route_aware_no_mutation_yet(response)
+
+    def test_install_codex_agents_route_aware_dry_run_uses_required_fallbacks_from_same_snapshot(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            manifest_path = self.write_valid_route_policy_manifest(git_root)
+            expected_snapshot = routing_capability_snapshot()
+            expected_snapshot["available_routes"] = ["required-fallback", "helper-primary"]
+            inputs = self.route_aware_inputs(manifest_path, git_root)
+            inputs["test_overrides"] = {"codex_capability_snapshot": expected_snapshot}
+
+            completed, response, stderr_records = run_runner(
+                helper_request("install-codex-agents", inputs=inputs),
+                cwd=git_root,
+            )
+
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(stderr_records, [])
+        self.assert_response(response, "ok", 0)
+        self.assert_route_aware_snapshot_response(
+            response,
+            manifest_path=manifest_path,
+            git_root=git_root,
+            expected_snapshot=expected_snapshot,
+        )
+        self.assert_route_aware_required_resolution(
+            response,
+            expected_snapshot=expected_snapshot,
+            selected_route_id="required-fallback",
+            expected_attempt_count=2,
+        )
+        self.assert_route_aware_helper_installed(response, expected_snapshot=expected_snapshot)
+
+    def test_install_codex_agents_route_aware_apply_installs_missing_required_fallback_bytes(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        before_source_digests = codex_agent_source_digests()
+        with tmp:
+            manifest_path = self.write_valid_route_policy_manifest(git_root)
+            expected_snapshot = routing_capability_snapshot()
+            expected_snapshot["available_routes"] = ["required-fallback", "helper-primary"]
+            inputs = self.route_aware_inputs(manifest_path, git_root)
+            inputs["test_overrides"] = {"codex_capability_snapshot": expected_snapshot}
+            destination = git_root / ".codex" / "agents"
+
+            completed, response, stderr_records = run_runner(
+                helper_request("install-codex-agents", mode="apply", inputs=inputs),
+                cwd=git_root,
+            )
+
+            self.assertEqual(completed.returncode, 0)
+            self.assertEqual(stderr_records, [])
+            self.assert_response(response, "ok", 0)
+            self.assert_route_aware_snapshot_response(
+                response,
+                manifest_path=manifest_path,
+                git_root=git_root,
+                expected_snapshot=expected_snapshot,
+            )
+            self.assert_route_aware_required_resolution(
+                response,
+                expected_snapshot=expected_snapshot,
+                selected_route_id="required-fallback",
+                expected_attempt_count=2,
+            )
+            self.assert_route_aware_apply_mutation_evidence(response)
+            self.assert_route_aware_required_destination_bytes(response, destination)
+            matched = set(response["data"]["verification"]["matched_files"])
+            self.assertTrue({f"{agent}.toml" for agent in routing_required_agents()} <= matched)
+        self.assertEqual(codex_agent_source_digests(), before_source_digests)
+
+    def test_install_codex_agents_route_aware_apply_refreshes_stale_required_bytes_only_after_complete_plan(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        before_source_digests = codex_agent_source_digests()
+        with tmp:
+            manifest_path = self.write_valid_route_policy_manifest(git_root)
+            expected_snapshot = routing_capability_snapshot()
+            destination = git_root / ".codex" / "agents"
+            destination.mkdir(parents=True)
+            unrelated = destination / "user-owned-agent.toml"
+            unrelated.write_text("user owned\n", encoding="utf-8")
+            for agent_name in routing_required_agents():
+                (destination / f"{agent_name}.toml").write_text(f"stale {agent_name}\n", encoding="utf-8")
+
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "install-codex-agents",
+                    mode="apply",
+                    inputs=self.route_aware_inputs(manifest_path, git_root),
+                ),
+                cwd=git_root,
+            )
+
+            self.assertEqual(completed.returncode, 0)
+            self.assertEqual(stderr_records, [])
+            self.assert_response(response, "ok", 0)
+            self.assert_route_aware_snapshot_response(
+                response,
+                manifest_path=manifest_path,
+                git_root=git_root,
+                expected_snapshot=expected_snapshot,
+            )
+            self.assert_route_aware_required_resolution(response, expected_snapshot=expected_snapshot)
+            self.assert_route_aware_apply_mutation_evidence(response)
+            self.assert_route_aware_required_destination_bytes(response, destination)
+            self.assertEqual(unrelated.read_text(encoding="utf-8"), "user owned\n")
+        self.assertEqual(codex_agent_source_digests(), before_source_digests)
+
+    def test_install_codex_agents_route_aware_apply_failure_restores_prior_required_bytes_and_modes(self) -> None:
+        from speckit_pro_runner.helpers import install
+        from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp, tempfile.TemporaryDirectory() as home_tmp:
+            fake_home = Path(home_tmp).resolve()
+            manifest_path = self.write_valid_route_policy_manifest(git_root)
+            expected_snapshot = routing_capability_snapshot()
+            expected_snapshot["available_routes"] = ["required-primary", "required-fallback"]
+            destination = fake_home / ".codex" / "agents"
+            destination.mkdir(parents=True)
+            prior_mode = 0o640
+            prior_agent_bytes = {
+                agent_name: f"previous route-aware install {agent_name}\n".encode("utf-8")
+                for agent_name in routing_required_agents()
+            }
+            for agent_name, content in prior_agent_bytes.items():
+                target = destination / f"{agent_name}.toml"
+                target.write_bytes(content)
+                target.chmod(prior_mode)
+            failed_agent_name = routing_required_agents()[1]
+            failed_once = False
+            real_write = install.write_codex_agent_atomic
+
+            def fail_second_required_write(
+                target: Path,
+                content: bytes,
+                target_dir: Path,
+                identity: tuple[int, int] | None,
+                *,
+                mode: int | None = None,
+            ) -> None:
+                nonlocal failed_once
+                if target.name == f"{failed_agent_name}.toml" and not failed_once:
+                    failed_once = True
+                    raise OSError("injected route-aware write failure")
+                real_write(target, content, target_dir, identity, mode=mode)
+
+            request = SimpleNamespace(
+                request_id="test-route-aware-rollback-success",
+                helper_id="install-codex-agents",
+                operation="install-codex-agents",
+                mode="apply",
+                inputs=self.route_aware_inputs(manifest_path, git_root, destination=None),
+            )
+            request.inputs["test_overrides"] = {"codex_capability_snapshot": expected_snapshot}
+            old_cwd = Path.cwd()
+            os.chdir(git_root)
+            try:
+                with (
+                    patch.dict(os.environ, {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}),
+                    patch.object(install, "write_codex_agent_atomic", side_effect=fail_second_required_write),
+                ):
+                    response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
+            finally:
+                os.chdir(old_cwd)
+
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["codex_agent_install_failed"])
+            self.assert_route_aware_snapshot_response(
+                response,
+                manifest_path=manifest_path,
+                git_root=git_root,
+                expected_snapshot=expected_snapshot,
+            )
+            self.assert_route_aware_required_resolution(response, expected_snapshot=expected_snapshot)
+            self.assert_route_aware_rollback_success_evidence(
+                response,
+                destination,
+                prior_agent_bytes,
+                prior_mode,
+                failed_agent_name,
+            )
+
+    def test_install_codex_agents_route_aware_apply_reports_unrestored_rollback_failure(self) -> None:
+        from speckit_pro_runner.helpers import install
+        from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp, tempfile.TemporaryDirectory() as home_tmp:
+            fake_home = Path(home_tmp).resolve()
+            manifest_path = self.write_valid_route_policy_manifest(git_root)
+            expected_snapshot = routing_capability_snapshot()
+            expected_snapshot["available_routes"] = ["required-primary", "required-fallback"]
+            destination = fake_home / ".codex" / "agents"
+            destination.mkdir(parents=True)
+            prior_mode = 0o640
+            prior_agent_bytes = {
+                agent_name: f"rollback failure previous {agent_name}\n".encode("utf-8")
+                for agent_name in routing_required_agents()
+            }
+            for agent_name, content in prior_agent_bytes.items():
+                target = destination / f"{agent_name}.toml"
+                target.write_bytes(content)
+                target.chmod(prior_mode)
+            failed_agent_name = routing_required_agents()[1]
+            unrestored_agent_name = routing_required_agents()[0]
+            failed_once = False
+            real_write = install.write_codex_agent_atomic
+
+            def fail_second_required_write_and_first_rollback(
+                target: Path,
+                content: bytes,
+                target_dir: Path,
+                identity: tuple[int, int] | None,
+                *,
+                mode: int | None = None,
+            ) -> None:
+                nonlocal failed_once
+                if target.name == f"{failed_agent_name}.toml" and not failed_once:
+                    failed_once = True
+                    raise OSError("injected route-aware write failure")
+                if target.name == f"{unrestored_agent_name}.toml" and failed_once and mode is not None:
+                    raise OSError("injected route-aware rollback failure")
+                real_write(target, content, target_dir, identity, mode=mode)
+
+            request = SimpleNamespace(
+                request_id="test-route-aware-rollback-failure",
+                helper_id="install-codex-agents",
+                operation="install-codex-agents",
+                mode="apply",
+                inputs=self.route_aware_inputs(manifest_path, git_root, destination=None),
+            )
+            request.inputs["test_overrides"] = {"codex_capability_snapshot": expected_snapshot}
+            old_cwd = Path.cwd()
+            os.chdir(git_root)
+            try:
+                with (
+                    patch.dict(os.environ, {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}),
+                    patch.object(install, "write_codex_agent_atomic", side_effect=fail_second_required_write_and_first_rollback),
+                ):
+                    response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
+            finally:
+                os.chdir(old_cwd)
+
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["codex_agent_install_failed"])
+            self.assert_route_aware_snapshot_response(
+                response,
+                manifest_path=manifest_path,
+                git_root=git_root,
+                expected_snapshot=expected_snapshot,
+            )
+            self.assert_route_aware_required_resolution(response, expected_snapshot=expected_snapshot)
+            self.assert_route_aware_rollback_failure_evidence(
+                response,
+                destination,
+                prior_agent_bytes,
+                prior_mode,
+                failed_agent_name,
+                unrestored_agent_name,
+            )
+
+    def test_install_codex_agents_route_aware_dry_run_omits_unavailable_helper_when_no_file_exists(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            manifest_path = self.write_valid_route_policy_manifest(git_root)
+            expected_snapshot = routing_capability_snapshot()
+            expected_snapshot["available_routes"] = ["required-primary", "required-fallback"]
+            inputs = self.route_aware_inputs(manifest_path, git_root)
+            inputs["test_overrides"] = {"codex_capability_snapshot": expected_snapshot}
+            destination = git_root / ".codex" / "agents"
+
+            completed, response, stderr_records = run_runner(
+                helper_request("install-codex-agents", inputs=inputs),
+                cwd=git_root,
+            )
+
+            self.assertEqual(completed.returncode, 0)
+            self.assertEqual(stderr_records, [])
+            self.assert_response(response, "ok", 0)
+            self.assert_route_aware_snapshot_response(
+                response,
+                manifest_path=manifest_path,
+                git_root=git_root,
+                expected_snapshot=expected_snapshot,
+            )
+            self.assert_route_aware_required_resolution(response, expected_snapshot=expected_snapshot)
+            self.assert_route_aware_helper_omitted_no_file(response, destination)
+            self.assert_route_aware_no_mutation_yet(response)
+            self.assertEqual(len(response["data"]["mutation"]["planned_operations"]), 12)
+
+    def test_install_codex_agents_route_aware_apply_omits_unavailable_helper_and_installs_required_roster(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            manifest_path = self.write_valid_route_policy_manifest(git_root)
+            expected_snapshot = routing_capability_snapshot()
+            expected_snapshot["available_routes"] = ["required-primary", "required-fallback"]
+            inputs = self.route_aware_inputs(manifest_path, git_root)
+            inputs["test_overrides"] = {"codex_capability_snapshot": expected_snapshot}
+            destination = git_root / ".codex" / "agents"
+
+            completed, response, stderr_records = run_runner(
+                helper_request("install-codex-agents", mode="apply", inputs=inputs),
+                cwd=git_root,
+            )
+
+            self.assertEqual(completed.returncode, 0)
+            self.assertEqual(stderr_records, [])
+            self.assert_response(response, "ok", 0)
+            self.assert_route_aware_required_resolution(response, expected_snapshot=expected_snapshot)
+            self.assert_route_aware_helper_omitted_no_file(response, destination)
+            self.assert_route_aware_apply_mutation_evidence(response)
+            self.assert_route_aware_required_destination_bytes(response, destination)
+            self.assertEqual(len(response["data"]["mutation"]["applied_operations"]), 12)
+
+    def test_install_codex_agents_route_aware_dry_run_removes_managed_helper_by_trusted_provenance(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            manifest_path = self.write_valid_route_policy_manifest(git_root)
+            expected_snapshot = routing_capability_snapshot()
+            expected_snapshot["available_routes"] = ["required-primary", "required-fallback"]
+            destination = git_root / ".codex" / "agents"
+            destination.mkdir(parents=True)
+            helper_path = destination / f"{routing_optional_helper()}.toml"
+            helper_bytes = b"plugin managed helper\n"
+            helper_path.write_bytes(helper_bytes)
+            inputs = self.route_aware_inputs(manifest_path, git_root)
+            inputs["test_overrides"] = {"codex_capability_snapshot": expected_snapshot}
+            inputs["managed_helper_provenance"] = {
+                "helper_name": routing_optional_helper(),
+                "destination": ".codex/agents/autopilot-fast-helper.toml",
+                "installer_id": "install-codex-agents",
+                "source_roster_id": valid_route_policy_manifest()["source_roster"]["source_roster_id"],
+                "manifest_id": valid_route_policy_manifest()["manifest_id"],
+                "destination_digest": f"sha256:{hashlib.sha256(helper_bytes).hexdigest()}",
+            }
+
+            completed, response, stderr_records = run_runner(
+                helper_request("install-codex-agents", inputs=inputs),
+                cwd=git_root,
+            )
+
+            self.assertEqual(completed.returncode, 0)
+            self.assertEqual(stderr_records, [])
+            self.assert_response(response, "ok", 0)
+            self.assert_route_aware_required_resolution(response, expected_snapshot=expected_snapshot)
+            self.assert_route_aware_managed_helper_removal(response, proof_status="trusted_provenance")
+            self.assert_route_aware_helper_removal_evidence(response, destination)
+            self.assertTrue(helper_path.exists())
+
+    def test_install_codex_agents_route_aware_apply_removes_managed_helper_by_known_rendered_digest(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            manifest_path = self.write_valid_route_policy_manifest(git_root)
+            expected_snapshot = routing_capability_snapshot()
+            expected_snapshot["available_routes"] = ["required-primary", "required-fallback"]
+            destination = git_root / ".codex" / "agents"
+            destination.mkdir(parents=True)
+            helper_path = destination / f"{routing_optional_helper()}.toml"
+            helper_path.write_bytes(route_rendered_optional_helper_bytes())
+            inputs = self.route_aware_inputs(manifest_path, git_root)
+            inputs["test_overrides"] = {"codex_capability_snapshot": expected_snapshot}
+
+            completed, response, stderr_records = run_runner(
+                helper_request("install-codex-agents", mode="apply", inputs=inputs),
+                cwd=git_root,
+            )
+
+            self.assertEqual(completed.returncode, 0)
+            self.assertEqual(stderr_records, [])
+            self.assert_response(response, "ok", 0)
+            self.assert_route_aware_required_resolution(response, expected_snapshot=expected_snapshot)
+            self.assert_route_aware_managed_helper_removal(response, proof_status="known_rendered_digest")
+            self.assert_route_aware_apply_mutation_evidence(response)
+            self.assert_route_aware_required_destination_bytes(response, destination)
+            self.assertFalse(helper_path.exists())
+
+    def test_install_codex_agents_route_aware_apply_preserves_unmanaged_same_name_helpers(self) -> None:
+        rendered_helper = route_rendered_optional_helper_bytes()
+        cases = [
+            ("filename-only", b"same filename without TOML proof\n"),
+            ("syntactic-toml", b'name = "autopilot-fast-helper"\nmodel = "user-owned-model"\n'),
+            ("parsed-equivalent", b"# comment is not byte proof\n" + rendered_helper),
+            (
+                "normalized-content",
+                rendered_helper.replace(
+                    b'model = "gpt-5.3-codex-spark"\n',
+                    b'model    =    "gpt-5.3-codex-spark"\n',
+                    1,
+                ),
+            ),
+            (
+                "user-modified-same-name",
+                b'name = "autopilot-fast-helper"\n'
+                b'description = "User-owned helper with the same filename."\n'
+                b'model = "gpt-5.3-codex-spark"\n'
+                b'developer_instructions = """Do user-specific work only."""\n',
+            ),
+        ]
+        for label, helper_bytes in cases:
+            with self.subTest(label=label):
+                tmp, git_root = self.temp_clean_git_repo()
+                with tmp, tempfile.TemporaryDirectory() as home_tmp:
+                    fake_home = Path(home_tmp).resolve()
+                    manifest_path = self.write_valid_route_policy_manifest(git_root)
+                    expected_snapshot = routing_capability_snapshot()
+                    expected_snapshot["available_routes"] = ["required-primary", "required-fallback"]
+                    destination = fake_home / ".codex" / "agents"
+                    destination.mkdir(parents=True)
+                    helper_path = destination / f"{routing_optional_helper()}.toml"
+                    helper_path.write_bytes(helper_bytes)
+                    inputs = self.route_aware_inputs(manifest_path, git_root, destination=None)
+                    inputs["test_overrides"] = {"codex_capability_snapshot": expected_snapshot}
+                    env = {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}
+
+                    completed, response, stderr_records = run_runner(
+                        helper_request("install-codex-agents", mode="apply", inputs=inputs),
+                        cwd=git_root,
+                        env_overrides=env,
+                    )
+
+                    self.assertEqual(completed.returncode, 0)
+                    self.assertEqual(stderr_records, [])
+                    self.assert_response(response, "ok", 0)
+                    self.assert_route_aware_required_resolution(response, expected_snapshot=expected_snapshot)
+                    self.assert_route_aware_unmanaged_helper_preserved(response, destination)
+                    self.assert_route_aware_apply_mutation_evidence(response)
+                    self.assert_route_aware_required_destination_bytes(response, destination)
+                    self.assert_route_aware_helper_preserved_without_removal(response, destination, helper_bytes)
+
+    def test_install_codex_agents_strict_required_override_uses_one_tuple_per_required_agent(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            manifest_path = self.write_valid_route_policy_manifest(git_root)
+            expected_snapshot = routing_capability_snapshot()
+            expected_snapshot["available_routes"] = ["required-fallback", "helper-primary"]
+            inputs = self.route_aware_inputs(manifest_path, git_root)
+            inputs["strict_model_override"] = "gpt-5.4"
+            inputs["test_overrides"] = {"codex_capability_snapshot": expected_snapshot}
+
+            completed, response, stderr_records = run_runner(
+                helper_request("install-codex-agents", inputs=inputs),
+                cwd=git_root,
+            )
+
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(stderr_records, [])
+        self.assert_response(response, "ok", 0)
+        self.assert_route_aware_snapshot_response(
+            response,
+            manifest_path=manifest_path,
+            git_root=git_root,
+            expected_snapshot=expected_snapshot,
+        )
+        self.assert_strict_required_override_evidence(response, model="gpt-5.4", expected_status="compatible")
+        self.assert_route_aware_no_mutation_yet(response)
+
+    def test_install_codex_agents_strict_required_override_miss_reports_all_required_without_writes(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            manifest = strict_override_required_miss_manifest()
+            manifest_path = self.write_route_policy_manifest(git_root, manifest)
+            expected_snapshot = routing_capability_snapshot()
+            expected_snapshot["available_routes"] = ["required-fallback", "helper-primary"]
+            inputs = self.route_aware_inputs(manifest_path, git_root)
+            inputs["strict_model_override"] = "gpt-5.4"
+            inputs["test_overrides"] = {"codex_capability_snapshot": expected_snapshot}
+            destination = git_root / ".codex" / "agents"
+
+            completed, response, stderr_records = run_runner(
+                helper_request("install-codex-agents", mode="apply", inputs=inputs),
+                cwd=git_root,
+            )
+
+            self.assertEqual(completed.returncode, 1)
+            self.assertEqual([diag["code"] for diag in stderr_records], ["codex_strict_override_required_unresolved"])
+            self.assert_response(response, "expected_failure", 1)
+            self.assert_route_aware_snapshot_response(
+                response,
+                manifest_path=manifest_path,
+                git_root=git_root,
+                expected_snapshot=expected_snapshot,
+                expected_manifest=manifest,
+            )
+            self.assert_strict_required_override_evidence(response, model="gpt-5.4", expected_status="incompatible")
+            records = {record["agent_name"]: record for record in response["data"]["routing"]["required_agents"]}
+            self.assertEqual(records["analyze-executor"]["terminal_outcome"], "unresolved")
+            self.assertIsNone(records["analyze-executor"]["selected_route"])
+            self.assertEqual(records["analyze-executor"]["attempted_routes"][0]["outcome"], "rejected")
+            self.assertEqual(records["analyze-executor"]["attempted_routes"][0]["reason"], "strict_override_route_missing")
+            self.assert_strict_required_override_zero_mutation(response)
+            self.assertFalse(destination.exists())
+
+    def test_install_codex_agents_route_aware_required_miss_preserves_fake_home_prior_state(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp, tempfile.TemporaryDirectory() as home_tmp:
+            fake_home = Path(home_tmp).resolve()
+            manifest_path = self.write_valid_route_policy_manifest(git_root)
+            expected_snapshot = routing_capability_snapshot()
+            expected_snapshot["available_routes"] = []
+            destination = fake_home / ".codex" / "agents"
+            destination.mkdir(parents=True)
+            prior_agent_bytes = {
+                agent_name: f"previous known-good {agent_name}\n".encode("utf-8")
+                for agent_name in routing_required_agents()
+            }
+            for agent_name, content in prior_agent_bytes.items():
+                (destination / f"{agent_name}.toml").write_bytes(content)
+            inputs = self.route_aware_inputs(manifest_path, git_root, destination=None)
+            inputs["test_overrides"] = {"codex_capability_snapshot": expected_snapshot}
+            env = {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}
+
+            completed, response, stderr_records = run_runner(
+                helper_request("install-codex-agents", mode="apply", inputs=inputs),
+                cwd=git_root,
+                env_overrides=env,
+            )
+
+            self.assertEqual(completed.returncode, 1)
+            self.assertEqual([diag["code"] for diag in stderr_records], ["codex_route_required_agent_unresolved"])
+            self.assert_response(response, "expected_failure", 1)
+            self.assert_route_aware_snapshot_response(
+                response,
+                manifest_path=manifest_path,
+                git_root=git_root,
+                expected_snapshot=expected_snapshot,
+            )
+            self.assert_route_aware_required_miss_zero_mutation(
+                response,
+                expected_snapshot=expected_snapshot,
+                prior_agent_bytes=prior_agent_bytes,
+                destination=destination,
+            )
+
+    def test_install_codex_agents_strict_helper_override_installs_compatible_helper(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            manifest = strict_override_helper_compatible_manifest()
+            manifest_path = self.write_route_policy_manifest(git_root, manifest)
+            expected_snapshot = routing_capability_snapshot()
+            expected_snapshot["available_routes"] = ["required-helper-compatible", "helper-primary"]
+            inputs = self.route_aware_inputs(manifest_path, git_root)
+            inputs["strict_model_override"] = "gpt-5.3-codex-spark"
+            inputs["test_overrides"] = {"codex_capability_snapshot": expected_snapshot}
+
+            completed, response, stderr_records = run_runner(
+                helper_request("install-codex-agents", inputs=inputs),
+                cwd=git_root,
+            )
+
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(stderr_records, [])
+        self.assert_response(response, "ok", 0)
+        self.assert_route_aware_snapshot_response(
+            response,
+            manifest_path=manifest_path,
+            git_root=git_root,
+            expected_snapshot=expected_snapshot,
+            expected_manifest=manifest,
+        )
+        self.assert_strict_helper_override_evidence(
+            response,
+            model="gpt-5.3-codex-spark",
+            helper_status="compatible",
+            helper_outcome="installed",
+        )
+        helper = response["data"]["routing"]["optional_helper_decision"]
+        self.assertEqual(helper["selected_route"]["model"], "gpt-5.3-codex-spark")
+        self.assertEqual(helper["selected_route"]["model_reasoning_effort"], "high")
+
+    def test_install_codex_agents_strict_helper_override_uses_valid_no_helper_without_helper_fallback(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            manifest_path = self.write_valid_route_policy_manifest(git_root)
+            expected_snapshot = routing_capability_snapshot()
+            expected_snapshot["available_routes"] = ["required-fallback"]
+            inputs = self.route_aware_inputs(manifest_path, git_root)
+            inputs["strict_model_override"] = "gpt-5.4"
+            inputs["test_overrides"] = {"codex_capability_snapshot": expected_snapshot}
+
+            completed, response, stderr_records = run_runner(
+                helper_request("install-codex-agents", inputs=inputs),
+                cwd=git_root,
+            )
+
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(stderr_records, [])
+        self.assert_response(response, "ok", 0)
+        self.assert_strict_required_override_evidence(response, model="gpt-5.4", expected_status="compatible")
+        self.assert_strict_helper_override_evidence(
+            response,
+            model="gpt-5.4",
+            helper_status="incompatible_no_helper",
+            helper_outcome="omitted",
+        )
+        helper = response["data"]["routing"]["optional_helper_decision"]
+        self.assertIsNone(helper["selected_route"])
+        self.assertTrue(helper["no_helper_validation"]["selected"])
+        self.assertEqual(helper["attempted_routes"][0]["reason"], "strict_override_route_missing")
+
+    def test_install_codex_agents_strict_helper_override_invalid_no_helper_fails_before_mutation(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            manifest = strict_override_invalid_no_helper_manifest()
+            manifest_path = self.write_route_policy_manifest(git_root, manifest)
+            expected_snapshot = routing_capability_snapshot()
+            expected_snapshot["available_routes"] = ["required-fallback"]
+            inputs = self.route_aware_inputs(manifest_path, git_root)
+            inputs["strict_model_override"] = "gpt-5.4"
+            inputs["test_overrides"] = {"codex_capability_snapshot": expected_snapshot}
+            destination = git_root / ".codex" / "agents"
+
+            completed, response, stderr_records = run_runner(
+                helper_request("install-codex-agents", mode="apply", inputs=inputs),
+                cwd=git_root,
+            )
+
+            self.assertEqual(completed.returncode, 1)
+            self.assertEqual([diag["code"] for diag in stderr_records], ["codex_strict_override_helper_unresolved"])
+            self.assert_response(response, "expected_failure", 1)
+            self.assert_route_aware_snapshot_response(
+                response,
+                manifest_path=manifest_path,
+                git_root=git_root,
+                expected_snapshot=expected_snapshot,
+                expected_manifest=manifest,
+            )
+            self.assert_strict_required_override_evidence(response, model="gpt-5.4", expected_status="compatible")
+            self.assert_strict_helper_override_evidence(
+                response,
+                model="gpt-5.4",
+                helper_status="unresolved",
+                helper_outcome="unresolved",
+            )
+            self.assert_strict_required_override_zero_mutation(response)
+            self.assertFalse(destination.exists())
+
+    def test_install_codex_agents_static_mode_does_not_capture_capability_snapshot(self) -> None:
+        from speckit_pro_runner.helpers import install
+        from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            request = SimpleNamespace(
+                request_id="test-static-mode-skips-snapshot",
+                helper_id="install-codex-agents",
+                operation="install-codex-agents",
+                mode="dry_run",
+                inputs={"destination": ".codex/agents", "model": "gpt-5.5"},
+            )
+            old_cwd = Path.cwd()
+            os.chdir(git_root)
+            try:
+                with patch.object(install, "capture_codex_runtime_capabilities", side_effect=AssertionError("static mode captured capabilities")):
+                    response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
+            finally:
+                os.chdir(old_cwd)
+
+        self.assert_response(response, "ok", 0)
+        self.assertNotIn("routing", response["data"])
+        self.assertEqual(response["data"]["agent_files"], list(install.CODEX_SOURCE_AGENT_TOML_NAMES))
+        self.assertEqual(response["data"]["model"], "gpt-5.5")
+        self.assertEqual(response["data"]["mutation"]["mutation_status"], "planned")
+        self.assertEqual(len(response["data"]["mutation"]["planned_operations"]), 13)
+        self.assertEqual(response["data"]["verification"], {"status": "planned", "matched_files": []})
+        self.assertFalse(response["data"]["writes_state"])
+        self.assertFalse(response["data"]["restart_required"])
 
     def test_unpromoted_helpers_fail_closed_before_dispatch_in_all_mutation_modes(self) -> None:
         cases = [

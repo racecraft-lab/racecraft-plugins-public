@@ -33,22 +33,27 @@ default user-scope path above.
 This skill installs the bundled TOML subagent templates that the
 Codex autopilot expects to exist as real custom subagents:
 
-- `autopilot-fast-helper.toml`
-- `phase-executor.toml`
-- `clarify-executor.toml`
-- `checklist-executor.toml`
 - `analyze-executor.toml`
-- `implement-executor.toml`
+- `artifact-author.toml`
+- `autopilot-fast-helper.toml`
+- `checklist-executor.toml`
+- `clarify-executor.toml`
 - `codebase-analyst.toml`
-- `spec-context-analyst.toml`
 - `domain-researcher.toml`
+- `implement-executor.toml`
+- `phase-executor.toml`
+- `spec-context-analyst.toml`
+- `sweep-analyst.toml`
+- `sweep-classifier.toml`
 - `uat-runbook-author.toml`
 
-`autopilot-fast-helper.toml` is optional at runtime. The main
-autopilot may use it for tiny advisory text-only prep work when
-`gpt-5.3-codex-spark` is available, but autopilot must continue
-without it if that model is unavailable in the current Codex
-environment.
+The bundled source inventory is strict: all 13 TOML files must be present
+before the installer plans either static or route-aware destination changes.
+In route-aware planning, 12 files are required destination agents and
+`autopilot-fast-helper.toml` is the only optional helper. The main autopilot
+may use that helper for tiny advisory text-only prep work when
+`gpt-5.3-codex-spark` is available, but autopilot must continue without it if
+the helper is unavailable and no-helper continuation validates.
 
 These files follow the official Codex subagent format: one standalone
 TOML file per custom agent, with required `name`, `description`, and
@@ -88,6 +93,89 @@ plugin. It does not mutate plugin caches or marketplace directories. Its
 `dry_run` is content-aware: same-named destination files whose rendered content
 differs are planned for refresh, while current files are reported as no-ops.
 
+## Static and Route-aware Modes
+
+The default install path is static compatibility mode. If the request does not
+include `route_policy_manifest`, the helper preserves the existing 13-file
+route-agnostic copy/verify behavior:
+
+- `data.routing` is absent.
+- No capability discovery, bounded probe, route-policy evaluation, optional
+  helper omission/removal/preservation, or strict override validation runs.
+- Existing mechanical response fields remain authoritative for the copy:
+  `agent_files`, `model`, `source`, `destination`, `mutation`,
+  `verification`, `writes_state`, and `restart_required`.
+
+Route-aware mode activates only when the request supplies an explicit
+`route_policy_manifest` path. Inline policy objects, inferred bundled defaults,
+or a vague "use routing" request must not activate route-aware mode. The
+manifest must be a supported, closed, repository-local document that binds the
+current 13-TOML source roster, declares exactly 12 required policies, declares
+the `autopilot-fast-helper` policy/no-helper state, and admits every route
+candidate and bounded probe used by the run.
+
+Route-aware mode returns `data.routing` with:
+
+- one runtime capability snapshot for the whole invocation, with child probe
+  evidence when native discovery is unavailable
+- required-agent resolution records in canonical 12-agent order
+- optional-helper decision evidence
+- strict-override evidence when requested
+- recovery-or-mutation evidence for planned/applied writes, removals, rollback,
+  restart requirement, and manual remediation
+
+G56R-006 route-aware evidence is deterministic framework evidence only. It uses
+injected discovery/probe fixtures and fake-home or temporary project
+destinations for acceptance. Do not use route-aware G56R-006 acceptance to write
+the operator's real `~/.codex/agents/`, and do not describe the result as live
+UAT or production route qualification. Production route qualification is owned
+by later G56R work.
+
+### Strict override behavior
+
+If `strict_model_override` is supplied in route-aware mode, required agents
+evaluate exactly one override-derived tuple per required agent. The run does not
+walk preferred or fallback routes after an override miss. Required-agent
+incompatibility fails before mutation after all 12 required diagnostics are
+complete.
+
+The optional helper follows the override only when a compatible helper tuple
+exists. If the helper tuple is incompatible and no-helper continuation
+validates, the helper is omitted or the existing same-named helper is handled by
+the ownership rules below. If no-helper continuation does not validate, the
+route-aware batch fails before mutation.
+
+### Optional helper outcomes
+
+Route-aware optional-helper outcomes are:
+
+- `installed`: a manifest-admitted helper route resolves and materializes
+- `omitted`: no helper route is available, no existing helper file is present,
+  and no-helper continuation validates
+- `removed`: an existing helper is removed only with trusted runner-owned
+  provenance or exact known rendered-byte digest proof
+- `preserved`: an existing same-named helper lacks managed ownership proof and
+  is left in place with bounded manual-remediation evidence
+- `unresolved`: neither a compatible helper nor validated no-helper
+  continuation is available, so the batch fails before mutation
+
+Filename, location, syntactic TOML validity, parsed equivalence, and normalized
+content do not prove helper ownership.
+
+### Recovery evidence
+
+Route-aware apply plans all required writes and managed-helper removals as one
+rollback-backed batch. Before mutation, it captures prior bytes and file modes
+for each planned destination action. On failure:
+
+- successful rollback reports `rollback_outcome=restored`,
+  `writes_state=false`, `restart_required=false`, and no verification success
+- failed or uncertain rollback reports every unrestored action and error,
+  `writes_state=true` or uncertain state, `restart_required=true`, bounded
+  manual remediation, and no verification success
+- required-route pre-mutation failures report zero planned/applied writes and
+  removals, `writes_state=false`, and `restart_required=false`
+
 ## Hard Constraints
 
 - Never touch `.claude/agents/`, `.claude-plugin/`, `commands/`, or any
@@ -100,6 +188,9 @@ differs are planned for refresh, while current files are reported as no-ops.
 - Overwrite only same-named SpecKit Pro agent files in the target directory.
 - If the source bundle is missing or incomplete, STOP and report the exact
   missing files.
+- Do not use the operator's real home directory for G56R-006 route-aware
+  acceptance evidence. Use a fake HOME/USERPROFILE or a temporary project
+  `.codex/agents/` destination.
 - After an applied change, always finish by telling the user to restart Codex.
   A no-op verification does not require another restart.
 
@@ -140,11 +231,23 @@ with the selected destination. Run it first in `dry_run` mode, then in
 `apply` mode after the plan matches the requested destination and model
 override. Use `gpt-5.4` only when fallback mode was requested.
 
-The structured request inputs are:
+For static compatibility mode, omit `route_policy_manifest`. The structured
+request inputs are:
 
 - `destination`: omit for `~/.codex/agents/`, or set to `.codex/agents/` for
   current-project scope
 - `model`: `gpt-5.5` or `gpt-5.4`
+
+For route-aware mode, use only an explicit trusted manifest path:
+
+- `destination`: omit for `~/.codex/agents/`, or set to `.codex/agents/` for
+  current-project scope
+- `route_policy_manifest`: repository-local manifest path
+- `strict_model_override`: optional model string for strict route validation
+
+Do not mix static `model` fallback semantics with route-aware manifest
+activation. Route-aware destination bytes come from the selected manifest
+routes and materialization proof.
 
 The helper must be the only mechanism used for copying files. Do not
 re-implement the copy loop inline unless the helper itself is broken and
@@ -198,15 +301,18 @@ Return a concise installation report like:
 **Destination:** <HOME>/.codex/agents
 
 **Installed files:**
-- autopilot-fast-helper.toml
-- phase-executor.toml
-- clarify-executor.toml
-- checklist-executor.toml
 - analyze-executor.toml
-- implement-executor.toml
+- artifact-author.toml
+- autopilot-fast-helper.toml
+- checklist-executor.toml
+- clarify-executor.toml
 - codebase-analyst.toml
-- spec-context-analyst.toml
 - domain-researcher.toml
+- implement-executor.toml
+- phase-executor.toml
+- spec-context-analyst.toml
+- sweep-analyst.toml
+- sweep-classifier.toml
 - uat-runbook-author.toml
 
 **Next step:** Restart Codex now so the custom subagents are loaded.
@@ -222,5 +328,8 @@ Stop instead of improvising when:
 - the destination cannot be created
 - post-copy verification does not match the bundled source set
 
-If the install partially succeeded, report exactly what copied and what still
-needs repair. Do not silently continue.
+If the install partially succeeded or rollback is uncertain, report the
+structured recovery evidence: staged actions, applied actions, rolled-back
+actions, cleanup actions/errors, failed actions, unrestored actions, restart
+requirement, and bounded manual-remediation guidance. Do not silently continue
+or claim verification success.

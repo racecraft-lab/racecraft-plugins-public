@@ -1,0 +1,476 @@
+{
+  "schema_version": "1.0",
+  "feature_id": "G56R-006",
+  "required_agents": [
+    "analyze-executor",
+    "artifact-author",
+    "checklist-executor",
+    "clarify-executor",
+    "codebase-analyst",
+    "domain-researcher",
+    "implement-executor",
+    "phase-executor",
+    "spec-context-analyst",
+    "sweep-analyst",
+    "sweep-classifier",
+    "uat-runbook-author"
+  ],
+  "optional_helper": "autopilot-fast-helper",
+  "base_case": {
+    "manifest": {
+      "schema_version": "1.0.0",
+      "provenance_id": "fixture:g56r-006",
+      "required_route": {
+        "route_id": "required-primary",
+        "model": "gpt-5.5",
+        "model_reasoning_effort": "xhigh",
+        "capabilities": [
+          "reasoning",
+          "tools"
+        ],
+        "probe_id": null
+      },
+      "required_fallback": {
+        "route_id": "required-fallback",
+        "model": "gpt-5.4",
+        "model_reasoning_effort": "xhigh",
+        "capabilities": [
+          "reasoning",
+          "tools"
+        ],
+        "probe_id": null
+      },
+      "helper_route": {
+        "route_id": "helper-primary",
+        "model": "gpt-5.3-codex-spark",
+        "model_reasoning_effort": "high",
+        "capabilities": [
+          "fast_text"
+        ],
+        "probe_id": null
+      },
+      "no_helper": {
+        "allowed": true,
+        "reason": "fixture policy permits required-only continuation"
+      },
+      "bounded_probes": {}
+    },
+    "capability_snapshot": {
+      "snapshot_id": "snapshot:g56r-006:001",
+      "adapter_id": "fixture-adapter.v1",
+      "native_discovery": true,
+      "available_routes": [
+        "required-primary",
+        "required-fallback",
+        "helper-primary"
+      ],
+      "child_probe_results": []
+    },
+    "destination": {
+      "kind": "fake_home",
+      "existing_files": {},
+      "faults": []
+    }
+  },
+  "cases": [
+    {
+      "case_id": "valid-route-aware-dry-run",
+      "category": "valid",
+      "overrides": {},
+      "expected": {
+        "status": "ok",
+        "required_outcome": "resolved",
+        "required_count": 12,
+        "helper_outcome": "installed",
+        "writes_state": false,
+        "restart_required": false
+      }
+    },
+    {
+      "case_id": "invalid-unsupported-schema-version",
+      "category": "invalid_manifest",
+      "overrides": {
+        "manifest.schema_version": "2.0.0"
+      },
+      "expected": {
+        "status": "input_error",
+        "diagnostic_code": "invalid_route_policy_manifest",
+        "snapshot_captured": false,
+        "writes_state": false
+      }
+    },
+    {
+      "case_id": "invalid-unknown-top-level-key",
+      "category": "invalid_manifest",
+      "overrides": {
+        "manifest.unknown_key": true
+      },
+      "expected": {
+        "status": "input_error",
+        "diagnostic_code": "invalid_route_policy_manifest",
+        "snapshot_captured": false,
+        "writes_state": false
+      }
+    },
+    {
+      "case_id": "invalid-manifest-id",
+      "category": "invalid_manifest",
+      "overrides": {
+        "manifest.manifest_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expected": {
+        "status": "input_error",
+        "diagnostic_code": "invalid_route_policy_manifest",
+        "snapshot_captured": false,
+        "writes_state": false
+      }
+    },
+    {
+      "case_id": "invalid-source-roster-digest",
+      "category": "invalid_manifest",
+      "overrides": {
+        "manifest.source_roster.source_roster_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expected": {
+        "status": "input_error",
+        "diagnostic_code": "invalid_route_policy_manifest",
+        "snapshot_captured": false,
+        "writes_state": false
+      }
+    },
+    {
+      "case_id": "invalid-required-roster-missing-agent",
+      "category": "invalid_manifest",
+      "overrides": {
+        "manifest.remove_required_agent": "uat-runbook-author"
+      },
+      "expected": {
+        "status": "input_error",
+        "diagnostic_code": "invalid_route_policy_manifest",
+        "snapshot_captured": false,
+        "writes_state": false
+      }
+    },
+    {
+      "case_id": "invalid-manifest-path-outside-repository",
+      "category": "invalid_manifest_path",
+      "overrides": {
+        "request.route_policy_manifest": "/tmp/g56r-006-route-policy.json"
+      },
+      "expected": {
+        "status": "input_error",
+        "diagnostic_code": "invalid_route_policy_manifest_path",
+        "snapshot_captured": false,
+        "writes_state": false
+      }
+    },
+    {
+      "case_id": "strict-override-required-compatible",
+      "category": "strict_override",
+      "overrides": {
+        "request.strict_model_override": "gpt-5.4"
+      },
+      "expected": {
+        "status": "ok",
+        "strict_override_status": "compatible",
+        "required_agents_evaluated": 12,
+        "attempts_per_required_agent": 1,
+        "fallback_suppressed": true
+      }
+    },
+    {
+      "case_id": "strict-override-required-incompatible",
+      "category": "strict_override",
+      "overrides": {
+        "request.strict_model_override": "gpt-5.4",
+        "capability_snapshot.unavailable_for": [
+          "analyze-executor"
+        ]
+      },
+      "expected": {
+        "status": "expected_failure",
+        "strict_override_status": "incompatible",
+        "required_agents_evaluated": 12,
+        "attempts_per_required_agent": 1,
+        "fallback_suppressed": true,
+        "planned_writes": 0,
+        "planned_removals": 0,
+        "writes_state": false,
+        "restart_required": false
+      }
+    },
+    {
+      "case_id": "strict-override-helper-compatible",
+      "category": "strict_override",
+      "overrides": {
+        "request.strict_model_override": "gpt-5.3-codex-spark"
+      },
+      "expected": {
+        "status": "ok",
+        "helper_outcome": "installed",
+        "helper_evaluated": true
+      }
+    },
+    {
+      "case_id": "strict-override-helper-incompatible-no-helper-valid",
+      "category": "strict_override",
+      "overrides": {
+        "request.strict_model_override": "gpt-5.4",
+        "capability_snapshot.available_routes": [
+          "required-fallback"
+        ]
+      },
+      "expected": {
+        "status": "ok",
+        "helper_outcome": "omitted",
+        "no_helper_valid": true
+      }
+    },
+    {
+      "case_id": "strict-override-helper-incompatible-no-helper-invalid",
+      "category": "strict_override",
+      "overrides": {
+        "request.strict_model_override": "gpt-5.4",
+        "manifest.no_helper.allowed": false,
+        "capability_snapshot.available_routes": [
+          "required-fallback"
+        ]
+      },
+      "expected": {
+        "status": "expected_failure",
+        "helper_outcome": "unresolved",
+        "planned_writes": 0,
+        "writes_state": false,
+        "restart_required": false
+      }
+    },
+    {
+      "case_id": "helper-unavailable-no-file",
+      "category": "optional_helper",
+      "overrides": {
+        "capability_snapshot.available_routes": [
+          "required-primary",
+          "required-fallback"
+        ]
+      },
+      "expected": {
+        "status": "ok",
+        "helper_outcome": "omitted",
+        "planned_removals": 0,
+        "no_helper_valid": true
+      }
+    },
+    {
+      "case_id": "helper-unavailable-managed-provenance",
+      "category": "optional_helper",
+      "overrides": {
+        "capability_snapshot.available_routes": [
+          "required-primary",
+          "required-fallback"
+        ],
+        "destination.existing_files.autopilot-fast-helper.toml": "runner_provenance_match"
+      },
+      "expected": {
+        "status": "ok",
+        "helper_outcome": "removed",
+        "ownership_proof": "trusted_provenance",
+        "planned_removals": 1
+      }
+    },
+    {
+      "case_id": "helper-unavailable-known-rendered-bytes",
+      "category": "optional_helper",
+      "overrides": {
+        "capability_snapshot.available_routes": [
+          "required-primary",
+          "required-fallback"
+        ],
+        "destination.existing_files.autopilot-fast-helper.toml": "known_rendered_digest_match"
+      },
+      "expected": {
+        "status": "ok",
+        "helper_outcome": "removed",
+        "ownership_proof": "known_rendered_bytes",
+        "planned_removals": 1
+      }
+    },
+    {
+      "case_id": "helper-unavailable-user-modified",
+      "category": "optional_helper",
+      "overrides": {
+        "capability_snapshot.available_routes": [
+          "required-primary",
+          "required-fallback"
+        ],
+        "destination.existing_files.autopilot-fast-helper.toml": "user_modified"
+      },
+      "expected": {
+        "status": "ok",
+        "helper_outcome": "preserved",
+        "ownership_proof": null,
+        "planned_removals": 0,
+        "manual_remediation": true
+      }
+    },
+    {
+      "case_id": "native-discovery-unavailable-probe-success",
+      "category": "bounded_probe",
+      "overrides": {
+        "capability_snapshot.native_discovery": false,
+        "manifest.bounded_probes.required-primary": "probe-required-primary",
+        "capability_snapshot.child_probe_results": [
+          {
+            "probe_id": "probe-required-primary",
+            "outcome": "compatible"
+          }
+        ]
+      },
+      "expected": {
+        "status": "ok",
+        "snapshot_count": 1,
+        "probe_is_child_evidence": true,
+        "candidate_widened": false
+      }
+    },
+    {
+      "case_id": "native-discovery-unavailable-probe-failure",
+      "category": "bounded_probe",
+      "overrides": {
+        "capability_snapshot.native_discovery": false,
+        "manifest.bounded_probes.required-primary": "probe-required-primary",
+        "capability_snapshot.child_probe_results": [
+          {
+            "probe_id": "probe-required-primary",
+            "outcome": "unavailable"
+          }
+        ]
+      },
+      "expected": {
+        "status": "expected_failure",
+        "snapshot_count": 1,
+        "probe_is_child_evidence": true,
+        "candidate_widened": false,
+        "planned_writes": 0
+      }
+    },
+    {
+      "case_id": "probe-not-admitted-by-manifest",
+      "category": "bounded_probe",
+      "overrides": {
+        "capability_snapshot.native_discovery": false,
+        "capability_snapshot.child_probe_results": [
+          {
+            "probe_id": "unadmitted-probe",
+            "outcome": "compatible"
+          }
+        ]
+      },
+      "expected": {
+        "status": "expected_failure",
+        "candidate_widened": false,
+        "planned_writes": 0
+      }
+    },
+    {
+      "case_id": "required-route-miss",
+      "category": "resolution_failure",
+      "overrides": {
+        "capability_snapshot.unavailable_for": [
+          "analyze-executor"
+        ]
+      },
+      "expected": {
+        "status": "expected_failure",
+        "required_agents_evaluated": 12,
+        "planned_writes": 0,
+        "planned_removals": 0,
+        "writes_state": false,
+        "restart_required": false
+      }
+    },
+    {
+      "case_id": "apply-write-failure-rollback-restored",
+      "category": "filesystem_failure",
+      "overrides": {
+        "request.mode": "apply",
+        "destination.faults": [
+          {
+            "kind": "write_failure",
+            "target": "implement-executor.toml"
+          }
+        ],
+        "destination.rollback": "succeeds"
+      },
+      "expected": {
+        "status": "expected_failure",
+        "rollback_outcome": "restored",
+        "pre_final_state_match": true,
+        "writes_state": false,
+        "restart_required": false,
+        "verification_status": "failed"
+      }
+    },
+    {
+      "case_id": "apply-verification-failure-rollback-restored",
+      "category": "filesystem_failure",
+      "overrides": {
+        "request.mode": "apply",
+        "destination.faults": [
+          {
+            "kind": "verification_failure",
+            "target": "phase-executor.toml"
+          }
+        ],
+        "destination.rollback": "succeeds"
+      },
+      "expected": {
+        "status": "expected_failure",
+        "rollback_outcome": "restored",
+        "pre_final_state_match": true,
+        "writes_state": false,
+        "restart_required": false,
+        "verification_status": "failed"
+      }
+    },
+    {
+      "case_id": "apply-failure-rollback-incomplete",
+      "category": "rollback_failure",
+      "overrides": {
+        "request.mode": "apply",
+        "destination.faults": [
+          {
+            "kind": "write_failure",
+            "target": "implement-executor.toml"
+          },
+          {
+            "kind": "rollback_failure",
+            "target": "analyze-executor.toml"
+          }
+        ],
+        "destination.rollback": "fails"
+      },
+      "expected": {
+        "status": "expected_failure",
+        "rollback_outcome": "incomplete",
+        "writes_state": "uncertain",
+        "restart_required": true,
+        "manual_remediation": true,
+        "verification_status": "failed"
+      }
+    },
+    {
+      "case_id": "unsafe-destination-entry",
+      "category": "filesystem_failure",
+      "overrides": {
+        "destination.existing_files.analyze-executor.toml": "symlink"
+      },
+      "expected": {
+        "status": "input_error",
+        "diagnostic_code": "unsafe_agent_destination",
+        "planned_writes": 0,
+        "writes_state": false,
+        "restart_required": false
+      }
+    }
+  ]
+}

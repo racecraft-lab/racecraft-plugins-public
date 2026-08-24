@@ -53,6 +53,43 @@ EXPECTED_ROUTE = {
     "model_reasoning_effort": "xhigh",
 }
 EXPECTED_PARENT_CONTROLS = {"sandbox_mode": "workspace-write"}
+ROUTE_SOURCE_BYTES = (
+    b'name = "fixture-agent"\n'
+    b'description = "Fixture agent for route materialization."\n'
+    b'model = "gpt-5.5"\n'
+    b'model_reasoning_effort = "xhigh"\n'
+    b'sandbox_mode = "workspace-write"\n'
+    b'tools = ["shell", "apply_patch"]\n'
+    b'skills = ["speckit-autopilot"]\n'
+    b'mcp_servers = ["context7"]\n'
+    b'mutation_policy = "fake-home-only"\n'
+    b'output_contract = "structured-json"\n'
+    b'developer_instructions = """\n'
+    b'# Fixture Agent\n'
+    b'\n'
+    b'Return exact evidence.\n'
+    b'"""\n'
+)
+ROUTE_DESTINATION_BYTES = ROUTE_SOURCE_BYTES.replace(
+    b'model = "gpt-5.5"\nmodel_reasoning_effort = "xhigh"\n',
+    b'model = "gpt-5.4"\nmodel_reasoning_effort = "high"\n',
+)
+SELECTED_ROUTE = {
+    "agent_name": "fixture-agent",
+    "model": "gpt-5.4",
+    "model_reasoning_effort": "high",
+}
+NON_ROUTE_FIELDS = {
+    "name",
+    "description",
+    "sandbox_mode",
+    "tools",
+    "skills",
+    "mcp_servers",
+    "mutation_policy",
+    "output_contract",
+    "developer_instructions",
+}
 
 
 def sha256_digest(value: bytes) -> str:
@@ -89,6 +126,15 @@ class AgentMaterializationTests(unittest.TestCase):
             source_relative_path=SOURCE_PATH,
             source_bytes=source_bytes,
             candidate_route=copy.deepcopy(EXPECTED_ROUTE),
+            parent_controls=copy.deepcopy(EXPECTED_PARENT_CONTROLS),
+        )
+
+    def materialize_selected_route(self):
+        module = self.materializer()
+        return module.materialize_agent_policy(
+            source_relative_path=SOURCE_PATH,
+            source_bytes=ROUTE_SOURCE_BYTES,
+            candidate_route=copy.deepcopy(SELECTED_ROUTE),
             parent_controls=copy.deepcopy(EXPECTED_PARENT_CONTROLS),
         )
 
@@ -135,6 +181,49 @@ class AgentMaterializationTests(unittest.TestCase):
         )
         self.assertEqual(result.materializer_version, module.MATERIALIZER_VERSION)
 
+    def test_renders_selected_explicit_route_from_original_source_bytes(self) -> None:
+        result = self.materialize_selected_route()
+
+        self.assertEqual(result.destination_bytes, ROUTE_DESTINATION_BYTES)
+        self.assertEqual(
+            result.destination_bytes_digest,
+            sha256_digest(ROUTE_DESTINATION_BYTES),
+        )
+        self.assertEqual(
+            result.source_binding,
+            {
+                "path": SOURCE_PATH,
+                "digest": sha256_digest(ROUTE_SOURCE_BYTES),
+                "byte_count": len(ROUTE_SOURCE_BYTES),
+            },
+        )
+        self.assertNotEqual(result.source_binding["digest"], result.destination_bytes_digest)
+        self.assertEqual(result.candidate_route, SELECTED_ROUTE)
+
+    def test_route_materialization_preserves_non_route_fields(self) -> None:
+        result = self.materialize_selected_route()
+        source_policy = tomllib.loads(ROUTE_SOURCE_BYTES.decode("utf-8"))
+        destination_policy = tomllib.loads(result.destination_bytes.decode("utf-8"))
+
+        self.assertEqual(destination_policy["model"], SELECTED_ROUTE["model"])
+        self.assertEqual(
+            destination_policy["model_reasoning_effort"],
+            SELECTED_ROUTE["model_reasoning_effort"],
+        )
+        self.assertEqual(
+            {field: destination_policy[field] for field in NON_ROUTE_FIELDS},
+            {field: source_policy[field] for field in NON_ROUTE_FIELDS},
+        )
+        self.assertIs(result.non_route_fields_unchanged, True)
+        self.assertEqual(
+            result.non_route_fields_digest,
+            sha256_digest(
+                canonical_bytes(
+                    {field: source_policy[field] for field in sorted(NON_ROUTE_FIELDS)}
+                )
+            ),
+        )
+
     def test_runner_trust_metadata_registers_materializer_source(self) -> None:
         expected_digest = hashlib.sha256(MODULE_PATH.read_bytes()).hexdigest()
         manifest = json.loads(RUNNER_MANIFEST_PATH.read_text(encoding="utf-8"))
@@ -152,6 +241,7 @@ class AgentMaterializationTests(unittest.TestCase):
             expected_digest,
         )
         self.assertEqual(
+            manifest_records.get(MATERIALIZER_PLUGIN_PATH),
             checksum_records.get(MATERIALIZER_PLUGIN_PATH),
             expected_digest,
         )
@@ -184,7 +274,7 @@ class AgentMaterializationTests(unittest.TestCase):
     def test_rejects_route_or_parent_control_mismatch(self) -> None:
         module = self.materializer()
         wrong_route = copy.deepcopy(EXPECTED_ROUTE)
-        wrong_route["model_reasoning_effort"] = "medium"
+        wrong_route["agent_name"] = "other-agent"
         with self.assertRaisesRegex(ValueError, "candidate route"):
             module.materialize_agent_policy(
                 source_relative_path=SOURCE_PATH,
