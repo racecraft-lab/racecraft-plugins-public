@@ -342,6 +342,29 @@ result, with the already-current case collapsing to one line.
   surface MUST NOT delete a file; the system performs the deletion, stages it
   in the FR-018 commit, and reports each removal as its own outcome per
   FR-012.
+- **FR-012b**: A selected page whose regeneration returns a `gap` of its own,
+  in a run that produced at least one `generated` page, MUST have any
+  pre-existing file at its path removed from disk, and that removal MUST be
+  reported inside the page's own `gap` outcome rather than as a separate
+  `removed` outcome, which FR-012 reserves for deselection. FR-012a keeps a
+  gapped page out of the removal set because the page is still selected; that
+  rule governs the deselection diff alone and MUST NOT be read as licence to
+  leave the page's pre-amendment file in the tree. The reused emission
+  machinery already deletes a page that fails its on-disk verification, on the
+  stated ground that a plausible-looking document about a plan that is not this
+  one is worse than no document at all. A page the author declined to rewrite
+  is that same hazard one degree sharper: it is about the right feature and the
+  wrong, superseded plan. Leaving it would also put the two sinks FR-021
+  requires into direct disagreement, the description's gap row saying the page
+  is missing while a complete-looking page sits beside it on disk.
+  The whole-set gap FR-037 governs is deliberately excluded: there the run
+  learned nothing about any individual page, FR-038 leaves the join reading
+  `stale`, and the next sweep leg regenerates the set again, so the stale pages
+  are the best available account of the plan for the one leg they survive, and
+  deleting them would strand the pull request with no pages at all on the
+  strength of a dispatch that never reported. That exclusion is also what keeps
+  FR-012b from moving the artifacts directory on a run that must stay
+  retryable.
 - **FR-013**: Regeneration MUST reuse the existing ART-007 draft-artifact
   emission machinery, including its per-page `generated` or `gap` outcomes and
   its on-disk verification of written pages. This slice MUST NOT introduce a
@@ -357,6 +380,74 @@ result, with the already-current case collapsing to one line.
 - **FR-015**: On a sweep that amended, the system MUST run the sequence amend,
   then regenerate, then refresh, then stop. The regeneration and the refresh
   MUST both complete before the run emits its stop report.
+- **FR-015a**: The regeneration sequence MUST run after the sweep's reply
+  point, never before it. Slice 1 posts every reply a run owes once, at the end
+  of the run, after every bookkeeping commit that run takes has landed; neither
+  FR-018's artifacts commit nor FR-039's record commit is a bookkeeping commit
+  (FR-020), so the shipped rule places neither of them and an unstated order
+  would decide by accident whether a reviewer whose comment was amended is
+  answered at all when regeneration later fails. Running after the reply point
+  is what keeps this slice's Assumption that slice 1's reply behavior is
+  unchanged literally true: every reply is already posted before this slice's
+  first new failure point is reached, so no new failure can swallow one.
+- **FR-015b**: FR-019a adds a second push to a sequence whose shipped prose
+  names only one, and the two closed enumerations that name a failed push MUST
+  each be scoped by an added sentence on both platform reference surfaces, in
+  the manner FR-033b already uses rather than by rewriting or deleting shipped
+  text. First, the enumeration naming the stops that abort before the reply
+  point and post no reply — whose members include a failed push — MUST be
+  scoped to the amendment push slice 1 owns, so FR-019a's artifacts push, which
+  occurs after the reply point under FR-015a, is not read into it. Excluding it
+  from that member is not sufficient on its own, because the sentence is an
+  exhaustive dichotomy: three named stops are said to occur after the reply
+  point and *every other stop* to abort before it. The added sentence MUST
+  therefore also place FR-019a's amended-leg stop on the after-reply-point side,
+  stating that a run reaching it has already posted every reply it owes. That is
+  a statement of where the new stop falls, not an edit to either list's
+  membership, so it leaves both enumerations as shipped. Second, the
+  enumeration of the conditions that end a run in this sequence MUST be scoped
+  where it names a failed push, because FR-017 makes the artifacts push
+  non-run-ending on the leg that amended nothing, while the shipped list names
+  a failed push unconditionally. Neither edit may add to or remove from the
+  members those enumerations already carry.
+- **FR-015d**: On the leg FR-017 governs, where at least one comment was
+  handled and nothing was classified `amended`, the regeneration sequence
+  MUST reach its own terminal outcome, in FR-023's fail-open sense, before
+  slice 1's post-publication redaction stop evaluates whether to fire. This
+  adds no stop condition and changes no decision Out of Scope reserves to
+  slice 1: the stop still fires on exactly the ground slice 1 fixed, one or
+  more redaction events on this leg, with the same report shape and the same
+  resume path. What this requirement fixes is where slice 1's own trigger,
+  "once every write the run owes has landed," is measured from, because
+  FR-017 has already, uncontested, inserted the dedicated artifacts commit,
+  its push, and the description refresh into what this leg owes before it
+  reaches the proceed transition. Evaluating the redaction stop from the
+  reply point alone, ahead of those writes, would falsify the shipped
+  sentence "this stop replaces the proceed at that same point": FR-017 has
+  already moved that point later, so the stop must move with it to remain at
+  the same point rather than an earlier one. It would also turn a stop slice
+  1 defines as notification after publication, never prevention, into the
+  opposite: a gate that blocks writes this leg now owes on the strength of an
+  unrelated redaction event. Terminal outcome carries FR-023's meaning, not
+  success: a per-page gap, a whole-set gap, or a failed artifacts push under
+  FR-019a each end the sequence at their own reported outcome without
+  blocking the run, and the redaction stop's evaluation follows immediately
+  once any of them is reached. Where FR-019a's push failure leaves the
+  artifacts commit local, the redaction stop still fires on this leg's
+  coincident redaction event, and its report carries FR-019a's own manual
+  resume path beside the redaction report. Both platform reference surfaces
+  MUST scope the shipped "stop once every commit is pushed and every reply is
+  posted" sentence by an added sentence stating that the writes this leg owes
+  now include the regeneration sequence's terminal outcome, in the manner
+  FR-015b already uses, rather than rewriting or deleting shipped text. On
+  the leg that amended something, no separate rule is needed: FR-015 already
+  forces regenerate-then-refresh before any stop that leg emits,
+  unconditionally, so a coincident redaction event coalesces into that stop
+  under the shipped coalescing rule. On the leg that handled no comment at
+  all, this requirement is vacuous: the redaction surface fires only on this
+  run's amendment, log-row, and reply writes, none of which exist when
+  nothing was handled. The redaction stop is not a fourth sweep leg: a run on
+  which it fires is still a run FR-016 requires the freshness evaluation on.
 - **FR-016**: The system MUST evaluate freshness on every sweep leg it reaches,
   including the leg that amends nothing and the leg that handles no comment at
   all, because the recovery case in User Story 2 surfaces only on those legs.
@@ -371,10 +462,13 @@ result, with the already-current case collapsing to one line.
   Repairing stale pages MUST NOT convert a proceed into a stop.
 - **FR-018**: The system MUST write the regenerated pages in one dedicated
   commit that stages `specs/<feature>/artifacts/` and nothing else, using the
-  `docs` conventional-commit type. The commit is taken only when regeneration
-  produced a change under that directory; a run that produced no change takes
-  no commit, because an empty commit records nothing and cannot move the FR-001
-  join.
+  `docs` conventional-commit type. The commit is taken only when the run's
+  final, post-verification outcome set contains at least one `generated` page;
+  a run whose verified count is zero — whether reached through a self-reported
+  whole-set gap or through the shipped on-disk verification converting every
+  written page to a per-page gap — takes no commit and leaves the artifacts
+  directory unmoved, because a commit there records nothing generated and
+  would move the FR-001 join past pages the run failed to produce.
 - **FR-019**: That commit MUST be separate from the sweep's bookkeeping commit.
   Keeping the artifacts directory in a commit of its own is what makes the
   FR-001 join exact, because any other staged path would move the directory's
@@ -392,6 +486,13 @@ result, with the already-current case collapsing to one line.
   re-review stop's pull request shows to already be current. On a leg that
   amended nothing (FR-017), this MUST NOT convert the proceed into a stop;
   the local commit stands and rides up with the branch's next push.
+  On either leg the commit is local and complete, so the FR-001 join reads the
+  artifacts directory as current on the next run and no later sweep regenerates
+  or attempts the refresh this failure skipped. The run report MUST therefore
+  carry the same non-repair statement and manual resume path FR-036 requires of
+  a refresh that ran and failed, naming both steps the operator owes: push the
+  branch, then refresh the pull-request description directly, outside the
+  automated sequence.
 - **FR-020**: The dedicated artifacts commit MUST NOT be read as the
   bookkeeping commit that slice 1 declines to write on the leg where no comment
   was handled. Slice 1's rule that the no-comment leg writes no bookkeeping
@@ -505,6 +606,26 @@ result, with the already-current case collapsing to one line.
   `pr_closed`, `pr_missing`, and `identity_mismatch` each end the refresh
   attempt, create nothing, and leave the `Draft PR` row exactly as found. No
   status opens a second pull request.
+- **FR-034a**: One of FR-034's six statuses cannot classify at the refresh
+  call site, and one classifies with only a single live branch; FR-034 MUST
+  say so rather than leave a create-capable branch importable into Phase 7. `no_record` requires an absent `Draft PR` row, but
+  FR-016 reaches the sweep only on an entry-gate `match`, which requires the
+  row to be present, and FR-022 forbids the sweep writing that row, so no step
+  between the gate and the refresh can clear it. `skipped` is the shipped
+  contract's two-branch status — it refreshes the recorded pull request when
+  the tool can be reached, and reports through the could-not-be-opened shape
+  when it cannot — and only the second branch is live here, because at this
+  call site the classification's own input is the observation FR-033a takes at
+  that moment, so a `skipped` classification is itself the evidence the tool
+  could not be reached. FR-034's single stated behavior for `skipped` is
+  therefore the whole of the contract as it applies here, not a narrowing of
+  it. Neither status may be implemented as a fallthrough to creation. Should
+  either classify despite this reasoning, the refresh attempt MUST end with
+  nothing created and the `Draft PR` row left as found, because FR-014
+  authorizes a refresh and this slice opens no pull request on any path. A
+  defensively-caught `no_record` here indicates an orchestrator invariant
+  violation, not an operator-fixable pull-request state, and the report MUST
+  say so rather than offer a `Draft PR` row repair as the resume path.
 - **FR-035**: A discrepancy or an unreachable tool at the refresh call site MUST
   end the refresh attempt only. It MUST NOT change the run's stop-or-proceed
   decision, MUST NOT unwind a regeneration commit that already landed, and MUST
@@ -516,19 +637,50 @@ result, with the already-current case collapsing to one line.
   The report MUST state that once the regeneration commit has landed, a
   re-run does NOT retry the failed refresh: the FR-001 join then reads the
   artifacts directory as current, so a later sweep regenerates nothing and
-  refreshes nothing. The report MUST name the operator's manual resume path:
-  refresh the pull-request description directly, outside the automated
-  sequence. When the failure traces to the recorded and live pull-request
-  identities disagreeing, the report MUST name both identities, the one
-  recorded and the one observed.
+  refreshes nothing. The report MUST name the operator's manual resume path,
+  and MUST name the one belonging to the status that ended the attempt rather
+  than a single path shared across them, for the reason the shipped
+  corroboration gate already gives: the stopping statuses have different fixes,
+  and one shared path would send an operator to the wrong repair. Refreshing
+  the pull-request description directly, outside the automated sequence, is the
+  path when a reachable pull request's refresh failed. A `skipped` failure
+  names fixing the tool; a `pr_closed` failure names reopening the pull
+  request; a `pr_missing` failure names correcting or clearing the `Draft PR`
+  row. Neither of the last two is repaired by refreshing a description, which
+  is why the generic path may not stand in for them. When the failure traces to
+  the recorded and live pull-request identities disagreeing, the report MUST
+  name both identities, the one recorded and the one observed.
 - **FR-037**: A whole-set regeneration failure MUST still run the description
   refresh, which carries the whole-set gap as a single row through the ART-007
   three-sink contract, and MUST leave the stop-or-proceed decision unchanged.
+  It MUST also leave the artifacts directory entirely unmoved: no page is
+  deleted on this path, FR-012b's per-page deletion is excluded, and FR-012's
+  deselection removal is withheld as well, even though the removal set is
+  otherwise computable. Withholding it is what keeps FR-018 from taking a
+  commit, which is the only thing keeping the FR-001 join reading `stale` so
+  the next sweep leg retries. A removal landing alone here would move the
+  directory, mark the whole set current, and strand every gapped page
+  permanently stale for the sake of deleting one file. Nothing is lost by
+  waiting: FR-010 re-selects from the manifest on the retry, so the same
+  deselection is recomputed and the removal lands in the run that also
+  regenerates.
 - **FR-038**: The FR-001 join repairs an interrupted run, never a gapped one.
   Any commit touching the artifacts directory marks the set current on the next
   run's join, including a commit carrying only removals and a commit carrying
-  only a subset of the selected pages. Per-page gaps are therefore the
-  operator's to act on from the report, and no later run re-attempts them.
+  only a subset of the selected pages. Per-page gaps inside a run that took
+  that commit are therefore the operator's to act on from the report, and no
+  later run re-attempts them. Whether a later leg retries is decided by
+  whether the artifacts commit was taken, never by the shape of the shortfall,
+  and the spec MUST NOT present the two gap shapes as one outcome. FR-018 takes
+  that commit only when something under the directory changed, so a whole-set
+  gap — which generated nothing, and which FR-012b excludes from deletion for
+  exactly this reason — moves nothing, leaves the join reading `stale`, and is
+  retried by the next sweep leg, while a per-page gap beside at least one
+  generated page rides a commit that marks the whole set current and is retried
+  by nothing. The report MUST state which of the two it is: that the next leg
+  retries, or that it does not and the gap is the operator's. A run that
+  generated nothing never takes the commit, because FR-037 withholds the
+  deselection removal that would otherwise move the directory on that path.
 - **FR-039**: When FR-014's refresh actually changes the `Draft PR` row's
   cell, the write MUST ride the emission machinery's own record commit — the
   same separate, workflow-file-path-alone `chore:` commit the plan-stage
@@ -542,9 +694,16 @@ result, with the already-current case collapsing to one line.
   Consensus Resolution Log row still takes none of those. It MUST NOT be
   folded into the dedicated artifacts commit under FR-018 and FR-019 either.
   A failure of this commit or its push MUST be reported through the refresh
-  outcome (FR-025) and MUST NOT block the run (FR-023); the row's existing
-  repair rule recovers an unwritten row on the next refresh that reaches this
-  step, so the failure is reported, never fatal.
+  outcome (FR-025) and MUST NOT block the run (FR-023). The report MUST NOT
+  claim the row repairs itself on a later sweep. The emission machinery's
+  repair rule recovers an unwritten row only on a later refresh that reaches
+  this step, and FR-036 establishes that no later sweep reaches it once the
+  regeneration commit has landed, so within this slice the repair path is
+  unreachable and saying otherwise would send an operator away from a row that
+  stays wrong. The report MUST name the resume path the way FR-036 names its
+  own: the pull request itself is correct on the remote and only the record is
+  unwritten, so the row is repaired by hand, or by any later run that reaches
+  the plan-stage create-or-refresh step, which this slice never schedules.
 
 ### Reviewability Notes *(if applicable)*
 
@@ -670,7 +829,14 @@ second, worse lever are in `plan.md`.
 
 - **SC-001**: After a sweep that amends, 100% of the draft artifact pages the
   reviewer opens at the re-review stop describe the amended plan. Zero pages are
-  older than the newest amendment.
+  older than the newest amendment. A page that regeneration could not produce is
+  absent rather than stale, because FR-012b removes the superseded file it left
+  behind, so a per-page shortfall subtracts from the set the reviewer sees and
+  never adds a misleading member to it. The one stated exception is the
+  whole-set gap of FR-037, where the run learned nothing about any page and
+  FR-012b deliberately leaves the previous set in place: there the pages are
+  stale for exactly one leg, the join still reads `stale` under FR-038, and the
+  next sweep leg regenerates them.
 - **SC-002**: An operator can determine whether the pages in front of them are
   current in under 30 seconds, reading only the run report, without opening git
   history or comparing page content.

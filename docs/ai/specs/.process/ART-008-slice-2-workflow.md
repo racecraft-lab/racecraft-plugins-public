@@ -343,6 +343,9 @@ if any SKILL.md sentence must change, words must be freed first.
 | 5 | Clarify | What does `undeterminable` trigger? | [spec] | 1 | Resolved (high) | Report loudly, act never (FR-005a); regeneration on undeterminable livelocks — unjoinable rows never self-repair | spec-context-analyst |
 | 6 | Clarify | What "page set" does the helper return? | [spec] [codebase] | 1 | Resolved (high, 2/2 agree) | Echo supplied inventory; selection stays with emission machinery; removal diff = second named surface, gap outcomes stay selected (FR-004, FR-012a, Key Entities) | spec-context-analyst, codebase-analyst |
 | 7 | Clarify | FR-033 observation query shape + classifying surface | [spec] [codebase] | 1 | Resolved (high, 2/2 agree) | Entry-gate `--state all` five-field query; six-status classification reused verbatim (pure function already shipped); registration homing left to Plan; entry-gate sentences scoped (FR-033a, FR-033b) | spec-context-analyst, codebase-analyst |
+| 8 | Checklist | CHK044: redaction stop vs regeneration ordering | [codebase] [spec] | 1 | Resolved (high, 2/2 agree) | Regenerate first; redaction stop rides the leg's own stop-or-proceed point (new FR-015d); not a fourth leg — FR-016 evaluation still runs | codebase-analyst, spec-context-analyst |
+| 9 | Checklist | CHK002/016/036: FR-012b delete-superseded-file + FR-037 withholding | [codebase] [spec] | 1 | Upheld (high, 2/2) + refinement | Delete upheld (shipped verification precedent; keep-and-report has no precedent and strands pages); FR-018 gate re-keyed to ≥1 verified `generated` page, closing the verification-zeroed stranding route | codebase-analyst, spec-context-analyst |
+| 10 | Checklist | CHK008: FR-034a unreachable statuses (security keyword) | [security] | 1 | Upheld (high, 3/3) + wording | Fail-closed posture confirmed (OWASP/CWE/RFC-grounded); headline corrected (skipped classifies, one live branch); defensive no_record reported as orchestrator invariant violation | codebase-analyst, spec-context-analyst, domain-researcher |
 
 ---
 
@@ -487,6 +490,12 @@ Focus on ART-008 slice 2 requirements:
 ```
 
 ### Checklist Results
+
+- **error-handling** (44 items): 15 gaps found, 15 closed (14 by the executor,
+  CHK044 by consensus as FR-015d). Spec 46 → 51 FRs (new FR-012b, FR-015a,
+  FR-015b, FR-015d, FR-034a; amended FR-018, FR-019a, FR-034a, FR-036,
+  FR-037, FR-038, FR-039, SC-001). Consensus items 8–10; full suite green at
+  the executor's verification (14012/14012).
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|

@@ -304,6 +304,19 @@ membership is not — the suite manifest is verification, and the Claude
 One warn, no block. The warn is size-only and is accepted rather than re-sliced,
 for the reason argued below.
 
+**Delta from the error-handling checklist remediation.** Four requirements were
+added after this table was derived — FR-012b, FR-015a, FR-015b, FR-034a — plus
+wording corrections to FR-019a, FR-036, FR-038, FR-039, and SC-001. None adds a
+file: every landing site is already declared MODIFIED above. FR-012b is the only
+one with an executable footprint, a conditional delete inside a step that
+already deletes the removal set, at roughly 8-15 lines across the two reference
+surfaces. The rest is scoping and reporting prose, roughly 25-45 lines across
+`phase-execution.md` and its Codex mirror. That moves the production-only
+midpoint from ~690 to roughly **720**, still a warn and still under the 800
+block; the high end moves from 825 to about 885, and the split lever below is
+unchanged and remains rejected on the same merit. Re-derive rather than trust
+this note if the Analyze phase disputes the figure.
+
 ### The split lever, named because the high end reaches 800
 
 Derivation A's high end is 825 and derivation B's midpoint is 920, so the lever
@@ -589,16 +602,38 @@ sweep reaches, including the leg that amends nothing and the leg that handles no
 comment at all (FR-016).
 
 ```text
+0. Slice 1's reply point: every reply this run owes is already posted (FR-015a).
 1. Evaluate freshness (verdict surface).
 2. On `stale`: re-dispatch speckit-pro:artifact-author against the amended record.
 3. Compute the removal set (removal_diff surface) and delete those files.
+3b. Delete the superseded file behind each per-page gap (FR-012b); skip this
+    entirely on a whole-set gap.
 4. Verify the written pages on disk (ART-007's two positive tests).
-5. Commit specs/<feature>/artifacts/ alone, `docs:` type.
+5. Commit specs/<feature>/artifacts/ alone, `docs:` type — only if step 3, 3b,
+   or the regeneration changed something under it.
 6. Push. A failed push ends the sequence here.
 7. Take the refresh call site's own live observation; classify it.
 8. Refresh the description through ART-007 create-or-refresh.
 9. When the `Draft PR` cell actually changed, take the shipped record commit.
 ```
+
+**Step 0 is a placement, not a new step.** FR-015a fixes the whole sequence
+after slice 1's reply point, which the shipped rule puts "at the end of the
+run, after every bookkeeping commit this run takes has landed"
+(`phase-execution.md:1812-1814`). Neither commit this sequence takes is a
+bookkeeping commit (FR-020), so the shipped sentence places neither, and the
+order had to be chosen rather than inherited. Running after the reply point is
+the choice that leaves slice 1's reply behavior untouched, which `spec.md`
+§Assumptions already claims: every reply is posted before step 6, the first
+point at which this slice can stop an amended run.
+
+**Step 3b is why the gap shapes diverge.** A per-page gap beside a generated
+page leaves a superseded file the run would otherwise commit and the join would
+then read as current forever, so FR-012b deletes it, on the same ground the
+shipped verification gives for deleting a page that fails its two tests
+(`phase-execution.md:936-942`). A whole-set gap is excluded: it generated
+nothing, so skipping the deletion is what leaves the directory unmoved, the
+commit untaken, and the next leg free to retry.
 
 **Three commit shapes, kept apart, and none may absorb another:**
 
@@ -623,8 +658,14 @@ already takes (`phase-execution.md:823-831`). It is taken only when the cell
 actually changed; a refresh leaving the cell as found stages nothing, which is
 the same no-op the machinery already applies when a re-run finds nothing left to
 stage. A failure of this commit or its push is reported through the refresh
-outcome and never blocks the run — the row's existing repair rule recovers an
-unwritten row on the next refresh that reaches this step.
+outcome and never blocks the run, but the report **must not** claim the row
+repairs itself. The machinery's repair rule recovers an unwritten row only on a
+later refresh that reaches this step, and FR-036 establishes that no later sweep
+reaches it once the regeneration commit has landed, so inside this slice that
+path is unreachable. The pull request itself is correct on the remote and only
+the record is unwritten, so FR-039 names the resume path the way FR-036 names
+its own: repair the row by hand, or leave it to a later run that reaches the
+plan-stage create-or-refresh step, which this slice never schedules.
 
 ### FR-019a: the push is inside the step, and the leg decides the stop
 
@@ -645,6 +686,38 @@ reused machinery's unreached-sink rule already treats a failed branch push.
   the proceed into a stop. The local commit stands and rides up with the
   branch's next push.
 
+**On both legs the condition is unrecoverable inside this slice, and the report
+must say so.** The commit is local and complete, so the FR-001 join reads the
+directory as current on the next run: no later sweep regenerates, and none
+attempts the refresh this failure skipped. That is the same shape FR-036 names
+for a refresh that ran and failed, so FR-019a now carries the same two
+obligations — the non-repair statement and a manual resume path, here naming
+both steps the operator owes: push the branch, then refresh the description
+directly.
+
+**Two shipped closed enumerations stop being exact here, and FR-015b scopes
+both** by the added-sentence technique FR-033b already uses, never by rewriting
+shipped text:
+
+| Surface | Line | Enumeration | Why it needs scoping |
+|---|---:|---|---|
+| `phase-execution.md` | 1821-1824 | the stops that abort before the reply point and post no reply, "a failed push" its sixth and last member | FR-015a puts the artifacts push **after** the reply point, so this push is not one of them |
+
+**The first edit needs two clauses, not one.** That sentence is an exhaustive
+dichotomy — three named stops after the reply point, "every other stop" before
+it — so merely saying FR-019a's push is not the failed push in the member list
+leaves it caught by "every other stop". The added sentence has to place it
+positively, on the side where every owed reply is already posted. Both clauses
+are statements about where a new stop falls; neither touches what either list
+already contains, which is what keeps the edit inside FR-015b's own rule.
+| `phase-execution-codex.md` | 1468-1471 | the same enumeration | FR-029 parity |
+| `phase-execution.md` | 1307-1314 | the conditions that end a run in this sequence, "a failed push" its seventh member | FR-017 makes the artifacts push non-run-ending on the leg that amended nothing, while the shipped list is unconditional |
+| `phase-execution-codex.md` | 1034-1041 | the same enumeration | FR-029 parity |
+
+Neither edit adds or removes a member; each adds one sentence saying which push
+the existing member means. Both files already stand as MODIFIED in the file
+operations block, so this adds no file to the budget.
+
 ### The refresh call site takes its own observation
 
 FR-033 requires a live read at the moment of the refresh rather than a reuse of
@@ -664,6 +737,29 @@ could-not-be-opened shape naming which of the four causes occurred; `pr_closed`,
 nothing, and leave the `Draft PR` row exactly as found. **No status opens a
 second pull request.**
 
+**Two of the six cannot classify here at all, and FR-034a says so** rather than
+leaving the shipped table's create-capable branch importable into Phase 7:
+
+- **`no_record` is unreachable.** It means an absent `Draft PR` row, but FR-016
+  reaches the sweep only on an entry-gate `match`, which requires the row, and
+  FR-022 forbids the sweep writing it. Nothing between the gate and the refresh
+  can clear it. This matters because the shipped row's behavior is "fall through
+  to the live by-branch existence test above, **then create or refresh**"
+  (`phase-execution.md:1181`), and creation is not something this slice does on
+  any path.
+- **`skipped` has one live branch, not two.** The shipped row carries a
+  conditional — refresh the recorded pull request when the tool can be reached,
+  report through the could-not-be-opened path when it cannot
+  (`phase-execution.md:1183-1187`). At this call site the classifier's input
+  *is* the observation FR-033a takes at that moment, so a `skipped`
+  classification is itself the evidence the tool could not be reached. The
+  reachable branch is dead by construction, which is why FR-034's single stated
+  behavior is the whole of the contract here rather than a narrowing of it.
+
+Stating this is what keeps FR-034's "takes the behavior the contract already
+assigns it" from reading as a contradiction against a table that visibly
+assigns `skipped` two.
+
 **Where slice 2 diverges from ART-007** (FR-035): ART-007's terminal step sits
 at a stage boundary the run stops at regardless, while the sweep may proceed
 into task work. So a discrepancy or an unreachable tool here ends the refresh
@@ -674,9 +770,27 @@ page failure.
 **FR-036's non-repair statement is mandatory in the report.** Once the
 regeneration commit has landed, FR-001's join reads the artifacts directory as
 current, so no later sweep regenerates or re-attempts the refresh. The report
-must say that in as many words and name the operator's manual resume path:
-refresh the pull-request description directly, outside the automated sequence.
-When the failure traces to disagreeing identities, both are named.
+must say that in as many words and name the operator's manual resume path.
+
+**The resume path is per-status, not one generic line.** The shipped
+corroboration gate already states the reason — "each stopping status names its
+own resume path, because the four have different fixes and one shared path would
+send an operator to the wrong repair" (`phase-execution.md:1337-1338`, mirror
+`phase-execution-codex.md:1060-1061`) — and the terminal-step table already
+practises it, naming each status's path in its own row prose rather than in a
+summary line (`phase-execution.md:1181-1188`). Slice 1 is where that rule was
+made explicit, in its own FR-019 and FR-019b
+(`specs/art-008-feedback-sweep/spec.md:2587-2601,2622-2632`), the second of
+which turns on precisely the status slice 2 also has to keep separate:
+collapsing `skipped` into the discrepancy wording "costs the operator the
+ability to tell a broken tool from a real discrepancy, and those have different
+fixes." FR-036 reuses all of that rather than inventing a rule: "refresh the description directly" is simply not a repair for
+a pull request that is closed or gone. FR-036 therefore
+binds four: `skipped` names fixing the tool; `pr_closed` names reopening the
+pull request; `pr_missing` names correcting or clearing the `Draft PR` row; and
+a refresh that failed against a reachable pull request names refreshing the
+description directly, outside the automated sequence. When the failure traces to
+disagreeing identities, both are named.
 
 ### Reporting: one report, one extension, two removals
 
@@ -693,6 +807,21 @@ Every shortfall regeneration produces still reaches ART-007's three sinks
 (FR-021), with one substitution named explicitly: at this Phase 7 call site the
 third sink is the run report, because the plan-stage stop report the shipped
 sink table names does not exist here.
+
+**The two gap shapes are reported apart, because they differ in repairability
+rather than in severity** (FR-038). What decides whether a later leg retries is
+whether the artifacts commit was taken, and FR-018 ties that to whether anything
+under the directory changed:
+
+| Shortfall | Directory moved? | Commit | Next leg |
+|---|---|---|---|
+| per-page gap beside a generated page | yes | taken | does not retry; the gap is the operator's |
+| whole-set gap (FR-037) | no, and FR-012b deletes nothing | not taken | regenerates the set again |
+| deselection removal landing alone | yes | taken | does not retry; the report names the removal as the reason |
+
+A report that called both of the first two rows "gap" and stopped there would
+leave an operator unable to tell work that will be retried from work that will
+not, which is the distinction SC-002 asks them to make in under 30 seconds.
 
 On a sweep that amended nothing and found the pages already current, the
 freshness contribution collapses to **one line** naming the commit the pages are
