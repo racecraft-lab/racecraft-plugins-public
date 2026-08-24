@@ -773,6 +773,55 @@ recorded G0 baseline of 14012 preserved with the +13 drift recorded above.
   `error:` line) are already in place, since T015–T024 are fixture-only.
 - Privacy scan clean across every created and modified path.
 
+**Phase 3, User Story 1 — verdict surface (T015–T029)** — complete.
+`FRESHNESS_TEST` **88/88**, `HELPER_TEST` **84/84**, both re-run by the
+orchestrator rather than taken on report.
+
+- 29 fixture cases cover every bullet of the contract's Layer 4 verdict list:
+  the four verdicts on their own conditions, both precedence pairs, FR-007a/b
+  including the pinned `false` ancestry encoding, FR-008's abbreviated-cell
+  equality, FR-009 both directions, one case per closed FR-006 reason, the
+  three unusable-observation shapes, both structural cases, six input errors,
+  and the dual-anchoring regression.
+- **T025 red, measured**: 59/88 — all 29 result assertions failed (23 on
+  envelope mismatch against the stub's two keys, 6 on `input_error` status).
+  The 59 green were the three meta-tests over fixture form, which check shape
+  rather than the helper.
+
+#### Four contract refinements the fixtures settled
+
+The planning artifacts left four points underdetermined. Each was settled
+against shipped precedent, pinned into the fixtures, and implemented to; none
+is drift.
+
+1. **A uniform nine-key envelope with a top-level `reason`.** The contract
+   returns `undeterminable` "with reason `unusable_observation`", but that token
+   is not in the closed per-row reason set and is not a row, so `data-model.md`
+   §3 had no home for it. Every key is present on every case, null where a case
+   has nothing to say, following `corroboration_record`'s shipped rule.
+2. **An unusable observation echoes nothing** — `pages: []`,
+   `last_artifacts_commit: null`, `amended_rows_read: 0`. §2 says `ok` must be
+   the literal `true` "to be read at all", which collides with §3's echo rule;
+   resolved toward §2, since reading nothing cannot produce an echo.
+3. **`missing_commit_cell` means the header carries no `Commit` column**, which
+   is the condition §1's validation table left unassigned while §1 and §2
+   between them accounted for the other four reasons. Consequence, honored in
+   the implementation: **the header row is located by `Class`, never by
+   `Commit`.**
+4. **Five diagnostic strings**, phrased to mirror the shipped `sweep_error`
+   house strings rather than invented.
+
+#### Two ordering hazards, measured rather than discovered by failing
+
+- A short row against the eight-cell header has `cells[-2] == "amended"`, the
+  Class token itself. The malformed-short-row guard therefore runs **before**
+  the `-2` read, or the join takes the Class cell.
+- The escaped-pipe row splits into **nine** cells. A left-anchored `Commit`
+  read takes the disposition prose, matches no record, and returns
+  `undeterminable` where the truth is `stale` — the silent wrong-direction
+  failure that leaves stale pages unregenerated. This is the regression the
+  dual-anchoring rule exists for.
+
 
 ### Implement Prompt
 

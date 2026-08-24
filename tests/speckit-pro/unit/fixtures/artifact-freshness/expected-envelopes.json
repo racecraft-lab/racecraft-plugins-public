@@ -1,3 +1,488 @@
 {
-  "cases": {}
+  "cases": {
+    "dual-anchoring-escaped-pipe-in-disposition": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "verdict",
+        "verdict": "stale",
+        "reason": null,
+        "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+        "amended_rows_read": 1,
+        "deciding_rows": [
+          {
+            "row": "81",
+            "cell": "a1b2c3d"
+          }
+        ],
+        "undeterminable_rows": [],
+        "pages": [
+          "implementation-plan",
+          "spec-explainer"
+        ]
+      }
+    },
+    "fr007a-null-artifacts-commit-with-joinable-row-is-stale": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "verdict",
+        "verdict": "stale",
+        "reason": null,
+        "last_artifacts_commit": null,
+        "amended_rows_read": 1,
+        "deciding_rows": [
+          {
+            "row": "41",
+            "cell": "c3d4e5f"
+          }
+        ],
+        "undeterminable_rows": [],
+        "pages": [
+          "implementation-plan",
+          "spec-explainer"
+        ]
+      }
+    },
+    "fr007b-null-artifacts-commit-with-unresolved-row-is-undeterminable": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "verdict",
+        "verdict": "undeterminable",
+        "reason": null,
+        "last_artifacts_commit": null,
+        "amended_rows_read": 1,
+        "deciding_rows": [],
+        "undeterminable_rows": [
+          {
+            "row": "42",
+            "cell": "deadbee",
+            "reason": "unresolvable_commit"
+          }
+        ],
+        "pages": [
+          "implementation-plan",
+          "spec-explainer"
+        ]
+      }
+    },
+    "fr007b-pinned-false-ancestor-reaches-stale-through-the-ordinary-test": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "verdict",
+        "verdict": "stale",
+        "reason": null,
+        "last_artifacts_commit": null,
+        "amended_rows_read": 1,
+        "deciding_rows": [
+          {
+            "row": "43",
+            "cell": "5a6b7c8"
+          }
+        ],
+        "undeterminable_rows": [],
+        "pages": [
+          "implementation-plan",
+          "spec-explainer"
+        ]
+      }
+    },
+    "fr008-abbreviated-cell-against-full-sha-is-current": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "verdict",
+        "verdict": "current",
+        "reason": null,
+        "last_artifacts_commit": "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+        "amended_rows_read": 1,
+        "deciding_rows": [],
+        "undeterminable_rows": [],
+        "pages": [
+          "implementation-plan",
+          "spec-explainer"
+        ]
+      }
+    },
+    "fr009-one-older-row-and-one-newer-row-is-stale": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "verdict",
+        "verdict": "stale",
+        "reason": null,
+        "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+        "amended_rows_read": 2,
+        "deciding_rows": [
+          {
+            "row": "53",
+            "cell": "e4f5a6b"
+          }
+        ],
+        "undeterminable_rows": [],
+        "pages": [
+          "implementation-plan",
+          "spec-explainer"
+        ]
+      }
+    },
+    "fr009-two-older-rows-are-current": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "verdict",
+        "verdict": "current",
+        "reason": null,
+        "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+        "amended_rows_read": 2,
+        "deciding_rows": [],
+        "undeterminable_rows": [],
+        "pages": [
+          "implementation-plan",
+          "spec-explainer"
+        ]
+      }
+    },
+    "input-error-artifacts-dir-state-outside-the-closed-three": {
+      "status": "input_error",
+      "error_contains": "artifacts_dir_state must be one of"
+    },
+    "input-error-observation-absent": {
+      "status": "input_error",
+      "error_contains": "artifacts_observation is required"
+    },
+    "input-error-observation-not-an-object": {
+      "status": "input_error",
+      "error_contains": "artifacts_observation must be an object"
+    },
+    "input-error-workflow-file-absent": {
+      "status": "input_error",
+      "error_contains": "workflow_file is required"
+    },
+    "input-error-workflow-file-blank": {
+      "status": "input_error",
+      "error_contains": "workflow_file is required"
+    },
+    "input-error-workflow-file-unreadable": {
+      "status": "input_error",
+      "error_contains": "workflow file cannot be read"
+    },
+    "observation-ok-absent-is-undeterminable": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "verdict",
+        "verdict": "undeterminable",
+        "reason": "unusable_observation",
+        "last_artifacts_commit": null,
+        "amended_rows_read": 0,
+        "deciding_rows": [],
+        "undeterminable_rows": [],
+        "pages": []
+      }
+    },
+    "observation-ok-integer-one-is-undeterminable": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "verdict",
+        "verdict": "undeterminable",
+        "reason": "unusable_observation",
+        "last_artifacts_commit": null,
+        "amended_rows_read": 0,
+        "deciding_rows": [],
+        "undeterminable_rows": [],
+        "pages": []
+      }
+    },
+    "observation-ok-string-true-is-undeterminable": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "verdict",
+        "verdict": "undeterminable",
+        "reason": "unusable_observation",
+        "last_artifacts_commit": null,
+        "amended_rows_read": 0,
+        "deciding_rows": [],
+        "undeterminable_rows": [],
+        "pages": []
+      }
+    },
+    "precedence-no-pages-over-amended-rows": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "verdict",
+        "verdict": "no_pages",
+        "reason": null,
+        "last_artifacts_commit": null,
+        "amended_rows_read": 3,
+        "deciding_rows": [],
+        "undeterminable_rows": [],
+        "pages": []
+      }
+    },
+    "precedence-stale-over-undeterminable-row": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "verdict",
+        "verdict": "stale",
+        "reason": null,
+        "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+        "amended_rows_read": 2,
+        "deciding_rows": [
+          {
+            "row": "32",
+            "cell": "e4f5a6b"
+          }
+        ],
+        "undeterminable_rows": [
+          {
+            "row": "31",
+            "cell": "deadbee",
+            "reason": "unresolvable_commit"
+          }
+        ],
+        "pages": [
+          "implementation-plan",
+          "spec-explainer"
+        ]
+      }
+    },
+    "reason-empty-commit-cell": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "verdict",
+        "verdict": "undeterminable",
+        "reason": null,
+        "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+        "amended_rows_read": 1,
+        "deciding_rows": [],
+        "undeterminable_rows": [
+          {
+            "row": "62",
+            "cell": "",
+            "reason": "empty_commit_cell"
+          }
+        ],
+        "pages": [
+          "implementation-plan",
+          "spec-explainer"
+        ]
+      }
+    },
+    "reason-malformed-row": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "verdict",
+        "verdict": "undeterminable",
+        "reason": null,
+        "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+        "amended_rows_read": 1,
+        "deciding_rows": [],
+        "undeterminable_rows": [
+          {
+            "row": "65",
+            "cell": null,
+            "reason": "malformed_row"
+          }
+        ],
+        "pages": [
+          "implementation-plan",
+          "spec-explainer"
+        ]
+      }
+    },
+    "reason-missing-commit-cell": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "verdict",
+        "verdict": "undeterminable",
+        "reason": null,
+        "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+        "amended_rows_read": 1,
+        "deciding_rows": [],
+        "undeterminable_rows": [
+          {
+            "row": "61",
+            "cell": null,
+            "reason": "missing_commit_cell"
+          }
+        ],
+        "pages": [
+          "implementation-plan",
+          "spec-explainer"
+        ]
+      }
+    },
+    "reason-no-matching-observation-record": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "verdict",
+        "verdict": "undeterminable",
+        "reason": null,
+        "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+        "amended_rows_read": 1,
+        "deciding_rows": [],
+        "undeterminable_rows": [
+          {
+            "row": "64",
+            "cell": "beefca7",
+            "reason": "no_matching_observation_record"
+          }
+        ],
+        "pages": [
+          "implementation-plan",
+          "spec-explainer"
+        ]
+      }
+    },
+    "reason-unresolvable-commit": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "verdict",
+        "verdict": "undeterminable",
+        "reason": null,
+        "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+        "amended_rows_read": 1,
+        "deciding_rows": [],
+        "undeterminable_rows": [
+          {
+            "row": "63",
+            "cell": "deadbee",
+            "reason": "unresolvable_commit"
+          }
+        ],
+        "pages": [
+          "implementation-plan",
+          "spec-explainer"
+        ]
+      }
+    },
+    "structural-no-feedback-sweep-log-heading": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "verdict",
+        "verdict": "current",
+        "reason": null,
+        "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+        "amended_rows_read": 0,
+        "deciding_rows": [],
+        "undeterminable_rows": [],
+        "pages": [
+          "implementation-plan",
+          "spec-explainer"
+        ]
+      }
+    },
+    "structural-short-row-does-not-stop-the-other-rows": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "verdict",
+        "verdict": "undeterminable",
+        "reason": null,
+        "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+        "amended_rows_read": 2,
+        "deciding_rows": [],
+        "undeterminable_rows": [
+          {
+            "row": "82",
+            "cell": null,
+            "reason": "malformed_row"
+          }
+        ],
+        "pages": [
+          "implementation-plan",
+          "spec-explainer"
+        ]
+      }
+    },
+    "verdict-current-ancestor-row": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "verdict",
+        "verdict": "current",
+        "reason": null,
+        "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+        "amended_rows_read": 1,
+        "deciding_rows": [],
+        "undeterminable_rows": [],
+        "pages": [
+          "implementation-plan",
+          "spec-explainer"
+        ]
+      }
+    },
+    "verdict-no-pages-directory-absent": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "verdict",
+        "verdict": "no_pages",
+        "reason": null,
+        "last_artifacts_commit": null,
+        "amended_rows_read": 0,
+        "deciding_rows": [],
+        "undeterminable_rows": [],
+        "pages": []
+      }
+    },
+    "verdict-stale-newer-amended-row": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "verdict",
+        "verdict": "stale",
+        "reason": null,
+        "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+        "amended_rows_read": 1,
+        "deciding_rows": [
+          {
+            "row": "12",
+            "cell": "e4f5a6b"
+          }
+        ],
+        "undeterminable_rows": [],
+        "pages": [
+          "implementation-plan",
+          "spec-explainer"
+        ]
+      }
+    },
+    "verdict-undeterminable-unmatched-row": {
+      "status": "ok",
+      "envelope": {
+        "tool": "check-artifact-freshness",
+        "named_surface": "verdict",
+        "verdict": "undeterminable",
+        "reason": null,
+        "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+        "amended_rows_read": 1,
+        "deciding_rows": [],
+        "undeterminable_rows": [
+          {
+            "row": "13",
+            "cell": "c0ffee1",
+            "reason": "no_matching_observation_record"
+          }
+        ],
+        "pages": [
+          "implementation-plan",
+          "spec-explainer"
+        ]
+      }
+    }
+  }
 }
