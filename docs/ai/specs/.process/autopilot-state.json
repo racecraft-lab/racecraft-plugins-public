@@ -5,8 +5,8 @@
   "branch": "g56r-006-resolver-materializer-installer-strict-override",
   "status": "in_progress",
   "stage": "plan",
-  "updated_at": "2026-08-24T17:01:08Z",
-  "active_step": "Phase 3: Plan",
+  "updated_at": "2026-08-24T17:30:20Z",
+  "active_step": "Phase 4: Checklist - Error Handling",
   "stage_resolution": {
     "source": "argv",
     "basis": "explicit --stage plan",
@@ -152,6 +152,12 @@
       "pass": true,
       "markers": 0,
       "reason": "0 [NEEDS CLARIFICATION] markers"
+    },
+    "G3": {
+      "gate": "3",
+      "pass": true,
+      "markers": 0,
+      "reason": "plan.md exists with 0 unresolved markers"
     }
   },
   "phase_results": {
@@ -235,6 +241,41 @@
       "questions": 15,
       "unresolved_markers": 0,
       "g2": "pass"
+    },
+    "plan": {
+      "status": "completed",
+      "executor_attempts": 2,
+      "files": [
+        "specs/g56r-006-resolver-materializer-installer-strict-override/plan.md",
+        "specs/g56r-006-resolver-materializer-installer-strict-override/research.md",
+        "specs/g56r-006-resolver-materializer-installer-strict-override/data-model.md",
+        "specs/g56r-006-resolver-materializer-installer-strict-override/contracts/route-policy-manifest.schema.md",
+        "specs/g56r-006-resolver-materializer-installer-strict-override/contracts/install-codex-agents-route-aware.md",
+        "specs/g56r-006-resolver-materializer-installer-strict-override/quickstart.md"
+      ],
+      "contracts": 2,
+      "unresolved_markers": 0,
+      "g3": "pass",
+      "reviewability": {
+        "helper_status": "pass",
+        "projected": 0,
+        "helper_production_files": 0,
+        "new": 7,
+        "modified": 48,
+        "total_entries": 55,
+        "taxonomy_note": "the helper does not classify speckit-pro/**/*.py as production",
+        "manual_production_files": 4,
+        "authored_implementation_files": 8,
+        "planning_artifacts": 6,
+        "generated_follow_through_paths": 41,
+        "split_decision": "one vertical slice"
+      }
+    },
+    "after_plan_speckit_utils_validate": {
+      "status": "deferred",
+      "reason": "the direct extension contract requires tasks.md, which is not created until Phase 5",
+      "blocking": false,
+      "writes_state": false
     }
   },
   "plan": [
@@ -247,8 +288,8 @@
     {"step": "Phase 2: Clarify - Resolution and Override Semantics Consensus", "status": "completed"},
     {"step": "Phase 2: Clarify - State, Ownership, and Evidence", "status": "completed"},
     {"step": "Phase 2: Clarify - State, Ownership, and Evidence Consensus", "status": "completed"},
-    {"step": "Phase 3: Plan", "status": "in_progress"},
-    {"step": "Phase 4: Checklist - Error Handling", "status": "pending"},
+    {"step": "Phase 3: Plan", "status": "completed"},
+    {"step": "Phase 4: Checklist - Error Handling", "status": "in_progress"},
     {"step": "Phase 4: Checklist - Error Handling Consensus", "status": "pending"},
     {"step": "Phase 4: Checklist - State Management", "status": "pending"},
     {"step": "Phase 4: Checklist - State Management Consensus", "status": "pending"},

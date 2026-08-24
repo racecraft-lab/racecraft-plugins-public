@@ -32,8 +32,8 @@ Re-read it before every phase. Once autopilot begins, later clarifications use `
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 4 stories, 29 FRs, 9 success criteria, 13 acceptance scenarios, and 0 clarification markers |
 | Clarify | `/speckit-clarify` | ✅ Complete | 15 questions resolved across roster, route, override, ownership, rollback, compatibility, and response boundaries; G2 passed with 0 markers |
-| Plan | `/speckit-plan` | 🔄 In Progress | Design the materializer extension, observation adapter, resolver plan, and rollback batch |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Error handling, state management, data integrity, and reliability |
+| Plan | `/speckit-plan` | ✅ Complete | Six planning artifacts, two closed contracts, exact 8-authored/41-generated implementation path accounting, and G3 with 0 unresolved markers |
+| Checklist | `/speckit-checklist` | 🔄 In Progress | Error handling, state management, data integrity, and reliability |
 | Tasks | `/speckit-tasks` | ⏳ Pending | Vertical, TDD-first ordering with explicit RED→GREEN pairs |
 | Analyze | `/speckit-analyze` | ⏳ Pending | Cross-check spec, plan, tasks, and Design Concept |
 | Confidence Gate | G6.5 | ⏳ Pending | Advisory composite confidence before implementation |
@@ -275,11 +275,13 @@ Quote and link the Design Concept for every decision that changes architecture. 
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | Technical context, file inventory, execution and rollback flow |
-| `research.md` | ⏳ | Decisions and alternatives |
-| `data-model.md` | ⏳ | Manifest, snapshot, resolution, materialization, response, mutation records |
-| `contracts/` | ⏳ | Closed request/response and policy-manifest contracts if needed |
-| `quickstart.md` | ⏳ | Deterministic fake-home verification |
+| `plan.md` | ✅ | One vertical slice; 4 production and 8 authored implementation files, 6 planning artifacts, and 41 generated follow-through paths |
+| `research.md` | ✅ | Eight decisions with rejected alternatives and Design Concept provenance |
+| `data-model.md` | ✅ | Nine closed entities plus static and route-aware state transitions |
+| `contracts/` | ✅ | Versioned trusted-manifest contract and route-aware request/response contract |
+| `quickstart.md` | ✅ | Deterministic fake-home, focused, structural, generated-artifact, and contract verification |
+
+Plan-phase reviewability helper: `status=pass`, `projected=0`, `production=0`, `new=7`, `modified=48`, `total_entries=55`. The zero projection is a helper taxonomy limitation for `speckit-pro/**/*.py`; the manual authored count above is the planning evidence. The optional `speckit-utils validate` after-plan hook was accepted but deferred because `tasks.md` does not exist until Phase 5.
 
 ---
 
