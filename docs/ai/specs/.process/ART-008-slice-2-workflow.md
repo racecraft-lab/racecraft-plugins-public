@@ -168,6 +168,7 @@ Each phase requires **human review and approval** before proceeding:
 | **Enables** | The trusted human checkpoint reviews CURRENT pages; closes ART-008 |
 | **Priority** | P1 |
 | **Stage** | plan |
+| **Draft PR** | [#502](https://github.com/racecraft-lab/racecraft-plugins-public/pull/502) — draft; 4/4 pages generated (implementation-plan, spec-explainer, code-approaches, module-map), no gaps |
 
 ### Success Criteria Summary
 
