@@ -2417,3 +2417,39 @@ required because no `speckit-pro/` source or payload input changes.
 BRAND-001 remains an incomplete active planning package and is not an archive
 candidate. ART-013 remains pending because other roadmap dependencies are still
 incomplete.
+
+---
+
+## Revision 2026-08-24 - G56R-005 Post-Merge Architecture
+
+[Source: specs/g56r-005-model-availability-fallback-recovery] — archived after
+PR #487. Revision reason: record the shipped architecture and release the
+G56R-006 dependency.
+
+### Where G56R-005 Lives Now
+
+- Closed contracts:
+  `tests/speckit-pro/layer6-efficiency/contracts-codex-fallback/`
+- Roster-bound deterministic corpus:
+  `tests/speckit-pro/layer6-efficiency/fixtures-codex-fallback/fallback-recovery-corpus.json`
+- Resolver and fake-home recovery harness:
+  `tests/speckit-pro/layer6-efficiency/lib/codex_route_fallback.py`
+- Focused owner:
+  `tests/speckit-pro/unit/test-codex-route-fallback-recovery.py`
+- Owner registration: `tests/speckit-pro/suite-manifest.json`
+- Historical workflow, design concept, manual UAT, and retrospective:
+  `docs/ai/specs/.process/G56R-005-*`
+
+### Dependency and Cleanup Plan
+
+G56R-006 is ready because PR #487 supplies deterministic availability,
+fallback, strict-override, bounded-execution, and recovery evidence. G56R-006
+may consume those contracts while remaining responsible for production
+resolution, policy materialization, atomic installation, and real strict
+override behavior.
+
+Post-merge cleanup preserves durable process evidence, removes only
+`specs/g56r-005-model-availability-fallback-recovery/`, and regenerates the
+Codex routing roadmap index. No plugin-source, docs-reference, or payload refresh
+is required because the cleanup changes only project memory, roadmap/process
+records, and active-spec residue.

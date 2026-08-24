@@ -48,6 +48,7 @@ import json
 import re
 import sys
 import tempfile
+import tomllib
 import unittest
 from collections import Counter
 from collections.abc import Callable, Iterable
@@ -70,6 +71,76 @@ MANIFEST_FILE = "manifest.json"
 TEMPLATES_DIR = "templates"
 PLANNED = "planned"
 SHIPPED = "shipped"
+
+CLAUDE_ARTIFACT_AUTHOR = PLUGIN_ROOT / "agents" / "artifact-author.md"
+CODEX_ARTIFACT_AUTHOR = PLUGIN_ROOT / "codex-agents" / "artifact-author.toml"
+CLAUDE_PHASE_EXECUTION = (
+    PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "phase-execution.md"
+)
+CODEX_PHASE_EXECUTION = (
+    PLUGIN_ROOT
+    / "codex-skills"
+    / "speckit-autopilot"
+    / "references"
+    / "phase-execution-codex.md"
+)
+
+
+class ArtifactAuthorPublishLastContractTests(unittest.TestCase):
+    """The author must never expose unfinished sample pages at final paths."""
+
+    REQUIRED_INSTRUCTIONS = (
+        "finish one page before reading or writing the next template",
+        "Never pre-copy raw templates to their final artifact paths",
+        "replacement map whose keys equal the template's declared slot inventory exactly",
+        ".artifact-author-<entry-id>.<nonce>.tmp",
+        "atomically replace the final `.html`",
+        "Never publish by writing directly to the final path",
+        "`sample-notice`, `notice`, or `note`",
+        "every declared `FILL` marker pair still appears exactly once and in order",
+        "every marked region matches the replacement map",
+    )
+
+    REQUIRED_RECONCILIATION = (
+        "Reconcile current-run ownership before trusting any artifact file",
+        "only the IDs it reports as `generated`",
+        "lacks a complete current-run `generated` outcome",
+        "delete every sibling `.artifact-author-*.tmp` file",
+        "re-read the artifact directory",
+        "every remaining draft-stage final ID is owned",
+        "no `.artifact-author-*.tmp` file remains",
+        "STOP before staging, the boundary commit, push",
+        "fail-open cannot safely preserve an unowned file",
+        "After every verification-driven deletion, re-read that path",
+        "Demoting the outcome remains fail-open only when the invalid file is verifiably gone",
+        "a surviving invalid file is the same artifact-integrity failure",
+    )
+
+    def test_claude_and_codex_agents_publish_only_finished_pages(self) -> None:
+        claude_instructions = CLAUDE_ARTIFACT_AUTHOR.read_text(encoding="utf-8")
+        codex_instructions = tomllib.loads(
+            CODEX_ARTIFACT_AUTHOR.read_text(encoding="utf-8")
+        )["developer_instructions"]
+
+        for runtime, instructions in (
+            ("Claude", claude_instructions),
+            ("Codex", codex_instructions),
+        ):
+            with self.subTest(runtime=runtime):
+                normalized = " ".join(instructions.split())
+                for required in self.REQUIRED_INSTRUCTIONS:
+                    self.assertIn(required, normalized)
+
+    def test_orchestrators_remove_every_artifact_not_owned_by_this_run(self) -> None:
+        for runtime, path in (
+            ("Claude", CLAUDE_PHASE_EXECUTION),
+            ("Codex", CODEX_PHASE_EXECUTION),
+        ):
+            instructions = path.read_text(encoding="utf-8")
+            with self.subTest(runtime=runtime):
+                normalized = " ".join(instructions.split())
+                for required in self.REQUIRED_RECONCILIATION:
+                    self.assertIn(required, normalized)
 
 
 # ---------------------------------------------------------------------------
@@ -1496,6 +1567,7 @@ class FillRegionFixtureTests(FillRegionFixtureCase):
 # Registered cases, in check order. A case not named here is a case the suite
 # never runs.
 CHECK_GROUPS: tuple[type[unittest.TestCase], ...] = (
+    ArtifactAuthorPublishLastContractTests,
     FillRegionTests,
     FillRegionFixtureTests,
 )

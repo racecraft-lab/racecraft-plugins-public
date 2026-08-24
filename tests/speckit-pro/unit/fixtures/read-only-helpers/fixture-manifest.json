@@ -28,6 +28,18 @@
       "rollback": "Use the registered check-prerequisites operation in read_only mode."
     },
     {
+      "helper_id": "resolve-workflow-binding",
+      "operation": "resolve-workflow-binding",
+      "promotion_status": "python_authoritative",
+      "failure_classes": ["invalid_input", "missing_file", "ambiguous_worktree", "unsupported_path", "subprocess_failure"],
+      "rejected_stdout_schema": {"binding_status": "resolved|missing|ambiguous|invalid", "relation": "same|descendant|external|null"},
+      "deterministic_remediation": {"summary": "Provide one readable workflow file owned by a registered Git worktree.", "actions": ["Use an absolute workflow path when relative lookup is ambiguous.", "Retry after correcting worktree registration or path drift."]},
+      "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
+      "path_boundary_policy": {"boundary": "registered_git_worktrees", "rejects": ["unregistered_path", "traversal", "symlink_escape"]},
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/read-only-helpers/requests/resolve-workflow-binding.json",
+      "rollback": "Remove the helper registry entry and restore the prior worktree-affinity stop."
+    },
+    {
       "helper_id": "detect-commands",
       "operation": "detect-commands",
       "promotion_status": "python_authoritative",

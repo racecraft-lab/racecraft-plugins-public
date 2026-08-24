@@ -36,7 +36,7 @@ autonomous phase loop.
 | Analyze | `/speckit-analyze` | ✅ Complete | 4 findings remediated (0C/1H/3M); G6 passed with no unresolved findings |
 | Confidence Gate | G6.5 | ✅ Complete | PASS: 0.99 ≥ 0.90 in advisory mode |
 | Implement | `/speckit-implement` | ✅ Complete | T001-T025 complete; focused 35/35 after review remediation, Layer 4 6002/6002, full suite 7663/7663, generated checks current |
-| Post | Post-Implementation | ⏳ Pending | Not run by the `stage=plan` handoff |
+| Post | Post-Implementation | ✅ Complete | PR #487 merged; post-merge archive evidence is preserved outside the active spec directory |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
@@ -646,13 +646,13 @@ production routing, live qualification, or cross-platform reconciliation.
 | Post: Integration Suite | ✅ Complete | Authoritative exact-worktree run passed 7663/7663: L1 1469, L4 6002, L5 192 |
 | Post: Reviewability Diff Gate | ✅ Complete (WARN) | 584 reviewable authored LOC, 0 production files, 20 implementation/remediation files; above the 400-LOC and 15-file warnings but below the 25-file block, so no split |
 | Post: Self-Review | ✅ Complete | Four-question audit found no edge-case, traceability, tidiness, or silent-deferral defect |
-| Post: UAT Runbook Generation | ✅ Complete | Manual source-derived runbook committed after browser and behavioral UAT; one unsafe dynamic-title finding was remediated and retested |
+| Post: UAT Runbook Generation | ✅ Complete | Manual source-derived runbook preserved at `docs/ai/specs/.process/G56R-005-manual-uat.md`; one unsafe dynamic-title finding was remediated and retested |
 | Post: Final Reviewability Backstop | ✅ Complete (WARN) | Deferred helper honored via current committed evidence at `91012212c`; LOC and file-count warnings remain below the block, with no correctness blocker |
 | Post: PR Packet/Body Generation | ✅ Complete | `pr-packet-output` dry-run/apply succeeded; read-only and persisted validation passed with `pr_blocked: false` |
 | Post: PR Body Generation | ✅ Complete | Packet-owned implementation-era body generated with current verification, UAT, scope, non-goals, and known gaps |
 | Post: PR Creation | ✅ Complete | Existing draft PR [#487](https://github.com/racecraft-lab/racecraft-plugins-public/pull/487) updated from validated packet fields at head `656852e5a` |
 | Post: Review Remediation | ✅ Complete | One live review contained two important threads; both were remediated RED→GREEN at 35/35 and full suite 7663/7663 before reply/resolution |
-| Post: Retrospective | ✅ Complete | `retrospective.md`: 25/25 tasks, 100% spec adherence, 0 critical and 4 remediated significant findings, 2 minor process findings |
+| Post: Retrospective | ✅ Complete | `docs/ai/specs/.process/G56R-005-retrospective.md`: 25/25 tasks, 100% spec adherence, 0 critical and 4 remediated significant findings, 2 minor process findings |
 
 ### Parallel Post-Implementation Evidence
 

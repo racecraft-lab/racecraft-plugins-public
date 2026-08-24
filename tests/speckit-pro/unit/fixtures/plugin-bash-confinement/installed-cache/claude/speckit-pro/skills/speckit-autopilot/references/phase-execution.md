@@ -913,6 +913,21 @@ list" case above — it takes the whole-set gap rather than being read as far as
 got. A partial summary is missing information, never evidence of success, and a
 gap count read off one is not a measurement.
 
+**Reconcile current-run ownership before trusting any artifact file.** Read the
+manifest's `draft-pr` entry IDs after the dispatch. A complete outcome list owns
+only the IDs it reports as `generated`; an error, timeout, truncated result, or
+unreadable list owns none. Delete every draft-stage final `.html` whose ID lacks
+a complete current-run `generated` outcome, and delete every sibling
+`.artifact-author-*.tmp` file. This cleanup removes stale results from prior
+runs as well as interrupted writes. After deletion, re-read the artifact
+directory and require that every remaining draft-stage final ID is owned by the
+complete current-run `generated` set and that no `.artifact-author-*.tmp` file
+remains. A successfully removed page is ordinary fail-open gap handling. A
+failed deletion or an ownership postcondition that cannot be established is an
+artifact-integrity failure: STOP before staging, the boundary commit, push, or
+pull-request creation or refresh, because fail-open cannot safely preserve an
+unowned file.
+
 #### The written pages are verified on disk, not taken on report
 
 **Every outcome above is a claim about a file; this step checks the file.** The
@@ -940,6 +955,13 @@ templates are complete worked examples built on an invented feature, so an
 unfilled page is neither empty nor obviously broken: it is a plausible-looking
 document about something else. Left on disk it is committed, pushed, and linked
 from the pull-request body as though it were real.
+
+After every verification-driven deletion, re-read that path and require it to
+be absent. If an invalid or sample page cannot be removed, STOP before staging,
+the boundary commit, push, or pull-request creation or refresh. Demoting the
+outcome remains fail-open only when the invalid file is verifiably gone; a
+surviving invalid file is the same artifact-integrity failure as a surviving
+unowned file.
 
 **This is why an emptiness check cannot stand in for these two.** "Is every
 marked region populated?" answers yes on a page that was never touched, because

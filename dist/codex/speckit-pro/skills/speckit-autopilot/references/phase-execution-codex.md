@@ -178,23 +178,23 @@ only recovery path.
 
 #### Artifact generation: the `artifact-author` dispatch
 
-**Re-check worktree affinity immediately before dispatch.** Resolve the current
-Codex task's repository root with `git rev-parse --show-toplevel` from the
-session's default checkout, then separately resolve the repository root that
-owns the already-validated workflow path. The current task root **must equal the
-workflow-bound repository root** before `spawn_agent` runs. A per-command
-`workdir` or absolute path in the prompt does not repair a mismatch: the spawned
-agent inherits the task's workspace and writable roots, not a shell command's
-working directory.
+**Revalidate the established workflow binding immediately before dispatch.**
+Re-run the read-only `resolve-workflow-binding` runner helper with the canonical
+`WORKFLOW_FILE` established at pre-flight, invoking the helper from
+`WORKFLOW_ROOT`. Require `binding_status=resolved`; require the returned
+`task_root` and `workflow_root` both to equal the established `WORKFLOW_ROOT`;
+require the returned `workflow_file` to equal the established `WORKFLOW_FILE`;
+and require `relation=same`. Keep the original `TASK_ROOT` as immutable
+discovery context, but do not compare it with the helper's cwd-derived
+`task_root` during this revalidation.
 
-When the roots differ, this is **not an artifact-content gap**. It is a broken
-write-capable handoff, so STOP before artifact generation or pull-request
-refresh, write no gap sink, and direct the operator to start a Codex task rooted
-at the workflow-bound repository. Do not dispatch the author, commit, push, or
-mutate the pull request from the mismatched task. This boundary re-check is in
-addition to the startup guard: a resumed session or an operator-directed
-continuation must not turn a bypassed startup precondition into a normal
-fail-open page outcome.
+Registration drift, path drift, ambiguity, external reclassification, and
+sandbox denial are **not artifact-content gaps**. They are broken write-capable
+handoffs, so STOP before artifact generation or pull-request refresh, write no
+gap sink, and do not dispatch the author, commit, push, or mutate the pull
+request. This revalidation is in addition to the startup guard: a resumed
+session or operator-directed continuation must not turn a stale or bypassed
+binding into a normal fail-open page outcome.
 
 Step 1 is a single `spawn_agent` call on the installed `artifact-author` agent,
 followed by a bounded `wait_agent` loop that runs until its outcome list
@@ -203,6 +203,10 @@ gallery, and answers with one outcome per page it wrote or could not write:
 
 ```text
 spawn_agent("artifact-author", prompt="""
+  WORKFLOW_ROOT: <canonical absolute worktree root>
+  Use WORKFLOW_ROOT as the workdir for every shell call and as the base for
+  every filesystem path. Write and return paths only inside WORKFLOW_ROOT.
+
   Author this feature's draft-stage gallery pages and write them into
   specs/<feature>/artifacts/.
 
@@ -257,9 +261,9 @@ all land the same way: zero generated pages, and one whole-set gap carrying that
 reason. The precondition rule above governs the steps that halt the sequence,
 and generation is not among them, because fail-open below converts every
 shortfall this step can produce into an outcome. This applies only after the
-worktree-affinity precondition passed; a mismatched task root never reaches the
-dispatch and cannot be downgraded to a whole-set gap. Step 2 runs regardless of
-content-generation outcomes.
+workflow-binding precondition passed; a drifted or non-executable binding never
+reaches the dispatch and cannot be downgraded to a whole-set gap. Step 2 runs
+regardless of content-generation outcomes.
 
 **A truncated reply is not a clean one.** An agent that exhausts its budget
 mid-summary returns a fragment, and a fragment carrying fewer than one outcome
@@ -267,6 +271,21 @@ per selected page is precisely the "cannot be read as an outcome list" case
 above: it takes the whole-set gap rather than being read as far as it reached. A
 partial summary is missing information, never evidence of success, and a gap
 count read off one is not a measurement.
+
+**Reconcile current-run ownership before trusting any artifact file.** Read the
+manifest's `draft-pr` entry IDs after the dispatch. A complete outcome list owns
+only the IDs it reports as `generated`; an error, timeout, truncated result, or
+unreadable list owns none. Delete every draft-stage final `.html` whose ID lacks
+a complete current-run `generated` outcome, and delete every sibling
+`.artifact-author-*.tmp` file. This cleanup removes stale results from prior
+runs as well as interrupted writes. After deletion, re-read the artifact
+directory and require that every remaining draft-stage final ID is owned by the
+complete current-run `generated` set and that no `.artifact-author-*.tmp` file
+remains. A successfully removed page is ordinary fail-open gap handling. A
+failed deletion or an ownership postcondition that cannot be established is an
+artifact-integrity failure: STOP before staging, the boundary commit, push, or
+pull-request creation or refresh, because fail-open cannot safely preserve an
+unowned file.
 
 #### The written pages are verified on disk, not taken on report
 
@@ -294,6 +313,13 @@ is a finished worked example about an invented feature, so an unfilled page is
 neither empty nor visibly broken — it is a credible document describing something
 else entirely. Left in place it gets committed, pushed, and linked from the
 pull-request body as genuine.
+
+After every verification-driven deletion, re-read that path and require it to
+be absent. If an invalid or sample page cannot be removed, STOP before staging,
+the boundary commit, push, or pull-request creation or refresh. Demoting the
+outcome remains fail-open only when the invalid file is verifiably gone; a
+surviving invalid file is the same artifact-integrity failure as a surviving
+unowned file.
 
 **An emptiness check cannot replace these two.** Asking whether every marked
 region holds content returns yes for a page never touched, because the shipped
@@ -684,6 +710,14 @@ Consensus uses `codebase-analyst`, `spec-context-analyst`, and
 
 For each pending phase, spawn a subagent, collect the result, validate the
 gate, and advance.
+
+Every step in this loop executes against the pre-flight `WORKFLOW_ROOT`, even
+when the Codex task was invoked from its parent checkout. Set that root as the
+`workdir` for every shell call; invoke helpers from it; resolve every direct
+read, write, state, and Git path against it; and include the exact root plus the
+same directive in every executor and consensus prompt. Validate agent-returned
+paths against `WORKFLOW_ROOT` before applying them. Never infer the execution
+root from the task's default checkout.
 
 ```text
 for phase in PHASES starting from first_pending:
