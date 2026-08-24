@@ -191,6 +191,23 @@
       }
     },
     {
+      "case_id": "invalid-partial-bounded-probe",
+      "category": "invalid_manifest",
+      "overrides": {
+        "manifest.required_agent_policies.analyze-executor.preferred_route.probe_id": "probe-required-primary",
+        "manifest.bounded_probes.probe-required-primary": {
+          "probe_id": "probe-required-primary",
+          "candidate_route_id": "required-primary"
+        }
+      },
+      "expected": {
+        "status": "input_error",
+        "diagnostic_code": "invalid_route_policy_manifest",
+        "snapshot_captured": false,
+        "writes_state": false
+      }
+    },
+    {
       "case_id": "invalid-manifest-path-outside-repository",
       "category": "invalid_manifest_path",
       "overrides": {

@@ -262,9 +262,10 @@ def bounded_probe_required_manifest() -> dict[str, object]:
     manifest["bounded_probes"] = {
         "probe-required-primary": {
             "probe_id": "probe-required-primary",
-            "route_id": "required-primary",
             "candidate_route_id": "required-primary",
-            "evidence_id": "fixture:required-primary",
+            "purpose": "deterministically establish required primary availability",
+            "bounds": {"max_calls": 1},
+            "expected_result_shape": {"available": "boolean"},
         }
     }
     return finalize_route_policy_manifest(manifest)
@@ -521,7 +522,7 @@ class MutationHelperTests(unittest.TestCase):
         self.assertEqual(len(record["applied_actions"]), 1)
         self.assertEqual(record["failed_actions"][0]["operation_id"], mutation["failure_operation"]["operation_id"])
         self.assertEqual(record["failed_actions"][0]["target"], failed_target)
-        self.assertEqual([action["name"] for action in record["rolled_back_actions"]], required_files)
+        self.assertEqual([action["name"] for action in record["rolled_back_actions"]], required_files[:1])
         self.assertEqual(record["cleanup_errors"], [])
         self.assertEqual(record["cleanup_actions"], [])
         self.assertEqual(recovery["planned_writes"], mutation["planned_paths"])
@@ -1052,6 +1053,63 @@ class MutationHelperTests(unittest.TestCase):
                 "invalid-no-helper-allowed-type",
                 lambda manifest: manifest["optional_helper"]["no_helper"].__setitem__("allowed", "false"),
                 "optional_helper_no_helper_allowed_not_boolean",
+            ),
+            (
+                "partial-bounded-probe",
+                lambda manifest: (
+                    manifest["required_agent_policies"]["analyze-executor"]["preferred_route"].__setitem__(
+                        "probe_id",
+                        "probe-required-primary",
+                    ),
+                    manifest["bounded_probes"].__setitem__(
+                        "probe-required-primary",
+                        {
+                            "probe_id": "probe-required-primary",
+                            "candidate_route_id": "required-primary",
+                        },
+                    ),
+                ),
+                "bounded_probe_schema_mismatch",
+            ),
+            (
+                "bounded-probe-id-mismatch",
+                lambda manifest: (
+                    manifest["required_agent_policies"]["analyze-executor"]["preferred_route"].__setitem__(
+                        "probe_id",
+                        "probe-required-primary",
+                    ),
+                    manifest["bounded_probes"].__setitem__(
+                        "probe-required-primary",
+                        {
+                            "probe_id": "different-probe",
+                            "candidate_route_id": "required-primary",
+                            "purpose": "test",
+                            "bounds": {"max_calls": 1},
+                            "expected_result_shape": {"available": "boolean"},
+                        },
+                    ),
+                ),
+                "bounded_probe_id_mismatch",
+            ),
+            (
+                "bounded-probe-route-binding-mismatch",
+                lambda manifest: (
+                    manifest["required_agent_policies"]["analyze-executor"]["preferred_route"].__setitem__(
+                        "probe_id",
+                        "probe-required-primary",
+                    ),
+                    manifest["bounded_probes"].__setitem__(
+                        "probe-required-primary",
+                        {
+                            "probe_id": "probe-required-primary",
+                            "candidate_route_id": "required-fallback",
+                            "purpose": "test",
+                            "bounds": {"max_calls": 1},
+                            "expected_result_shape": {"available": "boolean"},
+                        },
+                    ),
+                ),
+                "bounded_probe_route_binding_mismatch",
             ),
             (
                 "source-roster-missing-optional-helper",
@@ -1633,6 +1691,133 @@ class MutationHelperTests(unittest.TestCase):
                 prior_mode,
                 failed_agent_name,
                 unrestored_agent_name,
+            )
+
+    def test_install_codex_agents_route_aware_recovery_reports_cleanup_actions(self) -> None:
+        from speckit_pro_runner.helpers import install
+        from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp, tempfile.TemporaryDirectory() as home_tmp:
+            fake_home = Path(home_tmp).resolve()
+            manifest_path = self.write_valid_route_policy_manifest(git_root)
+            expected_snapshot = routing_capability_snapshot()
+            expected_snapshot["available_routes"] = ["required-primary", "required-fallback"]
+            failed_agent_name = routing_required_agents()[1]
+            real_write = install.write_codex_agent_atomic
+
+            def fail_second_write(
+                target: Path,
+                content: bytes,
+                target_dir: Path,
+                identity: tuple[int, int] | None,
+                *,
+                mode: int | None = None,
+                expected_state: object = None,
+            ) -> object:
+                if target.name == f"{failed_agent_name}.toml":
+                    raise OSError("injected route-aware write failure")
+                return real_write(target, content, target_dir, identity, mode=mode, expected_state=expected_state)
+
+            request = SimpleNamespace(
+                request_id="test-route-aware-cleanup-evidence",
+                helper_id="install-codex-agents",
+                operation="install-codex-agents",
+                mode="apply",
+                inputs=self.route_aware_inputs(manifest_path, git_root, destination=None),
+            )
+            request.inputs["test_overrides"] = {"codex_capability_snapshot": expected_snapshot}
+            old_cwd = Path.cwd()
+            os.chdir(git_root)
+            try:
+                with (
+                    patch.dict(os.environ, {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}),
+                    patch.object(install, "write_codex_agent_atomic", side_effect=fail_second_write),
+                ):
+                    response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
+            finally:
+                os.chdir(old_cwd)
+
+            record = response["data"]["routing"]["recovery_or_mutation"]["recovery_record"]
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual(len(record["applied_actions"]), 1)
+            self.assertEqual(len(record["rolled_back_actions"]), 1)
+            self.assertEqual(
+                [action["target"] for action in record["cleanup_actions"]],
+                [(fake_home / ".codex" / "agents").as_posix(), (fake_home / ".codex").as_posix()],
+            )
+            self.assertEqual(record["cleanup_errors"], [])
+            self.assertFalse((fake_home / ".codex").exists())
+
+    def test_install_codex_agents_route_aware_reports_helper_removal_as_failed_operation(self) -> None:
+        from speckit_pro_runner.helpers import install
+        from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            manifest_path = self.write_valid_route_policy_manifest(git_root)
+            expected_snapshot = routing_capability_snapshot()
+            expected_snapshot["available_routes"] = ["required-primary", "required-fallback"]
+            destination = git_root / ".codex" / "agents"
+            destination.mkdir(parents=True)
+            helper_name = f"{routing_optional_helper()}.toml"
+            helper_path = destination / helper_name
+            helper_path.write_bytes(route_rendered_optional_helper_bytes())
+            inputs = self.route_aware_inputs(manifest_path, git_root)
+            inputs["test_overrides"] = {"codex_capability_snapshot": expected_snapshot}
+            request = SimpleNamespace(
+                request_id="test-route-aware-helper-removal-failure",
+                helper_id="install-codex-agents",
+                operation="install-codex-agents",
+                mode="apply",
+                inputs=inputs,
+            )
+            real_remove = install.remove_codex_agent_if_unchanged
+
+            def fail_helper_removal(target: Path, *args: object, **kwargs: object) -> None:
+                if target.name == helper_name:
+                    raise OSError("injected helper removal failure")
+                real_remove(target, *args, **kwargs)
+
+            old_cwd = Path.cwd()
+            os.chdir(git_root)
+            try:
+                with patch.object(install, "remove_codex_agent_if_unchanged", side_effect=fail_helper_removal):
+                    response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
+            finally:
+                os.chdir(old_cwd)
+
+            mutation = response["data"]["mutation"]
+            failed = response["data"]["routing"]["recovery_or_mutation"]["recovery_record"]["failed_actions"]
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual(mutation["failure_operation"]["kind"], "remove_file")
+            self.assertEqual(mutation["failure_operation"]["operation_id"], f"remove-codex-agent:{helper_name}")
+            self.assertEqual(failed[0]["kind"], "remove_file")
+            self.assertEqual(failed[0]["name"], helper_name)
+            self.assertTrue(helper_path.exists())
+
+    def test_install_codex_agents_cleanup_reports_directory_removal_errors(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp) / ".codex" / "agents"
+            destination.mkdir(parents=True)
+            with patch.object(Path, "rmdir", side_effect=OSError("injected cleanup failure")):
+                actions, errors = install.cleanup_codex_agent_destination(
+                    destination,
+                    destination_existed=False,
+                    destination_parent_existed=False,
+                )
+
+            self.assertEqual(actions, [])
+            self.assertEqual(
+                [error["target"] for error in errors],
+                [destination.as_posix(), destination.parent.as_posix()],
+            )
+            self.assertTrue(all(error["error"] == "OSError" for error in errors))
+            self.assertEqual(
+                install.codex_route_aware_cleanup_manual_remediation(errors)[0]["paths"],
+                [destination.as_posix(), destination.parent.as_posix()],
             )
 
     def test_install_codex_agents_route_aware_refuses_concurrent_edit_before_write(self) -> None:

@@ -85,5 +85,7 @@ Before marking implementation complete, verify:
 - Optional helper removal has exact known rendered-byte digest proof; caller-asserted provenance is rejected as untrusted.
 - Apply and rollback refuse to overwrite a destination changed after its captured snapshot.
 - Successful rollback restores bytes and modes or removes newly created files and reports no restart.
+- Recovery evidence reports only actions actually applied and rolled back, the exact failed write or removal, and real directory-cleanup outcomes.
+- Bounded probes reject partial records, aliases, key/ID mismatches, and candidate routes that do not declare the same probe.
 - Rollback uncertainty sets restart guidance and does not claim verification success.
 - Fake-home cases use a temporary HOME/USERPROFILE or temporary repository `.codex/agents` destination; they do not add a test-only installer input or touch the operator's real home.

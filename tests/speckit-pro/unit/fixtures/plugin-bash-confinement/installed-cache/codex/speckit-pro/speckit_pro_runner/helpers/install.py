@@ -80,6 +80,9 @@ ROUTE_POLICY_OPTIONAL_HELPER_KEYS = frozenset(
     {"helper_name", "policy_id", "preferred_route", "fallback_routes", "no_helper"}
 )
 ROUTE_POLICY_NO_HELPER_KEYS = frozenset({"allowed", "reason"})
+ROUTE_POLICY_BOUNDED_PROBE_KEYS = frozenset(
+    {"probe_id", "candidate_route_id", "purpose", "bounds", "expected_result_shape"}
+)
 ROUTE_POLICY_SHA256_IDENTITY = re.compile(r"^sha256:[0-9a-f]{64}$")
 ROUTE_POLICY_SHA256_HEX = re.compile(r"^[0-9a-f]{64}$")
 CODEX_AGENT_STATE_UNSET = object()
@@ -365,6 +368,7 @@ def run_codex_agent_install(entry: Any, request: Any) -> dict[str, Any]:
     destination_parent_existed = destination.parent.exists()
     destination_identity: tuple[int, int] | None = None
     failed_name: str | None = None
+    failed_operation: dict[str, Any] | None = None
     try:
         destination.mkdir(parents=True, exist_ok=True)
         unsafe = codex_agent_destination_diagnostic(destination)
@@ -373,11 +377,31 @@ def run_codex_agent_install(entry: Any, request: Any) -> dict[str, Any]:
         destination_identity = codex_agent_destination_identity(destination)
         for name, target, _content in planned:
             failed_name = name
+            failed_operation = next(
+                (
+                    dict(operation)
+                    for operation in mutation["planned_operations"]
+                    if isinstance(operation, dict)
+                    and operation.get("operation_id")
+                    in {f"install-codex-agent:{name}", f"remove-codex-agent:{name}"}
+                ),
+                None,
+            )
             if not codex_agent_target_is_safe(target, destination, destination_identity):
                 raise OSError(f"unsafe destination entry: {name}")
             previous[name] = codex_agent_previous_state(target)
         for index, (name, target, content) in enumerate(planned):
             failed_name = name
+            failed_operation = next(
+                (
+                    dict(operation)
+                    for operation in mutation["planned_operations"]
+                    if isinstance(operation, dict)
+                    and operation.get("operation_id")
+                    in {f"install-codex-agent:{name}", f"remove-codex-agent:{name}"}
+                ),
+                None,
+            )
             if not codex_agent_target_is_safe(target, destination, destination_identity):
                 raise OSError(f"unsafe destination entry: {name}")
             if not codex_agent_state_matches(target, previous[name]):
@@ -405,6 +429,8 @@ def run_codex_agent_install(entry: Any, request: Any) -> dict[str, Any]:
             mutation["applied_operations"].append(dict(operation) if operation["kind"] == "remove_file" else operation_record(operation))
             mutation["touched_paths"].append(target.as_posix())
 
+        failed_name = None
+        failed_operation = None
         mismatches = verify_codex_agent_install(destination, install_rendered)
         if mismatches:
             raise OSError(f"post-copy verification failed: {', '.join(mismatches)}")
@@ -419,35 +445,37 @@ def run_codex_agent_install(entry: Any, request: Any) -> dict[str, Any]:
             failed_target = destination / failed_name
             if not codex_agent_state_matches(failed_target, previous.get(failed_name)):
                 rollback_failures = sorted({*rollback_failures, failed_name})
-        cleanup_codex_agent_destination(
+        cleanup_actions, cleanup_errors = cleanup_codex_agent_destination(
             destination,
             destination_existed=destination_existed,
             destination_parent_existed=destination_parent_existed,
         )
-        mutation["mutation_status"] = "partial_failure" if rollback_failures else "blocked"
-        if failed_name is not None:
-            failed_target = destination / failed_name
-            mutation["failure_operation"] = operation_record(
-                {
-                    "operation_id": f"install-codex-agent:{failed_name}",
-                    "kind": "write_file",
-                    "target": failed_target.as_posix(),
-                }
-            )
-        mutation["manual_remediation"] = (
-            codex_route_aware_rollback_manual_remediation(destination, rollback_failures) if rollback_failures else []
-        )
-        data["writes_state"] = bool(rollback_failures)
-        data["rollback_succeeded"] = not rollback_failures
-        data["restart_required"] = bool(rollback_failures)
+        recovery_failed = bool(rollback_failures or cleanup_errors)
+        mutation["mutation_status"] = "partial_failure" if recovery_failed else "blocked"
+        mutation["failure_operation"] = failed_operation
+        mutation["manual_remediation"] = [
+            *codex_route_aware_rollback_manual_remediation(destination, rollback_failures),
+            *codex_route_aware_cleanup_manual_remediation(cleanup_errors),
+        ]
         data["verification"] = {"status": "failed", "matched_files": []}
         if route_routing is not None:
-            data["routing"]["recovery_or_mutation"] = codex_route_aware_recovery_after_apply_failure(
+            recovery = codex_route_aware_recovery_after_apply_failure(
                 mutation,
                 destination,
                 previous,
+                applied_previous,
                 rollback_failures,
+                cleanup_actions,
+                cleanup_errors,
             )
+            data["routing"]["recovery_or_mutation"] = recovery
+            data["writes_state"] = recovery["writes_state"]
+            data["rollback_succeeded"] = not rollback_failures
+            data["restart_required"] = recovery["restart_required"]
+        else:
+            data["writes_state"] = recovery_failed
+            data["rollback_succeeded"] = not recovery_failed
+            data["restart_required"] = recovery_failed
         return response(
             "expected_failure",
             request_id=request.request_id,
@@ -456,7 +484,11 @@ def run_codex_agent_install(entry: Any, request: Any) -> dict[str, Any]:
                 diagnostic(
                     "codex_agent_install_failed",
                     "Codex agent installation failed and rollback was attempted",
-                    details={"error": str(exc), "rollback_failures": rollback_failures},
+                    details={
+                        "error": str(exc),
+                        "rollback_failures": rollback_failures,
+                        "cleanup_errors": cleanup_errors,
+                    },
                     remediation_summary="Inspect the destination and retry after resolving the reported failure.",
                     remediation_actions=codex_route_aware_remediation_action_summaries(mutation["manual_remediation"])
                     or ["Retry the same request in dry_run mode."],
@@ -689,8 +721,8 @@ def codex_route_aware_admitted_probe_pairs(route_manifest: dict[str, Any]) -> se
     for key, raw in bounded_probes.items():
         if not isinstance(raw, dict):
             continue
-        probe_id = raw.get("probe_id", key)
-        route_id = raw.get("route_id") or raw.get("candidate_route_id")
+        probe_id = raw.get("probe_id")
+        route_id = raw.get("candidate_route_id")
         if isinstance(probe_id, str) and isinstance(route_id, str):
             pairs.add((probe_id, route_id))
     return pairs
@@ -1491,7 +1523,10 @@ def codex_route_aware_recovery_after_apply_failure(
     mutation: dict[str, Any],
     destination: Path,
     previous: dict[str, CodexAgentFileState | None],
+    applied_previous: dict[str, CodexAgentFileState | None],
     rollback_failures: list[str],
+    cleanup_actions: list[dict[str, Any]],
+    cleanup_errors: list[dict[str, Any]],
 ) -> dict[str, Any]:
     planned_operations = mutation.get("planned_operations", [])
     applied_operations = mutation.get("applied_operations", [])
@@ -1506,8 +1541,8 @@ def codex_route_aware_recovery_after_apply_failure(
     final_state = codex_route_aware_destination_state_records(destination, list(previous))
     pre_state_id = route_policy_digest(prior_state)
     final_state_id = route_policy_digest(final_state)
-    writes_state = bool(rollback_failures) or pre_state_id != final_state_id
-    rollback_outcome = "unrestored" if rollback_failures else "restored"
+    writes_state = bool(rollback_failures or cleanup_errors) or pre_state_id != final_state_id
+    rollback_outcome = "unrestored" if rollback_failures or pre_state_id != final_state_id else "restored"
     failure_operation = mutation.get("failure_operation")
     rollback_error_records = codex_route_aware_rollback_error_records(destination, rollback_failures)
     unrestored_actions = codex_route_aware_unrestored_actions(destination, rollback_failures)
@@ -1528,9 +1563,13 @@ def codex_route_aware_recovery_after_apply_failure(
             "final_state": final_state,
             "staged_actions": list(planned_operations if isinstance(planned_operations, list) else []),
             "applied_actions": list(applied_operations if isinstance(applied_operations, list) else []),
-            "rolled_back_actions": codex_route_aware_rolled_back_actions(destination, previous),
-            "cleanup_actions": [],
-            "cleanup_errors": [],
+            "rolled_back_actions": codex_route_aware_rolled_back_actions(
+                destination,
+                applied_previous,
+                rollback_failures,
+            ),
+            "cleanup_actions": list(cleanup_actions),
+            "cleanup_errors": list(cleanup_errors),
             "failed_actions": codex_route_aware_failed_actions(destination, failure_operation),
             "rollback_outcome": rollback_outcome,
             "rollback_failures": list(rollback_failures),
@@ -1598,10 +1637,14 @@ def codex_route_aware_state_record(
 
 def codex_route_aware_rolled_back_actions(
     destination: Path,
-    previous: dict[str, tuple[bytes, int] | None],
+    previous: dict[str, CodexAgentFileState | None],
+    rollback_failures: list[str],
 ) -> list[dict[str, Any]]:
     actions: list[dict[str, Any]] = []
+    failed_names = set(rollback_failures)
     for name, state in previous.items():
+        if name in failed_names:
+            continue
         actions.append(
             {
                 "operation_id": f"rollback-codex-agent:{name}",
@@ -1620,6 +1663,8 @@ def codex_route_aware_failed_actions(destination: Path, failure_operation: Any) 
     if not isinstance(operation_id, str):
         return [dict(failure_operation)]
     name = operation_id.removeprefix("install-codex-agent:")
+    if name == operation_id:
+        name = operation_id.removeprefix("remove-codex-agent:")
     if name == operation_id:
         return [dict(failure_operation)]
     return [
@@ -1662,6 +1707,27 @@ def codex_route_aware_rollback_manual_remediation(
                 "Restore each unrestored file from the previous known-good bytes when available.",
                 "Review the route-aware recovery record before retrying apply.",
                 "Restart Codex after correcting the reported destination state.",
+            ],
+        }
+    ]
+
+
+def codex_route_aware_cleanup_manual_remediation(
+    cleanup_errors: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    paths = [error["target"] for error in cleanup_errors if isinstance(error.get("target"), str)]
+    if not paths:
+        return []
+    return [
+        {
+            "action_type": "manual_remediation",
+            "reason": "cleanup_incomplete",
+            "paths": paths,
+            "summary": "Inspect and remove installer-created destination directories when they are empty and safe to remove.",
+            "recommended_actions": [
+                "Inspect each reported directory without following symlinks.",
+                "Remove only empty directories created by this install attempt.",
+                "Retry the install after the destination state is understood.",
             ],
         }
     ]
@@ -1719,8 +1785,87 @@ def validate_codex_route_policy_manifest(manifest: dict[str, Any], source_dir: P
     helper_result = validate_route_policy_optional_helper(manifest.get("optional_helper"))
     if is_diagnostic(helper_result):
         return helper_result
-    if not isinstance(manifest.get("bounded_probes"), dict):
+    probes_result = validate_route_policy_bounded_probes(
+        manifest.get("bounded_probes"),
+        manifest["required_agent_policies"],
+        manifest["optional_helper"],
+    )
+    if is_diagnostic(probes_result):
+        return probes_result
+    return {}
+
+
+def validate_route_policy_bounded_probes(
+    raw: Any,
+    required_policies: dict[str, Any],
+    optional_helper: dict[str, Any],
+) -> dict[str, Any]:
+    if not isinstance(raw, dict):
         return invalid_route_policy_manifest("bounded_probes_not_object")
+
+    route_probe_pairs: set[tuple[str, str]] = set()
+    admitted_route_ids: set[str] = set()
+    route_groups = [
+        *required_policies.values(),
+        optional_helper,
+    ]
+    for policy in route_groups:
+        routes = [policy.get("preferred_route"), *policy.get("fallback_routes", [])]
+        for route in routes:
+            if not isinstance(route, dict):
+                continue
+            route_id = route.get("route_id")
+            probe_id = route.get("probe_id")
+            if isinstance(route_id, str):
+                admitted_route_ids.add(route_id)
+                if isinstance(probe_id, str):
+                    route_probe_pairs.add((probe_id, route_id))
+
+    manifest_probe_pairs: set[tuple[str, str]] = set()
+    for key, probe in raw.items():
+        if not isinstance(key, str) or not key:
+            return invalid_route_policy_manifest("bounded_probe_key_invalid")
+        if not isinstance(probe, dict):
+            return invalid_route_policy_manifest("bounded_probe_not_object", details={"probe_id": key})
+        keys = set(probe)
+        if keys != ROUTE_POLICY_BOUNDED_PROBE_KEYS:
+            return invalid_route_policy_manifest(
+                "bounded_probe_schema_mismatch",
+                details={
+                    "probe_id": key,
+                    "missing": sorted(ROUTE_POLICY_BOUNDED_PROBE_KEYS - keys),
+                    "unknown": sorted(keys - ROUTE_POLICY_BOUNDED_PROBE_KEYS),
+                },
+            )
+        if probe.get("probe_id") != key:
+            return invalid_route_policy_manifest(
+                "bounded_probe_id_mismatch",
+                details={"probe_key": key, "probe_id": probe.get("probe_id")},
+            )
+        candidate_route_id = probe.get("candidate_route_id")
+        if not isinstance(candidate_route_id, str) or not candidate_route_id:
+            return invalid_route_policy_manifest("bounded_probe_candidate_route_id_invalid", details={"probe_id": key})
+        if candidate_route_id not in admitted_route_ids:
+            return invalid_route_policy_manifest(
+                "bounded_probe_candidate_not_admitted",
+                details={"probe_id": key, "candidate_route_id": candidate_route_id},
+            )
+        if not isinstance(probe.get("purpose"), str) or not probe["purpose"]:
+            return invalid_route_policy_manifest("bounded_probe_purpose_invalid", details={"probe_id": key})
+        if not isinstance(probe.get("bounds"), dict) or not probe["bounds"]:
+            return invalid_route_policy_manifest("bounded_probe_bounds_invalid", details={"probe_id": key})
+        if not isinstance(probe.get("expected_result_shape"), dict) or not probe["expected_result_shape"]:
+            return invalid_route_policy_manifest("bounded_probe_expected_result_shape_invalid", details={"probe_id": key})
+        manifest_probe_pairs.add((key, candidate_route_id))
+
+    if manifest_probe_pairs != route_probe_pairs:
+        return invalid_route_policy_manifest(
+            "bounded_probe_route_binding_mismatch",
+            details={
+                "missing": sorted(route_probe_pairs - manifest_probe_pairs),
+                "unreferenced": sorted(manifest_probe_pairs - route_probe_pairs),
+            },
+        )
     return {}
 
 
@@ -2131,15 +2276,22 @@ def cleanup_codex_agent_destination(
     *,
     destination_existed: bool,
     destination_parent_existed: bool,
-) -> None:
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    cleanup_actions: list[dict[str, Any]] = []
+    cleanup_errors: list[dict[str, Any]] = []
     for path, existed in ((destination, destination_existed), (destination.parent, destination_parent_existed)):
         if existed:
             continue
         try:
             path.rmdir()
-        except OSError:
+            cleanup_actions.append({"kind": "remove_directory", "target": path.as_posix()})
+        except OSError as exc:
             # Cleanup is best-effort and must not replace the install or rollback result.
-            pass
+            if path.exists():
+                cleanup_errors.append(
+                    {"kind": "remove_directory", "target": path.as_posix(), "error": type(exc).__name__}
+                )
+    return cleanup_actions, cleanup_errors
 
 
 def write_codex_agent_atomic(

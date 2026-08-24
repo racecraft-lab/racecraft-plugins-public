@@ -179,6 +179,9 @@ immediately before each mutation and before rollback, preserving concurrent
 external edits and reporting uncertain state instead of overwriting them. On
 failure:
 
+- recovery distinguishes staged actions from actions actually applied and
+  rolled back, reports the exact failed write or removal, and records real
+  destination-directory cleanup outcomes
 - successful rollback reports `rollback_outcome=restored`,
   `writes_state=false`, `restart_required=false`, and no verification success
 - failed or uncertain rollback reports every unrestored action and error,
@@ -186,6 +189,12 @@ failure:
   manual remediation, and no verification success
 - required-route pre-mutation failures report zero planned/applied writes and
   removals, `writes_state=false`, and `restart_required=false`
+
+Bounded probe declarations use the closed manifest schema `probe_id`,
+`candidate_route_id`, `purpose`, `bounds`, and `expected_result_shape`. Each
+declaration must be keyed by its exact probe ID and bind to an admitted route
+that declares the same probe; aliases and partial records are rejected before
+capability discovery.
 
 ## Hard Constraints
 
