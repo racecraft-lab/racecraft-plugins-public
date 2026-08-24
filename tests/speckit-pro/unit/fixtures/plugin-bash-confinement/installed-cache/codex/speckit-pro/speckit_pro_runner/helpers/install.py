@@ -40,6 +40,8 @@ REQUIRED_CODEX_AGENT_NAMES = frozenset(
         "implement-executor.toml",
         "phase-executor.toml",
         "spec-context-analyst.toml",
+        "sweep-analyst.toml",
+        "sweep-classifier.toml",
         "uat-runbook-author.toml",
     }
 )

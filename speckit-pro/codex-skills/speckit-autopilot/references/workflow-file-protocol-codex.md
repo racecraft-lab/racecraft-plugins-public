@@ -28,6 +28,71 @@ If consensus was used during a phase, add entries to the **Consensus
 Resolution Log** with `Round`, `Routed Categories`, `Outcome`, and
 `Analysts Used` columns.
 
+## Feedback Sweep Log
+
+The pull-request feedback sweep keeps its own table in the workflow file, under
+a `Feedback Sweep Log` heading, with this header:
+
+```text
+| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |
+```
+
+One row per **handled** comment, meaning one that was assigned a class. A
+comment the trust filter dropped, one the self-reply rule dropped, and one whose
+consensus round returned no answer each take no class, so none of them gets a
+row. The row carries the comment id, the surface it was read from, its author,
+its class, its disposition, and the commit that answered it.
+
+The `Disposition` cell escapes any pipe as `\|` and any newline as a line break.
+Table readers here split rows on the bare pipe with no escape handling, so one
+unescaped pipe would shift `CRL #` out of its column and make the consensus link
+read the wrong cell; the comment id sits ahead of the disposition, so the skip
+key survives whatever that prose contains. What fills the cell is the
+classifier's `reason`, at most 512 bytes as UTF-8 and carrying neither a pipe
+nor a newline, after it crosses the redaction surface's `log_row` leg: the
+leg's output is the only form that reaches the cell, and the escaping is
+applied last, to that output. An author that cannot be resolved is recorded
+explicitly rather than left blank, because a blank cell is indistinguishable
+from a cell nobody wrote.
+
+Every amendment additionally produces a Consensus Resolution Log row, and
+`CRL #` names it by number. The link runs both ways at no extra column, because
+that row's item cell names the comment id; see
+[`consensus-protocol.md`](../../skills/speckit-autopilot/references/consensus-protocol.md)
+§Logging for the `Sweep` row type.
+
+**The sweep creates the table** when the workflow file carries none, writing the
+heading and the header row itself. The scaffold workflow template ships neither
+and is not changed to ship them. **Creation and that run's first rows are one
+write in one bookkeeping commit**, never a commit of their own ahead of it: a
+commit carrying an empty table reads as "nothing has been handled", which is
+indistinguishable from a genuine clean first run, and that is the one direction
+the skip key cannot tolerate.
+
+**Placement matches the anchor's level rather than assuming one**, because the
+anchor is neither guaranteed to exist nor guaranteed to sit at `###`. Match
+`Consensus Resolution Log` by its heading text at any level and write
+`Feedback Sweep Log` at the **same** level, so the two are siblings; with no
+anchor, append `## Feedback Sweep Log` at the end of the file. Of the 69
+workflow files committed in this repository, 33 carry no Consensus Resolution
+Log heading at all; of the 36 that do, 31 write it at `###` and 5 at `##`. A
+fixed `###` under a `##` anchor would nest the sweep log inside the consensus
+section, which reads as subordinate to it and is not what the `CRL #`
+cross-reference describes.
+
+**Rows number sequentially.** The leading `#` column starts at 1 and each new
+row takes one more than the highest number already in the table, so numbering
+continues across runs and never restarts.
+
+**This table is the sole store, with no state-file mirror**, deliberately,
+following the `Draft PR` row's rule in the [Claude protocol
+reference](../../skills/speckit-autopilot/references/workflow-file-protocol.md).
+A second sink would introduce exactly the status-versus-evidence drift the Step
+1.1 coverage guard and the tree-wide CI gate already fail on. It is also what
+makes the record durable across archiving, and what lets a re-run read its own
+skip set back: the sweep skips any comment id that already carries a row here,
+and it reads that set from this table and nowhere else.
+
 ## `workflow_file` State Authority
 
 `autopilot-state.json.workflow_file` names the workflow a run is authorized

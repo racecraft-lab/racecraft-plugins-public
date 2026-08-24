@@ -32,7 +32,8 @@ satisfied, and its acceptance evidence is preserved at
 2026-08-18 after delivering six design/prototyping ports plus ART-020's gallery
 accessibility repair and guard; ART-020 remains superseded by ART-004;
 ART-005 shipped as seven stacked PRs (#444, #446, #447, #448, #452, #454 and
-#455) and was archived 2026-08-20; ART-008, ART-009 and ART-010 are ready;
+#455) and was archived 2026-08-20; ART-008 was scaffolded 2026-08-20 as two
+stacked slices and is in progress; ART-009 and ART-010 are ready;
 ART-015 was opened from ART-006 findings and is ready with no dependencies;
 ART-016 and ART-018 were opened from ART-014 findings on 2026-08-12 and are
 ready; ART-017, opened from the same findings, is in progress; ART-019 was
@@ -146,7 +147,7 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-005 | Gallery Completion: Knowledge, Reports & Editors | ✅ Complete / Archived | [.process/ART-005-workflow.md](.process/ART-005-workflow.md) | Shipped as seven stacked slices in PRs #444, #446, #447, #448, #452, #454 and #455; archived 2026-08-20. All seven templates and manifest rows live outside `specs/**`; 252 browser UAT rows closed at 177 pass, 75 evidence-backed N/A, and 0 fail. Evidence is preserved at [.process/ART-005-uat-results.md](.process/ART-005-uat-results.md) and [.process/ART-005-uat-results.json](.process/ART-005-uat-results.json) |
 | ART-006 | Autopilot Staging | ✅ Complete / Archived | [.process/ART-006-workflow.md](.process/ART-006-workflow.md) | PR #422; archived 2026-08-09; re-audited and re-grilled 2026-08-03. Declared budget 382 reviewable LOC, one slice. `gh` corroboration deferred to ART-007 (see Scope). **Prerequisite discharged** — PRs #416/#417 shipped in speckit-pro 2.22.0, so durable stage state now has a reliable store; ready for autopilot from Phase 1 |
 | ART-007 | Draft-PR Emission | ✅ Complete / Archived | [.process/ART-007-workflow.md](.process/ART-007-workflow.md) | PR #445; archived 2026-08-18. Scoping absorbed the ART-006 `gh` corroboration limb, resolved OQ-1 (the draft becomes the first slice PR), and recorded the corpus deferral to ART-009 (see both Scope amendments). Acceptance evidence preserved at `.process/ART-007-manual-uat.md` |
-| ART-008 | Feedback Sweep | ⏳ Ready | - | ART-007 dependency satisfied by PR #445 |
+| ART-008 | Feedback Sweep | 🔄 In Progress | [.process/ART-008-workflow.md](.process/ART-008-workflow.md) | Scaffolded 2026-08-20 as two stacked slices: slice 1 (the checkpoint) on `art-008-feedback-sweep`, slice 2 (artifact freshness) to be scaffolded on top of it. Grill-me settled 12 forks; the blind-spot pass did not run (wait deadline expired). Next: `/speckit-pro:speckit-autopilot docs/ai/specs/.process/ART-008-workflow.md --stage plan` |
 | ART-009 | UAT Walkthrough Replacement | ⏳ Ready | - | ART-006 dependency satisfied by PR #422 |
 | ART-010 | Final-PR Writeup, Companions & Ready Flip | ⏳ Ready | - | All three dependencies satisfied: ART-003 by PRs #435/#436/#439, ART-007 by PR #445, ART-012 by PR #426 |
 | ART-011 | Scaffold Integration | ✅ Complete / Archived | [.process/ART-011-workflow.md](.process/ART-011-workflow.md) | PR #434; archived 2026-08-13. The blind-spot pass and the planning hand-off live on both platforms outside `specs/**`. Shipped inverted from its design: scaffold cannot invoke the autopilot, which carries `disable-model-invocation: true`, so it prints the command instead — nine requirements amended, five superseded. Declared 162 reviewable LOC and estimated 322 at the final 31 FRs; shipped 1160 production changed lines across the two scaffold `SKILL.md` variants, a second data point for ART-015. Layer 2 trigger evaluation is still owed, and the 984-line result is what ART-019 slice D exists to repair |
@@ -635,15 +636,43 @@ review-visible under `specs/<branch>/artifacts/` and opened locally over
 planning artifacts through consensus and stops for re-review whenever it
 changed anything.
 
-**Reviewability Budget:** Primary surface: harness/adapter |
-Projected reviewable LOC: 150 (estimator: ok, modify-weighted) |
-Production files: ~4 |
-Total files: ~7 |
-Budget result: within budget
+**Reviewability Budget:** Re-declared 2026-08-20 at scaffold. The original
+150 LOC / ~4 production files predates the scoping interview, which added a
+deterministic read-only helper for the comment parse (plus its registry entry
+and harness manifests), the Codex reference mirrors, an author trust filter,
+and a Feedback Sweep Log protocol. Runner `estimate-spec-size` with the
+post-interview signals (3 user stories, 14 files, 18 FRs, modify-weighted)
+returned `{"estimated_loc":452,"suggested_slices":2,"status":"warn"}`;
+production files alone (9) return 352 / ok / 1. ART-008 therefore ships as
+**two stacked slices**, each declared at its own Plan phase:
+
+| Slice | Branch | Scope | Projected |
+|---|---|---|---|
+| 1, the checkpoint | `art-008-feedback-sweep` (from `main`) | read both comment surfaces, trust filter, export recognition, classify, consensus-amend, Feedback Sweep Log and CRL rows, per-comment replies, stop-or-proceed, unreadable-PR stop | measured at Plan: **515-830, midpoint ~630**, 7 production files |
+| 2, artifact freshness | `art-008-feedback-sweep-slice-2` (from slice 1) | whole-set regeneration after amendments, stale-page detection on a clean sweep, draft-description refresh | re-measure at Plan |
+
+Primary surface: harness/adapter | Budget result: warning accepted for the
+whole spec; no exception pragma is claimed. Full rationale and Q&A:
+[.process/ART-008-design-concept.md](.process/ART-008-design-concept.md).
+
+**Slice 1 re-derivation (2026-08-20, at Plan and after the checklist passes).**
+The scaffold expectation recorded above — that neither slice would reach the 800
+block — **did not hold for slice 1**. The estimator cannot measure this slice at
+all (it classifies none of these paths as production and returns `projected: 0`
+with a `pass` that carries no information), so Plan sized it by hand from its
+Declared File Operations block at 515 to 745. The trust-boundary and
+error-handling checklist passes then moved the high end to roughly **810 to 830,
+which crosses the 800 block**; the midpoint of about 630 and the 7 production
+files leave it at **two warns**. The crossing is accepted and recorded rather
+than re-sliced, and no exception pragma is claimed, because the accepted
+exception classes are refactor, infra, and upgrade and this slice is net-new
+feature work. Slice 2 is still unmeasured. See `specs/art-008-feedback-sweep/`
+`spec.md` §Reviewability Budget for the rejected levers.
 
 **Scope:**
-- One vertical slice — read comments → classify → consensus-amend → regenerate
-  → stop-or-proceed.
+- Two vertical slices (amended 2026-08-20 at scaffold; originally one) —
+  slice 1: read comments → classify → consensus-amend → record and reply →
+  stop-or-proceed; slice 2: regenerate → refresh.
 - `gh`-based read of unresolved draft-PR comments (including artifact-exported
   markdown blocks); zero unresolved feedback proceeds directly.
 - The sweep reads the **`markdown`** export kind (ART-001 FR-028) — that is what a
@@ -675,9 +704,26 @@ re-review — the checkpoint's value is the human confirming plan changes.
 Alternatives: continue-in-run (undercuts checkpoint), manual re-run
 responsibility (feedback becomes decoration).
 
+**Scaffold decisions (2026-08-20, grill-me, 12 questions):** the sweep is a
+Phase 7 setup step, not a new Workflow Overview row (Q1); it reads review
+threads with `isResolved` false plus PR-level conversation comments (Q2); it
+acts only on `authorAssociation` OWNER, MEMBER, or COLLABORATOR and reports
+every other author as "not swept: untrusted author" (Q3, this repository is
+public and `SECURITY.md` names prompt injection reaching a write tool as in
+scope); the operator resolves threads, the sweep never does (Q4); one reply
+per handled comment (Q5); a Feedback Sweep Log table in the workflow file plus
+the mandated CRL rows, no state-file mirror (Q6); an unreadable Draft PR row
+stops, `no_record` proceeds (Q7); a clean sweep with stale pages regenerates,
+refreshes, and proceeds (Q8); whole-set regeneration (Q9); export blocks are
+recognized by a lead-sentence registry in the helper, no template edits (Q10);
+the description refreshes through ART-007's create-or-refresh path (Q11);
+two stacked slices (Q12).
+
 **Key Files:**
 - `speckit-pro/skills/speckit-autopilot/references/phase-execution.md` — implement-stage entry
 - `speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md` — sweep routing
+- `speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md` — the Feedback Sweep Log entry
+- `speckit-pro/speckit_pro_runner/helpers/read_only.py` — the deterministic comment parse (new helper)
 - `speckit-pro/codex-skills/speckit-autopilot/` mirror
 
 ---

@@ -623,6 +623,20 @@ from the log alone.
 | 5 | Finding | OAuth callback URL handling  | [security]         | 2     | [HUMAN REVIEW] | Surfaced to user           | All (security tag → all-3 mandatory)   |
 ```
 
+**`Type` values:** `Clarify`, `Gap`, and `Finding` name the phase that produced
+the item. `Sweep` names the pull-request feedback sweep, which writes one row
+per amended item. A `Sweep` row's item cell names the comment id, and the
+Feedback Sweep Log row's `CRL #` names this row's number, so the link runs both
+ways at no extra column. On the human-review path the sweep writes this row and
+no Feedback Sweep Log row, so the link degrades to one direction, by design.
+
+**Sweep rows count toward the Round-2 escape-rate metric.** They are produced by
+the same round structure and the same agreement rule and can escape the same
+way, so excluding them would blind the 10% trigger precisely where the input is
+least controlled. Inclusion costs no attribution: the `Type` column is itself
+the source discriminator, so a breach of the threshold can be attributed to
+sweep rows or to phase rows without either being excluded from the rate.
+
 **Outcome values:**
 - `high-confidence` — Round 1, single-analyst, synthesizer flagged high
 - `both-agree` — Round 1, two-analyst, agreement

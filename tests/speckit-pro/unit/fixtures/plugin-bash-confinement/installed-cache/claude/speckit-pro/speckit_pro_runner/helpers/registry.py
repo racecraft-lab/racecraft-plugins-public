@@ -186,6 +186,14 @@ HELPERS: dict[str, HelperEntry] = {
         "python_only",
         authoritative_request("resolve-autopilot-stage"),
     ),
+    "sweep-pr-feedback": HelperEntry(
+        "sweep-pr-feedback",
+        "sweep-pr-feedback",
+        None,
+        "python_authoritative",
+        "python_only",
+        authoritative_request("sweep-pr-feedback"),
+    ),
     "confidence-gate": HelperEntry(
         "confidence-gate",
         "confidence-gate",

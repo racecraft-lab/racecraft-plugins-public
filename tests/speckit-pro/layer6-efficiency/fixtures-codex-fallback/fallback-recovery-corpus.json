@@ -3,20 +3,74 @@
   "fixture_kind": "codex_fallback_recovery_replay",
   "description": "Deterministic local simulation seeds only; no row makes a live model or service availability claim.",
   "source_roster": {
-    "source_roster_id": "sha256:6bda28dda07eac46d068f3b26ea5db85c3b502da192da92fe83c9e2e4da48be4",
+    "source_roster_id": "sha256:255c636459b4f02ee196937ab2d81f3fc8f36e9dbf3d90109d051dfb231bbb7a",
     "canonicalization": "json-sorted-keys-compact-over-path-sha256-classification-rows",
     "members": [
-      {"classification": "required_core", "path": "speckit-pro/codex-agents/analyze-executor.toml", "sha256": "sha256:eac0a81678fe8b82411ab90258af41bc819681e4111547c16581e12d60afb3a4"},
-      {"classification": "required_core", "path": "speckit-pro/codex-agents/artifact-author.toml", "sha256": "sha256:80a8e9cae9579e862ffce3eb1d9f411d2793f338e2acab4a3f80800517202919"},
-      {"classification": "optional_helper", "path": "speckit-pro/codex-agents/autopilot-fast-helper.toml", "sha256": "sha256:aa570f8ff51fa3cb7848d8c05253ddf5d080f5d4a2dbed9a55f0149fceb1296d"},
-      {"classification": "required_core", "path": "speckit-pro/codex-agents/checklist-executor.toml", "sha256": "sha256:ec29b97b8211c626e00fed1edbf0f601d3328dde57e22fb54626b5a92c2671d0"},
-      {"classification": "required_core", "path": "speckit-pro/codex-agents/clarify-executor.toml", "sha256": "sha256:7853d199bcf06685239d724a289d7aeaafcf5a133e665c21bc23375220d3f490"},
-      {"classification": "required_core", "path": "speckit-pro/codex-agents/codebase-analyst.toml", "sha256": "sha256:12f41b87c1a2f2003c588d328702144d7ffcbef11f28489124751be44bb98a1e"},
-      {"classification": "required_core", "path": "speckit-pro/codex-agents/domain-researcher.toml", "sha256": "sha256:eb558933bb60f874d5bed972226100b8ff8cf5adf5c334b184ef232f0287518f"},
-      {"classification": "required_core", "path": "speckit-pro/codex-agents/implement-executor.toml", "sha256": "sha256:b4bbd4a690defd926ec2a71b3c3bbba016c683a4f98db013ce2993220d5f427b"},
-      {"classification": "required_core", "path": "speckit-pro/codex-agents/phase-executor.toml", "sha256": "sha256:6f974a124ea4f3422f6650e4c9b501c15916ff874e2490a46cecfeedd634f7c9"},
-      {"classification": "required_core", "path": "speckit-pro/codex-agents/spec-context-analyst.toml", "sha256": "sha256:680e93129186f37d245ffa35dc44e064dffe24b497675aaa72b275daa7642674"},
-      {"classification": "required_core", "path": "speckit-pro/codex-agents/uat-runbook-author.toml", "sha256": "sha256:ea1e74b375a9fab40881d52574ec9c184033abe020e69637eac1b2248509b918"}
+      {
+        "classification": "required_core",
+        "path": "speckit-pro/codex-agents/analyze-executor.toml",
+        "sha256": "sha256:eac0a81678fe8b82411ab90258af41bc819681e4111547c16581e12d60afb3a4"
+      },
+      {
+        "classification": "required_core",
+        "path": "speckit-pro/codex-agents/artifact-author.toml",
+        "sha256": "sha256:80a8e9cae9579e862ffce3eb1d9f411d2793f338e2acab4a3f80800517202919"
+      },
+      {
+        "classification": "optional_helper",
+        "path": "speckit-pro/codex-agents/autopilot-fast-helper.toml",
+        "sha256": "sha256:aa570f8ff51fa3cb7848d8c05253ddf5d080f5d4a2dbed9a55f0149fceb1296d"
+      },
+      {
+        "classification": "required_core",
+        "path": "speckit-pro/codex-agents/checklist-executor.toml",
+        "sha256": "sha256:ec29b97b8211c626e00fed1edbf0f601d3328dde57e22fb54626b5a92c2671d0"
+      },
+      {
+        "classification": "required_core",
+        "path": "speckit-pro/codex-agents/clarify-executor.toml",
+        "sha256": "sha256:7853d199bcf06685239d724a289d7aeaafcf5a133e665c21bc23375220d3f490"
+      },
+      {
+        "classification": "required_core",
+        "path": "speckit-pro/codex-agents/codebase-analyst.toml",
+        "sha256": "sha256:12f41b87c1a2f2003c588d328702144d7ffcbef11f28489124751be44bb98a1e"
+      },
+      {
+        "classification": "required_core",
+        "path": "speckit-pro/codex-agents/domain-researcher.toml",
+        "sha256": "sha256:eb558933bb60f874d5bed972226100b8ff8cf5adf5c334b184ef232f0287518f"
+      },
+      {
+        "classification": "required_core",
+        "path": "speckit-pro/codex-agents/implement-executor.toml",
+        "sha256": "sha256:b4bbd4a690defd926ec2a71b3c3bbba016c683a4f98db013ce2993220d5f427b"
+      },
+      {
+        "classification": "required_core",
+        "path": "speckit-pro/codex-agents/phase-executor.toml",
+        "sha256": "sha256:6f974a124ea4f3422f6650e4c9b501c15916ff874e2490a46cecfeedd634f7c9"
+      },
+      {
+        "classification": "required_core",
+        "path": "speckit-pro/codex-agents/spec-context-analyst.toml",
+        "sha256": "sha256:680e93129186f37d245ffa35dc44e064dffe24b497675aaa72b275daa7642674"
+      },
+      {
+        "classification": "required_core",
+        "path": "speckit-pro/codex-agents/sweep-analyst.toml",
+        "sha256": "sha256:ca9adb84449c1ecd989187377e1d6cd22df42bc3ef55f91d54483fb2ce08fea9"
+      },
+      {
+        "classification": "required_core",
+        "path": "speckit-pro/codex-agents/sweep-classifier.toml",
+        "sha256": "sha256:f1aaf16d46d4d5dc20cec29fc268e4e68e4ad717a5b4352617aefd9049162ae2"
+      },
+      {
+        "classification": "required_core",
+        "path": "speckit-pro/codex-agents/uat-runbook-author.toml",
+        "sha256": "sha256:ea1e74b375a9fab40881d52574ec9c184033abe020e69637eac1b2248509b918"
+      }
     ]
   },
   "required_scenarios": [
@@ -87,39 +141,183 @@
     "SC-009": "test_scope_excludes_production_and_live_claims"
   },
   "cases": [
-    {"case_id": "preferred-absent-fallback-qualified", "covers": ["preferred_model_absent", "availability_probe_success"]},
-    {"case_id": "unsupported-effort-fallback-qualified", "covers": ["unsupported_effort"]},
-    {"case_id": "discovery-unavailable-no-safe-route", "covers": ["capability_discovery_unavailable", "no_safe_route", "fallback_exhaustion"]},
-    {"case_id": "availability-probe-failed", "covers": ["availability_probe_failure"]},
-    {"case_id": "treatment-probe-failed", "covers": ["treatment_probe_failure"]},
+    {
+      "case_id": "preferred-absent-fallback-qualified",
+      "covers": [
+        "preferred_model_absent",
+        "availability_probe_success"
+      ]
+    },
+    {
+      "case_id": "unsupported-effort-fallback-qualified",
+      "covers": [
+        "unsupported_effort"
+      ]
+    },
+    {
+      "case_id": "discovery-unavailable-no-safe-route",
+      "covers": [
+        "capability_discovery_unavailable",
+        "no_safe_route",
+        "fallback_exhaustion"
+      ]
+    },
+    {
+      "case_id": "availability-probe-failed",
+      "covers": [
+        "availability_probe_failure"
+      ]
+    },
+    {
+      "case_id": "treatment-probe-failed",
+      "covers": [
+        "treatment_probe_failure"
+      ]
+    },
     {
       "case_id": "approved-service-reroute",
-      "covers": ["approved_service_reroute"],
-      "service_reroute": {"origin": "service", "observed_target_route": "fallback", "approval": "approved", "scoring_effect": "eligible"}
+      "covers": [
+        "approved_service_reroute"
+      ],
+      "service_reroute": {
+        "origin": "service",
+        "observed_target_route": "fallback",
+        "approval": "approved",
+        "scoring_effect": "eligible"
+      }
     },
     {
       "case_id": "unapproved-service-reroute",
-      "covers": ["unapproved_service_reroute", "unqualified_adjacent_rejection"],
-      "service_reroute": {"origin": "service", "observed_target_route": "adjacent", "approval": "unapproved", "scoring_effect": "ineligible"}
+      "covers": [
+        "unapproved_service_reroute",
+        "unqualified_adjacent_rejection"
+      ],
+      "service_reroute": {
+        "origin": "service",
+        "observed_target_route": "adjacent",
+        "approval": "unapproved",
+        "scoring_effect": "ineligible"
+      }
     },
     {
       "case_id": "optional-helper-no-helper-continuation",
-      "covers": ["optional_helper_unavailable", "validated_no_helper_continuation"],
-      "helper_state": {"available": false, "no_helper_continuation_qualified": true, "helper_route_attempts": 0}
+      "covers": [
+        "optional_helper_unavailable",
+        "validated_no_helper_continuation"
+      ],
+      "helper_state": {
+        "available": false,
+        "no_helper_continuation_qualified": true,
+        "helper_route_attempts": 0
+      }
     },
-    {"case_id": "incompatible-strict-override", "covers": ["incompatible_strict_override"]},
-    {"case_id": "bounded-retry-exhaustion", "covers": ["bounded_retry"], "budget_evidence": {"retries": 2}},
-    {"case_id": "loop-rejected", "covers": ["loop_rejection"]},
-    {"case_id": "generic-substitution-rejected", "covers": ["generic_substitution_rejection"]},
-    {"case_id": "inherited-route-fields-rejected", "covers": ["inherited_model_rejection", "inherited_effort_rejection"]},
-    {"case_id": "non-route-treatment-mutation", "covers": ["non_route_treatment_mutation"]},
-    {"case_id": "partial-install-rollback-previous-good", "covers": ["partial_required_installation", "rollback", "previous_known_good_preservation"]},
-    {"case_id": "prewrite-validation-atomic", "covers": ["atomic_no_write"]},
-    {"case_id": "cancel-after-mutation", "covers": ["cancellation"], "budget_evidence": {"cancellation": true}},
-    {"case_id": "fake-home-boundary-rejections", "covers": ["fake_home_boundary_escape", "fake_home_traversal", "fake_home_symlink_rejection"]},
-    {"case_id": "time-budget-exhausted", "covers": ["time_budget"], "budget_evidence": {"elapsed_units": 6}},
-    {"case_id": "fanout-budget-rejected", "covers": ["fanout_budget"], "budget_evidence": {"fanout": 2}},
-    {"case_id": "context-budget-rejected", "covers": ["context_budget"], "budget_evidence": {"context_units": 11}},
-    {"case_id": "escalation-budget-rejected", "covers": ["escalation_budget"], "budget_evidence": {"escalations": 1, "human_in_loop": true}}
+    {
+      "case_id": "incompatible-strict-override",
+      "covers": [
+        "incompatible_strict_override"
+      ]
+    },
+    {
+      "case_id": "bounded-retry-exhaustion",
+      "covers": [
+        "bounded_retry"
+      ],
+      "budget_evidence": {
+        "retries": 2
+      }
+    },
+    {
+      "case_id": "loop-rejected",
+      "covers": [
+        "loop_rejection"
+      ]
+    },
+    {
+      "case_id": "generic-substitution-rejected",
+      "covers": [
+        "generic_substitution_rejection"
+      ]
+    },
+    {
+      "case_id": "inherited-route-fields-rejected",
+      "covers": [
+        "inherited_model_rejection",
+        "inherited_effort_rejection"
+      ]
+    },
+    {
+      "case_id": "non-route-treatment-mutation",
+      "covers": [
+        "non_route_treatment_mutation"
+      ]
+    },
+    {
+      "case_id": "partial-install-rollback-previous-good",
+      "covers": [
+        "partial_required_installation",
+        "rollback",
+        "previous_known_good_preservation"
+      ]
+    },
+    {
+      "case_id": "prewrite-validation-atomic",
+      "covers": [
+        "atomic_no_write"
+      ]
+    },
+    {
+      "case_id": "cancel-after-mutation",
+      "covers": [
+        "cancellation"
+      ],
+      "budget_evidence": {
+        "cancellation": true
+      }
+    },
+    {
+      "case_id": "fake-home-boundary-rejections",
+      "covers": [
+        "fake_home_boundary_escape",
+        "fake_home_traversal",
+        "fake_home_symlink_rejection"
+      ]
+    },
+    {
+      "case_id": "time-budget-exhausted",
+      "covers": [
+        "time_budget"
+      ],
+      "budget_evidence": {
+        "elapsed_units": 6
+      }
+    },
+    {
+      "case_id": "fanout-budget-rejected",
+      "covers": [
+        "fanout_budget"
+      ],
+      "budget_evidence": {
+        "fanout": 2
+      }
+    },
+    {
+      "case_id": "context-budget-rejected",
+      "covers": [
+        "context_budget"
+      ],
+      "budget_evidence": {
+        "context_units": 11
+      }
+    },
+    {
+      "case_id": "escalation-budget-rejected",
+      "covers": [
+        "escalation_budget"
+      ],
+      "budget_evidence": {
+        "escalations": 1,
+        "human_in_loop": true
+      }
+    }
   ]
 }
