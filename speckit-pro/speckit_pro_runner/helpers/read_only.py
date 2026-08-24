@@ -2899,7 +2899,11 @@ def freshness_log_rows(text: str) -> list[tuple[list[str], list[str]]]:
 
 
 def freshness_row_reading(header: list[str], cells: list[str]) -> dict[str, Any] | None:
-    """One `amended` row's join key, or the reason it has none. None if not amended.
+    # Raw, because the docstring names the escaped pipe `\|` literally. Python
+    # 3.12 emits a SyntaxWarning for that sequence in an ordinary string, and the
+    # runner's trust path compiles this module from source text, so the warning
+    # lands on stderr and breaks every caller that parses stderr as JSON.
+    r"""One `amended` row's join key, or the reason it has none. None if not amended.
 
     The dual-anchoring rule of `data-model.md` §1. `sweep_table_cells` splits on
     the bare pipe with no unescaping, so a `Disposition` carrying an escaped `\|`

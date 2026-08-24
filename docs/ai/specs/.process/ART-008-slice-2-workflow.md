@@ -1327,6 +1327,23 @@ against about 906 of reference prose) is already recorded as a diagnostic in
 the pull-request body; this pass adds to the prose side and does not change the
 character of the overrun.
 
+**R9 — a docstring backslash broke the runner's stderr contract on Python 3.12.
+Fixed.** Found by CI, not by either review. `freshness_row_reading`'s docstring
+names the escaped pipe `\\|` literally, which Python 3.12 reports as an invalid
+escape sequence. The runner's trust path compiles the module from source text,
+so the warning landed on **stderr** — and `test-speckit-pro-gates.py` parses
+every stderr line as JSON, so six unrelated gate tests failed with
+`JSONDecodeError`. Invisible locally, because this machine runs 3.11, which does
+not emit the warning; invisible to CI until now, because the `test` job is
+gated on `draft == false` and had never run on this branch. The docstring is now
+raw. Reproduced under 3.12 (55/61), fixed, re-verified (61/61), and every
+Python file this branch touches now compiles warning-free under 3.12.
+
+**Interpreter note for later work on this branch's surface.** A warning on
+stderr is not cosmetic here: the runner's stderr is a JSON channel, so anything
+that writes a bare line to it breaks callers that parse it. Compile-check under
+the CI interpreter, not only the local one.
+
 ### Manual UAT results
 
 Run against the worktree source with `PYTHONPATH=speckit-pro`, not the
@@ -1355,7 +1372,8 @@ cached plugin, so they cannot execute against the working tree. This is the
 same limit slice 1 recorded at T098 and is stated in the pull-request body.
 
 - [x] All tasks marked complete in tasks.md — 81/81
-- [x] Full suite passes: `python3 tests/speckit-pro/run-all.py` — 14199/14199, exit 0
+- [x] Full suite passes: `python3 tests/speckit-pro/run-all.py` — 14199/14199, exit 0, verified under both Python 3.11 and 3.12
+- [x] The exact CI suite invocation passes under 3.12: 6/6 suite commands, exit 0
 - [x] Payload + proofs regenerated: `python3 scripts/refresh-release-artifacts.py` — idempotent on a second run
 - [x] Docs reference regenerated: `pnpm --dir docs-site reference:generate`
 - [x] Codex parity validators pass (Layer 1) — `validate-codex-skills` and `validate-codex-parity` green
