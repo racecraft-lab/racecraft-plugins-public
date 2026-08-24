@@ -561,7 +561,24 @@ result, with the already-current case collapsing to one line.
 - **FR-022**: The sweep MUST NOT write the workflow file's `Draft PR` row. That
   row has exactly one writer, the emission machinery, and this slice MUST NOT
   add a second. The emission machinery remains the row's sole writer; this
-  slice supplies only the commit that carries what the machinery wrote.
+  slice supplies only the trigger and the timing of the refresh that makes the
+  machinery write, and the commit carrying that write is the machinery's own
+  record commit, reused verbatim under FR-039 rather than supplied here.
+  The shipped sentence carrying this invariant — "The sweep never writes the
+  `Draft PR` row on any path", stated of the corroboration gate's four stops on
+  both platform reference surfaces — MUST survive verbatim. This slice neither
+  rewrites nor deletes it. It stays true because its subject is the sweep's own
+  writes: FR-014's refresh changes the row's cell through the emission
+  machinery, and FR-039 records that change on the machinery's own commit, so
+  no write is ever the sweep's. Its stated ground is preserved too — the
+  sentence exists so that a run cannot repair a record it just failed to
+  corroborate, and FR-016 reaches the refresh only after an entry-gate `match`,
+  so no refresh ever touches a row whose corroboration failed. Because "on any
+  path" can nevertheless be read as forbidding any change to the row during the
+  sweep, both surfaces MUST carry an added sentence scoping it to the sweep's
+  own writes and naming the FR-014 refresh's row write as the machinery's, in
+  the manner FR-033b and FR-015b already use rather than by rewriting or
+  deleting shipped text.
 - **FR-023**: Page generation MUST be fail-open. No page shortfall, no
   whole-set gap, and no description-refresh failure may block the run, change
   its stop-or-proceed decision, or prevent a regeneration commit that has
@@ -571,6 +588,24 @@ result, with the already-current case collapsing to one line.
   why. The page outcome lines land in the report's what-already-landed part,
   extending that closed enumeration once in the shared report-shape section so
   every sweep leg inherits them.
+- **FR-024a**: The shared report-shape section carries a shipped sentence
+  stating that a run which observed no comment at all reports that "as a
+  one-line report rather than an absent one". FR-016 evaluates freshness on
+  exactly that leg and FR-017 regenerates there when the verdict is stale, so
+  that same leg can emit one outcome line per page, FR-025's commit sha and
+  refresh outcome, and FR-018a's restoration line. Both platform reference
+  surfaces MUST scope the shipped sentence by an added sentence, in the manner
+  FR-033b and FR-015b already use rather than by rewriting or deleting shipped
+  text. The added sentence MUST place the one-line characterization on the
+  per-comment dispositions its own paragraph is about — where it means that a
+  run seeing no comment still says so in one line instead of omitting the part
+  — and MUST state that the freshness evaluation contributes its own lines to
+  the what-already-landed part on that leg, so a report there is one line of
+  dispositions and however many lines the freshness outcome requires. Reading
+  the shipped sentence as a promise about the whole report would also put it in
+  conflict with FR-018a's restoration line, which lands in that same part on a
+  leg that generated nothing; the scoping resolves both readings at once. This
+  adds no member to either enumeration and changes no report part's contents.
 - **FR-025**: The run report MUST name the regeneration commit's sha and the
   outcome of the description refresh, in the what-already-landed part; a
   failure's manual resume path (FR-036, FR-005a) belongs in the resume-path
@@ -944,6 +979,21 @@ second, worse lever are in `plan.md`.
 - Slice 1's sweep behavior is unchanged in every respect: reading, trust
   filtering, classification, consensus amendment, log rows, replies, and the
   stop-or-proceed decision.
+- Slice 1 leaves this slice a standing constraint, and it is inherited
+  unchanged: after an amendment run stops, a reviewer can tell from the pull
+  request alone what changed and where, and that rests entirely on slice 1's
+  per-comment replies. Slice 2 owns the description refresh and must not weaken
+  those replies on the assumption that the refreshed description now carries
+  the amendment summary. That inference is the one thing this slice makes
+  newly tempting and it is forbidden: the refresh recomposes the description
+  whole through the draft-mode packet path, so a draft description remains
+  fully fingerprint-protected with no editable region and there is still
+  nowhere safe in it for an amendment summary. The constraint is discharged
+  here by leaving the replies alone, which §Out of Scope already requires.
+  It is cited by slice rather than by bare identifier because the identifier
+  collides: it is slice 1's SC-008, in
+  `specs/art-008-feedback-sweep/spec.md`, whereas this spec's own SC-008 is
+  the platform-parity criterion.
 - The repository's generated-artifact contract applies, so a change to shipped
   plugin source is followed by payload and proof regeneration before the work is
   called done.

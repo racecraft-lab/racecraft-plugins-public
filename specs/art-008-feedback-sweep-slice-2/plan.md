@@ -317,6 +317,18 @@ block; the high end moves from 825 to about 885, and the split lever below is
 unchanged and remains rejected on the same merit. Re-derive rather than trust
 this note if the Analyze phase disputes the figure.
 
+**Delta from the requirements checklist remediation.** One requirement was
+added after the note above — FR-024a — plus a revision to FR-022 and a new
+Assumptions bullet recording slice 1's SC-008 standing constraint. None adds a
+file: both landing sites, `phase-execution.md` and `phase-execution-codex.md`,
+are already declared MODIFIED, and neither `SKILL.md` is touched, so FR-030's
+two words of headroom on the Codex body stay unspent. There is no executable
+footprint at all — both are added scoping sentences of the FR-033b kind, at
+roughly 8-14 lines across the two reference surfaces. The production-only
+midpoint moves from roughly 720 to roughly **730**, still a warn, still well
+under the 800 block, and the split lever below remains rejected on the same
+merit.
+
 ### The split lever, named because the high end reaches 800
 
 Derivation A's high end is 825 and derivation B's midpoint is 920, so the lever
@@ -903,6 +915,41 @@ passed and the sweep has already amended.
 The Claude autopilot `SKILL.md:372` phrase "one read-only observation per run"
 gets the same scoping, to Step 0.6c's own step rather than every corroboration
 read a run may take. That phrase occurs exactly once in the tree.
+
+### FR-024a's and FR-022's scoping edits
+
+Two more shipped sentences stop being exact once the outcome lines and the
+description refresh land. Both get the same added-sentence treatment FR-033b
+and FR-015b already use, never a rewrite or a deletion:
+
+| Surface | Line | Sentence | Why it needs scoping |
+|---|---:|---|---|
+| `phase-execution.md` | 1294 | "A run that observed no comment at all reports that, as a one-line report rather than an absent one" | FR-016 evaluates freshness on that very leg and FR-017 regenerates there when stale, so the report can carry per-page outcome lines, FR-025's sha and refresh outcome, and FR-018a's restoration line |
+| `phase-execution-codex.md` | 1026 | the same sentence | FR-029 parity |
+| `phase-execution.md` | 1342 | "The sweep never writes the `Draft PR` row on any path", these four stops included | FR-014's refresh changes the row's cell mid-sweep through the emission machinery, so "on any path" needs the writer-identity reading made visible |
+| `phase-execution-codex.md` | 1063 | the same sentence | FR-029 parity |
+
+**The one-line sentence is scoped, not retired.** It sits inside the paragraph
+whose subject is the per-comment dispositions, so the added sentence places the
+one-line characterization there — a run seeing no comment still says so in one
+line instead of omitting the part — and states that the freshness evaluation
+contributes its own lines to the what-already-landed part on that leg. Reading
+it as a promise about the whole report would also put it in conflict with
+FR-018a's restoration line, which lands in that same part on a leg that
+generated nothing.
+
+**The `Draft PR` sentence survives verbatim**, and the added sentence exists to
+keep it readable rather than to qualify it. Its subject is the sweep's own
+writes; the row's sole writer stays the emission machinery (FR-022), and FR-039
+records the cell change on that machinery's own commit. Its stated ground is
+untouched as well: the sentence exists so a run cannot repair a record it just
+failed to corroborate, and FR-016 reaches the refresh only after an entry-gate
+`match`.
+
+Neither edit adds or removes a member of any enumeration, and neither touches
+either `SKILL.md`, so the Codex body's two words of headroom under FR-030 are
+not spent. Both files already stand as MODIFIED in the file operations block,
+so this adds no file to the budget.
 
 ### Codex parity: what FR-029 actually constrains
 
