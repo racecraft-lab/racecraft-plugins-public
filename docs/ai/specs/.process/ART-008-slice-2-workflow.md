@@ -90,7 +90,7 @@ Projected reviewable LOC: re-measure at Plan (hand-derived; estimator returns a 
 | Tasks | `/speckit-tasks` | ✅ Complete | 81 tasks (T001–T081), 54/54 FR coverage both directions, 16 [P]; G5 pass |
 | Analyze | `/speckit-analyze` | ✅ Complete | 5 findings (0C/1H/1M/3L), all remediated; coverage 54/54 bidirectional; constitution 6/6; G6 pass; 📊 0.92 |
 | Confidence Gate | G6.5 | ✅ Complete | Composite 0.92 ≥ 0.90, advisory mode — PASS, proceed; plan stage ends here |
-| Implement | `/speckit-implement` | 🔄 In Progress | 81 tasks (T001–T081); TDD; started 2026-08-24 |
+| Implement | `/speckit-implement` | ✅ Complete | 81/81 tasks; full suite 14179/14179 exit 0; G7 pass (+167 over the 14012 baseline) |
 | Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -1024,6 +1024,99 @@ pinned `--state all` query, and the `artifact-author` dispatch. One phrasing
 difference is benign — "three sinks" reads 7 times on Claude and 6 on Codex,
 which is wording density rather than a missing behavior.
 
+**Phase 6, Polish (T072–T081)** — complete.
+
+- **T072**: every import in both helper modules is standard library. A
+  function-by-function audit of all nine `freshness_*` functions found **no**
+  `subprocess`, socket, `urllib`, `git`, or `gh` reach; the only matches were
+  docstring prose stating the constraint.
+- **T073**: `codex-skills/speckit-autopilot/SKILL.md` is byte-unchanged by this
+  slice, confirmed by `git diff` against `main`.
+- **T074**: 51 cases, 51 expectations, name parity both directions. Every case
+  was red before its implementation. The two cases the orchestrator added last
+  had no red phase, so their non-vacuity was proven by **mutation**: corrupting
+  their expected diagnostic dropped the suite to 152/154, and restoring it
+  returned 154/154 with no residual diff.
+- **T075**: `refresh-release-artifacts.py` run twice; the second run reported
+  no further change, which is the idempotence the task requires.
+- **T076**: five of the six declared installed-cache copies match their
+  `speckit-pro/` source byte for byte. The sixth, `phase-execution-codex.md`,
+  differs by exactly one line — a relative link the payload builder rewrites
+  when it relocates `codex-skills/` under `skills/` — and matches its `dist/`
+  copy byte for byte, which is the correct comparison for a relocated file.
+  **`plan.md`'s declared generated surface names that path under
+  `codex-skills/`; the real path is under `skills/`.** Recorded rather than
+  corrected, since the plan's block is a planning record.
+- **T077**: `pnpm --dir docs-site reference:generate` refreshed
+  `reference/tests.md`.
+- **T078 — the final gate**: **14179/14179, exit 0** (L1 1511, L4 12449, L5
+  219). **G7 pass**: the count increased against the recorded 14012 baseline by
+  **+167**. All seven stale-payload failures that stood mid-phase cleared, as
+  predicted.
+- **T080**: the promise wording returns **zero** on both reference surfaces,
+  both `SKILL.md` files, every `dist/` payload, and every installed-cache copy.
+  Remaining occurrences are in spec and planning artifacts that quote it as
+  history, which is correct.
+
+#### T079 — two quickstart scenarios were not executable as written
+
+Validating the scenarios found two defects in the quickstart itself, both now
+corrected in place:
+
+1. **Scenario 1's falsifiable step could not flip the verdict.** It said to
+   supply one `is_ancestor_of_artifacts_commit: false` record and watch the
+   verdict become `stale`. The workflow file it names carries no
+   `Feedback Sweep Log` rows, so `amended_rows_read` is 0 and no join happens —
+   the verdict correctly stayed `current`. The join needs a row to join *to*.
+   The step now says so and points at the Layer 4 case that is the assembled
+   pairing.
+2. **Scenario 6 expected a Codex `SKILL.md` body of 7998 words. It measures
+   7996.** The two words were freed by work that landed on `main` between the
+   slices, not by this slice, which leaves the file byte-unchanged. Measured at
+   slice 1's merge commit `8db22a420` the body was 7998; at HEAD it is 7996.
+   **Headroom under the 8000-word cap is 4 words, not 2.**
+
+Scenario 2 was executed against real bytes: a `Feedback Sweep Log` row whose
+disposition carries an escaped pipe splits into nine cells, and the helper still
+reads `Commit` as `e4f5a6b` and returns `stale` with that row deciding. That is
+the silent wrong-direction failure the dual-anchoring rule exists to prevent,
+proven rather than argued. Scenario 1's reproducibility check produced a
+byte-identical envelope across two runs (SC-005). Scenarios 6 and 7 pass.
+
+**Scenarios 3, 4, and 5 were not executed and are not claimed.** They need an
+installed plugin carrying both slices, which exists only after a release cuts
+from this merge and the cache refreshes.
+
+#### The realized diff overran its declared budget
+
+| Production path | Declared | Realized | Verdict |
+|---|---:|---:|---|
+| `helpers/read_only.py` | 271–390 | 347 | in band |
+| `helpers/registry.py` | 8–10 | 8 | in band |
+| `skills/speckit-autopilot/SKILL.md` | 2–5 | 4 | in band |
+| `references/phase-execution.md` | 150–230 | **455** | ~2x over |
+| `references/phase-execution-codex.md` | 125–190 | **408** | ~2x over |
+| **Total production** | **556–885, mid ~730** | **1222 added / 15 removed** | **over the 800 block** |
+
+**The executable surface landed inside its estimate.** The overrun is entirely
+reference prose on both platforms, and it is density rather than unplanned
+scope: every added passage traces to a task, and no requirement grew during
+implementation.
+
+**No gate produced a block verdict**, so none is recorded as one.
+`final-reviewability-backstop` is deferred on the installed runner, so the
+governing evidence is the committed WARN chain from T014, which is a
+may-continue outcome. This is a **realized-overrun diagnostic**.
+
+**`plan.md`'s named split lever no longer matches where the overrun is.** That
+lever deferred the description-refresh half, worth 95–155 lines; the overrun is
+spread across all three stories' prose, so pulling that seam would not reach
+800. The seam that would work is the platform one — land Claude plus the helper,
+defer the 408-line Codex mirror — which trades reviewability for a window where
+the two platforms disagree, exactly what SC-008 exists to prevent. **The choice
+belongs to the operator at this checkpoint**, which is the decision point this
+spec family was built to create.
+
 
 ### Implement Prompt
 
@@ -1057,10 +1150,12 @@ For each task: RED (failing test/fixture) → GREEN (minimum implementation)
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - Foundation (helper + fixtures) | | | |
-| 2 - US1 (regenerate-refresh-stop) | | | |
-| 3 - US2 (clean-sweep staleness) | | | |
-| 4 - US3 (reports) + Polish | | | |
+| 1 - Setup | T001–T003 | 3/3 | Baseline 14025/14025; docs-site installed; merge driver set |
+| 2 - Foundation (helper + fixtures) | T004–T014 | 11/11 | Helper registered; Layer 4 harness stood up; T014 checkpoint recorded |
+| 3 - US1 (regenerate-refresh-stop) | T015–T049 | 35/35 | Three surfaces green; prose on both platforms; both promise passages removed |
+| 4 - US2 (clean-sweep staleness) | T050–T056 | 7/7 | Every-leg evaluation; repair proceeds without stopping |
+| 5 - US3 (reports) | T057–T071 | 15/15 | Outcome lines, gap shapes, per-status resume paths, four scoping edits |
+| 6 - Polish | T072–T081 | 10/10 | Audits, idempotent regeneration, full gate, quickstart validation, review packet |
 
 ---
 

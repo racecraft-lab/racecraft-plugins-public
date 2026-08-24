@@ -7,7 +7,7 @@
   "stage": "implement",
   "prior_run_note": "completed",
   "updated_at": "2026-08-24T00:00:00Z",
-  "active_step": "Phase 7: Implement",
+  "active_step": "Post-Implementation",
   "reclaimed_from": {
     "workflow_file": "docs/ai/specs/.process/ART-008-workflow.md",
     "spec_id": "ART-008",
@@ -77,7 +77,7 @@
     },
     {
       "step": "Phase 7: Implement",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Post: Doctor Extension Check",
@@ -180,6 +180,13 @@
       "pass": true,
       "composite": 0.92,
       "mode": "advisory"
+    },
+    "G7": {
+      "pass": true,
+      "suite": "14179/14179",
+      "baseline": 14012,
+      "delta": 167,
+      "exit_code": 0
     }
   },
   "budget_warning": {
@@ -238,5 +245,32 @@
     "cause": "origin/main merge brought #501's new Layer 4 cases",
     "blocking": false,
     "note": "diagnostic only; the recorded G0 baseline is preserved per Step 0.6e"
+  },
+  "final_reviewability_gate": {
+    "helper": "final-reviewability-backstop",
+    "mode": "deferred_on_installed_runner",
+    "governing_evidence": "committed WARN chain recorded at T014",
+    "outcome": "warn_may_continue",
+    "block_recorded": false,
+    "realized_overrun": {
+      "declared_mid": 730,
+      "declared_range": [
+        556,
+        885
+      ],
+      "block_threshold": 800,
+      "realized_added": 1222,
+      "realized_removed": 15,
+      "in_band": [
+        "read_only.py 347",
+        "registry.py 8",
+        "SKILL.md 4"
+      ],
+      "over": [
+        "phase-execution.md 455 vs 150-230",
+        "phase-execution-codex.md 408 vs 125-190"
+      ],
+      "note": "executable surface in band; overrun is reference prose density on both platforms; operator decision at the draft-PR checkpoint"
+    }
   }
 }

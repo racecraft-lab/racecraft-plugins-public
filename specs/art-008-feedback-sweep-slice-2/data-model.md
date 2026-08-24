@@ -57,6 +57,7 @@ one pipe has nine cells, not eight.
 | row has more cells than the header | ordinary pipe-in-disposition case; right-anchored cells are correct; **not** an error |
 | `Commit` cell empty or whitespace | row is undeterminable (FR-006) |
 | `Class` cell missing or unreadable | row is not `amended` and contributes nothing |
+| header carries no `Commit` column | the `-2` anchor is underivable; every `amended` row is undeterminable with reason `missing_commit_cell`. The header row is therefore located by `Class`, never by `Commit`. |
 | no `Feedback Sweep Log` heading in the file | zero `amended` rows; the verdict is decided by the directory state alone |
 
 ---
@@ -131,6 +132,7 @@ order (FR-005):
   "tool": "check-artifact-freshness",
   "named_surface": "verdict",
   "verdict": "stale",
+  "reason": null,
   "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
   "amended_rows_read": 3,
   "deciding_rows": [{"row": "2", "cell": "e4f5a6b"}],
@@ -142,9 +144,15 @@ order (FR-005):
 | Field | Rule |
 |---|---|
 | `verdict` | One of the four literals. The set is closed. |
+| `reason` | Present on every verdict, `null` unless the observation was unusable, where it is `unusable_observation`. That token names a fact about the request rather than about a row, so it has no home in `undeterminable_rows`. Every key is present on every response, `null` where a verdict has nothing to say, following `corroboration_record`'s shipped rule. |
 | `deciding_rows` | Present on `stale`; every row that proved it, so the operator sees the evidence rather than a bare token. |
 | `undeterminable_rows` | Each carries the row's `#` cell value and a reason from a closed set: `missing_commit_cell`, `empty_commit_cell`, `unresolvable_commit`, `no_matching_observation_record`, `malformed_row`. Present on any verdict, because FR-006 requires surfacing such a row even when `stale` already decided the verdict. |
 | `pages` | The supplied inventory, echoed. Never a selection. |
+
+**An unusable observation echoes nothing.** §2 requires `ok` to be the literal
+`true` "to be read at all", which governs the echo rule above: a response that
+read nothing cannot echo it. On that verdict `pages` is `[]`,
+`last_artifacts_commit` is `null`, and `amended_rows_read` is `0`.
 
 **The `undeterminable` verdict is reported and acted on never.** It triggers no
 regeneration, no refresh, and no commit, and it moves the stop-or-proceed

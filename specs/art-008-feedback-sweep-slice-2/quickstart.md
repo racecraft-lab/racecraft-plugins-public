@@ -48,9 +48,15 @@ PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < /tmp/freshness-request.js
 **Expected**: `"verdict":"current"` with `"amended_rows_read":0`. Run it twice;
 the envelope is byte-identical. That reproducibility is SC-005.
 
-**Falsifiable**: replace `amended_commits` with one record carrying
-`"is_ancestor_of_artifacts_commit": false` and the verdict must become `stale`
-with that row named in `deciding_rows`.
+**Falsifiable**: the request above names a workflow file carrying **no**
+`Feedback Sweep Log` rows, so `amended_rows_read` is 0 and no join happens.
+Supplying an ancestry record alone therefore changes nothing, and the verdict
+stays `current` — the join needs a row to join *to*. To see the flip, point
+`workflow_file` at a file whose log holds an `amended` row and supply a record
+whose `cell` matches that row's `Commit` cell with
+`"is_ancestor_of_artifacts_commit": false`. The verdict must become `stale`
+with that row named in `deciding_rows`. The Layer 4 case
+`verdict-stale-newer-amended-row` is that pairing, already assembled.
 
 ## Scenario 2 — The dual-anchored `Commit` read survives a piped disposition
 
@@ -155,7 +161,13 @@ from structural_helpers import body as b
 print(len(b(open('speckit-pro/codex-skills/speckit-autopilot/SKILL.md').read().splitlines()).split()))"
 ```
 
-**Expected**: 7998, unchanged. This slice adds no word to that body.
+**Expected**: **7996**, and unchanged **by this slice** — verified with
+`git diff`, which reports the file byte-identical to `main`. The figure moved
+from the 7998 measured at slice 1's merge (`8db22a420`) because work that
+landed on `main` between the two slices freed two words, not because this slice
+spent or freed any. Headroom under the 8000-word cap is therefore **4 words**,
+not 2. Re-measure rather than trusting either number: it moves whenever
+anything else edits that file.
 
 ## Scenario 7 — The generated-artifact contract is discharged
 
