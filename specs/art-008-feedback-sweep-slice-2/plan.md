@@ -633,13 +633,25 @@ comment at all (FR-016).
 3b. Delete the superseded file behind each per-page gap (FR-012b); skip this
     entirely on a whole-set gap.
 4. Verify the written pages on disk (ART-007's two positive tests).
-5. Commit specs/<feature>/artifacts/ alone, `docs:` type — only if step 3, 3b,
-   or the regeneration changed something under it.
+5. Commit specs/<feature>/artifacts/ alone, `docs:` type — only if the run's
+   final post-verification outcome set contains at least one `generated` page.
 6. Push. A failed push ends the sequence here.
 7. Take the refresh call site's own live observation; classify it.
 8. Refresh the description through ART-007 create-or-refresh.
 9. When the `Draft PR` cell actually changed, take the shipped record commit.
 ```
+
+**Revision note, step 5.** This block first gated the regeneration commit on
+"step 3, 3b, or the regeneration changed something under it". Checklist
+consensus item 9 re-keyed the FR-018 gate to **at least one verified
+`generated` page**, and the wording above now states that gate. The difference
+is a zero-generated run carrying only deselection removals: the any-change
+reading would take a removal-only commit, which moves the FR-001 join past
+pages that were never generated and strands them permanently. It would also
+contradict FR-018a's replay, which fires precisely when the verified
+`generated` count is zero and calls that gate its own. `tasks.md` T041 and the
+shipped reference prose both carry the re-keyed wording.
+
 
 **Step 0 is a placement, not a new step.** FR-015a fixes the whole sequence
 after slice 1's reply point, which the shipped rule puts "at the end of the

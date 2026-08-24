@@ -1872,6 +1872,235 @@ failed observation is deliberate: an observation that failed means the work
 never happened, while a reply that failed means the work landed and only the
 notification did not.
 
+#### Phase 7 Setup: The Regeneration Sequence
+
+**Evaluate the freshness verdict before deciding anything else here.** Ask the
+`check-artifact-freshness` helper's `verdict` surface for one verdict over the
+feature's pages, supplying the workflow file and the artifacts observation the
+orchestrator gathered: the directory state, the last commit touching
+`specs/<feature>/artifacts/`, the on-disk page inventory by filename stem, and
+one ancestry record per `amended` row, keyed by that row's `Commit` cell text
+verbatim. **The verdict joins on those supplied records, never on page
+bytes.** The pages are agent-authored prose, so identical inputs produce
+different bytes and a content comparison would read every page as stale on
+every run.
+
+**On `stale`, re-dispatch the shipped `speckit-pro:artifact-author` agent
+against the amended planning record**, and run the rest of the sequence:
+
+```text
+0. The reply point above: every reply this run owes is already posted.
+1. Evaluate freshness through the `verdict` surface.
+2. On `stale`, re-dispatch `speckit-pro:artifact-author` against the amended
+   planning record.
+3. Compute the removal set through the `removal_diff` surface, and delete
+   those files.
+3b. Delete the superseded file behind each per-page gap. Skipped entirely on
+    a whole-set gap.
+4. Verify the written pages on disk, through the two positive tests above.
+5. Commit specs/<feature>/artifacts/ alone, with the docs type.
+6. Push. A failed push ends the sequence there.
+7. Take the refresh call site's own live observation, and classify it.
+8. Refresh the description through create or refresh.
+9. When the `Draft PR` cell actually changed, take the record commit.
+```
+
+**Step 0 is a placement, not a new step.** The whole sequence runs after the
+reply point above, so every reply the run owes is already posted before step
+6, this sequence's first new failure point. That is what leaves the reply
+behavior above literally unchanged. The placement had to be chosen rather than
+inherited: neither commit this sequence takes is a bookkeeping commit, so the
+reply point's own rule places neither of them.
+
+**Re-selection reads the shipped gallery manifest against the amended
+record**, never the page list the previous run happened to produce. A run that
+regenerates decides its page set the same way a first generation does.
+
+**Every selected page is authored fresh.** No page is patched, diffed, or
+partially updated, and this slice introduces no second page-authoring path:
+the dispatch, its per-page `generated` and `gap` outcomes, and its on-disk
+verification are the ones the draft-PR emission sequence above already
+describes.
+
+#### Phase 7 Setup: The Superseded File Behind a Per-Page Gap
+
+**A selected page whose regeneration returns a `gap` of its own, in a run that
+produced at least one `generated` page, has any pre-existing file at its path
+removed from disk.** That is step 3b. The removal is reported **inside that
+page's own `gap` outcome**, never as a separate `removed` outcome, which is
+reserved for a page re-selection no longer selects.
+
+**The ground is the one the on-disk verification above already gives** for
+deleting a page that fails its two tests: a plausible-looking document about a
+plan that is not this one is worse than no document at all. A page the author
+declined to rewrite is that same hazard one degree sharper, because it is
+about the right feature and the wrong, superseded plan.
+
+**The exclusion is explicit: a whole-set gap deletes nothing.** Step 3b is
+skipped in its entirety there, and the directory is left unmoved.
+
+**The removal set keeps a gapped page out**, because the page is still
+selected. That rule governs the deselection diff alone and is never licence to
+leave the superseded file in the tree.
+
+#### Phase 7 Setup: Three Commit Shapes, Kept Apart
+
+| Commit | Stages | Type | When it is taken |
+| --- | --- | --- | --- |
+| Regeneration | `specs/<feature>/artifacts/` and nothing else | `docs` | the run's final post-verification outcome set carries at least one `generated` page |
+| Record | the workflow file path alone | `chore` | the refresh actually changed the `Draft PR` cell |
+| Bookkeeping | the workflow file path alone | `chore` | unchanged, exactly as the sweep already takes it above |
+
+**No commit absorbs another.** The regeneration commit stages the artifacts
+directory alone because that is what keeps the freshness join exact: any other
+staged path would move the directory's last-touched commit for reasons
+unrelated to page content.
+
+**An empty regeneration commit is never taken.** It records nothing and cannot
+move the join, which is why the gate above is the outcome set rather than the
+fact that the step ran.
+
+**The record commit is the plan-stage terminal step's own commit, reused
+verbatim** rather than redefined here. The refresh changes the `Draft PR` cell
+through the emission machinery, and this commit carries that change; the sweep
+still writes no row of its own.
+
+**Writing the regeneration commit on the no-comment leg contradicts nothing.**
+The rule that a run handling no comment takes no commit governs the
+bookkeeping commit, and the regeneration commit is not it.
+
+#### Phase 7 Setup: The Artifacts Directory Is Left Unmoved
+
+**From the sweep onward, the regeneration commit is the only commit that
+stages any path under `specs/<feature>/artifacts/`** — not merely a commit
+that stages nothing else. Phase 7 ends in a whole-worktree commit, which runs
+on the proceed leg after the sweep, so anything the sweep left uncommitted
+under that directory would ride into a commit touching it and move the join.
+**The rule does not reach backward to the plan-stage boundary commit**, which
+legitimately carries the first generation through its own `specs/` path set.
+
+**The other half binds the working tree, not the commit.** The reused
+machinery writes each page directly into that directory and deletes every
+written page failing its verification **before** the commit decision exists,
+so a run can end having changed, or emptied, a directory it took no commit
+for. An emptied directory reads `no_pages` on the next join, which outranks
+`stale`, so the retry that would otherwise repair it never fires.
+
+**The mechanism is snapshot and replay.** Snapshot the artifacts directory's
+bytes immediately after the artifacts observation above and before the author
+dispatch, and replay that snapshot only when the run's final verified
+`generated` count is zero — the regeneration commit's own gate, never a proxy
+such as whether a commit landed.
+
+**A git-restore path is rejected.** The history this case arises on is one
+where no commit has ever touched the directory, so git holds no copy to
+restore from.
+
+**The snapshot goes under `specs/<feature>/.process/feedback-sweep/`**, the
+sweep's byproduct directory below, because that rule already places every file
+the sweep writes for its own transport there and nowhere else, and names any
+scratch the run needs among them. It is run-scoped, ignored through that
+directory's self-ignoring `.gitignore`, always removed, and its removal
+reported. It is transport, not a store, so it adds no second bookkeeping
+record.
+
+**It never lives under `specs/<feature>/artifacts/`.** The observation would
+read it as a page, and the stem-matched removal diff would then compute it as
+a deselection removal, deleting the restore copy. The exclusivity rule above
+forbids it there independently.
+
+**The replay decision completes before the byproduct directory is removed.**
+The removal below runs before the run proceeds into task work or stops, and
+this sequence now sits before that point. Ordered the other way, the removal
+destroys the bytes the replay exists to restore, on exactly the zero-generated
+path it was written for. The removal itself is unchanged and still runs on
+every path.
+
+**Any restoration performed is reported as a run-level line beside the commit
+sha**, and is not a fourth page outcome: a restored page's own outcome is the
+`gap` explaining why it was not regenerated.
+
+#### Phase 7 Setup: The Push Is Inside the Regeneration Step
+
+**The push at step 6 is part of that step, not a step after it.** The
+dedicated commit is not complete until it is on the remote, and a failed push
+**ends the emission sequence there**: the refresh must not run against pages
+the remote does not show. That is the same sequencing the reused machinery
+already applies between its own push and its create-or-refresh step.
+
+**The leg decides what happens next.**
+
+- **On a sweep that amended**, a failed push **stops the run immediately**.
+  The re-review stop's pull request has to already show current pages, and it
+  does not.
+- **On a leg that amended nothing**, a failed push does **not** convert the
+  proceed into a stop. The local commit stands and rides up with the branch's
+  next push.
+
+**On both legs the condition is unrecoverable inside this slice, and the
+report says so.** The commit is local and complete, so the join reads the
+directory as current on the next run: no later sweep regenerates, and none
+re-attempts the refresh this failure skipped.
+
+**The manual resume path names both steps the operator owes**: push the
+branch, then refresh the description directly.
+
+#### Phase 7 Setup: The Refresh Takes Its Own Observation
+
+**Step 7 takes its own live read-only observation at the moment of the
+refresh, rather than reusing the entry gate's.** A pull request can be closed
+or replaced while the sweep runs, and the later read is the current evidence.
+This is the principle the create-or-refresh terminal step above already
+applies to its own second read.
+
+**The query shape is the entry gate's:**
+
+```text
+gh pr list --head <branch> --state all --json number,url,state,isDraft,headRefName
+```
+
+**`--state all` is load-bearing.** It is what makes a closed pull request
+distinguishable from an absent one, a distinction the machinery's own
+existence test cannot produce.
+
+**The classification is the same six-status logic, reused verbatim** — the
+`corroborate_refresh` surface of the same helper registration — so each status
+takes the behaviour the create-or-refresh contract above already assigns it at
+its terminal step: `match` refreshes the recorded pull request's description;
+`pr_closed`, `pr_missing`, and `identity_mismatch` each end the refresh
+attempt, create nothing, and leave the `Draft PR` row exactly as found. **No
+status opens a second pull request.** The remaining two are the subject of the
+section below.
+
+#### Phase 7 Setup: Two Statuses That Cannot Classify Here
+
+**`no_record` is unreachable at this call site.** It means an absent `Draft
+PR` row, but the sweep is reached only on an entry-gate `match`, which
+requires the row, and the sweep is forbidden from writing it, so nothing
+between the gate and the refresh can clear it. This matters because the
+shipped row's behaviour falls through to creation, and this slice creates on
+no path.
+
+**`skipped` has one live branch here, not two.** Its shipped row carries a
+conditional: refresh when the tool can be reached, report through the
+could-not-be-opened path when it cannot. At this call site the classifier's
+own input is the observation just taken, so a `skipped` classification is
+itself the evidence the tool could not be reached. The reachable branch is
+dead by construction.
+
+**Neither is implemented as a fallthrough to creation.** Should either
+classify despite the above, the attempt ends with nothing created and the
+`Draft PR` row left exactly as found, and a caught `no_record` is reported as
+an orchestrator invariant violation rather than as an operator-fixable
+pull-request state.
+
+**Where this call site diverges from the terminal step**: a discrepancy or an
+unreachable tool here ends the refresh attempt **only**. It does not change
+the stop-or-proceed decision below, does not unwind a regeneration commit that
+already landed, and is never reported as a page failure. The terminal step
+sits at a stage boundary the run stops at regardless, while the sweep may
+proceed into task work.
+
 #### Phase 7 Setup: Stop or Proceed
 
 **One or more `amended`: stop for re-review before any task work.** Its

@@ -862,6 +862,53 @@ is drift.
   since the shipped classifier short-circuits to `no_record` on an absent row
   before any observation is read.
 
+**Phase 3, User Story 1 — Claude reference prose (T039–T045)** — complete.
+`LAYER1` **1511/1511**, re-run by the orchestrator on the final bytes.
+
+- **229 insertions, 0 deletions.** Verified by `git diff --numstat`, not taken
+  on report: the slice's non-goals guard permits deletion only of the two
+  FR-027 promise passages, and those belong to T048. Both are still present.
+- Seven new sections landed as one block immediately before
+  `Phase 7 Setup: Stop or Proceed`, so document order equals runtime order:
+  reply point → regeneration sequence → stop-or-proceed → byproduct removal.
+- Covered: the nine-step regeneration sequence with step 0 as a placement
+  rather than a step; step 3b's superseded-file deletion reported inside the
+  page's own `gap` outcome; the three commit shapes in a table with the rule
+  that none absorbs another; FR-018a's two-directional exclusivity with
+  snapshot-and-replay under `.process/feedback-sweep/`, replay ordered before
+  removal, restoration reported as a run-level line rather than a fourth page
+  outcome; FR-019a's push inside step 6; the refresh's own live observation
+  with the pinned five-field query; and FR-034a's two statuses that cannot
+  classify here, neither reachable as a fallthrough to creation.
+- A visible tension between T043's push rule and two shipped enumerations is
+  **left standing deliberately** — T052 is the task that scopes them, and
+  scoping early would have meant editing shipped text out of turn.
+
+#### One artifact disagreement, reconciled rather than papered over
+
+`plan.md`'s nine-step block gated the regeneration commit at step 5 on "step 3,
+3b, or the regeneration changed something under it". `tasks.md` T041 gates it
+on **at least one verified `generated` page**. These part company on a
+zero-generated run carrying only deselection removals.
+
+The task list is right and the plan was stale: Checklist consensus item 9
+re-keyed the FR-018 gate to the verified-`generated` form precisely to close a
+permanent-stranding route, and FR-018a's replay fires when that count is zero
+and calls the gate its own. The any-change reading would take a removal-only
+commit, moving the FR-001 join past pages that were never generated. The
+shipped prose carries the re-keyed wording, and **`plan.md` step 5 was
+corrected to match, with a revision note recording why**, so the two artifacts
+no longer contradict each other.
+
+#### The generated tree was refreshed early
+
+Layer 1's preflight auto-synced `dist/`, so the orchestrator ran
+`refresh-release-artifacts.py` to completion rather than leave a half-synced
+tree. Every generated path is a mirror of authored bytes — the `dist/` prose
+deltas match the authored 229 lines exactly, and the runner deltas are the
+already-committed helper catching up. T075 re-runs this after the last source
+edit; running it early neither substitutes for that nor invalidates it.
+
 
 ### Implement Prompt
 
