@@ -19,14 +19,14 @@
     "body": {
       "algorithm": "sha256",
       "path": "specs/g56r-006-resolver-materializer-installer-strict-override/.process/pr-packets/g56r-006/body.md",
-      "sha256": "c46a1d49c759dbf807131e772e29acb93e16bf6658447eb50c445e1f26fc738c",
-      "size_bytes": 3176
+      "sha256": "fdb97cd4971012ab70979172558d4f0ba740239f3163c15ab163bdcaa10b0a6c",
+      "size_bytes": 3317
     },
     "packet": {
       "algorithm": "sha256",
       "path": "specs/g56r-006-resolver-materializer-installer-strict-override/.process/pr-packets/g56r-006.json",
-      "sha256": "c0ac2c5c5e0985cd0a5622ff3174527f38ebe9c5448b93add156386634b8be1f",
-      "size_bytes": 10141
+      "sha256": "e09e1ecb430bb5bc5bb53daeb29201cc7248d9a7e394c8a0b0672f1d15a31038",
+      "size_bytes": 10428
     }
   },
   "status": "passed",
@@ -35,7 +35,7 @@
     "base_branch": "main",
     "head_branch": "g56r-006-resolver-materializer-installer-strict-override"
   },
-  "timestamp": "2026-08-25T07:42:43Z",
+  "timestamp": "2026-08-25T08:28:31Z",
   "title_value": "feat(g56r-006): Add capability-aware agent installation",
   "validation_result_path": "specs/g56r-006-resolver-materializer-installer-strict-override/.process/pr-packets/g56r-006/validation.json"
 }
