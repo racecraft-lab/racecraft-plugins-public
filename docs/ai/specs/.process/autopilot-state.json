@@ -1,274 +1,948 @@
 {
-  "workflow_file": "docs/ai/specs/.process/ART-008-slice-2-workflow.md",
-  "spec_id": "ART-008",
-  "feature_dir": "specs/art-008-feedback-sweep-slice-2",
-  "branch": "art-008-feedback-sweep-slice-2",
-  "status": "completed",
+  "workflow_file": "docs/ai/specs/.process/G56R-006-workflow.md",
+  "spec_id": "G56R-006",
+  "feature_dir": "specs/g56r-006-resolver-materializer-installer-strict-override",
+  "branch": "g56r-006-resolver-materializer-installer-strict-override",
+  "status": "completed_pr_open",
   "stage": "implement",
-  "prior_run_note": "completed",
-  "updated_at": "2026-08-24T00:00:00Z",
+  "updated_at": "2026-08-25T08:25:12Z",
   "active_step": null,
-  "reclaimed_from": {
-    "workflow_file": "docs/ai/specs/.process/ART-008-workflow.md",
-    "spec_id": "ART-008",
-    "status": "completed",
-    "note": "Slice 1 run; one state slot, many specs. Reclaiming is normal operation, not an error."
-  },
   "stage_resolution": {
-    "stage": "implement",
     "source": "argv",
     "basis": "explicit --stage implement",
+    "recorded_stage": "plan",
+    "planning_complete": true,
+    "confidence_gate_status": "✅ Complete",
+    "from_phase": null,
     "corroboration": {
       "status": "match",
-      "recorded": 502,
-      "observed": 502
+      "recorded": {
+        "number": 503,
+        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/503"
+      },
+      "observed": {
+        "number": 503,
+        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/503",
+        "state": "OPEN"
+      },
+      "merged": null,
+      "reason": null
     }
   },
-  "archive_sweep": {
-    "mode": "report_only",
-    "current_target": "specs/art-008-feedback-sweep-slice-2",
-    "candidates": [
-      {
-        "dir": "specs/art-008-feedback-sweep",
-        "merged_pr": 464,
-        "merge_commit": "8db22a420",
-        "disposition": "operator_deferred_until_slice_2_merges"
-      }
-    ],
-    "safeToApplyCleanup": false,
-    "cleanup_applied": false
-  },
-  "plan": [
-    {
-      "step": "Archive Sweep: previously merged specs report-only eligibility",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 0: Prerequisites",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 1: Specify",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 2: Clarify (3 sessions + consensus)",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 3: Plan",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist (error-handling, state-management, requirements)",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 5: Tasks",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 6: Analyze",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 6.5: Confidence Gate (advisory)",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 7: Implement",
-      "status": "completed"
-    },
-    {
-      "step": "Post: Doctor Extension Check",
-      "status": "completed"
-    },
-    {
-      "step": "Post: Verify Implementation",
-      "status": "completed"
-    },
-    {
-      "step": "Post: Verify Tasks Phantom Check",
-      "status": "completed"
-    },
-    {
-      "step": "Post: Code Review",
-      "status": "completed"
-    },
-    {
-      "step": "Post: Integration Suite",
-      "status": "completed"
-    },
-    {
-      "step": "Post: Reviewability Diff Gate",
-      "status": "completed"
-    },
-    {
-      "step": "Post: Self-Review",
-      "status": "completed"
-    },
-    {
-      "step": "Post: UAT Runbook Generation",
-      "status": "completed",
-      "note": "skipped: generate-uat-skeleton deferred on the installed runner and no committed skeleton exists; uat-runbook-author not spawned"
-    },
-    {
-      "step": "Post: PR Body Generation",
-      "status": "completed"
-    },
-    {
-      "step": "Post: PR Creation",
-      "status": "completed"
-    },
-    {
-      "step": "Post: Review Remediation",
-      "status": "completed",
-      "note": "deferred: draft PR carries 0 reviews and 0 comments and review gates skip on draft; loop belongs after the operator flips it to ready"
-    },
-    {
-      "step": "Post: Retrospective",
-      "status": "completed"
-    }
-  ],
-  "test_baseline_g0": {
-    "total": 14012,
-    "layers": {
-      "L1": 1511,
-      "L4": 12282,
-      "L5": 219
-    },
-    "captured": "2026-08-24",
-    "phase": "pre-flight"
+  "settings": {
+    "consensus_mode": "moderate",
+    "gate_failure": "stop",
+    "auto_commit": "per-phase",
+    "confidence_gate_mode": "advisory",
+    "source": "no .claude/speckit-pro.local.md or .codex/speckit-pro.local.md; defaults"
   },
   "prerequisites": {
-    "constitution_check": "pass",
-    "suite": "14012/14012",
-    "date": "2026-08-24"
+    "status": "completed",
+    "all_pass": true,
+    "python": "3.11.0",
+    "speckit_cli": "specify 0.14.2",
+    "runner_speckit_detail": "specify 0.11.8",
+    "is_worktree": true,
+    "workflow_branch_match": true,
+    "runner_on_feature_branch_heuristic": true,
+    "worktree_binding": "resolve-workflow-binding returned resolved with descendant relation; every command and agent targets the registered G56R-006 worktree",
+    "codex_agents": "no_op across 13 installed TOMLs at user scope with gpt-5.5",
+    "project_implementation_agent": "implement-executor",
+    "full_suite": "14012/14012 passed (L1 1511, L4 12282, L5 219)"
   },
-  "gates": {
-    "G1": {
-      "pass": true,
-      "markers": 0
-    },
-    "G2": {
-      "pass": true,
-      "markers": 0
-    },
-    "G3": {
-      "pass": true,
-      "markers": 0
-    },
-    "G5": {
-      "pass": true,
-      "task_count": 81
-    },
-    "G6": {
-      "pass": true,
-      "critical": 0
-    },
-    "G6.5": {
-      "pass": true,
-      "composite": 0.92,
-      "mode": "advisory"
-    },
-    "G7": {
-      "pass": true,
-      "suite": "14179/14179",
-      "baseline": 14012,
-      "delta": 167,
-      "exit_code": 0
+  "project_commands": {
+    "BUILD": "N/A",
+    "TYPECHECK": "N/A",
+    "LINT": "N/A",
+    "LINT_FIX": "N/A",
+    "UNIT_TEST": "python3 tests/speckit-pro/run-all.py",
+    "INTEGRATION_TEST": "N/A",
+    "SINGLE_FILE_TEST": "N/A",
+    "SINGLE_FILE_INTEGRATION": "N/A",
+    "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py"
+  },
+  "preset_conventions": {
+    "name": "speckit-pro-reviewability",
+    "version": "1.0.0",
+    "spec_template": ".specify/presets/speckit-pro-reviewability/templates/spec-template.md",
+    "plan_template": ".specify/presets/speckit-pro-reviewability/templates/plan-template.md",
+    "tasks_template": ".specify/presets/speckit-pro-reviewability/templates/tasks-template.md"
+  },
+  "extensions": {
+    "archive": true,
+    "git": true,
+    "verify": true,
+    "verify_tasks": true,
+    "retrospective": true,
+    "speckit_utils": true
+  },
+  "capability_coverage": {
+    "codebase_context": "repository reads plus codebase-analyst",
+    "spec_context": "workflow, design concept, roadmap, constitution, and spec-context-analyst",
+    "library_documentation": "Context7 is installed; no library-doc need identified for this repo-local planning run",
+    "web_domain_research": "web and Tavily skills are installed; no external-fact need identified at preflight",
+    "source_extraction": "local repository reads are sufficient at preflight"
+  },
+  "archive_sweep": {
+    "status": "completed",
+    "execution_path": "extension_contract",
+    "invocation_available": true,
+    "prerequisite_available": true,
+    "prerequisite_mode": "codex_native_worktree_binding",
+    "archive_extension_installed": true,
+    "cleanup_mode": "provenance_only",
+    "eligible_previous_specs": [
+      {
+        "spec_id": "ART-008",
+        "feature_dir": "specs/art-008-feedback-sweep",
+        "pr": 464,
+        "merge_commit": "8db22a42078074c217c79de3498fbdf9951ffa37"
+      },
+      {
+        "spec_id": "ART-017",
+        "feature_dir": "specs/art-017-state-bookkeeping-checks",
+        "pr": 490,
+        "merge_commit": "070a36c2ba93da2afe1b3a49bf886c1c28903d2c"
+      }
+    ],
+    "excluded_current_spec": "specs/g56r-006-resolver-materializer-installer-strict-override",
+    "safe_to_apply_cleanup": false,
+    "cleanup_applied": false,
+    "blocked_by": [
+      "--apply-cleanup was not supplied",
+      "the active branch is the G56R-006 feature branch, not the safe integration branch"
+    ]
+  },
+  "reviewability_setup": {
+    "target": "docs/ai/specs/codex-gpt-5-6-agent-routing-technical-roadmap.md",
+    "mode": "setup",
+    "status": "warn",
+    "pass": true,
+    "reviewable_loc": 395,
+    "production_files": 2,
+    "total_files": 15,
+    "primary_surface_count": 3,
+    "warnings": [
+      "primary surfaces 3 exceeds warn threshold 1"
+    ],
+    "blockers": [],
+    "g56r_006_scaffold_estimate": {
+      "reviewable_loc": 385,
+      "suggested_slices": 1,
+      "status": "ok"
     }
   },
-  "budget_warning": {
-    "hand_derived_loc": 690,
-    "range": [
-      556,
-      825
-    ],
-    "status": "warn",
-    "estimator": "false_zero_recorded"
+  "tier_2_relocation": {
+    "status": "suppressed",
+    "reason": "current G56R-006 SPEC-MOC already declares structureVersion 1 and PROCESS artifacts are normalized under .process"
   },
-  "atomicity_route": {
-    "route": "one-navigable-PR",
-    "releasable": true,
-    "signals": [
-      "change-shape:modify-heavy"
+  "gates": {
+    "G0": {
+      "gate": "0",
+      "pass": true,
+      "unit_test": "14012/14012 passed, zero failures",
+      "typecheck": "N/A",
+      "build": "N/A",
+      "lint": "N/A",
+      "constitution": "principles I-VI verified for planning baseline",
+      "reviewability_setup": "warn, pass=true, blockers=[]"
+    },
+    "G1": {
+      "gate": "1",
+      "pass": true,
+      "route": "clarify",
+      "markers": 0,
+      "reason": "workflow defines three mandatory clarify sessions despite the clean marker count"
+    },
+    "G2": {
+      "gate": "2",
+      "pass": true,
+      "markers": 0,
+      "reason": "0 [NEEDS CLARIFICATION] markers"
+    },
+    "G3": {
+      "gate": "3",
+      "pass": true,
+      "markers": 0,
+      "reason": "plan.md exists with 0 unresolved markers"
+    },
+    "G4": {
+      "gate": "4",
+      "pass": true,
+      "markers": 0,
+      "reason": "0 [Gap] markers across 123 checklist items"
+    },
+    "G5": {
+      "gate": "5",
+      "pass": true,
+      "markers": 0,
+      "task_count": 53,
+      "reason": "53 tasks found with all 29 functional requirements mapped"
+    },
+    "G6": {
+      "gate": "6",
+      "pass": true,
+      "markers": 0,
+      "reason": "0 CRITICAL/HIGH findings and 0 unresolved findings at every severity"
+    }
+  },
+  "phase_results": {
+    "specify": {
+      "status": "completed",
+      "files": [
+        "specs/g56r-006-resolver-materializer-installer-strict-override/spec.md",
+        "specs/g56r-006-resolver-materializer-installer-strict-override/checklists/requirements.md"
+      ],
+      "user_stories": 4,
+      "acceptance_scenarios": 13,
+      "functional_requirements": 29,
+      "success_criteria": 9,
+      "clarification_markers": 0,
+      "unresolved_for_consensus": "downstream 11-agent cohort mismatch remains intentionally open for Clarify and later roadmap reconciliation"
+    },
+    "after_specify_doctor": {
+      "status": "completed_with_warnings",
+      "failures": 0,
+      "warnings": [
+        "configured Claude integration has skills rather than legacy speckit command files",
+        "in-flight feature directories are expected to have incomplete plan/tasks artifacts"
+      ],
+      "writes_state": false
+    },
+    "clarify_session_1": {
+      "status": "completed",
+      "questions": 5,
+      "consensus": {
+        "status": "completed",
+        "round": 1,
+        "items": 2,
+        "outcome": "both-agree",
+        "confidence": "high"
+      },
+      "decisions": [
+        "the current 13-file route-agnostic installer is the no-manifest compatibility authority",
+        "route-aware policy distinguishes 12 required agents from one optional helper while source inventory remains exactly 13 TOMLs",
+        "the downstream cohort mismatch is named and deferred without changing qualification scope or aggregate counts",
+        "static responses omit the policy-dependent top-level routing block"
+      ]
+    },
+    "clarify_session_2": {
+      "status": "completed",
+      "questions": 5,
+      "consensus": {
+        "status": "completed",
+        "round": 1,
+        "items": 1,
+        "outcome": "agree",
+        "confidence": "high"
+      },
+      "decisions": [
+        "all required agents receive complete ordered diagnostics even after a required miss",
+        "one snapshot identity binds every resolution and any bounded probe child evidence",
+        "strict override evaluates only one override-derived tuple per agent and never silently falls back",
+        "an incompatible helper override requires a validated no-helper continuation or the batch fails before mutation",
+        "required misses report zero planned or applied mutation, writes_state false, and no restart requirement"
+      ]
+    },
+    "clarify_session_3": {
+      "status": "completed",
+      "questions": 5,
+      "consensus": {
+        "status": "completed",
+        "items": 0,
+        "outcome": "not_needed",
+        "confidence": "high"
+      },
+      "decisions": [
+        "managed helper removal requires trusted provenance binding or an exact known rendered-byte digest match",
+        "route-aware activation requires a closed supported-version manifest with identity, provenance, source-roster, roster, candidate, and probe bindings",
+        "static responses preserve current fields and omit the routing object",
+        "rollback proves restoration through prior bytes and modes plus matching pre-state and final-state identities",
+        "route-aware responses use the closed top-level routing object defined in FR-015"
+      ]
+    },
+    "clarify": {
+      "status": "completed",
+      "sessions": 3,
+      "questions": 15,
+      "unresolved_markers": 0,
+      "g2": "pass"
+    },
+    "plan": {
+      "status": "completed",
+      "executor_attempts": 2,
+      "files": [
+        "specs/g56r-006-resolver-materializer-installer-strict-override/plan.md",
+        "specs/g56r-006-resolver-materializer-installer-strict-override/research.md",
+        "specs/g56r-006-resolver-materializer-installer-strict-override/data-model.md",
+        "specs/g56r-006-resolver-materializer-installer-strict-override/contracts/route-policy-manifest.schema.md",
+        "specs/g56r-006-resolver-materializer-installer-strict-override/contracts/install-codex-agents-route-aware.md",
+        "specs/g56r-006-resolver-materializer-installer-strict-override/quickstart.md"
+      ],
+      "contracts": 2,
+      "unresolved_markers": 0,
+      "g3": "pass",
+      "reviewability": {
+        "helper_status": "pass",
+        "projected": 0,
+        "helper_production_files": 0,
+        "new": 7,
+        "modified": 48,
+        "total_entries": 55,
+        "taxonomy_note": "the helper does not classify speckit-pro/**/*.py as production",
+        "manual_production_files": 4,
+        "authored_implementation_files": 8,
+        "planning_artifacts": 6,
+        "generated_follow_through_paths": 41,
+        "split_decision": "one vertical slice"
+      }
+    },
+    "after_plan_speckit_utils_validate": {
+      "status": "deferred",
+      "reason": "the direct extension contract requires tasks.md, which is not created until Phase 5",
+      "blocking": false,
+      "writes_state": false
+    },
+    "checklist_error_handling": {
+      "status": "completed",
+      "file": "specs/g56r-006-resolver-materializer-installer-strict-override/checklists/error-handling.md",
+      "items": 28,
+      "gaps_before": 0,
+      "gaps_after": 0,
+      "remediation": "not_needed",
+      "consensus": {
+        "status": "completed",
+        "items": 0,
+        "outcome": "not_needed"
+      }
+    },
+    "checklist_state_management": {
+      "status": "completed",
+      "file": "specs/g56r-006-resolver-materializer-installer-strict-override/checklists/state-management.md",
+      "items": 28,
+      "gaps_before": 0,
+      "gaps_after": 0,
+      "remediation": "not_needed",
+      "consensus": {
+        "status": "completed",
+        "items": 0,
+        "outcome": "not_needed"
+      }
+    },
+    "checklist_data_integrity": {
+      "status": "completed",
+      "file": "specs/g56r-006-resolver-materializer-installer-strict-override/checklists/data-integrity.md",
+      "items": 36,
+      "gaps_before": 0,
+      "gaps_after": 0,
+      "remediation": "not_needed",
+      "consensus": {
+        "status": "completed",
+        "items": 0,
+        "outcome": "not_needed"
+      }
+    },
+    "checklist_reliability": {
+      "status": "completed",
+      "file": "specs/g56r-006-resolver-materializer-installer-strict-override/checklists/reliability.md",
+      "items": 31,
+      "gaps_before": 0,
+      "gaps_after": 0,
+      "remediation": "not_needed",
+      "consensus": {
+        "status": "completed",
+        "items": 0,
+        "outcome": "not_needed"
+      }
+    },
+    "checklist": {
+      "status": "completed",
+      "domains": 4,
+      "items": 123,
+      "gaps_before": 0,
+      "gaps_after": 0,
+      "consensus_items": 0,
+      "g4": "pass"
+    },
+    "tasks": {
+      "status": "completed",
+      "file": "specs/g56r-006-resolver-materializer-installer-strict-override/tasks.md",
+      "tasks": 53,
+      "phases": 7,
+      "parallel_tasks": 4,
+      "user_stories": 4,
+      "functional_requirements": 29,
+      "acceptance_scenarios": 13,
+      "success_criteria": 9,
+      "red_green_pairs": 14,
+      "markers": 0,
+      "g5": "pass"
+    },
+    "analyze": {
+      "status": "completed",
+      "findings_before": {
+        "critical": 0,
+        "high": 0,
+        "medium": 1,
+        "low": 0
+      },
+      "findings_after": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "remediation_loops": 1,
+      "files_modified": [
+        "specs/g56r-006-resolver-materializer-installer-strict-override/data-model.md"
+      ],
+      "consensus": {
+        "status": "completed",
+        "items": 0,
+        "outcome": "not_needed"
+      },
+      "confidence": 0.94,
+      "g6": "pass"
+    },
+    "confidence_gate": {
+      "status": "completed",
+      "mode": "advisory",
+      "composite": 0.94,
+      "threshold": 0.9,
+      "pass": true,
+      "recommended_action": "proceed",
+      "criteria": {
+        "task_understanding": 0.96,
+        "approach_clarity": 0.94,
+        "requirements_alignment": 0.95,
+        "risk_assessment": 0.92,
+        "completeness": 0.94
+      },
+      "remediation_iterations": 0
+    },
+    "implementation_feedback_sweep": {
+      "status": "completed",
+      "pull_request": 503,
+      "surfaces_read": ["review_thread", "pr_conversation"],
+      "observed": 0,
+      "candidates": 0,
+      "excluded": 0,
+      "temporary_directory_removed": true
+    },
+    "implementation_setup": {
+      "status": "completed",
+      "tasks": ["T001", "T002", "T003", "T004", "T005"],
+      "baseline_test": "test-speckit-pro-mutation-helpers: 53/53 passed"
+    },
+    "implementation_foundation": {
+      "status": "completed",
+      "tasks": ["T006", "T007", "T008", "T009", "T010", "T011"],
+      "focused_test": "test-speckit-pro-mutation-helpers: 61/61 passed"
+    },
+    "implementation_user_story_1": {
+      "status": "completed",
+      "tasks": ["T012", "T013", "T014", "T015", "T016", "T017", "T018"],
+      "focused_tests": [
+        "test-agent-materialization: 10/10 passed",
+        "test-speckit-pro-mutation-helpers: 65/65 passed"
+      ]
+    },
+    "implementation_user_story_2": {
+      "status": "completed",
+      "tasks": ["T019", "T020", "T021", "T022", "T023"],
+      "focused_test": "test-speckit-pro-mutation-helpers: 70/70 passed"
+    },
+    "implementation_user_story_3": {
+      "status": "completed",
+      "tasks": ["T024", "T025", "T026", "T027", "T028", "T029", "T030"],
+      "focused_test": "test-speckit-pro-mutation-helpers: 75/75 passed"
+    },
+    "implementation_user_story_4": {
+      "status": "completed",
+      "tasks": ["T031", "T032", "T033", "T034", "T035", "T036", "T037", "T038", "T039"],
+      "focused_test": "test-speckit-pro-mutation-helpers: 80/80 passed"
+    },
+    "implementation_polish": {
+      "status": "completed",
+      "tasks": ["T040", "T041", "T042", "T043", "T044", "T045", "T046", "T047", "T048", "T049", "T050", "T051", "T052", "T053"],
+      "focused_materializer": "10/10 passed",
+      "focused_installer": "80/80 passed",
+      "layer_1": "1511/1511 passed",
+      "layer_4": "12309/12309 passed",
+      "layer_5": "219/219 passed",
+      "full_suite": "14039/14039 passed",
+      "docs_reference": "current",
+      "reviewability_budget_status": "over_plan_typed_exception_completed"
+    },
+    "post_doctor": {
+      "status": "completed_with_warning",
+      "pass": 4,
+      "warnings": 1,
+      "failures": 0,
+      "warning": "specs/brand-001-racecraft-identity-system has only SPEC-MOC.md and lacks spec.md, plan.md, and tasks.md",
+      "writes_state": false
+    },
+    "post_code_review": {
+      "status": "completed_approved",
+      "reviewed_head": "84cba452c6db320e8f8508e07aa672fa2876839b",
+      "important_findings": 3,
+      "nits": 0,
+      "findings": [
+        "caller-supplied optional-helper provenance is forgeable",
+        "batch apply and rollback do not refuse concurrent regular-file changes",
+        "installer duplicates and bypasses the canonical agent materializer"
+      ],
+      "remediation_required": true
+      ,
+      "re_review_1": {
+        "reviewed_head": "0c983fd67ba485a323047819d14cf27947a07b39",
+        "resolved": [
+          "caller-supplied helper provenance",
+          "canonical materializer bypass and duplication"
+        ],
+        "remaining_or_new": [
+          "rollback path recapture can absorb and overwrite a concurrent edit",
+          "required-policy non-route contract digest is not validated against canonical source"
+        ],
+        "important_findings": 2,
+        "nits": 0
+      },
+      "re_review_2": {
+        "reviewed_head": "89b9162653f1b4acaf94632a88c9c208a01b69e2",
+        "resolved": [
+          "all five previous findings"
+        ],
+        "remaining_or_new": [
+          "invalid required_capabilities types bypass compatibility enforcement"
+        ],
+        "important_findings": 1,
+        "nits": 0
+      },
+      "re_review_3": {
+        "reviewed_head": "45c271953233433f58cdf4d9bbe5033637de032c",
+        "resolved": [
+          "all six previous findings"
+        ],
+        "remaining_or_new": [
+          "truthy non-boolean no_helper.allowed can authorize helper omission"
+        ],
+        "important_findings": 1,
+        "nits": 0
+      },
+      "re_review_4": {
+        "reviewed_head": "c92fb4be2b01de4375792d339c81e363c6334d72",
+        "resolved": [
+          "all eight previous findings"
+        ],
+        "remaining_or_new": [
+          "malformed bounded-probe records can authorize candidate routes",
+          "recovery evidence reports staged actions as rolled back and synthesizes failed operations"
+        ],
+        "important_findings": 2,
+        "nits": 0
+      },
+      "re_review_5": {
+        "reviewed_head": "551d212b679c16840393a6a2437322bb732d3b68",
+        "resolved": [
+          "closed bounded-probe schema and route binding",
+          "exact mutation failure identity and applied-only rollback accounting",
+          "cleanup action, error, and remediation evidence"
+        ],
+        "remaining_or_new": [
+          "final compare-to-write and compare-to-remove windows can clobber concurrent edits",
+          "one route ID can describe inconsistent model tuples",
+          "post-copy verification failures omit failed-action evidence"
+        ],
+        "important_findings": 3,
+        "nits": 0
+      },
+      "re_review_6": {
+        "reviewed_head": "9df8e6942e3f988f5fcfda980fd64a6b79570bf3",
+        "resolved": [
+          "final compare-to-write and compare-to-remove windows",
+          "reused route-ID tuple ambiguity",
+          "post-copy verification failed-action evidence"
+        ],
+        "remaining_or_new": [
+          "no-clobber collision cleanup can discard a moved prior entry or report success while a concurrent target remains"
+        ],
+        "important_findings": 1,
+        "nits": 0
+      },
+      "re_review_7": {
+        "reviewed_head": "aefbf603035f426678efb625ea549cc6d52ad48b",
+        "resolved": [
+          "all prior route-policy, provenance, materializer, probe, recovery, and after-move collision findings"
+        ],
+        "remaining_or_new": [
+          "write, removal, and rollback restore can lose captured prior state during final backup cleanup",
+          "a successful temp-cleanup retry can leave stale preserved-path evidence"
+        ],
+        "important_findings": 2,
+        "nits": 0
+      },
+      "re_review_8": {
+        "reviewed_head": "68ff038440095f159ffc001fe1e91356985d9586",
+        "resolved": [
+          "direct write, removal, and restore cleanup-window detection",
+          "transient temp-cleanup evidence truthfulness"
+        ],
+        "remaining_or_new": [
+          "rollback cleanup races preserve installer bytes instead of original pre-batch state and drop nested paths",
+          "recovery copies are not anchored to the captured destination identity",
+          "backup allocation relinquishes its exclusive placeholder before replacement",
+          "incomplete recovery copies are mislabeled as valid preserved files"
+        ],
+        "important_findings": 4,
+        "nits": 0
+      },
+      "re_review_9": {
+        "reviewed_head": "a346e20d95dc9e4565e6bd9596fbe79704953066",
+        "resolved": [
+          "rollback original-state selection and nested cleanup-path propagation",
+          "pre-call replaced-destination refusal",
+          "partial recovery-copy classification"
+        ],
+        "remaining_or_new": [
+          "restore state, link, and unlink operations are path-based after destination replacement",
+          "backup placeholder takeover can still be clobbered by os.replace",
+          "post-open directory moves make recovery-copy paths stale",
+          "pre-creation and descriptor-close failures produce unreliable evidence"
+        ],
+        "important_findings": 3,
+        "nits": 0
+      },
+      "re_review_10": {
+        "reviewed_head": "5e3022ccb4f8c7073cc480c8d33b310ec0f88c0a",
+        "resolved": [
+          "Darwin and Linux native no-replace constants and EEXIST retry",
+          "no clobbering os.replace fallback",
+          "rollback original-state and nested cleanup propagation",
+          "recovery-copy created tracking and local close handling"
+        ],
+        "remaining_or_new": [
+          "primary temp lifecycle remains path-based and can delete a concurrent replacement after destination swap",
+          "anchored move and recovery evidence return or reconsume stale absolute paths after directory movement",
+          "move, anchored-read, and restore close failures mask mutation state",
+          "missing Darwin renameatx_np symbol escapes as AttributeError"
+        ],
+        "important_findings": 4,
+        "nits": 0
+      }
+    },
+    "post_review_remediation": {
+      "status": "implemented_pending_independent_reverification",
+      "remediations": [
+        "caller-supplied helper provenance rejected; exact trusted rendered bytes required",
+        "apply and rollback revalidate bytes, mode, device, and inode and preserve concurrent edits",
+        "installer materialization and proof generation delegate to canonical agent_materialization.py"
+      ],
+      "focused_materializer": "11/11 passed",
+      "focused_installer": "82/82 passed",
+      "full_suite": "14041/14041 passed (L1 1511, L4 12311, L5 219)",
+      "docs_reference": "current",
+      "diff_check": "passed",
+      "remediation_commit": "0c983fd67ba485a323047819d14cf27947a07b39",
+      "independent_reverification_required": true
+      ,
+      "second_round": {
+        "status": "committed_pending_reverification",
+        "remediation_commit": "89b9162653f1b4acaf94632a88c9c208a01b69e2",
+        "remediations": [
+          "atomic write returns the exact installed state so caller recapture cannot absorb concurrent bytes",
+          "required-policy non-route contract digests are syntax-checked and matched to canonical source materialization"
+        ],
+        "focused_materializer": "11/11 passed",
+        "focused_installer": "82/82 passed",
+        "full_suite": "14041/14041 passed (L1 1511, L4 12311, L5 219)",
+        "docs_reference": "current"
+      },
+      "third_round": {
+        "status": "committed_pending_reverification",
+        "remediation_commit": "45c271953233433f58cdf4d9bbe5033637de032c",
+        "remediations": [
+          "required-policy objects require exact closed keys and non-empty policy IDs",
+          "required_capabilities requires a duplicate-free list of non-empty strings"
+        ],
+        "focused_materializer": "11/11 passed",
+        "focused_installer": "82/82 passed",
+        "full_suite": "14041/14041 passed (L1 1511, L4 12311, L5 219)",
+        "docs_reference": "current"
+      },
+      "fourth_round": {
+        "status": "committed_pending_reverification",
+        "remediation_commit": "c92fb4be2b01de4375792d339c81e363c6334d72",
+        "remediations": [
+          "optional-helper no_helper uses exact allowed and reason keys",
+          "allowed is strictly boolean and reason is a non-empty string",
+          "optional policy identity is typed and required whenever routes exist"
+        ],
+        "focused_materializer": "11/11 passed",
+        "focused_installer": "83/83 passed",
+        "full_suite": "14042/14042 passed (L1 1511, L4 12312, L5 219)",
+        "docs_reference": "current"
+      },
+      "fifth_round": {
+        "status": "committed_pending_reverification",
+        "remediation_commit": "551d212b6",
+        "remediations": [
+          "bounded probes require the exact five-field schema, key and ID equality, admitted candidates, and matching route declarations",
+          "probe admission uses candidate_route_id only and rejects partial or aliased records",
+          "recovery records the exact failed write or removal and only successfully rolled-back applied actions",
+          "destination cleanup actions and errors are recorded with bounded remediation for incomplete cleanup"
+        ],
+        "focused_materializer": "11/11 passed",
+        "focused_installer": "86/86 passed",
+        "full_suite": "14045/14045 passed (L1 1511, L4 12315, L5 219)",
+        "docs_reference": "current",
+        "diff_check": "passed"
+      },
+      "sixth_round": {
+        "status": "committed_pending_reverification",
+        "remediation_commit": "9df8e6942",
+        "remediations": [
+          "existing targets move to a backup and are validated there before exclusive no-clobber installation or removal",
+          "final-window concurrent entries are preserved; multi-writer conflicts retain both files with structured remediation",
+          "reused route IDs require an identical normalized model, effort, capability, and probe tuple",
+          "post-copy verification failures report a verify_files action and exact mismatched targets"
+        ],
+        "focused_materializer": "11/11 passed",
+        "focused_installer": "92/92 passed",
+        "full_suite": "14051/14051 passed (L1 1511, L4 12321, L5 219)",
+        "docs_reference": "current",
+        "diff_check": "passed"
+      },
+      "seventh_round": {
+        "status": "committed_pending_reverification",
+        "remediation_commit": "8bc573364",
+        "baseline_merge_commit": "b43bf70712c195fc26ab783ea400c5df213f153c",
+        "exact_review_head": "aefbf6030",
+        "remediations": [
+          "no-clobber collisions retain both the moved prior entry and concurrent target",
+          "every preserved conflict path is reported with bounded manual remediation",
+          "temporary-file and backup cleanup failures are explicit recovery errors"
+        ],
+        "focused_materializer": "11/11 passed",
+        "focused_installer": "94/94 passed",
+        "pre_merge_full_suite": "14053/14053 passed (L1 1511, L4 12323, L5 219)",
+        "current_baseline_full_suite": "14066/14066 passed (L1 1511, L4 12336, L5 219)",
+        "docs_reference": "current",
+        "diff_check": "passed"
+      },
+      "eighth_round": {
+        "status": "committed_pending_reverification",
+        "remediation_commit": "68ff038440095f159ffc001fe1e91356985d9586",
+        "remediations": [
+          "write, removal, and rollback restore recapture target state after destructive backup cleanup",
+          "cleanup-window races recreate captured prior bytes and mode under a fresh exclusive backup path",
+          "preserved-path evidence drops temporary files removed by a successful cleanup retry"
+        ],
+        "focused_materializer": "11/11 passed",
+        "focused_installer": "98/98 passed",
+        "full_suite": "14070/14070 passed (L1 1511, L4 12340, L5 219)",
+        "docs_reference": "current",
+        "diff_check": "passed"
+      },
+      "ninth_round": {
+        "status": "committed_pending_reverification",
+        "remediation_commit": "a346e20d95dc9e4565e6bd9596fbe79704953066",
+        "remediations": [
+          "rollback carries original pre-batch state into cleanup-race preservation and propagates structured conflict paths",
+          "recovery copies use descriptor-relative exclusive creation bound to the captured destination identity",
+          "backup placeholders remain exclusively owned until atomic replacement",
+          "incomplete recovery artifacts use recovery_copy_failed evidence and remediation"
+        ],
+        "focused_materializer": "11/11 passed",
+        "focused_installer": "102/102 passed",
+        "full_suite": "14074/14074 passed (L1 1511, L4 12344, L5 219)",
+        "docs_reference": "current",
+        "diff_check": "passed"
+      },
+      "tenth_round": {
+        "status": "committed_pending_reverification",
+        "remediation_commit": "5e3022ccb4f8c7073cc480c8d33b310ec0f88c0a",
+        "remediations": [
+          "Darwin and Linux use native atomic no-replace rename through a verified directory descriptor with no clobbering fallback",
+          "restore state capture, link, and unlink operations are descriptor-relative and refuse replacement directories",
+          "recovery-copy evidence is revalidated after creation and omits phantom pre-create paths",
+          "descriptor cleanup attempts every close and preserves categorized primary outcomes"
+        ],
+        "focused_materializer": "11/11 passed",
+        "focused_installer": "107/107 passed",
+        "full_suite": "14079/14079 passed (L1 1511, L4 12349, L5 219)",
+        "docs_reference": "current",
+        "diff_check": "passed"
+      },
+      "blocking_condition": {
+        "status": "resolved",
+        "resumed_at": "2026-08-25T01:09:05Z",
+        "reviewed_head": "5e3022ccb4f8c7073cc480c8d33b310ec0f88c0a",
+        "reason": "Exact no-clobber and directory-swap safety requires one long-lived anchored-directory backend across the entire mutation batch; surgical per-helper fixes leave path re-resolution windows.",
+        "required_follow_up": [
+          "design AnchoredAgentDir abstraction for POSIX directory descriptors and Windows directory handles",
+          "make temp creation, native move, state capture, apply, rollback, cleanup, restore, and evidence anchor-relative",
+          "make descriptor cleanup non-masking across every anchored operation",
+          "add platform-specific contract and fault-injection coverage before resuming post review"
+        ],
+        "safe_state": "resolved by the anchored POSIX and Windows mutation backend with exhaustive deterministic fault injection"
+      },
+      "final_exact_review": {
+        "status": "approved",
+        "reviewed_head": "52e3176188d9fb2ee495ba433b9a6c9af096e1e4",
+        "baseline": "8edeb224824b7325b3ee8e00904c294ba3373de8",
+        "important_findings": 0,
+        "nits": 0,
+        "worktree_clean": true,
+        "refs_stable": true
+      },
+      "final_exact_verification": {
+        "status": "passed",
+        "verified_head": "52e3176188d9fb2ee495ba433b9a6c9af096e1e4",
+        "baseline": "8edeb224824b7325b3ee8e00904c294ba3373de8",
+        "tasks": "53/53 verified; 0 phantom, missing, flagged, or extra",
+        "requirements": "29 FRs, 4 stories, 13 acceptance scenarios, 9 success criteria",
+        "path_trace": "127 references, 42 unique, 42 resolved, 0 missing",
+        "focused_installer": "196/196 passed",
+        "focused_materializer": "13/13 passed",
+        "focused_canonical_materializer": "17/17 passed",
+        "full_suite": "14352/14352 passed (L1 1511, L4 12622, L5 219)",
+        "release_artifacts": "current",
+        "docs_reference": "current",
+        "diff_check": "passed",
+        "worktree_clean": true,
+        "refs_stable": true
+      },
+      "post_reviewability": {
+        "status": "completed_with_typed_exception",
+        "planned_reviewable_loc": 385,
+        "observed_authored_added_lines": 12611,
+        "decision": "one navigable PR retained for the atomic installer transaction and inseparable adversarial evidence suite",
+        "excluded": "generated payloads, installed-cache mirrors, docs/planning artifacts, and implementation notes"
+      },
+      "post_self_review": {
+        "status": "completed",
+        "tests": "focused, full suite, release artifact, docs reference, and diff checks passed",
+        "edge_cases": "all acceptance mappings and POSIX/Win32 adversarial cleanup boundaries covered",
+        "requirements": "29/29 FRs and 53/53 tasks mapped and verified",
+        "tidiness": "no unresolved implementation markers or stray debug output"
+      },
+      "post_uat_runbook": {
+        "status": "skipped_deferred",
+        "reason": "generate-uat-skeleton is deferred and no committed source-derived uat-runbook.md exists",
+        "acceptance_boundary": "deterministic fake-home UAT; live installed UAT deferred to G56R-011"
+      },
+      "post_final_reviewability_backstop": {
+        "status": "completed_deferred_fallback",
+        "reason": "final-reviewability-backstop is deferred; current exact diff evidence retains the atomic-safety typed exception"
+      },
+      "post_retrospective": {
+        "status": "completed",
+        "report": "specs/g56r-006-resolver-materializer-installer-strict-override/retrospective.md",
+        "completion_rate": 100,
+        "spec_adherence": 100,
+        "critical_findings": 0,
+        "proposed_spec_changes": false
+      }
+    },
+    "G7": {
+      "gate": "G7",
+      "pass": true,
+      "done": 53,
+      "total": 53,
+      "markers": 0,
+      "reason": "All 53 tasks complete"
+    }
+  },
+  "artifact_generation": {
+    "status": "completed_with_gaps",
+    "selected": [
+      "implementation-plan",
+      "spec-explainer",
+      "code-approaches",
+      "module-map"
+    ],
+    "generated": [],
+    "gaps": [
+      {
+        "page": "implementation-plan",
+        "reason": "on-disk verification found prohibited class=sample-notice; file deleted"
+      },
+      {
+        "page": "spec-explainer",
+        "reason": "on-disk verification found prohibited class=notice; file deleted"
+      },
+      {
+        "page": "code-approaches",
+        "reason": "on-disk verification found prohibited class=sample-notice; file deleted"
+      },
+      {
+        "page": "module-map",
+        "reason": "on-disk verification found prohibited class=sample-notice; file deleted"
+      }
     ]
+  },
+  "tasks_reviewability": {
+    "status": "deferred_with_fallback_pass",
+    "helper_id": "reviewability-gate",
+    "requested_mode": "tasks",
+    "deferral_reason": "the installed runner supports setup mode only; tasks mode is deferred by contract",
+    "fallback_evidence": {
+      "setup": "warn with pass=true and no blockers",
+      "plan_estimator": "pass",
+      "operator_split_decision": "one vertical slice"
+    },
+    "correctness_or_safety_block": false,
+    "fingerprints": "current",
+    "decision": "proceed",
+    "marker_plan_required": false
   },
   "layer_plan": {
     "status": "skipped",
-    "reason": "route one-navigable-PR"
+    "reason": "atomicity route one-navigable-PR is not split-PR; plan-layers-feature-dir was not invoked"
   },
-  "task_reviewability": {
-    "mode": "deferred",
-    "fallback": "setup-warn + estimator-false-zero + hand-derived-690-warn",
-    "marker_plan": "not_required"
-  },
-  "terminal_step": "plan-stage emission complete: draft PR #502 created, Draft PR row recorded",
-  "installed_plugin_version": "2.27.0",
-  "feedback_sweep": {
-    "ran": false,
-    "reason": "installed plugin 2.27.0 predates ART-008 slice 1",
-    "substitute_observation": {
-      "pr": 502,
-      "reviews": 0,
-      "comments": 0,
-      "mode": "read_only_report_only"
-    }
-  },
-  "main_sync": {
-    "merged": "origin/main",
-    "commits": [
-      "#499",
-      "#500",
-      "#501"
-    ],
-    "conflicts": [
-      "docs/ai/specs/html-artifacts-technical-roadmap.md"
-    ],
-    "regenerated": "already consistent"
-  },
-  "test_baseline_drift": {
-    "observed_total": 14025,
-    "recorded_baseline": 14012,
-    "delta": 13,
-    "cause": "origin/main merge brought #501's new Layer 4 cases",
-    "blocking": false,
-    "note": "diagnostic only; the recorded G0 baseline is preserved per Step 0.6e"
-  },
-  "final_reviewability_gate": {
-    "helper": "final-reviewability-backstop",
-    "mode": "deferred_on_installed_runner",
-    "governing_evidence": "committed WARN chain recorded at T014",
-    "outcome": "warn_may_continue",
-    "block_recorded": false,
-    "realized_overrun": {
-      "declared_mid": 730,
-      "declared_range": [
-        556,
-        885
-      ],
-      "block_threshold": 800,
-      "realized_added": 1222,
-      "realized_removed": 15,
-      "in_band": [
-        "read_only.py 347",
-        "registry.py 8",
-        "SKILL.md 4"
-      ],
-      "over": [
-        "phase-execution.md 455 vs 150-230",
-        "phase-execution-codex.md 408 vs 125-190"
-      ],
-      "note": "executable surface in band; overrun is reference prose density on both platforms; operator decision at the draft-PR checkpoint"
-    }
-  },
-  "pull_request": {
-    "number": 502,
-    "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/502",
-    "action": "refreshed_existing_draft",
-    "second_pr_opened": false,
-    "draft": true,
-    "ci": "PR Checks completed success against head 2b3de7ae8"
-  }
+  "plan": [
+    {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
+    {"step": "Phase 0: Prerequisites", "status": "completed"},
+    {"step": "Phase 1: Specify", "status": "completed"},
+    {"step": "Phase 2: Clarify - Roster and Cross-spec Boundary", "status": "completed"},
+    {"step": "Phase 2: Clarify - Roster and Cross-spec Boundary Consensus", "status": "completed"},
+    {"step": "Phase 2: Clarify - Resolution and Override Semantics", "status": "completed"},
+    {"step": "Phase 2: Clarify - Resolution and Override Semantics Consensus", "status": "completed"},
+    {"step": "Phase 2: Clarify - State, Ownership, and Evidence", "status": "completed"},
+    {"step": "Phase 2: Clarify - State, Ownership, and Evidence Consensus", "status": "completed"},
+    {"step": "Phase 3: Plan", "status": "completed"},
+    {"step": "Phase 4: Checklist - Error Handling", "status": "completed"},
+    {"step": "Phase 4: Checklist - Error Handling Consensus", "status": "completed"},
+    {"step": "Phase 4: Checklist - State Management", "status": "completed"},
+    {"step": "Phase 4: Checklist - State Management Consensus", "status": "completed"},
+    {"step": "Phase 4: Checklist - Data Integrity", "status": "completed"},
+    {"step": "Phase 4: Checklist - Data Integrity Consensus", "status": "completed"},
+    {"step": "Phase 4: Checklist - Reliability", "status": "completed"},
+    {"step": "Phase 4: Checklist - Reliability Consensus", "status": "completed"},
+    {"step": "Phase 5: Tasks", "status": "completed"},
+    {"step": "Phase 6: Analyze", "status": "completed"},
+    {"step": "Phase 6: Analyze - Consensus", "status": "completed"},
+    {"step": "Phase 6.5: Confidence Gate", "status": "completed"},
+    {"step": "Phase 7: Implement - Setup (T001-T005)", "status": "completed"},
+    {"step": "Phase 7: Implement - Foundation (T006-T011)", "status": "completed"},
+    {"step": "Phase 7: Implement - User Story 1 (T012-T018)", "status": "completed"},
+    {"step": "Phase 7: Implement - User Story 2 (T019-T023)", "status": "completed"},
+    {"step": "Phase 7: Implement - User Story 3 (T024-T030)", "status": "completed"},
+    {"step": "Phase 7: Implement - User Story 4 (T031-T039)", "status": "completed"},
+    {"step": "Phase 7: Implement - Polish and verification (T040-T053)", "status": "completed"},
+    {"step": "Post: Doctor Extension Check", "status": "completed"},
+    {"step": "Post: Verify Implementation", "status": "completed"},
+    {"step": "Post: Verify Tasks Phantom Check", "status": "completed"},
+    {"step": "Post: Code Review", "status": "completed"},
+    {"step": "Post: Integration Suite", "status": "completed"},
+    {"step": "Post: Reviewability Diff Gate", "status": "completed"},
+    {"step": "Post: Self-Review", "status": "completed"},
+    {"step": "Post: UAT Runbook Generation", "status": "completed"},
+    {"step": "Post: Final Reviewability Backstop", "status": "completed"},
+    {"step": "Post: PR Packet/Body Generation", "status": "completed"},
+    {"step": "Post: PR Body Generation", "status": "completed"},
+    {"step": "Post: PR Creation", "status": "completed"},
+    {"step": "Post: Review Remediation", "status": "completed"},
+    {"step": "Post: Retrospective", "status": "completed"}
+  ]
 }

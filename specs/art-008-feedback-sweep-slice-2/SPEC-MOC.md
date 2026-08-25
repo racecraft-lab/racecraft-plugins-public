@@ -34,6 +34,8 @@ merged in PR #464; its map lives beside this one at
 - [checklists/requirements-domain.md](checklists/requirements-domain.md)
 - [checklists/requirements.md](checklists/requirements.md)
 - [checklists/state-management.md](checklists/state-management.md)
+- [.process/pr-review-packet.md](.process/pr-review-packet.md)
+- [.process/retrospective.md](.process/retrospective.md)
 - [artifacts/code-approaches.html](artifacts/code-approaches.html)
 - [artifacts/implementation-plan.html](artifacts/implementation-plan.html)
 - [artifacts/module-map.html](artifacts/module-map.html)
