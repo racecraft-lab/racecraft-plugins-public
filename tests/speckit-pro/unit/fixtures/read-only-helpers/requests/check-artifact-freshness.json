@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-check-artifact-freshness",
+  "helper_id": "check-artifact-freshness",
+  "operation": "check-artifact-freshness",
+  "mode": "read_only",
+  "inputs": {
+    "workflow_file": "docs/ai/specs/.process/ART-008-workflow.md",
+    "artifacts_observation": {
+      "ok": true,
+      "artifacts_dir_state": "present",
+      "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+      "pages": ["implementation-plan", "spec-explainer"],
+      "amended_commits": [
+        {"cell": "a1b2c3d", "resolved": true, "is_ancestor_of_artifacts_commit": true}
+      ]
+    }
+  }
+}

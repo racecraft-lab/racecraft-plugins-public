@@ -1,0 +1,1322 @@
+{
+  "cases": {
+    "corroborate-identity-mismatch": {
+      "purpose": "The branch grew a second, open pull request under a different number. That conflict is reported ahead of every later rule and independent of array order, and both identities are named. The refresh attempt ends, nothing is created, and the row is left exactly as found.",
+      "acceptance": [
+        "FR-033a",
+        "FR-034"
+      ],
+      "inputs": {
+        "named_surface": "corroborate_refresh",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/corroborate-identity-mismatch.md",
+        "pr_observation": {
+          "ok": true,
+          "pull_requests": [
+            {
+              "number": 508,
+              "url": "https://github.com/octo-org/octo-repo/pull/508",
+              "state": "open",
+              "isDraft": true,
+              "headRefName": "art-008-feedback-sweep-slice-2"
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n### Basic Information\n\n| Field | Value |\n|---|---|\n| Stage | implement |\n| Draft PR | [#471](https://github.com/octo-org/octo-repo/pull/471) |\n\n"
+    },
+    "corroborate-match": {
+      "purpose": "The recorded `Draft PR` row and the observation agree on number, url, and an open state, so the shipped classifier returns `match` and the refresh call site refreshes that pull request's description.",
+      "acceptance": [
+        "FR-033a",
+        "FR-034"
+      ],
+      "inputs": {
+        "named_surface": "corroborate_refresh",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/corroborate-match.md",
+        "pr_observation": {
+          "ok": true,
+          "pull_requests": [
+            {
+              "number": 471,
+              "url": "https://github.com/octo-org/octo-repo/pull/471",
+              "state": "open",
+              "isDraft": true,
+              "headRefName": "art-008-feedback-sweep-slice-2"
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n### Basic Information\n\n| Field | Value |\n|---|---|\n| Stage | implement |\n| Draft PR | [#471](https://github.com/octo-org/octo-repo/pull/471) |\n\n"
+    },
+    "corroborate-no-record-absent-draft-pr-row": {
+      "purpose": "A `### Basic Information` table carrying no `Draft PR` row. The row's presence is what triggers the observation, so a run without one has nothing to corroborate and the supplied observation is never read.",
+      "acceptance": [
+        "FR-033a",
+        "FR-034"
+      ],
+      "inputs": {
+        "named_surface": "corroborate_refresh",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/corroborate-no-record-absent-draft-pr-row.md",
+        "pr_observation": {
+          "ok": true,
+          "pull_requests": [
+            {
+              "number": 471,
+              "url": "https://github.com/octo-org/octo-repo/pull/471",
+              "state": "open",
+              "isDraft": true,
+              "headRefName": "art-008-feedback-sweep-slice-2"
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n### Basic Information\n\n| Field | Value |\n|---|---|\n| Stage | implement |\n\n"
+    },
+    "corroborate-no-record-draft-pr-row-inside-html-comment": {
+      "purpose": "A well-formed `Draft PR` row sitting inside an HTML comment span. The comment is blanked before the row is read, exactly as the shipped call site blanks it, so a commented-out row never becomes evidence. Without the blanking this case would classify `match` off text the file does not assert, and the run would refresh a pull request nobody recorded.",
+      "acceptance": [
+        "FR-033a",
+        "FR-034",
+        "FR-004"
+      ],
+      "inputs": {
+        "named_surface": "corroborate_refresh",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/corroborate-no-record-draft-pr-row-inside-html-comment.md",
+        "pr_observation": {
+          "ok": true,
+          "pull_requests": [
+            {
+              "number": 471,
+              "url": "https://github.com/octo-org/octo-repo/pull/471",
+              "state": "open",
+              "isDraft": true,
+              "headRefName": "art-008-feedback-sweep-slice-2"
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n<!--\n### Basic Information\n\n| Field | Value |\n|---|---|\n| Stage | implement |\n| Draft PR | [#471](https://github.com/octo-org/octo-repo/pull/471) |\n-->\n\n"
+    },
+    "corroborate-no-record-malformed-draft-pr-row": {
+      "purpose": "A `Draft PR` row whose value is prose rather than a numbered link. The shipped reader returns None on a malformed value rather than raising, because the workflow file is operator-edited prose and a traceback there would stop a run over a typo.",
+      "acceptance": [
+        "FR-033a",
+        "FR-034"
+      ],
+      "inputs": {
+        "named_surface": "corroborate_refresh",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/corroborate-no-record-malformed-draft-pr-row.md",
+        "pr_observation": {
+          "ok": true,
+          "pull_requests": [
+            {
+              "number": 471,
+              "url": "https://github.com/octo-org/octo-repo/pull/471",
+              "state": "open",
+              "isDraft": true,
+              "headRefName": "art-008-feedback-sweep-slice-2"
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n### Basic Information\n\n| Field | Value |\n|---|---|\n| Stage | implement |\n| Draft PR | pull request 471 |\n\n"
+    },
+    "corroborate-pr-closed": {
+      "purpose": "The recorded pull request resolves and its state is `closed`. The refresh attempt ends, nothing is created, and the row is left exactly as found. `merged` is false because the closed state says so and the query carries no separate merged field.",
+      "acceptance": [
+        "FR-033a",
+        "FR-034"
+      ],
+      "inputs": {
+        "named_surface": "corroborate_refresh",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/corroborate-pr-closed.md",
+        "pr_observation": {
+          "ok": true,
+          "pull_requests": [
+            {
+              "number": 471,
+              "url": "https://github.com/octo-org/octo-repo/pull/471",
+              "state": "closed",
+              "isDraft": false,
+              "headRefName": "art-008-feedback-sweep-slice-2"
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n### Basic Information\n\n| Field | Value |\n|---|---|\n| Stage | implement |\n| Draft PR | [#471](https://github.com/octo-org/octo-repo/pull/471) |\n\n"
+    },
+    "corroborate-pr-missing": {
+      "purpose": "A successful query returning an empty array. The empty array is a usable answer rather than a malformed one, and it is how a branch with no pull request answers, so the recorded number is missing. The refresh attempt ends and nothing is created; `--state all` is what makes this distinguishable from a closed pull request.",
+      "acceptance": [
+        "FR-033a",
+        "FR-034"
+      ],
+      "inputs": {
+        "named_surface": "corroborate_refresh",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/corroborate-pr-missing.md",
+        "pr_observation": {
+          "ok": true,
+          "pull_requests": []
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n### Basic Information\n\n| Field | Value |\n|---|---|\n| Stage | implement |\n| Draft PR | [#471](https://github.com/octo-org/octo-repo/pull/471) |\n\n"
+    },
+    "corroborate-skipped-observation-absent": {
+      "purpose": "A recorded row with no `pr_observation` at all. The row is present, so a skipped run still knows which pull request it failed to reach, and the reason is the one this operation supplies for itself. `skipped` is never grounds to open a second pull request.",
+      "acceptance": [
+        "FR-033a",
+        "FR-034"
+      ],
+      "inputs": {
+        "named_surface": "corroborate_refresh",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/corroborate-skipped-observation-absent.md"
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n### Basic Information\n\n| Field | Value |\n|---|---|\n| Stage | implement |\n| Draft PR | [#471](https://github.com/octo-org/octo-repo/pull/471) |\n\n"
+    },
+    "corroborate-skipped-ok-short-of-literal-true-preserves-request-reason": {
+      "purpose": "`ok` supplied as the integer 1. Python reads `1 == True`, so a truthiness test would accept the gather as a success and let a stale array report a discrepancy. The literal test rejects it, and the reason the request carried is preserved verbatim rather than replaced by this operation's own default, because the operator acts on which failure it was.",
+      "acceptance": [
+        "FR-033a",
+        "FR-034"
+      ],
+      "inputs": {
+        "named_surface": "corroborate_refresh",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/corroborate-skipped-ok-short-of-literal-true-preserves-request-reason.md",
+        "pr_observation": {
+          "ok": 1,
+          "reason": "gh is not authenticated on this runner"
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n### Basic Information\n\n| Field | Value |\n|---|---|\n| Stage | implement |\n| Draft PR | [#471](https://github.com/octo-org/octo-repo/pull/471) |\n\n"
+    },
+    "dual-anchoring-escaped-pipe-in-disposition": {
+      "purpose": "A `Disposition` carrying an escaped `\\|`, so the row splits into nine cells against an eight-cell header. `Class` keeps its left-hand header index and still reads `amended`; `Commit` is anchored at `-2` from the row's end and still reads `a1b2c3d`. A left-anchored `Commit` read takes the disposition's second half instead, finds no matching record, and returns `undeterminable` \u2014 which leaves a genuinely stale page set unregenerated. That is the silent, wrong-direction failure this case exists to catch.",
+      "acceptance": [
+        "FR-004",
+        "FR-006"
+      ],
+      "inputs": {
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/dual-anchoring-escaped-pipe-in-disposition.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+          "pages": [
+            "implementation-plan",
+            "spec-explainer"
+          ],
+          "amended_commits": [
+            {
+              "cell": "a1b2c3d",
+              "resolved": true,
+              "is_ancestor_of_artifacts_commit": false
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 81 | IC_kwDOaaa081 | pr_conversation | octocat | amended | Renamed the helper for what it reports \\| kept the surface set closed | a1b2c3d | 23 |\n\n"
+    },
+    "fr007a-null-artifacts-commit-with-joinable-row-is-stale": {
+      "purpose": "Pages present, no commit has ever touched the artifacts directory, and one `amended` row is joinable: FR-007a reads that as `stale`, because pages exist that no commit accounts for.",
+      "acceptance": [
+        "FR-007a"
+      ],
+      "inputs": {
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/fr007a-null-artifacts-commit-with-joinable-row-is-stale.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": null,
+          "pages": [
+            "implementation-plan",
+            "spec-explainer"
+          ],
+          "amended_commits": [
+            {
+              "cell": "c3d4e5f",
+              "resolved": true,
+              "is_ancestor_of_artifacts_commit": false
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 41 | IC_kwDOaaa041 | pr_conversation | octocat | amended | Reworded the failure table. | c3d4e5f | 10 |\n\n"
+    },
+    "fr007b-null-artifacts-commit-with-unresolved-row-is-undeterminable": {
+      "purpose": "The same shape as FR-007a except the only `amended` row is matched but carries `resolved` false, so it is not joinable. FR-007b makes this `undeterminable` and never `stale`: a row that cannot prove freshness may not be allowed to prove staleness instead.",
+      "acceptance": [
+        "FR-007b",
+        "FR-006"
+      ],
+      "inputs": {
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/fr007b-null-artifacts-commit-with-unresolved-row-is-undeterminable.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": null,
+          "pages": [
+            "implementation-plan",
+            "spec-explainer"
+          ],
+          "amended_commits": [
+            {
+              "cell": "deadbee",
+              "resolved": false,
+              "is_ancestor_of_artifacts_commit": null
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 42 | IC_kwDOaaa042 | pr_conversation | octocat | amended | Reworded the failure table. | deadbee | 11 |\n\n"
+    },
+    "fr007b-pinned-false-ancestor-reaches-stale-through-the-ordinary-test": {
+      "purpose": "A resolved row supplied with `is_ancestor_of_artifacts_commit` as `false` because `last_artifacts_commit` is null. The pinned encoding reaches `stale` through the ordinary staleness test rather than through a special null-commit branch, which is what lets the FR-007a reading be a fixture assertion rather than a second code path.",
+      "acceptance": [
+        "FR-007b",
+        "FR-007a"
+      ],
+      "inputs": {
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/fr007b-pinned-false-ancestor-reaches-stale-through-the-ordinary-test.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": null,
+          "pages": [
+            "implementation-plan",
+            "spec-explainer"
+          ],
+          "amended_commits": [
+            {
+              "cell": "5a6b7c8",
+              "resolved": true,
+              "is_ancestor_of_artifacts_commit": false
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 43 | IC_kwDOaaa043 | pr_conversation | octocat | amended | Added the registration checklist. | 5a6b7c8 | 12 |\n\n"
+    },
+    "fr008-abbreviated-cell-against-full-sha-is-current": {
+      "purpose": "The `Commit` cell holds an abbreviated sha while `last_artifacts_commit` is the full one for the same commit. A commit is its own ancestor, so the supplied ancestry answers `current`; a string comparison would call this pairing stale and regenerate pages that are fine.",
+      "acceptance": [
+        "FR-008",
+        "FR-002"
+      ],
+      "inputs": {
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/fr008-abbreviated-cell-against-full-sha-is-current.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+          "pages": [
+            "implementation-plan",
+            "spec-explainer"
+          ],
+          "amended_commits": [
+            {
+              "cell": "a1b2c3d",
+              "resolved": true,
+              "is_ancestor_of_artifacts_commit": true
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 51 | IC_kwDOaaa051 | pr_conversation | octocat | amended | Took the artifacts commit itself. | a1b2c3d | 13 |\n\n"
+    },
+    "fr009-one-older-row-and-one-newer-row-is-stale": {
+      "purpose": "Two `amended` rows, one an ancestor of the artifacts commit and one not. One such row decides `stale` alone, and only that row is deciding.",
+      "acceptance": [
+        "FR-009",
+        "FR-008"
+      ],
+      "inputs": {
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/fr009-one-older-row-and-one-newer-row-is-stale.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+          "pages": [
+            "implementation-plan",
+            "spec-explainer"
+          ],
+          "amended_commits": [
+            {
+              "cell": "a1b2c3d",
+              "resolved": true,
+              "is_ancestor_of_artifacts_commit": true
+            },
+            {
+              "cell": "e4f5a6b",
+              "resolved": true,
+              "is_ancestor_of_artifacts_commit": false
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 52 | IC_kwDOaaa052 | pr_conversation | octocat | amended | Landed before the artifacts commit. | a1b2c3d | 14 |\n| 53 | IC_kwDOaaa053 | pr_conversation | octocat | amended | Landed after the artifacts commit. | e4f5a6b | 15 |\n\n"
+    },
+    "fr009-two-older-rows-are-current": {
+      "purpose": "Two `amended` rows, both ancestors of the artifacts commit. Nothing amended the branch after the artifacts were taken, so the verdict is `current` and `deciding_rows` stays empty.",
+      "acceptance": [
+        "FR-009",
+        "FR-008"
+      ],
+      "inputs": {
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/fr009-two-older-rows-are-current.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+          "pages": [
+            "implementation-plan",
+            "spec-explainer"
+          ],
+          "amended_commits": [
+            {
+              "cell": "a1b2c3d",
+              "resolved": true,
+              "is_ancestor_of_artifacts_commit": true
+            },
+            {
+              "cell": "b2c3d4e",
+              "resolved": true,
+              "is_ancestor_of_artifacts_commit": true
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 54 | IC_kwDOaaa054 | pr_conversation | octocat | amended | Landed before the artifacts commit. | a1b2c3d | 16 |\n| 55 | IC_kwDOaaa055 | pr_conversation | octocat | amended | Also landed before it. | b2c3d4e | 17 |\n\n"
+    },
+    "fr012b-generated-and-gap-page-disjoint-from-removal-set": {
+      "purpose": "The FR-012b/FR-018a disjointness case. One re-selected page came back `generated` and one came back as a per-page `gap`, and a third observed page was deselected. The removal set holds the deselected page alone and excludes the gapped one, so the per-page deletion path and the zero-generated replay path never co-fire over the same page.",
+      "acceptance": [
+        "FR-012b",
+        "FR-018a"
+      ],
+      "inputs": {
+        "named_surface": "removal_diff",
+        "observed_pages": [
+          "spec-explainer",
+          "implementation-plan",
+          "module-map"
+        ],
+        "reselected_pages": [
+          "implementation-plan",
+          "module-map"
+        ]
+      }
+    },
+    "input-error-artifacts-dir-state-outside-the-closed-three": {
+      "purpose": "`artifacts_dir_state` outside `absent`, `empty`, and `present`. The set is closed, so a fourth token is a malformed request and not a state to discover.",
+      "acceptance": [
+        "FR-004",
+        "FR-023"
+      ],
+      "inputs": {
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/input-error-artifacts-dir-state-outside-the-closed-three.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "missing",
+          "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+          "pages": [
+            "implementation-plan",
+            "spec-explainer"
+          ],
+          "amended_commits": [
+            {
+              "cell": "a1b2c3d",
+              "resolved": true,
+              "is_ancestor_of_artifacts_commit": true
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 91 | IC_kwDOaaa091 | pr_conversation | octocat | amended | Ordinary amendment. | a1b2c3d | 25 |\n\n"
+    },
+    "input-error-corroborate-workflow-file-absent": {
+      "purpose": "The corroboration surface reads the same single path the verdict surface does, so its absence is the caller's defect here too. Pins that the shared prologue governs every surface rather than the default one alone.",
+      "acceptance": [
+        "FR-004",
+        "FR-033a"
+      ],
+      "inputs": {
+        "named_surface": "corroborate_refresh"
+      }
+    },
+    "input-error-corroborate-workflow-file-unreadable": {
+      "purpose": "A `workflow_file` naming no readable file. Unreadable is an input error on this surface, unlike an unusable observation, which reports without blocking.",
+      "acceptance": [
+        "FR-004",
+        "FR-033a"
+      ],
+      "inputs": {
+        "named_surface": "corroborate_refresh",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/no-such-workflow-file.md"
+      }
+    },
+    "input-error-observation-absent": {
+      "purpose": "A readable workflow file and no `artifacts_observation` at all. Absence is not an unusable observation: there is no observation to judge usable, so this is a malformed request.",
+      "acceptance": [
+        "FR-004",
+        "FR-023"
+      ],
+      "inputs": {
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/input-error-observation-absent.md"
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 91 | IC_kwDOaaa091 | pr_conversation | octocat | amended | Ordinary amendment. | a1b2c3d | 25 |\n\n"
+    },
+    "input-error-observation-amended-commits-not-an-array": {
+      "purpose": "The join iterates the records, so a non-array raises before any row is read. Refused as the caller's defect rather than crashing partway through the log.",
+      "acceptance": [
+        "FR-004a"
+      ],
+      "inputs": {
+        "named_surface": "verdict",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/input-error-observation-amended-commits-not-an-array.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab",
+          "pages": [
+            "implementation-plan"
+          ],
+          "amended_commits": 7
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 4 | IC_kwDOaaa004 | pr_conversation | octocat | amended | Narrowed FR-012 in spec.md. | e4f5a6b | 3 |\n\n"
+    },
+    "input-error-observation-amended-commits-omitted": {
+      "purpose": "An omitted `amended_commits` read as empty makes every `amended` row unmatched and returns `undeterminable` naming rows, which points the operator at the log instead of at the gather that forgot to supply the records. The legal empty case is the empty array.",
+      "acceptance": [
+        "FR-004a",
+        "FR-006"
+      ],
+      "inputs": {
+        "named_surface": "verdict",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/input-error-observation-amended-commits-omitted.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab",
+          "pages": [
+            "implementation-plan"
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 4 | IC_kwDOaaa004 | pr_conversation | octocat | amended | Narrowed FR-012 in spec.md. | e4f5a6b | 3 |\n\n"
+    },
+    "input-error-observation-not-an-object": {
+      "purpose": "`artifacts_observation` supplied as an array. A non-object cannot carry `ok`, so it is a malformed request rather than a gather that failed.",
+      "acceptance": [
+        "FR-004",
+        "FR-023"
+      ],
+      "inputs": {
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/input-error-observation-not-an-object.md",
+        "artifacts_observation": []
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 91 | IC_kwDOaaa091 | pr_conversation | octocat | amended | Ordinary amendment. | a1b2c3d | 25 |\n\n"
+    },
+    "input-error-observation-pages-non-string-member": {
+      "purpose": "A bare string in place of the array is the sharpest form: `list(\"impl\")` splats one page per character and reports an inventory nobody supplied, at exit 0. A non-string member is the same class and is refused with it.",
+      "acceptance": [
+        "FR-004"
+      ],
+      "inputs": {
+        "named_surface": "verdict",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/input-error-observation-pages-non-string-member.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab",
+          "pages": [
+            "implementation-plan",
+            7
+          ],
+          "amended_commits": []
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 4 | IC_kwDOaaa004 | pr_conversation | octocat | amended | Narrowed FR-012 in spec.md. | e4f5a6b | 3 |\n\n"
+    },
+    "input-error-observation-pages-not-an-array": {
+      "purpose": "A gather that reported `ok` as the literal `true` and then handed over a non-array `pages` is the caller's own defect, not the failed gather FR-023 protects. Without the refusal the echo raises a `TypeError` the runner reports as an internal failure, which is not a verdict.",
+      "acceptance": [
+        "FR-004",
+        "FR-023"
+      ],
+      "inputs": {
+        "named_surface": "verdict",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/input-error-observation-pages-not-an-array.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab",
+          "pages": 7,
+          "amended_commits": []
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 4 | IC_kwDOaaa004 | pr_conversation | octocat | amended | Narrowed FR-012 in spec.md. | e4f5a6b | 3 |\n\n"
+    },
+    "input-error-observation-pages-omitted": {
+      "purpose": "An omitted `pages` is the caller's defect, not the empty inventory. Read as empty it would echo a directory the caller never looked at, and the legal empty case is supplied as the empty array. This follows `freshness_page_list`, which already refuses absence on the removal surface for the same reason.",
+      "acceptance": [
+        "FR-004"
+      ],
+      "inputs": {
+        "named_surface": "verdict",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/input-error-observation-pages-omitted.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab",
+          "amended_commits": []
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 4 | IC_kwDOaaa004 | pr_conversation | octocat | amended | Narrowed FR-012 in spec.md. | e4f5a6b | 3 |\n\n"
+    },
+    "input-error-observation-record-claims-ancestry-of-a-null-commit": {
+      "purpose": "The direction of FR-007b a boolean check alone lets through. With `last_artifacts_commit` null there is no commit for anything to be an ancestor of, so `true` is not a weaker claim than `false` but a false one \u2014 and it reaches the ordinary stale test as *not stale*, returning `current` on exactly the interrupted-run case FR-007a exists for. FR-007b pins the value, so the helper pins it too.",
+      "acceptance": [
+        "FR-007a",
+        "FR-007b"
+      ],
+      "inputs": {
+        "named_surface": "verdict",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/input-error-observation-record-claims-ancestry-of-a-null-commit.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": null,
+          "pages": [
+            "implementation-plan"
+          ],
+          "amended_commits": [
+            {
+              "cell": "e4f5a6b",
+              "resolved": true,
+              "is_ancestor_of_artifacts_commit": true
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 4 | IC_kwDOaaa004 | pr_conversation | octocat | amended | Narrowed FR-012 in spec.md. | e4f5a6b | 3 |\n\n"
+    },
+    "input-error-observation-record-resolved-without-boolean-ancestry": {
+      "purpose": "FR-007b's caller obligation, enforced. The stale test is for the literal `false`, so a resolved record leaving the ancestry field null reads as *not stale* and hands the re-reviewer the pre-amendment plan. That is exactly the FR-007a interrupted-run case, so a silent default is worse here than a refusal.",
+      "acceptance": [
+        "FR-007a",
+        "FR-007b"
+      ],
+      "inputs": {
+        "named_surface": "verdict",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/input-error-observation-record-resolved-without-boolean-ancestry.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": null,
+          "pages": [
+            "implementation-plan"
+          ],
+          "amended_commits": [
+            {
+              "cell": "e4f5a6b",
+              "resolved": true,
+              "is_ancestor_of_artifacts_commit": null
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 4 | IC_kwDOaaa004 | pr_conversation | octocat | amended | Narrowed FR-012 in spec.md. | e4f5a6b | 3 |\n\n"
+    },
+    "input-error-observation-record-unresolved-with-non-null-ancestry": {
+      "purpose": "The other half of the same declared rule: the ancestry field is null when `resolved` is false, because an unresolved cell names no commit that could be anyone's ancestor. A record asserting both at once contradicts itself and is refused.",
+      "acceptance": [
+        "FR-006",
+        "FR-007b"
+      ],
+      "inputs": {
+        "named_surface": "verdict",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/input-error-observation-record-unresolved-with-non-null-ancestry.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab",
+          "pages": [
+            "implementation-plan"
+          ],
+          "amended_commits": [
+            {
+              "cell": "e4f5a6b",
+              "resolved": false,
+              "is_ancestor_of_artifacts_commit": true
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 4 | IC_kwDOaaa004 | pr_conversation | octocat | amended | Narrowed FR-012 in spec.md. | e4f5a6b | 3 |\n\n"
+    },
+    "input-error-observed-pages-absent": {
+      "purpose": "`observed_pages` omitted. Both arrays are required, and an absent inventory is a malformed request rather than an empty one: reading it as empty would report no removals for a run that observed pages.",
+      "acceptance": [
+        "FR-012a",
+        "FR-023"
+      ],
+      "inputs": {
+        "named_surface": "removal_diff",
+        "reselected_pages": [
+          "implementation-plan"
+        ]
+      }
+    },
+    "input-error-observed-pages-non-string-member": {
+      "purpose": "`observed_pages` carrying a non-string member. A stem is a filename stem, and a number compared against strings would never match and would report a removal that has no file behind it.",
+      "acceptance": [
+        "FR-012a",
+        "FR-023"
+      ],
+      "inputs": {
+        "named_surface": "removal_diff",
+        "observed_pages": [
+          "implementation-plan",
+          7
+        ],
+        "reselected_pages": [
+          "implementation-plan"
+        ]
+      }
+    },
+    "input-error-observed-pages-not-an-array": {
+      "purpose": "`observed_pages` supplied as a string. A bare string is iterable in Python and would diff character by character, so the type is checked rather than assumed.",
+      "acceptance": [
+        "FR-012a",
+        "FR-023"
+      ],
+      "inputs": {
+        "named_surface": "removal_diff",
+        "observed_pages": "implementation-plan",
+        "reselected_pages": [
+          "implementation-plan"
+        ]
+      }
+    },
+    "input-error-reselected-pages-absent": {
+      "purpose": "`reselected_pages` omitted. Absent is not the same as empty: the empty array is the legal whole-set-gap case, so reading an omission as empty would delete every observed page on a malformed request.",
+      "acceptance": [
+        "FR-012a",
+        "FR-023"
+      ],
+      "inputs": {
+        "named_surface": "removal_diff",
+        "observed_pages": [
+          "implementation-plan"
+        ]
+      }
+    },
+    "input-error-reselected-pages-non-string-member": {
+      "purpose": "`reselected_pages` carrying a non-string member. A null member would match no observed stem and would silently widen the removal set.",
+      "acceptance": [
+        "FR-012a",
+        "FR-023"
+      ],
+      "inputs": {
+        "named_surface": "removal_diff",
+        "observed_pages": [
+          "implementation-plan"
+        ],
+        "reselected_pages": [
+          "implementation-plan",
+          null
+        ]
+      }
+    },
+    "input-error-reselected-pages-not-an-array": {
+      "purpose": "`reselected_pages` supplied as an object. The re-selection returns a list of page ids, and any other shape is the caller's defect.",
+      "acceptance": [
+        "FR-012a",
+        "FR-023"
+      ],
+      "inputs": {
+        "named_surface": "removal_diff",
+        "observed_pages": [
+          "implementation-plan"
+        ],
+        "reselected_pages": {
+          "implementation-plan": "generated"
+        }
+      }
+    },
+    "input-error-workflow-file-absent": {
+      "purpose": "No `workflow_file` key. The one read path is required, and its absence is the caller's defect.",
+      "acceptance": [
+        "FR-004",
+        "FR-023"
+      ],
+      "inputs": {
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+          "pages": [
+            "implementation-plan",
+            "spec-explainer"
+          ],
+          "amended_commits": [
+            {
+              "cell": "a1b2c3d",
+              "resolved": true,
+              "is_ancestor_of_artifacts_commit": true
+            }
+          ]
+        }
+      }
+    },
+    "input-error-workflow-file-blank": {
+      "purpose": "A blank `workflow_file`. The empty string is a value outside the contract rather than an omission, and it reaches the same required-input diagnostic.",
+      "acceptance": [
+        "FR-004",
+        "FR-023"
+      ],
+      "inputs": {
+        "workflow_file": "",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+          "pages": [
+            "implementation-plan",
+            "spec-explainer"
+          ],
+          "amended_commits": [
+            {
+              "cell": "a1b2c3d",
+              "resolved": true,
+              "is_ancestor_of_artifacts_commit": true
+            }
+          ]
+        }
+      }
+    },
+    "input-error-workflow-file-unreadable": {
+      "purpose": "A repo-relative `workflow_file` inside the trust boundary that names no file. It passes the shared path prologue and fails on the read, which is the diagnostic an operator can act on.",
+      "acceptance": [
+        "FR-004",
+        "FR-023"
+      ],
+      "inputs": {
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/input-error-workflow-file-unreadable.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+          "pages": [
+            "implementation-plan",
+            "spec-explainer"
+          ],
+          "amended_commits": [
+            {
+              "cell": "a1b2c3d",
+              "resolved": true,
+              "is_ancestor_of_artifacts_commit": true
+            }
+          ]
+        }
+      }
+    },
+    "observation-ok-absent-is-undeterminable": {
+      "purpose": "An unusable observation returns the `undeterminable` verdict at exit 0, never an input error: FR-023 forbids a failed gather from blocking the run. `ok` absent entirely, which is how a gather that never ran answers. Nothing from the observation is echoed, because `ok` must be the literal `true` for the observation to be read at all.",
+      "acceptance": [
+        "FR-004a",
+        "FR-023"
+      ],
+      "inputs": {
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/observation-ok-absent-is-undeterminable.md",
+        "artifacts_observation": {
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+          "pages": [
+            "implementation-plan",
+            "spec-explainer"
+          ],
+          "amended_commits": [
+            {
+              "cell": "e4f5a6b",
+              "resolved": true,
+              "is_ancestor_of_artifacts_commit": false
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 71 | IC_kwDOaaa071 | pr_conversation | octocat | amended | Would otherwise prove staleness. | e4f5a6b | 22 |\n\n"
+    },
+    "observation-ok-integer-one-is-undeterminable": {
+      "purpose": "An unusable observation returns the `undeterminable` verdict at exit 0, never an input error: FR-023 forbids a failed gather from blocking the run. `ok` as the integer `1`. Python reads `1 == True`, so a truthiness test would accept this as a successful gather and report a verdict on data the orchestrator never actually collected. Nothing from the observation is echoed, because `ok` must be the literal `true` for the observation to be read at all.",
+      "acceptance": [
+        "FR-004a",
+        "FR-023"
+      ],
+      "inputs": {
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/observation-ok-integer-one-is-undeterminable.md",
+        "artifacts_observation": {
+          "ok": 1,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+          "pages": [
+            "implementation-plan",
+            "spec-explainer"
+          ],
+          "amended_commits": [
+            {
+              "cell": "e4f5a6b",
+              "resolved": true,
+              "is_ancestor_of_artifacts_commit": false
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 71 | IC_kwDOaaa071 | pr_conversation | octocat | amended | Would otherwise prove staleness. | e4f5a6b | 22 |\n\n"
+    },
+    "observation-ok-string-true-is-undeterminable": {
+      "purpose": "An unusable observation returns the `undeterminable` verdict at exit 0, never an input error: FR-023 forbids a failed gather from blocking the run. `ok` as the string `\"true\"`. A truthy non-empty string is the other value a loose test admits. Nothing from the observation is echoed, because `ok` must be the literal `true` for the observation to be read at all.",
+      "acceptance": [
+        "FR-004a",
+        "FR-023"
+      ],
+      "inputs": {
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/observation-ok-string-true-is-undeterminable.md",
+        "artifacts_observation": {
+          "ok": "true",
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+          "pages": [
+            "implementation-plan",
+            "spec-explainer"
+          ],
+          "amended_commits": [
+            {
+              "cell": "e4f5a6b",
+              "resolved": true,
+              "is_ancestor_of_artifacts_commit": false
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 71 | IC_kwDOaaa071 | pr_conversation | octocat | amended | Would otherwise prove staleness. | e4f5a6b | 22 |\n\n"
+    },
+    "precedence-no-pages-over-amended-rows": {
+      "purpose": "`no_pages` wins over a log full of `amended` rows that would otherwise every one of them prove `stale`. The rows are still read and reported, because the precedence governs the verdict and not the reporting.",
+      "acceptance": [
+        "FR-005",
+        "FR-007"
+      ],
+      "inputs": {
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/precedence-no-pages-over-amended-rows.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "empty",
+          "last_artifacts_commit": null,
+          "pages": [],
+          "amended_commits": [
+            {
+              "cell": "e4f5a6b",
+              "resolved": true,
+              "is_ancestor_of_artifacts_commit": false
+            },
+            {
+              "cell": "b7c8d9e",
+              "resolved": true,
+              "is_ancestor_of_artifacts_commit": false
+            },
+            {
+              "cell": "f0a1b2c",
+              "resolved": true,
+              "is_ancestor_of_artifacts_commit": false
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 21 | IC_kwDOaaa021 | pr_conversation | octocat | amended | First amendment. | e4f5a6b | 5 |\n| 22 | IC_kwDOaaa022 | pr_conversation | octocat | amended | Second amendment. | b7c8d9e | 6 |\n| 23 | IC_kwDOaaa023 | pr_conversation | octocat | amended | Third amendment. | f0a1b2c | 7 |\n\n"
+    },
+    "precedence-stale-over-undeterminable-row": {
+      "purpose": "`stale` outranks a co-occurring undeterminable row, and that row still appears in `undeterminable_rows`: FR-006 requires surfacing it even when `stale` already decided the verdict.",
+      "acceptance": [
+        "FR-005",
+        "FR-006",
+        "FR-007"
+      ],
+      "inputs": {
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/precedence-stale-over-undeterminable-row.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+          "pages": [
+            "implementation-plan",
+            "spec-explainer"
+          ],
+          "amended_commits": [
+            {
+              "cell": "deadbee",
+              "resolved": false,
+              "is_ancestor_of_artifacts_commit": null
+            },
+            {
+              "cell": "e4f5a6b",
+              "resolved": true,
+              "is_ancestor_of_artifacts_commit": false
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 31 | IC_kwDOaaa031 | pr_conversation | octocat | amended | Could not be resolved in this history. | deadbee | 8 |\n| 32 | IC_kwDOaaa032 | pr_conversation | octocat | amended | Landed after the artifacts commit. | e4f5a6b | 9 |\n\n"
+    },
+    "reason-empty-commit-cell": {
+      "purpose": "A well-formed row whose `Commit` cell is whitespace only. The cell is present and unreadable, which is its own reason and not the missing-cell one.",
+      "acceptance": [
+        "FR-006",
+        "FR-004a"
+      ],
+      "inputs": {
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/reason-empty-commit-cell.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+          "pages": [
+            "implementation-plan",
+            "spec-explainer"
+          ],
+          "amended_commits": []
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 62 | IC_kwDOaaa062 | pr_conversation | octocat | amended | Amended but the commit was never recorded. |   | 19 |\n\n"
+    },
+    "reason-malformed-row": {
+      "purpose": "A data row with six cells against an eight-cell header. Its `Class` is still readable at the left-hand header index, so the row is `amended` and must be judged; its `Commit` is not readable at all. The short-row test has to run before the `-2` read, because `-2` on this row lands on the `Class` cell and would join on the literal token `amended`.",
+      "acceptance": [
+        "FR-006",
+        "FR-004a"
+      ],
+      "inputs": {
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/reason-malformed-row.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+          "pages": [
+            "implementation-plan",
+            "spec-explainer"
+          ],
+          "amended_commits": []
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 65 | IC_kwDOaaa065 | pr_conversation | octocat | amended | Truncated by hand |\n\n"
+    },
+    "reason-missing-commit-cell": {
+      "purpose": "The `Feedback Sweep Log` header carries no `Commit` column at all, so the cell the join needs is missing rather than empty. The row is surfaced with its own `#` and its own reason. Both anchors derive from the header row, so a hard-coded `-2` would read the `Disposition` here and join on prose.",
+      "acceptance": [
+        "FR-006",
+        "FR-004a"
+      ],
+      "inputs": {
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/reason-missing-commit-cell.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+          "pages": [
+            "implementation-plan",
+            "spec-explainer"
+          ],
+          "amended_commits": []
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | CRL # |\n|---|---|---|---|---|---|---|\n| 61 | IC_kwDOaaa061 | pr_conversation | octocat | amended | Reworded the diagnostic. | 18 |\n\n"
+    },
+    "reason-no-matching-observation-record": {
+      "purpose": "The cell is readable and resolvable-looking but matches no supplied `amended_commits[].cell`. The orchestrator gathered no record for it, so the row is reported rather than dropped: dropping it would read the pages as current.",
+      "acceptance": [
+        "FR-006",
+        "FR-004a"
+      ],
+      "inputs": {
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/reason-no-matching-observation-record.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+          "pages": [
+            "implementation-plan",
+            "spec-explainer"
+          ],
+          "amended_commits": [
+            {
+              "cell": "a1b2c3d",
+              "resolved": true,
+              "is_ancestor_of_artifacts_commit": true
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 64 | IC_kwDOaaa064 | pr_conversation | octocat | amended | Amended in a later run than the gather. | beefca7 | 21 |\n\n"
+    },
+    "reason-unresolvable-commit": {
+      "purpose": "The cell matched a supplied ancestry record, but that record carries `resolved` false: the cell names no commit in this history.",
+      "acceptance": [
+        "FR-006",
+        "FR-004a"
+      ],
+      "inputs": {
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/reason-unresolvable-commit.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+          "pages": [
+            "implementation-plan",
+            "spec-explainer"
+          ],
+          "amended_commits": [
+            {
+              "cell": "deadbee",
+              "resolved": false,
+              "is_ancestor_of_artifacts_commit": null
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 63 | IC_kwDOaaa063 | pr_conversation | octocat | amended | Recorded a commit that was later rewritten. | deadbee | 20 |\n\n"
+    },
+    "removal-deselected-page-yields-one-removal": {
+      "purpose": "The ordinary removal. Three pages were observed on disk and the manifest re-selection returned two of them, so the third is a removal. The surface reports it; the system performs the deletion and stages it in the FR-018 commit, because this helper deletes nothing.",
+      "acceptance": [
+        "FR-012",
+        "FR-012a"
+      ],
+      "inputs": {
+        "named_surface": "removal_diff",
+        "observed_pages": [
+          "implementation-plan",
+          "spec-explainer",
+          "module-map"
+        ],
+        "reselected_pages": [
+          "implementation-plan",
+          "spec-explainer"
+        ]
+      }
+    },
+    "removal-empty-reselected-removes-every-observed-page": {
+      "purpose": "An empty `reselected_pages`, the whole-set-gap case. It is legal rather than an input error, so every observed page is a removal and FR-023 keeps the run from blocking. The removals keep `observed_pages` order rather than a sorted order, which is what makes the output diffable.",
+      "acceptance": [
+        "FR-012a",
+        "FR-023"
+      ],
+      "inputs": {
+        "named_surface": "removal_diff",
+        "observed_pages": [
+          "spec-explainer",
+          "implementation-plan"
+        ],
+        "reselected_pages": []
+      }
+    },
+    "removal-gap-page-in-reselected-is-not-removed": {
+      "purpose": "A page the re-selection returned as a `gap` rather than as `generated`. `reselected_pages` carries both outcomes, so the gapped page is still selected and is not a removal. Dropping gapped ids from the input would delete a page the run merely failed to author.",
+      "acceptance": [
+        "FR-012a"
+      ],
+      "inputs": {
+        "named_surface": "removal_diff",
+        "observed_pages": [
+          "implementation-plan",
+          "module-map"
+        ],
+        "reselected_pages": [
+          "implementation-plan",
+          "module-map"
+        ]
+      }
+    },
+    "removal-stem-only-in-reselected-is-ignored": {
+      "purpose": "A stem present in `reselected_pages` and absent from `observed_pages`. The direction is one-way, so it is a new page the author dispatch writes and never a removal. A set symmetric difference would report it and the system would then try to delete a file that does not exist.",
+      "acceptance": [
+        "FR-012a"
+      ],
+      "inputs": {
+        "named_surface": "removal_diff",
+        "observed_pages": [
+          "implementation-plan"
+        ],
+        "reselected_pages": [
+          "implementation-plan",
+          "module-map"
+        ]
+      }
+    },
+    "structural-no-feedback-sweep-log-heading": {
+      "purpose": "A workflow file with no `Feedback Sweep Log` heading at all. Zero `amended` rows are read and the verdict falls to the directory state alone; the absent log is not an error and not undeterminable.",
+      "acceptance": [
+        "FR-006",
+        "FR-005"
+      ],
+      "inputs": {
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/structural-no-feedback-sweep-log-heading.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+          "pages": [
+            "implementation-plan",
+            "spec-explainer"
+          ],
+          "amended_commits": []
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Notes\n\nNo sweep has run against this branch yet.\n\n"
+    },
+    "structural-short-row-does-not-stop-the-other-rows": {
+      "purpose": "A short row alongside a well-formed one. The short row is malformed and undeterminable rather than an error, and the well-formed row still evaluates \u2014 so a malformed row degrades the verdict without aborting the read.",
+      "acceptance": [
+        "FR-006"
+      ],
+      "inputs": {
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/structural-short-row-does-not-stop-the-other-rows.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+          "pages": [
+            "implementation-plan",
+            "spec-explainer"
+          ],
+          "amended_commits": [
+            {
+              "cell": "a1b2c3d",
+              "resolved": true,
+              "is_ancestor_of_artifacts_commit": true
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 82 | IC_kwDOaaa082 | pr_conversation | octocat | amended | Truncated by hand |\n| 83 | IC_kwDOaaa083 | pr_conversation | octocat | amended | Landed before the artifacts commit. | a1b2c3d | 24 |\n\n"
+    },
+    "verdict-current-ancestor-row": {
+      "purpose": "One `amended` row that resolved and is an ancestor of the artifacts commit is `current`: the artifacts were taken after that amendment, so nothing needs regenerating.",
+      "acceptance": [
+        "FR-005",
+        "FR-008",
+        "FR-001"
+      ],
+      "inputs": {
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/verdict-current-ancestor-row.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+          "pages": [
+            "implementation-plan",
+            "spec-explainer"
+          ],
+          "amended_commits": [
+            {
+              "cell": "a1b2c3d",
+              "resolved": true,
+              "is_ancestor_of_artifacts_commit": true
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 14 | IC_kwDOaaa004 | pr_conversation | octocat | amended | Fixed the diagnostic wording. | a1b2c3d | 4 |\n\n"
+    },
+    "verdict-no-pages-directory-absent": {
+      "purpose": "An absent artifacts directory is `no_pages` on the directory state alone, with a log that carries no `amended` row at all, so nothing but the state can be deciding it.",
+      "acceptance": [
+        "FR-005",
+        "FR-007",
+        "FR-001"
+      ],
+      "inputs": {
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/verdict-no-pages-directory-absent.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "absent",
+          "last_artifacts_commit": null,
+          "pages": [],
+          "amended_commits": []
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 11 | IC_kwDOaaa001 | pr_conversation | octocat | acknowledged | Wording only; no code change. |  | 1 |\n\n"
+    },
+    "verdict-no-pages-still-reports-undeterminable-rows": {
+      "purpose": "`no_pages` wins the precedence and leaves `deciding_rows` empty, but the rows the join could not read are still surfaced: FR-006 requires that on any verdict, and reporting `amended_rows_read` while hiding the rows behind it would tell an operator the log was read without telling them what it could not read.",
+      "acceptance": [
+        "FR-005",
+        "FR-006",
+        "FR-007"
+      ],
+      "inputs": {
+        "named_surface": "verdict",
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/verdict-no-pages-still-reports-undeterminable-rows.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "empty",
+          "last_artifacts_commit": "9f2c1ab",
+          "pages": [],
+          "amended_commits": []
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 4 | IC_kwDOaaa004 | pr_conversation | octocat | amended | Narrowed FR-012 in spec.md. | e4f5a6b | 3 |\n\n"
+    },
+    "verdict-stale-newer-amended-row": {
+      "purpose": "One `amended` row that resolved and is not an ancestor of the artifacts commit is `stale`, and the row that proved it is carried in `deciding_rows` so the operator sees the evidence rather than a bare token.",
+      "acceptance": [
+        "FR-005",
+        "FR-008",
+        "FR-009",
+        "FR-001"
+      ],
+      "inputs": {
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/verdict-stale-newer-amended-row.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+          "pages": [
+            "implementation-plan",
+            "spec-explainer"
+          ],
+          "amended_commits": [
+            {
+              "cell": "e4f5a6b",
+              "resolved": true,
+              "is_ancestor_of_artifacts_commit": false
+            }
+          ]
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 12 | IC_kwDOaaa002 | pr_conversation | octocat | amended | Renamed the helper for what it reports. | e4f5a6b | 2 |\n\n"
+    },
+    "verdict-undeterminable-unmatched-row": {
+      "purpose": "One `amended` row whose `Commit` cell matches no supplied ancestry record is `undeterminable`; it is never silently skipped, because skipping would read the pages as current.",
+      "acceptance": [
+        "FR-005",
+        "FR-006",
+        "FR-004a"
+      ],
+      "inputs": {
+        "workflow_file": "tests/speckit-pro/unit/fixtures/artifact-freshness/.workflow-scratch/verdict-undeterminable-unmatched-row.md",
+        "artifacts_observation": {
+          "ok": true,
+          "artifacts_dir_state": "present",
+          "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+          "pages": [
+            "implementation-plan",
+            "spec-explainer"
+          ],
+          "amended_commits": []
+        }
+      },
+      "workflow_content": "# ART-008 workflow\n\n## Workflow Overview\n\n| Phase | Owner | Status |\n|---|---|---|\n| Implement | autopilot | complete |\n\n## Feedback Sweep Log\n\n| # | Comment ID | Surface | Author | Class | Disposition | Commit | CRL # |\n|---|---|---|---|---|---|---|---|\n| 13 | IC_kwDOaaa003 | pr_conversation | octocat | amended | Tightened the boundary check. | c0ffee1 | 3 |\n\n"
+    }
+  }
+}
