@@ -272,6 +272,7 @@ def canonicalize_inputs(helper_id: str, inputs: dict[str, Any], repo_root: Path)
         # whose normalize_path_input rewrites each backslash, so a reviewer comment
         # body listed here would be corrupted before the deny-set ever runs.
         "sweep-pr-feedback": {"workflow_file", "feature_dir"},
+        "sweep-isolation-session": {"workflow_file"},
         # The freshness helper reads one path and only one: every git fact it
         # needs arrives as request data (FR-004, FR-004a).
         "check-artifact-freshness": {"workflow_file"},
@@ -378,6 +379,10 @@ def explicit_or_derived_args(helper_id: str, inputs: dict[str, Any], repo_root: 
     if helper_id == "sweep-pr-feedback":
         # The observation arrives as request data on stdin, so there are no
         # derived CLI args and no field is interpolated into a command (FR-004b).
+        return []
+    if helper_id == "sweep-isolation-session":
+        # All values cross the runner on stdin. No untrusted value is ever
+        # interpolated into a shell command or model prompt.
         return []
     if helper_id == "check-artifact-freshness":
         # Same reason: the whole request arrives on stdin and no field is
@@ -2150,6 +2155,100 @@ def sweep_pr_feedback(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]
     return sweep_parse(inputs, repo_root)
 
 
+def sweep_isolation_session(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+    """Operate the private feedback-sweep boundary without returning prose."""
+    from ..sweep_isolation import (
+        CaptureViolation,
+        IsolationViolation,
+        ReceiptViolation,
+        SchemaViolation,
+        SweepSession,
+        capture_github_session,
+    )
+    from ..sweep_launcher import (
+        LauncherViolation,
+        run_claude_sweep,
+        run_codex_sweep,
+        verify_claude_boundary,
+        verify_codex_boundary,
+    )
+
+    named_surface = inputs.get("named_surface")
+    allowed = {
+        "capture",
+        "accept",
+        "launch_claude",
+        "launch_codex",
+        "attest_claude",
+        "close",
+    }
+    if named_surface not in allowed:
+        return make_result(json_text({"status": "invalid_request"}), "isolation request rejected\n", 2)
+
+    plugin_root = Path(__file__).resolve().parents[2]
+    try:
+        if named_surface == "attest_claude":
+            if set(inputs) != {"named_surface"}:
+                raise SchemaViolation("attestation fields do not match")
+            verify_claude_boundary(repo_root, plugin_root)
+            payload = {"surface": "claude", "status": "attested"}
+        elif named_surface == "close":
+            if set(inputs) != {"named_surface", "session_id"}:
+                raise SchemaViolation("close fields do not match")
+            session = SweepSession.open(inputs["session_id"])
+            session.invalidate()
+            payload = {"session_id": inputs["session_id"], "status": "closed"}
+        elif named_surface == "capture":
+            if set(inputs) != {"named_surface", "surface", "repository", "pr_number", "workflow_file"}:
+                raise SchemaViolation("capture fields do not match")
+            surface = inputs["surface"]
+            if surface == "claude":
+                verify_claude_boundary(repo_root, plugin_root)
+            elif surface == "codex":
+                verify_codex_boundary(plugin_root)
+            else:
+                raise SchemaViolation("surface is unknown")
+            payload = capture_github_session(
+                repo_root,
+                repository=inputs["repository"],
+                pr_number=inputs["pr_number"],
+                workflow_file=inputs["workflow_file"],
+            )
+            payload["surface"] = surface
+        elif named_surface == "accept":
+            if set(inputs) != {"named_surface", "session_id", "receipt", "stage"}:
+                raise SchemaViolation("accept fields do not match")
+            stage = inputs["stage"]
+            if stage not in {"classifier", "perspective"}:
+                raise SchemaViolation("only non-synthesis receipts may be accepted directly")
+            session = SweepSession.open(inputs["session_id"])
+            payload = session.accept_receipt(inputs["receipt"], expected_stage=stage)
+        elif named_surface in {"launch_claude", "launch_codex"}:
+            expected = {"named_surface", "session_id", "comment_id", "stage"}
+            if inputs.get("stage") == "perspective":
+                expected.add("perspective")
+            if set(inputs) != expected:
+                raise SchemaViolation("isolated launch fields do not match")
+            launcher = run_claude_sweep if named_surface == "launch_claude" else run_codex_sweep
+            payload = launcher(
+                plugin_root=plugin_root,
+                repo_root=repo_root,
+                session_id=inputs["session_id"],
+                comment_id=inputs["comment_id"],
+                stage=inputs["stage"],
+                perspective=inputs.get("perspective"),
+            )
+        else:
+            raise SchemaViolation("isolation surface is unreachable")
+    except (CaptureViolation, IsolationViolation, LauncherViolation, ReceiptViolation, SchemaViolation):
+        return make_result(
+            json_text({"status": "blocked", "reason": "isolation_boundary_unavailable"}),
+            "feedback sweep isolation boundary unavailable\n",
+            3,
+        )
+    return make_result(json_text(payload))
+
+
 def sweep_parse(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     """Report the sweepable comments of one supplied pull-request observation."""
     self_login = inputs.get("self_login")
@@ -2401,7 +2500,7 @@ SWEEP_KEY_HEADER_RE = re.compile(
 # token" out, the digit keeps a word and a row of placeholder characters out, and
 # the class keeps every `${{ ... }}` and `<...>` placeholder out.
 SWEEP_TOKEN_RUN = r"(?=[A-Za-z0-9._~+/=-]*[0-9])[A-Za-z0-9._~+/=-]{20,}"
-# The four value rules, in FR-012f's order. Group 1 is the run, because the span
+# The value rules, in FR-012f's order. Group 1 is the run, because the span
 # each rule replaces is the run alone and never the trigger beside it. No rule
 # fires on a name, a phrase, or a quoted header alone.
 SWEEP_REDACT_VALUE_RULES = (
@@ -2417,6 +2516,41 @@ SWEEP_REDACT_VALUE_RULES = (
     ),
     ("bearer_token", re.compile(r"(?i:bearer)[ \t]+(" + SWEEP_TOKEN_RUN + ")")),
     ("assigned_token", re.compile(r"[A-Z0-9_]*_TOKEN=[\"']?(" + SWEEP_TOKEN_RUN + ")")),
+    (
+        "github_token",
+        re.compile(r"\b((?:ghp|gho|ghu|ghs|ghr)_(?=[A-Za-z0-9]*[0-9])[A-Za-z0-9]{36,255})"),
+    ),
+    (
+        "github_fine_grained_pat",
+        re.compile(r"\b(github_pat_(?=[A-Za-z0-9_]*[0-9])[A-Za-z0-9_]{82,255})"),
+    ),
+    (
+        "slack_token",
+        re.compile(r"\b(xox[abceprs]-(?=[A-Za-z0-9-]*[0-9])[A-Za-z0-9-]{17,250})"),
+    ),
+    (
+        "anthropic_api_key",
+        re.compile(r"\b(sk-ant-(?=[A-Za-z0-9_-]*[0-9])[A-Za-z0-9_-]{24,120})"),
+    ),
+    (
+        "openai_api_key",
+        re.compile(r"\b(sk-(?:proj-|svcacct-|admin-)?[A-Za-z0-9_-]{20,}?T3BlbkFJ[A-Za-z0-9_-]{20,})"),
+    ),
+    (
+        "google_api_key",
+        re.compile(r"\b(AIza(?=[0-9A-Za-z_-]*[0-9])[0-9A-Za-z_-]{35})\b"),
+    ),
+    (
+        "aws_access_key_id",
+        re.compile(r"\b((?:AKIA|ASIA|ABIA|ACCA|A3T[A-Z0-9])[A-Z2-7]{16})\b"),
+    ),
+    (
+        "url_credentials",
+        re.compile(
+            r"(?i)\b[a-z][a-z0-9+.-]{1,30}://[^\s:/@'\"<>`]{1,64}"
+            r":((?=[^\s/@]*[0-9])[^\s/@'\"<>${}`]{8,256})@"
+        ),
+    ),
 )
 
 
@@ -2435,7 +2569,7 @@ def sweep_key_header_closer(line: str) -> str | None:
 
 
 def sweep_redact_value_rules(line: str) -> tuple[str, list[str]]:
-    """Apply the four value rules in order, replacing each run and nothing beside it.
+    """Apply value rules in order, replacing each run and nothing beside it.
 
     The line is carried as literal and placeholder pieces so that a replaced span is
     never rescanned: only the literal pieces are offered to the next rule. Each rule
@@ -6138,6 +6272,7 @@ PY_HELPERS: dict[str, Callable[[dict[str, Any], Path], dict[str, Any]]] = {
     "resolve-confidence-mode": resolve_confidence_mode,
     "resolve-autopilot-stage": resolve_autopilot_stage,
     "sweep-pr-feedback": sweep_pr_feedback,
+    "sweep-isolation-session": sweep_isolation_session,
     "check-artifact-freshness": check_artifact_freshness,
     "confidence-gate": confidence_gate,
     "generate-spec-index-check": generate_spec_index_check,

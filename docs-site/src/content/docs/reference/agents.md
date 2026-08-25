@@ -313,49 +313,47 @@ Claude Code plugin agents and Codex custom-agent templates with runtime-specific
 
 ### Sweep Analyst
 
-- **Purpose:** Performs the consensus work for one amended feedback-sweep item and returns one structured record.
+- **Purpose:** Performs one feedback-sweep perspective or synthesis call through the immutable snapshot broker and returns only a session-bound receipt.
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro sweep-analyst agent
 - **Claude Code:** sweep-analyst.md plugin agent source
-- **Codex:** sweep-analyst.toml custom-agent template
+- **Codex:** No Codex custom-agent template in this repository.
 - **Runtime difference:** Claude Code agent sources are Markdown plugin agent definitions; Codex custom-agent templates are TOML files installed into a Codex agent directory.
 
 #### Source Facts
 
-- sweep-analyst has Claude Code agent source and Codex custom-agent source. Codex model metadata declares `gpt-5.5` with `xhigh` effort. Source refs: `speckit-pro/agents/sweep-analyst.md`, `speckit-pro/codex-agents/sweep-analyst.toml`.
+- sweep-analyst has Claude Code agent source and no Codex custom-agent source. Source refs: `speckit-pro/agents/sweep-analyst.md`.
 
 #### Sources
 
 - [speckit-pro/agents/sweep-analyst.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/agents/sweep-analyst.md)
-- [speckit-pro/codex-agents/sweep-analyst.toml](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/codex-agents/sweep-analyst.toml)
 
 #### Inferred Notes
 
 - Runtime-specific agent source formats are parallel surfaces, not generated copies of one another.
-  - Based on: `speckit-pro/agents/sweep-analyst.md`, `speckit-pro/codex-agents/sweep-analyst.toml`
+  - Based on: `speckit-pro/agents/sweep-analyst.md`
 
 ### Sweep Classifier
 
-- **Purpose:** Assigns one class from the feedback sweep's closed vocabulary to a single pull-request review comment and returns a four-field record.
+- **Purpose:** Classifies one untrusted pull-request comment through the immutable feedback- sweep snapshot broker and returns only a session-bound receipt.
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro sweep-classifier agent
 - **Claude Code:** sweep-classifier.md plugin agent source
-- **Codex:** sweep-classifier.toml custom-agent template
+- **Codex:** No Codex custom-agent template in this repository.
 - **Runtime difference:** Claude Code agent sources are Markdown plugin agent definitions; Codex custom-agent templates are TOML files installed into a Codex agent directory.
 
 #### Source Facts
 
-- sweep-classifier has Claude Code agent source and Codex custom-agent source. Codex model metadata declares `gpt-5.5` with `xhigh` effort. Source refs: `speckit-pro/agents/sweep-classifier.md`, `speckit-pro/codex-agents/sweep-classifier.toml`.
+- sweep-classifier has Claude Code agent source and no Codex custom-agent source. Source refs: `speckit-pro/agents/sweep-classifier.md`.
 
 #### Sources
 
 - [speckit-pro/agents/sweep-classifier.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/agents/sweep-classifier.md)
-- [speckit-pro/codex-agents/sweep-classifier.toml](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/codex-agents/sweep-classifier.toml)
 
 #### Inferred Notes
 
 - Runtime-specific agent source formats are parallel surfaces, not generated copies of one another.
-  - Based on: `speckit-pro/agents/sweep-classifier.md`, `speckit-pro/codex-agents/sweep-classifier.toml`
+  - Based on: `speckit-pro/agents/sweep-classifier.md`
 
 ### Uat Runbook Author
 

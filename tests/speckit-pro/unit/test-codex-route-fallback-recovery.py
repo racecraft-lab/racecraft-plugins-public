@@ -407,7 +407,7 @@ class OptionalHelperAndRosterTests(unittest.TestCase):
     def setUp(self) -> None:
         self.runtime = load_runtime()
 
-    def test_current_roster_has_twelve_core_roles_and_one_optional_helper(self) -> None:
+    def test_current_roster_has_ten_core_roles_and_one_optional_helper(self) -> None:
         # Twelve since ART-008 added sweep-classifier and sweep-analyst, the two
         # agents that read reviewer-written text. Neither participates in route
         # fallback; they raise the count because the roster is derived by globbing
@@ -415,7 +415,7 @@ class OptionalHelperAndRosterTests(unittest.TestCase):
         roster = self.runtime.derive_source_roster(SOURCE_ROOT, ROOT)
         core = [item for item in roster["members"] if item["classification"] == "required_core"]
         helpers = [item for item in roster["members"] if item["classification"] == "optional_helper"]
-        self.assertEqual(len(core), 12)
+        self.assertEqual(len(core), 10)
         self.assertEqual([Path(item["path"]).name for item in helpers], ["autopilot-fast-helper.toml"])
 
     def test_qualified_no_helper_continuation_has_separate_zero_helper_counter(self) -> None:

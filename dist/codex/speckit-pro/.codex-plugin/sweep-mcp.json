@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "sweep-broker": {
+      "command": "python3",
+      "args": ["-m", "speckit_pro_runner.sweep_broker"],
+      "env": {
+        "PYTHONPATH": "${PLUGIN_ROOT}"
+      }
+    }
+  }
+}

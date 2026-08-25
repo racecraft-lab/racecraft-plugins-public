@@ -1252,6 +1252,63 @@ REDACTION_RULES = (
     "bearer_token",
     "assigned_token",
     "over_bound_line",
+    "github_token",
+    "github_fine_grained_pat",
+    "slack_token",
+    "anthropic_api_key",
+    "openai_api_key",
+    "google_api_key",
+    "aws_access_key_id",
+    "url_credentials",
+)
+
+
+def _secret(prefix: str, body: str) -> str:
+    """Assemble positive controls without committing live-looking literals."""
+    return prefix + body
+
+
+ISSUER_PREFIX_CASES = (
+    (
+        "github_token",
+        "the token is " + _secret("ghp" + "_", "A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8"),
+        "a ghp_ prefixed classic token, described and not pasted",
+    ),
+    (
+        "github_fine_grained_pat",
+        _secret("github" + "_pat_", "1A" * 41 + "bc"),
+        "github_pat_ is the fine-grained prefix",
+    ),
+    (
+        "slack_token",
+        _secret("xox" + "b-", "1234567890123-1234567890123-AbCdEfGh1jKlMnOpQrStUvWx"),
+        "the xoxb- and xoxp- token types differ by audience",
+    ),
+    (
+        "anthropic_api_key",
+        _secret("sk-" + "ant-", "api03-" + "aB3" * 20 + "AA"),
+        "sk-ant- keys are issued per workspace",
+    ),
+    (
+        "openai_api_key",
+        _secret("sk-" + "proj-", "a1" * 12 + "T3Blbk" + "FJ" + "b2" * 12),
+        "task-execution and sub-agent routing",
+    ),
+    (
+        "google_api_key",
+        _secret("AIz" + "a", "SyB1c2D3e4F5g6H7i8J9k0L1m2N3o4P5q6R"),
+        "AIza is the Google API key prefix",
+    ),
+    (
+        "aws_access_key_id",
+        _secret("AKI" + "A", "IOSFODNN7EXAMPLE"),
+        "AKIA is the long-lived access-key prefix",
+    ),
+    (
+        "url_credentials",
+        "postgres://admin:" + _secret("s3cret", "password1") + "@localhost:5432/app",
+        "https://<user>:<password>@host/db",
+    ),
 )
 
 FEATURE_ID = "art-008-feedback-sweep"
@@ -1391,6 +1448,42 @@ def event_rules(envelope: dict[str, Any]) -> list[str]:
 
 def event_lines(envelope: dict[str, Any]) -> list[int]:
     return [entry["line"] for entry in envelope["redactions"]]
+
+
+class IssuerPrefixRedactionTest(unittest.TestCase):
+    def redact(self, lines: list[str]) -> dict[str, Any]:
+        response = run_runner(helper_request("issuer-prefix", {
+            "named_surface": "redact",
+            "leg": "amendment",
+            "comment_id": "IC_kwDOKQ7tDs5vY0200A",
+            "lines": lines,
+        }))
+        self.assertEqual(response.get("status"), "ok", stderr_text(response))
+        return stdout_json(response)
+
+    def test_each_issuer_prefix_rule_redacts_its_own_secret(self) -> None:
+        for rule, secret, _prose in ISSUER_PREFIX_CASES:
+            with self.subTest(rule=rule):
+                envelope = self.redact([secret])
+                self.assertEqual(event_rules(envelope), [rule])
+                self.assertIn(f"[redacted: {rule}]", envelope["lines"][0])
+                self.assertNotIn(secret, envelope["lines"][0])
+
+    def test_no_issuer_prefix_rule_fires_on_prose_that_names_it(self) -> None:
+        for rule, _secret_value, prose in ISSUER_PREFIX_CASES:
+            with self.subTest(rule=rule):
+                envelope = self.redact([prose])
+                self.assertEqual(envelope["redactions"], [])
+                self.assertEqual(envelope["lines"], [prose])
+
+    def test_a_url_password_is_replaced_and_its_user_and_host_are_not(self) -> None:
+        line = "postgres://admin:" + _secret("s3cret", "password1") + "@localhost:5432/app"
+        envelope = self.redact([line])
+        out = envelope["lines"][0]
+        self.assertEqual(event_rules(envelope), ["url_credentials"])
+        self.assertIn("postgres://admin:", out)
+        self.assertIn("@localhost:5432/app", out)
+        self.assertNotIn("s3cretpassword1", out)
 
 
 class OutboundRedactionTest(unittest.TestCase):

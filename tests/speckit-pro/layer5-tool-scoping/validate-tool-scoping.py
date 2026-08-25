@@ -47,8 +47,22 @@ READ_ONLY_ROLES = (
 )
 UNTRUSTED_INPUT_CONSUMERS = ("sweep-classifier", "sweep-analyst")
 UNTRUSTED_INPUT_ALLOWLISTS = {
-    "sweep-classifier": {"Read"},
-    "sweep-analyst": {"Read", "Grep", "Glob"},
+    "sweep-classifier": {
+        "mcp__plugin_speckit-pro_sweep-broker__snapshot_list",
+        "mcp__plugin_speckit-pro_sweep-broker__snapshot_read",
+        "mcp__plugin_speckit-pro_sweep-broker__snapshot_search",
+        "mcp__plugin_speckit-pro_sweep-broker__review_comment",
+        "mcp__plugin_speckit-pro_sweep-broker__consensus_inputs",
+        "mcp__plugin_speckit-pro_sweep-broker__submit_result",
+    },
+    "sweep-analyst": {
+        "mcp__plugin_speckit-pro_sweep-broker__snapshot_list",
+        "mcp__plugin_speckit-pro_sweep-broker__snapshot_read",
+        "mcp__plugin_speckit-pro_sweep-broker__snapshot_search",
+        "mcp__plugin_speckit-pro_sweep-broker__review_comment",
+        "mcp__plugin_speckit-pro_sweep-broker__consensus_inputs",
+        "mcp__plugin_speckit-pro_sweep-broker__submit_result",
+    },
 }
 TERMINAL_WORKERS = ("implement-executor", "uat-runbook-author")
 SKILL_DRIVEN_EXECUTORS = ("phase-executor", "analyze-executor", "checklist-executor")
@@ -73,7 +87,7 @@ TEST_METHOD_ORDER = (
     "test_untrusted_input_consumers_pin_read_only_allowlists",
 )
 
-NAMED_TOOL_PATTERN = re.compile(r"mcp__[A-Za-z0-9-]+__[A-Za-z0-9_-]+")
+NAMED_TOOL_PATTERN = re.compile(r"mcp__[A-Za-z0-9_-]+__[A-Za-z0-9_-]+")
 PROSE_TOKEN_ALLOWLIST: set[str] = set()
 
 
@@ -173,11 +187,10 @@ class ValidateToolScoping(unittest.TestCase):
                         f"{agent_name} pins a tools: allowlist - availability is operator-owned; use disallowedTools for role denials only",
                     )
 
-            with self.subTest(msg=f"{agent_name} frontmatter has no vendor-qualified mcp__ token"):
-                self.assertIsNone(
-                    NAMED_TOOL_PATTERN.search(frontmatter),
-                    f"{agent_name} frontmatter names a vendor-qualified MCP tool - the plugin neither grants nor blocks named vendor tools",
-                )
+            with self.subTest(msg=f"{agent_name} frontmatter uses only its permitted vendor-qualified mcp__ tokens"):
+                tokens = set(NAMED_TOOL_PATTERN.findall(frontmatter))
+                expected = UNTRUSTED_INPUT_ALLOWLISTS.get(agent_name, set())
+                self.assertEqual(expected, tokens)
 
     def test_open_executors_orchestration_capabilities_never_denied(self) -> None:
         for agent in OPEN_EXECUTORS:

@@ -73,6 +73,7 @@ EXPECTED_HELPERS = [
     "validate-pr-packet-read-only",
     "estimate-spec-size",
     "sweep-pr-feedback",
+    "sweep-isolation-session",
     "check-artifact-freshness",
 ]
 
@@ -92,6 +93,7 @@ NO_BASH_ANCESTOR = (
     "resolve-workflow-binding",
     "resolve-autopilot-stage",
     "sweep-pr-feedback",
+    "sweep-isolation-session",
     "check-artifact-freshness",
 )
 
@@ -149,6 +151,7 @@ HELPER_CASES: dict[str, dict[str, object]] = {
             ],
         },
     },
+    "sweep-isolation-session": {"named_surface": "attest_claude"},
     "check-artifact-freshness": {
         "workflow_file": "docs/ai/specs/.process/ART-008-workflow.md",
         "artifacts_observation": {

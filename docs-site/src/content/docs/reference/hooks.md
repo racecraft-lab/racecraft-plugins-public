@@ -36,7 +36,7 @@ Runtime hook configuration surfaces and source boundaries.
 
 #### Source Facts
 
-- Claude Code hook events: UserPromptExpansion. Source refs: `speckit-pro/hooks/hooks.json`.
+- Claude Code hook events: SessionStart, PreToolUse, SubagentStop, UserPromptExpansion. Source refs: `speckit-pro/hooks/hooks.json`.
 - The Claude Code hook matcher targets SpecKit Pro and SpecKit command-style prompts before warning about a missing specify CLI. Source refs: `speckit-pro/hooks/hooks.json`.
 
 #### Sources

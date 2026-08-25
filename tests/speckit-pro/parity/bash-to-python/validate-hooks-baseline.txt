@@ -2,11 +2,11 @@
 002 hooks.json is valid JSON
 003 has top-level hooks key
 004 UserPromptExpansion event exists under hooks
-005 NO SessionStart hook (would fire on every session — regression guard)
+005 SessionStart attests the feedback-sweep hook boundary
 006 NO UserPromptSubmit hook (would fire on every prompt — regression guard)
 007 UserPromptExpansion is a non-empty array
 008 Hook entry has matcher field (scopes to plugin command_name)
 009 Matcher contains plugin-scoping regex (speckit-pro: or speckit. or speckit- or grill-me)
 010 Hook entry has hooks array
-011 No hook event declares an executable command
+011 Only the three version-pinned sweep isolation commands are executable
 TOTAL: 11

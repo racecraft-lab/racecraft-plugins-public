@@ -21,6 +21,7 @@
   ],
   "skills": "./skills/",
   "hooks": "./codex-hooks.json",
+  "mcpServers": "./.codex-plugin/sweep-mcp.json",
   "interface": {
     "displayName": "SpecKit Pro",
     "shortDescription": "Spec-driven workflows and Codex subagent install support",

@@ -745,7 +745,7 @@ class MutationHelperTests(unittest.TestCase):
         required_records = routing["required_agents"]
         required_agents = routing_required_agents()
         self.assertEqual([record["agent_name"] for record in required_records], required_agents)
-        self.assertEqual(len(required_records), 12)
+        self.assertEqual(len(required_records), len(required_agents))
         self.assertEqual(routing["strict_override"]["status"], "absent")
         self.assertFalse(routing["strict_override"]["requested"])
         self.assertEqual(routing["strict_override"]["required_agents_evaluated"], 0)
@@ -860,7 +860,7 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(state["mode"], oct(prior_mode))
             self.assertEqual(state["digest"], f"sha256:{hashlib.sha256(prior_agent_bytes[agent_name]).hexdigest()}")
 
-        self.assertEqual(len(record["staged_actions"]), 12)
+        self.assertEqual(len(record["staged_actions"]), len(required_files))
         self.assertEqual(len(record["applied_actions"]), 1)
         self.assertEqual(record["failed_actions"][0]["operation_id"], mutation["failure_operation"]["operation_id"])
         self.assertEqual(record["failed_actions"][0]["target"], failed_target)
@@ -961,9 +961,9 @@ class MutationHelperTests(unittest.TestCase):
         self.assertTrue(strict["requested"])
         self.assertEqual(strict["status"], expected_status)
         self.assertEqual(strict["model"], model)
-        self.assertEqual(strict["required_agents_evaluated"], 12)
+        self.assertEqual(strict["required_agents_evaluated"], len(routing_required_agents()))
         self.assertTrue(strict["fallback_suppressed"])
-        self.assertEqual(len(strict["evaluated_tuples"]), 12)
+        self.assertEqual(len(strict["evaluated_tuples"]), len(routing_required_agents()))
 
         required_agents = routing_required_agents()
         self.assertEqual([item["agent_name"] for item in strict["evaluated_tuples"]], required_agents)
@@ -1264,14 +1264,16 @@ class MutationHelperTests(unittest.TestCase):
             "Keep live PR mutation deferred; use the registered multi-pr-emission operation only for command-plan capture.",
         )
 
-    def test_codex_source_roster_requires_exact_13_tomls_including_optional_helper(self) -> None:
+    def test_codex_source_roster_excludes_sweep_roles_and_includes_optional_helper(self) -> None:
         from speckit_pro_runner.helpers import install
 
         roster = install.codex_agent_source_roster(PLUGIN_ROOT / "codex-agents")
         self.assertNotIn("code", roster)
         source_names = [record["name"] for record in roster["files"]]
         self.assertEqual(source_names, list(install.CODEX_SOURCE_AGENT_TOML_NAMES))
-        self.assertEqual(len(source_names), 13)
+        self.assertEqual(len(source_names), 11)
+        self.assertNotIn("sweep-classifier.toml", source_names)
+        self.assertNotIn("sweep-analyst.toml", source_names)
         self.assertIn(f"{install.CODEX_OPTIONAL_HELPER_NAME}.toml", source_names)
         self.assertEqual(registry.CODEX_REQUIRED_AGENT_NAMES, tuple(routing_required_agents()))
         self.assertEqual(registry.CODEX_OPTIONAL_HELPER_NAME, routing_optional_helper())
@@ -1764,7 +1766,7 @@ class MutationHelperTests(unittest.TestCase):
         self.assertEqual(stderr_records, [])
         self.assert_response(response, "ok", 0)
         self.assertEqual(response["data"]["mutation"]["mutation_status"], "planned")
-        self.assertEqual(len(response["data"]["mutation"]["planned_operations"]), 13)
+        self.assertEqual(len(response["data"]["mutation"]["planned_operations"]), 11)
         self.assert_route_aware_snapshot_response(
             response,
             manifest_path=manifest_path,
@@ -2291,8 +2293,8 @@ class MutationHelperTests(unittest.TestCase):
                     "targets": [(fake_home / ".codex" / "agents" / mismatch).as_posix()],
                 }],
             )
-            self.assertEqual(len(record["applied_actions"]), 12)
-            self.assertEqual(len(record["rolled_back_actions"]), 12)
+            self.assertEqual(len(record["applied_actions"]), len(routing_required_agents()))
+            self.assertEqual(len(record["rolled_back_actions"]), len(routing_required_agents()))
             self.assertTrue(response["data"]["writes_state"])
 
     def test_install_codex_agents_no_clobber_write_preserves_final_window_edit(self) -> None:
@@ -6667,7 +6669,10 @@ class MutationHelperTests(unittest.TestCase):
             self.assert_route_aware_required_resolution(response, expected_snapshot=expected_snapshot)
             self.assert_route_aware_helper_omitted_no_file(response, destination)
             self.assert_route_aware_no_mutation_yet(response)
-            self.assertEqual(len(response["data"]["mutation"]["planned_operations"]), 12)
+            self.assertEqual(
+                len(response["data"]["mutation"]["planned_operations"]),
+                len(routing_required_agents()),
+            )
 
     def test_install_codex_agents_route_aware_apply_omits_unavailable_helper_and_installs_required_roster(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
@@ -6691,7 +6696,10 @@ class MutationHelperTests(unittest.TestCase):
             self.assert_route_aware_helper_omitted_no_file(response, destination)
             self.assert_route_aware_apply_mutation_evidence(response)
             self.assert_route_aware_required_destination_bytes(response, destination)
-            self.assertEqual(len(response["data"]["mutation"]["applied_operations"]), 12)
+            self.assertEqual(
+                len(response["data"]["mutation"]["applied_operations"]),
+                len(routing_required_agents()),
+            )
 
     def test_install_codex_agents_route_aware_rejects_caller_asserted_helper_provenance(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
@@ -7116,7 +7124,7 @@ class MutationHelperTests(unittest.TestCase):
         self.assertEqual(response["data"]["agent_files"], list(install.CODEX_SOURCE_AGENT_TOML_NAMES))
         self.assertEqual(response["data"]["model"], "gpt-5.5")
         self.assertEqual(response["data"]["mutation"]["mutation_status"], "planned")
-        self.assertEqual(len(response["data"]["mutation"]["planned_operations"]), 13)
+        self.assertEqual(len(response["data"]["mutation"]["planned_operations"]), 11)
         self.assertEqual(response["data"]["verification"], {"status": "planned", "matched_files": []})
         self.assertFalse(response["data"]["writes_state"])
         self.assertFalse(response["data"]["restart_required"])
@@ -7201,7 +7209,7 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(stderr_records, [])
             self.assert_response(response, "ok", 0)
             self.assertEqual(response["data"]["mutation"]["mutation_status"], "planned")
-            self.assertEqual(len(response["data"]["mutation"]["planned_operations"]), 13)
+            self.assertEqual(len(response["data"]["mutation"]["planned_operations"]), 11)
             self.assertEqual(stale.read_text(encoding="utf-8"), "stale\n")
 
             completed, response, stderr_records = run_runner(
@@ -7230,7 +7238,7 @@ class MutationHelperTests(unittest.TestCase):
             mutation = response["data"]["mutation"]
             self.assertEqual(mutation["mutation_status"], "no_op")
             self.assertEqual(mutation["planned_operations"], [])
-            self.assertEqual(len(mutation["no_op_operations"]), 13)
+            self.assertEqual(len(mutation["no_op_operations"]), 11)
             self.assertFalse(response["data"]["restart_required"])
 
     def test_install_codex_agents_defaults_to_fake_user_home_without_touching_real_home(self) -> None:
