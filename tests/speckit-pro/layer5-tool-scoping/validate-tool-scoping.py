@@ -296,8 +296,8 @@ class ValidateToolScoping(unittest.TestCase):
             with self.subTest(msg=f"codex {agent}: sandbox_mode is read-only"):
                 self.assertEqual("read-only", _toml_field(agent_file, "sandbox_mode"), f"{agent} must be read-only")
 
-            with self.subTest(msg=f"codex {agent}: model is gpt-5.5"):
-                self.assertEqual("gpt-5.5", _toml_field(agent_file, "model"), f"{agent} must use gpt-5.5")
+            with self.subTest(msg=f"codex {agent}: model is gpt-5.6-sol"):
+                self.assertEqual("gpt-5.6-sol", _toml_field(agent_file, "model"), f"{agent} must use gpt-5.6-sol")
 
             effort = _toml_field(agent_file, "model_reasoning_effort")
             if agent in {"codebase-analyst", "spec-context-analyst"}:
@@ -334,8 +334,8 @@ class ValidateToolScoping(unittest.TestCase):
             with self.subTest(msg=f"codex {agent}: sandbox_mode is workspace-write"):
                 self.assertEqual("workspace-write", _toml_field(agent_file, "sandbox_mode"), f"{agent} must be workspace-write")
 
-            with self.subTest(msg=f"codex {agent}: model is gpt-5.5"):
-                self.assertEqual("gpt-5.5", _toml_field(agent_file, "model"), f"{agent} must use gpt-5.5")
+            with self.subTest(msg=f"codex {agent}: model is gpt-5.6-sol"):
+                self.assertEqual("gpt-5.6-sol", _toml_field(agent_file, "model"), f"{agent} must use gpt-5.6-sol")
 
             with self.subTest(msg=f"codex {agent}: reasoning is xhigh (max-thinking policy)"):
                 self.assertEqual(

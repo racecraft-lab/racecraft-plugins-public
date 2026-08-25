@@ -3,63 +3,63 @@
   "fixture_kind": "codex_fallback_recovery_replay",
   "description": "Deterministic local simulation seeds only; no row makes a live model or service availability claim.",
   "source_roster": {
-    "source_roster_id": "sha256:127d2a9b23764dea044c515598d4ad99b00692d015214257b65be3a04c435ef5",
+    "source_roster_id": "sha256:d0ee78d3e1848c7e7a1e040aa93a3aafbde3f6da910f3566cbe15f4f06f75b41",
     "canonicalization": "json-sorted-keys-compact-over-path-sha256-classification-rows",
     "members": [
       {
         "classification": "required_core",
         "path": "speckit-pro/codex-agents/analyze-executor.toml",
-        "sha256": "sha256:eac0a81678fe8b82411ab90258af41bc819681e4111547c16581e12d60afb3a4"
+        "sha256": "sha256:b19f9df0fc78a9bf4842fa1a9ff24f5ded7ae5c9b14812d7cbd230360deeff7d"
       },
       {
         "classification": "required_core",
         "path": "speckit-pro/codex-agents/artifact-author.toml",
-        "sha256": "sha256:75d67d951e1e3e393cedc7310eff25e228571773d107e4cc5c74e7e365b435de"
+        "sha256": "sha256:d0a0e4e0cedb1c56c3b813bd85b8844901d1e379e4da8dee4e62fcf5a6dc3fd9"
       },
       {
         "classification": "optional_helper",
         "path": "speckit-pro/codex-agents/autopilot-fast-helper.toml",
-        "sha256": "sha256:aa570f8ff51fa3cb7848d8c05253ddf5d080f5d4a2dbed9a55f0149fceb1296d"
+        "sha256": "sha256:41895ec171f58a4f23adf62b29d30d3e5a6b640fd49822ac73482352c94b9239"
       },
       {
         "classification": "required_core",
         "path": "speckit-pro/codex-agents/checklist-executor.toml",
-        "sha256": "sha256:ec29b97b8211c626e00fed1edbf0f601d3328dde57e22fb54626b5a92c2671d0"
+        "sha256": "sha256:0b1cb387be8885ee6826fc2a6536865b633951fb737306fb9b9ec43c63674aae"
       },
       {
         "classification": "required_core",
         "path": "speckit-pro/codex-agents/clarify-executor.toml",
-        "sha256": "sha256:7853d199bcf06685239d724a289d7aeaafcf5a133e665c21bc23375220d3f490"
+        "sha256": "sha256:742511293a0733ec6f2b268684e61408f769b27d99e7df9c74f52d80275aee2f"
       },
       {
         "classification": "required_core",
         "path": "speckit-pro/codex-agents/codebase-analyst.toml",
-        "sha256": "sha256:12f41b87c1a2f2003c588d328702144d7ffcbef11f28489124751be44bb98a1e"
+        "sha256": "sha256:40e7f98c0e81c80231912841c645d3c83936de09afa151acdb8802e06cbc2524"
       },
       {
         "classification": "required_core",
         "path": "speckit-pro/codex-agents/domain-researcher.toml",
-        "sha256": "sha256:eb558933bb60f874d5bed972226100b8ff8cf5adf5c334b184ef232f0287518f"
+        "sha256": "sha256:9e9aa8972781bbbab13dc167774704426798a060b2573839facdf9aaffb51411"
       },
       {
         "classification": "required_core",
         "path": "speckit-pro/codex-agents/implement-executor.toml",
-        "sha256": "sha256:b4bbd4a690defd926ec2a71b3c3bbba016c683a4f98db013ce2993220d5f427b"
+        "sha256": "sha256:984db5904510d8aac2e8b09823313cfc381eea9d73dfd7052f5066a25139c07c"
       },
       {
         "classification": "required_core",
         "path": "speckit-pro/codex-agents/phase-executor.toml",
-        "sha256": "sha256:6f974a124ea4f3422f6650e4c9b501c15916ff874e2490a46cecfeedd634f7c9"
+        "sha256": "sha256:06690f0ed8367ad3f73b92794534fb0df24f64291f485efca00f997c7f70339c"
       },
       {
         "classification": "required_core",
         "path": "speckit-pro/codex-agents/spec-context-analyst.toml",
-        "sha256": "sha256:680e93129186f37d245ffa35dc44e064dffe24b497675aaa72b275daa7642674"
+        "sha256": "sha256:4b0547280124f47a4ffe2de770cce1b8e8c92dfed79e19eed9ad7cf09fe08307"
       },
       {
         "classification": "required_core",
         "path": "speckit-pro/codex-agents/uat-runbook-author.toml",
-        "sha256": "sha256:ea1e74b375a9fab40881d52574ec9c184033abe020e69637eac1b2248509b918"
+        "sha256": "sha256:95a4a2b05fff89badf433e06111b273552ff39a13bb200d7891bb6a58c88e9ae"
       }
     ]
   },

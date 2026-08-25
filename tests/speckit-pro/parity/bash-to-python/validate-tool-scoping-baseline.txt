@@ -134,33 +134,33 @@
 134 consensus-synthesizer model is sonnet
 135 consensus-synthesizer effort is max (max-thinking policy)
 136 codex codebase-analyst: sandbox_mode is read-only
-137 codex codebase-analyst: model is gpt-5.5
+137 codex codebase-analyst: model is gpt-5.6-sol
 138 codex codebase-analyst: reasoning is L6-validated (low or xhigh)
 139 codex spec-context-analyst: sandbox_mode is read-only
-140 codex spec-context-analyst: model is gpt-5.5
+140 codex spec-context-analyst: model is gpt-5.6-sol
 141 codex spec-context-analyst: reasoning is L6-validated (low or xhigh)
 142 codex domain-researcher: sandbox_mode is read-only
-143 codex domain-researcher: model is gpt-5.5
+143 codex domain-researcher: model is gpt-5.6-sol
 144 codex domain-researcher: reasoning is xhigh (max-thinking policy, no L6 carve-out)
 145 codex clarify-executor: sandbox_mode is read-only
-146 codex clarify-executor: model is gpt-5.5
+146 codex clarify-executor: model is gpt-5.6-sol
 147 codex clarify-executor: reasoning is xhigh (max-thinking policy, no L6 carve-out)
 148 codex clarify-executor: sandbox_mode is read-only
 149 codex autopilot-fast-helper: sandbox_mode is read-only (advisory text-only leaf)
 150 codex checklist-executor: sandbox_mode is workspace-write
-151 codex checklist-executor: model is gpt-5.5
+151 codex checklist-executor: model is gpt-5.6-sol
 152 codex checklist-executor: reasoning is xhigh (max-thinking policy)
 153 codex analyze-executor: sandbox_mode is workspace-write
-154 codex analyze-executor: model is gpt-5.5
+154 codex analyze-executor: model is gpt-5.6-sol
 155 codex analyze-executor: reasoning is xhigh (max-thinking policy)
 156 codex implement-executor: sandbox_mode is workspace-write
-157 codex implement-executor: model is gpt-5.5
+157 codex implement-executor: model is gpt-5.6-sol
 158 codex implement-executor: reasoning is xhigh (max-thinking policy)
 159 codex phase-executor: sandbox_mode is workspace-write
-160 codex phase-executor: model is gpt-5.5
+160 codex phase-executor: model is gpt-5.6-sol
 161 codex phase-executor: reasoning is xhigh (max-thinking policy)
 162 codex uat-runbook-author: sandbox_mode is workspace-write
-163 codex uat-runbook-author: model is gpt-5.5
+163 codex uat-runbook-author: model is gpt-5.6-sol
 164 codex uat-runbook-author: reasoning is xhigh (max-thinking policy)
 165 named-tool guard: active-agent set is non-empty (fail-closed)
 166 analyze-executor.md guidance prose has no hardcoded named vendor tool

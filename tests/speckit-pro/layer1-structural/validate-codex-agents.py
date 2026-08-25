@@ -41,7 +41,9 @@ AGENTS = (
 
 CC_ONLY_FIELDS = ("tools", "disallowedTools", "permissionMode", "color", "maxTurns", "background", "effort")
 
-MODEL_RE = re.compile(r"^(gpt-5\.5|gpt-5\.4|gpt-5\.4-mini|gpt-5\.3-codex|gpt-5\.3-codex-spark)$")
+MODEL_RE = re.compile(
+    r"^(gpt-5\.6-sol|gpt-5\.6-terra|gpt-5\.6-luna|gpt-5\.5|gpt-5\.4|gpt-5\.4-mini|gpt-5\.3-codex|gpt-5\.3-codex-spark)$"
+)
 EFFORT_RE = re.compile(r"^(minimal|low|medium|high|xhigh)$")
 SANDBOX_RE = re.compile(r"^(read-only|workspace-write)$")
 
@@ -110,6 +112,10 @@ class ValidateCodexAgents(unittest.TestCase):
                 ):
                     self.assertNotIn('model_reasoning_effort = "', content)
                 effort_val = ""
+            elif agent == "autopilot-fast-helper":
+                with self.subTest(msg="autopilot-fast-helper: has low model_reasoning_effort field"):
+                    self.assertIn('model_reasoning_effort = "low"', content)
+                effort_val = _extract_toml_string(content, "model_reasoning_effort")
             else:
                 with self.subTest(msg=f"{agent}: has model_reasoning_effort field"):
                     self.assertIn('model_reasoning_effort = "', content)
@@ -154,17 +160,17 @@ class ValidateCodexAgents(unittest.TestCase):
     def _check_profile(self, agent: str, model_val: str, effort_val: str, sandbox_val: str, instructions: str) -> None:
         if agent == "autopilot-fast-helper":
             with self.subTest(
-                msg="autopilot-fast-helper: uses Spark read-only (no reasoning effort — Spark does not support reasoning fields per OpenAI docs)"
+                msg="autopilot-fast-helper: uses Luna low-effort read-only advisory profile"
             ):
                 self.assertTrue(
-                    model_val == "gpt-5.3-codex-spark" and effort_val == "" and sandbox_val == "read-only",
-                    f"expected gpt-5.3-codex-spark / no-effort-field / read-only, got {model_val} / {effort_val} / {sandbox_val}",
+                    model_val == "gpt-5.6-luna" and effort_val == "low" and sandbox_val == "read-only",
+                    f"expected gpt-5.6-luna / low / read-only, got {model_val} / {effort_val} / {sandbox_val}",
                 )
         elif agent == "clarify-executor":
-            with self.subTest(msg="clarify-executor: uses xhigh GPT-5.5 read-only question-prep profile"):
+            with self.subTest(msg="clarify-executor: uses xhigh GPT-5.6 Sol read-only question-prep profile"):
                 self.assertTrue(
-                    model_val == "gpt-5.5" and effort_val == "xhigh" and sandbox_val == "read-only",
-                    f"expected gpt-5.5 / xhigh / read-only, got {model_val} / {effort_val} / {sandbox_val}",
+                    model_val == "gpt-5.6-sol" and effort_val == "xhigh" and sandbox_val == "read-only",
+                    f"expected gpt-5.6-sol / xhigh / read-only, got {model_val} / {effort_val} / {sandbox_val}",
                 )
             with self.subTest(msg="clarify-executor: returns questions to parent"):
                 self.assertIn("## Clarify Question Set", instructions)
@@ -173,30 +179,30 @@ class ValidateCodexAgents(unittest.TestCase):
             with self.subTest(msg="clarify-executor: does not invoke interactive clarify skill"):
                 self.assertNotIn("Run `$speckit-clarify`", instructions)
         elif agent in ("phase-executor", "checklist-executor", "analyze-executor"):
-            with self.subTest(msg=f"{agent}: uses xhigh GPT-5.5 executor profile"):
+            with self.subTest(msg=f"{agent}: uses xhigh GPT-5.6 Sol executor profile"):
                 self.assertTrue(
-                    model_val == "gpt-5.5" and effort_val == "xhigh" and sandbox_val == "workspace-write",
-                    f"expected gpt-5.5 / xhigh / workspace-write, got {model_val} / {effort_val} / {sandbox_val}",
+                    model_val == "gpt-5.6-sol" and effort_val == "xhigh" and sandbox_val == "workspace-write",
+                    f"expected gpt-5.6-sol / xhigh / workspace-write, got {model_val} / {effort_val} / {sandbox_val}",
                 )
         elif agent == "implement-executor":
-            with self.subTest(msg="implement-executor: uses xhigh GPT-5.5 TDD profile"):
+            with self.subTest(msg="implement-executor: uses xhigh GPT-5.6 Sol TDD profile"):
                 self.assertTrue(
-                    model_val == "gpt-5.5" and effort_val == "xhigh" and sandbox_val == "workspace-write",
-                    f"expected gpt-5.5 / xhigh / workspace-write, got {model_val} / {effort_val} / {sandbox_val}",
+                    model_val == "gpt-5.6-sol" and effort_val == "xhigh" and sandbox_val == "workspace-write",
+                    f"expected gpt-5.6-sol / xhigh / workspace-write, got {model_val} / {effort_val} / {sandbox_val}",
                 )
         elif agent in ("codebase-analyst", "spec-context-analyst"):
-            with self.subTest(msg=f"{agent}: uses GPT-5.5 read-only consensus profile (L6-validated effort)"):
+            with self.subTest(msg=f"{agent}: uses GPT-5.6 Sol read-only consensus profile (L6-validated effort)"):
                 self.assertTrue(
-                    model_val == "gpt-5.5" and effort_val in ("low", "xhigh") and sandbox_val == "read-only",
-                    f"expected gpt-5.5 / low|xhigh / read-only, got {model_val} / {effort_val} / {sandbox_val}",
+                    model_val == "gpt-5.6-sol" and effort_val in ("low", "xhigh") and sandbox_val == "read-only",
+                    f"expected gpt-5.6-sol / low|xhigh / read-only, got {model_val} / {effort_val} / {sandbox_val}",
                 )
         elif agent == "domain-researcher":
             with self.subTest(
-                msg="domain-researcher: uses xhigh read-only GPT-5.5 consensus profile (L6 has not validated lower effort)"
+                msg="domain-researcher: uses xhigh read-only GPT-5.6 Sol consensus profile (L6 has not validated lower effort)"
             ):
                 self.assertTrue(
-                    model_val == "gpt-5.5" and effort_val == "xhigh" and sandbox_val == "read-only",
-                    f"expected gpt-5.5 / xhigh / read-only, got {model_val} / {effort_val} / {sandbox_val}",
+                    model_val == "gpt-5.6-sol" and effort_val == "xhigh" and sandbox_val == "read-only",
+                    f"expected gpt-5.6-sol / xhigh / read-only, got {model_val} / {effort_val} / {sandbox_val}",
                 )
 
 

@@ -49,7 +49,7 @@ Claude Code plugin agents and Codex custom-agent templates with runtime-specific
 
 #### Source Facts
 
-- analyze-executor has Claude Code agent source and Codex custom-agent source. Codex model metadata declares `gpt-5.5` with `xhigh` effort. Source refs: `speckit-pro/agents/analyze-executor.md`, `speckit-pro/codex-agents/analyze-executor.toml`.
+- analyze-executor has Claude Code agent source and Codex custom-agent source. Codex model metadata declares `gpt-5.6-sol` with `xhigh` effort. Source refs: `speckit-pro/agents/analyze-executor.md`, `speckit-pro/codex-agents/analyze-executor.toml`.
 
 #### Sources
 
@@ -72,7 +72,7 @@ Claude Code plugin agents and Codex custom-agent templates with runtime-specific
 
 #### Source Facts
 
-- artifact-author has Claude Code agent source and Codex custom-agent source. Codex model metadata declares `gpt-5.5` with `xhigh` effort. Source refs: `speckit-pro/agents/artifact-author.md`, `speckit-pro/codex-agents/artifact-author.toml`.
+- artifact-author has Claude Code agent source and Codex custom-agent source. Codex model metadata declares `gpt-5.6-sol` with `xhigh` effort. Source refs: `speckit-pro/agents/artifact-author.md`, `speckit-pro/codex-agents/artifact-author.toml`.
 
 #### Sources
 
@@ -95,7 +95,7 @@ Claude Code plugin agents and Codex custom-agent templates with runtime-specific
 
 #### Source Facts
 
-- autopilot-fast-helper has no Claude Code agent source and Codex custom-agent source. Codex model metadata declares `gpt-5.3-codex-spark`. Source refs: `speckit-pro/codex-agents/autopilot-fast-helper.toml`.
+- autopilot-fast-helper has no Claude Code agent source and Codex custom-agent source. Codex model metadata declares `gpt-5.6-luna` with `low` effort. Source refs: `speckit-pro/codex-agents/autopilot-fast-helper.toml`.
 
 #### Sources
 
@@ -117,7 +117,7 @@ Claude Code plugin agents and Codex custom-agent templates with runtime-specific
 
 #### Source Facts
 
-- checklist-executor has Claude Code agent source and Codex custom-agent source. Codex model metadata declares `gpt-5.5` with `xhigh` effort. Source refs: `speckit-pro/agents/checklist-executor.md`, `speckit-pro/codex-agents/checklist-executor.toml`.
+- checklist-executor has Claude Code agent source and Codex custom-agent source. Codex model metadata declares `gpt-5.6-sol` with `xhigh` effort. Source refs: `speckit-pro/agents/checklist-executor.md`, `speckit-pro/codex-agents/checklist-executor.toml`.
 
 #### Sources
 
@@ -140,7 +140,7 @@ Claude Code plugin agents and Codex custom-agent templates with runtime-specific
 
 #### Source Facts
 
-- clarify-executor has Claude Code agent source and Codex custom-agent source. Codex model metadata declares `gpt-5.5` with `xhigh` effort. Source refs: `speckit-pro/agents/clarify-executor.md`, `speckit-pro/codex-agents/clarify-executor.toml`.
+- clarify-executor has Claude Code agent source and Codex custom-agent source. Codex model metadata declares `gpt-5.6-sol` with `xhigh` effort. Source refs: `speckit-pro/agents/clarify-executor.md`, `speckit-pro/codex-agents/clarify-executor.toml`.
 
 #### Sources
 
@@ -163,7 +163,7 @@ Claude Code plugin agents and Codex custom-agent templates with runtime-specific
 
 #### Source Facts
 
-- codebase-analyst has Claude Code agent source and Codex custom-agent source. Codex model metadata declares `gpt-5.5` with `low` effort. Source refs: `speckit-pro/agents/codebase-analyst.md`, `speckit-pro/codex-agents/codebase-analyst.toml`.
+- codebase-analyst has Claude Code agent source and Codex custom-agent source. Codex model metadata declares `gpt-5.6-sol` with `low` effort. Source refs: `speckit-pro/agents/codebase-analyst.md`, `speckit-pro/codex-agents/codebase-analyst.toml`.
 
 #### Sources
 
@@ -208,7 +208,7 @@ Claude Code plugin agents and Codex custom-agent templates with runtime-specific
 
 #### Source Facts
 
-- domain-researcher has Claude Code agent source and Codex custom-agent source. Codex model metadata declares `gpt-5.5` with `xhigh` effort. Source refs: `speckit-pro/agents/domain-researcher.md`, `speckit-pro/codex-agents/domain-researcher.toml`.
+- domain-researcher has Claude Code agent source and Codex custom-agent source. Codex model metadata declares `gpt-5.6-sol` with `xhigh` effort. Source refs: `speckit-pro/agents/domain-researcher.md`, `speckit-pro/codex-agents/domain-researcher.toml`.
 
 #### Sources
 
@@ -253,7 +253,7 @@ Claude Code plugin agents and Codex custom-agent templates with runtime-specific
 
 #### Source Facts
 
-- implement-executor has Claude Code agent source and Codex custom-agent source. Codex model metadata declares `gpt-5.5` with `xhigh` effort. Source refs: `speckit-pro/agents/implement-executor.md`, `speckit-pro/codex-agents/implement-executor.toml`.
+- implement-executor has Claude Code agent source and Codex custom-agent source. Codex model metadata declares `gpt-5.6-sol` with `xhigh` effort. Source refs: `speckit-pro/agents/implement-executor.md`, `speckit-pro/codex-agents/implement-executor.toml`.
 
 #### Sources
 
@@ -276,7 +276,7 @@ Claude Code plugin agents and Codex custom-agent templates with runtime-specific
 
 #### Source Facts
 
-- phase-executor has Claude Code agent source and Codex custom-agent source. Codex model metadata declares `gpt-5.5` with `xhigh` effort. Source refs: `speckit-pro/agents/phase-executor.md`, `speckit-pro/codex-agents/phase-executor.toml`.
+- phase-executor has Claude Code agent source and Codex custom-agent source. Codex model metadata declares `gpt-5.6-sol` with `xhigh` effort. Source refs: `speckit-pro/agents/phase-executor.md`, `speckit-pro/codex-agents/phase-executor.toml`.
 
 #### Sources
 
@@ -299,7 +299,7 @@ Claude Code plugin agents and Codex custom-agent templates with runtime-specific
 
 #### Source Facts
 
-- spec-context-analyst has Claude Code agent source and Codex custom-agent source. Codex model metadata declares `gpt-5.5` with `low` effort. Source refs: `speckit-pro/agents/spec-context-analyst.md`, `speckit-pro/codex-agents/spec-context-analyst.toml`.
+- spec-context-analyst has Claude Code agent source and Codex custom-agent source. Codex model metadata declares `gpt-5.6-sol` with `low` effort. Source refs: `speckit-pro/agents/spec-context-analyst.md`, `speckit-pro/codex-agents/spec-context-analyst.toml`.
 
 #### Sources
 
@@ -366,7 +366,7 @@ Claude Code plugin agents and Codex custom-agent templates with runtime-specific
 
 #### Source Facts
 
-- uat-runbook-author has Claude Code agent source and Codex custom-agent source. Codex model metadata declares `gpt-5.5` with `xhigh` effort. Source refs: `speckit-pro/agents/uat-runbook-author.md`, `speckit-pro/codex-agents/uat-runbook-author.toml`.
+- uat-runbook-author has Claude Code agent source and Codex custom-agent source. Codex model metadata declares `gpt-5.6-sol` with `xhigh` effort. Source refs: `speckit-pro/agents/uat-runbook-author.md`, `speckit-pro/codex-agents/uat-runbook-author.toml`.
 
 #### Sources
 

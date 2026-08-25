@@ -450,7 +450,7 @@ class OptionalHelperAndRosterTests(unittest.TestCase):
             helper,
             {
                 "classification": "optional_helper",
-                "model": "gpt-5.3-codex-spark",
+                "model": "gpt-5.6-luna",
                 "name": "autopilot-fast-helper",
                 "sandbox_mode": "read-only",
             },

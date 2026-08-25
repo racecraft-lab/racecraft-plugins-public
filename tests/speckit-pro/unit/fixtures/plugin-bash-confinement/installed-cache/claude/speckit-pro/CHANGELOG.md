@@ -14,6 +14,7 @@
 ### Bug Fixes
 
 * **art-017:** Arm state bookkeeping checks ([#490](https://github.com/racecraft-lab/racecraft-plugins-public/issues/490)) ([070a36c](https://github.com/racecraft-lab/racecraft-plugins-public/commit/070a36c2ba93da2afe1b3a49bf886c1c28903d2c))
+* **codex:** update SpecKit agents to GPT-5.6 ([#509](https://github.com/racecraft-lab/racecraft-plugins-public/issues/509)) ([2657ed6](https://github.com/racecraft-lab/racecraft-plugins-public/commit/2657ed666d345a0b809229740deaf64f969e9456))
 * **speckit-pro:** restore autopilot handoff and review artifacts ([#501](https://github.com/racecraft-lab/racecraft-plugins-public/issues/501)) ([96ed55f](https://github.com/racecraft-lab/racecraft-plugins-public/commit/96ed55f661b9619a93a979bc69133551441d30fb))
 
 ## [2.27.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.26.0...speckit-pro-v2.27.0) (2026-08-20)
