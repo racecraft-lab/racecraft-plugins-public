@@ -185,7 +185,10 @@ with bounded manual remediation. Temporary-file and backup cleanup failures are
 also explicit recovery errors rather than successful outcomes. After destructive
 backup cleanup, the installer recaptures the target; a cleanup-window race
 recreates the captured prior bytes and mode under a fresh exclusive backup path
-and reports both surviving entries. On failure:
+anchored to the captured destination identity and reports both surviving
+entries. Rollback carries the original pre-batch state into that recovery path.
+An incomplete recovery copy is reported separately and is never identified as
+a valid preserved file. On failure:
 
 - recovery distinguishes staged actions from actions actually applied and
   rolled back, reports the exact failed write or removal, and records real

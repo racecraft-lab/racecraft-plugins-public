@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -295,10 +296,19 @@ class MutationHelperTests(unittest.TestCase):
             *,
             mode: int | None = None,
             expected_state: object = None,
+            cleanup_race_state: object = None,
         ) -> object:
             if target.name == "autopilot-fast-helper.toml":
                 raise OSError("injected test failure")
-            return real_write(target, content, target_dir, identity, mode=mode, expected_state=expected_state)
+            return real_write(
+                target,
+                content,
+                target_dir,
+                identity,
+                mode=mode,
+                expected_state=expected_state,
+                cleanup_race_state=cleanup_race_state,
+            )
 
         return fail_write
 
@@ -1574,12 +1584,21 @@ class MutationHelperTests(unittest.TestCase):
                 *,
                 mode: int | None = None,
                 expected_state: object = None,
+                cleanup_race_state: object = None,
             ) -> object:
                 nonlocal failed_once
                 if target.name == f"{failed_agent_name}.toml" and not failed_once:
                     failed_once = True
                     raise OSError("injected route-aware write failure")
-                return real_write(target, content, target_dir, identity, mode=mode, expected_state=expected_state)
+                return real_write(
+                    target,
+                    content,
+                    target_dir,
+                    identity,
+                    mode=mode,
+                    expected_state=expected_state,
+                    cleanup_race_state=cleanup_race_state,
+                )
 
             request = SimpleNamespace(
                 request_id="test-route-aware-rollback-success",
@@ -1651,6 +1670,7 @@ class MutationHelperTests(unittest.TestCase):
                 *,
                 mode: int | None = None,
                 expected_state: object = None,
+                cleanup_race_state: object = None,
             ) -> object:
                 nonlocal failed_once
                 if target.name == f"{failed_agent_name}.toml" and not failed_once:
@@ -1658,7 +1678,15 @@ class MutationHelperTests(unittest.TestCase):
                     raise OSError("injected route-aware write failure")
                 if target.name == f"{unrestored_agent_name}.toml" and failed_once and mode is not None:
                     raise OSError("injected route-aware rollback failure")
-                return real_write(target, content, target_dir, identity, mode=mode, expected_state=expected_state)
+                return real_write(
+                    target,
+                    content,
+                    target_dir,
+                    identity,
+                    mode=mode,
+                    expected_state=expected_state,
+                    cleanup_race_state=cleanup_race_state,
+                )
 
             request = SimpleNamespace(
                 request_id="test-route-aware-rollback-failure",
@@ -1718,10 +1746,19 @@ class MutationHelperTests(unittest.TestCase):
                 *,
                 mode: int | None = None,
                 expected_state: object = None,
+                cleanup_race_state: object = None,
             ) -> object:
                 if target.name == f"{failed_agent_name}.toml":
                     raise OSError("injected route-aware write failure")
-                return real_write(target, content, target_dir, identity, mode=mode, expected_state=expected_state)
+                return real_write(
+                    target,
+                    content,
+                    target_dir,
+                    identity,
+                    mode=mode,
+                    expected_state=expected_state,
+                    cleanup_race_state=cleanup_race_state,
+                )
 
             request = SimpleNamespace(
                 request_id="test-route-aware-cleanup-evidence",
@@ -2152,6 +2189,142 @@ class MutationHelperTests(unittest.TestCase):
             self.assertTrue(all(Path(path).exists() for path in raised.exception.preserved_paths))
             self.assertTrue(all(not path.endswith(".tmp") for path in raised.exception.preserved_paths))
 
+    def test_install_codex_agents_rollback_cleanup_race_preserves_original_state_and_paths(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve() / "agents"
+            destination.mkdir()
+            target = destination / "agent.toml"
+            target.write_bytes(b"original user bytes\n")
+            target.chmod(0o751)
+            original_state = install.codex_agent_previous_state(target)
+            assert original_state is not None
+            target.write_bytes(b"installer bytes\n")
+            target.chmod(0o644)
+            installer_state = install.codex_agent_previous_state(target)
+            assert installer_state is not None
+            identity = install.codex_agent_destination_identity(destination)
+            concurrent = destination / ".concurrent-rollback"
+            concurrent.write_bytes(b"concurrent rollback edit\n")
+            real_unlink = Path.unlink
+            real_replace = os.replace
+            injected = False
+
+            def replace_during_rollback_cleanup(path: Path, *args: object, **kwargs: object) -> None:
+                nonlocal injected
+                if (
+                    path.suffix == ".bak"
+                    and target.exists()
+                    and target.read_bytes() == original_state.content
+                    and not injected
+                ):
+                    injected = True
+                    real_replace(concurrent, target)
+                real_unlink(path, *args, **kwargs)
+
+            with patch.object(Path, "unlink", autospec=True, side_effect=replace_during_rollback_cleanup):
+                failures, cleanup_errors = install.rollback_codex_agent_install(
+                    destination,
+                    {target.name: original_state},
+                    identity,
+                    expected_current={target.name: installer_state},
+                )
+
+            self.assertEqual(failures, [target.name])
+            self.assertEqual(target.read_bytes(), b"concurrent rollback edit\n")
+            backups = list(destination.glob(".*.bak"))
+            self.assertEqual(len(backups), 1)
+            self.assertEqual(backups[0].read_bytes(), original_state.content)
+            self.assertEqual(stat.S_IMODE(backups[0].stat().st_mode), 0o751)
+            self.assertEqual(
+                [error["target"] for error in cleanup_errors],
+                [backups[0].as_posix(), target.as_posix()],
+            )
+            self.assertTrue(all(error["kind"] == "preserved_concurrent_file" for error in cleanup_errors))
+
+    def test_install_codex_agents_recovery_copy_refuses_replaced_destination(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            destination = root / "agents"
+            destination.mkdir()
+            source = destination / "source.toml"
+            source.write_bytes(b"original bytes\n")
+            state = install.codex_agent_previous_state(source)
+            assert state is not None
+            identity = install.codex_agent_destination_identity(destination)
+            moved = root / "moved-agents"
+            outside = root / "outside"
+            outside.mkdir()
+            destination.rename(moved)
+            destination.symlink_to(outside, target_is_directory=True)
+
+            with self.assertRaises(install.CodexAgentRecoveryCopyFailure):
+                install.codex_agent_preserve_state_as_backup(
+                    state,
+                    destination / "agent.toml",
+                    destination,
+                    identity,
+                )
+
+            self.assertEqual(list(outside.iterdir()), [])
+            self.assertEqual(list(moved.glob(".*.bak")), [])
+
+    def test_install_codex_agents_backup_move_keeps_exclusive_placeholder_until_replace(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            target = destination / "agent.toml"
+            target.write_bytes(b"original target bytes\n")
+            real_unlink = Path.unlink
+            relinquished = False
+
+            def detect_placeholder_unlink(path: Path, *args: object, **kwargs: object) -> None:
+                nonlocal relinquished
+                if path.suffix == ".bak" and target.exists():
+                    relinquished = True
+                real_unlink(path, *args, **kwargs)
+
+            with patch.object(Path, "unlink", autospec=True, side_effect=detect_placeholder_unlink):
+                backup = install.codex_agent_move_target_to_backup(target, destination)
+
+            self.assertFalse(relinquished)
+            self.assertFalse(target.exists())
+            self.assertEqual(backup.read_bytes(), b"original target bytes\n")
+
+    def test_install_codex_agents_incomplete_recovery_copy_is_not_preserved_evidence(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            source = destination / "source.toml"
+            source.write_bytes(b"exact original bytes\n")
+            source.chmod(0o751)
+            state = install.codex_agent_previous_state(source)
+            assert state is not None
+            identity = install.codex_agent_destination_identity(destination)
+
+            with patch.object(install.os, "fchmod", side_effect=OSError("injected mode failure")):
+                with self.assertRaises(install.CodexAgentRecoveryCopyFailure) as raised:
+                    install.codex_agent_preserve_state_as_backup(
+                        state,
+                        destination / "agent.toml",
+                        destination,
+                        identity,
+                    )
+
+            self.assertNotIsInstance(raised.exception, install.CodexAgentNoClobberConflict)
+            errors = [
+                {"kind": "recovery_copy_failed", "target": path, "error": "recovery_copy_incomplete"}
+                for path in raised.exception.failed_paths
+            ]
+            actions = install.codex_route_aware_cleanup_manual_remediation(errors)
+            self.assertEqual(actions[0]["reason"], "recovery_copy_failed")
+            self.assertTrue(all(Path(path).exists() for path in raised.exception.failed_paths))
+
     def test_install_codex_agents_cleanup_reports_directory_removal_errors(self) -> None:
         from speckit_pro_runner.helpers import install
 
@@ -2293,6 +2466,7 @@ class MutationHelperTests(unittest.TestCase):
                 *,
                 mode: int | None = None,
                 expected_state: object = None,
+                cleanup_race_state: object = None,
             ) -> object:
                 nonlocal failed_once, changed_once
                 if target.name == f"{failed_name}.toml" and not failed_once:
@@ -2305,6 +2479,7 @@ class MutationHelperTests(unittest.TestCase):
                     identity,
                     mode=mode,
                     expected_state=expected_state,
+                    cleanup_race_state=cleanup_race_state,
                 )
                 if target == changed_target and not changed_once:
                     changed_once = True

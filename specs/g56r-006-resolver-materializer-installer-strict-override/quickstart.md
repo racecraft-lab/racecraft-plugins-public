@@ -90,6 +90,7 @@ Before marking implementation complete, verify:
 - Reused route IDs must describe one identical normalized route tuple, and write/removal swaps preserve entries created in the final mutation window.
 - No-clobber collisions retain both the moved prior entry and the concurrent target, report every preserved path, and fail with manual remediation; temporary or backup cleanup failures are never reported as success.
 - Destructive backup cleanup is followed by target recapture; a cleanup-window race recreates the captured prior bytes and mode under a fresh exclusive backup path, while cleanup evidence omits paths removed by a successful retry.
+- Recovery copies are descriptor-anchored to the captured destination identity, rollback preserves the original pre-batch state, backup allocation never relinquishes its exclusive placeholder, and incomplete copies use distinct `recovery_copy_failed` evidence.
 - Post-copy verification failures identify the verification action and every mismatched target before rollback.
 - Rollback uncertainty sets restart guidance and does not claim verification success.
 - Fake-home cases use a temporary HOME/USERPROFILE or temporary repository `.codex/agents` destination; they do not add a test-only installer input or touch the operator's real home.

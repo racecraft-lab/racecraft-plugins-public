@@ -8,6 +8,7 @@ import json
 import os
 import platform as platform_module
 import re
+import secrets
 import stat
 import subprocess
 import sys
@@ -99,6 +100,13 @@ class CodexAgentFileState:
 class CodexAgentNoClobberConflict(OSError):
     def __init__(self, message: str, preserved_paths: list[str]) -> None:
         super().__init__(message)
+        self.preserved_paths = preserved_paths
+
+
+class CodexAgentRecoveryCopyFailure(OSError):
+    def __init__(self, message: str, failed_paths: list[str], preserved_paths: list[str]) -> None:
+        super().__init__(message)
+        self.failed_paths = failed_paths
         self.preserved_paths = preserved_paths
 
 
@@ -446,7 +454,7 @@ def run_codex_agent_install(entry: Any, request: Any) -> dict[str, Any]:
             }
             raise OSError(f"post-copy verification failed: {', '.join(mismatches)}")
     except OSError as exc:
-        rollback_failures = rollback_codex_agent_install(
+        rollback_failures, rollback_cleanup_errors = rollback_codex_agent_install(
             destination,
             applied_previous,
             destination_identity,
@@ -461,7 +469,25 @@ def run_codex_agent_install(entry: Any, request: Any) -> dict[str, Any]:
             destination_existed=destination_existed,
             destination_parent_existed=destination_parent_existed,
         )
+        cleanup_errors = [*rollback_cleanup_errors, *cleanup_errors]
         if isinstance(exc, CodexAgentNoClobberConflict):
+            cleanup_errors.extend(
+                {
+                    "kind": "preserved_concurrent_file",
+                    "target": path,
+                    "error": "no_clobber_conflict",
+                }
+                for path in exc.preserved_paths
+            )
+        elif isinstance(exc, CodexAgentRecoveryCopyFailure):
+            cleanup_errors.extend(
+                {
+                    "kind": "recovery_copy_failed",
+                    "target": path,
+                    "error": "recovery_copy_incomplete",
+                }
+                for path in exc.failed_paths
+            )
             cleanup_errors.extend(
                 {
                     "kind": "preserved_concurrent_file",
@@ -1745,6 +1771,11 @@ def codex_route_aware_cleanup_manual_remediation(
         for error in cleanup_errors
         if error.get("kind") == "preserved_concurrent_file" and isinstance(error.get("target"), str)
     ]
+    failed_copy_paths = [
+        error["target"]
+        for error in cleanup_errors
+        if error.get("kind") == "recovery_copy_failed" and isinstance(error.get("target"), str)
+    ]
     actions: list[dict[str, Any]] = []
     if directory_paths:
         actions.append({
@@ -1768,6 +1799,18 @@ def codex_route_aware_cleanup_manual_remediation(
                 "Compare the reported target and backup bytes without following symlinks.",
                 "Keep or restore the intended user-owned version before removing the other file.",
                 "Retry only after the destination has stopped changing.",
+            ],
+        })
+    if failed_copy_paths:
+        actions.append({
+            "action_type": "manual_remediation",
+            "reason": "recovery_copy_failed",
+            "paths": failed_copy_paths,
+            "summary": "Recovery could not verify an exact prior-state backup; inspect the target and any incomplete copy before retrying.",
+            "recommended_actions": [
+                "Treat each reported recovery copy as incomplete, not as a valid prior-state backup.",
+                "Inspect content and mode without following symlinks, then restore the intended known-good state.",
+                "Retry only after the destination identity and file state are stable.",
             ],
         })
     return actions
@@ -2294,8 +2337,9 @@ def rollback_codex_agent_install(
     destination_identity: tuple[int, int] | None,
     *,
     expected_current: dict[str, CodexAgentFileState | None],
-) -> list[str]:
+) -> tuple[list[str], list[dict[str, str]]]:
     failures: list[str] = []
+    cleanup_errors: list[dict[str, str]] = []
     for name, state in reversed(list(previous.items())):
         target = destination / name
         try:
@@ -2319,10 +2363,39 @@ def rollback_codex_agent_install(
                     destination_identity,
                     mode=state.mode,
                     expected_state=expected_current[name],
+                    cleanup_race_state=state,
                 )
+        except CodexAgentNoClobberConflict as exc:
+            failures.append(name)
+            cleanup_errors.extend(
+                {
+                    "kind": "preserved_concurrent_file",
+                    "target": path,
+                    "error": "no_clobber_conflict",
+                }
+                for path in exc.preserved_paths
+            )
+        except CodexAgentRecoveryCopyFailure as exc:
+            failures.append(name)
+            cleanup_errors.extend(
+                {
+                    "kind": "recovery_copy_failed",
+                    "target": path,
+                    "error": "recovery_copy_incomplete",
+                }
+                for path in exc.failed_paths
+            )
+            cleanup_errors.extend(
+                {
+                    "kind": "preserved_concurrent_file",
+                    "target": path,
+                    "error": "no_clobber_conflict",
+                }
+                for path in exc.preserved_paths
+            )
         except OSError:
             failures.append(name)
-    return sorted(failures)
+    return sorted(failures), cleanup_errors
 
 
 def cleanup_codex_agent_destination(
@@ -2356,6 +2429,7 @@ def write_codex_agent_atomic(
     *,
     mode: int | None = None,
     expected_state: CodexAgentFileState | None | object = CODEX_AGENT_STATE_UNSET,
+    cleanup_race_state: CodexAgentFileState | None = None,
 ) -> CodexAgentFileState:
     if not codex_agent_target_is_safe(target, destination, destination_identity):
         raise OSError("unsafe target path")
@@ -2392,7 +2466,7 @@ def write_codex_agent_atomic(
             backup_path = codex_agent_move_target_to_backup(target, destination)
             moved_state = codex_agent_previous_state(backup_path)
             if moved_state != expected_state:
-                codex_agent_restore_backup_no_clobber(backup_path, target)
+                codex_agent_restore_backup_no_clobber(backup_path, target, destination, destination_identity)
                 backup_path = None
                 raise OSError("target changed before no-clobber install")
         elif os.path.lexists(target):
@@ -2436,8 +2510,14 @@ def write_codex_agent_atomic(
             backup_path = None
         if not codex_agent_state_matches(target, prepared_state):
             paths = [target.as_posix()]
-            if moved_state is not None:
-                preserved = codex_agent_preserve_state_as_backup(moved_state, target)
+            state_to_preserve = cleanup_race_state if cleanup_race_state is not None else moved_state
+            if state_to_preserve is not None:
+                preserved = codex_agent_preserve_state_as_backup(
+                    state_to_preserve,
+                    target,
+                    destination,
+                    destination_identity,
+                )
                 paths.insert(0, preserved.as_posix())
             raise CodexAgentNoClobberConflict("target changed during backup cleanup", paths)
         return installed_state
@@ -2459,7 +2539,7 @@ def write_codex_agent_atomic(
                     preserved_paths.append(target.as_posix())
             elif not os.path.lexists(target):
                 try:
-                    codex_agent_restore_backup_no_clobber(backup_path, target)
+                    codex_agent_restore_backup_no_clobber(backup_path, target, destination, destination_identity)
                     backup_path = None
                 except CodexAgentNoClobberConflict as restore_exc:
                     preserved_paths.extend(restore_exc.preserved_paths)
@@ -2485,7 +2565,7 @@ def remove_codex_agent_if_unchanged(
     try:
         moved_state = codex_agent_previous_state(backup_path)
         if moved_state != expected_state:
-            codex_agent_restore_backup_no_clobber(backup_path, target)
+            codex_agent_restore_backup_no_clobber(backup_path, target, destination, destination_identity)
             backup_path = None
             raise OSError("removal target changed before no-clobber removal")
         if os.path.lexists(target):
@@ -2504,7 +2584,12 @@ def remove_codex_agent_if_unchanged(
         if not codex_agent_state_matches(target, None):
             if moved_state is None:
                 raise OSError("moved removal state disappeared")
-            preserved = codex_agent_preserve_state_as_backup(moved_state, target)
+            preserved = codex_agent_preserve_state_as_backup(
+                moved_state,
+                target,
+                destination,
+                destination_identity,
+            )
             raise CodexAgentNoClobberConflict(
                 "target appeared before no-clobber removal completed",
                 [preserved.as_posix(), target.as_posix()],
@@ -2518,7 +2603,7 @@ def remove_codex_agent_if_unchanged(
                     preserved_paths.append(target.as_posix())
             elif not os.path.lexists(target):
                 try:
-                    codex_agent_restore_backup_no_clobber(backup_path, target)
+                    codex_agent_restore_backup_no_clobber(backup_path, target, destination, destination_identity)
                     backup_path = None
                 except CodexAgentNoClobberConflict as restore_exc:
                     preserved_paths.extend(restore_exc.preserved_paths)
@@ -2533,7 +2618,6 @@ def codex_agent_move_target_to_backup(target: Path, destination: Path) -> Path:
     descriptor, raw_backup = tempfile.mkstemp(prefix=f".{target.name}.", suffix=".bak", dir=destination)
     os.close(descriptor)
     backup = Path(raw_backup)
-    backup.unlink()
     try:
         os.replace(target, backup)
     except OSError:
@@ -2545,7 +2629,16 @@ def codex_agent_move_target_to_backup(target: Path, destination: Path) -> Path:
     return backup
 
 
-def codex_agent_restore_backup_no_clobber(backup: Path, target: Path) -> None:
+def codex_agent_restore_backup_no_clobber(
+    backup: Path,
+    target: Path,
+    destination: Path | None = None,
+    destination_identity: tuple[int, int] | None = None,
+) -> None:
+    if destination is None:
+        destination = target.parent
+    if destination_identity is None:
+        destination_identity = codex_agent_destination_identity(destination)
     backup_state = codex_agent_previous_state(backup)
     if backup_state is None:
         raise OSError(f"preserved backup disappeared before restore: {backup.name}")
@@ -2564,44 +2657,86 @@ def codex_agent_restore_backup_no_clobber(backup: Path, target: Path) -> None:
             [backup.as_posix(), target.as_posix()],
         ) from None
     if not codex_agent_state_matches(target, backup_state):
-        preserved = codex_agent_preserve_state_as_backup(backup_state, target)
+        preserved = codex_agent_preserve_state_as_backup(
+            backup_state,
+            target,
+            destination,
+            destination_identity,
+        )
         raise CodexAgentNoClobberConflict(
             f"restored target changed during backup cleanup: {backup.name}",
             [preserved.as_posix(), target.as_posix()],
         )
 
 
-def codex_agent_preserve_state_as_backup(state: CodexAgentFileState, target: Path) -> Path:
-    preserved_path: Path | None = None
+def codex_agent_preserve_state_as_backup(
+    state: CodexAgentFileState,
+    target: Path,
+    destination: Path,
+    destination_identity: tuple[int, int] | None,
+) -> Path:
+    directory_fd: int | None = None
+    preserved_fd: int | None = None
+    preserved_name: str | None = None
     try:
-        with tempfile.NamedTemporaryFile(
-            mode="wb",
-            prefix=f".{target.name}.",
-            suffix=".bak",
-            dir=target.parent,
-            delete=False,
-        ) as handle:
-            preserved_path = Path(handle.name)
-            handle.write(state.content)
-            descriptor_chmod = getattr(os, "fchmod", None)
-            if not callable(descriptor_chmod):
-                raise OSError("safe descriptor-based mode preservation is unavailable")
-            descriptor_chmod(handle.fileno(), state.mode & 0o7777)
-            handle.flush()
-            os.fsync(handle.fileno())
-        preserved_state = codex_agent_previous_state(preserved_path)
-        if (
-            preserved_state is None
-            or preserved_state.content != state.content
-            or stat.S_IMODE(preserved_state.mode) != stat.S_IMODE(state.mode)
-        ):
+        directory_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
+        directory_fd = os.open(destination, directory_flags)
+        directory_metadata = os.fstat(directory_fd)
+        if destination_identity is None or (directory_metadata.st_dev, directory_metadata.st_ino) != destination_identity:
+            raise OSError("destination changed before anchored recovery copy")
+        if os.open not in os.supports_dir_fd:
+            raise OSError("descriptor-relative recovery copy is unavailable")
+        for _ in range(32):
+            preserved_name = f".{target.name}.{secrets.token_hex(12)}.bak"
+            try:
+                preserved_fd = os.open(
+                    preserved_name,
+                    os.O_RDWR | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0),
+                    state.mode & 0o7777,
+                    dir_fd=directory_fd,
+                )
+                break
+            except FileExistsError:
+                preserved_name = None
+        if preserved_fd is None or preserved_name is None:
+            raise OSError("could not allocate exclusive anchored recovery copy")
+        view = memoryview(state.content)
+        written = 0
+        while written < len(view):
+            count = os.write(preserved_fd, view[written:])
+            if count <= 0:
+                raise OSError("recovery copy write made no progress")
+            written += count
+        descriptor_chmod = getattr(os, "fchmod", None)
+        if not callable(descriptor_chmod):
+            raise OSError("safe descriptor-based mode preservation is unavailable")
+        descriptor_chmod(preserved_fd, state.mode & 0o7777)
+        os.fsync(preserved_fd)
+        os.lseek(preserved_fd, 0, os.SEEK_SET)
+        restored = bytearray()
+        while True:
+            chunk = os.read(preserved_fd, 65536)
+            if not chunk:
+                break
+            restored.extend(chunk)
+        preserved_metadata = os.fstat(preserved_fd)
+        if bytes(restored) != state.content or stat.S_IMODE(preserved_metadata.st_mode) != stat.S_IMODE(state.mode):
             raise OSError("preserved prior-state backup verification failed")
-        return preserved_path
+        return destination / preserved_name
     except OSError as exc:
-        paths = [target.as_posix()]
-        if preserved_path is not None and os.path.lexists(preserved_path):
-            paths.insert(0, preserved_path.as_posix())
-        raise CodexAgentNoClobberConflict("could not preserve prior state after cleanup race", paths) from exc
+        failed_paths: list[str] = []
+        if preserved_name is not None:
+            failed_paths.append((destination / preserved_name).as_posix())
+        raise CodexAgentRecoveryCopyFailure(
+            "could not create a verified anchored recovery copy",
+            failed_paths,
+            [target.as_posix()] if os.path.lexists(target) else [],
+        ) from exc
+    finally:
+        if preserved_fd is not None:
+            os.close(preserved_fd)
+        if directory_fd is not None:
+            os.close(directory_fd)
 
 
 def codex_agent_target_is_safe(
