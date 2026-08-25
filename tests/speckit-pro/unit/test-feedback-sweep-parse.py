@@ -1506,7 +1506,7 @@ class IssuerPrefixRedactionTest(unittest.TestCase):
         # The one rule whose span sits inside a larger structure. Redacting the
         # whole URL would destroy the reviewable fact that a connection string
         # was pasted at all.
-        line = "postgres://admin:s3cretpassword1@localhost:5432/app"
+        line = "postgres://admin:" + _secret("s3cret", "password1") + "@localhost:5432/app"
         envelope = self.redact([line])
         out = envelope["lines"][0]
         self.assertEqual(event_rules(envelope), ["url_credentials"])
