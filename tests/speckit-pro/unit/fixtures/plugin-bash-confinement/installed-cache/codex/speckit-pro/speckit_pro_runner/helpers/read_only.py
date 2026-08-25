@@ -2417,6 +2417,59 @@ SWEEP_REDACT_VALUE_RULES = (
     ),
     ("bearer_token", re.compile(r"(?i:bearer)[ \t]+(" + SWEEP_TOKEN_RUN + ")")),
     ("assigned_token", re.compile(r"[A-Z0-9_]*_TOKEN=[\"']?(" + SWEEP_TOKEN_RUN + ")")),
+    # The issuer-prefix rules. The four rules above catch a credential by the
+    # shape of its surroundings — an assignment, a `bearer` word — so a token
+    # sitting bare in a sentence passes them all. These catch it by its own
+    # first bytes instead: each names a published prefix and then matches a
+    # bounded body (exact or ranged, depending on the issuer).
+    #
+    # Where the token alphabet makes it safe, rules add the same "contains a
+    # digit" lookahead SWEEP_TOKEN_RUN uses plus a left `\b` and the prefix's
+    # own separator so prose that merely *names* a prefix (e.g. `ghp_`,
+    # `sk-ant-`) survives the deny-set.
+    (
+        "github_token",
+        re.compile(r"\b((?:ghp|gho|ghu|ghs|ghr)_(?=[A-Za-z0-9]*[0-9])[A-Za-z0-9]{36,255})"),
+    ),
+    (
+        "github_fine_grained_pat",
+        re.compile(r"\b(github_pat_(?=[A-Za-z0-9_]*[0-9])[A-Za-z0-9_]{82,255})"),
+    ),
+    (
+        "slack_token",
+        re.compile(r"\b(xox[abceprs]-(?=[A-Za-z0-9-]*[0-9])[A-Za-z0-9-]{17,250})"),
+    ),
+    (
+        "anthropic_api_key",
+        re.compile(r"\b(sk-ant-(?=[A-Za-z0-9_-]*[0-9])[A-Za-z0-9_-]{24,120})"),
+    ),
+    (
+        # The infix marker rather than the prefix: OpenAI's key families differ
+        # at the front and share `T3BlbkFJ` in the middle, so anchoring there
+        # covers the families without enumerating them.
+        "openai_api_key",
+        re.compile(r"\b(sk-(?:proj-|svcacct-|admin-)?[A-Za-z0-9_-]{20,}?T3BlbkFJ[A-Za-z0-9_-]{20,})"),
+    ),
+    (
+        "google_api_key",
+        re.compile(r"\b(AIza(?=[0-9A-Za-z_-]*[0-9])[0-9A-Za-z_-]{35})(?![0-9A-Za-z_-])"),
+    ),
+    (
+        "aws_access_key_id",
+        re.compile(r"\b((?:AKIA|ASIA|ABIA|ACCA|A3T[A-Z0-9])[A-Z2-7]{16})\b"),
+    ),
+    (
+        # The password alone, never the user or the host. `<`, `>`, `$`, `{` and
+        # `}` are excluded from the group so a documented placeholder such as
+        # `https://<user>:<password>@host` or a `${{ secrets.X }}` interpolation
+        # is not a credential. The cost is stated rather than hidden: an
+        # all-alphabetic password carries no digit and passes.
+        "url_credentials",
+        re.compile(
+            r"(?i)\b[a-z][a-z0-9+.-]{1,30}://[^\s:/@'\"<>`]{1,64}"
+            r":((?=[^\s/@]*[0-9])[^\s/@'\"<>${}`]{8,256})@"
+        ),
+    ),
 )
 
 
