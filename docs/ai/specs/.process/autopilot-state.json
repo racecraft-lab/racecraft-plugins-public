@@ -3,10 +3,10 @@
   "spec_id": "G56R-006",
   "feature_dir": "specs/g56r-006-resolver-materializer-installer-strict-override",
   "branch": "g56r-006-resolver-materializer-installer-strict-override",
-  "status": "in_progress",
+  "status": "completed_pr_open",
   "stage": "implement",
-  "updated_at": "2026-08-25T07:31:44Z",
-  "active_step": "Post: PR Creation",
+  "updated_at": "2026-08-25T08:25:12Z",
+  "active_step": null,
   "stage_resolution": {
     "source": "argv",
     "basis": "explicit --stage implement",
@@ -788,7 +788,7 @@
       },
       "final_exact_review": {
         "status": "approved",
-        "reviewed_head": "c2e9d6c89cb992ce7100187c1f31c261e5db9044",
+        "reviewed_head": "52e3176188d9fb2ee495ba433b9a6c9af096e1e4",
         "baseline": "8edeb224824b7325b3ee8e00904c294ba3373de8",
         "important_findings": 0,
         "nits": 0,
@@ -797,13 +797,13 @@
       },
       "final_exact_verification": {
         "status": "passed",
-        "verified_head": "c2e9d6c89cb992ce7100187c1f31c261e5db9044",
+        "verified_head": "52e3176188d9fb2ee495ba433b9a6c9af096e1e4",
         "baseline": "8edeb224824b7325b3ee8e00904c294ba3373de8",
         "tasks": "53/53 verified; 0 phantom, missing, flagged, or extra",
         "requirements": "29 FRs, 4 stories, 13 acceptance scenarios, 9 success criteria",
         "path_trace": "127 references, 42 unique, 42 resolved, 0 missing",
         "focused_installer": "196/196 passed",
-        "focused_materializer": "11/11 passed",
+        "focused_materializer": "13/13 passed",
         "focused_canonical_materializer": "17/17 passed",
         "full_suite": "14352/14352 passed (L1 1511, L4 12622, L5 219)",
         "release_artifacts": "current",
@@ -815,7 +815,7 @@
       "post_reviewability": {
         "status": "completed_with_typed_exception",
         "planned_reviewable_loc": 385,
-        "observed_authored_added_lines": 12542,
+        "observed_authored_added_lines": 12611,
         "decision": "one navigable PR retained for the atomic installer transaction and inseparable adversarial evidence suite",
         "excluded": "generated payloads, installed-cache mirrors, docs/planning artifacts, and implementation notes"
       },
@@ -834,6 +834,14 @@
       "post_final_reviewability_backstop": {
         "status": "completed_deferred_fallback",
         "reason": "final-reviewability-backstop is deferred; current exact diff evidence retains the atomic-safety typed exception"
+      },
+      "post_retrospective": {
+        "status": "completed",
+        "report": "specs/g56r-006-resolver-materializer-installer-strict-override/retrospective.md",
+        "completion_rate": 100,
+        "spec_adherence": 100,
+        "critical_findings": 0,
+        "proposed_spec_changes": false
       }
     },
     "G7": {
@@ -933,8 +941,8 @@
     {"step": "Post: Final Reviewability Backstop", "status": "completed"},
     {"step": "Post: PR Packet/Body Generation", "status": "completed"},
     {"step": "Post: PR Body Generation", "status": "completed"},
-    {"step": "Post: PR Creation", "status": "in_progress"},
+    {"step": "Post: PR Creation", "status": "completed"},
     {"step": "Post: Review Remediation", "status": "completed"},
-    {"step": "Post: Retrospective", "status": "pending"}
+    {"step": "Post: Retrospective", "status": "completed"}
   ]
 }

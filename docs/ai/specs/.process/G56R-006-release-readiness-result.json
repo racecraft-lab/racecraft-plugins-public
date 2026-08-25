@@ -29,8 +29,8 @@
     "planned_reviewable_loc": 385,
     "planned_production_files": 4,
     "planned_authored_implementation_files": 8,
-    "observed_authored_added_lines": 12542,
-    "observed_note": "Observed authored additions are 4557 installer, 122 materializer, 9 registry, 163 install-skill, 545 deterministic fixture, 111 materializer-test, and 7035 mutation-helper-test lines. Generated mirrors, proof payloads, docs/planning artifacts, and implementation notes are excluded.",
+    "observed_authored_added_lines": 12611,
+    "observed_note": "Observed authored additions are 4557 installer, 135 materializer, 9 registry, 163 install-skill, 545 deterministic fixture, 167 materializer-test, and 7035 mutation-helper-test lines. Generated mirrors, proof payloads, docs/planning artifacts, implementation notes, and retrospective evidence are excluded.",
     "status": "over_plan_typed_exception",
     "required_follow_up": "Completed: exact-head reviewability and attack-review tracks retained one navigable PR because one atomic installer transaction and its adversarial cross-platform evidence cannot be split safely without severing rollback and ownership invariants."
   },
@@ -55,7 +55,7 @@
     ]
   },
   "verification": {
-    "focused_materializer": "11/11 passed after review remediation",
+    "focused_materializer": "13/13 passed after review remediation",
     "focused_installer": "196/196 passed after review remediation",
     "layer_1": "1511/1511 passed",
     "layer_4": "12622/12622 passed",
@@ -65,7 +65,7 @@
     "docs_reference_generate": "7 pages generated",
     "docs_reference_check": "current",
     "diff_check": "passed",
-    "independent_review": "approved at c2e9d6c89 with 0 Important findings and 0 nits",
+    "independent_review": "approved at 52e317618 with 0 Important findings and 0 nits",
     "exact_baseline": "8edeb224824b7325b3ee8e00904c294ba3373de8"
   },
   "known_gaps": [
