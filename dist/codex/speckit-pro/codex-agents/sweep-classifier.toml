@@ -1,6 +1,6 @@
 name = "sweep-classifier"
 description = "Assigns one class from the feedback sweep's closed vocabulary to a single pull-request review comment and returns a four-field record. The autopilot feedback sweep dispatches it once per candidate comment, and nothing else dispatches it. Reads one sanitized, delimited block of reviewer text the sweep has already shaped, then returns the class, the target artifact, and a bounded reason. Runs read-only, because the text it reads is reviewer-written and therefore attacker-controllable."
-model = "gpt-5.5"
+model = "gpt-5.6-sol"
 model_reasoning_effort = "xhigh"
 sandbox_mode = "read-only"
 developer_instructions = """

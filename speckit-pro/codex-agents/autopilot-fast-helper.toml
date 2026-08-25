@@ -1,6 +1,7 @@
 name = "autopilot-fast-helper"
-description = "Optional leaf helper for the SpecKit autopilot. Uses gpt-5.3-codex-spark for near-instant text-only compression, triage, and query drafting. Advisory only."
-model = "gpt-5.3-codex-spark"
+description = "Optional leaf helper for the SpecKit autopilot. Uses gpt-5.6-luna for latency-first text-only compression, triage, and query drafting. Advisory only."
+model = "gpt-5.6-luna"
+model_reasoning_effort = "low"
 sandbox_mode = "read-only"
 developer_instructions = """
 # Autopilot Fast Helper
