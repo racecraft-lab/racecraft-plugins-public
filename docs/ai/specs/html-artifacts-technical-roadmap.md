@@ -149,7 +149,7 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-006 | Autopilot Staging | ✅ Complete / Archived | [.process/ART-006-workflow.md](.process/ART-006-workflow.md) | PR #422; archived 2026-08-09; re-audited and re-grilled 2026-08-03. Declared budget 382 reviewable LOC, one slice. `gh` corroboration deferred to ART-007 (see Scope). **Prerequisite discharged** — PRs #416/#417 shipped in speckit-pro 2.22.0, so durable stage state now has a reliable store; ready for autopilot from Phase 1 |
 | ART-007 | Draft-PR Emission | ✅ Complete / Archived | [.process/ART-007-workflow.md](.process/ART-007-workflow.md) | PR #445; archived 2026-08-18. Scoping absorbed the ART-006 `gh` corroboration limb, resolved OQ-1 (the draft becomes the first slice PR), and recorded the corpus deferral to ART-009 (see both Scope amendments). Acceptance evidence preserved at `.process/ART-007-manual-uat.md` |
 | ART-008 | Feedback Sweep | 🔄 In Progress | [.process/ART-008-workflow.md](.process/ART-008-workflow.md) | Scaffolded 2026-08-20 as two stacked slices. **Slice 1 (the checkpoint) shipped in PR #464**, merged 2026-08-24 at `8db22a420`, 111/111 tasks and a 7983/7983 suite; a manual UAT over its `quickstart.md` ran the same day and is recorded in the workflow file. `specs/art-008-feedback-sweep/` stays in place until slice 2 merges — its quickstart carries the interfaces slice 2 inherits. **Slice 2 (artifact freshness) scaffolded 2026-08-24** on `art-008-feedback-sweep-slice-2` (cut from `main`, slice 1 already in): the slice-2 grill-me settled 7 forks and its blind-spot pass ran (3 findings, 0 set aside). Planning completed 2026-08-24 — 54 FRs, 81 tasks, G1–G6 pass, confidence 0.92 — and draft PR #502 is open. Next: `/speckit-pro:speckit-autopilot docs/ai/specs/.process/ART-008-slice-2-workflow.md --stage implement` |
-| ART-009 | UAT Walkthrough Replacement | ⏳ Ready | - | ART-006 dependency satisfied by PR #422 |
+| ART-009 | UAT Walkthrough Replacement | ⏳ Ready | - | ART-006 dependency satisfied by PR #422. Also carries ART-008 slice 2's undischarged live UAT (quickstart scenarios 3, 4, 5), which needs a Phase 7 run on a draft PR and cannot execute against a working tree |
 | ART-010 | Final-PR Writeup, Companions & Ready Flip | ⏳ Ready | - | All three dependencies satisfied: ART-003 by PRs #435/#436/#439, ART-007 by PR #445, ART-012 by PR #426 |
 | ART-011 | Scaffold Integration | ✅ Complete / Archived | [.process/ART-011-workflow.md](.process/ART-011-workflow.md) | PR #434; archived 2026-08-13. The blind-spot pass and the planning hand-off live on both platforms outside `specs/**`. Shipped inverted from its design: scaffold cannot invoke the autopilot, which carries `disable-model-invocation: true`, so it prints the command instead — nine requirements amended, five superseded. Declared 162 reviewable LOC and estimated 322 at the final 31 FRs; shipped 1160 production changed lines across the two scaffold `SKILL.md` variants, a second data point for ART-015. Layer 2 trigger evaluation is still owed, and the 984-line result is what ART-019 slice D exists to repair |
 | ART-012 | Implementation-Notes Capture | ✅ Complete / Archived | [.process/ART-012-workflow.md](.process/ART-012-workflow.md) | PR #426; archived 2026-08-12. The record contract and the executor reporting field live on both platforms outside `specs/**`. Budget re-estimated at every amendment (115 at scaffold → 155 → 162 → 190 once the operator restored the literal per-task guarantee), and the final six production files matched the declaration exactly |
@@ -772,6 +772,20 @@ Budget result: within budget
   `uat-runbook-author` → `uat-artifact-author` rename, so both roles' entries
   land in one governed-corpus change. Re-derive this entry's reviewability
   budget at its own scaffold time to price the corpus work in.
+- **Amended 2026-08-24 during ART-008 slice 2:** ART-009 also carries ART-008's
+  undischarged live UAT. Slice 2's quickstart scenarios 3, 4, and 5 need an
+  autopilot run that reaches Phase 7 on a draft pull request carrying reviewer
+  feedback, and the autopilot runs from the installed plugin cache, so none of
+  the three can execute against a working tree. ART-009's own autopilot run is
+  that condition rather than a simulation of it, and this entry already owns
+  UAT, so **observe and record them there instead of re-opening ART-008**.
+  Scenario 3 needs only observation of Phase 7's commit shape and stop report;
+  scenario 4 needs the artifacts directory deliberately left behind a commit
+  before a second run; scenario 5 needs an induced whole-set authoring failure
+  and is the only one with real setup cost. The scenarios and their expected
+  results are in `specs/art-008-feedback-sweep-slice-2/quickstart.md`, and the
+  slice's own limits section records why they were left open. Price this
+  observation work into the reviewability budget re-derivation above.
 
 **Out of Scope:**
 - PR-writeup generation and the ready flip (ART-010).
