@@ -188,7 +188,11 @@ recreates the captured prior bytes and mode under a fresh exclusive backup path
 anchored to the captured destination identity and reports both surviving
 entries. Rollback carries the original pre-batch state into that recovery path.
 An incomplete recovery copy is reported separately and is never identified as
-a valid preserved file. On failure:
+a valid preserved file. Existing targets move through an anchored native atomic
+no-replace primitive; unsupported platforms or filesystems fail closed rather
+than falling back to a clobbering rename. Restore uses descriptor-relative
+state, link, and unlink operations, and evidence paths are emitted only while
+the destination still matches its captured identity. On failure:
 
 - recovery distinguishes staged actions from actions actually applied and
   rolled back, reports the exact failed write or removal, and records real

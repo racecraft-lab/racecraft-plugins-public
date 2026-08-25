@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import copy
+import ctypes
+import errno
 import hashlib
 import json
 import os
@@ -87,6 +89,7 @@ ROUTE_POLICY_BOUNDED_PROBE_KEYS = frozenset(
 ROUTE_POLICY_SHA256_IDENTITY = re.compile(r"^sha256:[0-9a-f]{64}$")
 ROUTE_POLICY_SHA256_HEX = re.compile(r"^[0-9a-f]{64}$")
 CODEX_AGENT_STATE_UNSET = object()
+CODEX_AGENT_OPEN_SUPPORTS_DIR_FD = os.open in os.supports_dir_fd
 
 
 @dataclass(frozen=True)
@@ -2463,7 +2466,7 @@ def write_codex_agent_atomic(
         if expected_state is CODEX_AGENT_STATE_UNSET:
             expected_state = codex_agent_previous_state(target)
         if expected_state is not None:
-            backup_path = codex_agent_move_target_to_backup(target, destination)
+            backup_path = codex_agent_move_target_to_backup(target, destination, destination_identity)
             moved_state = codex_agent_previous_state(backup_path)
             if moved_state != expected_state:
                 codex_agent_restore_backup_no_clobber(backup_path, target, destination, destination_identity)
@@ -2560,7 +2563,7 @@ def remove_codex_agent_if_unchanged(
         raise OSError("removal requires a captured file state")
     if not codex_agent_target_is_safe(target, destination, destination_identity):
         raise OSError("unsafe removal target")
-    backup_path = codex_agent_move_target_to_backup(target, destination)
+    backup_path = codex_agent_move_target_to_backup(target, destination, destination_identity)
     moved_state: CodexAgentFileState | None = None
     try:
         moved_state = codex_agent_previous_state(backup_path)
@@ -2614,19 +2617,116 @@ def remove_codex_agent_if_unchanged(
         raise
 
 
-def codex_agent_move_target_to_backup(target: Path, destination: Path) -> Path:
-    descriptor, raw_backup = tempfile.mkstemp(prefix=f".{target.name}.", suffix=".bak", dir=destination)
-    os.close(descriptor)
-    backup = Path(raw_backup)
-    try:
-        os.replace(target, backup)
-    except OSError:
+def codex_agent_open_anchored_directory(
+    destination: Path,
+    destination_identity: tuple[int, int] | None,
+) -> int:
+    flags = (
+        os.O_RDONLY
+        | getattr(os, "O_DIRECTORY", 0)
+        | getattr(os, "O_NOFOLLOW", 0)
+        | getattr(os, "O_CLOEXEC", 0)
+    )
+    descriptor = os.open(destination, flags)
+    metadata = os.fstat(descriptor)
+    if destination_identity is None or (metadata.st_dev, metadata.st_ino) != destination_identity:
+        os.close(descriptor)
+        raise OSError("destination changed before anchored operation")
+    return descriptor
+
+
+def codex_agent_native_rename_no_replace(directory_fd: int, source_name: str, target_name: str) -> None:
+    library = ctypes.CDLL(None, use_errno=True)
+    source = os.fsencode(source_name)
+    target = os.fsencode(target_name)
+    if sys.platform == "darwin":
+        function = library.renameatx_np
+        function.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
+        function.restype = ctypes.c_int
+        result = function(directory_fd, source, directory_fd, target, 0x00000004)
+    elif sys.platform.startswith("linux"):
         try:
-            backup.unlink()
-        except OSError:
-            pass
-        raise
-    return backup
+            function = library.renameat2
+        except AttributeError as exc:
+            raise OSError(errno.ENOTSUP, "renameat2 is unavailable") from exc
+        function.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
+        function.restype = ctypes.c_int
+        result = function(directory_fd, source, directory_fd, target, 0x00000001)
+    else:
+        raise OSError(errno.ENOTSUP, "anchored atomic no-replace rename is unavailable")
+    if result != 0:
+        error_number = ctypes.get_errno()
+        raise OSError(error_number, os.strerror(error_number), target_name)
+
+
+def codex_agent_move_target_to_backup(
+    target: Path,
+    destination: Path,
+    destination_identity: tuple[int, int] | None = None,
+) -> Path:
+    if destination_identity is None:
+        destination_identity = codex_agent_destination_identity(destination)
+    directory_fd = codex_agent_open_anchored_directory(destination, destination_identity)
+    moved_name: str | None = None
+    try:
+        for _ in range(32):
+            candidate = f".{target.name}.{secrets.token_hex(12)}.bak"
+            try:
+                codex_agent_native_rename_no_replace(directory_fd, target.name, candidate)
+                moved_name = candidate
+                break
+            except FileExistsError:
+                continue
+        if moved_name is None:
+            raise OSError("could not allocate a collision-free backup name")
+        if codex_agent_destination_identity(destination) != destination_identity:
+            try:
+                codex_agent_native_rename_no_replace(directory_fd, moved_name, target.name)
+            except OSError as restore_error:
+                raise CodexAgentRecoveryCopyFailure(
+                    "destination moved after anchored backup creation and restore failed",
+                    [],
+                    [],
+                ) from restore_error
+            raise OSError("destination moved during anchored backup creation")
+        return destination / moved_name
+    finally:
+        os.close(directory_fd)
+
+
+def codex_agent_previous_state_at(directory_fd: int, name: str) -> CodexAgentFileState | None:
+    try:
+        metadata = os.stat(name, dir_fd=directory_fd, follow_symlinks=False)
+    except FileNotFoundError:
+        return None
+    if not stat.S_ISREG(metadata.st_mode):
+        raise OSError("managed target is not a regular file")
+    descriptor = os.open(
+        name,
+        os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0),
+        dir_fd=directory_fd,
+    )
+    try:
+        opened_metadata = os.fstat(descriptor)
+        if (opened_metadata.st_dev, opened_metadata.st_ino) != (metadata.st_dev, metadata.st_ino):
+            raise OSError("managed target changed while being read")
+        content_parts: list[bytes] = []
+        while True:
+            chunk = os.read(descriptor, 65536)
+            if not chunk:
+                break
+            content_parts.append(chunk)
+        final_metadata = os.fstat(descriptor)
+        if (final_metadata.st_dev, final_metadata.st_ino) != (metadata.st_dev, metadata.st_ino):
+            raise OSError("managed target changed while being read")
+        return CodexAgentFileState(
+            content=b"".join(content_parts),
+            mode=final_metadata.st_mode,
+            device=final_metadata.st_dev,
+            inode=final_metadata.st_ino,
+        )
+    finally:
+        os.close(descriptor)
 
 
 def codex_agent_restore_backup_no_clobber(
@@ -2639,34 +2739,51 @@ def codex_agent_restore_backup_no_clobber(
         destination = target.parent
     if destination_identity is None:
         destination_identity = codex_agent_destination_identity(destination)
-    backup_state = codex_agent_previous_state(backup)
-    if backup_state is None:
-        raise OSError(f"preserved backup disappeared before restore: {backup.name}")
+    directory_fd = codex_agent_open_anchored_directory(destination, destination_identity)
     try:
-        os.link(backup, target, follow_symlinks=False)
-    except OSError:
-        raise CodexAgentNoClobberConflict(
-            f"could not restore moved target without clobbering concurrent state: {backup.name}",
-            [backup.as_posix(), target.as_posix()],
-        ) from None
-    try:
-        backup.unlink()
-    except OSError:
-        raise CodexAgentNoClobberConflict(
-            f"restored target but could not remove preserved backup: {backup.name}",
-            [backup.as_posix(), target.as_posix()],
-        ) from None
-    if not codex_agent_state_matches(target, backup_state):
-        preserved = codex_agent_preserve_state_as_backup(
-            backup_state,
-            target,
-            destination,
-            destination_identity,
-        )
-        raise CodexAgentNoClobberConflict(
-            f"restored target changed during backup cleanup: {backup.name}",
-            [preserved.as_posix(), target.as_posix()],
-        )
+        backup_state = codex_agent_previous_state_at(directory_fd, backup.name)
+        if backup_state is None:
+            raise OSError(f"preserved backup disappeared before restore: {backup.name}")
+        try:
+            os.link(
+                backup.name,
+                target.name,
+                src_dir_fd=directory_fd,
+                dst_dir_fd=directory_fd,
+                follow_symlinks=False,
+            )
+        except OSError:
+            if codex_agent_destination_identity(destination) != destination_identity:
+                raise CodexAgentRecoveryCopyFailure("destination moved during anchored restore", [], []) from None
+            raise CodexAgentNoClobberConflict(
+                f"could not restore moved target without clobbering concurrent state: {backup.name}",
+                [backup.as_posix(), target.as_posix()],
+            ) from None
+        try:
+            os.unlink(backup.name, dir_fd=directory_fd)
+        except OSError:
+            if codex_agent_destination_identity(destination) != destination_identity:
+                raise CodexAgentRecoveryCopyFailure("destination moved during anchored restore cleanup", [], []) from None
+            raise CodexAgentNoClobberConflict(
+                f"restored target but could not remove preserved backup: {backup.name}",
+                [backup.as_posix(), target.as_posix()],
+            ) from None
+        restored_state = codex_agent_previous_state_at(directory_fd, target.name)
+        if restored_state != backup_state:
+            preserved = codex_agent_preserve_state_as_backup(
+                backup_state,
+                target,
+                destination,
+                destination_identity,
+            )
+            raise CodexAgentNoClobberConflict(
+                f"restored target changed during backup cleanup: {backup.name}",
+                [preserved.as_posix(), target.as_posix()],
+            )
+        if codex_agent_destination_identity(destination) != destination_identity:
+            raise CodexAgentRecoveryCopyFailure("destination moved before anchored restore evidence", [], [])
+    finally:
+        os.close(directory_fd)
 
 
 def codex_agent_preserve_state_as_backup(
@@ -2678,13 +2795,13 @@ def codex_agent_preserve_state_as_backup(
     directory_fd: int | None = None
     preserved_fd: int | None = None
     preserved_name: str | None = None
+    created = False
+    result: Path | None = None
+    primary_error: OSError | None = None
+    close_errors: list[OSError] = []
     try:
-        directory_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
-        directory_fd = os.open(destination, directory_flags)
-        directory_metadata = os.fstat(directory_fd)
-        if destination_identity is None or (directory_metadata.st_dev, directory_metadata.st_ino) != destination_identity:
-            raise OSError("destination changed before anchored recovery copy")
-        if os.open not in os.supports_dir_fd:
+        directory_fd = codex_agent_open_anchored_directory(destination, destination_identity)
+        if not CODEX_AGENT_OPEN_SUPPORTS_DIR_FD:
             raise OSError("descriptor-relative recovery copy is unavailable")
         for _ in range(32):
             preserved_name = f".{target.name}.{secrets.token_hex(12)}.bak"
@@ -2695,6 +2812,7 @@ def codex_agent_preserve_state_as_backup(
                     state.mode & 0o7777,
                     dir_fd=directory_fd,
                 )
+                created = True
                 break
             except FileExistsError:
                 preserved_name = None
@@ -2722,21 +2840,49 @@ def codex_agent_preserve_state_as_backup(
         preserved_metadata = os.fstat(preserved_fd)
         if bytes(restored) != state.content or stat.S_IMODE(preserved_metadata.st_mode) != stat.S_IMODE(state.mode):
             raise OSError("preserved prior-state backup verification failed")
-        return destination / preserved_name
+        if codex_agent_destination_identity(destination) != destination_identity:
+            raise OSError("destination moved before recovery-copy evidence")
+        result = destination / preserved_name
     except OSError as exc:
-        failed_paths: list[str] = []
-        if preserved_name is not None:
-            failed_paths.append((destination / preserved_name).as_posix())
-        raise CodexAgentRecoveryCopyFailure(
-            "could not create a verified anchored recovery copy",
-            failed_paths,
-            [target.as_posix()] if os.path.lexists(target) else [],
-        ) from exc
+        primary_error = exc
     finally:
         if preserved_fd is not None:
-            os.close(preserved_fd)
+            try:
+                os.close(preserved_fd)
+            except OSError as exc:
+                close_errors.append(exc)
         if directory_fd is not None:
-            os.close(directory_fd)
+            try:
+                os.close(directory_fd)
+            except OSError as exc:
+                close_errors.append(exc)
+    if primary_error is not None or close_errors:
+        try:
+            destination_current = codex_agent_destination_identity(destination) == destination_identity
+        except OSError:
+            destination_current = False
+        failed_paths: list[str] = []
+        if created and preserved_name is not None:
+            failed_paths.append(
+                (destination / preserved_name).as_posix() if destination_current else destination.as_posix()
+            )
+        preserved_paths: list[str] = []
+        if destination_current and os.path.lexists(target):
+            preserved_paths.append(target.as_posix())
+        detail = ""
+        if close_errors:
+            detail = f"; descriptor cleanup errors={len(close_errors)}"
+        error = CodexAgentRecoveryCopyFailure(
+            f"could not create a verified anchored recovery copy{detail}",
+            failed_paths,
+            preserved_paths,
+        )
+        if primary_error is not None:
+            raise error from primary_error
+        raise error from close_errors[0]
+    if result is None:
+        raise CodexAgentRecoveryCopyFailure("anchored recovery copy produced no result", [], [])
+    return result
 
 
 def codex_agent_target_is_safe(

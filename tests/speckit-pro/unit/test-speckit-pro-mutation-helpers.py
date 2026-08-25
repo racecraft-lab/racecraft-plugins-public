@@ -1895,17 +1895,17 @@ class MutationHelperTests(unittest.TestCase):
             expected = install.codex_agent_previous_state(target)
             identity = install.codex_agent_destination_identity(destination)
             concurrent = b"concurrent final-window edit\n"
-            real_replace = install.os.replace
+            real_move = install.codex_agent_native_rename_no_replace
             injected = False
 
-            def edit_before_move(source: object, backup: object) -> None:
+            def edit_before_move(directory_fd: int, source: str, backup: str) -> None:
                 nonlocal injected
-                if Path(source) == target and not injected:
+                if source == target.name and not injected:
                     injected = True
                     target.write_bytes(concurrent)
-                real_replace(source, backup)
+                real_move(directory_fd, source, backup)
 
-            with patch.object(install.os, "replace", side_effect=edit_before_move):
+            with patch.object(install, "codex_agent_native_rename_no_replace", side_effect=edit_before_move):
                 with self.assertRaisesRegex(OSError, "target changed before no-clobber install"):
                     install.write_codex_agent_atomic(
                         target,
@@ -1930,17 +1930,17 @@ class MutationHelperTests(unittest.TestCase):
             assert expected is not None
             identity = install.codex_agent_destination_identity(destination)
             concurrent = b"concurrent helper edit\n"
-            real_replace = install.os.replace
+            real_move = install.codex_agent_native_rename_no_replace
             injected = False
 
-            def edit_before_move(source: object, backup: object) -> None:
+            def edit_before_move(directory_fd: int, source: str, backup: str) -> None:
                 nonlocal injected
-                if Path(source) == target and not injected:
+                if source == target.name and not injected:
                     injected = True
                     target.write_bytes(concurrent)
-                real_replace(source, backup)
+                real_move(directory_fd, source, backup)
 
-            with patch.object(install.os, "replace", side_effect=edit_before_move):
+            with patch.object(install, "codex_agent_native_rename_no_replace", side_effect=edit_before_move):
                 with self.assertRaisesRegex(OSError, "removal target changed before no-clobber removal"):
                     install.remove_codex_agent_if_unchanged(target, expected, destination, identity)
 
@@ -1996,17 +1996,17 @@ class MutationHelperTests(unittest.TestCase):
             assert expected is not None
             identity = install.codex_agent_destination_identity(destination)
             concurrent = b"concurrent helper after move\n"
-            real_replace = install.os.replace
+            real_move = install.codex_agent_native_rename_no_replace
             injected = False
 
-            def create_after_move(source: object, backup: object) -> None:
+            def create_after_move(directory_fd: int, source: str, backup: str) -> None:
                 nonlocal injected
-                real_replace(source, backup)
-                if Path(source) == target and not injected:
+                real_move(directory_fd, source, backup)
+                if source == target.name and not injected:
                     injected = True
                     target.write_bytes(concurrent)
 
-            with patch.object(install.os, "replace", side_effect=create_after_move):
+            with patch.object(install, "codex_agent_native_rename_no_replace", side_effect=create_after_move):
                 with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
                     install.remove_codex_agent_if_unchanged(target, expected, destination, identity)
 
@@ -2134,18 +2134,18 @@ class MutationHelperTests(unittest.TestCase):
             backup.write_bytes(b"captured rollback state\n")
             concurrent = destination / ".concurrent-restore"
             concurrent.write_bytes(b"concurrent restore-window edit\n")
-            real_unlink = Path.unlink
+            real_unlink = install.os.unlink
             real_replace = os.replace
             injected = False
 
-            def replace_during_backup_cleanup(path: Path, *args: object, **kwargs: object) -> None:
+            def replace_during_backup_cleanup(path: object, *args: object, **kwargs: object) -> None:
                 nonlocal injected
-                if path == backup and not injected:
+                if path == backup.name and not injected:
                     injected = True
                     real_replace(concurrent, target)
                 real_unlink(path, *args, **kwargs)
 
-            with patch.object(Path, "unlink", autospec=True, side_effect=replace_during_backup_cleanup):
+            with patch.object(install.os, "unlink", side_effect=replace_during_backup_cleanup):
                 with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
                     install.codex_agent_restore_backup_no_clobber(backup, target)
 
@@ -2272,7 +2272,7 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(list(outside.iterdir()), [])
             self.assertEqual(list(moved.glob(".*.bak")), [])
 
-    def test_install_codex_agents_backup_move_keeps_exclusive_placeholder_until_replace(self) -> None:
+    def test_install_codex_agents_backup_move_does_not_relinquish_candidate_before_native_move(self) -> None:
         from speckit_pro_runner.helpers import install
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -2294,6 +2294,163 @@ class MutationHelperTests(unittest.TestCase):
             self.assertFalse(relinquished)
             self.assertFalse(target.exists())
             self.assertEqual(backup.read_bytes(), b"original target bytes\n")
+
+    def test_install_codex_agents_backup_move_retries_native_no_replace_collision(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            target = destination / "agent.toml"
+            target.write_bytes(b"original target bytes\n")
+            identity = install.codex_agent_destination_identity(destination)
+            real_move = install.codex_agent_native_rename_no_replace
+            collision: Path | None = None
+            injected = False
+
+            def collide_once(directory_fd: int, source: str, backup: str) -> None:
+                nonlocal collision, injected
+                if not injected:
+                    injected = True
+                    collision = destination / backup
+                    collision.write_bytes(b"concurrent backup-name entry\n")
+                real_move(directory_fd, source, backup)
+
+            with patch.object(install, "codex_agent_native_rename_no_replace", side_effect=collide_once):
+                backup = install.codex_agent_move_target_to_backup(target, destination, identity)
+
+            assert collision is not None
+            self.assertEqual(collision.read_bytes(), b"concurrent backup-name entry\n")
+            self.assertEqual(backup.read_bytes(), b"original target bytes\n")
+            self.assertNotEqual(collision, backup)
+
+    def test_install_codex_agents_restore_refuses_replacement_directory(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            destination = root / "agents"
+            destination.mkdir()
+            backup_name = ".agent.toml.initial.bak"
+            original_backup = destination / backup_name
+            original_backup.write_bytes(b"original backup bytes\n")
+            identity = install.codex_agent_destination_identity(destination)
+            moved = root / "moved-agents"
+            destination.rename(moved)
+            destination.mkdir()
+            replacement_backup = destination / backup_name
+            replacement_backup.write_bytes(b"replacement-directory bytes\n")
+
+            with self.assertRaisesRegex(OSError, "destination changed"):
+                install.codex_agent_restore_backup_no_clobber(
+                    replacement_backup,
+                    destination / "agent.toml",
+                    destination,
+                    identity,
+                )
+
+            self.assertEqual(replacement_backup.read_bytes(), b"replacement-directory bytes\n")
+            self.assertFalse((destination / "agent.toml").exists())
+            self.assertEqual((moved / backup_name).read_bytes(), b"original backup bytes\n")
+
+    def test_install_codex_agents_recovery_copy_detects_post_open_directory_move(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            destination = root / "agents"
+            destination.mkdir()
+            source = destination / "source.toml"
+            source.write_bytes(b"original bytes\n")
+            state = install.codex_agent_previous_state(source)
+            assert state is not None
+            identity = install.codex_agent_destination_identity(destination)
+            moved = root / "moved-agents"
+            real_open = install.os.open
+            injected = False
+
+            def move_after_copy_open(path: object, flags: int, *args: object, **kwargs: object) -> int:
+                nonlocal injected
+                descriptor = real_open(path, flags, *args, **kwargs)
+                if kwargs.get("dir_fd") is not None and flags & os.O_CREAT and not injected:
+                    injected = True
+                    destination.rename(moved)
+                    destination.mkdir()
+                return descriptor
+
+            with patch.object(install.os, "open", side_effect=move_after_copy_open):
+                with self.assertRaises(install.CodexAgentRecoveryCopyFailure) as raised:
+                    install.codex_agent_preserve_state_as_backup(
+                        state,
+                        destination / "agent.toml",
+                        destination,
+                        identity,
+                    )
+
+            self.assertEqual(raised.exception.failed_paths, [destination.as_posix()])
+            backups = list(moved.glob(".*.bak"))
+            self.assertEqual(len(backups), 1)
+            self.assertEqual(backups[0].read_bytes(), state.content)
+            self.assertEqual(list(destination.iterdir()), [])
+
+    def test_install_codex_agents_recovery_copy_precreate_failure_reports_no_phantom_path(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            source = destination / "source.toml"
+            source.write_bytes(b"original bytes\n")
+            state = install.codex_agent_previous_state(source)
+            assert state is not None
+            identity = install.codex_agent_destination_identity(destination)
+            real_open = install.os.open
+
+            def reject_copy_open(path: object, flags: int, *args: object, **kwargs: object) -> int:
+                if kwargs.get("dir_fd") is not None and flags & os.O_CREAT:
+                    raise PermissionError("injected copy-open failure")
+                return real_open(path, flags, *args, **kwargs)
+
+            with patch.object(install.os, "open", side_effect=reject_copy_open):
+                with self.assertRaises(install.CodexAgentRecoveryCopyFailure) as raised:
+                    install.codex_agent_preserve_state_as_backup(
+                        state,
+                        destination / "agent.toml",
+                        destination,
+                        identity,
+                    )
+
+            self.assertEqual(raised.exception.failed_paths, [])
+            self.assertEqual(list(destination.glob(".*.bak")), [])
+
+    def test_install_codex_agents_recovery_copy_close_errors_are_non_masking_and_exhaustive(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            source = destination / "source.toml"
+            source.write_bytes(b"original bytes\n")
+            state = install.codex_agent_previous_state(source)
+            assert state is not None
+            identity = install.codex_agent_destination_identity(destination)
+            real_close = install.os.close
+            close_calls: list[int] = []
+
+            def close_then_report(descriptor: int) -> None:
+                close_calls.append(descriptor)
+                real_close(descriptor)
+                raise OSError("injected close evidence failure")
+
+            with patch.object(install.os, "close", side_effect=close_then_report):
+                with self.assertRaises(install.CodexAgentRecoveryCopyFailure) as raised:
+                    install.codex_agent_preserve_state_as_backup(
+                        state,
+                        destination / "agent.toml",
+                        destination,
+                        identity,
+                    )
+
+            self.assertEqual(len(close_calls), 2)
+            self.assertIn("descriptor cleanup errors=2", str(raised.exception))
+            self.assertEqual(len(raised.exception.failed_paths), 1)
 
     def test_install_codex_agents_incomplete_recovery_copy_is_not_preserved_evidence(self) -> None:
         from speckit_pro_runner.helpers import install
@@ -2670,19 +2827,19 @@ class MutationHelperTests(unittest.TestCase):
             )
             collision_request.inputs["test_overrides"] = {"codex_capability_snapshot": required_only_snapshot}
             concurrent_helper = b"concurrent user helper\n"
-            real_replace = install.os.replace
+            real_move = install.codex_agent_native_rename_no_replace
             injected = False
 
-            def create_after_helper_move(source: object, backup: object) -> None:
+            def create_after_helper_move(directory_fd: int, source: str, backup: str) -> None:
                 nonlocal injected
-                real_replace(source, backup)
-                if Path(source).name == helper_path.name and not injected:
+                real_move(directory_fd, source, backup)
+                if source == helper_path.name and not injected:
                     injected = True
                     helper_path.write_bytes(concurrent_helper)
 
             os.chdir(git_root)
             try:
-                with patch.object(install.os, "replace", side_effect=create_after_helper_move):
+                with patch.object(install, "codex_agent_native_rename_no_replace", side_effect=create_after_helper_move):
                     response = install.run_codex_agent_install(
                         MUTATION_HELPERS["install-codex-agents"],
                         collision_request,
@@ -3323,22 +3480,20 @@ class MutationHelperTests(unittest.TestCase):
             from speckit_pro_runner.helpers import install
             from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
 
-            real_replace = install.os.replace
-            replace_count = 0
+            real_move = install.codex_agent_native_rename_no_replace
+            move_count = 0
 
-            def swap_after_rollback_replace(source: object, target: object) -> None:
-                nonlocal replace_count
-                real_replace(source, target)
-                replace_count += 1
-                if replace_count == 2:
-                    target_path = Path(target)
-                    target_path.unlink()
-                    target_path.symlink_to(outside)
+            def swap_after_rollback_move(directory_fd: int, source: str, backup: str) -> None:
+                nonlocal move_count
+                real_move(directory_fd, source, backup)
+                move_count += 1
+                if move_count == 2:
+                    (destination / source).symlink_to(outside)
 
             with (
                 patch.object(install, "codex_agent_destination", return_value=destination),
                 patch.object(install, "write_codex_agent_atomic", side_effect=self.fail_on_autopilot_agent_write(install.write_codex_agent_atomic)),
-                patch.object(install.os, "replace", side_effect=swap_after_rollback_replace),
+                patch.object(install, "codex_agent_native_rename_no_replace", side_effect=swap_after_rollback_move),
             ):
                 response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
 
