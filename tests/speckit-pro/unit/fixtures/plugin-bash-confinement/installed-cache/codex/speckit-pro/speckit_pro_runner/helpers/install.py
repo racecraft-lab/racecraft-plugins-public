@@ -213,12 +213,27 @@ class CodexAgentNoClobberConflict(OSError):
         self.cleanup_errors = cleanup_errors or []
 
 
-class CodexAgentWindowsRenameCommittedCloseFailure(OSError):
-    def __init__(self, source_name: str, target_name: str, close_error: OSError) -> None:
-        super().__init__(str(close_error))
+class CodexAgentWindowsRenameFailure(OSError):
+    def __init__(
+        self,
+        source_name: str,
+        target_name: str,
+        primary_error: OSError | None,
+        close_error: OSError | None,
+        outcome: str,
+    ) -> None:
+        message_error = primary_error if primary_error is not None else close_error
+        super().__init__(str(message_error) if message_error is not None else "Windows rename failed")
         self.source_name = source_name
         self.target_name = target_name
+        self.primary_error = primary_error
         self.close_error = close_error
+        self.outcome = outcome
+
+
+class CodexAgentWindowsRenameCommittedCloseFailure(CodexAgentWindowsRenameFailure):
+    def __init__(self, source_name: str, target_name: str, close_error: OSError) -> None:
+        super().__init__(source_name, target_name, None, close_error, "committed")
 
 
 class CodexAgentRecoveryCopyFailure(OSError):
@@ -520,6 +535,14 @@ def codex_agent_windows_rename_no_replace(
         if source_handle is not None:
             close_error = codex_agent_windows_close_handle(source_handle)
     if primary_error is not None:
+        if close_error is not None:
+            raise CodexAgentWindowsRenameFailure(
+                source_name,
+                target_name,
+                primary_error,
+                close_error,
+                "unknown",
+            ) from primary_error
         raise codex_agent_note_close_error(primary_error, close_error)
     if close_error is not None:
         raise CodexAgentWindowsRenameCommittedCloseFailure(source_name, target_name, close_error)
@@ -1070,9 +1093,10 @@ class AnchoredAgentDir:
         except OSError as exc:
             result = CodexAgentCleanupResult()
             error = "backup_restore_rename_failed"
+            if isinstance(exc, CodexAgentWindowsRenameFailure) and exc.close_error is not None:
+                result.cleanup_errors.append(self.close_handle_cleanup_error(exc.target_name, exc.close_error))
             if isinstance(exc, CodexAgentWindowsRenameCommittedCloseFailure):
                 error = "backup_restore_rename_close_failure"
-                result.cleanup_errors.append(self.close_handle_cleanup_error(exc.target_name, exc.close_error))
             self.merge_cleanup_result(
                 result,
                 self.classify_entry_by_expected(backup_name, backup_state, error),
@@ -1081,8 +1105,6 @@ class AnchoredAgentDir:
                 result,
                 self.classify_entry_by_expected(target_name, backup_state, error, exact_is_cleanup=False),
             )
-            if not result:
-                result.public_conflicts.extend([self.evidence_path(backup_name), self.evidence_path(target_name)])
             raise CodexAgentNoClobberConflict(
                 f"could not restore moved target without clobbering concurrent state: {backup_name}",
                 result.preserved_paths,
@@ -1529,9 +1551,10 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
                     moved_state = None
                 error = "cleanup_rename_failed"
                 rename_committed_close_failure = isinstance(exc, CodexAgentWindowsRenameCommittedCloseFailure)
-                if isinstance(exc, CodexAgentWindowsRenameCommittedCloseFailure):
-                    error = "cleanup_rename_close_failure"
+                if isinstance(exc, CodexAgentWindowsRenameFailure) and exc.close_error is not None:
                     rename_cleanup_errors.append(self.close_handle_cleanup_error(exc.target_name, exc.close_error))
+                if rename_committed_close_failure:
+                    error = "cleanup_rename_close_failure"
                 if moved_state == expected_state or (rename_committed_close_failure and self.path(candidate).exists()):
                     cleanup_name = candidate
                     moved_state_after_rename = expected_state
@@ -1675,9 +1698,10 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
             except OSError as exc:
                 result = CodexAgentCleanupResult()
                 error = "backup_rename_failed"
+                if isinstance(exc, CodexAgentWindowsRenameFailure) and exc.close_error is not None:
+                    result.cleanup_errors.append(self.close_handle_cleanup_error(exc.target_name, exc.close_error))
                 if isinstance(exc, CodexAgentWindowsRenameCommittedCloseFailure):
                     error = "backup_rename_close_failure"
-                    result.cleanup_errors.append(self.close_handle_cleanup_error(exc.target_name, exc.close_error))
                 if expected_state is not None:
                     self.merge_cleanup_result(
                         result,
@@ -4355,47 +4379,51 @@ def write_codex_agent_atomic(
                 agent_dir.rename_no_replace(tmp_name, target.name)
                 tmp_name = None
             except OSError as link_exc:
-                if isinstance(link_exc, CodexAgentWindowsRenameCommittedCloseFailure) and prepared_state is not None:
-                    result = CodexAgentCleanupResult(
-                        cleanup_errors=[
+                if isinstance(link_exc, CodexAgentWindowsRenameFailure) and prepared_state is not None:
+                    result = CodexAgentCleanupResult()
+                    error = "publish_rename_failed"
+                    if link_exc.close_error is not None:
+                        result.cleanup_errors.append(
                             agent_dir.close_handle_cleanup_error(link_exc.target_name, link_exc.close_error)
-                        ]
-                    )
-                    agent_dir.merge_cleanup_result(
-                        result,
-                        agent_dir.classify_entry_by_expected(
-                            tmp_name,
-                            prepared_state,
-                            "publish_rename_close_failure",
-                        ),
-                    )
+                        )
+                    if isinstance(link_exc, CodexAgentWindowsRenameCommittedCloseFailure):
+                        error = "publish_rename_close_failure"
                     agent_dir.merge_cleanup_result(
                         result,
                         agent_dir.classify_entry_by_expected(
                             target.name,
                             prepared_state,
-                            "publish_rename_close_failure",
+                            error,
                             exact_is_cleanup=False,
                         ),
                     )
-                    if not result.public_conflicts:
-                        result.public_conflicts.append(agent_dir.evidence_path(target.name))
                     raise CodexAgentNoClobberConflict(
-                        "target publish close failed",
+                        "target publish close failed"
+                        if isinstance(link_exc, CodexAgentWindowsRenameCommittedCloseFailure)
+                        else "target publish failed",
                         result.preserved_paths,
                         result.cleanup_errors,
                     ) from link_exc
-                paths = [agent_dir.evidence_path(target.name)]
-                cleanup_errors: list[dict[str, str]] = []
+                result = CodexAgentCleanupResult()
+                if prepared_state is not None:
+                    agent_dir.merge_cleanup_result(
+                        result,
+                        agent_dir.classify_entry_by_expected(
+                            target.name,
+                            prepared_state,
+                            "publish_rename_failed",
+                            exact_is_cleanup=False,
+                        ),
+                    )
                 if isinstance(link_exc, CodexAgentNoClobberConflict):
-                    paths = [*link_exc.preserved_paths, *paths]
-                    cleanup_errors = list(link_exc.cleanup_errors)
+                    result.public_conflicts = [*link_exc.preserved_paths, *result.public_conflicts]
+                    result.cleanup_errors = [*link_exc.cleanup_errors, *result.cleanup_errors]
                 if backup_name is not None:
-                    paths.insert(0, agent_dir.evidence_path(backup_name))
+                    result.public_conflicts.insert(0, agent_dir.evidence_path(backup_name))
                 raise CodexAgentNoClobberConflict(
                     "target changed during no-clobber install",
-                    list(dict.fromkeys(paths)),
-                    cleanup_errors,
+                    result.preserved_paths,
+                    result.cleanup_errors,
                 ) from None
             try:
                 installed_state = agent_dir.previous_state(target.name)

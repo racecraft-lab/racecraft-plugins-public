@@ -57,6 +57,7 @@ class FakeWindowsKernel32:
         self.close_handles: list[int] = []
         self.events: list[str] = []
         self.fail_close = False
+        self.fail_close_once_paths: set[PosixPath] = set()
         self.fail_close_paths: set[PosixPath] = set()
         self.fail_hardlink = False
         self.fail_write = False
@@ -131,6 +132,10 @@ class FakeWindowsKernel32:
         self.close_handles.append(handle)
         self.events.append(f"CloseHandle:{handle}")
         record = self.handles.get(handle)
+        if record is not None and PosixPath(record["path"]) in self.fail_close_once_paths:
+            self.fail_close_once_paths.remove(PosixPath(record["path"]))
+            self.set_last_error(6)
+            return 0
         if record is not None and PosixPath(record["path"]) in self.fail_close_paths:
             self.set_last_error(6)
             return 0
@@ -4567,6 +4572,289 @@ class MutationHelperTests(unittest.TestCase):
             self.assertIn(
                 {"kind": "close_handle", "target": target.as_posix(), "error": "OSError"},
                 raised.exception.cleanup_errors,
+            )
+
+    def test_install_codex_agents_windows_rename_primary_and_close_failure_is_structured(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            source = destination / "agent.toml"
+            source.write_bytes(b"windows source\n")
+            target = destination / "backup.toml"
+            target.write_bytes(b"already here\n")
+            identity = install.codex_agent_destination_identity(destination)
+            fake = FakeWindowsKernel32()
+            fake.fail_close_once_paths.add(source)
+
+            with (
+                patch.object(install.os, "name", "nt"),
+                patch.object(install.ctypes, "WinDLL", return_value=fake, create=True),
+                patch.object(install.ctypes, "get_last_error", side_effect=fake.get_last_error, create=True),
+            ):
+                agent_dir = install.AnchoredAgentDir.open(destination, identity)
+                try:
+                    with self.assertRaises(OSError) as raised:
+                        install.codex_agent_windows_rename_no_replace(agent_dir, source.name, target.name)
+                finally:
+                    agent_dir.close()
+
+            exc = raised.exception
+            self.assertTrue(hasattr(exc, "primary_error"))
+            self.assertIsInstance(exc.primary_error, FileExistsError)
+            self.assertIsInstance(exc.close_error, OSError)
+            self.assertEqual(exc.source_name, source.name)
+            self.assertEqual(exc.target_name, target.name)
+            self.assertEqual(exc.outcome, "unknown")
+            self.assertEqual(getattr(exc, "__notes__", []), [])
+            self.assertEqual(source.read_bytes(), b"windows source\n")
+            self.assertEqual(target.read_bytes(), b"already here\n")
+
+    def test_install_codex_agents_windows_restore_rename_failure_does_not_preserve_absent_entries(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            backup = destination / ".agent.toml.tokenid.bak"
+            backup.write_bytes(b"windows backup bytes\n")
+            target = destination / "agent.toml"
+            identity = install.codex_agent_destination_identity(destination)
+            fake = FakeWindowsKernel32()
+
+            def disappear_then_fail(source_name: str, target_name: str) -> None:
+                self.assertEqual(source_name, backup.name)
+                self.assertEqual(target_name, target.name)
+                backup.unlink()
+                raise OSError("restore rename failed after both entries disappeared")
+
+            with (
+                patch.object(install.os, "name", "nt"),
+                patch.object(install.ctypes, "WinDLL", return_value=fake, create=True),
+                patch.object(install.ctypes, "get_last_error", side_effect=fake.get_last_error, create=True),
+            ):
+                agent_dir = install.AnchoredAgentDir.open(destination, identity)
+                try:
+                    with patch.object(agent_dir, "rename_no_replace", side_effect=disappear_then_fail):
+                        with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
+                            agent_dir.restore_backup_no_clobber(backup.name, target.name)
+                finally:
+                    agent_dir.close()
+
+            self.assertFalse(backup.exists())
+            self.assertFalse(target.exists())
+            self.assertEqual(raised.exception.preserved_paths, [])
+            self.assertEqual(raised.exception.cleanup_errors, [])
+
+    def test_install_codex_agents_windows_publish_primary_and_close_failure_does_not_preserve_absent_target(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            target = destination / "agent.toml"
+            temp_path = destination / ".agent.toml.tokenid.tmp"
+            identity = install.codex_agent_destination_identity(destination)
+            fake = FakeWindowsKernel32()
+            real_set_file_information = fake.SetFileInformationByHandle
+            failed_publish = False
+
+            def fail_publish_rename(handle: int, info_class: int, rename_info_buffer: object, buffer_size: int) -> int:
+                nonlocal failed_publish
+                if (
+                    info_class == install.WINDOWS_FILE_RENAME_INFO_CLASS
+                    and PosixPath(fake.handles[handle]["path"]) == temp_path
+                    and not failed_publish
+                ):
+                    failed_publish = True
+                    fake.fail_close_once_paths.add(temp_path)
+                    fake.set_last_error(fake.ERROR_ACCESS_DENIED)
+                    return 0
+                return real_set_file_information(handle, info_class, rename_info_buffer, buffer_size)
+
+            fake.SetFileInformationByHandle = fail_publish_rename  # type: ignore[method-assign]
+
+            with (
+                patch.object(install.os, "name", "nt"),
+                patch.object(install.ctypes, "WinDLL", return_value=fake, create=True),
+                patch.object(install.ctypes, "get_last_error", side_effect=fake.get_last_error, create=True),
+                patch.object(install.secrets, "token_hex", return_value="tokenid"),
+            ):
+                with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
+                    install.write_codex_agent_atomic(
+                        target,
+                        b"windows publish bytes\n",
+                        destination,
+                        identity,
+                        expected_state=None,
+                    )
+
+            self.assertFalse(temp_path.exists())
+            self.assertFalse(target.exists())
+            self.assertEqual(raised.exception.preserved_paths, [])
+            self.assertIn(
+                {"kind": "close_handle", "target": target.as_posix(), "error": "OSError"},
+                raised.exception.cleanup_errors,
+            )
+            self.assertFalse(
+                any(error["kind"] == "preserved_cleanup_entry" for error in raised.exception.cleanup_errors)
+            )
+
+    def test_install_codex_agents_windows_backup_primary_and_close_failure_keeps_primary_classification(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            target = destination / "agent.toml"
+            target.write_bytes(b"windows original\n")
+            expected = install.codex_agent_previous_state(target)
+            assert expected is not None
+            backup_path = destination / ".agent.toml.tokenid.bak"
+            backup_path.write_bytes(b"concurrent backup occupant\n")
+            identity = install.codex_agent_destination_identity(destination)
+            fake = FakeWindowsKernel32()
+            real_set_file_information = fake.SetFileInformationByHandle
+
+            def fail_backup_close_after_rename_attempt(
+                handle: int,
+                info_class: int,
+                rename_info_buffer: object,
+                buffer_size: int,
+            ) -> int:
+                result = real_set_file_information(handle, info_class, rename_info_buffer, buffer_size)
+                if info_class == install.WINDOWS_FILE_RENAME_INFO_CLASS:
+                    fake.fail_close_once_paths.add(target)
+                return result
+
+            fake.SetFileInformationByHandle = fail_backup_close_after_rename_attempt  # type: ignore[method-assign]
+
+            with (
+                patch.object(install.os, "name", "nt"),
+                patch.object(install.ctypes, "WinDLL", return_value=fake, create=True),
+                patch.object(install.ctypes, "get_last_error", side_effect=fake.get_last_error, create=True),
+                patch.object(install.secrets, "token_hex", return_value="tokenid"),
+            ):
+                with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
+                    install.write_codex_agent_atomic(
+                        target,
+                        b"windows replacement\n",
+                        destination,
+                        identity,
+                        expected_state=expected,
+                    )
+
+            self.assertEqual(target.read_bytes(), b"windows original\n")
+            self.assertEqual(backup_path.read_bytes(), b"concurrent backup occupant\n")
+            self.assertEqual(raised.exception.preserved_paths, [backup_path.as_posix(), target.as_posix()])
+            self.assertIn(
+                {"kind": "close_handle", "target": backup_path.as_posix(), "error": "OSError"},
+                raised.exception.cleanup_errors,
+            )
+            self.assertIn(
+                {"kind": "preserved_concurrent_file", "target": backup_path.as_posix(), "error": "backup_rename_failed"},
+                raised.exception.cleanup_errors,
+            )
+
+    def test_install_codex_agents_windows_restore_primary_and_close_failure_reports_close_and_final_state(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            backup = destination / ".agent.toml.tokenid.bak"
+            backup.write_bytes(b"windows backup bytes\n")
+            target = destination / "agent.toml"
+            target.write_bytes(b"concurrent target bytes\n")
+            identity = install.codex_agent_destination_identity(destination)
+            fake = FakeWindowsKernel32()
+            real_set_file_information = fake.SetFileInformationByHandle
+
+            def fail_restore_close_after_rename_attempt(
+                handle: int,
+                info_class: int,
+                rename_info_buffer: object,
+                buffer_size: int,
+            ) -> int:
+                result = real_set_file_information(handle, info_class, rename_info_buffer, buffer_size)
+                if info_class == install.WINDOWS_FILE_RENAME_INFO_CLASS:
+                    fake.fail_close_once_paths.add(backup)
+                return result
+
+            fake.SetFileInformationByHandle = fail_restore_close_after_rename_attempt  # type: ignore[method-assign]
+
+            with (
+                patch.object(install.os, "name", "nt"),
+                patch.object(install.ctypes, "WinDLL", return_value=fake, create=True),
+                patch.object(install.ctypes, "get_last_error", side_effect=fake.get_last_error, create=True),
+            ):
+                agent_dir = install.AnchoredAgentDir.open(destination, identity)
+                try:
+                    with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
+                        agent_dir.restore_backup_no_clobber(backup.name, target.name)
+                finally:
+                    agent_dir.close()
+
+            self.assertEqual(backup.read_bytes(), b"windows backup bytes\n")
+            self.assertEqual(target.read_bytes(), b"concurrent target bytes\n")
+            self.assertEqual(raised.exception.preserved_paths, [backup.as_posix(), target.as_posix()])
+            self.assertIn(
+                {"kind": "close_handle", "target": target.as_posix(), "error": "OSError"},
+                raised.exception.cleanup_errors,
+            )
+            self.assertIn(
+                {"kind": "preserved_concurrent_file", "target": target.as_posix(), "error": "backup_restore_rename_failed"},
+                raised.exception.cleanup_errors,
+            )
+
+    def test_install_codex_agents_windows_cleanup_primary_and_close_failure_reports_close_without_relabeling(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            target_name = "agent.tmp"
+            target = destination / target_name
+            target.write_bytes(b"windows installer-owned cleanup\n")
+            cleanup_name = ".cleanupid.cleanup.agent.tmp"
+            cleanup_path = destination / cleanup_name
+            cleanup_path.write_bytes(b"concurrent cleanup occupant\n")
+            identity = install.codex_agent_destination_identity(destination)
+            fake = FakeWindowsKernel32()
+            real_set_file_information = fake.SetFileInformationByHandle
+
+            def fail_cleanup_close_after_rename_attempt(
+                handle: int,
+                info_class: int,
+                rename_info_buffer: object,
+                buffer_size: int,
+            ) -> int:
+                result = real_set_file_information(handle, info_class, rename_info_buffer, buffer_size)
+                if info_class == install.WINDOWS_FILE_RENAME_INFO_CLASS:
+                    fake.fail_close_once_paths.add(target)
+                return result
+
+            fake.SetFileInformationByHandle = fail_cleanup_close_after_rename_attempt  # type: ignore[method-assign]
+
+            with (
+                patch.object(install.os, "name", "nt"),
+                patch.object(install.ctypes, "WinDLL", return_value=fake, create=True),
+                patch.object(install.ctypes, "get_last_error", side_effect=fake.get_last_error, create=True),
+                patch.object(install.secrets, "token_hex", return_value="cleanupid"),
+            ):
+                agent_dir = install.AnchoredAgentDir.open(destination, identity)
+                try:
+                    state = agent_dir.previous_state(target_name)
+                    assert state is not None
+                    result = agent_dir.cleanup_owned_entry(target_name, state)
+                finally:
+                    agent_dir.close()
+
+            self.assertEqual(cleanup_path.read_bytes(), b"concurrent cleanup occupant\n")
+            self.assertEqual(target.read_bytes(), b"windows installer-owned cleanup\n")
+            self.assertEqual(result.public_conflicts, [cleanup_path.as_posix(), target.as_posix()])
+            self.assertIn(
+                {"kind": "close_handle", "target": cleanup_path.as_posix(), "error": "OSError"},
+                result.cleanup_errors,
+            )
+            self.assertIn(
+                {"kind": "preserved_concurrent_file", "target": cleanup_path.as_posix(), "error": "cleanup_rename_failed"},
+                result.cleanup_errors,
             )
 
     def test_install_codex_agents_windows_recovery_copy_verifies_exclusive_handle_without_path_reopen(self) -> None:
