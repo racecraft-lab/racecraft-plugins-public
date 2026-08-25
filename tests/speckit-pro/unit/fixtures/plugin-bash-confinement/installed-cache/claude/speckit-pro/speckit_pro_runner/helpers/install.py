@@ -1020,8 +1020,13 @@ class AnchoredAgentDir:
                         if not final_result.preserved_private_paths:
                             final_result.preserved_private_paths.append(private_dir_path())
 
-    def move_target_to_backup(self, target_name: str) -> str:
+    def move_target_to_backup(
+        self,
+        target_name: str,
+        expected_state: CodexAgentFileState | None = None,
+    ) -> str:
         self._validate_name(target_name)
+        del expected_state
         moved_name: str | None = None
         for _ in range(32):
             candidate = f".{target_name}.{secrets.token_hex(12)}.bak"
@@ -1524,6 +1529,7 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
             )
             return result
         handle: int | None = None
+        had_rename_cleanup_errors = bool(rename_cleanup_errors)
         result = CodexAgentCleanupResult(cleanup_errors=rename_cleanup_errors)
 
         def close_cleanup_handle() -> None:
@@ -1570,20 +1576,44 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
                 codex_agent_windows_delete_by_handle(handle)
                 close_cleanup_handle()
                 if self.path(cleanup_name).exists():
-                    result.public_conflicts.append(self.evidence_path(cleanup_name))
+                    if had_rename_cleanup_errors:
+                        self.merge_cleanup_result(
+                            result,
+                            self.classify_entry_by_expected(
+                                cleanup_name,
+                                expected_state,
+                                "cleanup_rename_close_failure",
+                            ),
+                        )
+                    else:
+                        result.public_conflicts.append(self.evidence_path(cleanup_name))
+                if had_rename_cleanup_errors:
+                    self.merge_cleanup_result(
+                        result,
+                        self.classify_entry_by_expected(name, expected_state, "cleanup_rename_close_failure"),
+                    )
                 return result
             except OSError:
                 self.merge_cleanup_result(
                     result,
                     self.classify_entry_by_expected(cleanup_name, expected_state, "OSError"),
                 )
+                if had_rename_cleanup_errors:
+                    self.merge_cleanup_result(
+                        result,
+                        self.classify_entry_by_expected(name, expected_state, "cleanup_rename_close_failure"),
+                    )
                 return result
             finally:
                 close_cleanup_handle()
         result.public_conflicts.append(self.evidence_path(cleanup_name))
         return result
 
-    def move_target_to_backup(self, target_name: str) -> str:
+    def move_target_to_backup(
+        self,
+        target_name: str,
+        expected_state: CodexAgentFileState | None = None,
+    ) -> str:
         self._validate_name(target_name)
         moved_name: str | None = None
         for _ in range(32):
@@ -1594,6 +1624,36 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
                 break
             except FileExistsError:
                 continue
+            except OSError as exc:
+                result = CodexAgentCleanupResult()
+                close_target_name = candidate if self.path(candidate).exists() else target_name
+                if "CloseHandle" in str(exc):
+                    result.cleanup_errors.append(
+                        {
+                            "kind": "close_handle",
+                            "target": self.evidence_path(close_target_name),
+                            "error": type(exc).__name__,
+                        }
+                    )
+                if expected_state is not None:
+                    self.merge_cleanup_result(
+                        result,
+                        self.classify_entry_by_expected(candidate, expected_state, "backup_rename_close_failure"),
+                    )
+                    self.merge_cleanup_result(
+                        result,
+                        self.classify_entry_by_expected(target_name, expected_state, "backup_rename_close_failure"),
+                    )
+                else:
+                    self.merge_cleanup_result(result, self.preserve_uncertain_entry(candidate, "backup_rename_close_failure"))
+                    self.merge_cleanup_result(result, self.preserve_uncertain_entry(target_name, "backup_rename_close_failure"))
+                if result:
+                    raise CodexAgentNoClobberConflict(
+                        "backup rename failed after possible commit",
+                        result.preserved_paths,
+                        result.cleanup_errors,
+                    ) from exc
+                raise
         if moved_name is None:
             raise OSError("could not allocate a collision-free backup name")
         return moved_name
@@ -4219,7 +4279,10 @@ def write_codex_agent_atomic(
             if expected_state is CODEX_AGENT_STATE_UNSET:
                 expected_state = agent_dir.previous_state(target.name)
             if expected_state is not None:
-                backup_name = agent_dir.move_target_to_backup(target.name)
+                backup_name = agent_dir.move_target_to_backup(
+                    target.name,
+                    expected_state if isinstance(expected_state, CodexAgentFileState) else None,
+                )
                 moved_state = agent_dir.previous_state(backup_name)
                 if moved_state != expected_state:
                     try:
@@ -4408,7 +4471,7 @@ def remove_codex_agent_if_unchanged(
     with codex_agent_borrow_anchored_directory(destination, destination_identity) as agent_dir:
         if target.parent != destination or not agent_dir.target_is_safe(target.name):
             raise OSError("unsafe removal target")
-        backup_name = agent_dir.move_target_to_backup(target.name)
+        backup_name = agent_dir.move_target_to_backup(target.name, expected_state)
         moved_state: CodexAgentFileState | None = None
         try:
             moved_state = agent_dir.previous_state(backup_name)

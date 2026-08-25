@@ -289,3 +289,7 @@
 ### Post: Review Remediation — Final-State and Restore Evidence
 
 **Deviations/Edge cases/Surprises:** Exact-head review found that late `ENOTEMPTY` children and attacker-controlled names could still evade packaging, successful restore could retain a phantom pre-rename source, and ordinary or recovery-copy restore failures could mask the primary write/removal conflict. Seven deterministic cases established RED at 175/182 with two failures and five errors. The remediation treats every non-empty quarantine directory conservatively without enumerating child names, rebuilds restore evidence only from final state, and merges every secondary restore failure into structured NoClobber evidence. GREEN and REFACTOR passed 182/182; materialization remained 11/11 and the canonical materializer 17/17.
+
+### Post: Review Remediation — Windows Post-Rename Evidence
+
+**Deviations/Edge cases/Surprises:** The next exact-head review found that a Windows rename could commit before a source-handle close error, losing the attempted backup name, and that cleanup could omit a concurrently recreated source after the same post-rename failure. Three mocked Win32 cases established RED at 182/185 with two errors and one failure. The remediation carries the attempted destination and expected state through backup moves, raises structured NoClobber evidence after possible commit, and reclassifies both cleanup names after safe owned cleanup. GREEN and REFACTOR passed 185/185; materialization remained 11/11 and the canonical materializer 17/17.
