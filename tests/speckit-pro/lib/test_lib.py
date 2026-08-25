@@ -112,6 +112,54 @@ class CountingTestResultTests(unittest.TestCase):
         self.assertIn("allpass: 3/3 passed", stream.getvalue())
 
 
+class SpecsReadGuardTests(unittest.TestCase):
+    """The guard that keeps a shipped test from depending on a folder archive deletes."""
+
+    def test_the_guard_distinguishes_reading_a_specs_path_from_naming_one(self) -> None:
+        # One process installs one irremovable audit hook, so this exercises the
+        # hook already installed by this suite's own run_counted rather than
+        # installing a second one.
+        import os
+        import tempfile
+        from pathlib import Path
+
+        test_result.install_specs_read_guard()
+        repo_root = Path(__file__).resolve().parents[3]
+        live = repo_root / "specs"
+
+        # Naming one is data, and stays legal: the fixtures across this suite
+        # assert `specs/<feature>/...` strings because that is the shape a real
+        # run produces.
+        named = f"{live}/some-feature/spec.md"
+        self.assertTrue(named.endswith("spec.md"))
+        # So is asking whether it exists. Archive makes that answer False; it
+        # does not make it raise.
+        self.assertFalse(Path(named).exists())
+        self.assertTrue(str(Path(named).resolve()).endswith("spec.md"))
+
+        # Opening one is not.
+        probe = live / ".specs-read-guard-probe"
+        probe.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            with self.assertRaises(AssertionError) as caught:
+                open(os.fspath(probe), "w")
+            self.assertIn("a test read a live specs/ path", str(caught.exception))
+            self.assertIn("fixtures/", str(caught.exception))
+        finally:
+            if probe.exists():
+                probe.unlink()
+
+        # A path outside `specs/` is untouched.
+        with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False) as handle:
+            handle.write("ordinary\n")
+            outside = handle.name
+        try:
+            with open(outside, encoding="utf-8") as handle:
+                self.assertEqual(handle.read(), "ordinary\n")
+        finally:
+            os.unlink(outside)
+
+
 class CaptureBaselineParseTests(unittest.TestCase):
     def test_inventory_preserves_order_and_duplicate_names(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -313,6 +361,7 @@ def main() -> int:
     suite = unittest.TestSuite()
     loader = unittest.defaultTestLoader
     suite.addTests(loader.loadTestsFromTestCase(CountingTestResultTests))
+    suite.addTests(loader.loadTestsFromTestCase(SpecsReadGuardTests))
     suite.addTests(loader.loadTestsFromTestCase(CaptureBaselineParseTests))
     suite.addTests(loader.loadTestsFromTestCase(TreatmentFixtureHelpersTests))
     return test_result.run_counted(suite, label="test-lib")

@@ -1177,7 +1177,7 @@ The canonical closeout. Every row must reach Complete or an explicit
 | Post: PR Body Generation | ✅ Complete | `pr-packet-output` single mode, dry-run then apply; read-only validation `status=passed`, `pr_blocked=false`, `writes_state=false`; write-mode validation persisted. Exactly one non-empty `release-note` fence |
 | Post: PR Creation | ✅ Complete | **Refreshed draft #502 — no second pull request was opened.** `validate-pr-workflow-contract` passed on the title and changed-file scope before the update. CI `PR Checks` completed **success** against head `2b3de7ae8` |
 | Post: Review Remediation | ⏭️ Deferred | The pull request is a **draft** carrying 0 reviews and 0 comments, and the repository's review gates skip on draft. A five-minute polling loop would poll nothing. The remediation loop belongs after the operator flips the pull request to ready, which is their decision at this checkpoint |
-| Post: Retrospective | ✅ Complete | `specs/art-008-feedback-sweep-slice-2/.process/retrospective.md` |
+| Post: Retrospective | ✅ Complete | `docs/ai/specs/.process/ART-008-slice-2-retrospective.md` (relocated from `specs/art-008-feedback-sweep-slice-2/.process/retrospective.md` at archive) |
 
 ### Self-Review (four answers)
 

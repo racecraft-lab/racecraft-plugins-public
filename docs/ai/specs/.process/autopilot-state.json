@@ -3,10 +3,10 @@
   "spec_id": "ART-008",
   "feature_dir": "specs/art-008-feedback-sweep-slice-2",
   "branch": "art-008-feedback-sweep-slice-2",
-  "status": "completed",
+  "status": "completed_archived",
   "stage": "implement",
   "prior_run_note": "completed",
-  "updated_at": "2026-08-24T00:00:00Z",
+  "updated_at": "2026-08-25T00:00:00Z",
   "active_step": null,
   "reclaimed_from": {
     "workflow_file": "docs/ai/specs/.process/ART-008-workflow.md",
@@ -25,18 +25,24 @@
     }
   },
   "archive_sweep": {
-    "mode": "report_only",
+    "mode": "applied",
     "current_target": "specs/art-008-feedback-sweep-slice-2",
     "candidates": [
       {
         "dir": "specs/art-008-feedback-sweep",
         "merged_pr": 464,
         "merge_commit": "8db22a420",
-        "disposition": "operator_deferred_until_slice_2_merges"
+        "disposition": "archived_2026-08-25; slice 2 merged in PR #502, so the deferral condition is discharged"
+      },
+      {
+        "dir": "specs/art-008-feedback-sweep-slice-2",
+        "merged_pr": 502,
+        "merge_commit": "32043c45a",
+        "disposition": "archived_2026-08-25"
       }
     ],
-    "safeToApplyCleanup": false,
-    "cleanup_applied": false
+    "safeToApplyCleanup": true,
+    "cleanup_applied": true
   },
   "plan": [
     {
@@ -270,5 +276,35 @@
     "second_pr_opened": false,
     "draft": true,
     "ci": "PR Checks completed success against head 2b3de7ae8"
+  },
+  "archive": {
+    "archived_at": "2026-08-25T00:00:00Z",
+    "report": ".specify/memory/archive-reports/2026-08-25-art-008-post-merge-hygiene.md",
+    "removed_directories": [
+      "specs/art-008-feedback-sweep",
+      "specs/art-008-feedback-sweep-slice-2"
+    ],
+    "recovery_boundary": "32043c45a60e7c38d15f0958bc4874f0362ea505",
+    "relocated_evidence": {
+      "specs/art-008-feedback-sweep-slice-2/quickstart.md": "docs/ai/specs/.process/ART-008-slice-2-quickstart.md",
+      "specs/art-008-feedback-sweep/.process/retrospective.md": "docs/ai/specs/.process/ART-008-retrospective.md",
+      "specs/art-008-feedback-sweep-slice-2/.process/retrospective.md": "docs/ai/specs/.process/ART-008-slice-2-retrospective.md"
+    },
+    "identity_fields_note": "feature_dir, branch and workflow_file above are the historical identity of the run and are left unchanged; the directories they name no longer exist and are recoverable at recovery_boundary.",
+    "undischarged_acceptance": "Slice 2 quickstart scenarios 3, 4 and 5 were never executed and are carried to ART-009; see the roadmap entry and the archive report.",
+    "relocated_corpus": {
+      "destination": "tests/speckit-pro/unit/fixtures/feedback-sweep/corpus/",
+      "documents": [
+        "spec.md",
+        "plan.md",
+        "tasks.md",
+        "data-model.md",
+        "research.md",
+        "quickstart.md",
+        "contracts/sweep-pr-feedback.md",
+        "contracts/sweep-classifier-output.md"
+      ],
+      "reason": "tests/speckit-pro/unit/test-feedback-sweep-parse.py reads these eight documents as its deny-set corpus; a shipped test may not depend on a folder this procedure removes."
+    }
   }
 }

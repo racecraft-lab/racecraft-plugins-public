@@ -10506,7 +10506,12 @@ def build_suite() -> unittest.TestSuite:
 
 
 def main() -> int:
-    return run_counted(build_suite(), label="test-artifact-gallery")
+    # Sweeps whatever specs exist rather than depending on a named one, so
+    # it is archive-safe by construction: an absent feature folder
+    # contributes nothing. See install_specs_read_guard.
+    return run_counted(
+        build_suite(), label="test-artifact-gallery", allow_live_specs=True
+    )
 
 
 if __name__ == "__main__":

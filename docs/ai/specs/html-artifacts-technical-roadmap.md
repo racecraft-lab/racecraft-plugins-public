@@ -148,7 +148,7 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-005 | Gallery Completion: Knowledge, Reports & Editors | ✅ Complete / Archived | [.process/ART-005-workflow.md](.process/ART-005-workflow.md) | Shipped as seven stacked slices in PRs #444, #446, #447, #448, #452, #454 and #455; archived 2026-08-20. All seven templates and manifest rows live outside `specs/**`; 252 browser UAT rows closed at 177 pass, 75 evidence-backed N/A, and 0 fail. Evidence is preserved at [.process/ART-005-uat-results.md](.process/ART-005-uat-results.md) and [.process/ART-005-uat-results.json](.process/ART-005-uat-results.json) |
 | ART-006 | Autopilot Staging | ✅ Complete / Archived | [.process/ART-006-workflow.md](.process/ART-006-workflow.md) | PR #422; archived 2026-08-09; re-audited and re-grilled 2026-08-03. Declared budget 382 reviewable LOC, one slice. `gh` corroboration deferred to ART-007 (see Scope). **Prerequisite discharged** — PRs #416/#417 shipped in speckit-pro 2.22.0, so durable stage state now has a reliable store; ready for autopilot from Phase 1 |
 | ART-007 | Draft-PR Emission | ✅ Complete / Archived | [.process/ART-007-workflow.md](.process/ART-007-workflow.md) | PR #445; archived 2026-08-18. Scoping absorbed the ART-006 `gh` corroboration limb, resolved OQ-1 (the draft becomes the first slice PR), and recorded the corpus deferral to ART-009 (see both Scope amendments). Acceptance evidence preserved at `.process/ART-007-manual-uat.md` |
-| ART-008 | Feedback Sweep | 🔄 In Progress | [.process/ART-008-workflow.md](.process/ART-008-workflow.md) | Scaffolded 2026-08-20 as two stacked slices. **Slice 1 (the checkpoint) shipped in PR #464**, merged 2026-08-24 at `8db22a420`, 111/111 tasks and a 7983/7983 suite; a manual UAT over its `quickstart.md` ran the same day and is recorded in the workflow file. `specs/art-008-feedback-sweep/` stays in place until slice 2 merges — its quickstart carries the interfaces slice 2 inherits. **Slice 2 (artifact freshness) scaffolded 2026-08-24** on `art-008-feedback-sweep-slice-2` (cut from `main`, slice 1 already in): the slice-2 grill-me settled 7 forks and its blind-spot pass ran (3 findings, 0 set aside). Planning completed 2026-08-24 — 54 FRs, 81 tasks, G1–G6 pass, confidence 0.92 — and draft PR #502 is open. Next: `/speckit-pro:speckit-autopilot docs/ai/specs/.process/ART-008-slice-2-workflow.md --stage implement` |
+| ART-008 | Feedback Sweep | ✅ Complete / Archived | [.process/ART-008-workflow.md](.process/ART-008-workflow.md) | Shipped as two stacked slices; archived 2026-08-25. **Slice 1 (the checkpoint) in PR #464**, merged 2026-08-24 at `8db22a420`, 111/111 tasks and a 7983/7983 suite. **Slice 2 (artifact freshness) in PR #502**, merged 2026-08-25 at `32043c45a`, 81/81 tasks and a 14208/14208 suite. Both slices' shipped surfaces live outside `specs/**`. Acceptance evidence is preserved: slice 1's quickstart at `tests/speckit-pro/unit/fixtures/feedback-sweep/corpus/quickstart.md`, where it also serves as the deny-set corpus, and slice 2's at [.process/ART-008-slice-2-quickstart.md](.process/ART-008-slice-2-quickstart.md). **Slice 2's quickstart scenarios 3, 4 and 5 are undischarged** — they need an autopilot run reaching Phase 7 on a draft pull request and cannot execute against a working tree — and are carried to ART-009 |
 | ART-009 | UAT Walkthrough Replacement | ⏳ Ready | - | ART-006 dependency satisfied by PR #422. Also carries ART-008 slice 2's undischarged live UAT (quickstart scenarios 3, 4, 5), which needs a Phase 7 run on a draft PR and cannot execute against a working tree |
 | ART-010 | Final-PR Writeup, Companions & Ready Flip | ⏳ Ready | - | All three dependencies satisfied: ART-003 by PRs #435/#436/#439, ART-007 by PR #445, ART-012 by PR #426 |
 | ART-011 | Scaffold Integration | ✅ Complete / Archived | [.process/ART-011-workflow.md](.process/ART-011-workflow.md) | PR #434; archived 2026-08-13. The blind-spot pass and the planning hand-off live on both platforms outside `specs/**`. Shipped inverted from its design: scaffold cannot invoke the autopilot, which carries `disable-model-invocation: true`, so it prints the command instead — nine requirements amended, five superseded. Declared 162 reviewable LOC and estimated 322 at the final 31 FRs; shipped 1160 production changed lines across the two scaffold `SKILL.md` variants, a second data point for ART-015. Layer 2 trigger evaluation is still owed, and the 984-line result is what ART-019 slice D exists to repair |
@@ -647,10 +647,10 @@ returned `{"estimated_loc":452,"suggested_slices":2,"status":"warn"}`;
 production files alone (9) return 352 / ok / 1. ART-008 therefore ships as
 **two stacked slices**, each declared at its own Plan phase:
 
-| Slice | Branch | Scope | Projected |
-|---|---|---|---|
-| 1, the checkpoint | `art-008-feedback-sweep` (from `main`) | read both comment surfaces, trust filter, export recognition, classify, consensus-amend, Feedback Sweep Log and CRL rows, per-comment replies, stop-or-proceed, unreadable-PR stop | measured at Plan: **515-830, midpoint ~630**, 7 production files |
-| 2, artifact freshness | `art-008-feedback-sweep-slice-2` (from slice 1) | whole-set regeneration after amendments, stale-page detection on a clean sweep, draft-description refresh | re-measure at Plan |
+| Slice | Branch | Scope | Projected | Realized |
+|---|---|---|---|---|
+| 1, the checkpoint | `art-008-feedback-sweep` (from `main`) | read both comment surfaces, trust filter, export recognition, classify, consensus-amend, Feedback Sweep Log and CRL rows, per-comment replies, stop-or-proceed, unreadable-PR stop | measured at Plan: **515-830, midpoint ~630**, 7 production files | PR #464, merged 2026-08-24 at `8db22a420` |
+| 2, artifact freshness | `art-008-feedback-sweep-slice-2` (from `main`, slice 1 already in) | whole-set regeneration after amendments, stale-page detection on a clean sweep, draft-description refresh | measured at Plan: **~730 midpoint, 800 block** | PR #502, merged 2026-08-25 at `32043c45a`; **1250 realized**, the overrun in reference prose rather than executable surface, recorded as a diagnostic since no gate produced a block verdict |
 
 Primary surface: harness/adapter | Budget result: warning accepted for the
 whole spec; no exception pragma is claimed. Full rationale and Q&A:
@@ -667,8 +667,11 @@ which crosses the 800 block**; the midpoint of about 630 and the 7 production
 files leave it at **two warns**. The crossing is accepted and recorded rather
 than re-sliced, and no exception pragma is claimed, because the accepted
 exception classes are refactor, infra, and upgrade and this slice is net-new
-feature work. Slice 2 is still unmeasured. See `specs/art-008-feedback-sweep/`
-`spec.md` §Reviewability Budget for the rejected levers.
+feature work. Slice 2 measured **~730 midpoint against an 800 block** at its own Plan and
+realized **1250**, the overrun in reference prose rather than executable surface.
+The rejected levers are recorded in slice 1's `spec.md` §Reviewability Budget,
+which was archived on 2026-08-25 and now lives at
+`tests/speckit-pro/unit/fixtures/feedback-sweep/corpus/spec.md`.
 
 **Scope:**
 - Two vertical slices (amended 2026-08-20 at scaffold; originally one) —
@@ -719,6 +722,23 @@ refreshes, and proceeds (Q8); whole-set regeneration (Q9); export blocks are
 recognized by a lead-sentence registry in the helper, no template edits (Q10);
 the description refreshes through ART-007's create-or-refresh path (Q11);
 two stacked slices (Q12).
+
+**Archival closeout (2026-08-25).** Both slices merged and both active spec
+directories were removed. Every shipped surface — the two read-only helpers, the
+registry entries, both platforms' `phase-execution` references, and the Layer 4
+fixture corpora — lives outside `specs/**` and is unaffected. Acceptance evidence
+was relocated rather than deleted: `.process/ART-008-slice-2-quickstart.md`,
+`.process/ART-008-retrospective.md`, and
+`.process/ART-008-slice-2-retrospective.md`. Slice 1's eight planning documents
+moved to `tests/speckit-pro/unit/fixtures/feedback-sweep/corpus/` instead,
+because `tests/speckit-pro/unit/test-feedback-sweep-parse.py` reads them as its
+deny-set corpus — a shipped test may not depend on a folder this procedure
+removes, and that coupling is what made the removal fail first time. **The acceptance record is
+deliberately incomplete**: slice 2's quickstart scenarios 3, 4 and 5 were never
+executed, because each needs an autopilot run reaching Phase 7 on a draft pull
+request and the autopilot runs from the installed plugin cache. They are carried
+to ART-009 rather than claimed here. Full provenance and recovery commands:
+`.specify/memory/archive-reports/2026-08-25-art-008-post-merge-hygiene.md`.
 
 **Key Files:**
 - `speckit-pro/skills/speckit-autopilot/references/phase-execution.md` — implement-stage entry
@@ -783,7 +803,7 @@ Budget result: within budget
   scenario 4 needs the artifacts directory deliberately left behind a commit
   before a second run; scenario 5 needs an induced whole-set authoring failure
   and is the only one with real setup cost. The scenarios and their expected
-  results are in `specs/art-008-feedback-sweep-slice-2/quickstart.md`, and the
+  results are in `.process/ART-008-slice-2-quickstart.md`, and the
   slice's own limits section records why they were left open. Price this
   observation work into the reviewability budget re-derivation above.
 

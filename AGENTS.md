@@ -129,7 +129,13 @@ and need their own step when their inputs changed:
 - Do not hand-edit generated payloads, installed-cache proofs, generated
   reference pages, or vendored upstream content.
 - Name repository-authored scripts and tests for durable behavior or capability;
-  never couple their filenames to a temporary spec ID.
+  never couple their filenames to a temporary spec ID, and never have test code
+  read a `specs/<feature>/` path from disk at run time. Archive cleanup deletes
+  that folder once the feature merges, so such a read is green today and red at
+  archive time, in a cleanup branch that has nothing to do with it. Freeze any
+  spec prose a test needs under that test's own `fixtures/` tree. Asserting a
+  `specs/...` path as a string is fine; opening one is not, and
+  `tests/speckit-pro/lib/test_result.py` enforces the difference at run time.
 - Keep repository-owned tooling on Python 3.11+ standard library unless an
   existing local toolchain already owns the surface.
 - Do not add active repository Bash or `jq` dependencies outside existing

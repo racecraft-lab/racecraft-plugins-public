@@ -2453,3 +2453,31 @@ Post-merge cleanup preserves durable process evidence, removes only
 Codex routing roadmap index. No plugin-source, docs-reference, or payload refresh
 is required because the cleanup changes only project memory, roadmap/process
 records, and active-spec residue.
+
+## Revision 2026-08-25 - ART-008 Post-Merge Architecture
+
+### Where ART-008 Lives Now
+
+The sweep and the freshness join are two read-only runner helpers,
+`sweep-pr-feedback` and `check-artifact-freshness`, in
+`speckit-pro/speckit_pro_runner/helpers/read_only.py` with entries in
+`registry.py`. The orchestration contract that drives them lives in
+`speckit-pro/skills/speckit-autopilot/references/phase-execution.md` and its
+Codex mirror. The owning tests are
+`tests/speckit-pro/unit/test-feedback-sweep-parse.py` and
+`tests/speckit-pro/unit/test-artifact-freshness.py`, the latter over a 60-case
+fixture corpus.
+
+### Dependency and Cleanup Plan
+
+ART-009 is the next ART entry and now carries two things from ART-008: the
+undischarged live UAT (quickstart scenarios 3, 4 and 5), and its own pre-existing
+scope. Both are recorded in the ART-009 roadmap entry's Scope block.
+
+Post-merge cleanup removed `specs/art-008-feedback-sweep/` and
+`specs/art-008-feedback-sweep-slice-2/`, preserved durable evidence under
+`docs/ai/specs/.process/`, and relocated slice 1's eight planning documents into
+the test fixture tree because a shipped test read them. No plugin-source,
+docs-reference or payload refresh was required: the cleanup changed only project
+memory, roadmap and process records, active-spec residue, and the one test that
+reads the relocated corpus.

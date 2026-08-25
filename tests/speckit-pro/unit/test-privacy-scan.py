@@ -318,7 +318,10 @@ class PrivacyScanTests(unittest.TestCase):
 
 def main() -> int:
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(PrivacyScanTests)
-    return run_counted(suite, label="test-privacy-scan")
+    # Sweeps whatever specs exist rather than depending on a named one, so
+    # it is archive-safe by construction: an absent feature folder
+    # contributes nothing. See install_specs_read_guard.
+    return run_counted(suite, label="test-privacy-scan", allow_live_specs=True)
 
 
 if __name__ == "__main__":
