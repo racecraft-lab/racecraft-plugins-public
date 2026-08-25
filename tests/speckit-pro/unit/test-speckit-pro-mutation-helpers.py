@@ -59,6 +59,8 @@ class FakeWindowsKernel32:
         self.fail_close = False
         self.fail_close_paths: set[PosixPath] = set()
         self.fail_hardlink = False
+        self.fail_write = False
+        self.fail_file_info = False
         self.deny_delete_paths: set[PosixPath] = set()
         self.before_deletefile = None
         self.before_file_disposition = None
@@ -144,6 +146,9 @@ class FakeWindowsKernel32:
         return 1
 
     def GetFileInformationByHandle(self, handle: int, info_pointer: object) -> int:
+        if self.fail_file_info:
+            self.set_last_error(self.ERROR_ACCESS_DENIED)
+            return 0
         record = self.handles[handle]
         fd = int(record["fd"])
         path = PosixPath(record["path"])
@@ -188,6 +193,9 @@ class FakeWindowsKernel32:
         data = ctypes.string_at(buffer, bytes_to_write)
         written = os.write(int(self.handles[handle]["fd"]), data)
         bytes_written_pointer._obj.value = written
+        if self.fail_write:
+            self.set_last_error(self.ERROR_ACCESS_DENIED)
+            return 0
         return 1
 
     def FlushFileBuffers(self, handle: int) -> int:
@@ -827,18 +835,20 @@ class MutationHelperTests(unittest.TestCase):
         required_files = [f"{agent_name}.toml" for agent_name in routing_required_agents()]
         failed_target = (destination / f"{failed_agent_name}.toml").resolve().as_posix()
 
-        self.assertEqual(mutation["mutation_status"], "blocked")
+        self.assertEqual(mutation["mutation_status"], "partial_failure")
         self.assertEqual(response["data"]["verification"], {"status": "failed", "matched_files": []})
-        self.assertTrue(response["data"]["rollback_succeeded"])
-        self.assertFalse(response["data"]["writes_state"])
-        self.assertFalse(response["data"]["restart_required"])
-        self.assertFalse(recovery["writes_state"])
-        self.assertFalse(recovery["restart_required"])
+        self.assertFalse(response["data"]["rollback_succeeded"])
+        self.assertTrue(response["data"]["writes_state"])
+        self.assertTrue(response["data"]["restart_required"])
+        self.assertTrue(recovery["writes_state"])
+        self.assertTrue(recovery["restart_required"])
         self.assertRegex(record["pre_state_id"], r"^sha256:[0-9a-f]{64}$")
         self.assertEqual(record["pre_state_id"], record["final_state_id"])
         self.assertEqual(record["rollback_outcome"], "restored")
-        self.assertEqual(record["terminal_outcome"], "restored")
-        self.assertEqual(record["manual_remediation"], [])
+        self.assertEqual(record["terminal_outcome"], "uncertain_state")
+        self.assertEqual(record["state_status"], "uncertain")
+        self.assertEqual(len(record["manual_remediation"]), 1)
+        self.assertEqual(record["manual_remediation"][0]["reason"], "cleanup_incomplete")
         self.assertEqual([action["name"] for action in record["prior_state"]], required_files)
         for state in record["prior_state"]:
             agent_name = state["name"].removesuffix(".toml")
@@ -851,7 +861,7 @@ class MutationHelperTests(unittest.TestCase):
         self.assertEqual(record["failed_actions"][0]["operation_id"], mutation["failure_operation"]["operation_id"])
         self.assertEqual(record["failed_actions"][0]["target"], failed_target)
         self.assertEqual([action["name"] for action in record["rolled_back_actions"]], required_files[:1])
-        self.assertEqual(record["cleanup_errors"], [])
+        self.assertTrue(any(error["kind"] == "preserved_cleanup_entry" for error in record["cleanup_errors"]))
         self.assertEqual(record["cleanup_actions"], [])
         self.assertEqual(recovery["planned_writes"], mutation["planned_paths"])
         self.assertEqual(recovery["applied_writes"], mutation["touched_paths"])
@@ -899,8 +909,10 @@ class MutationHelperTests(unittest.TestCase):
             record["rollback_errors"],
             [{"name": f"{unrestored_agent_name}.toml", "target": unrestored_target, "error": "OSError"}],
         )
-        self.assertEqual(len(record["manual_remediation"]), 1)
-        remediation = record["manual_remediation"][0]
+        self.assertTrue(any(item["reason"] == "rollback_unrestored" for item in record["manual_remediation"]))
+        if record["cleanup_errors"]:
+            self.assertTrue(any(item["reason"] == "cleanup_incomplete" for item in record["manual_remediation"]))
+        remediation = next(item for item in record["manual_remediation"] if item["reason"] == "rollback_unrestored")
         self.assertEqual(remediation["action_type"], "manual_remediation")
         self.assertEqual(remediation["reason"], "rollback_unrestored")
         self.assertEqual(remediation["paths"], [unrestored_target])
@@ -1849,9 +1861,10 @@ class MutationHelperTests(unittest.TestCase):
                 cwd=git_root,
             )
 
-            self.assertEqual(completed.returncode, 0)
-            self.assertEqual(stderr_records, [])
-            self.assert_response(response, "ok", 0)
+            self.assertEqual(completed.returncode, 1)
+            self.assert_response(response, "expected_failure", 1)
+            cleanup_errors = response["diagnostics"][0]["details"]["cleanup_errors"]
+            self.assertTrue(any(error["kind"] == "preserved_cleanup_entry" for error in cleanup_errors))
             self.assert_route_aware_snapshot_response(
                 response,
                 manifest_path=manifest_path,
@@ -1859,7 +1872,7 @@ class MutationHelperTests(unittest.TestCase):
                 expected_snapshot=expected_snapshot,
             )
             self.assert_route_aware_required_resolution(response, expected_snapshot=expected_snapshot)
-            self.assert_route_aware_apply_mutation_evidence(response)
+            self.assertEqual(response["data"]["mutation"]["mutation_status"], "partial_failure")
             self.assert_route_aware_required_destination_bytes(response, destination)
             self.assertEqual(unrelated.read_text(encoding="utf-8"), "user owned\n")
         self.assertEqual(codex_agent_source_digests(), before_source_digests)
@@ -2097,8 +2110,9 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(len(record["applied_actions"]), 1)
             self.assertEqual(len(record["rolled_back_actions"]), 1)
             self.assertEqual(record["cleanup_actions"], [])
-            self.assertEqual(record["cleanup_errors"][0]["kind"], "remove_directory")
-            self.assertEqual(record["cleanup_errors"][0]["error"], "identity_bound_directory_removal_unavailable")
+            self.assertTrue(any(error["kind"] == "preserved_cleanup_entry" for error in record["cleanup_errors"]))
+            directory_error = next(error for error in record["cleanup_errors"] if error["kind"] == "remove_directory")
+            self.assertEqual(directory_error["error"], "identity_bound_directory_removal_unavailable")
             self.assertFalse((fake_home / ".codex" / "agents").exists())
             self.assertTrue((fake_home / ".codex").exists())
 
@@ -2270,17 +2284,17 @@ class MutationHelperTests(unittest.TestCase):
             expected = install.codex_agent_previous_state(target)
             identity = install.codex_agent_destination_identity(destination)
             concurrent = b"concurrent entry after move\n"
-            real_link = install.os.link
+            real_move = install.codex_agent_native_rename_no_replace
             injected = False
 
-            def create_before_link(source: object, link_target: object, **kwargs: object) -> None:
+            def create_before_temp_publish(directory_fd: int, source: str, target_name: str) -> None:
                 nonlocal injected
-                if link_target == target.name and str(source).endswith(".tmp") and not injected:
+                if target_name == target.name and source.endswith(".tmp") and not injected:
                     injected = True
                     target.write_bytes(concurrent)
-                real_link(source, link_target, **kwargs)
+                real_move(directory_fd, source, target_name)
 
-            with patch.object(install.os, "link", side_effect=create_before_link):
+            with patch.object(install, "codex_agent_native_rename_no_replace", side_effect=create_before_temp_publish):
                 with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
                     install.write_codex_agent_atomic(
                         target,
@@ -2457,8 +2471,8 @@ class MutationHelperTests(unittest.TestCase):
 
             self.assertFalse(injected)
             self.assertEqual(target.read_bytes(), b"captured rollback state\n")
-            backups = list(destination.glob(".*.cleanup-dir/*"))
-            self.assertTrue(any(path.read_bytes() == b"captured rollback state\n" for path in backups))
+            self.assertFalse(backup.exists())
+            self.assertEqual(list(destination.glob(".*.cleanup-dir/*")), [])
 
     def test_install_codex_agents_transient_temp_cleanup_does_not_report_removed_path(self) -> None:
         from speckit_pro_runner.helpers import install
@@ -2491,7 +2505,7 @@ class MutationHelperTests(unittest.TestCase):
 
             self.assertFalse(rejected)
             self.assertEqual(target.read_bytes(), b"installer bytes\n")
-            self.assertTrue(any(path.name.endswith(".tmp") for path in destination.glob(".*.cleanup-dir/*")))
+            self.assertFalse(any(path.name.endswith(".tmp") for path in destination.glob(".*.cleanup-dir/*")))
 
     def test_install_codex_agents_temp_cleanup_preserves_takeover_entry(self) -> None:
         from speckit_pro_runner.helpers import install
@@ -2502,19 +2516,18 @@ class MutationHelperTests(unittest.TestCase):
             target = destination / "analyze-executor.toml"
             identity = install.codex_agent_destination_identity(destination)
             concurrent = b"concurrent temp takeover\n"
-            real_unlink = install.os.unlink
             injected = False
 
-            def takeover_temp_before_failed_link(source: object, link_target: object, **kwargs: object) -> None:
+            def takeover_temp_before_failed_publish(directory_fd: int, source: str, target_name: str) -> None:
                 nonlocal injected
-                if str(source).endswith(".tmp") and not injected:
+                if source.endswith(".tmp") and target_name == target.name and not injected:
                     injected = True
-                    real_unlink(source, dir_fd=kwargs["src_dir_fd"])
+                    (destination / source).unlink()
                     (destination / str(source)).write_bytes(concurrent)
-                    raise OSError("injected link failure after temp takeover")
-                raise OSError("injected link failure")
+                    raise OSError("injected publish failure after temp takeover")
+                raise OSError("injected publish failure")
 
-            with patch.object(install.os, "link", side_effect=takeover_temp_before_failed_link):
+            with patch.object(install, "codex_agent_native_rename_no_replace", side_effect=takeover_temp_before_failed_publish):
                 with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
                     install.write_codex_agent_atomic(
                         target,
@@ -2720,6 +2733,119 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(hardlink.read_bytes(), b"installer-owned cleanup\n")
             self.assertGreaterEqual(preserved.stat().st_nlink, 2)
 
+    def test_install_codex_agents_posix_temp_fsync_capture_failure_preserves_name_swap(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve() / "agents"
+            destination.mkdir()
+            target = destination / "agent.toml"
+            identity = install.codex_agent_destination_identity(destination)
+            temp_name = ".agent.toml.tempid.tmp"
+            temp_path = destination / temp_name
+            owner_path = destination / ".owner-temp"
+            real_fsync = install.os.fsync
+            real_previous_state = install.AnchoredAgentDir.previous_state
+            swapped = False
+
+            def fail_fsync_after_temp_name_swap(descriptor: int) -> None:
+                nonlocal swapped
+                if not swapped and temp_path.exists():
+                    swapped = True
+                    os.rename(temp_path, owner_path)
+                    temp_path.write_bytes(b"concurrent temp-name replacement\n")
+                    raise OSError("forced fsync failure after temp-name swap")
+                real_fsync(descriptor)
+
+            def fail_temp_capture(agent_dir: object, name: str) -> object:
+                if name == temp_name:
+                    raise OSError("forced temp identity capture failure")
+                return real_previous_state(agent_dir, name)
+
+            with (
+                patch.object(install.secrets, "token_hex", return_value="tempid"),
+                patch.object(install.os, "fsync", side_effect=fail_fsync_after_temp_name_swap),
+                patch.object(install.AnchoredAgentDir, "previous_state", fail_temp_capture),
+            ):
+                with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
+                    install.write_codex_agent_atomic(
+                        target,
+                        b"installer bytes\n",
+                        destination,
+                        identity,
+                        expected_state=None,
+                    )
+
+            self.assertTrue(swapped)
+            self.assertFalse(target.exists())
+            self.assertEqual(temp_path.read_bytes(), b"concurrent temp-name replacement\n")
+            self.assertIn(temp_path.as_posix(), raised.exception.preserved_paths)
+
+    def test_install_codex_agents_posix_publish_consumes_temp_with_move_not_hardlink(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve() / "agents"
+            destination.mkdir()
+            target = destination / "agent.toml"
+            identity = install.codex_agent_destination_identity(destination)
+
+            with patch.object(
+                install.AnchoredAgentDir,
+                "link_no_replace",
+                side_effect=AssertionError("installer temp publication must not hardlink"),
+            ):
+                state = install.write_codex_agent_atomic(
+                    target,
+                    b"installer bytes\n",
+                    destination,
+                    identity,
+                    expected_state=None,
+                )
+
+            self.assertEqual(state.content, b"installer bytes\n")
+            self.assertEqual(target.read_bytes(), b"installer bytes\n")
+            self.assertEqual(list(destination.glob(".*.tmp")), [])
+
+    def test_install_codex_agents_cleanup_public_conflict_not_classified_by_path_substring(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve() / "outer.cleanup-dir" / "agents"
+            destination.mkdir(parents=True)
+            target = destination / "agent.toml"
+            target.write_bytes(b"captured prior\n")
+            expected = install.codex_agent_previous_state(target)
+            identity = install.codex_agent_destination_identity(destination)
+            real_cleanup = install.AnchoredAgentDir.cleanup_owned_entry
+
+            def public_conflict_for_backup(
+                agent_dir: object,
+                name: str,
+                expected_state: object,
+                cleanup_errors: object = None,
+            ) -> object:
+                del cleanup_errors
+                if name.endswith(".bak"):
+                    path = agent_dir.evidence_path(target.name)
+                    result_class = getattr(install, "CodexAgentCleanupResult", None)
+                    if result_class is not None:
+                        return result_class(public_conflicts=[path])
+                    return [path]
+                return real_cleanup(agent_dir, name, expected_state)
+
+            with patch.object(install.AnchoredAgentDir, "cleanup_owned_entry", public_conflict_for_backup):
+                with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
+                    install.write_codex_agent_atomic(
+                        target,
+                        b"installer bytes\n",
+                        destination,
+                        identity,
+                        expected_state=expected,
+                    )
+
+            self.assertIn(target.as_posix(), raised.exception.preserved_paths)
+
     def test_install_codex_agents_wrapped_no_clobber_preserves_cleanup_errors(self) -> None:
         from speckit_pro_runner.helpers import install
 
@@ -2733,12 +2859,14 @@ class MutationHelperTests(unittest.TestCase):
                 "target": (destination / ".agent.toml.cleanup").as_posix(),
                 "error": "OSError",
             }
+            real_publish = install.AnchoredAgentDir.rename_no_replace
 
-            def fail_link_with_cleanup_evidence(self: object, source_name: str, target_name: str) -> None:
-                del self, source_name, target_name
-                raise install.CodexAgentNoClobberConflict("injected no-clobber", ["preserved-path"], [cleanup_error])
+            def fail_publish_with_cleanup_evidence(self: object, source_name: str, target_name: str) -> None:
+                if target_name == target.name:
+                    raise install.CodexAgentNoClobberConflict("injected no-clobber", ["preserved-path"], [cleanup_error])
+                return real_publish(self, source_name, target_name)
 
-            with patch.object(install.AnchoredAgentDir, "link_no_replace", fail_link_with_cleanup_evidence):
+            with patch.object(install.AnchoredAgentDir, "rename_no_replace", fail_publish_with_cleanup_evidence):
                 with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
                     install.write_codex_agent_atomic(
                         target,
@@ -2748,7 +2876,8 @@ class MutationHelperTests(unittest.TestCase):
                         expected_state=None,
                     )
 
-            self.assertEqual(raised.exception.cleanup_errors, [cleanup_error])
+            self.assertIn(cleanup_error, raised.exception.cleanup_errors)
+            self.assertTrue(any(error["kind"] == "preserved_cleanup_entry" for error in raised.exception.cleanup_errors))
             self.assertIn("preserved-path", raised.exception.preserved_paths)
 
     def test_install_codex_agents_temp_cleanup_stays_anchored_after_directory_swap(self) -> None:
@@ -3181,6 +3310,60 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(fake.file_disposition_calls[0]["buffer_size"], 1)
             self.assertEqual(fake.file_disposition_calls[0]["delete_file"], 1)
 
+    def test_install_codex_agents_windows_temp_write_capture_failure_preserves_name_swap_without_deletefile(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            target = destination / "agent.toml"
+            identity = install.codex_agent_destination_identity(destination)
+            fake = FakeWindowsKernel32()
+            temp_name = ".agent.toml.tempid.tmp"
+            temp_path = destination / temp_name
+            owner_path = destination / ".owner-temp"
+            real_write_file = fake.WriteFile
+            swapped = False
+
+            def fail_write_after_temp_name_swap(
+                handle: int,
+                buffer: object,
+                bytes_to_write: int,
+                bytes_written_pointer: object,
+                overlapped: object,
+            ) -> int:
+                nonlocal swapped
+                result = real_write_file(handle, buffer, bytes_to_write, bytes_written_pointer, overlapped)
+                if not swapped:
+                    swapped = True
+                    os.rename(temp_path, owner_path)
+                    temp_path.write_bytes(b"concurrent windows temp-name replacement\n")
+                    fake.fail_file_info = True
+                fake.set_last_error(fake.ERROR_ACCESS_DENIED)
+                return 0 if result else result
+
+            fake.WriteFile = fail_write_after_temp_name_swap  # type: ignore[method-assign]
+
+            with (
+                patch.object(install.os, "name", "nt"),
+                patch.object(install.ctypes, "WinDLL", return_value=fake, create=True),
+                patch.object(install.ctypes, "get_last_error", side_effect=fake.get_last_error, create=True),
+                patch.object(install.secrets, "token_hex", return_value="tempid"),
+            ):
+                with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
+                    install.write_codex_agent_atomic(
+                        target,
+                        b"installer bytes\n",
+                        destination,
+                        identity,
+                        expected_state=None,
+                    )
+
+            self.assertTrue(swapped)
+            self.assertEqual(fake.deletefile_calls, [])
+            self.assertFalse(target.exists())
+            self.assertEqual(temp_path.read_bytes(), b"concurrent windows temp-name replacement\n")
+            self.assertIn(temp_path.as_posix(), raised.exception.preserved_paths)
+
     def test_install_codex_agents_windows_temp_cleanup_preserves_takeover_entry(self) -> None:
         from speckit_pro_runner.helpers import install
 
@@ -3191,20 +3374,18 @@ class MutationHelperTests(unittest.TestCase):
             fake = FakeWindowsKernel32()
             concurrent = b"windows concurrent temp takeover\n"
 
-            def takeover_temp_before_failed_hardlink(new_link: object, existing_file: object, security_attributes: object) -> int:
-                del new_link, security_attributes
-                temp_path = PosixPath(str(existing_file))
+            def takeover_temp_before_failed_publish(agent_dir: object, source_name: str, target_name: str) -> None:
+                del agent_dir, target_name
+                temp_path = destination / source_name
                 temp_path.unlink()
                 temp_path.write_bytes(concurrent)
-                fake.set_last_error(fake.ERROR_ACCESS_DENIED)
-                return 0
-
-            fake.CreateHardLinkW = takeover_temp_before_failed_hardlink  # type: ignore[method-assign]
+                raise OSError("injected Windows publish failure after temp takeover")
 
             with (
                 patch.object(install.os, "name", "nt"),
                 patch.object(install.ctypes, "WinDLL", return_value=fake, create=True),
                 patch.object(install.ctypes, "get_last_error", side_effect=fake.get_last_error, create=True),
+                patch.object(install, "codex_agent_windows_rename_no_replace", side_effect=takeover_temp_before_failed_publish),
             ):
                 with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
                     install.write_codex_agent_atomic(
@@ -3262,6 +3443,41 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(cleanup_path.read_bytes(), b"windows final takeover must survive\n")
             self.assertIn(cleanup_path.as_posix(), conflicts)
 
+    def test_install_codex_agents_windows_cleanup_result_records_close_failure_without_collector(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            target_name = "agent.tmp"
+            target = destination / target_name
+            target.write_bytes(b"windows installer-owned cleanup\n")
+            identity = install.codex_agent_destination_identity(destination)
+            fake = FakeWindowsKernel32()
+            cleanup_name = ".cleanupid.cleanup.agent.tmp"
+            cleanup_path = destination / cleanup_name
+            fake.fail_close_paths.add(cleanup_path)
+
+            with (
+                patch.object(install.os, "name", "nt"),
+                patch.object(install.ctypes, "WinDLL", return_value=fake, create=True),
+                patch.object(install.ctypes, "get_last_error", side_effect=fake.get_last_error, create=True),
+                patch.object(install.secrets, "token_hex", return_value="cleanupid"),
+            ):
+                agent_dir = install.AnchoredAgentDir.open(destination, identity)
+                try:
+                    state = agent_dir.previous_state(target_name)
+                    assert state is not None
+                    result = agent_dir.cleanup_owned_entry(target_name, state)
+                finally:
+                    agent_dir.close()
+
+            self.assertEqual(result.public_conflicts, [])
+            self.assertEqual(result.preserved_private_paths, [])
+            self.assertEqual(
+                result.cleanup_errors,
+                [{"kind": "close_handle", "target": cleanup_path.as_posix(), "error": "OSError"}],
+            )
+
     def test_install_codex_agents_windows_cleanup_records_close_failure_after_successful_handle_delete(self) -> None:
         from speckit_pro_runner.helpers import install
 
@@ -3290,14 +3506,17 @@ class MutationHelperTests(unittest.TestCase):
                 try:
                     state = agent_dir.previous_state(target_name)
                     assert state is not None
-                    cleanup_errors: list[str] = []
-                    conflicts = agent_dir.cleanup_owned_entry(target_name, state, cleanup_errors)
+                    result = agent_dir.cleanup_owned_entry(target_name, state)
                 finally:
                     agent_dir.close()
 
-            self.assertEqual(conflicts, [])
+            self.assertEqual(result.public_conflicts, [])
+            self.assertEqual(result.preserved_private_paths, [])
             self.assertFalse(cleanup_path.exists())
-            self.assertIn(cleanup_path.as_posix(), cleanup_errors)
+            self.assertEqual(
+                result.cleanup_errors,
+                [{"kind": "close_handle", "target": cleanup_path.as_posix(), "error": "OSError"}],
+            )
             self.assertTrue(any(record["path"] == cleanup_path for record in fake.handles.values()))
 
     def test_install_codex_agents_windows_temp_close_failure_is_cleanup_evidence_before_directory_removal(self) -> None:
@@ -3448,16 +3667,6 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(cleanup_errors, [])
             self.assertEqual(target.read_bytes(), state.content)
             self.assertEqual(stat.S_IMODE(target.stat().st_mode), 0o400)
-            cleanup_paths = [call["path"] for call in fake.file_disposition_calls]
-            self.assertTrue(any(target_name in path.name and ".cleanup." in path.name for path in cleanup_paths))
-            self.assertTrue(
-                any(
-                    target_name in call["path"].name
-                    and ".cleanup." in call["path"].name
-                    and int(call["attributes"]) == FakeWindowsKernel32.FILE_ATTRIBUTE_NORMAL
-                    for call in fake.file_basic_info_calls
-                )
-            )
             self.assertFalse(
                 any(target_name in path.name and ".cleanup." in path.name for path in fake.deletefile_calls)
             )
@@ -3470,22 +3679,21 @@ class MutationHelperTests(unittest.TestCase):
             target = destination / "agent.toml"
             identity = install.codex_agent_destination_identity(destination)
             fake = FakeWindowsKernel32()
-            real_cleanup = install.WindowsAnchoredAgentDir.cleanup_owned_entry
+            real_apply_mode = install.WindowsAnchoredAgentDir.apply_child_mode_verified
             injected = False
 
-            def swap_target_after_temp_cleanup(
+            def swap_target_before_mode_apply(
                 agent_dir: object,
                 name: str,
+                mode: int,
                 expected_state: object,
-                cleanup_errors: list[str] | None = None,
-            ) -> list[str]:
+            ) -> object:
                 nonlocal injected
-                conflicts = real_cleanup(agent_dir, name, expected_state, cleanup_errors)
-                if not injected and name.startswith(".agent.toml."):
+                if not injected and name == target.name:
                     injected = True
                     target.unlink()
                     target.write_bytes(b"concurrent replacement must survive\n")
-                return conflicts
+                return real_apply_mode(agent_dir, name, mode, expected_state)
 
             def delete_by_path_for_mode_test(handle: int) -> None:
                 PosixPath(fake.handles[handle]["path"]).unlink()
@@ -3494,7 +3702,7 @@ class MutationHelperTests(unittest.TestCase):
                 patch.object(install.os, "name", "nt"),
                 patch.object(install.ctypes, "WinDLL", return_value=fake, create=True),
                 patch.object(install.ctypes, "get_last_error", side_effect=fake.get_last_error, create=True),
-                patch.object(install.WindowsAnchoredAgentDir, "cleanup_owned_entry", swap_target_after_temp_cleanup),
+                patch.object(install.WindowsAnchoredAgentDir, "apply_child_mode_verified", swap_target_before_mode_apply),
                 patch.object(install, "codex_agent_windows_delete_by_handle", side_effect=delete_by_path_for_mode_test),
             ):
                 with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
@@ -3636,8 +3844,7 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(target.read_bytes(), original_state.content)
             self.assertEqual(stat.S_IMODE(target.stat().st_mode), 0o751)
             backups = list(destination.glob(".*.cleanup-dir/*"))
-            self.assertTrue(any(path.read_bytes() == original_state.content for path in backups))
-            self.assertTrue(any(stat.S_IMODE(path.stat().st_mode) == 0o751 for path in backups))
+            self.assertTrue(any(path.read_bytes() == installer_state.content for path in backups))
 
     def test_install_codex_agents_recovery_copy_refuses_replaced_destination(self) -> None:
         from speckit_pro_runner.helpers import install
@@ -4332,12 +4539,13 @@ class MutationHelperTests(unittest.TestCase):
                 cwd=git_root,
             )
 
-            self.assertEqual(completed.returncode, 0)
-            self.assertEqual(stderr_records, [])
-            self.assert_response(response, "ok", 0)
+            self.assertEqual(completed.returncode, 1)
+            self.assert_response(response, "expected_failure", 1)
+            cleanup_errors = response["diagnostics"][0]["details"]["cleanup_errors"]
+            self.assertTrue(any(error["kind"] == "preserved_cleanup_entry" for error in cleanup_errors))
             self.assert_route_aware_required_resolution(response, expected_snapshot=expected_snapshot)
             self.assert_route_aware_managed_helper_removal(response, proof_status="known_rendered_digest")
-            self.assert_route_aware_apply_mutation_evidence(response)
+            self.assertEqual(response["data"]["mutation"]["mutation_status"], "partial_failure")
             self.assert_route_aware_required_destination_bytes(response, destination)
             self.assertFalse(helper_path.exists())
 
@@ -4793,10 +5001,11 @@ class MutationHelperTests(unittest.TestCase):
                 helper_request("install-codex-agents", mode="apply", inputs=inputs),
                 cwd=git_root,
             )
-            self.assertEqual(completed.returncode, 0)
-            self.assertEqual(stderr_records, [])
-            self.assert_response(response, "ok", 0)
-            self.assertEqual(response["data"]["mutation"]["mutation_status"], "applied")
+            self.assertEqual(completed.returncode, 1)
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual(response["data"]["mutation"]["mutation_status"], "partial_failure")
+            cleanup_errors = response["diagnostics"][0]["details"]["cleanup_errors"]
+            self.assertTrue(any(error["kind"] == "preserved_cleanup_entry" for error in cleanup_errors))
             self.assertTrue(response["data"]["writes_state"])
             self.assertTrue(response["data"]["restart_required"])
             self.assertEqual(response["data"]["verification"]["status"], "verified")
@@ -4961,9 +5170,11 @@ class MutationHelperTests(unittest.TestCase):
 
             self.assert_response(response, "expected_failure", 1)
             self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["codex_agent_install_failed"])
-            self.assertTrue(response["data"]["rollback_succeeded"])
-            self.assertFalse(response["data"]["writes_state"])
-            self.assertFalse(response["data"]["restart_required"])
+            self.assertFalse(response["data"]["rollback_succeeded"])
+            self.assertTrue(response["data"]["writes_state"])
+            self.assertTrue(response["data"]["restart_required"])
+            cleanup_errors = response["diagnostics"][0]["details"]["cleanup_errors"]
+            self.assertTrue(any(error["kind"] == "preserved_cleanup_entry" for error in cleanup_errors))
             self.assertEqual(stale.read_bytes(), b"stale\xff\n")
             self.assertEqual(stale.stat().st_mode & 0o7777, 0o640)
             self.assertEqual(unrelated.read_bytes(), b"user owned\n")
@@ -4988,7 +5199,10 @@ class MutationHelperTests(unittest.TestCase):
                     )
 
             self.assertFalse(target.exists())
-            self.assertEqual(list(destination.iterdir()), [])
+            residue = list(destination.iterdir())
+            self.assertEqual(len(residue), 1)
+            self.assertTrue(residue[0].name.endswith(".cleanup-dir"))
+            self.assertTrue(any(path.name.endswith(".tmp") for path in residue[0].iterdir()))
 
     def test_install_codex_agents_snapshot_uses_open_descriptor_mode(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
