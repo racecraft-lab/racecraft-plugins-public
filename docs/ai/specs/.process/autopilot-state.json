@@ -1,661 +1,46 @@
 {
-  "workflow_file": "docs/ai/specs/.process/ART-008-workflow.md",
+  "workflow_file": "docs/ai/specs/.process/ART-008-slice-2-workflow.md",
   "spec_id": "ART-008",
-  "feature_dir": "specs/art-008-feedback-sweep",
-  "branch": "art-008-feedback-sweep",
+  "feature_dir": "specs/art-008-feedback-sweep-slice-2",
+  "branch": "art-008-feedback-sweep-slice-2",
   "status": "completed",
   "stage": "implement",
-  "prior_run_note": "completed_archived",
-  "updated_at": "2026-08-23T00:00:00Z",
+  "prior_run_note": "completed",
+  "updated_at": "2026-08-24T00:00:00Z",
   "active_step": null,
   "reclaimed_from": {
-    "workflow_file": "docs/ai/specs/.process/ART-005-workflow.md",
-    "spec_id": "ART-005",
-    "status": "completed_archived",
-    "note": "One state slot, many specs. Reclaiming is normal operation, not an error."
+    "workflow_file": "docs/ai/specs/.process/ART-008-workflow.md",
+    "spec_id": "ART-008",
+    "status": "completed",
+    "note": "Slice 1 run; one state slot, many specs. Reclaiming is normal operation, not an error."
   },
   "stage_resolution": {
+    "stage": "implement",
     "source": "argv",
     "basis": "explicit --stage implement",
-    "recorded_stage": "plan",
-    "planning_complete": false,
-    "confidence_gate_status": "⏳ Pending",
-    "from_phase": null,
     "corroboration": {
       "status": "match",
-      "recorded": {
-        "number": 464,
-        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/464"
-      },
-      "observed": {
-        "number": 464,
-        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/464"
-      },
-      "merged": null,
-      "reason": null,
-      "note": "Draft PR row present; one gh observation taken and passed to the helper as inputs.pr_observation."
+      "recorded": 502,
+      "observed": 502
     }
-  },
-  "settings": {
-    "consensus_mode": "moderate",
-    "gate_failure": "stop",
-    "auto_commit": "per-phase",
-    "confidence_gate_mode": "advisory",
-    "source": "no .claude/speckit-pro.local.md; runner defaults"
-  },
-  "prerequisites": {
-    "all_pass": true,
-    "python": "3.11.0",
-    "speckit_cli": "specify 0.14.2 on PATH; check-prerequisites reported specify 0.11.8",
-    "is_worktree": true,
-    "workflow_branch_match": true,
-    "runner_on_feature_branch_heuristic": false,
-    "feature_json_pin": "specs/art-008-feedback-sweep (gitignored; written at Step 0)",
-    "branch_creation_prefix": "Specify subagent is told not to create a feature branch: the vendored ^[0-9]{3}- regex does not match art-008-feedback-sweep, but the branch already exists and is checked out here.",
-    "codex_agents": "no_op",
-    "project_implementation_agent": "speckit-pro:phase-executor"
-  },
-  "project_commands": {
-    "BUILD": "N/A",
-    "TYPECHECK": "N/A",
-    "LINT": "N/A",
-    "LINT_FIX": "N/A",
-    "UNIT_TEST": "python3 tests/speckit-pro/run-all.py",
-    "INTEGRATION_TEST": "N/A",
-    "SINGLE_FILE_TEST": "N/A",
-    "SINGLE_FILE_INTEGRATION": "N/A",
-    "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py"
-  },
-  "preset_conventions": {
-    "name": "speckit-pro-reviewability",
-    "version": "1.0.0",
-    "spec_template": ".specify/presets/speckit-pro-reviewability/templates/spec-template.md",
-    "plan_template": ".specify/presets/speckit-pro-reviewability/templates/plan-template.md",
-    "tasks_template": ".specify/presets/speckit-pro-reviewability/templates/tasks-template.md"
-  },
-  "extensions": {
-    "archive": true,
-    "git": true,
-    "verify": true,
-    "verify_tasks": true,
-    "retrospective": true,
-    "speckit_utils": true
-  },
-  "capability_coverage": {
-    "codebase_context": "local repository reads plus gitnexus graph queries",
-    "spec_context": "local workflow, design concept, constitution, roadmap, and prior-spec evidence",
-    "library_documentation": "context7 query-docs",
-    "web_domain_research": "tavily search/research",
-    "source_extraction": "tavily extract and git retrieval paths"
   },
   "archive_sweep": {
-    "status": "completed",
-    "cleanup_mode": "dry_run",
-    "archive_extension_installed": true,
-    "invocation_available": true,
-    "current_target_excluded": "specs/art-008-feedback-sweep",
-    "eligible_previous_specs": [],
-    "safe_to_apply_cleanup": false,
-    "cleanup_applied": false,
-    "note": "Only specs/brand-001-racecraft-identity-system remains beside the current target; it is status pending with no spec.md or plan.md and no merged feature pull request, so it is not archive-eligible. Nothing was written."
-  },
-  "reviewability_setup": {
-    "runner_status": "warn",
-    "runner_mode": "setup",
-    "runner_pass": true,
-    "warning": "primary surfaces 3 exceeds warn threshold 1 (whole-roadmap scan; the reported figures are the roadmap's last entry, ART-020)",
-    "blockers": [],
-    "scaffold_estimate_reviewable_loc": 452,
-    "scaffold_suggested_slices": 2,
-    "scaffold_verdict": "warn",
-    "operator_decision": "two vertical slices along a Path seam; this workflow is slice 1 (the checkpoint)",
-    "recorded_at": "scaffold, 2026-08-20",
-    "reverified_at_phase_0": {
-      "status": "warn",
-      "pass": true,
-      "reviewable_loc": 40,
-      "production_files": 3,
-      "total_files": 5,
-      "primary_surface_count": 3,
-      "warnings": [
-        "primary surfaces 3 exceeds warn threshold 1"
-      ],
-      "blockers": [],
-      "note": "Setup mode scans the whole roadmap: the reported figures belong to the roadmap's last entry, not to ART-008. Empty blockers is the only stop condition and it is empty."
-    }
-  },
-  "gates": {
-    "G0": {
-      "gate": "0",
-      "pass": true,
-      "unit_test": "7659/7659 passed, zero failures",
-      "typecheck": "N/A (no typecheck entry point)",
-      "build": "N/A (no build entry point)",
-      "lint": "N/A (no lint entry point)",
-      "constitution": "principles I-VI verified; Constitution Check set to Verified",
-      "reviewability_setup": "warn, pass=true, blockers=[]",
-      "architecture_patterns": "AGENTS.md working rules, repository orientation, and editing boundaries read and recorded"
-    },
-    "G1": {
-      "gate": "1",
-      "pass": true,
-      "route": "clarify",
-      "direct_marker_count": 3,
-      "counting_method": "loose grep -c 'NEEDS CLARIFICATION' on spec.md",
-      "markers": [
-        "FR-010 classification granularity",
-        "FR-012 commit granularity",
-        "FR-014 CRL type value"
-      ],
-      "gap_markers": 0,
-      "human_review_markers": 0,
-      "note": "Routing decision, not pass/fail. All three Clarify sessions run regardless of the count: they carry the seven deferred Open Questions and the hidden-coupling search the expired blind-spot pass left owed."
-    },
-    "G2_partial": {
-      "note": "Not the G2 gate itself, which runs after session 3. Session 1 verification only.",
-      "markers_after_session_1": 0,
-      "human_review_markers": 0,
-      "clarifications_section_present": true
-    },
-    "G2": {
-      "gate": "2",
-      "pass": true,
-      "markers": 0,
-      "human_review_markers": 0,
-      "clarifications_section": true,
-      "clarify_sessions_completed": 3,
-      "consensus": "7 items, all resolved in Round 1",
-      "counting_method": "loose grep for both the bare and colon marker forms"
-    },
-    "G3": {
-      "gate": "3",
-      "pass": true,
-      "plan_md": true,
-      "research_md": true,
-      "data_model_md": true,
-      "fail_markers": 0,
-      "todo_markers": 0,
-      "clarification_markers": 0,
-      "path_leaks": 0
-    },
-    "G4": {
-      "gate": "4",
-      "pass": true,
-      "gap_markers": 0,
-      "domains": [
-        "security",
-        "error-handling",
-        "state-management"
-      ],
-      "suite": "7659/7659",
-      "counting_method": "own grep; the runner counter reported 4 vs 8, 21 vs 30, and 0 vs 16"
-    },
-    "G5": {
-      "gate": "5",
-      "pass": true,
-      "fr_coverage": "48/48",
-      "sc_coverage": "13/13",
-      "tasks": 80,
-      "sequential": true,
-      "duplicates": 0,
-      "method": "orchestrator cross-reference with a trailing-boundary regex",
-      "orchestrator_repair": "added T080 for SC-003, the only uncovered criterion"
-    },
-    "G6": {
-      "gate": "6",
-      "pass": true,
-      "critical_findings": 0,
-      "gap_markers": 0,
-      "clarification_markers": 0,
-      "path_leaks": 0,
-      "suite": "7659/7659",
-      "consensus_items": 0
-    },
-    "G6.5": {
-      "gate": "6.5",
-      "pass": false,
-      "mode": "advisory",
-      "composite": 0.8,
-      "threshold": 0.9,
-      "recommended_action": "continue_with_warning",
-      "note": "advisory, so it warns rather than blocks; deliberately recorded as not a pass"
-    },
-    "G7": {
-      "status": "pass",
-      "suite": "14011/14011",
-      "layers": {
-        "L1": "1511/1511",
-        "L4": "12281/12281",
-        "L5": "219/219"
-      },
-      "baseline_g0": 7659,
-      "baseline_note": "G0 preserved verbatim per Step 0.6e.",
-      "count_correction": "An earlier G7 read 7983 because test-feedback-sweep-parse.py emitted no house summary and counted zero units. Wired to run_counted; its 6028 units now count.",
-      "recorded_at": "2026-08-23"
-    }
-  },
-  "phase_results": {
-    "prerequisites": {
-      "status": "completed",
-      "doctor": {
-        "verdict": "warnings",
-        "failures": 0,
-        "warnings": 3,
-        "blocking": false,
-        "items": [
-          "agent config: 'no command files registered' at .claude/commands/speckit.*.md - stale pattern predating the skills migration; 27 speckit-* skills are registered under .claude/skills/",
-          "features: specs/art-008-feedback-sweep reports spec/plan/tasks absent - the correct pre-Specify state",
-          "features: specs/brand-001-racecraft-identity-system reports the same shape - unrelated to this run"
-        ],
-        "not_implemented_by_this_doctor": [
-          "scripts",
-          "extensions",
-          "git"
-        ],
-        "wrote_anything": false
+    "mode": "report_only",
+    "current_target": "specs/art-008-feedback-sweep-slice-2",
+    "candidates": [
+      {
+        "dir": "specs/art-008-feedback-sweep",
+        "merged_pr": 464,
+        "merge_commit": "8db22a420",
+        "disposition": "operator_deferred_until_slice_2_merges"
       }
-    },
-    "specify": {
-      "status": "completed",
-      "files": [
-        "specs/art-008-feedback-sweep/spec.md",
-        "specs/art-008-feedback-sweep/checklists/requirements.md"
-      ],
-      "functional_requirements": 19,
-      "user_stories": 3,
-      "acceptance_scenarios": 11,
-      "edge_cases": 9,
-      "success_criteria": 8,
-      "key_entities": 6,
-      "declared_budget": {
-        "reviewable_loc": 330,
-        "production_files": 7,
-        "total_files": 10,
-        "result": "within budget (projected)"
-      },
-      "feature_directory": "specs/art-008-feedback-sweep",
-      "branch_hook_skipped": "before_specify speckit.git.feature - branch already exists and is checked out",
-      "verification": "branch unchanged, no NNN- directory generated, no absolute-path leaks under specs/"
-    },
-    "clarify": {
-      "status": "completed",
-      "sessions": {
-        "1": {
-          "focus": "Feedback Sweep Log and commit protocol",
-          "questions_returned": 5,
-          "settled_by_parent": [
-            "FR-012 one commit per amendment; run-wide amendment commit excluded",
-            "FR-013a log writes ride a separate bookkeeping commit staging the workflow file alone",
-            "FR-014 Type value Sweep",
-            "FR-010 one class per comment, amended dominant",
-            "FR-013 column set and placement after the Consensus Resolution Log",
-            "FR-009 skip key is the log's comment-id column alone"
-          ],
-          "markers_cleared": 3,
-          "unresolved_for_consensus": 4,
-          "consensus_round_1_dispatches": 7,
-          "consensus": {
-            "round_1_items": 4,
-            "round_1_analyst_dispatches": 7,
-            "round_2_items": 0,
-            "escape_hatches": 0,
-            "human_review": 0,
-            "outcomes": {
-              "I1 escape-rate inclusion": "both-agree, include (spec-context + domain-researcher)",
-              "I2 divergent-objection dominance": "high-confidence, confirm amended-dominance (spec-context)",
-              "I3 log-to-log link": "both-agree, confirm CRL # plus bidirectional refinement (codebase + spec-context)",
-              "I4 interrupt window": "both-agree, per-amendment cadence and accept re-processing (codebase + spec-context)"
-            },
-            "defects_found_in_orchestrator_text": [
-              "FR-012a rationale claimed cadence was forced when only the ordering is",
-              "FR-012a borrowed the Draft PR write rules while silently dropping the repair rule",
-              "a run with zero amendments but at least one handled comment had no commit to carry its rows",
-              "SC-002 was falsified by the same edge case as SC-003, not just SC-003",
-              "the orchestrator's own zero-amendment fix would have mandated an empty commit on a comment-free sweep"
-            ],
-            "renumbered": "FR-013a renamed to FR-012a: it sits in the Amendment section beside FR-012, so the original label read out of order",
-            "synthesizer_delivery": "3 of 4 synthesizer results returned empty result fields. I3 re-emitted on request and matched what the orchestrator had already applied. I1 and I2 edits were derived and applied by the orchestrator directly from the analyst responses, which were unanimous, high confidence, and escape-hatch free."
-          },
-          "status": "completed"
-        },
-        "2": {
-          "focus": "Helper envelope and hidden coupling",
-          "status": "completed",
-          "questions_returned": 5,
-          "applied_by_parent": [
-            "FR-007 rewritten: whole-line match within the first ten lines, not the first line. The shipped builder emits Artifact/feature/blank ahead of the lead, so the lead sits on line four of a verbatim paste. Verified directly in implementation-plan.html payload().",
-            "FR-007a added: the empty-export sentences are registered. The builder returns before pushing the lead when nothing was recorded, so an empty export would otherwise reach the sweep as ordinary feedback. Two templates ship the identical string, so template id reports ambiguous.",
-            "FR-008 extended: line-ending normalization plus mandatory per-comment truncation below the runner's 32 KiB bounded-input limit, which is enforced over every string and rejects the whole request.",
-            "FR-008a added: fixture corpus and a template-parity test reading the lead declarations out of the three templates. Test-only, so it does not cross the no-template-edits non-goal.",
-            "FR-004a added: both reads paginate to exhaustion and request the author-association field, which no shipped query requests today.",
-            "FR-004b added: no comment text in a shell argument, in either direction.",
-            "FR-005 extended: the closed eight-value association enum, a fixture per excluded value, and the honest statement that the allowlist is a proxy for write access rather than a permissions check.",
-            "FR-013 extended: pipe and newline escaping in the Disposition cell, because the table readers split on the bare pipe and one unescaped pipe would shift CRL # out of position; plus an explicit value when the author is unresolvable.",
-            "SC-005 broadened to the real fixture corpus. SC-008 now states it rests on the replies alone, because a draft description is fully fingerprint-protected with no editable region.",
-            "Key Entities and Assumptions updated: registry shape, swept-comment fields, the runner's deferred command-plan apply mode, the installed-cache twins, and the seven-place helper registration traps."
-          ],
-          "routed_to_consensus": [
-            "I5 [security] register the three PROMPT_LEAD variants",
-            "I6 [security, codebase] the FR-006 own-reply recognition mechanism",
-            "I7 [domain, codebase] whether corroboration status skipped stops or proceeds"
-          ],
-          "consensus_round_1_dispatches": 8,
-          "verified_by_parent": [
-            "payload() puts Artifact/featureLine/blank ahead of the lead and returns early on the empty branch",
-            "BOUNDED_TEXT_INPUT_BYTES is 32 KiB, enforced over every input string, rejecting the whole request"
-          ],
-          "consensus": {
-            "round_1_items": 3,
-            "round_1_analyst_dispatches": 8,
-            "round_2_items": 0,
-            "escape_hatches": 0,
-            "human_review": 0,
-            "outcomes": {
-              "I5 prompt-lead variants": "2 of 3 majority, register with the kind recorded; domain-researcher dissented toward neutralizing, answered inside the majority option by requiring the matched lead to be carried as metadata rather than free text",
-              "I6 own-reply recognition": "3 of 3 unanimous, anchored HTML-comment marker plus an author match, both required",
-              "I7 corroboration status skipped": "both-agree, stop; retry refinement declined as out-of-scope machinery"
-            },
-            "scope_correction": "The spec said three templates export. Ten do, and seven of those export a prompt kind as well. FR-007b widens the registry to every shipped exporting template and FR-008a derives the expected set from the manifest, so the count is data rather than design. Verified directly against the manifest and the template sources.",
-            "applied_after_consensus": [
-              "FR-006 and FR-006a: marker-plus-author exclusion, anchored, with self-reply exclusions named in the run report; convergence rationale recorded",
-              "FR-007b, FR-007c, FR-007d: registry covers every shipped exporting template in every kind; the prompt kind's safety rationale; recognition never forces a class",
-              "FR-015 and FR-015a: the marker opens every reply template; the two surfaces need different writes and the conversation write has no prior art",
-              "FR-019, FR-019a, FR-019b: all six corroboration statuses mapped, skipped stops, and its report reads distinctly and names its cause",
-              "SC-006 and the Assumptions vocabulary list corrected from five statuses to six",
-              "Non-Goals: the operator skip flag stays deferred, but the concrete case is now named rather than absent"
-            ]
-          }
-        },
-        "3": {
-          "focus": "Settled-decision verification",
-          "status": "completed",
-          "questions_returned": 1,
-          "consensus_items": 0,
-          "verification": "all 8 settled interview decisions encoded, none partial or missing",
-          "consistency_findings": 15,
-          "high_severity_fixed": [
-            "FR-015 required an artifact, section, and commit from all four reply classes; only amended has them, so three of the four templates were unsatisfiable",
-            "FR-015's exactly-one-reply rule lacked the qualifier SC-002 and SC-003 gained in session 1 for the same edge case",
-            "FR-004b, the no-shell-argument injection boundary, had no criterion, scenario, or fixture anywhere"
-          ],
-          "added": [
-            "SC-009 no comment text in a shell argument",
-            "SC-010 log survives reviewer prose and unresolvable authors"
-          ],
-          "stale_figure_fixed": "three templates share the identical empty-export sentence, not two",
-          "verified_correct": [
-            "ten exporting templates with seven carrying a prompt kind",
-            "the six-value corroboration vocabulary matches the shipped classifier exactly"
-          ]
-        }
-      },
-      "finding_out_of_scope": "consensus-protocol.md:157-171 documents aggregate-crl and parse-consensus-categories in the present tense as shipped scripts. Both were deleted by the XPLAT-009 shipped-Bash purge (XPLAT-010-deleted-tests-ledger.md rows 1 and 20) and nothing replaced them; the scripts directory holds only validate-autopilot-phase-coverage.py and the Codex mirror has no scripts directory. Separately, workflow-file-protocol.md:26 names a mandatory 'Routed Categories' CRL column that no committed workflow file uses. Both are stale shipped prose, outside ART-008 slice 1's scope, flagged for the operator.",
-      "totals": {
-        "sessions": 3,
-        "questions": 15,
-        "consensus_items": 7,
-        "analyst_dispatches": 23,
-        "round_2_items": 0,
-        "escape_hatches": 0,
-        "human_review": 0
-      }
-    },
-    "plan": {
-      "status": "completed",
-      "artifacts": [
-        "specs/art-008-feedback-sweep/plan.md",
-        "specs/art-008-feedback-sweep/research.md",
-        "specs/art-008-feedback-sweep/data-model.md",
-        "specs/art-008-feedback-sweep/quickstart.md",
-        "specs/art-008-feedback-sweep/contracts/sweep-pr-feedback.md"
-      ],
-      "declared_file_operations": {
-        "production": 7,
-        "test_and_fixture": 7,
-        "generated": 8,
-        "total_entries": 22
-      },
-      "hand_derived_loc": {
-        "low": 515,
-        "high": 745,
-        "midpoint": 630
-      },
-      "verdict": "two warns (LOC over 400, production files 7 over 6), zero blocks; warn accepted, split lever recorded",
-      "estimator": {
-        "status": "pass",
-        "projected": 0,
-        "production_classified": 0,
-        "reading": "absent measurement, not a budget verdict"
-      },
-      "plan_findings": [
-        "Codex SKILL.md sits at 7997 of 8000 body words, three words of headroom, so no SKILL.md edit is taken at all; that alone drops production files from 8-9 to 7",
-        "uat-walkthrough is a phantom manifest entry declaring exports with no template file, so FR-008a's derive test pins an explicit skip list rather than skipping silently",
-        "Truncation must be orchestrator-side: the 32 KiB bound rejects the whole request before the helper runs, so the helper can validate the budget but never perform it",
-        "Recognition degrades for the three serialization templates, where the registered line is the header, so a header-trimmed paste is unrecognizable; accepted because FR-007d forbids recognition forcing a class",
-        "Two stale references found and deliberately not fixed as out of scope: consensus-protocol.md still documents aggregate-crl as callable, and five templates cite a contracts/export-payload-contract.md that does not exist"
-      ]
-    },
-    "checklist": {
-      "status": "completed",
-      "domains": {
-        "security": {
-          "status": "completed",
-          "items": 50,
-          "gaps_found_my_grep": 8,
-          "gaps_found_helper": 4,
-          "helper_undercount_reason": "count-markers gaps mode matches only the bare [Gap] literal and missed all four combined forms: [Gap, Ambiguity], [Coverage, Gap], [Gap, Edge Case], [Gap, Exception Flow]",
-          "gaps_remaining": 0,
-          "added_requirements": [
-            "FR-007e analyst payload for a recognized export",
-            "FR-012b the amendment edit surface, enforced at two points",
-            "FR-018a the run report exists on every path, not only the stopping one"
-          ],
-          "repo_wide_findings": [
-            "consensus-protocol.md interpolates item text into the analyst prompt raw, with no delimiter and no treat-as-data instruction, so FR-007c's protection does not exist upstream",
-            "no edit-target guard exists anywhere in the repository; the synthesizer emits a free-form File: <path> and nothing validates it, and the three-file enumeration is justified by write contention rather than scope safety",
-            "Phase 7's commit path uses git add -A, so an amendment commit inheriting it would stage the whole worktree and defeat the allowlist"
-          ],
-          "routed_to_consensus": 3,
-          "consensus_dispatches": 9,
-          "consensus": {
-            "items": 3,
-            "analyst_dispatches": 9,
-            "retries": 1,
-            "retry_reason": "one codebase analyst died to an API error mid-response and was re-dispatched",
-            "round_2_items": 0,
-            "escape_hatches": 0,
-            "human_review": 0,
-            "outcomes": {
-              "I8 analyst payload and trust unit": "3 of 3 unanimous on all four sub-positions",
-              "I9 amendment edit surface": "3 of 3, two-point structure with the write point as the enforcement boundary",
-              "I10 authenticated-identity input": "3 of 3 in substance; the apparent split was two layers, not a disagreement"
-            },
-            "added_requirements": [
-              "FR-006b",
-              "FR-007f",
-              "FR-008b",
-              "FR-012c",
-              "FR-012d"
-            ],
-            "corrections_to_orchestrator_or_checklist_text": [
-              "FR-007e framed removal as the primary safety claim; delimiting is the boundary and removal is defence in depth, and the spec now says which is cut first under pressure",
-              "the checklist said an empty authenticated account collapses the test to its marker half; with exact comparison the author clause is permanently false, so no comment is ever excluded. Same outcome, opposite mechanism",
-              "the spec's Reviewability Budget still carried 325-485 LOC and 8-or-9 production files after Plan corrected both to 515-745 and 7; reconciled"
-            ],
-            "threshold_fact": "production files warn above 6 and block above 8, so the 7 this slice carries is a warn while the 9 the earlier draft claimed would have been a block",
-            "filed_not_fixed": [
-              "the shared consensus prompt templates interpolate external text raw in all three variants; FR-007e fixes only this slice's own payload",
-              "no job-scoped edit-target guard exists on the shared consensus write path; FR-012b guards only the sweep's caller"
-            ]
-          }
-        },
-        "error-handling": {
-          "status": "completed",
-          "items": 56,
-          "loops": 2,
-          "gaps_found_my_grep": 30,
-          "gaps_found_helper": 21,
-          "helper_undercount_reason": "count-markers gaps mode uses the literal regex \\[Gap\\] at read_only.py:838, so it missed 2 [Clarity, Gap], 3 [Conflict, Gap], and 4 [Coverage, Gap]. Same failure as the security domain.",
-          "gaps_remaining": 0,
-          "added_requirements": [
-            "FR-004c all-or-nothing observation, partial reads stop",
-            "FR-011a consensus outcomes that produce no answer",
-            "FR-012e amendment committed but push failed",
-            "FR-015b reply reconciliation against the pull request",
-            "FR-020 one report contract across all eight stops"
-          ],
-          "added_criteria": [
-            "SC-011"
-          ],
-          "worst_finding": "replies post after the log row lands while the skip key is the log row alone, so a failed reply was permanently lost and SC-002 unsatisfiable. Not merely unspecified: the ordering made the loss irreversible.",
-          "suite": "7659/7659 passed after remediation",
-          "routed_to_consensus": 4,
-          "consensus_dispatches": 4,
-          "consensus": {
-            "items": 4,
-            "analyst_dispatches": 4,
-            "round_2_items": 0,
-            "escape_hatches": 0,
-            "human_review": 0,
-            "outcomes": {
-              "I11 budget crossing": "both agree, record and continue; no lever taken",
-              "I12 marker carries a comment id": "both agree, extends the settled session 2 decision rather than reversing it",
-              "I13 unresolvable-consensus log placement": "Consensus Resolution Log only; an unresolvable comment is not handled; stop confirmed"
-            },
-            "budget_resolution": {
-              "verdict": "accept and record; measure later against real code",
-              "why_not_defer": "saves 15-30 lines against a 10-30 line overage, so it sits inside the estimate's own noise and may not close the gap, and it costs FR-007b completeness plus the parity test",
-              "why_not_typed_exception": "accepted classes are refactor, infra, upgrade; this is net-new feature work, and ratification is a roadmap-level pragma that does not exist for ART-008",
-              "why_not_reslice": "no split reaches 400 while shipping a working checkpoint; the one that fits ships a checkpoint that reads feedback and acts on none of it",
-              "when_the_block_bites": "never at plan stage. The estimator is advisory by contract; the tasks gate and the final backstop are both deferred on the installed runner and their shipped rule is that a size-only block continues into marker planning. Only a correctness block halts.",
-              "precedent": "PRSG-013 recorded a size-only block at 1800 reviewable LOC, 2.25x over, and the run continued with the crossing captured as marker-planning input",
-              "estimation_evidence": "the tightest published pre-code error band is about 10 percent, roughly 80 lines on this midpoint, three to eight times the margin being adjudicated; and defect detection flattens by 200-250 lines, so 810 is not materially different from 745"
-            },
-            "orchestrator_errors_corrected": [
-              "I stated that deferring the three serialization-family registry rows would cost part of the prompt-variant registration that closes the injection exposure. Wrong: those three templates carry no prompt kind. Deferring them costs FR-007b completeness and the parity test, not a security control.",
-              "three generations of the budget figure were live at once across spec.md and plan.md (745, ~775, 810-830) with six places still asserting zero blocks; all reconciled",
-              "plan.md mechanism 5 described the empty-login failure as collapsing to the marker half; corrected to permanently unsatisfiable",
-              "FR-015 said every reply opens with the same fixed marker, which FR-015b made false; corrected to a fixed prefix",
-              "FR-011a quoted the literal human-review flag string, which would trip a literal-match gate on every future run; reworded"
-            ]
-          }
-        },
-        "state-management": {
-          "status": "completed",
-          "items": 37,
-          "loops": 1,
-          "interrupted": "the first executor died to an API error mid-write after adding FR-006c, FR-009a, FR-013a, FR-015c, SC-012 and SC-013 but before marking any gap resolved or finishing the plan alignment. A continuation was dispatched with the inherited state rather than restarting.",
-          "gaps_found_my_grep": 16,
-          "gaps_found_helper": 0,
-          "helper_undercount_reason": "all 16 markers were combined forms, so the bare-literal regex saw none. Its zero before remediation and its zero after carry the same information: none. Third data point after 4-of-8 and 9-of-30.",
-          "gaps_remaining": 0,
-          "self_contradiction_caught": "FR-015c, written by the interrupted run, closed with a blanket rule that a run stopping for another reason still posts the replies it owes. That would post two replies in a case its own worked example three paragraphs earlier fixes at zero. Corrected by partitioning the eight stops: two sit after the reply point and have already replied, six abort before it and post none.",
-          "convergence_proved": "the work set is trusted, minus logged, minus self-reply, and three rules make it monotone. Two cycling paths foreclosed: an empty authenticated account (now an input error that stops before any read) and the human-review item (a stationary point bounded by operator action, not a divergence)",
-          "suite": "7659/7659 passed",
-          "routed_to_consensus": 1,
-          "consensus_dispatches": 2,
-          "consensus": {
-            "items": 1,
-            "analyst_dispatches": 2,
-            "round_2_items": 0,
-            "escape_hatches": 0,
-            "human_review": 0,
-            "outcome": "both agree the fix belongs in FR-012a and the row is load-bearing for the escape-rate metric; they differed only on drafting form",
-            "applied": "the bookkeeping-commit trigger is now stated as rows-written-to-either-log rather than handled-comments-exist, which subsumes the old proxy instead of adding a branch beside it. Handled comments were only ever a proxy for Feedback Sweep Log rows, and it held until FR-011a introduced a Consensus Resolution Log row with no counterpart.",
-            "objection_removed": "the forced-ordering rationale does not bind these rows: the Consensus Resolution Log schema carries no commit column, so nothing has to exist before the commit does"
-          }
-        }
-      },
-      "totals": {
-        "domains": 3,
-        "items": 143,
-        "gaps_found": 54,
-        "gaps_closed": 54,
-        "consensus_items": 8,
-        "analyst_dispatches": 24,
-        "round_2_items": 0,
-        "escape_hatches": 0,
-        "human_review": 0,
-        "agent_failures_recovered": 2
-      }
-    },
-    "tasks": {
-      "status": "completed",
-      "artifact": "specs/art-008-feedback-sweep/tasks.md",
-      "total_tasks": 80,
-      "phases": 6,
-      "parallel_safe": 9,
-      "story_split": {
-        "US1": 29,
-        "US2": 22,
-        "US3": 5,
-        "setup": 6,
-        "foundational": 8,
-        "polish": 10
-      },
-      "coverage": "48 of 48 requirements and 13 of 13 criteria, verified independently by the orchestrator with a trailing-boundary regex so a parent is never satisfied by a lettered child",
-      "orchestrator_added": "T080. The executor verified requirement coverage but not criterion coverage, and SC-003 — the clean-re-run convergence claim — was the one criterion no task cited. T044 covers the no-second-reply half; nothing pinned the whole-run assertion or its interrupted-run qualifier.",
-      "flags_raised_by_executor": [
-        "Known interface gap: FR-012b rule 2 needs the path check at the write point, but the helper is called once before classification when no resolved target exists. T004 adds the feature-dir input and T051 implements the check; how the orchestrator invokes it at the write is left open rather than inventing an unregistered second operation the plan does not budget for.",
-        "T014 is a blocking checkpoint in Foundational that forces the operator to record one budget lever before Phase 3 begins. The executor did not self-split and did not trim tasks to duck under the line."
-      ],
-      "boundaries_honored": "no task edits either SKILL.md; the eight generated paths carry regeneration tasks only; no task crosses a stated non-goal"
-    },
-    "analyze": {
-      "status": "completed",
-      "findings": 6,
-      "remediated": 6,
-      "unresolved_for_consensus": 0,
-      "executor_note": "the executor exhausted its budget at the summary stage after 115 tool calls; its edits were complete and were reviewed by the orchestrator before acceptance",
-      "findings_detail": [
-        "FR-012b called three artifacts the whole edit surface while FR-012a, FR-013 and FR-014 oblige the sweep to write the workflow file; the membership test applied to every write would have stopped the run on its first log row. Scoped to the amendment surface.",
-        "the gallery manifest declares eleven exporting entries, not ten; uat-walkthrough declares both kinds and ships no template file. The derivation skip is now conditional in both directions, because a name-only skip would leave its prompt lead unregistered once the file lands.",
-        "the author-association corpus pinned only the five excluded values, so a wrongly-rejecting allowlist would have passed every fixture; admitted cases added for all three permitted values.",
-        "three serialization-family templates carry no lead sentence and are recognized by a header block that no fixture exercised; cases added including a wrong-order negative.",
-        "the quickstart omitted docs-site reference regeneration, which a tracked test-tree change restales.",
-        "two task cross-references pointed at renumbered tasks; the reviewability figure was reconciled across all five documents and the roadmap now records that its scaffold expectation did not hold."
-      ],
-      "cross_artifact_agreement": "all five documents carry 515 to 830; remaining 745 references are explicitly labelled Plan-time history",
-      "roadmap_edited": true,
-      "suite": "7659/7659"
-    },
-    "confidence_gate": {
-      "status": "resolved",
-      "mode": "advisory",
-      "threshold": 0.9,
-      "composite": 0.8,
-      "pass": false,
-      "recommended_action": "continue_with_warning",
-      "reason": "composite below threshold in advisory mode",
-      "criteria": {
-        "task_understanding": 0.9,
-        "approach_clarity": 0.8,
-        "requirements_alignment": 0.86,
-        "risk_assessment": 0.68,
-        "completeness": 0.78
-      },
-      "lowest_criterion": "risk_assessment",
-      "remediation_loop": "declined, with the reason recorded in the workflow file. The procedure's focused round for risk_assessment re-runs Analyze against remaining open findings, and there are none: Analyze closed all six it raised and routed nothing to consensus. The facts behind 0.68 are disclosed, reasoned lever by lever, and gated by a blocking task; the estimate drift is history; and the only thing that would genuinely raise the score is a measurement against real code, which this stage cannot produce. Iterating would re-score identical evidence.",
-      "row_left_pending": "G6.5 is an advisory phase the main loop does not flip, which the workflow file states and the coverage guard's WORKFLOW_ADVISORY_PHASES honors",
-      "emission": "a warn is not a strict-mode block, so the plan stage's terminal emission sequence runs"
-    }
-  },
-  "test_baseline_g0": {
-    "passed": 7659,
-    "total": 7659,
-    "toolchain_preflight": "ok",
-    "layers": {
-      "L1": "1469/1469",
-      "L4": "5998/5998",
-      "L5": "192/192"
-    },
-    "captured_at": "2026-08-20",
-    "command": "python3 tests/speckit-pro/run-all.py",
-    "note": "Preserved, never recomputed. A --stage implement run compares its count against this number."
+    ],
+    "safeToApplyCleanup": false,
+    "cleanup_applied": false
   },
   "plan": [
     {
-      "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
+      "step": "Archive Sweep: previously merged specs report-only eligibility",
       "status": "completed"
     },
     {
@@ -667,55 +52,15 @@
       "status": "completed"
     },
     {
-      "step": "Phase 2: Clarify - Feedback Sweep Log and Commit Protocol",
+      "step": "Phase 2: Clarify (3 sessions + consensus)",
       "status": "completed"
-    },
-    {
-      "step": "Phase 2: Clarify - Feedback Sweep Log and Commit Protocol Consensus",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 2: Clarify - Helper Envelope and Hidden Coupling",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 2: Clarify - Helper Envelope and Hidden Coupling Consensus",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 2: Clarify - Settled-Decision Verification",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 2: Clarify - Settled-Decision Verification Consensus",
-      "status": "skipped: zero unresolved items"
     },
     {
       "step": "Phase 3: Plan",
       "status": "completed"
     },
     {
-      "step": "Phase 4: Checklist - security",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - security Consensus",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - error-handling",
-      "status": "in_progress"
-    },
-    {
-      "step": "Phase 4: Checklist - error-handling Consensus",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - state-management",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - state-management Consensus",
+      "step": "Phase 4: Checklist (error-handling, state-management, requirements)",
       "status": "completed"
     },
     {
@@ -727,219 +72,203 @@
       "status": "completed"
     },
     {
-      "step": "Phase 6: Analyze - Consensus",
-      "status": "skipped: zero unresolved items"
-    },
-    {
-      "step": "Phase 6.5: Confidence Gate",
-      "status": "completed"
-    },
-    {
-      "step": "Plan-stage terminal: draft artifact generation",
-      "status": "completed"
-    },
-    {
-      "step": "Plan-stage terminal: stage-boundary commit and push",
-      "status": "completed"
-    },
-    {
-      "step": "Plan-stage terminal: draft PR emission and record",
+      "step": "Phase 6.5: Confidence Gate (advisory)",
       "status": "completed"
     },
     {
       "step": "Phase 7: Implement",
-      "status": "skipped: outside the resolved plan stage"
+      "status": "completed"
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "skipped: outside the resolved plan stage"
+      "status": "completed"
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "skipped: outside the resolved plan stage"
+      "status": "completed"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "skipped: outside the resolved plan stage"
+      "status": "completed"
     },
     {
       "step": "Post: Code Review",
-      "status": "skipped: outside the resolved plan stage"
+      "status": "completed"
     },
     {
       "step": "Post: Integration Suite",
-      "status": "skipped: outside the resolved plan stage"
+      "status": "completed"
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "skipped: outside the resolved plan stage"
+      "status": "completed"
     },
     {
       "step": "Post: Self-Review",
-      "status": "skipped: outside the resolved plan stage"
+      "status": "completed"
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "skipped: outside the resolved plan stage"
+      "status": "completed",
+      "note": "skipped: generate-uat-skeleton deferred on the installed runner and no committed skeleton exists; uat-runbook-author not spawned"
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "skipped: outside the resolved plan stage"
+      "status": "completed"
     },
     {
       "step": "Post: PR Creation",
-      "status": "skipped: outside the resolved plan stage"
+      "status": "completed"
     },
     {
       "step": "Post: Review Remediation",
-      "status": "skipped: outside the resolved plan stage"
+      "status": "completed",
+      "note": "deferred: draft PR carries 0 reviews and 0 comments and review gates skip on draft; loop belongs after the operator flips it to ready"
     },
     {
       "step": "Post: Retrospective",
-      "status": "skipped: outside the resolved plan stage"
+      "status": "completed"
     }
   ],
-  "tier2_relocation": {
-    "candidate": null,
-    "suppressed": [
-      {
-        "spec_dir": "specs/brand-001-racecraft-identity-system",
-        "reasons": [
-          "non_speckit_namespace",
-          "already_current (SPEC-MOC structureVersion: 1)"
-        ]
-      }
-    ],
-    "note": "relocate-process-artifacts is deferred and was not invoked."
+  "test_baseline_g0": {
+    "total": 14012,
+    "layers": {
+      "L1": 1511,
+      "L4": 12282,
+      "L5": 219
+    },
+    "captured": "2026-08-24",
+    "phase": "pre-flight"
+  },
+  "prerequisites": {
+    "constitution_check": "pass",
+    "suite": "14012/14012",
+    "date": "2026-08-24"
+  },
+  "gates": {
+    "G1": {
+      "pass": true,
+      "markers": 0
+    },
+    "G2": {
+      "pass": true,
+      "markers": 0
+    },
+    "G3": {
+      "pass": true,
+      "markers": 0
+    },
+    "G5": {
+      "pass": true,
+      "task_count": 81
+    },
+    "G6": {
+      "pass": true,
+      "critical": 0
+    },
+    "G6.5": {
+      "pass": true,
+      "composite": 0.92,
+      "mode": "advisory"
+    },
+    "G7": {
+      "pass": true,
+      "suite": "14179/14179",
+      "baseline": 14012,
+      "delta": 167,
+      "exit_code": 0
+    }
   },
   "budget_warning": {
-    "declared_at_scaffold": {
-      "reviewable_loc": 330,
-      "production_files": 7,
-      "total_files": 10
-    },
-    "revised_at_clarify": {
-      "reviewable_loc_range": [
-        325,
-        485
-      ],
-      "midpoint": 400,
-      "production_files": "8 or 9"
-    },
-    "verdict": "at or over the 400 warn line, under the 800 block. One primary surface. Proceeds, but no longer fits the number it was scoped against.",
-    "estimator_is_blind": "estimate-reviewable-loc counts a file as production only under src/, app/, lib/, scripts/ or with a JS/TS/SQL extension. Every ART-008 path fails both tests, so the plan estimator will report projected 0 and status pass regardless of the real diff. Plan must size by hand and treat the helper verdict as an absent measurement, not a passing one.",
-    "after_error_handling_checklist": {
-      "reviewable_loc_high": "810 to 830",
-      "midpoint": "under 800",
-      "block_threshold": 800,
-      "verdict": "the HIGH END now crosses the block; the midpoint does not. Verified against read_only.py:976-992 where the block fires at loc > 800.",
-      "levers": [
-        "defer the three serialization-family registry rows, saving 15-30 lines and costing part of FR-007b",
-        "claim an explicit typed exception",
-        "re-slice"
-      ],
-      "note": "This is an operator decision, routed to consensus for a recommendation. The plan-stage estimator cannot see it and reports zero."
-    }
+    "hand_derived_loc": 690,
+    "range": [
+      556,
+      825
+    ],
+    "status": "warn",
+    "estimator": "false_zero_recorded"
   },
   "atomicity_route": {
     "route": "one-navigable-PR",
     "releasable": true,
     "signals": [
       "change-shape:modify-heavy"
-    ],
-    "hints": [],
-    "warnings": [],
-    "advisory": true,
-    "note": "structural seams, not size; the reviewability crossing is a separate question the classifier neither sees nor comments on"
+    ]
   },
   "layer_plan": {
     "status": "skipped",
-    "reason": "the layer planner runs only on an exact split-PR route; the classifier returned one-navigable-PR",
-    "helper_invoked": false,
-    "warnings": []
+    "reason": "route one-navigable-PR"
   },
   "task_reviewability": {
-    "helper_id": "reviewability-gate",
-    "requested_mode": "tasks",
-    "status": "deferred",
-    "invoked": false,
-    "deferral_reason": "installed runner supports setup mode only; tasks mode is deferred",
-    "fallback_evidence": {
-      "setup_mode": {
-        "status": "warn",
-        "blockers": []
-      },
-      "plan_estimator": {
-        "status": "pass",
-        "projected": 0,
-        "reading": "absent measurement, not a verdict"
-      },
-      "hand_derived": {
-        "loc_low": 515,
-        "loc_high": 830,
-        "midpoint": 630,
-        "production_files": 7,
-        "verdict": "two warns; high end crosses the 800 block, midpoint under it"
-      }
-    },
-    "pr_marker_plan": null,
-    "marker_plan_reason": "house precedent: pass-or-warn evidence without a split demand creates no marker state, and the route is one-navigable-PR"
+    "mode": "deferred",
+    "fallback": "setup-warn + estimator-false-zero + hand-derived-690-warn",
+    "marker_plan": "not_required"
   },
-  "terminal_step": {
-    "pr": 464,
-    "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/464",
-    "state": "OPEN",
-    "draft": false,
-    "ready_for_review": true
+  "terminal_step": "plan-stage emission complete: draft PR #502 created, Draft PR row recorded",
+  "installed_plugin_version": "2.27.0",
+  "feedback_sweep": {
+    "ran": false,
+    "reason": "installed plugin 2.27.0 predates ART-008 slice 1",
+    "substitute_observation": {
+      "pr": 502,
+      "reviews": 0,
+      "comments": 0,
+      "mode": "read_only_report_only"
+    }
   },
-  "implementation": {
-    "test_baseline_observed": 7912,
-    "test_baseline_g0": {
-      "passed": 7659,
-      "total": 7659,
-      "toolchain_preflight": "ok",
-      "layers": {
-        "L1": "1469/1469",
-        "L4": "5998/5998",
-        "L5": "192/192"
-      },
-      "captured_at": "2026-08-20",
-      "command": "python3 tests/speckit-pro/run-all.py",
-      "note": "Preserved, never recomputed. A --stage implement run compares its count against this number."
-    },
-    "baseline_note": "G0 stays 7659 verbatim per Step 0.6e; 7912 is a non-blocking drift diagnostic, all of it from merged main.",
-    "groups": [
-      {
-        "group": "Phase 1 Setup",
-        "tasks": 7,
-        "complete": 7,
-        "commit": "819eb3547"
-      },
-      {
-        "group": "Phase 2 Foundational",
-        "tasks": 9,
-        "complete": 9,
-        "commit": "ed1691cf4",
-        "harness": "76/76"
-      }
+  "main_sync": {
+    "merged": "origin/main",
+    "commits": [
+      "#499",
+      "#500",
+      "#501"
     ],
-    "tasks_added_during_implementation": [
-      "T110",
-      "T111"
+    "conflicts": [
+      "docs/ai/specs/html-artifacts-technical-roadmap.md"
     ],
-    "notes_record": "specs/art-008-feedback-sweep/.process/implementation-notes.md",
-    "tasks_complete": "111/111",
-    "phantom_completions_caught": [
-      "T051",
-      "T086"
-    ],
-    "known_gaps": [
-      "T098 binding probe UNRUN: plugin agents load from the versioned cache, not worktree source; stop condition not triggered and not discharged."
-    ],
-    "review_findings_fixed": [
-      "deny-set bypass via an embedded newline in a lines entry",
-      "write-point allowlist resolved through a symlink at an allowlist name",
-      "oversized envelope reported ok with stdout_json dropped"
-    ]
+    "regenerated": "already consistent"
+  },
+  "test_baseline_drift": {
+    "observed_total": 14025,
+    "recorded_baseline": 14012,
+    "delta": 13,
+    "cause": "origin/main merge brought #501's new Layer 4 cases",
+    "blocking": false,
+    "note": "diagnostic only; the recorded G0 baseline is preserved per Step 0.6e"
+  },
+  "final_reviewability_gate": {
+    "helper": "final-reviewability-backstop",
+    "mode": "deferred_on_installed_runner",
+    "governing_evidence": "committed WARN chain recorded at T014",
+    "outcome": "warn_may_continue",
+    "block_recorded": false,
+    "realized_overrun": {
+      "declared_mid": 730,
+      "declared_range": [
+        556,
+        885
+      ],
+      "block_threshold": 800,
+      "realized_added": 1222,
+      "realized_removed": 15,
+      "in_band": [
+        "read_only.py 347",
+        "registry.py 8",
+        "SKILL.md 4"
+      ],
+      "over": [
+        "phase-execution.md 455 vs 150-230",
+        "phase-execution-codex.md 408 vs 125-190"
+      ],
+      "note": "executable surface in band; overrun is reference prose density on both platforms; operator decision at the draft-PR checkpoint"
+    }
+  },
+  "pull_request": {
+    "number": 502,
+    "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/502",
+    "action": "refreshed_existing_draft",
+    "second_pr_opened": false,
+    "draft": true,
+    "ci": "PR Checks completed success against head 2b3de7ae8"
   }
 }

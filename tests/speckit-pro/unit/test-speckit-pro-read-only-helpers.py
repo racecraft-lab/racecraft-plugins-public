@@ -73,6 +73,7 @@ EXPECTED_HELPERS = [
     "validate-pr-packet-read-only",
     "estimate-spec-size",
     "sweep-pr-feedback",
+    "check-artifact-freshness",
 ]
 
 JSON_STDOUT_PARITY_HELPERS = {"atomicity-route"}
@@ -83,12 +84,15 @@ JSON_STDOUT_PARITY_HELPERS = {"atomicity-route"}
 # deleted `.sh` ancestor, and inventing a `source_script` for it would record a
 # lie in a provenance manifest. `sweep-pr-feedback` is new behaviour for the same
 # reason: it reads an observation the orchestrator already took, so there was
-# never a script to delete.
+# never a script to delete. `check-artifact-freshness` is new behaviour with no
+# deleted `.sh` ancestor for the same reason, and inventing a `source_script` for
+# it would record a lie in a provenance manifest.
 NO_BASH_ANCESTOR = (
     "helper-registry-dispatch",
     "resolve-workflow-binding",
     "resolve-autopilot-stage",
     "sweep-pr-feedback",
+    "check-artifact-freshness",
 )
 
 HELPER_CASES: dict[str, dict[str, object]] = {
@@ -141,6 +145,22 @@ HELPER_CASES: dict[str, dict[str, object]] = {
                     "body": "Drive-by suggestion.",
                     "truncated": False,
                     "thread_resolved": False,
+                },
+            ],
+        },
+    },
+    "check-artifact-freshness": {
+        "workflow_file": "docs/ai/specs/.process/ART-008-workflow.md",
+        "artifacts_observation": {
+            "ok": True,
+            "artifacts_dir_state": "present",
+            "last_artifacts_commit": "9f2c1ab8d4e5f60718293a4b5c6d7e8f90123456",
+            "pages": ["implementation-plan", "spec-explainer"],
+            "amended_commits": [
+                {
+                    "cell": "a1b2c3d",
+                    "resolved": True,
+                    "is_ancestor_of_artifacts_commit": True,
                 },
             ],
         },

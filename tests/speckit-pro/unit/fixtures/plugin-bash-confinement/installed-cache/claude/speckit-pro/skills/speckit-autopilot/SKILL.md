@@ -373,6 +373,10 @@ Run the pre-flight sequence before any phase work. STOP on failure.
 
      `--state all` is load-bearing: returning pull requests in every state is
      what makes a closed one distinguishable from an absent one.
+     That observation is Step 0.6c's own — one at this step per run, not a
+     cap on every corroboration read a run may take. The create-or-refresh
+     terminal step and the Phase 7 feedback sweep's description refresh each
+     take their own later live read.
    - **The trigger is the row's presence, not the stage.** Any invocation
      carrying a `Draft PR` row takes this observation — including one whose
      stage came from an explicit `--stage` argument, and one that resolves a

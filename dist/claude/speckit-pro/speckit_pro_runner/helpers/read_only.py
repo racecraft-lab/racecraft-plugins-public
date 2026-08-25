@@ -272,6 +272,9 @@ def canonicalize_inputs(helper_id: str, inputs: dict[str, Any], repo_root: Path)
         # whose normalize_path_input rewrites each backslash, so a reviewer comment
         # body listed here would be corrupted before the deny-set ever runs.
         "sweep-pr-feedback": {"workflow_file", "feature_dir"},
+        # The freshness helper reads one path and only one: every git fact it
+        # needs arrives as request data (FR-004, FR-004a).
+        "check-artifact-freshness": {"workflow_file"},
         "confidence-gate": {"workflow_file"},
         "generate-spec-index-check": {"repo_root"},
         "o5-topology": {"target"},
@@ -375,6 +378,10 @@ def explicit_or_derived_args(helper_id: str, inputs: dict[str, Any], repo_root: 
     if helper_id == "sweep-pr-feedback":
         # The observation arrives as request data on stdin, so there are no
         # derived CLI args and no field is interpolated into a command (FR-004b).
+        return []
+    if helper_id == "check-artifact-freshness":
+        # Same reason: the whole request arrives on stdin and no field is
+        # interpolated into a command (FR-004).
         return []
     if helper_id == "confidence-gate":
         workflow_file = inputs.get("workflow_file")
@@ -2709,6 +2716,461 @@ def sweep_analyst_payload(inputs: dict[str, Any], comment_id: str) -> dict[str, 
         "text": block,
         "report": report,
     }))
+
+
+FRESHNESS_TOOL = "check-artifact-freshness"
+FRESHNESS_VERDICT_SURFACE = "verdict"
+# The closed three. A fourth value is a malformed request rather than a surface
+# to discover, so the set lives here and not in the caller.
+FRESHNESS_NAMED_SURFACES = (
+    FRESHNESS_VERDICT_SURFACE,
+    "removal_diff",
+    "corroborate_refresh",
+)
+
+
+# The log this surface reads is slice 1's, so the heading is the shipped constant
+# rather than a second spelling of the same string.
+FRESHNESS_LOG_HEADING = SWEEP_LOG_HEADING
+# The header row is located by `Class`, not by `Commit`: a header carrying no
+# `Commit` column at all is the `missing_commit_cell` case, and locating the
+# header by the column that is absent would drop the row instead of reporting it.
+FRESHNESS_CLASS_COLUMN = "Class"
+FRESHNESS_COMMIT_COLUMN = "Commit"
+FRESHNESS_NUMBER_COLUMN = "#"
+FRESHNESS_AMENDED_CLASS = "amended"
+# The closed three of `artifacts_dir_state`. `absent` and `empty` both read as
+# nothing to judge (FR-007).
+FRESHNESS_DIR_STATES = ("absent", "empty", "present")
+FRESHNESS_NO_PAGES_STATES = ("absent", "empty")
+FRESHNESS_NO_PAGES = "no_pages"
+FRESHNESS_STALE = "stale"
+FRESHNESS_UNDETERMINABLE = "undeterminable"
+FRESHNESS_CURRENT = "current"
+FRESHNESS_UNUSABLE_REASON = "unusable_observation"
+
+
+def freshness_error(message: str) -> dict[str, Any]:
+    return make_result("", f"error: {message}\n", 2)
+
+
+def freshness_result(payload: dict[str, Any]) -> dict[str, Any]:
+    """Return one freshness envelope, or fail closed when it would not survive capture.
+
+    The same failure `sweep_result` above refuses, for the same reason. The
+    runner captures a helper's stdout at ``CAPTURE_LIMIT_BYTES`` and truncates
+    the JSON mid-string when that trips, so the parse fails and ``stdout_json``
+    is dropped. What reaches the caller then reads ``status: ok`` with
+    ``exit_code: 0`` and no diagnostics, and carries no ``verdict`` at all — and
+    an orchestrator told to branch on the verdict cannot tell that from a
+    surface it never called.
+
+    Reachable without an attacker: a long-lived feature whose Feedback Sweep Log
+    has accumulated `amended` rows across many runs, since every unmatched row
+    is echoed in ``undeterminable_rows`` by design, or a removal diff over a
+    large observed inventory. So this is measured here and refused rather than
+    left to the caller to notice.
+    """
+    text = json_text(payload)
+    if len(text.encode("utf-8")) > CAPTURE_LIMIT_BYTES:
+        return freshness_error(
+            "the freshness envelope exceeds the runner's stdout capture of "
+            f"{CAPTURE_LIMIT_BYTES} bytes, so it would reach the caller truncated "
+            "and unparseable while still reporting success; narrow the request "
+            "(a shorter log, or a smaller page inventory) and retry"
+        )
+    return make_result(text)
+
+
+def freshness_observation_error(observation: dict[str, Any]) -> str | None:
+    """Name what is malformed in an observation that reported success, or None.
+
+    Scoped to a gather that already claimed `ok` as the literal `true`. A failed
+    gather never reaches here, so nothing this function refuses is the failed
+    gather FR-023 protects: these are shape defects in data the caller said it
+    had, which the contract calls the caller's own defect and answers with exit
+    2. Without this, `pages` as a bare string splats into one page per
+    character, and a non-list `amended_commits` raises a `TypeError` the runner
+    reports as `internal_failure` — neither of which is a verdict.
+
+    Semantically negative values are data and are not refused here. `resolved`
+    as false carries meaning the join acts on, and FR-006 owns the row-level
+    reason it produces.
+
+    Absence is refused with the wrong type, following `freshness_page_list`
+    below: an omitted `pages` would echo as the empty inventory and report a
+    directory the caller never looked at, and an omitted `amended_commits` would
+    make every `amended` row unmatched and turn a caller-shape defect into an
+    `undeterminable` verdict that names rows rather than the defect. Both states
+    are legally empty and are supplied as the empty array.
+    """
+    if "pages" not in observation:
+        return "artifacts_observation.pages is required when ok is true"
+    pages = observation.get("pages")
+    if not (isinstance(pages, list) and all(isinstance(entry, str) for entry in pages)):
+        return "artifacts_observation.pages must be an array of strings"
+    last_artifacts_commit = observation.get("last_artifacts_commit")
+    if last_artifacts_commit is not None and not isinstance(last_artifacts_commit, str):
+        return "artifacts_observation.last_artifacts_commit must be a string or null"
+    if "amended_commits" not in observation:
+        return "artifacts_observation.amended_commits is required when ok is true"
+    records = observation.get("amended_commits")
+    if not isinstance(records, list):
+        return "artifacts_observation.amended_commits must be an array of records"
+    for record in records or []:
+        if not isinstance(record, dict):
+            return "artifacts_observation.amended_commits carries an entry that is not an object"
+        if not isinstance(record.get("cell"), str):
+            return "an amended_commits record carries no string cell"
+        resolved = record.get("resolved")
+        if not isinstance(resolved, bool):
+            return (
+                "an amended_commits record carries a non-boolean resolved: "
+                f"{record.get('cell')}"
+            )
+        ancestor = record.get("is_ancestor_of_artifacts_commit")
+        if resolved and not isinstance(ancestor, bool):
+            # FR-007b's caller obligation, enforced rather than merely written
+            # down. The stale test is for the literal `false`, so a resolved
+            # record leaving this field null or omitted reads as *not stale* and
+            # hands a re-reviewer the pre-amendment plan. That is the FR-007a
+            # interrupted-run case, and it is the one shape where a silent
+            # default is worse than a refusal.
+            return (
+                "an amended_commits record resolved without a boolean "
+                f"is_ancestor_of_artifacts_commit: {record.get('cell')}"
+            )
+        if not resolved and ancestor is not None:
+            return (
+                "an unresolved amended_commits record carries a non-null "
+                f"is_ancestor_of_artifacts_commit: {record.get('cell')}"
+            )
+        if resolved and last_artifacts_commit is None and ancestor is True:
+            # The other direction of the same FR-007b rule, and the one a
+            # boolean check alone lets through. With no commit for anything to
+            # be an ancestor of, `true` is not a weaker claim than `false` — it
+            # is a false one, and it reaches the ordinary test as *not stale*,
+            # returning `current` on exactly the interrupted-run case FR-007a
+            # exists for. FR-007b pins the value, so the helper pins it too.
+            return (
+                "an amended_commits record claims ancestry of a null "
+                f"last_artifacts_commit: {record.get('cell')}"
+            )
+    return None
+
+
+def freshness_envelope(
+    verdict: str,
+    *,
+    reason: str | None = None,
+    last_artifacts_commit: Any = None,
+    amended_rows_read: int = 0,
+    deciding_rows: list[dict[str, Any]] | None = None,
+    undeterminable_rows: list[dict[str, Any]] | None = None,
+    pages: Any = None,
+) -> dict[str, Any]:
+    """All nine keys, for every verdict, in the order the contract writes them.
+
+    What a verdict has nothing to say about is null or empty rather than
+    omitted, following `corroboration_record`: no consumer then has to tell
+    "missing" apart from "not applicable".
+    """
+    return {
+        "tool": FRESHNESS_TOOL,
+        "named_surface": FRESHNESS_VERDICT_SURFACE,
+        "verdict": verdict,
+        "reason": reason,
+        "last_artifacts_commit": last_artifacts_commit,
+        "amended_rows_read": amended_rows_read,
+        "deciding_rows": list(deciding_rows or []),
+        "undeterminable_rows": list(undeterminable_rows or []),
+        "pages": list(pages or []),
+    }
+
+
+def freshness_log_rows(text: str) -> list[tuple[list[str], list[str]]]:
+    """Every `Feedback Sweep Log` data row, paired with its own header row.
+
+    The shipped heading-anchored read: anchor on the heading text, break
+    `inside` on any line starting with `#`, find the header by column name, skip
+    the table rule row. The header travels with each row because both of the
+    row's anchors are derived from it and neither is fixed by this module.
+    """
+    rows: list[tuple[list[str], list[str]]] = []
+    inside = False
+    header: list[str] | None = None
+    for raw in text.splitlines():
+        stripped = raw.strip()
+        if stripped.startswith("#"):
+            inside = stripped.lstrip("#").strip() == FRESHNESS_LOG_HEADING
+            header = None
+            continue
+        if not inside or not stripped.startswith("|"):
+            continue
+        cells = sweep_table_cells(stripped)
+        if header is None:
+            if FRESHNESS_CLASS_COLUMN in cells:
+                header = cells
+            continue
+        if sweep_is_table_rule(cells):
+            continue
+        rows.append((header, cells))
+    return rows
+
+
+def freshness_row_reading(header: list[str], cells: list[str]) -> dict[str, Any] | None:
+    # Raw, because the docstring names the escaped pipe `\|` literally. Python
+    # 3.12 emits a SyntaxWarning for that sequence in an ordinary string, and the
+    # runner's trust path compiles this module from source text, so the warning
+    # lands on stderr and breaks every caller that parses stderr as JSON.
+    r"""One `amended` row's join key, or the reason it has none. None if not amended.
+
+    The dual-anchoring rule of `data-model.md` §1. `sweep_table_cells` splits on
+    the bare pipe with no unescaping, so a `Disposition` carrying an escaped `\|`
+    still splits and every column to its right shifts. Columns at or before
+    `Disposition` therefore keep their left-hand header index and columns after
+    it are addressed by negative offset from the row's end. Both offsets come
+    from the header row.
+    """
+    class_index = header.index(FRESHNESS_CLASS_COLUMN)
+    if class_index >= len(cells):
+        # An unreadable `Class` is not evidence of an `amended` row, so the row
+        # contributes nothing rather than being reported.
+        return None
+    if cells[class_index].casefold() != FRESHNESS_AMENDED_CLASS:
+        return None
+    number_index = (
+        header.index(FRESHNESS_NUMBER_COLUMN) if FRESHNESS_NUMBER_COLUMN in header else None
+    )
+    row = cells[number_index] if number_index is not None and number_index < len(cells) else ""
+    if len(cells) < len(header):
+        # Before any right-anchored read, and that order is the point: a row six
+        # cells long against an eight-cell header has the `Class` token itself at
+        # `-2`, so reading the join key first would join on the class.
+        return {"row": row, "cell": None, "reason": "malformed_row"}
+    if FRESHNESS_COMMIT_COLUMN not in header:
+        return {"row": row, "cell": None, "reason": "missing_commit_cell"}
+    commit_offset = header.index(FRESHNESS_COMMIT_COLUMN) - len(header)
+    cell = cells[commit_offset]
+    if not cell:
+        return {"row": row, "cell": "", "reason": "empty_commit_cell"}
+    return {"row": row, "cell": cell, "reason": None}
+
+
+def check_artifact_freshness(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+    """Route one request to the named surface it asks for.
+
+    Reports; never decides and never selects. Page selection stays with the
+    emission machinery and the stop-or-proceed decision stays with the
+    orchestrator, so this helper writes no file, runs no `git`, runs no `gh`, and
+    reaches no network: every git fact arrives as request data (FR-004,
+    FR-004a).
+
+    An explicit JSON null reads as absence and routes to the verdict surface,
+    because a caller assembling the object programmatically writes the key with a
+    null value where a caller writing it by hand omits the key. The empty string
+    is a value outside the three and is an input error, so the test is `is None`
+    rather than truthiness, following `sweep_pr_feedback`.
+    """
+    named_surface = inputs.get("named_surface")
+    if named_surface is None:
+        named_surface = FRESHNESS_VERDICT_SURFACE
+    if named_surface not in FRESHNESS_NAMED_SURFACES:
+        return freshness_error(f"unknown named_surface: {named_surface}")
+    if named_surface == "removal_diff":
+        return freshness_removal_diff(inputs)
+    if named_surface == "corroborate_refresh":
+        return freshness_corroborate_refresh(inputs, repo_root)
+    return freshness_verdict(inputs, repo_root)
+
+
+def freshness_verdict(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+    """Report the freshness verdict of one supplied artifacts observation.
+
+    A malformed *request* is the caller's defect and returns exit 2. A failed or
+    unusable *observation* is a fact about the world, and FR-023 forbids it from
+    blocking the run, so it returns a verdict that acts on nothing.
+    """
+    workflow_file = inputs.get("workflow_file")
+    if not isinstance(workflow_file, str) or not workflow_file:
+        return freshness_error("workflow_file is required")
+    workflow_display = request_path_display(workflow_file, repo_root)
+    workflow_text = trusted_text(resolve_input_path(workflow_display, repo_root), repo_root)
+    if workflow_text is None:
+        return freshness_error(f"workflow file cannot be read: {workflow_display}")
+    observation = inputs.get("artifacts_observation")
+    if observation is None:
+        return freshness_error("artifacts_observation is required")
+    if not isinstance(observation, dict):
+        return freshness_error("artifacts_observation must be an object")
+    if observation.get("ok") is not True:
+        # `ok` must be the JSON literal `true` to be read at all, following
+        # `observation_pull_requests`: `1 == True` in Python, so a truthiness
+        # test would accept `ok: 1` as a successful gather. Nothing else in the
+        # observation is echoed, because none of it was read.
+        return freshness_result(freshness_envelope(
+            FRESHNESS_UNDETERMINABLE,
+            reason=FRESHNESS_UNUSABLE_REASON,
+        ))
+    dir_state = observation.get("artifacts_dir_state")
+    if dir_state not in FRESHNESS_DIR_STATES:
+        return freshness_error(
+            "artifacts_dir_state must be one of"
+            f" {', '.join(FRESHNESS_DIR_STATES)}: {dir_state}"
+        )
+    observation_error = freshness_observation_error(observation)
+    if observation_error is not None:
+        return freshness_error(observation_error)
+    last_artifacts_commit = observation.get("last_artifacts_commit")
+    pages = observation.get("pages") or []
+    records = observation.get("amended_commits") or []
+
+    amended_rows_read = 0
+    deciding_rows: list[dict[str, Any]] = []
+    undeterminable_rows: list[dict[str, Any]] = []
+    for header, cells in freshness_log_rows(workflow_text):
+        reading = freshness_row_reading(header, cells)
+        if reading is None:
+            continue
+        amended_rows_read += 1
+        if reading["reason"] is not None:
+            undeterminable_rows.append(reading)
+            continue
+        cell = reading["cell"]
+        # Verbatim, and matched against the supplied records alone: the cell may
+        # be abbreviated where `last_artifacts_commit` is full, so a string
+        # comparison would report a matching commit as stale (FR-008), and a
+        # timestamp comparison would be wrong across a rebase (FR-004a).
+        record = next(
+            (entry for entry in records if isinstance(entry, dict) and entry.get("cell") == cell),
+            None,
+        )
+        if record is None:
+            # Never silently skipped: skipping would read the pages as current.
+            undeterminable_rows.append(
+                {"row": reading["row"], "cell": cell, "reason": "no_matching_observation_record"}
+            )
+        elif record.get("resolved") is not True:
+            undeterminable_rows.append(
+                {"row": reading["row"], "cell": cell, "reason": "unresolvable_commit"}
+            )
+        elif record.get("is_ancestor_of_artifacts_commit") is False:
+            # One such row decides staleness alone. FR-007a needs no branch of
+            # its own: a null `last_artifacts_commit` pins this field false for
+            # every resolved row (FR-007b), so it reaches `stale` here.
+            deciding_rows.append({"row": reading["row"], "cell": cell})
+
+    if dir_state in FRESHNESS_NO_PAGES_STATES:
+        # Nothing to judge, so no row decides anything and `deciding_rows` stays
+        # empty. The rows that could not be read are still reported: FR-006
+        # requires surfacing such a row on any verdict, and reporting the count
+        # while hiding the rows behind it would tell an operator that the log
+        # was read without telling them what it could not read.
+        return freshness_result(freshness_envelope(
+            FRESHNESS_NO_PAGES,
+            last_artifacts_commit=last_artifacts_commit,
+            amended_rows_read=amended_rows_read,
+            undeterminable_rows=undeterminable_rows,
+            pages=pages,
+        ))
+    if deciding_rows:
+        verdict = FRESHNESS_STALE
+    elif undeterminable_rows:
+        verdict = FRESHNESS_UNDETERMINABLE
+    else:
+        verdict = FRESHNESS_CURRENT
+    return freshness_result(freshness_envelope(
+        verdict,
+        last_artifacts_commit=last_artifacts_commit,
+        amended_rows_read=amended_rows_read,
+        deciding_rows=deciding_rows,
+        # Surfaced on any verdict, because FR-006 requires reporting such a row
+        # even when a deciding row already settled the verdict.
+        undeterminable_rows=undeterminable_rows,
+        pages=pages,
+    ))
+
+
+def freshness_page_list(inputs: dict[str, Any], key: str) -> list[str] | None:
+    """One required array-of-strings input, or None when it is malformed.
+
+    Absent, not an array, and carrying a non-string are one class: each is the
+    caller's defect and none is a page list this surface can diff. Absent is
+    kept apart from empty deliberately, because the empty array is the legal
+    whole-set-gap case and reading an omission as empty would report every
+    observed page as a removal on a malformed request.
+    """
+    value = inputs.get(key)
+    if not isinstance(value, list):
+        return None
+    if not all(isinstance(entry, str) for entry in value):
+        return None
+    return value
+
+
+def freshness_removal_diff(inputs: dict[str, Any]) -> dict[str, Any]:
+    """Report the observed pages the re-selection dropped. Deletes nothing.
+
+    A pure set difference over the manifest entry id the emission machinery
+    keeps as the filename stem, one-way: present in `observed_pages` and absent
+    from `reselected_pages`. Never the reverse, because a stem the re-selection
+    returned and the directory does not hold is a new page the author dispatch
+    writes. `reselected_pages` carries both `generated` and `gap` outcomes, so a
+    gapped page is still selected and is not a removal (FR-012a).
+
+    Reads no file and deletes nothing: the system performs the deletion, stages
+    it in the FR-018 commit, and reports each removal as its own outcome
+    (FR-012).
+    """
+    observed = freshness_page_list(inputs, "observed_pages")
+    if observed is None:
+        return freshness_error("observed_pages must be an array of strings")
+    reselected = freshness_page_list(inputs, "reselected_pages")
+    if reselected is None:
+        return freshness_error("reselected_pages must be an array of strings")
+    selected = set(reselected)
+    return freshness_result({
+        "tool": FRESHNESS_TOOL,
+        "named_surface": "removal_diff",
+        # `observed_pages` order rather than a sorted or set order, so two runs
+        # over the same inventory produce the same list and a reviewer can diff
+        # it. Both inputs are echoed so that difference need not be re-derived.
+        "removals": [stem for stem in observed if stem not in selected],
+        "observed": observed,
+        "reselected": reselected,
+    })
+
+
+def freshness_corroborate_refresh(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+    """Classify the recorded `Draft PR` row against a supplied observation.
+
+    The two shipped pure functions are called verbatim, the same pair
+    `resolve_autopilot_stage` calls, and this surface adds no branch of its own.
+    The literal reuse is the requirement: FR-034 assigns each of the six
+    statuses the behavior the ART-007 contract already gives it, and that
+    guarantee holds only while the same code decides the status in both places.
+    A second implementation would drift, and the drift would be silent.
+
+    Stays on this registration's single read path, the workflow file (FR-004).
+    """
+    workflow_file = inputs.get("workflow_file")
+    if not isinstance(workflow_file, str) or not workflow_file:
+        return freshness_error("workflow_file is required")
+    workflow_display = request_path_display(workflow_file, repo_root)
+    workflow_text = trusted_text(resolve_input_path(workflow_display, repo_root), repo_root)
+    if workflow_text is None:
+        return freshness_error(f"workflow file cannot be read: {workflow_display}")
+    # Blanked the way the shipped call site blanks them, and for the reason it
+    # records: a commented-out row must never become evidence.
+    lines = HTML_COMMENT_RE.sub("", workflow_text).splitlines()
+    corroboration = corroborate_draft_pr(
+        workflow_draft_pr_row(lines), inputs.get("pr_observation")
+    )
+    return freshness_result({
+        "tool": FRESHNESS_TOOL,
+        "named_surface": "corroborate_refresh",
+        "corroboration": corroboration,
+    })
 
 
 def resolve_confidence_mode(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
@@ -5676,6 +6138,7 @@ PY_HELPERS: dict[str, Callable[[dict[str, Any], Path], dict[str, Any]]] = {
     "resolve-confidence-mode": resolve_confidence_mode,
     "resolve-autopilot-stage": resolve_autopilot_stage,
     "sweep-pr-feedback": sweep_pr_feedback,
+    "check-artifact-freshness": check_artifact_freshness,
     "confidence-gate": confidence_gate,
     "generate-spec-index-check": generate_spec_index_check,
     "o5-topology": o5_topology,

@@ -202,6 +202,14 @@ HELPERS: dict[str, HelperEntry] = {
         "python_only",
         authoritative_request("sweep-pr-feedback"),
     ),
+    "check-artifact-freshness": HelperEntry(
+        "check-artifact-freshness",
+        "check-artifact-freshness",
+        None,
+        "python_authoritative",
+        "python_only",
+        authoritative_request("check-artifact-freshness"),
+    ),
     "confidence-gate": HelperEntry(
         "confidence-gate",
         "confidence-gate",
