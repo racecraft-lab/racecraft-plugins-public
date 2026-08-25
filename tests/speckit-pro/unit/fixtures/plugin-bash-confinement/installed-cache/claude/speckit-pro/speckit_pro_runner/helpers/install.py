@@ -795,6 +795,28 @@ class AnchoredAgentDir:
             path = self.evidence_path(name)
             preserved_paths[:] = [preserved for preserved in preserved_paths if preserved != path]
 
+    def restore_failure_for_packaging(
+        self,
+        exc: OSError,
+        backup_name: str,
+        target_name: str,
+        preserved_paths: list[str],
+        cleanup_errors: list[dict[str, str]],
+        error: str,
+    ) -> None:
+        if isinstance(exc, CodexAgentNoClobberConflict):
+            preserved_paths.extend(exc.preserved_paths)
+            cleanup_errors.extend(exc.cleanup_errors)
+        elif isinstance(exc, CodexAgentRecoveryCopyFailure):
+            cleanup_errors.extend(
+                {"kind": "recovery_copy_failed", "target": path, "error": "recovery_copy_incomplete"}
+                for path in exc.failed_paths
+            )
+            for path in exc.preserved_paths:
+                self.preserve_path_unknown(preserved_paths, cleanup_errors, path, error)
+        self.preserve_path_unknown(preserved_paths, cleanup_errors, self.evidence_path(backup_name), error)
+        self.preserve_path_unknown(preserved_paths, cleanup_errors, self.evidence_path(target_name), error)
+
     def cleanup_owned_entry(
         self,
         name: str,
@@ -829,15 +851,16 @@ class AnchoredAgentDir:
         except OSError:
             moved_state = None
         if moved_state != expected_state:
-            result = self.classify_entry_by_expected(cleanup_name, expected_state, "cleanup_restore_collision")
             try:
                 self.rename_no_replace(cleanup_name, name)
             except OSError:
+                result = self.classify_entry_by_expected(cleanup_name, expected_state, "cleanup_restore_collision")
                 self.merge_cleanup_result(
                     result,
                     self.classify_entry_by_expected(name, expected_state, "cleanup_restore_collision"),
                 )
                 return result
+            result = CodexAgentCleanupResult()
             self.merge_cleanup_result(
                 result,
                 self.classify_entry_by_expected(cleanup_name, expected_state, "cleanup_restore_collision"),
@@ -877,7 +900,6 @@ class AnchoredAgentDir:
         private_dir_fd: int | None = None
         private_entry_name = cleanup_name
         final_result: CodexAgentCleanupResult | None = None
-        private_dir_entries_before_close: list[str] | None = None
 
         def public_entry_classification(error: str) -> tuple[list[str], list[dict[str, str]]]:
             public_path = self.evidence_path(cleanup_name)
@@ -977,11 +999,6 @@ class AnchoredAgentDir:
         finally:
             if private_dir_fd is not None:
                 try:
-                    private_dir_entries_before_close = os.listdir(private_dir_fd)
-                except OSError:
-                    private_dir_entries_before_close = None
-            if private_dir_fd is not None:
-                try:
                     os.close(private_dir_fd)
                 except OSError as exc:
                     if final_result is not None:
@@ -995,17 +1012,7 @@ class AnchoredAgentDir:
                     os.rmdir(private_dir_name, dir_fd=self.directory_fd)
                 except OSError as exc:
                     if final_result is not None and exc.errno in {errno.ENOTEMPTY, errno.EEXIST}:
-                        reported_private_paths = set(final_result.preserved_private_paths)
-                        known_entries = (
-                            private_dir_entries_before_close is not None
-                            and bool(private_dir_entries_before_close)
-                            and all(
-                                self.evidence_subpath(private_dir_name, entry) in reported_private_paths
-                                for entry in private_dir_entries_before_close
-                            )
-                        )
-                        if not known_entries:
-                            append_private_dir_unknown(final_result, "private_quarantine_dir_not_empty")
+                        append_private_dir_unknown(final_result, "private_quarantine_dir_not_empty")
                     elif final_result is not None:
                         final_result.cleanup_errors.append(
                             {"kind": "remove_directory", "target": private_dir_path(), "error": type(exc).__name__}
@@ -4215,7 +4222,25 @@ def write_codex_agent_atomic(
                 backup_name = agent_dir.move_target_to_backup(target.name)
                 moved_state = agent_dir.previous_state(backup_name)
                 if moved_state != expected_state:
-                    agent_dir.restore_backup_no_clobber(backup_name, target.name)
+                    try:
+                        agent_dir.restore_backup_no_clobber(backup_name, target.name)
+                    except OSError as restore_exc:
+                        preserved_paths: list[str] = []
+                        cleanup_errors: list[dict[str, str]] = []
+                        agent_dir.restore_failure_for_packaging(
+                            restore_exc,
+                            backup_name,
+                            target.name,
+                            preserved_paths,
+                            cleanup_errors,
+                            "secondary_restore_failure",
+                        )
+                        backup_name = None
+                        raise CodexAgentNoClobberConflict(
+                            "target changed before no-clobber install",
+                            list(dict.fromkeys(preserved_paths)),
+                            cleanup_errors,
+                        ) from restore_exc
                     backup_name = None
                     raise OSError("target changed before no-clobber install")
             elif agent_dir.previous_state(target.name) is not None:
@@ -4349,6 +4374,16 @@ def write_codex_agent_atomic(
                     except CodexAgentNoClobberConflict as restore_exc:
                         preserved_paths.extend(restore_exc.preserved_paths)
                         preserved_cleanup_errors.extend(restore_exc.cleanup_errors)
+                    except OSError as restore_exc:
+                        agent_dir.restore_failure_for_packaging(
+                            restore_exc,
+                            backup_name,
+                            target.name,
+                            preserved_paths,
+                            preserved_cleanup_errors,
+                            "secondary_restore_failure",
+                        )
+                        backup_name = None
                 else:
                     preserved_paths.extend([backup_path_text, target_path_text])
             if preserved_paths:
@@ -4378,7 +4413,25 @@ def remove_codex_agent_if_unchanged(
         try:
             moved_state = agent_dir.previous_state(backup_name)
             if moved_state != expected_state:
-                agent_dir.restore_backup_no_clobber(backup_name, target.name)
+                try:
+                    agent_dir.restore_backup_no_clobber(backup_name, target.name)
+                except OSError as restore_exc:
+                    preserved_paths: list[str] = []
+                    cleanup_errors: list[dict[str, str]] = []
+                    agent_dir.restore_failure_for_packaging(
+                        restore_exc,
+                        backup_name,
+                        target.name,
+                        preserved_paths,
+                        cleanup_errors,
+                        "secondary_restore_failure",
+                    )
+                    backup_name = None
+                    raise CodexAgentNoClobberConflict(
+                        "removal target changed before no-clobber removal",
+                        list(dict.fromkeys(preserved_paths)),
+                        cleanup_errors,
+                    ) from restore_exc
                 backup_name = None
                 raise OSError("removal target changed before no-clobber removal")
             if agent_dir.previous_state(target.name) is not None:
@@ -4448,6 +4501,16 @@ def remove_codex_agent_if_unchanged(
                     except CodexAgentNoClobberConflict as restore_exc:
                         preserved_paths.extend(restore_exc.preserved_paths)
                         preserved_cleanup_errors.extend(restore_exc.cleanup_errors)
+                    except OSError as restore_exc:
+                        agent_dir.restore_failure_for_packaging(
+                            restore_exc,
+                            backup_name,
+                            target.name,
+                            preserved_paths,
+                            preserved_cleanup_errors,
+                            "secondary_restore_failure",
+                        )
+                        backup_name = None
                 else:
                     preserved_paths.extend([backup_path_text, target_path_text])
             if preserved_paths:

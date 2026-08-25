@@ -847,8 +847,7 @@ class MutationHelperTests(unittest.TestCase):
         self.assertEqual(record["rollback_outcome"], "restored")
         self.assertEqual(record["terminal_outcome"], "uncertain_state")
         self.assertEqual(record["state_status"], "uncertain")
-        self.assertEqual(len(record["manual_remediation"]), 1)
-        self.assertEqual(record["manual_remediation"][0]["reason"], "cleanup_incomplete")
+        self.assertEqual([action["reason"] for action in record["manual_remediation"]], ["cleanup_incomplete", "concurrent_file_preserved"])
         self.assertEqual([action["name"] for action in record["prior_state"]], required_files)
         for state in record["prior_state"]:
             agent_name = state["name"].removesuffix(".toml")
@@ -2564,6 +2563,224 @@ class MutationHelperTests(unittest.TestCase):
                 raised.exception.cleanup_errors,
             )
 
+    def test_install_codex_agents_write_restore_failure_packaging_retains_primary_when_restore_raises(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve() / "agents"
+            destination.mkdir()
+            target = destination / "analyze-executor.toml"
+            target.write_bytes(b"captured\n")
+            expected = install.codex_agent_previous_state(target)
+            assert expected is not None
+            identity = install.codex_agent_destination_identity(destination)
+            real_previous = install.AnchoredAgentDir.previous_state
+
+            def mismatched_backup_state(self: object, name: str) -> object:
+                state = real_previous(self, name)
+                if name.endswith(".bak") and state is not None:
+                    return install.CodexAgentFileState(
+                        content=b"changed backup state\n",
+                        mode=state.mode,
+                        device=state.device,
+                        inode=state.inode,
+                    )
+                return state
+
+            def restore_raises(self: object, backup_name: str, target_name: str) -> None:
+                del self, backup_name, target_name
+                raise OSError("secondary restore failure")
+
+            with (
+                patch.object(install.AnchoredAgentDir, "previous_state", mismatched_backup_state),
+                patch.object(install.AnchoredAgentDir, "restore_backup_no_clobber", restore_raises),
+            ):
+                with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
+                    install.write_codex_agent_atomic(
+                        target,
+                        b"installer bytes\n",
+                        destination,
+                        identity,
+                        expected_state=expected,
+                    )
+
+            backups = list(destination.glob(".*.bak"))
+            self.assertEqual(len(backups), 1)
+            self.assertIn("target changed before no-clobber install", str(raised.exception))
+            self.assertIn(backups[0].as_posix(), raised.exception.preserved_paths)
+            self.assertIn(target.as_posix(), raised.exception.preserved_paths)
+            self.assertIn(
+                {"kind": "preserved_concurrent_file", "target": backups[0].as_posix(), "error": "secondary_restore_failure"},
+                raised.exception.cleanup_errors,
+            )
+            self.assertIn(
+                {"kind": "preserved_concurrent_file", "target": target.as_posix(), "error": "secondary_restore_failure"},
+                raised.exception.cleanup_errors,
+            )
+
+    def test_install_codex_agents_write_restore_failure_packaging_merges_recovery_copy_failure(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve() / "agents"
+            destination.mkdir()
+            target = destination / "analyze-executor.toml"
+            target.write_bytes(b"captured\n")
+            failed_copy = (destination / ".failed-recovery-copy").as_posix()
+            expected = install.codex_agent_previous_state(target)
+            assert expected is not None
+            identity = install.codex_agent_destination_identity(destination)
+            real_previous = install.AnchoredAgentDir.previous_state
+
+            def mismatched_backup_state(self: object, name: str) -> object:
+                state = real_previous(self, name)
+                if name.endswith(".bak") and state is not None:
+                    return install.CodexAgentFileState(
+                        content=b"changed backup state\n",
+                        mode=state.mode,
+                        device=state.device,
+                        inode=state.inode,
+                    )
+                return state
+
+            def restore_recovery_fails(self: object, backup_name: str, target_name: str) -> None:
+                del self, backup_name, target_name
+                raise install.CodexAgentRecoveryCopyFailure(
+                    "secondary recovery copy failure",
+                    [failed_copy],
+                    [target.as_posix()],
+                )
+
+            with (
+                patch.object(install.AnchoredAgentDir, "previous_state", mismatched_backup_state),
+                patch.object(install.AnchoredAgentDir, "restore_backup_no_clobber", restore_recovery_fails),
+            ):
+                with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
+                    install.write_codex_agent_atomic(
+                        target,
+                        b"installer bytes\n",
+                        destination,
+                        identity,
+                        expected_state=expected,
+                    )
+
+            backups = list(destination.glob(".*.bak"))
+            self.assertEqual(len(backups), 1)
+            self.assertIn("target changed before no-clobber install", str(raised.exception))
+            self.assertIn(backups[0].as_posix(), raised.exception.preserved_paths)
+            self.assertIn(target.as_posix(), raised.exception.preserved_paths)
+            self.assertIn(
+                {"kind": "recovery_copy_failed", "target": failed_copy, "error": "recovery_copy_incomplete"},
+                raised.exception.cleanup_errors,
+            )
+            self.assertIn(
+                {"kind": "preserved_concurrent_file", "target": target.as_posix(), "error": "secondary_restore_failure"},
+                raised.exception.cleanup_errors,
+            )
+
+    def test_install_codex_agents_removal_restore_failure_packaging_retains_primary_when_restore_raises(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve() / "agents"
+            destination.mkdir()
+            target = destination / "autopilot-fast-helper.toml"
+            target.write_bytes(b"captured helper\n")
+            expected = install.codex_agent_previous_state(target)
+            assert expected is not None
+            identity = install.codex_agent_destination_identity(destination)
+            real_previous = install.AnchoredAgentDir.previous_state
+
+            def mismatched_backup_state(self: object, name: str) -> object:
+                state = real_previous(self, name)
+                if name.endswith(".bak") and state is not None:
+                    return install.CodexAgentFileState(
+                        content=b"changed helper state\n",
+                        mode=state.mode,
+                        device=state.device,
+                        inode=state.inode,
+                    )
+                return state
+
+            def restore_raises(self: object, backup_name: str, target_name: str) -> None:
+                del self, backup_name, target_name
+                raise OSError("secondary restore failure")
+
+            with (
+                patch.object(install.AnchoredAgentDir, "previous_state", mismatched_backup_state),
+                patch.object(install.AnchoredAgentDir, "restore_backup_no_clobber", restore_raises),
+            ):
+                with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
+                    install.remove_codex_agent_if_unchanged(target, expected, destination, identity)
+
+            backups = list(destination.glob(".*.bak"))
+            self.assertEqual(len(backups), 1)
+            self.assertIn("removal target changed before no-clobber removal", str(raised.exception))
+            self.assertIn(backups[0].as_posix(), raised.exception.preserved_paths)
+            self.assertIn(target.as_posix(), raised.exception.preserved_paths)
+            self.assertIn(
+                {"kind": "preserved_concurrent_file", "target": backups[0].as_posix(), "error": "secondary_restore_failure"},
+                raised.exception.cleanup_errors,
+            )
+            self.assertIn(
+                {"kind": "preserved_concurrent_file", "target": target.as_posix(), "error": "secondary_restore_failure"},
+                raised.exception.cleanup_errors,
+            )
+
+    def test_install_codex_agents_removal_restore_failure_packaging_merges_recovery_copy_failure(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve() / "agents"
+            destination.mkdir()
+            target = destination / "autopilot-fast-helper.toml"
+            target.write_bytes(b"captured helper\n")
+            failed_copy = (destination / ".failed-removal-recovery-copy").as_posix()
+            expected = install.codex_agent_previous_state(target)
+            assert expected is not None
+            identity = install.codex_agent_destination_identity(destination)
+            real_previous = install.AnchoredAgentDir.previous_state
+
+            def mismatched_backup_state(self: object, name: str) -> object:
+                state = real_previous(self, name)
+                if name.endswith(".bak") and state is not None:
+                    return install.CodexAgentFileState(
+                        content=b"changed helper state\n",
+                        mode=state.mode,
+                        device=state.device,
+                        inode=state.inode,
+                    )
+                return state
+
+            def restore_recovery_fails(self: object, backup_name: str, target_name: str) -> None:
+                del self, backup_name, target_name
+                raise install.CodexAgentRecoveryCopyFailure(
+                    "secondary recovery copy failure",
+                    [failed_copy],
+                    [target.as_posix()],
+                )
+
+            with (
+                patch.object(install.AnchoredAgentDir, "previous_state", mismatched_backup_state),
+                patch.object(install.AnchoredAgentDir, "restore_backup_no_clobber", restore_recovery_fails),
+            ):
+                with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
+                    install.remove_codex_agent_if_unchanged(target, expected, destination, identity)
+
+            backups = list(destination.glob(".*.bak"))
+            self.assertEqual(len(backups), 1)
+            self.assertIn("removal target changed before no-clobber removal", str(raised.exception))
+            self.assertIn(backups[0].as_posix(), raised.exception.preserved_paths)
+            self.assertIn(target.as_posix(), raised.exception.preserved_paths)
+            self.assertIn(
+                {"kind": "recovery_copy_failed", "target": failed_copy, "error": "recovery_copy_incomplete"},
+                raised.exception.cleanup_errors,
+            )
+            self.assertIn(
+                {"kind": "preserved_concurrent_file", "target": target.as_posix(), "error": "secondary_restore_failure"},
+                raised.exception.cleanup_errors,
+            )
+
     def test_install_codex_agents_reports_persistent_backup_cleanup_failure(self) -> None:
         from speckit_pro_runner.helpers import install
 
@@ -2822,9 +3039,14 @@ class MutationHelperTests(unittest.TestCase):
                 agent_dir.close()
 
             preserved = destination / ".cleanupid.cleanup-dir" / ".cleanupid.cleanup.agent.tmp"
+            private_dir = destination / ".cleanupid.cleanup-dir"
             self.assertFalse((destination / ".cleanupid.cleanup.agent.tmp").exists())
             self.assertEqual(preserved.read_bytes(), b"installer-owned cleanup\n")
-            self.assertEqual(conflicts.preserved_private_paths, [preserved.as_posix()])
+            self.assertEqual(conflicts.preserved_private_paths, [preserved.as_posix(), private_dir.as_posix()])
+            self.assertIn(
+                {"kind": "preserved_concurrent_file", "target": private_dir.as_posix(), "error": "private_quarantine_dir_not_empty"},
+                conflicts.cleanup_errors,
+            )
 
     def test_install_codex_agents_cleanup_private_restore_no_replace_preserves_public_takeover(self) -> None:
         from speckit_pro_runner.helpers import install
@@ -2884,10 +3106,15 @@ class MutationHelperTests(unittest.TestCase):
                 agent_dir.close()
 
             preserved = destination / ".cleanupid.cleanup-dir" / ".cleanupid.cleanup.agent.tmp"
+            private_dir = destination / ".cleanupid.cleanup-dir"
             self.assertFalse(injected)
             self.assertFalse(cleanup_path.exists())
-            self.assertEqual(conflicts, [preserved.as_posix()])
+            self.assertEqual(conflicts.preserved_private_paths, [preserved.as_posix(), private_dir.as_posix()])
             self.assertEqual(preserved.read_bytes(), b"installer-owned cleanup\n")
+            self.assertIn(
+                {"kind": "preserved_concurrent_file", "target": private_dir.as_posix(), "error": "private_quarantine_dir_not_empty"},
+                conflicts.cleanup_errors,
+            )
 
     def test_install_codex_agents_posix_cleanup_preserves_verified_quarantine_without_unlink(self) -> None:
         from speckit_pro_runner.helpers import install
@@ -2924,11 +3151,16 @@ class MutationHelperTests(unittest.TestCase):
                 agent_dir.close()
 
             preserved = destination / ".cleanupid.cleanup-dir" / ".cleanupid.cleanup.agent.tmp"
+            private_dir = destination / ".cleanupid.cleanup-dir"
             self.assertFalse(private_unlink_attempted)
-            self.assertEqual(conflicts, [preserved.as_posix()])
+            self.assertEqual(conflicts.preserved_private_paths, [preserved.as_posix(), private_dir.as_posix()])
             self.assertEqual(preserved.read_bytes(), b"installer-owned cleanup\n")
             self.assertEqual(hardlink.read_bytes(), b"installer-owned cleanup\n")
             self.assertGreaterEqual(preserved.stat().st_nlink, 2)
+            self.assertIn(
+                {"kind": "preserved_concurrent_file", "target": private_dir.as_posix(), "error": "private_quarantine_dir_not_empty"},
+                conflicts.cleanup_errors,
+            )
 
     def test_install_codex_agents_posix_private_quarantine_collision_preserves_both_entries(self) -> None:
         from speckit_pro_runner.helpers import install
@@ -3046,7 +3278,7 @@ class MutationHelperTests(unittest.TestCase):
             self.assertFalse(public_cleanup.exists())
             self.assertEqual(private_victim.read_bytes(), b"private residue after missing source\n")
             self.assertEqual(result.public_conflicts, [])
-            self.assertEqual(result.preserved_private_paths, [private_victim.as_posix()])
+            self.assertEqual(result.preserved_private_paths, [private_victim.as_posix(), (destination / private_dir_name).as_posix()])
             self.assertIn(
                 {
                     "kind": "preserved_concurrent_file",
@@ -3064,7 +3296,7 @@ class MutationHelperTests(unittest.TestCase):
             remediation = install.codex_route_aware_cleanup_manual_remediation(result.cleanup_errors)
             self.assertNotIn("cleanup_incomplete", [action["reason"] for action in remediation])
             concurrent_action = next(action for action in remediation if action["reason"] == "concurrent_file_preserved")
-            self.assertEqual(concurrent_action["paths"], [private_victim.as_posix()])
+            self.assertEqual(concurrent_action["paths"], [private_victim.as_posix(), (destination / private_dir_name).as_posix()])
             self.assertIn(
                 "unknown/private concurrent data",
                 " ".join([concurrent_action["summary"], *concurrent_action["recommended_actions"]]),
@@ -3106,7 +3338,7 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(public_cleanup.read_bytes(), b"installer-owned cleanup\n")
             self.assertEqual(private_victim.read_bytes(), b"private victim after failed move\n")
             self.assertEqual(result.public_conflicts, [public_cleanup.as_posix()])
-            self.assertEqual(result.preserved_private_paths, [private_victim.as_posix()])
+            self.assertEqual(result.preserved_private_paths, [private_victim.as_posix(), (destination / private_dir_name).as_posix()])
             self.assertIn(
                 {
                     "kind": "preserved_cleanup_entry",
@@ -3127,7 +3359,7 @@ class MutationHelperTests(unittest.TestCase):
             cleanup_action = next(action for action in remediation if action["reason"] == "cleanup_incomplete")
             concurrent_action = next(action for action in remediation if action["reason"] == "concurrent_file_preserved")
             self.assertEqual(cleanup_action["paths"], [public_cleanup.as_posix()])
-            self.assertEqual(concurrent_action["paths"], [private_victim.as_posix()])
+            self.assertEqual(concurrent_action["paths"], [private_victim.as_posix(), (destination / private_dir_name).as_posix()])
 
     def test_install_codex_agents_posix_private_quarantine_post_move_mismatch_classifies_public_original(self) -> None:
         from speckit_pro_runner.helpers import install
@@ -3164,7 +3396,7 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(public_cleanup.read_bytes(), b"installer-owned cleanup\n")
             self.assertEqual(private_victim.read_bytes(), b"private victim after reported move\n")
             self.assertEqual(result.public_conflicts, [public_cleanup.as_posix()])
-            self.assertEqual(result.preserved_private_paths, [private_victim.as_posix()])
+            self.assertEqual(result.preserved_private_paths, [private_victim.as_posix(), (destination / private_dir_name).as_posix()])
             self.assertIn(
                 {
                     "kind": "preserved_cleanup_entry",
@@ -3191,7 +3423,7 @@ class MutationHelperTests(unittest.TestCase):
             cleanup_action = next(action for action in remediation if action["reason"] == "cleanup_incomplete")
             concurrent_action = next(action for action in remediation if action["reason"] == "concurrent_file_preserved")
             self.assertEqual(cleanup_action["paths"], [public_cleanup.as_posix()])
-            self.assertEqual(concurrent_action["paths"], [private_victim.as_posix()])
+            self.assertEqual(concurrent_action["paths"], [private_victim.as_posix(), (destination / private_dir_name).as_posix()])
 
     def test_install_codex_agents_posix_private_quarantine_public_read_error_is_concurrent_unknown(self) -> None:
         from speckit_pro_runner.helpers import install
@@ -3432,6 +3664,91 @@ class MutationHelperTests(unittest.TestCase):
                 result.cleanup_errors,
             )
 
+    def test_install_codex_agents_posix_private_quarantine_late_rmdir_child_reports_private_dir_unknown(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve() / "agents"
+            destination.mkdir()
+            cleanup_name = ".latechild.cleanup.agent.tmp"
+            public_cleanup = destination / cleanup_name
+            public_cleanup.write_bytes(b"installer-owned cleanup\n")
+            private_dir_name = ".dirid.cleanup-dir"
+            private_dir = destination / private_dir_name
+            private_leaf = private_dir / cleanup_name
+            late_child = private_dir / "late-child"
+            identity = install.codex_agent_destination_identity(destination)
+            agent_dir = install.AnchoredAgentDir.open(destination, identity)
+            expected_state = agent_dir.previous_state(cleanup_name)
+            assert expected_state is not None
+            real_rmdir = install.os.rmdir
+
+            def inject_late_child_before_rmdir(path: object, *args: object, **kwargs: object) -> None:
+                if path == private_dir_name and kwargs.get("dir_fd") == agent_dir.directory_fd:
+                    late_child.write_bytes(b"late concurrent child\n")
+                    raise OSError(errno.ENOTEMPTY, "directory not empty")
+                real_rmdir(path, *args, **kwargs)
+
+            try:
+                with (
+                    patch.object(install.secrets, "token_hex", return_value="dirid"),
+                    patch.object(install.os, "rmdir", side_effect=inject_late_child_before_rmdir),
+                ):
+                    result = agent_dir.cleanup_verified_quarantine(cleanup_name, expected_state)
+            finally:
+                agent_dir.close()
+
+            self.assertFalse(public_cleanup.exists())
+            self.assertEqual(private_leaf.read_bytes(), b"installer-owned cleanup\n")
+            self.assertEqual(late_child.read_bytes(), b"late concurrent child\n")
+            self.assertIn(private_leaf.as_posix(), result.preserved_private_paths)
+            self.assertIn(private_dir.as_posix(), result.preserved_private_paths)
+            self.assertIn(
+                {"kind": "preserved_concurrent_file", "target": private_dir.as_posix(), "error": "private_quarantine_dir_not_empty"},
+                result.cleanup_errors,
+            )
+
+    def test_install_codex_agents_posix_private_quarantine_backslash_child_reports_private_dir_unknown(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve() / "agents"
+            destination.mkdir()
+            cleanup_name = ".backslash.cleanup.agent.tmp"
+            public_cleanup = destination / cleanup_name
+            public_cleanup.write_bytes(b"installer-owned cleanup\n")
+            private_dir_name = ".dirid.cleanup-dir"
+            private_dir = destination / private_dir_name
+            private_leaf = private_dir / cleanup_name
+            backslash_child = private_dir / "valid\\posix-child"
+            identity = install.codex_agent_destination_identity(destination)
+            agent_dir = install.AnchoredAgentDir.open(destination, identity)
+            expected_state = agent_dir.previous_state(cleanup_name)
+            assert expected_state is not None
+            real_move = install.codex_agent_native_rename_no_replace_between
+
+            def move_then_add_backslash_child(*args: object, **kwargs: object) -> None:
+                real_move(*args, **kwargs)
+                backslash_child.write_bytes(b"valid POSIX backslash child\n")
+
+            try:
+                with (
+                    patch.object(install.secrets, "token_hex", return_value="dirid"),
+                    patch.object(install, "codex_agent_native_rename_no_replace_between", side_effect=move_then_add_backslash_child),
+                ):
+                    result = agent_dir.cleanup_verified_quarantine(cleanup_name, expected_state)
+            finally:
+                agent_dir.close()
+
+            self.assertFalse(public_cleanup.exists())
+            self.assertEqual(private_leaf.read_bytes(), b"installer-owned cleanup\n")
+            self.assertEqual(backslash_child.read_bytes(), b"valid POSIX backslash child\n")
+            self.assertIn(private_dir.as_posix(), result.preserved_private_paths)
+            self.assertIn(
+                {"kind": "preserved_concurrent_file", "target": private_dir.as_posix(), "error": "private_quarantine_dir_not_empty"},
+                result.cleanup_errors,
+            )
+
     def test_install_codex_agents_posix_cleanup_restore_collision_read_error_reports_both_names(self) -> None:
         from speckit_pro_runner.helpers import install
 
@@ -3485,6 +3802,48 @@ class MutationHelperTests(unittest.TestCase):
                 {"kind": "preserved_concurrent_file", "target": cleanup_path.as_posix(), "error": "cleanup_restore_collision"},
                 result.cleanup_errors,
             )
+            self.assertIn(
+                {"kind": "preserved_concurrent_file", "target": target.as_posix(), "error": "cleanup_restore_collision"},
+                result.cleanup_errors,
+            )
+
+    def test_install_codex_agents_posix_cleanup_restore_success_without_reappearance_has_no_phantom_source(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve() / "agents"
+            destination.mkdir()
+            target_name = "agent.tmp"
+            target = destination / target_name
+            target.write_bytes(b"installer-owned cleanup\n")
+            cleanup_name = ".moveid.cleanup.agent.tmp"
+            cleanup_path = destination / cleanup_name
+            identity = install.codex_agent_destination_identity(destination)
+            agent_dir = install.AnchoredAgentDir.open(destination, identity)
+            expected_state = agent_dir.previous_state(target_name)
+            assert expected_state is not None
+            real_rename = install.codex_agent_native_rename_no_replace
+
+            def mismatch_then_restore(directory_fd: int, source: str, target_name_arg: str) -> None:
+                if source == target_name:
+                    real_rename(directory_fd, source, target_name_arg)
+                    cleanup_path.write_bytes(b"mismatched cleanup bytes\n")
+                    return
+                real_rename(directory_fd, source, target_name_arg)
+
+            try:
+                with (
+                    patch.object(install.secrets, "token_hex", return_value="moveid"),
+                    patch.object(install, "codex_agent_native_rename_no_replace", side_effect=mismatch_then_restore),
+                ):
+                    result = agent_dir.cleanup_owned_entry(target_name, expected_state)
+            finally:
+                agent_dir.close()
+
+            self.assertFalse(cleanup_path.exists())
+            self.assertEqual(target.read_bytes(), b"mismatched cleanup bytes\n")
+            self.assertEqual(result.public_conflicts, [target.as_posix()])
+            self.assertNotIn(cleanup_path.as_posix(), result.preserved_paths)
             self.assertIn(
                 {"kind": "preserved_concurrent_file", "target": target.as_posix(), "error": "cleanup_restore_collision"},
                 result.cleanup_errors,
