@@ -293,3 +293,7 @@
 ### Post: Review Remediation — Windows Post-Rename Evidence
 
 **Deviations/Edge cases/Surprises:** The next exact-head review found that a Windows rename could commit before a source-handle close error, losing the attempted backup name, and that cleanup could omit a concurrently recreated source after the same post-rename failure. Three mocked Win32 cases established RED at 182/185 with two errors and one failure. The remediation carries the attempted destination and expected state through backup moves, raises structured NoClobber evidence after possible commit, and reclassifies both cleanup names after safe owned cleanup. GREEN and REFACTOR passed 185/185; materialization remained 11/11 and the canonical materializer 17/17.
+
+### Post: Review Remediation — Uniform Windows Rename Callers
+
+**Deviations/Edge cases/Surprises:** Exact-head review found three remaining Windows caller inconsistencies: publish mislabeled a committed target as changed, restore reported a phantom backup, and generic cleanup errors omitted a recreated source while mislabeling arbitrary errors as handle-close failures. Three mocked Win32 cases established RED at 185/188. The remediation uses typed post-commit rename-close evidence, final-state classifies both names for publish and restore, and classifies both cleanup names on every return while reserving `close_handle` for positively identified close failures. GREEN and REFACTOR passed 188/188; materialization remained 11/11 and the canonical materializer 17/17.

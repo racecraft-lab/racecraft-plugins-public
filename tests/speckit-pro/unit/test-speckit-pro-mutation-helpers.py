@@ -4430,6 +4430,42 @@ class MutationHelperTests(unittest.TestCase):
             self.assertFalse(source.exists())
             self.assertEqual((destination / "backup.toml").read_bytes(), b"windows source\n")
 
+    def test_install_codex_agents_windows_publish_rename_close_failure_preserves_committed_target(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            target = destination / "agent.toml"
+            temp_path = destination / ".agent.toml.tokenid.tmp"
+            identity = install.codex_agent_destination_identity(destination)
+            fake = FakeWindowsKernel32()
+            fake.fail_close_paths.add(target)
+
+            with (
+                patch.object(install.os, "name", "nt"),
+                patch.object(install.ctypes, "WinDLL", return_value=fake, create=True),
+                patch.object(install.ctypes, "get_last_error", side_effect=fake.get_last_error, create=True),
+                patch.object(install.secrets, "token_hex", return_value="tokenid"),
+            ):
+                with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
+                    install.write_codex_agent_atomic(
+                        target,
+                        b"windows publish bytes\n",
+                        destination,
+                        identity,
+                        expected_state=None,
+                    )
+
+            self.assertFalse(temp_path.exists())
+            self.assertEqual(target.read_bytes(), b"windows publish bytes\n")
+            self.assertNotIn("target changed", str(raised.exception))
+            self.assertEqual(raised.exception.preserved_paths, [target.as_posix()])
+            self.assertIn(
+                {"kind": "close_handle", "target": target.as_posix(), "error": "OSError"},
+                raised.exception.cleanup_errors,
+            )
+            self.assertTrue(any(record["path"] == target for record in fake.handles.values()))
+
     def test_install_codex_agents_windows_write_backup_rename_close_failure_preserves_attempted_destination(self) -> None:
         from speckit_pro_runner.helpers import install
 
@@ -4499,6 +4535,39 @@ class MutationHelperTests(unittest.TestCase):
                 raised.exception.cleanup_errors,
             )
             self.assertTrue(any(record["path"] == backup_path for record in fake.handles.values()))
+
+    def test_install_codex_agents_windows_restore_rename_close_failure_omits_absent_backup(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            backup = destination / ".agent.toml.tokenid.bak"
+            backup.write_bytes(b"windows backup bytes\n")
+            target = destination / "agent.toml"
+            identity = install.codex_agent_destination_identity(destination)
+            fake = FakeWindowsKernel32()
+            fake.fail_close_paths.add(target)
+
+            with (
+                patch.object(install.os, "name", "nt"),
+                patch.object(install.ctypes, "WinDLL", return_value=fake, create=True),
+                patch.object(install.ctypes, "get_last_error", side_effect=fake.get_last_error, create=True),
+            ):
+                agent_dir = install.AnchoredAgentDir.open(destination, identity)
+                try:
+                    with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
+                        agent_dir.restore_backup_no_clobber(backup.name, target.name)
+                finally:
+                    agent_dir.close()
+
+            self.assertFalse(backup.exists())
+            self.assertEqual(target.read_bytes(), b"windows backup bytes\n")
+            self.assertEqual(raised.exception.preserved_paths, [target.as_posix()])
+            self.assertNotIn(backup.as_posix(), raised.exception.preserved_paths)
+            self.assertIn(
+                {"kind": "close_handle", "target": target.as_posix(), "error": "OSError"},
+                raised.exception.cleanup_errors,
+            )
 
     def test_install_codex_agents_windows_recovery_copy_verifies_exclusive_handle_without_path_reopen(self) -> None:
         from speckit_pro_runner.helpers import install
@@ -5101,6 +5170,60 @@ class MutationHelperTests(unittest.TestCase):
             )
             self.assertIn(
                 {"kind": "close_handle", "target": cleanup_path.as_posix(), "error": "OSError"},
+                result.cleanup_errors,
+            )
+
+    def test_install_codex_agents_windows_cleanup_generic_rename_error_classifies_candidate_and_source(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            target_name = "agent.tmp"
+            target = destination / target_name
+            target.write_bytes(b"windows installer-owned cleanup\n")
+            identity = install.codex_agent_destination_identity(destination)
+            fake = FakeWindowsKernel32()
+            cleanup_name = ".cleanupid.cleanup.agent.tmp"
+            cleanup_path = destination / cleanup_name
+
+            def rename_then_mismatch_and_recreate(
+                agent_dir: object,
+                source_name: str,
+                target_name_arg: str,
+            ) -> None:
+                del agent_dir
+                if source_name == target_name and target_name_arg == cleanup_name:
+                    os.rename(target, cleanup_path)
+                    cleanup_path.write_bytes(b"windows mismatched cleanup candidate\n")
+                    target.write_bytes(b"windows recreated source after generic rename error\n")
+                    raise OSError("generic post-rename failure")
+                raise AssertionError("unexpected rename call")
+
+            with (
+                patch.object(install.os, "name", "nt"),
+                patch.object(install.ctypes, "WinDLL", return_value=fake, create=True),
+                patch.object(install.ctypes, "get_last_error", side_effect=fake.get_last_error, create=True),
+                patch.object(install.secrets, "token_hex", return_value="cleanupid"),
+                patch.object(install, "codex_agent_windows_rename_no_replace", side_effect=rename_then_mismatch_and_recreate),
+            ):
+                agent_dir = install.AnchoredAgentDir.open(destination, identity)
+                try:
+                    state = agent_dir.previous_state(target_name)
+                    assert state is not None
+                    result = agent_dir.cleanup_owned_entry(target_name, state)
+                finally:
+                    agent_dir.close()
+
+            self.assertEqual(cleanup_path.read_bytes(), b"windows mismatched cleanup candidate\n")
+            self.assertEqual(target.read_bytes(), b"windows recreated source after generic rename error\n")
+            self.assertEqual(result.public_conflicts, [cleanup_path.as_posix(), target.as_posix()])
+            self.assertFalse(any(error["kind"] == "close_handle" for error in result.cleanup_errors))
+            self.assertIn(
+                {"kind": "preserved_concurrent_file", "target": cleanup_path.as_posix(), "error": "cleanup_rename_failed"},
+                result.cleanup_errors,
+            )
+            self.assertIn(
+                {"kind": "preserved_concurrent_file", "target": target.as_posix(), "error": "cleanup_rename_failed"},
                 result.cleanup_errors,
             )
 
