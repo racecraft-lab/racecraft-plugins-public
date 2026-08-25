@@ -1,0 +1,186 @@
+{
+  "body_file": "specs/g56r-006-resolver-materializer-installer-strict-override/.process/pr-packets/g56r-006/body.md",
+  "editable_fields": [
+    {
+      "end_marker": "<!-- speckit-pro-editable:summary:end -->",
+      "field_id": "summary",
+      "heading": "Summary",
+      "start_marker": "<!-- speckit-pro-editable:summary:start -->"
+    },
+    {
+      "end_marker": "<!-- speckit-pro-editable:what_changed:end -->",
+      "field_id": "what_changed",
+      "heading": "What Changed",
+      "start_marker": "<!-- speckit-pro-editable:what_changed:start -->"
+    },
+    {
+      "end_marker": "<!-- speckit-pro-editable:why_it_matters:end -->",
+      "field_id": "why_it_matters",
+      "heading": "Why It Matters",
+      "start_marker": "<!-- speckit-pro-editable:why_it_matters:start -->"
+    }
+  ],
+  "generated_title": {
+    "description": "Add capability-aware agent installation",
+    "rejected_candidates": [],
+    "scope": "g56r-006",
+    "source_evidence": {
+      "kind": "workflow",
+      "source": "docs/ai/specs/.process/G56R-006-workflow.md",
+      "summary": "Title generated from active SpecKit workflow evidence."
+    },
+    "type": "feat",
+    "value": "feat(g56r-006): Add capability-aware agent installation"
+  },
+  "mode": "single",
+  "packet_id": "g56r-006",
+  "protected_body_fingerprint": {
+    "algorithm": "sha256",
+    "elided_fields": [
+      "summary",
+      "what_changed",
+      "why_it_matters"
+    ],
+    "normalization": "LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
+    "value": "7423f5d7f8ba6eae28dcb1c6810363bb19f2efbd3d00ffc0dc069dc56a1bd6e7"
+  },
+  "required_headings": [
+    "Summary",
+    "What Changed",
+    "Why It Matters",
+    "How To Review",
+    "How To UAT",
+    "Verification",
+    "Scope",
+    "Known Gaps"
+  ],
+  "schema_version": "1.0.0",
+  "scope_evidence": {
+    "budget_result": "exception",
+    "changed_files": [
+      "dist/claude/speckit-pro/speckit_pro_runner/agent_materialization.py",
+      "dist/claude/speckit-pro/speckit_pro_runner/helpers/install.py",
+      "dist/claude/speckit-pro/speckit_pro_runner/helpers/registry.py",
+      "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "dist/codex/speckit-pro/skills/install/SKILL.md",
+      "dist/codex/speckit-pro/speckit_pro_runner/agent_materialization.py",
+      "dist/codex/speckit-pro/speckit_pro_runner/helpers/install.py",
+      "dist/codex/speckit-pro/speckit_pro_runner/helpers/registry.py",
+      "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "docs/ai/specs/.process/G56R-006-design-concept.md",
+      "docs/ai/specs/.process/G56R-006-release-readiness-result.json",
+      "docs/ai/specs/.process/G56R-006-workflow.md",
+      "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json",
+      "docs/ai/specs/.process/XPLAT-009-payload-completeness-result.json",
+      "docs/ai/specs/.process/XPLAT-009-release-readiness-result.json",
+      "docs/ai/specs/.process/autopilot-state.json",
+      "docs/ai/specs/codex-gpt-5-6-agent-routing-roadmap-MOC.md",
+      "docs/ai/specs/codex-gpt-5-6-agent-routing-technical-roadmap.md",
+      "speckit-pro/codex-skills/install/SKILL.md",
+      "speckit-pro/speckit_pro_runner/agent_materialization.py",
+      "speckit-pro/speckit_pro_runner/helpers/install.py",
+      "speckit-pro/speckit_pro_runner/helpers/registry.py",
+      "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "specs/art-008-feedback-sweep-slice-2/SPEC-MOC.md",
+      "specs/g56r-006-resolver-materializer-installer-strict-override/.process/implementation-notes.md",
+      "specs/g56r-006-resolver-materializer-installer-strict-override/SPEC-MOC.md",
+      "specs/g56r-006-resolver-materializer-installer-strict-override/checklists/data-integrity.md",
+      "specs/g56r-006-resolver-materializer-installer-strict-override/checklists/error-handling.md",
+      "specs/g56r-006-resolver-materializer-installer-strict-override/checklists/reliability.md",
+      "specs/g56r-006-resolver-materializer-installer-strict-override/checklists/requirements.md",
+      "specs/g56r-006-resolver-materializer-installer-strict-override/checklists/state-management.md",
+      "specs/g56r-006-resolver-materializer-installer-strict-override/contracts/install-codex-agents-route-aware.md",
+      "specs/g56r-006-resolver-materializer-installer-strict-override/contracts/route-policy-manifest.schema.md",
+      "specs/g56r-006-resolver-materializer-installer-strict-override/data-model.md",
+      "specs/g56r-006-resolver-materializer-installer-strict-override/plan.md",
+      "specs/g56r-006-resolver-materializer-installer-strict-override/quickstart.md",
+      "specs/g56r-006-resolver-materializer-installer-strict-override/research.md",
+      "specs/g56r-006-resolver-materializer-installer-strict-override/retrospective.md",
+      "specs/g56r-006-resolver-materializer-installer-strict-override/spec.md",
+      "specs/g56r-006-resolver-materializer-installer-strict-override/tasks.md",
+      "specs/g56r-006-resolver-materializer-installer-strict-override/verify-tasks-report.md",
+      "tests/speckit-pro/unit/fixtures/mutation-helpers/codex-agent-routing/cases.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-file-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-mutable.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-source-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-mutable.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-partial-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-root-mismatch.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-same-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-single-product.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-source-mismatch.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-stale-hash.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-traversal-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner/agent_materialization.py",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner/helpers/install.py",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner/helpers/registry.py",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/install/SKILL.md",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner/agent_materialization.py",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner/helpers/install.py",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner/helpers/registry.py",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "tests/speckit-pro/unit/test-agent-materialization.py",
+      "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py"
+    ],
+    "non_goals": [
+      "No production route qualification or default activation.",
+      "No live model calls or real-user-home acceptance writes.",
+      "No Claude agent installation behavior.",
+      "No final downstream cohort assignment."
+    ],
+    "production_files": 4,
+    "reviewable_loc": 12611,
+    "total_files": 70
+  },
+  "source_feature_dir": "specs/g56r-006-resolver-materializer-installer-strict-override",
+  "source_markers": [
+    {
+      "marker_id": "g56r-006",
+      "rendered_text": "feat(g56r-006): Add capability-aware agent installation",
+      "source": "specs/g56r-006-resolver-materializer-installer-strict-override"
+    }
+  ],
+  "target": {
+    "base_branch": "main",
+    "head_branch": "g56r-006-resolver-materializer-installer-strict-override"
+  },
+  "uat": {
+    "how_to_uat": "Run the focused fake-home installer and materializer suites; live installed-home UAT is deferred to G56R-011.",
+    "uat_runbook_heading": "## UAT Runbook",
+    "uat_source": "packet-input"
+  },
+  "validation_result_path": "specs/g56r-006-resolver-materializer-installer-strict-override/.process/pr-packets/g56r-006/validation.json",
+  "verification_evidence": [
+    {
+      "kind": "verification",
+      "result": "pass",
+      "source": "validation",
+      "summary": "Independent attack review approved 52e317618 with 0 Important findings and 0 nits"
+    },
+    {
+      "kind": "verification",
+      "result": "pass",
+      "source": "validation",
+      "summary": "Focused installer 196/196, materializer 13/13, canonical materializer 17/17"
+    },
+    {
+      "kind": "verification",
+      "result": "pass",
+      "source": "validation",
+      "summary": "Full deterministic suite 14352/14352; release artifacts and docs references current; diff check passed"
+    },
+    {
+      "kind": "verification",
+      "result": "pass",
+      "source": "validation",
+      "summary": "Retrospective completed with 53/53 tasks, 100% adherence, and 0 critical findings"
+    }
+  ]
+}

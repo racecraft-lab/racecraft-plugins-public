@@ -215,20 +215,40 @@ the joined paths, and each `.process/` filename individually.
 | `docs/ai/specs/.process/ART-008-workflow.md` | the acceptance citation and the `Post: Retrospective` row | both repointed; surrounding prose retained as history |
 | `docs/ai/specs/.process/ART-008-slice-2-workflow.md` | the `Post: Retrospective` row plus historical planning paths | row repointed; historical paths retained |
 | `docs/ai/specs/.process/ART-008-slice-2-design-concept.md` | `source-input:` naming slice 1's quickstart | retained as the historical record |
-| `docs/ai/specs/.process/autopilot-state.json` | live feature/branch identity and the archive-sweep block | status set to `completed_archived`, archive block added, identity fields retained |
+| `docs/ai/specs/.process/autopilot-state.json` | live feature/branch identity and the archive-sweep block | **left unchanged**; see below |
 | `docs/ai/specs/html-artifacts-roadmap-MOC.md` | two generated backlinks into the removed folders | **regenerated** by the spec index, never hand-edited |
 | `tests/speckit-pro/unit/fixtures/feedback-sweep/comment-corpus.json` and `expected-envelopes.json` | 103 `feature_dir` strings and three edit `file` paths | **none needed**; they are data the helper echoes, and the reads that back them now resolve through `corpus_path` |
 | `speckit-pro/.../capability-discovery.md`, `tests/.../validate-tool-scoping.py` | `art-008-feedback-sweep FR-008c` | spec-ID citations, not paths; retained |
 
-## Defect Found And Fixed During This Cleanup
+## Why `autopilot-state.json` Was Not Touched
 
-Setting `autopilot-state.json` `status` to `archived` failed the state-evidence
-guard: the closed enum in
+That file is a **single-slot pointer to the current run**, not a history log. Its
+own schema says so: "the current-in-flight pointer for one run; the per-spec
+durable record is the workflow file, which survives archive." The archive
+procedure's rule follows from that — update it *only if it still points at the
+completed spec*.
+
+It no longer does. G56R-006 merged in #503 while this cleanup was in review and
+reclaimed the slot, which is normal operation rather than a collision: one slot,
+many specs. Writing ART-008's archive record into it would have deleted a live
+pointer to a run whose pull request had just landed.
+
+**This was caught by a conflict, but it was never really a merge problem.** An
+earlier revision of this branch did edit the file, and the merge resolved that
+edit cleanly in the wrong direction: git saw two textual changes and took mine,
+silently replacing G56R-006's record. The rule above is what made the resolution
+obvious, and it would have applied even with no conflict at all. ART-008's
+durable record is the workflow file and this report; neither needs the pointer.
+
+### A defect this cleanup did find
+
+While the state edit still existed, setting `status` to `archived` failed the
+state-evidence guard: the closed enum in
 `speckit-pro/skills/speckit-autopilot/contracts/autopilot-state-status.schema.json`
-admits `completed_archived`, and the schema's own description names near-miss
-spellings as retired precisely so they do not reappear. Corrected before commit.
-`prior_run_note` was also restored to `completed`, which is the predecessor run's
-status verbatim rather than this run's.
+admits `completed_archived`, and the schema's description names near-miss
+spellings as retired precisely so they do not reappear. The edit is gone now, so
+the correction went with it, but the trap is real and worth knowing about for the
+next archive that *does* own the slot.
 
 ## Recovery Commands
 

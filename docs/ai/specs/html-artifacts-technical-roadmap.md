@@ -737,7 +737,10 @@ removes, and that coupling is what made the removal fail first time. **The accep
 deliberately incomplete**: slice 2's quickstart scenarios 3, 4 and 5 were never
 executed, because each needs an autopilot run reaching Phase 7 on a draft pull
 request and the autopilot runs from the installed plugin cache. They are carried
-to ART-009 rather than claimed here. Full provenance and recovery commands:
+to ART-009 rather than claimed here. `autopilot-state.json` was deliberately not
+touched: it is a single-slot pointer to the current run, and G56R-006 reclaimed
+that slot in PR #503 while this cleanup was in review. Full provenance and
+recovery commands:
 `.specify/memory/archive-reports/2026-08-25-art-008-post-merge-hygiene.md`.
 
 **Key Files:**
