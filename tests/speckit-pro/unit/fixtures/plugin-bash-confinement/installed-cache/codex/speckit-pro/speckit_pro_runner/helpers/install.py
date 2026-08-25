@@ -749,6 +749,52 @@ class AnchoredAgentDir:
         )
         result.cleanup_errors.extend(extra.cleanup_errors)
 
+    def preserve_path_unknown(
+        self,
+        preserved_paths: list[str],
+        cleanup_errors: list[dict[str, str]],
+        path: str,
+        error: str,
+    ) -> None:
+        if path not in preserved_paths:
+            preserved_paths.append(path)
+        record = self.preserved_concurrent_file(path, error)
+        if record not in cleanup_errors:
+            cleanup_errors.append(record)
+
+    def previous_state_exists_for_packaging(
+        self,
+        name: str,
+        preserved_paths: list[str],
+        cleanup_errors: list[dict[str, str]],
+        error: str,
+    ) -> bool:
+        try:
+            return self.previous_state(name) is not None
+        except OSError:
+            self.preserve_path_unknown(preserved_paths, cleanup_errors, self.evidence_path(name), error)
+            return True
+
+    def cleanup_entry_for_packaging(
+        self,
+        name: str,
+        expected_state: CodexAgentFileState,
+        preserved_paths: list[str],
+        cleanup_errors: list[dict[str, str]],
+        error: str,
+    ) -> None:
+        try:
+            cleanup = self.cleanup_owned_entry(name, expected_state)
+        except OSError:
+            self.preserve_path_unknown(preserved_paths, cleanup_errors, self.evidence_path(name), error)
+            return
+        cleanup_errors.extend(cleanup.cleanup_errors)
+        if cleanup.preserved_paths:
+            preserved_paths.extend(cleanup.preserved_paths)
+        else:
+            path = self.evidence_path(name)
+            preserved_paths[:] = [preserved for preserved in preserved_paths if preserved != path]
+
     def cleanup_owned_entry(
         self,
         name: str,
@@ -792,7 +838,15 @@ class AnchoredAgentDir:
                     self.classify_entry_by_expected(name, expected_state, "cleanup_restore_collision"),
                 )
                 return result
-            return self.classify_entry_by_expected(name, expected_state, "cleanup_restore_collision")
+            self.merge_cleanup_result(
+                result,
+                self.classify_entry_by_expected(cleanup_name, expected_state, "cleanup_restore_collision"),
+            )
+            self.merge_cleanup_result(
+                result,
+                self.classify_entry_by_expected(name, expected_state, "cleanup_restore_collision"),
+            )
+            return result
 
         return self.cleanup_verified_quarantine(cleanup_name, expected_state)
 
@@ -823,6 +877,7 @@ class AnchoredAgentDir:
         private_dir_fd: int | None = None
         private_entry_name = cleanup_name
         final_result: CodexAgentCleanupResult | None = None
+        private_dir_entries_before_close: list[str] | None = None
 
         def public_entry_classification(error: str) -> tuple[list[str], list[dict[str, str]]]:
             public_path = self.evidence_path(cleanup_name)
@@ -867,13 +922,20 @@ class AnchoredAgentDir:
         def private_dir_path() -> str:
             return self.evidence_path(private_dir_name or "")
 
-        def preserve_private_dir_unknown(result: CodexAgentCleanupResult, error: str) -> None:
+        def append_private_dir_unknown(result: CodexAgentCleanupResult, error: str) -> None:
             if private_dir_name is None:
                 return
             path = private_dir_path()
             if path not in result.preserved_private_paths:
                 result.preserved_private_paths.append(path)
-            result.cleanup_errors.append(self.preserved_concurrent_file(path, error))
+            record = self.preserved_concurrent_file(path, error)
+            if record not in result.cleanup_errors:
+                result.cleanup_errors.append(record)
+
+        def preserve_private_dir_unknown(result: CodexAgentCleanupResult, error: str) -> None:
+            if private_dir_name is None:
+                return
+            append_private_dir_unknown(result, error)
 
         try:
             for _ in range(32):
@@ -915,6 +977,11 @@ class AnchoredAgentDir:
         finally:
             if private_dir_fd is not None:
                 try:
+                    private_dir_entries_before_close = os.listdir(private_dir_fd)
+                except OSError:
+                    private_dir_entries_before_close = None
+            if private_dir_fd is not None:
+                try:
                     os.close(private_dir_fd)
                 except OSError as exc:
                     if final_result is not None:
@@ -927,7 +994,19 @@ class AnchoredAgentDir:
                 try:
                     os.rmdir(private_dir_name, dir_fd=self.directory_fd)
                 except OSError as exc:
-                    if final_result is not None and exc.errno not in {errno.ENOTEMPTY, errno.EEXIST}:
+                    if final_result is not None and exc.errno in {errno.ENOTEMPTY, errno.EEXIST}:
+                        reported_private_paths = set(final_result.preserved_private_paths)
+                        known_entries = (
+                            private_dir_entries_before_close is not None
+                            and bool(private_dir_entries_before_close)
+                            and all(
+                                self.evidence_subpath(private_dir_name, entry) in reported_private_paths
+                                for entry in private_dir_entries_before_close
+                            )
+                        )
+                        if not known_entries:
+                            append_private_dir_unknown(final_result, "private_quarantine_dir_not_empty")
+                    elif final_result is not None:
                         final_result.cleanup_errors.append(
                             {"kind": "remove_directory", "target": private_dir_path(), "error": type(exc).__name__}
                         )
@@ -4157,7 +4236,23 @@ def write_codex_agent_atomic(
                     list(dict.fromkeys(paths)),
                     cleanup_errors,
                 ) from None
-            installed_state = agent_dir.previous_state(target.name)
+            try:
+                installed_state = agent_dir.previous_state(target.name)
+            except OSError as read_exc:
+                paths = [agent_dir.evidence_path(target.name)]
+                cleanup_errors = [
+                    agent_dir.preserved_concurrent_file(
+                        agent_dir.evidence_path(target.name),
+                        "secondary_target_read_failure",
+                    )
+                ]
+                if backup_name is not None:
+                    paths.insert(0, agent_dir.evidence_path(backup_name))
+                raise CodexAgentNoClobberConflict(
+                    "target changed during no-clobber install",
+                    paths,
+                    cleanup_errors,
+                ) from read_exc
             if installed_state != prepared_state:
                 paths = [agent_dir.evidence_path(target.name)]
                 if backup_name is not None:
@@ -4175,7 +4270,23 @@ def write_codex_agent_atomic(
             if backup_name is not None:
                 if moved_state is None:
                     raise OSError("moved backup state disappeared")
-                backup_cleanup = agent_dir.cleanup_owned_entry(backup_name, moved_state)
+                try:
+                    backup_cleanup = agent_dir.cleanup_owned_entry(backup_name, moved_state)
+                except OSError as cleanup_exc:
+                    backup_path_text = agent_dir.evidence_path(backup_name)
+                    target_path_text = agent_dir.evidence_path(target.name)
+                    cleanup_errors = [
+                        agent_dir.preserved_concurrent_file(
+                            backup_path_text,
+                            "secondary_backup_cleanup_failure",
+                        )
+                    ]
+                    backup_name = None
+                    raise CodexAgentNoClobberConflict(
+                        str(cleanup_exc),
+                        [backup_path_text, target_path_text],
+                        cleanup_errors,
+                    ) from cleanup_exc
                 agent_dir.record_cleanup_result(backup_cleanup)
                 if backup_cleanup.public_conflicts or (
                     isinstance(agent_dir, WindowsAnchoredAgentDir) and backup_cleanup.cleanup_errors
@@ -4198,29 +4309,40 @@ def write_codex_agent_atomic(
             preserved_paths = list(exc.preserved_paths) if isinstance(exc, CodexAgentNoClobberConflict) else []
             preserved_cleanup_errors = list(exc.cleanup_errors) if isinstance(exc, CodexAgentNoClobberConflict) else []
             if tmp_name is not None:
-                tmp_path_text = agent_dir.evidence_path(tmp_name)
                 if prepared_state is not None:
-                    temp_cleanup = agent_dir.cleanup_owned_entry(tmp_name, prepared_state)
-                    preserved_cleanup_errors.extend(temp_cleanup.cleanup_errors)
-                    if temp_cleanup.preserved_paths:
-                        preserved_paths.extend(temp_cleanup.preserved_paths)
-                    else:
-                        preserved_paths = [path for path in preserved_paths if path != tmp_path_text]
+                    agent_dir.cleanup_entry_for_packaging(
+                        tmp_name,
+                        prepared_state,
+                        preserved_paths,
+                        preserved_cleanup_errors,
+                        "secondary_temp_cleanup_failure",
+                    )
                 else:
                     temp_cleanup = agent_dir.preserve_uncertain_entry(tmp_name, "temp_state_capture_unavailable")
                     preserved_cleanup_errors.extend(temp_cleanup.cleanup_errors)
                     if temp_cleanup.preserved_paths:
                         preserved_paths.extend(temp_cleanup.preserved_paths)
                     else:
+                        tmp_path_text = agent_dir.evidence_path(tmp_name)
                         preserved_paths = [path for path in preserved_paths if path != tmp_path_text]
             if backup_name is not None:
                 backup_path_text = agent_dir.evidence_path(backup_name)
                 target_path_text = agent_dir.evidence_path(target.name)
                 if isinstance(exc, CodexAgentNoClobberConflict):
                     preserved_paths.append(backup_path_text)
-                    if agent_dir.previous_state(target.name) is not None:
+                    if agent_dir.previous_state_exists_for_packaging(
+                        target.name,
+                        preserved_paths,
+                        preserved_cleanup_errors,
+                        "secondary_target_read_failure",
+                    ):
                         preserved_paths.append(target_path_text)
-                elif agent_dir.previous_state(target.name) is None:
+                elif not agent_dir.previous_state_exists_for_packaging(
+                    target.name,
+                    preserved_paths,
+                    preserved_cleanup_errors,
+                    "secondary_target_read_failure",
+                ):
                     try:
                         agent_dir.restore_backup_no_clobber(backup_name, target.name)
                         backup_name = None
@@ -4264,7 +4386,22 @@ def remove_codex_agent_if_unchanged(
                     "target appeared during no-clobber removal",
                     [agent_dir.evidence_path(backup_name), agent_dir.evidence_path(target.name)],
                 )
-            backup_cleanup = agent_dir.cleanup_owned_entry(backup_name, expected_state)
+            try:
+                backup_cleanup = agent_dir.cleanup_owned_entry(backup_name, expected_state)
+            except OSError as cleanup_exc:
+                backup_path_text = agent_dir.evidence_path(backup_name)
+                cleanup_errors = [
+                    agent_dir.preserved_concurrent_file(
+                        backup_path_text,
+                        "secondary_backup_cleanup_failure",
+                    )
+                ]
+                backup_name = None
+                raise CodexAgentNoClobberConflict(
+                    str(cleanup_exc),
+                    [backup_path_text],
+                    cleanup_errors,
+                ) from cleanup_exc
             agent_dir.record_cleanup_result(backup_cleanup)
             if backup_cleanup.public_conflicts or (
                 isinstance(agent_dir, WindowsAnchoredAgentDir) and backup_cleanup.cleanup_errors
@@ -4292,9 +4429,19 @@ def remove_codex_agent_if_unchanged(
                 target_path_text = agent_dir.evidence_path(target.name)
                 if isinstance(exc, CodexAgentNoClobberConflict):
                     preserved_paths.append(backup_path_text)
-                    if agent_dir.previous_state(target.name) is not None:
+                    if agent_dir.previous_state_exists_for_packaging(
+                        target.name,
+                        preserved_paths,
+                        preserved_cleanup_errors,
+                        "secondary_target_read_failure",
+                    ):
                         preserved_paths.append(target_path_text)
-                elif agent_dir.previous_state(target.name) is None:
+                elif not agent_dir.previous_state_exists_for_packaging(
+                    target.name,
+                    preserved_paths,
+                    preserved_cleanup_errors,
+                    "secondary_target_read_failure",
+                ):
                     try:
                         agent_dir.restore_backup_no_clobber(backup_name, target.name)
                         backup_name = None
