@@ -13,7 +13,8 @@ import tempfile
 import tomllib
 import unittest
 import hashlib
-from pathlib import Path
+import ctypes
+from pathlib import Path, PosixPath
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -26,6 +27,209 @@ REQUEST_SCHEMA = CONTRACT_DIR / "mutation-helper-request.schema.json"
 RESULT_SCHEMA = CONTRACT_DIR / "mutation-helper-result.schema.json"
 PROMOTION_SCHEMA = CONTRACT_DIR / "helper-promotion-record.schema.json"
 CODEX_AGENT_ROUTING_CASES = FIXTURE_DIR / "codex-agent-routing" / "cases.json"
+
+
+class FakeWindowsKernel32:
+    INVALID_HANDLE_VALUE = ctypes.c_void_p(-1).value
+    CREATE_NEW = 1
+    OPEN_EXISTING = 3
+    GENERIC_WRITE = 0x40000000
+    DELETE = 0x00010000
+    ERROR_FILE_NOT_FOUND = 2
+    ERROR_ACCESS_DENIED = 5
+    ERROR_ALREADY_EXISTS = 183
+    FILE_ATTRIBUTE_DIRECTORY = 0x00000010
+
+    def __init__(self) -> None:
+        self.next_handle = 1000
+        self.handles: dict[int, dict[str, object]] = {}
+        self.last_error = 0
+        self.createfile_calls: list[dict[str, object]] = []
+        self.rename_calls: list[dict[str, object]] = []
+        self.close_handles: list[int] = []
+        self.events: list[str] = []
+        self.fail_close = False
+
+    def get_last_error(self) -> int:
+        return self.last_error
+
+    def set_last_error(self, error: int) -> None:
+        self.last_error = error
+
+    def CreateFileW(
+        self,
+        path: object,
+        desired_access: int,
+        share_mode: int,
+        security_attributes: object,
+        creation_disposition: int,
+        flags_and_attributes: int,
+        template_file: object,
+    ) -> int:
+        del security_attributes, template_file
+        target = PosixPath(str(path))
+        self.createfile_calls.append(
+            {
+                "path": target,
+                "desired_access": desired_access,
+                "share_mode": share_mode,
+                "creation_disposition": creation_disposition,
+                "flags_and_attributes": flags_and_attributes,
+            }
+        )
+        try:
+            if creation_disposition == self.CREATE_NEW:
+                flags = os.O_RDWR | os.O_CREAT | os.O_EXCL
+                fd = os.open(target, flags, 0o600)
+            elif creation_disposition == self.OPEN_EXISTING:
+                if not target.exists():
+                    self.set_last_error(self.ERROR_FILE_NOT_FOUND)
+                    return self.INVALID_HANDLE_VALUE
+                flags = os.O_RDWR if desired_access & (self.GENERIC_WRITE | self.DELETE) else os.O_RDONLY
+                fd = os.open(target, flags)
+            else:
+                self.set_last_error(self.ERROR_ACCESS_DENIED)
+                return self.INVALID_HANDLE_VALUE
+        except FileExistsError:
+            self.set_last_error(self.ERROR_ALREADY_EXISTS)
+            return self.INVALID_HANDLE_VALUE
+        except FileNotFoundError:
+            self.set_last_error(self.ERROR_FILE_NOT_FOUND)
+            return self.INVALID_HANDLE_VALUE
+        except OSError:
+            self.set_last_error(self.ERROR_ACCESS_DENIED)
+            return self.INVALID_HANDLE_VALUE
+        handle = self.next_handle
+        self.next_handle += 1
+        self.handles[handle] = {"fd": fd, "path": target}
+        if target.is_dir():
+            self.events.append(f"CreateFileW:dir:{handle}")
+        return handle
+
+    def CloseHandle(self, handle: int) -> int:
+        self.close_handles.append(handle)
+        self.events.append(f"CloseHandle:{handle}")
+        record = self.handles.pop(handle, None)
+        if record is not None:
+            try:
+                os.close(int(record["fd"]))
+            except OSError:
+                pass
+        if self.fail_close:
+            self.set_last_error(6)
+            return 0
+        return 1
+
+    def GetFileInformationByHandle(self, handle: int, info_pointer: object) -> int:
+        record = self.handles[handle]
+        fd = int(record["fd"])
+        path = PosixPath(record["path"])
+        metadata = os.fstat(fd)
+        info = info_pointer._obj
+        info.dwFileAttributes = self.FILE_ATTRIBUTE_DIRECTORY if stat.S_ISDIR(metadata.st_mode) else 0x00000080
+        info.dwVolumeSerialNumber = metadata.st_dev & 0xFFFFFFFF
+        info.nFileSizeHigh = (metadata.st_size >> 32) & 0xFFFFFFFF
+        info.nFileSizeLow = metadata.st_size & 0xFFFFFFFF
+        info.nNumberOfLinks = metadata.st_nlink
+        info.nFileIndexHigh = (metadata.st_ino >> 32) & 0xFFFFFFFF
+        info.nFileIndexLow = metadata.st_ino & 0xFFFFFFFF
+        if path.is_dir():
+            info.dwFileAttributes |= self.FILE_ATTRIBUTE_DIRECTORY
+        return 1
+
+    def ReadFile(
+        self,
+        handle: int,
+        buffer: object,
+        bytes_to_read: int,
+        bytes_read_pointer: object,
+        overlapped: object,
+    ) -> int:
+        del overlapped
+        data = os.read(int(self.handles[handle]["fd"]), bytes_to_read)
+        ctypes.memmove(buffer, data, len(data))
+        bytes_read_pointer._obj.value = len(data)
+        return 1
+
+    def WriteFile(
+        self,
+        handle: int,
+        buffer: object,
+        bytes_to_write: int,
+        bytes_written_pointer: object,
+        overlapped: object,
+    ) -> int:
+        del overlapped
+        data = ctypes.string_at(buffer, bytes_to_write)
+        written = os.write(int(self.handles[handle]["fd"]), data)
+        bytes_written_pointer._obj.value = written
+        return 1
+
+    def FlushFileBuffers(self, handle: int) -> int:
+        try:
+            os.fsync(int(self.handles[handle]["fd"]))
+        except OSError:
+            return 0
+        return 1
+
+    def SetFileInformationByHandle(self, handle: int, info_class: int, rename_info_buffer: object, buffer_size: int) -> int:
+        del buffer_size
+        source = PosixPath(self.handles[handle]["path"])
+        header = install_windows_rename_header(rename_info_buffer)
+        name = install_windows_rename_name(rename_info_buffer, header.FileNameLength)
+        root = self.handles[int(header.RootDirectory)]["path"]
+        target = PosixPath(root) / name
+        self.rename_calls.append(
+            {
+                "info_class": info_class,
+                "replace": bool(header.ReplaceIfExists),
+                "root": int(header.RootDirectory),
+                "name": name,
+            }
+        )
+        self.events.append("SetFileInformationByHandle")
+        if target.exists() and not header.ReplaceIfExists:
+            self.set_last_error(self.ERROR_ALREADY_EXISTS)
+            return 0
+        os.rename(source, target)
+        self.handles[handle]["path"] = target
+        return 1
+
+    def CreateHardLinkW(self, new_link: object, existing_file: object, security_attributes: object) -> int:
+        del security_attributes
+        new_path = PosixPath(str(new_link))
+        existing_path = PosixPath(str(existing_file))
+        if new_path.exists():
+            self.set_last_error(self.ERROR_ALREADY_EXISTS)
+            return 0
+        os.link(existing_path, new_path)
+        return 1
+
+    def DeleteFileW(self, path: object) -> int:
+        try:
+            os.unlink(PosixPath(str(path)))
+        except FileNotFoundError:
+            self.set_last_error(self.ERROR_FILE_NOT_FOUND)
+            return 0
+        return 1
+
+
+class FakeWindowsFileRenameInfoHeader(ctypes.Structure):
+    _fields_ = [
+        ("ReplaceIfExists", ctypes.c_int),
+        ("RootDirectory", ctypes.c_void_p),
+        ("FileNameLength", ctypes.c_uint32),
+    ]
+
+
+def install_windows_rename_header(rename_info_buffer: object) -> FakeWindowsFileRenameInfoHeader:
+    return FakeWindowsFileRenameInfoHeader.from_buffer(rename_info_buffer)
+
+
+def install_windows_rename_name(rename_info_buffer: object, byte_length: int) -> str:
+    offset = ctypes.sizeof(FakeWindowsFileRenameInfoHeader)
+    address = ctypes.addressof(rename_info_buffer) + offset
+    return ctypes.string_at(address, byte_length).decode("utf-16le")
 
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
@@ -1963,7 +2167,7 @@ class MutationHelperTests(unittest.TestCase):
 
             def create_before_link(source: object, link_target: object, **kwargs: object) -> None:
                 nonlocal injected
-                if Path(link_target) == target and str(source).endswith(".tmp") and not injected:
+                if link_target == target.name and str(source).endswith(".tmp") and not injected:
                     injected = True
                     target.write_bytes(concurrent)
                 real_link(source, link_target, **kwargs)
@@ -2026,14 +2230,14 @@ class MutationHelperTests(unittest.TestCase):
             target.write_bytes(b"captured prior\n")
             expected = install.codex_agent_previous_state(target)
             identity = install.codex_agent_destination_identity(destination)
-            real_unlink = Path.unlink
+            real_unlink = install.os.unlink
 
-            def reject_backup_cleanup(path: Path, *args: object, **kwargs: object) -> None:
-                if path.suffix == ".bak" and target.exists() and target.read_bytes() == b"installer bytes\n":
+            def reject_backup_cleanup(path: object, *args: object, **kwargs: object) -> None:
+                if str(path).endswith(".bak") and target.exists() and target.read_bytes() == b"installer bytes\n":
                     raise OSError("persistent backup cleanup failure")
                 real_unlink(path, *args, **kwargs)
 
-            with patch.object(Path, "unlink", autospec=True, side_effect=reject_backup_cleanup):
+            with patch.object(install.os, "unlink", side_effect=reject_backup_cleanup):
                 with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
                     install.write_codex_agent_atomic(
                         target,
@@ -2061,14 +2265,14 @@ class MutationHelperTests(unittest.TestCase):
             identity = install.codex_agent_destination_identity(destination)
             concurrent = destination / ".concurrent-write"
             concurrent.write_bytes(b"concurrent cleanup-window edit\n")
-            real_unlink = Path.unlink
+            real_unlink = install.os.unlink
             real_replace = os.replace
             injected = False
 
-            def replace_during_backup_cleanup(path: Path, *args: object, **kwargs: object) -> None:
+            def replace_during_backup_cleanup(path: object, *args: object, **kwargs: object) -> None:
                 nonlocal injected
                 if (
-                    path.suffix == ".bak"
+                    str(path).endswith(".bak")
                     and target.exists()
                     and target.read_bytes() == b"installer bytes\n"
                     and not injected
@@ -2077,7 +2281,7 @@ class MutationHelperTests(unittest.TestCase):
                     real_replace(concurrent, target)
                 real_unlink(path, *args, **kwargs)
 
-            with patch.object(Path, "unlink", autospec=True, side_effect=replace_during_backup_cleanup):
+            with patch.object(install.os, "unlink", side_effect=replace_during_backup_cleanup):
                 with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
                     install.write_codex_agent_atomic(
                         target,
@@ -2104,17 +2308,17 @@ class MutationHelperTests(unittest.TestCase):
             expected = install.codex_agent_previous_state(target)
             assert expected is not None
             identity = install.codex_agent_destination_identity(destination)
-            real_unlink = Path.unlink
+            real_unlink = install.os.unlink
             injected = False
 
-            def create_during_backup_cleanup(path: Path, *args: object, **kwargs: object) -> None:
+            def create_during_backup_cleanup(path: object, *args: object, **kwargs: object) -> None:
                 nonlocal injected
-                if path.suffix == ".bak" and not target.exists() and not injected:
+                if str(path).endswith(".bak") and not target.exists() and not injected:
                     injected = True
                     target.write_bytes(b"concurrent removal-window edit\n")
                 real_unlink(path, *args, **kwargs)
 
-            with patch.object(Path, "unlink", autospec=True, side_effect=create_during_backup_cleanup):
+            with patch.object(install.os, "unlink", side_effect=create_during_backup_cleanup):
                 with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
                     install.remove_codex_agent_if_unchanged(target, expected, destination, identity)
 
@@ -2165,17 +2369,17 @@ class MutationHelperTests(unittest.TestCase):
             target.write_bytes(b"captured prior\n")
             expected = install.codex_agent_previous_state(target)
             identity = install.codex_agent_destination_identity(destination)
-            real_unlink = Path.unlink
+            real_unlink = install.os.unlink
             rejected = False
 
-            def reject_first_temp_cleanup(path: Path, *args: object, **kwargs: object) -> None:
+            def reject_first_temp_cleanup(path: object, *args: object, **kwargs: object) -> None:
                 nonlocal rejected
-                if path.suffix == ".tmp" and not rejected:
+                if str(path).endswith(".tmp") and not rejected:
                     rejected = True
                     raise OSError("transient temp cleanup failure")
                 real_unlink(path, *args, **kwargs)
 
-            with patch.object(Path, "unlink", autospec=True, side_effect=reject_first_temp_cleanup):
+            with patch.object(install.os, "unlink", side_effect=reject_first_temp_cleanup):
                 with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
                     install.write_codex_agent_atomic(
                         target,
@@ -2188,6 +2392,369 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(list(destination.glob(".*.tmp")), [])
             self.assertTrue(all(Path(path).exists() for path in raised.exception.preserved_paths))
             self.assertTrue(all(not path.endswith(".tmp") for path in raised.exception.preserved_paths))
+
+    def test_install_codex_agents_temp_cleanup_stays_anchored_after_directory_swap(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            destination = root / "agents"
+            destination.mkdir()
+            target = destination / "analyze-executor.toml"
+            identity = install.codex_agent_destination_identity(destination)
+            moved = root / "moved-agents"
+            replacement_temp: Path | None = None
+            real_identity = install.codex_agent_destination_identity
+            injected = False
+
+            def swap_after_temp_exists(path: Path) -> tuple[int, int]:
+                nonlocal injected, replacement_temp
+                if path == destination and not injected:
+                    temps = list(destination.glob(".*.tmp"))
+                    if temps:
+                        injected = True
+                        temp_name = temps[0].name
+                        destination.rename(moved)
+                        destination.mkdir()
+                        replacement_temp = destination / temp_name
+                        replacement_temp.write_bytes(b"replacement temp must survive\n")
+                return real_identity(path)
+
+            with patch.object(install, "codex_agent_destination_identity", side_effect=swap_after_temp_exists):
+                with self.assertRaisesRegex(OSError, "destination .*during|destination .*after|destination .*before"):
+                    install.write_codex_agent_atomic(
+                        target,
+                        b"installer bytes\n",
+                        destination,
+                        identity,
+                        expected_state=None,
+                    )
+
+            assert replacement_temp is not None
+            self.assertEqual(replacement_temp.read_bytes(), b"replacement temp must survive\n")
+            self.assertEqual(list(moved.glob(".*.tmp")), [])
+            self.assertFalse(target.exists())
+
+    def test_install_codex_agents_backup_move_close_error_does_not_hide_moved_backup(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            target = destination / "agent.toml"
+            target.write_bytes(b"original target bytes\n")
+            real_close = install.os.close
+            close_calls = 0
+
+            def close_then_report(descriptor: int) -> None:
+                nonlocal close_calls
+                close_calls += 1
+                real_close(descriptor)
+                raise OSError("injected anchored directory close failure")
+
+            with patch.object(install.os, "close", side_effect=close_then_report):
+                backup = install.codex_agent_move_target_to_backup(target, destination)
+
+            self.assertEqual(close_calls, 1)
+            self.assertFalse(target.exists())
+            self.assertEqual(backup.read_bytes(), b"original target bytes\n")
+
+    def test_install_codex_agents_anchored_read_close_error_does_not_mask_state(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            target = destination / "agent.toml"
+            target.write_bytes(b"readable state\n")
+            directory_fd = install.codex_agent_open_anchored_directory(
+                destination,
+                install.codex_agent_destination_identity(destination),
+            )
+            real_close = install.os.close
+            try:
+                with patch.object(install.os, "close", side_effect=lambda descriptor: (_ for _ in ()).throw(OSError("injected read close failure"))):
+                    state = install.codex_agent_previous_state_at(directory_fd, target.name)
+            finally:
+                real_close(directory_fd)
+
+            self.assertIsNotNone(state)
+            assert state is not None
+            self.assertEqual(state.content, b"readable state\n")
+
+    def test_install_codex_agents_restore_close_error_does_not_mask_restored_state(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            backup = destination / ".agent.toml.initial.bak"
+            target = destination / "agent.toml"
+            backup.write_bytes(b"captured rollback state\n")
+            real_close = install.os.close
+
+            def close_then_report(descriptor: int) -> None:
+                real_close(descriptor)
+                raise OSError("injected restore close failure")
+
+            with patch.object(install.os, "close", side_effect=close_then_report):
+                install.codex_agent_restore_backup_no_clobber(backup, target)
+
+            self.assertEqual(target.read_bytes(), b"captured rollback state\n")
+            self.assertFalse(backup.exists())
+
+    def test_install_codex_agents_recovery_copy_evidence_is_anchor_relative_after_directory_move(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            destination = root / "agents"
+            destination.mkdir()
+            source = destination / "source.toml"
+            source.write_bytes(b"original bytes\n")
+            state = install.codex_agent_previous_state(source)
+            assert state is not None
+            identity = install.codex_agent_destination_identity(destination)
+            moved = root / "moved-agents"
+            real_open = install.os.open
+            injected = False
+
+            def move_after_copy_open(path: object, flags: int, *args: object, **kwargs: object) -> int:
+                nonlocal injected
+                descriptor = real_open(path, flags, *args, **kwargs)
+                if kwargs.get("dir_fd") is not None and flags & os.O_CREAT and not injected:
+                    injected = True
+                    destination.rename(moved)
+                    destination.mkdir()
+                return descriptor
+
+            with patch.object(install.os, "open", side_effect=move_after_copy_open):
+                with self.assertRaises(install.CodexAgentRecoveryCopyFailure) as raised:
+                    install.codex_agent_preserve_state_as_backup(
+                        state,
+                        destination / "agent.toml",
+                        destination,
+                        identity,
+                    )
+
+            self.assertEqual(len(raised.exception.failed_paths), 1)
+            self.assertTrue(raised.exception.failed_paths[0].startswith("anchored-agent-dir:"))
+            self.assertNotEqual(raised.exception.failed_paths[0], (destination / "agent.toml").as_posix())
+            backups = list(moved.glob(".*.bak"))
+            self.assertEqual(len(backups), 1)
+            self.assertEqual(backups[0].read_bytes(), state.content)
+            self.assertEqual(list(destination.iterdir()), [])
+
+    def test_install_codex_agents_anchored_backend_fails_closed_when_dir_fd_is_unavailable(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            identity = install.codex_agent_destination_identity(destination)
+
+            with patch.object(install, "CODEX_AGENT_OPEN_SUPPORTS_DIR_FD", False):
+                with self.assertRaisesRegex(OSError, "descriptor-relative anchored directory"):
+                    install.AnchoredAgentDir.open(destination, identity)
+
+    def test_install_codex_agents_windows_backend_opens_directory_without_share_delete(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            identity = install.codex_agent_destination_identity(destination)
+            fake = FakeWindowsKernel32()
+
+            with (
+                patch.object(install.os, "name", "nt"),
+                patch.object(install.ctypes, "WinDLL", return_value=fake, create=True),
+                patch.object(install.ctypes, "get_last_error", side_effect=fake.get_last_error, create=True),
+            ):
+                agent_dir = install.AnchoredAgentDir.open(destination, identity)
+                directory_handle = agent_dir.directory_fd
+                agent_dir.close()
+
+            self.assertEqual(fake.createfile_calls[0]["path"], destination)
+            self.assertEqual(int(fake.createfile_calls[0]["share_mode"]) & 0x00000004, 0)
+            self.assertNotEqual(int(fake.createfile_calls[0]["share_mode"]) & 0x00000001, 0)
+            self.assertNotEqual(int(fake.createfile_calls[0]["share_mode"]) & 0x00000002, 0)
+            self.assertNotEqual(int(fake.createfile_calls[0]["flags_and_attributes"]) & 0x02000000, 0)
+            self.assertIn(directory_handle, fake.close_handles)
+
+    def test_install_codex_agents_windows_no_replace_rename_uses_root_handle_and_replace_false(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            source = destination / "agent.toml"
+            source.write_bytes(b"windows source\n")
+            identity = install.codex_agent_destination_identity(destination)
+            fake = FakeWindowsKernel32()
+
+            with (
+                patch.object(install.os, "name", "nt"),
+                patch.object(install.ctypes, "WinDLL", return_value=fake, create=True),
+                patch.object(install.ctypes, "get_last_error", side_effect=fake.get_last_error, create=True),
+                patch.object(install.secrets, "token_hex", return_value="abcdef"),
+            ):
+                agent_dir = install.AnchoredAgentDir.open(destination, identity)
+                directory_handle = agent_dir.directory_fd
+                backup_name = agent_dir.move_target_to_backup(source.name)
+                agent_dir.close()
+
+            self.assertEqual(backup_name, ".agent.toml.abcdef.bak")
+            self.assertFalse(source.exists())
+            self.assertEqual((destination / backup_name).read_bytes(), b"windows source\n")
+            self.assertEqual(fake.rename_calls[0]["info_class"], 3)
+            self.assertFalse(fake.rename_calls[0]["replace"])
+            self.assertEqual(fake.rename_calls[0]["root"], directory_handle)
+
+    def test_install_codex_agents_windows_no_replace_rename_maps_existing_target(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            source = destination / "agent.toml"
+            source.write_bytes(b"windows source\n")
+            target = destination / "existing.toml"
+            target.write_bytes(b"already here\n")
+            identity = install.codex_agent_destination_identity(destination)
+            fake = FakeWindowsKernel32()
+
+            with (
+                patch.object(install.os, "name", "nt"),
+                patch.object(install.ctypes, "WinDLL", return_value=fake, create=True),
+                patch.object(install.ctypes, "get_last_error", side_effect=fake.get_last_error, create=True),
+            ):
+                agent_dir = install.AnchoredAgentDir.open(destination, identity)
+                with self.assertRaises(FileExistsError):
+                    install.codex_agent_windows_rename_no_replace(agent_dir, source.name, target.name)
+                agent_dir.close()
+
+            self.assertEqual(source.read_bytes(), b"windows source\n")
+            self.assertEqual(target.read_bytes(), b"already here\n")
+            self.assertFalse(fake.rename_calls[0]["replace"])
+
+    def test_install_codex_agents_windows_rename_close_error_is_non_masking(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            source = destination / "agent.toml"
+            source.write_bytes(b"windows source\n")
+            identity = install.codex_agent_destination_identity(destination)
+            fake = FakeWindowsKernel32()
+
+            with (
+                patch.object(install.os, "name", "nt"),
+                patch.object(install.ctypes, "WinDLL", return_value=fake, create=True),
+                patch.object(install.ctypes, "get_last_error", side_effect=fake.get_last_error, create=True),
+            ):
+                agent_dir = install.AnchoredAgentDir.open(destination, identity)
+                fake.fail_close = True
+                install.codex_agent_windows_rename_no_replace(agent_dir, source.name, "backup.toml")
+                fake.fail_close = False
+                agent_dir.close()
+
+            self.assertFalse(source.exists())
+            self.assertEqual((destination / "backup.toml").read_bytes(), b"windows source\n")
+
+    def test_install_codex_agents_windows_write_apply_does_not_fail_on_nt_backend(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            target = destination / "agent.toml"
+            identity = install.codex_agent_destination_identity(destination)
+            fake = FakeWindowsKernel32()
+
+            with (
+                patch.object(install.os, "name", "nt"),
+                patch.object(install.ctypes, "WinDLL", return_value=fake, create=True),
+                patch.object(install.ctypes, "get_last_error", side_effect=fake.get_last_error, create=True),
+            ):
+                state = install.write_codex_agent_atomic(
+                    target,
+                    b"windows install\n",
+                    destination,
+                    identity,
+                    expected_state=None,
+                )
+
+            self.assertEqual(state.content, b"windows install\n")
+            self.assertEqual(target.read_bytes(), b"windows install\n")
+
+    def test_install_codex_agents_windows_directory_handle_outlives_backup_rename(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            target = destination / "agent.toml"
+            target.write_bytes(b"prior\n")
+            expected = install.codex_agent_previous_state(target)
+            identity = install.codex_agent_destination_identity(destination)
+            fake = FakeWindowsKernel32()
+
+            with (
+                patch.object(install.os, "name", "nt"),
+                patch.object(install.ctypes, "WinDLL", return_value=fake, create=True),
+                patch.object(install.ctypes, "get_last_error", side_effect=fake.get_last_error, create=True),
+            ):
+                install.write_codex_agent_atomic(
+                    target,
+                    b"windows replacement\n",
+                    destination,
+                    identity,
+                    expected_state=expected,
+                )
+
+            directory_handle = int(fake.rename_calls[0]["root"])
+            self.assertLess(
+                fake.events.index("SetFileInformationByHandle"),
+                fake.events.index(f"CloseHandle:{directory_handle}"),
+            )
+
+    def test_install_codex_agents_darwin_renameatx_missing_fails_closed(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with (
+            patch.object(install.sys, "platform", "darwin"),
+            patch.object(install.ctypes, "CDLL", return_value=SimpleNamespace()),
+        ):
+            with self.assertRaisesRegex(OSError, "renameatx_np is unavailable"):
+                install.codex_agent_native_rename_no_replace(3, "source.toml", "target.toml")
+
+    def test_install_codex_agents_native_no_replace_uses_platform_flags_and_eexist(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        class RenameProbe:
+            def __init__(self) -> None:
+                self.calls: list[tuple[int, bytes, int, bytes, int]] = []
+                self.argtypes: object | None = None
+                self.restype: object | None = None
+
+            def __call__(self, source_fd: int, source: bytes, target_fd: int, target: bytes, flags: int) -> int:
+                self.calls.append((source_fd, source, target_fd, target, flags))
+                install.ctypes.set_errno(install.errno.EEXIST)
+                return -1
+
+        for platform_name, symbol, expected_flag in (
+            ("darwin", "renameatx_np", 0x00000004),
+            ("linux", "renameat2", 0x00000001),
+        ):
+            with self.subTest(platform=platform_name):
+                probe = RenameProbe()
+                library = SimpleNamespace(**{symbol: probe})
+                with (
+                    patch.object(install.sys, "platform", platform_name),
+                    patch.object(install.ctypes, "CDLL", return_value=library),
+                ):
+                    with self.assertRaises(FileExistsError):
+                        install.codex_agent_native_rename_no_replace(7, "source.toml", "target.toml")
+                self.assertEqual(probe.calls, [(7, b"source.toml", 7, b"target.toml", expected_flag)])
+
+    def test_install_codex_agents_native_no_replace_rejects_unsupported_platform(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with patch.object(install.sys, "platform", "freebsd14"):
+            with self.assertRaisesRegex(OSError, "anchored atomic no-replace rename is unavailable"):
+                install.codex_agent_native_rename_no_replace(3, "source.toml", "target.toml")
 
     def test_install_codex_agents_rollback_cleanup_race_preserves_original_state_and_paths(self) -> None:
         from speckit_pro_runner.helpers import install
@@ -2207,14 +2774,14 @@ class MutationHelperTests(unittest.TestCase):
             identity = install.codex_agent_destination_identity(destination)
             concurrent = destination / ".concurrent-rollback"
             concurrent.write_bytes(b"concurrent rollback edit\n")
-            real_unlink = Path.unlink
+            real_unlink = install.os.unlink
             real_replace = os.replace
             injected = False
 
-            def replace_during_rollback_cleanup(path: Path, *args: object, **kwargs: object) -> None:
+            def replace_during_rollback_cleanup(path: object, *args: object, **kwargs: object) -> None:
                 nonlocal injected
                 if (
-                    path.suffix == ".bak"
+                    str(path).endswith(".bak")
                     and target.exists()
                     and target.read_bytes() == original_state.content
                     and not injected
@@ -2223,7 +2790,7 @@ class MutationHelperTests(unittest.TestCase):
                     real_replace(concurrent, target)
                 real_unlink(path, *args, **kwargs)
 
-            with patch.object(Path, "unlink", autospec=True, side_effect=replace_during_rollback_cleanup):
+            with patch.object(install.os, "unlink", side_effect=replace_during_rollback_cleanup):
                 failures, cleanup_errors = install.rollback_codex_agent_install(
                     destination,
                     {target.name: original_state},
@@ -2386,7 +2953,8 @@ class MutationHelperTests(unittest.TestCase):
                         identity,
                     )
 
-            self.assertEqual(raised.exception.failed_paths, [destination.as_posix()])
+            self.assertEqual(len(raised.exception.failed_paths), 1)
+            self.assertTrue(raised.exception.failed_paths[0].startswith("anchored-agent-dir:"))
             backups = list(moved.glob(".*.bak"))
             self.assertEqual(len(backups), 1)
             self.assertEqual(backups[0].read_bytes(), state.content)
@@ -2449,7 +3017,7 @@ class MutationHelperTests(unittest.TestCase):
                     )
 
             self.assertEqual(len(close_calls), 2)
-            self.assertIn("descriptor cleanup errors=2", str(raised.exception))
+            self.assertIn("descriptor cleanup errors=1", str(raised.exception))
             self.assertEqual(len(raised.exception.failed_paths), 1)
 
     def test_install_codex_agents_incomplete_recovery_copy_is_not_preserved_evidence(self) -> None:
@@ -3582,10 +4150,17 @@ class MutationHelperTests(unittest.TestCase):
             from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
 
             real_identity = install.codex_agent_destination_identity(destination)
-            identities = iter((real_identity, (real_identity[0], real_identity[1] + 1)))
+            changed_identity = (real_identity[0], real_identity[1] + 1)
+            identities = [real_identity, changed_identity]
+
+            def destination_identity_changes(_path: Path) -> tuple[int, int]:
+                if identities:
+                    return identities.pop(0)
+                return changed_identity
+
             with (
                 patch.object(install, "codex_agent_destination", return_value=destination),
-                patch.object(install, "codex_agent_destination_identity", side_effect=lambda _path: next(identities)),
+                patch.object(install, "codex_agent_destination_identity", side_effect=destination_identity_changes),
             ):
                 response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
 
