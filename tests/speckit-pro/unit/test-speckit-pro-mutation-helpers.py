@@ -4605,10 +4605,69 @@ class MutationHelperTests(unittest.TestCase):
             self.assertIsInstance(exc.close_error, OSError)
             self.assertEqual(exc.source_name, source.name)
             self.assertEqual(exc.target_name, target.name)
-            self.assertEqual(exc.outcome, "unknown")
+            self.assertEqual(exc.outcome, "not_committed")
             self.assertEqual(getattr(exc, "__notes__", []), [])
             self.assertEqual(source.read_bytes(), b"windows source\n")
             self.assertEqual(target.read_bytes(), b"already here\n")
+
+    def test_install_codex_agents_windows_rename_close_evidence_targets_by_outcome_and_serializes_manual(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            identity = install.codex_agent_destination_identity(destination)
+            fake = FakeWindowsKernel32()
+
+            with (
+                patch.object(install.os, "name", "nt"),
+                patch.object(install.ctypes, "WinDLL", return_value=fake, create=True),
+                patch.object(install.ctypes, "get_last_error", side_effect=fake.get_last_error, create=True),
+            ):
+                agent_dir = install.AnchoredAgentDir.open(destination, identity)
+                try:
+                    committed = install.CodexAgentWindowsRenameCommittedCloseFailure("source.tmp", "target.toml", OSError())
+                    not_committed = install.CodexAgentWindowsRenameFailure(
+                        "source.tmp",
+                        "target.toml",
+                        OSError("primary"),
+                        OSError("close"),
+                        "not_committed",
+                    )
+                    unknown = install.CodexAgentWindowsRenameFailure(
+                        "source.tmp",
+                        "target.toml",
+                        OSError("primary"),
+                        OSError("close"),
+                        "unknown",
+                    )
+
+                    self.assertEqual(
+                        agent_dir.close_handle_cleanup_errors_for_rename(committed),
+                        [{"kind": "close_handle", "target": (destination / "target.toml").as_posix(), "error": "OSError"}],
+                    )
+                    self.assertEqual(
+                        agent_dir.close_handle_cleanup_errors_for_rename(not_committed),
+                        [{"kind": "close_handle", "target": (destination / "source.tmp").as_posix(), "error": "OSError"}],
+                    )
+                    self.assertEqual(
+                        agent_dir.close_handle_cleanup_errors_for_rename(unknown),
+                        [
+                            {"kind": "close_handle", "target": (destination / "source.tmp").as_posix(), "error": "OSError"},
+                            {"kind": "close_handle", "target": (destination / "target.toml").as_posix(), "error": "OSError"},
+                        ],
+                    )
+                    self.assertEqual(
+                        install.codex_route_aware_cleanup_manual_remediation(
+                            [
+                                *agent_dir.close_handle_cleanup_errors_for_rename(committed),
+                                *agent_dir.close_handle_cleanup_errors_for_rename(not_committed),
+                                *agent_dir.close_handle_cleanup_errors_for_rename(unknown),
+                            ]
+                        ),
+                        [],
+                    )
+                finally:
+                    agent_dir.close()
 
     def test_install_codex_agents_windows_restore_rename_failure_does_not_preserve_absent_entries(self) -> None:
         from speckit_pro_runner.helpers import install
@@ -4691,7 +4750,7 @@ class MutationHelperTests(unittest.TestCase):
             self.assertFalse(target.exists())
             self.assertEqual(raised.exception.preserved_paths, [])
             self.assertIn(
-                {"kind": "close_handle", "target": target.as_posix(), "error": "OSError"},
+                {"kind": "close_handle", "target": temp_path.as_posix(), "error": "OSError"},
                 raised.exception.cleanup_errors,
             )
             self.assertFalse(
@@ -4745,7 +4804,7 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(backup_path.read_bytes(), b"concurrent backup occupant\n")
             self.assertEqual(raised.exception.preserved_paths, [backup_path.as_posix(), target.as_posix()])
             self.assertIn(
-                {"kind": "close_handle", "target": backup_path.as_posix(), "error": "OSError"},
+                {"kind": "close_handle", "target": target.as_posix(), "error": "OSError"},
                 raised.exception.cleanup_errors,
             )
             self.assertIn(
@@ -4795,7 +4854,7 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(target.read_bytes(), b"concurrent target bytes\n")
             self.assertEqual(raised.exception.preserved_paths, [backup.as_posix(), target.as_posix()])
             self.assertIn(
-                {"kind": "close_handle", "target": target.as_posix(), "error": "OSError"},
+                {"kind": "close_handle", "target": backup.as_posix(), "error": "OSError"},
                 raised.exception.cleanup_errors,
             )
             self.assertIn(
@@ -4849,13 +4908,116 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(target.read_bytes(), b"windows installer-owned cleanup\n")
             self.assertEqual(result.public_conflicts, [cleanup_path.as_posix(), target.as_posix()])
             self.assertIn(
-                {"kind": "close_handle", "target": cleanup_path.as_posix(), "error": "OSError"},
+                {"kind": "close_handle", "target": target.as_posix(), "error": "OSError"},
                 result.cleanup_errors,
             )
             self.assertIn(
                 {"kind": "preserved_concurrent_file", "target": cleanup_path.as_posix(), "error": "cleanup_rename_failed"},
                 result.cleanup_errors,
             )
+
+    def test_install_codex_agents_windows_cleanup_close_rename_mismatch_returns_candidate_and_source(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        mismatch_cases = ["content", "reparse", "directory", "device", "inode"]
+        for mismatch in mismatch_cases:
+            with self.subTest(mismatch=mismatch), tempfile.TemporaryDirectory() as tmp:
+                destination = Path(tmp).resolve()
+                target_name = "agent.tmp"
+                target = destination / target_name
+                target.write_bytes(b"windows installer-owned cleanup\n")
+                identity = install.codex_agent_destination_identity(destination)
+                fake = FakeWindowsKernel32()
+                cleanup_name = ".cleanupid.cleanup.agent.tmp"
+                cleanup_path = destination / cleanup_name
+                real_set_file_information = fake.SetFileInformationByHandle
+                real_windows_file_info = install.codex_agent_windows_file_info
+                real_windows_read_all = install.codex_agent_windows_read_all
+                rename_finished = False
+
+                def close_fail_recreate_and_mutate_candidate(
+                    handle: int,
+                    info_class: int,
+                    rename_info_buffer: object,
+                    buffer_size: int,
+                ) -> int:
+                    nonlocal rename_finished
+                    result = real_set_file_information(handle, info_class, rename_info_buffer, buffer_size)
+                    if (
+                        result
+                        and info_class == install.WINDOWS_FILE_RENAME_INFO_CLASS
+                        and PosixPath(fake.handles[handle]["path"]) == cleanup_path
+                        and not rename_finished
+                    ):
+                        rename_finished = True
+                        fake.fail_close_once_paths.add(cleanup_path)
+                        target.write_bytes(b"windows recreated source during cleanup verify\n")
+                        if mismatch == "content":
+                            cleanup_path.write_bytes(b"windows mismatched cleanup content\n")
+                    return result
+
+                def mutated_file_info(handle: int) -> object:
+                    info = real_windows_file_info(handle)
+                    record = fake.handles.get(handle)
+                    if record is not None and PosixPath(record["path"]) == cleanup_path and rename_finished:
+                        if mismatch == "reparse":
+                            info.dwFileAttributes |= install.WINDOWS_FILE_ATTRIBUTE_REPARSE_POINT
+                        elif mismatch == "directory":
+                            info.dwFileAttributes |= fake.FILE_ATTRIBUTE_DIRECTORY
+                        elif mismatch == "device":
+                            info.dwVolumeSerialNumber = int(info.dwVolumeSerialNumber) ^ 1
+                        elif mismatch == "inode":
+                            info.nFileIndexLow = int(info.nFileIndexLow) ^ 1
+                    return info
+
+                def mutated_read_all(handle: int) -> bytes:
+                    record = fake.handles.get(handle)
+                    if (
+                        mismatch == "content"
+                        and record is not None
+                        and PosixPath(record["path"]) == cleanup_path
+                        and rename_finished
+                    ):
+                        return b"windows mismatched cleanup content\n"
+                    return real_windows_read_all(handle)
+
+                fake.SetFileInformationByHandle = close_fail_recreate_and_mutate_candidate  # type: ignore[method-assign]
+
+                with (
+                    patch.object(install.os, "name", "nt"),
+                    patch.object(install.ctypes, "WinDLL", return_value=fake, create=True),
+                    patch.object(install.ctypes, "get_last_error", side_effect=fake.get_last_error, create=True),
+                    patch.object(install.secrets, "token_hex", return_value="cleanupid"),
+                    patch.object(install, "codex_agent_windows_file_info", side_effect=mutated_file_info),
+                    patch.object(install, "codex_agent_windows_read_all", side_effect=mutated_read_all),
+                ):
+                    agent_dir = install.AnchoredAgentDir.open(destination, identity)
+                    try:
+                        state = agent_dir.previous_state(target_name)
+                        assert state is not None
+                        result = agent_dir.cleanup_owned_entry(target_name, state)
+                    finally:
+                        agent_dir.close()
+
+                self.assertEqual(target.read_bytes(), b"windows recreated source during cleanup verify\n")
+                self.assertTrue(cleanup_path.exists())
+                self.assertEqual(result.public_conflicts, [cleanup_path.as_posix(), target.as_posix()])
+                self.assertIn(
+                    {
+                        "kind": "preserved_concurrent_file",
+                        "target": cleanup_path.as_posix(),
+                        "error": "cleanup_rename_close_failure",
+                    },
+                    result.cleanup_errors,
+                )
+                self.assertIn(
+                    {
+                        "kind": "preserved_concurrent_file",
+                        "target": target.as_posix(),
+                        "error": "cleanup_rename_close_failure",
+                    },
+                    result.cleanup_errors,
+                )
 
     def test_install_codex_agents_windows_recovery_copy_verifies_exclusive_handle_without_path_reopen(self) -> None:
         from speckit_pro_runner.helpers import install

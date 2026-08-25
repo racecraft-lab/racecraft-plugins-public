@@ -511,6 +511,7 @@ def codex_agent_windows_rename_no_replace(
     source_handle: int | None = None
     primary_error: OSError | None = None
     close_error: OSError | None = None
+    rename_outcome = "unknown"
     try:
         source_handle = codex_agent_windows_create_file(
             agent_dir.path(source_name),
@@ -528,7 +529,9 @@ def codex_agent_windows_rename_no_replace(
             ctypes.c_int,
         )
         if not function(source_handle, WINDOWS_FILE_RENAME_INFO_CLASS, rename_info, rename_info_size):
+            rename_outcome = "not_committed"
             raise codex_agent_windows_os_error("SetFileInformationByHandle", agent_dir.path(target_name))
+        rename_outcome = "committed"
     except OSError as exc:
         primary_error = exc
     finally:
@@ -541,7 +544,7 @@ def codex_agent_windows_rename_no_replace(
                 target_name,
                 primary_error,
                 close_error,
-                "unknown",
+                rename_outcome,
             ) from primary_error
         raise codex_agent_note_close_error(primary_error, close_error)
     if close_error is not None:
@@ -783,6 +786,20 @@ class AnchoredAgentDir:
             "target": self.evidence_path(name),
             "error": type(close_error).__name__,
         }
+
+    def close_handle_cleanup_errors_for_rename(
+        self,
+        exc: CodexAgentWindowsRenameFailure,
+    ) -> list[dict[str, str]]:
+        if exc.close_error is None:
+            return []
+        if exc.outcome == "committed":
+            names = [exc.target_name]
+        elif exc.outcome == "not_committed":
+            names = [exc.source_name]
+        else:
+            names = [exc.source_name, exc.target_name]
+        return [self.close_handle_cleanup_error(name, exc.close_error) for name in dict.fromkeys(names)]
 
     def merge_cleanup_result(self, result: CodexAgentCleanupResult, extra: CodexAgentCleanupResult) -> None:
         result.public_conflicts = list(dict.fromkeys([*result.public_conflicts, *extra.public_conflicts]))
@@ -1094,7 +1111,7 @@ class AnchoredAgentDir:
             result = CodexAgentCleanupResult()
             error = "backup_restore_rename_failed"
             if isinstance(exc, CodexAgentWindowsRenameFailure) and exc.close_error is not None:
-                result.cleanup_errors.append(self.close_handle_cleanup_error(exc.target_name, exc.close_error))
+                result.cleanup_errors.extend(self.close_handle_cleanup_errors_for_rename(exc))
             if isinstance(exc, CodexAgentWindowsRenameCommittedCloseFailure):
                 error = "backup_restore_rename_close_failure"
             self.merge_cleanup_result(
@@ -1552,7 +1569,7 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
                 error = "cleanup_rename_failed"
                 rename_committed_close_failure = isinstance(exc, CodexAgentWindowsRenameCommittedCloseFailure)
                 if isinstance(exc, CodexAgentWindowsRenameFailure) and exc.close_error is not None:
-                    rename_cleanup_errors.append(self.close_handle_cleanup_error(exc.target_name, exc.close_error))
+                    rename_cleanup_errors.extend(self.close_handle_cleanup_errors_for_rename(exc))
                 if rename_committed_close_failure:
                     error = "cleanup_rename_close_failure"
                 if moved_state == expected_state or (rename_committed_close_failure and self.path(candidate).exists()):
@@ -1608,6 +1625,25 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
                     }
                 )
 
+        def return_cleanup_verification_mismatch() -> CodexAgentCleanupResult:
+            if rename_cleanup_error is not None:
+                self.merge_cleanup_result(
+                    result,
+                    self.classify_entry_by_expected(cleanup_name, expected_state, rename_cleanup_error),
+                )
+                self.merge_cleanup_result(
+                    result,
+                    self.classify_entry_by_expected(
+                        name,
+                        expected_state,
+                        rename_cleanup_error,
+                        exact_is_cleanup=False,
+                    ),
+                )
+                return result
+            result.public_conflicts.append(self.evidence_path(cleanup_name))
+            return result
+
         for _ in range(2):
             try:
                 handle = self.open_child_handle(
@@ -1618,21 +1654,16 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
                 )
                 info = codex_agent_windows_file_info(handle)
                 if info.dwFileAttributes & WINDOWS_FILE_ATTRIBUTE_REPARSE_POINT:
-                    result.public_conflicts.append(self.evidence_path(cleanup_name))
-                    return result
+                    return return_cleanup_verification_mismatch()
                 if info.dwFileAttributes & WINDOWS_FILE_ATTRIBUTE_DIRECTORY:
-                    result.public_conflicts.append(self.evidence_path(cleanup_name))
-                    return result
+                    return return_cleanup_verification_mismatch()
                 if int(info.dwVolumeSerialNumber) != expected_state.device:
-                    result.public_conflicts.append(self.evidence_path(cleanup_name))
-                    return result
+                    return return_cleanup_verification_mismatch()
                 if codex_agent_windows_inode(info) != expected_state.inode:
-                    result.public_conflicts.append(self.evidence_path(cleanup_name))
-                    return result
+                    return return_cleanup_verification_mismatch()
                 codex_agent_windows_seek_start(handle)
                 if codex_agent_windows_read_all(handle) != expected_state.content:
-                    result.public_conflicts.append(self.evidence_path(cleanup_name))
-                    return result
+                    return return_cleanup_verification_mismatch()
                 codex_agent_windows_set_mode_by_handle(handle, stat.S_IFREG | 0o600)
                 codex_agent_windows_delete_by_handle(handle)
                 close_cleanup_handle()
@@ -1699,7 +1730,7 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
                 result = CodexAgentCleanupResult()
                 error = "backup_rename_failed"
                 if isinstance(exc, CodexAgentWindowsRenameFailure) and exc.close_error is not None:
-                    result.cleanup_errors.append(self.close_handle_cleanup_error(exc.target_name, exc.close_error))
+                    result.cleanup_errors.extend(self.close_handle_cleanup_errors_for_rename(exc))
                 if isinstance(exc, CodexAgentWindowsRenameCommittedCloseFailure):
                     error = "backup_rename_close_failure"
                 if expected_state is not None:
@@ -4383,9 +4414,7 @@ def write_codex_agent_atomic(
                     result = CodexAgentCleanupResult()
                     error = "publish_rename_failed"
                     if link_exc.close_error is not None:
-                        result.cleanup_errors.append(
-                            agent_dir.close_handle_cleanup_error(link_exc.target_name, link_exc.close_error)
-                        )
+                        result.cleanup_errors.extend(agent_dir.close_handle_cleanup_errors_for_rename(link_exc))
                     if isinstance(link_exc, CodexAgentWindowsRenameCommittedCloseFailure):
                         error = "publish_rename_close_failure"
                     agent_dir.merge_cleanup_result(

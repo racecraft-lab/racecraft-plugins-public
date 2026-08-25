@@ -301,3 +301,7 @@
 ### Post: Review Remediation — Structured Windows Rename Failures
 
 **Deviations/Edge cases/Surprises:** The next exact-head review found phantom fallback paths when no rename entry survived and a combined primary-plus-close failure hidden in non-serialized exception notes. Six mocked Win32 cases established RED at 188/194 with five failures and one error. The remediation introduces structured Windows rename failures carrying source, target, primary error, optional close error, and outcome; every caller records close evidence separately, preserves the primary classification, and derives preserved paths only from final anchored state. GREEN and REFACTOR passed 194/194; materialization remained 11/11 and the canonical materializer 17/17.
+
+### Post: Review Remediation — Outcome-Aware Windows Close Evidence
+
+**Deviations/Edge cases/Surprises:** Exact-head review found that combined rename/close evidence always targeted the destination even when the handle remained bound to the source, and that cleanup mismatch returns bypassed recreated-source classification. Two new regressions plus five corrected caller expectations established RED at 185/196 with ten failures and one error. The remediation makes close evidence outcome-aware (`not_committed` source, `committed` destination, `unknown` both endpoints) and routes every cleanup verification mismatch through common final candidate/source classification. GREEN and REFACTOR passed 196/196; materialization remained 11/11 and the canonical materializer 17/17.
