@@ -44,8 +44,6 @@ CODEX_REQUIRED_AGENT_NAMES = (
     "implement-executor",
     "phase-executor",
     "spec-context-analyst",
-    "sweep-analyst",
-    "sweep-classifier",
     "uat-runbook-author",
 )
 CODEX_SOURCE_AGENT_TOML_NAMES = tuple(

@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-sweep-apply-result",
+  "helper_id": "sweep-apply-result",
+  "operation": "sweep-apply-result",
+  "mode": "dry_run",
+  "inputs": {
+    "session_id": "00000000000000000000000000000000",
+    "receipt": "sweep-result:v1:0000000000000000000000000000000000000000000000000000000000000000",
+    "feature_dir": "specs/example"
+  }
+}

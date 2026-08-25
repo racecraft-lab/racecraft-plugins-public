@@ -43,13 +43,11 @@ Codex autopilot expects to exist as real custom subagents:
 - `implement-executor.toml`
 - `phase-executor.toml`
 - `spec-context-analyst.toml`
-- `sweep-analyst.toml`
-- `sweep-classifier.toml`
 - `uat-runbook-author.toml`
 
-The bundled source inventory is strict: all 13 TOML files must be present
+The bundled source inventory is strict: all 11 TOML files must be present
 before the installer plans either static or route-aware destination changes.
-In route-aware planning, 12 files are required destination agents and
+In route-aware planning, 10 files are required destination agents and
 `autopilot-fast-helper.toml` is the only optional helper. The main autopilot
 may use that helper for tiny advisory text-only prep work when
 `gpt-5.6-luna` is available, but autopilot must continue without it if
@@ -348,8 +346,6 @@ Return a concise installation report like:
 - implement-executor.toml
 - phase-executor.toml
 - spec-context-analyst.toml
-- sweep-analyst.toml
-- sweep-classifier.toml
 - uat-runbook-author.toml
 
 **Next step:** Restart Codex now so the custom subagents are loaded.
@@ -364,6 +360,10 @@ Stop instead of improvising when:
 - the installer helper fails or rolls back
 - the destination cannot be created
 - post-copy verification does not match the bundled source set
+
+Feedback-sweep classifier and analyst prompts are trusted launcher resources,
+not installable Codex agents. Never recreate them under `.codex/agents/`; the
+autopilot runs them only through the isolated `codex exec` launcher.
 
 If the install partially succeeded or rollback is uncertain, report the
 structured recovery evidence: staged actions, applied actions, rolled-back

@@ -11,8 +11,6 @@
     "implement-executor",
     "phase-executor",
     "spec-context-analyst",
-    "sweep-analyst",
-    "sweep-classifier",
     "uat-runbook-author"
   ],
   "optional_helper": "autopilot-fast-helper",
@@ -80,7 +78,7 @@
       "expected": {
         "status": "ok",
         "required_outcome": "resolved",
-        "required_count": 12,
+        "required_count": 10,
         "helper_outcome": "installed",
         "writes_state": false,
         "restart_required": false

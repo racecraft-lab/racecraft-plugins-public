@@ -765,6 +765,105 @@ def _spec_index_write_data(
     }
 
 
+def run_sweep_apply_result(entry: Any, request: Any) -> dict[str, Any]:
+    """Consume one synthesis receipt and expose only a bounded mutation projection."""
+    from ..sweep_isolation import (
+        IsolationViolation,
+        MutationViolation,
+        ReceiptViolation,
+        SchemaViolation,
+        SweepSession,
+        apply_synthesis_receipt,
+    )
+
+    repo_root = find_repo_root(Path.cwd())
+    base = {
+        "helper_id": entry.helper_id,
+        "operation": entry.operation,
+        "mode": request.mode,
+        "promotion_status": entry.promotion_status,
+        "comparison_mode": entry.comparison_mode,
+        "writes_state": False,
+        "mutation": empty_mutation(request.mode),
+    }
+    if repo_root is None:
+        return response(
+            "missing_prerequisite",
+            request_id=request.request_id,
+            data=base,
+            diagnostics=[
+                diagnostic(
+                    "missing_prerequisite",
+                    "feedback sweep mutation requires a repository checkout",
+                    remediation_summary="Retry from the bound SpecKit repository.",
+                    remediation_actions=["Change to the repository root.", "Retry the receipt mutation."],
+                )
+            ],
+        )
+    expected = {"session_id", "receipt", "feature_dir"}
+    if set(request.inputs) != expected or not all(
+        isinstance(request.inputs.get(field), str) and request.inputs[field]
+        for field in expected
+    ):
+        return response(
+            "input_error",
+            request_id=request.request_id,
+            data=base,
+            diagnostics=[
+                diagnostic(
+                    "invalid_input",
+                    "feedback sweep mutation fields do not match the closed receipt schema",
+                    remediation_summary="Provide only the session, receipt, and feature directory identifiers.",
+                    remediation_actions=["Remove extra fields.", "Retry with the exact receipt mutation request."],
+                )
+            ],
+        )
+    try:
+        projection = apply_synthesis_receipt(
+            repo_root,
+            request.inputs["feature_dir"],
+            SweepSession.open(request.inputs["session_id"]),
+            request.inputs["receipt"],
+            mode=request.mode,
+        )
+    except (IsolationViolation, MutationViolation, ReceiptViolation, SchemaViolation):
+        base["mutation"]["mutation_status"] = "blocked"
+        return response(
+            "expected_failure",
+            request_id=request.request_id,
+            data=base,
+            diagnostics=[
+                diagnostic(
+                    "receipt_mutation_refused",
+                    "feedback sweep receipt failed a deterministic mutation precondition",
+                    remediation_summary="Capture a fresh exact-HEAD sweep session and rerun consensus.",
+                    remediation_actions=["Do not reuse this receipt.", "Restart the feedback sweep at the current HEAD."],
+                )
+            ],
+        )
+
+    mutation = base["mutation"]
+    path = projection.get("path")
+    if isinstance(path, str):
+        mutation["planned_paths"] = [path]
+        mutation["planned_operations"] = [
+            {"operation_id": "sweep-amendment", "kind": "write_file", "target": path}
+        ]
+    status = projection["status"]
+    if status.startswith("applied"):
+        mutation["mutation_status"] = "applied"
+        mutation["live_mutation"] = True
+        mutation["applied_operations"] = list(mutation["planned_operations"])
+        mutation["touched_paths"] = list(mutation["planned_paths"])
+        base["writes_state"] = True
+    elif status.startswith("planned"):
+        mutation["mutation_status"] = "planned"
+    else:
+        mutation["mutation_status"] = "no_op"
+    base["result"] = projection
+    return response("ok", request_id=request.request_id, data=base)
+
+
 def run_mutation_helper(
     entry: Any,
     request: Any,

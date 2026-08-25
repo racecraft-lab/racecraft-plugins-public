@@ -2,9 +2,9 @@
 """Structural validation for hooks/hooks.json (port of validate-hooks.sh).
 
 XPLAT-010 count-parity port (T027, US2). Python 3.11+ standard library only.
-Asserts the plugin hook is scoped via ``UserPromptExpansion`` with a
-plugin-scoping matcher and an intentionally empty command list — never a global
-``SessionStart``/``UserPromptSubmit`` hook. Every former ``assert_*``/``_pass``/
+Asserts the plugin keeps command expansion scoped while installing the exact
+feedback-sweep attestation and receipt-validation hooks required by its security
+boundary. Every former ``assert_*``/``_pass``/
 ``_fail`` execution maps to one counted ``subTest`` unit; names reproduced
 verbatim via ``subTest(msg=...)`` for a 1:1 baseline match.
 
@@ -59,11 +59,12 @@ class ValidateHooks(unittest.TestCase):
 
         hooks_map = data.get("hooks", {}) if isinstance(data.get("hooks"), dict) else {}
 
-        with self.subTest(msg="NO SessionStart hook (would fire on every session — regression guard)"):
-            has_session_start = "SessionStart" in hooks_map
+        with self.subTest(msg="SessionStart attests the feedback-sweep hook boundary"):
+            commands = _declared_hook_commands({"hooks": {"SessionStart": hooks_map.get("SessionStart", [])}})
             self.assertEqual(
-                "false", "true" if has_session_start else "false",
-                "plugin must not register a global SessionStart hook",
+                ["command=${CLAUDE_PLUGIN_ROOT}/scripts/sweep-isolation-hook.py attest sweep-isolation-v1"],
+                commands,
+                "SessionStart must run only the version-pinned sweep hook attestation",
             )
         with self.subTest(msg="NO UserPromptSubmit hook (would fire on every prompt — regression guard)"):
             has_user_prompt_submit = "UserPromptSubmit" in hooks_map
@@ -99,14 +100,17 @@ class ValidateHooks(unittest.TestCase):
             ok = isinstance(entry, dict) and "hooks" in entry and isinstance(entry["hooks"], list)
             self.assertEqual("true", "true" if ok else "false", "hook entry must have hooks array")
 
-        with self.subTest(msg="No hook event declares an executable command"):
+        with self.subTest(msg="Only the four version-pinned sweep isolation commands are executable"):
             declared = _declared_hook_commands(data)
             self.assertEqual(
-                "true", "true" if not declared else "false",
-                "Plugin hook manifests declare event scope only: no hook event may "
-                "carry an executable command, because a static manifest cannot "
-                "resolve the Python 3.11+ interpreter the Installed Runtime Contract "
-                f"requires. Skills own interpreter resolution. Found: {declared}",
+                [
+                    "command=${CLAUDE_PLUGIN_ROOT}/scripts/sweep-isolation-hook.py attest sweep-isolation-v1",
+                    "command=${CLAUDE_PLUGIN_ROOT}/scripts/sweep-isolation-hook.py pre-dispatch sweep-isolation-v1",
+                    "command=${CLAUDE_PLUGIN_ROOT}/scripts/sweep-isolation-hook.py authorize-broker sweep-isolation-v1",
+                    "command=${CLAUDE_PLUGIN_ROOT}/scripts/sweep-isolation-hook.py validate-stop sweep-isolation-v1",
+                ],
+                declared,
+                "Claude sweep confinement requires exactly its attestation, dispatch, and receipt hooks",
             )
 
 

@@ -45,7 +45,12 @@ CODEX_AGENTS_DIR = PLUGIN_ROOT / "codex-agents"
 SKILLS_DIR = PLUGIN_ROOT / "skills"
 CODEX_SKILLS_DIR = PLUGIN_ROOT / "codex-skills"
 
-CC_ONLY_AGENTS = frozenset({"gate-validator", "consensus-synthesizer"})
+CC_ONLY_AGENTS = frozenset({
+    "gate-validator",
+    "consensus-synthesizer",
+    "sweep-classifier",
+    "sweep-analyst",
+})
 CODEX_ONLY_AGENTS = frozenset({"autopilot-fast-helper"})
 
 REF_RE = re.compile(r"\.\./\.\./skills/[^)]+\.md")
@@ -109,6 +114,13 @@ class ValidateCodexParity(unittest.TestCase):
                         (CODEX_AGENTS_DIR / f"{agent_name}.toml").is_file(),
                         f"file not found: {CODEX_AGENTS_DIR / (agent_name + '.toml')}",
                     )
+            for agent_name, resource_name in (
+                ("sweep-analyst", "analyst.md"),
+                ("sweep-classifier", "classifier.md"),
+            ):
+                resource = CODEX_SKILLS_DIR / "speckit-autopilot" / "references" / "sweep-prompts" / resource_name
+                with self.subTest(msg=f"codex trusted launcher resource exists for {agent_name}"):
+                    self.assertTrue(resource.is_file(), f"file not found: {resource}")
         else:
             with self.subTest(msg="agents/ and codex-agents/ directories exist"):
                 self.fail(f"one or both agent directories missing (CC: {AGENTS_DIR}, Codex: {CODEX_AGENTS_DIR})")

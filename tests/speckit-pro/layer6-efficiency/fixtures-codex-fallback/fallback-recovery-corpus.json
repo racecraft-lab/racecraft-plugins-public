@@ -3,7 +3,7 @@
   "fixture_kind": "codex_fallback_recovery_replay",
   "description": "Deterministic local simulation seeds only; no row makes a live model or service availability claim.",
   "source_roster": {
-    "source_roster_id": "sha256:f41bc8e06ff46623ec2e933ad9f1e21e6f5fe0fac5f22e0f213df726a7ce9133",
+    "source_roster_id": "sha256:d0ee78d3e1848c7e7a1e040aa93a3aafbde3f6da910f3566cbe15f4f06f75b41",
     "canonicalization": "json-sorted-keys-compact-over-path-sha256-classification-rows",
     "members": [
       {
@@ -55,16 +55,6 @@
         "classification": "required_core",
         "path": "speckit-pro/codex-agents/spec-context-analyst.toml",
         "sha256": "sha256:4b0547280124f47a4ffe2de770cce1b8e8c92dfed79e19eed9ad7cf09fe08307"
-      },
-      {
-        "classification": "required_core",
-        "path": "speckit-pro/codex-agents/sweep-analyst.toml",
-        "sha256": "sha256:afcec26fc296479e906d7b17fccb5aa1c321aa2f77091fc3fb8ebed64be423c3"
-      },
-      {
-        "classification": "required_core",
-        "path": "speckit-pro/codex-agents/sweep-classifier.toml",
-        "sha256": "sha256:f597de83ea842448d19d2bf0da51bbb8325002bdd4721e37e8c5aac2756a0eaf"
       },
       {
         "classification": "required_core",
