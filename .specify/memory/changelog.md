@@ -2870,3 +2870,29 @@ legal and `os.stat` is unwatched, so existence probes and path arithmetic are
 unaffected. Six whole-tree sweeps declare `allow_live_specs=True`; the guard
 identified four of them by failing on its first run. The rule is recorded in
 root `AGENTS.md` and `REVIEW.md`.
+
+## 2026-08-25 - ART-017 And G56R-006 Post-Merge Archive Cleanup
+
+### ART-017
+
+PR #490, merged `2026-08-23T01:58:12Z` at `070a36c2b`. 31/31 tasks, 20/20 FRs.
+Armed three state bookkeeping helpers that had been reporting clean on input
+they should catch. Manual UAT executed 9/9 acceptance scenarios; preserved at
+`docs/ai/specs/.process/ART-017-manual-uat.md`.
+
+### G56R-006
+
+PR #503, merged `2026-08-25T14:52:56Z` at `609f99e17`. 53/53 tasks, 0 critical
+findings. Capability-aware resolution, strict per-agent override and an atomic
+installer with a zero-mutation miss response. Retrospective preserved at
+`docs/ai/specs/.process/G56R-006-retrospective.md`.
+
+### The sweep
+
+Both workflow files preserved; ART-017's UAT and G56R-006's retrospective
+relocated; both roadmaps and the Codex routing MOC reconciled; both active
+folders removed; `autopilot-state.json` advanced to `completed_archived`
+because the slot still pointed at G56R-006; spec index regenerated. `specs/`
+now holds only `.gitkeep` and BRAND-001, which is scaffolded and unstarted
+rather than merged. Recovery commands and full verification live in the two
+per-spec reports under `.specify/memory/archive-reports/`.
