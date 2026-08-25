@@ -5,8 +5,8 @@
   "branch": "g56r-006-resolver-materializer-installer-strict-override",
   "status": "in_progress",
   "stage": "implement",
-  "updated_at": "2026-08-24T22:37:00Z",
-  "active_step": "Post: Review Remediation",
+  "updated_at": "2026-08-25T00:47:17Z",
+  "active_step": "Post: Review Remediation (blocked)",
   "stage_resolution": {
     "source": "argv",
     "basis": "explicit --stage implement",
@@ -528,6 +528,106 @@
         ],
         "important_findings": 1,
         "nits": 0
+      },
+      "re_review_4": {
+        "reviewed_head": "c92fb4be2b01de4375792d339c81e363c6334d72",
+        "resolved": [
+          "all eight previous findings"
+        ],
+        "remaining_or_new": [
+          "malformed bounded-probe records can authorize candidate routes",
+          "recovery evidence reports staged actions as rolled back and synthesizes failed operations"
+        ],
+        "important_findings": 2,
+        "nits": 0
+      },
+      "re_review_5": {
+        "reviewed_head": "551d212b679c16840393a6a2437322bb732d3b68",
+        "resolved": [
+          "closed bounded-probe schema and route binding",
+          "exact mutation failure identity and applied-only rollback accounting",
+          "cleanup action, error, and remediation evidence"
+        ],
+        "remaining_or_new": [
+          "final compare-to-write and compare-to-remove windows can clobber concurrent edits",
+          "one route ID can describe inconsistent model tuples",
+          "post-copy verification failures omit failed-action evidence"
+        ],
+        "important_findings": 3,
+        "nits": 0
+      },
+      "re_review_6": {
+        "reviewed_head": "9df8e6942e3f988f5fcfda980fd64a6b79570bf3",
+        "resolved": [
+          "final compare-to-write and compare-to-remove windows",
+          "reused route-ID tuple ambiguity",
+          "post-copy verification failed-action evidence"
+        ],
+        "remaining_or_new": [
+          "no-clobber collision cleanup can discard a moved prior entry or report success while a concurrent target remains"
+        ],
+        "important_findings": 1,
+        "nits": 0
+      },
+      "re_review_7": {
+        "reviewed_head": "aefbf603035f426678efb625ea549cc6d52ad48b",
+        "resolved": [
+          "all prior route-policy, provenance, materializer, probe, recovery, and after-move collision findings"
+        ],
+        "remaining_or_new": [
+          "write, removal, and rollback restore can lose captured prior state during final backup cleanup",
+          "a successful temp-cleanup retry can leave stale preserved-path evidence"
+        ],
+        "important_findings": 2,
+        "nits": 0
+      },
+      "re_review_8": {
+        "reviewed_head": "68ff038440095f159ffc001fe1e91356985d9586",
+        "resolved": [
+          "direct write, removal, and restore cleanup-window detection",
+          "transient temp-cleanup evidence truthfulness"
+        ],
+        "remaining_or_new": [
+          "rollback cleanup races preserve installer bytes instead of original pre-batch state and drop nested paths",
+          "recovery copies are not anchored to the captured destination identity",
+          "backup allocation relinquishes its exclusive placeholder before replacement",
+          "incomplete recovery copies are mislabeled as valid preserved files"
+        ],
+        "important_findings": 4,
+        "nits": 0
+      },
+      "re_review_9": {
+        "reviewed_head": "a346e20d95dc9e4565e6bd9596fbe79704953066",
+        "resolved": [
+          "rollback original-state selection and nested cleanup-path propagation",
+          "pre-call replaced-destination refusal",
+          "partial recovery-copy classification"
+        ],
+        "remaining_or_new": [
+          "restore state, link, and unlink operations are path-based after destination replacement",
+          "backup placeholder takeover can still be clobbered by os.replace",
+          "post-open directory moves make recovery-copy paths stale",
+          "pre-creation and descriptor-close failures produce unreliable evidence"
+        ],
+        "important_findings": 3,
+        "nits": 0
+      },
+      "re_review_10": {
+        "reviewed_head": "5e3022ccb4f8c7073cc480c8d33b310ec0f88c0a",
+        "resolved": [
+          "Darwin and Linux native no-replace constants and EEXIST retry",
+          "no clobbering os.replace fallback",
+          "rollback original-state and nested cleanup propagation",
+          "recovery-copy created tracking and local close handling"
+        ],
+        "remaining_or_new": [
+          "primary temp lifecycle remains path-based and can delete a concurrent replacement after destination swap",
+          "anchored move and recovery evidence return or reconsume stale absolute paths after directory movement",
+          "move, anchored-read, and restore close failures mask mutation state",
+          "missing Darwin renameatx_np symbol escapes as AttributeError"
+        ],
+        "important_findings": 4,
+        "nits": 0
       }
     },
     "post_review_remediation": {
@@ -570,7 +670,8 @@
         "docs_reference": "current"
       },
       "fourth_round": {
-        "status": "implemented_pending_commit_and_reverification",
+        "status": "committed_pending_reverification",
+        "remediation_commit": "c92fb4be2b01de4375792d339c81e363c6334d72",
         "remediations": [
           "optional-helper no_helper uses exact allowed and reason keys",
           "allowed is strictly boolean and reason is a non-empty string",
@@ -580,6 +681,109 @@
         "focused_installer": "83/83 passed",
         "full_suite": "14042/14042 passed (L1 1511, L4 12312, L5 219)",
         "docs_reference": "current"
+      },
+      "fifth_round": {
+        "status": "committed_pending_reverification",
+        "remediation_commit": "551d212b6",
+        "remediations": [
+          "bounded probes require the exact five-field schema, key and ID equality, admitted candidates, and matching route declarations",
+          "probe admission uses candidate_route_id only and rejects partial or aliased records",
+          "recovery records the exact failed write or removal and only successfully rolled-back applied actions",
+          "destination cleanup actions and errors are recorded with bounded remediation for incomplete cleanup"
+        ],
+        "focused_materializer": "11/11 passed",
+        "focused_installer": "86/86 passed",
+        "full_suite": "14045/14045 passed (L1 1511, L4 12315, L5 219)",
+        "docs_reference": "current",
+        "diff_check": "passed"
+      },
+      "sixth_round": {
+        "status": "committed_pending_reverification",
+        "remediation_commit": "9df8e6942",
+        "remediations": [
+          "existing targets move to a backup and are validated there before exclusive no-clobber installation or removal",
+          "final-window concurrent entries are preserved; multi-writer conflicts retain both files with structured remediation",
+          "reused route IDs require an identical normalized model, effort, capability, and probe tuple",
+          "post-copy verification failures report a verify_files action and exact mismatched targets"
+        ],
+        "focused_materializer": "11/11 passed",
+        "focused_installer": "92/92 passed",
+        "full_suite": "14051/14051 passed (L1 1511, L4 12321, L5 219)",
+        "docs_reference": "current",
+        "diff_check": "passed"
+      },
+      "seventh_round": {
+        "status": "committed_pending_reverification",
+        "remediation_commit": "8bc573364",
+        "baseline_merge_commit": "b43bf70712c195fc26ab783ea400c5df213f153c",
+        "exact_review_head": "aefbf6030",
+        "remediations": [
+          "no-clobber collisions retain both the moved prior entry and concurrent target",
+          "every preserved conflict path is reported with bounded manual remediation",
+          "temporary-file and backup cleanup failures are explicit recovery errors"
+        ],
+        "focused_materializer": "11/11 passed",
+        "focused_installer": "94/94 passed",
+        "pre_merge_full_suite": "14053/14053 passed (L1 1511, L4 12323, L5 219)",
+        "current_baseline_full_suite": "14066/14066 passed (L1 1511, L4 12336, L5 219)",
+        "docs_reference": "current",
+        "diff_check": "passed"
+      },
+      "eighth_round": {
+        "status": "committed_pending_reverification",
+        "remediation_commit": "68ff038440095f159ffc001fe1e91356985d9586",
+        "remediations": [
+          "write, removal, and rollback restore recapture target state after destructive backup cleanup",
+          "cleanup-window races recreate captured prior bytes and mode under a fresh exclusive backup path",
+          "preserved-path evidence drops temporary files removed by a successful cleanup retry"
+        ],
+        "focused_materializer": "11/11 passed",
+        "focused_installer": "98/98 passed",
+        "full_suite": "14070/14070 passed (L1 1511, L4 12340, L5 219)",
+        "docs_reference": "current",
+        "diff_check": "passed"
+      },
+      "ninth_round": {
+        "status": "committed_pending_reverification",
+        "remediation_commit": "a346e20d95dc9e4565e6bd9596fbe79704953066",
+        "remediations": [
+          "rollback carries original pre-batch state into cleanup-race preservation and propagates structured conflict paths",
+          "recovery copies use descriptor-relative exclusive creation bound to the captured destination identity",
+          "backup placeholders remain exclusively owned until atomic replacement",
+          "incomplete recovery artifacts use recovery_copy_failed evidence and remediation"
+        ],
+        "focused_materializer": "11/11 passed",
+        "focused_installer": "102/102 passed",
+        "full_suite": "14074/14074 passed (L1 1511, L4 12344, L5 219)",
+        "docs_reference": "current",
+        "diff_check": "passed"
+      },
+      "tenth_round": {
+        "status": "committed_pending_reverification",
+        "remediation_commit": "5e3022ccb4f8c7073cc480c8d33b310ec0f88c0a",
+        "remediations": [
+          "Darwin and Linux use native atomic no-replace rename through a verified directory descriptor with no clobbering fallback",
+          "restore state capture, link, and unlink operations are descriptor-relative and refuse replacement directories",
+          "recovery-copy evidence is revalidated after creation and omits phantom pre-create paths",
+          "descriptor cleanup attempts every close and preserves categorized primary outcomes"
+        ],
+        "focused_materializer": "11/11 passed",
+        "focused_installer": "107/107 passed",
+        "full_suite": "14079/14079 passed (L1 1511, L4 12349, L5 219)",
+        "docs_reference": "current",
+        "diff_check": "passed"
+      },
+      "blocking_condition": {
+        "status": "blocked",
+        "reviewed_head": "5e3022ccb4f8c7073cc480c8d33b310ec0f88c0a",
+        "reason": "Exact no-clobber and directory-swap safety requires one long-lived anchored-directory backend across the entire mutation batch; surgical per-helper fixes leave path re-resolution windows.",
+        "required_follow_up": [
+          "design AnchoredAgentDir abstraction for POSIX directory descriptors and Windows directory handles",
+          "make temp creation, native move, state capture, apply, rollback, cleanup, restore, and evidence anchor-relative",
+          "make descriptor cleanup non-masking across every anchored operation",
+          "add platform-specific contract and fault-injection coverage before resuming post review"
+        ],
+        "safe_state": "draft PR not refreshed; remote branch unchanged; local product head retained for follow-up"
       }
     }
     ,
