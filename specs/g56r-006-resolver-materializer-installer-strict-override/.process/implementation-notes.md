@@ -277,3 +277,7 @@
 ### Post: Review Remediation — End-to-End Cleanup Provenance
 
 **Deviations/Edge cases/Surprises:** The next exact-head review found that an uncertain name could reacquire installer ownership through recapture, while the NoClobber response path could flatten proven installer cleanup into concurrent-file evidence. Three deterministic cases established RED at 157/160 with two failures and one error. The remediation now preserves every uncertain/read-error entry as `preserved_concurrent_file` and synthesizes NoClobber provenance only for paths without an existing structured ownership record. GREEN and REFACTOR passed 160/160; materialization remained 11/11 and the canonical materializer 17/17.
+
+### Post: Review Remediation — Exhaustive Cleanup Failure Evidence
+
+**Deviations/Edge cases/Surprises:** Exact-head attack review found four remaining evidence gaps: unreadable state could still imply ownership, POSIX quarantine setup/teardown failures could retain unreported residue, collision recovery could omit one of two preserved entries, and recovery-copy packaging could omit or mask an unreadable target. Nine deterministic cases established RED at 160/169 with six failures and three errors. The remediation centralizes exact-state provenance, reports non-masking quarantine lifecycle failures, independently classifies both collision names, and keeps recovery-copy failures structured while preserving unreadable targets as unknown data. GREEN and REFACTOR passed 169/169; materialization remained 11/11 and the canonical materializer 17/17.

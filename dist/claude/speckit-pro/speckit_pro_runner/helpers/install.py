@@ -221,7 +221,6 @@ class CodexAgentRecoveryCopyFailure(OSError):
 
 
 CODEX_AGENT_PRESERVED_PATH_PROVENANCE_KINDS = {
-    "cleanup_incomplete",
     "preserved_cleanup_entry",
     "preserved_concurrent_file",
 }
@@ -702,6 +701,54 @@ class AnchoredAgentDir:
         self._validate_name(target_name)
         codex_agent_native_rename_no_replace(self.directory_fd, source_name, target_name)
 
+    def preserved_cleanup_entry(self, path: str, error: str = "fd_bound_delete_unavailable") -> dict[str, str]:
+        return {
+            "kind": "preserved_cleanup_entry",
+            "target": path,
+            "error": error,
+        }
+
+    def preserved_concurrent_file(self, path: str, error: str) -> dict[str, str]:
+        return {
+            "kind": "preserved_concurrent_file",
+            "target": path,
+            "error": error,
+        }
+
+    def classify_entry_by_expected(
+        self,
+        name: str,
+        expected_state: CodexAgentFileState,
+        error: str,
+    ) -> CodexAgentCleanupResult:
+        self._validate_name(name)
+        evidence_path = self.evidence_path(name)
+        try:
+            current_state = self.previous_state(name)
+        except OSError:
+            return CodexAgentCleanupResult(
+                public_conflicts=[evidence_path],
+                cleanup_errors=[self.preserved_concurrent_file(evidence_path, error)],
+            )
+        if current_state is None:
+            return CodexAgentCleanupResult()
+        if current_state == expected_state:
+            return CodexAgentCleanupResult(
+                public_conflicts=[evidence_path],
+                cleanup_errors=[self.preserved_cleanup_entry(evidence_path, error)],
+            )
+        return CodexAgentCleanupResult(
+            public_conflicts=[evidence_path],
+            cleanup_errors=[self.preserved_concurrent_file(evidence_path, error)],
+        )
+
+    def merge_cleanup_result(self, result: CodexAgentCleanupResult, extra: CodexAgentCleanupResult) -> None:
+        result.public_conflicts = list(dict.fromkeys([*result.public_conflicts, *extra.public_conflicts]))
+        result.preserved_private_paths = list(
+            dict.fromkeys([*result.preserved_private_paths, *extra.preserved_private_paths])
+        )
+        result.cleanup_errors.extend(extra.cleanup_errors)
+
     def cleanup_owned_entry(
         self,
         name: str,
@@ -736,17 +783,16 @@ class AnchoredAgentDir:
         except OSError:
             moved_state = None
         if moved_state != expected_state:
-            preserved = [self.evidence_path(cleanup_name)]
+            result = self.classify_entry_by_expected(cleanup_name, expected_state, "cleanup_restore_collision")
             try:
                 self.rename_no_replace(cleanup_name, name)
             except OSError:
-                try:
-                    if self.previous_state(name) is not None:
-                        preserved.append(self.evidence_path(name))
-                except OSError:
-                    pass
-                return CodexAgentCleanupResult(public_conflicts=list(dict.fromkeys(preserved)))
-            return CodexAgentCleanupResult(public_conflicts=[self.evidence_path(name)])
+                self.merge_cleanup_result(
+                    result,
+                    self.classify_entry_by_expected(name, expected_state, "cleanup_restore_collision"),
+                )
+                return result
+            return self.classify_entry_by_expected(name, expected_state, "cleanup_restore_collision")
 
         return self.cleanup_verified_quarantine(cleanup_name, expected_state)
 
@@ -776,32 +822,19 @@ class AnchoredAgentDir:
         private_dir_name: str | None = None
         private_dir_fd: int | None = None
         private_entry_name = cleanup_name
-
-        def preserved_cleanup_entry(path: str, error: str = "fd_bound_delete_unavailable") -> dict[str, str]:
-            return {
-                "kind": "preserved_cleanup_entry",
-                "target": path,
-                "error": error,
-            }
-
-        def preserved_concurrent_file(path: str, error: str = "private_quarantine_collision") -> dict[str, str]:
-            return {
-                "kind": "preserved_concurrent_file",
-                "target": path,
-                "error": error,
-            }
+        final_result: CodexAgentCleanupResult | None = None
 
         def public_entry_classification(error: str) -> tuple[list[str], list[dict[str, str]]]:
             public_path = self.evidence_path(cleanup_name)
             try:
                 public_state = self.previous_state(cleanup_name)
             except OSError:
-                return [public_path], [{"kind": "cleanup_incomplete", "target": public_path, "error": error}]
+                return [public_path], [self.preserved_concurrent_file(public_path, error)]
             if public_state is None:
                 return [], []
             if public_state == expected_state:
-                return [public_path], [preserved_cleanup_entry(public_path, error)]
-            return [public_path], [preserved_concurrent_file(public_path, error)]
+                return [public_path], [self.preserved_cleanup_entry(public_path, error)]
+            return [public_path], [self.preserved_concurrent_file(public_path, error)]
 
         def private_entry_classification(error: str) -> tuple[list[str], list[dict[str, str]]]:
             if private_dir_fd is None or private_dir_name is None:
@@ -810,12 +843,12 @@ class AnchoredAgentDir:
             try:
                 private_state = codex_agent_previous_state_at(private_dir_fd, private_entry_name)
             except OSError:
-                return [private_path], [preserved_concurrent_file(private_path, error)]
+                return [private_path], [self.preserved_concurrent_file(private_path, error)]
             if private_state is None:
                 return [], []
             if private_state == expected_state:
-                return [private_path], [preserved_cleanup_entry(private_path)]
-            return [private_path], [preserved_concurrent_file(private_path, error)]
+                return [private_path], [self.preserved_cleanup_entry(private_path)]
+            return [private_path], [self.preserved_concurrent_file(private_path, error)]
 
         def classified_quarantine_result(error: str) -> CodexAgentCleanupResult:
             public_paths, public_errors = public_entry_classification(error)
@@ -826,6 +859,22 @@ class AnchoredAgentDir:
                 cleanup_errors=[*public_errors, *private_errors],
             )
 
+        def remember(result: CodexAgentCleanupResult) -> CodexAgentCleanupResult:
+            nonlocal final_result
+            final_result = result
+            return result
+
+        def private_dir_path() -> str:
+            return self.evidence_path(private_dir_name or "")
+
+        def preserve_private_dir_unknown(result: CodexAgentCleanupResult, error: str) -> None:
+            if private_dir_name is None:
+                return
+            path = private_dir_path()
+            if path not in result.preserved_private_paths:
+                result.preserved_private_paths.append(path)
+            result.cleanup_errors.append(self.preserved_concurrent_file(path, error))
+
         try:
             for _ in range(32):
                 candidate = f".{secrets.token_hex(12)}.cleanup-dir"
@@ -835,13 +884,20 @@ class AnchoredAgentDir:
                     break
                 except FileExistsError:
                     continue
+                except OSError:
+                    return remember(classified_quarantine_result("private_quarantine_dir_unavailable"))
             if private_dir_name is None:
-                return CodexAgentCleanupResult(public_conflicts=[self.evidence_path(cleanup_name)])
-            private_dir_fd = os.open(
-                private_dir_name,
-                os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0),
-                dir_fd=self.directory_fd,
-            )
+                return remember(classified_quarantine_result("private_quarantine_dir_unavailable"))
+            try:
+                private_dir_fd = os.open(
+                    private_dir_name,
+                    os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0),
+                    dir_fd=self.directory_fd,
+                )
+            except OSError:
+                result = classified_quarantine_result("private_quarantine_open_failed")
+                preserve_private_dir_unknown(result, "private_quarantine_open_failed")
+                return remember(result)
             try:
                 codex_agent_native_rename_no_replace_between(
                     self.directory_fd,
@@ -850,20 +906,33 @@ class AnchoredAgentDir:
                     private_entry_name,
                 )
             except FileNotFoundError:
-                return classified_quarantine_result("private_quarantine_file_not_found")
+                return remember(classified_quarantine_result("private_quarantine_file_not_found"))
             except FileExistsError:
-                return classified_quarantine_result("private_quarantine_collision")
+                return remember(classified_quarantine_result("private_quarantine_collision"))
             except OSError:
-                return classified_quarantine_result("private_quarantine_move_failed")
-            return classified_quarantine_result("private_quarantine_identity_mismatch")
+                return remember(classified_quarantine_result("private_quarantine_move_failed"))
+            return remember(classified_quarantine_result("private_quarantine_identity_mismatch"))
         finally:
             if private_dir_fd is not None:
-                codex_agent_close_descriptor_nonmasking(private_dir_fd)
-            if private_dir_name is not None:
+                try:
+                    os.close(private_dir_fd)
+                except OSError as exc:
+                    if final_result is not None:
+                        final_result.cleanup_errors.append(
+                            {"kind": "close_descriptor", "target": private_dir_path(), "error": type(exc).__name__}
+                        )
+            if private_dir_name is not None and (
+                final_result is None or private_dir_path() not in final_result.preserved_private_paths
+            ):
                 try:
                     os.rmdir(private_dir_name, dir_fd=self.directory_fd)
-                except OSError:
-                    pass
+                except OSError as exc:
+                    if final_result is not None and exc.errno not in {errno.ENOTEMPTY, errno.EEXIST}:
+                        final_result.cleanup_errors.append(
+                            {"kind": "remove_directory", "target": private_dir_path(), "error": type(exc).__name__}
+                        )
+                        if not final_result.preserved_private_paths:
+                            final_result.preserved_private_paths.append(private_dir_path())
 
     def move_target_to_backup(self, target_name: str) -> str:
         self._validate_name(target_name)
@@ -970,9 +1039,10 @@ class AnchoredAgentDir:
             try:
                 target_state = self.previous_state(target_name)
             except OSError:
-                target_state = None
-            if target_state is not None:
                 preserved_paths.append(self.evidence_path(target_name))
+            else:
+                if target_state is not None:
+                    preserved_paths.append(self.evidence_path(target_name))
             detail = ""
             if close_errors:
                 detail = f"; descriptor cleanup errors={len(close_errors)}"
@@ -1344,11 +1414,7 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
                 return CodexAgentCleanupResult(
                     public_conflicts=[self.evidence_path(name)],
                     cleanup_errors=[
-                        {
-                            "kind": "cleanup_incomplete",
-                            "target": self.evidence_path(name),
-                            "error": type(exc).__name__,
-                        }
+                        self.preserved_concurrent_file(self.evidence_path(name), type(exc).__name__)
                     ],
                 )
         if cleanup_name is None:
@@ -1361,10 +1427,16 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
             except OSError:
                 moved_state = None
         if moved_state != expected_state:
-            return CodexAgentCleanupResult(
-                public_conflicts=[self.evidence_path(cleanup_name)],
-                cleanup_errors=rename_cleanup_errors,
+            result = CodexAgentCleanupResult(cleanup_errors=rename_cleanup_errors)
+            self.merge_cleanup_result(
+                result,
+                self.classify_entry_by_expected(cleanup_name, expected_state, "cleanup_moved_state_mismatch"),
             )
+            self.merge_cleanup_result(
+                result,
+                self.classify_entry_by_expected(name, expected_state, "cleanup_moved_state_mismatch"),
+            )
+            return result
         handle: int | None = None
         result = CodexAgentCleanupResult(cleanup_errors=rename_cleanup_errors)
 
@@ -1415,20 +1487,11 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
                     result.public_conflicts.append(self.evidence_path(cleanup_name))
                 return result
             except OSError:
-                result.cleanup_errors.append(
-                    {
-                        "kind": "cleanup_incomplete",
-                        "target": self.evidence_path(cleanup_name),
-                        "error": "OSError",
-                    }
+                self.merge_cleanup_result(
+                    result,
+                    self.classify_entry_by_expected(cleanup_name, expected_state, "OSError"),
                 )
-                try:
-                    if self.previous_state(cleanup_name) != expected_state:
-                        result.public_conflicts.append(self.evidence_path(cleanup_name))
-                        return result
-                except OSError:
-                    result.public_conflicts.append(self.evidence_path(cleanup_name))
-                    return result
+                return result
             finally:
                 close_cleanup_handle()
         result.public_conflicts.append(self.evidence_path(cleanup_name))
@@ -1500,8 +1563,13 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
             if created and preserved_name is not None:
                 failed_paths.append(self.evidence_path(preserved_name))
             preserved_paths: list[str] = []
-            if self.previous_state(target_name) is not None:
+            try:
+                target_state = self.previous_state(target_name)
+            except OSError:
                 preserved_paths.append(self.evidence_path(target_name))
+            else:
+                if target_state is not None:
+                    preserved_paths.append(self.evidence_path(target_name))
             detail = ""
             if close_errors:
                 detail = f"; handle cleanup errors={len(close_errors)}"
