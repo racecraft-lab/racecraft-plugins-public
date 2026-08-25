@@ -2116,6 +2116,87 @@ class MutationHelperTests(unittest.TestCase):
             self.assertFalse((fake_home / ".codex" / "agents").exists())
             self.assertTrue((fake_home / ".codex").exists())
 
+    def test_install_codex_agents_route_aware_no_clobber_preserves_exact_cleanup_provenance(self) -> None:
+        from speckit_pro_runner.helpers import install
+        from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp, tempfile.TemporaryDirectory() as home_tmp:
+            fake_home = Path(home_tmp).resolve()
+            manifest_path = self.write_valid_route_policy_manifest(git_root)
+            expected_snapshot = routing_capability_snapshot()
+            expected_snapshot["available_routes"] = ["required-primary", "required-fallback"]
+            cleanup_path = fake_home / ".codex" / "agents" / ".agent.toml.exact-owned.cleanup"
+            cleanup_error = {
+                "kind": "preserved_cleanup_entry",
+                "target": cleanup_path.as_posix(),
+                "error": "fd_bound_delete_unavailable",
+            }
+
+            def fail_with_exact_owned_cleanup(
+                target: Path,
+                content: bytes,
+                target_dir: Path,
+                identity: tuple[int, int] | None,
+                *,
+                mode: int | None = None,
+                expected_state: object = None,
+                cleanup_race_state: object = None,
+            ) -> object:
+                del target, content, target_dir, identity, mode, expected_state, cleanup_race_state
+                cleanup_path.parent.mkdir(parents=True, exist_ok=True)
+                cleanup_path.write_bytes(b"exact installer-owned cleanup\n")
+                raise install.CodexAgentNoClobberConflict(
+                    "injected exact installer cleanup",
+                    [cleanup_path.as_posix()],
+                    [cleanup_error],
+                )
+
+            request = SimpleNamespace(
+                request_id="test-route-aware-no-clobber-exact-cleanup-provenance",
+                helper_id="install-codex-agents",
+                operation="install-codex-agents",
+                mode="apply",
+                inputs=self.route_aware_inputs(manifest_path, git_root, destination=None),
+            )
+            request.inputs["test_overrides"] = {"codex_capability_snapshot": expected_snapshot}
+            old_cwd = Path.cwd()
+            os.chdir(git_root)
+            try:
+                with (
+                    patch.dict(os.environ, {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}),
+                    patch.object(install, "write_codex_agent_atomic", side_effect=fail_with_exact_owned_cleanup),
+                ):
+                    response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
+            finally:
+                os.chdir(old_cwd)
+
+            self.assert_response(response, "expected_failure", 1)
+            cleanup_errors = response["diagnostics"][0]["details"]["cleanup_errors"]
+            self.assertIn(cleanup_error, cleanup_errors)
+            self.assertNotIn(
+                {
+                    "kind": "preserved_concurrent_file",
+                    "target": cleanup_path.as_posix(),
+                    "error": "no_clobber_conflict",
+                },
+                cleanup_errors,
+            )
+            recovery_errors = response["data"]["routing"]["recovery_or_mutation"]["recovery_record"]["cleanup_errors"]
+            self.assertIn(cleanup_error, recovery_errors)
+            self.assertNotIn(
+                {
+                    "kind": "preserved_concurrent_file",
+                    "target": cleanup_path.as_posix(),
+                    "error": "no_clobber_conflict",
+                },
+                recovery_errors,
+            )
+            remediation = response["data"]["mutation"]["manual_remediation"]
+            cleanup_action = next(action for action in remediation if action["reason"] == "cleanup_incomplete")
+            self.assertIn(cleanup_path.as_posix(), cleanup_action["paths"])
+            self.assertNotIn("concurrent_file_preserved", [action["reason"] for action in remediation])
+
     def test_install_codex_agents_route_aware_reports_helper_removal_as_failed_operation(self) -> None:
         from speckit_pro_runner.helpers import install
         from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
@@ -2972,6 +3053,72 @@ class MutationHelperTests(unittest.TestCase):
             concurrent_action = next(action for action in remediation if action["reason"] == "concurrent_file_preserved")
             self.assertEqual(cleanup_action["paths"], [public_cleanup.as_posix()])
             self.assertEqual(concurrent_action["paths"], [private_victim.as_posix()])
+
+    def test_install_codex_agents_posix_uncertain_entry_takeover_is_not_laundered_as_cleanup(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve() / "agents"
+            destination.mkdir()
+            uncertain_name = ".agent.toml.tempid.tmp"
+            uncertain_path = destination / uncertain_name
+            uncertain_path.write_bytes(b"concurrent victim at uncertain name\n")
+            identity = install.codex_agent_destination_identity(destination)
+            agent_dir = install.AnchoredAgentDir.open(destination, identity)
+            try:
+                result = agent_dir.preserve_uncertain_entry(uncertain_name, "temp_state_capture_unavailable")
+            finally:
+                agent_dir.close()
+
+            self.assertEqual(uncertain_path.read_bytes(), b"concurrent victim at uncertain name\n")
+            self.assertEqual(result.public_conflicts, [uncertain_path.as_posix()])
+            self.assertEqual(result.preserved_private_paths, [])
+            self.assertEqual(
+                result.cleanup_errors,
+                [
+                    {
+                        "kind": "preserved_concurrent_file",
+                        "target": uncertain_path.as_posix(),
+                        "error": "temp_state_capture_unavailable",
+                    }
+                ],
+            )
+            remediation = install.codex_route_aware_cleanup_manual_remediation(result.cleanup_errors)
+            self.assertEqual([action["reason"] for action in remediation], ["concurrent_file_preserved"])
+            self.assertEqual(remediation[0]["paths"], [uncertain_path.as_posix()])
+
+    def test_install_codex_agents_posix_uncertain_entry_read_error_is_not_cleanup_incomplete(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve() / "agents"
+            destination.mkdir()
+            uncertain_name = ".agent.toml.tempid.tmp"
+            uncertain_path = destination / uncertain_name
+            uncertain_path.write_bytes(b"unreadable uncertain victim\n")
+            identity = install.codex_agent_destination_identity(destination)
+            agent_dir = install.AnchoredAgentDir.open(destination, identity)
+            try:
+                with patch.object(agent_dir, "previous_state", side_effect=OSError("injected read error")):
+                    result = agent_dir.preserve_uncertain_entry(uncertain_name, "temp_state_capture_unavailable")
+            finally:
+                agent_dir.close()
+
+            self.assertEqual(uncertain_path.read_bytes(), b"unreadable uncertain victim\n")
+            self.assertEqual(result.public_conflicts, [uncertain_path.as_posix()])
+            self.assertEqual(
+                result.cleanup_errors,
+                [
+                    {
+                        "kind": "preserved_concurrent_file",
+                        "target": uncertain_path.as_posix(),
+                        "error": "temp_state_capture_unavailable",
+                    }
+                ],
+            )
+            remediation = install.codex_route_aware_cleanup_manual_remediation(result.cleanup_errors)
+            self.assertEqual([action["reason"] for action in remediation], ["concurrent_file_preserved"])
+            self.assertNotIn("cleanup_incomplete", [action["reason"] for action in remediation])
 
     def test_install_codex_agents_posix_temp_fsync_capture_failure_preserves_name_swap(self) -> None:
         from speckit_pro_runner.helpers import install
@@ -5497,8 +5644,9 @@ class MutationHelperTests(unittest.TestCase):
             self.assertFalse(target.exists())
             residue = list(destination.iterdir())
             self.assertEqual(len(residue), 1)
-            self.assertTrue(residue[0].name.endswith(".cleanup-dir"))
-            self.assertTrue(any(path.name.endswith(".tmp") for path in residue[0].iterdir()))
+            self.assertTrue(residue[0].name.startswith(".analyze-executor.toml."))
+            self.assertTrue(residue[0].name.endswith(".tmp"))
+            self.assertEqual(residue[0].read_bytes(), b"restored\n")
 
     def test_install_codex_agents_snapshot_uses_open_descriptor_mode(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

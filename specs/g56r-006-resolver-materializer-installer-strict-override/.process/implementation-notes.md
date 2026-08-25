@@ -273,3 +273,7 @@
 ### Post: Review Remediation — Uniform Cleanup Provenance
 
 **Deviations/Edge cases/Surprises:** Exact-head review found that FileNotFound, generic move failures, and post-move mismatch still inferred private-location ownership. Three deterministic cases established RED at 154/157. The remediation independently classifies public and private leaves, emits `preserved_cleanup_entry` only for exact expected installer state, and treats unverified private leaves as `preserved_concurrent_file` with safe manual guidance. GREEN and REFACTOR passed 157/157; materialization remained 11/11 and the canonical materializer 17/17.
+
+### Post: Review Remediation — End-to-End Cleanup Provenance
+
+**Deviations/Edge cases/Surprises:** The next exact-head review found that an uncertain name could reacquire installer ownership through recapture, while the NoClobber response path could flatten proven installer cleanup into concurrent-file evidence. Three deterministic cases established RED at 157/160 with two failures and one error. The remediation now preserves every uncertain/read-error entry as `preserved_concurrent_file` and synthesizes NoClobber provenance only for paths without an existing structured ownership record. GREEN and REFACTOR passed 160/160; materialization remained 11/11 and the canonical materializer 17/17.

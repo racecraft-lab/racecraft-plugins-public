@@ -219,6 +219,36 @@ class CodexAgentRecoveryCopyFailure(OSError):
         self.failed_paths = failed_paths
         self.preserved_paths = preserved_paths
 
+
+CODEX_AGENT_PRESERVED_PATH_PROVENANCE_KINDS = {
+    "cleanup_incomplete",
+    "preserved_cleanup_entry",
+    "preserved_concurrent_file",
+}
+
+
+def codex_agent_unproven_preserved_path_records(
+    preserved_paths: list[str],
+    cleanup_errors: list[dict[str, Any]],
+    error: str,
+) -> list[dict[str, str]]:
+    proven_targets = {
+        str(cleanup_error["target"])
+        for cleanup_error in cleanup_errors
+        if cleanup_error.get("kind") in CODEX_AGENT_PRESERVED_PATH_PROVENANCE_KINDS
+        and isinstance(cleanup_error.get("target"), str)
+    }
+    return [
+        {
+            "kind": "preserved_concurrent_file",
+            "target": path,
+            "error": error,
+        }
+        for path in preserved_paths
+        if path not in proven_targets
+    ]
+
+
 def codex_agent_windows_kernel32() -> Any:
     windll = getattr(ctypes, "WinDLL", None)
     if not callable(windll):
@@ -728,11 +758,14 @@ class AnchoredAgentDir:
         except OSError:
             return CodexAgentCleanupResult(
                 public_conflicts=[evidence_path],
-                cleanup_errors=[{"kind": "cleanup_incomplete", "target": evidence_path, "error": error}],
+                cleanup_errors=[{"kind": "preserved_concurrent_file", "target": evidence_path, "error": error}],
             )
         if state is None:
             return CodexAgentCleanupResult()
-        return self.cleanup_owned_entry(name, state)
+        return CodexAgentCleanupResult(
+            public_conflicts=[evidence_path],
+            cleanup_errors=[{"kind": "preserved_concurrent_file", "target": evidence_path, "error": error}],
+        )
 
     def cleanup_verified_quarantine(
         self,
@@ -1946,12 +1979,11 @@ def run_codex_agent_install(entry: Any, request: Any) -> dict[str, Any]:
         if isinstance(exc, CodexAgentNoClobberConflict):
             cleanup_errors.extend(exc.cleanup_errors)
             cleanup_errors.extend(
-                {
-                    "kind": "preserved_concurrent_file",
-                    "target": path,
-                    "error": "no_clobber_conflict",
-                }
-                for path in exc.preserved_paths
+                codex_agent_unproven_preserved_path_records(
+                    exc.preserved_paths,
+                    cleanup_errors,
+                    "no_clobber_conflict",
+                )
             )
         elif isinstance(exc, CodexAgentRecoveryCopyFailure):
             cleanup_errors.extend(
@@ -1963,12 +1995,11 @@ def run_codex_agent_install(entry: Any, request: Any) -> dict[str, Any]:
                 for path in exc.failed_paths
             )
             cleanup_errors.extend(
-                {
-                    "kind": "preserved_concurrent_file",
-                    "target": path,
-                    "error": "no_clobber_conflict",
-                }
-                for path in exc.preserved_paths
+                codex_agent_unproven_preserved_path_records(
+                    exc.preserved_paths,
+                    cleanup_errors,
+                    "no_clobber_conflict",
+                )
             )
         recovery_failed = bool(rollback_failures or cleanup_errors)
         mutation["mutation_status"] = "partial_failure" if recovery_failed else "blocked"
@@ -3893,12 +3924,11 @@ def rollback_codex_agent_install(
             failures.append(name)
             cleanup_errors.extend(exc.cleanup_errors)
             cleanup_errors.extend(
-                {
-                    "kind": "preserved_concurrent_file",
-                    "target": path,
-                    "error": "no_clobber_conflict",
-                }
-                for path in exc.preserved_paths
+                codex_agent_unproven_preserved_path_records(
+                    exc.preserved_paths,
+                    cleanup_errors,
+                    "no_clobber_conflict",
+                )
             )
         except CodexAgentRecoveryCopyFailure as exc:
             failures.append(name)
@@ -3911,12 +3941,11 @@ def rollback_codex_agent_install(
                 for path in exc.failed_paths
             )
             cleanup_errors.extend(
-                {
-                    "kind": "preserved_concurrent_file",
-                    "target": path,
-                    "error": "no_clobber_conflict",
-                }
-                for path in exc.preserved_paths
+                codex_agent_unproven_preserved_path_records(
+                    exc.preserved_paths,
+                    cleanup_errors,
+                    "no_clobber_conflict",
+                )
             )
         except OSError:
             failures.append(name)
