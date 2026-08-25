@@ -2420,16 +2420,13 @@ SWEEP_REDACT_VALUE_RULES = (
     # The issuer-prefix rules. The four rules above catch a credential by the
     # shape of its surroundings — an assignment, a `bearer` word — so a token
     # sitting bare in a sentence passes them all. These catch it by its own
-    # first bytes instead, which is why each one names a published prefix and
-    # never a length alone: GitHub's own guidance is that integrators must stop
-    # assuming a fixed token length, so every body here is a floor and a
-    # generous ceiling rather than an exact count.
+    # first bytes instead: each names a published prefix and then matches a
+    # bounded body (exact or ranged, depending on the issuer).
     #
-    # Each carries the digit lookahead the run above uses, and a left `\b` with
-    # the prefix's own separator. Both are load-bearing against this repository's
-    # own prose: a spec that names `ghp_` or `sk-ant-` must survive its own
-    # deny-set, and an early draft without the boundary matched inside the
-    # ordinary word "task-execution".
+    # Where the token alphabet makes it safe, rules add the same "contains a
+    # digit" lookahead SWEEP_TOKEN_RUN uses plus a left `\b` and the prefix's
+    # own separator so prose that merely *names* a prefix (e.g. `ghp_`,
+    # `sk-ant-`) survives the deny-set.
     (
         "github_token",
         re.compile(r"\b((?:ghp|gho|ghu|ghs|ghr)_(?=[A-Za-z0-9]*[0-9])[A-Za-z0-9]{36,255})"),
@@ -2455,7 +2452,7 @@ SWEEP_REDACT_VALUE_RULES = (
     ),
     (
         "google_api_key",
-        re.compile(r"\b(AIza(?=[0-9A-Za-z_-]*[0-9])[0-9A-Za-z_-]{35})\b"),
+        re.compile(r"\b(AIza(?=[0-9A-Za-z_-]*[0-9])[0-9A-Za-z_-]{35})(?![0-9A-Za-z_-])"),
     ),
     (
         "aws_access_key_id",

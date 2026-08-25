@@ -5,14 +5,14 @@
 005 autopilot-fast-helper: has description field
 006 autopilot-fast-helper: has model field
 007 autopilot-fast-helper: model is an officially documented Codex GPT model
-008 autopilot-fast-helper: model_reasoning_effort field is absent (Spark does not support reasoning fields)
+008 autopilot-fast-helper: has low model_reasoning_effort field
 009 autopilot-fast-helper: has sandbox_mode field
 010 autopilot-fast-helper: sandbox_mode uses supported values
 011 autopilot-fast-helper: has developer_instructions block
 012 autopilot-fast-helper: developer_instructions body is non-empty
 013 autopilot-fast-helper: no Claude Code-only fields
 014 autopilot-fast-helper: intentionally Codex-only
-015 autopilot-fast-helper: uses Spark read-only (no reasoning effort — Spark does not support reasoning fields per OpenAI docs)
+015 autopilot-fast-helper: uses Luna low-effort read-only advisory profile
 016 clarify-executor: TOML file exists
 017 clarify-executor: legacy Markdown file removed
 018 clarify-executor: has name field
@@ -28,7 +28,7 @@
 028 clarify-executor: developer_instructions body is non-empty
 029 clarify-executor: no Claude Code-only fields
 030 clarify-executor: corresponding Claude agent exists in agents/
-031 clarify-executor: uses xhigh GPT-5.5 read-only question-prep profile
+031 clarify-executor: uses xhigh GPT-5.6 Sol read-only question-prep profile
 032 clarify-executor: returns questions to parent
 033 clarify-executor: does not claim to be the user
 034 clarify-executor: does not invoke interactive clarify skill
@@ -47,7 +47,7 @@
 047 checklist-executor: developer_instructions body is non-empty
 048 checklist-executor: no Claude Code-only fields
 049 checklist-executor: corresponding Claude agent exists in agents/
-050 checklist-executor: uses xhigh GPT-5.5 executor profile
+050 checklist-executor: uses xhigh GPT-5.6 Sol executor profile
 051 analyze-executor: TOML file exists
 052 analyze-executor: legacy Markdown file removed
 053 analyze-executor: has name field
@@ -63,7 +63,7 @@
 063 analyze-executor: developer_instructions body is non-empty
 064 analyze-executor: no Claude Code-only fields
 065 analyze-executor: corresponding Claude agent exists in agents/
-066 analyze-executor: uses xhigh GPT-5.5 executor profile
+066 analyze-executor: uses xhigh GPT-5.6 Sol executor profile
 067 implement-executor: TOML file exists
 068 implement-executor: legacy Markdown file removed
 069 implement-executor: has name field
@@ -79,7 +79,7 @@
 079 implement-executor: developer_instructions body is non-empty
 080 implement-executor: no Claude Code-only fields
 081 implement-executor: corresponding Claude agent exists in agents/
-082 implement-executor: uses xhigh GPT-5.5 TDD profile
+082 implement-executor: uses xhigh GPT-5.6 Sol TDD profile
 083 phase-executor: TOML file exists
 084 phase-executor: legacy Markdown file removed
 085 phase-executor: has name field
@@ -95,7 +95,7 @@
 095 phase-executor: developer_instructions body is non-empty
 096 phase-executor: no Claude Code-only fields
 097 phase-executor: corresponding Claude agent exists in agents/
-098 phase-executor: uses xhigh GPT-5.5 executor profile
+098 phase-executor: uses xhigh GPT-5.6 Sol executor profile
 099 codebase-analyst: TOML file exists
 100 codebase-analyst: legacy Markdown file removed
 101 codebase-analyst: has name field
@@ -111,7 +111,7 @@
 111 codebase-analyst: developer_instructions body is non-empty
 112 codebase-analyst: no Claude Code-only fields
 113 codebase-analyst: corresponding Claude agent exists in agents/
-114 codebase-analyst: uses GPT-5.5 read-only consensus profile (L6-validated effort)
+114 codebase-analyst: uses GPT-5.6 Sol read-only consensus profile (L6-validated effort)
 115 spec-context-analyst: TOML file exists
 116 spec-context-analyst: legacy Markdown file removed
 117 spec-context-analyst: has name field
@@ -127,7 +127,7 @@
 127 spec-context-analyst: developer_instructions body is non-empty
 128 spec-context-analyst: no Claude Code-only fields
 129 spec-context-analyst: corresponding Claude agent exists in agents/
-130 spec-context-analyst: uses GPT-5.5 read-only consensus profile (L6-validated effort)
+130 spec-context-analyst: uses GPT-5.6 Sol read-only consensus profile (L6-validated effort)
 131 domain-researcher: TOML file exists
 132 domain-researcher: legacy Markdown file removed
 133 domain-researcher: has name field
@@ -143,7 +143,7 @@
 143 domain-researcher: developer_instructions body is non-empty
 144 domain-researcher: no Claude Code-only fields
 145 domain-researcher: corresponding Claude agent exists in agents/
-146 domain-researcher: uses xhigh read-only GPT-5.5 consensus profile (L6 has not validated lower effort)
+146 domain-researcher: uses xhigh read-only GPT-5.6 Sol consensus profile (L6 has not validated lower effort)
 147 codex-agents/openai.yaml removed
 148 codex-agents directory contains TOML files only
 TOTAL: 148

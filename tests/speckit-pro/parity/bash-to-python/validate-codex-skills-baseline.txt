@@ -51,8 +51,8 @@
 051 speckit-autopilot: documents skill-local agents/openai.yaml metadata
 052 speckit-autopilot: validates installed Codex subagent paths
 053 speckit-autopilot: fails closed to the install skill when subagents are missing
-054 speckit-autopilot: documents the optional Spark helper
-055 speckit-autopilot: keeps the Spark helper advisory and parent-only
+054 speckit-autopilot: documents the optional Luna helper
+055 speckit-autopilot: keeps the Luna helper advisory and parent-only
 056 speckit-autopilot: does not bundle skill-local TOML subagents
 057 speckit-autopilot: excludes Claude-only runtime primitives
 058 speckit-autopilot: Codex-specific references exist

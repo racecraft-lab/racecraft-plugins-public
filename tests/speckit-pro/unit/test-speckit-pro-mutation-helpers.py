@@ -449,8 +449,12 @@ def routing_optional_helper() -> str:
 def route_rendered_optional_helper_bytes() -> bytes:
     helper_source = (PLUGIN_ROOT / "codex-agents" / f"{routing_optional_helper()}.toml").read_text(encoding="utf-8")
     return helper_source.replace(
+        'model = "gpt-5.6-luna"\n',
         'model = "gpt-5.3-codex-spark"\n',
-        'model = "gpt-5.3-codex-spark"\nmodel_reasoning_effort = "high"\n',
+        1,
+    ).replace(
+        'model_reasoning_effort = "low"\n',
+        'model_reasoning_effort = "high"\n',
         1,
     ).encode("utf-8")
 
@@ -5719,7 +5723,7 @@ class MutationHelperTests(unittest.TestCase):
                 patch.object(install.ctypes, "get_last_error", side_effect=fake.get_last_error, create=True),
                 patch.object(install, "codex_plugin_root", return_value=PLUGIN_ROOT),
                 patch.object(install, "codex_agent_destination", return_value=destination),
-                patch.object(install, "load_codex_agent_bundle", return_value=({"agent.toml": b"installer bytes\n"}, "gpt-5.5")),
+                patch.object(install, "load_codex_agent_bundle", return_value=({"agent.toml": b"installer bytes\n"}, "gpt-5.6-sol")),
                 patch.object(Path, "rmdir", autospec=True, side_effect=reject_directory_removal_while_anchor_open),
             ):
                 fake.fail_close = True
@@ -5757,7 +5761,7 @@ class MutationHelperTests(unittest.TestCase):
                 patch.object(install.ctypes, "get_last_error", side_effect=fake.get_last_error, create=True),
                 patch.object(install, "codex_plugin_root", return_value=PLUGIN_ROOT),
                 patch.object(install, "codex_agent_destination", return_value=destination),
-                patch.object(install, "load_codex_agent_bundle", return_value=({"agent.toml": b"installer bytes\n"}, "gpt-5.5")),
+                patch.object(install, "load_codex_agent_bundle", return_value=({"agent.toml": b"installer bytes\n"}, "gpt-5.6-sol")),
             ):
                 response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
 
@@ -7101,7 +7105,7 @@ class MutationHelperTests(unittest.TestCase):
                 helper_id="install-codex-agents",
                 operation="install-codex-agents",
                 mode="dry_run",
-                inputs={"destination": ".codex/agents", "model": "gpt-5.5"},
+                inputs={"destination": ".codex/agents", "model": "gpt-5.6-sol"},
             )
             old_cwd = Path.cwd()
             os.chdir(git_root)
@@ -7114,7 +7118,7 @@ class MutationHelperTests(unittest.TestCase):
         self.assert_response(response, "ok", 0)
         self.assertNotIn("routing", response["data"])
         self.assertEqual(response["data"]["agent_files"], list(install.CODEX_SOURCE_AGENT_TOML_NAMES))
-        self.assertEqual(response["data"]["model"], "gpt-5.5")
+        self.assertEqual(response["data"]["model"], "gpt-5.6-sol")
         self.assertEqual(response["data"]["mutation"]["mutation_status"], "planned")
         self.assertEqual(len(response["data"]["mutation"]["planned_operations"]), 13)
         self.assertEqual(response["data"]["verification"], {"status": "planned", "matched_files": []})
@@ -7191,7 +7195,7 @@ class MutationHelperTests(unittest.TestCase):
             unrelated = destination / "user-owned-agent.toml"
             stale.write_text("stale\n", encoding="utf-8")
             unrelated.write_text("user owned\n", encoding="utf-8")
-            inputs = {"destination": ".codex/agents", "model": "gpt-5.5"}
+            inputs = {"destination": ".codex/agents", "model": "gpt-5.6-sol"}
 
             completed, response, stderr_records = run_runner(
                 helper_request("install-codex-agents", inputs=inputs),
@@ -7244,7 +7248,7 @@ class MutationHelperTests(unittest.TestCase):
             env = {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}
 
             completed, response, stderr_records = run_runner(
-                helper_request("install-codex-agents", mode="apply", inputs={"model": "gpt-5.5"}),
+                helper_request("install-codex-agents", mode="apply", inputs={"model": "gpt-5.6-sol"}),
                 cwd=git_root,
                 env_overrides=env,
             )
@@ -7258,7 +7262,7 @@ class MutationHelperTests(unittest.TestCase):
                 self.assertEqual((destination / source.name).read_bytes(), source.read_bytes())
 
             completed, response, stderr_records = run_runner(
-                helper_request("install-codex-agents", mode="apply", inputs={"model": "gpt-5.5"}),
+                helper_request("install-codex-agents", mode="apply", inputs={"model": "gpt-5.6-sol"}),
                 cwd=git_root,
                 env_overrides=env,
             )
@@ -7282,8 +7286,9 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(stderr_records, [])
             self.assert_response(response, "ok", 0)
             destination = (git_root / ".codex" / "agents").resolve()
-            spark = (destination / "autopilot-fast-helper.toml").read_text(encoding="utf-8")
-            self.assertIn('model = "gpt-5.3-codex-spark"', spark)
+            helper = (destination / "autopilot-fast-helper.toml").read_text(encoding="utf-8")
+            self.assertIn('model = "gpt-5.6-luna"', helper)
+            self.assertIn('model_reasoning_effort = "low"', helper)
             for target in sorted(destination.glob("*.toml")):
                 if target.name == "autopilot-fast-helper.toml":
                     continue
@@ -7315,7 +7320,7 @@ class MutationHelperTests(unittest.TestCase):
                 helper_id="install-codex-agents",
                 operation="install-codex-agents",
                 mode="dry_run",
-                inputs={"destination": ".codex/agents", "model": "gpt-5.5"},
+                inputs={"destination": ".codex/agents", "model": "gpt-5.6-sol"},
             )
             from speckit_pro_runner.helpers import install
             from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
@@ -7330,7 +7335,7 @@ class MutationHelperTests(unittest.TestCase):
             shutil.copytree(PLUGIN_ROOT / "codex-agents", fake_plugin / "codex-agents")
             analyze = fake_plugin / "codex-agents" / "analyze-executor.toml"
             analyze.write_text(
-                analyze.read_text(encoding="utf-8").replace('model = "gpt-5.5"', "model = 'gpt-5.5'", 1),
+                analyze.read_text(encoding="utf-8").replace('model = "gpt-5.6-sol"', "model = 'gpt-5.6-sol'", 1),
                 encoding="utf-8",
             )
             request = SimpleNamespace(
@@ -7364,7 +7369,7 @@ class MutationHelperTests(unittest.TestCase):
                 helper_id="install-codex-agents",
                 operation="install-codex-agents",
                 mode="apply",
-                inputs={"destination": ".codex/agents", "model": "gpt-5.5"},
+                inputs={"destination": ".codex/agents", "model": "gpt-5.6-sol"},
             )
             from speckit_pro_runner.helpers import install
             from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
@@ -7452,7 +7457,7 @@ class MutationHelperTests(unittest.TestCase):
                 helper_id="install-codex-agents",
                 operation="install-codex-agents",
                 mode="apply",
-                inputs={"destination": ".codex/agents", "model": "gpt-5.5"},
+                inputs={"destination": ".codex/agents", "model": "gpt-5.6-sol"},
             )
             from speckit_pro_runner.helpers import install
             from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
@@ -7489,7 +7494,7 @@ class MutationHelperTests(unittest.TestCase):
                 helper_request(
                     "install-codex-agents",
                     mode="apply",
-                    inputs={"destination": "agents", "model": "gpt-5.5"},
+                    inputs={"destination": "agents", "model": "gpt-5.6-sol"},
                 ),
                 cwd=git_root,
             )
@@ -7508,7 +7513,7 @@ class MutationHelperTests(unittest.TestCase):
                     helper_request(
                         "install-codex-agents",
                         mode="apply",
-                        inputs={"destination": ".codex/agents", "model": "gpt-5.5"},
+                        inputs={"destination": ".codex/agents", "model": "gpt-5.6-sol"},
                     ),
                     cwd=git_root,
                 )
@@ -7533,7 +7538,7 @@ class MutationHelperTests(unittest.TestCase):
                 helper_request(
                     "install-codex-agents",
                     mode="apply",
-                    inputs={"destination": ".codex/agents", "model": "gpt-5.5"},
+                inputs={"destination": ".codex/agents", "model": "gpt-5.6-sol"},
                 ),
                 cwd=git_root,
             )
@@ -7554,7 +7559,7 @@ class MutationHelperTests(unittest.TestCase):
                 helper_id="install-codex-agents",
                 operation="install-codex-agents",
                 mode="apply",
-                inputs={"destination": ".codex/agents", "model": "gpt-5.5"},
+                inputs={"destination": ".codex/agents", "model": "gpt-5.6-sol"},
             )
             from speckit_pro_runner.helpers import install
             from speckit_pro_runner.helpers.registry import MUTATION_HELPERS

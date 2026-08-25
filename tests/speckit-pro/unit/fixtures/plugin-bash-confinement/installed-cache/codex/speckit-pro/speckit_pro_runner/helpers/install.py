@@ -52,7 +52,7 @@ CODEX_SOURCE_AGENT_TOML_NAMES = tuple(
     sorted((*[f"{name}.toml" for name in CODEX_REQUIRED_AGENT_NAMES], f"{CODEX_OPTIONAL_HELPER_NAME}.toml"))
 )
 REQUIRED_CODEX_AGENT_NAMES = frozenset(CODEX_SOURCE_AGENT_TOML_NAMES)
-SUPPORTED_CODEX_AGENT_MODELS = frozenset({"gpt-5.5", "gpt-5.4"})
+SUPPORTED_CODEX_AGENT_MODELS = frozenset({"gpt-5.6-sol", "gpt-5.5", "gpt-5.4"})
 ROUTE_POLICY_MANIFEST_SCHEMA_VERSION = "1.0.0"
 ROUTE_POLICY_MANIFEST_TOP_LEVEL_KEYS = frozenset(
     {
@@ -4056,14 +4056,14 @@ def validate_route_policy_route(raw: Any, *, context: str) -> dict[str, Any]:
 
 
 def load_codex_agent_bundle(source_dir: Path, inputs: dict[str, Any]) -> tuple[dict[str, bytes], str] | dict[str, Any]:
-    raw_model = inputs["model"] if "model" in inputs else os.environ.get("SPECKIT_CODEX_MODEL") or "gpt-5.5"
+    raw_model = inputs["model"] if "model" in inputs else os.environ.get("SPECKIT_CODEX_MODEL") or "gpt-5.6-sol"
     if not isinstance(raw_model, str) or raw_model not in SUPPORTED_CODEX_AGENT_MODELS:
         return diagnostic(
             "unsupported_codex_model",
-            "model must be gpt-5.5 or gpt-5.4",
+            "model must be gpt-5.6-sol, gpt-5.5, or gpt-5.4",
             details={"model": raw_model},
             remediation_summary="Choose a supported explicit Codex agent model.",
-            remediation_actions=["Set inputs.model to gpt-5.5 or gpt-5.4."],
+            remediation_actions=["Set inputs.model to gpt-5.6-sol, gpt-5.5, or gpt-5.4."],
         )
     roster_result = codex_agent_source_roster(source_dir)
     if is_diagnostic(roster_result):
@@ -4079,21 +4079,21 @@ def load_codex_agent_bundle(source_dir: Path, inputs: dict[str, Any]) -> tuple[d
             source_policy = tomllib.loads(source_text)
             if source_policy.get("name") != path.stem:
                 raise ValueError(f"{path.name}: name must match filename")
-            expected_source_model = "gpt-5.3-codex-spark" if path.name == "autopilot-fast-helper.toml" else "gpt-5.5"
+            expected_source_model = "gpt-5.6-luna" if path.name == "autopilot-fast-helper.toml" else "gpt-5.6-sol"
             if source_policy.get("model") != expected_source_model:
                 raise ValueError(f"{path.name}: unexpected source model")
 
-            if raw_model == "gpt-5.4" and expected_source_model == "gpt-5.5":
+            if raw_model != expected_source_model and expected_source_model == "gpt-5.6-sol":
                 rendered_text, replacement_count = re.subn(
-                    r'^model = "gpt-5\.5"$',
-                    'model = "gpt-5.4"',
+                    r'^model = "gpt-5\.6-sol"$',
+                    f'model = "{raw_model}"',
                     source_text,
                     flags=re.MULTILINE,
                 )
                 if replacement_count != 1:
                     raise ValueError(f"{path.name}: expected exactly one model rewrite")
                 rendered_policy = tomllib.loads(rendered_text)
-                if rendered_policy.get("model") != "gpt-5.4":
+                if rendered_policy.get("model") != raw_model:
                     raise ValueError(f"{path.name}: model rewrite did not validate")
                 rendered[path.name] = rendered_text.encode("utf-8")
             else:
