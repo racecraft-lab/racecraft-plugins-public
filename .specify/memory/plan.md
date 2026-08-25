@@ -2481,3 +2481,34 @@ the test fixture tree because a shipped test read them. No plugin-source,
 docs-reference or payload refresh was required: the cleanup changed only project
 memory, roadmap and process records, active-spec residue, and the one test that
 reads the relocated corpus.
+
+## Revision 2026-08-25 - ART-017 And G56R-006 Post-Merge Architecture
+
+### Where They Live Now
+
+ART-017's armed verdicts live in the autopilot guard scripts and its
+status-evidence contract, owned by
+`tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py`. G56R-006's
+resolver, materializer and installer live under `speckit-pro/` with the
+route-policy manifest schema and the route-aware install contract, owned by the
+G56R route-fallback and policy-contract suites.
+
+### Dependency And Cleanup Plan
+
+G56R-007 through G56R-010 were blocked by G56R-006 and are now unblocked; they
+run in parallel, serializing shared regeneration. G56R-011 remains blocked by
+that cohort. On the ART side, ART-009 is the next entry and already carries
+ART-008's undischarged live UAT.
+
+Cleanup removed both active folders, preserved durable evidence under
+`docs/ai/specs/.process/`, and advanced `autopilot-state.json` to
+`completed_archived` — legitimate here because the slot still pointed at
+G56R-006, unlike the ART-008 cleanup a day earlier where it did not. No
+plugin-source or payload refresh was required; the docs reference and spec index
+were regenerated.
+
+### `specs/` after this sweep
+
+Only `specs/.gitkeep` and `specs/brand-001-racecraft-identity-system/`, which
+holds a `SPEC-MOC.md` alone at status `pending`. BRAND-001 is scaffolded and
+unstarted, not merged work, and is deliberately not archived.

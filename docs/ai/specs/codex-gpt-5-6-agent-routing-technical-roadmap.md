@@ -22,7 +22,8 @@ PRs #366-#368; [G56R-003](.process/G56R-003-workflow.md) is complete and
 archived after PR #386; [G56R-004](.process/G56R-004-workflow.md) is complete
 and archived after PR #403;
 [G56R-005](.process/G56R-005-workflow.md) is complete and archived after
-PR #487; [G56R-006](.process/G56R-006-workflow.md) is in progress
+PR #487; [G56R-006](.process/G56R-006-workflow.md) shipped in PR #503, merged
+2026-08-25 at `609f99e17`, and was archived 2026-08-25
 
 **Legacy identifier note:** `G56R` and the existing filenames are retained for
 traceability. They do not limit the candidate catalog to GPT-5.6.
