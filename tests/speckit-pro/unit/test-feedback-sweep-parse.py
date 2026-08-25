@@ -1252,7 +1252,7 @@ REDACTION_RULES = (
     "bearer_token",
     "assigned_token",
     "over_bound_line",
-    # The issuer-prefix rules. The five above catch a credential by the shape of
+    # The issuer-prefix rules. The four value rules above catch a credential by the shape of
     # its surroundings; these catch it by its own first bytes, which is the form
     # a bare token in a sentence takes.
     "github_token",
