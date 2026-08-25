@@ -743,7 +743,6 @@ class AnchoredAgentDir:
         private_dir_name: str | None = None
         private_dir_fd: int | None = None
         private_entry_name = cleanup_name
-        public_conflicts: list[str] = []
 
         def preserved_cleanup_entry(path: str, error: str = "fd_bound_delete_unavailable") -> dict[str, str]:
             return {
@@ -759,17 +758,39 @@ class AnchoredAgentDir:
                 "error": error,
             }
 
-        def preserve_private_entry() -> str:
-            if private_dir_fd is None:
-                return self.evidence_path(cleanup_name)
-            return self.evidence_subpath(private_dir_name or "", private_entry_name)
+        def public_entry_classification(error: str) -> tuple[list[str], list[dict[str, str]]]:
+            public_path = self.evidence_path(cleanup_name)
+            try:
+                public_state = self.previous_state(cleanup_name)
+            except OSError:
+                return [public_path], [{"kind": "cleanup_incomplete", "target": public_path, "error": error}]
+            if public_state is None:
+                return [], []
+            if public_state == expected_state:
+                return [public_path], [preserved_cleanup_entry(public_path, error)]
+            return [public_path], [preserved_concurrent_file(public_path, error)]
 
-        def preserved_private_conflicts() -> CodexAgentCleanupResult:
-            preserved = preserve_private_entry()
+        def private_entry_classification(error: str) -> tuple[list[str], list[dict[str, str]]]:
+            if private_dir_fd is None or private_dir_name is None:
+                return [], []
+            private_path = self.evidence_subpath(private_dir_name, private_entry_name)
+            try:
+                private_state = codex_agent_previous_state_at(private_dir_fd, private_entry_name)
+            except OSError:
+                return [private_path], [preserved_concurrent_file(private_path, error)]
+            if private_state is None:
+                return [], []
+            if private_state == expected_state:
+                return [private_path], [preserved_cleanup_entry(private_path)]
+            return [private_path], [preserved_concurrent_file(private_path, error)]
+
+        def classified_quarantine_result(error: str) -> CodexAgentCleanupResult:
+            public_paths, public_errors = public_entry_classification(error)
+            private_paths, private_errors = private_entry_classification(error)
             return CodexAgentCleanupResult(
-                public_conflicts=list(dict.fromkeys(public_conflicts)),
-                preserved_private_paths=[preserved],
-                cleanup_errors=[preserved_cleanup_entry(preserved)],
+                public_conflicts=list(dict.fromkeys(public_paths)),
+                preserved_private_paths=list(dict.fromkeys(private_paths)),
+                cleanup_errors=[*public_errors, *private_errors],
             )
 
         try:
@@ -796,42 +817,12 @@ class AnchoredAgentDir:
                     private_entry_name,
                 )
             except FileNotFoundError:
-                return CodexAgentCleanupResult()
+                return classified_quarantine_result("private_quarantine_file_not_found")
             except FileExistsError:
-                private_path = self.evidence_subpath(private_dir_name, private_entry_name)
-                public_path = self.evidence_path(cleanup_name)
-                return CodexAgentCleanupResult(
-                    public_conflicts=[public_path],
-                    preserved_private_paths=[private_path],
-                    cleanup_errors=[
-                        preserved_cleanup_entry(public_path, "private_quarantine_collision"),
-                        preserved_concurrent_file(private_path, "private_quarantine_collision"),
-                    ],
-                )
+                return classified_quarantine_result("private_quarantine_collision")
             except OSError:
-                preserved_private_paths: list[str] = []
-                try:
-                    if codex_agent_previous_state_at(private_dir_fd, private_entry_name) is not None:
-                        preserved_private_paths.append(self.evidence_subpath(private_dir_name, private_entry_name))
-                except OSError:
-                    preserved_private_paths.append(self.evidence_subpath(private_dir_name, private_entry_name))
-                return CodexAgentCleanupResult(
-                    public_conflicts=[self.evidence_path(cleanup_name)],
-                    preserved_private_paths=preserved_private_paths,
-                    cleanup_errors=[preserved_cleanup_entry(path) for path in preserved_private_paths],
-                )
-            try:
-                if self.previous_state(cleanup_name) is not None:
-                    public_conflicts.append(self.evidence_path(cleanup_name))
-            except OSError:
-                public_conflicts.append(self.evidence_path(cleanup_name))
-            try:
-                private_state = codex_agent_previous_state_at(private_dir_fd, private_entry_name)
-            except OSError:
-                private_state = None
-            if private_state != expected_state:
-                return preserved_private_conflicts()
-            return preserved_private_conflicts()
+                return classified_quarantine_result("private_quarantine_move_failed")
+            return classified_quarantine_result("private_quarantine_identity_mismatch")
         finally:
             if private_dir_fd is not None:
                 codex_agent_close_descriptor_nonmasking(private_dir_fd)

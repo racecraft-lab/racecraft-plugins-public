@@ -2789,6 +2789,190 @@ class MutationHelperTests(unittest.TestCase):
             concurrent_text = " ".join([concurrent_action["summary"], *concurrent_action["recommended_actions"]])
             self.assertIn("unknown/private concurrent data", concurrent_text)
 
+    def test_install_codex_agents_posix_private_quarantine_file_not_found_preserves_private_residue(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve() / "agents"
+            destination.mkdir()
+            cleanup_name = ".lost.cleanup.agent.tmp"
+            public_cleanup = destination / cleanup_name
+            public_cleanup.write_bytes(b"installer-owned cleanup\n")
+            identity = install.codex_agent_destination_identity(destination)
+            agent_dir = install.AnchoredAgentDir.open(destination, identity)
+            expected_state = agent_dir.previous_state(cleanup_name)
+            assert expected_state is not None
+            private_dir_name = ".dirid.cleanup-dir"
+            private_victim = destination / private_dir_name / cleanup_name
+
+            def fail_missing_after_private_residue(*_args: object, **_kwargs: object) -> None:
+                public_cleanup.unlink()
+                private_victim.write_bytes(b"private residue after missing source\n")
+                raise FileNotFoundError(cleanup_name)
+
+            try:
+                with (
+                    patch.object(install.secrets, "token_hex", return_value="dirid"),
+                    patch.object(
+                        install,
+                        "codex_agent_native_rename_no_replace_between",
+                        side_effect=fail_missing_after_private_residue,
+                    ),
+                ):
+                    result = agent_dir.cleanup_verified_quarantine(cleanup_name, expected_state)
+            finally:
+                agent_dir.close()
+
+            self.assertFalse(public_cleanup.exists())
+            self.assertEqual(private_victim.read_bytes(), b"private residue after missing source\n")
+            self.assertEqual(result.public_conflicts, [])
+            self.assertEqual(result.preserved_private_paths, [private_victim.as_posix()])
+            self.assertIn(
+                {
+                    "kind": "preserved_concurrent_file",
+                    "target": private_victim.as_posix(),
+                    "error": "private_quarantine_file_not_found",
+                },
+                result.cleanup_errors,
+            )
+            self.assertFalse(
+                any(
+                    error["kind"] == "preserved_cleanup_entry" and error["target"] == private_victim.as_posix()
+                    for error in result.cleanup_errors
+                )
+            )
+            remediation = install.codex_route_aware_cleanup_manual_remediation(result.cleanup_errors)
+            self.assertNotIn("cleanup_incomplete", [action["reason"] for action in remediation])
+            concurrent_action = next(action for action in remediation if action["reason"] == "concurrent_file_preserved")
+            self.assertEqual(concurrent_action["paths"], [private_victim.as_posix()])
+            self.assertIn(
+                "unknown/private concurrent data",
+                " ".join([concurrent_action["summary"], *concurrent_action["recommended_actions"]]),
+            )
+
+    def test_install_codex_agents_posix_private_quarantine_move_error_classifies_public_and_private(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve() / "agents"
+            destination.mkdir()
+            cleanup_name = ".failed.cleanup.agent.tmp"
+            public_cleanup = destination / cleanup_name
+            public_cleanup.write_bytes(b"installer-owned cleanup\n")
+            identity = install.codex_agent_destination_identity(destination)
+            agent_dir = install.AnchoredAgentDir.open(destination, identity)
+            expected_state = agent_dir.previous_state(cleanup_name)
+            assert expected_state is not None
+            private_dir_name = ".dirid.cleanup-dir"
+            private_victim = destination / private_dir_name / cleanup_name
+
+            def fail_move_after_private_leaf(*_args: object, **_kwargs: object) -> None:
+                private_victim.write_bytes(b"private victim after failed move\n")
+                raise OSError("injected move failure")
+
+            try:
+                with (
+                    patch.object(install.secrets, "token_hex", return_value="dirid"),
+                    patch.object(
+                        install,
+                        "codex_agent_native_rename_no_replace_between",
+                        side_effect=fail_move_after_private_leaf,
+                    ),
+                ):
+                    result = agent_dir.cleanup_verified_quarantine(cleanup_name, expected_state)
+            finally:
+                agent_dir.close()
+
+            self.assertEqual(public_cleanup.read_bytes(), b"installer-owned cleanup\n")
+            self.assertEqual(private_victim.read_bytes(), b"private victim after failed move\n")
+            self.assertEqual(result.public_conflicts, [public_cleanup.as_posix()])
+            self.assertEqual(result.preserved_private_paths, [private_victim.as_posix()])
+            self.assertIn(
+                {
+                    "kind": "preserved_cleanup_entry",
+                    "target": public_cleanup.as_posix(),
+                    "error": "private_quarantine_move_failed",
+                },
+                result.cleanup_errors,
+            )
+            self.assertIn(
+                {
+                    "kind": "preserved_concurrent_file",
+                    "target": private_victim.as_posix(),
+                    "error": "private_quarantine_move_failed",
+                },
+                result.cleanup_errors,
+            )
+            remediation = install.codex_route_aware_cleanup_manual_remediation(result.cleanup_errors)
+            cleanup_action = next(action for action in remediation if action["reason"] == "cleanup_incomplete")
+            concurrent_action = next(action for action in remediation if action["reason"] == "concurrent_file_preserved")
+            self.assertEqual(cleanup_action["paths"], [public_cleanup.as_posix()])
+            self.assertEqual(concurrent_action["paths"], [private_victim.as_posix()])
+
+    def test_install_codex_agents_posix_private_quarantine_post_move_mismatch_classifies_public_original(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve() / "agents"
+            destination.mkdir()
+            cleanup_name = ".mismatch.cleanup.agent.tmp"
+            public_cleanup = destination / cleanup_name
+            public_cleanup.write_bytes(b"installer-owned cleanup\n")
+            identity = install.codex_agent_destination_identity(destination)
+            agent_dir = install.AnchoredAgentDir.open(destination, identity)
+            expected_state = agent_dir.previous_state(cleanup_name)
+            assert expected_state is not None
+            private_dir_name = ".dirid.cleanup-dir"
+            private_victim = destination / private_dir_name / cleanup_name
+
+            def report_success_with_private_victim(*_args: object, **_kwargs: object) -> None:
+                private_victim.write_bytes(b"private victim after reported move\n")
+
+            try:
+                with (
+                    patch.object(install.secrets, "token_hex", return_value="dirid"),
+                    patch.object(
+                        install,
+                        "codex_agent_native_rename_no_replace_between",
+                        side_effect=report_success_with_private_victim,
+                    ),
+                ):
+                    result = agent_dir.cleanup_verified_quarantine(cleanup_name, expected_state)
+            finally:
+                agent_dir.close()
+
+            self.assertEqual(public_cleanup.read_bytes(), b"installer-owned cleanup\n")
+            self.assertEqual(private_victim.read_bytes(), b"private victim after reported move\n")
+            self.assertEqual(result.public_conflicts, [public_cleanup.as_posix()])
+            self.assertEqual(result.preserved_private_paths, [private_victim.as_posix()])
+            self.assertIn(
+                {
+                    "kind": "preserved_cleanup_entry",
+                    "target": public_cleanup.as_posix(),
+                    "error": "private_quarantine_identity_mismatch",
+                },
+                result.cleanup_errors,
+            )
+            self.assertIn(
+                {
+                    "kind": "preserved_concurrent_file",
+                    "target": private_victim.as_posix(),
+                    "error": "private_quarantine_identity_mismatch",
+                },
+                result.cleanup_errors,
+            )
+            self.assertFalse(
+                any(
+                    error["kind"] == "preserved_cleanup_entry" and error["target"] == private_victim.as_posix()
+                    for error in result.cleanup_errors
+                )
+            )
+            remediation = install.codex_route_aware_cleanup_manual_remediation(result.cleanup_errors)
+            cleanup_action = next(action for action in remediation if action["reason"] == "cleanup_incomplete")
+            concurrent_action = next(action for action in remediation if action["reason"] == "concurrent_file_preserved")
+            self.assertEqual(cleanup_action["paths"], [public_cleanup.as_posix()])
+            self.assertEqual(concurrent_action["paths"], [private_victim.as_posix()])
+
     def test_install_codex_agents_posix_temp_fsync_capture_failure_preserves_name_swap(self) -> None:
         from speckit_pro_runner.helpers import install
 

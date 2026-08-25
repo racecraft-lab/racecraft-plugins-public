@@ -269,3 +269,7 @@
 ### Post: Review Remediation — Ownership-Aware Collision Evidence
 
 **Deviations/Edge cases/Surprises:** Exact-head review found that collision evidence labeled a concurrent private victim as installer-owned cleanup residue and that `target_is_safe` could still reduce a Windows close failure to a generic unsafe result. Two deterministic cases established RED at 152/154. The remediation now records installer-owned public residue separately from unknown/private concurrent data, generates manual guidance that explicitly preserves the unknown data, and raises or attaches Windows close evidence without masking a primary error. GREEN and REFACTOR passed 154/154; materialization remained 11/11 and the canonical materializer 17/17.
+
+### Post: Review Remediation — Uniform Cleanup Provenance
+
+**Deviations/Edge cases/Surprises:** Exact-head review found that FileNotFound, generic move failures, and post-move mismatch still inferred private-location ownership. Three deterministic cases established RED at 154/157. The remediation independently classifies public and private leaves, emits `preserved_cleanup_entry` only for exact expected installer state, and treats unverified private leaves as `preserved_concurrent_file` with safe manual guidance. GREEN and REFACTOR passed 157/157; materialization remained 11/11 and the canonical materializer 17/17.
