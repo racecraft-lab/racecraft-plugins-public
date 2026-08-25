@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.28.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.27.0...speckit-pro-v2.28.0) (2026-08-25)
+
+
+### Features
+
+* **g56r-005:** Add model availability fallback and recovery simulation ([#487](https://github.com/racecraft-lab/racecraft-plugins-public/issues/487)) ([85762d5](https://github.com/racecraft-lab/racecraft-plugins-public/commit/85762d5a7033981da1fdf6a18b5913c83fc6d9a5))
+* **g56r-006:** Add capability-aware agent installation ([#503](https://github.com/racecraft-lab/racecraft-plugins-public/issues/503)) ([609f99e](https://github.com/racecraft-lab/racecraft-plugins-public/commit/609f99e1732424ffd68adfbd17d6f41d37f0fba4))
+* **speckit-pro:** Regenerate draft artifact pages after feedback sweep amendments ([#502](https://github.com/racecraft-lab/racecraft-plugins-public/issues/502)) ([32043c4](https://github.com/racecraft-lab/racecraft-plugins-public/commit/32043c45a60e7c38d15f0958bc4874f0362ea505))
+* **speckit-pro:** sweep draft pull request feedback before implementation begins ([#464](https://github.com/racecraft-lab/racecraft-plugins-public/issues/464)) ([8db22a4](https://github.com/racecraft-lab/racecraft-plugins-public/commit/8db22a42078074c217c79de3498fbdf9951ffa37))
+
+
+### Bug Fixes
+
+* **art-017:** Arm state bookkeeping checks ([#490](https://github.com/racecraft-lab/racecraft-plugins-public/issues/490)) ([070a36c](https://github.com/racecraft-lab/racecraft-plugins-public/commit/070a36c2ba93da2afe1b3a49bf886c1c28903d2c))
+* **speckit-pro:** restore autopilot handoff and review artifacts ([#501](https://github.com/racecraft-lab/racecraft-plugins-public/issues/501)) ([96ed55f](https://github.com/racecraft-lab/racecraft-plugins-public/commit/96ed55f661b9619a93a979bc69133551441d30fb))
+
 ## [2.27.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.26.0...speckit-pro-v2.27.0) (2026-08-20)
 
 
