@@ -745,11 +745,18 @@ class AnchoredAgentDir:
         private_entry_name = cleanup_name
         public_conflicts: list[str] = []
 
-        def preserved_cleanup_entry(path: str) -> dict[str, str]:
+        def preserved_cleanup_entry(path: str, error: str = "fd_bound_delete_unavailable") -> dict[str, str]:
             return {
                 "kind": "preserved_cleanup_entry",
                 "target": path,
-                "error": "fd_bound_delete_unavailable",
+                "error": error,
+            }
+
+        def preserved_concurrent_file(path: str, error: str = "private_quarantine_collision") -> dict[str, str]:
+            return {
+                "kind": "preserved_concurrent_file",
+                "target": path,
+                "error": error,
             }
 
         def preserve_private_entry() -> str:
@@ -792,10 +799,14 @@ class AnchoredAgentDir:
                 return CodexAgentCleanupResult()
             except FileExistsError:
                 private_path = self.evidence_subpath(private_dir_name, private_entry_name)
+                public_path = self.evidence_path(cleanup_name)
                 return CodexAgentCleanupResult(
-                    public_conflicts=[self.evidence_path(cleanup_name)],
+                    public_conflicts=[public_path],
                     preserved_private_paths=[private_path],
-                    cleanup_errors=[preserved_cleanup_entry(private_path)],
+                    cleanup_errors=[
+                        preserved_cleanup_entry(public_path, "private_quarantine_collision"),
+                        preserved_concurrent_file(private_path, "private_quarantine_collision"),
+                    ],
                 )
             except OSError:
                 preserved_private_paths: list[str] = []
@@ -1000,6 +1011,7 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
         self._validate_name(name)
         handle: int | None = None
         result = False
+        primary_error: OSError | None = None
         try:
             handle = self.open_child_handle(
                 name,
@@ -1014,13 +1026,16 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
                 result = not bool(info.dwFileAttributes & WINDOWS_FILE_ATTRIBUTE_DIRECTORY)
         except FileNotFoundError:
             result = True
-        except OSError:
+        except OSError as exc:
+            primary_error = exc
             result = False
         finally:
             if handle is not None:
                 close_error = codex_agent_windows_close_handle(handle)
                 if close_error is not None:
-                    return False
+                    if primary_error is not None:
+                        raise codex_agent_note_close_error(primary_error, close_error)
+                    raise close_error
         return result
 
     def previous_state(self, name: str) -> CodexAgentFileState | None:
@@ -3309,10 +3324,10 @@ def codex_route_aware_cleanup_manual_remediation(
             "action_type": "manual_remediation",
             "reason": "concurrent_file_preserved",
             "paths": preserved_paths,
-            "summary": "Inspect both preserved files and keep the intended concurrent version before retrying.",
+            "summary": "Inspect preserved unknown/private concurrent data and keep the intended version before retrying.",
             "recommended_actions": [
                 "Compare the reported target and backup bytes without following symlinks.",
-                "Keep or restore the intended user-owned version before removing the other file.",
+                "Keep or restore unknown/private concurrent data before removing any installer cleanup residue.",
                 "Retry only after the destination has stopped changing.",
             ],
         })

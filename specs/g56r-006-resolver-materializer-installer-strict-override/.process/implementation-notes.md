@@ -265,3 +265,7 @@
 ### Post: Review Remediation — No-Replace Quarantine and Mandatory Close Results
 
 **Deviations/Edge cases/Surprises:** Exact-head review narrowed the remaining defects to replacing rename into the POSIX private quarantine and lower-level Windows callers that could still omit close evidence. Two deterministic cases established RED at 151/153. The remediation now uses native no-replace rename across directory descriptors for private quarantine collisions and makes every Windows handle close return or raise structured evidence so no caller can silently leak a handle. GREEN and REFACTOR passed 153/153; materialization remained 11/11 and the canonical materializer 17/17.
+
+### Post: Review Remediation — Ownership-Aware Collision Evidence
+
+**Deviations/Edge cases/Surprises:** Exact-head review found that collision evidence labeled a concurrent private victim as installer-owned cleanup residue and that `target_is_safe` could still reduce a Windows close failure to a generic unsafe result. Two deterministic cases established RED at 152/154. The remediation now records installer-owned public residue separately from unknown/private concurrent data, generates manual guidance that explicitly preserves the unknown data, and raises or attaches Windows close evidence without masking a primary error. GREEN and REFACTOR passed 154/154; materialization remained 11/11 and the canonical materializer 17/17.

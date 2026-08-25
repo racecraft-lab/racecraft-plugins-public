@@ -2756,6 +2756,38 @@ class MutationHelperTests(unittest.TestCase):
             self.assertGreaterEqual(victim_link.stat().st_nlink, 2)
             self.assertIn(public_cleanup.as_posix(), result.public_conflicts)
             self.assertIn(private_victim.as_posix(), result.preserved_private_paths)
+            self.assertIn(
+                {
+                    "kind": "preserved_cleanup_entry",
+                    "target": public_cleanup.as_posix(),
+                    "error": "private_quarantine_collision",
+                },
+                result.cleanup_errors,
+            )
+            self.assertIn(
+                {
+                    "kind": "preserved_concurrent_file",
+                    "target": private_victim.as_posix(),
+                    "error": "private_quarantine_collision",
+                },
+                result.cleanup_errors,
+            )
+            self.assertNotIn(
+                {
+                    "kind": "preserved_cleanup_entry",
+                    "target": private_victim.as_posix(),
+                    "error": "fd_bound_delete_unavailable",
+                },
+                result.cleanup_errors,
+            )
+            remediation = install.codex_route_aware_cleanup_manual_remediation(result.cleanup_errors)
+            cleanup_action = next(action for action in remediation if action["reason"] == "cleanup_incomplete")
+            concurrent_action = next(action for action in remediation if action["reason"] == "concurrent_file_preserved")
+            self.assertIn(public_cleanup.as_posix(), cleanup_action["paths"])
+            self.assertNotIn(private_victim.as_posix(), cleanup_action["paths"])
+            self.assertIn(private_victim.as_posix(), concurrent_action["paths"])
+            concurrent_text = " ".join([concurrent_action["summary"], *concurrent_action["recommended_actions"]])
+            self.assertIn("unknown/private concurrent data", concurrent_text)
 
     def test_install_codex_agents_posix_temp_fsync_capture_failure_preserves_name_swap(self) -> None:
         from speckit_pro_runner.helpers import install
@@ -3334,6 +3366,29 @@ class MutationHelperTests(unittest.TestCase):
 
             self.assertEqual(fake.file_disposition_calls[0]["buffer_size"], 1)
             self.assertEqual(fake.file_disposition_calls[0]["delete_file"], 1)
+
+    def test_install_codex_agents_windows_target_is_safe_close_failure_raises_close_handle(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            target = destination / "agent.toml"
+            target.write_bytes(b"safe target whose handle close fails\n")
+            identity = install.codex_agent_destination_identity(destination)
+            fake = FakeWindowsKernel32()
+            fake.fail_close_paths.add(target)
+
+            with (
+                patch.object(install.os, "name", "nt"),
+                patch.object(install.ctypes, "WinDLL", return_value=fake, create=True),
+                patch.object(install.ctypes, "get_last_error", side_effect=fake.get_last_error, create=True),
+            ):
+                agent_dir = install.AnchoredAgentDir.open(destination, identity)
+                try:
+                    with self.assertRaisesRegex(OSError, "CloseHandle"):
+                        agent_dir.target_is_safe(target.name)
+                finally:
+                    agent_dir.close()
 
     def test_install_codex_agents_windows_temp_write_capture_failure_preserves_name_swap_without_deletefile(self) -> None:
         from speckit_pro_runner.helpers import install
