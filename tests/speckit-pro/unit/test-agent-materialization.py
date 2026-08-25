@@ -220,6 +220,62 @@ class AgentMaterializationTests(unittest.TestCase):
         )
         self.assertTrue(result.non_route_fields_unchanged)
 
+    def test_legacy_default_route_preserves_source_that_omits_optional_effort(self) -> None:
+        module = self.materializer()
+        source_bytes = ROUTE_SOURCE_BYTES.replace(
+            b'model_reasoning_effort = "xhigh"\n',
+            b'',
+        )
+
+        result = module.materialize_agent_policy(
+            source_relative_path=SOURCE_PATH,
+            source_bytes=source_bytes,
+            candidate_route=None,
+            parent_controls=copy.deepcopy(EXPECTED_PARENT_CONTROLS),
+        )
+
+        self.assertEqual(result.destination_bytes, source_bytes)
+        self.assertTrue(module.verify_destination_bytes(result, source_bytes))
+        self.assertEqual(
+            result.candidate_route,
+            {
+                "agent_name": EXPECTED_ROUTE["agent_name"],
+                "model": EXPECTED_ROUTE["model"],
+                "model_reasoning_effort": "",
+            },
+        )
+        self.assertEqual(result.selected_model_reasoning_effort, "")
+
+        explicit_without_effort = copy.deepcopy(SELECTED_ROUTE)
+        explicit_without_effort["model_reasoning_effort"] = ""
+        with self.assertRaisesRegex(
+            ValueError,
+            "candidate route requires non-empty model_reasoning_effort",
+        ):
+            module.materialize_agent_policy(
+                source_relative_path=SOURCE_PATH,
+                source_bytes=source_bytes,
+                candidate_route=explicit_without_effort,
+                parent_controls=copy.deepcopy(EXPECTED_PARENT_CONTROLS),
+            )
+
+    def test_legacy_default_route_preserves_original_model_formatting(self) -> None:
+        module = self.materializer()
+        source_bytes = ROUTE_SOURCE_BYTES.replace(
+            b'model = "gpt-5.5"\nmodel_reasoning_effort = "xhigh"\n',
+            b'model="gpt-5.5"\n',
+        )
+
+        result = module.materialize_agent_policy(
+            source_relative_path=SOURCE_PATH,
+            source_bytes=source_bytes,
+            candidate_route=None,
+            parent_controls=copy.deepcopy(EXPECTED_PARENT_CONTROLS),
+        )
+
+        self.assertEqual(result.destination_bytes, source_bytes)
+        self.assertTrue(module.verify_destination_bytes(result, source_bytes))
+
     def test_route_materialization_preserves_non_route_fields(self) -> None:
         result = self.materialize_selected_route()
         source_policy = tomllib.loads(ROUTE_SOURCE_BYTES.decode("utf-8"))

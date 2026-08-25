@@ -85,7 +85,10 @@ def materialize_agent_policy(
     expected_controls = _parent_controls_from_policy(policy)
     route = _selected_route_from_policy(policy, candidate_route)
     controls = _validated_mapping(parent_controls, expected_controls, "parent controls")
-    destination_text = _render_selected_route(source_text, policy, route)
+    if candidate_route is None:
+        destination_text = source_text
+    else:
+        destination_text = _render_selected_route(source_text, policy, route)
     destination_policy = _parse_toml(destination_text)
     _require_unchanged_non_route_fields(policy, destination_policy)
     configuration = {
@@ -204,10 +207,14 @@ def _need_string(policy: Mapping[str, Any], key: str) -> str:
 
 
 def _route_from_policy(policy: Mapping[str, Any]) -> dict[str, Any]:
+    if "model_reasoning_effort" in policy:
+        model_reasoning_effort = _need_string(policy, "model_reasoning_effort")
+    else:
+        model_reasoning_effort = ""
     return {
         "agent_name": _need_string(policy, "name"),
         "model": _need_string(policy, "model"),
-        "model_reasoning_effort": _need_string(policy, "model_reasoning_effort"),
+        "model_reasoning_effort": model_reasoning_effort,
     }
 
 
@@ -265,17 +272,22 @@ def _render_selected_route(
 ) -> str:
     _need_string(source_policy, "model")
     rendered = _replace_top_level_string_field(source_text, "model", route["model"])
+    route_effort = route["model_reasoning_effort"]
     if "model_reasoning_effort" in source_policy:
         _need_string(source_policy, "model_reasoning_effort")
+        if not route_effort:
+            raise AgentMaterializationError(
+                "selected route requires non-empty model_reasoning_effort"
+            )
         rendered = _replace_top_level_string_field(
             rendered,
             "model_reasoning_effort",
-            route["model_reasoning_effort"],
+            route_effort,
         )
-    else:
+    elif route_effort:
         rendered, insertion_count = re.subn(
             r"(?m)^(model\s*=.*)$",
-            rf'\1\nmodel_reasoning_effort = {json.dumps(route["model_reasoning_effort"], ensure_ascii=False)}',
+            rf'\1\nmodel_reasoning_effort = {json.dumps(route_effort, ensure_ascii=False)}',
             rendered,
             count=1,
         )
@@ -286,12 +298,13 @@ def _render_selected_route(
     destination_policy = _parse_toml(rendered)
     if destination_policy.get("model") != route["model"]:
         raise AgentMaterializationError("destination model did not render selected route")
-    if (
-        destination_policy.get("model_reasoning_effort")
-        != route["model_reasoning_effort"]
-    ):
+    if route_effort and destination_policy.get("model_reasoning_effort") != route_effort:
         raise AgentMaterializationError(
             "destination model_reasoning_effort did not render selected route"
+        )
+    if not route_effort and "model_reasoning_effort" in destination_policy:
+        raise AgentMaterializationError(
+            "destination model_reasoning_effort rendered unexpectedly"
         )
     return rendered
 
