@@ -160,7 +160,7 @@ class _WindowsFileBasicInfo(ctypes.Structure):
 
 
 class _WindowsFileDispositionInfo(ctypes.Structure):
-    _fields_ = [("DeleteFile", ctypes.c_int)]
+    _fields_ = [("DeleteFile", ctypes.c_ubyte)]
 
 
 WINDOWS_FILE_RENAME_INFO_FILENAME_OFFSET = (
@@ -193,6 +193,10 @@ class CodexAgentRecoveryCopyFailure(OSError):
         super().__init__(message)
         self.failed_paths = failed_paths
         self.preserved_paths = preserved_paths
+
+
+def codex_agent_has_public_cleanup_conflict(paths: list[str]) -> bool:
+    return any(".cleanup-dir/" not in path for path in paths)
 
 
 def codex_agent_windows_kernel32() -> Any:
@@ -688,30 +692,11 @@ class AnchoredAgentDir:
         private_dir_fd: int | None = None
         private_entry_name = cleanup_name
         public_conflicts: list[str] = []
-        restored_private_preservation = False
 
         def preserve_private_entry() -> str:
-            nonlocal restored_private_preservation
             if private_dir_fd is None:
                 return self.evidence_path(cleanup_name)
-            if public_conflicts:
-                return self.evidence_subpath(private_dir_name or "", private_entry_name)
-            if restored_private_preservation:
-                return self.evidence_path(cleanup_name)
-            try:
-                codex_agent_native_rename_no_replace_between(
-                    private_dir_fd,
-                    private_entry_name,
-                    self.directory_fd,
-                    cleanup_name,
-                )
-            except FileExistsError:
-                public_conflicts.append(self.evidence_path(cleanup_name))
-                return self.evidence_subpath(private_dir_name or "", private_entry_name)
-            except OSError:
-                return self.evidence_subpath(private_dir_name or "", private_entry_name)
-            restored_private_preservation = True
-            return self.evidence_path(cleanup_name)
+            return self.evidence_subpath(private_dir_name or "", private_entry_name)
 
         def preserved_private_conflicts() -> list[str]:
             preserved = preserve_private_entry()
@@ -750,21 +735,7 @@ class AnchoredAgentDir:
                 private_state = None
             if private_state != expected_state:
                 return preserved_private_conflicts()
-            for _ in range(2):
-                try:
-                    os.unlink(private_entry_name, dir_fd=private_dir_fd)
-                    break
-                except OSError:
-                    if cleanup_errors is not None:
-                        cleanup_errors.append(self.evidence_subpath(private_dir_name, private_entry_name))
-                    try:
-                        if codex_agent_previous_state_at(private_dir_fd, private_entry_name) != expected_state:
-                            return preserved_private_conflicts()
-                    except OSError:
-                        return preserved_private_conflicts()
-            else:
-                return preserved_private_conflicts()
-            return list(dict.fromkeys(public_conflicts))
+            return preserved_private_conflicts()
         finally:
             if private_dir_fd is not None:
                 codex_agent_close_descriptor_nonmasking(private_dir_fd)
@@ -804,10 +775,11 @@ class AnchoredAgentDir:
             ) from None
         cleanup_conflicts = self.cleanup_owned_entry(backup_name, backup_state)
         if cleanup_conflicts:
-            raise CodexAgentNoClobberConflict(
-                f"restored target but could not remove preserved backup: {backup_name}",
-                list(dict.fromkeys([*cleanup_conflicts, self.evidence_path(target_name)])),
-            ) from None
+            if isinstance(self, WindowsAnchoredAgentDir) or codex_agent_has_public_cleanup_conflict(cleanup_conflicts):
+                raise CodexAgentNoClobberConflict(
+                    f"restored target but could not remove preserved backup: {backup_name}",
+                    list(dict.fromkeys([*cleanup_conflicts, self.evidence_path(target_name)])),
+                ) from None
         restored_state = self.previous_state(target_name)
         if restored_state != backup_state:
             preserved = self.preserve_state_as_backup(backup_state, target_name)
@@ -1112,6 +1084,66 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
         if close_errors:
             raise close_errors[0]
 
+    def state_from_handle(self, handle: int) -> CodexAgentFileState:
+        info = codex_agent_windows_file_info(handle)
+        if info.dwFileAttributes & WINDOWS_FILE_ATTRIBUTE_REPARSE_POINT:
+            raise OSError("managed target is not a regular file")
+        if info.dwFileAttributes & WINDOWS_FILE_ATTRIBUTE_DIRECTORY:
+            raise OSError("managed target is not a regular file")
+        codex_agent_windows_seek_start(handle)
+        content = codex_agent_windows_read_all(handle)
+        readonly = bool(info.dwFileAttributes & WINDOWS_FILE_ATTRIBUTE_READONLY)
+        mode = stat.S_IFREG | (0o400 if readonly else 0o600)
+        return CodexAgentFileState(
+            content=content,
+            mode=mode,
+            device=int(info.dwVolumeSerialNumber),
+            inode=codex_agent_windows_inode(info),
+        )
+
+    def apply_child_mode_verified(
+        self,
+        name: str,
+        mode: int,
+        expected_state: CodexAgentFileState,
+    ) -> CodexAgentFileState:
+        self._validate_name(name)
+        handle: int | None = None
+        close_errors: list[OSError] = []
+        result: CodexAgentFileState | None = None
+        primary_error: OSError | None = None
+        try:
+            handle = self.open_child_handle(
+                name,
+                WINDOWS_GENERIC_READ | WINDOWS_FILE_WRITE_ATTRIBUTES,
+                0,
+                WINDOWS_OPEN_EXISTING,
+            )
+            current_state = self.state_from_handle(handle)
+            if (
+                current_state.content != expected_state.content
+                or current_state.device != expected_state.device
+                or current_state.inode != expected_state.inode
+            ):
+                raise CodexAgentNoClobberConflict(
+                    "target changed before Windows mode application",
+                    [self.evidence_path(name)],
+                )
+            codex_agent_windows_set_mode_by_handle(handle, mode)
+            result = self.state_from_handle(handle)
+        except OSError as exc:
+            primary_error = exc
+        finally:
+            if handle is not None:
+                codex_agent_windows_close_handle(handle, close_errors)
+        if primary_error is not None:
+            raise primary_error
+        if close_errors:
+            raise close_errors[0]
+        if result is None:
+            raise OSError("Windows mode application produced no verified state")
+        return result
+
     def cleanup_owned_entry(
         self,
         name: str,
@@ -1147,7 +1179,17 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
         if moved_state != expected_state:
             return [self.evidence_path(cleanup_name)]
         handle: int | None = None
-        close_errors: list[OSError] = []
+
+        def close_cleanup_handle() -> None:
+            nonlocal handle
+            if handle is None:
+                return
+            close_errors: list[OSError] = []
+            codex_agent_windows_close_handle(handle, close_errors)
+            handle = None
+            if close_errors and cleanup_errors is not None:
+                cleanup_errors.extend(self.evidence_path(cleanup_name) for _ in close_errors)
+
         for _ in range(2):
             try:
                 handle = self.open_child_handle(
@@ -1170,12 +1212,8 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
                     return [self.evidence_path(cleanup_name)]
                 codex_agent_windows_set_mode_by_handle(handle, stat.S_IFREG | 0o600)
                 codex_agent_windows_delete_by_handle(handle)
-                codex_agent_windows_close_handle(handle, close_errors)
-                handle = None
-                try:
-                    if self.previous_state(cleanup_name) is not None:
-                        return [self.evidence_path(cleanup_name)]
-                except OSError:
+                close_cleanup_handle()
+                if self.path(cleanup_name).exists():
                     return [self.evidence_path(cleanup_name)]
                 return []
             except OSError:
@@ -1187,11 +1225,7 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
                 except OSError:
                     return [self.evidence_path(cleanup_name)]
             finally:
-                if handle is not None:
-                    codex_agent_windows_close_handle(handle, close_errors)
-                    handle = None
-        if close_errors and cleanup_errors is not None:
-            cleanup_errors.extend(self.evidence_path(cleanup_name) for _ in close_errors)
+                close_cleanup_handle()
         return [self.evidence_path(cleanup_name)]
 
     def move_target_to_backup(self, target_name: str) -> str:
@@ -3851,21 +3885,23 @@ def write_codex_agent_atomic(
                 if backup_name is not None:
                     paths.insert(0, agent_dir.evidence_path(backup_name))
                 raise CodexAgentNoClobberConflict("target changed after no-clobber link", paths)
-            temp_cleanup_errors: list[str] = []
-            temp_cleanup_conflicts = agent_dir.cleanup_owned_entry(tmp_name, prepared_state, temp_cleanup_errors)
-            if temp_cleanup_conflicts or temp_cleanup_errors:
-                paths = [*temp_cleanup_conflicts, agent_dir.evidence_path(target.name)]
-                if backup_name is not None:
-                    paths.append(agent_dir.evidence_path(backup_name))
-                raise CodexAgentNoClobberConflict("temporary install file cleanup failed", paths) from None
-            tmp_name = None
+            if tmp_name is not None:
+                temp_cleanup_errors: list[str] = []
+                temp_cleanup_conflicts = agent_dir.cleanup_owned_entry(tmp_name, prepared_state, temp_cleanup_errors)
+                if temp_cleanup_conflicts or temp_cleanup_errors:
+                    if (
+                        isinstance(agent_dir, WindowsAnchoredAgentDir)
+                        or temp_cleanup_errors
+                        or codex_agent_has_public_cleanup_conflict(temp_cleanup_conflicts)
+                    ):
+                        paths = [*temp_cleanup_conflicts, agent_dir.evidence_path(target.name)]
+                        if backup_name is not None:
+                            paths.append(agent_dir.evidence_path(backup_name))
+                        raise CodexAgentNoClobberConflict("temporary install file cleanup failed", paths) from None
+                tmp_name = None
             if isinstance(agent_dir, WindowsAnchoredAgentDir) and mode is not None:
-                agent_dir.set_child_mode(target.name, mode)
-                refreshed_state = agent_dir.previous_state(target.name)
-                if refreshed_state is None:
-                    raise OSError("installed target disappeared after mode application")
-                installed_state = refreshed_state
-                prepared_state = refreshed_state
+                installed_state = agent_dir.apply_child_mode_verified(target.name, mode, prepared_state)
+                prepared_state = installed_state
             agent_dir.ensure_current("destination changed during no-clobber install")
             if not agent_dir.state_matches(target.name, prepared_state):
                 paths = [agent_dir.evidence_path(target.name)]
@@ -3877,11 +3913,14 @@ def write_codex_agent_atomic(
                     raise OSError("moved backup state disappeared")
                 backup_cleanup_conflicts = agent_dir.cleanup_owned_entry(backup_name, moved_state)
                 if backup_cleanup_conflicts:
-                    backup_name = None
-                    raise CodexAgentNoClobberConflict(
-                        "prior-state backup cleanup failed",
-                        list(dict.fromkeys([*backup_cleanup_conflicts, agent_dir.evidence_path(target.name)])),
-                    ) from None
+                    if isinstance(agent_dir, WindowsAnchoredAgentDir) or codex_agent_has_public_cleanup_conflict(
+                        backup_cleanup_conflicts
+                    ):
+                        backup_name = None
+                        raise CodexAgentNoClobberConflict(
+                            "prior-state backup cleanup failed",
+                            list(dict.fromkeys([*backup_cleanup_conflicts, agent_dir.evidence_path(target.name)])),
+                        ) from None
                 backup_name = None
             if not agent_dir.state_matches(target.name, prepared_state):
                 paths = [agent_dir.evidence_path(target.name)]
@@ -3962,11 +4001,14 @@ def remove_codex_agent_if_unchanged(
                 )
             backup_cleanup_conflicts = agent_dir.cleanup_owned_entry(backup_name, expected_state)
             if backup_cleanup_conflicts:
-                backup_name = None
-                raise CodexAgentNoClobberConflict(
-                    "prior-state backup cleanup failed during removal",
-                    backup_cleanup_conflicts,
-                ) from None
+                if isinstance(agent_dir, WindowsAnchoredAgentDir) or codex_agent_has_public_cleanup_conflict(
+                    backup_cleanup_conflicts
+                ):
+                    backup_name = None
+                    raise CodexAgentNoClobberConflict(
+                        "prior-state backup cleanup failed during removal",
+                        backup_cleanup_conflicts,
+                    ) from None
             backup_name = None
             if not agent_dir.state_matches(target.name, None):
                 if moved_state is None:

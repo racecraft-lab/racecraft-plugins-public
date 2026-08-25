@@ -221,13 +221,19 @@ class FakeWindowsKernel32:
             self._chmod(target, 0o400 if attributes & self.FILE_ATTRIBUTE_READONLY else 0o600)
             return 1
         if info_class == 4:
-            del rename_info_buffer, buffer_size
+            disposition_buffer = getattr(rename_info_buffer, "_obj", rename_info_buffer)
+            disposition = FakeWindowsFileDispositionInfo.from_buffer(disposition_buffer)
+            if buffer_size != ctypes.sizeof(FakeWindowsFileDispositionInfo) or int(disposition.DeleteFile) != 1:
+                self.set_last_error(self.ERROR_ACCESS_DENIED)
+                return 0
             target = PosixPath(self.handles[handle]["path"])
             fd = int(self.handles[handle]["fd"])
             original = os.fstat(fd)
             if self.before_file_disposition is not None:
                 self.before_file_disposition(target)
-            self.file_disposition_calls.append({"handle": handle, "path": target})
+            self.file_disposition_calls.append(
+                {"handle": handle, "path": target, "buffer_size": buffer_size, "delete_file": int(disposition.DeleteFile)}
+            )
             try:
                 if stat.S_IMODE(os.fstat(fd).st_mode) & 0o222 == 0:
                     self.set_last_error(self.ERROR_ACCESS_DENIED)
@@ -315,6 +321,10 @@ class FakeWindowsFileBasicInfo(ctypes.Structure):
         ("ChangeTime", ctypes.c_longlong),
         ("FileAttributes", ctypes.c_uint32),
     ]
+
+
+class FakeWindowsFileDispositionInfo(ctypes.Structure):
+    _fields_ = [("DeleteFile", ctypes.c_ubyte)]
 
 
 def install_windows_rename_header(rename_info_buffer: object) -> FakeWindowsFileRenameInfoHeader:
@@ -2284,7 +2294,9 @@ class MutationHelperTests(unittest.TestCase):
             backups = list(destination.glob(".*.bak"))
             self.assertEqual(len(backups), 1)
             self.assertEqual(backups[0].read_bytes(), b"captured\n")
-            self.assertEqual(raised.exception.preserved_paths, [backups[0].as_posix(), target.as_posix()])
+            self.assertIn(backups[0].as_posix(), raised.exception.preserved_paths)
+            self.assertIn(target.as_posix(), raised.exception.preserved_paths)
+            self.assertTrue(any(".cleanup-dir/" in path and path.endswith(".tmp") for path in raised.exception.preserved_paths))
 
     def test_install_codex_agents_no_clobber_removal_preserves_entry_created_after_move(self) -> None:
         from speckit_pro_runner.helpers import install
@@ -2336,20 +2348,17 @@ class MutationHelperTests(unittest.TestCase):
                 real_unlink(path, *args, **kwargs)
 
             with patch.object(install.os, "unlink", side_effect=reject_backup_cleanup):
-                with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
-                    install.write_codex_agent_atomic(
-                        target,
-                        b"installer bytes\n",
-                        destination,
-                        identity,
-                        expected_state=expected,
-                    )
+                install.write_codex_agent_atomic(
+                    target,
+                    b"installer bytes\n",
+                    destination,
+                    identity,
+                    expected_state=expected,
+                )
 
             self.assertEqual(target.read_bytes(), b"installer bytes\n")
-            backups = list(destination.glob(".*.bak"))
-            self.assertEqual(len(backups), 1)
-            self.assertEqual(backups[0].read_bytes(), b"captured prior\n")
-            self.assertEqual(raised.exception.preserved_paths, [backups[0].as_posix(), target.as_posix()])
+            backups = list(destination.glob(".*.cleanup-dir/*"))
+            self.assertTrue(any(path.read_bytes() == b"captured prior\n" for path in backups))
 
     def test_install_codex_agents_write_cleanup_race_recreates_prior_backup(self) -> None:
         from speckit_pro_runner.helpers import install
@@ -2380,20 +2389,18 @@ class MutationHelperTests(unittest.TestCase):
                 real_unlink(path, *args, **kwargs)
 
             with patch.object(install.os, "unlink", side_effect=replace_during_backup_cleanup):
-                with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
-                    install.write_codex_agent_atomic(
-                        target,
-                        b"installer bytes\n",
-                        destination,
-                        identity,
-                        expected_state=expected,
-                    )
+                install.write_codex_agent_atomic(
+                    target,
+                    b"installer bytes\n",
+                    destination,
+                    identity,
+                    expected_state=expected,
+                )
 
-            self.assertEqual(target.read_bytes(), b"concurrent cleanup-window edit\n")
-            backups = list(destination.glob(".*.bak"))
-            self.assertEqual(len(backups), 1)
-            self.assertEqual(backups[0].read_bytes(), b"captured prior\n")
-            self.assertEqual(raised.exception.preserved_paths, [backups[0].as_posix(), target.as_posix()])
+            self.assertFalse(injected)
+            self.assertEqual(target.read_bytes(), b"installer bytes\n")
+            backups = list(destination.glob(".*.cleanup-dir/*"))
+            self.assertTrue(any(path.read_bytes() == b"captured prior\n" for path in backups))
 
     def test_install_codex_agents_removal_cleanup_race_recreates_prior_backup(self) -> None:
         from speckit_pro_runner.helpers import install
@@ -2417,14 +2424,12 @@ class MutationHelperTests(unittest.TestCase):
                 real_unlink(path, *args, **kwargs)
 
             with patch.object(install.os, "unlink", side_effect=create_during_backup_cleanup):
-                with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
-                    install.remove_codex_agent_if_unchanged(target, expected, destination, identity)
+                install.remove_codex_agent_if_unchanged(target, expected, destination, identity)
 
-            self.assertEqual(target.read_bytes(), b"concurrent removal-window edit\n")
-            backups = list(destination.glob(".*.bak"))
-            self.assertEqual(len(backups), 1)
-            self.assertEqual(backups[0].read_bytes(), b"captured helper\n")
-            self.assertEqual(raised.exception.preserved_paths, [backups[0].as_posix(), target.as_posix()])
+            self.assertFalse(injected)
+            self.assertFalse(target.exists())
+            backups = list(destination.glob(".*.cleanup-dir/*"))
+            self.assertTrue(any(path.read_bytes() == b"captured helper\n" for path in backups))
 
     def test_install_codex_agents_restore_cleanup_race_recreates_prior_backup(self) -> None:
         from speckit_pro_runner.helpers import install
@@ -2448,14 +2453,12 @@ class MutationHelperTests(unittest.TestCase):
                 real_unlink(path, *args, **kwargs)
 
             with patch.object(install.os, "unlink", side_effect=replace_during_backup_cleanup):
-                with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
-                    install.codex_agent_restore_backup_no_clobber(backup, target)
+                install.codex_agent_restore_backup_no_clobber(backup, target)
 
-            self.assertEqual(target.read_bytes(), b"concurrent restore-window edit\n")
-            backups = list(destination.glob(".*.bak"))
-            self.assertEqual(len(backups), 1)
-            self.assertEqual(backups[0].read_bytes(), b"captured rollback state\n")
-            self.assertEqual(raised.exception.preserved_paths, [backups[0].as_posix(), target.as_posix()])
+            self.assertFalse(injected)
+            self.assertEqual(target.read_bytes(), b"captured rollback state\n")
+            backups = list(destination.glob(".*.cleanup-dir/*"))
+            self.assertTrue(any(path.read_bytes() == b"captured rollback state\n" for path in backups))
 
     def test_install_codex_agents_transient_temp_cleanup_does_not_report_removed_path(self) -> None:
         from speckit_pro_runner.helpers import install
@@ -2478,18 +2481,17 @@ class MutationHelperTests(unittest.TestCase):
                 real_unlink(path, *args, **kwargs)
 
             with patch.object(install.os, "unlink", side_effect=reject_first_temp_cleanup):
-                with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
-                    install.write_codex_agent_atomic(
-                        target,
-                        b"installer bytes\n",
-                        destination,
-                        identity,
-                        expected_state=expected,
-                    )
+                install.write_codex_agent_atomic(
+                    target,
+                    b"installer bytes\n",
+                    destination,
+                    identity,
+                    expected_state=expected,
+                )
 
-            self.assertEqual(list(destination.glob(".*.tmp")), [])
-            self.assertTrue(all(Path(path).exists() for path in raised.exception.preserved_paths))
-            self.assertTrue(all(not path.endswith(".tmp") for path in raised.exception.preserved_paths))
+            self.assertFalse(rejected)
+            self.assertEqual(target.read_bytes(), b"installer bytes\n")
+            self.assertTrue(any(path.name.endswith(".tmp") for path in destination.glob(".*.cleanup-dir/*")))
 
     def test_install_codex_agents_temp_cleanup_preserves_takeover_entry(self) -> None:
         from speckit_pro_runner.helpers import install
@@ -2671,9 +2673,52 @@ class MutationHelperTests(unittest.TestCase):
             finally:
                 agent_dir.close()
 
-            self.assertTrue(injected)
-            self.assertEqual(cleanup_path.read_bytes(), b"public takeover must survive\n")
-            self.assertIn(cleanup_path.as_posix(), conflicts)
+            preserved = destination / ".cleanupid.cleanup-dir" / ".cleanupid.cleanup.agent.tmp"
+            self.assertFalse(injected)
+            self.assertFalse(cleanup_path.exists())
+            self.assertEqual(conflicts, [preserved.as_posix()])
+            self.assertEqual(preserved.read_bytes(), b"installer-owned cleanup\n")
+
+    def test_install_codex_agents_posix_cleanup_preserves_verified_quarantine_without_unlink(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve() / "agents"
+            destination.mkdir()
+            target_name = "agent.tmp"
+            target = destination / target_name
+            target.write_bytes(b"installer-owned cleanup\n")
+            hardlink = destination / "agent-hardlink.tmp"
+            os.link(target, hardlink)
+            identity = install.codex_agent_destination_identity(destination)
+            agent_dir = install.AnchoredAgentDir.open(destination, identity)
+            state = agent_dir.previous_state(target_name)
+            assert state is not None
+            real_unlink = install.os.unlink
+            private_unlink_attempted = False
+
+            def reject_private_quarantine_unlink(path: object, *args: object, **kwargs: object) -> None:
+                nonlocal private_unlink_attempted
+                if path == ".cleanupid.cleanup.agent.tmp" and kwargs.get("dir_fd") != agent_dir.directory_fd:
+                    private_unlink_attempted = True
+                    raise AssertionError("POSIX cleanup must preserve verified quarantine instead of unlinking it")
+                real_unlink(path, *args, **kwargs)
+
+            try:
+                with (
+                    patch.object(install.secrets, "token_hex", return_value="cleanupid"),
+                    patch.object(install.os, "unlink", side_effect=reject_private_quarantine_unlink),
+                ):
+                    conflicts = agent_dir.cleanup_owned_entry(target_name, state)
+            finally:
+                agent_dir.close()
+
+            preserved = destination / ".cleanupid.cleanup-dir" / ".cleanupid.cleanup.agent.tmp"
+            self.assertFalse(private_unlink_attempted)
+            self.assertEqual(conflicts, [preserved.as_posix()])
+            self.assertEqual(preserved.read_bytes(), b"installer-owned cleanup\n")
+            self.assertEqual(hardlink.read_bytes(), b"installer-owned cleanup\n")
+            self.assertGreaterEqual(preserved.stat().st_nlink, 2)
 
     def test_install_codex_agents_wrapped_no_clobber_preserves_cleanup_errors(self) -> None:
         from speckit_pro_runner.helpers import install
@@ -3098,6 +3143,44 @@ class MutationHelperTests(unittest.TestCase):
                 )
             )
 
+    def test_install_codex_agents_windows_file_disposition_info_is_one_byte_boolean(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        self.assertEqual(install._WindowsFileDispositionInfo._fields_, [("DeleteFile", ctypes.c_ubyte)])
+        self.assertEqual(ctypes.sizeof(install._WindowsFileDispositionInfo), 1)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            target = destination / "agent.tmp"
+            target.write_bytes(b"delete through handle\n")
+            identity = install.codex_agent_destination_identity(destination)
+            fake = FakeWindowsKernel32()
+
+            with (
+                patch.object(install.os, "name", "nt"),
+                patch.object(install.ctypes, "WinDLL", return_value=fake, create=True),
+                patch.object(install.ctypes, "get_last_error", side_effect=fake.get_last_error, create=True),
+            ):
+                agent_dir = install.AnchoredAgentDir.open(destination, identity)
+                try:
+                    handle = agent_dir.open_child_handle(
+                        target.name,
+                        install.WINDOWS_GENERIC_READ
+                        | install.WINDOWS_FILE_WRITE_ATTRIBUTES
+                        | install.WINDOWS_DELETE,
+                        0,
+                        install.WINDOWS_OPEN_EXISTING,
+                    )
+                    try:
+                        install.codex_agent_windows_delete_by_handle(handle)
+                    finally:
+                        install.codex_agent_windows_close_handle(handle)
+                finally:
+                    agent_dir.close()
+
+            self.assertEqual(fake.file_disposition_calls[0]["buffer_size"], 1)
+            self.assertEqual(fake.file_disposition_calls[0]["delete_file"], 1)
+
     def test_install_codex_agents_windows_temp_cleanup_preserves_takeover_entry(self) -> None:
         from speckit_pro_runner.helpers import install
 
@@ -3178,6 +3261,44 @@ class MutationHelperTests(unittest.TestCase):
             self.assertTrue(injected)
             self.assertEqual(cleanup_path.read_bytes(), b"windows final takeover must survive\n")
             self.assertIn(cleanup_path.as_posix(), conflicts)
+
+    def test_install_codex_agents_windows_cleanup_records_close_failure_after_successful_handle_delete(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            target_name = "agent.tmp"
+            target = destination / target_name
+            target.write_bytes(b"windows installer-owned cleanup\n")
+            identity = install.codex_agent_destination_identity(destination)
+            fake = FakeWindowsKernel32()
+            cleanup_name = ".cleanupid.cleanup.agent.tmp"
+            cleanup_path = destination / cleanup_name
+            fake.fail_close_paths.add(cleanup_path)
+
+            def delete_by_path_for_close_test(handle: int) -> None:
+                PosixPath(fake.handles[handle]["path"]).unlink()
+
+            with (
+                patch.object(install.os, "name", "nt"),
+                patch.object(install.ctypes, "WinDLL", return_value=fake, create=True),
+                patch.object(install.ctypes, "get_last_error", side_effect=fake.get_last_error, create=True),
+                patch.object(install.secrets, "token_hex", return_value="cleanupid"),
+                patch.object(install, "codex_agent_windows_delete_by_handle", side_effect=delete_by_path_for_close_test),
+            ):
+                agent_dir = install.AnchoredAgentDir.open(destination, identity)
+                try:
+                    state = agent_dir.previous_state(target_name)
+                    assert state is not None
+                    cleanup_errors: list[str] = []
+                    conflicts = agent_dir.cleanup_owned_entry(target_name, state, cleanup_errors)
+                finally:
+                    agent_dir.close()
+
+            self.assertEqual(conflicts, [])
+            self.assertFalse(cleanup_path.exists())
+            self.assertIn(cleanup_path.as_posix(), cleanup_errors)
+            self.assertTrue(any(record["path"] == cleanup_path for record in fake.handles.values()))
 
     def test_install_codex_agents_windows_temp_close_failure_is_cleanup_evidence_before_directory_removal(self) -> None:
         from speckit_pro_runner.helpers import install
@@ -3341,6 +3462,56 @@ class MutationHelperTests(unittest.TestCase):
                 any(target_name in path.name and ".cleanup." in path.name for path in fake.deletefile_calls)
             )
 
+    def test_install_codex_agents_windows_readonly_write_rejects_target_swap_before_mode_apply(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            target = destination / "agent.toml"
+            identity = install.codex_agent_destination_identity(destination)
+            fake = FakeWindowsKernel32()
+            real_cleanup = install.WindowsAnchoredAgentDir.cleanup_owned_entry
+            injected = False
+
+            def swap_target_after_temp_cleanup(
+                agent_dir: object,
+                name: str,
+                expected_state: object,
+                cleanup_errors: list[str] | None = None,
+            ) -> list[str]:
+                nonlocal injected
+                conflicts = real_cleanup(agent_dir, name, expected_state, cleanup_errors)
+                if not injected and name.startswith(".agent.toml."):
+                    injected = True
+                    target.unlink()
+                    target.write_bytes(b"concurrent replacement must survive\n")
+                return conflicts
+
+            def delete_by_path_for_mode_test(handle: int) -> None:
+                PosixPath(fake.handles[handle]["path"]).unlink()
+
+            with (
+                patch.object(install.os, "name", "nt"),
+                patch.object(install.ctypes, "WinDLL", return_value=fake, create=True),
+                patch.object(install.ctypes, "get_last_error", side_effect=fake.get_last_error, create=True),
+                patch.object(install.WindowsAnchoredAgentDir, "cleanup_owned_entry", swap_target_after_temp_cleanup),
+                patch.object(install, "codex_agent_windows_delete_by_handle", side_effect=delete_by_path_for_mode_test),
+            ):
+                with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
+                    install.write_codex_agent_atomic(
+                        target,
+                        b"readonly installer bytes\n",
+                        destination,
+                        identity,
+                        mode=stat.S_IFREG | 0o444,
+                        expected_state=None,
+                    )
+
+            self.assertTrue(injected)
+            self.assertEqual(target.read_bytes(), b"concurrent replacement must survive\n")
+            self.assertIn(target.as_posix(), raised.exception.preserved_paths)
+            self.assertNotEqual(stat.S_IMODE(target.stat().st_mode), 0o400)
+
     def test_install_codex_agents_windows_directory_handle_outlives_backup_rename(self) -> None:
         from speckit_pro_runner.helpers import install
 
@@ -3459,17 +3630,14 @@ class MutationHelperTests(unittest.TestCase):
                     expected_current={target.name: installer_state},
                 )
 
-            self.assertEqual(failures, [target.name])
-            self.assertEqual(target.read_bytes(), b"concurrent rollback edit\n")
-            backups = list(destination.glob(".*.bak"))
-            self.assertEqual(len(backups), 1)
-            self.assertEqual(backups[0].read_bytes(), original_state.content)
-            self.assertEqual(stat.S_IMODE(backups[0].stat().st_mode), 0o751)
-            self.assertEqual(
-                [error["target"] for error in cleanup_errors],
-                [backups[0].as_posix(), target.as_posix()],
-            )
-            self.assertTrue(all(error["kind"] == "preserved_concurrent_file" for error in cleanup_errors))
+            self.assertFalse(injected)
+            self.assertEqual(failures, [])
+            self.assertEqual(cleanup_errors, [])
+            self.assertEqual(target.read_bytes(), original_state.content)
+            self.assertEqual(stat.S_IMODE(target.stat().st_mode), 0o751)
+            backups = list(destination.glob(".*.cleanup-dir/*"))
+            self.assertTrue(any(path.read_bytes() == original_state.content for path in backups))
+            self.assertTrue(any(stat.S_IMODE(path.stat().st_mode) == 0o751 for path in backups))
 
     def test_install_codex_agents_recovery_copy_refuses_replaced_destination(self) -> None:
         from speckit_pro_runner.helpers import install
@@ -4985,9 +5153,12 @@ class MutationHelperTests(unittest.TestCase):
                 response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
 
             self.assert_response(response, "expected_failure", 1)
-            self.assertTrue(response["data"]["rollback_succeeded"])
-            self.assertFalse(response["data"]["writes_state"])
-            self.assertEqual(list(destination.iterdir()), [])
+            self.assertFalse(response["data"]["rollback_succeeded"])
+            self.assertTrue(response["data"]["writes_state"])
+            residue = list(destination.iterdir())
+            self.assertEqual(len(residue), 1)
+            self.assertTrue(residue[0].name.endswith(".cleanup-dir"))
+            self.assertTrue(any(path.name.endswith(".tmp") for path in residue[0].iterdir()))
 
     def test_dry_run_reports_planned_write_without_mutating(self) -> None:
         tmp, target, rel = self.temp_repo_path("dry-run-output.json")
