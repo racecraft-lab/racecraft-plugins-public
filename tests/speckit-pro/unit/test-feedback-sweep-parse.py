@@ -1252,6 +1252,9 @@ REDACTION_RULES = (
     "bearer_token",
     "assigned_token",
     "over_bound_line",
+    # The issuer-prefix rules. The four value rules above catch a credential by the shape of
+    # its surroundings; these catch it by its own first bytes, which is the form
+    # a bare token in a sentence takes.
     "github_token",
     "github_fine_grained_pat",
     "slack_token",
@@ -1262,9 +1265,22 @@ REDACTION_RULES = (
     "url_credentials",
 )
 
-
+# One redacted and one untouched line per issuer-prefix rule.
+#
+# The untouched column is the half that matters. A deny-set is only usable if it
+# leaves ordinary prose alone, and every entry there is a shape this repository's
+# own documents actually contain: a prefix named without a token beside it, a
+# placeholder row, a documented connection string. A rule that fired on those
+# would be removed by the next person who tripped over it.
+# Every secret below is assembled at import time, never written as one literal.
+#
+# GitHub push protection scans pushes for live-looking credentials and refuses
+# them, which is right and which this file must not fight: a contiguous
+# `xoxb-...` in the tree reads to any scanner exactly like a leaked Slack token.
+# Splitting the prefix from the body keeps the deny-set under test — the rule
+# still sees the joined string — while leaving nothing in the committed bytes
+# for a scanner to flag. Do not "unblock" a secret to re-inline these.
 def _secret(prefix: str, body: str) -> str:
-    """Assemble positive controls without committing live-looking literals."""
     return prefix + body
 
 
@@ -1451,6 +1467,16 @@ def event_lines(envelope: dict[str, Any]) -> list[int]:
 
 
 class IssuerPrefixRedactionTest(unittest.TestCase):
+    """The issuer-prefix rules, driven through the real redaction surface.
+
+    Every case is a pair, and the pair is the point. A deny-set that redacts is
+    easy; one that redacts without firing on the prose that merely *names* a
+    prefix is the thing worth testing, because this repository's own security
+    documents name every prefix below. A rule that fired on them would be
+    deleted by the next person it inconvenienced, and the deny-set would quietly
+    get weaker.
+    """
+
     def redact(self, lines: list[str]) -> dict[str, Any]:
         response = run_runner(helper_request("issuer-prefix", {
             "named_surface": "redact",
@@ -1477,6 +1503,9 @@ class IssuerPrefixRedactionTest(unittest.TestCase):
                 self.assertEqual(envelope["lines"], [prose])
 
     def test_a_url_password_is_replaced_and_its_user_and_host_are_not(self) -> None:
+        # The one rule whose span sits inside a larger structure. Redacting the
+        # whole URL would destroy the reviewable fact that a connection string
+        # was pasted at all.
         line = "postgres://admin:" + _secret("s3cret", "password1") + "@localhost:5432/app"
         envelope = self.redact([line])
         out = envelope["lines"][0]
