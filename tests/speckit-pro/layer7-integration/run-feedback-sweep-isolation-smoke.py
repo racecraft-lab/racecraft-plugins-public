@@ -68,13 +68,27 @@ class SmokeFixture:
 def _run(
     command: list[str],
     *,
+    tool: str,
     cwd: Path,
     env: dict[str, str] | None = None,
     timeout: int = 300,
 ) -> subprocess.CompletedProcess[str]:
+    if tool == "git":
+        candidate = shutil.which("git")
+        label = "Git"
+    elif tool == "claude":
+        candidate = shutil.which("claude")
+        label = "Claude Code"
+    elif tool == "codex":
+        candidate = shutil.which("codex")
+        label = "Codex"
+    else:
+        raise SmokeFailure("unsupported smoke subprocess tool")
+    sweep_launcher._trusted_executable(candidate, label)
+    arguments = [candidate, *command[1:]]
     try:
         return subprocess.run(
-            command,
+            arguments,
             cwd=cwd,
             env=env,
             text=True,
@@ -90,6 +104,7 @@ def _run(
 def _git(repo: Path, *args: str) -> str:
     completed = _run(
         ["git", *args],
+        tool="git",
         cwd=repo,
         env={
             "PATH": os.environ.get("PATH", ""),
@@ -223,7 +238,12 @@ def adversarial_fixture(base: Path) -> Iterator[SmokeFixture]:
 
 def _verify_exact_version(surface: str) -> str:
     executable = "claude" if surface == "claude" else "codex"
-    completed = _run([executable, "--version"], cwd=REPO_ROOT, timeout=15)
+    completed = _run(
+        [executable, "--version"],
+        tool=surface,
+        cwd=REPO_ROOT,
+        timeout=15,
+    )
     match = VERSION_RE.search(completed.stdout + completed.stderr)
     observed = match.group(1) if match else "unavailable"
     required = REQUIRED_CLI_VERSIONS[surface]
@@ -353,7 +373,7 @@ def _claude_smoke(fixture: SmokeFixture, max_budget_usd: str) -> dict[str, str]:
         )
         environment = _model_environment(fixture)
         environment["SPECKIT_SWEEP_CAPABILITY"] = capability
-        completed = _run(command, cwd=runtime_root, env=environment)
+        completed = _run(command, tool="claude", cwd=runtime_root, env=environment)
         _assert_no_canaries(fixture, completed.stdout, completed.stderr)
         if completed.returncode != 0:
             raise SmokeFailure(
@@ -419,7 +439,12 @@ def _codex_smoke(fixture: SmokeFixture) -> dict[str, str]:
             state_root=fixture.state_root,
             output_path=output_path,
         )
-        completed = _run(command, cwd=runtime_root, env=_model_environment(fixture))
+        completed = _run(
+            command,
+            tool="codex",
+            cwd=runtime_root,
+            env=_model_environment(fixture),
+        )
         output = output_path.read_text(encoding="utf-8") if output_path.is_file() else ""
         telemetry = sweep_launcher.codex_event_projection(completed.stdout)
         _assert_no_canaries(fixture, completed.stdout, completed.stderr, output)

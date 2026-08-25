@@ -103,8 +103,11 @@ class LauncherViolation(RuntimeError):
 def _trusted_executable(candidate: str | None, label: str) -> Path:
     if not candidate:
         raise LauncherViolation(f"{label} is unavailable")
+    candidate_path = Path(candidate)
+    if not candidate_path.is_absolute():
+        raise LauncherViolation(f"{label} runtime path must be absolute")
     try:
-        resolved = Path(candidate).resolve(strict=True)
+        resolved = candidate_path.resolve(strict=True)
         info = resolved.stat()
     except OSError as exc:
         raise LauncherViolation(f"{label} runtime path cannot be attested") from exc
@@ -434,10 +437,11 @@ def verify_codex_event_trace(output: str, *, stage: str) -> dict[str, Any]:
 
 
 def _codex_version() -> tuple[int, int, int]:
-    executable = codex_executable()
+    candidate = shutil.which("codex")
+    _trusted_executable(candidate, "Codex")
     try:
         completed = subprocess.run(
-            [str(executable), "--version"],
+            [candidate, "--version"],
             text=True,
             capture_output=True,
             check=False,
@@ -453,10 +457,11 @@ def _codex_version() -> tuple[int, int, int]:
 
 
 def _verify_codex_features() -> None:
-    executable = codex_executable()
+    candidate = shutil.which("codex")
+    _trusted_executable(candidate, "Codex")
     try:
         completed = subprocess.run(
-            [str(executable), "features", "list"],
+            [candidate, "features", "list"],
             text=True,
             capture_output=True,
             check=False,
@@ -477,9 +482,11 @@ def verify_codex_boundary(plugin_root: Path | None = None) -> tuple[int, int, in
     if version < MINIMUM_CODEX_VERSION:
         raise LauncherViolation("Codex permission profiles require Codex 0.138.0 or newer")
     _verify_codex_features()
+    candidate = shutil.which("codex")
+    _trusted_executable(candidate, "Codex")
     try:
         completed = subprocess.run(
-            [str(codex_executable()), "exec", "--help"],
+            [candidate, "exec", "--help"],
             text=True,
             capture_output=True,
             check=False,
@@ -543,9 +550,13 @@ def run_codex_sweep(
             state_root=state_root,
             output_path=output_path,
         )
+        candidate = shutil.which("codex")
+        if _trusted_executable(candidate, "Codex") != Path(command[0]):
+            raise LauncherViolation("Codex runtime changed after boundary attestation")
+        arguments = [candidate, *command[1:]]
         try:
             completed = subprocess.run(
-                command,
+                arguments,
                 cwd=runtime_root,
                 text=True,
                 capture_output=True,
@@ -576,10 +587,11 @@ def run_codex_sweep(
 
 
 def _claude_version() -> tuple[int, int, int]:
-    executable = claude_executable()
+    candidate = shutil.which("claude")
+    _trusted_executable(candidate, "Claude Code")
     try:
         completed = subprocess.run(
-            [str(executable), "--version"],
+            [candidate, "--version"],
             text=True,
             capture_output=True,
             check=False,
@@ -654,9 +666,11 @@ def verify_claude_boundary(repo_root: Path, plugin_root: Path) -> tuple[int, int
     version = _claude_version()
     if version < MINIMUM_CLAUDE_VERSION:
         raise LauncherViolation("Claude sweep isolation requires Claude Code 2.1.245 or newer")
+    candidate = shutil.which("claude")
+    _trusted_executable(candidate, "Claude Code")
     try:
         completed = subprocess.run(
-            [str(claude_executable()), "--help"],
+            [candidate, "--help"],
             text=True,
             capture_output=True,
             check=False,
@@ -694,8 +708,12 @@ def _run_claude_process(
     command: list[str], *, runtime_root: Path, environment: dict[str, str]
 ) -> subprocess.CompletedProcess[str]:
     """Run only the isolated Claude child; kept narrow for deterministic tests."""
+    candidate = shutil.which("claude")
+    if _trusted_executable(candidate, "Claude Code") != Path(command[0]):
+        raise LauncherViolation("Claude runtime changed after boundary attestation")
+    arguments = [candidate, *command[1:]]
     return subprocess.run(
-        command,
+        arguments,
         cwd=runtime_root,
         env=environment,
         text=True,
