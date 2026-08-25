@@ -734,15 +734,17 @@ class SurfaceConfinementTests(unittest.TestCase):
 
     def test_codex_launcher_is_ephemeral_user_config_free_and_disables_privileged_surfaces(self) -> None:
         runtime_root = REPO_ROOT.parent / "isolated-sweep-runtime"
-        command = sweep_launcher.codex_command(
-            plugin_root=PLUGIN_ROOT,
-            repo_root=REPO_ROOT,
-            runtime_root=runtime_root,
-            capability=f"sweep-cap:v1:{'a' * 32}:{'b' * 64}",
-            stage="classifier",
-        )
+        codex_runtime = REPO_ROOT.parent / "test-runtimes" / "codex"
+        with patch.object(sweep_launcher, "codex_executable", return_value=codex_runtime):
+            command = sweep_launcher.codex_command(
+                plugin_root=PLUGIN_ROOT,
+                repo_root=REPO_ROOT,
+                runtime_root=runtime_root,
+                capability=f"sweep-cap:v1:{'a' * 32}:{'b' * 64}",
+                stage="classifier",
+            )
         joined = " ".join(command)
-        self.assertEqual(Path(shutil.which("codex")).resolve(), Path(command[0]))
+        self.assertEqual(codex_runtime, Path(command[0]))
         filesystem = next(
             item
             for item in command
@@ -936,11 +938,13 @@ class SurfaceConfinementTests(unittest.TestCase):
             sweep_launcher.codex_prompt_resource(REPO_ROOT, "classifier")
 
     def test_claude_launcher_is_a_separate_broker_only_process(self) -> None:
-        command = sweep_launcher.claude_command(
-            plugin_root=PLUGIN_ROOT,
-            stage="classifier",
-        )
-        self.assertEqual(Path(shutil.which("claude")).resolve(), Path(command[0]))
+        claude_runtime = REPO_ROOT.parent / "test-runtimes" / "claude"
+        with patch.object(sweep_launcher, "claude_executable", return_value=claude_runtime):
+            command = sweep_launcher.claude_command(
+                plugin_root=PLUGIN_ROOT,
+                stage="classifier",
+            )
+        self.assertEqual(claude_runtime, Path(command[0]))
         for flag in (
             "--print",
             "--plugin-dir",
