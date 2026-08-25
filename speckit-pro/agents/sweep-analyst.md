@@ -36,9 +36,24 @@ hold the operator's surface rather than yours.
 
 **Those three tools are permission-scoped, never path-scoped.** They do not
 confine you to this repository, and nothing here should be read as saying they
-do. What bounds you is the absence of a shell and of any network tool, the
-redaction the sweep applies to your `replacement`, and the human checkpoint the
-run stops at. Read what the item needs and stop there.
+do.
+
+**What actually bounds you, stated without flattery.** You hold no shell and no
+network tool. Your output is a fixed-shape record whose field count and byte
+budgets are enforced, so bytes leave you only through `finding`, `evidence`, and
+`replacement`. Of those, only `replacement` reaches a committed artifact, and it
+passes a deny-set that redacts known credential shapes: named issuer prefixes,
+key/value assignments, private-key blocks, and passwords inside connection URLs.
+
+**The deny-set is a tripwire, not a guarantee.** It recognises shapes. Secret
+material carried in any other shape — a private file's ordinary prose, a
+configuration value with no telltale prefix — passes it untouched. And the run
+pushes the amendment commit to the remote **before** the human checkpoint, so
+until that ordering changes the deny-set is the only thing standing between your
+`replacement` and publication.
+
+Read what the item needs and stop there. Treat every byte you read from outside
+this repository as bytes you must not restate.
 
 Use capability-first discovery as defined in
 `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`, and

@@ -1252,6 +1252,79 @@ REDACTION_RULES = (
     "bearer_token",
     "assigned_token",
     "over_bound_line",
+    # The issuer-prefix rules. The five above catch a credential by the shape of
+    # its surroundings; these catch it by its own first bytes, which is the form
+    # a bare token in a sentence takes.
+    "github_token",
+    "github_fine_grained_pat",
+    "slack_token",
+    "anthropic_api_key",
+    "openai_api_key",
+    "google_api_key",
+    "aws_access_key_id",
+    "url_credentials",
+)
+
+# One redacted and one untouched line per issuer-prefix rule.
+#
+# The untouched column is the half that matters. A deny-set is only usable if it
+# leaves ordinary prose alone, and every entry there is a shape this repository's
+# own documents actually contain: a prefix named without a token beside it, a
+# placeholder row, a documented connection string. A rule that fired on those
+# would be removed by the next person who tripped over it.
+# Every secret below is assembled at import time, never written as one literal.
+#
+# GitHub push protection scans pushes for live-looking credentials and refuses
+# them, which is right and which this file must not fight: a contiguous
+# `xoxb-...` in the tree reads to any scanner exactly like a leaked Slack token.
+# Splitting the prefix from the body keeps the deny-set under test — the rule
+# still sees the joined string — while leaving nothing in the committed bytes
+# for a scanner to flag. Do not "unblock" a secret to re-inline these.
+def _secret(prefix: str, body: str) -> str:
+    return prefix + body
+
+
+ISSUER_PREFIX_CASES = (
+    (
+        "github_token",
+        "the token is " + _secret("ghp" + "_", "A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8"),
+        "a ghp_ prefixed classic token, described and not pasted",
+    ),
+    (
+        "github_fine_grained_pat",
+        _secret("github" + "_pat_", "1A" * 41 + "bc"),
+        "github_pat_ is the fine-grained prefix",
+    ),
+    (
+        "slack_token",
+        _secret("xox" + "b-", "1234567890123-1234567890123-AbCdEfGh1jKlMnOpQrStUvWx"),
+        "the xoxb- and xoxp- token types differ by audience",
+    ),
+    (
+        "anthropic_api_key",
+        _secret("sk-" + "ant-", "api03-" + "aB3" * 20 + "AA"),
+        "sk-ant- keys are issued per workspace",
+    ),
+    (
+        "openai_api_key",
+        _secret("sk-" + "proj-", "a1" * 12 + "T3Blbk" + "FJ" + "b2" * 12),
+        "task-execution and sub-agent routing",
+    ),
+    (
+        "google_api_key",
+        _secret("AIz" + "a", "SyB1c2D3e4F5g6H7i8J9k0L1m2N3o4P5q6R"),
+        "AIza is the Google API key prefix",
+    ),
+    (
+        "aws_access_key_id",
+        _secret("AKI" + "A", "IOSFODNN7EXAMPLE"),
+        "AKIA is the long-lived access-key prefix",
+    ),
+    (
+        "url_credentials",
+        "postgres://admin:" + _secret("s3cret", "password1") + "@localhost:5432/app",
+        "https://<user>:<password>@host/db",
+    ),
 )
 
 FEATURE_ID = "art-008-feedback-sweep"
@@ -1391,6 +1464,55 @@ def event_rules(envelope: dict[str, Any]) -> list[str]:
 
 def event_lines(envelope: dict[str, Any]) -> list[int]:
     return [entry["line"] for entry in envelope["redactions"]]
+
+
+class IssuerPrefixRedactionTest(unittest.TestCase):
+    """The issuer-prefix rules, driven through the real redaction surface.
+
+    Every case is a pair, and the pair is the point. A deny-set that redacts is
+    easy; one that redacts without firing on the prose that merely *names* a
+    prefix is the thing worth testing, because this repository's own security
+    documents name every prefix below. A rule that fired on them would be
+    deleted by the next person it inconvenienced, and the deny-set would quietly
+    get weaker.
+    """
+
+    def redact(self, lines: list[str]) -> dict[str, Any]:
+        response = run_runner(helper_request("issuer-prefix", {
+            "named_surface": "redact",
+            "leg": "amendment",
+            "comment_id": "IC_kwDOKQ7tDs5vY0200A",
+            "lines": lines,
+        }))
+        self.assertEqual(response.get("status"), "ok", stderr_text(response))
+        return stdout_json(response)
+
+    def test_each_issuer_prefix_rule_redacts_its_own_secret(self) -> None:
+        for rule, secret, _prose in ISSUER_PREFIX_CASES:
+            with self.subTest(rule=rule):
+                envelope = self.redact([secret])
+                self.assertEqual(event_rules(envelope), [rule])
+                self.assertIn(f"[redacted: {rule}]", envelope["lines"][0])
+                self.assertNotIn(secret, envelope["lines"][0])
+
+    def test_no_issuer_prefix_rule_fires_on_prose_that_names_it(self) -> None:
+        for rule, _secret, prose in ISSUER_PREFIX_CASES:
+            with self.subTest(rule=rule):
+                envelope = self.redact([prose])
+                self.assertEqual(envelope["redactions"], [])
+                self.assertEqual(envelope["lines"], [prose])
+
+    def test_a_url_password_is_replaced_and_its_user_and_host_are_not(self) -> None:
+        # The one rule whose span sits inside a larger structure. Redacting the
+        # whole URL would destroy the reviewable fact that a connection string
+        # was pasted at all.
+        line = "postgres://admin:s3cretpassword1@localhost:5432/app"
+        envelope = self.redact([line])
+        out = envelope["lines"][0]
+        self.assertEqual(event_rules(envelope), ["url_credentials"])
+        self.assertIn("postgres://admin:", out)
+        self.assertIn("@localhost:5432/app", out)
+        self.assertNotIn("s3cretpassword1", out)
 
 
 class OutboundRedactionTest(unittest.TestCase):
