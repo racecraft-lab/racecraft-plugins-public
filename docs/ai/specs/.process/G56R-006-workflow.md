@@ -534,7 +534,7 @@ After focused tests pass, run the relevant Layer 1/4/5 checks, generated runner/
 | Post: PR Packet/Body Generation | ⏳ Pending | |
 | Post: PR Body Generation | ⏳ Pending | |
 | Post: PR Creation | ⏳ Pending | |
-| Post: Review Remediation | ⛔ Blocked | Surgical remediation is exhausted: exact safety requires one long-lived anchored-directory backend across temp creation, native move, state capture, apply, rollback, cleanup, restore, and evidence, including Windows handle semantics |
+| Post: Review Remediation | 🔄 In Progress | Scope expansion authorized: implementing one long-lived anchored-directory backend across temp creation, native move, state capture, apply, rollback, cleanup, restore, and evidence, including Windows handle semantics |
 | Post: Retrospective | ⏳ Pending | |
 
 - [x] All tasks complete and every FR mapped.

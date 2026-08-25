@@ -5,8 +5,8 @@
   "branch": "g56r-006-resolver-materializer-installer-strict-override",
   "status": "in_progress",
   "stage": "implement",
-  "updated_at": "2026-08-25T00:47:17Z",
-  "active_step": "Post: Review Remediation (blocked)",
+  "updated_at": "2026-08-25T01:09:05Z",
+  "active_step": "Post: Review Remediation",
   "stage_resolution": {
     "source": "argv",
     "basis": "explicit --stage implement",
@@ -774,7 +774,8 @@
         "diff_check": "passed"
       },
       "blocking_condition": {
-        "status": "blocked",
+        "status": "remediation_in_progress",
+        "resumed_at": "2026-08-25T01:09:05Z",
         "reviewed_head": "5e3022ccb4f8c7073cc480c8d33b310ec0f88c0a",
         "reason": "Exact no-clobber and directory-swap safety requires one long-lived anchored-directory backend across the entire mutation batch; surgical per-helper fixes leave path re-resolution windows.",
         "required_follow_up": [
