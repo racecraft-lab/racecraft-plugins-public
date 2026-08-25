@@ -42,7 +42,7 @@
       "why_it_matters"
     ],
     "normalization": "LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
-    "value": "ffbbb09f47d561020462e7937b77d55b32d7a65b3303bebc8baf8dc3a3d38504"
+    "value": "7423f5d7f8ba6eae28dcb1c6810363bb19f2efbd3d00ffc0dc069dc56a1bd6e7"
   },
   "required_headings": [
     "Summary",
@@ -98,6 +98,7 @@
       "specs/g56r-006-resolver-materializer-installer-strict-override/plan.md",
       "specs/g56r-006-resolver-materializer-installer-strict-override/quickstart.md",
       "specs/g56r-006-resolver-materializer-installer-strict-override/research.md",
+      "specs/g56r-006-resolver-materializer-installer-strict-override/retrospective.md",
       "specs/g56r-006-resolver-materializer-installer-strict-override/spec.md",
       "specs/g56r-006-resolver-materializer-installer-strict-override/tasks.md",
       "specs/g56r-006-resolver-materializer-installer-strict-override/verify-tasks-report.md",
@@ -135,8 +136,8 @@
       "No final downstream cohort assignment."
     ],
     "production_files": 4,
-    "reviewable_loc": 12542,
-    "total_files": 69
+    "reviewable_loc": 12611,
+    "total_files": 70
   },
   "source_feature_dir": "specs/g56r-006-resolver-materializer-installer-strict-override",
   "source_markers": [
@@ -161,19 +162,25 @@
       "kind": "verification",
       "result": "pass",
       "source": "validation",
-      "summary": "Independent attack review approved c2e9d6c89 with 0 Important findings and 0 nits"
+      "summary": "Independent attack review approved 52e317618 with 0 Important findings and 0 nits"
     },
     {
       "kind": "verification",
       "result": "pass",
       "source": "validation",
-      "summary": "Focused installer 196/196, materializer 11/11, canonical materializer 17/17"
+      "summary": "Focused installer 196/196, materializer 13/13, canonical materializer 17/17"
     },
     {
       "kind": "verification",
       "result": "pass",
       "source": "validation",
       "summary": "Full deterministic suite 14352/14352; release artifacts and docs references current; diff check passed"
+    },
+    {
+      "kind": "verification",
+      "result": "pass",
+      "source": "validation",
+      "summary": "Retrospective completed with 53/53 tasks, 100% adherence, and 0 critical findings"
     }
   ]
 }
