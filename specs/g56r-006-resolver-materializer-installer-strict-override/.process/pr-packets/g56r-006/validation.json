@@ -1,0 +1,41 @@
+{
+  "body_file": "specs/g56r-006-resolver-materializer-installer-strict-override/.process/pr-packets/g56r-006/body.md",
+  "error_class": "none",
+  "exit_code": 0,
+  "failures": [],
+  "mode": "single",
+  "packet_id": "g56r-006",
+  "pr_blocked": false,
+  "remediation_evidence": [],
+  "rule_outcomes": [
+    {
+      "evidence": "no failures",
+      "rule": "packet.validation",
+      "status": "passed"
+    }
+  ],
+  "schema_version": "1.0.0",
+  "source_fingerprints": {
+    "body": {
+      "algorithm": "sha256",
+      "path": "specs/g56r-006-resolver-materializer-installer-strict-override/.process/pr-packets/g56r-006/body.md",
+      "sha256": "c46a1d49c759dbf807131e772e29acb93e16bf6658447eb50c445e1f26fc738c",
+      "size_bytes": 3176
+    },
+    "packet": {
+      "algorithm": "sha256",
+      "path": "specs/g56r-006-resolver-materializer-installer-strict-override/.process/pr-packets/g56r-006.json",
+      "sha256": "c0ac2c5c5e0985cd0a5622ff3174527f38ebe9c5448b93add156386634b8be1f",
+      "size_bytes": 10141
+    }
+  },
+  "status": "passed",
+  "stderr_line": "",
+  "target": {
+    "base_branch": "main",
+    "head_branch": "g56r-006-resolver-materializer-installer-strict-override"
+  },
+  "timestamp": "2026-08-25T07:42:43Z",
+  "title_value": "feat(g56r-006): Add capability-aware agent installation",
+  "validation_result_path": "specs/g56r-006-resolver-materializer-installer-strict-override/.process/pr-packets/g56r-006/validation.json"
+}
