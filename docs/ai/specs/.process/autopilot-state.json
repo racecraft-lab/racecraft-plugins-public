@@ -12,7 +12,7 @@
     "basis": "explicit --stage implement",
     "recorded_stage": "plan",
     "planning_complete": true,
-    "confidence_gate_status": "\u2705 Complete",
+    "confidence_gate_status": "✅ Complete",
     "from_phase": null,
     "corroboration": {
       "status": "match",
