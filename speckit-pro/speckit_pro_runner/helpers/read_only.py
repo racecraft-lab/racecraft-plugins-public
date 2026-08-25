@@ -2452,7 +2452,7 @@ SWEEP_REDACT_VALUE_RULES = (
     ),
     (
         "google_api_key",
-        re.compile(r"\b(AIza(?=[0-9A-Za-z_-]*[0-9])[0-9A-Za-z_-]{35})\b"),
+        re.compile(r"\b(AIza(?=[0-9A-Za-z_-]*[0-9])[0-9A-Za-z_-]{35})(?![0-9A-Za-z_-])"),
     ),
     (
         "aws_access_key_id",
