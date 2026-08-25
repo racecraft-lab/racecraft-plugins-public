@@ -5,8 +5,8 @@
   "branch": "g56r-006-resolver-materializer-installer-strict-override",
   "status": "in_progress",
   "stage": "implement",
-  "updated_at": "2026-08-25T01:09:05Z",
-  "active_step": "Post: Review Remediation",
+  "updated_at": "2026-08-25T07:31:44Z",
+  "active_step": "Post: PR Packet/Body Generation",
   "stage_resolution": {
     "source": "argv",
     "basis": "explicit --stage implement",
@@ -472,7 +472,7 @@
       "layer_5": "219/219 passed",
       "full_suite": "14039/14039 passed",
       "docs_reference": "current",
-      "reviewability_budget_status": "over_plan_pending_post_review"
+      "reviewability_budget_status": "over_plan_typed_exception_completed"
     },
     "post_doctor": {
       "status": "completed_with_warning",
@@ -483,7 +483,7 @@
       "writes_state": false
     },
     "post_code_review": {
-      "status": "completed_with_findings",
+      "status": "completed_approved",
       "reviewed_head": "84cba452c6db320e8f8508e07aa672fa2876839b",
       "important_findings": 3,
       "nits": 0,
@@ -774,7 +774,7 @@
         "diff_check": "passed"
       },
       "blocking_condition": {
-        "status": "remediation_in_progress",
+        "status": "resolved",
         "resumed_at": "2026-08-25T01:09:05Z",
         "reviewed_head": "5e3022ccb4f8c7073cc480c8d33b310ec0f88c0a",
         "reason": "Exact no-clobber and directory-swap safety requires one long-lived anchored-directory backend across the entire mutation batch; surgical per-helper fixes leave path re-resolution windows.",
@@ -784,10 +784,58 @@
           "make descriptor cleanup non-masking across every anchored operation",
           "add platform-specific contract and fault-injection coverage before resuming post review"
         ],
-        "safe_state": "draft PR not refreshed; remote branch unchanged; local product head retained for follow-up"
+        "safe_state": "resolved by the anchored POSIX and Windows mutation backend with exhaustive deterministic fault injection"
+      },
+      "final_exact_review": {
+        "status": "approved",
+        "reviewed_head": "c2e9d6c89cb992ce7100187c1f31c261e5db9044",
+        "baseline": "8edeb224824b7325b3ee8e00904c294ba3373de8",
+        "important_findings": 0,
+        "nits": 0,
+        "worktree_clean": true,
+        "refs_stable": true
+      },
+      "final_exact_verification": {
+        "status": "passed",
+        "verified_head": "c2e9d6c89cb992ce7100187c1f31c261e5db9044",
+        "baseline": "8edeb224824b7325b3ee8e00904c294ba3373de8",
+        "tasks": "53/53 verified; 0 phantom, missing, flagged, or extra",
+        "requirements": "29 FRs, 4 stories, 13 acceptance scenarios, 9 success criteria",
+        "path_trace": "127 references, 42 unique, 42 resolved, 0 missing",
+        "focused_installer": "196/196 passed",
+        "focused_materializer": "11/11 passed",
+        "focused_canonical_materializer": "17/17 passed",
+        "full_suite": "14352/14352 passed (L1 1511, L4 12622, L5 219)",
+        "release_artifacts": "current",
+        "docs_reference": "current",
+        "diff_check": "passed",
+        "worktree_clean": true,
+        "refs_stable": true
+      },
+      "post_reviewability": {
+        "status": "completed_with_typed_exception",
+        "planned_reviewable_loc": 385,
+        "observed_authored_added_lines": 12542,
+        "decision": "one navigable PR retained for the atomic installer transaction and inseparable adversarial evidence suite",
+        "excluded": "generated payloads, installed-cache mirrors, docs/planning artifacts, and implementation notes"
+      },
+      "post_self_review": {
+        "status": "completed",
+        "tests": "focused, full suite, release artifact, docs reference, and diff checks passed",
+        "edge_cases": "all acceptance mappings and POSIX/Win32 adversarial cleanup boundaries covered",
+        "requirements": "29/29 FRs and 53/53 tasks mapped and verified",
+        "tidiness": "no unresolved implementation markers or stray debug output"
+      },
+      "post_uat_runbook": {
+        "status": "skipped_deferred",
+        "reason": "generate-uat-skeleton is deferred and no committed source-derived uat-runbook.md exists",
+        "acceptance_boundary": "deterministic fake-home UAT; live installed UAT deferred to G56R-011"
+      },
+      "post_final_reviewability_backstop": {
+        "status": "completed_deferred_fallback",
+        "reason": "final-reviewability-backstop is deferred; current exact diff evidence retains the atomic-safety typed exception"
       }
-    }
-    ,
+    },
     "G7": {
       "gate": "G7",
       "pass": true,
@@ -875,18 +923,18 @@
     {"step": "Phase 7: Implement - User Story 4 (T031-T039)", "status": "completed"},
     {"step": "Phase 7: Implement - Polish and verification (T040-T053)", "status": "completed"},
     {"step": "Post: Doctor Extension Check", "status": "completed"},
-    {"step": "Post: Verify Implementation", "status": "pending"},
-    {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
+    {"step": "Post: Verify Implementation", "status": "completed"},
+    {"step": "Post: Verify Tasks Phantom Check", "status": "completed"},
     {"step": "Post: Code Review", "status": "completed"},
-    {"step": "Post: Integration Suite", "status": "pending"},
-    {"step": "Post: Reviewability Diff Gate", "status": "pending"},
-    {"step": "Post: Self-Review", "status": "pending"},
-    {"step": "Post: UAT Runbook Generation", "status": "pending"},
-    {"step": "Post: Final Reviewability Backstop", "status": "pending"},
-    {"step": "Post: PR Packet/Body Generation", "status": "pending"},
+    {"step": "Post: Integration Suite", "status": "completed"},
+    {"step": "Post: Reviewability Diff Gate", "status": "completed"},
+    {"step": "Post: Self-Review", "status": "completed"},
+    {"step": "Post: UAT Runbook Generation", "status": "completed"},
+    {"step": "Post: Final Reviewability Backstop", "status": "completed"},
+    {"step": "Post: PR Packet/Body Generation", "status": "in_progress"},
     {"step": "Post: PR Body Generation", "status": "pending"},
     {"step": "Post: PR Creation", "status": "pending"},
-    {"step": "Post: Review Remediation", "status": "in_progress"},
+    {"step": "Post: Review Remediation", "status": "completed"},
     {"step": "Post: Retrospective", "status": "pending"}
   ]
 }

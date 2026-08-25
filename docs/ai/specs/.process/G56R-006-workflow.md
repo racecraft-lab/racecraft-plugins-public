@@ -523,18 +523,18 @@ After focused tests pass, run the relevant Layer 1/4/5 checks, generated runner/
 | Canonical Item | Status | Evidence |
 |---|---|---|
 | Post: Doctor Extension Check | ✅ Complete | 4 PASS, 1 unrelated warning for incomplete brand-001 placeholder artifacts, 0 FAIL; no writes |
-| Post: Verify Implementation | ⛔ Blocked | Exact-head verification was stopped after review invalidated `5e3022ccb`; prior local full suite passed 14079/14079 but is not final independent proof |
-| Post: Verify Tasks Phantom Check | ⏳ Pending | |
-| Post: Code Review | ✅ Complete — Blocking Findings | Review of `5e3022ccb` found path-based primary-temp cleanup, stale anchored-path handoff, and masking close failures; a full-batch anchored-directory abstraction is required |
-| Post: Integration Suite | ⏳ Pending | |
-| Post: Reviewability Diff Gate | ⏳ Pending | |
-| Post: Self-Review | ⏳ Pending | |
-| Post: UAT Runbook Generation | ⏳ Pending | |
-| Post: Final Reviewability Backstop | ⏳ Pending | |
+| Post: Verify Implementation | ✅ Complete | Exact `c2e9d6c89`: 29/29 FRs, 4/4 stories, 13/13 acceptance scenarios, 9/9 success criteria, 127 path refs with 42/42 unique paths resolved |
+| Post: Verify Tasks Phantom Check | ✅ Complete | 53/53 tasks verified; 0 phantom, missing, flagged, or extra tasks; 0 NEEDS CLARIFICATION, Gap, or CRITICAL markers |
+| Post: Code Review | ✅ Complete — Approved | Independent exact-head attack review of `c2e9d6c89` against `8edeb2248`: 0 Important, 0 nits; refs stable and worktree clean |
+| Post: Integration Suite | ✅ Complete | Full 14352/14352: L1 1511, L4 12622, L5 219; focused installer 196/196, materializer 11/11, canonical 17/17 |
+| Post: Reviewability Diff Gate | ⚠️ Complete — Typed Exception | 12542 authored additions versus 385 planned; one atomic installer transaction plus adversarial evidence suite remains one navigable PR; generated payloads, docs/planning, and installed-cache mirrors excluded |
+| Post: Self-Review | ✅ Complete | Tests, edge cases, requirements, and tidiness reviewed below; no unresolved implementation marker or stray debug output found |
+| Post: UAT Runbook Generation | ⏭️ Skipped — Deferred | `generate-uat-skeleton` is deferred and no committed source-derived `.process/uat-runbook.md` exists; fake-home UAT remains the acceptance boundary and live installed UAT is G56R-011 |
+| Post: Final Reviewability Backstop | ⚠️ Complete — Deferred Fallback | `final-reviewability-backstop` is deferred; current exact diff evidence retains the atomic-safety typed exception and warning |
 | Post: PR Packet/Body Generation | ⏳ Pending | |
 | Post: PR Body Generation | ⏳ Pending | |
 | Post: PR Creation | ⏳ Pending | |
-| Post: Review Remediation | 🔄 In Progress | Scope expansion authorized: implementing one long-lived anchored-directory backend across temp creation, native move, state capture, apply, rollback, cleanup, restore, and evidence, including Windows handle semantics |
+| Post: Review Remediation | ✅ Complete | Anchored POSIX/Windows mutation backend plus exhaustive cleanup, rollback, ownership, and close-evidence remediation; independent final review approved `c2e9d6c89` with 0 Important findings |
 | Post: Retrospective | ⏳ Pending | |
 
 - [x] All tasks complete and every FR mapped.
@@ -545,6 +545,15 @@ After focused tests pass, run the relevant Layer 1/4/5 checks, generated runner/
 - [x] Fake-home manual/deterministic verification is complete; live installed UAT is explicitly deferred to G56R-011.
 - [ ] Exact PR title passes the release-readiness gate.
 - [ ] Draft/final PR packet, review remediation, and retrospective are complete.
+
+---
+
+## Self-Review
+
+1. **Tests executed:** Focused installer 196/196, route materializer 11/11, canonical materializer 17/17, and full deterministic repository suite 14352/14352 passed at exact `c2e9d6c89`. The full suite owns the repository's structural, integration, lint-like, and toolchain checks; release artifacts, docs references, and diff whitespace also passed independently.
+2. **Edge cases covered:** All 13 acceptance scenarios are mapped in `tasks.md:228-254`. Core resolution/apply/rollback coverage begins at `test-speckit-pro-mutation-helpers.py:1267`; adversarial POSIX cleanup coverage begins at line 3124; mocked Win32 rename/handle coverage begins at line 4283. The exact verifier found 0 missing semantic paths or markers.
+3. **Requirements matched:** `tasks.md:196-226` maps all 29 FRs to completed tasks; the verify-tasks report contains 53 verified rows with no missing or extra task, and the independent implementation verifier confirmed 4 stories, 13 scenarios, and 9 success criteria.
+4. **Follow-up and tidiness:** No unresolved `TODO`, `DEFERRED`, `OUT-OF-SCOPE`, clarification, gap, or critical implementation marker was found. The two remaining `print` calls are the existing deterministic test summary and bounded Python probe payload, not debug output. Native Windows execution remains deferred; mocked Win32 contract coverage is 196/196 within this non-Windows worktree.
 
 ---
 

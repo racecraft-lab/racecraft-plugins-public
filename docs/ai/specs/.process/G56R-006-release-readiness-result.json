@@ -29,10 +29,10 @@
     "planned_reviewable_loc": 385,
     "planned_production_files": 4,
     "planned_authored_implementation_files": 8,
-    "observed_authored_added_lines": 4170,
-    "observed_note": "Observed added lines include the 476-line deterministic fixture corpus and 1706 added mutation-helper test lines; generated mirrors, proof payloads, planning artifacts, and implementation notes are excluded.",
-    "status": "over_plan",
-    "required_follow_up": "Mandatory post reviewability and code-review tracks must determine whether the vertical slice remains acceptably reviewable or requires behavior-preserving reduction."
+    "observed_authored_added_lines": 12542,
+    "observed_note": "Observed authored additions are 4557 installer, 122 materializer, 9 registry, 163 install-skill, 545 deterministic fixture, 111 materializer-test, and 7035 mutation-helper-test lines. Generated mirrors, proof payloads, docs/planning artifacts, and implementation notes are excluded.",
+    "status": "over_plan_typed_exception",
+    "required_follow_up": "Completed: exact-head reviewability and attack-review tracks retained one navigable PR because one atomic installer transaction and its adversarial cross-platform evidence cannot be split safely without severing rollback and ownership invariants."
   },
   "traceability": {
     "FR-001_to_FR-010": [
@@ -56,21 +56,24 @@
   },
   "verification": {
     "focused_materializer": "11/11 passed after review remediation",
-    "focused_installer": "83/83 passed after review remediation",
+    "focused_installer": "196/196 passed after review remediation",
     "layer_1": "1511/1511 passed",
-    "layer_4": "12309/12309 passed",
+    "layer_4": "12622/12622 passed",
     "layer_5": "219/219 passed",
-    "full_suite": "14042/14042 passed after review remediation",
+    "full_suite": "14352/14352 passed after review remediation",
     "toolchain_preflight": "passed",
     "docs_reference_generate": "7 pages generated",
     "docs_reference_check": "current",
-    "diff_check": "passed"
+    "diff_check": "passed",
+    "independent_review": "approved at c2e9d6c89 with 0 Important findings and 0 nits",
+    "exact_baseline": "8edeb224824b7325b3ee8e00904c294ba3373de8"
   },
   "known_gaps": [
     "Downstream G56R-007 through G56R-011 roster reconciliation remains unresolved by design.",
     "artifact-author, sweep-analyst, sweep-classifier, consensus-synthesizer, and gate-validator remain reconciliation inputs without cohort assignment here.",
     "No production route policy is qualified or enabled by default.",
-    "The authored implementation exceeds the planning estimate and requires the mandatory post reviewability decision."
+    "The authored implementation exceeds the planning estimate; the completed reviewability gate records an atomic-safety typed exception for one navigable PR.",
+    "Native Windows filesystem execution was not run in this macOS worktree; deterministic mocked Win32 contract tests cover the Windows mutation boundary."
   ],
   "rollback_or_feature_flag": {
     "activation": "Route-aware behavior activates only when route_policy_manifest is explicitly supplied and validated.",
