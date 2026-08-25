@@ -1501,7 +1501,9 @@ job is to rewrite an existing skeleton in place, and dispatching it against
 nothing would produce an invented document rather than a derived one.
 
 **What stands in its place, and why it is not a gap in practice.**
-`specs/art-008-feedback-sweep/quickstart.md` is a source-derived acceptance
+`tests/speckit-pro/unit/fixtures/feedback-sweep/corpus/quickstart.md` (relocated
+there at the 2026-08-25 archive, where it is also the deny-set corpus) is a
+source-derived acceptance
 document carrying seven numbered scenarios, each mapped to the requirements it
 verifies, plus a five-step "Before calling the work done" tail. Every scenario
 was executed during T079 and each passed. It is not a plain-English runbook for a
@@ -1593,7 +1595,7 @@ The canonical closeout. Every row must reach Complete or an explicit
 | Post: PR Body Generation | ✅ Complete | one release-note fence, scope budget vs accepted, 4 known gaps stated |
 | Post: PR Creation | ✅ Complete | #464 ready for review, not draft |
 | Post: Review Remediation | ✅ Complete | 3 blocking findings remediated in-run rather than deferred to a loop |
-| Post: Retrospective | ✅ Complete | `specs/art-008-feedback-sweep/.process/retrospective.md` |
+| Post: Retrospective | ✅ Complete | `docs/ai/specs/.process/ART-008-retrospective.md` (relocated from `specs/art-008-feedback-sweep/.process/retrospective.md` at archive) |
 
 - [ ] All tasks marked complete in tasks.md
 - [ ] Full suite passes above the recorded baseline:

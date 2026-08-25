@@ -2835,3 +2835,38 @@ retrospective under `docs/ai/specs/.process/`, marked G56R-005 complete and
 G56R-006 ready, removed only the completed active spec folder, and regenerated
 the SpecKit index. Recovery commands and the complete verification record live
 in `.specify/memory/archive-reports/2026-08-24-g56r-005-post-merge-hygiene.md`.
+
+## 2026-08-25 - ART-008 Post-Merge Archive Cleanup
+
+### ART-008
+
+- Branches: `art-008-feedback-sweep`, `art-008-feedback-sweep-slice-2`
+- PRs: #464 merged `2026-08-24T00:41:46Z`, #502 merged `2026-08-25T01:12:32Z`
+- Completion: 111/111 then 81/81 tasks; 14208/14208 suite at merge
+
+ART-008 shipped the draft-pull-request feedback sweep and the artifact-freshness
+join that follows it. Canonical behaviour lives in the two read-only runner
+helpers, both platforms' `phase-execution` references, and the two owning test
+files with their fixture corpora.
+
+The cleanup preserved both design concepts and workflow files, both
+retrospectives, and slice 2's quickstart under `docs/ai/specs/.process/`;
+relocated slice 1's eight planning documents to
+`tests/speckit-pro/unit/fixtures/feedback-sweep/corpus/` because a shipped test
+reads them; marked ART-008 Complete / Archived; removed both active spec folders;
+and regenerated the SpecKit index. Slice 2's quickstart scenarios 3, 4 and 5 are
+undischarged and carried to ART-009. Recovery commands and the full verification
+record live in
+`.specify/memory/archive-reports/2026-08-25-art-008-post-merge-hygiene.md`.
+
+### Durable fix shipped with this cleanup
+
+ART-008's archive was blocked by a shipped test reading the spec folder it was
+removing. Beyond relocating that corpus, this cleanup installed
+`install_specs_read_guard` in `tests/speckit-pro/lib/test_result.py`: a
+`sys.addaudithook` guard, active for every suite through `run_counted`, that
+fails any test reading a live `specs/` path. Naming such a path as data stays
+legal and `os.stat` is unwatched, so existence probes and path arithmetic are
+unaffected. Six whole-tree sweeps declare `allow_live_specs=True`; the guard
+identified four of them by failing on its first run. The rule is recorded in
+root `AGENTS.md` and `REVIEW.md`.

@@ -300,7 +300,11 @@ def main(argv: list[str]) -> int:
             print(f"ERROR: validate-moc-orphan.py: internal failure ({exc.__class__.__name__}: {exc})", file=sys.stderr)
             return 2
         return 1 if violations > 0 else 0
-    return run_counted(build_suite(), label="validate-moc-orphan")
+    # Walking the live `specs/` tree is this validator's job, and it is
+    # archive-safe: an absent feature folder scans clean.
+    return run_counted(
+        build_suite(), label="validate-moc-orphan", allow_live_specs=True
+    )
 
 
 if __name__ == "__main__":
