@@ -483,11 +483,11 @@
             "transform": "claude_guard_strip"
           },
           {
-            "byte_count": 52980,
+            "byte_count": 53246,
             "kind": "skill",
             "path": "skills/speckit-autopilot/SKILL.md",
             "required": true,
-            "sha256": "0b4940beeb65ba99668772e48d1b6680abf82ebefa9e94961917a56d8bc92793",
+            "sha256": "88a4582d1c4bd195b92b1fde90e0e740c496075ce133d1867ccbd8655ff328c2",
             "source_path": "speckit-pro/skills/speckit-autopilot/SKILL.md",
             "transform": "claude_guard_strip"
           },
@@ -690,11 +690,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 125783,
+            "byte_count": 154809,
             "kind": "skill",
             "path": "skills/speckit-autopilot/references/phase-execution.md",
             "required": true,
-            "sha256": "518e913a68077f69ef0dbd82d6a51c2ea747d347bedec75665a80f807c442c37",
+            "sha256": "fd97e75adef4f6014161e60a3a18bdc3cba7b2865826b81e6c752a1c1b27dd7e",
             "source_path": "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
             "transform": "none"
           },
@@ -1140,20 +1140,20 @@
             "transform": "none"
           },
           {
-            "byte_count": 249497,
+            "byte_count": 272102,
             "kind": "runner",
             "path": "speckit_pro_runner/helpers/read_only.py",
             "required": true,
-            "sha256": "d6b6699427a388e4e80c21c15b7356471042839ffa329b01f3d2168de4a510e2",
+            "sha256": "07c4ab041767ddbf7c914d5edc3633a8fda98491c36e001c26aab1c6d95ee2d7",
             "source_path": "speckit-pro/speckit_pro_runner/helpers/read_only.py",
             "transform": "none"
           },
           {
-            "byte_count": 24600,
+            "byte_count": 24852,
             "kind": "runner",
             "path": "speckit_pro_runner/helpers/registry.py",
             "required": true,
-            "sha256": "da9a272a0c92ef576b79e95c7b9ac588b8fd322cdb352bb338fb7e9f136b86c0",
+            "sha256": "f4c42046bc8a040d53cfc05486d5d5a3c2952d933b200f0c10b675c061b8e147",
             "source_path": "speckit-pro/speckit_pro_runner/helpers/registry.py",
             "transform": "none"
           },
@@ -1207,7 +1207,7 @@
             "kind": "trust_metadata",
             "path": "speckit_pro_runner/speckit-pro-runner.manifest.json",
             "required": true,
-            "sha256": "3a5f47e102f768a140cbe90fc52c96630d38db88b2ab7f9d2c23a8c4b6a7b86c",
+            "sha256": "c3f602c0f16938293134095912eea65c92fa2b19ae568abfd7eea5cf6c68532d",
             "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
             "transform": "none"
           },
@@ -1216,7 +1216,7 @@
             "kind": "checksum",
             "path": "speckit_pro_runner/speckit-pro-runner.sha256",
             "required": true,
-            "sha256": "7d1fdee2bc3baa9b5215950ccc72336a9b5615387ed81d9c7f0e7fa190454d02",
+            "sha256": "f91c1d6f8b74571e6cb8dfcd771c034629fe6ee005487e41f4f1e5372e7e9882",
             "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
             "transform": "none"
           }
@@ -1673,11 +1673,11 @@
             "transform": "claude_guard_strip"
           },
           {
-            "byte_count": 52980,
+            "byte_count": 53246,
             "kind": "skill",
             "path": "skills/speckit-autopilot/SKILL.md",
             "required": true,
-            "sha256": "0b4940beeb65ba99668772e48d1b6680abf82ebefa9e94961917a56d8bc92793",
+            "sha256": "88a4582d1c4bd195b92b1fde90e0e740c496075ce133d1867ccbd8655ff328c2",
             "source_path": "speckit-pro/skills/speckit-autopilot/SKILL.md",
             "transform": "claude_guard_strip"
           },
@@ -1880,11 +1880,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 125783,
+            "byte_count": 154809,
             "kind": "skill",
             "path": "skills/speckit-autopilot/references/phase-execution.md",
             "required": true,
-            "sha256": "518e913a68077f69ef0dbd82d6a51c2ea747d347bedec75665a80f807c442c37",
+            "sha256": "fd97e75adef4f6014161e60a3a18bdc3cba7b2865826b81e6c752a1c1b27dd7e",
             "source_path": "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
             "transform": "none"
           },
@@ -2330,20 +2330,20 @@
             "transform": "none"
           },
           {
-            "byte_count": 249497,
+            "byte_count": 272102,
             "kind": "runner",
             "path": "speckit_pro_runner/helpers/read_only.py",
             "required": true,
-            "sha256": "d6b6699427a388e4e80c21c15b7356471042839ffa329b01f3d2168de4a510e2",
+            "sha256": "07c4ab041767ddbf7c914d5edc3633a8fda98491c36e001c26aab1c6d95ee2d7",
             "source_path": "speckit-pro/speckit_pro_runner/helpers/read_only.py",
             "transform": "none"
           },
           {
-            "byte_count": 24600,
+            "byte_count": 24852,
             "kind": "runner",
             "path": "speckit_pro_runner/helpers/registry.py",
             "required": true,
-            "sha256": "da9a272a0c92ef576b79e95c7b9ac588b8fd322cdb352bb338fb7e9f136b86c0",
+            "sha256": "f4c42046bc8a040d53cfc05486d5d5a3c2952d933b200f0c10b675c061b8e147",
             "source_path": "speckit-pro/speckit_pro_runner/helpers/registry.py",
             "transform": "none"
           },
@@ -2397,7 +2397,7 @@
             "kind": "trust_metadata",
             "path": "speckit_pro_runner/speckit-pro-runner.manifest.json",
             "required": true,
-            "sha256": "3a5f47e102f768a140cbe90fc52c96630d38db88b2ab7f9d2c23a8c4b6a7b86c",
+            "sha256": "c3f602c0f16938293134095912eea65c92fa2b19ae568abfd7eea5cf6c68532d",
             "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
             "transform": "none"
           },
@@ -2406,13 +2406,13 @@
             "kind": "checksum",
             "path": "speckit_pro_runner/speckit-pro-runner.sha256",
             "required": true,
-            "sha256": "7d1fdee2bc3baa9b5215950ccc72336a9b5615387ed81d9c7f0e7fa190454d02",
+            "sha256": "f91c1d6f8b74571e6cb8dfcd771c034629fe6ee005487e41f4f1e5372e7e9882",
             "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
             "transform": "none"
           }
         ],
         "extra_paths": [],
-        "file_tree_hash": "ea928dfe9c98406378737acd7ba40841f4e9be5e32070e9f6b8a4fe0218d408f",
+        "file_tree_hash": "43c4c8553ee731075d18f291b4abf230864a75ef29deccd19b3a5f80f36d5778",
         "generated_root": "dist/claude/speckit-pro",
         "mismatched_paths": [],
         "missing_paths": [],
@@ -3130,20 +3130,20 @@
             "transform": "none"
           },
           {
-            "byte_count": 101009,
+            "byte_count": 129873,
             "kind": "skill",
             "path": "skills/speckit-autopilot/references/phase-execution-codex.md",
             "required": true,
-            "sha256": "cdd09078ed6d1daf718ed104f6c44d501e09c2ceca3267c2d1e3ad908caf187b",
+            "sha256": "ec0b5f6888fbbddeef0a09553c06dac04d071d07cef0efa3be66149d23a12154",
             "source_path": "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
             "transform": "path_normalization"
           },
           {
-            "byte_count": 125783,
+            "byte_count": 154809,
             "kind": "skill",
             "path": "skills/speckit-autopilot/references/phase-execution.md",
             "required": true,
-            "sha256": "518e913a68077f69ef0dbd82d6a51c2ea747d347bedec75665a80f807c442c37",
+            "sha256": "fd97e75adef4f6014161e60a3a18bdc3cba7b2865826b81e6c752a1c1b27dd7e",
             "source_path": "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
             "transform": "none"
           },
@@ -3688,20 +3688,20 @@
             "transform": "none"
           },
           {
-            "byte_count": 249497,
+            "byte_count": 272102,
             "kind": "runner",
             "path": "speckit_pro_runner/helpers/read_only.py",
             "required": true,
-            "sha256": "d6b6699427a388e4e80c21c15b7356471042839ffa329b01f3d2168de4a510e2",
+            "sha256": "07c4ab041767ddbf7c914d5edc3633a8fda98491c36e001c26aab1c6d95ee2d7",
             "source_path": "speckit-pro/speckit_pro_runner/helpers/read_only.py",
             "transform": "none"
           },
           {
-            "byte_count": 24600,
+            "byte_count": 24852,
             "kind": "runner",
             "path": "speckit_pro_runner/helpers/registry.py",
             "required": true,
-            "sha256": "da9a272a0c92ef576b79e95c7b9ac588b8fd322cdb352bb338fb7e9f136b86c0",
+            "sha256": "f4c42046bc8a040d53cfc05486d5d5a3c2952d933b200f0c10b675c061b8e147",
             "source_path": "speckit-pro/speckit_pro_runner/helpers/registry.py",
             "transform": "none"
           },
@@ -3755,7 +3755,7 @@
             "kind": "trust_metadata",
             "path": "speckit_pro_runner/speckit-pro-runner.manifest.json",
             "required": true,
-            "sha256": "3a5f47e102f768a140cbe90fc52c96630d38db88b2ab7f9d2c23a8c4b6a7b86c",
+            "sha256": "c3f602c0f16938293134095912eea65c92fa2b19ae568abfd7eea5cf6c68532d",
             "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
             "transform": "none"
           },
@@ -3764,7 +3764,7 @@
             "kind": "checksum",
             "path": "speckit_pro_runner/speckit-pro-runner.sha256",
             "required": true,
-            "sha256": "7d1fdee2bc3baa9b5215950ccc72336a9b5615387ed81d9c7f0e7fa190454d02",
+            "sha256": "f91c1d6f8b74571e6cb8dfcd771c034629fe6ee005487e41f4f1e5372e7e9882",
             "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
             "transform": "none"
           }
@@ -4473,20 +4473,20 @@
             "transform": "none"
           },
           {
-            "byte_count": 101009,
+            "byte_count": 129873,
             "kind": "skill",
             "path": "skills/speckit-autopilot/references/phase-execution-codex.md",
             "required": true,
-            "sha256": "cdd09078ed6d1daf718ed104f6c44d501e09c2ceca3267c2d1e3ad908caf187b",
+            "sha256": "ec0b5f6888fbbddeef0a09553c06dac04d071d07cef0efa3be66149d23a12154",
             "source_path": "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
             "transform": "path_normalization"
           },
           {
-            "byte_count": 125783,
+            "byte_count": 154809,
             "kind": "skill",
             "path": "skills/speckit-autopilot/references/phase-execution.md",
             "required": true,
-            "sha256": "518e913a68077f69ef0dbd82d6a51c2ea747d347bedec75665a80f807c442c37",
+            "sha256": "fd97e75adef4f6014161e60a3a18bdc3cba7b2865826b81e6c752a1c1b27dd7e",
             "source_path": "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
             "transform": "none"
           },
@@ -5031,20 +5031,20 @@
             "transform": "none"
           },
           {
-            "byte_count": 249497,
+            "byte_count": 272102,
             "kind": "runner",
             "path": "speckit_pro_runner/helpers/read_only.py",
             "required": true,
-            "sha256": "d6b6699427a388e4e80c21c15b7356471042839ffa329b01f3d2168de4a510e2",
+            "sha256": "07c4ab041767ddbf7c914d5edc3633a8fda98491c36e001c26aab1c6d95ee2d7",
             "source_path": "speckit-pro/speckit_pro_runner/helpers/read_only.py",
             "transform": "none"
           },
           {
-            "byte_count": 24600,
+            "byte_count": 24852,
             "kind": "runner",
             "path": "speckit_pro_runner/helpers/registry.py",
             "required": true,
-            "sha256": "da9a272a0c92ef576b79e95c7b9ac588b8fd322cdb352bb338fb7e9f136b86c0",
+            "sha256": "f4c42046bc8a040d53cfc05486d5d5a3c2952d933b200f0c10b675c061b8e147",
             "source_path": "speckit-pro/speckit_pro_runner/helpers/registry.py",
             "transform": "none"
           },
@@ -5098,7 +5098,7 @@
             "kind": "trust_metadata",
             "path": "speckit_pro_runner/speckit-pro-runner.manifest.json",
             "required": true,
-            "sha256": "3a5f47e102f768a140cbe90fc52c96630d38db88b2ab7f9d2c23a8c4b6a7b86c",
+            "sha256": "c3f602c0f16938293134095912eea65c92fa2b19ae568abfd7eea5cf6c68532d",
             "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
             "transform": "none"
           },
@@ -5107,13 +5107,13 @@
             "kind": "checksum",
             "path": "speckit_pro_runner/speckit-pro-runner.sha256",
             "required": true,
-            "sha256": "7d1fdee2bc3baa9b5215950ccc72336a9b5615387ed81d9c7f0e7fa190454d02",
+            "sha256": "f91c1d6f8b74571e6cb8dfcd771c034629fe6ee005487e41f4f1e5372e7e9882",
             "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
             "transform": "none"
           }
         ],
         "extra_paths": [],
-        "file_tree_hash": "cef8949e11beb9493d8fc5598ca05318acc7bbb18d89ca30d58232a4407e036f",
+        "file_tree_hash": "b76965fa581b209833f00718084a386476199895066a02a96be29aa083e1bdd7",
         "generated_root": "dist/codex/speckit-pro",
         "mismatched_paths": [],
         "missing_paths": [],
