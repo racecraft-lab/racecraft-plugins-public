@@ -151,7 +151,7 @@ def _final_message(payload: dict[str, Any]) -> str | None:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) < 1 or (len(argv) > 1 and argv[1] != HOOK_VERSION):
+    if len(argv) != 2 or argv[1] != HOOK_VERSION:
         print("feedback sweep hook version mismatch", file=sys.stderr)
         return 2
     if sys.version_info < (3, 11):

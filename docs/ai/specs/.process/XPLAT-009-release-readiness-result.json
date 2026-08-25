@@ -650,11 +650,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 6858,
+              "byte_count": 6839,
               "kind": "docs",
               "path": "scripts/sweep-isolation-hook.py",
               "required": true,
-              "sha256": "19c6365289c143bce26bea0580c9f8f237777753e6bb61504975cf089cb03f2f",
+              "sha256": "bc2148f36acbc15fa48eac5b0ce7e3116c7eed98499de769fb7366f5edb2eb02",
               "source_path": "speckit-pro/scripts/sweep-isolation-hook.py",
               "transform": "none"
             },
@@ -1894,11 +1894,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 6858,
+              "byte_count": 6839,
               "kind": "docs",
               "path": "scripts/sweep-isolation-hook.py",
               "required": true,
-              "sha256": "19c6365289c143bce26bea0580c9f8f237777753e6bb61504975cf089cb03f2f",
+              "sha256": "bc2148f36acbc15fa48eac5b0ce7e3116c7eed98499de769fb7366f5edb2eb02",
               "source_path": "speckit-pro/scripts/sweep-isolation-hook.py",
               "transform": "none"
             },
@@ -2714,7 +2714,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "bf97ef0d23e99ca469a6eaa61d1dcc76ea25b68d6c502e0d4b23b60b7218101b",
+          "file_tree_hash": "598e68f61a35aade8d0fc378416111328d6a5550dca748957ca7f7bfbd35b7a0",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
@@ -3123,11 +3123,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 6858,
+              "byte_count": 6839,
               "kind": "docs",
               "path": "scripts/sweep-isolation-hook.py",
               "required": true,
-              "sha256": "19c6365289c143bce26bea0580c9f8f237777753e6bb61504975cf089cb03f2f",
+              "sha256": "bc2148f36acbc15fa48eac5b0ce7e3116c7eed98499de769fb7366f5edb2eb02",
               "source_path": "speckit-pro/scripts/sweep-isolation-hook.py",
               "transform": "none"
             },
@@ -4520,11 +4520,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 6858,
+              "byte_count": 6839,
               "kind": "docs",
               "path": "scripts/sweep-isolation-hook.py",
               "required": true,
-              "sha256": "19c6365289c143bce26bea0580c9f8f237777753e6bb61504975cf089cb03f2f",
+              "sha256": "bc2148f36acbc15fa48eac5b0ce7e3116c7eed98499de769fb7366f5edb2eb02",
               "source_path": "speckit-pro/scripts/sweep-isolation-hook.py",
               "transform": "none"
             },
@@ -5520,7 +5520,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "8d800637523ba0f235ab6d496b20710d701ff6b9eadd51e3c15e8f8bc04e4dd5",
+          "file_tree_hash": "ba26794069f5ff138509ffc0f55fa90e396a3c5e3b34038a0f7ea9c7f8e84438",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],

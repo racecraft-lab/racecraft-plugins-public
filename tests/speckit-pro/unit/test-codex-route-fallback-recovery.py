@@ -408,10 +408,9 @@ class OptionalHelperAndRosterTests(unittest.TestCase):
         self.runtime = load_runtime()
 
     def test_current_roster_has_ten_core_roles_and_one_optional_helper(self) -> None:
-        # Twelve since ART-008 added sweep-classifier and sweep-analyst, the two
-        # agents that read reviewer-written text. Neither participates in route
-        # fallback; they raise the count because the roster is derived by globbing
-        # every Codex agent definition, not by listing fallback participants.
+        # Feedback-sweep isolation removed sweep-classifier and sweep-analyst from
+        # the callable Codex agent roster. The glob-derived roster therefore has
+        # ten required-core roles plus the separately classified optional helper.
         roster = self.runtime.derive_source_roster(SOURCE_ROOT, ROOT)
         core = [item for item in roster["members"] if item["classification"] == "required_core"]
         helpers = [item for item in roster["members"] if item["classification"] == "optional_helper"]

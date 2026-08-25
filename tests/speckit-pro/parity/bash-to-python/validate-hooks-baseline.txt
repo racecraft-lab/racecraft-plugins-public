@@ -8,5 +8,5 @@
 008 Hook entry has matcher field (scopes to plugin command_name)
 009 Matcher contains plugin-scoping regex (speckit-pro: or speckit. or speckit- or grill-me)
 010 Hook entry has hooks array
-011 Only the three version-pinned sweep isolation commands are executable
+011 Only the four version-pinned sweep isolation commands are executable
 TOTAL: 11

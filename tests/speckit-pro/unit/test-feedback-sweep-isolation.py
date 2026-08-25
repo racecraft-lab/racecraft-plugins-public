@@ -1206,6 +1206,27 @@ class CaptureAndHookTests(unittest.TestCase):
             )
         self.assertEqual(before, set(self.state_root.iterdir()))
 
+    def test_claude_hook_requires_exactly_a_mode_and_version(self) -> None:
+        script = PLUGIN_ROOT / "scripts" / "sweep-isolation-hook.py"
+        payload = json.dumps({"cwd": str(REPO_ROOT)})
+        with tempfile.TemporaryDirectory(prefix="sweep-hook-argv-") as temporary:
+            env = {**os.environ, "TMPDIR": temporary}
+            for arguments in (
+                ["attest"],
+                ["attest", sweep_isolation.HOOK_VERSION, "ignored"],
+            ):
+                with self.subTest(arguments=arguments):
+                    refused = subprocess.run(
+                        [sys.executable, str(script), *arguments],
+                        input=payload,
+                        text=True,
+                        capture_output=True,
+                        env=env,
+                        check=False,
+                    )
+                    self.assertEqual(2, refused.returncode)
+                    self.assertIn("version mismatch", refused.stderr)
+
     def test_claude_hook_attests_and_rejects_non_receipt_final_output(self) -> None:
         script = PLUGIN_ROOT / "scripts" / "sweep-isolation-hook.py"
         with tempfile.TemporaryDirectory(prefix="sweep-hook-") as temporary:
