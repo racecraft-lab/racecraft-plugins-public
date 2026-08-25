@@ -438,7 +438,10 @@ def verify_codex_event_trace(output: str, *, stage: str) -> dict[str, Any]:
 
 def _codex_version() -> tuple[int, int, int]:
     candidate = shutil.which("codex")
-    _trusted_executable(candidate, "Codex")
+    executable = _trusted_executable(candidate, "Codex")
+    candidate = shutil.which("codex", path=str(executable.parent))
+    if _trusted_executable(candidate, "Codex") != executable:
+        raise LauncherViolation("Codex runtime changed after boundary attestation")
     try:
         completed = subprocess.run(
             [candidate, "--version"],
@@ -458,7 +461,10 @@ def _codex_version() -> tuple[int, int, int]:
 
 def _verify_codex_features() -> None:
     candidate = shutil.which("codex")
-    _trusted_executable(candidate, "Codex")
+    executable = _trusted_executable(candidate, "Codex")
+    candidate = shutil.which("codex", path=str(executable.parent))
+    if _trusted_executable(candidate, "Codex") != executable:
+        raise LauncherViolation("Codex runtime changed after boundary attestation")
     try:
         completed = subprocess.run(
             [candidate, "features", "list"],
@@ -483,7 +489,10 @@ def verify_codex_boundary(plugin_root: Path | None = None) -> tuple[int, int, in
         raise LauncherViolation("Codex permission profiles require Codex 0.138.0 or newer")
     _verify_codex_features()
     candidate = shutil.which("codex")
-    _trusted_executable(candidate, "Codex")
+    executable = _trusted_executable(candidate, "Codex")
+    candidate = shutil.which("codex", path=str(executable.parent))
+    if _trusted_executable(candidate, "Codex") != executable:
+        raise LauncherViolation("Codex runtime changed after boundary attestation")
     try:
         completed = subprocess.run(
             [candidate, "exec", "--help"],
@@ -551,7 +560,11 @@ def run_codex_sweep(
             output_path=output_path,
         )
         candidate = shutil.which("codex")
-        if _trusted_executable(candidate, "Codex") != Path(command[0]):
+        executable = _trusted_executable(candidate, "Codex")
+        if executable != Path(command[0]):
+            raise LauncherViolation("Codex runtime changed after boundary attestation")
+        candidate = shutil.which("codex", path=str(executable.parent))
+        if _trusted_executable(candidate, "Codex") != executable:
             raise LauncherViolation("Codex runtime changed after boundary attestation")
         arguments = [candidate, *command[1:]]
         try:
@@ -709,7 +722,8 @@ def _run_claude_process(
 ) -> subprocess.CompletedProcess[str]:
     """Run only the isolated Claude child; kept narrow for deterministic tests."""
     candidate = shutil.which("claude")
-    if _trusted_executable(candidate, "Claude Code") != Path(command[0]):
+    executable = _trusted_executable(candidate, "Claude Code")
+    if executable != Path(command[0]):
         raise LauncherViolation("Claude runtime changed after boundary attestation")
     arguments = [candidate, *command[1:]]
     return subprocess.run(

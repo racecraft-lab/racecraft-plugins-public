@@ -659,6 +659,34 @@ class SessionAndReceiptTests(unittest.TestCase):
 
 
 class SurfaceConfinementTests(unittest.TestCase):
+    def test_codex_version_executes_the_attested_binary_not_a_path_alias(self) -> None:
+        alias = "/mutable-path/codex"
+        resolved = Path("/trusted-runtime/codex")
+        completed = SimpleNamespace(
+            returncode=0,
+            stdout="codex-cli 0.149.0\n",
+            stderr="",
+        )
+        with (
+            patch.object(
+                sweep_launcher.shutil,
+                "which",
+                side_effect=(alias, str(resolved)),
+            ) as which,
+            patch.object(sweep_launcher, "_trusted_executable", return_value=resolved),
+            patch.object(sweep_launcher.subprocess, "run", return_value=completed) as run,
+        ):
+            self.assertEqual((0, 149, 0), sweep_launcher._codex_version())
+
+        arguments, = run.call_args.args
+        self.assertEqual([str(resolved), "--version"], arguments)
+        self.assertNotIn("executable", run.call_args.kwargs)
+        self.assertFalse(run.call_args.kwargs["shell"])
+        self.assertEqual(
+            (("codex",), {"path": str(resolved.parent)}),
+            (which.call_args_list[1].args, which.call_args_list[1].kwargs),
+        )
+
     def test_runner_cannot_return_a_model_capability_to_the_parent(self) -> None:
         result = read_only.sweep_isolation_session(
             {

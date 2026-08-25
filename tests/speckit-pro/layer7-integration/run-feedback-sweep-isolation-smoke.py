@@ -84,7 +84,11 @@ def _run(
         label = "Codex"
     else:
         raise SmokeFailure("unsupported smoke subprocess tool")
-    sweep_launcher._trusted_executable(candidate, label)
+    executable = sweep_launcher._trusted_executable(candidate, label)
+    if tool == "codex":
+        candidate = shutil.which("codex", path=str(executable.parent))
+    if sweep_launcher._trusted_executable(candidate, label) != executable:
+        raise SmokeFailure(f"{label} runtime changed after boundary attestation")
     arguments = [candidate, *command[1:]]
     try:
         return subprocess.run(
