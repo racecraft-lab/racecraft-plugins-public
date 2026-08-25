@@ -531,9 +531,9 @@ After focused tests pass, run the relevant Layer 1/4/5 checks, generated runner/
 | Post: Self-Review | ✅ Complete | Tests, edge cases, requirements, and tidiness reviewed below; no unresolved implementation marker or stray debug output found |
 | Post: UAT Runbook Generation | ⏭️ Skipped — Deferred | `generate-uat-skeleton` is deferred and no committed source-derived `.process/uat-runbook.md` exists; fake-home UAT remains the acceptance boundary and live installed UAT is G56R-011 |
 | Post: Final Reviewability Backstop | ⚠️ Complete — Deferred Fallback | `final-reviewability-backstop` is deferred; current exact diff evidence retains the atomic-safety typed exception and warning |
-| Post: PR Packet/Body Generation | ⏳ Pending | |
-| Post: PR Body Generation | ⏳ Pending | |
-| Post: PR Creation | ⏳ Pending | |
+| Post: PR Packet/Body Generation | ✅ Complete | `pr-packet-output` dry-run/apply emitted `g56r-006.json` and packet-owned body; read-only validation passed with `pr_blocked=false`, then current validation was persisted from a clean worktree |
+| Post: PR Body Generation | ✅ Complete | Packet-owned body contains all required headings/markers and exactly one non-empty `release-note` fence; title/scope workflow contract passed read-only |
+| Post: PR Creation | 🔄 In Progress | Existing draft PR #503 will be refreshed from the validated packet; no duplicate PR will be created |
 | Post: Review Remediation | ✅ Complete | Anchored POSIX/Windows mutation backend plus exhaustive cleanup, rollback, ownership, and close-evidence remediation; independent final review approved `c2e9d6c89` with 0 Important findings |
 | Post: Retrospective | ⏳ Pending | |
 

@@ -6,7 +6,7 @@
   "status": "in_progress",
   "stage": "implement",
   "updated_at": "2026-08-25T07:31:44Z",
-  "active_step": "Post: PR Packet/Body Generation",
+  "active_step": "Post: PR Creation",
   "stage_resolution": {
     "source": "argv",
     "basis": "explicit --stage implement",
@@ -931,9 +931,9 @@
     {"step": "Post: Self-Review", "status": "completed"},
     {"step": "Post: UAT Runbook Generation", "status": "completed"},
     {"step": "Post: Final Reviewability Backstop", "status": "completed"},
-    {"step": "Post: PR Packet/Body Generation", "status": "in_progress"},
-    {"step": "Post: PR Body Generation", "status": "pending"},
-    {"step": "Post: PR Creation", "status": "pending"},
+    {"step": "Post: PR Packet/Body Generation", "status": "completed"},
+    {"step": "Post: PR Body Generation", "status": "completed"},
+    {"step": "Post: PR Creation", "status": "in_progress"},
     {"step": "Post: Review Remediation", "status": "completed"},
     {"step": "Post: Retrospective", "status": "pending"}
   ]
