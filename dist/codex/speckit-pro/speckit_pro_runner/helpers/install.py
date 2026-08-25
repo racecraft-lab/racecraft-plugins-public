@@ -105,6 +105,7 @@ WINDOWS_FILE_ATTRIBUTE_NORMAL = 0x00000080
 WINDOWS_FILE_ATTRIBUTE_REPARSE_POINT = 0x00000400
 WINDOWS_FILE_FLAG_OPEN_REPARSE_POINT = 0x00200000
 WINDOWS_FILE_FLAG_BACKUP_SEMANTICS = 0x02000000
+WINDOWS_FILE_BASIC_INFO_CLASS = 0
 WINDOWS_FILE_RENAME_INFO_CLASS = 3
 WINDOWS_FILE_BEGIN = 0
 WINDOWS_ERROR_FILE_NOT_FOUND = 2
@@ -143,6 +144,16 @@ class _WindowsFileRenameInfoHeader(ctypes.Structure):
         ("ReplaceIfExists", ctypes.c_int),
         ("RootDirectory", ctypes.c_void_p),
         ("FileNameLength", ctypes.c_uint32),
+    ]
+
+
+class _WindowsFileBasicInfo(ctypes.Structure):
+    _fields_ = [
+        ("CreationTime", ctypes.c_longlong),
+        ("LastAccessTime", ctypes.c_longlong),
+        ("LastWriteTime", ctypes.c_longlong),
+        ("ChangeTime", ctypes.c_longlong),
+        ("FileAttributes", ctypes.c_uint32),
     ]
 
 
@@ -350,6 +361,24 @@ def codex_agent_windows_flush(handle: int) -> None:
         raise codex_agent_windows_os_error("FlushFileBuffers")
 
 
+def codex_agent_windows_attributes_for_mode(mode: int) -> int:
+    return WINDOWS_FILE_ATTRIBUTE_READONLY if stat.S_IMODE(mode) & 0o222 == 0 else WINDOWS_FILE_ATTRIBUTE_NORMAL
+
+
+def codex_agent_windows_set_mode_by_handle(handle: int, mode: int) -> None:
+    kernel32 = codex_agent_windows_kernel32()
+    function = kernel32.SetFileInformationByHandle
+    codex_agent_windows_set_signature(
+        function,
+        [ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p, ctypes.c_uint32],
+        ctypes.c_int,
+    )
+    basic_info = _WindowsFileBasicInfo()
+    basic_info.FileAttributes = codex_agent_windows_attributes_for_mode(mode)
+    if not function(handle, WINDOWS_FILE_BASIC_INFO_CLASS, ctypes.byref(basic_info), ctypes.sizeof(basic_info)):
+        raise codex_agent_windows_os_error("SetFileInformationByHandle")
+
+
 def codex_agent_windows_file_rename_info(target_name: str, directory_handle: int) -> tuple[ctypes.Array[Any], int]:
     encoded_name = target_name.encode("utf-16le")
     offset = WINDOWS_FILE_RENAME_INFO_FILENAME_OFFSET
@@ -441,6 +470,13 @@ class AnchoredAgentDir:
         if self.is_current():
             return (self.destination / name).as_posix()
         return f"anchored-agent-dir:{self.identity[0]}:{self.identity[1]}/{name}"
+
+    def evidence_subpath(self, *names: str) -> str:
+        for name in names:
+            self._validate_name(name)
+        if self.is_current():
+            return self.destination.joinpath(*names).as_posix()
+        return f"anchored-agent-dir:{self.identity[0]}:{self.identity[1]}/{'/'.join(names)}"
 
     def path(self, name: str) -> Path:
         self._validate_name(name)
@@ -614,19 +650,92 @@ class AnchoredAgentDir:
                 return list(dict.fromkeys(preserved))
             return [self.evidence_path(name)]
 
-        for _ in range(2):
+        return self.cleanup_verified_quarantine(cleanup_name, expected_state, cleanup_errors)
+
+    def cleanup_verified_quarantine(
+        self,
+        cleanup_name: str,
+        expected_state: CodexAgentFileState,
+        cleanup_errors: list[str] | None,
+    ) -> list[str]:
+        self._validate_name(cleanup_name)
+        private_dir_name: str | None = None
+        private_dir_fd: int | None = None
+        private_entry_name = cleanup_name
+        public_conflicts: list[str] = []
+        restored_private_preservation = False
+
+        def preserve_private_entry() -> str:
+            nonlocal restored_private_preservation
+            if private_dir_fd is None:
+                return self.evidence_path(cleanup_name)
+            if public_conflicts:
+                return self.evidence_subpath(private_dir_name or "", private_entry_name)
+            if restored_private_preservation:
+                return self.evidence_path(cleanup_name)
             try:
-                self.unlink(cleanup_name)
+                os.rename(private_entry_name, cleanup_name, src_dir_fd=private_dir_fd, dst_dir_fd=self.directory_fd)
+            except OSError:
+                return self.evidence_subpath(private_dir_name or "", private_entry_name)
+            restored_private_preservation = True
+            return self.evidence_path(cleanup_name)
+
+        try:
+            for _ in range(32):
+                candidate = f".{secrets.token_hex(12)}.cleanup-dir"
+                try:
+                    os.mkdir(candidate, 0o700, dir_fd=self.directory_fd)
+                    private_dir_name = candidate
+                    break
+                except FileExistsError:
+                    continue
+            if private_dir_name is None:
+                return [self.evidence_path(cleanup_name)]
+            private_dir_fd = os.open(
+                private_dir_name,
+                os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0),
+                dir_fd=self.directory_fd,
+            )
+            try:
+                os.rename(cleanup_name, private_entry_name, src_dir_fd=self.directory_fd, dst_dir_fd=private_dir_fd)
+            except FileNotFoundError:
                 return []
             except OSError:
-                if cleanup_errors is not None:
-                    cleanup_errors.append(self.evidence_path(cleanup_name))
+                return [self.evidence_path(cleanup_name)]
+            try:
+                if self.previous_state(cleanup_name) is not None:
+                    public_conflicts.append(self.evidence_path(cleanup_name))
+            except OSError:
+                public_conflicts.append(self.evidence_path(cleanup_name))
+            try:
+                private_state = codex_agent_previous_state_at(private_dir_fd, private_entry_name)
+            except OSError:
+                private_state = None
+            if private_state != expected_state:
+                return list(dict.fromkeys([*public_conflicts, preserve_private_entry()]))
+            for _ in range(2):
                 try:
-                    if self.previous_state(cleanup_name) != expected_state:
-                        return [self.evidence_path(cleanup_name)]
+                    os.unlink(private_entry_name, dir_fd=private_dir_fd)
+                    break
                 except OSError:
-                    return [self.evidence_path(cleanup_name)]
-        return [self.evidence_path(cleanup_name)]
+                    if cleanup_errors is not None:
+                        cleanup_errors.append(self.evidence_subpath(private_dir_name, private_entry_name))
+                    try:
+                        if codex_agent_previous_state_at(private_dir_fd, private_entry_name) != expected_state:
+                            return list(dict.fromkeys([*public_conflicts, preserve_private_entry()]))
+                    except OSError:
+                        return list(dict.fromkeys([*public_conflicts, preserve_private_entry()]))
+            else:
+                return list(dict.fromkeys([*public_conflicts, preserve_private_entry()]))
+            return list(dict.fromkeys(public_conflicts))
+        finally:
+            if private_dir_fd is not None:
+                codex_agent_close_descriptor_nonmasking(private_dir_fd)
+            if private_dir_name is not None:
+                try:
+                    os.rmdir(private_dir_name, dir_fd=self.directory_fd)
+                except OSError:
+                    pass
 
     def move_target_to_backup(self, target_name: str) -> str:
         self._validate_name(target_name)
@@ -943,6 +1052,54 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
     def rename_no_replace(self, source_name: str, target_name: str) -> None:
         codex_agent_windows_rename_no_replace(self, source_name, target_name)
 
+    def cleanup_owned_entry(
+        self,
+        name: str,
+        expected_state: CodexAgentFileState,
+        cleanup_errors: list[str] | None = None,
+    ) -> list[str]:
+        self._validate_name(name)
+        try:
+            current_state = self.previous_state(name)
+        except OSError:
+            return [self.evidence_path(name)]
+        if current_state is None:
+            return []
+        if current_state != expected_state:
+            return [self.evidence_path(name)]
+        cleanup_name: str | None = None
+        for _ in range(32):
+            candidate = f".{secrets.token_hex(12)}.cleanup.{name}"
+            try:
+                self.rename_no_replace(name, candidate)
+                cleanup_name = candidate
+                break
+            except FileExistsError:
+                continue
+            except FileNotFoundError:
+                return []
+        if cleanup_name is None:
+            return [self.evidence_path(name)]
+        try:
+            moved_state = self.previous_state(cleanup_name)
+        except OSError:
+            moved_state = None
+        if moved_state != expected_state:
+            return [self.evidence_path(cleanup_name)]
+        for _ in range(2):
+            try:
+                self.unlink(cleanup_name)
+                return []
+            except OSError:
+                if cleanup_errors is not None:
+                    cleanup_errors.append(self.evidence_path(cleanup_name))
+                try:
+                    if self.previous_state(cleanup_name) != expected_state:
+                        return [self.evidence_path(cleanup_name)]
+                except OSError:
+                    return [self.evidence_path(cleanup_name)]
+        return [self.evidence_path(cleanup_name)]
+
     def move_target_to_backup(self, target_name: str) -> str:
         self._validate_name(target_name)
         moved_name: str | None = None
@@ -982,6 +1139,7 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
             if handle is None or preserved_name is None:
                 raise OSError("could not allocate exclusive anchored recovery copy")
             codex_agent_windows_write_all(handle, state.content)
+            codex_agent_windows_set_mode_by_handle(handle, state.mode)
             codex_agent_windows_flush(handle)
             codex_agent_windows_seek_start(handle)
             restored = codex_agent_windows_read_all(handle)
@@ -992,6 +1150,10 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
                 raise OSError("preserved prior-state backup verification failed")
             if restored != state.content:
                 raise OSError("preserved prior-state backup verification failed")
+            expected_readonly = bool(codex_agent_windows_attributes_for_mode(state.mode) & WINDOWS_FILE_ATTRIBUTE_READONLY)
+            actual_readonly = bool(preserved_info.dwFileAttributes & WINDOWS_FILE_ATTRIBUTE_READONLY)
+            if actual_readonly != expected_readonly:
+                raise OSError("preserved prior-state backup mode verification failed")
             if not self.is_current():
                 raise OSError("destination moved before recovery-copy evidence")
         except OSError as exc:
@@ -1451,13 +1613,29 @@ def run_codex_agent_install(entry: Any, request: Any) -> dict[str, Any]:
             failed_target = destination / failed_name
             if not codex_agent_state_matches(failed_target, previous.get(failed_name)):
                 rollback_failures = sorted({*rollback_failures, failed_name})
+        anchor_cleanup_errors: list[dict[str, Any]] = []
+        if agent_dir_for_apply is not None:
+            close_errors: list[OSError] = []
+            close_kind = "close_handle" if isinstance(agent_dir_for_apply, WindowsAnchoredAgentDir) else "close_descriptor"
+            if _CODEX_AGENT_ANCHORED_DIR_STACK and _CODEX_AGENT_ANCHORED_DIR_STACK[-1] is agent_dir_for_apply:
+                _CODEX_AGENT_ANCHORED_DIR_STACK.pop()
+            agent_dir_for_apply.close(close_errors)
+            anchor_cleanup_errors.extend(
+                {
+                    "kind": close_kind,
+                    "target": destination.as_posix(),
+                    "error": type(error).__name__,
+                }
+                for error in close_errors
+            )
+            agent_dir_for_apply = None
         cleanup_actions, cleanup_errors = cleanup_codex_agent_destination(
             destination,
             destination_existed=destination_existed,
             destination_parent_existed=destination_parent_existed,
             destination_identity=destination_identity,
         )
-        cleanup_errors = [*rollback_cleanup_errors, *cleanup_errors]
+        cleanup_errors = [*rollback_cleanup_errors, *anchor_cleanup_errors, *cleanup_errors]
         if isinstance(exc, CodexAgentNoClobberConflict):
             cleanup_errors.extend(exc.cleanup_errors)
             cleanup_errors.extend(
@@ -3409,24 +3587,14 @@ def cleanup_codex_agent_destination(
         if existed:
             continue
         if path == destination and destination_identity is not None:
-            try:
-                current_identity = codex_agent_destination_identity(path)
-            except OSError as exc:
-                if path.exists():
-                    cleanup_errors.append(
-                        {"kind": "remove_directory", "target": path.as_posix(), "error": type(exc).__name__}
-                    )
-                    break
-            else:
-                if current_identity != destination_identity:
-                    cleanup_errors.append(
-                        {
-                            "kind": "remove_directory",
-                            "target": path.as_posix(),
-                            "error": "destination_identity_mismatch",
-                        }
-                    )
-                    break
+            action, error = codex_agent_remove_directory_identity_bound(path, destination_identity)
+            if action is not None:
+                cleanup_actions.append(action)
+                continue
+            if error is not None:
+                cleanup_errors.append(error)
+                break
+            continue
         try:
             path.rmdir()
             cleanup_actions.append({"kind": "remove_directory", "target": path.as_posix()})
@@ -3437,6 +3605,53 @@ def cleanup_codex_agent_destination(
                     {"kind": "remove_directory", "target": path.as_posix(), "error": type(exc).__name__}
                 )
     return cleanup_actions, cleanup_errors
+
+
+def codex_agent_remove_directory_identity_bound(
+    path: Path,
+    expected_identity: tuple[int, int],
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    try:
+        current_identity = codex_agent_destination_identity(path)
+    except OSError as exc:
+        if path.exists():
+            return None, {"kind": "remove_directory", "target": path.as_posix(), "error": type(exc).__name__}
+        return None, None
+    if current_identity != expected_identity:
+        return None, {"kind": "remove_directory", "target": path.as_posix(), "error": "destination_identity_mismatch"}
+
+    quarantine: Path | None = None
+    for _ in range(32):
+        candidate = path.parent / f".{path.name}.{secrets.token_hex(12)}.cleanup-dir"
+        if candidate.exists():
+            continue
+        quarantine = candidate
+        break
+    if quarantine is None:
+        return None, {"kind": "remove_directory", "target": path.as_posix(), "error": "cleanup_name_unavailable"}
+
+    try:
+        os.rename(path, quarantine)
+    except OSError as exc:
+        if path.exists():
+            return None, {"kind": "remove_directory", "target": path.as_posix(), "error": type(exc).__name__}
+        return None, None
+
+    try:
+        quarantine_identity = codex_agent_destination_identity(quarantine)
+    except OSError as exc:
+        return None, {"kind": "remove_directory", "target": quarantine.as_posix(), "error": type(exc).__name__}
+    if quarantine_identity != expected_identity:
+        return None, {"kind": "remove_directory", "target": quarantine.as_posix(), "error": "destination_identity_mismatch"}
+
+    try:
+        quarantine.rmdir()
+    except OSError as exc:
+        return None, {"kind": "remove_directory", "target": quarantine.as_posix(), "error": type(exc).__name__}
+
+    if path.exists():
+        return None, {"kind": "remove_directory", "target": path.as_posix(), "error": "destination_replaced_during_cleanup"}
+    return {"kind": "remove_directory", "target": path.as_posix()}, None
 
 
 def write_codex_agent_atomic(
@@ -3479,11 +3694,19 @@ def write_codex_agent_atomic(
                 raise OSError("target appeared before no-clobber install")
             try:
                 agent_dir.link_no_replace(tmp_name, target.name)
-            except OSError:
+            except OSError as link_exc:
                 paths = [agent_dir.evidence_path(target.name)]
+                cleanup_errors: list[dict[str, str]] = []
+                if isinstance(link_exc, CodexAgentNoClobberConflict):
+                    paths = [*link_exc.preserved_paths, *paths]
+                    cleanup_errors = list(link_exc.cleanup_errors)
                 if backup_name is not None:
                     paths.insert(0, agent_dir.evidence_path(backup_name))
-                raise CodexAgentNoClobberConflict("target changed during no-clobber install", paths) from None
+                raise CodexAgentNoClobberConflict(
+                    "target changed during no-clobber install",
+                    list(dict.fromkeys(paths)),
+                    cleanup_errors,
+                ) from None
             installed_state = agent_dir.previous_state(target.name)
             if installed_state != prepared_state:
                 paths = [agent_dir.evidence_path(target.name)]
@@ -3524,6 +3747,7 @@ def write_codex_agent_atomic(
             return installed_state
         except OSError as exc:
             preserved_paths = list(exc.preserved_paths) if isinstance(exc, CodexAgentNoClobberConflict) else []
+            preserved_cleanup_errors = list(exc.cleanup_errors) if isinstance(exc, CodexAgentNoClobberConflict) else []
             if tmp_name is not None:
                 tmp_path_text = agent_dir.evidence_path(tmp_name)
                 if prepared_state is not None:
@@ -3553,10 +3777,15 @@ def write_codex_agent_atomic(
                         backup_name = None
                     except CodexAgentNoClobberConflict as restore_exc:
                         preserved_paths.extend(restore_exc.preserved_paths)
+                        preserved_cleanup_errors.extend(restore_exc.cleanup_errors)
                 else:
                     preserved_paths.extend([backup_path_text, target_path_text])
             if preserved_paths:
-                raise CodexAgentNoClobberConflict(str(exc), list(dict.fromkeys(preserved_paths))) from exc
+                raise CodexAgentNoClobberConflict(
+                    str(exc),
+                    list(dict.fromkeys(preserved_paths)),
+                    preserved_cleanup_errors,
+                ) from exc
             raise
 
 
@@ -3604,6 +3833,7 @@ def remove_codex_agent_if_unchanged(
                 )
         except OSError as exc:
             preserved_paths = list(exc.preserved_paths) if isinstance(exc, CodexAgentNoClobberConflict) else []
+            preserved_cleanup_errors = list(exc.cleanup_errors) if isinstance(exc, CodexAgentNoClobberConflict) else []
             if backup_name is not None:
                 backup_path_text = agent_dir.evidence_path(backup_name)
                 target_path_text = agent_dir.evidence_path(target.name)
@@ -3617,10 +3847,15 @@ def remove_codex_agent_if_unchanged(
                         backup_name = None
                     except CodexAgentNoClobberConflict as restore_exc:
                         preserved_paths.extend(restore_exc.preserved_paths)
+                        preserved_cleanup_errors.extend(restore_exc.cleanup_errors)
                 else:
                     preserved_paths.extend([backup_path_text, target_path_text])
             if preserved_paths:
-                raise CodexAgentNoClobberConflict(str(exc), list(dict.fromkeys(preserved_paths))) from exc
+                raise CodexAgentNoClobberConflict(
+                    str(exc),
+                    list(dict.fromkeys(preserved_paths)),
+                    preserved_cleanup_errors,
+                ) from exc
             raise
 
 

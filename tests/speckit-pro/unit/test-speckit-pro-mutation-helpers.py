@@ -38,15 +38,19 @@ class FakeWindowsKernel32:
     ERROR_FILE_NOT_FOUND = 2
     ERROR_ACCESS_DENIED = 5
     ERROR_ALREADY_EXISTS = 183
+    FILE_ATTRIBUTE_READONLY = 0x00000001
     FILE_ATTRIBUTE_DIRECTORY = 0x00000010
+    FILE_ATTRIBUTE_NORMAL = 0x00000080
     FILE_BEGIN = 0
 
     def __init__(self) -> None:
         self.next_handle = 1000
         self.handles: dict[int, dict[str, object]] = {}
         self.last_error = 0
+        self._chmod = os.chmod
         self.createfile_calls: list[dict[str, object]] = []
         self.rename_calls: list[dict[str, object]] = []
+        self.file_basic_info_calls: list[dict[str, object]] = []
         self.deletefile_calls: list[PosixPath] = []
         self.close_handles: list[int] = []
         self.events: list[str] = []
@@ -137,6 +141,8 @@ class FakeWindowsKernel32:
         metadata = os.fstat(fd)
         info = info_pointer._obj
         info.dwFileAttributes = self.FILE_ATTRIBUTE_DIRECTORY if stat.S_ISDIR(metadata.st_mode) else 0x00000080
+        if not stat.S_ISDIR(metadata.st_mode) and stat.S_IMODE(metadata.st_mode) & 0o222 == 0:
+            info.dwFileAttributes |= self.FILE_ATTRIBUTE_READONLY
         info.dwVolumeSerialNumber = metadata.st_dev & 0xFFFFFFFF
         info.nFileSizeHigh = (metadata.st_size >> 32) & 0xFFFFFFFF
         info.nFileSizeLow = metadata.st_size & 0xFFFFFFFF
@@ -196,6 +202,15 @@ class FakeWindowsKernel32:
         return 1
 
     def SetFileInformationByHandle(self, handle: int, info_class: int, rename_info_buffer: object, buffer_size: int) -> int:
+        if info_class == 0:
+            del buffer_size
+            basic_info_buffer = getattr(rename_info_buffer, "_obj", rename_info_buffer)
+            basic_info = FakeWindowsFileBasicInfo.from_buffer(basic_info_buffer)
+            target = PosixPath(self.handles[handle]["path"])
+            attributes = int(basic_info.FileAttributes)
+            self.file_basic_info_calls.append({"handle": handle, "path": target, "attributes": attributes})
+            self._chmod(target, 0o400 if attributes & self.FILE_ATTRIBUTE_READONLY else 0o600)
+            return 1
         del buffer_size
         source = PosixPath(self.handles[handle]["path"])
         header = install_windows_rename_header(rename_info_buffer)
@@ -250,6 +265,16 @@ class FakeWindowsFileRenameInfoHeader(ctypes.Structure):
         ("ReplaceIfExists", ctypes.c_int),
         ("RootDirectory", ctypes.c_void_p),
         ("FileNameLength", ctypes.c_uint32),
+    ]
+
+
+class FakeWindowsFileBasicInfo(ctypes.Structure):
+    _fields_ = [
+        ("CreationTime", ctypes.c_longlong),
+        ("LastAccessTime", ctypes.c_longlong),
+        ("LastWriteTime", ctypes.c_longlong),
+        ("ChangeTime", ctypes.c_longlong),
+        ("FileAttributes", ctypes.c_uint32),
     ]
 
 
@@ -2503,6 +2528,85 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(target.read_bytes(), b"installer bytes\n")
             self.assertEqual(raised.exception.preserved_paths, [backups[0].as_posix(), target.as_posix()])
 
+    def test_install_codex_agents_cleanup_owned_entry_final_unlink_takeover_preserves_victim(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve() / "agents"
+            destination.mkdir()
+            target_name = "agent.tmp"
+            target = destination / target_name
+            target.write_bytes(b"installer-owned cleanup\n")
+            identity = install.codex_agent_destination_identity(destination)
+            agent_dir = install.AnchoredAgentDir.open(destination, identity)
+            state = agent_dir.previous_state(target_name)
+            assert state is not None
+            cleanup_name = ".cleanupid.cleanup.agent.tmp"
+            cleanup_path = destination / cleanup_name
+            real_unlink = install.os.unlink
+            real_rename = install.os.rename
+            injected = False
+
+            def inject_takeover_at_public_unlink(path: object, *args: object, **kwargs: object) -> None:
+                nonlocal injected
+                if path == cleanup_name and kwargs.get("dir_fd") == agent_dir.directory_fd and not injected:
+                    injected = True
+                    real_unlink(path, *args, **kwargs)
+                    cleanup_path.write_bytes(b"concurrent victim\n")
+                real_unlink(path, *args, **kwargs)
+
+            def inject_takeover_after_private_move(src: object, dst: object, *args: object, **kwargs: object) -> None:
+                nonlocal injected
+                real_rename(src, dst, *args, **kwargs)
+                if src == cleanup_name and kwargs.get("src_dir_fd") == agent_dir.directory_fd and not injected:
+                    injected = True
+                    cleanup_path.write_bytes(b"concurrent victim\n")
+
+            try:
+                with (
+                    patch.object(install.secrets, "token_hex", return_value="cleanupid"),
+                    patch.object(install.os, "unlink", side_effect=inject_takeover_at_public_unlink),
+                    patch.object(install.os, "rename", side_effect=inject_takeover_after_private_move),
+                ):
+                    conflicts = agent_dir.cleanup_owned_entry(target_name, state)
+            finally:
+                agent_dir.close()
+
+            self.assertTrue(injected)
+            self.assertEqual(cleanup_path.read_bytes(), b"concurrent victim\n")
+            self.assertIn(cleanup_path.as_posix(), conflicts)
+
+    def test_install_codex_agents_wrapped_no_clobber_preserves_cleanup_errors(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve() / "agents"
+            destination.mkdir()
+            target = destination / "agent.toml"
+            identity = install.codex_agent_destination_identity(destination)
+            cleanup_error = {
+                "kind": "close_handle",
+                "target": (destination / ".agent.toml.cleanup").as_posix(),
+                "error": "OSError",
+            }
+
+            def fail_link_with_cleanup_evidence(self: object, source_name: str, target_name: str) -> None:
+                del self, source_name, target_name
+                raise install.CodexAgentNoClobberConflict("injected no-clobber", ["preserved-path"], [cleanup_error])
+
+            with patch.object(install.AnchoredAgentDir, "link_no_replace", fail_link_with_cleanup_evidence):
+                with self.assertRaises(install.CodexAgentNoClobberConflict) as raised:
+                    install.write_codex_agent_atomic(
+                        target,
+                        b"installer bytes\n",
+                        destination,
+                        identity,
+                        expected_state=None,
+                    )
+
+            self.assertEqual(raised.exception.cleanup_errors, [cleanup_error])
+            self.assertIn("preserved-path", raised.exception.preserved_paths)
+
     def test_install_codex_agents_temp_cleanup_stays_anchored_after_directory_swap(self) -> None:
         from speckit_pro_runner.helpers import install
 
@@ -2852,6 +2956,49 @@ class MutationHelperTests(unittest.TestCase):
                 )
             )
 
+    def test_install_codex_agents_windows_recovery_copy_applies_readonly_mode_via_exclusive_handle(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve()
+            identity = install.codex_agent_destination_identity(destination)
+            state = install.CodexAgentFileState(
+                content=b"readonly recovery bytes\n",
+                mode=stat.S_IFREG | 0o444,
+                device=11,
+                inode=22,
+            )
+            fake = FakeWindowsKernel32()
+
+            with (
+                patch.object(install.os, "name", "nt"),
+                patch.object(install.ctypes, "WinDLL", return_value=fake, create=True),
+                patch.object(install.ctypes, "get_last_error", side_effect=fake.get_last_error, create=True),
+                patch.object(install.os, "chmod", side_effect=AssertionError("path chmod is forbidden under exclusive handle")),
+            ):
+                agent_dir = install.AnchoredAgentDir.open(destination, identity)
+                try:
+                    preserved = agent_dir.preserve_state_as_backup(state, "agent.toml")
+                finally:
+                    agent_dir.close()
+
+            preserved_path = destination / Path(preserved).name
+            self.assertEqual(preserved_path.read_bytes(), state.content)
+            self.assertEqual(stat.S_IMODE(preserved_path.stat().st_mode), 0o400)
+            self.assertTrue(
+                any(
+                    call["path"] == preserved_path
+                    and int(call["attributes"]) & FakeWindowsKernel32.FILE_ATTRIBUTE_READONLY
+                    for call in fake.file_basic_info_calls
+                )
+            )
+            self.assertFalse(
+                any(
+                    call["path"] == preserved_path and call["creation_disposition"] == FakeWindowsKernel32.OPEN_EXISTING
+                    for call in fake.createfile_calls
+                )
+            )
+
     def test_install_codex_agents_windows_temp_cleanup_preserves_takeover_entry(self) -> None:
         from speckit_pro_runner.helpers import install
 
@@ -2920,6 +3067,12 @@ class MutationHelperTests(unittest.TestCase):
                 mode="apply",
                 inputs={},
             )
+            real_rmdir = Path.rmdir
+
+            def reject_directory_removal_while_anchor_open(path: Path) -> None:
+                if path == destination and any(record["path"] == destination for record in fake.handles.values()):
+                    raise OSError("directory anchor still open")
+                real_rmdir(path)
 
             with (
                 patch.object(install.os, "name", "nt"),
@@ -2928,6 +3081,7 @@ class MutationHelperTests(unittest.TestCase):
                 patch.object(install, "codex_plugin_root", return_value=PLUGIN_ROOT),
                 patch.object(install, "codex_agent_destination", return_value=destination),
                 patch.object(install, "load_codex_agent_bundle", return_value=({"agent.toml": b"installer bytes\n"}, "gpt-5.5")),
+                patch.object(Path, "rmdir", autospec=True, side_effect=reject_directory_removal_while_anchor_open),
             ):
                 fake.fail_close = True
                 response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
@@ -2935,6 +3089,9 @@ class MutationHelperTests(unittest.TestCase):
             self.assert_response(response, "expected_failure", 1)
             cleanup_errors = response["diagnostics"][0]["details"]["cleanup_errors"]
             self.assertTrue(any(error["kind"] == "close_handle" for error in cleanup_errors))
+            self.assertTrue(
+                any(error["kind"] == "close_handle" and error["target"] == destination.as_posix() for error in cleanup_errors)
+            )
             self.assertFalse(destination.exists())
 
     def test_install_codex_agents_windows_write_apply_does_not_fail_on_nt_backend(self) -> None:
@@ -3380,6 +3537,52 @@ class MutationHelperTests(unittest.TestCase):
             self.assertTrue((destination / "replacement.toml").exists())
             self.assertEqual(errors[0]["kind"], "remove_directory")
             self.assertEqual(errors[0]["error"], "destination_identity_mismatch")
+
+    def test_install_codex_agents_cleanup_final_rmdir_swap_preserves_replacement_directory(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            destination = root / ".codex" / "agents"
+            destination.mkdir(parents=True)
+            identity = install.codex_agent_destination_identity(destination)
+            moved = root / "moved-agents"
+            real_rmdir = Path.rmdir
+            real_rename = install.os.rename
+            injected = False
+
+            def swap_before_public_rmdir(path: Path) -> None:
+                nonlocal injected
+                if path == destination and not injected:
+                    injected = True
+                    destination.rename(moved)
+                    destination.mkdir(parents=True)
+                real_rmdir(path)
+
+            def swap_after_identity_bound_move(src: object, dst: object, *args: object, **kwargs: object) -> None:
+                nonlocal injected
+                real_rename(src, dst, *args, **kwargs)
+                if Path(src) == destination and not injected:
+                    injected = True
+                    destination.mkdir(parents=True)
+
+            with (
+                patch.object(Path, "rmdir", autospec=True, side_effect=swap_before_public_rmdir),
+                patch.object(install.os, "rename", side_effect=swap_after_identity_bound_move),
+            ):
+                actions, errors = install.cleanup_codex_agent_destination(
+                    destination,
+                    destination_existed=False,
+                    destination_parent_existed=False,
+                    destination_identity=identity,
+                )
+
+            self.assertTrue(injected)
+            self.assertTrue(destination.exists())
+            self.assertTrue(destination.is_dir())
+            self.assertEqual(actions, [])
+            self.assertEqual(errors[0]["kind"], "remove_directory")
+            self.assertIn(errors[0]["error"], {"destination_replaced_during_cleanup", "destination_identity_mismatch"})
 
     def test_install_codex_agents_no_clobber_restore_reports_both_preserved_entries(self) -> None:
         from speckit_pro_runner.helpers import install
