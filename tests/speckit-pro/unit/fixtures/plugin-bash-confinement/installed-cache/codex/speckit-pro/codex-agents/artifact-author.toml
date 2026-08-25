@@ -1,6 +1,6 @@
 name = "artifact-author"
 description = "Fills the shipped HTML artifact-gallery templates for a feature and writes the finished pages into the feature's artifacts/ directory. Use at draft pull-request time, after tasks.md exists and before the pull request is created or refreshed. Reads the gallery manifest to decide which draft-stage pages the feature needs, fills each selected template's marked regions from the feature's planning record, and reports one outcome per page. Fail-open — a page it cannot fill is reported as a gap and never blocks pull-request creation."
-model = "gpt-5.5"
+model = "gpt-5.6-sol"
 model_reasoning_effort = "xhigh"
 sandbox_mode = "workspace-write"
 developer_instructions = """

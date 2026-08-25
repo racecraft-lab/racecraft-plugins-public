@@ -52,7 +52,7 @@ before the installer plans either static or route-aware destination changes.
 In route-aware planning, 12 files are required destination agents and
 `autopilot-fast-helper.toml` is the only optional helper. The main autopilot
 may use that helper for tiny advisory text-only prep work when
-`gpt-5.3-codex-spark` is available, but autopilot must continue without it if
+`gpt-5.6-luna` is available, but autopilot must continue without it if
 the helper is unavailable and no-helper continuation validates.
 
 These files follow the official Codex subagent format: one standalone
@@ -67,14 +67,15 @@ curate write-capable MCP servers OUT at the profile/config level (`enabled =
 false`, or `enabled_tools`/`disabled_tools`).
 
 The bundled model policy runs every execution and consensus agent on
-`gpt-5.5`. Reasoning effort remains exactly as declared by each bundled TOML.
-`autopilot-fast-helper` is the only model exception: it stays on
-`gpt-5.3-codex-spark` for tiny advisory text-only prep, never for SDD reasoning.
+`gpt-5.6-sol`. Reasoning effort remains exactly as declared by each bundled TOML.
+`autopilot-fast-helper` is the only model exception: it runs on
+`gpt-5.6-luna` at low effort for tiny advisory text-only prep, never for SDD
+reasoning.
 
-If `gpt-5.5` is not available in the current Codex environment, set the
-helper's `model` input to `gpt-5.4` (or set
-`SPECKIT_CODEX_MODEL=gpt-5.4`); the installer rewrites only destination
-copies.
+If `gpt-5.6-sol` is not available in the current Codex environment, set the
+installer's `model` input to `gpt-5.5` or `gpt-5.4` (or set
+`SPECKIT_CODEX_MODEL` to the selected fallback); the installer rewrites only
+destination copies.
 
 ## Plugin Upgrade and Agent Refresh Boundary
 
@@ -243,9 +244,9 @@ Resolve all paths before mutating anything:
    - default: `~/.codex/agents/`
    - explicit project scope: `.codex/agents/` in the current project
 4. Resolve the executor/consensus model:
-   - default: `gpt-5.5`
-   - fallback: `gpt-5.4` via the helper's `model` input or
-     `SPECKIT_CODEX_MODEL=gpt-5.4`
+   - default: `gpt-5.6-sol`
+   - fallback: `gpt-5.5` or `gpt-5.4` via the installer `model` input or
+     `SPECKIT_CODEX_MODEL`
 
 Do not infer a Claude path from a vague request. If the user says only
 "install the agents", use `~/.codex/agents/`.
@@ -265,14 +266,14 @@ If any required file is missing, stop immediately. Do not partially install.
 Use the deterministic installed-runtime helper for `install-codex-agents`
 with the selected destination. Run it first in `dry_run` mode, then in
 `apply` mode after the plan matches the requested destination and model
-override. Use `gpt-5.4` only when fallback mode was requested.
+override. Use `gpt-5.5` or `gpt-5.4` only when fallback mode was requested.
 
 For static compatibility mode, omit `route_policy_manifest`. The structured
 request inputs are:
 
 - `destination`: omit for `~/.codex/agents/`, or set to `.codex/agents/` for
   current-project scope
-- `model`: `gpt-5.5` or `gpt-5.4`
+- `model`: `gpt-5.6-sol`, `gpt-5.5`, or `gpt-5.4`
 
 For route-aware mode, use only an explicit trusted manifest path:
 
@@ -290,8 +291,8 @@ re-implement the copy loop inline unless the helper itself is broken and
 you have already reported that failure.
 
 When fallback mode is requested, verify every destination copy whose bundled
-source model is `gpt-5.5` uses `model = "gpt-5.4"`. The Spark helper remains
-unchanged, and all bundled source templates remain byte-identical.
+source model is `gpt-5.6-sol` uses the requested legacy model. The Luna helper
+remains unchanged, and all bundled source templates remain byte-identical.
 
 ### 4. Verify the installed destination
 
@@ -300,9 +301,9 @@ After the helper completes:
 1. Verify the destination directory exists.
 2. Verify every expected TOML file now exists in the destination.
 3. Verify the copied files are the same filenames as the bundled source set.
-4. For `gpt-5.5`, verify every destination file is byte-identical to its
-   bundled source. For `gpt-5.4`, verify only the supported model assignment
-   was rewritten in destination copies.
+4. For `gpt-5.6-sol`, verify every destination file is byte-identical to its
+   bundled source. For `gpt-5.5` or `gpt-5.4`, verify only the supported model
+   assignment was rewritten in required-agent destination copies.
 5. Preserve any unrelated user files in the destination.
 6. Require the helper's verification status to be `verified` before reporting
    success.

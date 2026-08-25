@@ -350,10 +350,10 @@ class ValidateCodexSkills(unittest.TestCase):
                 "expected read-only installer dry-run preflight and install/restart fail-closed guidance",
             )
 
-        with self.subTest(msg="speckit-autopilot: documents the optional Spark helper"):
+        with self.subTest(msg="speckit-autopilot: documents the optional Luna helper"):
             self.assertIn("autopilot-fast-helper", body)
 
-        with self.subTest(msg="speckit-autopilot: keeps the Spark helper advisory and parent-only"):
+        with self.subTest(msg="speckit-autopilot: keeps the Luna helper advisory and parent-only"):
             self.assertTrue(
                 "Only the parent orchestrator may call this helper" in body
                 and "latency optimization, not a dependency" in body,

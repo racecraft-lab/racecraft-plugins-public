@@ -1,6 +1,6 @@
 name = "sweep-analyst"
 description = "Performs the consensus work for one amended feedback-sweep item and returns one structured record. The autopilot feedback sweep dispatches it four times per item, three perspective calls and then one synthesis call, and nothing else dispatches it. The perspective arrives in the prompt rather than in this definition, so one agent serves codebase, spec-context, and domain. Runs read-only, because the text it reads is reviewer-written and therefore attacker-controllable."
-model = "gpt-5.5"
+model = "gpt-5.6-sol"
 model_reasoning_effort = "xhigh"
 sandbox_mode = "read-only"
 developer_instructions = """

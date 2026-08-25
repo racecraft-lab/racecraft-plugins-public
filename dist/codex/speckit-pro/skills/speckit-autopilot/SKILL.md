@@ -171,24 +171,23 @@ decisions that cascade into expensive rework.
 **Before executing any step**, verify:
 
 1. **Model check:** You MUST be running on the highest-capability Codex model
-   tier available in this environment. Prefer `gpt-5.5` when it is available
-   in the Codex model picker. `gpt-5.4` is an acceptable documented fallback
+   tier available. Prefer `gpt-5.6-sol` when it is available
+   in the Codex model picker. `gpt-5.5` or `gpt-5.4` is an acceptable fallback
    during rollout or when the environment uses API-key authentication. If the
-   session is explicitly on a mini, fast, Spark, or otherwise reduced-capability
+   session is explicitly on a mini, fast, Luna, or otherwise reduced-capability
    tier, STOP and instruct the user to relaunch the autopilot on a stronger
-   model. If `gpt-5.5` is unavailable, also verify the installed SpecKit Pro
-   executor and consensus subagents were installed with `--model gpt-5.4`
-   or `SPECKIT_CODEX_MODEL=gpt-5.4`; changing only the parent session model
-   does not rewrite hard-pinned custom-agent TOML files.
+   model. If `gpt-5.6-sol` is unavailable, also verify the installed SpecKit Pro
+   executor and consensus subagents were installed with `--model gpt-5.5` or
+   `--model gpt-5.4` (or `SPECKIT_CODEX_MODEL` set to the selected fallback);
+   parent session model changes do not rewrite hard-pinned TOML files.
 
 **Reasoning effort is inherited, never checked.** Run at whatever
 `model_reasoning_effort` the session already has and do not stop, warn,
-or ask the operator to relaunch. Higher effort produces better
-orchestration, so every bundled custom subagent still ships with
-`model_reasoning_effort = "xhigh"` (including `autopilot-fast-helper`
-on gpt-5.3-codex-spark) — that pin only ever raises a worker's effort
-and never refuses to run. The operator owns the session setting; the
-plugin does not veto it.
+or ask the operator to relaunch. The required bundled custom subagents keep
+their declared effort, normally `xhigh`; the optional `autopilot-fast-helper`
+is pinned to low effort on gpt-5.6-luna for latency-sensitive prep.
+Those pins only constrain worker effort and never refuse to run. The operator
+owns the session setting; the plugin does not veto it.
 
 The model check above is non-negotiable.
 
@@ -511,7 +510,7 @@ resolved questions/gaps.
 failed consensus (all disagree at Round 2), security keyword
 flagged for human, or missing prerequisite.
 
-### 8. Optional Spark helper is advisory only
+### 8. Optional Luna helper is advisory only
 
 The main autopilot may optionally spawn `autopilot-fast-helper`
 for one of these narrow tasks:
@@ -527,7 +526,7 @@ Guardrails:
 - Executor or consensus subagents must never spawn it
 - Use it only for text-only prep work before a real decision
 - Never use it to edit artifacts, vote in consensus, or decide gates
-- If the helper spawn fails because `gpt-5.3-codex-spark` is unavailable,
+- If the helper spawn fails because `gpt-5.6-luna` is unavailable,
   log the failure briefly and continue without it
 
 This helper is a latency optimization, not a dependency.

@@ -23,7 +23,7 @@ because the underlying tool surfaces differ:
 | Fast helper | N/A (Claude's main thread is fast enough) | `autopilot-fast-helper` for sub-second compression/triage work |
 | Subagent installation | Plugin auto-installs into `~/.claude/plugins/cache/...` | Custom agents live in `.codex/agents/` (project) or `~/.codex/agents/` (user); require explicit `$install` step |
 | Sandbox/permission model | `permissionMode` frontmatter (acceptEdits, plan, …) | `sandbox_mode` frontmatter (read-only, workspace-write) |
-| Model selection | `model: opus` etc. + `/model` slash command | `model: gpt-5.5` etc. + `model_reasoning_effort` |
+| Model selection | `model: opus` etc. + `/model` slash command | `model: gpt-5.6-sol` (with gpt-5.5/gpt-5.4 legacy fallbacks) + `model_reasoning_effort` |
 
 Trying to force byte-for-byte mirrors would either lie about the
 runtime contract or break one of the two integrations.

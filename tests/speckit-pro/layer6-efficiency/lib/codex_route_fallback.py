@@ -114,7 +114,7 @@ def validate_helper_definition(helper_path: Path) -> dict[str, str]:
     document = tomllib.loads(helper_path.read_text(encoding="utf-8"))
     expected = {
         "classification": "optional_helper",
-        "model": "gpt-5.3-codex-spark",
+        "model": "gpt-5.6-luna",
         "name": "autopilot-fast-helper",
         "sandbox_mode": "read-only",
     }
