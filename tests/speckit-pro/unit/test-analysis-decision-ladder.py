@@ -1793,4 +1793,9 @@ def build_suite() -> unittest.TestSuite:
 
 
 if __name__ == "__main__":
-    raise SystemExit(run_counted(build_suite(), label="test-analysis-decision-ladder"))
+    # Sweeps whatever specs exist rather than depending on a named one, so
+    # it is archive-safe by construction: an absent feature folder
+    # contributes nothing. See install_specs_read_guard.
+    raise SystemExit(run_counted(
+        build_suite(), label="test-analysis-decision-ladder", allow_live_specs=True
+    ))

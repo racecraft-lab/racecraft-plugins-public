@@ -1258,6 +1258,53 @@ FEATURE_ID = "art-008-feedback-sweep"
 FEATURE_DIR = f"specs/{FEATURE_ID}"
 BYPRODUCT_DIR = f"{FEATURE_DIR}/.process/feedback-sweep"
 
+# Where those documents actually live now.
+#
+# ART-008 merged and was archived on 2026-08-25, and a shipped test may not
+# depend on a folder the archive procedure removes: this file read eight
+# documents out of `specs/art-008-feedback-sweep/` and went 21 assertions red
+# the moment that directory went away. The eight were copied here verbatim at
+# that archive.
+#
+# `FEATURE_DIR` above is unchanged on purpose. Every path this file asserts —
+# an edit's `file`, a write-point verdict, a byproduct location — keeps the
+# `specs/<feature>/` shape a real run produces, because that shape is part of
+# what the fixtures pin. Only the reads move, through `corpus_path` below, so
+# the relocation cost no fixture its realism.
+#
+# The documents are real authored prose, and that is the point: they carry the
+# deny-set's own negative examples, so a rule loosened back to a substring match
+# fails here before it fails on a reviewer's amendment. A fixture written to
+# pass could not do that, because whoever wrote it would write around the very
+# rules it is meant to catch. The bytes are frozen — do not refresh them from a
+# later spec, and do not repoint this at a live `specs/` directory.
+CORPUS_DIR = "tests/speckit-pro/unit/fixtures/feedback-sweep/corpus"
+
+
+def corpus_path(repo_relative: str) -> Path:
+    """Resolve a document the fixtures name under `FEATURE_DIR` to its copy."""
+    prefix = f"{FEATURE_DIR}/"
+    if not repo_relative.startswith(prefix):
+        raise AssertionError(
+            f"{repo_relative} is not one of the feature's own documents; "
+            "the corpus holds only those"
+        )
+    return REPO_ROOT / CORPUS_DIR / repo_relative[len(prefix):]
+
+
+def corpus_target(repo_relative: str) -> str:
+    """The corpus spelling of a path the fixtures name under `FEATURE_DIR`.
+
+    The shipped `check_target` surface requires `feature_dir` to resolve to a
+    real directory, which is right for a live run and is why the corpus stands
+    in for one here. A path already outside the feature is passed through
+    unchanged, so an escape attempt stays an escape attempt.
+    """
+    prefix = f"{FEATURE_DIR}/"
+    if not repo_relative.startswith(prefix):
+        return repo_relative
+    return f"{CORPUS_DIR}/{repo_relative[len(prefix):]}"
+
 # The eight documents T091 runs through the amendment leg. The feature's own
 # prose carries the deny-set's negative examples, so a rule loosened back to a
 # substring fails here before it fails on a reviewer's amendment.
@@ -1659,7 +1706,7 @@ class CorpusScanTest(unittest.TestCase):
 
     def test_no_rule_fires_on_this_feature_s_own_documents(self) -> None:
         for relative in SWEEP_DOCUMENTS:
-            path = REPO_ROOT / FEATURE_DIR / relative
+            path = corpus_path(f"{FEATURE_DIR}/{relative}")
             with self.subTest(document=relative):
                 self.assertTrue(path.is_file(), f"{relative} is missing")
                 lines = path.read_text(encoding="utf-8").split("\n")
@@ -1854,7 +1901,10 @@ def build_capture(names: list[str]) -> dict[str, dict[str, Any]]:
     command_runs: dict[str, Any] = {}
     dispatch_runs: dict[str, Any] = {}
     surface_runs: dict[str, Any] = {}
-    anchors = {name: unique_anchor(REPO_ROOT / FEATURE_DIR / name) for name in AMENDABLE_FILES}
+    anchors = {
+        name: unique_anchor(corpus_path(f"{FEATURE_DIR}/{name}"))
+        for name in AMENDABLE_FILES
+    }
 
     for name in names:
         case = cases()[name]
@@ -2965,7 +3015,7 @@ def anchor_resolves_once(edit: dict[str, Any]) -> str | None:
         return "anchor_over_the_cap"
     if len(edit["replacement"].encode("utf-8")) > REPLACEMENT_BUDGET_BYTES:
         return "replacement_over_the_cap"
-    text = (REPO_ROOT / edit["file"]).read_text(encoding="utf-8")
+    text = corpus_path(edit["file"]).read_text(encoding="utf-8")
     if text.count(edit["anchor"]) != 1:
         return "anchor_does_not_resolve_once"
     return None
@@ -3018,9 +3068,13 @@ class StructuredEditTest(unittest.TestCase):
         self.assertIsNone(anchor_resolves_once(dict(good, anchor=good["anchor"])))
 
     def write_point(self, target: str) -> dict[str, Any]:
+        # The corpus stands in for the feature directory: the surface resolves
+        # `feature_dir` on disk, and the archived spec folder no longer exists.
+        # Every target is translated with it, so the allowlist arithmetic under
+        # test is unchanged and only the root differs.
         response = run_runner(helper_request("write-point", {
-            "named_surface": "check_target", "feature_dir": FEATURE_DIR,
-            "target": target, "comment_id": "IC_kwDOKQ7tDs5vY0100A",
+            "named_surface": "check_target", "feature_dir": CORPUS_DIR,
+            "target": corpus_target(target), "comment_id": "IC_kwDOKQ7tDs5vY0100A",
         }))
         self.assertEqual(response.get("status"), "ok", stderr_text(response))
         return stdout_json(response)
@@ -3034,7 +3088,7 @@ class StructuredEditTest(unittest.TestCase):
             with self.subTest(target=member):
                 self.assertTrue(verdict["allowed"])
                 self.assertIsNone(verdict["reason"])
-                self.assertEqual(verdict["resolved"], f"{FEATURE_DIR}/{member}")
+                self.assertEqual(verdict["resolved"], f"{CORPUS_DIR}/{member}")
         refused = (
             f"{FEATURE_DIR}/research.md",
             f"{FEATURE_DIR}/contracts/sweep-pr-feedback.md",
@@ -3048,7 +3102,7 @@ class StructuredEditTest(unittest.TestCase):
                 self.assertEqual(verdict["reason"], "outside_set")
                 self.assertNotIn(
                     verdict["resolved"],
-                    [f"{FEATURE_DIR}/{member}" for member in AMENDABLE_FILES],
+                    [f"{CORPUS_DIR}/{member}" for member in AMENDABLE_FILES],
                     "a refused target is never coerced onto an allowed path",
                 )
 

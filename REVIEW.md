@@ -24,7 +24,11 @@ break the generated-artifact contract, or expose the repository:
 - A workflow change that grants `pull_request_target` write access to untrusted
   content, unpins a third-party action, or exposes a secret to a fork PR.
 - A repository-authored script or test whose filename is coupled to a temporary
-  spec ID rather than durable behavior.
+  spec ID rather than durable behavior, or whose code reads a `specs/<feature>/`
+  path from disk at run time. Archive cleanup deletes that folder once the
+  feature merges, so the read passes review and fails months later in an
+  unrelated cleanup branch. Asserting such a path as a string is fine; opening
+  one is not.
 
 Style, naming, prose, and refactoring suggestions are Nit at most.
 

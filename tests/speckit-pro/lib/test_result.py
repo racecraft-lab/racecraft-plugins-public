@@ -22,9 +22,97 @@ suite. Its own unit tests live in ``tests/speckit-pro/lib/test_lib.py``.
 
 from __future__ import annotations
 
+import os
 import unittest
 import unittest.case
+from pathlib import Path
 from typing import TextIO
+
+# Repo root, from this file's own location: tests/speckit-pro/lib/ -> repo root.
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_SPECS_GUARD_INSTALLED = False
+
+
+def install_specs_read_guard(repo_root: Path | None = None) -> None:
+    """Fail any test that reads a live ``specs/<feature>/`` path from disk.
+
+    Archive cleanup deletes a feature's ``specs/`` folder once its pull request
+    merges, so a test that opens one is a time bomb: green today, red at archive
+    time, months later, in a cleanup branch that has nothing to do with it. That
+    is not hypothetical — it is what ART-008's archive hit, and 21 assertions in
+    ``test-feedback-sweep-parse.py`` went red at once because the file read eight
+    documents out of the folder being removed.
+
+    **Why an audit hook rather than a source scan.** The distinction that matters
+    is data versus access, and no static pass draws it reliably. A ``specs/...``
+    string is perfectly legitimate as *data* — the same test asserts dozens of
+    them, because ``specs/<feature>/`` is the shape a real run produces and the
+    fixtures are right to pin it. What is not legitimate is *opening* one. Only
+    the interpreter knows which happened, and ``sys.addaudithook`` is where it
+    says so. A grep would flood on the strings and still miss the real read,
+    which reached the filesystem through a variable rather than a literal.
+
+    **``os.stat`` is deliberately not watched.** ``Path.resolve()``,
+    ``exists()``, and ``is_dir()`` on a specs-shaped path survive archive on
+    their own terms: the folder simply stops existing and the probe answers
+    False. Watching them would fail exactly the path arithmetic that is safe.
+    Content reads and directory listings are what break, and those are what this
+    catches.
+
+    **Opt out where sweeping the live tree is the job.** Six suites do:
+    ``validate-moc-orphan``, ``validate-moc-stale-index``,
+    ``validate-agent-instructions``, ``test-analysis-decision-ladder``,
+    ``test-privacy-scan`` and ``test-artifact-gallery``. Each walks whatever
+    specs happen to exist rather than depending on one by name, which makes it
+    archive-safe by construction: an absent feature folder contributes nothing.
+    They pass ``allow_live_specs=True`` to ``run_counted``.
+
+    That is the whole test for whether opting out is right, and it is narrower
+    than "this suite touches ``specs/``". Sweeping what is there is safe;
+    depending on a named spec is the time bomb, and no amount of opting out
+    makes it safe — that case wants its documents frozen under the suite's own
+    ``fixtures/`` tree instead. Four of the six above were found by this guard
+    failing on its first run rather than predicted, so expect to discover rather
+    than enumerate.
+
+    Known gap, accepted: the hook is per-process, so a read inside a subprocess
+    the test spawns is not seen. Reaching one takes deliberately handing a
+    ``specs/...`` path to a helper; every in-process read — the kind that broke —
+    is covered.
+    """
+    global _SPECS_GUARD_INSTALLED
+    if _SPECS_GUARD_INSTALLED:
+        return
+    import sys
+
+    root = Path(repo_root).resolve() if repo_root is not None else _REPO_ROOT
+    prefix = str(root / "specs") + os.sep
+    watched = ("open", "os.scandir", "os.listdir", "glob.glob")
+
+    def _hook(event: str, hook_args: tuple) -> None:
+        if event not in watched or not hook_args:
+            return
+        candidate = hook_args[0]
+        if not isinstance(candidate, (str, bytes, os.PathLike)):
+            return
+        try:
+            path = os.fsdecode(os.fspath(candidate))
+        except (TypeError, ValueError):
+            return
+        if not os.path.abspath(path).startswith(prefix):
+            return
+        raise AssertionError(
+            f"a test read a live specs/ path: {path}\n"
+            "Archive cleanup deletes specs/<feature>/ once the feature merges, so "
+            "this read would go red at archive time rather than now. Freeze the "
+            "documents the test needs under its own fixtures/ tree and read them "
+            "from there. Asserting a specs/... path as a string is fine; opening "
+            "one is not. A validator whose job is scanning the live tree passes "
+            "allow_live_specs=True to run_counted."
+        )
+
+    sys.addaudithook(_hook)
+    _SPECS_GUARD_INSTALLED = True
 
 _SUBTEST_MSG_SENTINEL = getattr(unittest.case, "_subtest_msg_sentinel", None)
 
@@ -135,14 +223,22 @@ def run_counted(
     label: str,
     stream: TextIO | None = None,
     verbosity: int = 0,
+    allow_live_specs: bool = False,
 ) -> int:
     """Run ``suite`` with per-assertion counting; print the house summary.
 
     Prints ``<label>: {passed}/{total} passed`` to ``stream`` (default stdout)
     and returns ``0`` when every counted unit passed, ``1`` otherwise.
+
+    Installs the live-``specs/`` read guard first, because every test in this
+    repository funnels through here and one install covers all of them. Pass
+    ``allow_live_specs=True`` only when walking the live tree is the suite's
+    actual job; see ``install_specs_read_guard``.
     """
     import sys
 
+    if not allow_live_specs:
+        install_specs_read_guard()
     out = sys.stdout if stream is None else stream
     result = CountingTestResult(stream=None, descriptions=False, verbosity=verbosity)
     suite.run(result)
@@ -151,4 +247,4 @@ def run_counted(
     return 0 if ok else 1
 
 
-__all__ = ("CountingTestResult", "run_counted")
+__all__ = ("CountingTestResult", "install_specs_read_guard", "run_counted")

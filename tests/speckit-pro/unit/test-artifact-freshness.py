@@ -21,8 +21,9 @@ interchangeable:
     {"status": "input_error", "error_contains": "..."}
 
 Every expectation here is written by hand, because the contract fixes each
-envelope field by field and a reader can check it against
-`specs/art-008-feedback-sweep-slice-2/contracts/check-artifact-freshness.md`.
+envelope field by field and a reader can check it against the slice's contract,
+`contracts/check-artifact-freshness.md`, which was archived on 2026-08-25 and is
+readable at merge commit `32043c45a`.
 Nothing in this file is captured from the helper's own output: a test that
 compares a helper's output to itself executes nothing.
 

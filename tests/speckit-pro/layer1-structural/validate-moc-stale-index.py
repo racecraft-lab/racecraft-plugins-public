@@ -265,7 +265,13 @@ def main() -> int:
     _with_broken_symlink()
     try:
         try:
-            return run_counted(build_suite(), label="validate-moc-stale-index")
+            # Walking the live `specs/` tree is this validator's job, and it is
+            # archive-safe: an absent feature folder scans clean.
+            return run_counted(
+                build_suite(),
+                label="validate-moc-stale-index",
+                allow_live_specs=True,
+            )
         except Exception as exc:  # pragma: no cover - defensive CLI contract
             print(f"ERROR: validate-moc-stale-index.py: internal failure ({exc})", file=sys.stderr)
             return 2

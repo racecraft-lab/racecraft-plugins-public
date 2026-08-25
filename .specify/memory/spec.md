@@ -3121,3 +3121,39 @@ active folder; every tracked byte remains recoverable from merge commit
 `85762d5a7033981da1fdf6a18b5913c83fc6d9a5`. Canonical schemas, corpus,
 harness, tests, docs reference, generated payload evidence, and process records
 remain outside `specs/**`.
+
+## Revision 2026-08-25 - ART-008 Feedback Sweep Archived
+
+- PRs: #464 (slice 1, `8db22a420`) and #502 (slice 2, `32043c45a`)
+- Branches: `art-008-feedback-sweep`, `art-008-feedback-sweep-slice-2`
+- Completion: 111/111 then 81/81 tasks; suite 14208/14208 at merge
+
+### User Outcomes
+
+The implement stage now opens with a sweep of the draft pull request's
+unresolved reviewer feedback. Substantive comments route through consensus and
+amend the planning artifacts; a run that amended anything stops for re-review, so
+a human confirms plan changes before task work begins. After amendments the draft
+artifact pages regenerate and the pull-request description refreshes, so the
+re-reviewer reads pages that match the amendments beside them. Pages a previous
+run left stale are detected on a clean sweep by a git-history join and repaired
+without stopping the run.
+
+### Cleanup Note
+
+The design concepts and workflow files remain under `docs/ai/specs/.process/`,
+joined there by both retrospectives and slice 2's quickstart. Slice 1's eight
+planning documents moved to
+`tests/speckit-pro/unit/fixtures/feedback-sweep/corpus/` instead of being
+removed: `tests/speckit-pro/unit/test-feedback-sweep-parse.py` reads them as its
+deny-set corpus, and a shipped test may not depend on a folder the archive
+procedure removes. Remaining planning exhaust, checklists, contracts, artifact
+pages and PR packets were removed with the two active folders; every tracked byte
+remains recoverable from `32043c45a60e7c38d15f0958bc4874f0362ea505`.
+
+**Acceptance is deliberately incomplete.** Slice 2's quickstart scenarios 3, 4
+and 5 were never executed, because each needs an autopilot run reaching Phase 7
+on a draft pull request and the autopilot runs from the installed plugin cache.
+They are carried to ART-009, recorded in that entry's Scope block where
+`speckit-scaffold-spec` reads it. Detail:
+`.specify/memory/archive-reports/2026-08-25-art-008-post-merge-hygiene.md`.
