@@ -3,16 +3,16 @@
   "spec_id": "G56R-006",
   "feature_dir": "specs/g56r-006-resolver-materializer-installer-strict-override",
   "branch": "g56r-006-resolver-materializer-installer-strict-override",
-  "status": "completed_pr_open",
+  "status": "completed_archived",
   "stage": "implement",
-  "updated_at": "2026-08-25T08:25:12Z",
+  "updated_at": "2026-08-25T16:00:00Z",
   "active_step": null,
   "stage_resolution": {
     "source": "argv",
     "basis": "explicit --stage implement",
     "recorded_stage": "plan",
     "planning_complete": true,
-    "confidence_gate_status": "✅ Complete",
+    "confidence_gate_status": "\u2705 Complete",
     "from_phase": null,
     "corroboration": {
       "status": "match",
@@ -90,28 +90,27 @@
     "prerequisite_available": true,
     "prerequisite_mode": "codex_native_worktree_binding",
     "archive_extension_installed": true,
-    "cleanup_mode": "provenance_only",
+    "cleanup_mode": "apply",
     "eligible_previous_specs": [
       {
         "spec_id": "ART-008",
         "feature_dir": "specs/art-008-feedback-sweep",
         "pr": 464,
-        "merge_commit": "8db22a42078074c217c79de3498fbdf9951ffa37"
+        "merge_commit": "8db22a42078074c217c79de3498fbdf9951ffa37",
+        "disposition": "archived_2026-08-25 in PR #505"
       },
       {
         "spec_id": "ART-017",
         "feature_dir": "specs/art-017-state-bookkeeping-checks",
         "pr": 490,
-        "merge_commit": "070a36c2ba93da2afe1b3a49bf886c1c28903d2c"
+        "merge_commit": "070a36c2ba93da2afe1b3a49bf886c1c28903d2c",
+        "disposition": "archived_2026-08-25 in this cleanup"
       }
     ],
-    "excluded_current_spec": "specs/g56r-006-resolver-materializer-installer-strict-override",
-    "safe_to_apply_cleanup": false,
-    "cleanup_applied": false,
-    "blocked_by": [
-      "--apply-cleanup was not supplied",
-      "the active branch is the G56R-006 feature branch, not the safe integration branch"
-    ]
+    "excluded_current_spec": null,
+    "safe_to_apply_cleanup": true,
+    "cleanup_applied": true,
+    "blocked_by": []
   },
   "reviewability_setup": {
     "target": "docs/ai/specs/codex-gpt-5-6-agent-routing-technical-roadmap.md",
@@ -423,7 +422,10 @@
     "implementation_feedback_sweep": {
       "status": "completed",
       "pull_request": 503,
-      "surfaces_read": ["review_thread", "pr_conversation"],
+      "surfaces_read": [
+        "review_thread",
+        "pr_conversation"
+      ],
       "observed": 0,
       "candidates": 0,
       "excluded": 0,
@@ -431,17 +433,38 @@
     },
     "implementation_setup": {
       "status": "completed",
-      "tasks": ["T001", "T002", "T003", "T004", "T005"],
+      "tasks": [
+        "T001",
+        "T002",
+        "T003",
+        "T004",
+        "T005"
+      ],
       "baseline_test": "test-speckit-pro-mutation-helpers: 53/53 passed"
     },
     "implementation_foundation": {
       "status": "completed",
-      "tasks": ["T006", "T007", "T008", "T009", "T010", "T011"],
+      "tasks": [
+        "T006",
+        "T007",
+        "T008",
+        "T009",
+        "T010",
+        "T011"
+      ],
       "focused_test": "test-speckit-pro-mutation-helpers: 61/61 passed"
     },
     "implementation_user_story_1": {
       "status": "completed",
-      "tasks": ["T012", "T013", "T014", "T015", "T016", "T017", "T018"],
+      "tasks": [
+        "T012",
+        "T013",
+        "T014",
+        "T015",
+        "T016",
+        "T017",
+        "T018"
+      ],
       "focused_tests": [
         "test-agent-materialization: 10/10 passed",
         "test-speckit-pro-mutation-helpers: 65/65 passed"
@@ -449,22 +472,61 @@
     },
     "implementation_user_story_2": {
       "status": "completed",
-      "tasks": ["T019", "T020", "T021", "T022", "T023"],
+      "tasks": [
+        "T019",
+        "T020",
+        "T021",
+        "T022",
+        "T023"
+      ],
       "focused_test": "test-speckit-pro-mutation-helpers: 70/70 passed"
     },
     "implementation_user_story_3": {
       "status": "completed",
-      "tasks": ["T024", "T025", "T026", "T027", "T028", "T029", "T030"],
+      "tasks": [
+        "T024",
+        "T025",
+        "T026",
+        "T027",
+        "T028",
+        "T029",
+        "T030"
+      ],
       "focused_test": "test-speckit-pro-mutation-helpers: 75/75 passed"
     },
     "implementation_user_story_4": {
       "status": "completed",
-      "tasks": ["T031", "T032", "T033", "T034", "T035", "T036", "T037", "T038", "T039"],
+      "tasks": [
+        "T031",
+        "T032",
+        "T033",
+        "T034",
+        "T035",
+        "T036",
+        "T037",
+        "T038",
+        "T039"
+      ],
       "focused_test": "test-speckit-pro-mutation-helpers: 80/80 passed"
     },
     "implementation_polish": {
       "status": "completed",
-      "tasks": ["T040", "T041", "T042", "T043", "T044", "T045", "T046", "T047", "T048", "T049", "T050", "T051", "T052", "T053"],
+      "tasks": [
+        "T040",
+        "T041",
+        "T042",
+        "T043",
+        "T044",
+        "T045",
+        "T046",
+        "T047",
+        "T048",
+        "T049",
+        "T050",
+        "T051",
+        "T052",
+        "T053"
+      ],
       "focused_materializer": "10/10 passed",
       "focused_installer": "80/80 passed",
       "layer_1": "1511/1511 passed",
@@ -492,8 +554,7 @@
         "batch apply and rollback do not refuse concurrent regular-file changes",
         "installer duplicates and bypasses the canonical agent materializer"
       ],
-      "remediation_required": true
-      ,
+      "remediation_required": true,
       "re_review_1": {
         "reviewed_head": "0c983fd67ba485a323047819d14cf27947a07b39",
         "resolved": [
@@ -643,8 +704,7 @@
       "docs_reference": "current",
       "diff_check": "passed",
       "remediation_commit": "0c983fd67ba485a323047819d14cf27947a07b39",
-      "independent_reverification_required": true
-      ,
+      "independent_reverification_required": true,
       "second_round": {
         "status": "committed_pending_reverification",
         "remediation_commit": "89b9162653f1b4acaf94632a88c9c208a01b69e2",
@@ -901,48 +961,201 @@
     "reason": "atomicity route one-navigable-PR is not split-PR; plan-layers-feature-dir was not invoked"
   },
   "plan": [
-    {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
-    {"step": "Phase 0: Prerequisites", "status": "completed"},
-    {"step": "Phase 1: Specify", "status": "completed"},
-    {"step": "Phase 2: Clarify - Roster and Cross-spec Boundary", "status": "completed"},
-    {"step": "Phase 2: Clarify - Roster and Cross-spec Boundary Consensus", "status": "completed"},
-    {"step": "Phase 2: Clarify - Resolution and Override Semantics", "status": "completed"},
-    {"step": "Phase 2: Clarify - Resolution and Override Semantics Consensus", "status": "completed"},
-    {"step": "Phase 2: Clarify - State, Ownership, and Evidence", "status": "completed"},
-    {"step": "Phase 2: Clarify - State, Ownership, and Evidence Consensus", "status": "completed"},
-    {"step": "Phase 3: Plan", "status": "completed"},
-    {"step": "Phase 4: Checklist - Error Handling", "status": "completed"},
-    {"step": "Phase 4: Checklist - Error Handling Consensus", "status": "completed"},
-    {"step": "Phase 4: Checklist - State Management", "status": "completed"},
-    {"step": "Phase 4: Checklist - State Management Consensus", "status": "completed"},
-    {"step": "Phase 4: Checklist - Data Integrity", "status": "completed"},
-    {"step": "Phase 4: Checklist - Data Integrity Consensus", "status": "completed"},
-    {"step": "Phase 4: Checklist - Reliability", "status": "completed"},
-    {"step": "Phase 4: Checklist - Reliability Consensus", "status": "completed"},
-    {"step": "Phase 5: Tasks", "status": "completed"},
-    {"step": "Phase 6: Analyze", "status": "completed"},
-    {"step": "Phase 6: Analyze - Consensus", "status": "completed"},
-    {"step": "Phase 6.5: Confidence Gate", "status": "completed"},
-    {"step": "Phase 7: Implement - Setup (T001-T005)", "status": "completed"},
-    {"step": "Phase 7: Implement - Foundation (T006-T011)", "status": "completed"},
-    {"step": "Phase 7: Implement - User Story 1 (T012-T018)", "status": "completed"},
-    {"step": "Phase 7: Implement - User Story 2 (T019-T023)", "status": "completed"},
-    {"step": "Phase 7: Implement - User Story 3 (T024-T030)", "status": "completed"},
-    {"step": "Phase 7: Implement - User Story 4 (T031-T039)", "status": "completed"},
-    {"step": "Phase 7: Implement - Polish and verification (T040-T053)", "status": "completed"},
-    {"step": "Post: Doctor Extension Check", "status": "completed"},
-    {"step": "Post: Verify Implementation", "status": "completed"},
-    {"step": "Post: Verify Tasks Phantom Check", "status": "completed"},
-    {"step": "Post: Code Review", "status": "completed"},
-    {"step": "Post: Integration Suite", "status": "completed"},
-    {"step": "Post: Reviewability Diff Gate", "status": "completed"},
-    {"step": "Post: Self-Review", "status": "completed"},
-    {"step": "Post: UAT Runbook Generation", "status": "completed"},
-    {"step": "Post: Final Reviewability Backstop", "status": "completed"},
-    {"step": "Post: PR Packet/Body Generation", "status": "completed"},
-    {"step": "Post: PR Body Generation", "status": "completed"},
-    {"step": "Post: PR Creation", "status": "completed"},
-    {"step": "Post: Review Remediation", "status": "completed"},
-    {"step": "Post: Retrospective", "status": "completed"}
-  ]
+    {
+      "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 0: Prerequisites",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 1: Specify",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Roster and Cross-spec Boundary",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Roster and Cross-spec Boundary Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Resolution and Override Semantics",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Resolution and Override Semantics Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - State, Ownership, and Evidence",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - State, Ownership, and Evidence Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 3: Plan",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - Error Handling",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - Error Handling Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - State Management",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - State Management Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - Data Integrity",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - Data Integrity Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - Reliability",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - Reliability Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 5: Tasks",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 6: Analyze",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 6: Analyze - Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 6.5: Confidence Gate",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 7: Implement - Setup (T001-T005)",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 7: Implement - Foundation (T006-T011)",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 7: Implement - User Story 1 (T012-T018)",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 7: Implement - User Story 2 (T019-T023)",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 7: Implement - User Story 3 (T024-T030)",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 7: Implement - User Story 4 (T031-T039)",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 7: Implement - Polish and verification (T040-T053)",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Doctor Extension Check",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Verify Implementation",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Verify Tasks Phantom Check",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Code Review",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Integration Suite",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Reviewability Diff Gate",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Self-Review",
+      "status": "completed"
+    },
+    {
+      "step": "Post: UAT Runbook Generation",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Final Reviewability Backstop",
+      "status": "completed"
+    },
+    {
+      "step": "Post: PR Packet/Body Generation",
+      "status": "completed"
+    },
+    {
+      "step": "Post: PR Body Generation",
+      "status": "completed"
+    },
+    {
+      "step": "Post: PR Creation",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Review Remediation",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Retrospective",
+      "status": "completed"
+    }
+  ],
+  "archive": {
+    "archived_at": "2026-08-25T16:00:00Z",
+    "specs": [
+      "ART-017",
+      "G56R-006"
+    ],
+    "reports": [
+      ".specify/memory/archive-reports/2026-08-25-art-017-post-merge-hygiene.md",
+      ".specify/memory/archive-reports/2026-08-25-g56r-006-post-merge-hygiene.md"
+    ],
+    "removed_directories": [
+      "specs/art-017-state-bookkeeping-checks",
+      "specs/g56r-006-resolver-materializer-installer-strict-override"
+    ],
+    "recovery_boundaries": {
+      "ART-017": "070a36c2ba93da2afe1b3a49bf886c1c28903d2c",
+      "G56R-006": "609f99e1732424ffd68adfbd17d6f41d37f0fba4"
+    },
+    "relocated_evidence": {
+      "specs/art-017-state-bookkeeping-checks/.process/uat-runbook.md": "docs/ai/specs/.process/ART-017-manual-uat.md",
+      "specs/g56r-006-resolver-materializer-installer-strict-override/retrospective.md": "docs/ai/specs/.process/G56R-006-retrospective.md"
+    },
+    "identity_fields_note": "workflow_file, feature_dir and branch above are this run's historical identity and are left unchanged; the directory they name no longer exists and is recoverable at its boundary commit."
+  }
 }

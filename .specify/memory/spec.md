@@ -3157,3 +3157,41 @@ on a draft pull request and the autopilot runs from the installed plugin cache.
 They are carried to ART-009, recorded in that entry's Scope block where
 `speckit-scaffold-spec` reads it. Detail:
 `.specify/memory/archive-reports/2026-08-25-art-008-post-merge-hygiene.md`.
+
+## Revision 2026-08-25 - ART-017 And G56R-006 Archived
+
+### ART-017 Arm The Accidentally-Advisory State Bookkeeping Checks
+
+- PR #490, merged `2026-08-23T01:58:12Z` at `070a36c2b`
+- Completion: 31/31 tasks, 20/20 FRs, same-tree 7896/7896 suite
+
+Three state bookkeeping helpers were reporting a pass verdict on input that
+violated the rule they existed to enforce. They now fail it. The defect was
+reproduced by execution rather than argued from reading, which is why the fix is
+trustworthy. A manual UAT executed all 9 acceptance scenarios and is preserved at
+`docs/ai/specs/.process/ART-017-manual-uat.md`.
+
+The roadmap had said `🔄 In Progress` for two days after the merge; that is
+reconciled.
+
+### G56R-006 Capability-aware Resolver, Materializer, Installer, Strict Override
+
+- PR #503, merged `2026-08-25T14:52:56Z` at `609f99e17`
+- Completion: 53/53 tasks, 100% adherence, 0 critical findings
+
+Agent installation is now capability-aware: ordered preferred/fallback
+resolution from a single snapshot binding, bounded probe evidence, a strict
+per-agent override that permits no fallback, and an installer whose
+required-agent miss produces an exact zero-mutation response. Live UAT and
+real-home mutation were out of scope by decision at Specify, so acceptance rests
+on automated evidence and the dry-run install path.
+
+### Cleanup Note
+
+Both workflow files remain under `docs/ai/specs/.process/`, joined there by
+ART-017's manual UAT and G56R-006's retrospective. Planning documents,
+checklists, contracts, artifact pages and PR packets were removed with the two
+active folders; every tracked byte is recoverable from `070a36c2b` and
+`609f99e17` respectively. Reports:
+`.specify/memory/archive-reports/2026-08-25-art-017-post-merge-hygiene.md` and
+`.specify/memory/archive-reports/2026-08-25-g56r-006-post-merge-hygiene.md`.

@@ -37,7 +37,7 @@ stacked slices, of which slice 1 shipped in PR #464 on 2026-08-24 and slice 2
 is not yet scaffolded, so the spec stays in progress and unarchived; ART-009 and ART-010 are ready;
 ART-015 was opened from ART-006 findings and is ready with no dependencies;
 ART-016 and ART-018 were opened from ART-014 findings on 2026-08-12 and are
-ready; ART-017, opened from the same findings, is in progress; ART-019 was
+ready; ART-017, opened from the same findings, shipped in PR #490; ART-019 was
 opened on 2026-08-13 and is ready with no dependencies
 
 ---
@@ -157,7 +157,7 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-014 | Phase-Guard Enforcement Repair | ✅ Complete / Archived | [.process/ART-014-workflow.md](.process/ART-014-workflow.md) | PR #433; archived 2026-08-13. The guard, its tests, and both platforms' authority documentation live outside `specs/**`. Declared 337 reviewable LOC and shipped 906 added across six authored files, 488 across the five production ones; the overrun is the classification record and the tests, and it argues for ART-015. Found during ART-006, which deliberately did not fix it. Opened ART-016, ART-017 and ART-018 |
 | ART-015 | Spec-Size Re-Estimation Trigger | ⏳ Ready | - | No dependencies; found during ART-006 — the estimator is sound but is never re-fed |
 | ART-016 | Claude-Side Live PR Commit Authority | ⏳ Ready | - | No dependencies; opened from ART-014, which documents the gap and names this entry in the shipped Claude `SKILL.md` |
-| ART-017 | Arm The Accidentally-Advisory State Bookkeeping Checks | 🔄 In Progress | [.process/ART-017-workflow.md](.process/ART-017-workflow.md) | Scaffolded 2026-08-22 on `art-017-state-bookkeeping-checks`. ART-014 dependency satisfied by PR #433, which added the classification record these verdicts live in. Opened from ART-014's advisory audit; the defect was reproduced by execution |
+| ART-017 | Arm The Accidentally-Advisory State Bookkeeping Checks | ✅ Complete / Archived | [.process/ART-017-workflow.md](.process/ART-017-workflow.md) | PR #490, merged 2026-08-23 at `070a36c2b`; archived 2026-08-25. 31/31 tasks and 20/20 FRs, with a same-tree 7896/7896 suite. The guard, its contract and its tests live outside `specs/**`. Opened from ART-014's advisory audit; the defect was reproduced by execution rather than argued. A manual UAT executed all 9 acceptance scenarios and is preserved at [.process/ART-017-manual-uat.md](.process/ART-017-manual-uat.md) |
 | ART-018 | Repair The Silently-Clean Governance Matchers | ⏳ Ready | - | No dependencies; opened from ART-014's retrospective. Three helpers report clean on input they should catch, each hit live during that run |
 | ART-019 | Documented Best-Practice Alignment | ⏳ Ready | - | No dependencies; opened 2026-08-13 from a seven-surface audit against the live official docs. Zero documented rules broken; the gap is that the repo's gates are blind to the documented metrics. Ships as ordered child slices |
 | ART-020 | Keyboard-Reachable Scroll Containers In The Shipped Gallery | ⏭️ Superseded / Shipped | [.process/ART-004-workflow.md](.process/ART-004-workflow.md) | Superseded by ART-004 on 2026-08-17; its five existing-container fixes, accessible names, global Layer 4 assertion, negative fixture, keyboard UAT, and generated-artifact updates shipped in PR #450 |

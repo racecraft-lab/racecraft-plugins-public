@@ -535,7 +535,7 @@ After focused tests pass, run the relevant Layer 1/4/5 checks, generated runner/
 | Post: PR Body Generation | ✅ Complete | Packet-owned body contains all required headings/markers and exactly one non-empty `release-note` fence; title/scope workflow contract passed read-only |
 | Post: PR Creation | ✅ Complete | Existing PR #503 is open and ready for review; the final packet refresh, exact-head push, and CI confirmation close publication without creating a duplicate PR |
 | Post: Review Remediation | ✅ Complete | Anchored POSIX/Windows mutation backend plus exhaustive cleanup, rollback, ownership, and close-evidence remediation; live PR static-materialization feedback was fixed and independent final review approved `52e317618` with 0 Important findings |
-| Post: Retrospective | ✅ Complete | `specs/g56r-006-resolver-materializer-installer-strict-override/retrospective.md`: 53/53 tasks, 100% adherence, 0 critical findings, no proposed spec changes |
+| Post: Retrospective | ✅ Complete | `docs/ai/specs/.process/G56R-006-retrospective.md` (relocated at the 2026-08-25 archive): 53/53 tasks, 100% adherence, 0 critical findings, no proposed spec changes |
 
 - [x] All tasks complete and every FR mapped.
 - [x] Focused tests pass with explicit RED→GREEN evidence.
