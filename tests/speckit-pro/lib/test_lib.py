@@ -137,17 +137,16 @@ class SpecsReadGuardTests(unittest.TestCase):
         self.assertFalse(Path(named).exists())
         self.assertTrue(str(Path(named).resolve()).endswith("spec.md"))
 
-        # Opening one is not.
-        probe = live / ".specs-read-guard-probe"
-        probe.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            with self.assertRaises(AssertionError) as caught:
-                open(os.fspath(probe), "w")
-            self.assertIn("a test read a live specs/ path", str(caught.exception))
-            self.assertIn("fixtures/", str(caught.exception))
-        finally:
-            if probe.exists():
-                probe.unlink()
+        # Opening one is not. The hook raises on the `open` event, before the
+        # call reaches the filesystem, so the path need not exist and nothing is
+        # created, opened or left to clean up.
+        probe = live / "some-feature" / "spec.md"
+        with self.assertRaises(AssertionError) as caught:
+            with open(os.fspath(probe), encoding="utf-8"):
+                self.fail("the guard must raise before the file is opened")
+        self.assertIn("a test read a live specs/ path", str(caught.exception))
+        self.assertIn("fixtures/", str(caught.exception))
+        self.assertFalse(probe.exists(), "the guard must not create the path")
 
         # A path outside `specs/` is untouched.
         with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False) as handle:

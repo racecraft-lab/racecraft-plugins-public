@@ -59,10 +59,21 @@ def install_specs_read_guard(repo_root: Path | None = None) -> None:
     Content reads and directory listings are what break, and those are what this
     catches.
 
-    **Opt out where scanning the live tree is the job.** The two MOC validators
-    walk ``specs/`` by design and are archive-safe by construction, since an
-    absent directory scans clean. They pass ``allow_live_specs=True`` to
-    ``run_counted``.
+    **Opt out where sweeping the live tree is the job.** Six suites do:
+    ``validate-moc-orphan``, ``validate-moc-stale-index``,
+    ``validate-agent-instructions``, ``test-analysis-decision-ladder``,
+    ``test-privacy-scan`` and ``test-artifact-gallery``. Each walks whatever
+    specs happen to exist rather than depending on one by name, which makes it
+    archive-safe by construction: an absent feature folder contributes nothing.
+    They pass ``allow_live_specs=True`` to ``run_counted``.
+
+    That is the whole test for whether opting out is right, and it is narrower
+    than "this suite touches ``specs/``". Sweeping what is there is safe;
+    depending on a named spec is the time bomb, and no amount of opting out
+    makes it safe — that case wants its documents frozen under the suite's own
+    ``fixtures/`` tree instead. Four of the six above were found by this guard
+    failing on its first run rather than predicted, so expect to discover rather
+    than enumerate.
 
     Known gap, accepted: the hook is per-process, so a read inside a subprocess
     the test spawns is not seen. Reaching one takes deliberately handing a
