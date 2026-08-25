@@ -297,15 +297,24 @@ def codex_agent_windows_create_file(
     return handle
 
 
-def codex_agent_windows_close_handle(handle: int, close_errors: list[OSError] | None = None) -> None:
+def codex_agent_windows_close_handle(handle: int) -> OSError | None:
     kernel32 = codex_agent_windows_kernel32()
     function = kernel32.CloseHandle
     codex_agent_windows_set_signature(function, [ctypes.c_void_p], ctypes.c_int)
     if function(handle):
-        return
-    error = codex_agent_windows_os_error("CloseHandle")
-    if close_errors is not None:
-        close_errors.append(error)
+        return None
+    return codex_agent_windows_os_error("CloseHandle")
+
+
+def codex_agent_record_close_error(close_errors: list[OSError], close_error: OSError | None) -> None:
+    if close_error is not None:
+        close_errors.append(close_error)
+
+
+def codex_agent_note_close_error(primary_error: OSError, close_error: OSError | None) -> OSError:
+    if close_error is not None:
+        primary_error.add_note(f"CloseHandle failed during cleanup: {close_error}")
+    return primary_error
 
 
 def codex_agent_windows_file_info(handle: int) -> _WindowsByHandleFileInformation:
@@ -448,6 +457,8 @@ def codex_agent_windows_rename_no_replace(
     agent_dir._validate_name(source_name)
     agent_dir._validate_name(target_name)
     source_handle: int | None = None
+    primary_error: OSError | None = None
+    close_error: OSError | None = None
     try:
         source_handle = codex_agent_windows_create_file(
             agent_dir.path(source_name),
@@ -466,9 +477,15 @@ def codex_agent_windows_rename_no_replace(
         )
         if not function(source_handle, WINDOWS_FILE_RENAME_INFO_CLASS, rename_info, rename_info_size):
             raise codex_agent_windows_os_error("SetFileInformationByHandle", agent_dir.path(target_name))
+    except OSError as exc:
+        primary_error = exc
     finally:
         if source_handle is not None:
-            codex_agent_windows_close_handle(source_handle)
+            close_error = codex_agent_windows_close_handle(source_handle)
+    if primary_error is not None:
+        raise codex_agent_note_close_error(primary_error, close_error)
+    if close_error is not None:
+        raise close_error
 
 
 class AnchoredAgentDir:
@@ -765,11 +782,33 @@ class AnchoredAgentDir:
                 dir_fd=self.directory_fd,
             )
             try:
-                os.rename(cleanup_name, private_entry_name, src_dir_fd=self.directory_fd, dst_dir_fd=private_dir_fd)
+                codex_agent_native_rename_no_replace_between(
+                    self.directory_fd,
+                    cleanup_name,
+                    private_dir_fd,
+                    private_entry_name,
+                )
             except FileNotFoundError:
                 return CodexAgentCleanupResult()
+            except FileExistsError:
+                private_path = self.evidence_subpath(private_dir_name, private_entry_name)
+                return CodexAgentCleanupResult(
+                    public_conflicts=[self.evidence_path(cleanup_name)],
+                    preserved_private_paths=[private_path],
+                    cleanup_errors=[preserved_cleanup_entry(private_path)],
+                )
             except OSError:
-                return CodexAgentCleanupResult(public_conflicts=[self.evidence_path(cleanup_name)])
+                preserved_private_paths: list[str] = []
+                try:
+                    if codex_agent_previous_state_at(private_dir_fd, private_entry_name) is not None:
+                        preserved_private_paths.append(self.evidence_subpath(private_dir_name, private_entry_name))
+                except OSError:
+                    preserved_private_paths.append(self.evidence_subpath(private_dir_name, private_entry_name))
+                return CodexAgentCleanupResult(
+                    public_conflicts=[self.evidence_path(cleanup_name)],
+                    preserved_private_paths=preserved_private_paths,
+                    cleanup_errors=[preserved_cleanup_entry(path) for path in preserved_private_paths],
+                )
             try:
                 if self.previous_state(cleanup_name) is not None:
                     public_conflicts.append(self.evidence_path(cleanup_name))
@@ -941,20 +980,26 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
             handle_identity = codex_agent_windows_identity(info)
             if identity is not None and handle_identity != identity:
                 raise OSError("destination changed before anchored operation")
-        except OSError:
-            codex_agent_windows_close_handle(handle)
-            raise
+        except OSError as exc:
+            close_error = codex_agent_windows_close_handle(handle)
+            raise codex_agent_note_close_error(exc, close_error)
         return cls(destination, handle_identity, handle)
 
     def close(self, close_errors: list[OSError] | None = None) -> None:
         if self.closed:
             return
         self.closed = True
-        codex_agent_windows_close_handle(self.directory_fd, close_errors)
+        close_error = codex_agent_windows_close_handle(self.directory_fd)
+        if close_error is not None:
+            if close_errors is not None:
+                close_errors.append(close_error)
+            else:
+                raise close_error
 
     def target_is_safe(self, name: str) -> bool:
         self._validate_name(name)
         handle: int | None = None
+        result = False
         try:
             handle = self.open_child_handle(
                 name,
@@ -964,19 +1009,25 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
             )
             info = codex_agent_windows_file_info(handle)
             if info.dwFileAttributes & WINDOWS_FILE_ATTRIBUTE_REPARSE_POINT:
-                return False
-            return not bool(info.dwFileAttributes & WINDOWS_FILE_ATTRIBUTE_DIRECTORY)
+                result = False
+            else:
+                result = not bool(info.dwFileAttributes & WINDOWS_FILE_ATTRIBUTE_DIRECTORY)
         except FileNotFoundError:
-            return True
+            result = True
         except OSError:
-            return False
+            result = False
         finally:
             if handle is not None:
-                codex_agent_windows_close_handle(handle)
+                close_error = codex_agent_windows_close_handle(handle)
+                if close_error is not None:
+                    return False
+        return result
 
     def previous_state(self, name: str) -> CodexAgentFileState | None:
         self._validate_name(name)
         handle: int | None = None
+        result: CodexAgentFileState | None = None
+        primary_error: OSError | None = None
         try:
             handle = self.open_child_handle(
                 name,
@@ -994,17 +1045,25 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
                 mode = self.path(name).stat().st_mode
             except OSError:
                 mode = stat.S_IFREG | 0o600
-            return CodexAgentFileState(
+            result = CodexAgentFileState(
                 content=content,
                 mode=mode,
                 device=int(info.dwVolumeSerialNumber),
                 inode=codex_agent_windows_inode(info),
             )
         except FileNotFoundError:
-            return None
+            result = None
+        except OSError as exc:
+            primary_error = exc
         finally:
+            close_error: OSError | None = None
             if handle is not None:
-                codex_agent_windows_close_handle(handle)
+                close_error = codex_agent_windows_close_handle(handle)
+            if primary_error is not None:
+                raise codex_agent_note_close_error(primary_error, close_error)
+            if close_error is not None:
+                raise close_error
+        return result
 
     def create_temp_file(self, target_name: str, content: bytes, mode: int | None) -> str:
         self._validate_name(target_name)
@@ -1024,9 +1083,25 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
                 codex_agent_windows_flush(handle)
                 if mode is not None:
                     codex_agent_windows_set_mode_by_handle(handle, mode)
+                close_error = codex_agent_windows_close_handle(handle)
+                handle = None
+                if close_error is not None:
+                    cleanup_error = {
+                        "kind": "close_handle",
+                        "target": self.evidence_path(temp_name),
+                        "error": type(close_error).__name__,
+                    }
+                    cleanup_result = self.preserve_uncertain_entry(temp_name, "close_handle")
+                    raise CodexAgentNoClobberConflict(
+                        "temporary install file close failed",
+                        cleanup_result.preserved_paths,
+                        [cleanup_error, *cleanup_result.cleanup_errors],
+                    ) from close_error
                 return temp_name
             except FileExistsError:
                 continue
+            except CodexAgentNoClobberConflict:
+                raise
             except OSError as exc:
                 cleanup_errors: list[dict[str, str]] = []
                 cleanup_result = CodexAgentCleanupResult()
@@ -1045,16 +1120,15 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
                     except OSError:
                         expected_temp_state = None
                 if handle is not None:
-                    close_errors: list[OSError] = []
-                    codex_agent_windows_close_handle(handle, close_errors)
-                    cleanup_errors.extend(
-                        {
-                            "kind": "close_handle",
-                            "target": self.evidence_path(temp_name),
-                            "error": type(error).__name__,
-                        }
-                        for error in close_errors
-                    )
+                    close_error = codex_agent_windows_close_handle(handle)
+                    if close_error is not None:
+                        cleanup_errors.append(
+                            {
+                                "kind": "close_handle",
+                                "target": self.evidence_path(temp_name),
+                                "error": type(close_error).__name__,
+                            }
+                        )
                     handle = None
                 if created:
                     if expected_temp_state is not None:
@@ -1067,7 +1141,19 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
                 raise
             finally:
                 if handle is not None:
-                    codex_agent_windows_close_handle(handle)
+                    close_error = codex_agent_windows_close_handle(handle)
+                    if close_error is not None:
+                        self.record_cleanup_result(
+                            CodexAgentCleanupResult(
+                                cleanup_errors=[
+                                    {
+                                        "kind": "close_handle",
+                                        "target": self.evidence_path(temp_name),
+                                        "error": type(close_error).__name__,
+                                    }
+                                ]
+                            )
+                        )
         raise OSError("could not allocate a collision-free temporary install file")
 
     def link_no_replace(self, source_name: str, target_name: str) -> None:
@@ -1103,8 +1189,10 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
             primary_error = exc
         finally:
             if handle is not None:
-                codex_agent_windows_close_handle(handle, close_errors)
+                codex_agent_record_close_error(close_errors, codex_agent_windows_close_handle(handle))
         if primary_error is not None:
+            if close_errors:
+                raise codex_agent_note_close_error(primary_error, close_errors[0])
             raise primary_error
         if close_errors:
             raise close_errors[0]
@@ -1160,8 +1248,10 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
             primary_error = exc
         finally:
             if handle is not None:
-                codex_agent_windows_close_handle(handle, close_errors)
+                codex_agent_record_close_error(close_errors, codex_agent_windows_close_handle(handle))
         if primary_error is not None:
+            if close_errors:
+                raise codex_agent_note_close_error(primary_error, close_errors[0])
             raise primary_error
         if close_errors:
             raise close_errors[0]
@@ -1184,6 +1274,8 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
         if current_state != expected_state:
             return CodexAgentCleanupResult(public_conflicts=[self.evidence_path(name)])
         cleanup_name: str | None = None
+        rename_cleanup_errors: list[dict[str, str]] = []
+        moved_state_after_rename: CodexAgentFileState | None = None
         for _ in range(32):
             candidate = f".{secrets.token_hex(12)}.cleanup.{name}"
             try:
@@ -1194,32 +1286,63 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
                 continue
             except FileNotFoundError:
                 return CodexAgentCleanupResult()
+            except OSError as exc:
+                try:
+                    moved_state = self.previous_state(candidate)
+                except OSError:
+                    moved_state = None
+                if moved_state == expected_state or self.path(candidate).exists():
+                    cleanup_name = candidate
+                    moved_state_after_rename = expected_state
+                    rename_cleanup_errors.append(
+                        {
+                            "kind": "close_handle",
+                            "target": self.evidence_path(candidate),
+                            "error": type(exc).__name__,
+                        }
+                    )
+                    break
+                return CodexAgentCleanupResult(
+                    public_conflicts=[self.evidence_path(name)],
+                    cleanup_errors=[
+                        {
+                            "kind": "cleanup_incomplete",
+                            "target": self.evidence_path(name),
+                            "error": type(exc).__name__,
+                        }
+                    ],
+                )
         if cleanup_name is None:
             return CodexAgentCleanupResult(public_conflicts=[self.evidence_path(name)])
-        try:
-            moved_state = self.previous_state(cleanup_name)
-        except OSError:
-            moved_state = None
+        if moved_state_after_rename is not None:
+            moved_state = moved_state_after_rename
+        else:
+            try:
+                moved_state = self.previous_state(cleanup_name)
+            except OSError:
+                moved_state = None
         if moved_state != expected_state:
-            return CodexAgentCleanupResult(public_conflicts=[self.evidence_path(cleanup_name)])
+            return CodexAgentCleanupResult(
+                public_conflicts=[self.evidence_path(cleanup_name)],
+                cleanup_errors=rename_cleanup_errors,
+            )
         handle: int | None = None
-        result = CodexAgentCleanupResult()
+        result = CodexAgentCleanupResult(cleanup_errors=rename_cleanup_errors)
 
         def close_cleanup_handle() -> None:
             nonlocal handle
             if handle is None:
                 return
-            close_errors: list[OSError] = []
-            codex_agent_windows_close_handle(handle, close_errors)
+            close_error = codex_agent_windows_close_handle(handle)
             handle = None
-            result.cleanup_errors.extend(
-                {
-                    "kind": "close_handle",
-                    "target": self.evidence_path(cleanup_name),
-                    "error": type(error).__name__,
-                }
-                for error in close_errors
-            )
+            if close_error is not None:
+                result.cleanup_errors.append(
+                    {
+                        "kind": "close_handle",
+                        "target": self.evidence_path(cleanup_name),
+                        "error": type(close_error).__name__,
+                    }
+                )
 
         for _ in range(2):
             try:
@@ -1332,7 +1455,7 @@ class WindowsAnchoredAgentDir(AnchoredAgentDir):
             primary_error = exc
         finally:
             if handle is not None:
-                codex_agent_windows_close_handle(handle, close_errors)
+                codex_agent_record_close_error(close_errors, codex_agent_windows_close_handle(handle))
         if primary_error is not None or close_errors:
             failed_paths: list[str] = []
             if created and preserved_name is not None:
