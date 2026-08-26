@@ -237,6 +237,7 @@ def adversarial_fixture(base: Path) -> Iterator[SmokeFixture]:
         try:
             home_canary_path.unlink()
         except FileNotFoundError:
+            # Fixture teardown tolerates a canary already removed by the test.
             pass
 
 
@@ -368,6 +369,7 @@ def _claude_smoke(fixture: SmokeFixture, max_budget_usd: str) -> dict[str, str]:
         try:
             attestation.unlink()
         except FileNotFoundError:
+            # A failed-closed setup may have removed the attestation already.
             pass
         capability = session.issue_capability("SMOKE_REVIEW_COMMENT", stage="classifier")
         command = sweep_launcher.claude_command(
@@ -422,6 +424,7 @@ def _claude_smoke(fixture: SmokeFixture, max_budget_usd: str) -> dict[str, str]:
             try:
                 attestation.unlink()
             except FileNotFoundError:
+                # A failed-closed setup may have removed the attestation already.
                 pass
 
 
@@ -492,6 +495,7 @@ def _codex_smoke(fixture: SmokeFixture) -> dict[str, str]:
         try:
             output_path.unlink()
         except FileNotFoundError:
+            # The launcher may have cleaned the output before fixture teardown.
             pass
 
 

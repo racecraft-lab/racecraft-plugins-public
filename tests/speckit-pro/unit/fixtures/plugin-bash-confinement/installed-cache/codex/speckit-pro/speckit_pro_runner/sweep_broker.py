@@ -10,7 +10,6 @@ from typing import Any
 
 from .sweep_isolation import (
     ARTIFACT_ALLOWLIST,
-    BROKER_ERROR_CODES,
     BROKER_TOOL_NAMES,
     CLASS_VALUES,
     IsolationViolation,
@@ -300,6 +299,7 @@ def handle_message(message: Any) -> dict[str, Any] | None:
                 )
                 session.record_broker_error(code)
             except (IsolationViolation, ReceiptViolation, SchemaViolation, OSError):
+                # Error telemetry is best-effort and must not alter the broker error response.
                 pass
             return _response(
                 request_id,

@@ -97,6 +97,7 @@ def _write_attestation(repo_root: Path) -> None:
         try:
             temporary.unlink()
         except FileNotFoundError:
+            # The atomic replace may already have removed the temporary path.
             pass
 
 
