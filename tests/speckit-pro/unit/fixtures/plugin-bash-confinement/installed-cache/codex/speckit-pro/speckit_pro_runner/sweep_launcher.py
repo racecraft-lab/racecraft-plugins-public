@@ -793,6 +793,7 @@ def run_claude_sweep(
             try:
                 attestation.unlink()
             except FileNotFoundError:
+                # A failed-closed invocation may have removed the attestation already.
                 pass
         if (
             completed.returncode != 0

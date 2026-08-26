@@ -760,6 +760,7 @@ def _write_private_json(path: Path, payload: dict[str, Any]) -> None:
         try:
             temporary.unlink()
         except FileNotFoundError:
+            # Atomic replacement may have already removed the temporary path.
             pass
 
 
