@@ -296,6 +296,7 @@ def build_xplat008_payloads(repo_root: Path, dist_root: Path) -> None:
     reset_payload_dir(claude, dist_root)
     for name in [
         ".claude-plugin",
+        ".mcp.json",
         "agents",
         "commands",
         "hooks",

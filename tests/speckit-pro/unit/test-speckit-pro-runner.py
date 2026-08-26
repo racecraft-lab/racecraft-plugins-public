@@ -507,25 +507,37 @@ class RunnerFoundationTests(unittest.TestCase):
             "speckit-pro/.claude-plugin/plugin.json",
             "speckit-pro/.codex-plugin/plugin.json",
         }
-        if release_please_review:
-            for path in forbidden_exact & set(changed):
-                completed = subprocess.run(
-                    ["git", "show", f"origin/main:{path}"],
-                    cwd=REPO_ROOT,
-                    text=True,
-                    capture_output=True,
-                    check=False,
-                )
-                self.assertEqual(completed.returncode, 0, completed.stderr)
-                baseline = json.loads(completed.stdout)
-                current = json.loads((REPO_ROOT / path).read_text(encoding="utf-8"))
-                baseline_version = baseline.pop("version")
-                current_version = current.pop("version")
+        allowed_manifest_fields = {
+            "speckit-pro/.claude-plugin/plugin.json": {},
+            "speckit-pro/.codex-plugin/plugin.json": {
+                "mcpServers": "./.codex-plugin/sweep-mcp.json"
+            },
+        }
+        inherited_release_version = False
+        for path in forbidden_exact & set(changed):
+            completed = subprocess.run(
+                ["git", "show", f"origin/main:{path}"],
+                cwd=REPO_ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            baseline = json.loads(completed.stdout)
+            current = json.loads((REPO_ROOT / path).read_text(encoding="utf-8"))
+            baseline_version = baseline.pop("version")
+            current_version = current.pop("version")
+            expected = {**baseline, **allowed_manifest_fields[path]}
+            self.assertEqual(current, expected, path)
+            inherited_release_version = inherited_release_version or (
+                current_version != baseline_version
+            )
+            if release_please_review:
                 self.assertNotEqual(current_version, baseline_version, path)
-                self.assertEqual(current, baseline, path)
-        else:
-            for path in changed:
-                self.assertNotIn(path, forbidden_exact)
+        # A remediation branch may be cut from an open release-please head and
+        # therefore inherit its version-only release diff under a new branch
+        # name. Keep the release-surface rules bound to content, not naming.
+        release_please_review = release_please_review or inherited_release_version
         forbidden_prefixes = (
             "dist/",
             "speckit-pro/skills/",

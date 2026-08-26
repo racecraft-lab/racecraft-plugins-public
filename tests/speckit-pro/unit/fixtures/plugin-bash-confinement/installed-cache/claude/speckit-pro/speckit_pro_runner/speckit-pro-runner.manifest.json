@@ -3,7 +3,7 @@
   "runner_contract_id": "speckit-pro-runner",
   "selected_runtime_name": "python-stdlib-runner",
   "contract_version": "1.0",
-  "plugin_version": "2.27.0",
+  "plugin_version": "2.28.0",
   "runner_version": "0.1.0",
   "source_revision": "unknown",
   "python_minimum_version": "3.11",
@@ -72,7 +72,7 @@
         "value": "speckit_pro_runner/gates/payloads.py",
         "display": "speckit_pro_runner/gates/payloads.py"
       },
-      "sha256": "5cbef2ebd78b524baf7dc1f69b8b35db42a77452a87de8111186c634fd488a02"
+      "sha256": "7dc5cae0a9d42b0a42faa4db80b3f4a564831fd0b8caa731b6afd4eb22d773f4"
     },
     {
       "path": {
@@ -112,7 +112,7 @@
         "value": "speckit_pro_runner/helpers/install.py",
         "display": "speckit_pro_runner/helpers/install.py"
       },
-      "sha256": "a642c48eb09dd2baea7f62f957656fe28bedd3e6c850b3f3d78a5d275337c91a"
+      "sha256": "72a178c70c6daae5da34e4c28dfb509ca66e89d28f72999e24fd43250d17b154"
     },
     {
       "path": {
@@ -120,7 +120,7 @@
         "value": "speckit_pro_runner/helpers/mutation.py",
         "display": "speckit_pro_runner/helpers/mutation.py"
       },
-      "sha256": "7b2e939bb663f985ece886bcd7ab8310080bd20b13621d98c57f0cdd03ff9e58"
+      "sha256": "1f5728a184a6fcfa817bf75921f56155b8310878eaece61635ac4dd7a7c81182"
     },
     {
       "path": {
@@ -144,7 +144,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "c92597065d937a7afa02822f2690a55a1048cbdd40691237342cf12361f5e8d9"
+      "sha256": "f88efee0d447d04cc741bd9bd1c0eab97cec84e3831a2042c40a4997c0fcf10e"
     },
     {
       "path": {
@@ -152,7 +152,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "f4c42046bc8a040d53cfc05486d5d5a3c2952d933b200f0c10b675c061b8e147"
+      "sha256": "54a2364035c03777b4bbd83c857144aec566d055f71b2cd3c041c09b902a7562"
     },
     {
       "path": {
@@ -185,6 +185,30 @@
         "display": "speckit_pro_runner/runtime.py"
       },
       "sha256": "3cb545c1b202376945f820e039db5e30f80ef411786089901230caf406f1dc91"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/sweep_broker.py",
+        "display": "speckit_pro_runner/sweep_broker.py"
+      },
+      "sha256": "74efc32b9b71d04ea91414713bdba39970b36120354f29b80c5cc262386f9227"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/sweep_isolation.py",
+        "display": "speckit_pro_runner/sweep_isolation.py"
+      },
+      "sha256": "adb1a609e6a4d428691c4f8da1487cb69871c67dc1a68dd3ec8381c8db2eea0b"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/sweep_launcher.py",
+        "display": "speckit_pro_runner/sweep_launcher.py"
+      },
+      "sha256": "bebdf13b1b959ebb6a67230ba7c48088f5615a60429e167a0043892b0a92d6b1"
     }
   ]
 }

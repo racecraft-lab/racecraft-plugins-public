@@ -49,9 +49,10 @@ directly from what it has.
 Subagent definitions that omit `tools:` inherit the operator's full session
 surface and enumerate it directly. Every agent acting on trusted input omits
 it, and for those the plugin pins no availability allowlist. The stated
-exception is the two agents that read reviewer-derived text, `sweep-classifier`
-and `sweep-analyst`: each pins a read-only `tools:` allowlist and so enumerates
-only what that allowlist grants. Capability inheritance is right for an agent
+exception is the two Claude agents that read reviewer-derived text,
+`sweep-classifier` and `sweep-analyst`: each pins exactly the six snapshot
+broker tools and so cannot enumerate anything else. Codex does not install
+those roles and uses its separate permission-scoped launcher. Capability inheritance is right for an agent
 acting on trusted input and wrong for an agent reading text an attacker can
 write (art-008-feedback-sweep FR-008c). User-invocable skills may still declare
 platform-specific authorization metadata, such as Claude Code `allowed-tools`,

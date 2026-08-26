@@ -260,12 +260,17 @@ class ValidatePayloadConformance(unittest.TestCase):
             self.assertTrue(xdesc, "manifest 'description' missing or empty")
 
         codex_plugin_dir = CODEX_ROOT / ".codex-plugin"
-        extra = [path for path in codex_plugin_dir.iterdir() if path.name != "plugin.json"] if codex_plugin_dir.is_dir() else []
-        with self.subTest(msg="[codex] .codex-plugin/ contains ONLY plugin.json"):
+        expected_plugin_files = {"plugin.json", "sweep-mcp.json"}
+        actual_plugin_files = (
+            {path.name for path in codex_plugin_dir.iterdir() if path.is_file()}
+            if codex_plugin_dir.is_dir()
+            else set()
+        )
+        with self.subTest(msg="[codex] .codex-plugin/ contains only the manifest and sweep broker MCP config"):
             self.assertEqual(
-                [],
-                extra,
-                ".codex-plugin/ must contain only plugin.json; found also: " + " ".join(path.as_posix() for path in extra),
+                expected_plugin_files,
+                actual_plugin_files,
+                ".codex-plugin/ must contain exactly plugin.json and sweep-mcp.json",
             )
 
         self.assert_pointers_resolve("codex", manifest, CODEX_ROOT)

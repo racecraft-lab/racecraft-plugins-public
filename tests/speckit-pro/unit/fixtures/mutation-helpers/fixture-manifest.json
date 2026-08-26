@@ -18,6 +18,13 @@
       "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/mutation-helpers/requests/mutation-foundation.json"
     },
     {
+      "helper_id": "sweep-apply-result",
+      "operation": "sweep-apply-result",
+      "modes": ["dry_run", "apply"],
+      "failure_classes": ["invalid_input", "receipt_mutation_refused", "stale_head", "replay", "unsupported_path", "write_failure"],
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/mutation-helpers/requests/sweep-apply-result.json"
+    },
+    {
       "helper_id": "doctor-preflight",
       "operation": "doctor-preflight",
       "modes": ["read_only"],

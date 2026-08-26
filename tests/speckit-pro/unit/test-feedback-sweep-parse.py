@@ -1496,7 +1496,7 @@ class IssuerPrefixRedactionTest(unittest.TestCase):
                 self.assertNotIn(secret, envelope["lines"][0])
 
     def test_no_issuer_prefix_rule_fires_on_prose_that_names_it(self) -> None:
-        for rule, _secret, prose in ISSUER_PREFIX_CASES:
+        for rule, _secret_value, prose in ISSUER_PREFIX_CASES:
             with self.subTest(rule=rule):
                 envelope = self.redact([prose])
                 self.assertEqual(envelope["redactions"], [])

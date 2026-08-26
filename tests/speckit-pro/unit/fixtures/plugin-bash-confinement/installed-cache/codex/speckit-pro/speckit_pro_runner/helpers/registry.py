@@ -7,7 +7,7 @@ from typing import Any
 
 from ..envelope import diagnostic, response
 from .install import CODEX_OPTIONAL_HELPER_NAME, CODEX_REQUIRED_AGENT_NAMES, run_install_helper
-from .mutation import empty_mutation, run_mutation_helper, run_spec_index_write
+from .mutation import empty_mutation, run_mutation_helper, run_spec_index_write, run_sweep_apply_result
 from .pr_emission import run_pr_emission_helper
 from .promotion import promotion_record
 from .read_only import registry_report, run_registered_helper
@@ -210,6 +210,14 @@ HELPERS: dict[str, HelperEntry] = {
         "python_only",
         authoritative_request("sweep-pr-feedback"),
     ),
+    "sweep-isolation-session": HelperEntry(
+        "sweep-isolation-session",
+        "sweep-isolation-session",
+        None,
+        "python_authoritative",
+        "python_only",
+        authoritative_request("sweep-isolation-session"),
+    ),
     "check-artifact-freshness": HelperEntry(
         "check-artifact-freshness",
         "check-artifact-freshness",
@@ -308,6 +316,17 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         "fixture_semantic",
         mutation_authoritative_request("mutation-foundation"),
         ("dry-run-write", "apply-write", "dirty-worktree", "path-escape", "partial-failure"),
+    ),
+    "sweep-apply-result": MutationEntry(
+        "sweep-apply-result",
+        "sweep-apply-result",
+        ("dry_run", "apply"),
+        None,
+        "golden_only",
+        "fixture_semantic",
+        mutation_authoritative_request("sweep-apply-result"),
+        ("receipt-gated-apply", "replay-refusal", "stale-head-refusal"),
+        rollback="Restore the one touched artifact from the amendment commit before retrying.",
     ),
     "doctor-preflight": MutationEntry(
         "doctor-preflight",
@@ -627,6 +646,9 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
 
     if entry.helper_id == "generate-spec-index-write":
         return run_spec_index_write(entry, request)
+
+    if entry.helper_id == "sweep-apply-result":
+        return run_sweep_apply_result(entry, request)
 
     if entry.helper_id in {"doctor-preflight", "doctor-repair", "install-health-repair", "install-codex-agents"}:
         return run_install_helper(entry, request)

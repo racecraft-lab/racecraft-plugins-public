@@ -39,7 +39,18 @@ GROUNDING_MARKER = "grounding.md"
 CAPABILITY_NOTE = "Capability path:"
 
 # Out-of-scope exclusion sets — the ONLY agents allowed to omit the pointer.
-CC_EXCLUSIONS = frozenset({"consensus-synthesizer", "gate-validator", "phase-executor"})
+CC_EXCLUSIONS = frozenset(
+    {
+        "consensus-synthesizer",
+        "gate-validator",
+        "phase-executor",
+        # These two roles are deliberately confined to the snapshot broker and
+        # must return only a receipt. Capability discovery, grounding files,
+        # and evidence-note prose are outside that closed surface.
+        "sweep-analyst",
+        "sweep-classifier",
+    }
+)
 CODEX_EXCLUSIONS = frozenset({"autopilot-fast-helper", "phase-executor"})
 # Approved-equivalent allowlist — currently empty (every in-scope agent references
 # the directive directly). Format when non-empty: "<runtime>:<agent-name>".

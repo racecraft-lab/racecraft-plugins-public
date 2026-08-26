@@ -1,5 +1,51 @@
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/sweep-isolation-hook.py attest sweep-isolation-v1",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/sweep-isolation-hook.py pre-dispatch sweep-isolation-v1",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__plugin_speckit-pro_sweep-broker__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/sweep-isolation-hook.py authorize-broker sweep-isolation-v1",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "sweep-classifier|sweep-analyst",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/sweep-isolation-hook.py validate-stop sweep-isolation-v1",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
     "UserPromptExpansion": [
       {
         "matcher": "^(speckit-pro:|grill-me|speckit\\.|speckit-)",
