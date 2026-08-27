@@ -2736,11 +2736,11 @@
               "transform": "manifest_rewrite"
             },
             {
-              "byte_count": 201,
+              "byte_count": 156,
               "kind": "docs",
               "path": ".codex-plugin/sweep-mcp.json",
               "required": true,
-              "sha256": "eb9e3c2a81f8c8d4335dab1e9e45edf91d05372a3aa4e7abd520cd81d6dc0a16",
+              "sha256": "421fc1aecddd030f216473de97ff5fb6a2ee371f2f8c7eebca521baf1e81eb97",
               "source_path": "speckit-pro/.codex-plugin/sweep-mcp.json",
               "transform": "none"
             },
@@ -4133,11 +4133,11 @@
               "transform": "manifest_rewrite"
             },
             {
-              "byte_count": 201,
+              "byte_count": 156,
               "kind": "docs",
               "path": ".codex-plugin/sweep-mcp.json",
               "required": true,
-              "sha256": "eb9e3c2a81f8c8d4335dab1e9e45edf91d05372a3aa4e7abd520cd81d6dc0a16",
+              "sha256": "421fc1aecddd030f216473de97ff5fb6a2ee371f2f8c7eebca521baf1e81eb97",
               "source_path": "speckit-pro/.codex-plugin/sweep-mcp.json",
               "transform": "none"
             },
@@ -5520,7 +5520,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "8fcc3f96faec7b1a0a7abacb587950c2ff315dc111a7e2d6fcf89bcb7690b80f",
+          "file_tree_hash": "21647bcaae4027dd674ddc3b48316fb7a0fd2becad0c21ca48f655a42286d902",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
