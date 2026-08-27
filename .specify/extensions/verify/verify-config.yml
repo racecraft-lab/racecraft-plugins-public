@@ -1,5 +1,5 @@
 # Verify Extension Configuration
-# Copy this file to verify-config.yml and customize as needed
+# Customize this file as needed (defaults copied from config-template.yml).
 
 # Report formatting
 report:
