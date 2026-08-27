@@ -1059,7 +1059,7 @@ class SurfaceConfinementTests(unittest.TestCase):
         )
         self.assertEqual("python3", server["command"])
         completed = subprocess.run(
-            [sys.executable, *server["args"]],
+            [server["command"], *server["args"]],
             cwd=PLUGIN_ROOT / server["cwd"],
             input="".join(json.dumps(request) + "\n" for request in requests),
             text=True,
