@@ -1,7 +1,6 @@
 ---
 name: speckit-verify-tasks
-description: Verify tasks marked [X] in tasks.md are implemented, not phantom completions
-  (marked done but backed by missing or dead code).
+description: Verify tasks marked [X] in tasks.md are implemented, not phantom completions (marked done but backed by missing or dead code).
 compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
   author: github-spec-kit

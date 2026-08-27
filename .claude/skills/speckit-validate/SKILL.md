@@ -1,7 +1,6 @@
 ---
 name: speckit-validate
-description: Verify spec-to-task traceability and check that completed tasks produced
-  expected files
+description: Verify spec-to-task traceability and check that completed tasks produced expected files
 compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
   author: github-spec-kit

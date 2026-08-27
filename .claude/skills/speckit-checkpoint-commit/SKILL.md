@@ -4,8 +4,12 @@ description: Commit changes at meaningful checkpoints throughout the workflow
 compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
   author: github-spec-kit
-  source: checkpoint:commands/commit.md
+  source: extension:checkpoint
+user-invocable: true
+disable-model-invocation: false
 ---
+
+# Checkpoint Commit Skill
 
 # /speckit.checkpoint.commit
 

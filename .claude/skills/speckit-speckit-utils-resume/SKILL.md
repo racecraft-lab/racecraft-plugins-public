@@ -5,8 +5,12 @@ description: Resume an interrupted session by detecting feature state and sugges
 compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
   author: github-spec-kit
-  source: speckit-utils:commands/resume.md
+  source: extension:speckit-utils
+user-invocable: true
+disable-model-invocation: false
 ---
+
+# Speckit Utils Resume Skill
 
 ## User Input
 

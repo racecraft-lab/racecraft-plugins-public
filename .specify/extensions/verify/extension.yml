@@ -25,11 +25,11 @@ provides:
       description: "Validate implementation matches specification artifacts"
 
   scripts:
-    - name: "load-config.sh"
+    - name: "load-config-bash"
       file: "scripts/bash/load-config.sh"
       description: "Load and validate verify extension configuration"
       executable: true
-    - name: "load-config.ps1"
+    - name: "load-config-powershell"
       file: "scripts/powershell/load-config.ps1"
       description: "Load and validate verify extension configuration"
       executable: true
