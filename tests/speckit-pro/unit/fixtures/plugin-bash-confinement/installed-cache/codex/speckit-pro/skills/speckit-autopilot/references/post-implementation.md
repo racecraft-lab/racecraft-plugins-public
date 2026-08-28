@@ -732,17 +732,29 @@ answers in writing so anyone reviewing the PR sees them.
 
 Immediately after Self-Review and before PR-body generation (between
 `Post: Self-Review` and `Post: PR Body Generation`), the orchestrator records
-UAT runbook status. This row is mandatory, but its deferred capability boundary
-is fail-open. The runner helper `generate-uat-skeleton` is registered as
-deferred for installed workflows, so never invoke it as an active helper.
+UAT runbook status. This row and the generation attempt are mandatory. Invoke
+the registered `generate-uat-skeleton` mutation helper in `dry_run` and then
+`apply` mode with:
 
-Reuse a committed source-derived `<feature-dir>/.process/uat-runbook.md` when
-present. If none exists, log `skipped: generate-uat-skeleton deferred`, mark the
-UAT row skipped with that evidence, and continue to PR-body generation and PR
-creation. Missing deferred output alone never marks the row failed and never
-blocks PR side effects.
+- `spec_path=<feature-dir>/spec.md`
+- `output_path=<feature-dir>/.process/uat-runbook.md`
+- `workflow_file=<current workflow file>` when available
+- `project_commands=<PROJECT_COMMANDS object>`
 
-When the committed runbook exists, **spawn the
+Before `dry_run`, checkpoint the just-recorded Self-Review and UAT-pending state
+by staging only the current workflow and autopilot-state files and committing
+them when that scoped index is non-empty. Do not stage unrelated changes. The
+mutation helper intentionally rejects a dirty worktree, so this checkpoint is
+part of the mandatory generation attempt rather than an optional cleanup.
+
+The helper deterministically overwrites the output from current source inputs;
+do not preserve or synthesize a stale skeleton. If generation returns a failure
+or the output is absent, log `failed-open: generate-uat-skeleton` with the exact
+diagnostic, record the UAT row's fail-open outcome, skip authoring and
+validation, and continue. A genuine generation failure does not block PR side
+effects, but helper promotion status is never a reason to skip the attempt.
+
+When the helper writes the runbook, **spawn the
 `speckit-pro:uat-runbook-author` subagent to rewrite it in place** so the
 runbook reads in plain English and a non-engineer can actually execute it:
 
@@ -783,10 +795,10 @@ actual registered UAT-validation path exists, log
 validation path exists, run that registered validator against the existing
 runbook. If and only if that just-run validator reports the existing runbook
 invalid, STOP before PR-body generation or PR creation and report its
-diagnostics. Missing deferred output is never sent to validation and never
-blocks.
+diagnostics. Missing output after a recorded generation failure is never sent
+to validation and never blocks.
 
-If authoring changed the existing runbook, auto-commit that change:
+If generation or authoring changed the runbook, auto-commit that change:
 
 ```text
 git add <feature-dir>/.process/uat-runbook.md

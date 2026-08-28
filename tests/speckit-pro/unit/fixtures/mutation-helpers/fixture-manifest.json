@@ -53,6 +53,13 @@
       "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/mutation-helpers/requests/generate-pr-body.json"
     },
     {
+      "helper_id": "generate-uat-skeleton",
+      "operation": "generate-uat-skeleton",
+      "modes": ["dry_run", "apply"],
+      "failure_classes": ["invalid_input", "unsupported_path", "write_failure", "dirty_worktree"],
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/mutation-helpers/requests/generate-uat-skeleton.json"
+    },
+    {
       "helper_id": "pr-packet-output",
       "operation": "pr-packet-output",
       "modes": ["dry_run", "apply"],
