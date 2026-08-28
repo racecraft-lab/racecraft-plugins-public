@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.28.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.28.0...speckit-pro-v2.28.1) (2026-08-28)
+
+
+### Bug Fixes
+
+* **speckit-pro:** launch sweep broker from plugin root ([#510](https://github.com/racecraft-lab/racecraft-plugins-public/issues/510)) ([c1b0eac](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c1b0eac652a59758fb1c23145ba1b340c9a941d3))
+* **speckit-pro:** preserve artifact generation across wait timeouts ([#513](https://github.com/racecraft-lab/racecraft-plugins-public/issues/513)) ([681b9dc](https://github.com/racecraft-lab/racecraft-plugins-public/commit/681b9dc55cfa48c51ccf6d974c9308576362d4a5))
+
 ## [2.28.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.27.0...speckit-pro-v2.28.0) (2026-08-25)
 
 
