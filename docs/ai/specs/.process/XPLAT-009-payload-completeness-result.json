@@ -37,7 +37,7 @@
             "kind": "manifest",
             "path": ".claude-plugin/plugin.json",
             "required": true,
-            "sha256": "30404566f628e0166c6ec0735cd91c5b05607995038bd7a2db03acb8db53d63e",
+            "sha256": "359f85d8a3711a31b977a6bc91877f76622c603a2fe20a5f3116cfa82aa593e9",
             "source_path": "speckit-pro/.claude-plugin/plugin.json",
             "transform": "none"
           },
@@ -51,11 +51,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 81672,
+            "byte_count": 82345,
             "kind": "version_metadata",
             "path": "CHANGELOG.md",
             "required": true,
-            "sha256": "ea046769aa8ef9b4104095a9b853a236d3ee0db3c68c5ddca8da44c85ef4b9e0",
+            "sha256": "aaa484fa885a338f373fe19d8b92679642ebe80f258ad31c96007157d2b9b624",
             "source_path": "speckit-pro/CHANGELOG.md",
             "transform": "none"
           },
@@ -1234,7 +1234,7 @@
             "kind": "trust_metadata",
             "path": "speckit_pro_runner/speckit-pro-runner.manifest.json",
             "required": true,
-            "sha256": "438b0adbbb6f46218e497890d611d7818922c8602de6a20361812b2cbc879acc",
+            "sha256": "8389de4a5000c4f0b61596367a89769605dcb67edb6f6f651c5b78d8dd994c9b",
             "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
             "transform": "none"
           },
@@ -1281,7 +1281,7 @@
             "kind": "manifest",
             "path": ".claude-plugin/plugin.json",
             "required": true,
-            "sha256": "30404566f628e0166c6ec0735cd91c5b05607995038bd7a2db03acb8db53d63e",
+            "sha256": "359f85d8a3711a31b977a6bc91877f76622c603a2fe20a5f3116cfa82aa593e9",
             "source_path": "speckit-pro/.claude-plugin/plugin.json",
             "transform": "none"
           },
@@ -1295,11 +1295,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 81672,
+            "byte_count": 82345,
             "kind": "version_metadata",
             "path": "CHANGELOG.md",
             "required": true,
-            "sha256": "ea046769aa8ef9b4104095a9b853a236d3ee0db3c68c5ddca8da44c85ef4b9e0",
+            "sha256": "aaa484fa885a338f373fe19d8b92679642ebe80f258ad31c96007157d2b9b624",
             "source_path": "speckit-pro/CHANGELOG.md",
             "transform": "none"
           },
@@ -2478,7 +2478,7 @@
             "kind": "trust_metadata",
             "path": "speckit_pro_runner/speckit-pro-runner.manifest.json",
             "required": true,
-            "sha256": "438b0adbbb6f46218e497890d611d7818922c8602de6a20361812b2cbc879acc",
+            "sha256": "8389de4a5000c4f0b61596367a89769605dcb67edb6f6f651c5b78d8dd994c9b",
             "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
             "transform": "none"
           },
@@ -2520,13 +2520,13 @@
           }
         ],
         "extra_paths": [],
-        "file_tree_hash": "339db82cac2a2fee043418190eb936317b8954307e79516aa72af2906b8b4ecf",
+        "file_tree_hash": "b4488169dc1f8d5cd5bd502c7b43247d611bd25225610b9e33eb3bb77cebbeb7",
         "generated_root": "dist/claude/speckit-pro",
         "mismatched_paths": [],
         "missing_paths": [],
         "path_leaks": [],
         "payload_surface": "claude",
-        "plugin_version": "2.28.0",
+        "plugin_version": "2.28.1",
         "runner_version": "0.1.0",
         "schema_version": "1.0",
         "script_file_count": 0,
@@ -2540,7 +2540,7 @@
             "kind": "manifest",
             "path": ".codex-plugin/plugin.json",
             "required": true,
-            "sha256": "e0dc7e1f993c08b08699e67c7348ce461f45408b35616ae6358a54cfa3114e2a",
+            "sha256": "a38f8c47bf3e7594e10f603599131df1b9356ff851653e96d83e0019a8f70a42",
             "source_path": "speckit-pro/.codex-plugin/plugin.json",
             "transform": "manifest_rewrite"
           },
@@ -2554,11 +2554,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 81672,
+            "byte_count": 82345,
             "kind": "version_metadata",
             "path": "CHANGELOG.md",
             "required": true,
-            "sha256": "ea046769aa8ef9b4104095a9b853a236d3ee0db3c68c5ddca8da44c85ef4b9e0",
+            "sha256": "aaa484fa885a338f373fe19d8b92679642ebe80f258ad31c96007157d2b9b624",
             "source_path": "speckit-pro/CHANGELOG.md",
             "transform": "none"
           },
@@ -3890,7 +3890,7 @@
             "kind": "trust_metadata",
             "path": "speckit_pro_runner/speckit-pro-runner.manifest.json",
             "required": true,
-            "sha256": "438b0adbbb6f46218e497890d611d7818922c8602de6a20361812b2cbc879acc",
+            "sha256": "8389de4a5000c4f0b61596367a89769605dcb67edb6f6f651c5b78d8dd994c9b",
             "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
             "transform": "none"
           },
@@ -3937,7 +3937,7 @@
             "kind": "manifest",
             "path": ".codex-plugin/plugin.json",
             "required": true,
-            "sha256": "e0dc7e1f993c08b08699e67c7348ce461f45408b35616ae6358a54cfa3114e2a",
+            "sha256": "a38f8c47bf3e7594e10f603599131df1b9356ff851653e96d83e0019a8f70a42",
             "source_path": "speckit-pro/.codex-plugin/plugin.json",
             "transform": "manifest_rewrite"
           },
@@ -3951,11 +3951,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 81672,
+            "byte_count": 82345,
             "kind": "version_metadata",
             "path": "CHANGELOG.md",
             "required": true,
-            "sha256": "ea046769aa8ef9b4104095a9b853a236d3ee0db3c68c5ddca8da44c85ef4b9e0",
+            "sha256": "aaa484fa885a338f373fe19d8b92679642ebe80f258ad31c96007157d2b9b624",
             "source_path": "speckit-pro/CHANGELOG.md",
             "transform": "none"
           },
@@ -5287,7 +5287,7 @@
             "kind": "trust_metadata",
             "path": "speckit_pro_runner/speckit-pro-runner.manifest.json",
             "required": true,
-            "sha256": "438b0adbbb6f46218e497890d611d7818922c8602de6a20361812b2cbc879acc",
+            "sha256": "8389de4a5000c4f0b61596367a89769605dcb67edb6f6f651c5b78d8dd994c9b",
             "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
             "transform": "none"
           },
@@ -5329,13 +5329,13 @@
           }
         ],
         "extra_paths": [],
-        "file_tree_hash": "eb06981f35113e484121e29d4bd5129d5daaaa2b1b4227c15849cb8b10496cef",
+        "file_tree_hash": "e4198d5e82adeb75cd006c30b4ba7f83bed09c99b40ee81071fb486e4e2ba781",
         "generated_root": "dist/codex/speckit-pro",
         "mismatched_paths": [],
         "missing_paths": [],
         "path_leaks": [],
         "payload_surface": "codex",
-        "plugin_version": "2.28.0",
+        "plugin_version": "2.28.1",
         "runner_version": "0.1.0",
         "schema_version": "1.0",
         "script_file_count": 0,
