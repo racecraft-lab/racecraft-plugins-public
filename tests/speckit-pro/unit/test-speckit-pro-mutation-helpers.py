@@ -7333,6 +7333,56 @@ This line must not be copied.
             self.assertEqual([diag["code"] for diag in stderr_records], ["invalid_input"])
             self.assertFalse(missing_output.exists())
 
+    def test_generate_uat_skeleton_rejects_template_symlink_escape(self) -> None:
+        from speckit_pro_runner.helpers import pr_emission
+        from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp, tempfile.TemporaryDirectory() as outside_tmp:
+            spec_path = git_root / "specs" / "trust-boundary" / "spec.md"
+            spec_path.parent.mkdir(parents=True)
+            spec_path.write_text("# Feature Specification: Trust Boundary\n", encoding="utf-8")
+            self.run_git(git_root, "add", "specs/trust-boundary/spec.md")
+            self.run_git(git_root, "commit", "--quiet", "-m", "add trust-boundary spec")
+
+            payload_root = Path(outside_tmp) / "payload"
+            template_link = payload_root / "skills" / "speckit-autopilot" / "templates" / "uat-runbook-template.md"
+            template_link.parent.mkdir(parents=True)
+            outside_template = Path(outside_tmp) / "outside-uat-runbook-template.md"
+            outside_template.write_text("# UNTRUSTED TEMPLATE\n", encoding="utf-8")
+            try:
+                template_link.symlink_to(outside_template)
+            except OSError:
+                self.skipTest("symlink creation is unavailable")
+
+            request = RunnerRequest(
+                request_id="test-generate-uat-skeleton-template-symlink",
+                helper_id="generate-uat-skeleton",
+                operation="generate-uat-skeleton",
+                mode="dry_run",
+                inputs={
+                    "spec_path": "specs/trust-boundary/spec.md",
+                    "output_path": "specs/trust-boundary/.process/uat-runbook.md",
+                },
+            )
+            old_cwd = Path.cwd()
+            os.chdir(git_root)
+            try:
+                with (
+                    patch.object(pr_emission, "UAT_PAYLOAD_ROOT", payload_root),
+                    patch.object(pr_emission, "UAT_TEMPLATE_PATH", template_link),
+                ):
+                    response = pr_emission.generate_uat_skeleton(
+                        MUTATION_HELPERS["generate-uat-skeleton"],
+                        request,
+                    )
+            finally:
+                os.chdir(old_cwd)
+
+        self.assert_response(response, "input_error", 2)
+        self.assertEqual(response["diagnostics"][0]["code"], "invalid_input")
+        self.assertIn("template is unavailable", response["diagnostics"][0]["message"])
+
     def test_unpromoted_helpers_fail_closed_before_dispatch_in_all_mutation_modes(self) -> None:
         cases = [
             (
