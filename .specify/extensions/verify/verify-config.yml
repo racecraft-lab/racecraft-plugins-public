@@ -1,0 +1,7 @@
+# Verify Extension Configuration
+# Customize this file as needed (defaults copied from config-template.yml).
+
+# Report formatting
+report:
+  # Maximum number of findings in the report table (overflow is summarized)
+  max_findings: 50

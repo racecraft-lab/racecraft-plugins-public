@@ -5,8 +5,12 @@ description: Verify spec-to-task traceability and check that completed tasks pro
 compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
   author: github-spec-kit
-  source: speckit-utils:commands/validate.md
+  source: extension:speckit-utils
+user-invocable: true
+disable-model-invocation: false
 ---
+
+# Speckit Utils Validate Skill
 
 ## User Input
 

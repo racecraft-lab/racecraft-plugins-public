@@ -5,8 +5,12 @@ description: Archive merged feature specs into project memory with provenance, s
 compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
   author: github-spec-kit
-  source: archive:commands/archive.md
+  source: extension:archive
+user-invocable: true
+disable-model-invocation: false
 ---
+
+# Archive Run Skill
 
 Act as the **Chief Software Architect**, **Documentation Maintainer**, and
 **release provenance auditor**.

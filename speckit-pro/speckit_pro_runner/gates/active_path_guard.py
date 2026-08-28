@@ -38,6 +38,7 @@ XPLAT_010_CANONICAL_ALLOWLIST_PATHS = frozenset(
         ".specify/scripts/bash/check-prerequisites.sh",
         ".specify/scripts/bash/common.sh",
         ".specify/scripts/bash/create-new-feature.sh",
+        ".specify/scripts/bash/resolve-template.sh",
         ".specify/scripts/bash/setup-plan.sh",
         ".specify/scripts/bash/setup-tasks.sh",
     }
