@@ -750,12 +750,9 @@ detailed procedures in `references/post-implementation.md`:
    Suite and the PR body; findings are recorded in the workflow log and
    reproduced in the PR body. Reporting step — never gates the PR.
 4. **UAT Runbook Generation** — mandatory between Self-Review and the
-   PR body. The runner helper `generate-uat-skeleton` is registered as
-   deferred, so do not invoke it as an active helper. Reuse a committed
-   source-derived runbook when present; otherwise record the UAT skeleton as
-   skipped with deferred-helper evidence, then spawn the
-   `uat-runbook-author` subagent only when a skeleton exists. This is
-   fail-open and must be logged.
+   PR body. Run `generate-uat-skeleton` in apply mode, then spawn
+   `uat-runbook-author`. Log generation or author failures fail-open; never
+   skip because of helper availability.
 5. **3.2 PR Creation** — final verification, then apply the final
    reviewability boundary. The runner helper `final-reviewability-backstop` is
    registered as deferred, so do not invoke it as an active helper; use current
@@ -943,9 +940,10 @@ registered helper or gate operation IDs below.
 - `detect-commands`, `detect-presets`, and `count-markers` — Provide
   deterministic command, preset, and marker evidence through runner-owned
   operation IDs.
-- `generate-uat-skeleton` and `final-reviewability-backstop` — Registered but
-  deferred for installed workflows; follow the deferred guidance above instead
-  of invoking them.
+- `generate-uat-skeleton` — Generate the deterministic source-derived UAT
+  skeleton in `dry_run` or `apply` mode before dispatching the author agent.
+- `final-reviewability-backstop` — Registered but deferred for installed
+  workflows; follow the deferred guidance above instead of invoking it.
 - `relocate-process-artifacts` and `restack` — Registered but deferred with no
   active invocation contract. Do not invoke them or infer capability from
   generic runner plumbing.

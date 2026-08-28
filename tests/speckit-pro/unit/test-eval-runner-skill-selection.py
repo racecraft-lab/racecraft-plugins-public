@@ -432,13 +432,20 @@ def runtime_contract_parity_violations() -> list[str]:
 
 def post_implementation_outcome_violations(bodies: dict[str, str]) -> list[str]:
     required_fragments = {
-        "deferred UAT invocation prohibition": (
-            "the runner helper `generate-uat-skeleton` is registered as deferred",
-            "never invoke it as an active helper",
+        "active UAT generation invocation": (
+            "invoke the registered `generate-uat-skeleton` mutation helper",
+            "`dry_run` and then",
+            "`apply` mode",
         ),
-        "missing UAT fail-open fallback": (
-            "mark the uat row skipped with that evidence, and continue to pr-body generation and pr creation",
-            "missing deferred output alone never marks the row failed and never blocks pr side effects",
+        "clean UAT generation checkpoint": (
+            "checkpoint the just-recorded self-review and uat-pending state",
+            "staging only the current workflow and autopilot-state files",
+            "the mutation helper intentionally rejects a dirty worktree",
+        ),
+        "genuine UAT failure fallback": (
+            "log `failed-open: generate-uat-skeleton` with the exact diagnostic",
+            "a genuine generation failure does not block pr side effects",
+            "helper promotion status is never a reason to skip the attempt",
         ),
         "registered-validator-only blocker": (
             "never invoke `validate-uat-runbook`: that helper is not registered",

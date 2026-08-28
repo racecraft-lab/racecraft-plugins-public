@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-generate-uat-skeleton",
+  "helper_id": "generate-uat-skeleton",
+  "operation": "generate-uat-skeleton",
+  "mode": "dry_run",
+  "inputs": {
+    "spec_path": "tests/speckit-pro/unit/fixtures/mutation-helpers/uat-runbook-source/spec.md",
+    "output_path": "tests/speckit-pro/unit/fixtures/mutation-helpers/uat-runbook-source/.process/uat-runbook.md",
+    "workflow_file": "tests/speckit-pro/unit/fixtures/mutation-helpers/uat-runbook-source/workflow.md",
+    "project_commands": {
+      "BUILD": "python -m build",
+      "UNIT_TEST": "python -m unittest"
+    }
+  }
+}

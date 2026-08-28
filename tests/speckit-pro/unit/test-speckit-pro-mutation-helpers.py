@@ -7133,6 +7133,206 @@ class MutationHelperTests(unittest.TestCase):
         self.assertFalse(response["data"]["writes_state"])
         self.assertFalse(response["data"]["restart_required"])
 
+    def test_generate_uat_skeleton_apply_writes_source_derived_runbook(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            feature_dir = git_root / "specs" / "rdl-004-redline-reply"
+            feature_dir.mkdir(parents=True)
+            (feature_dir / "spec.md").write_text(
+                """# Feature Specification: Redline Reply
+
+## User Scenarios & Testing
+
+### User Story 1 - Reject stale review context (Priority: P1)
+
+The reviewer sees a bounded stale-context error.
+
+### Edge Cases
+
+- A reply arrives after the review thread is resolved.
+
+## Requirements
+
+### Functional Requirements
+
+- **FR-001**: The system MUST reject stale review context.
+
+## Rollback
+
+Revert the reply adapter commit.
+""",
+                encoding="utf-8",
+            )
+            workflow = feature_dir / ".process" / "RDL-004-workflow.md"
+            workflow.parent.mkdir()
+            workflow.write_text(
+                """# Workflow
+
+## Implementation
+
+- Implementation complete; Self-Review is pending.
+""",
+                encoding="utf-8",
+            )
+            self.run_git(git_root, "add", "specs/rdl-004-redline-reply")
+            self.run_git(git_root, "commit", "--quiet", "-m", "add RDL-004 sources")
+
+            workflow.write_text(
+                """# Workflow
+
+## Self-Review
+
+- Confirmed stale review context fails closed.
+
+## Next Section
+
+This line must not be copied.
+""",
+                encoding="utf-8",
+            )
+            inputs = {
+                "spec_path": "specs/rdl-004-redline-reply/spec.md",
+                "output_path": "specs/rdl-004-redline-reply/.process/uat-runbook.md",
+                "workflow_file": "specs/rdl-004-redline-reply/.process/RDL-004-workflow.md",
+                "project_commands": {
+                    "BUILD": "python -m build",
+                    "UNIT_TEST": "python -m unittest",
+                },
+            }
+            completed, response, stderr_records = run_runner(
+                helper_request("generate-uat-skeleton", mode="apply", inputs=inputs),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 1)
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual([diag["code"] for diag in stderr_records], ["dirty_worktree"])
+            self.assertFalse((feature_dir / ".process" / "uat-runbook.md").exists())
+
+            self.run_git(git_root, "add", "specs/rdl-004-redline-reply/.process/RDL-004-workflow.md")
+            self.run_git(git_root, "commit", "--quiet", "-m", "checkpoint Self-Review")
+
+            completed, response, stderr_records = run_runner(
+                helper_request("generate-uat-skeleton", mode="dry_run", inputs=inputs),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 0)
+            self.assert_response(response, "ok", 0)
+            self.assertEqual(stderr_records, [])
+            self.assertEqual(response["data"]["mutation"]["mutation_status"], "planned")
+            self.assertFalse((feature_dir / ".process" / "uat-runbook.md").exists())
+
+            completed, response, stderr_records = run_runner(
+                helper_request("generate-uat-skeleton", mode="apply", inputs=inputs),
+                cwd=git_root,
+            )
+
+            self.assertEqual(completed.returncode, 0)
+            self.assert_response(response, "ok", 0)
+            self.assertEqual(stderr_records, [])
+            mutation = response["data"]["mutation"]
+            self.assertEqual(mutation["mutation_status"], "applied")
+            self.assertEqual(
+                mutation["touched_paths"],
+                ["specs/rdl-004-redline-reply/.process/uat-runbook.md"],
+            )
+            runbook = (feature_dir / ".process" / "uat-runbook.md").read_text(encoding="utf-8")
+            self.assertIn("# UAT Runbook: rdl-004-redline-reply", runbook)
+            self.assertIn("### User Story 1 - Reject stale review context", runbook)
+            self.assertIn("A reply arrives after the review thread is resolved.", runbook)
+            self.assertIn("Confirmed stale review context fails closed.", runbook)
+            self.assertNotIn("This line must not be copied.", runbook)
+            self.assertIn("`python -m build`", runbook)
+            self.assertIn("Revert the reply adapter commit.", runbook)
+
+            self.run_git(git_root, "add", "specs/rdl-004-redline-reply/.process/uat-runbook.md")
+            self.run_git(git_root, "commit", "--quiet", "-m", "add generated UAT runbook")
+            (feature_dir / ".process" / "uat-runbook.md").write_text(
+                "HAND_EDITED_SENTINEL\n",
+                encoding="utf-8",
+            )
+            self.run_git(git_root, "add", "specs/rdl-004-redline-reply/.process/uat-runbook.md")
+            self.run_git(git_root, "commit", "--quiet", "-m", "replace generated UAT runbook")
+
+            completed, response, stderr_records = run_runner(
+                helper_request("generate-uat-skeleton", mode="apply", inputs=inputs),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 0)
+            self.assert_response(response, "ok", 0)
+            self.assertEqual(stderr_records, [])
+            self.assertEqual(
+                (feature_dir / ".process" / "uat-runbook.md").read_text(encoding="utf-8"),
+                runbook,
+            )
+
+    def test_generate_uat_skeleton_handles_zero_stories_and_missing_spec(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            feature_dir = git_root / "specs" / "infra-only"
+            feature_dir.mkdir(parents=True)
+            (feature_dir / "spec.md").write_text(
+                """# Feature Specification: Infra Only
+
+### Functional Requirements
+
+- **FR-001**: Keep the first requirement.
+- **FR-001**: Drop the duplicate requirement.
+- **FR-002**: Choose a timeout [NEEDS CLARIFICATION: which value?].
+
+### Measurable Outcomes
+
+- **SC-001**: The check blocks every unsafe change.
+""",
+                encoding="utf-8",
+            )
+            self.run_git(git_root, "add", "specs/infra-only/spec.md")
+            self.run_git(git_root, "commit", "--quiet", "-m", "add zero-story spec")
+
+            output = feature_dir / ".process" / "uat-runbook.md"
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "generate-uat-skeleton",
+                    mode="apply",
+                    inputs={
+                        "spec_path": "specs/infra-only/spec.md",
+                        "output_path": "specs/infra-only/.process/uat-runbook.md",
+                        "project_commands": {"LINT": "N/A"},
+                    },
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 0)
+            self.assert_response(response, "ok", 0)
+            self.assertEqual(stderr_records, [])
+            runbook = output.read_text(encoding="utf-8")
+            self.assertIn("no user stories", runbook)
+            self.assertIn("FR-keyed Acceptance Tests", runbook)
+            self.assertIn("SC-keyed Acceptance Tests", runbook)
+            self.assertEqual(runbook.count("FR-001"), 1)
+            self.assertNotIn("Drop the duplicate requirement", runbook)
+            self.assertIn("unresolved clarification", runbook)
+            self.assertIn("not available for this project", runbook)
+            self.assertEqual(response["data"]["duplicate_requirement_ids"], ["FR-001"])
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            missing_output = git_root / "specs" / "missing" / ".process" / "uat-runbook.md"
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "generate-uat-skeleton",
+                    mode="apply",
+                    inputs={
+                        "spec_path": "specs/missing/spec.md",
+                        "output_path": "specs/missing/.process/uat-runbook.md",
+                    },
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 2)
+            self.assert_response(response, "input_error", 2)
+            self.assertEqual([diag["code"] for diag in stderr_records], ["invalid_input"])
+            self.assertFalse(missing_output.exists())
+
     def test_unpromoted_helpers_fail_closed_before_dispatch_in_all_mutation_modes(self) -> None:
         cases = [
             (
@@ -7147,14 +7347,6 @@ class MutationHelperTests(unittest.TestCase):
                             "content": "generic dispatch must not write\n",
                         }
                     ]
-                },
-            ),
-            (
-                "generate-uat-skeleton",
-                "deferred",
-                {
-                    "output_path": "generated/adversarial.md",
-                    "content": "PR-emission dispatch must not write\n",
                 },
             ),
             (
@@ -8703,18 +8895,6 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(completed.returncode, 1)
             self.assert_response(response, "expected_failure", 1)
             self.assertEqual([diag["code"] for diag in stderr_records], ["deferred_live_mutation"])
-            mutation = response["data"]["mutation"]
-            self.assertEqual(mutation["mutation_status"], "blocked")
-            self.assertEqual(mutation["applied_operations"], [])
-            self.assertFalse(mutation["live_mutation"])
-
-            completed, response, stderr_records = run_runner(
-                helper_request("generate-uat-skeleton", mode="apply", inputs={}),
-                cwd=git_root,
-            )
-            self.assertEqual(completed.returncode, 1)
-            self.assert_response(response, "expected_failure", 1)
-            self.assertEqual([diag["code"] for diag in stderr_records], ["helper_not_promoted"])
             mutation = response["data"]["mutation"]
             self.assertEqual(mutation["mutation_status"], "blocked")
             self.assertEqual(mutation["applied_operations"], [])

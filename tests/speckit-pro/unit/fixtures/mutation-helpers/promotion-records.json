@@ -43,6 +43,14 @@
       "rollback": "Retry the registered generate-pr-body operation in dry_run mode before applying again."
     },
     {
+      "helper_id": "generate-uat-skeleton",
+      "promotion_status": "golden_only",
+      "fixture_ids": ["generate-uat-skeleton-apply"],
+      "bash_reference_ids": ["generate-uat-skeleton"],
+      "authoritative_python_command": "python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py",
+      "rollback": "Retry the registered generate-uat-skeleton operation in dry_run mode before applying again."
+    },
+    {
       "helper_id": "pr-packet-output",
       "promotion_status": "golden_only",
       "fixture_ids": ["pr-packet-output-apply"],

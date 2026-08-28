@@ -969,12 +969,9 @@ procedures in [post-implementation-codex.md](./references/post-implementation-co
    Suite and the PR body; findings are recorded in the workflow log and
    reproduced in the PR body. Reporting step — never gates the PR.
 3. **UAT Runbook Generation** — mandatory between Self-Review and the
-   PR body. The runner helper `generate-uat-skeleton` is registered as
-   deferred, so do not invoke it as an active helper. Reuse a committed
-   source-derived runbook when present; otherwise record the UAT skeleton as
-   skipped with deferred-helper evidence, then `spawn_agent` the
-   `uat-runbook-author` agent only when a skeleton exists. This is fail-open
-   and must be logged.
+   PR body. Run `generate-uat-skeleton` in apply mode, then `spawn_agent`
+   `uat-runbook-author`. Log generation or author failures fail-open; never
+   skip because of helper availability.
 4. **3.2 PR Creation** — final verification, then apply the final
    reviewability boundary. The runner helper `final-reviewability-backstop` is
    registered as deferred, so do not invoke it as an active helper; use current
@@ -1147,8 +1144,9 @@ registered helper or gate operation IDs below.
 - `install-codex-agents` — Content-aware Codex agent refresh used in `dry_run`
   mode during preflight; apply only through `$install`, followed by a Codex
   restart.
-- `generate-uat-skeleton`, `final-reviewability-backstop`, and
-  `detect-stack-manager-plan` — Registered
+- `generate-uat-skeleton` — Generate the deterministic source-derived UAT
+  skeleton in `dry_run` or `apply` mode before dispatching the author agent.
+- `final-reviewability-backstop` and `detect-stack-manager-plan` — Registered
   but not active helper calls for installed workflows; follow the deferred or
   out-of-scope guidance above instead of invoking them.
 - `relocate-process-artifacts` and `restack` — Registered but deferred with no
