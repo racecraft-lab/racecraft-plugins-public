@@ -34,8 +34,9 @@ SOURCE_FEATURE_PATTERN = re.compile(rf"^specs/(?P<feature>{PACKET_SLUG})$")
 PACKET_PATH_PATTERN = re.compile(
     rf"^(?P<source_feature_dir>specs/{PACKET_SLUG})/\.process/pr-packets/(?P<packet_id>{PACKET_SLUG})\.json$"
 )
+UAT_PAYLOAD_ROOT = Path(__file__).resolve().parents[2]
 UAT_TEMPLATE_PATH = (
-    Path(__file__).resolve().parents[2]
+    UAT_PAYLOAD_ROOT
     / "skills"
     / "speckit-autopilot"
     / "templates"
@@ -108,7 +109,7 @@ def generate_uat_skeleton(entry: Any, request: Any) -> dict[str, Any]:
     elif not all(isinstance(key, str) and isinstance(value, str) for key, value in project_commands.items()):
         return input_error(request, "project_commands must map string command names to string values")
 
-    template = trusted_text(UAT_TEMPLATE_PATH)
+    template = trusted_text(UAT_TEMPLATE_PATH, UAT_PAYLOAD_ROOT)
     if template is None:
         return input_error(request, "the installed UAT runbook template is unavailable")
 
