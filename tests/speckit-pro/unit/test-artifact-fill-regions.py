@@ -116,6 +116,16 @@ class ArtifactAuthorPublishLastContractTests(unittest.TestCase):
         "a surviving invalid file is the same artifact-integrity failure",
     )
 
+    REQUIRED_CODEX_WAIT_LIFECYCLE = (
+        "Bounded describes each wait call, not the lifetime of the worker",
+        "`wait_agent` timeout is one bounded mailbox poll",
+        "not an artifact-generation deadline",
+        "declares no aggregate wall-clock deadline or poll-count limit",
+        "Never synthesize loop exhaustion from an improvised number of polls or elapsed-time cutoff",
+        "never interrupt the worker for crossing one",
+        "A running worker whose latest bounded poll timed out is explicitly not in this set",
+    )
+
     def test_claude_and_codex_agents_publish_only_finished_pages(self) -> None:
         claude_instructions = CLAUDE_ARTIFACT_AUTHOR.read_text(encoding="utf-8")
         codex_instructions = tomllib.loads(
@@ -141,6 +151,13 @@ class ArtifactAuthorPublishLastContractTests(unittest.TestCase):
                 normalized = " ".join(instructions.split())
                 for required in self.REQUIRED_RECONCILIATION:
                     self.assertIn(required, normalized)
+
+    def test_codex_orchestrator_does_not_turn_poll_timeouts_into_artifact_gaps(self) -> None:
+        instructions = CODEX_PHASE_EXECUTION.read_text(encoding="utf-8")
+        normalized = " ".join(instructions.split())
+
+        for required in self.REQUIRED_CODEX_WAIT_LIFECYCLE:
+            self.assertIn(required, normalized)
 
 
 # ---------------------------------------------------------------------------

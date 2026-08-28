@@ -197,9 +197,9 @@ session or operator-directed continuation must not turn a stale or bypassed
 binding into a normal fail-open page outcome.
 
 Step 1 is a single `spawn_agent` call on the installed `artifact-author` agent,
-followed by a bounded `wait_agent` loop that runs until its outcome list
-arrives. The agent receives the feature's planning record and the shipped
-gallery, and answers with one outcome per page it wrote or could not write:
+followed by repeated bounded `wait_agent` polls until its outcome list arrives.
+The agent receives the feature's planning record and the shipped gallery, and
+answers with one outcome per page it wrote or could not write:
 
 ```text
 spawn_agent("artifact-author", prompt="""
@@ -226,6 +226,16 @@ wait_agent(...)
 
 Name the agent by its bare installed name. Codex resolves it from the installed
 agent bundle, so it carries no namespace prefix.
+
+**Bounded describes each wait call, not the lifetime of the worker.** A
+`wait_agent` timeout is one bounded mailbox poll, not an artifact-generation
+deadline or evidence that the worker is stuck. This phase declares no aggregate
+wall-clock deadline or poll-count limit. While the worker is still running,
+continue bounded waits and consume its actual result. Never synthesize loop
+exhaustion from an improvised number of polls or elapsed-time cutoff, and never
+interrupt the worker for crossing one. A separately declared execution deadline
+or confirmed no-progress condition may use the recovery lifecycle in the parent
+skill; absent that evidence, a poll timeout is non-terminal.
 
 **The orchestrator supplies no page list — the agent selects from the
 manifest.** It reads `speckit-pro/artifact-gallery/manifest.json`, discards
@@ -255,15 +265,17 @@ sinks defined under fail-open below, which decide where each outcome is recorded
 and which runs record it. This step supplies the outcomes and nothing more.
 
 **A dispatch that never delivers a readable result is a whole-set gap rather
-than a failed step.** An agent that errors, a bounded `wait_agent` loop that
-exhausts without a result, and a reply that cannot be read as an outcome list
-all land the same way: zero generated pages, and one whole-set gap carrying that
-reason. The precondition rule above governs the steps that halt the sequence,
-and generation is not among them, because fail-open below converts every
-shortfall this step can produce into an outcome. This applies only after the
-workflow-binding precondition passed; a drifted or non-executable binding never
-reaches the dispatch and cannot be downgraded to a whole-set gap. Step 2 runs
-regardless of content-generation outcomes.
+than a failed step.** An agent that reaches a terminal error, remains terminal
+without a result after mailbox drain and lifecycle recovery, or replies with
+something that cannot be read as an outcome list lands the same way: zero
+generated pages, and one whole-set gap carrying that reason. A running worker
+whose latest bounded poll timed out is explicitly not in this set. The
+precondition rule above governs the steps that halt the sequence, and generation
+is not among them, because fail-open below converts every shortfall this step can
+produce into an outcome. This applies only after the workflow-binding
+precondition passed; a drifted or non-executable binding never reaches the
+dispatch and cannot be downgraded to a whole-set gap. Step 2 runs regardless of
+content-generation outcomes.
 
 **A truncated reply is not a clean one.** An agent that exhausts its budget
 mid-summary returns a fragment, and a fragment carrying fewer than one outcome
