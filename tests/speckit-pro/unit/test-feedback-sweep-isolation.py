@@ -1028,7 +1028,8 @@ class SurfaceConfinementTests(unittest.TestCase):
         )
         codex_server = codex_mcp["mcpServers"]["sweep-broker"]
         self.assertEqual(["-m", "speckit_pro_runner.sweep_broker"], codex_server["args"])
-        self.assertEqual("${PLUGIN_ROOT}", codex_server["env"]["PYTHONPATH"])
+        self.assertEqual(".", codex_server["cwd"])
+        self.assertNotIn("env", codex_server)
         self.assertEqual(
             codex_mcp,
             json.loads(
@@ -1040,6 +1041,40 @@ class SurfaceConfinementTests(unittest.TestCase):
         )
         self.assertTrue(
             (PLUGIN_ROOT / "speckit_pro_runner/contracts/sweep-receipt-output.schema.json").is_file()
+        )
+
+    def test_codex_mcp_manifest_completes_a_stdio_handshake_without_pythonpath(self) -> None:
+        manifest = json.loads(
+            (PLUGIN_ROOT / ".codex-plugin/sweep-mcp.json").read_text(encoding="utf-8")
+        )
+        server = manifest["mcpServers"]["sweep-broker"]
+        requests = (
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {"protocolVersion": "2025-06-18", "capabilities": {}},
+            },
+            {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
+        )
+        self.assertEqual("python3", server["command"])
+        completed = subprocess.run(
+            ["python3", *server["args"]],
+            cwd=PLUGIN_ROOT / server["cwd"],
+            input="".join(json.dumps(request) + "\n" for request in requests),
+            text=True,
+            capture_output=True,
+            check=False,
+            env={"PATH": os.environ.get("PATH", ""), "PYTHONDONTWRITEBYTECODE": "1"},
+        )
+
+        self.assertEqual(0, completed.returncode, completed.stderr)
+        self.assertEqual("", completed.stderr)
+        responses = [json.loads(line) for line in completed.stdout.splitlines()]
+        self.assertEqual("speckit-pro-sweep-broker", responses[0]["result"]["serverInfo"]["name"])
+        self.assertEqual(
+            set(sweep_broker.BROKER_TOOL_NAMES),
+            {tool["name"] for tool in responses[1]["result"]["tools"]},
         )
 
     def test_runner_registers_private_capture_accept_launch_and_receipt_apply(self) -> None:
