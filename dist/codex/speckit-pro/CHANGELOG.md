@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.28.2](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.28.1...speckit-pro-v2.28.2) (2026-08-28)
+
+
+### Bug Fixes
+
+* **speckit-pro:** restore automatic UAT runbook generation ([#514](https://github.com/racecraft-lab/racecraft-plugins-public/issues/514)) ([a388256](https://github.com/racecraft-lab/racecraft-plugins-public/commit/a3882560451b86e1c39b8b1812ff4a0bd28f8933))
+
 ## [2.28.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.28.0...speckit-pro-v2.28.1) (2026-08-28)
 
 
