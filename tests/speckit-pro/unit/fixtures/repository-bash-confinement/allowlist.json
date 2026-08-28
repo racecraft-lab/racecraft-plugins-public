@@ -59,6 +59,13 @@
       "release_readiness_excluded": true
     },
     {
+      "path": ".specify/scripts/bash/resolve-template.sh",
+      "categories": ["script_file"],
+      "reason": "Vendored upstream Spec Kit repository helper.",
+      "scope": "vendored_specify_helper",
+      "release_readiness_excluded": true
+    },
+    {
       "path": ".specify/scripts/bash/setup-plan.sh",
       "categories": ["script_file"],
       "reason": "Vendored upstream Spec Kit repository helper.",

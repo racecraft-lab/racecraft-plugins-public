@@ -62,7 +62,7 @@
       "required": ["path", "entry_count", "release_readiness_excluded"],
       "properties": {
         "path": { "type": "string", "minLength": 1 },
-        "entry_count": { "type": "integer", "minimum": 0, "maximum": 10 },
+        "entry_count": { "type": "integer", "minimum": 0, "maximum": 11 },
         "release_readiness_excluded": {
           "type": "boolean",
           "description": "True iff a loaded allowlist exists and every entry carries release_readiness_excluded: true."

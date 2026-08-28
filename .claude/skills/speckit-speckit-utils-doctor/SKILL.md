@@ -5,8 +5,12 @@ description: 'Validate project health: templates, agent config, Python runner/he
 compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
   author: github-spec-kit
-  source: speckit-utils:commands/doctor.md
+  source: extension:speckit-utils
+user-invocable: true
+disable-model-invocation: false
 ---
+
+# Speckit Utils Doctor Skill
 
 ## User Input
 

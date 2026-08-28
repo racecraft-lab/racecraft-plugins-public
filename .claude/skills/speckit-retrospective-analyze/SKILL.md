@@ -5,8 +5,12 @@ description: Perform a post-implementation retrospective analysis measuring spec
 compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
   author: github-spec-kit
-  source: retrospective:commands/retrospective.md
+  source: extension:retrospective
+user-invocable: true
+disable-model-invocation: false
 ---
+
+# Retrospective Analyze Skill
 
 ## User Input
 
