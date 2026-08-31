@@ -41,13 +41,16 @@ checkout.
 4. On `relation=external`, STOP before Archive Sweep and report:
 
    ```text
-   STOP: Workflow worktree is outside the current task workspace. Use Codex Handoff to move this task to <workflow_root>, then run $speckit-autopilot <workflow_file>. If Handoff is unavailable, reopen Codex at <workflow_root>.
+   STOP: Workflow worktree is outside the current task workspace. Open a new Codex task rooted at <workflow_root>, then rerun the exact absolute workflow command with the original stage flags: $speckit-autopilot <workflow_file> <original-arguments>.
    ```
 
    This is also the recovery for a sibling worktree or a scaffold created with
-   an explicit external worktree-root override. OpenAI documents worktrees as
-   separate checkouts and Handoff as the supported way to move a task between
-   Local and Worktree contexts:
+   an explicit external worktree-root override. Preserve the canonical absolute
+   `workflow_file` and every original stage or resume flag exactly; do not
+   shorten the path or invent replacement arguments. OpenAI documents worktrees
+   as separate checkouts and Handoff as movement between Local and a task's
+   associated worktree, including returning to that same associated worktree,
+   not as an arbitrary filesystem-path selector:
    <https://learn.chatgpt.com/docs/environments/git-worktrees>.
 5. From `WORKFLOW_ROOT`, verify the live branch before Archive Sweep. STOP on
    `main`, a detached HEAD, or any protected integration/release branch; never

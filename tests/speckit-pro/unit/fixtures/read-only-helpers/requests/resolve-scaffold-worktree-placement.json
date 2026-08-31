@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-resolve-scaffold-worktree-placement",
+  "helper_id": "resolve-scaffold-worktree-placement",
+  "operation": "resolve-scaffold-worktree-placement",
+  "mode": "read_only",
+  "inputs": {
+    "branch_name": "test-scaffold-placement"
+  }
+}

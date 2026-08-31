@@ -174,6 +174,28 @@ class ValidateCodexSkills(unittest.TestCase):
                         "expected blind-spot dispatch to select codebase-analyst with an explicit isolated fork",
                     )
 
+                with self.subTest(msg="speckit-scaffold-spec: placement is task-root-bound before mutation"):
+                    self.assertTrue(
+                        "resolve-scaffold-worktree-placement" in content
+                        and "Before `git worktree add` or any artifact or roadmap write" in content
+                        and "`TASK_ROOT/.worktrees/<branch-name>`" in content
+                        and "Never derive worktree placement from" in content
+                        and "`git rev-parse --git-common-dir`" in content
+                        and "the primary checkout, or the first" in content
+                        and "`placement_status=resolved`" in content
+                        and "`relation=same` or `relation=descendant`" in content,
+                        "expected scaffold to resolve task-root placement before any mutation",
+                    )
+
+                with self.subTest(msg="speckit-scaffold-spec: placement is revalidated before bootstrap"):
+                    self.assertTrue(
+                        "Re-run `resolve-scaffold-worktree-placement` after" in content
+                        and "worktree creation and again before bootstrap or Grill Me" in content
+                        and "`disposition=reuse`" in content
+                        and "before bootstrap or Grill Me" in content,
+                        "expected scaffold to revalidate the identical registered root before bootstrap",
+                    )
+
             body = _body(lines)
             with self.subTest(msg=f"{skill}: body word count between 500 and 8000"):
                 word_count = len(body.split())
@@ -348,6 +370,16 @@ class ValidateCodexSkills(unittest.TestCase):
                 and "validate-agent-install" not in prerequisites
                 and "--autoheal" not in prerequisites,
                 "expected read-only installer dry-run preflight and install/restart fail-closed guidance",
+            )
+
+        with self.subTest(msg="speckit-autopilot: external recovery opens a correctly rooted task"):
+            prerequisites = _read(skill_dir / "references" / "prerequisites-codex.md")
+            self.assertTrue(
+                "Open a new Codex task rooted at <workflow_root>" in prerequisites
+                and "exact absolute workflow command" in prerequisites
+                and "original stage flags" in prerequisites
+                and "Use Codex Handoff to move this task to" not in prerequisites,
+                "expected fail-closed external recovery without arbitrary-path Handoff claims",
             )
 
         with self.subTest(msg="speckit-autopilot: documents the optional Luna helper"):
