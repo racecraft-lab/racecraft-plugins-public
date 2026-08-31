@@ -2471,6 +2471,20 @@ class ReadOnlyHelperTests(unittest.TestCase):
         self.assertEqual(record["partial_resume"]["strategy"], "fresh_retry_once")
         self.assertFalse(record["native_fallback"]["supported"])
         self.assertFalse(record["cache_ttl"]["client_supported"])
+        self.assertFalse(record["auto_memory"]["enabled"])
+
+        numeric_override = resolve_claude_subagent_runtime(
+            {
+                "client_version": "2.1.251",
+                "execution_mode": "interactive",
+                "max_concurrent_subagents": 3,
+                "max_subagent_spawn_depth": 2,
+            },
+            REPO_ROOT,
+        )
+        record = json.loads(numeric_override["stdout"])
+        self.assertEqual(record["concurrency"], {"limit": 3, "wave_size": 2, "source": "environment_override"})
+        self.assertEqual(record["spawn_depth"], {"limit": 2, "source": "environment_override"})
 
         invalid_override = resolve_claude_subagent_runtime(
             {
@@ -2483,6 +2497,17 @@ class ReadOnlyHelperTests(unittest.TestCase):
         record = json.loads(invalid_override["stdout"])
         self.assertEqual(record["concurrency"], {"limit": 1, "wave_size": 1, "source": "invalid_environment_override"})
         self.assertTrue(any("MAX_CONCURRENT_SUBAGENTS" in warning for warning in record["warnings"]))
+
+        boolean_override = resolve_claude_subagent_runtime(
+            {
+                "client_version": "2.1.251",
+                "execution_mode": "interactive",
+                "max_concurrent_subagents": True,
+            },
+            REPO_ROOT,
+        )
+        record = json.loads(boolean_override["stdout"])
+        self.assertEqual(record["concurrency"], {"limit": 1, "wave_size": 1, "source": "invalid_environment_override"})
 
     def test_claude_subagent_runtime_rejects_unknown_execution_mode(self) -> None:
         if self.helper_filter and self.helper_filter != "resolve-claude-subagent-runtime":

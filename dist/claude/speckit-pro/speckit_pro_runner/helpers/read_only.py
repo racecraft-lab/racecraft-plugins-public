@@ -1728,9 +1728,14 @@ def _claude_client_version(raw: Any) -> tuple[str, tuple[int, int, int]] | None:
 def _positive_runtime_limit(raw: Any) -> int | None:
     if raw is None:
         return None
-    if not isinstance(raw, str) or not raw.isdigit() or int(raw) <= 0:
+    if isinstance(raw, bool):
         return -1
-    return int(raw)
+    if isinstance(raw, int):
+        return raw if raw > 0 else -1
+    if not isinstance(raw, str) or not raw.isdigit():
+        return -1
+    value = int(raw)
+    return value if value > 0 else -1
 
 
 def resolve_claude_subagent_runtime(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
@@ -1848,7 +1853,7 @@ def resolve_claude_subagent_runtime(inputs: dict[str, Any], repo_root: Path) -> 
             "contract_verified": team_contract_verified,
             "reason": "available" if teams_available else "; ".join(team_reasons),
         },
-        "auto_memory": {"enabled": bool(inputs.get("auto_memory_enabled", True))},
+        "auto_memory": {"enabled": bool(inputs.get("auto_memory_enabled", False))},
         "warnings": warnings,
     }
     return make_result(json_text(record))
