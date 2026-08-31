@@ -15,8 +15,8 @@ Usage:
                               [--model MODEL] [--threshold 0.5]
 
 Examples:
-  # Smoke test: 3 queries, 1 run each, minimal reasoning
-  run_codex_evals.py grill-me --limit 3 --runs 1 --reasoning minimal
+  # Smoke test: 3 queries, 1 run each, low reasoning
+  run_codex_evals.py grill-me --limit 3 --runs 1 --reasoning low
 
   # Full eval (slow, costs LLM tokens)
   run_codex_evals.py speckit-coach --runs 3
@@ -39,6 +39,7 @@ import uuid
 # Tests live at <repo>/tests/speckit-pro/; the plugin is the sibling <repo>/speckit-pro/.
 TESTS_ROOT = pathlib.Path(__file__).resolve().parents[1]      # <repo>/tests/speckit-pro
 PLUGIN_ROOT = TESTS_ROOT.parents[1] / "speckit-pro"           # <repo>/speckit-pro
+DEFAULT_REASONING_EFFORT = "low"
 
 
 def setup_isolated_codex_home() -> pathlib.Path:
@@ -158,7 +159,11 @@ def main() -> int:
     ap.add_argument("skill", help="Codex skill name (looked up under codex-skills/)")
     ap.add_argument("--runs", type=int, default=3, help="Trials per query (default 3)")
     ap.add_argument("--limit", type=int, help="Only run the first N queries from the eval set")
-    ap.add_argument("--reasoning", default="minimal", help="codex model_reasoning_effort (default: minimal)")
+    ap.add_argument(
+        "--reasoning",
+        default=DEFAULT_REASONING_EFFORT,
+        help=f"codex model_reasoning_effort (default: {DEFAULT_REASONING_EFFORT})",
+    )
     ap.add_argument("--model", help="Override codex model id")
     ap.add_argument("--threshold", type=float, default=0.5, help="Trigger-rate threshold for pass (default 0.5)")
     ap.add_argument("--timeout", type=int, default=180, help="Per-query timeout seconds (default 180)")

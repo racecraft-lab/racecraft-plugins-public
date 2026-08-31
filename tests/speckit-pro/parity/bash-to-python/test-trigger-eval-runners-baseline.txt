@@ -24,4 +24,5 @@
 024 Layer-2 command argv contains no hard-coded python3 token
 025 Layer-2 runners never enable shell=True
 026 Layer-2 runners never call os.system
-TOTAL: 26
+027 Codex trigger engine defaults to supported low reasoning
+TOTAL: 27

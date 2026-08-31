@@ -25,6 +25,7 @@ TESTS_ROOT = REPO_ROOT / "tests" / "speckit-pro"
 LAYER2 = TESTS_ROOT / "layer2-trigger"
 CLAUDE_RUNNER = LAYER2 / "run-trigger-evals.py"
 CODEX_RUNNER = LAYER2 / "run-trigger-evals-codex.py"
+CODEX_ENGINE = LAYER2 / "run_codex_evals.py"
 LOOP_RUNNER = LAYER2 / "run-trigger-loop.py"
 BASELINE = TESTS_ROOT / "parity" / "bash-to-python" / "test-trigger-eval-runners-baseline.txt"
 SHARED_LIB = TESTS_ROOT / "lib"
@@ -62,6 +63,7 @@ CURRENT_INVENTORY = [
     "Layer-2 command argv contains no hard-coded python3 token",
     "Layer-2 runners never enable shell=True",
     "Layer-2 runners never call os.system",
+    "Codex trigger engine defaults to supported low reasoning",
 ]
 
 
@@ -153,8 +155,9 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
     def test_layer2_trigger_runner_contracts(self) -> None:
         claude = import_script(CLAUDE_RUNNER, "xplat010_layer2_claude_runner")
         codex = import_script(CODEX_RUNNER, "xplat010_layer2_codex_runner")
+        codex_engine = import_script(CODEX_ENGINE, "xplat010_layer2_codex_engine")
         loop = import_script(LOOP_RUNNER, "xplat010_layer2_loop_runner")
-        source_paths = (CLAUDE_RUNNER, CODEX_RUNNER, LOOP_RUNNER)
+        source_paths = (CLAUDE_RUNNER, CODEX_RUNNER, CODEX_ENGINE, LOOP_RUNNER)
 
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -472,6 +475,10 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 (
                     CURRENT_INVENTORY[25],
                     lambda: self.assertFalse(any(calls_os_system(path) for path in source_paths)),
+                ),
+                (
+                    CURRENT_INVENTORY[26],
+                    lambda: self.assertEqual(codex_engine.DEFAULT_REASONING_EFFORT, "low"),
                 ),
             ]
 
