@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -56,6 +57,7 @@ EXPECTED_HELPERS = [
     "helper-registry-dispatch",
     "check-prerequisites",
     "resolve-workflow-binding",
+    "resolve-scaffold-worktree-placement",
     "detect-commands",
     "detect-presets",
     "count-markers",
@@ -92,6 +94,7 @@ JSON_STDOUT_PARITY_HELPERS = {"atomicity-route"}
 NO_BASH_ANCESTOR = (
     "helper-registry-dispatch",
     "resolve-workflow-binding",
+    "resolve-scaffold-worktree-placement",
     "resolve-autopilot-stage",
     "resolve-claude-subagent-runtime",
     "sweep-pr-feedback",
@@ -102,6 +105,7 @@ NO_BASH_ANCESTOR = (
 HELPER_CASES: dict[str, dict[str, object]] = {
     "check-prerequisites": {"workflow_file": WORKFLOW_FILE},
     "resolve-workflow-binding": {"workflow_file": AUTOPILOT_STAGE_WORKFLOW_FILE},
+    "resolve-scaffold-worktree-placement": {"branch_name": "test-scaffold-placement"},
     "detect-commands": {},
     "detect-presets": {},
     "count-markers": {"type": "all", "feature_dir": FEATURE_DIR},
@@ -310,6 +314,78 @@ class ReadOnlyHelperTests(unittest.TestCase):
         from speckit_pro_runner.helpers.read_only import resolve_workflow_binding
 
         result = resolve_workflow_binding({"workflow_file": workflow_file}, task_root)
+        return json.loads(result["stdout"]), int(result["exit_code"])
+
+    def build_scaffold_placement_worktrees(
+        self,
+        base: Path,
+        *,
+        ignore_worktrees: bool = True,
+    ) -> tuple[Path, Path]:
+        primary_root = base / "Documents" / "Projects" / "racecraft-plugins-private"
+        task_root = base / ".codex" / "worktrees" / "15bd" / "racecraft-plugins-private"
+        primary_root.mkdir(parents=True)
+        subprocess.run(
+            ["git", "init", "-b", "main", str(primary_root)],
+            text=True,
+            capture_output=True,
+            shell=False,
+            check=True,
+        )
+        for key, value in (
+            ("user.email", "support@openai.com"),
+            ("user.name", "SpecKit Tests"),
+            ("commit.gpgsign", "false"),
+        ):
+            subprocess.run(
+                ["git", "-C", str(primary_root), "config", key, value],
+                text=True,
+                capture_output=True,
+                shell=False,
+                check=True,
+            )
+        (primary_root / "seed.txt").write_text("seed\n", encoding="utf-8")
+        (primary_root / ".specify").mkdir()
+        (primary_root / ".specify" / "fixture.txt").write_text("fixture\n", encoding="utf-8")
+        if ignore_worktrees:
+            (primary_root / ".gitignore").write_text("/.worktrees/\n", encoding="utf-8")
+        subprocess.run(
+            ["git", "-C", str(primary_root), "add", "."],
+            text=True,
+            capture_output=True,
+            shell=False,
+            check=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(primary_root), "commit", "-m", "seed"],
+            text=True,
+            capture_output=True,
+            shell=False,
+            check=True,
+        )
+        task_root.parent.mkdir(parents=True)
+        subprocess.run(
+            ["git", "-C", str(primary_root), "worktree", "add", "--detach", str(task_root)],
+            text=True,
+            capture_output=True,
+            shell=False,
+            check=True,
+        )
+        return primary_root, task_root
+
+    def placement_result(
+        self,
+        task_root: Path,
+        branch_name: str,
+        *,
+        worktree_root_override: str | None = None,
+    ) -> tuple[dict[str, object], int]:
+        from speckit_pro_runner.helpers.read_only import resolve_scaffold_worktree_placement
+
+        inputs: dict[str, object] = {"branch_name": branch_name}
+        if worktree_root_override is not None:
+            inputs["worktree_root_override"] = worktree_root_override
+        result = resolve_scaffold_worktree_placement(inputs, task_root)
         return json.loads(result["stdout"]), int(result["exit_code"])
 
     def assert_response(self, response: dict[str, object], status: str, exit_code: int) -> None:
@@ -607,6 +683,229 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 ("resolved", "external", 0),
             )
             self.assertEqual(payload["workflow_root"], external_root.resolve().as_posix())
+
+    def test_resolve_scaffold_placement_anchors_to_detached_task_root_and_revalidates(self) -> None:
+        if self.helper_filter and self.helper_filter != "resolve-scaffold-worktree-placement":
+            self.skipTest("scaffold-placement cases use resolve-scaffold-worktree-placement")
+        with tempfile.TemporaryDirectory() as temp:
+            primary_root, task_root = self.build_scaffold_placement_worktrees(Path(temp))
+            branch = "rdl-010-dual-runtime-writing-boundary"
+            expected_root = task_root / ".worktrees" / branch
+
+            worktree_listing = subprocess.run(
+                ["git", "-C", str(task_root), "worktree", "list", "--porcelain"],
+                text=True,
+                capture_output=True,
+                shell=False,
+                check=True,
+            ).stdout
+            self.assertTrue(worktree_listing.startswith(f"worktree {primary_root.resolve()}\n"))
+            common_dir_text = subprocess.run(
+                ["git", "-C", str(task_root), "rev-parse", "--git-common-dir"],
+                text=True,
+                capture_output=True,
+                shell=False,
+                check=True,
+            ).stdout.strip()
+            common_dir = Path(common_dir_text)
+            if not common_dir.is_absolute():
+                common_dir = task_root / common_dir
+            self.assertEqual(common_dir.resolve(), (primary_root / ".git").resolve())
+
+            payload, exit_code = self.placement_result(task_root, branch)
+            self.assertEqual(
+                (payload["placement_status"], payload["disposition"], payload["relation"], exit_code),
+                ("resolved", "create", "descendant", 0),
+            )
+            self.assertEqual(payload["task_root"], task_root.resolve().as_posix())
+            self.assertEqual(payload["worktree_root"], expected_root.resolve().as_posix())
+            self.assertNotEqual(payload["worktree_root"], (primary_root / ".worktrees" / branch).as_posix())
+
+            runner_completed = subprocess.run(
+                [sys.executable, "-m", "speckit_pro_runner"],
+                input=json.dumps(
+                    helper_request(
+                        "resolve-scaffold-worktree-placement",
+                        {"branch_name": branch},
+                    )
+                ),
+                text=True,
+                capture_output=True,
+                cwd=task_root,
+                env=runner_env(),
+                shell=False,
+                check=False,
+            )
+            self.assertEqual(runner_completed.returncode, 0, runner_completed.stderr)
+            runner_response = json.loads(runner_completed.stdout)
+            runner_payload = runner_response["data"]["stdout_json"]
+            self.assertEqual(runner_payload["task_root"], task_root.resolve().as_posix())
+            self.assertEqual(runner_payload["worktree_root"], expected_root.resolve().as_posix())
+            self.assertEqual(runner_payload["relation"], "descendant")
+
+            expected_root.parent.mkdir(parents=True)
+            subprocess.run(
+                ["git", "-C", str(task_root), "worktree", "add", "-b", branch, str(expected_root)],
+                text=True,
+                capture_output=True,
+                shell=False,
+                check=True,
+            )
+
+            payload, exit_code = self.placement_result(task_root, branch)
+            self.assertEqual(
+                (payload["placement_status"], payload["disposition"], payload["relation"], exit_code),
+                ("resolved", "reuse", "descendant", 0),
+            )
+            self.assertEqual(payload["worktree_root"], expected_root.resolve().as_posix())
+
+            payload, exit_code = self.placement_result(expected_root, branch)
+            self.assertEqual(
+                (payload["placement_status"], payload["disposition"], payload["relation"], exit_code),
+                ("resolved", "reuse", "same", 0),
+            )
+            self.assertEqual(payload["task_root"], expected_root.resolve().as_posix())
+            self.assertEqual(payload["worktree_root"], expected_root.resolve().as_posix())
+
+    def test_resolve_scaffold_placement_classifies_existing_and_overridden_external_roots(self) -> None:
+        if self.helper_filter and self.helper_filter != "resolve-scaffold-worktree-placement":
+            self.skipTest("scaffold-placement cases use resolve-scaffold-worktree-placement")
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            primary_root, task_root = self.build_scaffold_placement_worktrees(base)
+            sibling_branch = "rdl-010-existing-sibling"
+            sibling_root = base / "existing-sibling-worktree"
+            subprocess.run(
+                ["git", "-C", str(primary_root), "worktree", "add", "-b", sibling_branch, str(sibling_root)],
+                text=True,
+                capture_output=True,
+                shell=False,
+                check=True,
+            )
+
+            payload, exit_code = self.placement_result(task_root, sibling_branch)
+            self.assertEqual(
+                (payload["placement_status"], payload["disposition"], payload["relation"], exit_code),
+                ("resolved", "reuse", "external", 0),
+            )
+            self.assertEqual(payload["worktree_root"], sibling_root.resolve().as_posix())
+
+            override_parent = base / "explicit-external-parent"
+            override_branch = "rdl-011-explicit-external"
+            payload, exit_code = self.placement_result(
+                task_root,
+                override_branch,
+                worktree_root_override=str(override_parent),
+            )
+            self.assertEqual(
+                (payload["placement_status"], payload["disposition"], payload["relation"], exit_code),
+                ("resolved", "create", "external", 0),
+            )
+            self.assertEqual(payload["worktree_root"], (override_parent / override_branch).resolve().as_posix())
+
+    def test_resolve_scaffold_placement_rejects_unignored_occupied_symlinked_and_traversal_targets(self) -> None:
+        if self.helper_filter and self.helper_filter != "resolve-scaffold-worktree-placement":
+            self.skipTest("scaffold-placement cases use resolve-scaffold-worktree-placement")
+
+        with tempfile.TemporaryDirectory() as temp:
+            _, task_root = self.build_scaffold_placement_worktrees(Path(temp), ignore_worktrees=False)
+            payload, exit_code = self.placement_result(task_root, "rdl-012-unignored")
+            self.assertEqual((payload["placement_status"], exit_code), ("conflict", 1))
+            self.assertTrue(any("ignored" in problem for problem in payload["problems"]))
+
+        with tempfile.TemporaryDirectory() as temp:
+            _, task_root = self.build_scaffold_placement_worktrees(Path(temp))
+            branch = "rdl-013-occupied"
+            occupied = task_root / ".worktrees" / branch
+            occupied.mkdir(parents=True)
+            (occupied / "foreign.txt").write_text("occupied\n", encoding="utf-8")
+            payload, exit_code = self.placement_result(task_root, branch)
+            self.assertEqual((payload["placement_status"], exit_code), ("conflict", 1))
+            self.assertTrue(any("occupied" in problem for problem in payload["problems"]))
+
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            _, task_root = self.build_scaffold_placement_worktrees(base)
+            branch = "rdl-014-symlinked"
+            target = task_root / ".worktrees" / branch
+            target.parent.mkdir(parents=True)
+            outside = base / "symlink-target"
+            outside.mkdir()
+            try:
+                target.symlink_to(outside, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symlinks unavailable: {exc}")
+            payload, exit_code = self.placement_result(task_root, branch)
+            self.assertEqual((payload["placement_status"], exit_code), ("conflict", 1))
+            self.assertTrue(any("symlink" in problem for problem in payload["problems"]))
+
+        with tempfile.TemporaryDirectory() as temp:
+            _, task_root = self.build_scaffold_placement_worktrees(Path(temp))
+            payload, exit_code = self.placement_result(
+                task_root,
+                "rdl-015-traversal",
+                worktree_root_override="../outside",
+            )
+            self.assertEqual((payload["placement_status"], exit_code), ("invalid", 1))
+            self.assertTrue(any("traversal" in problem for problem in payload["problems"]))
+
+            payload, exit_code = self.placement_result(task_root, "rdl/015-not-single-segment")
+            self.assertEqual((payload["placement_status"], exit_code), ("invalid", 1))
+            self.assertTrue(any("single segment" in problem for problem in payload["problems"]))
+
+    def test_resolve_scaffold_placement_rejects_branch_path_mismatch_and_prunable_registration(self) -> None:
+        if self.helper_filter and self.helper_filter != "resolve-scaffold-worktree-placement":
+            self.skipTest("scaffold-placement cases use resolve-scaffold-worktree-placement")
+
+        with tempfile.TemporaryDirectory() as temp:
+            _, task_root = self.build_scaffold_placement_worktrees(Path(temp))
+            requested_branch = "rdl-016-mismatched"
+            mismatched_root = task_root / ".worktrees" / requested_branch
+            mismatched_root.parent.mkdir(parents=True)
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(task_root),
+                    "worktree",
+                    "add",
+                    "-b",
+                    "different-registered-branch",
+                    str(mismatched_root),
+                ],
+                text=True,
+                capture_output=True,
+                shell=False,
+                check=True,
+            )
+            payload, exit_code = self.placement_result(task_root, requested_branch)
+            self.assertEqual((payload["placement_status"], exit_code), ("conflict", 1))
+            self.assertTrue(any("branch/path mismatch" in problem for problem in payload["problems"]))
+
+        with tempfile.TemporaryDirectory() as temp:
+            _, task_root = self.build_scaffold_placement_worktrees(Path(temp))
+            branch = "rdl-017-prunable"
+            prunable_root = task_root / ".worktrees" / branch
+            prunable_root.parent.mkdir(parents=True)
+            subprocess.run(
+                ["git", "-C", str(task_root), "worktree", "add", "-b", branch, str(prunable_root)],
+                text=True,
+                capture_output=True,
+                shell=False,
+                check=True,
+            )
+            shutil.rmtree(prunable_root)
+            listing = subprocess.run(
+                ["git", "-C", str(task_root), "worktree", "list", "--porcelain"],
+                text=True,
+                capture_output=True,
+                shell=False,
+                check=True,
+            ).stdout
+            self.assertIn("prunable", listing)
+            payload, exit_code = self.placement_result(task_root, branch)
+            self.assertEqual((payload["placement_status"], exit_code), ("conflict", 1))
+            self.assertTrue(any("prunable" in problem for problem in payload["problems"]))
 
     def test_registered_worktree_roots_ignores_only_explicitly_prunable_entries(self) -> None:
         if self.helper_filter and self.helper_filter != "resolve-workflow-binding":

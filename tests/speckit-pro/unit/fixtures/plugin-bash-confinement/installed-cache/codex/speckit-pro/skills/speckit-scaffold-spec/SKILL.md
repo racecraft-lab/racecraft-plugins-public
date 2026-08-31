@@ -213,24 +213,44 @@ when the generated workflow records the budget result and split decision.
 
 ### 3. Prepare the branch and worktree
 
-Before any git mutation, inspect the actual remotes with `git remote -v`.
-Never assume `origin`. Then:
+Before `git worktree add` or any artifact or roadmap write, invoke the read-only
+runner helper `resolve-scaffold-worktree-placement` with the deterministic
+single-segment `branch_name` and, only when the user supplied one, the
+`worktree_root_override`. Require `placement_status=resolved` and either
+`relation=same` or `relation=descendant`. On `conflict` or `invalid`, report
+`problems[]` and STOP. On `relation=external`, report the canonical registered or
+proposed `worktree_root` and STOP before mutation; an explicit override is not
+permission to escape the current task workspace.
 
-1. Check whether the intended branch already exists locally or remotely.
-2. If a worktree for that branch already exists, reuse it unless the user has
-   explicitly asked to recreate it.
-3. If the branch exists but no worktree does, add a worktree for the existing
-   branch.
-4. If the branch does not exist, create it while adding the worktree.
+Without an override, the helper derives exactly
+`TASK_ROOT/.worktrees/<branch-name>`, where `TASK_ROOT` is the canonical current
+Codex task checkout. Never derive worktree placement from
+`git rev-parse --git-common-dir`, the primary checkout, or the first
+`git worktree list` record. Use the helper's returned absolute `worktree_root`
+unchanged for every create or reuse decision.
+
+Before any git mutation, inspect the actual remotes with `git remote -v`.
+Never assume `origin`. Then honor the helper disposition:
+
+1. On `disposition=reuse`, reuse the returned registered worktree. Do not move,
+   recreate, duplicate, or prune it.
+2. On `disposition=create`, check whether the intended branch exists locally
+   and on every actual remote. If more than one remote carries the branch, STOP
+   as ambiguous. If it exists locally, add the returned worktree for that local
+   branch. If it exists on one remote only, create the local tracking branch in
+   the returned worktree. If it exists nowhere, create it while adding the
+   returned worktree.
+3. Never substitute a different path because branch creation or remote lookup
+   is inconvenient; rerun the resolver if live state changes.
 
 Use a deterministic branch naming scheme based on the spec number and short
 slug, for example `009-search-database`. Verify the active branch inside the
-worktree before continuing.
-
-Place worktrees under `.worktrees/` at the repository root by default. The
-full worktree path should follow the pattern `.worktrees/<number>-<short-slug>`,
-for example `.worktrees/009-search-database`. Use a different root only if the
-user provides an explicit override.
+worktree before continuing. Re-run `resolve-scaffold-worktree-placement` after
+worktree creation and again before bootstrap or Grill Me on either the create
+or reuse path. Require `placement_status=resolved`, `disposition=reuse`, the
+identical canonical `task_root`, `worktree_root`, and `branch_name`, and
+`relation=same` or `relation=descendant`. STOP before bootstrap or Grill Me if
+any field drifts.
 
 ### 3.5. Bootstrap the worktree (in the worktree)
 
@@ -752,7 +772,7 @@ this check adds no machinery.
 | Check result | Effect on the hand-off |
 | ------------ | ---------------------- |
 | Step 1 passes | print the same-task absolute command below |
-| Step 1 fails | print the Codex Handoff/reopen recovery; never claim same-task execution is safe |
+| Step 1 fails | print the new-task recovery; never claim same-task execution is safe |
 | Step 2 fails | add one line naming the uncommitted changes as something to resolve first |
 
 **Print one line before asking.** The question and both option labels name
@@ -790,15 +810,16 @@ grill-me questions are pre-existing, are not counted, and are not removed.
 | Codex CLI | `$speckit-autopilot <absolute-workflow-file> --stage plan` |
 
 The Codex form is the ordinary same-task outcome. OpenAI documents worktrees as
-separate checkouts and Handoff as the way to move a task between Local and
-Worktree contexts:
+separate checkouts and Handoff as movement between Local and a task's associated
+worktree, including returning that task to the same associated worktree; it is
+not an arbitrary filesystem-path selector:
 <https://learn.chatgpt.com/docs/environments/git-worktrees>. This hand-off does
 not pretend to move the task or change its checkout. Autopilot instead binds
 every operation and agent explicitly to the registered nested `WORKFLOW_ROOT`.
 If Step 1 cannot prove that binding, print this recovery instruction instead:
 
 ```text
-Use Codex Handoff to move this task to <worktree>, then run $speckit-autopilot <absolute-workflow-file> --stage plan. If Handoff is unavailable, reopen Codex at <worktree>.
+Open a new Codex task rooted at <worktree>, then run $speckit-autopilot <absolute-workflow-file> --stage plan.
 ```
 
 The leading `$speckit-autopilot` token is the invocation form this skill set
