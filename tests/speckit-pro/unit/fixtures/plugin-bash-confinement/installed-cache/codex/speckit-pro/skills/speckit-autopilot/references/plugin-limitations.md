@@ -6,13 +6,13 @@ Claude Code silently ignores certain frontmatter fields when
 loading agents from a plugin. This is a security measure
 documented in the official Anthropic docs.
 
-### Ignored fields (set in agent files but not applied)
+### Unsupported fields for plugin-shipped agents
 
-| Field | Set To | Effect |
-|-------|--------|--------|
-| `permissionMode` | `acceptEdits` / `plan` | **Ignored.** Agents inherit the parent session's permission mode instead. |
-| `hooks` | (any) | **Ignored.** Plugin agents cannot define lifecycle hooks. |
-| `mcpServers` | (any) | **Ignored.** Plugin agents cannot declare their own MCP server connections. |
+| Field | Effect |
+|-------|--------|
+| `permissionMode` | **Ignored.** Agents inherit the parent session's permission mode instead. |
+| `hooks` | **Ignored.** Plugin agents cannot define lifecycle hooks. |
+| `mcpServers` | **Ignored.** Plugin agents cannot declare their own MCP server connections. |
 
 ### What this means for the autopilot
 
@@ -37,14 +37,19 @@ documented in the official Anthropic docs.
    evidence. Missing optional coverage is advisory; it becomes blocking only
    when no acceptable evidence path remains or a true prerequisite/gate fails.
 
-3. **Consensus agents are not read-only:** The consensus
-   agents (`codebase-analyst`, `spec-context-analyst`,
-   `domain-researcher`) set `permissionMode: plan` to
-   enforce read-only operation. Since this is ignored in
-   plugins, they inherit the parent's mode. In practice,
-   their instructions and tool lists (`Read`, `Grep`, `Glob`)
-   constrain them to read-only behavior, but the system-level
-   enforcement is absent.
+3. **Read-only roles use deny lists, not permissionMode:** The consensus agents
+   do not declare `permissionMode`. Their `disallowedTools` deny built-in
+   mutation and fan-out primitives while allowing the operator's installed
+   read/research surface to remain available. This is the enforceable
+   plugin-agent boundary; never describe an ignored `permissionMode` as active.
+
+4. **Persistent memory does not widen permissions:** `memory: local` may enable
+   Claude's memory read/write support for an eligible agent, but it does not
+   relax the agent's repository mutation or orchestration deny list. Current
+   task inputs and live source override memory. Never persist secrets, raw
+   reviewer/external text, current diffs, task state, or unverified claims.
+   The complete role matrix and curation contract live in
+   [`subagent-memory-policy.md`](./subagent-memory-policy.md).
 
 ### Workaround: Copy agents to local scope
 

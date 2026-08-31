@@ -56,20 +56,17 @@ work; a `full` run completes all 7 phases.
 ## Architectural Constraint — Main Agent Is The Orchestrator
 
 This skill loads into the **main session agent** when the user invokes
-`/speckit-pro:speckit-autopilot`. Only the main agent can spawn subagents
-([sub-agent docs](https://code.claude.com/docs/en/sub-agents):
-subagents can't nest) AND create Agent Teams
-([Agent Teams architecture](https://code.claude.com/docs/en/agent-teams#architecture):
-team-lead = main session). The skill IS the orchestrator at execution
-time. EVERY dispatch decision — parallel subagents vs sequential vs
-Agent Team, model routing, lifecycle sequencing — happens HERE. Phase
-executors are terminal workers; they don't dispatch, don't branch on
-`AGENT_TEAMS_AVAILABLE`, don't create teams.
+`/speckit-pro:speckit-autopilot`. Current Claude Code can nest subagents, but
+this workflow deliberately keeps one orchestration owner: the main session.
+EVERY workflow dispatch decision — parallel subagents vs sequential vs Agent
+Team, model routing, and lifecycle sequencing — happens HERE. Phase executors
+are terminal workers; they don't dispatch workflow phases, branch on
+`AGENT_TEAMS_AVAILABLE`, or create teams.
 
 Runtime enforcement is two-tier (Layer 5 verifies both): the
 hyper-focused single-purpose workers (the consensus analysts,
 clarify-executor, gate-validator, uat-runbook-author) explicitly deny
-`Agent`/`TeamCreate`/`SendMessage` via `disallowedTools` so they stay
+`Agent`/`SendMessage` via `disallowedTools` so they stay
 on their one job; the open workhorse executors (phase-, analyze-,
 checklist-, implement-executor) keep the operator's full surface —
 including orchestration tools — and the invariant there is carried by
@@ -335,9 +332,12 @@ Run the pre-flight sequence before any phase work. STOP on failure.
    match descriptions against implementation keywords; set
    `PROJECT_IMPLEMENTATION_AGENT` (fallback: `speckit-pro:phase-executor`). Also
    check CLAUDE.md for an explicit agent reference.
-6. **Load settings + Agent Teams probe** — read `.claude/speckit-pro.local.md`
-   (`consensus-mode`, `gate-failure`, `auto-commit`, `security-keywords`);
-   record `AGENT_TEAMS_AVAILABLE` from env+version probe (see prerequisites.md §Step 0.6).
+6. **Load settings + Claude subagent runtime record** — read
+   `.claude/speckit-pro.local.md` (`consensus-mode`, `gate-failure`,
+   `auto-commit`, `security-keywords`), observe the bounded Claude CLI/runtime
+   inputs, and call runner helper `resolve-claude-subagent-runtime`. Persist its
+   record and take `AGENT_TEAMS_AVAILABLE`, `SUBAGENT_WAVE_SIZE`, and resume
+   behavior from it (see prerequisites.md §Step 0.6).
 6b. **Resolve pre-Implement confidence gate mode** — run runner helper
    `resolve-confidence-mode` with the invocation argv to resolve
    the mode for G6.5 (precedence: `--strict` / `--advisory` flag

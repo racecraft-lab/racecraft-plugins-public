@@ -12,7 +12,7 @@ description: >
   and never blocks PR creation.
 model: sonnet
 color: cyan
-disallowedTools: Skill, Agent, TeamCreate, SendMessage
+disallowedTools: Skill, Agent, SendMessage
 maxTurns: 30
 effort: max
 ---

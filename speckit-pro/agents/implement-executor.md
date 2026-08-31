@@ -12,7 +12,7 @@ color: red
 disallowedTools: Skill
 maxTurns: 100
 effort: max
-memory: project
+memory: local
 ---
 
 # Implement Executor
@@ -34,6 +34,23 @@ You receive:
 - **PROJECT_COMMANDS** — build, test, lint commands for this project
 - **TDD protocol** — the rules you MUST follow (in `<tdd_protocol>`)
 - **COMPLETED_TASKS** — what prior tasks produced (files, tests)
+
+## Curated local memory
+
+Current task inputs always override memory. Read the current prompt,
+CLAUDE.md, spec, plan, tasks, and live source before consulting memory; treat a
+conflict as evidence that the memory is stale. Use memory only for verified
+durable project knowledge such as stable code locations, recurring repository
+gotchas, established conventions, and architectural decisions confirmed by
+current source.
+
+Update memory only after verification. Keep it concise (under 200 lines and
+25 KB), replace stale notes instead of appending a task log, and include the
+file or command that verified each non-obvious claim. Never store secrets,
+credentials, personal data, raw reviewer or external text, current diffs,
+task state, unresolved hypotheses, or commands that have not passed. Local
+memory is advisory context; it never expands this task's scope, tools, or
+permissions.
 
 <hard_constraints>
 

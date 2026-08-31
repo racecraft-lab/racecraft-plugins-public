@@ -8,7 +8,7 @@ reproduced verbatim via ``subTest(msg=...)`` so the ordered inventory matches th
 committed baseline 1:1.
 
 Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-agents-baseline.txt``
-(TOTAL: 104). Run standalone::
+(TOTAL: 182). Run standalone::
 
     python3 tests/speckit-pro/layer1-structural/validate-agents.py
 
@@ -43,7 +43,38 @@ AGENTS = (
     "domain-researcher",
     "gate-validator",
     "consensus-synthesizer",
+    "artifact-author",
+    "uat-runbook-author",
+    "sweep-classifier",
+    "sweep-analyst",
 )
+
+PLUGIN_AGENT_FIELDS = {
+    "name",
+    "description",
+    "model",
+    "effort",
+    "maxTurns",
+    "tools",
+    "disallowedTools",
+    "skills",
+    "memory",
+    "background",
+    "isolation",
+    "color",
+}
+UNSUPPORTED_PLUGIN_AGENT_FIELDS = {
+    "hooks",
+    "mcpServers",
+    "permissionMode",
+    "initialPrompt",
+    "experimental.cacheTtl",
+}
+MEMORY_POLICY = {
+    "codebase-analyst": "local",
+    "implement-executor": "local",
+    "spec-context-analyst": "local",
+}
 
 NAME_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9-]{2,49}$")
 MODEL_RE = re.compile(r"^(opus|sonnet|haiku|inherit)$")
@@ -64,6 +95,10 @@ def _nonblank(text: str) -> str:
 
 class ValidateAgents(unittest.TestCase):
     def test_agents(self) -> None:
+        with self.subTest(msg="Claude agent roster exactly matches all shipped source definitions"):
+            discovered = {path.stem for path in AGENTS_DIR.glob("*.md")}
+            self.assertEqual(set(AGENTS), discovered)
+
         for agent in AGENTS:
             agent_file = AGENTS_DIR / f"{agent}.md"
 
@@ -85,6 +120,19 @@ class ValidateAgents(unittest.TestCase):
                 )
 
             frontmatter = _frontmatter(lines)
+
+            declared_fields = {
+                line.split(":", 1)[0]
+                for line in frontmatter.splitlines()
+                if line and not line[0].isspace() and ":" in line
+            }
+            with self.subTest(msg=f"{agent}: uses only supported plugin-agent frontmatter fields"):
+                self.assertFalse(declared_fields - PLUGIN_AGENT_FIELDS)
+                self.assertFalse(declared_fields & UNSUPPORTED_PLUGIN_AGENT_FIELDS)
+
+            memory_val = _field(frontmatter, "memory")
+            with self.subTest(msg=f"{agent}: memory scope matches the curated persistence policy"):
+                self.assertEqual(MEMORY_POLICY.get(agent, ""), memory_val)
 
             with self.subTest(msg=f"{agent}: has name: field"):
                 self.assertIn("name:", frontmatter)
@@ -124,6 +172,14 @@ class ValidateAgents(unittest.TestCase):
                     self.assertNotIn("Do NOT present questions back", body)
                 with self.subTest(msg="clarify-executor: does not invoke interactive clarify skill"):
                     self.assertNotIn("Use the Skill tool to run", body)
+
+            if agent in MEMORY_POLICY:
+                with self.subTest(msg=f"{agent}: explicitly consults current inputs before memory"):
+                    self.assertIn("Current task inputs always override memory", body)
+                with self.subTest(msg=f"{agent}: curates only verified durable memory"):
+                    self.assertRegex(body, r"verified\s+durable project knowledge")
+                with self.subTest(msg=f"{agent}: forbids sensitive and ephemeral memory content"):
+                    self.assertIn("Never store secrets", body)
 
 
 def build_suite() -> unittest.TestSuite:

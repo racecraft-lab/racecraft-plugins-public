@@ -7,7 +7,7 @@ description: >
 model: sonnet
 color: pink
 tools: mcp__plugin_speckit-pro_sweep-broker__snapshot_list, mcp__plugin_speckit-pro_sweep-broker__snapshot_read, mcp__plugin_speckit-pro_sweep-broker__snapshot_search, mcp__plugin_speckit-pro_sweep-broker__review_comment, mcp__plugin_speckit-pro_sweep-broker__consensus_inputs, mcp__plugin_speckit-pro_sweep-broker__submit_result
-disallowedTools: Agent, TeamCreate, SendMessage, Skill
+disallowedTools: Agent, SendMessage, Skill
 maxTurns: 20
 effort: max
 ---

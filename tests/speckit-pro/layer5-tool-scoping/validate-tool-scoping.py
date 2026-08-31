@@ -14,7 +14,7 @@ membership rather than by pattern, and pinning that membership by equality is
 what keeps it the only exemption (art-008-feedback-sweep FR-008c).
 
 Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-tool-scoping-baseline.txt``
-(TOTAL: 186).
+(TOTAL: 216).
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ from test_result import run_counted  # noqa: E402
 AGENTS_DIR = PLUGIN_ROOT / "agents"
 CODEX_AGENTS_DIR = PLUGIN_ROOT / "codex-agents"
 
-ORCHESTRATION_TOOLS = ("Agent", "TeamCreate", "SendMessage")
+ORCHESTRATION_TOOLS = ("Agent", "SendMessage")
 MUTATION_DENIALS = ("Write", "Edit", "MultiEdit", "NotebookEdit")
 OPEN_EXECUTORS = ("phase-executor", "analyze-executor", "checklist-executor", "implement-executor")
 READ_ONLY_ROLES = (
@@ -274,6 +274,9 @@ class ValidateToolScoping(unittest.TestCase):
 
             with self.subTest(msg=f"{agent_name} effort field exists"):
                 self.assertNotEqual("", _yaml_field(agent_file, "effort"), "effort must not be empty")
+
+            with self.subTest(msg=f"{agent_name} does not reference retired TeamCreate tooling"):
+                self.assertNotIn("TeamCreate", _read(agent_file))
 
         with self.subTest(msg="phase-executor effort is max (max-thinking policy)"):
             self.assertEqual("max", _yaml_field(AGENTS_DIR / "phase-executor.md", "effort"))

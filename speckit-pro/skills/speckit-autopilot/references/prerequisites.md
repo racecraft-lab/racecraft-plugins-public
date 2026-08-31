@@ -9,7 +9,7 @@ The autopilot's pre-flight sequence. Run these before Step 1 (Parse Workflow Sta
 - [Step 0.0: Resolve Script Paths](#step-00-resolve-script-paths) — extract `SKILL_SCRIPTS` from the skill header (plugin path)
 - [Step 0.0b: Claude Agent Package Completeness](#step-00b-claude-agent-package-completeness) — verify bundled plugin agents are present
 - [Step 0.1–0.7: Environment Checks](#step-01-07-environment-checks) — `check-prerequisites` JSON parsing, branch detection
-- [Step 0.6: Load Settings](#step-06-load-settings) — `.claude/speckit-pro.local.md` YAML frontmatter
+- [Step 0.6: Load Settings and Resolve Claude Runtime](#step-06-load-settings--resolve-claude-runtime) — local settings plus one versioned subagent-runtime record
 - [Step 0.8: Capability Coverage & Plugin Limitation Check](#step-08-capability-coverage--plugin-limitation-check) — informational research/context advisory + plugin-agent caveats
 - [Step 0.9: Constitution Validation](#step-09-constitution-validation) — principle checks against current codebase
 - [Step 0.10: Implementation Agent Detection](#step-010-implementation-agent-detection) — discover `PROJECT_IMPLEMENTATION_AGENT`
@@ -168,7 +168,7 @@ workflow file's `Branch` field. Warn if they don't match.
 Skill tool invocations. The autopilot handles branch context by
 adjusting how it invokes each phase (see Phase Dispatch).
 
-## Step 0.6: Load Settings + Detect Agent Teams Capability
+## Step 0.6: Load Settings + Resolve Claude Runtime
 
 ### Settings file
 
@@ -178,41 +178,52 @@ frontmatter for: `consensus-mode` (default: `moderate`),
 `per-phase`), `security-keywords` (default: standard list).
 If the file doesn't exist, use all defaults.
 
-### Agent Teams capability probe
+### Versioned subagent-runtime record
 
-Agent Teams is a **capability**, not a user setting. The autopilot
-probes for it at startup and routes anywhere-it's-beneficial work to
-teams when available, otherwise falls back to highly-parallel
-subagent dispatch. Users do not opt-in — if Anthropic has enabled
-Agent Teams on this machine, speckit-pro uses it.
-
-Probe two conditions:
+Observe only the inputs needed by the registered read-only helper:
 
 ```text
-Command("test \"${CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS}\" = \"1\"")
-Command("claude --version with version sorting 2.1.32")
+client_version: output of `claude --version`
+execution_mode: interactive | headless
+max_concurrent_subagents: bounded value of CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS, if set
+max_subagent_spawn_depth: bounded value of CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH, if set
+agent_teams_env_enabled: whether CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
+team_contract_verified: whether this client/version passed the maintained live team UAT
+auto_memory_enabled: resolved Claude auto-memory setting
 ```
 
-1. **Env var:** `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` is set
-   (per [Anthropic's Agent Teams docs](https://code.claude.com/docs/en/agent-teams))
-2. **Version:** `claude --version` returns ≥ `2.1.32`
+Pass those fields to runner helper `resolve-claude-subagent-runtime`. Persist
+the complete stdout JSON as `claude_subagent_runtime` in
+`autopilot-state.json` and in the workflow file's Notes. The workflow file is
+the durable record. Set these dispatch values from the result:
 
-Record the result as `AGENT_TEAMS_AVAILABLE = true|false` in the
-workflow file's Notes section. Pass this flag to dispatch decisions
-downstream — it is not user-tunable.
+```text
+AGENT_TEAMS_AVAILABLE = agent_teams.available
+SUBAGENT_WAVE_SIZE = concurrency.wave_size
+SUBAGENT_RESUME_STRATEGY = partial_resume.strategy
+```
 
-When `AGENT_TEAMS_AVAILABLE` is `false`, log to the workflow file:
+The helper applies the current compatibility policy:
 
-> Agent Teams not detected (env var unset OR Claude Code < 2.1.32).
-> Using parallel-subagents dispatch for post-impl. To enable Agent
-> Teams (which adds inter-teammate messaging and shared task lists),
-> set `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` and upgrade Claude
-> Code to ≥ 2.1.32, then re-run.
+- Claude Code 2.1.217+ defaults to 20 concurrent subagents; older supported
+  clients use a compatibility default of 5. One slot is reserved for recovery,
+  so each deterministic wave uses `max(1, limit - 1)`.
+- Invalid concurrency or nesting overrides fail safe to one-at-a-time/depth-one
+  operation with a warning.
+- Claude Code 2.1.219+ uses the documented default nesting depth of 3. Workflow
+  phase dispatch remains flat by design even when the runtime supports nesting.
+- Claude Code 2.1.246+ may resume one partial subagent by agent ID; older clients
+  get one fresh retry. A second partial result stops the run.
+- Claude Code 2.1.247+ native model fallback is recorded as an operator control,
+  never silently configured or claimed by this plugin.
+- Claude Code 2.1.248+ client cache TTL support is recorded but not adopted for
+  plugin agents because the plugin-agent surface does not document that field.
 
-**Do not STOP** — both code paths complete the autopilot correctly.
-Agent Teams is a quality-and-coordination enhancement, not a
-dependency. The subagents fallback is itself parallel (background
-dispatch in one tool call) so wall-clock is comparable.
+Agent Teams is available only when the environment flag is enabled, the client
+is at least 2.1.178, execution is positively interactive, and the live team
+contract is verified. `claude -p` always uses ordinary subagents. When any
+condition fails, use batched ordinary subagents and log the resolver's reason.
+Do not stop: teams are an optional coordination enhancement.
 
 Dispatch details for both code paths live in
 [`post-implementation.md`](./post-implementation.md) §Post-Implementation Parallel Group.

@@ -50,6 +50,14 @@ except ImportError:  # pragma: no cover - exercised only before the module lands
 CONTRACT_ROOT = REPO_ROOT / "tests" / "speckit-pro" / "layer6-efficiency" / "contracts-claude"
 CORPUS_SCHEMA_PATH = CONTRACT_ROOT / "role-corpus.schema.json"
 AGENT_DIR = REPO_ROOT / "speckit-pro" / "agents"
+CURRENT_ROSTER_PATH = (
+    REPO_ROOT
+    / "tests"
+    / "speckit-pro"
+    / "layer6-efficiency"
+    / "fixtures"
+    / "claude-agent-roster-rebaseline-v2.json"
+)
 
 # FR-011: the eleven required-core roles that currently have shipped Claude agent
 # definitions. Stated as a literal so a unilateral widening of either the corpus
@@ -73,6 +81,23 @@ REQUIRED_CORE_ROLES = (
 CONTRACT_ONLY_ROLE = "autopilot-fast-helper"
 
 GOVERNED_ROLE_IDS = tuple(sorted(REQUIRED_CORE_ROLES + (CONTRACT_ONLY_ROLE,)))
+
+CURRENT_SHIPPED_ROLES = (
+    "analyze-executor",
+    "artifact-author",
+    "checklist-executor",
+    "clarify-executor",
+    "codebase-analyst",
+    "consensus-synthesizer",
+    "domain-researcher",
+    "gate-validator",
+    "implement-executor",
+    "phase-executor",
+    "spec-context-analyst",
+    "sweep-analyst",
+    "sweep-classifier",
+    "uat-runbook-author",
+)
 
 # FR-012: bound for every role entry, including the non-executable one.
 ALWAYS_BOUND_CONTRACT_FIELDS = (
@@ -305,9 +330,84 @@ class FixtureDigestTests(_RoleCorpusFixture, unittest.TestCase):
         self.assertLess(self.module.CORPUS_FIXTURE_PATH.stat().st_size, 32_768)
 
 
+class CurrentRosterRebaselineTests(unittest.TestCase):
+    """The successor roster binds live source without mutating CAR-003 v1."""
+
+    def setUp(self) -> None:
+        self.current = load_json(CURRENT_ROSTER_PATH)
+        self.roles = {role["role_id"]: role for role in self.current["shipped_roles"]}
+
+    def test_successor_roster_covers_all_fourteen_shipped_agents_plus_helper(self) -> None:
+        self.assertEqual(tuple(sorted(self.roles)), CURRENT_SHIPPED_ROLES)
+        self.assertEqual(
+            self.current["optional_contract_roles"],
+            [{"role_id": CONTRACT_ONLY_ROLE, "executable": False}],
+        )
+
+    def test_successor_roster_preserves_the_historical_corpus_identity(self) -> None:
+        historical = load_json(
+            REPO_ROOT
+            / "tests"
+            / "speckit-pro"
+            / "layer6-efficiency"
+            / "fixtures"
+            / "car-003-role-corpus.json"
+        )
+        self.assertEqual(self.current["historical_corpus"]["corpus_id"], historical["corpus_id"])
+        self.assertEqual(
+            self.current["historical_corpus"]["corpus_digest"],
+            historical["corpus_digest"],
+        )
+        self.assertEqual(self.current["historical_corpus"]["disposition"], "immutable")
+
+    def test_each_successor_source_digest_matches_current_agent_bytes(self) -> None:
+        for role_id, role in sorted(self.roles.items()):
+            with self.subTest(role=role_id):
+                digest = "sha256:" + hashlib.sha256(
+                    (AGENT_DIR / f"{role_id}.md").read_bytes()
+                ).hexdigest()
+                self.assertEqual(role["source_digest"], digest)
+
+    def test_new_roles_have_explicit_cohorts_and_trust_boundaries(self) -> None:
+        self.assertEqual(self.roles["artifact-author"]["cohort"], "structured-work")
+        for role_id in ("sweep-classifier", "sweep-analyst"):
+            with self.subTest(role=role_id):
+                self.assertEqual(self.roles[role_id]["cohort"], "untrusted-feedback")
+                self.assertEqual(
+                    self.roles[role_id]["trust_boundary"],
+                    "immutable_snapshot_broker_only",
+                )
+
+    def test_successor_memory_matrix_stays_narrow(self) -> None:
+        scopes = {
+            role_id: role["memory_scope"]
+            for role_id, role in self.roles.items()
+            if role["memory_scope"] is not None
+        }
+        self.assertEqual(
+            scopes,
+            {
+                "codebase-analyst": "local",
+                "implement-executor": "local",
+                "spec-context-analyst": "local",
+            },
+        )
+
+    def test_route_gate_consumes_successor_without_claiming_native_fallback(self) -> None:
+        gate = self.current["routing_gate"]
+        self.assertEqual(gate["car_006"], "ready")
+        self.assertEqual(gate["native_fallback"], "operator_override_only")
+        self.assertEqual(gate["unqualified_delivered_model"], "ineligible")
+
+    def test_successor_catalog_digest_covers_the_whole_record_minus_itself(self) -> None:
+        preimage = {key: value for key, value in self.current.items() if key != "catalog_digest"}
+        self.assertEqual(self.current["catalog_digest"], digest_over(preimage))
+
+
 TEST_CASES = (
     CorpusCompositionTests,
     FixtureDigestTests,
+    CurrentRosterRebaselineTests,
 )
 
 

@@ -19,9 +19,19 @@ the specified phase.
 
 ## Common Issues
 
-- **Subagent returns empty/incomplete summary:** Re-spawn with
-  the same prompt. If it fails again, run the command directly
-  via command tool and parse the output.
+- **Subagent returns an empty/incomplete summary:** Follow the persisted
+  `partial_resume` strategy from `resolve-claude-subagent-runtime`. When the
+  runtime supports partial results and the result includes an agent ID, send
+  exactly one `SendMessage` continuation to that same agent and record
+  `partial_resume_used=true`. That continuation consumes the reserved
+  concurrency slot. If the resumed result is still partial, STOP and report
+  the incomplete result; do not loop or silently replace it. On clients older
+  than 2.1.246, make one fresh retry with the same prompt and then STOP on a
+  second partial result.
+- **A parallel wave exceeds capacity:** Dispatch deterministic waves of at most
+  `SUBAGENT_WAVE_SIZE`, preserving task order in the final result regardless of
+  completion order. The resolver reserves one slot for recovery. An invalid
+  concurrency override forces wave size 1 and emits a warning.
 - **Gate fails after 2 auto-fix attempts:** If `gate-failure`
   setting is `stop`, STOP and report. Show the gate script
   output so the user can diagnose.

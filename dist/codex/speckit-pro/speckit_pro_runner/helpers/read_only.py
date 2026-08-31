@@ -390,6 +390,10 @@ def explicit_or_derived_args(helper_id: str, inputs: dict[str, Any], repo_root: 
                 return invalid_args(helper_id, "autopilot_args must be an array of strings")
             argv.extend(["--", *autopilot_args])
         return argv
+    if helper_id == "resolve-claude-subagent-runtime":
+        # Runtime observations arrive as bounded structured input. No observed
+        # value is interpolated into a subprocess or shell command.
+        return []
     if helper_id == "sweep-pr-feedback":
         # The observation arrives as request data on stdin, so there are no
         # derived CLI args and no field is interpolated into a command (FR-004b).
@@ -2148,6 +2152,150 @@ def corroborate_draft_pr(row: dict[str, Any] | None, observation: Any) -> dict[s
             "pr_closed", recorded=recorded, observed=observed, merged=CLOSED_PR_STATES[state]
         )
     return corroboration_record("match", recorded=recorded, observed=observed)
+
+
+def _claude_client_version(raw: Any) -> tuple[str, tuple[int, int, int]] | None:
+    if not isinstance(raw, str):
+        return None
+    match = re.search(r"(?<![0-9])([0-9]+)\.([0-9]+)\.([0-9]+)(?![0-9])", raw)
+    if match is None:
+        return None
+    version = ".".join(match.groups())
+    return version, tuple(int(part) for part in match.groups())
+
+
+def _positive_runtime_limit(raw: Any) -> int | None:
+    if raw is None:
+        return None
+    if isinstance(raw, bool):
+        return -1
+    if isinstance(raw, int):
+        return raw if raw > 0 else -1
+    if not isinstance(raw, str) or not raw.isdigit():
+        return -1
+    value = int(raw)
+    return value if value > 0 else -1
+
+
+def resolve_claude_subagent_runtime(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+    """Resolve one conservative, versioned Claude subagent runtime record.
+
+    The orchestrator supplies already-observed CLI/settings values. Keeping the
+    resolver pure makes it deterministic, prevents network or process access,
+    and lets the same record shape be replayed in CI and written to workflow
+    evidence without exposing the rest of the operator environment.
+    """
+    del repo_root
+    version_record = _claude_client_version(inputs.get("client_version"))
+    if version_record is None:
+        return make_result(
+            json_text({"error": "client_version must contain a semantic version"}),
+            exit_code=2,
+        )
+    execution_mode = inputs.get("execution_mode")
+    if execution_mode not in {"interactive", "headless"}:
+        return make_result(
+            json_text({"error": "execution_mode must be interactive or headless"}),
+            exit_code=2,
+        )
+    boolean_fields = (
+        "agent_teams_env_enabled",
+        "team_contract_verified",
+        "auto_memory_enabled",
+    )
+    for field in boolean_fields:
+        if field in inputs and not isinstance(inputs[field], bool):
+            return make_result(json_text({"error": f"{field} must be boolean"}), exit_code=2)
+
+    version, version_tuple = version_record
+    warnings: list[str] = []
+
+    concurrency_override = _positive_runtime_limit(inputs.get("max_concurrent_subagents"))
+    if concurrency_override == -1:
+        concurrency_limit = 1
+        concurrency_source = "invalid_environment_override"
+        warnings.append(
+            "CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS must be a positive integer; using one-at-a-time safety mode"
+        )
+    elif concurrency_override is not None:
+        concurrency_limit = concurrency_override
+        concurrency_source = "environment_override"
+    elif version_tuple >= (2, 1, 217):
+        concurrency_limit = 20
+        concurrency_source = "client_default"
+    else:
+        concurrency_limit = 5
+        concurrency_source = "compatibility_default"
+    wave_size = max(1, concurrency_limit - 1)
+
+    depth_override = _positive_runtime_limit(inputs.get("max_subagent_spawn_depth"))
+    if depth_override == -1:
+        spawn_depth = 1
+        depth_source = "invalid_environment_override"
+        warnings.append(
+            "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH must be a positive integer; using depth one safety mode"
+        )
+    elif depth_override is not None:
+        spawn_depth = depth_override
+        depth_source = "environment_override"
+    elif version_tuple >= (2, 1, 219):
+        spawn_depth = 3
+        depth_source = "client_default"
+    else:
+        spawn_depth = 1
+        depth_source = "compatibility_default"
+
+    teams_env = bool(inputs.get("agent_teams_env_enabled", False))
+    team_contract_verified = bool(inputs.get("team_contract_verified", False))
+    team_reasons: list[str] = []
+    if not teams_env:
+        team_reasons.append("agent teams environment flag is disabled")
+    if version_tuple < (2, 1, 178):
+        team_reasons.append("Claude Code is older than 2.1.178 named-Agent team semantics")
+    if execution_mode == "headless":
+        team_reasons.append("headless -p execution always uses subagents")
+    if not team_contract_verified:
+        team_reasons.append("live team contract is unverified")
+    teams_available = not team_reasons
+
+    partial_resume_supported = version_tuple >= (2, 1, 246)
+    fallback_supported = version_tuple >= (2, 1, 247)
+    cache_ttl_client_supported = version_tuple >= (2, 1, 248)
+    record = {
+        "tool": "resolve-claude-subagent-runtime",
+        "contract_version": 1,
+        "client_version": version,
+        "execution_mode": execution_mode,
+        "concurrency": {
+            "limit": concurrency_limit,
+            "wave_size": wave_size,
+            "source": concurrency_source,
+        },
+        "spawn_depth": {"limit": spawn_depth, "source": depth_source},
+        "partial_resume": {
+            "supported": partial_resume_supported,
+            "strategy": "same_agent_once" if partial_resume_supported else "fresh_retry_once",
+        },
+        "native_fallback": {
+            "supported": fallback_supported,
+            "operator_controlled": True,
+            "plugin_owned": False,
+        },
+        "cache_ttl": {
+            "client_supported": cache_ttl_client_supported,
+            "plugin_agent_supported": False,
+            "adopted": False,
+        },
+        "agent_teams": {
+            "available": teams_available,
+            "environment_enabled": teams_env,
+            "contract_verified": team_contract_verified,
+            "reason": "available" if teams_available else "; ".join(team_reasons),
+        },
+        "auto_memory": {"enabled": bool(inputs.get("auto_memory_enabled", False))},
+        "warnings": warnings,
+    }
+    return make_result(json_text(record))
 
 
 def auto_detect_basis(first_open: tuple[str, str | None] | None) -> str:
@@ -6729,6 +6877,7 @@ PY_HELPERS: dict[str, Callable[[dict[str, Any], Path], dict[str, Any]]] = {
     "estimate-spec-size": estimate_spec_size,
     "resolve-confidence-mode": resolve_confidence_mode,
     "resolve-autopilot-stage": resolve_autopilot_stage,
+    "resolve-claude-subagent-runtime": resolve_claude_subagent_runtime,
     "sweep-pr-feedback": sweep_pr_feedback,
     "sweep-isolation-session": sweep_isolation_session,
     "check-artifact-freshness": check_artifact_freshness,

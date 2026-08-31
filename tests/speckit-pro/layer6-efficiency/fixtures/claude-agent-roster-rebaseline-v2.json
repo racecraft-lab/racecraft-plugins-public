@@ -1,0 +1,122 @@
+{
+  "schema_version": "2.0.0",
+  "catalog_id": "claude-current-agent-roster-v2",
+  "frozen_at": "2026-08-30",
+  "historical_corpus": {
+    "corpus_id": "claude-car-003-role-corpus-v1",
+    "corpus_digest": "sha256:839c8b8082b1d30f49d76e239ac39dff6c214c1b9c9d8f89f6a120f2f6365a9f",
+    "disposition": "immutable"
+  },
+  "shipped_roles": [
+    {
+      "role_id": "analyze-executor",
+      "source_digest": "sha256:e3ae8f36aa0cf1ad3343c6d68d8118d71781632e85871338cbdf846eb5c0c535",
+      "cohort": "quality-critical",
+      "trust_boundary": "spec_artifact_write_only",
+      "memory_scope": null
+    },
+    {
+      "role_id": "artifact-author",
+      "source_digest": "sha256:41b94f2907daa2f28339a009707b05a69addced1e95af534583a9480457af803",
+      "cohort": "structured-work",
+      "trust_boundary": "artifact_directory_only",
+      "memory_scope": null
+    },
+    {
+      "role_id": "checklist-executor",
+      "source_digest": "sha256:7c0129ca4a6e106f1f42a8b51c321b813db5340bed45644f822a96274274c2ea",
+      "cohort": "structured-work",
+      "trust_boundary": "spec_artifact_write_only",
+      "memory_scope": null
+    },
+    {
+      "role_id": "clarify-executor",
+      "source_digest": "sha256:0ab6aaf076cbc2ea2205f641b420d7707f8617afb1a2f0ac162f3fbf76d6300d",
+      "cohort": "read-only-reasoning",
+      "trust_boundary": "read_only_denylist",
+      "memory_scope": null
+    },
+    {
+      "role_id": "codebase-analyst",
+      "source_digest": "sha256:d318685a8ca4a1292cae3f8d54bf736b7dfa941301c925b5e7a5392b77427deb",
+      "cohort": "read-only-reasoning",
+      "trust_boundary": "read_only_denylist",
+      "memory_scope": "local"
+    },
+    {
+      "role_id": "consensus-synthesizer",
+      "source_digest": "sha256:b4a85e656a2ce312a224cd8f2ebf4ce130d3e8b53f6b2fd583f0f56a872c9ff6",
+      "cohort": "orchestration-support",
+      "trust_boundary": "read_only_denylist",
+      "memory_scope": null
+    },
+    {
+      "role_id": "domain-researcher",
+      "source_digest": "sha256:f71aced1003db76cef247160179a2e6aac44c0b72a8b02e0751701eb2f0beb26",
+      "cohort": "read-only-reasoning",
+      "trust_boundary": "read_only_denylist",
+      "memory_scope": null
+    },
+    {
+      "role_id": "gate-validator",
+      "source_digest": "sha256:34e90ed3d44edcb300b47ad88ce112924aac212a18596edcb78fa0e2ee0d9a2e",
+      "cohort": "orchestration-support",
+      "trust_boundary": "read_only_denylist",
+      "memory_scope": null
+    },
+    {
+      "role_id": "implement-executor",
+      "source_digest": "sha256:713216df398e2cd66350d213c5eb5c499d4587c76f3f1edd4fe16ef831354227",
+      "cohort": "quality-critical",
+      "trust_boundary": "workspace_scoped_write_with_test_first_ordering",
+      "memory_scope": "local"
+    },
+    {
+      "role_id": "phase-executor",
+      "source_digest": "sha256:70bf046540039a16bf2fe1109d782c52f27c070ffaebc4c7a99f34347930179c",
+      "cohort": "quality-critical",
+      "trust_boundary": "spec_artifact_write_only",
+      "memory_scope": null
+    },
+    {
+      "role_id": "spec-context-analyst",
+      "source_digest": "sha256:ab7cbd9151e5a93571a37be3a4ac00752597c97bf2b1ad6da87f5a7a135d9c3d",
+      "cohort": "read-only-reasoning",
+      "trust_boundary": "read_only_denylist",
+      "memory_scope": "local"
+    },
+    {
+      "role_id": "sweep-analyst",
+      "source_digest": "sha256:7bb256f5f9350cdf65c9ff5f3010921e69c45cde9f75c5c95effd9f9cbc25822",
+      "cohort": "untrusted-feedback",
+      "trust_boundary": "immutable_snapshot_broker_only",
+      "memory_scope": null
+    },
+    {
+      "role_id": "sweep-classifier",
+      "source_digest": "sha256:271ca0ca51e346e19f27c08da87c1d5c1d3eef3fd83c1dce7ca94fd74d7ab804",
+      "cohort": "untrusted-feedback",
+      "trust_boundary": "immutable_snapshot_broker_only",
+      "memory_scope": null
+    },
+    {
+      "role_id": "uat-runbook-author",
+      "source_digest": "sha256:45ffb2fc9868957ad3dd261ea32f93f193c13df94bd524bf1348a7bfdac89c42",
+      "cohort": "structured-work",
+      "trust_boundary": "uat_runbook_only",
+      "memory_scope": null
+    }
+  ],
+  "optional_contract_roles": [
+    {
+      "role_id": "autopilot-fast-helper",
+      "executable": false
+    }
+  ],
+  "routing_gate": {
+    "car_006": "ready",
+    "native_fallback": "operator_override_only",
+    "unqualified_delivered_model": "ineligible"
+  },
+  "catalog_digest": "sha256:fd0afef23b36adc510c6ec81548b119c795fb659d483c2290b716cdcb4c8cf21"
+}

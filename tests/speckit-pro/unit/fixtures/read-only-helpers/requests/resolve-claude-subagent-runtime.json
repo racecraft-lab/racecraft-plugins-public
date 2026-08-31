@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-resolve-claude-subagent-runtime",
+  "helper_id": "resolve-claude-subagent-runtime",
+  "operation": "resolve-claude-subagent-runtime",
+  "mode": "read_only",
+  "inputs": {
+    "repo_root": ".",
+    "client_version": "2.1.251 (Claude Code)",
+    "execution_mode": "interactive",
+    "agent_teams_env_enabled": true,
+    "team_contract_verified": true,
+    "auto_memory_enabled": true
+  }
+}

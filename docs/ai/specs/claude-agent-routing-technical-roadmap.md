@@ -22,16 +22,19 @@ PR #369; CAR-003 is complete and archived after PR #385; CAR-004 is complete
 and archived after PR #401; CAR-005 is complete and archived after the stacked
 PRs #411 and #412; CAR-006 is ready
 
-**Parity note:** This roadmap is the Claude half of the shared twelve-agent
-catalog. The Codex half lives in the companion Codex routing roadmap (PR #330
-as amended by the parity PR #338); the two catalogs mirror each other and
-diverge only for platform-specific implementation requirements.
+**Parity note:** This roadmap now targets 14 required shipped Claude agents
+plus the optional helper. Shared roles mirror the companion Codex routing
+roadmap (PR #330 as amended by parity PR #338); Claude-only secure
+feedback-sweep roles are an explicit platform-specific exception. The frozen
+CAR-003 v1 11+helper corpus remains historical evidence, while the
+[current-source successor roster](../research/claude-subagent-runtime-rebaseline.md)
+binds the live 14-agent source tree for CAR-006 onward.
 
 ---
 
 ## Roadmap Overview
 
-The effort is decomposed into **11 specifications** across **8 dependency
+The effort is decomposed into **12 specifications** across **9 dependency
 tiers**.
 
 | Tier | Specs | Purpose | Parallelization |
@@ -51,10 +54,10 @@ CAR-005 -> CAR-006 -> CAR-007 + CAR-008 + CAR-009 + CAR-010 ->
 CAR-011
 
 **Implementation boundary:** This sequence has no external prerequisite, but
-its internal dependencies still apply: CAR-001 implementation and its
-official-source evidence parity amendment are complete and archived. CAR-002
-is ready to scaffold and must revalidate the merged v2 source ledger before
-capability probing begins. No installer exists or is introduced on the Claude
+its internal dependencies still apply: CAR-001 through CAR-005 and their
+official-source evidence amendments are complete and archived. CAR-006 must
+revalidate the source ledger and consume the current-source v2 roster before
+route-policy work begins. No installer exists or is introduced on the Claude
 side - agents
 auto-load from the shipped payload - so CAR-006 builds the route-policy
 manifest, materializer drift gate, and read-only session-preflight resolver
@@ -84,6 +87,7 @@ search itself starts at the documented default per AC-2.1.
 | `implement-executor` | opus / max | opus | default, ascend if needed, then descend | Every role-eligible probed model, including fable when probed available |
 | `analyze-executor` | opus / max | opus | default, ascend if needed, then descend | Every role-eligible probed model, including fable when probed available |
 | `checklist-executor` | opus / max | opus | default, ascend if needed, then descend | Every role-eligible probed model, including bounded-work haiku |
+| `artifact-author` | opus / max | opus | default, ascend if needed, then descend | Every role-eligible probed model, including bounded-work haiku |
 | `uat-runbook-author` | sonnet / max | sonnet | default, ascend if needed, then descend | Every role-eligible probed model, including bounded-work haiku |
 | `clarify-executor` | opus / max | opus | default, ascend if needed, then descend | Every role-eligible probed model |
 | `domain-researcher` | sonnet / max | sonnet | default, ascend if needed, then descend | Every role-eligible probed model |
@@ -91,6 +95,8 @@ search itself starts at the documented default per AC-2.1.
 | `spec-context-analyst` | sonnet / max | sonnet | default, ascend if needed, then descend | Every role-eligible probed model, including bounded-work haiku |
 | `consensus-synthesizer` | sonnet / max | sonnet | default, ascend if needed, then descend | Every role-eligible probed model, including bounded-work haiku |
 | `gate-validator` | sonnet / max | sonnet | default, ascend if needed, then descend | Every role-eligible probed model, including bounded-work haiku |
+| `sweep-classifier` | opus / max | opus | default, ascend if needed, then descend | Every role-eligible probed model that preserves the broker-only trust boundary |
+| `sweep-analyst` | opus / max | opus | default, ascend if needed, then descend | Every role-eligible probed model that preserves the broker-only trust boundary |
 | `autopilot-fast-helper` | None - net-new parity addition (Codex baseline: Spark helper) | haiku with explicit low effort | explicit effort search | Every probed latency-oriented candidate plus a validated no-helper path |
 
 ### Route, evidence, and identity contract
@@ -126,7 +132,7 @@ never mutated at runtime.
 | `route_resolution_id` | CAR-002 schema; CAR-003/CAR-006 records | Preferred and effective route, fallback index, reason, snapshot, attempted routes, and timestamp |
 | `resolved_agent_policy_id` | CAR-006 schema/fixtures; CAR-011 final records | Exact shipped frontmatter-plus-body content hash and selected effective route |
 | `agent_route_policy_id` | CAR-007 through CAR-010 | Named agent, preferred route, ordered qualified fallbacks, hard contract, evidence, client bounds, and invalidation rules |
-| `core_routing_policy_id` | CAR-011 | Ordered mapping of the eleven required named agents to final route-policy IDs |
+| `core_routing_policy_id` | CAR-011 | Ordered mapping of the fourteen required named agents to final route-policy IDs |
 | `optional_helper_policy_id` | CAR-011 | Final helper route policy, approved fallbacks, and no-helper contract |
 | `resolved_installation_id` | CAR-011 | dist/claude payload tree hash plus installed-cache proof binding shipped agents to resolved policies |
 | `release_policy_id` | CAR-011 | Final core/helper identities, preflight/materializer version, evidence lock, UAT, invalidation rules, and bounded claims |
@@ -303,6 +309,20 @@ G56R-003 -+     (joint change; lands with G56R-012 on both platforms)
 
 ## Progress Tracking
 
+### Current-source roster rebaseline (2026-08-30)
+
+The CAR-003 v1 qualification corpus is immutable historical evidence for the
+11 required agents plus optional helper that existed when it was captured. It
+is not silently expanded or rehashed. The separately versioned
+`claude-agent-roster-rebaseline-v2.json` binds the exact 14 shipped source
+digests, cohorts, trust boundaries, and memory scopes plus the still-optional
+helper. CAR-006 must consume this v2 roster and retain the v1 corpus reference
+and digest for provenance. `artifact-author` joins structured work;
+`sweep-classifier` and `sweep-analyst` form a broker-only,
+untrusted-feedback cohort. Native runtime fallback remains an explicit
+operator-controlled recovery option, never a plugin-owned qualification
+substitute, and an unqualified delivered model is release-ineligible.
+
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
 | CAR-001 | Candidate Route Baseline and Role Contracts | Complete / Archived | [.process/CAR-001-workflow.md](.process/CAR-001-workflow.md) | PR #350 and evidence-parity amendment PR #362 merged; canonical evidence lives under `docs/ai/research/` |
@@ -310,7 +330,7 @@ G56R-003 -+     (joint change; lands with G56R-012 on both platforms)
 | CAR-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | Complete / Archived | [.process/CAR-003-workflow.md](.process/CAR-003-workflow.md) | PR #385 merged; canonical materializer, evaluation evidence, qualification modules, and validators live outside `specs/**` |
 | CAR-004 | Policy Controls and Adaptive Comparators | Complete / Archived | [.process/CAR-004-workflow.md](.process/CAR-004-workflow.md) | PR #401 merged; frozen control registry, comparison rule, fixtures, and validators live outside `specs/**`. T062's three live smokes were never run, so SC-009, SC-026, SC-027, SC-029, SC-030, and SC-031 stay unevidenced; the operator runbook is [.process/CAR-004-live-smoke-runbook.md](.process/CAR-004-live-smoke-runbook.md) |
 | CAR-005 | Model Availability, Fallback, and Recovery Simulation | Complete / Archived | [.process/CAR-005-workflow.md](.process/CAR-005-workflow.md) | Stacked PRs #411 and #412 merged; the reference simulator, three closed contracts, the eighteen-case corpus, and the Layer 4 owner live outside `specs/**`. The simulator declares `POLICY_SCHEMA_PATH` and `SNAPSHOT_SCHEMA_PATH` but reads neither, so it validates the report it emits and not the policy or snapshot it accepts; CAR-006 inherits that gap |
-| CAR-006 | Route-policy Manifest, Materializer, Preflight, and Strict Override | Ready | - | CAR-005 dependency satisfied by PRs #411 and #412 |
+| CAR-006 | Route-policy Manifest, Materializer, Preflight, and Strict Override | Ready | - | CAR-005 dependency satisfied by PRs #411 and #412; current-source v2 roster prerequisite satisfied 2026-08-30 |
 | CAR-007 | Quality-critical Executor Routing | Pending | - | Blocked by CAR-006 |
 | CAR-008 | Structured-work Agent Routing | Pending | - | Blocked by CAR-006 |
 | CAR-009 | Read-only Reasoning and Orchestration-support Agent Routing | Pending | - | Blocked by CAR-006 |
@@ -656,6 +676,9 @@ drift gate
 
 **Scope:**
 
+- Consume `claude-agent-roster-rebaseline-v2.json` as the current-source
+  roster while retaining the immutable CAR-003 v1 corpus ID and digest as
+  historical provenance; never rewrite the v1 corpus in place.
 - Define the plugin-owned, versioned, content-addressed `agent-route-policy`
   manifest schema: per named agent, the preferred route (shipped alias plus
   qualified resolved model ID and explicit effort), ordered qualified
@@ -762,28 +785,28 @@ Budget result: re-estimate at scaffold; three agent policies plus role evidence
 **Priority:** P1 | **Depends On:** CAR-006 | **Enables:** CAR-011
 
 **Goal:** Produce final preferred and ordered fallback route policies for
-checklist remediation and UAT runbook authoring.
+checklist remediation, bounded artifact authoring, and UAT runbook authoring.
 
 **Reviewability Budget:** Primary surface: seed/config |
-Projected reviewable LOC: 210 | Suggested slices: 1 | Status: ok |
-Production files: approximately 2 | Total files: approximately 8 |
-Budget result: re-estimate at scaffold; two agent policies plus role evidence
+Projected reviewable LOC: 300 | Suggested slices: 1 | Status: ok |
+Production files: approximately 3 | Total files: approximately 11 |
+Budget result: re-estimate at scaffold; three agent policies plus role evidence
 
 **Scope:**
 
-- Screen every executable, role-eligible candidate for `checklist-executor`
-  and `uat-runbook-author`, including bounded-work `haiku` when its tool and
-  output contracts pass.
-- Require complete all-severity checklist remediation and executable,
-  plain-English, non-circular, acceptance-criteria-traceable UAT runbooks as
-  hard gates.
+- Screen every executable, role-eligible candidate for `checklist-executor`,
+  `artifact-author`, and `uat-runbook-author`, including bounded-work `haiku`
+  when its tool and output contracts pass.
+- Require complete all-severity checklist remediation, template-bounded
+  fail-open artifact authoring, and executable, plain-English, non-circular,
+  acceptance-criteria-traceable UAT runbooks as hard gates.
 - Preserve each role's write boundary and fail-open/fail-closed behavior
   across every route and fallback.
 - Apply the staged pair, prompt-interaction, and cohort-lock design with exact
   treatment for every candidate before integration.
 - Emit final `agent_route_policy_id` records with complete route order,
   contract, evidence, client bounds, and invalidation rules.
-- INVEST rationale: two structured-output mutators share a measurable contract
+- INVEST rationale: three structured-output mutators share a measurable contract
   and ship independently of deep executors and analysts.
 
 **Out of Scope:**
@@ -794,6 +817,7 @@ Budget result: re-estimate at scaffold; two agent policies plus role evidence
 **Key Files:**
 
 - `speckit-pro/agents/checklist-executor.md`
+- `speckit-pro/agents/artifact-author.md`
 - `speckit-pro/agents/uat-runbook-author.md`
 - `tests/speckit-pro/layer6-efficiency/fixtures/` - cohort fixtures/results
 
@@ -805,12 +829,12 @@ Budget result: re-estimate at scaffold; two agent policies plus role evidence
 
 **Goal:** Produce final preferred and ordered fallback route policies for
 clarification, research, codebase analysis, project-context analysis,
-consensus synthesis, and gate validation.
+consensus synthesis, gate validation, and broker-confined feedback analysis.
 
 **Reviewability Budget:** Primary surface: seed/config |
-Projected reviewable LOC: 392 | Suggested slices: 1 | Status: ok |
-Production files: approximately 6 | Total files: approximately 16 |
-Budget result: re-estimate at scaffold; six agent policies plus bounded role
+Projected reviewable LOC: 520 | Suggested slices: 2 | Status: ok |
+Production files: approximately 8 | Total files: approximately 22 |
+Budget result: re-estimate at scaffold; eight agent policies plus bounded role
 fixtures; declare an analysts-versus-orchestration-support work-package split
 if a scaffold re-estimate warns
 
@@ -818,27 +842,31 @@ if a scaffold re-estimate warns
 
 - Screen every executable, role-eligible candidate for `clarify-executor`,
   `domain-researcher`, `codebase-analyst`, `spec-context-analyst`,
-  `consensus-synthesizer`, and `gate-validator`; retain lighter models only
-  when they preserve the complete role contract.
+  `consensus-synthesizer`, `gate-validator`, `sweep-classifier`, and
+  `sweep-analyst`; retain lighter models only when they preserve the complete
+  role contract.
 - Hard-gate read-only behavior (the shared `disallowedTools` denylist),
   source-domain separation, citations or file locators, abstention, and
   structured return formats.
 - Hard-gate the three-analyst consensus-synthesis contract (agreement rule,
   confidence assessment, actionable synthesized answer) and the structured
   gate-validation evidence contract for the two orchestration-support agents,
-  reusing and extending their two existing fixtures.
+  reusing and extending their two existing fixtures. For sweep roles, also
+  hard-gate immutable-snapshot broker-only access, instruction resistance,
+  strict result schemas, and receipt-only output.
 - Apply A1/A2/A3, Stage B, Stage C, exact treatment, progressive effort
   search, and the shared statistical plan without consuming
   integrated-confirmation data.
 - Emit one final `agent_route_policy_id` per named agent with preferred route,
   ordered independently qualified fallbacks, hard contract, evidence, client
-  bounds, and invalidation triggers; one model is never forced across all six
+  bounds, and invalidation triggers; one model is never forced across all eight
   roles.
 - Prove all policies against CAR-006 preflight and drift-gate fixtures.
 - Keep this cohort layout mirrored with the Codex catalog, where the same two
-  orchestration-support agents join the read-only cohort as parity additions.
+  orchestration-support agents join the read-only cohort as parity additions;
+  the two broker-confined sweep roles are the declared Claude-only exception.
 - Update only cohort-specific frontmatter and directly tied guidance prose.
-- INVEST rationale: one read-only evidence seam preserves six distinct
+- INVEST rationale: one read-only evidence seam preserves eight distinct
   perspective and orchestration-support contracts without mutation conflicts.
 
 **Out of Scope:**
@@ -853,6 +881,8 @@ if a scaffold re-estimate warns
 - `speckit-pro/agents/spec-context-analyst.md`
 - `speckit-pro/agents/consensus-synthesizer.md`
 - `speckit-pro/agents/gate-validator.md`
+- `speckit-pro/agents/sweep-classifier.md`
+- `speckit-pro/agents/sweep-analyst.md`
 - `tests/speckit-pro/layer6-efficiency/fixtures/consensus-synthesizer/` - existing fixture
 - `tests/speckit-pro/layer6-efficiency/fixtures/gate-validator/` - existing fixture
 
@@ -892,7 +922,7 @@ split when scaffolded
   reference their helper.
 - Measure functionality, latency, spawn reliability, raw resource evidence,
   resolution reasons, and result use on a helper scorecard; keep helper
-  qualification separate from the required eleven-agent core statistic.
+  qualification separate from the required fourteen-agent core statistic.
 - Prove autopilot continuation when the helper is omitted, unavailable, not
   consulted, not invoked, or cannot spawn; helper absence is never a
   required-core resolution failure.
@@ -922,7 +952,7 @@ split when scaffolded
 **Priority:** P1 | **Depends On:** CAR-007, CAR-008, CAR-009, CAR-010 |
 **Enables:** Release
 
-**Goal:** Compose, ship, and prove one internally consistent twelve-agent
+**Goal:** Compose, ship, and prove one internally consistent fifteen-agent
 routing policy whose skills use the named agents and whose preflight behaves
 safely when a preferred route is unavailable.
 
@@ -935,7 +965,7 @@ fixes if warned
 **Scope:**
 
 - After all cohort locks, create final `resolved_agent_policy_id` records and
-  `core_routing_policy_id` from the eleven required `agent_route_policy_id`
+  `core_routing_policy_id` from the fourteen required `agent_route_policy_id`
   values; create `optional_helper_policy_id` from the helper route policy and
   no-helper contract; bind the dist/claude payload tree hash and
   installed-cache proof into `resolved_installation_id`; then bind the
@@ -944,7 +974,7 @@ fixes if warned
 - Rebuild `dist/claude` through the Python-authoritative payload builder and
   the artifact refresh ritual; never hand-edit generated agent files.
 - Reconcile source, payload, installed-cache, benchmark, rollback, and release
-  packet identities. Source and payload retain twelve definitions - eleven
+  packet identities. Source and payload retain fifteen definitions - fourteen
   required agents plus the helper - and the materializer drift gate passes on
   the final tree.
 - Update active guidance with route resolution, fallback, override validation,
@@ -952,7 +982,7 @@ fixes if warned
   prerequisites, its references that encode per-agent model and effort prose,
   and the public install documentation; the superseded "max thinking on every
   agent" statement is replaced by the evidence-backed route table.
-- Run final integrated confirmation of the assembled preferred eleven-agent
+- Run final integrated confirmation of the assembled preferred fourteen-agent
   core against the immutable production core on untouched data. Require all
   safety, quality, reliability, accepted-workflow, raw-resource, duration,
   retry, compaction, attrition, and powered long-horizon gates, including the
@@ -962,17 +992,17 @@ fixes if warned
   predeclared secondary arms. A materially dominant qualified control
   restricts efficiency wording under the frozen messaging rule.
 - Publish `skill_agent_usage_manifest` for every active Claude skill entry
-  point and all twelve source agents. Update each applicable skill to name the
+  point and all fifteen source agents. Update each applicable skill to name the
   installed agent (`speckit-pro:<name>`), triggering condition, allowed route
   resolution, and result-consumption contract; classify other mappings as
   conditional, prohibited, or not applicable.
 - Run representative workflows through actual installed Claude skills. Across
-  the set, prove every one of the eleven required core agents was spawned by
+  the set, prove every one of the fourteen required core agents was spawned by
   its namespaced name and that its returned result affected a decision,
   artifact, or validation. Direct harness injection, generic-agent
   substitution, missing required spawn, or unconsumed result fails release
   proof. Test the helper in a separate workflow and prove the no-helper path;
-  no single workflow must spawn all twelve agents.
+  no single workflow must spawn all fifteen agents.
 - Bind every installed UAT trace as:
 
   ```text
@@ -1006,7 +1036,7 @@ fixes if warned
 
 **Out of Scope:**
 
-- Global optimality across every complete twelve-agent assembly.
+- Global optimality across every complete fifteen-agent assembly.
 - Manual version bumps; release-please owns release versioning.
 
 **Key Files:**
@@ -1186,7 +1216,7 @@ on both platforms
 |---|---|---|
 | Candidate route record | [proposed] `docs/ai/research/` | Dated official facts, role contracts, candidate routes, capability questions, and fixture backlog |
 | Capability and telemetry adapter | [proposed] Layer 6 Python libraries | Runtime capability snapshot, exact invocation probe, telemetry profile, treatment and route-change trace schemas |
-| Route evaluation | Layer 6 Python harness | Canonical materializer, twelve-role fixtures, disjoint corpora, scoring, statistics, raw resource evidence, and long-horizon stratum |
+| Route evaluation | Layer 6 Python harness | Canonical materializer, immutable historical v1 fixtures plus the current-source v2 roster, disjoint corpora, scoring, statistics, raw resource evidence, and long-horizon stratum |
 | Fallback simulation | [proposed] Layer 6 replay fixtures | Availability, effort, probe, alias re-pointing, override, no-safe-route, helper, and retry cases |
 | Route-policy framework | Runner helpers, registry, and hooks | Route-policy manifest, frontmatter drift gate, read-only doctor/preflight, override validation, SessionStart warning |
 | Agent route policies | `speckit-pro/agents/*.md` | Preferred/fallback order remains project-owned; shipped frontmatter materializes one explicit route per agent |

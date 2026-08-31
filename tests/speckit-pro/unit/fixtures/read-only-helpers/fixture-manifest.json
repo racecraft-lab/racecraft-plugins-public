@@ -150,6 +150,18 @@
       "rollback": "Use the registered resolve-autopilot-stage operation in read_only mode."
     },
     {
+      "helper_id": "resolve-claude-subagent-runtime",
+      "operation": "resolve-claude-subagent-runtime",
+      "promotion_status": "python_authoritative",
+      "failure_classes": ["invalid_input"],
+      "rejected_stdout_schema": {"error": "string"},
+      "deterministic_remediation": {"summary": "Provide a parseable Claude Code version and a supported execution mode.", "actions": ["Observe claude --version.", "Pass interactive or headless plus the bounded runtime settings."]},
+      "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
+      "path_boundary_policy": {"boundary": "not_applicable", "rejects": []},
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/read-only-helpers/requests/resolve-claude-subagent-runtime.json",
+      "rollback": "Remove the runtime resolver registry entry and use serial subagent dispatch."
+    },
+    {
       "helper_id": "confidence-gate",
       "operation": "confidence-gate",
       "promotion_status": "python_authoritative",

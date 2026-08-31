@@ -57,9 +57,11 @@ versus the older `sum(tasks 10-14)` of strictly-sequential dispatch.
 
 ### Path A: Agent Teams (when `AGENT_TEAMS_AVAILABLE=true`)
 
-The lead spawns ONE Agent Team for tasks 10-14, waits for all
-teammates to complete, synthesizes findings into the workflow file,
-runs `Clean up the team`, then continues serially from task 15.
+The lead issues three named `Agent` calls for tasks 10-14, waits for every
+teammate report, requests graceful shutdown, confirms automatic cleanup, and
+then continues serially from task 15. The runtime resolver enables this path
+only for a positively interactive, team-enabled, exact-client-UAT-verified
+session. No legacy team-management tool is invoked.
 
 **Why a team here:** the docs' [parallel code review](https://code.claude.com/docs/en/agent-teams#use-case-examples)
 example is a 1:1 match — independent reviewers each apply a distinct
@@ -67,67 +69,29 @@ lens, lead synthesizes. The team adds inter-teammate messaging (a
 verifier can ask the reviewer "did you see the regression in
 `src/foo.ts:42`?") and a shared task list with file-locked claiming.
 
-**Team spawn (natural-language prompt to the lead):**
+**Team spawn (named Agent semantics):**
 
 ```text
-Create an agent team for SPEC-XXX post-implementation validation.
-Spawn 3 teammates, all using the speckit-pro:phase-executor subagent type.
-**Use Sonnet for each teammate** — these are focused execution
-tasks (run a slash command, report results), no opus reasoning
-needed. The lead stays on opus for synthesis.
+Agent(team_name: "SPEC-XXX-post-implementation", name: "doctor",
+      subagent_type: "general-purpose",
+      prompt: "Run /<doctor-cmd> for SPEC-XXX. Report extension health and blockers. Read only.")
+Agent(team_name: "SPEC-XXX-post-implementation", name: "reviewer",
+      subagent_type: "general-purpose",
+      prompt: "Review spec.md, plan.md, and origin/main...HEAD. Report findings by severity. Read only.")
+Agent(team_name: "SPEC-XXX-post-implementation", name: "verifier",
+      subagent_type: "general-purpose",
+      prompt: "Run /<verify-cmd>, then /<verify-tasks-cmd>, then <INTEGRATION_TEST>. Report each result. Read only.")
 
-- Name: "doctor"   — Task: Run /<doctor-cmd> for SPEC-XXX. Report
-                     extension health and any blocking issues.
-- Name: "reviewer" — Task: Independently review the implemented change
-                     for SPEC-XXX against spec.md/plan.md and the diff
-                     `origin/main...HEAD` — correctness, regressions,
-                     scope, missed edge cases. Report findings by
-                     severity (CRITICAL/HIGH/MEDIUM/LOW). This is a
-                     fresh-eyes review, distinct from the orchestrator's
-                     Self-Review. No extension required.
-- Name: "verifier" — Tasks (chain in order):
-                     1. Run /<verify-cmd> for SPEC-XXX
-                     2. Run /<verify-tasks-cmd> for SPEC-XXX
-                     3. Run <INTEGRATION_TEST command from PROJECT_COMMANDS>
-                     Report each step's pass/fail and any regressions.
-
-Task dependencies (set on the shared task list):
-  - "verifier-verify-tasks" blockedBy "verifier-verify"
-  - "verifier-integration"  blockedBy "verifier-verify-tasks"
-
-Require all three teammates to complete before I synthesize findings.
-Do not let any teammate edit src/, tests/, or specs/ files — they
-should only run commands and report results.
+Use the same `team_name` and a unique `name` for every teammate. Do not set
+`run_in_background` on teammate calls. Require all three final reports before
+synthesis. If the exact client cannot prove the read-only/tool contract, set
+`team_contract_verified=false` and use Path B.
 ```
-
-**Why sonnet teammates here (not for cost):** Per
-[Anthropic's "Specify teammates and models"](https://code.claude.com/docs/en/agent-teams#specify-teammates-and-models),
-teammates don't inherit the lead's model selection. Each teammate
-reuses a bundled subagent definition — gate-validator-style sonnet
-for these read-and-report tasks, opus for heavy-reasoning executors.
-**Every teammate runs at `effort: max` per the plugin's
-max-thinking-on-every-agent policy** (see
-[agent-teams-integration.md](./agent-teams-integration.md)
-§Design principles #8). The post-impl tasks here are mechanical
-(run a command, parse output, report) so sonnet is the right
-*model fit* — and the thinking budget is never lowered unless
-Layer 6 fixtures empirically prove quality=1.0 at a lower effort
-(see `tests/layer6-efficiency/results-codex/*.json`). Quality is
-paramount; cost is reduced only where quality is proven to be
-equivalent.
 
 Substitute the actual extension command names (e.g., `/speckit.doctor`
 vs `/speckit.speckit-utils.doctor`) based on Step 0.12 extension
-detection. Use the host project's `PROJECT_IMPLEMENTATION_AGENT`
-subagent type for any teammate where one is registered —
-`speckit-pro:phase-executor` is the safe fallback.
-
-**Reusing existing subagent definitions:** per Anthropic's "Use
-subagent definitions for teammates," the teammate types here reference
-plugin-scoped subagent definitions. `tools` and `model` carry over
-from the definition. `skills` and `mcpServers` do NOT — teammates
-load skills/MCP from project + user settings same as a regular
-session, so the `/speckit.*` extension commands remain invocable.
+detection. Teammate effort follows the lead. Do not claim that subagent-only
+`skills`, `disallowedTools`, `memory`, or `maxTurns` fields apply to teammates.
 
 **Lead synthesis after team completes:**
 
@@ -138,7 +102,7 @@ session, so the `/speckit.*` extension commands remain invocable.
 3. Write a consolidated Post-Implementation Checklist entry to the
    workflow file with one row per task (10/11/12/13/14):
      | Task | Status | Findings | Action Needed |
-4. Ask the lead: "Clean up the team"
+4. Request graceful teammate shutdown and confirm automatic cleanup
 5. Continue to Task 15 (Reviewability Diff Gate) — serial tail in the
    parent session
 ```
@@ -173,17 +137,15 @@ or surface the regression to the lead.
 
 **Path A failure modes:**
 
-- **A teammate stops on error:** message the teammate directly to
-  recover, or spawn a replacement (per Agent Teams troubleshooting
-  guidance). If unrecoverable, abandon the team and fall through to
-  Path B for the rest of this run; log the failure.
+- **A teammate stops on error:** message it once to recover. If unrecoverable,
+  request shutdown and fall through to Path B; log the failure.
 - **Lead shuts down team early:** tell the lead "wait for your
   teammates to complete their tasks before proceeding."
 - **Task status lags** (known Agent Teams limitation): if a teammate
   has clearly finished but its task is still `in_progress`, nudge
   the teammate or manually mark complete.
-- **Team cleanup fails** (active teammates remain): shut down any
-  remaining teammates first, then retry cleanup.
+- **Shutdown/cleanup is unconfirmed:** do not start another team. Record the
+  lifecycle failure and use ordinary subagents for the rest of the run.
 
 ### Path B: Parallel subagents (when `AGENT_TEAMS_AVAILABLE=false`)
 
@@ -191,6 +153,9 @@ Same three tracks, dispatched as background subagents in ONE message.
 Each track is a `general-purpose` subagent that runs its track's
 commands (singleton or chain) and returns a summary. The lead awaits
 all three, then synthesizes.
+
+Ordinary calls MUST omit `name`, which prevents accidental teammate promotion
+in a team-enabled interactive session.
 
 **Background dispatch (single tool turn):**
 

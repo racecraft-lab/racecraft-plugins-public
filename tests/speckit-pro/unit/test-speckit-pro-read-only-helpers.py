@@ -66,6 +66,7 @@ EXPECTED_HELPERS = [
     "estimate-reviewable-loc",
     "resolve-confidence-mode",
     "resolve-autopilot-stage",
+    "resolve-claude-subagent-runtime",
     "confidence-gate",
     "generate-spec-index-check",
     "o5-topology",
@@ -95,6 +96,7 @@ NO_BASH_ANCESTOR = (
     "resolve-workflow-binding",
     "resolve-scaffold-worktree-placement",
     "resolve-autopilot-stage",
+    "resolve-claude-subagent-runtime",
     "sweep-pr-feedback",
     "sweep-isolation-session",
     "check-artifact-freshness",
@@ -114,6 +116,13 @@ HELPER_CASES: dict[str, dict[str, object]] = {
     "resolve-autopilot-stage": {
         "workflow_file": AUTOPILOT_STAGE_WORKFLOW_FILE,
         "autopilot_args": ["--stage", "plan"],
+    },
+    "resolve-claude-subagent-runtime": {
+        "client_version": "2.1.251 (Claude Code)",
+        "execution_mode": "interactive",
+        "agent_teams_env_enabled": True,
+        "team_contract_verified": True,
+        "auto_memory_enabled": True,
     },
     "confidence-gate": {"workflow_file": WORKFLOW_FILE, "mode_name": "advisory"},
     "generate-spec-index-check": {},
@@ -2701,6 +2710,119 @@ class ReadOnlyHelperTests(unittest.TestCase):
         self.assertEqual(stderr_records, [])
         self.assert_response(response, "ok", 0)
         self.assertEqual(response["data"]["report"]["runner_contract_id"], "speckit-pro-runner")
+
+    def test_claude_subagent_runtime_resolves_versioned_capabilities(self) -> None:
+        if self.helper_filter and self.helper_filter != "resolve-claude-subagent-runtime":
+            self.skipTest("Claude runtime cases use resolve-claude-subagent-runtime")
+
+        from speckit_pro_runner.helpers.read_only import resolve_claude_subagent_runtime
+
+        modern = resolve_claude_subagent_runtime(
+            {
+                "client_version": "2.1.251 (Claude Code)",
+                "execution_mode": "interactive",
+                "agent_teams_env_enabled": True,
+                "team_contract_verified": True,
+                "auto_memory_enabled": True,
+            },
+            REPO_ROOT,
+        )
+        self.assertEqual(modern["exit_code"], 0)
+        record = json.loads(modern["stdout"])
+        self.assertEqual(record["client_version"], "2.1.251")
+        self.assertEqual(record["concurrency"], {"limit": 20, "wave_size": 19, "source": "client_default"})
+        self.assertEqual(record["spawn_depth"], {"limit": 3, "source": "client_default"})
+        self.assertTrue(record["partial_resume"]["supported"])
+        self.assertEqual(record["partial_resume"]["strategy"], "same_agent_once")
+        self.assertTrue(record["native_fallback"]["supported"])
+        self.assertTrue(record["cache_ttl"]["client_supported"])
+        self.assertFalse(record["cache_ttl"]["plugin_agent_supported"])
+        self.assertFalse(record["cache_ttl"]["adopted"])
+        self.assertTrue(record["agent_teams"]["available"])
+        self.assertTrue(record["auto_memory"]["enabled"])
+
+        low_cap = resolve_claude_subagent_runtime(
+            {
+                "client_version": "2.1.251",
+                "execution_mode": "headless",
+                "max_concurrent_subagents": "2",
+                "max_subagent_spawn_depth": "4",
+                "agent_teams_env_enabled": True,
+                "team_contract_verified": True,
+                "auto_memory_enabled": False,
+            },
+            REPO_ROOT,
+        )
+        record = json.loads(low_cap["stdout"])
+        self.assertEqual(record["concurrency"], {"limit": 2, "wave_size": 1, "source": "environment_override"})
+        self.assertEqual(record["spawn_depth"], {"limit": 4, "source": "environment_override"})
+        self.assertFalse(record["agent_teams"]["available"])
+        self.assertIn("headless", record["agent_teams"]["reason"])
+
+        legacy = resolve_claude_subagent_runtime(
+            {"client_version": "2.1.216", "execution_mode": "interactive"},
+            REPO_ROOT,
+        )
+        record = json.loads(legacy["stdout"])
+        self.assertEqual(record["concurrency"], {"limit": 5, "wave_size": 4, "source": "compatibility_default"})
+        self.assertEqual(record["spawn_depth"], {"limit": 1, "source": "compatibility_default"})
+        self.assertFalse(record["partial_resume"]["supported"])
+        self.assertEqual(record["partial_resume"]["strategy"], "fresh_retry_once")
+        self.assertFalse(record["native_fallback"]["supported"])
+        self.assertFalse(record["cache_ttl"]["client_supported"])
+        self.assertFalse(record["auto_memory"]["enabled"])
+
+        numeric_override = resolve_claude_subagent_runtime(
+            {
+                "client_version": "2.1.251",
+                "execution_mode": "interactive",
+                "max_concurrent_subagents": 3,
+                "max_subagent_spawn_depth": 2,
+            },
+            REPO_ROOT,
+        )
+        record = json.loads(numeric_override["stdout"])
+        self.assertEqual(record["concurrency"], {"limit": 3, "wave_size": 2, "source": "environment_override"})
+        self.assertEqual(record["spawn_depth"], {"limit": 2, "source": "environment_override"})
+
+        invalid_override = resolve_claude_subagent_runtime(
+            {
+                "client_version": "2.1.251",
+                "execution_mode": "interactive",
+                "max_concurrent_subagents": "zero",
+            },
+            REPO_ROOT,
+        )
+        record = json.loads(invalid_override["stdout"])
+        self.assertEqual(record["concurrency"], {"limit": 1, "wave_size": 1, "source": "invalid_environment_override"})
+        self.assertTrue(any("MAX_CONCURRENT_SUBAGENTS" in warning for warning in record["warnings"]))
+
+        boolean_override = resolve_claude_subagent_runtime(
+            {
+                "client_version": "2.1.251",
+                "execution_mode": "interactive",
+                "max_concurrent_subagents": True,
+            },
+            REPO_ROOT,
+        )
+        record = json.loads(boolean_override["stdout"])
+        self.assertEqual(record["concurrency"], {"limit": 1, "wave_size": 1, "source": "invalid_environment_override"})
+
+    def test_claude_subagent_runtime_rejects_unknown_execution_mode(self) -> None:
+        if self.helper_filter and self.helper_filter != "resolve-claude-subagent-runtime":
+            self.skipTest("Claude runtime cases use resolve-claude-subagent-runtime")
+
+        from speckit_pro_runner.helpers.read_only import resolve_claude_subagent_runtime
+
+        result = resolve_claude_subagent_runtime(
+            {"client_version": "2.1.251", "execution_mode": "daemon"},
+            REPO_ROOT,
+        )
+        self.assertEqual(result["exit_code"], 2)
+        self.assertEqual(
+            json.loads(result["stdout"])["error"],
+            "execution_mode must be interactive or headless",
+        )
 
     def test_promoted_helper_runs_without_bash_on_path(self) -> None:
         if self.helper_filter and self.helper_filter != "detect-commands":

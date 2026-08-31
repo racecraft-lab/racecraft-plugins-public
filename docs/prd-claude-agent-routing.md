@@ -1,16 +1,19 @@
 # PRD: Claude Code Agent Model Routing and Graceful Fallback
 
-**Status**: Active - CAR-001 complete/archived; CAR-002 ready
+**Status**: Active - CAR-001 through CAR-005 complete/archived; current-source
+roster rebaseline complete; CAR-006 ready
 **Source**: Maintainer request plus current official Anthropic documentation
-retrieved 2026-07-16 under the evidence-authority contract below
+retrieved 2026-08-30 under the evidence-authority contract below
 **Created**: 2026-07-12
-**Last updated**: 2026-07-16
+**Last updated**: 2026-08-30
 **Target window**: Next SpecKit Pro minor release after the evaluation and
 route-policy specifications in this roadmap are implemented
-**Parity note**: This PRD is the Claude half of the shared twelve-agent
-catalog. The Codex half is defined by the companion Codex routing PRD; the two
-documents mirror each other and diverge only for platform-specific
-implementation requirements.
+**Parity note**: This PRD now targets 14 required shipped Claude agents plus
+the optional helper. Shared roles mirror the companion Codex routing PRD;
+Claude-only secure feedback-sweep roles are an explicit platform-specific
+exception. The frozen CAR-003 v1 11+helper corpus remains historical evidence;
+the current-source successor roster is recorded in
+[`claude-subagent-runtime-rebaseline.md`](ai/research/claude-subagent-runtime-rebaseline.md).
 
 ---
 
@@ -54,18 +57,12 @@ implementation requirements.
 > unavailable without silently changing its role, tools, safety boundary, or
 > output contract?
 
-SpecKit Pro currently defines eleven named Claude Code agents, all required:
-five executors pinned to `opus` (`phase-executor`, `implement-executor`,
-`analyze-executor`, `checklist-executor`, `clarify-executor`) and six
-analyst/support agents pinned to `sonnet` (`codebase-analyst`,
-`consensus-synthesizer`, `domain-researcher`, `gate-validator`,
-`spec-context-analyst`, `uat-runbook-author`), every one at `effort: max`.
-Cross-platform agent parity is a governing principle: both platforms define
-the same named agents under each platform's official configuration surface and
-diverge only for platform-specific implementation requirements. This plan
-therefore targets a twelve-agent Claude catalog: the eleven required core
-agents plus the optional `autopilot-fast-helper`, introduced here as the
-Claude mirror of the existing Codex helper.
+SpecKit Pro currently defines 14 required Claude Code agents: three
+quality-critical executors, three structured-work roles, four read-only
+reasoning roles, two orchestration-support roles, and two broker-confined
+untrusted-feedback roles. Every shipped agent has explicit model, effort, and
+turn limits. This plan therefore targets a 15-role Claude catalog: the 14
+required shipped agents plus optional `autopilot-fast-helper`.
 
 The existing definitions pin one floating model alias each, but they do not
 express an evidence-backed ordered fallback policy, and no committed Claude
@@ -122,7 +119,7 @@ model/effort route for the same named agent. It cannot substitute a different
 named agent, a generic agent, or a weaker safety or tool contract.
 
 No complete public benchmark compares every supported Claude model and effort
-on SpecKit Pro's twelve roles. Model branding, generation, or placement in
+on SpecKit Pro's 15 target roles. Model branding, generation, or placement in
 product guidance therefore does not prove a route. The PRD uses controlled
 evaluation to qualify preferred and fallback routes, then resolves dispatch
 against a versioned capability snapshot from the user's working Claude Code
@@ -144,11 +141,9 @@ duration, retries, compaction, and accepted-workflow rate.
   or more ordered, independently qualified fallback routes.
 - Give the optional helper a preferred route, qualified helper fallbacks, and a
   validated no-helper path.
-- Maintain the same named agents on both the Claude and Codex platforms,
-  following each platform's official documentation and diverging only for
-  platform-specific implementation requirements; this plan delivers the Claude
-  half of the shared twelve-agent catalog, including the net-new
-  `autopilot-fast-helper`.
+- Maintain parity for shared Claude/Codex roles while recording explicit
+  platform-specific exceptions; this plan covers all 14 shipped Claude roles
+  plus the optional `autopilot-fast-helper`.
 - Preserve role-specific correctness, grounding, safety, mutation, output,
   tool, and orchestration contracts across every route.
 - Select preferred routes quality and reliability first, then use one
@@ -185,9 +180,8 @@ duration, retries, compaction, and accepted-workflow rate.
   release eligibility. Statusline rate-limit data and usage displays remain
   diagnostic environment evidence only.
 - Changing Codex agent definitions, Codex skills, or Codex marketplace
-  behavior. The Codex half of the twelve-agent parity target is companion
-  work, delivered through the Codex routing PRD and its parity amendment
-  (PR #338).
+  behavior. Shared-role parity remains companion work; Claude-only sweep roles
+  do not expand this PRD into Codex changes.
 - Claiming that ordered model fallback, strict override enforcement, or
   availability preflight is a native subagent-frontmatter feature. SpecKit Pro
   owns the ordered route policy, preflight resolver, and materializer.
@@ -208,7 +202,7 @@ duration, retries, compaction, and accepted-workflow rate.
 - Offering quality/balanced/economy profiles or arbitrary per-agent user
   overrides in v1. The documented global subagent-model override remains the
   compatibility escape hatch and is validated, not silently accepted.
-- Searching the complete eleven-agent combination space or claiming global
+- Searching the complete fourteen-agent combination space or claiming global
   assembled-policy optimality. Version 1 performs component-wise route and
   prompt selection, then confirms the assembled preferred core.
 - Automatically selecting an unqualified adjacent model, changing a named
@@ -249,7 +243,7 @@ depend on final aggregates that do not yet exist.
 | `agent_route_policy_id` | CAR-007 through CAR-010 | Named agent, preferred route, ordered fallbacks, hard contract, evidence, client bounds, and invalidation rules |
 | `route_resolution_id` | CAR-002 schema; CAR-003/CAR-006 records | Preferred and effective routes, fallback index and reason, attempted routes, capability snapshot, and timestamp |
 | `resolved_agent_policy_id` | CAR-006 schema/fixtures; CAR-011 final records | Exact shipped frontmatter-plus-body content hash and selected effective route for one named agent |
-| `core_routing_policy_id` | CAR-011 | Ordered mapping of the eleven required named agents to final route policies |
+| `core_routing_policy_id` | CAR-011 | Ordered mapping of the fourteen required named agents to final route policies |
 | `optional_helper_policy_id` | CAR-011 | Helper preferred route, qualified fallbacks, no-helper contract, and integration reference |
 | `resolved_installation_id` | CAR-011 | dist/claude payload tree hash plus installed-cache proof binding shipped agents to resolved policies |
 | `release_policy_id` | CAR-011 | Final core, helper state, preflight/materializer version, evidence lock, UAT, invalidation rules, and bounded claims |
@@ -265,6 +259,9 @@ plugin release.
 ## 3. Acceptance Criteria
 
 ### 3.1 Candidate Route Baseline and Role Contracts *(-> CAR-001)*
+
+AC-1.1 through AC-1.7 describe the immutable CAR-001/CAR-003 v1 evidence set.
+They are historical requirements, not the current source count.
 
 - **AC-1.1**: A dated research record inventories all twelve named target
   agents (the eleven current Claude agents plus the net-new
@@ -321,6 +318,12 @@ plugin release.
   results `non_release_evidence` until CAR-003 replays them through the shared
   materializer with exact treatment and the required tool surface, mutation
   contract, dispatch context, and telemetry proof.
+- **AC-1.8 — Current-source successor roster**: Before CAR-006, publish a
+  separately versioned roster that binds all 14 shipped agent source digests,
+  cohorts, trust boundaries, and memory scopes plus the optional helper. It
+  references the historical corpus by ID/digest without changing it. Add
+  `artifact-author` to structured work and put `sweep-classifier` and
+  `sweep-analyst` in a broker-only untrusted-feedback cohort.
 
 ### 3.2 Route Evaluation and Qualification *(-> CAR-002 through CAR-004)*
 
@@ -448,8 +451,8 @@ plugin release.
   strategy are locked. Changing any locked decision invalidates affected
   evidence.
 - **AC-2.13 — Immutable production comparator**: Before screening, the
-  immutable production comparator is pinned by repository revision, plugin
-  version, the eleven current frontmatter route tuples with their resolved
+  immutable CAR-003 v1 production comparator is pinned by repository revision,
+  plugin version, its eleven frontmatter route tuples with their resolved
   model IDs, each agent's instruction hash and mutation contract, client
   version, corpus snapshot, and analysis plan. Candidate routes compare with
   the corresponding production role route; integrated release compares the
@@ -457,7 +460,9 @@ plugin release.
   net-new helper has no production route and qualifies against its absolute
   contract, quality, and reliability floors outside the required-core primary
   statistic. The immutable production comparator remains the sole release
-  baseline.
+  baseline. The current-source v2 successor separately binds all 14 shipped
+  source policies; newly added roles use their bound shipped policy as the
+  comparator when their cohort is evaluated, without rewriting v1 evidence.
 - **AC-2.14 — Missing telemetry and attrition**: Every attempt records missing
   fields, cause classification, evidence, rerun eligibility/count, and final
   disposition. Only independently proven transient harness failures can
@@ -591,7 +596,8 @@ plugin release.
   effort; omitted or `inherit` values do not satisfy the contract for routed
   fields. A materializer drift gate fails when shipped frontmatter differs
   from the route-policy manifest's materialized preferred route. The shipped
-  agent set contains exactly the eleven required core agents plus the helper.
+  target agent set contains exactly the fourteen required core agents plus the
+  optional helper.
 - **AC-3.5**: The global `CLAUDE_CODE_SUBAGENT_MODEL` override remains a
   documented compatibility action. Because it is harness-owned and blanket,
   the preflight validates the resulting tuple for every named agent against
@@ -624,12 +630,14 @@ plugin release.
 
 ### 3.5 Structured-work Agent Routing *(-> CAR-008)*
 
-- **AC-5.1**: `checklist-executor` and `uat-runbook-author` screen every
+- **AC-5.1**: `checklist-executor`, `artifact-author`, and
+  `uat-runbook-author` screen every
   eligible route, including bounded-work candidates such as `haiku` when their
   tool and output contracts pass.
-- **AC-5.2**: Checklist remediation remains complete at every severity; UAT
-  runbooks remain executable, plain-English, non-circular, and traceable to
-  acceptance criteria.
+- **AC-5.2**: Checklist remediation remains complete at every severity;
+  artifact authoring remains template-bounded and fail-open; UAT runbooks
+  remain executable, plain-English, non-circular, and traceable to acceptance
+  criteria.
 - **AC-5.3**: Preferred and fallback routes preserve each role's write
   boundary and fail-open/fail-closed behavior and clear component
   qualification plus the disjoint cohort lock.
@@ -640,9 +648,10 @@ plugin release.
 ### 3.6 Read-only Reasoning and Orchestration-support Agent Routing *(-> CAR-009)*
 
 - **AC-6.1**: `clarify-executor`, `domain-researcher`, `codebase-analyst`,
-  `spec-context-analyst`, `consensus-synthesizer`, and `gate-validator` screen
-  every eligible route; lighter routes remain only when their grounding,
-  citation, and output contracts pass.
+  `spec-context-analyst`, `consensus-synthesizer`, `gate-validator`,
+  `sweep-classifier`, and `sweep-analyst` screen every eligible route; lighter
+  routes remain only when their grounding, citation, output, and trust-boundary
+  contracts pass.
 - **AC-6.2**: Each model follows the ordered effort search and boundary-retest
   contract; selection cannot stop after testing only one lower effort.
 - **AC-6.3**: Every route remains grounded in its assigned evidence domain,
@@ -650,8 +659,10 @@ plugin release.
   agent's read-only `disallowedTools` contract. The consensus-synthesis
   contract (three-analyst agreement rule, confidence assessment, actionable
   synthesized answer) and the structured gate-validation evidence contract are
-  additional hard gates for the two orchestration-support agents.
-- **AC-6.4**: One model is not forced across all six roles. Each final
+  additional hard gates for the two orchestration-support agents. Sweep roles
+  additionally hard-gate immutable-snapshot broker-only access, instruction
+  resistance, and receipt-only output.
+- **AC-6.4**: One model is not forced across all eight roles. Each final
   `agent_route_policy_id` records its independently qualified preferred route
   and ordered fallbacks.
 - **AC-6.5**: Exact-treatment evaluation, bounded prompt/context tuning,
@@ -688,8 +699,8 @@ plugin release.
 ### 3.8 Payload, Installed Skill UAT, Fallback Proof, and Release Integration *(-> CAR-011)*
 
 - **AC-8.1**: The Claude payload is rebuilt from source through the existing
-  Python-authoritative artifact refresh. All twelve source and payload agent
-  definitions, manifests/checksums, eleven required shipped policies, the
+  Python-authoritative artifact refresh. All fifteen target source and payload
+  agent definitions, manifests/checksums, fourteen required shipped policies, the
   optional helper, final identities, and active guidance reconcile without
   hand-editing generated artifacts.
 - **AC-8.2**: Active Claude guidance - the autopilot skill's model/effort
@@ -727,7 +738,7 @@ plugin release.
   binding, client, prompt, or policy changes trigger the predeclared scope of
   requalification, fallback revalidation, or integrated confirmation.
 - **AC-8.8**: Deterministic documentation checks validate relative links,
-  current versus proposed paths, the twelve-agent count, PRD-to-roadmap
+  current versus proposed paths, the fifteen-role target count, PRD-to-roadmap
   ownership, acyclic dependencies, candidate-versus-final identity lifecycle,
   exact-treatment wording, fallback ownership, override validation, no-mutate
   preflight semantics, helper/no-helper behavior, and skill-to-agent coverage.
@@ -735,7 +746,7 @@ plugin release.
   ordered fallback.
 - **AC-8.9 — Integrated release gate**: After CAR-007 through CAR-010 lock
   their policies, CAR-011 composes one `core_routing_policy_id` from the
-  eleven required preferred routes and evaluates it exactly once against the
+  fourteen required preferred routes and evaluates it exactly once against the
   immutable production core on the untouched integrated confirmation corpus.
   The core must pass every contract, safety, quality, reliability,
   accepted-workflow, predeclared environment-independent
@@ -745,7 +756,7 @@ plugin release.
   reopens route, prompt, or orchestration selection and requires new versioned
   confirmation evidence. Passing proves bounded improvement over production,
   not global assembled-policy optimality.
-- **AC-8.10 — Capability support claim**: Support means the eleven required
+- **AC-8.10 — Capability support claim**: Support means the fourteen required
   named agents resolve from qualified route policies, ship in one consistent
   payload, deliver exact treatment in the tested Claude Code client range, and
   report safely when resolution fails. The claim is limited to the tested
@@ -766,7 +777,7 @@ plugin release.
   substitute for AC-2.9 comparative long-horizon evidence.
 - **AC-8.13 — Skill-to-agent and model-fallback proof**: Before release,
   CAR-011 publishes a versioned `skill_agent_usage_manifest` covering every
-  active Claude skill entry point and all twelve source agents. Each mapping
+  active Claude skill entry point and all fifteen target source agents. Each mapping
   records skill ID and instruction hash, exact installed agent name
   (`speckit-pro:<name>`), trigger/phase, `required`, `conditional`,
   `prohibited`, or `not_applicable` state, spawn condition,
@@ -777,7 +788,7 @@ plugin release.
   at least one production skill path; the helper remains conditional.
 
   Representative UAT invokes the actual installed skills, not a direct harness
-  call. Across those workflows, every one of the eleven core agents is
+  call. Across those workflows, every one of the fourteen core agents is
   observed at least once under a predeclared trigger. Each trace binds
   `skill_id` and skill hash to the named-agent spawn, `route_resolution_id`,
   effective model evidence when proven, exact-treatment evidence, returned
@@ -787,7 +798,7 @@ plugin release.
   work unused, substituting a different named or generic agent, or injecting
   the agent directly from the harness fails release proof. The separate helper
   campaign proves the same chain when a helper route resolves and proves the
-  no-helper path otherwise. No single workflow must spawn all twelve agents.
+  no-helper path otherwise. No single workflow must spawn all fifteen agents.
 
 ### 3.9 Budgets, Controls, Fallback, and Recovery *(-> CAR-004, CAR-005, CAR-011)*
 
@@ -835,7 +846,8 @@ plugin release.
   fallback/recovery simulation.
 - **Phase 3 (CAR-006) - Route-policy and preflight framework**: Implement the
   route-policy manifest, canonical materializer and drift gate, session
-  preflight resolver, and override validation against fixture policies. Do not
+  preflight resolver, and override validation against fixture policies. Consume
+  the v2 current-source roster while preserving the CAR-003 v1 corpus. Do not
   create final route aggregates.
 - **Phase 4 (CAR-007 through CAR-010) - Agent route policies**: Select
   preferred and ordered fallback routes for the three required-agent cohorts
@@ -850,11 +862,9 @@ plugin release.
 - Claude-only scope: `speckit-pro/agents/`, Claude skills, the active Python
   runner path, Claude payloads (`dist/claude`), and directly related
   tests/evals/docs.
-- Cross-platform parity: the named-agent catalog remains identical across the
-  Claude and Codex plugins; catalog changes land on both platforms or record
-  an explicit platform-specific exception. The Codex half of the shared
-  twelve-agent catalog is owned by the Codex routing PRD (PR #330 as amended
-  by PR #338).
+- Cross-platform parity: shared named agents remain aligned across Claude and
+  Codex, while platform-specific roles are recorded explicitly. The two
+  broker-confined sweep roles are a Claude-specific exception in this PRD.
 - No installer is introduced: Claude plugin agents auto-load from the shipped
   payload; delivery is the plugin release plus marketplace update, and the
   payload/proof regeneration ritual owns generated artifacts.
@@ -939,7 +949,7 @@ plugin release.
 1. All acceptance criteria map once through the acyclic CAR-001 through
    CAR-011 catalog; CAR-001 does not wait on CAR-002, CAR-006 creates only
    framework/fixture policies, and CAR-011 creates final aggregates.
-2. Every one of the eleven required named agents has one qualified preferred
+2. Every one of the fourteen required named agents has one qualified preferred
    route and zero or more ordered qualified fallbacks. Every fallback
    preserves the same agent contract and changes only explicit model/effort
    route fields.

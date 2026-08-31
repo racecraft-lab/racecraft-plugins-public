@@ -1,36 +1,36 @@
 001 analyze-executor has NO tools: allowlist (inherits the operator's full surface)
-002 analyze-executor frontmatter has no vendor-qualified mcp__ token
-003 checklist-executor has NO tools: allowlist (inherits the operator's full surface)
-004 checklist-executor frontmatter has no vendor-qualified mcp__ token
-005 clarify-executor has NO tools: allowlist (inherits the operator's full surface)
-006 clarify-executor frontmatter has no vendor-qualified mcp__ token
-007 codebase-analyst has NO tools: allowlist (inherits the operator's full surface)
-008 codebase-analyst frontmatter has no vendor-qualified mcp__ token
-009 consensus-synthesizer has NO tools: allowlist (inherits the operator's full surface)
-010 consensus-synthesizer frontmatter has no vendor-qualified mcp__ token
-011 domain-researcher has NO tools: allowlist (inherits the operator's full surface)
-012 domain-researcher frontmatter has no vendor-qualified mcp__ token
-013 gate-validator has NO tools: allowlist (inherits the operator's full surface)
-014 gate-validator frontmatter has no vendor-qualified mcp__ token
-015 implement-executor has NO tools: allowlist (inherits the operator's full surface)
-016 implement-executor frontmatter has no vendor-qualified mcp__ token
-017 phase-executor has NO tools: allowlist (inherits the operator's full surface)
-018 phase-executor frontmatter has no vendor-qualified mcp__ token
-019 spec-context-analyst has NO tools: allowlist (inherits the operator's full surface)
-020 spec-context-analyst frontmatter has no vendor-qualified mcp__ token
-021 uat-runbook-author has NO tools: allowlist (inherits the operator's full surface)
-022 uat-runbook-author frontmatter has no vendor-qualified mcp__ token
-023 phase-executor does NOT deny Agent (operator orchestration stays available)
-024 phase-executor does NOT deny TeamCreate (operator orchestration stays available)
-025 phase-executor does NOT deny SendMessage (operator orchestration stays available)
-026 analyze-executor does NOT deny Agent (operator orchestration stays available)
-027 analyze-executor does NOT deny TeamCreate (operator orchestration stays available)
-028 analyze-executor does NOT deny SendMessage (operator orchestration stays available)
-029 checklist-executor does NOT deny Agent (operator orchestration stays available)
-030 checklist-executor does NOT deny TeamCreate (operator orchestration stays available)
-031 checklist-executor does NOT deny SendMessage (operator orchestration stays available)
-032 implement-executor does NOT deny Agent (operator orchestration stays available)
-033 implement-executor does NOT deny TeamCreate (operator orchestration stays available)
+002 analyze-executor frontmatter uses only its permitted vendor-qualified mcp__ tokens
+003 artifact-author has NO tools: allowlist (inherits the operator's full surface)
+004 artifact-author frontmatter uses only its permitted vendor-qualified mcp__ tokens
+005 checklist-executor has NO tools: allowlist (inherits the operator's full surface)
+006 checklist-executor frontmatter uses only its permitted vendor-qualified mcp__ tokens
+007 clarify-executor has NO tools: allowlist (inherits the operator's full surface)
+008 clarify-executor frontmatter uses only its permitted vendor-qualified mcp__ tokens
+009 codebase-analyst has NO tools: allowlist (inherits the operator's full surface)
+010 codebase-analyst frontmatter uses only its permitted vendor-qualified mcp__ tokens
+011 consensus-synthesizer has NO tools: allowlist (inherits the operator's full surface)
+012 consensus-synthesizer frontmatter uses only its permitted vendor-qualified mcp__ tokens
+013 domain-researcher has NO tools: allowlist (inherits the operator's full surface)
+014 domain-researcher frontmatter uses only its permitted vendor-qualified mcp__ tokens
+015 gate-validator has NO tools: allowlist (inherits the operator's full surface)
+016 gate-validator frontmatter uses only its permitted vendor-qualified mcp__ tokens
+017 implement-executor has NO tools: allowlist (inherits the operator's full surface)
+018 implement-executor frontmatter uses only its permitted vendor-qualified mcp__ tokens
+019 phase-executor has NO tools: allowlist (inherits the operator's full surface)
+020 phase-executor frontmatter uses only its permitted vendor-qualified mcp__ tokens
+021 spec-context-analyst has NO tools: allowlist (inherits the operator's full surface)
+022 spec-context-analyst frontmatter uses only its permitted vendor-qualified mcp__ tokens
+023 sweep-analyst frontmatter uses only its permitted vendor-qualified mcp__ tokens
+024 sweep-classifier frontmatter uses only its permitted vendor-qualified mcp__ tokens
+025 uat-runbook-author has NO tools: allowlist (inherits the operator's full surface)
+026 uat-runbook-author frontmatter uses only its permitted vendor-qualified mcp__ tokens
+027 phase-executor does NOT deny Agent (operator orchestration stays available)
+028 phase-executor does NOT deny SendMessage (operator orchestration stays available)
+029 analyze-executor does NOT deny Agent (operator orchestration stays available)
+030 analyze-executor does NOT deny SendMessage (operator orchestration stays available)
+031 checklist-executor does NOT deny Agent (operator orchestration stays available)
+032 checklist-executor does NOT deny SendMessage (operator orchestration stays available)
+033 implement-executor does NOT deny Agent (operator orchestration stays available)
 034 implement-executor does NOT deny SendMessage (operator orchestration stays available)
 035 codebase-analyst denies Write (read-only role)
 036 codebase-analyst denies Edit (read-only role)
@@ -38,150 +38,180 @@
 038 codebase-analyst denies NotebookEdit (read-only role)
 039 codebase-analyst denies Skill (consensus workers do not re-enter phases)
 040 codebase-analyst denies Agent (hyper-focused worker does not fan out)
-041 codebase-analyst denies TeamCreate (hyper-focused worker does not fan out)
-042 codebase-analyst denies SendMessage (hyper-focused worker does not fan out)
-043 spec-context-analyst denies Write (read-only role)
-044 spec-context-analyst denies Edit (read-only role)
-045 spec-context-analyst denies MultiEdit (read-only role)
-046 spec-context-analyst denies NotebookEdit (read-only role)
-047 spec-context-analyst denies Skill (consensus workers do not re-enter phases)
-048 spec-context-analyst denies Agent (hyper-focused worker does not fan out)
-049 spec-context-analyst denies TeamCreate (hyper-focused worker does not fan out)
-050 spec-context-analyst denies SendMessage (hyper-focused worker does not fan out)
-051 domain-researcher denies Write (read-only role)
-052 domain-researcher denies Edit (read-only role)
-053 domain-researcher denies MultiEdit (read-only role)
-054 domain-researcher denies NotebookEdit (read-only role)
-055 domain-researcher denies Skill (consensus workers do not re-enter phases)
-056 domain-researcher denies Agent (hyper-focused worker does not fan out)
-057 domain-researcher denies TeamCreate (hyper-focused worker does not fan out)
-058 domain-researcher denies SendMessage (hyper-focused worker does not fan out)
-059 clarify-executor denies Write (read-only role)
-060 clarify-executor denies Edit (read-only role)
-061 clarify-executor denies MultiEdit (read-only role)
-062 clarify-executor denies NotebookEdit (read-only role)
-063 clarify-executor denies Skill (consensus workers do not re-enter phases)
-064 clarify-executor denies Agent (hyper-focused worker does not fan out)
-065 clarify-executor denies TeamCreate (hyper-focused worker does not fan out)
-066 clarify-executor denies SendMessage (hyper-focused worker does not fan out)
-067 consensus-synthesizer denies Write (read-only role)
-068 consensus-synthesizer denies Edit (read-only role)
-069 consensus-synthesizer denies MultiEdit (read-only role)
-070 consensus-synthesizer denies NotebookEdit (read-only role)
-071 consensus-synthesizer denies Skill (consensus workers do not re-enter phases)
-072 consensus-synthesizer denies Agent (hyper-focused worker does not fan out)
-073 consensus-synthesizer denies TeamCreate (hyper-focused worker does not fan out)
-074 consensus-synthesizer denies SendMessage (hyper-focused worker does not fan out)
-075 gate-validator denies Write (validates, never fixes)
-076 gate-validator denies Edit (validates, never fixes)
-077 gate-validator denies MultiEdit (validates, never fixes)
-078 gate-validator denies NotebookEdit (validates, never fixes)
-079 gate-validator denies Skill (validates, never fixes)
-080 gate-validator denies Agent (hyper-focused validator does not fan out)
-081 gate-validator denies TeamCreate (hyper-focused validator does not fan out)
-082 gate-validator denies SendMessage (hyper-focused validator does not fan out)
-083 gate-validator does NOT deny Bash (runs gate scripts)
-084 gate-validator model is sonnet (max-thinking policy: haiku does not support max)
-085 gate-validator effort is max (max-thinking policy)
-086 gate-validator maxTurns exists and is positive
-087 implement-executor denies Skill (terminal worker, no phase re-entry)
-088 implement-executor does NOT deny Write (mutating role requires it)
-089 implement-executor does NOT deny Edit (mutating role requires it)
-090 implement-executor does NOT deny Bash (mutating role requires it)
-091 uat-runbook-author denies Skill (terminal worker, no phase re-entry)
-092 uat-runbook-author does NOT deny Write (mutating role requires it)
-093 uat-runbook-author does NOT deny Edit (mutating role requires it)
-094 uat-runbook-author does NOT deny Bash (mutating role requires it)
-095 uat-runbook-author denies Agent (hyper-focused worker does not fan out)
-096 uat-runbook-author denies TeamCreate (hyper-focused worker does not fan out)
-097 uat-runbook-author denies SendMessage (hyper-focused worker does not fan out)
-098 uat-runbook-author model is sonnet (read-and-synthesize task)
-099 phase-executor does NOT deny Skill (skill-driven executor requires it)
-100 phase-executor does NOT deny Write (skill-driven executor requires it)
-101 phase-executor does NOT deny Edit (skill-driven executor requires it)
-102 phase-executor does NOT deny Bash (skill-driven executor requires it)
-103 analyze-executor does NOT deny Skill (skill-driven executor requires it)
-104 analyze-executor does NOT deny Write (skill-driven executor requires it)
-105 analyze-executor does NOT deny Edit (skill-driven executor requires it)
-106 analyze-executor does NOT deny Bash (skill-driven executor requires it)
-107 checklist-executor does NOT deny Skill (skill-driven executor requires it)
-108 checklist-executor does NOT deny Write (skill-driven executor requires it)
-109 checklist-executor does NOT deny Edit (skill-driven executor requires it)
-110 checklist-executor does NOT deny Bash (skill-driven executor requires it)
-111 analyze-executor maxTurns exists and is positive
-112 analyze-executor effort field exists
-113 checklist-executor maxTurns exists and is positive
-114 checklist-executor effort field exists
-115 clarify-executor maxTurns exists and is positive
-116 clarify-executor effort field exists
-117 codebase-analyst maxTurns exists and is positive
-118 codebase-analyst effort field exists
+041 codebase-analyst denies SendMessage (hyper-focused worker does not fan out)
+042 spec-context-analyst denies Write (read-only role)
+043 spec-context-analyst denies Edit (read-only role)
+044 spec-context-analyst denies MultiEdit (read-only role)
+045 spec-context-analyst denies NotebookEdit (read-only role)
+046 spec-context-analyst denies Skill (consensus workers do not re-enter phases)
+047 spec-context-analyst denies Agent (hyper-focused worker does not fan out)
+048 spec-context-analyst denies SendMessage (hyper-focused worker does not fan out)
+049 domain-researcher denies Write (read-only role)
+050 domain-researcher denies Edit (read-only role)
+051 domain-researcher denies MultiEdit (read-only role)
+052 domain-researcher denies NotebookEdit (read-only role)
+053 domain-researcher denies Skill (consensus workers do not re-enter phases)
+054 domain-researcher denies Agent (hyper-focused worker does not fan out)
+055 domain-researcher denies SendMessage (hyper-focused worker does not fan out)
+056 clarify-executor denies Write (read-only role)
+057 clarify-executor denies Edit (read-only role)
+058 clarify-executor denies MultiEdit (read-only role)
+059 clarify-executor denies NotebookEdit (read-only role)
+060 clarify-executor denies Skill (consensus workers do not re-enter phases)
+061 clarify-executor denies Agent (hyper-focused worker does not fan out)
+062 clarify-executor denies SendMessage (hyper-focused worker does not fan out)
+063 consensus-synthesizer denies Write (read-only role)
+064 consensus-synthesizer denies Edit (read-only role)
+065 consensus-synthesizer denies MultiEdit (read-only role)
+066 consensus-synthesizer denies NotebookEdit (read-only role)
+067 consensus-synthesizer denies Skill (consensus workers do not re-enter phases)
+068 consensus-synthesizer denies Agent (hyper-focused worker does not fan out)
+069 consensus-synthesizer denies SendMessage (hyper-focused worker does not fan out)
+070 gate-validator denies Write (validates, never fixes)
+071 gate-validator denies Edit (validates, never fixes)
+072 gate-validator denies MultiEdit (validates, never fixes)
+073 gate-validator denies NotebookEdit (validates, never fixes)
+074 gate-validator denies Skill (validates, never fixes)
+075 gate-validator denies Agent (hyper-focused validator does not fan out)
+076 gate-validator denies SendMessage (hyper-focused validator does not fan out)
+077 gate-validator does NOT deny Bash (runs gate scripts)
+078 gate-validator model is sonnet (max-thinking policy: haiku does not support max)
+079 gate-validator effort is max (max-thinking policy)
+080 gate-validator maxTurns exists and is positive
+081 implement-executor denies Skill (terminal worker, no phase re-entry)
+082 implement-executor does NOT deny Write (mutating role requires it)
+083 implement-executor does NOT deny Edit (mutating role requires it)
+084 implement-executor does NOT deny Bash (mutating role requires it)
+085 uat-runbook-author denies Skill (terminal worker, no phase re-entry)
+086 uat-runbook-author does NOT deny Write (mutating role requires it)
+087 uat-runbook-author does NOT deny Edit (mutating role requires it)
+088 uat-runbook-author does NOT deny Bash (mutating role requires it)
+089 uat-runbook-author denies Agent (hyper-focused worker does not fan out)
+090 uat-runbook-author denies SendMessage (hyper-focused worker does not fan out)
+091 uat-runbook-author model is sonnet (read-and-synthesize task)
+092 phase-executor does NOT deny Skill (skill-driven executor requires it)
+093 phase-executor does NOT deny Write (skill-driven executor requires it)
+094 phase-executor does NOT deny Edit (skill-driven executor requires it)
+095 phase-executor does NOT deny Bash (skill-driven executor requires it)
+096 analyze-executor does NOT deny Skill (skill-driven executor requires it)
+097 analyze-executor does NOT deny Write (skill-driven executor requires it)
+098 analyze-executor does NOT deny Edit (skill-driven executor requires it)
+099 analyze-executor does NOT deny Bash (skill-driven executor requires it)
+100 checklist-executor does NOT deny Skill (skill-driven executor requires it)
+101 checklist-executor does NOT deny Write (skill-driven executor requires it)
+102 checklist-executor does NOT deny Edit (skill-driven executor requires it)
+103 checklist-executor does NOT deny Bash (skill-driven executor requires it)
+104 analyze-executor maxTurns exists and is positive
+105 analyze-executor effort field exists
+106 analyze-executor does not reference retired TeamCreate tooling
+107 artifact-author maxTurns exists and is positive
+108 artifact-author effort field exists
+109 artifact-author does not reference retired TeamCreate tooling
+110 checklist-executor maxTurns exists and is positive
+111 checklist-executor effort field exists
+112 checklist-executor does not reference retired TeamCreate tooling
+113 clarify-executor maxTurns exists and is positive
+114 clarify-executor effort field exists
+115 clarify-executor does not reference retired TeamCreate tooling
+116 codebase-analyst maxTurns exists and is positive
+117 codebase-analyst effort field exists
+118 codebase-analyst does not reference retired TeamCreate tooling
 119 consensus-synthesizer maxTurns exists and is positive
 120 consensus-synthesizer effort field exists
-121 domain-researcher maxTurns exists and is positive
-122 domain-researcher effort field exists
-123 gate-validator maxTurns exists and is positive
-124 gate-validator effort field exists
-125 implement-executor maxTurns exists and is positive
-126 implement-executor effort field exists
-127 phase-executor maxTurns exists and is positive
-128 phase-executor effort field exists
-129 spec-context-analyst maxTurns exists and is positive
-130 spec-context-analyst effort field exists
-131 uat-runbook-author maxTurns exists and is positive
-132 uat-runbook-author effort field exists
-133 phase-executor effort is max (max-thinking policy)
-134 consensus-synthesizer model is sonnet
-135 consensus-synthesizer effort is max (max-thinking policy)
-136 codex codebase-analyst: sandbox_mode is read-only
-137 codex codebase-analyst: model is gpt-5.6-sol
-138 codex codebase-analyst: reasoning is L6-validated (low or xhigh)
-139 codex spec-context-analyst: sandbox_mode is read-only
-140 codex spec-context-analyst: model is gpt-5.6-sol
-141 codex spec-context-analyst: reasoning is L6-validated (low or xhigh)
-142 codex domain-researcher: sandbox_mode is read-only
-143 codex domain-researcher: model is gpt-5.6-sol
-144 codex domain-researcher: reasoning is xhigh (max-thinking policy, no L6 carve-out)
-145 codex clarify-executor: sandbox_mode is read-only
-146 codex clarify-executor: model is gpt-5.6-sol
-147 codex clarify-executor: reasoning is xhigh (max-thinking policy, no L6 carve-out)
-148 codex clarify-executor: sandbox_mode is read-only
-149 codex autopilot-fast-helper: sandbox_mode is read-only (advisory text-only leaf)
-150 codex checklist-executor: sandbox_mode is workspace-write
-151 codex checklist-executor: model is gpt-5.6-sol
-152 codex checklist-executor: reasoning is xhigh (max-thinking policy)
-153 codex analyze-executor: sandbox_mode is workspace-write
-154 codex analyze-executor: model is gpt-5.6-sol
-155 codex analyze-executor: reasoning is xhigh (max-thinking policy)
-156 codex implement-executor: sandbox_mode is workspace-write
-157 codex implement-executor: model is gpt-5.6-sol
-158 codex implement-executor: reasoning is xhigh (max-thinking policy)
-159 codex phase-executor: sandbox_mode is workspace-write
-160 codex phase-executor: model is gpt-5.6-sol
-161 codex phase-executor: reasoning is xhigh (max-thinking policy)
-162 codex uat-runbook-author: sandbox_mode is workspace-write
-163 codex uat-runbook-author: model is gpt-5.6-sol
-164 codex uat-runbook-author: reasoning is xhigh (max-thinking policy)
-165 named-tool guard: active-agent set is non-empty (fail-closed)
-166 analyze-executor.md guidance prose has no hardcoded named vendor tool
-167 checklist-executor.md guidance prose has no hardcoded named vendor tool
-168 clarify-executor.md guidance prose has no hardcoded named vendor tool
-169 codebase-analyst.md guidance prose has no hardcoded named vendor tool
-170 consensus-synthesizer.md guidance prose has no hardcoded named vendor tool
-171 domain-researcher.md guidance prose has no hardcoded named vendor tool
-172 gate-validator.md guidance prose has no hardcoded named vendor tool
-173 implement-executor.md guidance prose has no hardcoded named vendor tool
-174 phase-executor.md guidance prose has no hardcoded named vendor tool
-175 spec-context-analyst.md guidance prose has no hardcoded named vendor tool
-176 uat-runbook-author.md guidance prose has no hardcoded named vendor tool
-177 analyze-executor.toml guidance prose has no hardcoded named vendor tool
-178 autopilot-fast-helper.toml guidance prose has no hardcoded named vendor tool
-179 checklist-executor.toml guidance prose has no hardcoded named vendor tool
-180 clarify-executor.toml guidance prose has no hardcoded named vendor tool
-181 codebase-analyst.toml guidance prose has no hardcoded named vendor tool
-182 domain-researcher.toml guidance prose has no hardcoded named vendor tool
-183 implement-executor.toml guidance prose has no hardcoded named vendor tool
-184 phase-executor.toml guidance prose has no hardcoded named vendor tool
-185 spec-context-analyst.toml guidance prose has no hardcoded named vendor tool
-186 uat-runbook-author.toml guidance prose has no hardcoded named vendor tool
-TOTAL: 186
+121 consensus-synthesizer does not reference retired TeamCreate tooling
+122 domain-researcher maxTurns exists and is positive
+123 domain-researcher effort field exists
+124 domain-researcher does not reference retired TeamCreate tooling
+125 gate-validator maxTurns exists and is positive
+126 gate-validator effort field exists
+127 gate-validator does not reference retired TeamCreate tooling
+128 implement-executor maxTurns exists and is positive
+129 implement-executor effort field exists
+130 implement-executor does not reference retired TeamCreate tooling
+131 phase-executor maxTurns exists and is positive
+132 phase-executor effort field exists
+133 phase-executor does not reference retired TeamCreate tooling
+134 spec-context-analyst maxTurns exists and is positive
+135 spec-context-analyst effort field exists
+136 spec-context-analyst does not reference retired TeamCreate tooling
+137 sweep-analyst maxTurns exists and is positive
+138 sweep-analyst effort field exists
+139 sweep-analyst does not reference retired TeamCreate tooling
+140 sweep-classifier maxTurns exists and is positive
+141 sweep-classifier effort field exists
+142 sweep-classifier does not reference retired TeamCreate tooling
+143 uat-runbook-author maxTurns exists and is positive
+144 uat-runbook-author effort field exists
+145 uat-runbook-author does not reference retired TeamCreate tooling
+146 phase-executor effort is max (max-thinking policy)
+147 consensus-synthesizer model is sonnet
+148 consensus-synthesizer effort is max (max-thinking policy)
+149 codex codebase-analyst: sandbox_mode is read-only
+150 codex codebase-analyst: model is gpt-5.6-sol
+151 codex codebase-analyst: reasoning is L6-validated (low or xhigh)
+152 codex spec-context-analyst: sandbox_mode is read-only
+153 codex spec-context-analyst: model is gpt-5.6-sol
+154 codex spec-context-analyst: reasoning is L6-validated (low or xhigh)
+155 codex domain-researcher: sandbox_mode is read-only
+156 codex domain-researcher: model is gpt-5.6-sol
+157 codex domain-researcher: reasoning is xhigh (max-thinking policy, no L6 carve-out)
+158 codex clarify-executor: sandbox_mode is read-only
+159 codex clarify-executor: model is gpt-5.6-sol
+160 codex clarify-executor: reasoning is xhigh (max-thinking policy, no L6 carve-out)
+161 codex clarify-executor: sandbox_mode is read-only
+162 codex autopilot-fast-helper: sandbox_mode is read-only (advisory text-only leaf)
+163 codex checklist-executor: sandbox_mode is workspace-write
+164 codex checklist-executor: model is gpt-5.6-sol
+165 codex checklist-executor: reasoning is xhigh (max-thinking policy)
+166 codex analyze-executor: sandbox_mode is workspace-write
+167 codex analyze-executor: model is gpt-5.6-sol
+168 codex analyze-executor: reasoning is xhigh (max-thinking policy)
+169 codex implement-executor: sandbox_mode is workspace-write
+170 codex implement-executor: model is gpt-5.6-sol
+171 codex implement-executor: reasoning is xhigh (max-thinking policy)
+172 codex phase-executor: sandbox_mode is workspace-write
+173 codex phase-executor: model is gpt-5.6-sol
+174 codex phase-executor: reasoning is xhigh (max-thinking policy)
+175 codex uat-runbook-author: sandbox_mode is workspace-write
+176 codex uat-runbook-author: model is gpt-5.6-sol
+177 codex uat-runbook-author: reasoning is xhigh (max-thinking policy)
+178 named-tool guard: active-agent set is non-empty (fail-closed)
+179 analyze-executor.md guidance prose has no hardcoded named vendor tool
+180 artifact-author.md guidance prose has no hardcoded named vendor tool
+181 checklist-executor.md guidance prose has no hardcoded named vendor tool
+182 clarify-executor.md guidance prose has no hardcoded named vendor tool
+183 codebase-analyst.md guidance prose has no hardcoded named vendor tool
+184 consensus-synthesizer.md guidance prose has no hardcoded named vendor tool
+185 domain-researcher.md guidance prose has no hardcoded named vendor tool
+186 gate-validator.md guidance prose has no hardcoded named vendor tool
+187 implement-executor.md guidance prose has no hardcoded named vendor tool
+188 phase-executor.md guidance prose has no hardcoded named vendor tool
+189 spec-context-analyst.md guidance prose has no hardcoded named vendor tool
+190 sweep-analyst.md guidance prose has no hardcoded named vendor tool
+191 sweep-classifier.md guidance prose has no hardcoded named vendor tool
+192 uat-runbook-author.md guidance prose has no hardcoded named vendor tool
+193 analyze-executor.toml guidance prose has no hardcoded named vendor tool
+194 artifact-author.toml guidance prose has no hardcoded named vendor tool
+195 autopilot-fast-helper.toml guidance prose has no hardcoded named vendor tool
+196 checklist-executor.toml guidance prose has no hardcoded named vendor tool
+197 clarify-executor.toml guidance prose has no hardcoded named vendor tool
+198 codebase-analyst.toml guidance prose has no hardcoded named vendor tool
+199 domain-researcher.toml guidance prose has no hardcoded named vendor tool
+200 implement-executor.toml guidance prose has no hardcoded named vendor tool
+201 phase-executor.toml guidance prose has no hardcoded named vendor tool
+202 spec-context-analyst.toml guidance prose has no hardcoded named vendor tool
+203 uat-runbook-author.toml guidance prose has no hardcoded named vendor tool
+204 carve-out: UNTRUSTED_INPUT_CONSUMERS is exactly the two reviewer-text readers
+205 carve-out: UNTRUSTED_INPUT_CONSUMERS shares no member with OPEN_EXECUTORS
+206 carve-out: every UNTRUSTED_INPUT_CONSUMERS member has a pinned allowlist
+207 carve-out: sweep-classifier Claude definition exists
+208 carve-out: sweep-classifier pins exactly 'mcp__plugin_speckit-pro_sweep-broker__consensus_inputs, mcp__plugin_speckit-pro_sweep-broker__review_comment, mcp__plugin_speckit-pro_sweep-broker__snapshot_list, mcp__plugin_speckit-pro_sweep-broker__snapshot_read, mcp__plugin_speckit-pro_sweep-broker__snapshot_search, mcp__plugin_speckit-pro_sweep-broker__submit_result' in tools
+209 carve-out: sweep-classifier denies Agent (a closed allowlist that can delegate is not closed)
+210 carve-out: sweep-classifier denies SendMessage (a closed allowlist that can delegate is not closed)
+211 carve-out: sweep-classifier denies Skill (scoped consumer does not re-enter phases)
+212 carve-out: sweep-analyst Claude definition exists
+213 carve-out: sweep-analyst pins exactly 'mcp__plugin_speckit-pro_sweep-broker__consensus_inputs, mcp__plugin_speckit-pro_sweep-broker__review_comment, mcp__plugin_speckit-pro_sweep-broker__snapshot_list, mcp__plugin_speckit-pro_sweep-broker__snapshot_read, mcp__plugin_speckit-pro_sweep-broker__snapshot_search, mcp__plugin_speckit-pro_sweep-broker__submit_result' in tools
+214 carve-out: sweep-analyst denies Agent (a closed allowlist that can delegate is not closed)
+215 carve-out: sweep-analyst denies SendMessage (a closed allowlist that can delegate is not closed)
+216 carve-out: sweep-analyst denies Skill (scoped consumer does not re-enter phases)
+TOTAL: 216

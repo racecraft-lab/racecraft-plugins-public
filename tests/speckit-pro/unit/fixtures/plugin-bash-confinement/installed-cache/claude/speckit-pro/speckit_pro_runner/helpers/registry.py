@@ -210,6 +210,14 @@ HELPERS: dict[str, HelperEntry] = {
         "python_only",
         authoritative_request("resolve-autopilot-stage"),
     ),
+    "resolve-claude-subagent-runtime": HelperEntry(
+        "resolve-claude-subagent-runtime",
+        "resolve-claude-subagent-runtime",
+        None,
+        "python_authoritative",
+        "python_only",
+        authoritative_request("resolve-claude-subagent-runtime"),
+    ),
     "sweep-pr-feedback": HelperEntry(
         "sweep-pr-feedback",
         "sweep-pr-feedback",
