@@ -104,14 +104,27 @@
     {
       "id": 9,
       "prompt": "Scaffolding G56R-001 succeeded in a dedicated worktree at /repo/.worktrees/g56r-001-candidate-route-baseline, and the workflow is docs/ai/specs/.process/G56R-001-workflow.md inside that worktree. What exact Codex handoff should the scaffold report give me?",
-      "expected_output": "Reports the absolute generated worktree root and the same-task command $speckit-autopilot /repo/.worktrees/g56r-001-candidate-route-baseline/docs/ai/specs/.process/G56R-001-workflow.md --stage plan. It explains that autopilot binds all execution to the registered descendant worktree and preserves Handoff/reopen as the fallback when that binding cannot be proved.",
+      "expected_output": "Reports the absolute generated worktree root and the same-task command $speckit-autopilot /repo/.worktrees/g56r-001-candidate-route-baseline/docs/ai/specs/.process/G56R-001-workflow.md --stage plan. It explains that autopilot binds all execution to the registered descendant worktree and, if binding cannot be proved, tells the operator to open a new Codex task rooted at that canonical worktree before retrying.",
       "expectations": [
         "Reports /repo/.worktrees/g56r-001-candidate-route-baseline as the absolute worktree root",
         "Prints $speckit-autopilot with the absolute workflow file and literal --stage plan",
         "States that the operator sends the printed command explicitly in the same Codex task",
         "Does not invoke autopilot from scaffold itself",
         "Does not hand off only the relative workflow path from the parent checkout",
-        "Uses Codex Handoff or reopen at the worktree only as the fail-closed fallback"
+        "Uses a new Codex task rooted at the canonical worktree as the fail-closed fallback and does not promise arbitrary-path Handoff"
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "Codex is running from a detached task checkout at /workspace/.codex/worktrees/15bd/repo, while the same repository's primary checkout is /workspace/projects/repo and appears first in git worktree list. Where must $speckit-scaffold-spec place branch rdl-010-dual-runtime-writing-boundary, and what must it verify before creating files?",
+      "expected_output": "Invokes resolve-scaffold-worktree-placement before git worktree add or any artifact or roadmap write. With no override, it uses the helper's canonical /workspace/.codex/worktrees/15bd/repo/.worktrees/rdl-010-dual-runtime-writing-boundary target, requires placement_status=resolved with relation=descendant, creates or reuses exactly that path, reruns the helper after creation, and requires disposition=reuse with the same root before bootstrap or Grill Me. It never derives placement from the Git common directory, primary checkout, or first worktree record.",
+      "expectations": [
+        "Calls resolve-scaffold-worktree-placement before git worktree add and before artifact or roadmap mutation",
+        "Defaults beneath the current Codex TASK_ROOT at /workspace/.codex/worktrees/15bd/repo/.worktrees/rdl-010-dual-runtime-writing-boundary",
+        "Does not use git rev-parse --git-common-dir, the primary checkout, or the first git worktree list record to choose placement",
+        "Requires placement_status=resolved and relation same or descendant before mutation",
+        "Reruns the helper after creation and requires disposition=reuse with the identical canonical worktree root before bootstrap and Grill Me",
+        "Stops before mutation when an explicit override or existing branch worktree is external"
       ]
     }
   ]

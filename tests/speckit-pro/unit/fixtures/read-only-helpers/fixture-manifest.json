@@ -40,6 +40,18 @@
       "rollback": "Remove the helper registry entry and restore the prior worktree-affinity stop."
     },
     {
+      "helper_id": "resolve-scaffold-worktree-placement",
+      "operation": "resolve-scaffold-worktree-placement",
+      "promotion_status": "python_authoritative",
+      "failure_classes": ["invalid_input", "placement_conflict", "unsupported_path", "subprocess_failure"],
+      "rejected_stdout_schema": {"placement_status": "resolved|conflict|invalid", "disposition": "create|reuse|null", "relation": "same|descendant|external|null"},
+      "deterministic_remediation": {"summary": "Provide one valid feature branch and a safe worktree parent.", "actions": ["Keep the default beneath the current task root.", "Correct conflicting worktree registration or path state before retrying."]},
+      "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
+      "path_boundary_policy": {"boundary": "task_root_or_explicit_override", "rejects": ["traversal", "symlink_escape", "occupied_unregistered_path", "branch_path_mismatch", "non_ignored_descendant", "prunable_registration"]},
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/read-only-helpers/requests/resolve-scaffold-worktree-placement.json",
+      "rollback": "Remove the helper registry entry and retain the scaffold pre-mutation stop."
+    },
+    {
       "helper_id": "detect-commands",
       "operation": "detect-commands",
       "promotion_status": "python_authoritative",
