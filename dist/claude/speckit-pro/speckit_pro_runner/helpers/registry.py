@@ -128,6 +128,14 @@ HELPERS: dict[str, HelperEntry] = {
         "python_contract",
         authoritative_request("resolve-workflow-binding"),
     ),
+    "resolve-scaffold-worktree-placement": HelperEntry(
+        "resolve-scaffold-worktree-placement",
+        "resolve-scaffold-worktree-placement",
+        None,
+        "python_authoritative",
+        "python_contract",
+        authoritative_request("resolve-scaffold-worktree-placement"),
+    ),
     "detect-commands": HelperEntry(
         "detect-commands",
         "detect-commands",

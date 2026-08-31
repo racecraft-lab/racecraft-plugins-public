@@ -55,6 +55,7 @@ PATH_KEYS = {
     "repo_root",
     "target",
     "workflow_file",
+    "worktree_root_override",
 }
 
 WARN_DESTRUCTIVE_MIGRATION = (
@@ -189,7 +190,12 @@ def validate_bounded_inputs(
     for key in PATH_KEYS:
         value = inputs.get(key)
         if isinstance(value, str) and value:
-            if helper_id == "resolve-workflow-binding" and key == "workflow_file":
+            permits_registered_or_explicit_external_path = (
+                helper_id == "resolve-workflow-binding" and key == "workflow_file"
+            ) or (
+                helper_id == "resolve-scaffold-worktree-placement" and key == "worktree_root_override"
+            )
+            if permits_registered_or_explicit_external_path:
                 if "\x00" in value:
                     return path_diagnostic(
                         "invalid_input",
@@ -338,6 +344,14 @@ def explicit_or_derived_args(helper_id: str, inputs: dict[str, Any], repo_root: 
         workflow_file = inputs.get("workflow_file")
         if not isinstance(workflow_file, str) or not workflow_file:
             return invalid_args(helper_id, "workflow_file is required")
+        return []
+    if helper_id == "resolve-scaffold-worktree-placement":
+        branch_name = inputs.get("branch_name")
+        if not isinstance(branch_name, str) or not branch_name.strip():
+            return invalid_args(helper_id, "branch_name is required")
+        override = inputs.get("worktree_root_override")
+        if override is not None and (not isinstance(override, str) or not override.strip()):
+            return invalid_args(helper_id, "worktree_root_override must be a non-empty string path")
         return []
     if helper_id == "check-prerequisites":
         workflow_file = inputs.get("workflow_file")
@@ -577,8 +591,17 @@ def active_feature_directory(repo_root: Path) -> str:
     return value.strip() if isinstance(value, str) else ""
 
 
-def registered_worktree_entries(repo_root: Path) -> tuple[list[tuple[Path, Path]], str | None]:
-    """Return registered worktree roots as lexical and canonical path pairs."""
+@dataclass(frozen=True)
+class RegisteredWorktreeRecord:
+    lexical_root: Path
+    canonical_root: Path | None
+    branch_name: str | None
+    prunable: bool
+    prune_reason: str | None
+
+
+def registered_worktree_records(repo_root: Path) -> tuple[list[RegisteredWorktreeRecord], str | None]:
+    """Return parsed Git worktree registrations, including prunable records."""
     try:
         completed = subprocess.run(
             ["git", "-C", str(repo_root), "worktree", "list", "--porcelain", "-z"],
@@ -594,7 +617,7 @@ def registered_worktree_entries(repo_root: Path) -> tuple[list[tuple[Path, Path]
         detail = completed.stderr.strip() or f"exit {completed.returncode}"
         return [], f"git worktree list failed: {detail}"
 
-    entries: list[tuple[Path, Path]] = []
+    records: list[RegisteredWorktreeRecord] = []
     seen: set[Path] = set()
     for raw_record in completed.stdout.split("\x00\x00"):
         fields = [field.rstrip("\n") for field in raw_record.split("\x00") if field]
@@ -604,10 +627,37 @@ def registered_worktree_entries(repo_root: Path) -> tuple[list[tuple[Path, Path]
         if len(worktree_fields) != 1:
             return [], "git worktree list returned a malformed registered worktree record"
         raw_root = worktree_fields[0].removeprefix("worktree ")
-        is_prunable = any(field == "prunable" or field.startswith("prunable ") for field in fields)
-        if is_prunable:
-            continue
+        branch_fields = [field for field in fields if field.startswith("branch ")]
+        detached_fields = [field for field in fields if field == "detached"]
+        if len(branch_fields) > 1 or (branch_fields and detached_fields):
+            return [], "git worktree list returned a malformed branch registration"
+        branch_name: str | None = None
+        if branch_fields:
+            branch_ref = branch_fields[0].removeprefix("branch ")
+            if not branch_ref.startswith("refs/heads/"):
+                return [], f"git worktree list returned an unsupported branch ref: {branch_ref}"
+            branch_name = branch_ref.removeprefix("refs/heads/")
+        prune_fields = [
+            field for field in fields if field == "prunable" or field.startswith("prunable ")
+        ]
+        if len(prune_fields) > 1:
+            return [], "git worktree list returned a malformed prunable registration"
+        is_prunable = bool(prune_fields)
+        prune_reason = None
+        if prune_fields:
+            prune_reason = prune_fields[0].removeprefix("prunable ") or "registration is prunable"
         lexical_root = Path(os.path.abspath(raw_root))
+        if is_prunable:
+            records.append(
+                RegisteredWorktreeRecord(
+                    lexical_root=lexical_root,
+                    canonical_root=None,
+                    branch_name=branch_name,
+                    prunable=True,
+                    prune_reason=prune_reason,
+                )
+            )
+            continue
         try:
             root = lexical_root.resolve(strict=True)
         except (OSError, RuntimeError, ValueError) as exc:
@@ -617,7 +667,30 @@ def registered_worktree_entries(repo_root: Path) -> tuple[list[tuple[Path, Path]
         if root in seen:
             continue
         seen.add(root)
-        entries.append((lexical_root, root))
+        records.append(
+            RegisteredWorktreeRecord(
+                lexical_root=lexical_root,
+                canonical_root=root,
+                branch_name=branch_name,
+                prunable=False,
+                prune_reason=None,
+            )
+        )
+    if not records:
+        return [], "git worktree list returned no registered worktrees"
+    return records, None
+
+
+def registered_worktree_entries(repo_root: Path) -> tuple[list[tuple[Path, Path]], str | None]:
+    """Return readable registered worktree roots as lexical/canonical pairs."""
+    records, error = registered_worktree_records(repo_root)
+    if error is not None:
+        return [], error
+    entries = [
+        (record.lexical_root, record.canonical_root)
+        for record in records
+        if not record.prunable and record.canonical_root is not None
+    ]
     if not entries:
         return [], "git worktree list returned no readable registered worktrees"
     return entries, None
@@ -792,6 +865,372 @@ def resolve_workflow_binding(inputs: dict[str, Any], repo_root: Path) -> dict[st
         workflow_file=workflow_file,
         relation=relation,
         candidates=[workflow_root],
+    )
+    return make_result(json_text(payload))
+
+
+def scaffold_placement_payload(
+    placement_status: str,
+    task_root: Path,
+    branch_name: str,
+    *,
+    disposition: str | None = None,
+    worktree_root: Path | None = None,
+    relation: str | None = None,
+    problems: list[str] | None = None,
+) -> dict[str, Any]:
+    return {
+        "placement_status": placement_status,
+        "disposition": disposition,
+        "task_root": task_root.as_posix(),
+        "worktree_root": worktree_root.as_posix() if worktree_root is not None else None,
+        "relation": relation,
+        "branch_name": branch_name,
+        "problems": problems or [],
+    }
+
+
+def worktree_relation(worktree_root: Path, task_root: Path) -> str:
+    if worktree_root == task_root:
+        return "same"
+    if is_lexically_relative_to(worktree_root, task_root):
+        return "descendant"
+    return "external"
+
+
+def resolve_scaffold_worktree_placement(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+    """Resolve scaffold worktree placement from the current task checkout only."""
+    lexical_repo_root = Path(os.path.abspath(str(repo_root)))
+    try:
+        task_root = lexical_repo_root.resolve(strict=True)
+    except (OSError, RuntimeError, ValueError) as exc:
+        payload = scaffold_placement_payload(
+            "invalid",
+            lexical_repo_root,
+            "",
+            problems=[f"task root cannot be canonicalized: {exc}"],
+        )
+        return make_result(json_text(payload), exit_code=1)
+
+    raw_branch = inputs.get("branch_name")
+    branch_name = raw_branch.strip() if isinstance(raw_branch, str) else ""
+    if not branch_name:
+        payload = scaffold_placement_payload(
+            "invalid",
+            task_root,
+            branch_name,
+            problems=["branch_name is required"],
+        )
+        return make_result(json_text(payload), exit_code=1)
+    if raw_branch != branch_name:
+        payload = scaffold_placement_payload(
+            "invalid",
+            task_root,
+            branch_name,
+            problems=["branch_name must not contain surrounding whitespace"],
+        )
+        return make_result(json_text(payload), exit_code=1)
+    if branch_name in {".", ".."} or "/" in branch_name or "\\" in branch_name:
+        payload = scaffold_placement_payload(
+            "invalid",
+            task_root,
+            branch_name,
+            problems=["branch_name must be a single segment with no path traversal"],
+        )
+        return make_result(json_text(payload), exit_code=1)
+    try:
+        branch_check = subprocess.run(
+            ["git", "-C", str(task_root), "check-ref-format", "--branch", branch_name],
+            text=True,
+            capture_output=True,
+            shell=False,
+            check=False,
+            timeout=SUBPROCESS_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        payload = scaffold_placement_payload(
+            "invalid",
+            task_root,
+            branch_name,
+            problems=[f"git check-ref-format failed: {exc}"],
+        )
+        return make_result(json_text(payload), exit_code=4)
+    if branch_check.returncode != 0:
+        detail = branch_check.stderr.strip() or "branch name is not accepted by Git"
+        payload = scaffold_placement_payload(
+            "invalid",
+            task_root,
+            branch_name,
+            problems=[f"branch_name is not a valid Git branch: {detail}"],
+        )
+        return make_result(json_text(payload), exit_code=1)
+
+    records, records_error = registered_worktree_records(task_root)
+    if records_error is not None:
+        payload = scaffold_placement_payload(
+            "invalid",
+            task_root,
+            branch_name,
+            problems=[records_error],
+        )
+        return make_result(json_text(payload), exit_code=4)
+    readable_roots = {
+        record.canonical_root
+        for record in records
+        if not record.prunable and record.canonical_root is not None
+    }
+    if task_root not in readable_roots:
+        payload = scaffold_placement_payload(
+            "invalid",
+            task_root,
+            branch_name,
+            problems=["task root is not a readable registered Git worktree"],
+        )
+        return make_result(json_text(payload), exit_code=1)
+
+    raw_override = inputs.get("worktree_root_override")
+    override_supplied = raw_override is not None
+    if override_supplied and (not isinstance(raw_override, str) or not raw_override.strip()):
+        payload = scaffold_placement_payload(
+            "invalid",
+            task_root,
+            branch_name,
+            problems=["worktree_root_override must be a non-empty string path"],
+        )
+        return make_result(json_text(payload), exit_code=1)
+
+    if override_supplied:
+        assert isinstance(raw_override, str)
+        normalized_override = normalize_path_input(raw_override.strip())
+        if "\x00" in normalized_override:
+            payload = scaffold_placement_payload(
+                "invalid",
+                task_root,
+                branch_name,
+                problems=["worktree_root_override contains a NUL byte"],
+            )
+            return make_result(json_text(payload), exit_code=1)
+        if looks_like_windows_absolute_path(normalized_override) and os.name != "nt":
+            payload = scaffold_placement_payload(
+                "invalid",
+                task_root,
+                branch_name,
+                problems=["worktree_root_override uses an unsupported absolute-path form"],
+            )
+            return make_result(json_text(payload), exit_code=1)
+        if ".." in PurePosixPath(normalized_override).parts:
+            payload = scaffold_placement_payload(
+                "invalid",
+                task_root,
+                branch_name,
+                problems=["worktree_root_override must not contain path traversal"],
+            )
+            return make_result(json_text(payload), exit_code=1)
+        override_path = Path(normalized_override)
+        if not override_path.is_absolute():
+            override_path = task_root / override_path
+        lexical_parent = Path(os.path.abspath(str(override_path)))
+    else:
+        lexical_parent = task_root / ".worktrees"
+    lexical_target = lexical_parent / branch_name
+
+    if lexical_parent.is_symlink() or lexical_target.is_symlink():
+        payload = scaffold_placement_payload(
+            "conflict",
+            task_root,
+            branch_name,
+            worktree_root=lexical_target,
+            problems=["scaffold worktree target or its parent is a symlink"],
+        )
+        return make_result(json_text(payload), exit_code=1)
+    try:
+        canonical_parent = lexical_parent.resolve(strict=False)
+        canonical_target = (canonical_parent / branch_name).resolve(strict=False)
+    except (OSError, RuntimeError, ValueError) as exc:
+        payload = scaffold_placement_payload(
+            "invalid",
+            task_root,
+            branch_name,
+            problems=[f"scaffold worktree target cannot be canonicalized: {exc}"],
+        )
+        return make_result(json_text(payload), exit_code=1)
+
+    lexical_relation = worktree_relation(lexical_target, task_root)
+    relation = worktree_relation(canonical_target, task_root)
+    if lexical_relation != relation:
+        payload = scaffold_placement_payload(
+            "conflict",
+            task_root,
+            branch_name,
+            worktree_root=canonical_target,
+            problems=["scaffold worktree target changes workspace relation after canonicalization (symlink escape)"],
+        )
+        return make_result(json_text(payload), exit_code=1)
+
+    prunable_for_branch = [
+        record for record in records if record.prunable and record.branch_name == branch_name
+    ]
+    if prunable_for_branch:
+        record = prunable_for_branch[0]
+        payload = scaffold_placement_payload(
+            "conflict",
+            task_root,
+            branch_name,
+            worktree_root=record.lexical_root,
+            problems=[
+                f"branch has a prunable worktree registration at {record.lexical_root.as_posix()}: "
+                f"{record.prune_reason or 'registration is prunable'}"
+            ],
+        )
+        return make_result(json_text(payload), exit_code=1)
+
+    active_for_branch = [
+        record
+        for record in records
+        if not record.prunable
+        and record.branch_name == branch_name
+        and record.canonical_root is not None
+    ]
+    if len(active_for_branch) > 1:
+        roots = sorted(record.canonical_root.as_posix() for record in active_for_branch if record.canonical_root)
+        payload = scaffold_placement_payload(
+            "conflict",
+            task_root,
+            branch_name,
+            problems=[f"branch is registered to multiple worktrees: {', '.join(roots)}"],
+        )
+        return make_result(json_text(payload), exit_code=1)
+    if active_for_branch:
+        record = active_for_branch[0]
+        assert record.canonical_root is not None
+        registered_root = record.canonical_root
+        registered_relation = worktree_relation(registered_root, task_root)
+        registered_lexical_relation = worktree_relation(record.lexical_root, task_root)
+        if registered_relation != registered_lexical_relation:
+            payload = scaffold_placement_payload(
+                "conflict",
+                task_root,
+                branch_name,
+                worktree_root=registered_root,
+                problems=["registered branch worktree escapes its lexical workspace after canonicalization"],
+            )
+            return make_result(json_text(payload), exit_code=1)
+        if override_supplied and registered_root != canonical_target:
+            payload = scaffold_placement_payload(
+                "conflict",
+                task_root,
+                branch_name,
+                worktree_root=registered_root,
+                problems=[
+                    "branch/path mismatch: existing branch worktree does not match the explicit override target"
+                ],
+            )
+            return make_result(json_text(payload), exit_code=1)
+        payload = scaffold_placement_payload(
+            "resolved",
+            task_root,
+            branch_name,
+            disposition="reuse",
+            worktree_root=registered_root,
+            relation=registered_relation,
+        )
+        return make_result(json_text(payload))
+
+    target_prunable = [record for record in records if record.prunable and record.lexical_root == lexical_target]
+    if target_prunable:
+        payload = scaffold_placement_payload(
+            "conflict",
+            task_root,
+            branch_name,
+            worktree_root=canonical_target,
+            problems=["target path has a prunable worktree registration"],
+        )
+        return make_result(json_text(payload), exit_code=1)
+
+    target_active = [
+        record
+        for record in records
+        if not record.prunable and record.canonical_root == canonical_target
+    ]
+    if target_active:
+        existing_branch = target_active[0].branch_name or "detached HEAD"
+        payload = scaffold_placement_payload(
+            "conflict",
+            task_root,
+            branch_name,
+            worktree_root=canonical_target,
+            problems=[
+                f"branch/path mismatch: target is registered to {existing_branch}, not {branch_name}"
+            ],
+        )
+        return make_result(json_text(payload), exit_code=1)
+
+    if os.path.lexists(lexical_target):
+        payload = scaffold_placement_payload(
+            "conflict",
+            task_root,
+            branch_name,
+            worktree_root=canonical_target,
+            problems=["target path is occupied but is not a registered worktree"],
+        )
+        return make_result(json_text(payload), exit_code=1)
+    if os.path.lexists(lexical_parent) and not lexical_parent.is_dir():
+        payload = scaffold_placement_payload(
+            "conflict",
+            task_root,
+            branch_name,
+            worktree_root=canonical_target,
+            problems=["worktree parent path is occupied by a non-directory"],
+        )
+        return make_result(json_text(payload), exit_code=1)
+
+    if relation == "descendant":
+        relative_target = canonical_target.relative_to(task_root).as_posix()
+        try:
+            ignore_check = subprocess.run(
+                ["git", "-C", str(task_root), "check-ignore", "-q", "--no-index", "--", relative_target],
+                text=True,
+                capture_output=True,
+                shell=False,
+                check=False,
+                timeout=SUBPROCESS_TIMEOUT_SECONDS,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            payload = scaffold_placement_payload(
+                "invalid",
+                task_root,
+                branch_name,
+                worktree_root=canonical_target,
+                problems=[f"git check-ignore failed: {exc}"],
+            )
+            return make_result(json_text(payload), exit_code=4)
+        if ignore_check.returncode == 1:
+            payload = scaffold_placement_payload(
+                "conflict",
+                task_root,
+                branch_name,
+                worktree_root=canonical_target,
+                problems=["descendant worktree target is not ignored by Git"],
+            )
+            return make_result(json_text(payload), exit_code=1)
+        if ignore_check.returncode != 0:
+            detail = ignore_check.stderr.strip() or f"exit {ignore_check.returncode}"
+            payload = scaffold_placement_payload(
+                "invalid",
+                task_root,
+                branch_name,
+                worktree_root=canonical_target,
+                problems=[f"git check-ignore failed: {detail}"],
+            )
+            return make_result(json_text(payload), exit_code=4)
+
+    payload = scaffold_placement_payload(
+        "resolved",
+        task_root,
+        branch_name,
+        disposition="create",
+        worktree_root=canonical_target,
+        relation=relation,
     )
     return make_result(json_text(payload))
 
@@ -6427,6 +6866,7 @@ def rollup_status(statuses: list[str]) -> str:
 
 PY_HELPERS: dict[str, Callable[[dict[str, Any], Path], dict[str, Any]]] = {
     "resolve-workflow-binding": resolve_workflow_binding,
+    "resolve-scaffold-worktree-placement": resolve_scaffold_worktree_placement,
     "check-prerequisites": check_prerequisites,
     "detect-commands": detect_commands,
     "detect-presets": detect_presets,
