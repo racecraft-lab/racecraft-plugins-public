@@ -673,6 +673,7 @@ class RunnerFoundationTests(unittest.TestCase):
             "docs/ai/research/claude-runtime-capability-snapshot.json",
             "docs/ai/research/claude-telemetry-capability-profile.json",
             "docs/ai/research/claude-agent-route-candidates.md",
+            "docs/ai/research/claude-subagent-runtime-rebaseline.md",
             "docs/ai/research/claude-agent-route-candidate-manifest.json",
             "docs/ai/research/claude-car-003-mandatory-observation-manifest.json",
             "docs/ai/research/claude-car-003-successor-freeze-collection.json",
