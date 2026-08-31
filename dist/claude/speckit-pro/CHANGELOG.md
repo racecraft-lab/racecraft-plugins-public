@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.29.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.28.2...speckit-pro-v2.29.0) (2026-08-31)
+
+
+### Features
+
+* **speckit-pro:** harden Claude subagent runtime support ([#517](https://github.com/racecraft-lab/racecraft-plugins-public/issues/517)) ([e4d9a35](https://github.com/racecraft-lab/racecraft-plugins-public/commit/e4d9a358ee24186199309b51b132fe89d3169be4))
+
+
+### Bug Fixes
+
+* **codex:** anchor scaffold worktrees to task root ([#516](https://github.com/racecraft-lab/racecraft-plugins-public/issues/516)) ([4b73210](https://github.com/racecraft-lab/racecraft-plugins-public/commit/4b73210f8312758f52a3fa72d002f66312583583))
+
 ## [2.28.2](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.28.1...speckit-pro-v2.28.2) (2026-08-28)
 
 
