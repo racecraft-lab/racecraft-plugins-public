@@ -11,7 +11,7 @@ description: >
   blocks pull-request creation.
 model: sonnet
 color: green
-disallowedTools: Skill, Agent, TeamCreate, SendMessage
+disallowedTools: Skill, Agent, SendMessage
 maxTurns: 30
 effort: max
 ---

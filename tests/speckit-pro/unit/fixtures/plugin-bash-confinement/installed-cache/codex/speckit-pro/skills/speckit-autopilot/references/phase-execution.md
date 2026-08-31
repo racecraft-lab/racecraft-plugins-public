@@ -2414,6 +2414,8 @@ written exactly once:
 3. Within each phase group:
    - Identify [P] (parallel) vs sequential tasks
    - Classify: test-only, implementation, verification
+   - Resolve declared file ownership. Parallelize only tasks with disjoint,
+     explicit ownership; serialize overlap or unknown ownership.
 4. Build ordered task list respecting phase dependencies
 ```
 
@@ -2461,11 +2463,15 @@ For each phase group in tasks.md:
   # Step 3b: Execute each RUN
   For each (kind, tasks_in_run) in RUNS:
     if kind == "parallel" and len(tasks_in_run) >= 2:
+      Split tasks_in_run into deterministic waves no larger than
+      SUBAGENT_WAVE_SIZE. Preserve task-list order when accumulating results.
+      For each wave:
       if AGENT_TEAMS_AVAILABLE:
-        # Path A: spawn an Agent Team for this parallel run
-        Create an agent team with len(tasks_in_run) teammates
-        (max 5 per Anthropic's 3-5 sweet spot — partition into
-        multiple teams if the run is larger). Use Sonnet teammates.
+        # Path A: named Agent calls become teammates in an eligible
+        # interactive team-enabled session.
+        Spawn one Agent teammate per task in the wave, using one stable
+        team_name for the wave and one unique name per teammate. Do not invoke
+        removed legacy team-management tools. Use Sonnet teammates.
         Each teammate claims one [P] task and runs it with the
         Agent prompt template below, plus one Teams-only line:
         each teammate MUST send its complete
@@ -2477,18 +2483,22 @@ For each phase group in tasks.md:
         arrives, without waiting for the rest of the run, and
         never on a bare idle or liveness notification.
         Only then wait for all teammates to complete.
-        Clean up the team before the next run.
+        Request graceful teammate shutdown after every report is received;
+        Claude Code owns team cleanup. Start no second team until shutdown is
+        confirmed.
       else:
         # Path B: spawn all [P] tasks in ONE message, background
-        For each task in tasks_in_run:
+        For each task in the wave:
           Agent(
             subagent_type: <routed agent>,
             run_in_background: true,
-            isolation: "worktree",
             description: "SPEC-XXX <task-id> [P] <brief>",
             prompt: <task prompt — see Step 3c>
           )
         # All N tasks dispatched in ONE assistant message
+        # Omit name so a normal subagent cannot be promoted to a teammate.
+        # All agents share the current checkout and must touch only their
+        # disjoint declared ownership.
         Wait for ALL to complete.
         Each background subagent's completion arrives on its own
         turn; append that task's entry then, without waiting for
@@ -2531,7 +2541,6 @@ For each phase group in tasks.md:
   # Step 3c: Agent prompt template (used for parallel + singleton)
   Agent(
     subagent_type: "<routed agent>",
-    isolation: "worktree" if part of a [P] parallel run else omitted,
     run_in_background: true if part of a [P] parallel run else omitted,
     description: "SPEC-XXX <task-id> <brief>",
     prompt: """

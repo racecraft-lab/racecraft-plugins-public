@@ -8,7 +8,7 @@ description: >
   external documentation and community best practices.
 model: sonnet
 color: green
-disallowedTools: Write, Edit, MultiEdit, NotebookEdit, Skill, Agent, TeamCreate, SendMessage
+disallowedTools: Write, Edit, MultiEdit, NotebookEdit, Skill, Agent, SendMessage
 maxTurns: 50
 background: true
 effort: max

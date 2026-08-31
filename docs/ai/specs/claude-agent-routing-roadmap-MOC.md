@@ -4,6 +4,7 @@ related:
   - "[Claude Code Agent Model Routing and Graceful Fallback PRD](../../prd-claude-agent-routing.md)"
   - "[Shared Agent Routing Evidence Parity Contract](agent-routing-parity-contract.md)"
   - "[Shared Candidate Manifest Schema](../research/agent-route-candidate-manifest.schema.json)"
+  - "[Current Claude Subagent Runtime Rebaseline](../research/claude-subagent-runtime-rebaseline.md)"
 status: "Active; CAR-001 through CAR-005 complete/archived; CAR-006 ready"
 rank:
 spec_id: "claude-agent-routing"
@@ -13,7 +14,10 @@ structureVersion: 1
 # Claude Code Agent Model Routing and Graceful Fallback - Map of Content
 
 Navigation map for evidence-backed per-agent model routing and graceful
-fallback on the Claude side of the shared twelve-agent catalog.
+fallback across 14 required shipped Claude agents plus the optional helper.
+Shared roles retain Codex parity; the two secure feedback-sweep roles remain a
+documented Claude-only exception. The historical CAR-003 v1 11+helper corpus
+is immutable, and the current-source v2 roster is the CAR-006 input.
 
 All routing evidence follows the shared vendor-official source contract and
 schema-v2 candidate-manifest shape before downstream specifications begin.
@@ -63,6 +67,7 @@ Why: Resolve the first qualified compatible route at session preflight,
 materialize explicit shipped policies through a drift gate, and validate the
 global override - without an installer and without mutating shipped files.
 
+- [Current-source Roster and Runtime Rebaseline](../research/claude-subagent-runtime-rebaseline.md)
 - [CAR-006 Route-policy Manifest, Materializer, Preflight, and Strict Override](claude-agent-routing-technical-roadmap.md#car-006-route-policy-manifest-materializer-preflight-and-strict-override)
 
 ### Role Cohorts

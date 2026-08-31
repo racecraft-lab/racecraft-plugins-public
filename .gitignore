@@ -21,6 +21,7 @@ tests/speckit-pro/layer7-integration/**/transcript.jsonl
 
 # Transient per-agent scratch memory (subagent learnings; not a deliverable)
 .claude/agent-memory/
+.claude/agent-memory-local/
 
 # Feedback-sweep transport byproducts: written and removed by the sweep, never committed
 specs/*/.process/feedback-sweep/
