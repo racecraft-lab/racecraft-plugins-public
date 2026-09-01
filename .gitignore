@@ -30,3 +30,6 @@ specs/*/.process/feedback-sweep/
 # here rather than per-clone so the spec-index generator cannot bake a backlink
 # to one into a committed SPEC-MOC.md.
 specs/*/.process/pr-packets/
+
+# Browser-automation scratch output (UAT screenshots, traces)
+.playwright-mcp/
