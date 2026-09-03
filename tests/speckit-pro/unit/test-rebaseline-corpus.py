@@ -263,18 +263,18 @@ class RebaselineCheckTests(RebaselineScriptTestCase):
 
     def test_check_fails_and_names_the_drift_after_a_one_byte_agent_change(self) -> None:
         self.assertEqual(self.run_script().returncode, 0)
-        agent_rel = f"{AGENT_DIR_REL}/gate-validator.md"
+        agent_rel = f"{AGENT_DIR_REL}/consensus-synthesizer.md"
         agent_path = self.sandbox / agent_rel
         agent_path.write_bytes(agent_path.read_bytes() + b"\n")
         result = self.run_script("--check")
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         report = result.stdout + result.stderr
-        self.assertIn("gate-validator", report)
+        self.assertIn("consensus-synthesizer", report)
         self.assertIn(MANIFEST_REL, report)
 
     def test_check_never_writes(self) -> None:
         self.assertEqual(self.run_script().returncode, 0)
-        agent_rel = f"{AGENT_DIR_REL}/gate-validator.md"
+        agent_rel = f"{AGENT_DIR_REL}/consensus-synthesizer.md"
         agent_path = self.sandbox / agent_rel
         agent_path.write_bytes(agent_path.read_bytes() + b"\n")
         before = self.snapshot()
@@ -353,8 +353,8 @@ class RebaselineMembershipTests(RebaselineScriptTestCase):
         self.assertEqual(self.snapshot(), baseline)
 
     def test_remove_role_retunes_the_role_count_in_every_schema(self) -> None:
-        # The enum and the array bounds have to move together. Eleven permitted
-        # ids under minItems 12 is unsatisfiable, so the schema would reject the
+        # The enum and the array bounds have to move together. Ten permitted
+        # ids under minItems 11 is unsatisfiable, so the schema would reject the
         # corpus the same run wrote.
         self.assertEqual(self.run_script().returncode, 0)
         self.drop_role_from_module(ROUND_TRIP_ROLE)
@@ -370,8 +370,8 @@ class RebaselineMembershipTests(RebaselineScriptTestCase):
                 self.assertEqual(len(self.enum_ids(relative)), expected_count)
 
     def test_add_role_retunes_the_role_count_in_every_schema(self) -> None:
-        # The growth direction fails the same way: thirteen roles under
-        # maxItems 12 is a schema that rejects its own corpus.
+        # The growth direction fails the same way: twelve roles under
+        # maxItems 11 is a schema that rejects its own corpus.
         self.assertEqual(self.run_script().returncode, 0)
         self.add_role_to_module(ADDED_ROLE)
         expected_count = self.governed_role_count()

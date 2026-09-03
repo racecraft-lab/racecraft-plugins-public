@@ -122,64 +122,56 @@
 122 15-checklist-phase: skill never invoked: grill-me (any scope)
 123 15-checklist-phase: dispatch count >= 1 (got 1)
 124 15-checklist-phase: dispatch count <= 2 (got 1)
-125 16-gate-validator: dispatched to speckit-pro:gate-validator
-126 16-gate-validator: never dispatched to speckit-pro:phase-executor
-127 16-gate-validator: never dispatched to speckit-pro:clarify-executor
-128 16-gate-validator: never dispatched to speckit-pro:grill-me
-129 16-gate-validator: no subagent spawned an Agent()
-130 16-gate-validator: skill never invoked: grill-me (any scope)
-131 16-gate-validator: dispatch count >= 1 (got 1)
-132 16-gate-validator: dispatch count <= 2 (got 1)
-133 17-phase-error-handling: never dispatched to speckit-pro:grill-me
-134 17-phase-error-handling: no subagent spawned an Agent()
-135 17-phase-error-handling: skill never invoked: grill-me (any scope)
-136 17-phase-error-handling: dispatch count >= 0 (got 1)
-137 17-phase-error-handling: dispatch count <= 2 (got 1)
-138 18-post-impl-parallel-subagents: dispatched to at least one of allowed set
-139 18-post-impl-parallel-subagents: never dispatched to speckit-pro:grill-me
-140 18-post-impl-parallel-subagents: never dispatched to speckit-pro:clarify-executor
-141 18-post-impl-parallel-subagents: no subagent spawned an Agent()
-142 18-post-impl-parallel-subagents: skill never invoked: grill-me (any scope)
-143 18-post-impl-parallel-subagents: dispatch count >= 3 (got 3)
-144 18-post-impl-parallel-subagents: dispatch count <= 5 (got 3)
-145 19-implement-parallel-p-tasks: dispatched to speckit-pro:implement-executor
-146 19-implement-parallel-p-tasks: never dispatched to speckit-pro:grill-me
-147 19-implement-parallel-p-tasks: never dispatched to speckit-pro:clarify-executor
-148 19-implement-parallel-p-tasks: never dispatched to speckit-pro:phase-executor
-149 19-implement-parallel-p-tasks: never dispatched to speckit-pro:domain-researcher
-150 19-implement-parallel-p-tasks: no subagent spawned an Agent()
-151 19-implement-parallel-p-tasks: skill never invoked: grill-me (any scope)
-152 19-implement-parallel-p-tasks: dispatch count >= 3 (got 3)
-153 19-implement-parallel-p-tasks: dispatch count <= 3 (got 3)
-154 20-consensus-multi-item-batch: dispatched to speckit-pro:codebase-analyst
-155 20-consensus-multi-item-batch: dispatched to speckit-pro:spec-context-analyst
-156 20-consensus-multi-item-batch: dispatched to speckit-pro:domain-researcher
-157 20-consensus-multi-item-batch: never dispatched to speckit-pro:grill-me
-158 20-consensus-multi-item-batch: never dispatched to speckit-pro:phase-executor
-159 20-consensus-multi-item-batch: no subagent spawned an Agent()
-160 20-consensus-multi-item-batch: skill never invoked: grill-me (any scope)
-161 20-consensus-multi-item-batch: dispatch count >= 9 (got 9)
-162 20-consensus-multi-item-batch: dispatch count <= 9 (got 9)
-163 21-resolve-pr-parallel-files: dispatched to general-purpose
-164 21-resolve-pr-parallel-files: never dispatched to speckit-pro:grill-me
-165 21-resolve-pr-parallel-files: never dispatched to speckit-pro:phase-executor
-166 21-resolve-pr-parallel-files: never dispatched to speckit-pro:clarify-executor
-167 21-resolve-pr-parallel-files: no subagent spawned an Agent()
-168 21-resolve-pr-parallel-files: skill never invoked: grill-me (any scope)
-169 21-resolve-pr-parallel-files: dispatch count >= 3 (got 3)
-170 21-resolve-pr-parallel-files: dispatch count <= 6 (got 3)
-171 22-stack-manager-replay: dispatched to speckit-pro:analyze-executor
-172 22-stack-manager-replay: dispatched to speckit-pro:implement-executor
-173 22-stack-manager-replay: never dispatched to speckit-pro:grill-me
-174 22-stack-manager-replay: no subagent spawned an Agent()
-175 22-stack-manager-replay: skill never invoked: grill-me (any scope)
-176 22-stack-manager-replay: transcript includes term: stack_manager_decision
-177 22-stack-manager-replay: transcript includes term: fallback_reason
-178 22-stack-manager-replay: transcript includes term: command_plan
-179 22-stack-manager-replay: transcript includes term: topology_compatibility
-180 22-stack-manager-replay: transcript includes term: mutation_boundary
-181 22-stack-manager-replay: transcript excludes term: gh pr create --live
-182 22-stack-manager-replay: transcript excludes term: gh stack link --live
-183 22-stack-manager-replay: dispatch count >= 2 (got 2)
-184 22-stack-manager-replay: dispatch count <= 4 (got 2)
-TOTAL: 184
+125 17-phase-error-handling: never dispatched to speckit-pro:grill-me
+126 17-phase-error-handling: no subagent spawned an Agent()
+127 17-phase-error-handling: skill never invoked: grill-me (any scope)
+128 17-phase-error-handling: dispatch count >= 0 (got 1)
+129 17-phase-error-handling: dispatch count <= 2 (got 1)
+130 18-post-impl-parallel-subagents: dispatched to at least one of allowed set
+131 18-post-impl-parallel-subagents: never dispatched to speckit-pro:grill-me
+132 18-post-impl-parallel-subagents: never dispatched to speckit-pro:clarify-executor
+133 18-post-impl-parallel-subagents: no subagent spawned an Agent()
+134 18-post-impl-parallel-subagents: skill never invoked: grill-me (any scope)
+135 18-post-impl-parallel-subagents: dispatch count >= 3 (got 3)
+136 18-post-impl-parallel-subagents: dispatch count <= 5 (got 3)
+137 19-implement-parallel-p-tasks: dispatched to speckit-pro:implement-executor
+138 19-implement-parallel-p-tasks: never dispatched to speckit-pro:grill-me
+139 19-implement-parallel-p-tasks: never dispatched to speckit-pro:clarify-executor
+140 19-implement-parallel-p-tasks: never dispatched to speckit-pro:phase-executor
+141 19-implement-parallel-p-tasks: never dispatched to speckit-pro:domain-researcher
+142 19-implement-parallel-p-tasks: no subagent spawned an Agent()
+143 19-implement-parallel-p-tasks: skill never invoked: grill-me (any scope)
+144 19-implement-parallel-p-tasks: dispatch count >= 3 (got 3)
+145 19-implement-parallel-p-tasks: dispatch count <= 3 (got 3)
+146 20-consensus-multi-item-batch: dispatched to speckit-pro:codebase-analyst
+147 20-consensus-multi-item-batch: dispatched to speckit-pro:spec-context-analyst
+148 20-consensus-multi-item-batch: dispatched to speckit-pro:domain-researcher
+149 20-consensus-multi-item-batch: never dispatched to speckit-pro:grill-me
+150 20-consensus-multi-item-batch: never dispatched to speckit-pro:phase-executor
+151 20-consensus-multi-item-batch: no subagent spawned an Agent()
+152 20-consensus-multi-item-batch: skill never invoked: grill-me (any scope)
+153 20-consensus-multi-item-batch: dispatch count >= 9 (got 9)
+154 20-consensus-multi-item-batch: dispatch count <= 9 (got 9)
+155 21-resolve-pr-parallel-files: dispatched to general-purpose
+156 21-resolve-pr-parallel-files: never dispatched to speckit-pro:grill-me
+157 21-resolve-pr-parallel-files: never dispatched to speckit-pro:phase-executor
+158 21-resolve-pr-parallel-files: never dispatched to speckit-pro:clarify-executor
+159 21-resolve-pr-parallel-files: no subagent spawned an Agent()
+160 21-resolve-pr-parallel-files: skill never invoked: grill-me (any scope)
+161 21-resolve-pr-parallel-files: dispatch count >= 3 (got 3)
+162 21-resolve-pr-parallel-files: dispatch count <= 6 (got 3)
+163 22-stack-manager-replay: dispatched to speckit-pro:analyze-executor
+164 22-stack-manager-replay: dispatched to speckit-pro:implement-executor
+165 22-stack-manager-replay: never dispatched to speckit-pro:grill-me
+166 22-stack-manager-replay: no subagent spawned an Agent()
+167 22-stack-manager-replay: skill never invoked: grill-me (any scope)
+168 22-stack-manager-replay: transcript includes term: stack_manager_decision
+169 22-stack-manager-replay: transcript includes term: fallback_reason
+170 22-stack-manager-replay: transcript includes term: command_plan
+171 22-stack-manager-replay: transcript includes term: topology_compatibility
+172 22-stack-manager-replay: transcript includes term: mutation_boundary
+173 22-stack-manager-replay: transcript excludes term: gh pr create --live
+174 22-stack-manager-replay: transcript excludes term: gh stack link --live
+175 22-stack-manager-replay: dispatch count >= 2 (got 2)
+176 22-stack-manager-replay: dispatch count <= 4 (got 2)
+TOTAL: 176

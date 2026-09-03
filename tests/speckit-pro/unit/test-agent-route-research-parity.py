@@ -29,7 +29,7 @@ MANIFEST_PATHS = (
     RESEARCH_ROOT / "claude-agent-route-candidate-manifest.json",
     RESEARCH_ROOT / "codex-agent-route-candidate-manifest.json",
 )
-SHARED_AGENT_NAMES = {
+LIVE_AGENT_NAMES = {
     "analyze-executor",
     "autopilot-fast-helper",
     "checklist-executor",
@@ -37,12 +37,16 @@ SHARED_AGENT_NAMES = {
     "codebase-analyst",
     "consensus-synthesizer",
     "domain-researcher",
-    "gate-validator",
     "implement-executor",
     "phase-executor",
     "spec-context-analyst",
     "uat-runbook-author",
 }
+# The candidate-route manifests are frozen research evidence. A role retired from
+# the live roster after the freeze stays bound there, so the parity check expects
+# the historical catalog, not today's roster.
+RETIRED_AGENT_NAMES = {"gate-validator"}
+SHARED_AGENT_NAMES = LIVE_AGENT_NAMES | RETIRED_AGENT_NAMES
 SHARED_EVIDENCE_CLASSES = {
     "official_documentation",
     "project_input",

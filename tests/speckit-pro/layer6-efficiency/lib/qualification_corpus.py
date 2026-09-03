@@ -22,7 +22,6 @@ GOVERNED_ROLE_ORDER = (
     "codebase-analyst",
     "consensus-synthesizer",
     "domain-researcher",
-    "gate-validator",
     "implement-executor",
     "phase-executor",
     "spec-context-analyst",
@@ -35,7 +34,6 @@ REQUIRED_CORE_ROLES = (
     "codebase-analyst",
     "consensus-synthesizer",
     "domain-researcher",
-    "gate-validator",
     "implement-executor",
     "phase-executor",
     "spec-context-analyst",
@@ -52,7 +50,7 @@ EXECUTABLE_CORE_ROLES = (
     "spec-context-analyst",
     "uat-runbook-author",
 )
-NON_EXECUTABLE_CORE_ROLES = ("consensus-synthesizer", "gate-validator")
+NON_EXECUTABLE_CORE_ROLES = ("consensus-synthesizer",)
 OPTIONAL_HELPER_ROLES = ("autopilot-fast-helper",)
 PARTITION_TYPES = ("calibration", "screening", "selection", "cohort_lock", "integrated_confirmation")
 
@@ -425,7 +423,7 @@ def _validate_role(value: object, *, repo_root: _Path, corpus_partition: dict) -
 
 
 def validate_role_corpus(corpus: object, *, repo_root: _Path | str | None = None) -> dict:
-    """Validate and deterministically order the governed twelve-role corpus."""
+    """Validate and deterministically order the governed eleven-role corpus."""
     root = _Path(repo_root) if repo_root is not None else _Path(__file__).resolve().parents[4]
     value = _closed(_copy.deepcopy(corpus), _TOP_LEVEL_FIELDS, "closed corpus")
     if value["schema_version"] != ROLE_CORPUS_SCHEMA_VERSION:
@@ -438,7 +436,7 @@ def validate_role_corpus(corpus: object, *, repo_root: _Path | str | None = None
     )
     roles = value["roles"]
     if not isinstance(roles, list) or len(roles) != len(GOVERNED_ROLE_ORDER):
-        raise ValueError("role corpus must contain exactly twelve governed roles")
+        raise ValueError("role corpus must contain exactly eleven governed roles")
     role_ids = []
     for raw in roles:
         if not isinstance(raw, dict):

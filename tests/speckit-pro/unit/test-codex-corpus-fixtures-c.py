@@ -25,13 +25,12 @@ ROLE_ORDER = (
     "codebase-analyst",
     "consensus-synthesizer",
     "domain-researcher",
-    "gate-validator",
     "implement-executor",
     "phase-executor",
     "spec-context-analyst",
     "uat-runbook-author",
 )
-GROUP_C_ROLE_IDS = ("autopilot-fast-helper", "consensus-synthesizer", "gate-validator")
+GROUP_C_ROLE_IDS = ("autopilot-fast-helper", "consensus-synthesizer")
 REQUIRED_CORE = (
     "analyze-executor",
     "checklist-executor",
@@ -39,7 +38,6 @@ REQUIRED_CORE = (
     "codebase-analyst",
     "consensus-synthesizer",
     "domain-researcher",
-    "gate-validator",
     "implement-executor",
     "phase-executor",
     "spec-context-analyst",
@@ -56,7 +54,7 @@ EXECUTABLE_CORE = (
     "spec-context-analyst",
     "uat-runbook-author",
 )
-NON_EXECUTABLE_CORE = ("consensus-synthesizer", "gate-validator")
+NON_EXECUTABLE_CORE = ("consensus-synthesizer",)
 OPTIONAL_HELPERS = ("autopilot-fast-helper",)
 READ_ONLY_ROLES = frozenset(
     {
@@ -64,7 +62,6 @@ READ_ONLY_ROLES = frozenset(
         "codebase-analyst",
         "consensus-synthesizer",
         "domain-researcher",
-        "gate-validator",
         "spec-context-analyst",
     }
 )
@@ -236,9 +233,9 @@ class CodexCorpusFixturesCTests(unittest.TestCase):
         validated = self.corpus.validate_role_corpus(corpus, repo_root=ROOT)
 
         stats = self.corpus.corpus_statistics(validated)
-        self.assertEqual(stats["required_core_roles"], 11)
+        self.assertEqual(stats["required_core_roles"], 10)
         self.assertEqual(stats["optional_helper_roles"], 1)
-        self.assertEqual(stats["non_executable_required_core_roles"], 2)
+        self.assertEqual(stats["non_executable_required_core_roles"], 1)
         self.assertEqual(stats["executable_optional_helper_roles"], 1)
         self.assertEqual(stats["optional_helper_role_ids"], ["autopilot-fast-helper"])
         self.assertNotIn("autopilot-fast-helper", stats["required_core_primary_role_ids"])
@@ -269,7 +266,7 @@ class CodexCorpusFixturesCTests(unittest.TestCase):
         )
         self.assertEqual(
             [entry["role_id"] for entry in schedule["unschedulable_governed"]],
-            ["consensus-synthesizer", "gate-validator"],
+            ["consensus-synthesizer"],
         )
         self.assertEqual(
             [entry["role_id"] for entry in schedule["optional_helpers"]],

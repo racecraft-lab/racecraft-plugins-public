@@ -41,7 +41,6 @@ AGENTS = (
     "codebase-analyst",
     "spec-context-analyst",
     "domain-researcher",
-    "gate-validator",
     "consensus-synthesizer",
     "artifact-author",
     "uat-runbook-author",

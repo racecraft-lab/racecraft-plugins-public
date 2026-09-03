@@ -13,7 +13,7 @@ authoritative and always override memory.
 | `spec-context-analyst` | `local` | Reuses artifact-verified principles and precedents; exact-client UAT proved memory-only writes and fresh-session value |
 | `phase-executor`, `clarify-executor`, `checklist-executor`, `analyze-executor` | none | Current planning artifacts are authoritative |
 | `domain-researcher` | none | External facts drift |
-| `consensus-synthesizer`, `gate-validator`, `artifact-author`, `uat-runbook-author` | none | Deterministic current inputs should decide the result |
+| `consensus-synthesizer`, `artifact-author`, `uat-runbook-author` | none | Deterministic current inputs should decide the result |
 | `sweep-classifier`, `sweep-analyst` | none | Reviewer/model text is attacker-influenced and must never persist |
 
 ## Curation contract

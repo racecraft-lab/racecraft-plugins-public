@@ -46,7 +46,7 @@ GROUNDING_MARKER = "grounding.md"
 PATH_TOKEN_RE = re.compile(r"speckit-pro/[A-Za-z0-9._/-]*capability-discovery\.md")
 GROUNDING_TOKEN_RE = re.compile(r"speckit-pro/[A-Za-z0-9._/-]*grounding\.md")
 
-CC_EXCLUSIONS = frozenset({"consensus-synthesizer", "gate-validator", "phase-executor"})
+CC_EXCLUSIONS = frozenset({"consensus-synthesizer", "phase-executor"})
 CODEX_EXCLUSIONS = frozenset({"autopilot-fast-helper", "phase-executor"})
 
 

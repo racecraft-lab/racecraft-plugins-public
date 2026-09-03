@@ -108,76 +108,64 @@
 108 domain-researcher: model is valid (opus|sonnet|haiku|inherit)
 109 domain-researcher: system prompt body exists (after frontmatter)
 110 domain-researcher: system prompt length > 20 chars
-111 gate-validator: file exists
-112 gate-validator: starts with --- (YAML frontmatter)
-113 gate-validator: has closing ---
-114 gate-validator: uses only supported plugin-agent frontmatter fields
-115 gate-validator: memory scope matches the curated persistence policy
-116 gate-validator: has name: field
-117 gate-validator: name is valid format (alphanumeric + hyphens, 3-50 chars)
-118 gate-validator: has description: field
-119 gate-validator: has model: field
-120 gate-validator: model is valid (opus|sonnet|haiku|inherit)
-121 gate-validator: system prompt body exists (after frontmatter)
-122 gate-validator: system prompt length > 20 chars
-123 consensus-synthesizer: file exists
-124 consensus-synthesizer: starts with --- (YAML frontmatter)
-125 consensus-synthesizer: has closing ---
-126 consensus-synthesizer: uses only supported plugin-agent frontmatter fields
-127 consensus-synthesizer: memory scope matches the curated persistence policy
-128 consensus-synthesizer: has name: field
-129 consensus-synthesizer: name is valid format (alphanumeric + hyphens, 3-50 chars)
-130 consensus-synthesizer: has description: field
-131 consensus-synthesizer: has model: field
-132 consensus-synthesizer: model is valid (opus|sonnet|haiku|inherit)
-133 consensus-synthesizer: system prompt body exists (after frontmatter)
-134 consensus-synthesizer: system prompt length > 20 chars
-135 artifact-author: file exists
-136 artifact-author: starts with --- (YAML frontmatter)
-137 artifact-author: has closing ---
-138 artifact-author: uses only supported plugin-agent frontmatter fields
-139 artifact-author: memory scope matches the curated persistence policy
-140 artifact-author: has name: field
-141 artifact-author: name is valid format (alphanumeric + hyphens, 3-50 chars)
-142 artifact-author: has description: field
-143 artifact-author: has model: field
-144 artifact-author: model is valid (opus|sonnet|haiku|inherit)
-145 artifact-author: system prompt body exists (after frontmatter)
-146 artifact-author: system prompt length > 20 chars
-147 uat-runbook-author: file exists
-148 uat-runbook-author: starts with --- (YAML frontmatter)
-149 uat-runbook-author: has closing ---
-150 uat-runbook-author: uses only supported plugin-agent frontmatter fields
-151 uat-runbook-author: memory scope matches the curated persistence policy
-152 uat-runbook-author: has name: field
-153 uat-runbook-author: name is valid format (alphanumeric + hyphens, 3-50 chars)
-154 uat-runbook-author: has description: field
-155 uat-runbook-author: has model: field
-156 uat-runbook-author: model is valid (opus|sonnet|haiku|inherit)
-157 uat-runbook-author: system prompt body exists (after frontmatter)
-158 uat-runbook-author: system prompt length > 20 chars
-159 sweep-classifier: file exists
-160 sweep-classifier: starts with --- (YAML frontmatter)
-161 sweep-classifier: has closing ---
-162 sweep-classifier: uses only supported plugin-agent frontmatter fields
-163 sweep-classifier: memory scope matches the curated persistence policy
-164 sweep-classifier: has name: field
-165 sweep-classifier: name is valid format (alphanumeric + hyphens, 3-50 chars)
-166 sweep-classifier: has description: field
-167 sweep-classifier: has model: field
-168 sweep-classifier: model is valid (opus|sonnet|haiku|inherit)
-169 sweep-classifier: system prompt body exists (after frontmatter)
-170 sweep-classifier: system prompt length > 20 chars
-171 sweep-analyst: file exists
-172 sweep-analyst: starts with --- (YAML frontmatter)
-173 sweep-analyst: has closing ---
-174 sweep-analyst: uses only supported plugin-agent frontmatter fields
-175 sweep-analyst: memory scope matches the curated persistence policy
-176 sweep-analyst: has name: field
-177 sweep-analyst: name is valid format (alphanumeric + hyphens, 3-50 chars)
-178 sweep-analyst: has description: field
-179 sweep-analyst: has model: field
-180 sweep-analyst: model is valid (opus|sonnet|haiku|inherit)
-181 sweep-analyst: system prompt body exists (after frontmatter)
-182 sweep-analyst: system prompt length > 20 chars
-TOTAL: 182
+111 consensus-synthesizer: file exists
+112 consensus-synthesizer: starts with --- (YAML frontmatter)
+113 consensus-synthesizer: has closing ---
+114 consensus-synthesizer: uses only supported plugin-agent frontmatter fields
+115 consensus-synthesizer: memory scope matches the curated persistence policy
+116 consensus-synthesizer: has name: field
+117 consensus-synthesizer: name is valid format (alphanumeric + hyphens, 3-50 chars)
+118 consensus-synthesizer: has description: field
+119 consensus-synthesizer: has model: field
+120 consensus-synthesizer: model is valid (opus|sonnet|haiku|inherit)
+121 consensus-synthesizer: system prompt body exists (after frontmatter)
+122 consensus-synthesizer: system prompt length > 20 chars
+123 artifact-author: file exists
+124 artifact-author: starts with --- (YAML frontmatter)
+125 artifact-author: has closing ---
+126 artifact-author: uses only supported plugin-agent frontmatter fields
+127 artifact-author: memory scope matches the curated persistence policy
+128 artifact-author: has name: field
+129 artifact-author: name is valid format (alphanumeric + hyphens, 3-50 chars)
+130 artifact-author: has description: field
+131 artifact-author: has model: field
+132 artifact-author: model is valid (opus|sonnet|haiku|inherit)
+133 artifact-author: system prompt body exists (after frontmatter)
+134 artifact-author: system prompt length > 20 chars
+135 uat-runbook-author: file exists
+136 uat-runbook-author: starts with --- (YAML frontmatter)
+137 uat-runbook-author: has closing ---
+138 uat-runbook-author: uses only supported plugin-agent frontmatter fields
+139 uat-runbook-author: memory scope matches the curated persistence policy
+140 uat-runbook-author: has name: field
+141 uat-runbook-author: name is valid format (alphanumeric + hyphens, 3-50 chars)
+142 uat-runbook-author: has description: field
+143 uat-runbook-author: has model: field
+144 uat-runbook-author: model is valid (opus|sonnet|haiku|inherit)
+145 uat-runbook-author: system prompt body exists (after frontmatter)
+146 uat-runbook-author: system prompt length > 20 chars
+147 sweep-classifier: file exists
+148 sweep-classifier: starts with --- (YAML frontmatter)
+149 sweep-classifier: has closing ---
+150 sweep-classifier: uses only supported plugin-agent frontmatter fields
+151 sweep-classifier: memory scope matches the curated persistence policy
+152 sweep-classifier: has name: field
+153 sweep-classifier: name is valid format (alphanumeric + hyphens, 3-50 chars)
+154 sweep-classifier: has description: field
+155 sweep-classifier: has model: field
+156 sweep-classifier: model is valid (opus|sonnet|haiku|inherit)
+157 sweep-classifier: system prompt body exists (after frontmatter)
+158 sweep-classifier: system prompt length > 20 chars
+159 sweep-analyst: file exists
+160 sweep-analyst: starts with --- (YAML frontmatter)
+161 sweep-analyst: has closing ---
+162 sweep-analyst: uses only supported plugin-agent frontmatter fields
+163 sweep-analyst: memory scope matches the curated persistence policy
+164 sweep-analyst: has name: field
+165 sweep-analyst: name is valid format (alphanumeric + hyphens, 3-50 chars)
+166 sweep-analyst: has description: field
+167 sweep-analyst: has model: field
+168 sweep-analyst: model is valid (opus|sonnet|haiku|inherit)
+169 sweep-analyst: system prompt body exists (after frontmatter)
+170 sweep-analyst: system prompt length > 20 chars
+TOTAL: 170
