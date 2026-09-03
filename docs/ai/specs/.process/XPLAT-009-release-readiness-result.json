@@ -335,15 +335,6 @@
               "transform": "none"
             },
             {
-              "byte_count": 2116,
-              "kind": "agent",
-              "path": "agents/gate-validator.md",
-              "required": true,
-              "sha256": "03381f470831d16ab90fbf518ec3e9efda6aa1cf0945ff27d49145cacb8e6a8c",
-              "source_path": "speckit-pro/agents/gate-validator.md",
-              "transform": "none"
-            },
-            {
               "byte_count": 7538,
               "kind": "agent",
               "path": "agents/implement-executor.md",
@@ -659,11 +650,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 18738,
+              "byte_count": 18720,
               "kind": "skill",
               "path": "skills/grill-me/SKILL.md",
               "required": true,
-              "sha256": "1b52d759bc69289dfc8ccb88119ba14d89c23ea03ff1f8ed3682ab9c6eeb9310",
+              "sha256": "ca55118c4ee55c3706e4a8b5844b56797d5afdfe9854a5f6a3ca73c54620fdd8",
               "source_path": "speckit-pro/skills/grill-me/SKILL.md",
               "transform": "claude_guard_strip"
             },
@@ -695,11 +686,11 @@
               "transform": "claude_guard_strip"
             },
             {
-              "byte_count": 51976,
+              "byte_count": 52119,
               "kind": "skill",
               "path": "skills/speckit-autopilot/SKILL.md",
               "required": true,
-              "sha256": "315e988758c464a7ebe2e42bcc4acb82ceca3f6770e925133437bd987572e386",
+              "sha256": "23d7c626267329fa9bfe5d5c5d403ffb799686031988762943a7ad5d2be2cf34",
               "source_path": "speckit-pro/skills/speckit-autopilot/SKILL.md",
               "transform": "claude_guard_strip"
             },
@@ -938,11 +929,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 2710,
+              "byte_count": 2692,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/subagent-memory-policy.md",
               "required": true,
-              "sha256": "15363ae6e493670600bafb5e93509a252e5c24e3d0c3fcfdd51669f1d3ab02c7",
+              "sha256": "7ce5b2ac7464dd01a8d493e5c72176ac7b9df7f778858909b1445b1828e27dd4",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/subagent-memory-policy.md",
               "transform": "none"
             },
@@ -1014,7 +1005,7 @@
               "kind": "skill",
               "path": "skills/speckit-coach/SKILL.md",
               "required": true,
-              "sha256": "d48cd283b3cb71888264935a9dd32a521dd5c74201dd2d30c85fd28d322e7f2d",
+              "sha256": "7c00046964aa1c598fd05ae57608a7b9dab8abd6ff41e9b1711849004c6a270e",
               "source_path": "speckit-pro/skills/speckit-coach/SKILL.md",
               "transform": "claude_guard_strip"
             },
@@ -1588,15 +1579,6 @@
               "transform": "none"
             },
             {
-              "byte_count": 2116,
-              "kind": "agent",
-              "path": "agents/gate-validator.md",
-              "required": true,
-              "sha256": "03381f470831d16ab90fbf518ec3e9efda6aa1cf0945ff27d49145cacb8e6a8c",
-              "source_path": "speckit-pro/agents/gate-validator.md",
-              "transform": "none"
-            },
-            {
               "byte_count": 7538,
               "kind": "agent",
               "path": "agents/implement-executor.md",
@@ -1912,11 +1894,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 18738,
+              "byte_count": 18720,
               "kind": "skill",
               "path": "skills/grill-me/SKILL.md",
               "required": true,
-              "sha256": "1b52d759bc69289dfc8ccb88119ba14d89c23ea03ff1f8ed3682ab9c6eeb9310",
+              "sha256": "ca55118c4ee55c3706e4a8b5844b56797d5afdfe9854a5f6a3ca73c54620fdd8",
               "source_path": "speckit-pro/skills/grill-me/SKILL.md",
               "transform": "claude_guard_strip"
             },
@@ -1948,11 +1930,11 @@
               "transform": "claude_guard_strip"
             },
             {
-              "byte_count": 51976,
+              "byte_count": 52119,
               "kind": "skill",
               "path": "skills/speckit-autopilot/SKILL.md",
               "required": true,
-              "sha256": "315e988758c464a7ebe2e42bcc4acb82ceca3f6770e925133437bd987572e386",
+              "sha256": "23d7c626267329fa9bfe5d5c5d403ffb799686031988762943a7ad5d2be2cf34",
               "source_path": "speckit-pro/skills/speckit-autopilot/SKILL.md",
               "transform": "claude_guard_strip"
             },
@@ -2191,11 +2173,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 2710,
+              "byte_count": 2692,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/subagent-memory-policy.md",
               "required": true,
-              "sha256": "15363ae6e493670600bafb5e93509a252e5c24e3d0c3fcfdd51669f1d3ab02c7",
+              "sha256": "7ce5b2ac7464dd01a8d493e5c72176ac7b9df7f778858909b1445b1828e27dd4",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/subagent-memory-policy.md",
               "transform": "none"
             },
@@ -2267,7 +2249,7 @@
               "kind": "skill",
               "path": "skills/speckit-coach/SKILL.md",
               "required": true,
-              "sha256": "d48cd283b3cb71888264935a9dd32a521dd5c74201dd2d30c85fd28d322e7f2d",
+              "sha256": "7c00046964aa1c598fd05ae57608a7b9dab8abd6ff41e9b1711849004c6a270e",
               "source_path": "speckit-pro/skills/speckit-coach/SKILL.md",
               "transform": "claude_guard_strip"
             },
@@ -2732,7 +2714,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "021b111d55a92894b06b204dfaec92648b3a43d94e2b6a0c0ec1f07447c1a1a7",
+          "file_tree_hash": "1c871a8689ae08c8b948fb0161b6a91d770d2d9bdd53539cce6ae53bda783cd9",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
@@ -3510,11 +3492,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 2710,
+              "byte_count": 2692,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/subagent-memory-policy.md",
               "required": true,
-              "sha256": "15363ae6e493670600bafb5e93509a252e5c24e3d0c3fcfdd51669f1d3ab02c7",
+              "sha256": "7ce5b2ac7464dd01a8d493e5c72176ac7b9df7f778858909b1445b1828e27dd4",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/subagent-memory-policy.md",
               "transform": "none"
             },
@@ -3618,11 +3600,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 32866,
+              "byte_count": 32867,
               "kind": "skill",
               "path": "skills/speckit-coach/SKILL.md",
               "required": true,
-              "sha256": "c36eea94f0f469b555523f7a0198752ef6f1cde8a8fd8ac0ebc408419929c09b",
+              "sha256": "909e496c23ba4e54e7f09b249dc0501db2729ff0913470f99634b32b4e3b41f9",
               "source_path": "speckit-pro/codex-skills/speckit-coach/SKILL.md",
               "transform": "codex_overlay"
             },
@@ -4916,11 +4898,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 2710,
+              "byte_count": 2692,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/subagent-memory-policy.md",
               "required": true,
-              "sha256": "15363ae6e493670600bafb5e93509a252e5c24e3d0c3fcfdd51669f1d3ab02c7",
+              "sha256": "7ce5b2ac7464dd01a8d493e5c72176ac7b9df7f778858909b1445b1828e27dd4",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/subagent-memory-policy.md",
               "transform": "none"
             },
@@ -5024,11 +5006,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 32866,
+              "byte_count": 32867,
               "kind": "skill",
               "path": "skills/speckit-coach/SKILL.md",
               "required": true,
-              "sha256": "c36eea94f0f469b555523f7a0198752ef6f1cde8a8fd8ac0ebc408419929c09b",
+              "sha256": "909e496c23ba4e54e7f09b249dc0501db2729ff0913470f99634b32b4e3b41f9",
               "source_path": "speckit-pro/codex-skills/speckit-coach/SKILL.md",
               "transform": "codex_overlay"
             },
@@ -5556,7 +5538,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "e56ba6bae95f07bbf3bae343d7118cc3151b0cff255a8950cc89ba0a7605e6dd",
+          "file_tree_hash": "c08010c60ef92be5b2dbe86aebb89a3611053d5f128f1cc76115db1d1834afde",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],

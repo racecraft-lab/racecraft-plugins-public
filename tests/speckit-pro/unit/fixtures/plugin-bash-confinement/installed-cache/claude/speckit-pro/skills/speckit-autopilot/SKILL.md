@@ -50,7 +50,7 @@ are terminal workers; they don't dispatch workflow phases, branch on
 
 Runtime enforcement is two-tier (Layer 5 verifies both): the
 hyper-focused single-purpose workers (the consensus analysts,
-clarify-executor, gate-validator, uat-runbook-author) explicitly deny
+clarify-executor, uat-runbook-author) explicitly deny
 `Agent`/`SendMessage` via `disallowedTools` so they stay
 on their one job; the open workhorse executors (phase-, analyze-,
 checklist-, implement-executor) keep the operator's full surface —
@@ -551,7 +551,10 @@ for phase in PHASES starting from first_pending:
          Agent(subagent_type: <phase executor>, prompt: ...)
     4. Run consensus (Clarify/Checklist/Analyze only) — see Rule 6
     5. Run after_<phase> hooks
-    6. Validate gate via gate-validator agent → parse PASS/FAIL
+    6. Validate the gate (G1-G7): run runner helper
+       `helper_id=validate-gate operation=validate-gate mode=read_only`
+       with `gate=G<N>` and `feature_dir=<feature-dir>`, then branch on
+       the JSON `pass` field
        On FAIL: auto-fix max 2 attempts; then honor gate-failure setting
     7. Update workflow file; auto-commit if configured
          phases 1-6: git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json && git commit
