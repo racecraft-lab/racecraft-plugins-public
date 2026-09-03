@@ -159,6 +159,13 @@ creates them.
   first stable pass when necessary, then descends and boundary-retests to the
   lowest stable ordinary effort. The current uniform `max` pins are the
   immutable comparator, not the search origin.
+- Amended 2026-09-02: the shipped pins are no longer uniform `max`.
+  `consensus-synthesizer` ships at `high` under the role-contract admission
+  path, because its body forbids its own analysis and evidence search and its
+  output is program-parsed. The comparator is unchanged: the immutable
+  `car-003-role-corpus.json` source digests and the uniform-max configuration
+  recorded at git 45147ad15. See
+  `docs/ai/research/prompt-audit-roster-decision.md`.
 - Exact treatment means real `speckit-pro:<name>` dispatch or a canonical
   materializer rendering proven equivalent; bare prompt emulation is
   smoke-only. The environment contract freezes fast mode off, a pinned client

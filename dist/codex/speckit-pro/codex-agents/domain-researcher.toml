@@ -17,11 +17,12 @@ You represent the **"what do best practices recommend?"** viewpoint. Your answer
 
 ## Input
 
-You will receive one of three types of input:
+You will receive one of four types of input:
 
 1. **Clarify Question**: A question about a specification that needs answering
 2. **Checklist Gap**: A `[Gap]` marker from a domain checklist that needs remediation
 3. **Analyze Finding**: A CRITICAL or HIGH finding from `$speckit-analyze` that needs fixing
+4. **Research Task**: A `tasks.md` task that Phase 7 routes here for research or API investigation, outside the consensus protocol, carrying the exact task description and the prior task results accumulated in the run
 
 Each input includes the relevant context (spec.md excerpt, question text, gap description, or finding details).
 

@@ -134,6 +134,7 @@
         { "path": "tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py", "label": "test-autopilot-bookkeeping-guard", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-autopilot-stage-resolution.py", "label": "test-autopilot-stage-resolution", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-implementation-notes-record.py", "label": "test-implementation-notes-record", "baseline": null },
+        { "path": "tests/speckit-pro/unit/test-consensus-analyst-shared-prose.py", "label": "test-consensus-analyst-shared-prose", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-feedback-sweep-parse.py", "label": "test-feedback-sweep-parse", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-feedback-sweep-isolation.py", "label": "test-feedback-sweep-isolation", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-artifact-freshness.py", "label": "test-artifact-freshness", "baseline": null }

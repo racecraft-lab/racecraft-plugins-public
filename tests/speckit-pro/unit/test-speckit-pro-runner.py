@@ -7,6 +7,7 @@ import copy
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -20,6 +21,8 @@ PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 RUNNER_DIR = PLUGIN_ROOT / "speckit_pro_runner"
 RELEASE_PLEASE_BRANCH_PREFIX = "release-please--branches--"
 MANIFESTS_REFERENCE_PAGE = "docs-site/src/content/docs/reference/manifests.md"
+ROUTING_ROADMAP = "docs/ai/specs/claude-agent-routing-technical-roadmap.md"
+PROMPT_AUDIT_ROSTER_RECORD = "docs/ai/research/prompt-audit-roster-decision.md"
 DEV_INSTALL_MANIFEST_PREFIX = ".specify/integrations/"
 sys.path.insert(0, str(PLUGIN_ROOT))
 FIXTURE_FILE = Path(__file__).resolve().parent / "fixtures" / "speckit-pro-runner" / "contract-fixtures.json"
@@ -153,6 +156,18 @@ def changed_status_against_review_base() -> dict[str, str]:
         }
 
     raise AssertionError(f"Unable to diff changed path statuses against review base: {'; '.join(errors)}")
+
+
+def git_tracks(path: str) -> bool:
+    """Report whether ``path`` is in this checkout's git index."""
+    completed = subprocess.run(
+        ["git", "ls-files", "--error-unmatch", "--", path],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    return completed.returncode == 0
 
 
 def is_release_please_review() -> bool:
@@ -663,8 +678,10 @@ class RunnerFoundationTests(unittest.TestCase):
             "docs-site/src/content/docs/reference/source-vs-dist.md",
             "docs/ai/research/tool-agnostic-capability-discovery-spike.md",
         }
-        # Shared CAR/G56R candidate-route research deliverables. These are
-        # governed planning evidence, not shipped payload or runtime claims.
+        # Research deliverables under docs/ai/research/: the shared CAR/G56R
+        # candidate-route set, plus the prompt-audit roster decision record.
+        # These are governed planning evidence, not shipped payload or runtime
+        # claims. Name each file exactly; do not widen the docs/ prefix rule.
         allowed_agent_route_research_exact = {
             "docs/ai/research/agent-route-candidate-manifest.schema.json",
             "docs/ai/research/claude-trace-contract.schema.json",
@@ -684,6 +701,7 @@ class RunnerFoundationTests(unittest.TestCase):
             "docs/ai/research/codex-g56r-002-capability-evidence.md",
             "docs/ai/research/codex-g56r-002-executable-candidate-freeze.json",
             "docs/ai/research/codex-g56r-003-effort-ladder.json",
+            "docs/ai/research/prompt-audit-roster-decision.md",
         }
         for path in changed:
             if (
@@ -729,6 +747,76 @@ class RunnerFoundationTests(unittest.TestCase):
                     or path.startswith("docs/roadmap-"),
                     path,
                 )
+
+    def _run_cutover_guard_over(self, changed: list[str]) -> None:
+        """Run the cutover guard against a synthetic set of changed paths.
+
+        The guard is one method that holds its allowlists as locals, so pinning
+        a single path means calling it under mocked change detection rather than
+        importing a set. Patch through ``sys.modules[__name__]`` because this
+        file's name is hyphenated: its module name differs between a direct run
+        and the suite loader, and a string target would miss under one of them.
+        """
+        module = sys.modules[__name__]
+        with (
+            mock.patch.object(
+                module, "changed_paths_against_review_base", return_value=changed
+            ),
+            mock.patch.object(
+                module, "changed_status_against_review_base", return_value={}
+            ),
+            mock.patch.object(module, "is_release_please_review", return_value=False),
+        ):
+            self.test_no_cutover_or_public_claim_surfaces_changed()
+
+    def test_cutover_guard_allows_the_prompt_audit_roster_record(self) -> None:
+        # Research deliverables under docs/ai/research/ fail the guard's docs/
+        # prefix rule unless the exact path is named. The guard diffs committed
+        # state, so a new record passes locally while it is still untracked and
+        # fails in CI, which checks out the branch with full history.
+        self._run_cutover_guard_over(
+            ["docs/ai/research/prompt-audit-roster-decision.md"]
+        )
+
+    def test_cutover_guard_still_rejects_an_unnamed_research_doc(self) -> None:
+        # Naming a research deliverable is an exact-path decision. Widening the
+        # docs/ prefix rule instead would let any future docs/ai/research/ file
+        # through unreviewed, so prove the prefix rule is still closed.
+        with self.assertRaises(AssertionError):
+            self._run_cutover_guard_over(
+                ["docs/ai/research/not-on-the-allowlist.md"]
+            )
+
+    def test_roadmap_research_citations_name_tracked_files(self) -> None:
+        """Every research path the routing roadmap cites must exist on the branch.
+
+        The cutover guard above names this record on an allowlist, but an
+        allowlist only decides whether a changed path is permitted. It cannot
+        see a citation whose target was never staged, because it diffs
+        committed state. An untracked record is therefore invisible here and
+        the roadmap ships a bullet pointing at a path CI does not have.
+
+        Assert tracked-ness rather than ``exists()``. An untracked file exists
+        on the author's disk and is absent from the CI checkout, so an
+        existence check is green in exactly the case that fails.
+        """
+        roadmap = (REPO_ROOT / ROUTING_ROADMAP).read_text(encoding="utf-8")
+        # Strip sentence-final periods before the extension test, so a
+        # citation written outside backticks is checked rather than dropped.
+        cited = sorted(
+            {
+                stripped
+                for citation in re.findall(r"docs/ai/research/[A-Za-z0-9._/-]+", roadmap)
+                if (stripped := citation.rstrip(".")) and Path(stripped).suffix
+            }
+        )
+        self.assertIn(PROMPT_AUDIT_ROSTER_RECORD, cited, ROUTING_ROADMAP)
+        self.assertEqual(
+            [],
+            [citation for citation in cited if not git_tracks(citation)],
+            f"{ROUTING_ROADMAP} cites a research path git does not track; "
+            "stage the record with the change that cites it",
+        )
 
     def test_release_please_review_detection_from_environment(self) -> None:
         with mock.patch.dict(

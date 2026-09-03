@@ -129,7 +129,7 @@
 129 uat-runbook-author does not reference retired TeamCreate tooling
 130 phase-executor effort is max (max-thinking policy)
 131 consensus-synthesizer model is sonnet
-132 consensus-synthesizer effort is max (max-thinking policy)
+132 consensus-synthesizer effort is high (bounded rule-applier runs at the documented default)
 133 codex codebase-analyst: sandbox_mode is read-only
 134 codex codebase-analyst: model is gpt-5.6-sol
 135 codex codebase-analyst: reasoning is L6-validated (low or xhigh)
