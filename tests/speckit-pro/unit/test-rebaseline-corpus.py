@@ -160,6 +160,16 @@ class RebaselineScriptTestCase(unittest.TestCase):
             return f"{AGENT_DIR_REL}/{role_id}.md"
         return f"{CODEX_AGENT_DIR_REL}/{role_id}.toml"
 
+    def governed_role_count(self) -> int:
+        """Return how many roles the sandbox module currently governs.
+
+        Reads ``GOVERNED_ROLE_ORDER`` fresh off the sandbox copy rather than a
+        hard-coded number, so a membership change to that tuple does not
+        silently break the expected count these tests assert against.
+        """
+        module = load_module(self.sandbox / MODULE_REL)
+        return len(module.GOVERNED_ROLE_ORDER)
+
 
 class RebaselineWriteTests(RebaselineScriptTestCase):
     """Default mode rebinds the digest chain to the live source bytes."""
@@ -292,12 +302,14 @@ class RebaselineMembershipTests(RebaselineScriptTestCase):
     def test_remove_role_drops_the_id_from_every_schema_enum(self) -> None:
         self.assertEqual(self.run_script().returncode, 0)
         self.drop_role_from_module(ROUND_TRIP_ROLE)
+        expected_count = self.governed_role_count()
         result = self.run_script("--remove-role", ROUND_TRIP_ROLE)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         for relative in SCHEMA_RELS:
             with self.subTest(schema=relative):
-                self.assertNotIn(ROUND_TRIP_ROLE, self.enum_ids(relative))
-                self.assertEqual(len(self.enum_ids(relative)), 11)
+                ids = self.enum_ids(relative)
+                self.assertNotIn(ROUND_TRIP_ROLE, ids)
+                self.assertEqual(len(ids), expected_count)
         manifest = self.read_json(MANIFEST_REL)
         self.assertNotIn(
             ROUND_TRIP_ROLE, [role["role_id"] for role in manifest["roles"]]
@@ -346,30 +358,36 @@ class RebaselineMembershipTests(RebaselineScriptTestCase):
         # corpus the same run wrote.
         self.assertEqual(self.run_script().returncode, 0)
         self.drop_role_from_module(ROUND_TRIP_ROLE)
+        expected_count = self.governed_role_count()
         result = self.run_script("--remove-role", ROUND_TRIP_ROLE)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(len(self.read_json(MANIFEST_REL)["roles"]), 11)
+        self.assertEqual(len(self.read_json(MANIFEST_REL)["roles"]), expected_count)
         for relative in SCHEMA_RELS:
             with self.subTest(schema=relative):
-                self.assertEqual(self.role_count_bounds(relative), (11, 11))
-                self.assertEqual(len(self.enum_ids(relative)), 11)
+                self.assertEqual(
+                    self.role_count_bounds(relative), (expected_count, expected_count)
+                )
+                self.assertEqual(len(self.enum_ids(relative)), expected_count)
 
     def test_add_role_retunes_the_role_count_in_every_schema(self) -> None:
         # The growth direction fails the same way: thirteen roles under
         # maxItems 12 is a schema that rejects its own corpus.
         self.assertEqual(self.run_script().returncode, 0)
         self.add_role_to_module(ADDED_ROLE)
+        expected_count = self.governed_role_count()
         source = self.sandbox / CODEX_AGENT_DIR_REL / f"{ADDED_ROLE}.toml"
         source.write_text(
             f'name = "{ADDED_ROLE}"\nsandbox_mode = "read-only"\n', encoding="utf-8"
         )
         result = self.run_script("--add-role", ADDED_ROLE, "--kind", "codex_toml")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(len(self.read_json(MANIFEST_REL)["roles"]), 13)
+        self.assertEqual(len(self.read_json(MANIFEST_REL)["roles"]), expected_count)
         for relative in SCHEMA_RELS:
             with self.subTest(schema=relative):
-                self.assertEqual(self.role_count_bounds(relative), (13, 13))
-                self.assertEqual(len(self.enum_ids(relative)), 13)
+                self.assertEqual(
+                    self.role_count_bounds(relative), (expected_count, expected_count)
+                )
+                self.assertEqual(len(self.enum_ids(relative)), expected_count)
 
     def test_add_role_refuses_a_kind_the_governed_order_contradicts(self) -> None:
         self.assertEqual(self.run_script().returncode, 0)
