@@ -17,9 +17,8 @@ BLOCKED_SUFFIXES = (
 WARNING = """Warning: Editing version-load-bearing file
 
 This file is normally only written by release-please or the marketplace-sync workflow.
-Manual edits cascade silently; see CLAUDE.md:
-  - "Adding a New Plugin to Release Automation" (legitimate manual edit)
-  - "Recovery & Rollback" Scenarios 1-6 (recovery from a bad state)
+Manual edits cascade silently; see the Release Automation section of
+docs-site/src/content/docs/contribute-and-release.md.
 
 If this is intentional, ask the user to confirm before retrying the edit.
 """

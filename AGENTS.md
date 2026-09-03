@@ -108,9 +108,10 @@ and need their own step when their inputs changed:
   committed backlink that passes locally and fails on a clean checkout.
 - The Layer 6 Codex qualification corpus in
   `tests/speckit-pro/layer6-efficiency/fixtures-codex/`, which binds a sha256
-  chain over agent source bytes and has no regeneration script. Editing any
-  agent definition restales it; the failure reads
-  `source digest does not match role source bytes`.
+  chain over agent source bytes. Editing any agent definition restales it; the
+  failure reads `source digest does not match role source bytes`. Regenerate
+  with `python3 tests/speckit-pro/layer6-efficiency/rebaseline-corpus.py`
+  (`--check` to verify without writing).
 
 ## Source Of Truth
 
@@ -154,7 +155,8 @@ the two in step when either changes.
   repository tooling leaving the Python 3.11+ standard library or adding an
   active Bash or `jq` dependency outside the allowed boundaries; a workflow that
   exposes secrets or elevated permissions to untrusted PR content; a script or
-  test filename coupled to a temporary spec ID.
+  test filename coupled to a temporary spec ID, or test code that reads a
+  `specs/<feature>/` path from disk at run time.
 - Treat style, naming, prose, and refactoring suggestions as minor at most.
 - Do not review generated reference pages, installed-cache proofs, generated
   payloads, vendored upstream content, lockfiles, or archived specs.

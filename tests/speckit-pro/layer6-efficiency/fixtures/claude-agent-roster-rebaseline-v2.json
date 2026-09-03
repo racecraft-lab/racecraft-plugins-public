@@ -10,7 +10,7 @@
   "shipped_roles": [
     {
       "role_id": "analyze-executor",
-      "source_digest": "sha256:e3ae8f36aa0cf1ad3343c6d68d8118d71781632e85871338cbdf846eb5c0c535",
+      "source_digest": "sha256:969de765752aae4add7ff5901d97fbf08c75452404acac89520007b4f1f2992b",
       "cohort": "quality-critical",
       "trust_boundary": "spec_artifact_write_only",
       "memory_scope": null
@@ -24,14 +24,14 @@
     },
     {
       "role_id": "checklist-executor",
-      "source_digest": "sha256:7c0129ca4a6e106f1f42a8b51c321b813db5340bed45644f822a96274274c2ea",
+      "source_digest": "sha256:87231d36152508651df6d19de504cbede196292399e603ae9d1570a8671099e2",
       "cohort": "structured-work",
       "trust_boundary": "spec_artifact_write_only",
       "memory_scope": null
     },
     {
       "role_id": "clarify-executor",
-      "source_digest": "sha256:0ab6aaf076cbc2ea2205f641b420d7707f8617afb1a2f0ac162f3fbf76d6300d",
+      "source_digest": "sha256:d208dd656a9342c15f2dce4f757a2855c0bef30a09abff0598a4c35ec75c4aae",
       "cohort": "read-only-reasoning",
       "trust_boundary": "read_only_denylist",
       "memory_scope": null
@@ -59,28 +59,28 @@
     },
     {
       "role_id": "gate-validator",
-      "source_digest": "sha256:34e90ed3d44edcb300b47ad88ce112924aac212a18596edcb78fa0e2ee0d9a2e",
+      "source_digest": "sha256:03381f470831d16ab90fbf518ec3e9efda6aa1cf0945ff27d49145cacb8e6a8c",
       "cohort": "orchestration-support",
       "trust_boundary": "read_only_denylist",
       "memory_scope": null
     },
     {
       "role_id": "implement-executor",
-      "source_digest": "sha256:713216df398e2cd66350d213c5eb5c499d4587c76f3f1edd4fe16ef831354227",
+      "source_digest": "sha256:97145cadabdfb245fef5e53b7efe46b9934f4e4acc0054bc33d04f4a49ee2582",
       "cohort": "quality-critical",
       "trust_boundary": "workspace_scoped_write_with_test_first_ordering",
       "memory_scope": "local"
     },
     {
       "role_id": "phase-executor",
-      "source_digest": "sha256:70bf046540039a16bf2fe1109d782c52f27c070ffaebc4c7a99f34347930179c",
+      "source_digest": "sha256:409be10981329a1e569845ef264236f295d059914bf183a14f49f4cfed6a1dd2",
       "cohort": "quality-critical",
       "trust_boundary": "spec_artifact_write_only",
       "memory_scope": null
     },
     {
       "role_id": "spec-context-analyst",
-      "source_digest": "sha256:ab7cbd9151e5a93571a37be3a4ac00752597c97bf2b1ad6da87f5a7a135d9c3d",
+      "source_digest": "sha256:d8f02b013f51e2251a1652f5c7f5029b280e42d7b446136d5eda48997fdc0673",
       "cohort": "read-only-reasoning",
       "trust_boundary": "read_only_denylist",
       "memory_scope": "local"
@@ -94,7 +94,7 @@
     },
     {
       "role_id": "sweep-classifier",
-      "source_digest": "sha256:271ca0ca51e346e19f27c08da87c1d5c1d3eef3fd83c1dce7ca94fd74d7ab804",
+      "source_digest": "sha256:9a1a5b420d9c140ea267d7779890738362c5cebd8300d3ca02b89c1da8b22d83",
       "cohort": "untrusted-feedback",
       "trust_boundary": "immutable_snapshot_broker_only",
       "memory_scope": null
@@ -118,5 +118,5 @@
     "native_fallback": "operator_override_only",
     "unqualified_delivered_model": "ineligible"
   },
-  "catalog_digest": "sha256:fd0afef23b36adc510c6ec81548b119c795fb659d483c2290b716cdcb4c8cf21"
+  "catalog_digest": "sha256:bae19773dc570d26dfde7344b5eb5083bbe92ac8b960445ee988d39ac1791b50"
 }

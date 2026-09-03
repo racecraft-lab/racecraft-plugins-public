@@ -43,24 +43,9 @@ agent.
    match by task fit and evidence quality, and fall back to local,
    native platform, or repo-local sources when no installed capability
    is available or usable.
-
-   a. **Web research** — search for API docs, library behavior,
-      standards, and best practices
-      - Use the selected web/domain research or source extraction
-        capability for the need.
-
-   b. **Library documentation** — look up specific API docs
-      for libraries mentioned in the question
-      - Use the selected library documentation capability for the need.
-
-   c. **Codebase exploration** — explore the codebase for
-      existing patterns, implementations, and conventions
-      - Use the selected codebase context capability for the need.
-
-   d. **Project context** — check the constitution
-      (`.specify/memory/constitution.md`), prior specs
-      (`specs/*/spec.md`), and CLAUDE.md for project
-      decisions and precedent
+   Ground each recommended answer in whichever of codebase precedent,
+   external documentation, or project decisions (constitution, prior
+   specs) actually answers it, and cite the source.
 
 4. **Return questions, not edits.** Generate up to 5 prioritized
    questions whose answers materially affect architecture, data
