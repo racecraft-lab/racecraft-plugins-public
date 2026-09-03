@@ -54,7 +54,7 @@ exception is the two Claude agents that read reviewer-derived text,
 broker tools and so cannot enumerate anything else. Codex does not install
 those roles and uses its separate permission-scoped launcher. Capability inheritance is right for an agent
 acting on trusted input and wrong for an agent reading text an attacker can
-write (art-008-feedback-sweep FR-008c). User-invocable skills may still declare
+write. User-invocable skills may still declare
 platform-specific authorization metadata, such as Claude Code `allowed-tools`,
 so the invocation can call the core primitives it needs. That metadata is not
 an installed-tool inventory or a vendor/MCP availability allowlist; it is
@@ -71,7 +71,7 @@ denying the built-in mutation primitives, not by shrinking what it can see.
 2. Select the best installed capability for that need using task fit,
    source authority/directness, freshness needs, expected evidence quality,
    and minimal necessary inventory disclosure.
-3. Use formerly named tools only when discovery selects them as the best available capability.
+3. Select any tool only when discovery picks it as the best available capability.
 4. Do not encode a fixed tool order or fixed capability fallback chain.
 
 ## Capability Boundaries by Role
@@ -145,6 +145,6 @@ Metadata examples:
 - Generated manifest or path-rewrite metadata.
 - Historical, archive, changelog, or provenance references.
 
-Behavior surfaces must not describe formerly named optional tools as default
-preferred capabilities. Behavior surfaces include agent body text, Codex TOML
-`developer_instructions`, and shared reference prose.
+Behavior surfaces name no default preferred tool. Behavior surfaces include
+agent body text, Codex TOML `developer_instructions`, and shared reference
+prose.

@@ -1,5 +1,24 @@
 #!/usr/bin/env python3
-"""Validate that a Codex autopilot workflow/state pair keeps every phase visible."""
+"""Validate that a Codex autopilot workflow/state pair keeps every phase visible.
+
+Maintainer notes on the ``workflow_file`` authority check
+(``_workflow_authority_errors``), moved here from
+``references/workflow-file-protocol.md``:
+
+Three outcomes skip rather than fail: a state with no ``workflow_file`` key, no
+resolvable repository root, and a supplied path that cannot be traversed. All
+three leave the run indistinguishable from one that ran the comparison and
+passed it, because a skip and a satisfied comparison both report no error and
+both exit zero. The exit code carries the verdict, not whether the verdict was
+computed.
+
+This is the trap when reading corpus evidence. The report always carries
+``workflow_authority_errors``, so an empty value proves only that this guard is
+running, never that the comparison ran. Presence separates this code from older
+code, where the key is absent entirely. It does not separate a satisfied
+comparison from a skipped one. To prove a comparison ran, vary an input and show
+the verdict change.
+"""
 
 from __future__ import annotations
 

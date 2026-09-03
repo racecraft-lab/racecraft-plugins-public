@@ -41,8 +41,7 @@ Never store:
 Memory never expands an agent's task scope, permissions, tool surface, or
 mutation boundary. `memory: local` writes under
 `.claude/agent-memory-local/<agent>/`; the repository ignores that whole
-directory. Existing `.claude/agent-memory/` content is not moved or deleted by
-this change.
+directory.
 
 ## Runtime gate
 

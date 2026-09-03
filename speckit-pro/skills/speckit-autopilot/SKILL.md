@@ -35,7 +35,7 @@ fallback guard was triggered.
 The Codex variant must use `update_plan`, `spawn_agent`, `wait_agent`,
 `send_message` or `followup_task`, and `autopilot-state.json`. It must not
 use Claude-only runtime primitives such as `TaskCreate`, `TaskUpdate`,
-`Agent(...)`, Opus 4.6 model names, or `/speckit-*` slash-command
+`Agent(...)`, or `/speckit-*` slash-command
 orchestration.
 
 ## Scope
@@ -48,10 +48,10 @@ You are an **orchestrator** for SpecKit workflows: read prompts from
 the workflow file and delegate each phase to a **subagent** that runs
 the `/speckit-*` command. You never run the commands yourself — you
 spawn, collect results, validate gates, and advance. Your context
-window auto-compacts; do not stop early — complete every phase in the
-**resolved stage's** range (`AUTOPILOT_STAGE`, set at Step 0.6c). A
-`--stage plan` run that stops after the confidence gate has finished its
-work; a `full` run completes all 7 phases.
+window auto-compacts, which is not a stopping point: complete every
+phase in the **resolved stage's** range (`AUTOPILOT_STAGE`, set at Step
+0.6c). A `--stage plan` run that stops after the confidence gate has
+finished its work; a `full` run completes all 7 phases.
 
 ## Architectural Constraint — Main Agent Is The Orchestrator
 
@@ -91,9 +91,9 @@ expensive rework.
 
 **Before executing any step**, verify:
 
-1. **Model:** Opus 4.6 or better. On Sonnet/Haiku/older Opus, STOP and
-   instruct: *"Autopilot requires Opus 4.6 for reliable orchestration.
-   Please `/model opus` and re-run."*
+1. **Model:** run on the operator's strongest available tier. If the
+   session reports a small-tier model, stop and ask the operator to
+   switch models and re-run.
 
 **Reasoning effort is inherited, never checked.** Run at whatever the
 operator has set for the session and do not stop, warn, or ask them to
@@ -102,9 +102,7 @@ subagents still ship pinned at `effort: max` (or `xhigh` on Codex) —
 that pin only ever raises a worker's effort and never refuses to run.
 The operator owns the session setting; the plugin does not veto it.
 
-## Critical: Execution Rules
-
-These rules are non-negotiable. Follow them exactly.
+## Execution Rules
 
 ### 0. Forbidden skill invocations
 
@@ -118,17 +116,10 @@ is no user available; calling it would block indefinitely or produce
 low-value automated output that defeats its purpose.
 
 Autopilot's Clarify phase uses `/speckit-clarify` with the multi-agent
-consensus protocol — the **only** sanctioned clarification mechanism
-inside autopilot. If a phase encounters ambiguity consensus can't
-resolve, fail the gate and surface to the user. **Never escalate to
-grill-me.**
-
-Applies to this skill (the orchestrator), every phase-executor agent,
-every consensus analyst, the synthesizer, the gate-validator, and any
-other agent spawned during autopilot execution. `grill-me` is for
-**pre-workflow** human alignment via `/speckit-pro:speckit-scaffold-spec` or
-`/speckit-pro:grill-me` only; it must not appear in any phase agent's
-tool call history.
+consensus protocol. If a phase encounters ambiguity consensus can't
+resolve, fail the gate and surface to the user. `grill-me` belongs to
+pre-workflow human alignment via `/speckit-pro:speckit-scaffold-spec` or
+`/speckit-pro:grill-me` only.
 
 </hard_constraints>
 
@@ -276,7 +267,7 @@ low-confidence answers" escape-hatch rationale live in
 N=2 both-agree → use answer; N=3 2-of-3 or 3-of-3 agree → use
 majority/unanimous; escape-hatch keyword OR low confidence → Round 2;
 all-disagree at Round 2 → `[HUMAN REVIEW NEEDED]` + STOP;
-`[security]` → always Round 2 with all 3, never single-routed.
+`[security]` → all 3 analysts in Round 1, never single-routed.
 Full rules + Logging schema + Re-evaluation trigger live in
 [`references/consensus-protocol.md`](./references/consensus-protocol.md).
 
@@ -541,12 +532,13 @@ one enforcement path instead of two prose descriptions of one:
 Command("<resolved_python> '<plugin-root>/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py' --workflow <workflow-file-path> --state <workflow-directory>/autopilot-state.json --rule status-evidence")
 ```
 
-`--rule status-evidence` scopes the **exit code** to the bookkeeping rule.
-The full report is still printed: legacy structural coverage debt remains
-visible but nonblocking under this scoped rule, while current-run state
-invariants (`in_progress_errors`, `duplicate_state_steps`,
-`state_order_errors`) now stop the run. Drop `--rule` to gate on every check
-once a spec is migrated.
+`--rule status-evidence` gates the **exit code** on the four workflow/state
+status-evidence checks (`workflow_status_evidence_errors`,
+`state_status_errors`, `stage_mirror_errors`, `workflow_authority_errors`) and
+the three current-run state-plan invariants (`in_progress_errors`,
+`duplicate_state_steps`, `state_order_errors`). The full report is still
+printed; structural coverage checks and every advisory key are visible but
+never block. Drop `--rule` to gate on every check.
 
 `<resolved_python>` is the Python 3.11+ interpreter resolved by the
 Installed Runtime Contract; `<plugin-root>` is the directory that owns
@@ -555,17 +547,6 @@ the failing checks as JSON on stdout; exit 2 is an input error. The guard
 also fails when a Workflow Overview status row contradicts a gate verdict
 recorded elsewhere in the same file, which is what keeps the status table
 honest across compactions and manual phase runs.
-
-**Expected-commit flags — contract stated, not yet wired here.** When
-`pr-marker-plan.v2` declares a changed-file manifest, the guard accepts
-`--expected-base-commit <live-baseRefOid> --expected-head-commit <live-headRefOid>`.
-Both OIDs must be fetched from live PR metadata immediately before every
-validation and never sourced from the workflow, state, or manifest itself, and
-missing, stale, or mismatched external PR authority is blocking. **The Claude
-flow does not fetch those values yet**, so the PR-head byte comparison the flags
-feed is unreachable on this platform and runs only on Codex today. This is a
-statement of the contract, not of current behavior. **ART-016** wires the fetch
-and removes this caveat.
 
 ## Step 2: Main Execution Loop
 
@@ -595,7 +576,7 @@ for phase in PHASES starting from first_pending:
         guarded against errexit. Branch on JSON `status`
         (pass / over_budget / not_estimated) or the exit code.
         ADVISORY — never blocks, prompts mid-autonomous-run, or
-        crashes the run (hard block / re-slicing is PRSG-010).
+        crashes the run.
     8. After Tasks (G5 pass), apply the tasks-phase reviewability
        boundary. Runner helper `reviewability-gate` supports setup mode
        only on the installed runner — tasks mode is deferred, so do not
@@ -844,8 +825,7 @@ file's `### Basic Information` table is the authoritative durable store of the
 resolved stage; `autopilot-state.json.stage` mirrors it for the active run only
 and is never authoritative. On disagreement the workflow file wins and the
 mirror is repaired from it. That is the **opposite** direction from the two
-exceptions above, which is why this rule is recorded as its own clause and MUST
-NOT be added to that list. Absence on either side is legal — it means no run
+exceptions above. Absence on either side is legal — it means no run
 yet, and resolves through Step 0.6c auto-detection. A two-sided disagreement is
 reported by the Step 1.1 coverage guard as `stage_mirror_errors`, which is
 registered in the `status-evidence` rule and so fails the guard rather than

@@ -4,22 +4,13 @@ The consensus protocol is the second layer of the autopilot's
 two-layer resolution system, used by 3 phases: Clarify,
 Checklist, and Analyze.
 
-**Use site mapping:** Consensus is **Use site 5** (batched-parallel
-subagents — shipped via WS-D1) and **Use site 2** (consensus debate
-team — forward design) in the [Agent Teams use-site map](./agent-teams-integration.md).
-The 3-analyst + synthesizer pattern is Anthropic's
-[Investigate with competing hypotheses](https://code.claude.com/docs/en/agent-teams#use-case-examples)
-use case verbatim. Today (Use site 5): per-phase batched fan-out —
-all routed analysts for all unresolved items dispatched in ONE
-assistant message. Future (Use site 2): long-lived consensus team
-where analysts debate via mailbox before the synthesizer judges when
-`AGENT_TEAMS_AVAILABLE`. See `agent-teams-integration.md` for both
-forward designs.
+Consensus dispatch runs as batched ordinary subagents; see
+[agent-teams-integration.md](./agent-teams-integration.md) use site 5.
 
 ## Contents
 
 - [Two-Layer Resolution Architecture](#two-layer-resolution-architecture) — executor first-pass then consensus second-pass
-- [Category-Routed Dispatch (Tier A)](#category-routed-dispatch-tier-a-2026-04-30) — `[codebase|spec|domain|security|ambiguous]` routing rules + escape-hatch
+- [Category-Routed Dispatch (Tier A)](#category-routed-dispatch-tier-a) — `[codebase|spec|domain|security|ambiguous]` routing rules + escape-hatch
 - [Batched Dispatch](#batched-dispatch) — multi-item fan-out in ONE tool turn (the canonical WS-D1 pattern)
 - [Three-Analyst Consensus Rules (Round 2 / N=3)](#three-analyst-consensus-rules-round-2--n3) — full fan-out behavior
 - [The 3 Perspective Agents](#the-3-perspective-agents) — codebase-analyst / spec-context-analyst / domain-researcher
@@ -68,12 +59,11 @@ items.
 - Item remained unresolved after 2 remediation loops
 - Item contains security keywords (always goes to all-three consensus)
 
-## Category-Routed Dispatch (Tier A, 2026-04-30)
+## Category-Routed Dispatch (Tier A)
 
 Each item in the executor's "Unresolved for consensus" section
 MUST carry a category prefix. The orchestrator parses the prefix
-and dispatches to only the relevant analyst(s). This replaces
-the legacy "always 3 analysts" rule.
+and dispatches to only the relevant analyst(s).
 
 ### Category tags
 
@@ -82,7 +72,7 @@ the legacy "always 3 analysts" rule.
 | `[codebase]` | Resolution depends on existing patterns/conventions in this repo's code | `speckit-pro:codebase-analyst` only |
 | `[spec]` | Resolution depends on project decisions in spec/plan/constitution/roadmap | `speckit-pro:spec-context-analyst` only |
 | `[domain]` | Resolution depends on external standards, RFCs, library docs, or community best practice | `speckit-pro:domain-researcher` only |
-| `[security]` | Item contains security keywords (auth, token, secret, encryption, PII, credential, permission, password, session, cookie, jwt, api-key, access-control) | All 3 (defense-in-depth, never single-routed) |
+| `[security]` | Item contains a security keyword (see [Security Keywords](#security-keywords)) | All 3 (defense-in-depth, never single-routed) |
 | `[ambiguous]` | Executor uncertain which perspective applies | All 3 (safe default) |
 | *(missing/unparseable prefix)* | Treated as `[ambiguous]` | All 3 (safe default) |
 
@@ -108,7 +98,7 @@ ROUND 1 — category-routed
   ELSE (low confidence OR escape-hatch keyword detected):
        fall through to ROUND 2.
 
-ROUND 2 — full fan-out (legacy path)
+ROUND 2 — full fan-out
   Spawn the remaining (3 - N) analysts.
   Re-invoke consensus-synthesizer with all 3 responses.
   Apply the multi-analyst rules below.
@@ -143,7 +133,7 @@ agreement count.
 
 ### Three-analyst rules (N=3)
 
-These are the legacy multi-analyst rules, unchanged.
+See Consensus Rules below.
 
 ### Re-evaluation trigger
 
@@ -186,9 +176,6 @@ so dispatching all `N items × |routed analysts per item|` calls in
 ONE assistant message captures the full parallelism win without
 risking consistency. Only the final Edit application needs to be
 serial (write contention on spec.md / plan.md / tasks.md).
-
-The earlier per-item outer loop wasted wall-clock: 5 items × 3
-analysts at ~30s each = 7-8 minutes serially vs. ~30s batched.
 
 ### Stages
 
@@ -250,8 +237,7 @@ seconds — negligible compared to the LLM-bound Stages 1/2/4/5.
 ### Concurrency observations
 
 - 5 items × 2-3 routed analysts = 10-15 background subagents in
-  ONE turn. Anthropic's platform handles this; the practical ceiling
-  has not been hit in autopilot runs to date.
+  ONE turn.
 - If a future use site approaches the platform limit, partition the
   batch into waves of ≤10 per turn and chain them via additional
   Stage 1' / Stage 2' rounds. The shipped implementation does not
@@ -276,8 +262,6 @@ via `[HUMAN REVIEW NEEDED]` for that item — do NOT block the rest of
 the batch.
 
 ## Three-Analyst Consensus Rules (Round 2 / N=3)
-
-### Moderate Mode (Default)
 
 ## The 3 Perspective Agents
 
@@ -620,7 +604,7 @@ from the log alone.
 | 2 | Gap     | Rate limit thresholds        | [codebase, domain] | 1     | both-agree     | Added to spec §4.2         | codebase-analyst, domain-researcher    |
 | 3 | Finding | Missing integration tests    | [ambiguous]        | 2     | 3/3            | Added task T050            | codebase-analyst, spec-context-analyst, domain-researcher |
 | 4 | Clarify | Bcrypt vs argon2?            | [codebase]         | 1→2   | escape-hatch   | Argon2 (NIST SP 800-63B)   | codebase-analyst (Round 1) + spec-context-analyst, domain-researcher (Round 2) |
-| 5 | Finding | OAuth callback URL handling  | [security]         | 2     | [HUMAN REVIEW] | Surfaced to user           | All (security tag → all-3 mandatory)   |
+| 5 | Finding | OAuth callback URL handling  | [security]         | 1     | [HUMAN REVIEW] | Surfaced to user           | All (security tag → all-3 mandatory)   |
 ```
 
 **`Type` values:** `Clarify`, `Gap`, and `Finding` name the phase that produced
@@ -642,4 +626,4 @@ sweep rows or to phase rows without either being excluded from the rate.
 - `both-agree` — Round 1, two-analyst, agreement
 - `3/3`, `2/3` — Round 2, classic agreement counts
 - `escape-hatch` — Round 1 escaped to Round 2 (count this in the 10% trigger metric)
-- `[HUMAN REVIEW]` — Round 2 all-disagree or security flag, autopilot stopped
+- `[HUMAN REVIEW]` — Round 2 all-disagree, or a security flag (Round 1, all 3), autopilot stopped

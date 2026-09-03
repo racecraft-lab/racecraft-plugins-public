@@ -27,14 +27,6 @@ operates in its own context — the command's noise (template
 reads, file exploration, completion reports) stays there and
 never touches the parent. The parent receives only a summary.
 
-**Future direction (Phase 7 `[P]` tasks):** Phase 7 is **Use site 3**
-in the [Agent Teams use-site map](./agent-teams-integration.md). Tasks
-marked `[P]` by `/speckit-tasks` are parallel-safe; the planned WS-D2
-implementation dispatches `[P]` runs as either an Agent Team (cross-task
-coordination via mailbox) when `AGENT_TEAMS_AVAILABLE`, or as batched
-background subagents otherwise. See `agent-teams-integration.md` §Use
-site 3 for the forward design.
-
 ## Contents
 
 - [SpecKit Infrastructure](#speckit-infrastructure) — commands, scripts, templates, constitution
@@ -44,8 +36,8 @@ site 3 for the forward design.
 - [Phase-by-Phase Execution](#phase-by-phase-execution) — per-phase prompts, agents, gates, file updates (Phases 1–7)
 - [Full Integration / E2E Suite Verification](#full-integration--e2e-suite-verification) — post-Implement test gate
 - [Extension Hook Events](#extension-hook-events) — `.specify/extensions.yml` `before_*` / `after_*` hooks
-- [PR Creation Protocol](#pr-creation-protocol) — generate body, push, open PR
-- [Copilot Review Remediation Loop](#copilot-review-remediation-loop) — `/loop` scheduling for review comments
+- [PR Creation Protocol](#pr-creation-protocol) — pointer to post-implementation.md section 3.2, plus the final commit
+- [Copilot Review Remediation Loop](#copilot-review-remediation-loop) — pointer to post-implementation.md section 3.3
 - [Workflow File Update Protocol](#workflow-file-update-protocol) — what to write after each phase
 
 ## SpecKit Infrastructure
@@ -55,20 +47,11 @@ commands and scripts:
 
 | Component | Location | Purpose |
 | ----------- | ---------------------------------------- | --------------------------------------------------------- |
-| **Core phase skills** | `.claude/skills/speckit-*/SKILL.md` | Skills that orchestrate each SDD phase (specify/plan/tasks/clarify/checklist/analyze/implement) — SpecKit v0.8.13+ |
-| **Extension commands** | `.claude/commands/speckit.*.md` | Slash commands provided by SpecKit extensions (verify, retrospective, …) |
+| **Core phase skills** | `.claude/skills/speckit-*/SKILL.md` | Skills that orchestrate each SDD phase (specify/plan/tasks/clarify/checklist/analyze/implement) |
+| **Extension skills** | `.claude/skills/<extension>/SKILL.md` | Skills installed by SpecKit extensions (`speckit-verify-run`, `speckit-verify-tasks-run`, retrospective, …) |
 | **Scripts** | `.specify/scripts/<type>/` | Shell scripts for branch creation, path resolution, prerequisite checking |
 | **Templates** | `.specify/templates/` | Spec, plan, tasks, checklist, and agent file templates |
 | **Constitution** | `.specify/memory/constitution.md` | Project principles for gate validation |
-
-### Key Scripts
-
-| Script | Used By | What It Does |
-| -------- | --------- | ----------- |
-| `common` | All scripts | Branch detection (`get_current_branch`), feature path resolution (`get_feature_paths`, `find_feature_dir_by_prefix`) |
-| `create-new-feature` | `/speckit-specify` | Creates git branch, `specs/` dir, copies spec template. Supports `--json`, `--short-name`, `--number` |
-| `setup-plan` | `/speckit-plan` | Copies plan template to feature dir. Outputs `FEATURE_SPEC`, `IMPL_PLAN`, `SPECS_DIR`, `BRANCH` |
-| `check-prerequisites` | `/speckit-clarify`, `.checklist`, `.tasks`, `.analyze`, `.implement` | Validates feature dir + required files exist. Supports `--json`, `--require-tasks`, `--include-tasks`, `--paths-only` |
 
 ## Subagent Delegation
 
@@ -85,8 +68,9 @@ gate and spawns the next subagent.
 
 ### Subagent Prompt Template
 
-Use the `speckit-pro:phase-executor` agent type for every phase. This
-agent is pre-configured with rules to run the command and
+Use `speckit-pro:phase-executor` for Specify, Plan, and Tasks; Clarify,
+Checklist, and Analyze use their own executors (SKILL.md Rule 2). The
+phase-executor is pre-configured with rules to run the command and
 return only a structured summary.
 
 ```text
@@ -112,23 +96,15 @@ The `speckit-pro:phase-executor` handles summary formatting and the
 
 ## Branch/Worktree Detection
 
-Before executing any phase, detect the current branch context:
+Before executing any phase, take the branch context from the
+`check-prerequisites` helper output recorded at Step 0.3. Do not
+recompute these facts from git commands or a branch-name pattern; the
+helper is the single source of truth.
 
-```text
-# Detect current branch
-CURRENT_BRANCH=<command output>
+Record two facts from that JSON:
 
-# Check if in a worktree
-GIT_DIR=<command output>
-GIT_COMMON=<command output>
-IS_WORKTREE=<command output>
-```
-
-Record two facts:
-
-- **`ON_FEATURE_BRANCH`**: `true` if `CURRENT_BRANCH` matches
-  `^[0-9]{3}-`
-- **`IS_WORKTREE`**: `true` if `GIT_DIR != GIT_COMMON`
+- **`ON_FEATURE_BRANCH`**: the helper's `on_feature_branch` value
+- **`IS_WORKTREE`**: the helper's `is_worktree` value
 
 When `ON_FEATURE_BRANCH` is true, the Specify subagent gets
 a "skip branch creation" prefix in its prompt. Do NOT use
@@ -384,13 +360,13 @@ before the next session runs.
 Read the workflow file's `### Plan Prompt` section.
 Spawn a subagent.
 
-**Plan-phase reviewability budget (advisory — never blocks, never crashes):**
+**Plan-phase reviewability budget:**
 After `plan.md` exists, run the standalone plan-phase estimator to project
 each slice's production-LOC footprint from `plan.md`'s declared file structure.
-This is preventive sizing — it catches an oversized slice at plan time, before
-any code is written. It is **advisory only**: no outcome blocks, prompts
-mid-autonomous-run, or aborts the run (hard blocking / re-slicing is PRSG-010,
-explicitly out of scope here).
+This is preventive sizing: it catches an oversized slice at plan time, before
+any code is written. This step is advisory: record the status (`pass`,
+`over_budget`, `not_estimated`, or the diagnostic) in the workflow file and
+continue; no outcome blocks or prompts.
 
 Invoke runner helper `estimate-reviewable-loc` from the parent session and
 capture the structured response instead of letting a failed helper response
@@ -419,13 +395,11 @@ runner status `ok` with the verdict in the helper stdout JSON `status` field;
 `plan.md`. Branch on the helper stdout JSON `status` when the runner response is
 `ok`, and on diagnostics otherwise:
 
-- **`pass`** → log "within budget" and record it in the workflow/plan record
-  (silent — no prompt, no block).
+- **`pass`** → log "within budget" and record it in the workflow/plan record.
 - **`over_budget`, autonomous run** → record an over-budget note in the
-  workflow/plan record and **CONTINUE** (advisory, non-blocking — FR-004,
-  SC-002). MUST NOT block the run or trigger re-slicing.
+  workflow/plan record and **CONTINUE**. Do not trigger re-slicing.
 - **`over_budget`, interactive use** → surface the over-budget result to the
-  human as a decision (FR-005).
+  human as a decision.
 - **`not_estimated`** (`projected: null` — `plan.md` has no parseable declared
   production-file structure) → record "not estimated (no declared production
   files)" and continue. Never treat this as a within-budget pass.
@@ -434,10 +408,6 @@ runner status `ok` with the verdict in the helper stdout JSON `status` field;
 
 This mirrors the established gate-handling pattern below: read the structured
 runner response and branch on it rather than aborting.
-Advisory-and-never-crash is the invariant for every outcome — under-budget,
-over-budget, unmeasured, or errored — none may block, prompt mid-autonomous-run,
-or crash the run. If the helper is unavailable on an older plugin build, record
-the diagnostic note and continue, same as any other error path.
 
 **Gate:** G3 — verify plan.md, research.md, data-model.md
 exist
@@ -500,7 +470,7 @@ Spawn a subagent.
 tasks.md
 
 **Verify Tasks (ALWAYS — plugin skill):**
-After G5 passes, run `/speckit.verify-tasks` to detect
+After G5 passes, run the `speckit-verify-tasks-run` skill to detect
 phantom completions — tasks marked `[X]` that have no real
 implementation. This catches tasks that were incorrectly
 marked complete during previous iterations.
@@ -510,14 +480,12 @@ TaskUpdate: "Phase 5: Verify Tasks" → in_progress
 Agent(
   subagent_type: "general-purpose",
   description: "SPEC-XXX verify tasks",
-  prompt: "Run /speckit.verify-tasks for SPEC-XXX.
+  prompt: "Run /speckit-verify-tasks-run for SPEC-XXX.
     Check for phantom completions — tasks marked [X]
     that have no real implementation. Return findings."
 )
 TaskUpdate: → completed
 ```
-
-⚠️ Use Agent() subagent, NOT Skill() directly.
 
 **Post-G5 reviewability capture (guarded):**
 After G5 and Verify Tasks pass, run the task reviewability gate without letting
@@ -587,14 +555,8 @@ evidence is complete), or `out-of-scope` (empty/missing `tasks.md`).
 `releasable: false` carries a canonical "CI-green ≠ releasable"
 warning for a destructive-migration or concurrency-sensitive change.
 
-**FLAG — this wires NO PR emission and NO branch creation.** The
-classifier only records a route for downstream specs to read; actually
-emitting multiple PRs or creating branches is **out of scope here** and
-belongs to PRSG-008 (layer-planner) and PRSG-009 (multi-PR emission).
-The route is recorded ONLY in the workflow file — never in the spec map.
-The classifier makes no call to, and no edit of, the reviewability gate;
-combining this route with reviewability sizing to decide whether to
-*actually* split is a later concern, not this step's.
+The route is recorded only in the workflow file, never in the spec map.
+The classifier makes no call to, and no edit of, the reviewability gate.
 
 **PR Marker Plan (post-route, pre-Analyze/pre-Implement):**
 When the captured reviewability result is marker-planning input, create or
@@ -1255,8 +1217,7 @@ Refresh is the only mutation it ever performs on an existing one.
 
 Phase 7 uses **task-level dispatch**: the orchestrator parses
 tasks.md and dispatches each task (or parallel group) to the
-best-fit agent. This replaces the monolithic implement-executor
-pattern.
+best-fit agent.
 
 When top-level `pr_marker_plan` is available and current, Phase 7 executes,
 checkpoints, and records evidence in marker order. Each marker's tasks run in
@@ -1269,11 +1230,9 @@ The marker checkpoint SHA is the source commit for later live marker PR
 branches. Do not infer a new marker order from changed files or reviewability
 warnings.
 
-**Why task-level:** Subagents cannot spawn other subagents
-(Claude Code platform constraint). The flat orchestrator-worker
-pattern — recommended by Anthropic's BrowseComp architecture
-and Research system — routes each task to a specialized agent
-from the orchestrator level.
+**Why task-level:** this workflow keeps one orchestration owner
+(SKILL.md §Architectural Constraint); executors are terminal workers,
+so routing happens here.
 
 #### Phase 7 Setup: The Pull-Request Feedback Sweep
 
@@ -1394,10 +1353,9 @@ commit, no row, no reply" reads as a fact an operator can act on.
 
 **The what-already-landed part also carries one outcome line per page**, each
 reading `generated`, `gap`, or `removed`, with every gap naming what was
-missing and why. These lines extend that part's enumeration once, here in the
-shared shape rather than in the amended-leg bullet below, because the
-freshness evaluation runs on every leg and an extension made in that bullet
-alone would miss the recovery leg entirely.
+missing and why. These lines belong to the shared shape, not to the
+amended-leg bullet below alone, because the freshness evaluation runs on every
+leg, the recovery leg included.
 
 **Two run-level lines sit beside them**: the regeneration commit's short sha,
 and the outcome of the description refresh. A failure's manual resume path
@@ -1454,9 +1412,9 @@ re-review stop still fires on its own independent ground. The report names the
 verdict, each affected row's `#` and its reason, and the operator's manual
 resume path, through the run report **alone**: the three sinks do not apply,
 because no regeneration occurred to produce a shortfall for them to carry.
-Nothing in scope can ever clear the condition, since this slice writes no log
-row and permits no second store, so an action keyed to it would repeat on
-every later clean sweep without end.
+Nothing can ever clear the condition, since the sweep writes no log row for
+it and permits no second store, so an action keyed to it would repeat on every
+later clean sweep without end.
 
 **A failed record commit, or a failed push of it, is reported through the
 refresh outcome and never blocks the run.** The report **must not** claim the
@@ -1465,7 +1423,7 @@ unwritten row only on a later refresh that reaches that step, and no later
 sweep reaches it once the regeneration commit has landed. Its resume path is
 named the way a failed refresh's is: the pull request is correct on the
 remote and only the record is unwritten, so the row is repaired by hand, or by
-a later run reaching the plan-stage create-or-refresh step, which this slice
+a later run reaching the plan-stage create-or-refresh step, which the sweep
 never schedules.
 
 **The per-comment dispositions sit inside that one report.** Report each
@@ -1482,10 +1440,9 @@ paragraph is about**: a run seeing no comment still says so in one line
 instead of omitting the part. The freshness evaluation contributes its own
 lines to the what-already-landed part on that same leg, so a report there is
 one line of dispositions plus however many lines the freshness outcome
-requires. Reading the shipped sentence as a promise about the whole report
-would also conflict with the restoration line above, which lands in that same
-part on a leg that generated nothing. This adds no member to either
-enumeration and changes no report part's contents.
+requires. The one-line rule is not a promise about the whole report: the
+restoration line above lands in that same part on a leg that generated
+nothing.
 
 **Every isolation refusal is reported without attacker-controlled detail**:
 name only the safe comment id when available, the boundary stage, and the
@@ -1509,8 +1466,8 @@ re-review. The final condition is not a failure.
 **The failed push in that list is the amendment push above.** The
 regeneration sequence's own artifacts push ends the run only on the leg that
 amended; on the leg that amended nothing it is reported and the run proceeds,
-so it is not among the conditions this list names. Which push the member
-means is all that is settled here; the members themselves stand as written.
+so it is not among the conditions this list names. The member names the
+amendment push and no other.
 
 **One condition needs more than the shared shape.** The human-review stop's
 resume path names **both** operator actions, resolve the substance and re-run
@@ -1571,9 +1528,9 @@ healthy row where a stop had been.
 
 **That invariant is about the sweep's own writes.** The description refresh
 below changes the `Draft PR` cell through the emission machinery, which keeps
-exactly one writer; this slice supplies only the trigger and the timing, and
-the commit carrying that change is the machinery's own record commit. Its
-ground stands unchanged: the sentence exists so a run cannot repair a record
+exactly one writer; the sweep supplies only the trigger and the timing, and
+the commit carrying that change is the machinery's own record commit. The
+invariant holds through the refresh: it exists so a run cannot repair a record
 it just failed to corroborate, and the refresh is reached only after an
 entry-gate `match`.
 
@@ -1762,10 +1719,7 @@ repository and the handed block, never from the network.
 sweep emits no category-tagged `Unresolved for consensus` item, so the routing
 table and the three phase-specific flows under it are never reached and
 Clarify, Checklist, and Analyze keep the shared analysts and those flows
-unchanged. This slice does edit `consensus-protocol.md`, to add the `Sweep`
-row type and the note that its rows count toward the escape-rate metric, and
-those two are the only edits this feature makes to that file, so say routing
-table untouched and never say that file untouched.
+unchanged.
 
 **When consensus does not answer, the item goes to human review.** Three ways
 lead there: all three analysts disagreeing after Round 2, a Round-1 escape
@@ -2031,8 +1985,7 @@ never committed — and getting it wrong puts the pre-amendment plan back in
 front of the re-reviewer, which is the outcome this whole sequence exists to
 prevent.
 
-**The helper now refuses that mistake rather than acting on it**, and refuses
-the rest of the observation's declared shapes with it: an absent or non-array
+**The helper refuses an observation whose shape is wrong:** an absent or non-array
 `pages`, an absent or non-array `amended_commits`, a record whose `cell` is not
 a string or whose `resolved` is not a boolean, a resolved record without a
 boolean ancestry field, an unresolved record carrying a non-null one, and a
@@ -2079,10 +2032,9 @@ record**, never the page list the previous run happened to produce. A run that
 regenerates decides its page set the same way a first generation does.
 
 **Every selected page is authored fresh.** No page is patched, diffed, or
-partially updated, and this slice introduces no second page-authoring path:
-the dispatch, its per-page `generated` and `gap` outcomes, and its on-disk
-verification are the ones the draft-PR emission sequence above already
-describes.
+partially updated, and there is no second page-authoring path: the dispatch,
+its per-page `generated` and `gap` outcomes, and its on-disk verification are
+the ones the draft-PR emission sequence above describes.
 
 #### Phase 7 Setup: Freshness Runs Only After an Amendment-Free Sweep
 
@@ -2157,8 +2109,7 @@ verbatim** rather than redefined here. The refresh changes the `Draft PR` cell
 through the emission machinery, and this commit carries that change; the sweep
 still writes no row of its own.
 
-**Writing the regeneration commit on the no-comment leg contradicts nothing.**
-The rule that a run handling no comment takes no commit governs the
+**The regeneration commit is permitted on the no-comment leg.** The rule that a run handling no comment takes no commit governs the
 bookkeeping commit, and the regeneration commit is not it.
 
 #### Phase 7 Setup: The Artifacts Directory Is Left Unmoved
@@ -2193,11 +2144,11 @@ is durable and the authoring failure may not be. So the two decisions are read
 apart: the `generated` count decides *whether* to replay, and the removal set
 decides *what the replay leaves out*.
 
-**The two shortfall rows follow from that, and do not contradict the gate.** A
+**The two shortfall rows follow from that.** A
 whole-set gap with no removal replays the whole snapshot, leaves the directory
 unmoved, and takes no commit. A whole-set gap beside a deselection removal
 replays every selected page, leaves the directory lighter by exactly that
-removal, and takes the commit the gate above now allows. Both match what the
+removal, and takes the commit the gate above allows. Both match what the
 shortfall table already told the operator to expect.
 
 **A git-restore path is rejected.** The history this case arises on is one
@@ -2278,7 +2229,7 @@ already applies between its own push and its create-or-refresh step.
   proceed into a stop. The local commit stands and rides up with the branch's
   next push.
 
-**On both legs the condition is unrecoverable inside this slice, and the
+**On both legs the condition is unrecoverable by any later sweep, and the
 report says so.** The commit is local and complete, so the join reads the
 directory as current on the next run: no later sweep regenerates, and none
 re-attempts the refresh this failure skipped.
@@ -2319,10 +2270,10 @@ section below.
 PR` row, but the sweep is reached only on an entry-gate `match`, which
 requires the row, and the sweep is forbidden from writing it, so nothing
 between the gate and the refresh can clear it. This matters because the
-shipped row's behaviour falls through to creation, and this slice creates on
-no path.
+status table's row for it falls through to creation, and the sweep never
+creates a pull request.
 
-**`skipped` has one live branch here, not two.** Its shipped row carries a
+**`skipped` has one live branch here, not two.** Its status table row carries a
 conditional: refresh when the tool can be reached, report through the
 could-not-be-opened path when it cannot. At this call site the classifier's
 own input is the observation just taken, so a `skipped` classification is
@@ -2471,7 +2422,7 @@ For each phase group in tasks.md:
         # interactive team-enabled session.
         Spawn one Agent teammate per task in the wave, using one stable
         team_name for the wave and one unique name per teammate. Do not invoke
-        removed legacy team-management tools. Use Sonnet teammates.
+        removed legacy team-management tools.
         Each teammate claims one [P] task and runs it with the
         Agent prompt template below, plus one Teams-only line:
         each teammate MUST send its complete
@@ -2857,97 +2808,25 @@ should understand what the presets enforce:
 
 ## PR Creation Protocol
 
-After G7 passes:
+After G7 passes, PR creation follows
+[post-implementation.md section 3.2 PR Creation](./post-implementation.md#32-pr-creation),
+which is authoritative. Once the PR is open, make the final commit:
+`feat(SPEC-XXX): open PR for review`.
 
-```text
-Step 1: Run final verification suite (build, typecheck, lint, test)
-Step 2: Detect remote name: git remote -v
-Step 3: Push branch: git push -u <remote> <branch>
-Step 4: Apply final reviewability boundary:
-  Use current committed reviewability evidence; if none is current, stop before PR side effects because final-reviewability-backstop is deferred.
-Step 5: Emit or refresh the current packet at specs/<feature>/.process/pr-packets/<packet-id>.json.
-  Run pr-packet-output in dry_run, then apply with current title, target, changed-file, verification, UAT, non-goal, and known-gap evidence.
-Step 6: Validate that packet with validate-pr-packet-read-only and consume data.stdout_json in memory/state.
-  Require data.stdout_json.status=passed, data.stdout_json.pr_blocked=false, and response data.writes_state=false.
-  If any required packet is absent or invalid, stop before PR creation with the validator diagnostics.
-  Checkpoint packet/body artifacts so validate-pr-packet-write runs from a clean worktree; apply mode reruns read-only validation before persisting validation_result_path.
-Step 7: Validate title/scope with validate-pr-workflow-contract using the packet title.
-Step 8: Create the PR only from packet fields:
-  gh pr create --base <packet.target.base_branch> --head <packet.target.head_branch> \
-    --title <packet.generated_title.value> --body-file <packet.body_file>
-Step 9: Update workflow file with PR URL
-Step 10: Final commit: "feat(SPEC-XXX): open PR for review"
-```
-
-`generate-pr-body` is a body-only `golden_only` operation. Its complete input
-contract is `output_path`, `title`, and `sections`, and it writes one Markdown
-body. It does not create or update packet JSON, packet metadata, template
-markers, validation evidence, or PR commands. Its output alone never authorizes
-PR creation.
-
-The current committed backstop evidence is fail-closed at the PR boundary.
-Recorded exit 0 means the final diff gate passed, warned, honored a valid typed
-exception, or produced final
-`marker_split` with a current `pr_marker_plan`; PR preparation may continue.
-When a current `pr_marker_plan` exists, PR preparation continues through
-marker emission even if the final full-diff result is only `pass` or `warn`.
-A full-diff size block with current marker evidence also proceeds to marker
-emission and is not a manual re-slicing stop. Recorded exit 1 means
-`reslicing_required` only for unexcepted
-correctness or missing-marker cases: do not run `generate-pr-body`, do not
-invoke any `gh pr create` variant, and do not run `multi-pr-emission` yet.
-This blocks only PR side effects. It is not a final response condition: read
-`autopilot_continuation`, `operator_steps`, and `resume.resume_from`; continue
-inside the same autopilot run through PRSG-007, regenerate PRSG-008, or hand off
-to PRSG-009 until a valid slice PR stack is emitted or a typed exception is
-committed. Never report completion while
-`autopilot_continuation.required=true`. Recorded exit 2 is a gate error: state is
-written, no packet is valid, and the run stops for operator repair.
-
-For marker-aware PR preparation, record gate status/mode/exit/evidence path,
-fingerprint status, ordered marker IDs, checkpoints, warnings, final
-marker_split or marker-plan-ready handoff, packet validation, and PR mappings
-before PR side effects.
+The packet contract that step depends on is the same on both platforms:
+emit or refresh the current packet at
+`specs/<feature>/.process/pr-packets/<packet-id>.json`, validate it with
+`validate-pr-packet-read-only`, and consume `data.stdout_json` in memory.
+Require `data.stdout_json.status=passed`,
+`data.stdout_json.pr_blocked=false`, and `writes_state=false` on the
+response. The body generator's contract is `output_path`, `title`, and
+`sections`, and it writes one Markdown file.
 
 ## Copilot Review Remediation Loop
 
-After PR creation, use `/loop` to schedule recurring review
-comment monitoring. The loop prompt must be **self-contained**
-— each cron fire runs in a fresh context with no memory.
-
-**Before invoking `/loop`:**
-1. Extract PR number from `gh pr create` output
-2. Extract repo owner/name from `git remote -v`
-3. Hardcode both values in the loop prompt
-
-**Prompt structure for `/loop`:**
-
-```text
-Skill("loop", args: "5m
-  Check PR #<PR_NUMBER> in <REPO> for unresolved review
-  comments and resolve them.
-
-  Step 1 — Fetch reviews and comments:
-  Command('gh api repos/<REPO>/pulls/<PR_NUMBER>/reviews ...')
-  Command('gh api repos/<REPO>/pulls/<PR_NUMBER>/comments ...')
-
-  Step 2 — If 0 unresolved, report and stop.
-
-  Step 3 — For each unresolved comment:
-  a. Code fix → edit, verify suite, commit, push, reply, resolve
-  b. Style → lint:fix, commit, push, reply, resolve
-  c. Question/FP → reply via gh api, then resolve
-
-  Step 4 — Report summary.
-")
-```
-
-**Critical:** All values (PR number, repo, branch) must be
-hardcoded strings in the prompt. Variables and references to
-conversation context will not resolve — the cron fires in a
-clean session.
-
-The loop auto-expires after 3 days (Claude Code limit).
+Review remediation follows
+[post-implementation.md section 3.3 Copilot Review Remediation Loop](./post-implementation.md#33-copilot-review-remediation-loop),
+which is authoritative.
 
 ## Workflow File Update Protocol
 

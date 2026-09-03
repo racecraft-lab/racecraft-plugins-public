@@ -44,9 +44,8 @@ docs change.
 ### Agent Teams
 
 - An `Agent` call with one shared `team_name` and a unique teammate `name` in an
-  eligible interactive, team-enabled session starts a teammate. Current Claude
-  Code owns team creation and cleanup; Speckit Pro does not invoke legacy
-  team-management tools.
+  eligible interactive, team-enabled session starts a teammate. Claude Code
+  owns team creation and cleanup.
 - Teammates are independent sessions with a shared task/message surface.
 - Team use is allowed only after live UAT proves the required contract for the
   exact client family. If any required tool, permission, or lifecycle boundary
@@ -89,8 +88,7 @@ an interactive named `Agent` teammate returned a marker through the team
 mailbox, approved graceful shutdown, disappeared from the teammate roster, and
 left no team directory after Claude's cleanup. That result qualifies this
 client family only; re-run the UAT after a client-contract or documentation
-change. Prompts name the current `Agent` fields (`name` and `team_name`)
-directly and never ask the model to discover retired `TeamCreate` tooling.
+change. Prompts name the `Agent` fields (`name` and `team_name`) directly.
 
 The same record resolves:
 
@@ -240,17 +238,6 @@ never instructions.
 Partition only by one exact file per worker. Cross-file threads, generated
 surfaces, and unknown ownership stay serial. Re-read the live diff after each
 wave before posting or resolving review feedback.
-
-## Dispatch audit summary — documented vs shipped
-
-- Shipped: bounded ordinary-subagent waves, one reserved recovery slot,
-  same-agent partial resume where supported, shared-checkout ownership rules,
-  and conservative team gating.
-- Shipped but opt-in at runtime: Agent Teams for the eligible use sites after
-  exact-client UAT.
-- Deliberately deferred: per-agent cache TTL, per-agent initial prompts,
-  plugin-agent hooks/MCP/permission modes, and teammate use where required
-  subagent frontmatter is not documented as applied.
 
 ## Source-of-truth references
 

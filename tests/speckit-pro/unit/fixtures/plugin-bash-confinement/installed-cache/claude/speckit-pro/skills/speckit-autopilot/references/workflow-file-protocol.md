@@ -110,12 +110,8 @@ cadence, and needs no state-file write at all. A second sink would introduce
 exactly the status-versus-evidence drift the Step 1.1 coverage guard and the
 tree-wide CI gate already fail on.
 
-**Reader.** `workflow_draft_pr_row(lines)` sits beside `workflow_recorded_stage`
-and reuses `workflow_table_rows` and `AUTOPILOT_BASIC_INFO_HEADING` unchanged. It
-returns the parsed number, URL, and gap note, or nothing when the row is absent.
-The two readers differ only in the key they match, which is three near-duplicate
-lines rather than a generic scalar-row abstraction — the trade the constitution's
-KISS and YAGNI principle asks for until a third caller exists.
+**Reader.** The row is parsed by `workflow_draft_pr_row` in
+`speckit_pro_runner/helpers/read_only.py`; its docstring records how.
 
 ## The Feedback Sweep Log
 
@@ -175,9 +171,7 @@ handled", which is indistinguishable from a genuine clean first run, and that
 is the one direction the skip key cannot tolerate.
 
 Placement matches the anchor's level rather than assuming one, because the
-anchor is neither guaranteed to exist nor guaranteed to sit at `###`. Of the 69
-workflow files committed in this repository, 33 carry no Consensus Resolution
-Log heading at all; of the 36 that do, 31 write it at `###` and 5 at `##`. A
+anchor is neither guaranteed to exist nor guaranteed to sit at `###`. A
 fixed `###` written under a `##` anchor would nest the sweep log inside the
 consensus section, which reads as subordinate to it and is not what the
 `CRL #` cross-reference describes.
@@ -209,18 +203,10 @@ win over a later failure.
 | 4 | The supplied workflow is resolved against the repository root | **fail** — `workflow file is outside the authorized repository` when it resolves outside; **skip** when it cannot be resolved at all | Outside the root is a completed evaluation with an out-of-boundary result, which is the case the check exists to catch — a different fact from branch 2, where the repository could not be found at all. Resolution itself raises on a path it cannot traverse, such as a symlink loop, and that is an absence of information rather than an out-of-boundary result, so it skips like branch 2 rather than reporting a mismatch it cannot substantiate. Through this guard's own call path that outcome is **defensive rather than reachable**: the supplied workflow is read before the comparison, so an untraversable path has already raised there. It exists so the helper cannot raise for a caller that reads in a different order, and so a future reordering does not turn a skip into a traceback |
 | 5 | The two references differ | **fail** — `supplied workflow does not match autopilot state workflow_file authority`, with both compared paths appended | This is a run resuming the wrong specification. Both paths are printed because the maintainer cannot otherwise tell which side to repair: re-point the run, or reclaim the state slot and let the next invocation rewrite it |
 
-Anything reaching the end passes and reports no authority error. **All three
-skips** — branch 1, branch 2, and the unresolvable-path outcome inside branch 4 —
-leave the run indistinguishable from one that ran the comparison and passed it,
-because a skip and a satisfied comparison both report no error and both exit
-zero. The exit code carries the verdict, not whether the verdict was computed.
-
-**This is the trap when reading corpus evidence.** The report always carries
-`workflow_authority_errors`, so an empty value proves only that the repaired
-guard is running, never that the comparison ran. Presence separates repaired code
-from unrepaired code, where the key is absent entirely. It does not separate a
-satisfied comparison from a skipped one. To prove a comparison ran, vary an input
-and show the verdict change.
+Anything reaching the end passes and reports no authority error. A skip and a
+satisfied comparison are indistinguishable from the exit code and the report;
+the module docstring of `scripts/validate-autopilot-phase-coverage.py` explains
+why and how to prove a comparison ran.
 
 **Resolution is asymmetric.** The **supplied** workflow is resolved against the
 repository root and rendered POSIX, so the right file named absolutely, or

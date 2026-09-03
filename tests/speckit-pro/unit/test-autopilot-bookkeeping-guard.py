@@ -42,6 +42,13 @@ BLOCKING_STATE_INVARIANT_KEYS = (
     "state_order_errors",
 )
 
+BLOCKING_STATUS_EVIDENCE_KEYS = (
+    "workflow_status_evidence_errors",
+    "state_status_errors",
+    "stage_mirror_errors",
+    "workflow_authority_errors",
+)
+
 PLAN_STEPS = (
     "Archive Sweep: previously merged specs dry-run/apply eligibility",
     "Phase 0: Prerequisites",
@@ -412,7 +419,13 @@ class LegacyCoverageAdvisoryTests(StatusEvidenceReportAssertions, unittest.TestC
 class StatusEvidenceSourceGuidanceTests(unittest.TestCase):
     """The shipped source skills must describe the same scoped-gate contract."""
 
-    def test_source_guidance_distinguishes_legacy_debt_from_blocking_state_invariants(self) -> None:
+    def test_source_guidance_names_every_gated_key_and_the_nonblocking_rest(self) -> None:
+        """Both skills must name all seven gated keys, not a subset.
+
+        ``--rule status-evidence`` arms four workflow/state status-evidence
+        checks plus the three current-run state-plan invariants; the guidance
+        that names only the invariants understates what stops a run.
+        """
         for label, path in (
             ("Claude", CLAUDE_AUTOPILOT_SKILL),
             ("Codex", CODEX_AUTOPILOT_SKILL),
@@ -420,12 +433,11 @@ class StatusEvidenceSourceGuidanceTests(unittest.TestCase):
             with self.subTest(skill=label):
                 guidance = status_evidence_guidance_paragraph(path)
                 folded = guidance.lower()
-                self.assertIn("legacy structural coverage debt", folded)
-                self.assertIn("visible", folded)
-                self.assertIn("nonblocking", folded)
-                self.assertIn("current-run state invariants", folded)
-                self.assertIn("stop the run", folded)
-                for key in BLOCKING_STATE_INVARIANT_KEYS:
+                self.assertIn("status-evidence checks", folded)
+                self.assertIn("state-plan invariants", folded)
+                self.assertIn("structural coverage checks", folded)
+                self.assertIn("visible but never block", folded)
+                for key in BLOCKING_STATUS_EVIDENCE_KEYS + BLOCKING_STATE_INVARIANT_KEYS:
                     self.assertIn(key, guidance)
 
 

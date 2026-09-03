@@ -58,10 +58,10 @@ to your project or user agent directory:
 
 ```text
 # Copy to project scope
-cp -r ~/.claude/plugins/marketplaces/*/plugins/speckit-pro/agents/*.md .claude/agents/
+cp -r ~/.claude/plugins/cache/*/speckit-pro/*/agents/*.md .claude/agents/
 
 # Or copy to user scope
-cp -r ~/.claude/plugins/marketplaces/*/plugins/speckit-pro/agents/*.md ~/.claude/agents/
+cp -r ~/.claude/plugins/cache/*/speckit-pro/*/agents/*.md ~/.claude/agents/
 ```
 
 Agents in `.claude/agents/` or `~/.claude/agents/` have full
