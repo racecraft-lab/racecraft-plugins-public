@@ -68,6 +68,34 @@ Agents in `.claude/agents/` or `~/.claude/agents/` have full
 frontmatter support including `permissionMode`, `hooks`, and
 `mcpServers`.
 
+## Skill `allowed-tools` is pre-approval, not a tool grant
+
+The table above is about agent frontmatter. A skill's `allowed-tools` is a
+different field on a different surface, and it is easy to read as the agent
+equivalent. It is not. Claude Code does not ignore it, but it also does not use
+it to decide what the skill may call.
+
+Claude Code documents `allowed-tools` as pre-approval for the turn that invokes
+the skill: the listed tools run without a permission prompt, and the grant
+clears on the operator's next message. It does not restrict availability. A tool
+the list leaves out stays callable and follows the session's permission
+settings, so leaving a tool out is not the same as denying it. The field that
+removes a tool from the pool is `disallowed-tools`. See "Pre-approve tools for a
+skill" in the Claude Code skills documentation.
+
+Two consequences for the autopilot:
+
+1. **The orchestrator's omitted command-execution tool is release policy, not a
+   capability limit.** The XPLAT-009 guard classifies such a token in a shipped
+   tool declaration as blocking, so the skill cannot list one. The
+   `Command(...)` runner invocations still reach the operator's permission
+   settings and still run.
+
+2. **Those settings decide whether an unattended run stops.** `acceptEdits`
+   covers file edits and common filesystem commands. It does not cover
+   arbitrary command execution, so a run that must never prompt needs
+   `bypassPermissions` or a session allow rule that covers the runner.
+
 ## Research/Context Capability Coverage
 
 The following capabilities improve evidence quality. All are optional when an
