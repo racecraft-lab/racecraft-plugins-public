@@ -68,6 +68,19 @@ frontmatter may still declare Claude `allowed-tools` to authorize the
 orchestrator's core primitives; that declaration is not an MCP/vendor
 availability list and does not replace runtime capability discovery.
 
+That declaration also deliberately omits a command-execution tool. The
+XPLAT-009 release guard classifies such a token in any shipped tool
+declaration as blocking, and release readiness re-runs that guard, so
+the omission is policy rather than oversight. It also costs nothing:
+Claude Code treats `allowed-tools` as pre-approval for the turn that
+invokes a skill, never as an availability list, so a tool the list
+leaves out stays callable and follows the session's own permission
+settings. Those settings, not this frontmatter, are what carry the
+`Command(...)` runner invocations below, which is why an unattended run
+has to prepare them before launch. See the plugin agent caveat in
+Step 0 and
+[`references/plugin-limitations.md`](./references/plugin-limitations.md).
+
 ## Prerequisites — Model
 
 The orchestrator makes gate decisions, synthesizes consensus, and
