@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.30.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.29.0...speckit-pro-v2.30.0) (2026-09-03)
+
+
+### Features
+
+* **speckit-pro:** move consensus arithmetic and routing into runner helpers ([#525](https://github.com/racecraft-lab/racecraft-plugins-public/issues/525)) ([897041b](https://github.com/racecraft-lab/racecraft-plugins-public/commit/897041b3b5503ac06d9530ce5e6a7caed21676bf))
+* **speckit-pro:** replace the gate-validator agent with a direct validate-gate helper call ([#524](https://github.com/racecraft-lab/racecraft-plugins-public/issues/524)) ([588f4d6](https://github.com/racecraft-lab/racecraft-plugins-public/commit/588f4d69310aa3f5e4183f84b0bbf929a3b0ab83))
+* **speckit-pro:** right-size the synthesizer effort and guard the analyst roster ([#526](https://github.com/racecraft-lab/racecraft-plugins-public/issues/526)) ([92ea316](https://github.com/racecraft-lab/racecraft-plugins-public/commit/92ea316f8134e745973bdf839e26c826a0d18808))
+
+
+### Bug Fixes
+
+* **speckit-pro:** repair stale paths, retired helpers and version pins in skills ([#523](https://github.com/racecraft-lab/racecraft-plugins-public/issues/523)) ([f14e084](https://github.com/racecraft-lab/racecraft-plugins-public/commit/f14e084a1063d15c7fc31c9ca380181754aaa280))
+
 ## [2.29.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.28.2...speckit-pro-v2.29.0) (2026-08-31)
 
 
