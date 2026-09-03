@@ -656,15 +656,23 @@ to proceed, surface a remediation hint, or stop.
      regression report). TaskUpdate G6.5 → completed with a
      `no_data: true` note. Advance to Phase 7.
    - exit 2 (FAIL):
-       a. Read JSON `criteria` object; find the lowest-scoring
-          criterion (lowest numeric value among the 5 keys).
+       a. Read JSON `deductions_applied` first. When it is true,
+          the shortfall is open CRITICAL and HIGH rows rather than
+          a weak criterion, and the target is those unresolved rows
+          in the workflow file's most recent Analysis Results
+          table: fix each one and record the fix in that row's
+          Resolution cell, which is what clears the deduction. The
+          criterion breakdown will not point at those rows, because
+          the synthesizer no longer deducts for findings. When it
+          is false, read the JSON `criteria` object and target the
+          lowest-scoring criterion (lowest numeric value among the
+          5 keys).
        b. If iteration_count < 3:
-            - Dispatch a focused consensus round on that criterion's
-              underlying artifact (e.g., "task_understanding" lowest
+            - Dispatch a focused consensus round on the artifact
+              behind that target (e.g., "task_understanding" lowest
               → re-evaluate spec.md ambiguity via clarify-executor
-              re-pass; "risk_assessment" lowest → re-run analyze on
-              remaining open findings; "completeness" lowest →
-              re-verify artifact presence).
+              re-pass; "completeness" lowest → re-verify artifact
+              presence).
             - After remediation completes, dispatch the
               consensus-synthesizer agent (single fan-out) to
               re-emit the pre-Implement Confidence block to the
@@ -2384,40 +2392,117 @@ regardless of which agent executes the task.
 #### Step 3: Task-Level Execution Loop (with `[P]` parallel partitioning)
 
 This is **Use site 3** in the [Agent Teams use-site map](./agent-teams-integration.md).
-Partition each phase group's tasks into RUNS (parallel for consecutive
-`[P]`-tagged tasks; singleton for non-`[P]`). Dispatch each parallel
-run in ONE assistant message via background subagents (or as an Agent
+Tasks are partitioned into RUNS (parallel for consecutive `[P]`-tagged tasks
+that route to the same agent; singleton for everything else). Dispatch each
+parallel run in ONE assistant message via background subagents (or as an Agent
 Team when `AGENT_TEAMS_AVAILABLE=true`). Sequential runs dispatch one
 foreground agent at a time. Safety net: after every parallel run, run
 TYPECHECK + UNIT_TEST; on regression, fall back to serial re-run.
 
+##### Step 3a: Partition The Tasks (runner helper)
+
+The partition is a deterministic function of `tasks.md`, so the runner owns it.
+Invoke runner helper `partition-phase7-tasks` once on entry to Step 3, before
+the first dispatch, and read the runs out of its stdout JSON:
+
+```text
+resolved_python -m speckit_pro_runner < request.json
+
+request.json:
+{
+  "schema_version": "1.0",
+  "request_id": "phase7-partition",
+  "helper_id": "partition-phase7-tasks",
+  "operation": "partition-phase7-tasks",
+  "mode": "read_only",
+  "inputs": {
+    "tasks_file": "specs/<feature>/tasks.md",
+    "wave_size": <SUBAGENT_WAVE_SIZE>,
+    "project_agent_name": "<PROJECT_IMPLEMENTATION_AGENT>",
+    "project_agent_keywords": ["<keyword>", "..."]
+  }
+}
+```
+
+`resolved_python` is the Python 3.11+ interpreter resolved by the installed
+runtime contract, not a hardcoded interpreter name. Pass `SUBAGENT_WAVE_SIZE`
+from the Step 0.6 runtime record explicitly; the helper falls back to the
+conservative default of 4 when the field is absent. Pass
+`project_agent_name` and `project_agent_keywords` from Step 0.10; omit both when
+the project has no implementation agent of its own.
+
+Stdout JSON carries `runs`, an ordered list. Each run has `kind`
+(`parallel` or `singleton`), `agent`, `group` (the phase-group heading), and
+`tasks` (task IDs in `tasks.md` order); a parallel run also has `waves`, its
+task IDs split into dispatch-sized groups. Runner status `ok` means the
+partition is usable. Exit 1 with a non-empty `errors` array means `tasks.md` has
+a duplicate or malformed task ID: fix the task list, do not dispatch a partial
+partition. `input_error` is the usage path for a missing or unreadable
+`tasks.md` or an out-of-range setting.
+
+**The ten rules the helper applies.** They are the contract for its output, and
+they are what a reader should check the helper against:
+
+1. Tasks are visited in `tasks.md` order, and that order is preserved
+   everywhere downstream: inside a run, inside a wave, and across runs.
+2. A task joins the open parallel run only when it carries `[P]` **and** routes
+   to the same agent as that run.
+3. A task that lacks `[P]`, or that routes to a different agent, closes the
+   open parallel run. A task without `[P]` becomes a singleton run; a `[P]`
+   task opens a new parallel run.
+4. A phase-group heading closes the open parallel run. No run straddles two
+   groups, because the orchestrator opens and closes one task entry per group.
+5. A parallel run holding fewer than two tasks degrades to a singleton; there is
+   nothing to run in parallel.
+6. Each parallel run is split into order-preserving waves no larger than
+   `wave_size`.
+7. Routing takes the first match, in this order: (a) the project
+   implementation agent when a project keyword matches, (b)
+   `speckit-pro:implement-executor` for `test`, `contract test`, `unit test`, or
+   `integration`, (c) `speckit-pro:domain-researcher` for `research`,
+   `investigate`, or `explore API`, (d) `orchestrator-direct` when the
+   description's leading verb is `verify`, `run`, `check`, `build`, or `lint`,
+   (e) `speckit-pro:implement-executor` as the fallback. Branch (d) is
+   verification-only work, which is why it reads the leading verb rather than
+   the whole description; rule 8 says what that buys.
+8. Inline code spans are removed from the description before matching, then
+   matching is case-insensitive and whole-word over what remains. Whole-word
+   keeps `test` off `latest` and still lets it match inside a bare
+   `src/parser.test.ts`. Dropping code spans keeps a backticked helper or file
+   name from routing the task: a task list writes those as identifiers, not as
+   words about the work, so "Port and register the `check-prerequisites`
+   helper" is implementation work and not a `check` for the orchestrator.
+   Branches (a) through (c) match anywhere in the description. Branch (d)
+   matches the leading verb alone, and markdown emphasis around that verb does
+   not hide it. The reason is that `run`, `check` and `build` are ordinary
+   words everywhere else in a task list, so matching them anywhere sent
+   implementation work to `orchestrator-direct`, the one route that dispatches
+   no agent and injects no TDD protocol: "Add the required
+   validate-release-note check (workflow)" and "Register the helper in the
+   dispatch table and check the manifest" both landed there. Measured over this
+   repository's task lists with no project agent set, the anywhere form
+   misrouted roughly one task in seven; the leading-verb form leaves one known
+   false positive. `build` at the head is that one, because it reads both ways
+   and verification wins it. An author who means implementation opens with
+   `Implement`, `Add`, or `Create`.
+9. Branch (a) applies only when the request carries both a project agent name
+   and at least one keyword that matches. Missing either one falls through to
+   (b).
+10. A duplicate or malformed task ID fails the partition rather than
+    partitioning around it, so a task list that two runs would disagree about is
+    never dispatched.
+
+##### Step 3b: Execute Each Run
+
 ```text
 Initialize COMPLETED_TASKS = {}
 
-For each phase group in tasks.md:
+For each phase group in the helper's runs (grouped by run.group):
   TaskUpdate: "<Phase 7: group name>" → in_progress
 
-  # Step 3a: Partition tasks into RUNS
-  RUNS = []
-  current_parallel_run = []
-  For each task in the group (in order):
-    if task has [P] marker AND routes to the same agent type as the
-       previous [P] task in current_parallel_run:
-      current_parallel_run.append(task)
-    else:
-      if current_parallel_run is non-empty:
-        RUNS.append(("parallel", current_parallel_run))
-        current_parallel_run = []
-      RUNS.append(("singleton", task))
-  if current_parallel_run is non-empty:
-    RUNS.append(("parallel", current_parallel_run))
-
-  # Step 3b: Execute each RUN
-  For each (kind, tasks_in_run) in RUNS:
-    if kind == "parallel" and len(tasks_in_run) >= 2:
-      Split tasks_in_run into deterministic waves no larger than
-      SUBAGENT_WAVE_SIZE. Preserve task-list order when accumulating results.
-      For each wave:
+  For each run in that group's runs:
+    if run.kind == "parallel":
+      For each wave in run.waves:
       if AGENT_TEAMS_AVAILABLE:
         # Path A: named Agent calls become teammates in an eligible
         # interactive team-enabled session.
@@ -2442,7 +2527,7 @@ For each phase group in tasks.md:
         # Path B: spawn all [P] tasks in ONE message, background
         For each task in the wave:
           Agent(
-            subagent_type: <routed agent>,
+            subagent_type: run.agent,
             run_in_background: true,
             description: "SPEC-XXX <task-id> [P] <brief>",
             prompt: <task prompt — see Step 3c>
@@ -2462,28 +2547,20 @@ For each phase group in tasks.md:
       If FAIL:
         Log regression to workflow file.
         Re-run the tasks SERIALLY (one foreground agent each):
-        for task in tasks_in_run:
-          Agent(subagent_type: <routed agent>, ..., prompt: ...)
+        for task in run.tasks:
+          Agent(subagent_type: run.agent, ..., prompt: ...)
           On that result, append a further entry under the same
           task ID; the earlier entry stays exactly as written.
         After serial re-run, run TYPECHECK + UNIT_TEST again.
         If still failing, surface to user.
 
     else:
-      # Singleton run or single-task "parallel" run
-      ROUTE to agent for tasks_in_run[0]:
-        a. PROJECT_IMPLEMENTATION_AGENT — task description matches
-           keywords from the detected agent (Step 0.9)
-        b. implement-executor — if test-only task (keywords:
-           "test", "contract test", "unit test", "integration")
-        c. domain-researcher — if research task (keywords:
-           "research", "investigate", "explore API")
-        d. orchestrator-direct — if verification-only (keywords:
-           "verify", "run", "check", "build", "lint")
-        e. implement-executor — default fallback
+      # Singleton run: run.tasks holds exactly one task ID and
+      # run.agent is the agent rule 7 routed it to.
 
-      All five branches append an entry; c and d emit no
-      task-result block, so their entries record None.
+      All five routing branches append an entry; the researcher
+      and orchestrator-direct branches emit no task-result block,
+      so their entries record None.
 
       Foreground dispatch: Agent(..., prompt: ...)
       Wait for result.
@@ -2492,7 +2569,7 @@ For each phase group in tasks.md:
 
   # Step 3c: Agent prompt template (used for parallel + singleton)
   Agent(
-    subagent_type: "<routed agent>",
+    subagent_type: "<run.agent>",
     run_in_background: true if part of a [P] parallel run else omitted,
     description: "SPEC-XXX <task-id> <brief>",
     prompt: """
@@ -2607,7 +2684,7 @@ Run FULL_VERIFY:
 | Contract/unit/integration tests | `speckit-pro:implement-executor` | Yes |
 | Implementation needing project patterns | PROJECT_IMPLEMENTATION_AGENT | Yes |
 | Research / API investigation | `speckit-pro:domain-researcher` | No |
-| Verification (build, lint, typecheck) | orchestrator-direct (command tool) | No |
+| Verification-only, by leading verb (`verify`, `run`, `check`, `build`, `lint`) | orchestrator-direct (command tool) | No |
 
 Every agent receiving implementation work gets the TDD protocol
 injected. Agent selection is about DOMAIN EXPERTISE — the
