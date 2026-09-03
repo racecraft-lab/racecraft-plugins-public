@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-parse-consensus-categories",
+  "helper_id": "parse-consensus-categories",
+  "operation": "parse-consensus-categories",
+  "mode": "read_only",
+  "inputs": {
+    "line": "[codebase, domain] Q1: bcrypt or argon2?"
+  }
+}

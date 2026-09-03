@@ -424,14 +424,11 @@ batch synthesizers, then apply Artifact Edits serially. Two rounds:
 
 ```text
 ROUND 1 — Category-routed, BATCHED across items
-  For each unresolved item Ix, parse the [<categories>] prefix to
-  determine the routed analyst set Sx per the routing table:
-    [codebase]            → codebase-analyst only
-    [spec]                → spec-context-analyst only
-    [domain]              → domain-researcher only
-    [security]            → ALL 3 (defense-in-depth)
-    [ambiguous] or empty  → ALL 3 (safe default)
-    [a, b]                → union of named analysts
+  For each unresolved item Ix, call the `parse-consensus-categories`
+  runner helper on the item line and dispatch exactly the analyst set
+  Sx it returns. Do not route by hand: the helper owns the security,
+  ambiguous, unknown-tag and untagged widening, and widens on a
+  security keyword in the item text.
 
   Stage 1: spawn_agent for every (item, analyst) pair in ONE turn
            (Σ |Sx| total calls). wait_agent on ALL handles.

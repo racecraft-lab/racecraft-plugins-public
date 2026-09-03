@@ -954,13 +954,19 @@ surface a remediation hint, or stop.
      report. update_plan G6.5 → completed with `no_data: true`.
      Advance to Phase 7.
    - exit 2 (FAIL):
-       a. Read JSON `criteria` object; find the lowest-scoring criterion.
+       a. Read JSON `deductions_applied` first. When true, the target
+          is the unresolved CRITICAL and HIGH rows in the workflow
+          file's most recent Analysis Results table: fix each one and
+          record the fix in that row's Resolution cell, which is what
+          clears the deduction. The criterion breakdown will not point
+          at those rows, because the synthesizer no longer deducts for
+          findings. When false, read the JSON `criteria` object and
+          target the lowest-scoring criterion.
        b. If iteration_count < 3:
-            - spawn_agent on the appropriate analyst for the lowest
-              criterion (e.g., "task_understanding" lowest →
-              clarify-executor re-pass on spec.md; "risk_assessment"
-              → analyze-executor re-pass on open findings;
-              "completeness" → verify artifact presence).
+            - spawn_agent on the appropriate analyst for that target
+              (e.g., "task_understanding" lowest → clarify-executor
+              re-pass on spec.md; "completeness" → verify artifact
+              presence).
             - spawn_agent consensus-synthesizer to re-emit the
               pre-Implement Confidence block to the workflow file.
             - Re-run confidence-gate.

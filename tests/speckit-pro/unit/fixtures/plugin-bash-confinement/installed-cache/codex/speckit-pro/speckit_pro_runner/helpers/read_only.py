@@ -52,11 +52,22 @@ PATH_KEYS = {
     "feature_dir",
     "packet_path",
     "plan_file",
+    "tasks_file",
     "repo_root",
     "target",
     "workflow_file",
     "worktree_root_override",
 }
+
+PHASE7_DEFAULT_WAVE_SIZE = 4
+PHASE7_IMPLEMENT_AGENT = "speckit-pro:implement-executor"
+PHASE7_RESEARCH_AGENT = "speckit-pro:domain-researcher"
+PHASE7_VERIFY_AGENT = "orchestrator-direct"
+PHASE7_TEST_KEYWORDS = ("contract test", "unit test", "integration", "test")
+PHASE7_RESEARCH_KEYWORDS = ("research", "investigate", "explore api")
+PHASE7_VERIFY_KEYWORDS = ("verify", "run", "check", "build", "lint")
+PHASE7_CODE_SPAN = re.compile(r"`[^`]*`")
+PHASE7_LEADING_VERB = re.compile(r"^[\s*_]*([A-Za-z]+)")
 
 WARN_DESTRUCTIVE_MIGRATION = (
     "destructive migration: a passing CI run does not prove this change is releasable "
@@ -283,10 +294,12 @@ def canonicalize_inputs(helper_id: str, inputs: dict[str, Any], repo_root: Path)
         # needs arrives as request data (FR-004, FR-004a).
         "check-artifact-freshness": {"workflow_file"},
         "confidence-gate": {"workflow_file"},
+        "aggregate-crl": {"workflow_file"},
         "generate-spec-index-check": {"repo_root"},
         "o5-topology": {"target"},
         "atomicity-route": {"feature_dir"},
         "plan-layers-feature-dir": {"feature_dir"},
+        "partition-phase7-tasks": {"tasks_file"},
         "validate-pr-workflow-contract": {"repo_root", "changed_files"},
         "validate-pr-packet-read-only": {"packet_path"},
     }
@@ -418,6 +431,19 @@ def explicit_or_derived_args(helper_id: str, inputs: dict[str, Any], repo_root: 
         if isinstance(mode, str) and mode:
             argv.extend(["--mode", mode])
         return argv
+    if helper_id == "parse-consensus-categories":
+        # The item line is executor text, never a path and never a command
+        # fragment: it crosses on stdin and is only ever parsed in process.
+        return required_args(inputs, ["line"], helper_id)
+    if helper_id == "aggregate-crl":
+        workflow_file = inputs.get("workflow_file")
+        if not isinstance(workflow_file, str) or not workflow_file:
+            return invalid_args(helper_id, "workflow_file is required")
+        argv = [request_path_display(workflow_file, repo_root)]
+        threshold = inputs.get("threshold_percent")
+        if isinstance(threshold, (int, float, str)) and not isinstance(threshold, bool):
+            argv.extend(["--threshold-percent", str(threshold)])
+        return argv
     if helper_id == "generate-spec-index-check":
         return ["--check", request_path_display(inputs.get("repo_root") or ".", repo_root)]
     if helper_id in {"o5-topology", "atomicity-route"}:
@@ -425,6 +451,19 @@ def explicit_or_derived_args(helper_id: str, inputs: dict[str, Any], repo_root: 
         return required_args(inputs, [path_key], helper_id, repo_root, path_keys={path_key})
     if helper_id == "plan-layers-feature-dir":
         return required_args(inputs, ["feature_dir"], helper_id, repo_root, path_keys={"feature_dir"})
+    if helper_id == "partition-phase7-tasks":
+        wave_size = inputs.get("wave_size")
+        if wave_size is not None and (isinstance(wave_size, bool) or not isinstance(wave_size, int) or wave_size < 1):
+            return invalid_args(helper_id, "wave_size must be a positive integer")
+        keywords = inputs.get("project_agent_keywords")
+        if keywords is not None and (
+            not isinstance(keywords, list) or not all(isinstance(word, str) for word in keywords)
+        ):
+            return invalid_args(helper_id, "project_agent_keywords must be an array of strings")
+        agent_name = inputs.get("project_agent_name")
+        if agent_name is not None and (not isinstance(agent_name, str) or not agent_name.strip()):
+            return invalid_args(helper_id, "project_agent_name must be a non-empty string")
+        return required_args(inputs, ["tasks_file"], helper_id, repo_root, path_keys={"tasks_file"})
     if helper_id == "validate-pr-workflow-contract":
         title = inputs.get("title")
         if not isinstance(title, str) or not title:
@@ -3930,6 +3969,67 @@ def resolve_confidence_mode(inputs: dict[str, Any], repo_root: Path) -> dict[str
     return make_result("advisory\n")
 
 
+ANALYSIS_SEVERITY_COLUMN = "severity"
+ANALYSIS_RESOLUTION_COLUMN = "resolution"
+ANALYSIS_OPEN_SEVERITIES = ("CRITICAL", "HIGH")
+
+
+def analysis_results_rows(text: str) -> tuple[list[str], list[list[str]]]:
+    """Header cells and data rows of the most recent Analysis Results table.
+
+    The table is found by its columns rather than by a heading, because the
+    severity legend above it carries the word `Severity` too and only the
+    findings table also carries `Resolution`. A Phase 6 log can hold one table
+    per Analyze pass, and only the last one describes the current state, so each
+    header seen resets the rows. Anything that is not a table row ends the run,
+    which is where a Markdown table ends.
+    """
+    header: list[str] = []
+    rows: list[list[str]] = []
+    collecting = False
+    for raw in text.splitlines():
+        stripped = raw.strip()
+        if not stripped.startswith("|"):
+            collecting = False
+            continue
+        cells = sweep_table_cells(stripped)
+        labels = [cell.casefold().strip("*` ") for cell in cells]
+        if ANALYSIS_SEVERITY_COLUMN in labels and ANALYSIS_RESOLUTION_COLUMN in labels:
+            header, rows, collecting = labels, [], True
+            continue
+        if not collecting or sweep_is_table_rule(cells):
+            continue
+        rows.append(cells)
+    return header, rows
+
+
+def open_analysis_findings(text: str) -> dict[str, int]:
+    """Unresolved CRITICAL and HIGH rows of the workflow's Analysis Results table.
+
+    A `[CRITICAL]` or `[HIGH]` marker in the log body cannot answer this. The
+    workflow file is an append-only log, so the same bracket text appears in
+    prose asserting zero findings and in a finding the run already remediated,
+    and the count would never fall across a G6.5 iteration. The Analysis Results
+    table carries the discriminator the log otherwise lacks: remediation fills
+    the row's Resolution cell, as the shipped workflow template records it. A row
+    whose cell count disagrees with its header is skipped rather than guessed at,
+    which fails toward no deduction.
+    """
+    header, rows = analysis_results_rows(text)
+    counts = {"critical": 0, "high": 0}
+    if not header:
+        return counts
+    severity_index = header.index(ANALYSIS_SEVERITY_COLUMN)
+    resolution_index = header.index(ANALYSIS_RESOLUTION_COLUMN)
+    for cells in rows:
+        if len(cells) != len(header):
+            continue
+        severity = cells[severity_index].strip("*` ").upper()
+        if severity in ANALYSIS_OPEN_SEVERITIES and not cells[resolution_index].strip("*` "):
+            counts[severity.casefold()] += 1
+    return counts
+
+
 def confidence_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     workflow_raw = request_path_display(inputs.get("workflow_file") or "", repo_root)
     workflow = resolve_input_path(workflow_raw, repo_root)
@@ -3949,15 +4049,6 @@ def confidence_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
         return make_result(json_text({"error": f"invalid threshold: {threshold_text}"}), exit_code=2)
     if not math.isfinite(threshold) or threshold < 0 or threshold > 1:
         return make_result(json_text({"error": f"invalid threshold: {threshold_text}"}), exit_code=2)
-    if not matches:
-        stderr = f"confidence-gate: NO_DATA — no synthesizer confidence emit found in {workflow_raw}\n"
-        stdout = (
-            '{"pass":null,"composite":null,"criteria":{},"threshold":'
-            f'{threshold_text},"mode":{json.dumps(mode)},"recommended_action":"soft_skip",'
-            f'"reason":"no confidence emit found","input":{json.dumps(workflow_raw)}}}\n'
-        )
-        return make_result(stdout, stderr, 1)
-    composite = float(matches[-1])
     criteria_names = {
         "Task understanding": "task_understanding",
         "Approach clarity": "approach_clarity",
@@ -3969,15 +4060,262 @@ def confidence_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     for label, key in criteria_names.items():
         values = re.findall(rf"^- {re.escape(label)}: ([01]\.[0-9]{{2}})$", text, flags=re.M)
         criteria[key] = float(values[-1]) if values else None
+    scores = [criteria[key] for key in criteria_names.values()]
+    stated = float(matches[-1]) if matches else None
+    if any(score is None for score in scores) and stated is None:
+        stderr = f"confidence-gate: NO_DATA — no synthesizer confidence emit found in {workflow_raw}\n"
+        stdout = (
+            '{"pass":null,"composite":null,"criteria":{},"threshold":'
+            f'{threshold_text},"mode":{json.dumps(mode)},"recommended_action":"soft_skip",'
+            f'"reason":"no confidence emit found","composite_source":null,"criteria_mean":null,'
+            '"deductions":{"critical":0,"high":0,"amount":0.0},"deductions_applied":false,'
+            f'"input":{json.dumps(workflow_raw)}}}\n'
+        )
+        return make_result(stdout, stderr, 1)
+    mismatch = ""
+    if any(score is None for score in scores):
+        composite_source = "stated"
+        criteria_mean = None
+        deductions = {"critical": 0, "high": 0, "amount": 0.0}
+        composite = stated
+    else:
+        composite_source = "computed"
+        criteria_mean = round(sum(scores) / len(scores), 2)
+        open_findings = open_analysis_findings(text)
+        critical = open_findings["critical"]
+        high = open_findings["high"]
+        deductions = {"critical": critical, "high": high, "amount": round(0.30 * critical + 0.10 * high, 2)}
+        composite = max(0.0, round(criteria_mean - deductions["amount"], 2))
+        if stated is not None and f"{stated:.2f}" != f"{criteria_mean:.2f}":
+            mismatch = f"; stated {stated:.2f} does not match the criterion mean {criteria_mean:.2f}"
+    deductions_applied = deductions["amount"] > 0
+    envelope = {
+        "criteria": criteria,
+        "threshold": threshold,
+        "mode": mode,
+        "composite_source": composite_source,
+        "criteria_mean": criteria_mean,
+        "deductions": deductions,
+        "deductions_applied": deductions_applied,
+        "input": workflow_raw,
+    }
     if composite >= threshold:
         stderr = f"confidence-gate: PASS — composite {composite:.2f} >= threshold {threshold_text}\n"
-        obj = {"pass": True, "composite": composite, "criteria": criteria, "threshold": threshold, "mode": mode, "recommended_action": "proceed", "reason": "composite at or above threshold", "input": workflow_raw}
+        obj = {"pass": True, "composite": composite, **envelope, "recommended_action": "proceed", "reason": "composite at or above threshold" + mismatch}
         return make_result(json_text(obj), stderr)
     action = "stop" if mode == "strict" else "continue_with_warning"
     reason = "composite below threshold in strict mode" if mode == "strict" else "composite below threshold in advisory mode"
     stderr = f"confidence-gate: FAIL — composite {composite:.2f} < threshold {threshold_text} (mode={mode}, {'STOP' if mode == 'strict' else 'log + continue'})\n"
-    obj = {"pass": False, "composite": composite, "criteria": criteria, "threshold": threshold, "mode": mode, "recommended_action": action, "reason": reason, "input": workflow_raw}
+    obj = {"pass": False, "composite": composite, **envelope, "recommended_action": action, "reason": reason + mismatch}
     return make_result(json_text(obj), stderr, 2)
+
+
+CONSENSUS_ROUTED_ANALYSTS = {
+    "codebase": "speckit-pro:codebase-analyst",
+    "spec": "speckit-pro:spec-context-analyst",
+    "domain": "speckit-pro:domain-researcher",
+}
+CONSENSUS_ALL_ANALYSTS = (
+    "speckit-pro:codebase-analyst",
+    "speckit-pro:spec-context-analyst",
+    "speckit-pro:domain-researcher",
+)
+CONSENSUS_LIST_MARKER_RE = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s+")
+CONSENSUS_PREFIX_RE = re.compile(r"^\s*\[([^\]]*)\]")
+# The Security Keywords list from consensus-protocol.md, which defines the
+# `[security]` tag by what the item text says rather than by what the executor
+# typed in the bracket. Matching them here keeps the widening in the one place
+# the reference now points the orchestrator at.
+CONSENSUS_SECURITY_KEYWORDS = (
+    "auth",
+    "token",
+    "secret",
+    "encryption",
+    "pii",
+    "credential",
+    "permission",
+    "password",
+    "authentication",
+    "authorization",
+    "session",
+    "cookie",
+    "jwt",
+    "api-key",
+    "access-control",
+)
+# Boundaries are non-alphanumeric so `api-key` and `access-control` match while
+# `token` inside `tokenizer` does not. Longest first so a shorter keyword never
+# shadows a longer one starting at the same position. The reference lists the
+# keywords in the singular and executors write questions in the plural, so a
+# trailing `s` is part of the keyword: `tokens` and `credentials` widen, while
+# `tokenised` and `permissioning` still do not, because any other trailing
+# letter fails the boundary.
+CONSENSUS_SECURITY_RE = re.compile(
+    "(?<![0-9A-Za-z])(?:"
+    + "|".join(re.escape(word) for word in sorted(CONSENSUS_SECURITY_KEYWORDS, key=len, reverse=True))
+    + ")s?(?![0-9A-Za-z])",
+    re.IGNORECASE,
+)
+
+
+def consensus_category_tags(line: str) -> list[str]:
+    """Lowercased tags from the leading `[a, b]` prefix, empty when unparseable.
+
+    An item may arrive as a bare line or as a list item, so one leading bullet
+    or ordinal is dropped before the prefix is read. Anything else in front of
+    the bracket means there is no prefix, which routes to all three analysts.
+    """
+    candidate = CONSENSUS_LIST_MARKER_RE.sub("", line, count=1)
+    match = CONSENSUS_PREFIX_RE.match(candidate)
+    if match is None:
+        return []
+    tags: list[str] = []
+    for raw in match.group(1).split(","):
+        tag = raw.strip().casefold()
+        if tag and tag not in tags:
+            tags.append(tag)
+    return tags
+
+
+def parse_consensus_categories(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+    """The Tier A routing table from consensus-protocol.md, executed.
+
+    Every widening rule fails toward all three analysts, so a tag the table does
+    not define costs a wider fan-out and never a narrower one. The table defines
+    `[security]` by the keywords the item text carries, so the text is scanned
+    too: an executor that tags a keyword-bearing item narrowly still gets all
+    three, which is the defense in depth the reference promises.
+    """
+    line = str(inputs.get("line") or "")
+    tags = consensus_category_tags(line)
+    unknown = next((tag for tag in tags if tag not in CONSENSUS_ROUTED_ANALYSTS), None)
+    keyword = CONSENSUS_SECURITY_RE.search(line)
+    if "security" in tags:
+        reason = "security tag: all three analysts (defense in depth)"
+    elif keyword is not None:
+        reason = f"security keyword {keyword.group(0).casefold()} in item text: all three analysts (defense in depth)"
+    elif not tags:
+        reason = "no category prefix: all three analysts (safe default)"
+    elif "ambiguous" in tags:
+        reason = "ambiguous tag: all three analysts (safe default)"
+    elif unknown is not None:
+        reason = f"unknown category tag {unknown}: all three analysts (safe default)"
+    else:
+        routed = {CONSENSUS_ROUTED_ANALYSTS[tag] for tag in tags}
+        analysts = [name for name in CONSENSUS_ALL_ANALYSTS if name in routed]
+        return make_result(json_text({"tags": tags, "analysts": analysts, "reason": "category-routed dispatch"}))
+    return make_result(json_text({"tags": tags, "analysts": list(CONSENSUS_ALL_ANALYSTS), "reason": reason}))
+
+
+CRL_HEADING = "Consensus Resolution Log"
+CRL_ROUND_COLUMN = "round"
+CRL_OUTCOME_COLUMN = "outcome"
+CRL_ESCAPE_OUTCOME = "escape-hatch"
+CRL_ESCALATION_ARROW = "->"
+CRL_DEFAULT_THRESHOLD_PERCENT = 10.0
+
+
+def crl_threshold_percent(raw: Any) -> float | None:
+    """The re-evaluation threshold as a percent, or None when it is unusable."""
+    if raw is None or raw == "":
+        return CRL_DEFAULT_THRESHOLD_PERCENT
+    if isinstance(raw, bool):
+        return None
+    if isinstance(raw, (int, float)):
+        value = float(raw)
+    elif isinstance(raw, str):
+        try:
+            value = float(raw.strip())
+        except ValueError:
+            return None
+    else:
+        return None
+    if not math.isfinite(value) or value < 0 or value > 100:
+        return None
+    return value
+
+
+def crl_table_rows(text: str) -> tuple[list[str], list[list[str]]]:
+    """Header cells and data rows of the Consensus Resolution Log table.
+
+    The heading is matched by text at any level, because workflow-file-protocol
+    fixes the heading's words and not its depth. Rows end at the next heading,
+    which is how the sibling Feedback Sweep Log reader bounds its own table.
+    """
+    inside = False
+    header: list[str] = []
+    rows: list[list[str]] = []
+    for raw in text.splitlines():
+        stripped = raw.strip()
+        if stripped.startswith("#"):
+            if inside and header:
+                break
+            inside = stripped.lstrip("#").strip() == CRL_HEADING
+            continue
+        if not inside or not stripped.startswith("|"):
+            continue
+        cells = sweep_table_cells(stripped)
+        if sweep_is_table_rule(cells):
+            continue
+        if not header:
+            header = [cell.casefold().strip("*` ") for cell in cells]
+            continue
+        rows.append(cells)
+    return header, rows
+
+
+def aggregate_crl(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+    """Round-1/Round-2 counts and the escape rate behind the 10% trigger.
+
+    `escape_rate_percent` is the escape-hatch share of all logged items, which
+    is the quantity consensus-protocol.md puts the threshold on. A row escapes
+    when its `Outcome` says so or when its `Round` carries an escalation arrow,
+    so a log that omits the optional `Outcome` column still yields the metric.
+    A `Round` cell with no readable number counts as Round 1, the non-escalating
+    side, so an unreadable cell can never inflate the rate.
+    """
+    workflow_raw = request_path_display(inputs.get("workflow_file") or "", repo_root)
+    if not workflow_raw:
+        return make_result(json_text({"error": "workflow_file is required"}), exit_code=2)
+    threshold = crl_threshold_percent(inputs.get("threshold_percent"))
+    if threshold is None:
+        return make_result(json_text({"error": "invalid threshold_percent"}), exit_code=2)
+    workflow = resolve_input_path(workflow_raw, repo_root)
+    if not trusted_file_exists(workflow, repo_root):
+        return make_result("", f'{{"error":"workflow file not found: {workflow_raw}"}}\n', 1)
+    header, rows = crl_table_rows(trusted_text(workflow, repo_root) or "")
+    round_index = header.index(CRL_ROUND_COLUMN) if CRL_ROUND_COLUMN in header else None
+    outcome_index = header.index(CRL_OUTCOME_COLUMN) if CRL_OUTCOME_COLUMN in header else None
+    total = 0
+    round1 = 0
+    round2 = 0
+    escaped = 0
+    for cells in rows if round_index is not None else []:
+        total += 1
+        round_cell = cells[round_index].replace("\u2192", CRL_ESCALATION_ARROW) if round_index < len(cells) else ""
+        escalated = CRL_ESCALATION_ARROW in round_cell
+        numbers = [int(found) for found in re.findall(r"\d+", round_cell)]
+        if escalated or (numbers and numbers[-1] >= 2):
+            round2 += 1
+        else:
+            round1 += 1
+        outcome = ""
+        if outcome_index is not None and outcome_index < len(cells):
+            outcome = cells[outcome_index].casefold().strip("*` ")
+        if escalated or outcome == CRL_ESCAPE_OUTCOME:
+            escaped += 1
+    rate = round(escaped / total * 100, 2) if total else 0.0
+    payload = {
+        "total_items": total,
+        "round1": round1,
+        "round2": round2,
+        "escape_hatch": escaped,
+        "escape_rate_percent": rate,
+        "threshold_percent": threshold,
+        "exceeds_threshold": rate > threshold,
+    }
+    stderr = "" if total else f"aggregate-crl: no Consensus Resolution Log rows in {workflow_raw}\n"
+    return make_result(json_text(payload), stderr)
 
 
 SPEC_INDEX_SEPARATOR = "\u00b7"
@@ -4799,6 +5137,205 @@ def plan_layers_feature_dir(inputs: dict[str, Any], repo_root: Path) -> dict[str
     stderr = f"plan-layers: ok with {warning_count} warning(s)\n" if warning_count else ""
     return make_result(stdout, stderr)
 
+
+def phase7_keyword_matches(title: str, keyword: str) -> bool:
+    """Match one routing keyword as a whole word, case-insensitively.
+
+    Whole-word matching is what keeps ``test`` off ``latest`` while still
+    matching it inside ``src/parser.test.ts``. Non-alphanumeric characters
+    bound a word, so a keyword still matches inside a bare hyphenated name or
+    a bare path.
+    Names the task writes as inline code are not description words at all, so
+    ``phase7_route`` removes those spans before calling this.
+    """
+    pattern = r"(?<![0-9A-Za-z])" + re.escape(keyword.strip()) + r"(?![0-9A-Za-z])"
+    return re.search(pattern, title, re.IGNORECASE) is not None
+
+
+def phase7_leading_verb(title: str) -> str:
+    """Return the description's opening word, lowercased, or an empty string.
+
+    Markdown emphasis around the verb is punctuation rather than a word, so a
+    bolded ``**Verify**`` still reports ``verify``. Any other opening character
+    means the description does not start with a verb, and the caller reads the
+    empty string as "no verification head".
+    """
+    match = PHASE7_LEADING_VERB.match(title)
+    return match.group(1).lower() if match else ""
+
+
+def phase7_route(title: str, project_agent: str | None, project_keywords: list[str]) -> str:
+    """Route one task description to an agent, first match wins.
+
+    The five branches are the documented Phase 7 routing table: the project
+    implementation agent, the TDD executor for test work, the researcher for
+    investigation, the orchestrator itself for verification commands, and the
+    TDD executor again as the fallback.
+
+    Inline code spans are removed first. A task list names helpers, files, and
+    commands in backticks, and those names are identifiers rather than words
+    about the work: matching them routed ``Port and register
+    `check-prerequisites` behavior`` to ``orchestrator-direct``, which
+    dispatches no agent at all. Only the prose around the spans decides.
+
+    Branches (a) through (c) match their keywords anywhere in the description.
+    The verification branch does not: it reads the leading verb alone, because
+    the documented branch is verification-only work and ``run``, ``check`` and
+    ``build`` are ordinary words everywhere else in a task list. Matching them
+    anywhere sent "Add the required validate-release-note check" and "Register
+    the helper and check the manifest" to ``orchestrator-direct``, which
+    dispatches no agent and injects no TDD protocol. ``build`` at the head is
+    the one word that still reads both ways, and verification wins it.
+    """
+    title = PHASE7_CODE_SPAN.sub(" ", title)
+    if project_agent and any(phase7_keyword_matches(title, word) for word in project_keywords):
+        return project_agent
+    if any(phase7_keyword_matches(title, word) for word in PHASE7_TEST_KEYWORDS):
+        return PHASE7_IMPLEMENT_AGENT
+    if any(phase7_keyword_matches(title, word) for word in PHASE7_RESEARCH_KEYWORDS):
+        return PHASE7_RESEARCH_AGENT
+    if phase7_leading_verb(title) in PHASE7_VERIFY_KEYWORDS:
+        return PHASE7_VERIFY_AGENT
+    return PHASE7_IMPLEMENT_AGENT
+
+
+def phase7_waves(task_ids: list[str], wave_size: int) -> list[list[str]]:
+    return [task_ids[start : start + wave_size] for start in range(0, len(task_ids), wave_size)]
+
+
+def phase7_flush(
+    pending: list[dict[str, Any]],
+    wave_size: int,
+    runs: list[dict[str, Any]],
+) -> None:
+    """Close the open parallel run, degrading a one-task run to a singleton."""
+    if not pending:
+        return
+    if len(pending) < 2:
+        runs.append(phase7_singleton(pending[0]))
+    else:
+        task_ids = [task["id"] for task in pending]
+        runs.append(
+            {
+                "kind": "parallel",
+                "agent": pending[0]["agent"],
+                "group": pending[0]["group"],
+                "tasks": task_ids,
+                "waves": phase7_waves(task_ids, wave_size),
+            }
+        )
+    pending.clear()
+
+
+def phase7_singleton(task: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "kind": "singleton",
+        "agent": task["agent"],
+        "group": task["group"],
+        "tasks": [task["id"]],
+    }
+
+
+def phase7_error(message: str) -> dict[str, Any]:
+    return make_result(
+        json_text({"tool": "partition-phase7-tasks", "contract_version": 1, "error": message}),
+        f"partition-phase7-tasks: input_error: {message}\n",
+        2,
+    )
+
+
+def partition_phase7_tasks(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+    """Partition a tasks.md file into ordered Phase 7 dispatch runs.
+
+    The orchestrator used to run these rules in its own context. They are
+    deterministic, so the runner owns them: consecutive ``[P]`` tasks that route
+    to the same agent become one parallel run, a task without ``[P]`` becomes a
+    singleton, a ``[P]`` task that routes elsewhere closes the open run and
+    opens a new one, a parallel run of one degrades to a singleton, and each
+    parallel run is split into order-preserving waves no larger than
+    ``wave_size``.
+    """
+    raw = inputs.get("tasks_file")
+    if not isinstance(raw, str) or not raw:
+        return phase7_error("tasks_file is required")
+    tasks_rel = request_path_display(raw, repo_root)
+    tasks_file = resolve_input_path(tasks_rel, repo_root)
+    if not trusted_file_exists(tasks_file, repo_root):
+        return phase7_error(f"tasks_file not found or unreadable: {tasks_rel}")
+
+    wave_raw = inputs.get("wave_size", PHASE7_DEFAULT_WAVE_SIZE)
+    if isinstance(wave_raw, bool) or not isinstance(wave_raw, int) or wave_raw < 1:
+        return phase7_error("wave_size must be a positive integer")
+    wave_size = wave_raw
+
+    project_agent = inputs.get("project_agent_name")
+    if project_agent is not None and (not isinstance(project_agent, str) or not project_agent.strip()):
+        return phase7_error("project_agent_name must be a non-empty string")
+    keywords_raw = inputs.get("project_agent_keywords", [])
+    if not isinstance(keywords_raw, list) or not all(
+        isinstance(word, str) and word.strip() for word in keywords_raw
+    ):
+        return phase7_error("project_agent_keywords must be an array of non-empty strings")
+    project_keywords = [word for word in keywords_raw if word.strip()]
+
+    lines = trusted_lines(tasks_file, repo_root)
+    task_sources: dict[str, dict[str, Any]] = {}
+    warnings: list[dict[str, Any]] = []
+    errors: list[dict[str, Any]] = []
+    runs: list[dict[str, Any]] = []
+    pending: list[dict[str, Any]] = []
+    group: str | None = None
+    task_count = 0
+
+    for line_no, line in enumerate(lines, start=1):
+        if line.startswith("## ") and not line.startswith("###"):
+            # A phase group is a dispatch boundary: the orchestrator opens and
+            # closes one task entry per group, so no run may straddle two.
+            phase7_flush(pending, wave_size, runs)
+            group = line[3:].strip()
+            continue
+        task = parse_task_line(
+            line,
+            line_no,
+            tasks_rel,
+            repo_root,
+            "phase7",
+            "partition",
+            task_sources,
+            warnings,
+            errors,
+        )
+        if task is None:
+            continue
+        task_count += 1
+        agent = phase7_route(task["title"], project_agent, project_keywords)
+        record = {"id": task["id"], "agent": agent, "group": group}
+        if task["parallel"] and pending and pending[0]["agent"] == agent:
+            pending.append(record)
+            continue
+        phase7_flush(pending, wave_size, runs)
+        if task["parallel"]:
+            pending.append(record)
+        else:
+            runs.append(phase7_singleton(record))
+    phase7_flush(pending, wave_size, runs)
+
+    payload = {
+        "tool": "partition-phase7-tasks",
+        "contract_version": 1,
+        "tasks_file": tasks_rel,
+        "wave_size": wave_size,
+        "task_count": task_count,
+        "runs": runs,
+        "errors": errors,
+    }
+    if errors:
+        return make_result(
+            json_text(payload),
+            f"partition-phase7-tasks: invalid_tasks: {len(errors)} error(s)\n",
+            1,
+        )
+    return make_result(json_text(payload))
 
 def validate_pr_workflow_contract(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     title = str(inputs.get("title") or "")
@@ -6882,10 +7419,13 @@ PY_HELPERS: dict[str, Callable[[dict[str, Any], Path], dict[str, Any]]] = {
     "sweep-isolation-session": sweep_isolation_session,
     "check-artifact-freshness": check_artifact_freshness,
     "confidence-gate": confidence_gate,
+    "parse-consensus-categories": parse_consensus_categories,
+    "aggregate-crl": aggregate_crl,
     "generate-spec-index-check": generate_spec_index_check,
     "o5-topology": o5_topology,
     "atomicity-route": atomicity_route,
     "plan-layers-feature-dir": plan_layers_feature_dir,
+    "partition-phase7-tasks": partition_phase7_tasks,
     "validate-pr-workflow-contract": validate_pr_workflow_contract,
     "validate-pr-packet-read-only": validate_pr_packet_read_only,
 }

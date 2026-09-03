@@ -285,6 +285,14 @@ class ValidateCodexSkills(unittest.TestCase):
                 "expected both spawn_agent and wait_agent in the Codex autopilot skill",
             )
 
+        with self.subTest(msg="speckit-autopilot: routes consensus through the parse-consensus-categories helper"):
+            # consensus-protocol.md mandates calling the helper and forbids
+            # hand-parsing the routing table, so a table inlined here would tell
+            # the Codex orchestrator the opposite of the reference it links.
+            self.assertIn("parse-consensus-categories", body)
+            self.assertNotIn("per the routing table", body)
+            self.assertNotIn("codebase-analyst only", body)
+
         with self.subTest(msg="speckit-autopilot: maps hosted and local Codex follow-up tools"):
             self.assertTrue(
                 "followup_task" in runtime_doc

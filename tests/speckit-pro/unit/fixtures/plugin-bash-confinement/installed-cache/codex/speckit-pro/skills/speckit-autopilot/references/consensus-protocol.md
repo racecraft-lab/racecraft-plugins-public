@@ -62,8 +62,10 @@ items.
 ## Category-Routed Dispatch (Tier A)
 
 Each item in the executor's "Unresolved for consensus" section
-MUST carry a category prefix. The orchestrator parses the prefix
-and dispatches to only the relevant analyst(s).
+MUST carry a category prefix. The orchestrator calls the
+`parse-consensus-categories` runner helper on the item line and
+dispatches exactly the analysts it returns. The table below states
+what that helper implements; it is not a procedure to run by hand.
 
 ### Category tags
 
@@ -77,16 +79,16 @@ and dispatches to only the relevant analyst(s).
 | *(missing/unparseable prefix)* | Treated as `[ambiguous]` | All 3 (safe default) |
 
 **Multi-category tags** are valid: `[codebase, domain]` dispatches
-both `speckit-pro:codebase-analyst` and `speckit-pro:domain-researcher`. The orchestrator
-parses comma-separated category lists inside the bracket and
-spawns the union.
+both `speckit-pro:codebase-analyst` and `speckit-pro:domain-researcher`.
+`parse-consensus-categories` reads the comma-separated category list
+inside the bracket and returns that union.
 
 ### Two-round protocol with escape hatch
 
 ```text
 ROUND 1 — category-routed
-  Parse the category prefix on the unresolved item.
-  Spawn N analysts (1 ≤ N ≤ 3) per the routing table.
+  Call parse-consensus-categories on the unresolved item line.
+  Spawn exactly the N analysts (1 ≤ N ≤ 3) it returns.
   consensus-synthesizer always runs (becomes "edit-applier" in 1-analyst case).
 
   IF synthesizer flags confidence: high
@@ -144,21 +146,44 @@ than authoritative. The threshold is documented here; the
 metric is tracked via the Consensus Resolution Log
 (see "Logging" below — the `Round` column is the data source).
 
-### Deterministic helpers
+### Deterministic helpers (runner)
 
-Two scripts under `skills/speckit-autopilot/scripts/` are the
-single source of truth for the rules above. The orchestrator
-prose mirrors them; if the prose drifts the Layer 4 tests catch
-it.
+Two runner helpers own the rules above. This prose mirrors them.
+The helpers are what executes.
 
-| Script | Purpose |
+| Helper | Purpose |
 |--------|---------|
-| `parse-consensus-categories "<line>"` | Parses the leading `[<categories>]` prefix, returns JSON listing the analysts to spawn and the dispatch reason. Implements every routing rule in the table above (security override, ambiguous safe default, unknown-tag safe default, multi-tag union, untagged → all 3). |
-| `aggregate-crl <workflow_file>` | Parses the Consensus Resolution Log table, computes total items / Round 1 / Round 2 / escape-hatch counts, returns escape-rate percent and `exceeds_threshold` boolean against `THRESHOLD_PERCENT` (default 10). |
+| `parse-consensus-categories` | Reads one unresolved-item line and returns `tags`, the `analysts` to spawn, and the dispatch `reason`. Implements every routing rule in the table above: security override, ambiguous safe default, unknown-tag safe default, multi-tag union, untagged → all 3. It reads the whole line, not just the bracket, so a [Security Keyword](#security-keywords) anywhere in the item text widens to all 3 even when the executor tagged the item narrowly. |
+| `aggregate-crl` | Reads the Consensus Resolution Log table out of a workflow file and returns `total_items`, `round1`, `round2`, `escape_hatch`, `escape_rate_percent`, the `threshold_percent` it was given (default 10), and `exceeds_threshold`. |
 
-The orchestrator MAY call these scripts directly during dispatch
-or use them out-of-band for the 30-day review. Either way, they
-define what "Tier A routing works" means in code, not prose.
+**Call `parse-consensus-categories` for every unresolved item and
+dispatch exactly the analysts it returns.** Do not route by reading
+the table yourself. The helper is the only place the widening rules
+run: a tag it does not recognize widens to all three analysts rather
+than narrowing to a guess, and so does a security keyword in the item
+text, whatever the executor put in the bracket.
+
+```text
+resolved_python -m speckit_pro_runner < request.json
+
+request.json:
+{
+  "schema_version": "1.0",
+  "request_id": "consensus-route-I1",
+  "helper_id": "parse-consensus-categories",
+  "operation": "parse-consensus-categories",
+  "mode": "read_only",
+  "inputs": { "line": "[codebase, domain] Q3: bcrypt or argon2?" }
+}
+```
+
+`resolved_python` is the Python 3.11+ interpreter resolved by the
+installed runtime contract, not a hardcoded interpreter name.
+
+Call `aggregate-crl` out of band for the 30-day review, passing
+`workflow_file` and an optional `threshold_percent`. Its
+`exceeds_threshold` is the re-evaluation trigger above, computed
+from the log rather than eyeballed.
 
 ## Batched Dispatch
 
@@ -182,7 +207,7 @@ serial (write contention on spec.md / plan.md / tasks.md).
 ```text
 Stage 1 — All routed analysts, ONE assistant message:
   For each unresolved item Ix (x = 1..N):
-    Parse [<categories>] prefix → routed analyst set Sx
+    Call parse-consensus-categories on the item line → analyst set Sx
     For each analyst a in Sx:
       Agent(subagent_type: <a>,
             run_in_background: true,
@@ -305,8 +330,13 @@ auth, token, secret, encryption, PII, credential, permission, password,
 authentication, authorization, session, cookie, jwt, api-key, access-control
 ```
 
+Case does not matter and the plural counts: `Tokens` and
+`credentials` are the same keyword as `token` and `credential`. A
+keyword buried inside a longer word is not a keyword, so `tokenizer`
+and `authored` do not trigger the rule.
+
 When a security keyword is detected:
-1. Still spawn all 3 agents to gather perspectives
+1. Still spawn all 3 agents to gather perspectives. `parse-consensus-categories` already returns all 3 for these keywords, so dispatching exactly what it returns satisfies this step
 2. Present all 3 answers to the human
 3. Let the human decide which answer to use
 4. Resume autopilot after human decision
@@ -320,7 +350,8 @@ main session handles Layer 2 (consensus) for unresolved items.
 > (full fan-out) path that fires after a Round 1 escape, or
 > directly when an item is tagged `[security]`, `[ambiguous]`,
 > or untagged. Round 1 follows the same shape but spawns only
-> the analyst(s) named by the category prefix (1 ≤ N ≤ 3).
+> the analyst(s) `parse-consensus-categories` returns for the
+> item (1 ≤ N ≤ 3).
 > Both rounds invoke `consensus-synthesizer` with whichever
 > analyst responses ran — see "Category-Routed Dispatch" above
 > for the routing rules.
@@ -343,8 +374,8 @@ clarify-executor prepares read-only Clarify Question Set
         see §Batched Dispatch above for the canonical 3-stage flow):
         │
         ├── Stage 1: spawn all routed analysts for all items in ONE
-        │   assistant message (background). Per-item routing per the
-        │   [<categories>] prefix (Category-Routed Dispatch).
+        │   assistant message (background). Per-item routing comes
+        │   from parse-consensus-categories (Category-Routed Dispatch).
         │
         ├── Stage 2: spawn all consensus-synthesizers in ONE message
         │   (one synthesizer per item).
@@ -531,11 +562,33 @@ the emit is not.
 - Completeness: 0.95
 ```
 
-The first line is the canonical signal. `scripts/confidence-gate`
-matches it with `^📊 Confidence: ([01]\.[0-9]{2})$` after
-trimming. The five subsequent lines are the per-criterion
-breakdown; the aggregate on the first line is their arithmetic
-mean, rounded to two decimals.
+The five criterion lines are the canonical signal. The
+`confidence-gate` helper parses them with
+`^- <Label>: ([01]\.[0-9]{2})$` and computes the composite
+itself: the arithmetic mean of the five, rounded to two
+decimals, then 0.30 off for each open `CRITICAL` and 0.10 off
+for each open `HIGH` finding, floored at 0.00. It reads those
+findings from the most recent Analysis Results table in the
+workflow file (`| ID | Severity | Issue | Resolution |`), and a
+row counts as open only while its `Resolution` cell is empty.
+That table is the one place the log records a finding with an
+open-or-closed discriminator. Bare `[CRITICAL]` and `[HIGH]`
+text in the body cannot serve: the log is append-only, so the
+same bracket text appears in findings the run already
+remediated and in prose asserting zero markers. A log whose
+latest table has no unresolved `CRITICAL` or `HIGH` row takes
+no deduction.
+
+The first line is a courtesy for human readers. The helper
+matches it with `^📊 Confidence: ([01]\.[0-9]{2})$` and falls
+back to it only when the five criterion lines are absent. When
+both are present and the stated number disagrees with the
+criterion mean, the helper reports the computed composite and
+names the disagreement in its `reason`. A stated number that
+matches the mean but not the post-deduction composite is not a
+disagreement. The JSON records which
+source it used in `composite_source`, the pre-deduction mean in
+`criteria_mean`, and the deduction in `deductions`.
 
 **The five criteria (each 0.00–1.00):**
 
@@ -544,7 +597,7 @@ mean, rounded to two decimals.
 | Task understanding | Does `spec.md` convey what's being built clearly enough that a competent engineer could begin implementing without further questions? Penalize ambiguity in user stories and acceptance criteria. |
 | Approach clarity | Does `plan.md` lay out a coherent implementation strategy — chosen libraries, data model, contract surface — without unresolved decisions? Penalize "TBD" markers and design holes. |
 | Requirements alignment | Do `tasks.md` items trace back to specific requirements in `spec.md`? Penalize tasks without a clear "this implements requirement X" mapping. |
-| Risk assessment | Are remaining `CRITICAL` or `HIGH` analyze findings still open in the workflow log? Each open `CRITICAL` deducts 0.30; each open `HIGH` deducts 0.10 from this criterion alone (floor 0.00). A clean Analyze pass with no findings scores 1.00. |
+| Risk assessment | How well are the residual risks in this feature understood and bounded: unknowns named, mitigations planned, blast radius stated? Score the judgment only. Do not deduct for open `CRITICAL` or `HIGH` findings here — the helper applies those deductions to the composite, so deducting twice would double-count them. |
 | Completeness | Are all expected artifacts present and non-empty: `spec.md`, `plan.md`, `tasks.md`, `data-model.md` (if planned), `contracts/` (if planned)? Penalize missing or empty artifacts. |
 
 The synthesizer emits this block exactly once per Phase 6 invocation,
@@ -556,12 +609,14 @@ confidence gate triggered remediation and re-invoked Phase 6),
 each pass emits its own block; the gate script reads the most
 recent one.
 
-**Why one aggregate line:** the gate is meant to be cheap and
-deterministic. A single `0.92` is grep-friendly, copy-pastable
-into PR review comments, and version-stable across synthesizer
-prompt iterations. The five-criterion breakdown is for human
-reviewers and remediation prompts — it tells you *which*
-dimension is low so the iteration loop knows what to fix.
+**Why the helper does the arithmetic:** the gate is meant to be
+cheap and deterministic, and an agent's stated aggregate is
+neither. Scoring five dimensions is judgment, which is the
+synthesizer's job; averaging them and subtracting for open
+findings is arithmetic, which code does the same way every run.
+The breakdown still serves human reviewers and remediation
+prompts — it tells you *which* dimension is low so the
+iteration loop knows what to fix.
 
 **Synthesizer prompt addition:** the consensus-synthesizer's
 agent body must include this directive verbatim:
@@ -569,9 +624,10 @@ agent body must include this directive verbatim:
 > At the very end of every Phase 6 Analyze synthesis (whether
 > findings were resolved or the pass was clean), emit a block in
 > the exact format above. Score each criterion against the
-> rubric. The aggregate is the arithmetic mean of the five,
-> rounded to two decimals. Do not omit this block — the
-> downstream Confidence Gate depends on it.
+> rubric. The first line is a courtesy; the confidence-gate
+> helper recomputes the composite from your five criterion
+> lines. Do not omit this block — the downstream Confidence
+> Gate depends on it.
 
 ## Determining Agreement
 

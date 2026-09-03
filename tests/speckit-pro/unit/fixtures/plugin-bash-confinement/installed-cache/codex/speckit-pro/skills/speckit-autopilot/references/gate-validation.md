@@ -275,6 +275,19 @@ clears a composite threshold of 0.90 (or the operator-configured
 threshold). Read by
 `runner helper confidence-gate`.
 
+**The helper computes the composite; the synthesizer does not.**
+It averages the five criterion scores, rounds to two decimals,
+then deducts 0.30 for each open `CRITICAL` and 0.10 for each
+open `HIGH` row in the workflow file's most recent Analysis
+Results table, floored at 0.00. A row is open only while its
+`Resolution` cell is empty, so the count falls as remediation
+records fixes. The JSON reports `composite_source` (`computed`, or
+`stated` when the five criterion lines are missing and only the
+`📊` line is available), `criteria_mean` before deductions, and
+`deductions` with its `critical`, `high`, and `amount`. A stated
+number that disagrees with `criteria_mean` loses, and the
+disagreement is named in `reason`.
+
 **Default mode:** advisory.
 
 **Mode precedence (highest wins):**
@@ -305,11 +318,20 @@ threshold). Read by
 
 3. Iteration loop (both modes, max 3 iterations):
    - If exit 2 AND iteration_count < 3:
-     - Identify the lowest-scoring criterion from the JSON output
-     - Dispatch a focused consensus round on that criterion's
-       artifacts (e.g., "Task understanding" low → re-evaluate
-       spec.md ambiguity; "Risk assessment" low → re-evaluate
-       open CRITICAL/HIGH findings)
+     - If deductions_applied is true, remediate the
+       unresolved CRITICAL and HIGH rows in the workflow
+       file's Analysis Results table first, and record each
+       fix in that row's Resolution cell. Filling the cell is
+       what clears the deduction, so a fix left unrecorded
+       fails the gate again on the next iteration. The
+       criterion breakdown will not point at those rows: the
+       synthesizer no longer deducts for findings, so they
+       show up in deductions, not in a low criterion.
+     - Otherwise identify the lowest-scoring criterion from
+       the JSON output and dispatch a focused consensus round
+       on that criterion's artifacts (e.g., "Task
+       understanding" low → re-evaluate spec.md ambiguity;
+       "Approach clarity" low → re-evaluate plan.md TBDs)
      - Re-invoke the synthesizer's pre-Implement confidence
        emit (consensus-synthesizer agent, single fan-out)
      - Re-run confidence-gate

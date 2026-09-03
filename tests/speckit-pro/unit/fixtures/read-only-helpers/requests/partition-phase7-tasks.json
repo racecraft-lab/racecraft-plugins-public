@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-partition-phase7-tasks",
+  "helper_id": "partition-phase7-tasks",
+  "operation": "partition-phase7-tasks",
+  "mode": "read_only",
+  "inputs": {
+    "tasks_file": "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature/tasks.md",
+    "wave_size": 4
+  }
+}
