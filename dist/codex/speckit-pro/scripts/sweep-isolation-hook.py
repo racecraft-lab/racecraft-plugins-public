@@ -165,11 +165,21 @@ def _verify_attestation(repo_root: Path) -> None:
         raise ValueError("hook attestation is stale or mismatched")
 
 
-def _require_attestation(repo_root: Path) -> None:
+def _reason_checked(reason: HookReason, fn, *args: Any) -> Any:
+    """Run ``fn(*args)``, turning its checked errors into one ``HookRefusal``.
+
+    Every call site that needs a specific reason class instead of the generic
+    ``UNCLASSIFIED`` fallback goes through here, so the checked-exception tuple
+    stays in one place.
+    """
     try:
-        _verify_attestation(repo_root)
+        return fn(*args)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
-        raise HookRefusal(HookReason.ATTESTATION) from exc
+        raise HookRefusal(reason) from exc
+
+
+def _require_attestation(repo_root: Path) -> None:
+    _reason_checked(HookReason.ATTESTATION, _verify_attestation, repo_root)
 
 
 def _agent_type(payload: dict[str, Any]) -> str | None:
@@ -200,17 +210,11 @@ def main(argv: list[str]) -> int:
         print("feedback sweep hooks require Python 3.11 or newer", file=sys.stderr)
         return 2
     try:
-        try:
-            payload = _payload()
-            repo_root = _repo_root(payload)
-        except (OSError, ValueError, json.JSONDecodeError) as exc:
-            raise HookRefusal(HookReason.HOOK_INPUT) from exc
+        payload = _reason_checked(HookReason.HOOK_INPUT, _payload)
+        repo_root = _reason_checked(HookReason.HOOK_INPUT, _repo_root, payload)
         mode = argv[0]
         if mode == "attest":
-            try:
-                _write_attestation(repo_root)
-            except (OSError, ValueError, json.JSONDecodeError) as exc:
-                raise HookRefusal(HookReason.ATTESTATION) from exc
+            _reason_checked(HookReason.ATTESTATION, _write_attestation, repo_root)
             return 0
         role = _agent_type(payload)
         if mode == "authorize-broker":

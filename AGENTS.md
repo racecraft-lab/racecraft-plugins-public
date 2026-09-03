@@ -108,9 +108,10 @@ and need their own step when their inputs changed:
   committed backlink that passes locally and fails on a clean checkout.
 - The Layer 6 Codex qualification corpus in
   `tests/speckit-pro/layer6-efficiency/fixtures-codex/`, which binds a sha256
-  chain over agent source bytes and has no regeneration script. Editing any
-  agent definition restales it; the failure reads
-  `source digest does not match role source bytes`.
+  chain over agent source bytes. Editing any agent definition restales it; the
+  failure reads `source digest does not match role source bytes`. Regenerate
+  with `python3 tests/speckit-pro/layer6-efficiency/rebaseline-corpus.py`
+  (`--check` to verify without writing).
 
 ## Source Of Truth
 
