@@ -59,9 +59,10 @@ CURRENT_ROSTER_PATH = (
     / "claude-agent-roster-rebaseline-v2.json"
 )
 
-# FR-011: the eleven required-core roles that currently have shipped Claude agent
-# definitions. Stated as a literal so a unilateral widening of either the corpus
-# or the shipped agent set shows up as a diff against this tuple.
+# FR-011: the eleven required-core roles the frozen CAR-003 corpus binds. Stated
+# as a literal so a unilateral widening of either the corpus or the shipped agent
+# set shows up as a diff against this tuple. The corpus is immutable, so a role
+# retired from the live roster stays here and is named in RETIRED_ROLES.
 REQUIRED_CORE_ROLES = (
     "analyze-executor",
     "checklist-executor",
@@ -80,7 +81,19 @@ REQUIRED_CORE_ROLES = (
 # every contract field, runs never, emits no score bundle, and is never attrition.
 CONTRACT_ONLY_ROLE = "autopilot-fast-helper"
 
+# Required-core roles the frozen corpus binds that no longer ship an agent
+# definition. `gate-validator` retired once the autopilot orchestrator began
+# calling the `validate-gate` runner helper directly.
+RETIRED_ROLES = ("gate-validator",)
+SHIPPED_REQUIRED_CORE_ROLES = tuple(
+    role for role in REQUIRED_CORE_ROLES if role not in RETIRED_ROLES
+)
+
 GOVERNED_ROLE_IDS = tuple(sorted(REQUIRED_CORE_ROLES + (CONTRACT_ONLY_ROLE,)))
+
+# The published schema tracks the live governed set, so it drops a retired role
+# while the frozen corpus keeps binding it.
+LIVE_GOVERNED_ROLE_IDS = tuple(sorted(SHIPPED_REQUIRED_CORE_ROLES + (CONTRACT_ONLY_ROLE,)))
 
 CURRENT_SHIPPED_ROLES = (
     "analyze-executor",
@@ -90,7 +103,6 @@ CURRENT_SHIPPED_ROLES = (
     "codebase-analyst",
     "consensus-synthesizer",
     "domain-researcher",
-    "gate-validator",
     "implement-executor",
     "phase-executor",
     "spec-context-analyst",
@@ -145,17 +157,25 @@ class CorpusCompositionTests(_RoleCorpusFixture, unittest.TestCase):
         self.assertEqual(len(self.corpus["roles"]), 12)
         self.assertEqual(tuple(sorted(self.roles)), GOVERNED_ROLE_IDS)
 
-    def test_the_module_declares_the_eleven_shipped_roles_plus_the_contract_only_one(
+    def test_the_module_declares_the_eleven_governed_roles_plus_the_contract_only_one(
         self,
     ) -> None:
         self.assertEqual(tuple(sorted(self.module.REQUIRED_CORE_ROLES)), tuple(sorted(REQUIRED_CORE_ROLES)))
         self.assertEqual(self.module.CONTRACT_ONLY_ROLES, (CONTRACT_ONLY_ROLE,))
         self.assertEqual(self.module.GOVERNED_ROLE_IDS, GOVERNED_ROLE_IDS)
+        self.assertEqual(self.module.RETIRED_ROLES, RETIRED_ROLES)
+        self.assertEqual(self.module.SHIPPED_REQUIRED_CORE_ROLES, SHIPPED_REQUIRED_CORE_ROLES)
 
-    def test_each_required_core_role_names_a_shipped_agent_definition(self) -> None:
-        for role_id in REQUIRED_CORE_ROLES:
+    def test_each_unretired_required_core_role_names_a_shipped_agent_definition(self) -> None:
+        for role_id in SHIPPED_REQUIRED_CORE_ROLES:
             with self.subTest(role=role_id):
                 self.assertTrue((AGENT_DIR / f"{role_id}.md").is_file())
+
+    def test_a_retired_required_core_role_no_longer_ships_an_agent_definition(self) -> None:
+        for role_id in RETIRED_ROLES:
+            with self.subTest(role=role_id):
+                self.assertIn(role_id, REQUIRED_CORE_ROLES)
+                self.assertFalse((AGENT_DIR / f"{role_id}.md").exists())
 
     def test_the_contract_only_role_has_no_shipped_agent_definition(self) -> None:
         self.assertFalse((AGENT_DIR / f"{CONTRACT_ONLY_ROLE}.md").exists())
@@ -217,15 +237,18 @@ class CorpusCompositionTests(_RoleCorpusFixture, unittest.TestCase):
         self.assertNotIn(CONTRACT_ONLY_ROLE, runnable)
         self.assertEqual(self.module.runnable_roles(self.corpus, ()), ())
 
-    def test_the_published_role_enumeration_is_closed_to_the_governed_set(self) -> None:
+    def test_the_published_role_enumeration_is_closed_to_the_live_governed_set(self) -> None:
         schema = load_json(CORPUS_SCHEMA_PATH)
         role_schema = schema["$defs"]["role"]  # type: ignore[index]
         self.assertEqual(
-            tuple(sorted(role_schema["properties"]["role_id"]["enum"])), GOVERNED_ROLE_IDS
+            tuple(sorted(role_schema["properties"]["role_id"]["enum"])), LIVE_GOVERNED_ROLE_IDS
         )
         roles_property = schema["properties"]["roles"]  # type: ignore[index]
-        self.assertEqual(roles_property["minItems"], 12)
-        self.assertEqual(roles_property["maxItems"], 12)
+        self.assertEqual(roles_property["minItems"], len(LIVE_GOVERNED_ROLE_IDS))
+        self.assertEqual(roles_property["maxItems"], len(LIVE_GOVERNED_ROLE_IDS))
+        for role_id in RETIRED_ROLES:
+            with self.subTest(role=role_id):
+                self.assertNotIn(role_id, role_schema["properties"]["role_id"]["enum"])
 
     def test_a_thirteenth_role_is_refused(self) -> None:
         oversized = json.loads(json.dumps(self.corpus))
@@ -294,7 +317,7 @@ class FixtureDigestTests(_RoleCorpusFixture, unittest.TestCase):
         self.assertTrue(self.module.verify_corpus_digest(self.corpus))
 
     def test_a_fixture_digest_mismatch_fails_the_fixture_before_candidate_scoring(self) -> None:
-        tampered = json.loads(json.dumps(self.roles["gate-validator"]))
+        tampered = json.loads(json.dumps(self.roles["consensus-synthesizer"]))
         tampered["mutation_contract"] = "unrestricted_write"
         verdict = self.module.verify_fixture(tampered)
         self.assertFalse(verdict.ok)
@@ -337,7 +360,7 @@ class CurrentRosterRebaselineTests(unittest.TestCase):
         self.current = load_json(CURRENT_ROSTER_PATH)
         self.roles = {role["role_id"]: role for role in self.current["shipped_roles"]}
 
-    def test_successor_roster_covers_all_fourteen_shipped_agents_plus_helper(self) -> None:
+    def test_successor_roster_covers_all_thirteen_shipped_agents_plus_helper(self) -> None:
         self.assertEqual(tuple(sorted(self.roles)), CURRENT_SHIPPED_ROLES)
         self.assertEqual(
             self.current["optional_contract_roles"],

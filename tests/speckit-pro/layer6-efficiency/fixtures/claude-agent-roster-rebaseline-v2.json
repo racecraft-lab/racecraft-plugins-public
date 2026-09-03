@@ -58,13 +58,6 @@
       "memory_scope": null
     },
     {
-      "role_id": "gate-validator",
-      "source_digest": "sha256:03381f470831d16ab90fbf518ec3e9efda6aa1cf0945ff27d49145cacb8e6a8c",
-      "cohort": "orchestration-support",
-      "trust_boundary": "read_only_denylist",
-      "memory_scope": null
-    },
-    {
       "role_id": "implement-executor",
       "source_digest": "sha256:97145cadabdfb245fef5e53b7efe46b9934f4e4acc0054bc33d04f4a49ee2582",
       "cohort": "quality-critical",
@@ -118,5 +111,5 @@
     "native_fallback": "operator_override_only",
     "unqualified_delivered_model": "ineligible"
   },
-  "catalog_digest": "sha256:bae19773dc570d26dfde7344b5eb5083bbe92ac8b960445ee988d39ac1791b50"
+  "catalog_digest": "sha256:266fd90c51e41561909e44551cd70a2584e82854b5497f7859851191f8a509c5"
 }

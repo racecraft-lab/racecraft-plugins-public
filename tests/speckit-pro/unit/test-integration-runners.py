@@ -68,7 +68,7 @@ class Layer7RunnerTests(unittest.TestCase):
         checks.append(("all Layer-7 Python runners are executable", lambda: self.assertTrue(all(os.access(path, os.X_OK) for path in RUNNERS))))
 
         for runner, summary in [
-            (RUNNERS[0], "run-dispatch-fixtures: 184/184 passed"),
+            (RUNNERS[0], "run-dispatch-fixtures: 176/176 passed"),
             (RUNNERS[1], "run-return-format-fixtures: 17/17 passed"),
             (RUNNERS[2], "run-e2e-fixtures: 23/23 passed"),
             (RUNNERS[3], "run-grounding-fixtures: 33/33 passed"),

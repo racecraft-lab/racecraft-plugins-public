@@ -2414,7 +2414,7 @@ class RouteResolutionFixtureTests(unittest.TestCase):
                 "candidate_route_id", "CAR-001-CR-99-99"
             ),
             "mismatched agent_contract_id": lambda r: r.__setitem__(
-                "agent_contract_id", "car.gate-validator.v1"
+                "agent_contract_id", "car.consensus-synthesizer.v1"
             ),
             "stale snapshot cross-ref": lambda r: r.__setitem__(
                 "runtime_capability_snapshot_id", "CAR-002-RCS-2020-01-01-V9"
@@ -2990,7 +2990,7 @@ class CommittedPayloadIntegrityTests(unittest.TestCase):
                 "candidate_route_id", "CAR-001-CR-99-99"
             ),
             "mismatched agent_contract_id": lambda r: r["route_resolution"].__setitem__(
-                "agent_contract_id", "car.gate-validator.v1"
+                "agent_contract_id", "car.consensus-synthesizer.v1"
             ),
             "stale snapshot cross-ref": lambda r: r["route_resolution"].__setitem__(
                 "runtime_capability_snapshot_id", "CAR-002-RCS-2020-01-01-V9"

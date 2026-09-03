@@ -247,8 +247,8 @@ def print_layer_commands(layer: dict, root: Path) -> None:
         argument_hint = " <skill>" if layer["id"] in {"2", "3"} else ""
         print(f"    python3 {script['path']}{argument_hint}")
         if layer["id"] == "6":
-            print(f"    python3 {script['path']} --agent gate-validator")
-            print(f"    python3 {script['path']} --agent gate-validator --sweep")
+            print(f"    python3 {script['path']} --agent consensus-synthesizer")
+            print(f"    python3 {script['path']} --agent consensus-synthesizer --sweep")
 
 
 def run_toolchain_preflight(root: Path, config: Config, manifest: dict) -> bool:

@@ -12,10 +12,10 @@
     "corpus_digest": {"$ref": "#/$defs/digest"},
     "partition_binding": {"$ref": "#/$defs/binding"},
     "roles": {
-      "description": "FR-011: exactly twelve role contracts. Eleven required-core roles with shipped agent definitions plus autopilot-fast-helper, which stays contract-only until CAR-011 authors it.",
+      "description": "FR-011: exactly eleven role contracts. Ten required-core roles with shipped agent definitions plus autopilot-fast-helper, which stays contract-only until CAR-011 authors it.",
       "type": "array",
-      "minItems": 12,
-      "maxItems": 12,
+      "minItems": 11,
+      "maxItems": 11,
       "uniqueItems": true,
       "items": {"$ref": "#/$defs/role"}
     }
@@ -57,7 +57,6 @@
             "codebase-analyst",
             "consensus-synthesizer",
             "domain-researcher",
-            "gate-validator",
             "implement-executor",
             "phase-executor",
             "spec-context-analyst",

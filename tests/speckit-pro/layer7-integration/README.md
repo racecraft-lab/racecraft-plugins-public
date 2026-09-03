@@ -51,7 +51,7 @@ exercise:
 | 10 | `[codebase, domain, spec]` | all 3 (explicit fan-out) |
 | 11 | Round 1 escape-hatch | Round 2 fans out remaining analysts |
 
-### Phase agents (Class 1, fixtures 12–16)
+### Phase agents (Class 1, fixtures 12–15)
 
 | Fixture | Phase | Expected agent |
 |---|---|---|
@@ -59,7 +59,6 @@ exercise:
 | 13 | Implement (per task) | implement-executor |
 | 14 | Analyze | analyze-executor |
 | 15 | Checklist (per domain) | checklist-executor |
-| 16 | Gate validation | gate-validator |
 
 ### Failure paths (Class 1, fixture 17)
 
@@ -90,7 +89,7 @@ of $10.00. Fixture 01 typically uses ~$1; fixture 02 typically uses
 
 Every named subagent appears in at least one fixture:
 
-- ✅ `phase-executor` — fixtures 12, 16 (gate); E2E 01, 02
+- ✅ `phase-executor` — fixture 12; E2E 01, 02
 - ✅ `clarify-executor` — fixture 03 (redelegation); E2E 01, 02
 - ✅ `checklist-executor` — fixture 15; Class 2 fixture 03
 - ✅ `analyze-executor` — fixture 14; E2E 02
@@ -99,7 +98,6 @@ Every named subagent appears in at least one fixture:
 - ✅ `domain-researcher` — fixtures 02, 03, 04, 06, 07, 09, 10, 11
 - ✅ `spec-context-analyst` — fixtures 05, 06, 07, 08, 09, 10, 11
 - ✅ `consensus-synthesizer` — Class 2 fixtures 01, 02
-- ✅ `gate-validator` — fixture 16
 
 ### What is asserted negative on every fixture
 

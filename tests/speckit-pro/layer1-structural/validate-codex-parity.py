@@ -46,7 +46,6 @@ SKILLS_DIR = PLUGIN_ROOT / "skills"
 CODEX_SKILLS_DIR = PLUGIN_ROOT / "codex-skills"
 
 CC_ONLY_AGENTS = frozenset({
-    "gate-validator",
     "consensus-synthesizer",
     "sweep-classifier",
     "sweep-analyst",

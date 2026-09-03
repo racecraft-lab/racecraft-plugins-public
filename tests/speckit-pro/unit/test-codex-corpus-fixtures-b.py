@@ -25,7 +25,6 @@ ROLE_ORDER = (
     "codebase-analyst",
     "consensus-synthesizer",
     "domain-researcher",
-    "gate-validator",
     "implement-executor",
     "phase-executor",
     "spec-context-analyst",
@@ -40,13 +39,12 @@ GROUP_B_ROLES = (
 )
 REQUIRED_CORE_ROLES = tuple(role for role in ROLE_ORDER if role != "autopilot-fast-helper")
 OPTIONAL_HELPER_ROLES = ("autopilot-fast-helper",)
-NON_EXECUTABLE_ROLES = ("consensus-synthesizer", "gate-validator")
+NON_EXECUTABLE_ROLES = ("consensus-synthesizer",)
 READ_ONLY_ROLES = (
     "autopilot-fast-helper",
     "codebase-analyst",
     "consensus-synthesizer",
     "domain-researcher",
-    "gate-validator",
     "spec-context-analyst",
 )
 PARTITION_DIGEST = "sha256:345cf184dd42fb4644f88c141053eb821c484500ac4e15ac94d59bd7673367d6"

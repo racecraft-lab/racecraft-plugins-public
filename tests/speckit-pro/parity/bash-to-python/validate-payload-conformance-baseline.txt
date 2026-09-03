@@ -89,122 +89,115 @@
 089 [claude-agent/domain-researcher] does NOT declare plugin-unsupported 'permissionMode' (plugins-reference)
 090 [claude-agent/domain-researcher] does NOT declare plugin-unsupported 'hooks' (plugins-reference)
 091 [claude-agent/domain-researcher] does NOT declare plugin-unsupported 'mcpServers' (plugins-reference)
-092 [claude-agent/gate-validator] opens with a '---' frontmatter fence
-093 [claude-agent/gate-validator] frontmatter has a non-empty 'name' (required)
-094 [claude-agent/gate-validator] frontmatter 'name' is kebab-case ('gate-validator')
-095 [claude-agent/gate-validator] frontmatter has a non-empty 'description' (required)
-096 [claude-agent/gate-validator] does NOT declare plugin-unsupported 'permissionMode' (plugins-reference)
-097 [claude-agent/gate-validator] does NOT declare plugin-unsupported 'hooks' (plugins-reference)
-098 [claude-agent/gate-validator] does NOT declare plugin-unsupported 'mcpServers' (plugins-reference)
-099 [claude-agent/implement-executor] opens with a '---' frontmatter fence
-100 [claude-agent/implement-executor] frontmatter has a non-empty 'name' (required)
-101 [claude-agent/implement-executor] frontmatter 'name' is kebab-case ('implement-executor')
-102 [claude-agent/implement-executor] frontmatter has a non-empty 'description' (required)
-103 [claude-agent/implement-executor] does NOT declare plugin-unsupported 'permissionMode' (plugins-reference)
-104 [claude-agent/implement-executor] does NOT declare plugin-unsupported 'hooks' (plugins-reference)
-105 [claude-agent/implement-executor] does NOT declare plugin-unsupported 'mcpServers' (plugins-reference)
-106 [claude-agent/phase-executor] opens with a '---' frontmatter fence
-107 [claude-agent/phase-executor] frontmatter has a non-empty 'name' (required)
-108 [claude-agent/phase-executor] frontmatter 'name' is kebab-case ('phase-executor')
-109 [claude-agent/phase-executor] frontmatter has a non-empty 'description' (required)
-110 [claude-agent/phase-executor] does NOT declare plugin-unsupported 'permissionMode' (plugins-reference)
-111 [claude-agent/phase-executor] does NOT declare plugin-unsupported 'hooks' (plugins-reference)
-112 [claude-agent/phase-executor] does NOT declare plugin-unsupported 'mcpServers' (plugins-reference)
-113 [claude-agent/spec-context-analyst] opens with a '---' frontmatter fence
-114 [claude-agent/spec-context-analyst] frontmatter has a non-empty 'name' (required)
-115 [claude-agent/spec-context-analyst] frontmatter 'name' is kebab-case ('spec-context-analyst')
-116 [claude-agent/spec-context-analyst] frontmatter has a non-empty 'description' (required)
-117 [claude-agent/spec-context-analyst] does NOT declare plugin-unsupported 'permissionMode' (plugins-reference)
-118 [claude-agent/spec-context-analyst] does NOT declare plugin-unsupported 'hooks' (plugins-reference)
-119 [claude-agent/spec-context-analyst] does NOT declare plugin-unsupported 'mcpServers' (plugins-reference)
-120 [claude-agent/uat-runbook-author] opens with a '---' frontmatter fence
-121 [claude-agent/uat-runbook-author] frontmatter has a non-empty 'name' (required)
-122 [claude-agent/uat-runbook-author] frontmatter 'name' is kebab-case ('uat-runbook-author')
-123 [claude-agent/uat-runbook-author] frontmatter has a non-empty 'description' (required)
-124 [claude-agent/uat-runbook-author] does NOT declare plugin-unsupported 'permissionMode' (plugins-reference)
-125 [claude-agent/uat-runbook-author] does NOT declare plugin-unsupported 'hooks' (plugins-reference)
-126 [claude-agent/uat-runbook-author] does NOT declare plugin-unsupported 'mcpServers' (plugins-reference)
-127 [claude] hooks file exists (dist/claude/speckit-pro/hooks/hooks.json)
-128 [claude] hooks file is valid JSON
-129 [claude] hooks file has a top-level 'hooks' object
-130 [codex] built payload root exists (dist/codex/speckit-pro)
-131 [codex] manifest exists at .codex-plugin/plugin.json
-132 [codex] manifest is valid JSON
-133 [codex] manifest 'name' is present, a string, and kebab-case
-134 [codex] manifest 'version' is present and non-empty (semver)
-135 [codex] manifest 'description' is present and non-empty
-136 [codex] .codex-plugin/ contains ONLY plugin.json
-137 [codex] manifest 'skills' pointer resolves in payload ('./skills/')
-138 [codex] manifest 'hooks' pointer resolves in payload ('./codex-hooks.json')
-139 [codex] skills/ directory exists at the plugin root
-140 [codex] at least one skills/*/SKILL.md is present
-141 [codex-skill/grill-me] opens with a '---' frontmatter fence
-142 [codex-skill/grill-me] frontmatter has a non-empty 'name' (required)
-143 [codex-skill/grill-me] frontmatter 'name' is kebab-case ('grill-me')
-144 [codex-skill/grill-me] frontmatter has a non-empty 'description' (required)
-145 [codex-skill/install] opens with a '---' frontmatter fence
-146 [codex-skill/install] frontmatter has a non-empty 'name' (required)
-147 [codex-skill/install] frontmatter 'name' is kebab-case ('install')
-148 [codex-skill/install] frontmatter has a non-empty 'description' (required)
-149 [codex-skill/speckit-archive-cleanup] opens with a '---' frontmatter fence
-150 [codex-skill/speckit-archive-cleanup] frontmatter has a non-empty 'name' (required)
-151 [codex-skill/speckit-archive-cleanup] frontmatter 'name' is kebab-case ('speckit-archive-cleanup')
-152 [codex-skill/speckit-archive-cleanup] frontmatter has a non-empty 'description' (required)
-153 [codex-skill/speckit-autopilot] opens with a '---' frontmatter fence
-154 [codex-skill/speckit-autopilot] frontmatter has a non-empty 'name' (required)
-155 [codex-skill/speckit-autopilot] frontmatter 'name' is kebab-case ('speckit-autopilot')
-156 [codex-skill/speckit-autopilot] frontmatter has a non-empty 'description' (required)
-157 [codex-skill/speckit-coach] opens with a '---' frontmatter fence
-158 [codex-skill/speckit-coach] frontmatter has a non-empty 'name' (required)
-159 [codex-skill/speckit-coach] frontmatter 'name' is kebab-case ('speckit-coach')
-160 [codex-skill/speckit-coach] frontmatter has a non-empty 'description' (required)
-161 [codex-skill/speckit-install] opens with a '---' frontmatter fence
-162 [codex-skill/speckit-install] frontmatter has a non-empty 'name' (required)
-163 [codex-skill/speckit-install] frontmatter 'name' is kebab-case ('speckit-install')
-164 [codex-skill/speckit-install] frontmatter has a non-empty 'description' (required)
-165 [codex-skill/speckit-prd] opens with a '---' frontmatter fence
-166 [codex-skill/speckit-prd] frontmatter has a non-empty 'name' (required)
-167 [codex-skill/speckit-prd] frontmatter 'name' is kebab-case ('speckit-prd')
-168 [codex-skill/speckit-prd] frontmatter has a non-empty 'description' (required)
-169 [codex-skill/speckit-resolve-pr] opens with a '---' frontmatter fence
-170 [codex-skill/speckit-resolve-pr] frontmatter has a non-empty 'name' (required)
-171 [codex-skill/speckit-resolve-pr] frontmatter 'name' is kebab-case ('speckit-resolve-pr')
-172 [codex-skill/speckit-resolve-pr] frontmatter has a non-empty 'description' (required)
-173 [codex-skill/speckit-scaffold-spec] opens with a '---' frontmatter fence
-174 [codex-skill/speckit-scaffold-spec] frontmatter has a non-empty 'name' (required)
-175 [codex-skill/speckit-scaffold-spec] frontmatter 'name' is kebab-case ('speckit-scaffold-spec')
-176 [codex-skill/speckit-scaffold-spec] frontmatter has a non-empty 'description' (required)
-177 [codex-skill/speckit-status] opens with a '---' frontmatter fence
-178 [codex-skill/speckit-status] frontmatter has a non-empty 'name' (required)
-179 [codex-skill/speckit-status] frontmatter 'name' is kebab-case ('speckit-status')
-180 [codex-skill/speckit-status] frontmatter has a non-empty 'description' (required)
-181 [codex-skill/speckit-upgrade] opens with a '---' frontmatter fence
-182 [codex-skill/speckit-upgrade] frontmatter has a non-empty 'name' (required)
-183 [codex-skill/speckit-upgrade] frontmatter 'name' is kebab-case ('speckit-upgrade')
-184 [codex-skill/speckit-upgrade] frontmatter has a non-empty 'description' (required)
-185 [codex] codex-agents/ directory exists at the plugin root
-186 [codex] at least one codex-agents/*.toml is present
-187 [codex-agent/analyze-executor] built agent .toml has a 'name =' key
-188 [codex-agent/analyze-executor] built agent .toml has a 'description =' key
-189 [codex-agent/autopilot-fast-helper] built agent .toml has a 'name =' key
-190 [codex-agent/autopilot-fast-helper] built agent .toml has a 'description =' key
-191 [codex-agent/checklist-executor] built agent .toml has a 'name =' key
-192 [codex-agent/checklist-executor] built agent .toml has a 'description =' key
-193 [codex-agent/clarify-executor] built agent .toml has a 'name =' key
-194 [codex-agent/clarify-executor] built agent .toml has a 'description =' key
-195 [codex-agent/codebase-analyst] built agent .toml has a 'name =' key
-196 [codex-agent/codebase-analyst] built agent .toml has a 'description =' key
-197 [codex-agent/domain-researcher] built agent .toml has a 'name =' key
-198 [codex-agent/domain-researcher] built agent .toml has a 'description =' key
-199 [codex-agent/implement-executor] built agent .toml has a 'name =' key
-200 [codex-agent/implement-executor] built agent .toml has a 'description =' key
-201 [codex-agent/phase-executor] built agent .toml has a 'name =' key
-202 [codex-agent/phase-executor] built agent .toml has a 'description =' key
-203 [codex-agent/spec-context-analyst] built agent .toml has a 'name =' key
-204 [codex-agent/spec-context-analyst] built agent .toml has a 'description =' key
-205 [codex-agent/uat-runbook-author] built agent .toml has a 'name =' key
-206 [codex-agent/uat-runbook-author] built agent .toml has a 'description =' key
-207 [codex] hooks file exists (dist/codex/speckit-pro/codex-hooks.json)
-208 [codex] hooks file is valid JSON
-209 [codex] hooks file has a top-level 'hooks' object
-TOTAL: 209
+092 [claude-agent/implement-executor] opens with a '---' frontmatter fence
+093 [claude-agent/implement-executor] frontmatter has a non-empty 'name' (required)
+094 [claude-agent/implement-executor] frontmatter 'name' is kebab-case ('implement-executor')
+095 [claude-agent/implement-executor] frontmatter has a non-empty 'description' (required)
+096 [claude-agent/implement-executor] does NOT declare plugin-unsupported 'permissionMode' (plugins-reference)
+097 [claude-agent/implement-executor] does NOT declare plugin-unsupported 'hooks' (plugins-reference)
+098 [claude-agent/implement-executor] does NOT declare plugin-unsupported 'mcpServers' (plugins-reference)
+099 [claude-agent/phase-executor] opens with a '---' frontmatter fence
+100 [claude-agent/phase-executor] frontmatter has a non-empty 'name' (required)
+101 [claude-agent/phase-executor] frontmatter 'name' is kebab-case ('phase-executor')
+102 [claude-agent/phase-executor] frontmatter has a non-empty 'description' (required)
+103 [claude-agent/phase-executor] does NOT declare plugin-unsupported 'permissionMode' (plugins-reference)
+104 [claude-agent/phase-executor] does NOT declare plugin-unsupported 'hooks' (plugins-reference)
+105 [claude-agent/phase-executor] does NOT declare plugin-unsupported 'mcpServers' (plugins-reference)
+106 [claude-agent/spec-context-analyst] opens with a '---' frontmatter fence
+107 [claude-agent/spec-context-analyst] frontmatter has a non-empty 'name' (required)
+108 [claude-agent/spec-context-analyst] frontmatter 'name' is kebab-case ('spec-context-analyst')
+109 [claude-agent/spec-context-analyst] frontmatter has a non-empty 'description' (required)
+110 [claude-agent/spec-context-analyst] does NOT declare plugin-unsupported 'permissionMode' (plugins-reference)
+111 [claude-agent/spec-context-analyst] does NOT declare plugin-unsupported 'hooks' (plugins-reference)
+112 [claude-agent/spec-context-analyst] does NOT declare plugin-unsupported 'mcpServers' (plugins-reference)
+113 [claude-agent/uat-runbook-author] opens with a '---' frontmatter fence
+114 [claude-agent/uat-runbook-author] frontmatter has a non-empty 'name' (required)
+115 [claude-agent/uat-runbook-author] frontmatter 'name' is kebab-case ('uat-runbook-author')
+116 [claude-agent/uat-runbook-author] frontmatter has a non-empty 'description' (required)
+117 [claude-agent/uat-runbook-author] does NOT declare plugin-unsupported 'permissionMode' (plugins-reference)
+118 [claude-agent/uat-runbook-author] does NOT declare plugin-unsupported 'hooks' (plugins-reference)
+119 [claude-agent/uat-runbook-author] does NOT declare plugin-unsupported 'mcpServers' (plugins-reference)
+120 [claude] hooks file exists (dist/claude/speckit-pro/hooks/hooks.json)
+121 [claude] hooks file is valid JSON
+122 [claude] hooks file has a top-level 'hooks' object
+123 [codex] built payload root exists (dist/codex/speckit-pro)
+124 [codex] manifest exists at .codex-plugin/plugin.json
+125 [codex] manifest is valid JSON
+126 [codex] manifest 'name' is present, a string, and kebab-case
+127 [codex] manifest 'version' is present and non-empty (semver)
+128 [codex] manifest 'description' is present and non-empty
+129 [codex] .codex-plugin/ contains ONLY plugin.json
+130 [codex] manifest 'skills' pointer resolves in payload ('./skills/')
+131 [codex] manifest 'hooks' pointer resolves in payload ('./codex-hooks.json')
+132 [codex] skills/ directory exists at the plugin root
+133 [codex] at least one skills/*/SKILL.md is present
+134 [codex-skill/grill-me] opens with a '---' frontmatter fence
+135 [codex-skill/grill-me] frontmatter has a non-empty 'name' (required)
+136 [codex-skill/grill-me] frontmatter 'name' is kebab-case ('grill-me')
+137 [codex-skill/grill-me] frontmatter has a non-empty 'description' (required)
+138 [codex-skill/install] opens with a '---' frontmatter fence
+139 [codex-skill/install] frontmatter has a non-empty 'name' (required)
+140 [codex-skill/install] frontmatter 'name' is kebab-case ('install')
+141 [codex-skill/install] frontmatter has a non-empty 'description' (required)
+142 [codex-skill/speckit-archive-cleanup] opens with a '---' frontmatter fence
+143 [codex-skill/speckit-archive-cleanup] frontmatter has a non-empty 'name' (required)
+144 [codex-skill/speckit-archive-cleanup] frontmatter 'name' is kebab-case ('speckit-archive-cleanup')
+145 [codex-skill/speckit-archive-cleanup] frontmatter has a non-empty 'description' (required)
+146 [codex-skill/speckit-autopilot] opens with a '---' frontmatter fence
+147 [codex-skill/speckit-autopilot] frontmatter has a non-empty 'name' (required)
+148 [codex-skill/speckit-autopilot] frontmatter 'name' is kebab-case ('speckit-autopilot')
+149 [codex-skill/speckit-autopilot] frontmatter has a non-empty 'description' (required)
+150 [codex-skill/speckit-coach] opens with a '---' frontmatter fence
+151 [codex-skill/speckit-coach] frontmatter has a non-empty 'name' (required)
+152 [codex-skill/speckit-coach] frontmatter 'name' is kebab-case ('speckit-coach')
+153 [codex-skill/speckit-coach] frontmatter has a non-empty 'description' (required)
+154 [codex-skill/speckit-install] opens with a '---' frontmatter fence
+155 [codex-skill/speckit-install] frontmatter has a non-empty 'name' (required)
+156 [codex-skill/speckit-install] frontmatter 'name' is kebab-case ('speckit-install')
+157 [codex-skill/speckit-install] frontmatter has a non-empty 'description' (required)
+158 [codex-skill/speckit-prd] opens with a '---' frontmatter fence
+159 [codex-skill/speckit-prd] frontmatter has a non-empty 'name' (required)
+160 [codex-skill/speckit-prd] frontmatter 'name' is kebab-case ('speckit-prd')
+161 [codex-skill/speckit-prd] frontmatter has a non-empty 'description' (required)
+162 [codex-skill/speckit-resolve-pr] opens with a '---' frontmatter fence
+163 [codex-skill/speckit-resolve-pr] frontmatter has a non-empty 'name' (required)
+164 [codex-skill/speckit-resolve-pr] frontmatter 'name' is kebab-case ('speckit-resolve-pr')
+165 [codex-skill/speckit-resolve-pr] frontmatter has a non-empty 'description' (required)
+166 [codex-skill/speckit-scaffold-spec] opens with a '---' frontmatter fence
+167 [codex-skill/speckit-scaffold-spec] frontmatter has a non-empty 'name' (required)
+168 [codex-skill/speckit-scaffold-spec] frontmatter 'name' is kebab-case ('speckit-scaffold-spec')
+169 [codex-skill/speckit-scaffold-spec] frontmatter has a non-empty 'description' (required)
+170 [codex-skill/speckit-status] opens with a '---' frontmatter fence
+171 [codex-skill/speckit-status] frontmatter has a non-empty 'name' (required)
+172 [codex-skill/speckit-status] frontmatter 'name' is kebab-case ('speckit-status')
+173 [codex-skill/speckit-status] frontmatter has a non-empty 'description' (required)
+174 [codex-skill/speckit-upgrade] opens with a '---' frontmatter fence
+175 [codex-skill/speckit-upgrade] frontmatter has a non-empty 'name' (required)
+176 [codex-skill/speckit-upgrade] frontmatter 'name' is kebab-case ('speckit-upgrade')
+177 [codex-skill/speckit-upgrade] frontmatter has a non-empty 'description' (required)
+178 [codex] codex-agents/ directory exists at the plugin root
+179 [codex] at least one codex-agents/*.toml is present
+180 [codex-agent/analyze-executor] built agent .toml has a 'name =' key
+181 [codex-agent/analyze-executor] built agent .toml has a 'description =' key
+182 [codex-agent/autopilot-fast-helper] built agent .toml has a 'name =' key
+183 [codex-agent/autopilot-fast-helper] built agent .toml has a 'description =' key
+184 [codex-agent/checklist-executor] built agent .toml has a 'name =' key
+185 [codex-agent/checklist-executor] built agent .toml has a 'description =' key
+186 [codex-agent/clarify-executor] built agent .toml has a 'name =' key
+187 [codex-agent/clarify-executor] built agent .toml has a 'description =' key
+188 [codex-agent/codebase-analyst] built agent .toml has a 'name =' key
+189 [codex-agent/codebase-analyst] built agent .toml has a 'description =' key
+190 [codex-agent/domain-researcher] built agent .toml has a 'name =' key
+191 [codex-agent/domain-researcher] built agent .toml has a 'description =' key
+192 [codex-agent/implement-executor] built agent .toml has a 'name =' key
+193 [codex-agent/implement-executor] built agent .toml has a 'description =' key
+194 [codex-agent/phase-executor] built agent .toml has a 'name =' key
+195 [codex-agent/phase-executor] built agent .toml has a 'description =' key
+196 [codex-agent/spec-context-analyst] built agent .toml has a 'name =' key
+197 [codex-agent/spec-context-analyst] built agent .toml has a 'description =' key
+198 [codex-agent/uat-runbook-author] built agent .toml has a 'name =' key
+199 [codex-agent/uat-runbook-author] built agent .toml has a 'description =' key
+200 [codex] hooks file exists (dist/codex/speckit-pro/codex-hooks.json)
+201 [codex] hooks file is valid JSON
+202 [codex] hooks file has a top-level 'hooks' object
+TOTAL: 202

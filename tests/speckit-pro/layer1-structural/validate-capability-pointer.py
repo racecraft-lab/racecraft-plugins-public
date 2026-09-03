@@ -42,7 +42,6 @@ CAPABILITY_NOTE = "Capability path:"
 CC_EXCLUSIONS = frozenset(
     {
         "consensus-synthesizer",
-        "gate-validator",
         "phase-executor",
         # These two roles are deliberately confined to the snapshot broker and
         # must return only a receipt. Capability discovery, grounding files,

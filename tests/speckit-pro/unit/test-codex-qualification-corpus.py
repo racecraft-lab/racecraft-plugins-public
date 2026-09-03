@@ -27,7 +27,6 @@ EXPECTED_ROLE_ORDER = (
     "codebase-analyst",
     "consensus-synthesizer",
     "domain-researcher",
-    "gate-validator",
     "implement-executor",
     "phase-executor",
     "spec-context-analyst",
@@ -40,7 +39,6 @@ EXPECTED_REQUIRED_CORE = (
     "codebase-analyst",
     "consensus-synthesizer",
     "domain-researcher",
-    "gate-validator",
     "implement-executor",
     "phase-executor",
     "spec-context-analyst",
@@ -57,7 +55,7 @@ EXPECTED_EXECUTABLE_CORE = (
     "spec-context-analyst",
     "uat-runbook-author",
 )
-EXPECTED_NON_EXECUTABLE_CORE = ("consensus-synthesizer", "gate-validator")
+EXPECTED_NON_EXECUTABLE_CORE = ("consensus-synthesizer",)
 EXPECTED_HELPERS = ("autopilot-fast-helper",)
 EXPECTED_PUBLIC_API = frozenset(
     {
@@ -292,8 +290,8 @@ class CodexQualificationCorpusTests(unittest.TestCase):
             {"schema_version", "corpus_id", "corpus_version", "corpus_digest", "partition_binding", "roles"},
         )
         roles_schema = schema["properties"]["roles"]
-        self.assertEqual(roles_schema["minItems"], 12)
-        self.assertEqual(roles_schema["maxItems"], 12)
+        self.assertEqual(roles_schema["minItems"], 11)
+        self.assertEqual(roles_schema["maxItems"], 11)
         role_schema = schema["$defs"]["roleContract"]
         self.assertFalse(role_schema["additionalProperties"])
         self.assertEqual(role_schema["properties"]["role_id"]["enum"], list(EXPECTED_ROLE_ORDER))
@@ -341,11 +339,11 @@ class CodexQualificationCorpusTests(unittest.TestCase):
         self.assertEqual(
             stats,
             {
-                "total_roles": 12,
-                "required_core_roles": 11,
+                "total_roles": 11,
+                "required_core_roles": 10,
                 "optional_helper_roles": 1,
                 "executable_required_core_roles": 9,
-                "non_executable_required_core_roles": 2,
+                "non_executable_required_core_roles": 1,
                 "executable_optional_helper_roles": 1,
                 "required_core_primary_role_ids": list(EXPECTED_REQUIRED_CORE),
                 "optional_helper_role_ids": ["autopilot-fast-helper"],
@@ -411,10 +409,10 @@ class CodexQualificationCorpusTests(unittest.TestCase):
             self.assertEqual(role["source_binding"], source_bindings_by_role[role_id])
 
         stats = self.corpus.corpus_statistics(validated)
-        self.assertEqual(stats["total_roles"], 12)
-        self.assertEqual(stats["required_core_roles"], 11)
+        self.assertEqual(stats["total_roles"], 11)
+        self.assertEqual(stats["required_core_roles"], 10)
         self.assertEqual(stats["executable_required_core_roles"], 9)
-        self.assertEqual(stats["non_executable_required_core_roles"], 2)
+        self.assertEqual(stats["non_executable_required_core_roles"], 1)
         self.assertEqual(stats["optional_helper_roles"], 1)
         self.assertEqual(stats["executable_optional_helper_roles"], 1)
         self.assertEqual(stats["required_core_primary_role_ids"], list(EXPECTED_REQUIRED_CORE))
@@ -466,11 +464,11 @@ class CodexQualificationCorpusTests(unittest.TestCase):
     def test_membership_and_executability_fail_closed(self) -> None:
         self.assert_rejects(
             lambda corpus: corpus["roles"].pop(),
-            "exactly twelve",
+            "exactly eleven",
         )
         self.assert_rejects(
             lambda corpus: corpus["roles"].append(role_contract("phase-executor")),
-            "exactly twelve",
+            "exactly eleven",
         )
 
         def duplicate_role(corpus: dict) -> None:
@@ -483,12 +481,12 @@ class CodexQualificationCorpusTests(unittest.TestCase):
 
         self.assert_rejects(helper_marked_required, "helper")
 
-        def gate_marked_executable(corpus: dict) -> None:
-            role = next(item for item in corpus["roles"] if item["role_id"] == "gate-validator")
+        def synthesizer_marked_executable(corpus: dict) -> None:
+            role = next(item for item in corpus["roles"] if item["role_id"] == "consensus-synthesizer")
             role["executable"] = True
-            role["route_bindings"] = [route_binding("gate-validator")]
+            role["route_bindings"] = [route_binding("consensus-synthesizer")]
 
-        self.assert_rejects(gate_marked_executable, "non-executable")
+        self.assert_rejects(synthesizer_marked_executable, "non-executable")
 
         def executable_without_route(corpus: dict) -> None:
             next(role for role in corpus["roles"] if role["role_id"] == "phase-executor")["route_bindings"] = []

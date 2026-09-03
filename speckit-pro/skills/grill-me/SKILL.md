@@ -72,7 +72,7 @@ silently produces low-value output.
   `checklist-executor`, `analyze-executor`, `implement-executor`
 - The consensus analysts: `codebase-analyst`, `spec-context-analyst`,
   `domain-researcher`
-- `consensus-synthesizer`, `gate-validator`
+- `consensus-synthesizer`
 - Any other autopilot-triggered agent
 - Any background agent, automation, CI job, or non-interactive runtime
 

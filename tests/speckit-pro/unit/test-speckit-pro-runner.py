@@ -618,7 +618,6 @@ class RunnerFoundationTests(unittest.TestCase):
             "dist/codex/speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
             "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
             "dist/codex/speckit-pro/skills/speckit-upgrade/SKILL.md",
-            "dist/claude/speckit-pro/agents/gate-validator.md",
             "speckit-pro/codex-hooks.json",
             "speckit-pro/codex-skills/install/SKILL.md",
             "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
@@ -627,7 +626,6 @@ class RunnerFoundationTests(unittest.TestCase):
             "speckit-pro/codex-skills/speckit-status/SKILL.md",
             "speckit-pro/codex-skills/speckit-upgrade/SKILL.md",
             "speckit-pro/hooks/hooks.json",
-            "speckit-pro/agents/gate-validator.md",
             "speckit-pro/skills/speckit-autopilot/SKILL.md",
             "speckit-pro/skills/speckit-install/SKILL.md",
             "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
@@ -699,8 +697,13 @@ class RunnerFoundationTests(unittest.TestCase):
                 source_agent = path.removeprefix("dist/claude/")
                 dist_agent_path = REPO_ROOT / path
                 source_agent_path = REPO_ROOT / source_agent
-                self.assertNotEqual(status_by_path.get(path), "D", path)
                 self.assertIn(source_agent, changed, path)
+                if not source_agent_path.exists():
+                    # Retiring an agent deletes the payload mirror together with
+                    # its source. A mirror that outlives its source still fails.
+                    self.assertFalse(dist_agent_path.exists(), path)
+                    continue
+                self.assertNotEqual(status_by_path.get(path), "D", path)
                 self.assertTrue(source_agent_path.is_file(), source_agent)
                 self.assertTrue(dist_agent_path.is_file(), path)
                 self.assertEqual(

@@ -78,7 +78,6 @@ TEST_METHOD_ORDER = (
     "test_operator_tool_surface_no_tools_allowlist_pinning",
     "test_open_executors_orchestration_capabilities_never_denied",
     "test_read_only_roles_deny_builtin_mutation_primitives",
-    "test_gate_validator",
     "test_terminal_workers_deny_skill_keep_mutation_surface",
     "test_skill_driven_executors_keep_skill_and_mutation_surface",
     "test_session_shape_metadata",
@@ -213,31 +212,6 @@ class ValidateToolScoping(unittest.TestCase):
             for tool in ORCHESTRATION_TOOLS:
                 with self.subTest(msg=f"{agent} denies {tool} (hyper-focused worker does not fan out)"):
                     self.assert_denied(denials, tool, agent)
-
-    def test_gate_validator(self) -> None:
-        agent = "gate-validator"
-        agent_file = AGENTS_DIR / f"{agent}.md"
-        denials = _disallowed_tools(agent_file)
-
-        for tool in ("Write", "Edit", "MultiEdit", "NotebookEdit", "Skill"):
-            with self.subTest(msg=f"gate-validator denies {tool} (validates, never fixes)"):
-                self.assert_denied(denials, tool, agent)
-
-        for tool in ORCHESTRATION_TOOLS:
-            with self.subTest(msg=f"gate-validator denies {tool} (hyper-focused validator does not fan out)"):
-                self.assert_denied(denials, tool, agent)
-
-        with self.subTest(msg="gate-validator does NOT deny Bash (runs gate scripts)"):
-            self.assert_not_denied(denials, "Bash", agent)
-
-        with self.subTest(msg="gate-validator model is sonnet (max-thinking policy: haiku does not support max)"):
-            self.assertEqual("sonnet", _yaml_field(agent_file, "model"))
-
-        with self.subTest(msg="gate-validator effort is max (max-thinking policy)"):
-            self.assertEqual("max", _yaml_field(agent_file, "effort"))
-
-        with self.subTest(msg="gate-validator maxTurns exists and is positive"):
-            self.assertTrue(_positive_integer(_yaml_field(agent_file, "maxTurns")), "maxTurns must be positive")
 
     def test_terminal_workers_deny_skill_keep_mutation_surface(self) -> None:
         for agent in TERMINAL_WORKERS:

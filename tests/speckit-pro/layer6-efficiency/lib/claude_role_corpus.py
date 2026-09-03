@@ -2,9 +2,12 @@
 """CAR-003 governed role corpus: composition, admission, and fixture digests.
 
 The corpus is one governed set of **twelve** role contracts — the eleven
-required-core roles that have shipped Claude agent definitions, plus
-``autopilot-fast-helper``, which has none and is therefore contract-only until a
-later spec authors it (FR-011).
+required-core roles, plus ``autopilot-fast-helper``, which has no Claude agent
+definition and is therefore contract-only until a later spec authors it
+(FR-011). The corpus fixture is frozen, so a role retired from the live roster
+stays bound here and is named in ``RETIRED_ROLES``;
+``SHIPPED_REQUIRED_CORE_ROLES`` is the subset that still names a definition
+under ``speckit-pro/agents/``.
 
 ``required_core`` and ``executable`` are **independent** booleans. A role can be
 required by the cohort design and still be unrunnable today, so every contract
@@ -54,7 +57,9 @@ CORPUS_FIXTURE_PATH = (
 SCHEMA_VERSION = "1.0.0"
 CORPUS_SIZE = 12
 
-# FR-011: the eleven required-core roles with shipped Claude agent definitions.
+# FR-011: the eleven required-core roles the frozen CAR-003 corpus binds. The
+# corpus is immutable, so this tuple never shrinks; a role retired from the live
+# roster is named in RETIRED_ROLES instead.
 REQUIRED_CORE_ROLES = (
     "analyze-executor",
     "checklist-executor",
@@ -71,6 +76,16 @@ REQUIRED_CORE_ROLES = (
 
 # FR-011, FR-012: required by the cohort design, contract-only for now.
 CONTRACT_ONLY_ROLES = ("autopilot-fast-helper",)
+
+# Required-core roles the frozen corpus still binds that no longer ship a Claude
+# agent definition. `gate-validator` retired once the autopilot orchestrator
+# began calling the `validate-gate` runner helper directly.
+RETIRED_ROLES = ("gate-validator",)
+
+# The required-core roles that still name a definition under speckit-pro/agents/.
+SHIPPED_REQUIRED_CORE_ROLES = tuple(
+    role for role in REQUIRED_CORE_ROLES if role not in RETIRED_ROLES
+)
 
 GOVERNED_ROLE_IDS = tuple(sorted(REQUIRED_CORE_ROLES + CONTRACT_ONLY_ROLES))
 
@@ -101,6 +116,8 @@ __all__ = [
     "FIXTURE_CHECK_STAGE",
     "GOVERNED_ROLE_IDS",
     "REQUIRED_CORE_ROLES",
+    "RETIRED_ROLES",
+    "SHIPPED_REQUIRED_CORE_ROLES",
     "FixtureVerdict",
     "RoleCorpusError",
     "analysis_partition",
