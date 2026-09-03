@@ -19,8 +19,7 @@ sites (consensus debate, Phase 7 `[P]` tasks, parallel
 checklist/analyze).
 
 Tasks 10/11/12/13/14 are independent post-implementation work that
-benefits from parallel dispatch. The serial tail — tasks 15-19, the
-renumbered remainder after the standalone Cleanup step was removed — is
+benefits from parallel dispatch. The serial tail — tasks 15-19 — is
 **not** part of that parallel group: each step stays strictly sequential
 because of hard dependencies (Reviewability reads the resulting diff, PR
 Body needs the reviewability result and Self-Review, PR Creation needs
@@ -52,8 +51,7 @@ same wall-clock parallelism via background dispatch.
 - Track C: `11 Verify` → `12 Verify-Tasks` → `14 Integration Suite`
   (chained — shared test fixtures, serialize within track)
 
-Wall-clock = `max(track A, track B, track C)` for either code path,
-versus the older `sum(tasks 10-14)` of strictly-sequential dispatch.
+Wall-clock = `max(track A, track B, track C)` for either code path.
 
 ### Path A: Agent Teams (when `AGENT_TEAMS_AVAILABLE=true`)
 
@@ -141,7 +139,7 @@ or surface the regression to the lead.
   request shutdown and fall through to Path B; log the failure.
 - **Lead shuts down team early:** tell the lead "wait for your
   teammates to complete their tasks before proceeding."
-- **Task status lags** (known Agent Teams limitation): if a teammate
+- **Task status lags**: if a teammate
   has clearly finished but its task is still `in_progress`, nudge
   the teammate or manually mark complete.
 - **Shutdown/cleanup is unconfirmed:** do not start another team. Record the
@@ -229,11 +227,6 @@ var + version) or they haven't. Speckit-pro uses it when available
 and uses parallel subagents otherwise — both paths deliver the same
 contract (3 parallel tracks, lead synthesizes, then serial tail).
 Users do not need to know about a setting; the autopilot adapts.
-
-If a future Claude Code release deprecates the env var (Agent Teams
-exits experimental and becomes default-on), the probe in
-`prerequisites.md` §Agent Teams capability probe should be relaxed
-to a single version check.
 
 ## 3.1 Full Integration / E2E Suite Verification
 
@@ -489,10 +482,9 @@ same-manager recovery evidence or block; do not mix managers.
 **This step is MANDATORY after PR creation.** Use the `/loop`
 command to schedule recurring review comment monitoring.
 
-**Before invoking `/loop`, extract these values and substitute
-them as LITERAL STRINGS into the loop prompt. The `/loop` fires
-in a fresh context -- template placeholders will NOT be resolved.
-You MUST substitute actual values.**
+Before invoking `/loop`, extract these values and substitute them
+as literal strings into the loop prompt; the `/loop` fires in a fresh
+context where template placeholders are not resolved.
 
 ```text
 PR_NUMBER = <from gh pr create output>
@@ -595,11 +587,6 @@ Skill("loop", args: "5m
   Step 5 -- After all comments addressed, report summary.
 ")
 ```
-
-**CRITICAL:** The example above uses LITERAL values (42,
-owner/repo, pnpm build, etc.) for illustration. YOU must
-substitute the ACTUAL values extracted above. Do NOT leave
-any angle-bracket placeholders in the /loop prompt.
 
 **Why `/loop`:** The loop runs every 5 minutes in the background,
 checking for new review comments from GitHub Copilot or human

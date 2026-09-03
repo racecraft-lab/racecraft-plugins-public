@@ -1,8 +1,8 @@
 # TDD Protocol
 
 Injected into every implementation subagent's prompt by the
-autopilot orchestrator. These rules are NON-NEGOTIABLE regardless
-of which agent executes the task.
+autopilot orchestrator. They apply to every agent, including a
+project-supplied implementation agent.
 
 ## RED-GREEN-REFACTOR Cycle
 

@@ -693,12 +693,13 @@ resolved_python "<plugin-root>/skills/speckit-autopilot/scripts/validate-autopil
 `resolved_python` is the Python 3.11+ interpreter resolved by the installed
 runtime contract, not a hardcoded interpreter name; `<plugin-root>` is the
 directory that owns `skills/speckit-autopilot/`. `--rule status-evidence`
-scopes the exit code to the bookkeeping rule, the same scoping the Claude
-variant uses, so both distributions gate on one rule. The full report still
-prints: legacy structural coverage debt remains visible, nonblocking, while
-current-run state invariants (`in_progress_errors`, `duplicate_state_steps`,
-`state_order_errors`) stop the run. Drop `--rule` to gate on every check after
-migration.
+gates the exit code on the four workflow/state status-evidence checks
+(`workflow_status_evidence_errors`, `state_status_errors`,
+`stage_mirror_errors`, `workflow_authority_errors`) and the three current-run
+state-plan invariants (`in_progress_errors`, `duplicate_state_steps`,
+`state_order_errors`), the same scoping the Claude variant uses. The full
+report still prints; structural coverage checks and every advisory key are
+visible but never block. Drop `--rule` to gate on every check.
 
 When `pr-marker-plan.v2` declares a changed-file manifest, append
 `--expected-base-commit <live-baseRefOid> --expected-head-commit <live-headRefOid>`.

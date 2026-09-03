@@ -28,7 +28,7 @@ Token discipline does **not** touch:
 
 - PR bodies, PR titles, commit messages, CHANGELOG entries
   — these are public-readable, governed by
-  [CLAUDE.md §Contributing](../../../../CLAUDE.md#contributing--branching-strategy)
+  [contribute-and-release.md](../../../../docs-site/src/content/docs/contribute-and-release.md)
 - Workflow log entries that a human reviews
   (Self-Review block, Consensus Resolution Log, gate decisions)
 - Operator-facing status output, error messages, or progress
@@ -172,6 +172,5 @@ Keeping it opt-in respects both preferences.
 
 The Layer 6 efficiency benchmarks
 (`tests/layer6-efficiency/`) do not currently measure
-token-discipline impact. If a future PR demonstrates a
-quality-neutral cost savings, the default may flip. Until then,
-the default is `off` and operators choose.
+token-discipline impact. The default is `off` and operators
+choose.

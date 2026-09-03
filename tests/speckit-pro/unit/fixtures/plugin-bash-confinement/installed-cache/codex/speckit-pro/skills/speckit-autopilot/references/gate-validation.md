@@ -20,7 +20,7 @@ Programmatic gate checks performed after each SDD phase. The autopilot validates
 2. UNIT_TEST + INTEGRATION_TEST commands → must pass (record count as baseline)
 3. BUILD command → must pass
 4. LINT command → must pass
-(use PROJECT_COMMANDS discovered in Step 0.10)
+(use PROJECT_COMMANDS discovered in Step 0.11)
 5. Architecture patterns verified (e.g., patterns documented in CLAUDE.md)
 6. Workflow file's Prerequisites table filled with baselines
 7. Constitution Check summary line set to "✅ Verified"
@@ -356,7 +356,7 @@ and no placeholder tests exist.
 5. Run INTEGRATION_TEST command separately → must pass.
    Many projects exclude integration tests from the default
    test command — you MUST run both.
-(use PROJECT_COMMANDS discovered in Step 0.10)
+(use PROJECT_COMMANDS discovered in Step 0.11)
 6. Verify spec-specific integration tests exist:
    Glob("tests/integration/*<spec-name>*") → must find files
 7. Verify test count increased from G0 baseline
@@ -418,26 +418,26 @@ unexcepted block or gate error stops PR preparation and records the
 | G1 | Specify | NEEDS CLARIFICATION markers | N/A (routing) | N/A |
 | G2 | Clarify | 0 markers remain | Re-run clarify | 2 |
 | G3 | Plan | Artifacts exist, gates pass | Re-run plan | 2 |
-| G4 | Checklist | 0 [Gap] markers | context_builder remediation | 2 |
+| G4 | Checklist | 0 [Gap] markers | Research + consensus remediation | 2 |
 | G5 | Tasks | All FRs mapped to tasks | Generate missing tasks | 2 |
-| G6 | Analyze | 0 findings (all severities) | context_builder remediation | 2 |
+| G6 | Analyze | 0 findings (all severities) | Research + consensus remediation | 2 |
 | G6.5 | (between Analyze and Implement) | Pre-Implement confidence ≥ 0.90 (advisory default; strict opt-in via `.claude/speckit-pro.local.md`) | Re-route consensus on lowest-scoring criterion, re-emit confidence | 3 |
 | G7 | Implement | Build+type+lint+test pass, integration tests exist, 0 placeholders, TDD evidence | Fix errors, replace placeholders, create real tests | 2 |
 
 ## Additional Verification (Extension Commands)
 
 If the `verify` extension is enabled in `.registry` (detected
-in Step 0.11), run `speckit.verify` as additional validation
-alongside the standard G7 checks. This validates the
+in Step 0.12), run the `speckit-verify-run` skill as additional
+validation alongside the standard G7 checks. This validates the
 implementation against spec artifacts.
 
 If the `verify-tasks` extension is enabled in `.registry`,
-run `speckit.verify-tasks` to complement G5 by detecting
+run the `speckit-verify-tasks-run` skill to complement G5 by detecting
 phantom completions — tasks marked `[X]` that have no real
 implementation behind them.
 
-These commands are installed by `specify extension add` and
-exist as `.claude/commands/` files. They are additive checks,
+These are extension-installed skills under `.claude/skills/`,
+installed by `specify extension add`. They are additive checks,
 not replacements for gates. If the extension is not installed,
 skip the check and log a recommendation to install it.
 

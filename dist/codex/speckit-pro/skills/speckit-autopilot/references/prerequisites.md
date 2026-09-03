@@ -175,7 +175,8 @@ adjusting how it invokes each phase (see Phase Dispatch).
 Read `.claude/speckit-pro.local.md` if it exists. Parse YAML
 frontmatter for: `consensus-mode` (default: `moderate`),
 `gate-failure` (default: `stop`), `auto-commit` (default:
-`per-phase`), `security-keywords` (default: standard list).
+`per-phase`), `security-keywords` (default: the list in the
+Security Keywords section of `consensus-protocol.md`).
 If the file doesn't exist, use all defaults.
 
 ### Versioned subagent-runtime record
@@ -281,7 +282,7 @@ names and makes the plugin work with any project.
 4. If exactly one match → record its name as
    PROJECT_IMPLEMENTATION_AGENT
 5. If multiple matches → pick the one with the most
-   specific description (or ask the user)
+   specific description
 6. If no matches → set PROJECT_IMPLEMENTATION_AGENT to
    "phase-executor" (fallback)
 ```
