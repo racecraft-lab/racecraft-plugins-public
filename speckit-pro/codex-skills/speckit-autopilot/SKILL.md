@@ -744,7 +744,7 @@ JSON `status` (`pass` / `over_budget` / `not_estimated`) or the exit
 code, recording the outcome to the workflow file and
 `autopilot-state.json`. This is preventive sizing and **advisory only**
 — no outcome blocks, prompts mid-autonomous-run, or crashes the run
-(hard block / re-slicing is PRSG-010). Full status branch in
+(hard blocking and re-slicing are a separate step). Full status branch in
 [phase-execution-codex.md §Phase 3: Plan — Reviewability Budget](./references/phase-execution-codex.md#phase-3-plan--reviewability-budget-advisory).
 
 **Phase 7 task-list reconciliation (body-pinned invariants):**
