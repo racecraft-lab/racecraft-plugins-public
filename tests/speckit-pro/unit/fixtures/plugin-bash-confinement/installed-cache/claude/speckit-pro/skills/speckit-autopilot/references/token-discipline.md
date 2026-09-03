@@ -162,8 +162,9 @@ Step 0.6 (or 0.6b for Codex).
 
 ## Why Opt-In
 
-The autopilot's quality bar (every agent at `effort: max` per
-the speckit-coach policy) is the primary design choice. Token
+The autopilot's quality bar (judgment agents at `effort: max` and
+bounded rule-applying agents at the documented default, per the
+speckit-coach policy) is the primary design choice. Token
 discipline trades some agent-to-agent legibility for fewer
 tokens. For operators running headless overnight with budget
 caps, that trade is often worth it; for interactive sessions

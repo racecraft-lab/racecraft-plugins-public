@@ -3,7 +3,7 @@
   "fixture_kind": "codex_fallback_recovery_replay",
   "description": "Deterministic local simulation seeds only; no row makes a live model or service availability claim.",
   "source_roster": {
-    "source_roster_id": "sha256:d0ee78d3e1848c7e7a1e040aa93a3aafbde3f6da910f3566cbe15f4f06f75b41",
+    "source_roster_id": "sha256:0615ad431651af6b3d71cc40c36d2d49898919ad6f578583dcb6832a380cf9b9",
     "canonicalization": "json-sorted-keys-compact-over-path-sha256-classification-rows",
     "members": [
       {
@@ -39,7 +39,7 @@
       {
         "classification": "required_core",
         "path": "speckit-pro/codex-agents/domain-researcher.toml",
-        "sha256": "sha256:9e9aa8972781bbbab13dc167774704426798a060b2573839facdf9aaffb51411"
+        "sha256": "sha256:e749ea1369d91379b97bf25db18d3afbfb50a5d6733976ad04c9333107ca2a34"
       },
       {
         "classification": "required_core",

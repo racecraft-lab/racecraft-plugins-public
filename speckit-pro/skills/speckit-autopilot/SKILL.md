@@ -97,9 +97,11 @@ expensive rework.
 
 **Reasoning effort is inherited, never checked.** Run at whatever the
 operator has set for the session and do not stop, warn, or ask them to
-change it. Higher effort produces better orchestration, so the bundled
-subagents still ship pinned at `effort: max` (or `xhigh` on Codex) —
-that pin only ever raises a worker's effort and never refuses to run.
+change it. The bundled subagents carry their own pins: judgment roles
+ship at `effort: max` (`xhigh` on Codex), and bounded rule-applying
+roles that only apply rules to inputs already in their prompt ship at
+the documented default. A pin sets that worker's effort regardless of
+the session and never refuses to run.
 The operator owns the session setting; the plugin does not veto it.
 
 ## Execution Rules

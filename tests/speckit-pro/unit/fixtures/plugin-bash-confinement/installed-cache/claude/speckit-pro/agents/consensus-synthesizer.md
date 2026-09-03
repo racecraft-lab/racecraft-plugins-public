@@ -11,7 +11,7 @@ model: sonnet
 color: purple
 disallowedTools: Write, Edit, MultiEdit, NotebookEdit, Skill, Agent, SendMessage
 maxTurns: 15
-effort: max
+effort: high
 ---
 
 # Consensus Synthesizer
