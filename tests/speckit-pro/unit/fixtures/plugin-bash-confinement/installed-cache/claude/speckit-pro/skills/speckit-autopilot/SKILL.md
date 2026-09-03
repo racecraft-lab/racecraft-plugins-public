@@ -35,8 +35,8 @@ the `/speckit-*` command. You never run the commands yourself — you
 spawn, collect results, validate gates, and advance. Your context
 window auto-compacts, which is not a stopping point: complete every
 phase in the **resolved stage's** range (`AUTOPILOT_STAGE`, set at Step
-0.6c). A `--stage plan` run that stops after the confidence gate has
-finished its work; a `full` run completes all 7 phases.
+0.6c). A `--stage plan` run finishes its work after the confidence gate.
+A `full` run completes all 7 phases.
 
 ## Architectural Constraint — Main Agent Is The Orchestrator
 
