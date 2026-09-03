@@ -11,7 +11,7 @@ compatibility: "Requires Claude Code with AskUserQuestion tool support. Codex va
 
 ## Capability discovery & grounding
 
-Before researching or recommending, enumerate the tools and skills your session actually exposes — do not assume a fixed set; the user may have installed anything — and select the best fit per `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`. Ground every external fact you assert in a real tool, skill, or file result per `speckit-pro/skills/speckit-autopilot/references/grounding.md`, and abstain when nothing grounds it. (This governs your research-backed recommended answers, not the interview mechanics.)
+Before researching or recommending, enumerate the tools and skills your session actually exposes — do not assume a fixed set; the user may have installed anything — and select the best fit per `${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/capability-discovery.md`. Ground every external fact you assert in a real tool, skill, or file result per `${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/grounding.md`, and abstain when nothing grounds it. (This governs your research-backed recommended answers, not the interview mechanics.)
 
 ## The collaboration contract
 
@@ -164,7 +164,7 @@ also write a roadmap-MOC **home note** at `docs/ai/specs/<slug>-roadmap-MOC.md`:
 a single navigable map for the whole spec tree. It carries two zones — a
 hand-curated epics zone you scaffold here, and a sentinel-bounded GENERATED INDEX
 zone the generator fills. This is **new-roadmaps-only**: never backfill a home
-note onto an existing/legacy roadmap (a later spec owns retro-migration).
+note onto an existing/legacy roadmap.
 
 **5a. Derive the curated epics zone (ZERO new interview questions).** The
 roadmap's phase/tier grouping IS the epic structure — reuse it; do not ask the

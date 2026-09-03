@@ -404,8 +404,8 @@ specify extension disable <id>
 specify extension set-priority <id> <N>
 ```
 
-**Every install / configure / hook-wiring response MUST end with a
-two-line closing block, verbatim. Do not paraphrase. Do not skip it,
+**End every install / configure / hook-wiring response with this
+two-line block, verbatim. Do not skip it,
 even if the rest of the response is long. The closing block is non-negotiable
 because long install walkthroughs reliably bury these two facts.**
 
@@ -642,7 +642,7 @@ but may be empty if extensions were installed with older CLI versions.
 | Hook not firing | Not configured in extensions.yml | Check `.specify/extensions.yml` hooks section |
 | Extension command missing | Extension disabled or IDE needs restart | `specify extension list`, restart IDE |
 | Config not applied | Wrong config layer or file name | Check 4-tier config priority |
-| Preset lost after upgrade | Presets survive `specify init --here --force` | Presets are safe — only core templates reset |
+| Preset lost after upgrade | Presets survive `specify integration upgrade`, including a `--force` escalation | Presets are safe — only core templates reset |
 | Extension lost after upgrade | Extensions survive upgrades | Extensions are safe — check with `specify extension list` |
 | `installed: []` but extensions exist | CLI didn't update field or older version | Check `.registry` or Glob for directories — those are authoritative |
 | Autopilot skips extension tasks | Wrong detection — not reading `.registry` | Ensure Step 0.11 checks `.registry` first, then Glob fallback |

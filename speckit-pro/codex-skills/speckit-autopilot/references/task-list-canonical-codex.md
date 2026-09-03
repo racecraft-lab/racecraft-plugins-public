@@ -82,8 +82,13 @@ advancing. Then run
 `resolved_python "<plugin-root>/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py" --workflow <workflow> --state <workflow-dir>/autopilot-state.json --rule status-evidence`
 and do not advance unless it exits 0. `resolved_python` is the Python 3.11+
 interpreter resolved by the installed runtime contract, never a literal
-`python3`; `--rule status-evidence` scopes the exit code to the bookkeeping
-rule, so a spec that predates the structural coverage checks stays resumable.
+`python3`. `--rule status-evidence` gates the exit code on the four
+workflow/state status-evidence checks (`workflow_status_evidence_errors`,
+`state_status_errors`, `stage_mirror_errors`, `workflow_authority_errors`)
+and the three current-run state-plan invariants (`in_progress_errors`,
+`duplicate_state_steps`, `state_order_errors`); other checks are printed but
+never block, so a spec that predates the structural coverage checks stays
+resumable.
 When v2 state declares a changed-file manifest, also pass
 `--expected-base-commit <live-baseRefOid> --expected-head-commit <live-headRefOid>`
 from freshly fetched live PR metadata, never from the state or manifest.

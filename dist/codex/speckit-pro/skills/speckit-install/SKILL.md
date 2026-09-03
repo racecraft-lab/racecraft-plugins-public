@@ -183,35 +183,20 @@ AskUserQuestion picker preset for `/speckit.clarify` and
 `speckit-pro/skills/speckit-coach/references/presets-extensions-guide.md`
 (section: "The curated set").
 
-Check what would change using the curated-set installer helper in
-check mode.
+Compare `.specify/extensions/` and `.specify/presets/` against the
+entries in `<plugin-root>/scripts/curated-set.json`.
 
-The script prints one line per entry that would be installed, exits 0
-if everything is already current, exits 2 if work is pending.
-
-- If exit code is **0**: report "Curated extensions and presets
+- If every entry is present: report "Curated extensions and presets
   already current." Continue to Step 6.
 
-- If exit code is **1** (typically `gh not on PATH` or another missing
-  prerequisite): surface the stderr message and **skip this step**.
-  Do not block the install. Tell the operator: "Curated-set
-  auto-install skipped — install `gh` (https://cli.github.com/) and
-  re-run `$speckit-upgrade` to pull the curated extensions and
-  presets." Continue to Step 6.
+- Otherwise, list the missing entries and ask which to install.
+  Recommended default is **all**. For each accepted entry, give the
+  operator the `specify extension add <id>` or preset command from the
+  curated set and run it only after they confirm. Skipped entries can be
+  installed later with `$speckit-upgrade`.
 
-- If exit code is **2**: tell the operator the check output and ask
-  which entries to install. Recommended default is **all**. Then
-  invoke the curated-set installer helper in install mode:
-
-  - All entries.
-  - A comma-separated accepted subset.
-  - None: skip. The operator can run `$speckit-upgrade` later to
-    install the curated set on demand.
-
-The script never installs without an explicit selection — empty
-`--accept` means all from the manifest; any other value scopes to that
-csv. A provenance trail is recorded in `.specify/curated-install.json`
-— commit this to git so the project's extension state is reproducible.
+Record the outcome in `.specify/curated-install.json` — commit this to
+git so the project's extension state is reproducible.
 
 If the script reports that an entry has neither a GitHub Release nor
 a git tag, surface the message but do not block the install. The

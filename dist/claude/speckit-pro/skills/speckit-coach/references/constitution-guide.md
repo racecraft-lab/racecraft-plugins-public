@@ -165,22 +165,31 @@ This is 4 principles, all testable, with clear governance. Start here and add pr
 
 ## Protecting Your Constitution During Upgrades
 
-**Critical:** Running `specify init --here --force` overwrites
-`constitution.md` with the default template. Your customized
-principles will be lost unless you back up first.
+**Critical:** An upgrade can replace `constitution.md` with the default
+template, and `specify init --here --force` overwrites it outright. Your
+customized principles are lost unless a backup already exists.
 
-**Best practice:**
+**Best practice:** run `/speckit-pro:speckit-upgrade`. It snapshots
+`.specify/` before it touches anything, runs the diff-aware
+`specify integration upgrade`, and offers to restore your constitution
+from that snapshot. `--force` stays available as an escalation you
+choose, after the backup exists, never as the first attempt.
+
+The same steps by hand:
 
 ```text
 # Before upgrading
 cp .specify/memory/constitution.md .specify/memory/constitution-backup.md
+
+# Upgrade without --force
+specify integration upgrade claude --script sh
 
 # After upgrading
 git restore .specify/memory/constitution.md
 # or: cp .specify/memory/constitution-backup.md .specify/memory/constitution.md
 ```
 
-**Why this happens:** The SpecKit upgrade replaces all files in
+**Why this happens:** A forced upgrade replaces all files in
 `.specify/memory/` with fresh templates. The constitution is the
 only file that's project-specific — all others are generic.
 

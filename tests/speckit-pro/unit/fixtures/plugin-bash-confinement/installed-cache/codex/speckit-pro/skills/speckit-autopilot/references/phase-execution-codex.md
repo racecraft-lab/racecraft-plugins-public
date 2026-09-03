@@ -814,10 +814,10 @@ before Phase 1 continues.
 
 After the Plan phase executor returns and `plan.md` exists (G3 pass), run the
 standalone plan-phase estimator to project each slice's production-LOC footprint
-from `plan.md`'s declared file structure. This is preventive sizing — it catches
-an oversized slice at plan time, before any code is written. It is **advisory
-only**: no outcome blocks, prompts mid-autonomous-run, or aborts the run (hard
-blocking / re-slicing is PRSG-010, explicitly out of scope here).
+from `plan.md`'s declared file structure. This is preventive sizing: it catches
+an oversized slice at plan time, before any code is written. This step is
+advisory: record the status (`pass`, `over_budget`, `not_estimated`, or the
+diagnostic) in the workflow file and continue; no outcome blocks or prompts.
 
 Invoke runner helper `estimate-reviewable-loc` from the parent session with
 `exec_command` and **capture the response status** rather than letting a
@@ -848,12 +848,11 @@ runner status `ok` with the verdict in the helper stdout JSON `status` field;
 `ok`, and on diagnostics otherwise:
 
 - **`pass`** → record "within budget" in the workflow/plan record and
-  `autopilot-state.json` (silent — no prompt, no block).
+  `autopilot-state.json`.
 - **`over_budget`, autonomous run** → record an over-budget note in the
-  workflow/plan record and **CONTINUE** (advisory, non-blocking — FR-004,
-  SC-002). Never block the run or trigger re-slicing.
+  workflow/plan record and **CONTINUE**. Do not trigger re-slicing.
 - **`over_budget`, interactive use** → surface the over-budget result to the
-  human as a decision (FR-005).
+  human as a decision.
 - **`not_estimated`** (`projected: null` — `plan.md` has no parseable declared
   production-file structure) → record "not estimated (no declared production
   files)" and continue. Never treat this as a within-budget pass.
@@ -862,11 +861,6 @@ runner status `ok` with the verdict in the helper stdout JSON `status` field;
 
 This mirrors the Codex gate-handling pattern: read the structured runner
 response and branch on it rather than aborting.
-Advisory-and-never-crash is the invariant for every outcome — under-budget,
-over-budget, unmeasured, or errored — none may block, prompt
-mid-autonomous-run, or crash the run. If the helper is unavailable on an older
-plugin build, record the diagnostic note and continue, same as any other error
-path.
 
 ## Phase-Gate: Spec-MOC Navigation Regeneration
 
@@ -1206,8 +1200,8 @@ re-review stop still fires on its own independent ground. The report names the
 verdict, each affected row's `#` and its reason, and the operator's manual
 resume path, through the run report **alone**: the three sinks do not apply,
 because no regeneration occurred to produce a shortfall for them to carry.
-Nothing in scope can ever clear the condition, since this slice writes no log
-row and permits no second store, so an action keyed to it would repeat on every
+Nothing can ever clear the condition, since the sweep writes no log row for it
+and permits no second store, so an action keyed to it would repeat on every
 later clean sweep without end.
 
 **A failed record commit, or a failed push of it, is reported through the
@@ -1217,7 +1211,7 @@ unwritten row only on a later refresh that reaches that step, and no later
 sweep reaches it once the regeneration commit has landed. Its resume path is
 named the way a failed refresh's is: the pull request is correct on the remote
 and only the record is unwritten, so the row is repaired by hand, or by a later
-run reaching the plan-stage create-or-refresh step, which this slice never
+run reaching the plan-stage create-or-refresh step, which the sweep never
 schedules.
 
 **The per-comment dispositions sit inside that one report.** Report each
@@ -1239,11 +1233,9 @@ the pull request.
 paragraph is about**: a run seeing no comment still says so in one line instead
 of omitting the part. The freshness evaluation contributes its own lines to the
 what-already-landed part on that same leg, so a report there is one line of
-dispositions plus however many lines the freshness outcome requires. Reading
-the shipped sentence as a promise about the whole report would also conflict
-with the restoration line above, which lands in that same part on a leg that
-generated nothing. This adds no member to either enumeration and changes no
-report part's contents.
+dispositions plus however many lines the freshness outcome requires. The
+one-line rule is not a promise about the whole report: the restoration line
+above lands in that same part on a leg that generated nothing.
 
 **The conditions that end a run in this sequence** are an invalid
 authenticated account, a corroboration status that is neither `match` nor
@@ -1259,8 +1251,8 @@ only stop whose resume path a re-run alone does not satisfy.
 **The failed push in that list is the amendment push above.** The regeneration
 sequence's own artifacts push ends the run only on the leg that amended; on the
 leg that amended nothing it is reported and the run proceeds, so it is not
-among the conditions this list names. Which push the member means is all that
-is settled here, and the members themselves stand as written.
+among the conditions this list names. The member names the amendment push and
+no other.
 
 **A failed description refresh names its resume path per stopping status**, one
 line per status rather than one shared line, for the reason the corroboration
@@ -1314,11 +1306,11 @@ checkpoint.
 
 **That invariant is about the sweep's own writes.** The description refresh
 below changes the `Draft PR` cell through the emission machinery, which keeps
-exactly one writer; this slice supplies only the trigger and the timing, and
-the commit carrying that change is the machinery's own record commit. Its
-ground stands unchanged: the sentence exists so a run cannot repair a record it
-just failed to corroborate, and the refresh is reached only after an entry-gate
-`match`.
+exactly one writer; the sweep supplies only the trigger and the timing, and
+the commit carrying that change is the machinery's own record commit. The
+invariant holds through the refresh: it exists so a run cannot repair a record
+it just failed to corroborate, and the refresh is reached only after an
+entry-gate `match`.
 
 **`skipped` and `no_record` are different readings and never interchangeable.**
 `no_record` means the gate **does not apply**: no draft pull request was ever
@@ -1483,10 +1475,7 @@ repository and the handed block, never from the network.
 sweep emits no category-tagged `Unresolved for consensus` item, so the routing
 table and the three phase-specific flows under it are never reached and
 Clarify, Checklist, and Analyze keep the shared analysts and those flows
-unchanged. This slice does edit `consensus-protocol.md`, to add the `Sweep`
-row type and the note that its rows count toward the escape-rate metric, and
-those two are the only edits this feature makes to that file, so say routing
-table untouched and never say that file untouched.
+unchanged.
 
 **When consensus does not answer, the item goes to human review.** Three ways
 lead there: all three analysts disagreeing after Round 2, a Round-1 escape
@@ -1697,10 +1686,10 @@ never committed — and getting it wrong puts the pre-amendment plan back in
 front of the re-reviewer, which is the outcome this whole sequence exists to
 prevent.
 
-**The helper now refuses that mistake rather than acting on it**, and refuses
-the rest of the observation's declared shapes with it: an absent or non-array
-`pages`, an absent or non-array `amended_commits`, a record whose `cell` is not
-a string or whose `resolved` is not a boolean, a resolved record without a
+**The helper refuses an observation whose shape is wrong:** an absent or
+non-array `pages`, an absent or non-array `amended_commits`, a record whose
+`cell` is not a string or whose `resolved` is not a boolean, a resolved
+record without a
 boolean ancestry field, an unresolved record carrying a non-null one, and a
 resolved record claiming ancestry of a null `last_artifacts_commit` — which is
 the same rule read the other way, because with no commit to be an ancestor of,
@@ -1750,10 +1739,9 @@ never the page list the previous run happened to produce. A run that
 regenerates decides its page set the same way a first generation does.
 
 **Every selected page is authored fresh.** No page is patched, diffed, or
-partially updated, and this slice introduces no second page-authoring path: the
-dispatch, its per-page `generated` and `gap` outcomes, and its on-disk
-verification are the ones the draft-PR emission sequence above already
-describes.
+partially updated, and there is no second page-authoring path: the dispatch,
+its per-page `generated` and `gap` outcomes, and its on-disk verification are
+the ones the draft-PR emission sequence above describes.
 
 **Do not evaluate freshness in a run that made an amendment.** The re-review
 stop comes first. Evaluate freshness on every amendment-free sweep leg,
@@ -1811,9 +1799,9 @@ artifacts directory for unrelated reasons. **The record commit is the
 plan-stage terminal step's own commit, reused verbatim** rather than redefined
 here: the refresh changes the `Draft PR` cell through the emission machinery
 and this commit carries that change, while the sweep still writes no row of its
-own. **Writing the regeneration commit on the no-comment leg contradicts
-nothing**, because the rule that a run handling no comment takes no commit
-governs the bookkeeping commit, and the regeneration commit is not it.
+own. **The regeneration commit is permitted on the no-comment leg.** The rule
+that a run handling no comment takes no commit governs the bookkeeping commit,
+and the regeneration commit is not it.
 
 **From the sweep onward, the regeneration commit is the only commit that
 stages any path under `specs/<feature>/artifacts/`** — not merely a commit
@@ -1845,12 +1833,12 @@ deselection is durable and the authoring failure may not be. So the two
 decisions are read apart: the `generated` count decides *whether* to replay, and
 the removal set decides *what the replay leaves out*.
 
-**The two shortfall rows follow from that, and do not contradict the gate.** A
-whole-set gap with no removal replays the whole snapshot, leaves the directory
-unmoved, and takes no commit. A whole-set gap beside a deselection removal
-replays every selected page, leaves the directory lighter by exactly that
-removal, and takes the commit the gate above now allows. Both match what the
-shortfall table already told the operator to expect.
+**The two shortfall rows follow from that.** A whole-set gap with no removal
+replays the whole snapshot, leaves the directory unmoved, and takes no commit.
+A whole-set gap beside a deselection removal replays every selected page,
+leaves the directory lighter by exactly that removal, and takes the commit the
+gate above allows. Both match what the shortfall table already told the
+operator to expect.
 
 **A git-restore path is rejected**: the
 history this case arises on is one where no commit has ever touched the
@@ -1914,11 +1902,12 @@ happens next.**
   proceed into a stop. The local commit stands and rides up with the branch's
   next push.
 
-**On both legs the condition is unrecoverable inside this slice, and the report
-says so.** The commit is local and complete, so the join reads the directory as
-current on the next run: no later sweep regenerates, and none re-attempts the
-refresh this failure skipped. **The manual resume path names both steps the
-operator owes**: push the branch, then refresh the description directly.
+**On both legs the condition is unrecoverable by any later sweep, and the
+report says so.** The commit is local and complete, so the join reads the
+directory as current on the next run: no later sweep regenerates, and none
+re-attempts the refresh this failure skipped. **The manual resume path names
+both steps the operator owes**: push the branch, then refresh the description
+directly.
 
 **Step 7 takes its own live read-only observation at the moment of the
 refresh, rather than reusing the entry gate's.** A pull request can be closed or
@@ -1945,10 +1934,10 @@ status opens a second pull request.**
 **`no_record` is unreachable at this call site.** It means an absent `Draft PR`
 row, but the sweep is reached only on an entry-gate `match`, which requires the
 row, and the sweep is forbidden from writing it, so nothing between the gate
-and the refresh can clear it. This matters because the shipped row's behaviour
-falls through to creation, and this slice creates on no path.
+and the refresh can clear it. This matters because the status table's row for
+it falls through to creation, and the sweep never creates a pull request.
 
-**`skipped` has one live branch here, not two.** Its shipped row carries a
+**`skipped` has one live branch here, not two.** Its status table row carries a
 conditional: refresh when the tool can be reached, report through the
 could-not-be-opened path when it cannot. At this call site the classifier's own
 input is the observation just taken, so a `skipped` classification is itself the

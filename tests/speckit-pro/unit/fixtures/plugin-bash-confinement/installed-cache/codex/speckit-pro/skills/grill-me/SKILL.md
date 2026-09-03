@@ -377,15 +377,6 @@ you prefer natural-language invocation, "run grill-me on this" or
 "use the grill-me skill on this brief" name-anchors more reliably than
 "interview me about this".
 
-## Performance Notes
-
-- **Take your time.** A 30-question session over 30 minutes produces
-  better alignment than a 10-question session over 5 minutes.
-- **Quality > speed.** A poorly-grounded recommendation is worse than
-  no recommendation. Mark low-confidence options explicitly.
-- **Walk branches in priority order.** Uncertainty × impact, not
-  random order.
-
 ## References
 
 For detailed operational guidance, consult these files only as needed:

@@ -12,7 +12,7 @@ This reference covers the SDD methodology as defined by the official [SpecKit](h
 - [The 7 Template Quality Mechanisms](#the-7-template-quality-mechanisms)
 - [The Constitutional Foundation](#the-constitutional-foundation)
 - [Evolving Specs Over Time](#evolving-specs-over-time)
-- [Extensibility: Presets & Extensions (v0.3.2)](#extensibility-presets--extensions-v032)
+- [Extensibility: Presets & Extensions](#extensibility-presets--extensions)
 - [Key Takeaways for Developers](#key-takeaways-for-developers)
 
 ## The Core Idea
@@ -152,7 +152,7 @@ From SpecKit community discussions, four patterns have emerged for managing spec
 
 **Critical insight**: Specifications and code naturally diverge. The workflow should include explicit loops to fold code changes back into specs. Close feedback loops between implementation and specification throughout development.
 
-## Extensibility: Presets & Extensions (v0.3.2)
+## Extensibility: Presets & Extensions
 
 SDD workflows are customizable through two mechanisms:
 

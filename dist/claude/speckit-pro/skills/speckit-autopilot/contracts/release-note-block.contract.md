@@ -2,8 +2,8 @@
 
 Machine-parseable grammar for the consumer-facing Release note block that each
 feat/fix PR carries, plus the composer's discovery, harvest, sanitization, and
-release-body-write contract. Frozen by Clarifications Session 3 and hardened by
-the PR 12 implementation review.
+release-body-write contract. This contract is frozen; changes require a spec
+update.
 
 ## 1. Block grammar (in a PR body)
 
@@ -157,6 +157,6 @@ removed and apply the same boundary. Tests MUST pin 249-, 250-, and
 - The workflow-level default remains `permissions: {}`. This check's job grants
   only `contents: read` for checkout, and checkout uses
   `persist-credentials: false`; the validator performs no API mutation.
-- This is a **NEW required status check name** — the landing PR (PR 12) MUST call
-  out the manual branch-protection addition of `validate-release-note` and MUST
-  create the `release-note/skip` label (verified absent today).
+- This is a **required status check name**. Branch protection MUST include
+  `validate-release-note`, and the `release-note/skip` label MUST exist in the
+  repository.

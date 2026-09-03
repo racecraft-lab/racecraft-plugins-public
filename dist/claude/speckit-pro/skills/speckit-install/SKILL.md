@@ -101,38 +101,23 @@ Pass `--script sh` explicitly on macOS/Linux to avoid prompting.
 speckit-pro recommends a small set of community extensions and presets
 that power the autopilot's post-implementation parallel group and the
 native AskUserQuestion picker on `/speckit-clarify` and `/speckit-checklist`.
-See [presets-extensions-guide.md → The curated set](../skills/speckit-coach/references/presets-extensions-guide.md)
+See [presets-extensions-guide.md → The curated set](../speckit-coach/references/presets-extensions-guide.md)
 for the full list and rationale.
 
-Check what would change by running runner helper `install-curated-set` in
-read-only check mode.
+Compare `.specify/extensions/` and `.specify/presets/` against the entries
+in `${CLAUDE_PLUGIN_ROOT}/scripts/curated-set.json`.
 
-The helper prints one line per entry that would be installed or upgraded,
-exits 0 if everything is already current, exits 2 if work is pending.
-
-- If exit code is **0**: report "Curated extensions and presets already
+- If every entry is present: report "Curated extensions and presets already
   current — nothing to install." Continue to Step 6.
 
-- If exit code is **1** (typically `gh not on PATH` or another missing
-  prerequisite): surface the stderr message and **skip this step**.
-  Do not block the install. Tell the operator: "Curated-set
-  auto-install skipped — install `gh` (https://cli.github.com/) and
-  re-run `/speckit-pro:speckit-upgrade` to pull the curated extensions and
-  presets." Continue to Step 6.
+- Otherwise, list the missing entries and ask which to install. Recommended
+  default is **all**. For each accepted entry, give the operator the
+  `specify extension add <id>` or preset command from the curated set and
+  run it only after they confirm. Skipped entries can be installed later
+  with `/speckit-pro:speckit-upgrade`.
 
-- If exit code is **2**: tell the operator what the check output showed
-  and ask which entries to install. Recommended default is **all**.
-  Then invoke runner helper `install-curated-set` with the operator's selection:
-
-  - All: install all pending curated entries.
-  - Subset: install only the accepted comma-separated entry IDs.
-  - None: skip. Tell the operator they can run `/speckit-pro:speckit-upgrade`
-    later to install the curated set on demand.
-
-The helper never installs without explicit operator selection (or an
-empty `--accept` meaning all). A provenance trail is recorded in
-`.specify/curated-install.json` — commit this to git so the project's
-extension state is reproducible.
+Record the outcome in `.specify/curated-install.json` — commit this to git
+so the project's extension state is reproducible.
 
 ### 6. Verify and report
 

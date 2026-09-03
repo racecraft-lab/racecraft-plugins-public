@@ -150,7 +150,7 @@ starting. High-level loop:
    roadmap-MOC **home note** at `docs/ai/specs/<slug>-roadmap-MOC.md`: one
    navigable map for the whole spec tree, carrying two zones. This is
    **new-roadmaps-only** — never backfill a home note onto an existing/legacy
-   roadmap (a later spec owns retro-migration).
+   roadmap.
 
    **6a. Derive the curated epics zone (ZERO new interview questions).** The
    roadmap's phase/tier grouping IS the epic structure — reuse it; ask the user

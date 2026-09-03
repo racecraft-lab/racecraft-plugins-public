@@ -9,7 +9,7 @@ license: MIT
 
 # SpecKit Upgrade
 
-## PRSG-011 Structure Migration Guidance
+## Repository Structure Migration Guidance
 
 For existing projects, after integration upgrade and verification, report that
 repository structure migration is not available through the current runner.
@@ -181,37 +181,24 @@ and presets that power the autopilot's post-implementation parallel
 group and the AskUserQuestion picker. The upgrade command can pull
 their latest released versions in the same pass as the SpecKit
 integration upgrade. See
-[presets-extensions-guide.md → The curated set](../skills/speckit-coach/references/presets-extensions-guide.md)
+[presets-extensions-guide.md → The curated set](../speckit-coach/references/presets-extensions-guide.md)
 for the full list.
 
-Check what would change using the curated-set installer helper in
-check mode.
+Compare `.specify/extensions/` and `.specify/presets/` against the entries
+in `${CLAUDE_PLUGIN_ROOT}/scripts/curated-set.json`.
 
-The script prints one line per entry that is missing or out of date,
-exits 0 if everything is current, exits 2 if work is pending.
+- If every entry is present and current: report "Curated extensions and
+  presets already current." Continue to Step 9.
 
-- If exit code is **0**: report "Curated extensions and presets
-  already current." Continue to Step 9.
+- Otherwise, list the missing or outdated entries and ask which to install
+  or upgrade. Recommended default is **all**. For each accepted entry, give
+  the operator the `specify extension add <id>` or preset command from the
+  curated set and run it only after they confirm. Skipped entries leave the
+  autopilot's post-implementation parallel group running with reduced
+  coverage; it does not fail.
 
-- If exit code is **1** (typically `gh not on PATH` or another missing
-  prerequisite): surface the stderr message and **skip this step**.
-  Do not block the upgrade. Tell the operator: "Curated-set upgrade
-  skipped — install `gh` (https://cli.github.com/) and re-run
-  `/speckit-pro:speckit-upgrade` to pull the latest curated extensions and
-  presets." Continue to Step 9.
-
-- If exit code is **2**: tell the operator the check output and ask
-  which entries to install or upgrade. Recommended default is **all**.
-  Then invoke the curated-set installer helper in upgrade mode:
-
-  - All entries.
-  - A comma-separated accepted subset.
-  - None: skip. The autopilot will continue to skip any missing
-    entries without failing, but the post-implementation parallel
-    group will run with reduced coverage.
-
-The provenance trail is appended to `.specify/curated-install.json`
-— commit this file so the upgrade history is reproducible.
+Append the outcome to `.specify/curated-install.json` — commit this file so
+the upgrade history is reproducible.
 
 ### 9. Report
 
