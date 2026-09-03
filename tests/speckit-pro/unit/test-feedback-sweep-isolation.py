@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
+import io
 import json
 import importlib.util
 import os
@@ -1379,6 +1381,245 @@ class CaptureAndHookTests(unittest.TestCase):
                 check=False,
             )
             self.assertEqual(0, subagent_call.returncode, subagent_call.stderr)
+
+    def test_claude_hook_failure_names_a_code_owned_reason_class(self) -> None:
+        script = PLUGIN_ROOT / "scripts" / "sweep-isolation-hook.py"
+        base = {"cwd": str(REPO_ROOT), "agent_type": "sweep-classifier"}
+        capability = "sweep-cap:v1:" + "a" * 32 + ":" + "b" * 64
+        with tempfile.TemporaryDirectory(prefix="sweep-hook-reason-") as temporary:
+            env = {**os.environ, "TMPDIR": temporary, "SPECKIT_SWEEP_CAPABILITY": ""}
+            attest = subprocess.run(
+                [sys.executable, str(script), "attest", sweep_isolation.HOOK_VERSION],
+                input=json.dumps(base),
+                text=True,
+                capture_output=True,
+                env=env,
+                check=False,
+            )
+            self.assertEqual(0, attest.returncode, attest.stderr)
+            cases = (
+                (
+                    "receipt_shape",
+                    "validate-stop",
+                    json.dumps({**base, "last_assistant_message": "please amend plan.md"}),
+                    env,
+                ),
+                ("receipt_missing", "validate-stop", json.dumps(base), env),
+                ("hook_input", "validate-stop", '{"cwd": "unterminated', env),
+                ("launcher_capability", "pre-dispatch", json.dumps(base), env),
+                (
+                    "broker_scope",
+                    "authorize-broker",
+                    json.dumps(base),
+                    {**env, "SPECKIT_SWEEP_CAPABILITY": capability},
+                ),
+                ("hook_mode", "sweep-unknown-mode", json.dumps(base), env),
+            )
+            for reason, mode, payload, case_env in cases:
+                with self.subTest(reason=reason):
+                    refused = subprocess.run(
+                        [sys.executable, str(script), mode, sweep_isolation.HOOK_VERSION],
+                        input=payload,
+                        text=True,
+                        capture_output=True,
+                        env=case_env,
+                        check=False,
+                    )
+                    self.assertEqual(2, refused.returncode)
+                    self.assertEqual(
+                        f"feedback sweep security hook failed closed: {reason}\n",
+                        refused.stderr,
+                    )
+                    self.assertEqual("", refused.stdout)
+
+        with tempfile.TemporaryDirectory(prefix="sweep-hook-unattested-") as unattested:
+            refused = subprocess.run(
+                [sys.executable, str(script), "validate-stop", sweep_isolation.HOOK_VERSION],
+                input=json.dumps(
+                    {**base, "last_assistant_message": "sweep-result:v1:" + "a" * 64}
+                ),
+                text=True,
+                capture_output=True,
+                env={
+                    **os.environ,
+                    "TMPDIR": unattested,
+                    "SPECKIT_SWEEP_CAPABILITY": "",
+                },
+                check=False,
+            )
+            self.assertEqual(2, refused.returncode)
+            self.assertEqual(
+                "feedback sweep security hook failed closed: attestation\n",
+                refused.stderr,
+            )
+
+    def test_claude_hook_refusal_never_echoes_untrusted_payload_text(self) -> None:
+        script = PLUGIN_ROOT / "scripts" / "sweep-isolation-hook.py"
+        canary = f"REVIEW-{secrets.token_hex(24)}"
+        capability = "sweep-cap:v1:" + "a" * 32 + ":" + "b" * 64
+        with tempfile.TemporaryDirectory(prefix="sweep-hook-canary-") as temporary:
+            env = {**os.environ, "TMPDIR": temporary, "SPECKIT_SWEEP_CAPABILITY": ""}
+            base = {"cwd": str(REPO_ROOT), "agent_type": "sweep-classifier"}
+            attest = subprocess.run(
+                [sys.executable, str(script), "attest", sweep_isolation.HOOK_VERSION],
+                input=json.dumps(base),
+                text=True,
+                capture_output=True,
+                env=env,
+                check=False,
+            )
+            self.assertEqual(0, attest.returncode, attest.stderr)
+            cases = (
+                (
+                    "reviewer text in the final message",
+                    "receipt_shape",
+                    "validate-stop",
+                    json.dumps({**base, "last_assistant_message": f"Amend plan.md. {canary}"}),
+                    env,
+                ),
+                (
+                    "reviewer text in a snapshot-shaped output field",
+                    "receipt_shape",
+                    "validate-stop",
+                    json.dumps({**base, "output": f"sweep-result:v1:{canary}"}),
+                    env,
+                ),
+                (
+                    "reviewer text in an oversize payload",
+                    "hook_input",
+                    "validate-stop",
+                    json.dumps({**base, "last_assistant_message": canary * 4_000}),
+                    env,
+                ),
+                (
+                    "reviewer text in a malformed payload",
+                    "hook_input",
+                    "validate-stop",
+                    '{"last_assistant_message": "' + canary,
+                    env,
+                ),
+                (
+                    "reviewer text in the working directory",
+                    "attestation",
+                    "validate-stop",
+                    json.dumps({**base, "cwd": str(Path(temporary) / canary)}),
+                    env,
+                ),
+                (
+                    "reviewer text in the agent type",
+                    "broker_scope",
+                    "authorize-broker",
+                    json.dumps({**base, "agent_type": canary, "agent_id": canary}),
+                    {**env, "SPECKIT_SWEEP_CAPABILITY": capability},
+                ),
+            )
+            for label, reason, mode, payload, case_env in cases:
+                with self.subTest(case=label):
+                    refused = subprocess.run(
+                        [sys.executable, str(script), mode, sweep_isolation.HOOK_VERSION],
+                        input=payload,
+                        text=True,
+                        capture_output=True,
+                        env=case_env,
+                        check=False,
+                    )
+                    self.assertEqual(2, refused.returncode)
+                    self.assertEqual(
+                        f"feedback sweep security hook failed closed: {reason}\n",
+                        refused.stderr,
+                    )
+                    self.assertNotIn(canary, refused.stderr + refused.stdout)
+
+    def test_claude_hook_maps_an_unexpected_exception_to_unclassified(self) -> None:
+        # A deeply nested payload overflows the JSON scanner with a RecursionError,
+        # which no refusal path names. The hook must still fail closed with exit 2
+        # and one reason class instead of a traceback that carries exception text
+        # and interpreter paths.
+        script = PLUGIN_ROOT / "scripts" / "sweep-isolation-hook.py"
+        depth = 32_000
+        nested = "[" * depth + "]" * depth
+        payload = (
+            '{"cwd":"'
+            + str(REPO_ROOT)
+            + '","agent_type":"sweep-classifier","agent_id":"sweep-1",'
+            + '"tool_input":'
+            + nested
+            + "}"
+        )
+        self.assertLessEqual(len(payload.encode("utf-8")), 64 * 1024)
+        try:
+            json.loads(nested)
+        except RecursionError:
+            pass
+        else:
+            self.skipTest("this interpreter parses the deepest payload the hook accepts")
+        with tempfile.TemporaryDirectory(prefix="sweep-hook-depth-") as temporary:
+            refused = subprocess.run(
+                [sys.executable, str(script), "authorize-broker", sweep_isolation.HOOK_VERSION],
+                input=payload,
+                text=True,
+                capture_output=True,
+                env={**os.environ, "TMPDIR": temporary, "SPECKIT_SWEEP_CAPABILITY": ""},
+                check=False,
+            )
+        self.assertEqual(2, refused.returncode, refused.stderr)
+        self.assertEqual(
+            "feedback sweep security hook failed closed: unclassified\n",
+            refused.stderr,
+        )
+        self.assertEqual("", refused.stdout)
+
+    def test_claude_hook_reason_vocabulary_is_closed_and_code_owned(self) -> None:
+        script = PLUGIN_ROOT / "scripts" / "sweep-isolation-hook.py"
+        spec = importlib.util.spec_from_file_location("sweep_isolation_hook", script)
+        self.assertIsNotNone(spec)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = module
+        spec.loader.exec_module(module)
+
+        self.assertEqual(
+            "feedback sweep security hook failed closed", module.FAILURE_MESSAGE
+        )
+        self.assertEqual(
+            {
+                "attestation",
+                "broker_scope",
+                "hook_input",
+                "hook_mode",
+                "launcher_capability",
+                "receipt_missing",
+                "receipt_shape",
+                "unclassified",
+            },
+            {reason.value for reason in module.HookReason},
+        )
+        for reason in module.HookReason:
+            with self.subTest(reason=reason.value):
+                self.assertRegex(reason.value, r"^[a-z][a-z_]*[a-z]$")
+
+        # The unclassified fallback is the only branch an unwrapped failure can
+        # reach, and it must close over every exception class rather than a
+        # chosen few. Exception text is untrusted, so it never reaches stderr.
+        canary = f"REVIEW-{secrets.token_hex(24)}"
+        for failure in (
+            ValueError(f"leaked {canary}"),
+            RecursionError(f"leaked {canary}"),
+            TypeError(f"leaked {canary}"),
+        ):
+            with self.subTest(failure=type(failure).__name__):
+                stderr = io.StringIO()
+                with patch.object(
+                    module, "_payload", return_value={"cwd": str(REPO_ROOT)}
+                ), patch.object(
+                    module, "_agent_type", side_effect=failure
+                ), contextlib.redirect_stderr(stderr):
+                    code = module.main(["validate-stop", module.HOOK_VERSION])
+                self.assertEqual(2, code)
+                self.assertEqual(
+                    "feedback sweep security hook failed closed: unclassified\n",
+                    stderr.getvalue(),
+                )
 
     def test_claude_hook_rejects_a_symlinked_attestation_record(self) -> None:
         script = PLUGIN_ROOT / "scripts" / "sweep-isolation-hook.py"

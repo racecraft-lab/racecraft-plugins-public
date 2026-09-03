@@ -154,7 +154,8 @@ the two in step when either changes.
   repository tooling leaving the Python 3.11+ standard library or adding an
   active Bash or `jq` dependency outside the allowed boundaries; a workflow that
   exposes secrets or elevated permissions to untrusted PR content; a script or
-  test filename coupled to a temporary spec ID.
+  test filename coupled to a temporary spec ID, or test code that reads a
+  `specs/<feature>/` path from disk at run time.
 - Treat style, naming, prose, and refactoring suggestions as minor at most.
 - Do not review generated reference pages, installed-cache proofs, generated
   payloads, vendored upstream content, lockfiles, or archived specs.

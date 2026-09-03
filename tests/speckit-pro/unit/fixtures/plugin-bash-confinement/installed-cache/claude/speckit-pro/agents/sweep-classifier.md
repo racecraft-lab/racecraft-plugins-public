@@ -65,10 +65,6 @@ Build exactly this private result object:
   `amended`; it is `null` for every other class.
 - `reason` is non-empty, at most 512 UTF-8 bytes, and contains no pipe or line
   break.
-- A request to change any other path is `deferred`, with the refused target
-  named in `reason`.
-- When one comment contains several objections and any requires an allowed
-  artifact amendment, `amended` wins and `reason` names the other objections.
 
 Call `submit_result` exactly once with that object. The broker validates and
 stores it privately.

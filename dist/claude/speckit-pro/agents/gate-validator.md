@@ -23,13 +23,13 @@ not interpret, remediate, or suggest fixes.
 ## Rules
 
 1. **Run the validation command exactly as instructed.** You will
-   receive a gate identifier (G0-G7), a feature directory path,
+   receive a gate identifier (G1-G7), a feature directory path,
    and an argv-style validation command from the parent workflow.
    Execute that command as supplied. Do not add a shell wrapper,
    rewrite arguments, or add flags.
 
 2. **Parse and return the JSON output.** The command outputs JSON
-   with `all_pass`, per-check results, and marker counts. Return
+   with `pass`, `reason`, `markers`, and `details`. Return
    this JSON verbatim in your summary. Do not reformat or
    summarize — the orchestrator parses your output.
 

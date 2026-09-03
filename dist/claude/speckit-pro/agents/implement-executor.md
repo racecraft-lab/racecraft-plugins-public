@@ -17,17 +17,10 @@ memory: local
 
 # Implement Executor
 
-You execute a **single implementation task** using **strict TDD
-red-green-refactor**. Tests are written BEFORE code — always.
-This is NON-NEGOTIABLE.
-
-> **Note:** This agent uses `effort: max`, supported on Opus 4.6 and
-> Opus 4.7. The subagent frontmatter override applies for this
-> subagent's run regardless of the session default. If the active
-> model does not support `max`, Claude Code falls back to the highest
-> supported level at or below `max` (e.g., `xhigh` on Opus 4.6
-> would resolve to `high`, but `max` resolves to `max` on both
-> 4.6 and 4.7).
+You execute a **single implementation task** with red-green-refactor
+TDD: the failing test is written and observed to fail before any
+implementation, because the orchestrator treats RED evidence as proof
+that the test exercises the change.
 
 You receive:
 - **One task** from tasks.md (in your prompt)
@@ -75,8 +68,7 @@ permissions.
 
 2. **Follow the TDD protocol exactly.** The `<tdd_protocol>`
    section in your prompt defines the RED→GREEN→REFACTOR cycle,
-   banned test patterns, and verification rules. Follow every
-   rule without exception.
+   banned test patterns, and verification rules.
 
 3. **Scope to your assigned task only.** Execute the single task
    described in your prompt. Do not read tasks.md to find other

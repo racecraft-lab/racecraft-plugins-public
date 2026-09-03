@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import enum
 import hashlib
 import json
 import os
@@ -16,6 +17,7 @@ from typing import Any
 
 
 HOOK_VERSION = "sweep-isolation-v1"
+FAILURE_MESSAGE = "feedback sweep security hook failed closed"
 RECEIPT_RE = re.compile(r"^sweep-result:v1:[0-9a-f]{64}$")
 CAPABILITY_RE = re.compile(r"^sweep-cap:v1:[0-9a-f]{32}:[0-9a-f]{64}$")
 SWEEP_ROLES = {
@@ -25,6 +27,38 @@ SWEEP_ROLES = {
     "speckit-pro:sweep-analyst",
 }
 PLUGIN_ROOT = Path(__file__).resolve().parents[1]
+
+
+class HookReason(enum.Enum):
+    """Closed vocabulary naming which check refused the run.
+
+    The hook prints exactly one of these names after ``FAILURE_MESSAGE`` so the
+    model can correct the specific violation instead of guessing. Every value is
+    a literal defined here. Reviewer comments, snapshot bytes, payload fields,
+    environment values, and exception text never reach the message.
+    """
+
+    ATTESTATION = "attestation"
+    BROKER_SCOPE = "broker_scope"
+    HOOK_INPUT = "hook_input"
+    HOOK_MODE = "hook_mode"
+    LAUNCHER_CAPABILITY = "launcher_capability"
+    RECEIPT_MISSING = "receipt_missing"
+    RECEIPT_SHAPE = "receipt_shape"
+    UNCLASSIFIED = "unclassified"
+
+
+class HookRefusal(Exception):
+    """A fail-closed refusal that carries one reason class and nothing else."""
+
+    def __init__(self, reason: HookReason) -> None:
+        super().__init__(reason.value)
+        self.reason = reason
+
+
+def _refuse(reason: HookReason) -> int:
+    print(f"{FAILURE_MESSAGE}: {reason.value}", file=sys.stderr)
+    return 2
 
 
 def _payload() -> dict[str, Any]:
@@ -131,6 +165,13 @@ def _verify_attestation(repo_root: Path) -> None:
         raise ValueError("hook attestation is stale or mismatched")
 
 
+def _require_attestation(repo_root: Path) -> None:
+    try:
+        _verify_attestation(repo_root)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        raise HookRefusal(HookReason.ATTESTATION) from exc
+
+
 def _agent_type(payload: dict[str, Any]) -> str | None:
     direct = payload.get("agent_type") or payload.get("subagent_type")
     if isinstance(direct, str):
@@ -159,15 +200,21 @@ def main(argv: list[str]) -> int:
         print("feedback sweep hooks require Python 3.11 or newer", file=sys.stderr)
         return 2
     try:
-        payload = _payload()
-        repo_root = _repo_root(payload)
+        try:
+            payload = _payload()
+            repo_root = _repo_root(payload)
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            raise HookRefusal(HookReason.HOOK_INPUT) from exc
         mode = argv[0]
         if mode == "attest":
-            _write_attestation(repo_root)
+            try:
+                _write_attestation(repo_root)
+            except (OSError, ValueError, json.JSONDecodeError) as exc:
+                raise HookRefusal(HookReason.ATTESTATION) from exc
             return 0
         role = _agent_type(payload)
         if mode == "authorize-broker":
-            _verify_attestation(repo_root)
+            _require_attestation(repo_root)
             capability = os.environ.get("SPECKIT_SWEEP_CAPABILITY", "")
             agent_id = payload.get("agent_id")
             if (
@@ -176,25 +223,34 @@ def main(argv: list[str]) -> int:
                 or not agent_id
                 or CAPABILITY_RE.fullmatch(capability) is None
             ):
-                raise ValueError("broker calls are restricted to the isolated sweep subagent")
+                # Broker calls are restricted to the isolated sweep subagent.
+                raise HookRefusal(HookReason.BROKER_SCOPE)
             return 0
         if role not in SWEEP_ROLES:
             return 0
-        _verify_attestation(repo_root)
+        _require_attestation(repo_root)
         if mode == "pre-dispatch":
             capability = os.environ.get("SPECKIT_SWEEP_CAPABILITY", "")
             if CAPABILITY_RE.fullmatch(capability) is None:
-                raise ValueError("sweep agents require an isolated launcher capability")
+                # Sweep agents require an isolated launcher capability.
+                raise HookRefusal(HookReason.LAUNCHER_CAPABILITY)
             return 0
         if mode == "validate-stop":
             final = _final_message(payload)
-            if final is None or RECEIPT_RE.fullmatch(final.strip()) is None:
-                raise ValueError("sweep agent final output is not exactly one valid receipt")
+            if final is None:
+                raise HookRefusal(HookReason.RECEIPT_MISSING)
+            if RECEIPT_RE.fullmatch(final.strip()) is None:
+                # The final output is not exactly one valid receipt.
+                raise HookRefusal(HookReason.RECEIPT_SHAPE)
             return 0
-        raise ValueError("unknown sweep hook mode")
-    except (OSError, ValueError, json.JSONDecodeError):
-        print("feedback sweep security hook failed closed", file=sys.stderr)
-        return 2
+        raise HookRefusal(HookReason.HOOK_MODE)
+    except HookRefusal as refusal:
+        return _refuse(refusal.reason)
+    except Exception:
+        # Every other failure, named or not, still fails closed with one reason
+        # class. A traceback would exit 1, which the hook contract treats as
+        # allow, and would print exception text the model must never read.
+        return _refuse(HookReason.UNCLASSIFIED)
 
 
 if __name__ == "__main__":

@@ -11,10 +11,7 @@ You audit release-automation alignment in this Claude Code plugin marketplace. R
 
 ## What you check
 
-This repo has a silent failure mode documented in CLAUDE.md:
-> CI will test the new plugin on PRs (if files changed), but release-please will not create a release entry until the plugin is added to release-please-config.json. This gap is silent.
-
-Your job is to make that gap loud.
+A plugin directory that is missing from release-please-config.json still passes CI but never gets a release entry. Make that gap loud.
 
 ### Audit checklist
 
@@ -70,7 +67,7 @@ Return a structured Markdown report:
 | 6 | PR title conventional-commits    | ✅/❌/N/A | actual title or "no PR" |
 
 ### Findings
-- [Each ❌ row gets a concrete fix here, citing the section of CLAUDE.md that applies]
+- [Each ❌ row gets a concrete fix here]
 
 ### Verdict
 PASS / FAIL — <one-line reason>

@@ -34,9 +34,9 @@ Style, naming, prose, and refactoring suggestions are Nit at most.
 
 ## Cap the nits
 
-Report at most five Nits per review. If you found more, note "plus N similar
-items" in the summary rather than posting them inline. Prose and config files
-can be polished indefinitely.
+Post only the Nits worth a reader's time, and roll the rest into one "plus N
+similar items" line in the summary rather than posting them inline. Prose and
+config files can be polished indefinitely.
 
 ## Do not report
 

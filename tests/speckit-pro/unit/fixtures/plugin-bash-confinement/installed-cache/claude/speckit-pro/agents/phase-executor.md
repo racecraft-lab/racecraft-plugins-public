@@ -4,7 +4,7 @@ description: >
   Executes a single SpecKit phase by running the /speckit-* command
   via the Skill tool. Use when the autopilot needs to run Specify,
   Plan, or Tasks. Specify and Plan are heavy architectural-reasoning
-  phases per the official SpecKit docs — this agent runs at high
+  phases per the official SpecKit docs — this agent runs at maximum
   reasoning effort so the produced spec.md and plan.md reflect that
   depth. Tasks is mechanical decomposition and runs on the same
   configuration for consistency. No iterative remediation or

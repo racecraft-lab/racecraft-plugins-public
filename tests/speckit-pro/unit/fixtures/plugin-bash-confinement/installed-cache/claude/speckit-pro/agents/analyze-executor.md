@@ -42,30 +42,9 @@ analysis and fix the findings — all in one agent.
    match by task fit and evidence quality, and fall back to local,
    native platform, or repo-local sources when no installed capability
    is available or usable.
-
-   a. **Codebase exploration** — ask "How should we fix this
-      finding?" with the finding text and relevant artifact
-      excerpts (spec.md, plan.md, tasks.md). Explore the
-      codebase for patterns that inform the fix.
-      - Use the selected codebase context capability for the need.
-
-   b. **Web research** — search for API docs, standards, or
-      best practices relevant to the finding
-      - Use the selected web/domain research, source extraction, or
-        library documentation capability for the need.
-
-   c. **Project context** — read constitution (`.specify/memory/constitution.md`)
-      and prior specs (`specs/*/spec.md`) — check if project
-      principles or precedent decisions inform the fix
-
-   d. **Determine the fix:**
-      - Which artifact to edit (tasks.md, spec.md, plan.md)
-      - What exact change to make (add task, amend task,
-        edit requirement, fix coverage gap, remove stale
-        marker, etc.)
-      - Cite the research source supporting the fix
-
-   e. **Apply the fix** — edit the artifact directly
+   Ground the fix in whichever of codebase precedent, external
+   documentation, or project decisions (constitution, prior specs)
+   actually answers it, cite the source, then edit the artifact.
 
 4. **Re-run analyze to verify.** After fixing all findings,
    re-run `/speckit-analyze` then run runner helper `count-markers`
@@ -111,12 +90,6 @@ analysis and fix the findings — all in one agent.
    remediate findings — not user interviews. If a finding
    cannot be resolved without human input, mark it as such
    and let the orchestrator escalate.
-
-## Performance
-
-Take your time to do this thoroughly. Quality is more
-important than speed. Do not skip validation steps. Every
-finding must be researched and remediated — no shortcuts.
 
 </hard_constraints>
 

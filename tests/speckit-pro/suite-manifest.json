@@ -73,6 +73,7 @@
         { "path": "tests/speckit-pro/unit/test-canonical-agent-materializer.py", "label": "test-canonical-agent-materializer", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-exact-treatment-runner.py", "label": "test-exact-treatment-runner", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-role-corpus-governance.py", "label": "test-role-corpus-governance", "baseline": null },
+        { "path": "tests/speckit-pro/unit/test-rebaseline-corpus.py", "label": "test-rebaseline-corpus", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-score-bundle-adjudication.py", "label": "test-score-bundle-adjudication", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-experiment-policy-partitions.py", "label": "test-experiment-policy-partitions", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-analysis-decision-ladder.py", "label": "test-analysis-decision-ladder", "baseline": null },
