@@ -27,7 +27,7 @@ configure, run, and troubleshoot the autopilot.
 **Operational + troubleshooting**:
 - [PR Creation & Review Loop](#pr-creation--review-loop) — final verification, push, /loop for Copilot remediation
 - [Troubleshooting](#troubleshooting) — common failure modes + recovery
-- [v0.3.2 Capabilities](#v032-capabilities) — preset and extension awareness
+- [Preset and Extension Capabilities](#preset-and-extension-capabilities) — preset and extension awareness
 
 ---
 
@@ -516,7 +516,7 @@ After the autopilot creates a PR:
 
 ---
 
-## v0.3.2 Capabilities
+## Preset and Extension Capabilities
 
 ### `/speckit.doctor` — Project Health Diagnostics
 

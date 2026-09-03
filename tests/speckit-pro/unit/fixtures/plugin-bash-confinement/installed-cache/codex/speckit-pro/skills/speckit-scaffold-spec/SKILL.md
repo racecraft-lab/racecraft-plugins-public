@@ -33,18 +33,18 @@ requirements when the roadmap entry does not exist.
 ## Artifact tiering (CONTRACT vs EXHAUST)
 
 speckit-pro artifacts are tiered. **CONTRACT** artifacts (`spec.md`, `plan.md`,
-`tasks.md`, `research.md`, supporting design artifacts) are review-visible and stay
-at their existing location — this skill does not relocate them. The three authored
-**EXHAUST** artifacts (the design-concept doc, the workflow file, and the UAT
-runbook) are scaffolding, so they are written under a `.process/` directory:
-the design-concept doc and workflow file land under `docs/ai/specs/.process/`, and
-the UAT runbook lands under the feature's own `specs/<NNN>/.process/`. Nothing is
-deleted — every relocated file still exists and is readable at its `.process/` path.
+`tasks.md`, `research.md`, supporting design artifacts) are review-visible and
+live at their normal locations. The three authored **EXHAUST** artifacts (the
+design-concept doc, the workflow file, and the UAT runbook) are scaffolding, so
+they are written under a `.process/` directory: the design-concept doc and
+workflow file land under `docs/ai/specs/.process/`, and the UAT runbook lands
+under the feature's own `specs/<NNN>/.process/`. EXHAUST artifacts are kept, not
+discarded: each one stays readable at its `.process/` path.
 
 ## O5 monster-epic fallback
 
-Normal PRSG-007/008/009 routing, layer planning, and split-PR emission remain
-the default path for oversized work. Describe or scaffold O5 only when the
+Normal reviewability re-slicing routing, layer planning, and split-PR emission
+remain the default path for oversized work. Describe or scaffold O5 only when the
 roadmap/design-concept evidence says ordinary O4 split planning cannot produce
 reviewable, independently ordered slices.
 
@@ -288,9 +288,8 @@ interview without attempting the pass. Mandatory to **attempt**, not to succeed:
 the pass fails open, as the end of this step sets out.
 
 **Engine.** The pass runs on the already-shipped read-only `codebase-analyst`,
-consumed unmodified. Do not add or edit an agent definition on either platform.
-Never add Grep, Glob, or Bash to this skill's tool surface: this step needs
-**no new tool grant**.
+consumed unmodified. Do not add or edit an agent definition. The existing
+`spawn_agent` grant already makes the dispatch possible.
 
 **Dispatch, then await.** Dispatch with `spawn_agent`, using
 `agent_type: "codebase-analyst"` and `fork_turns: "none"`, then poll
@@ -498,8 +497,8 @@ The word immediately after the key is the discriminator, drawn from the closed
 set `ran`, `returned nothing usable`, `did not run`. `<reason>` is the **same
 clause** the status line above carried. A pass that ran and raised nothing is the
 first shape with `N` and `M` both zero, which is what distinguishes it from one
-that never ran. This key needs no schema change. Do **not** add a section to the
-design concept, do **not** write a separate findings artifact — specifically not
+that never ran. Do **not** add a section to the design concept, do **not** write
+a separate findings artifact — specifically not
 `.process/<SPEC-ID>-blind-spots.md` — and do **not** change what the interview
 produces.
 
@@ -559,10 +558,10 @@ absent:
 
 The interview is the writer of first resort, but the request is one sentence
 inside a prose block handed to another skill, so verify rather than assume. Read
-to check and edit to repair: no new tool grant, no new machinery, no new section,
-no separate findings artifact, and no grill-me edit. When the interview does not
-return, nothing is owed — the run stops, so no design concept exists to carry a
-record and the step 3.6 status line is the only one.
+to check and edit to repair: no new section and no separate findings artifact.
+When the interview does not return, nothing is owed — the run stops, so no
+design concept exists to carry a record and the step 3.6 status line is the
+only one.
 
 ### 5. Copy the workflow template into the worktree
 
@@ -730,9 +729,8 @@ checkout as its mutation root.
 **The hand-off to the planning stage.** It extends this section rather than
 becoming a new numbered step, and it sits after step 8, once the design concept,
 the workflow file, the SPEC-MOC marker, and the roadmap status flip are all
-committed and pushed. Placing it earlier is rejected for a stated reason: a
-planning stage that fails or is interrupted must never leave the roadmap
-claiming the spec is still Ready.
+committed and pushed. Never place it earlier: a planning stage that fails or is
+interrupted must never leave the roadmap claiming the spec is still Ready.
 
 **Scaffold never invokes the autopilot. It prints the command; the operator runs
 it as the next message in the same task.** A skill body invoking a sibling skill
@@ -856,7 +854,7 @@ The report is **printed, not written to a file.**
 ## <heading>
 
 **Outcome:** <one line>
-**Draft PR:** none, because draft-PR creation is not part of this release
+**Draft PR:** none (scaffold does not open one; autopilot does at PR time)
 
 **Artifacts:**
 - <repo-relative path>     (one line each; only paths that exist)
@@ -909,12 +907,10 @@ reaches it inside the next-step command instead.
 plainly that there is none:
 
 ```text
-**Draft PR:** none, because draft-PR creation is not part of this release
+**Draft PR:** none (scaffold does not open one; autopilot does at PR time)
 ```
 
-Never omit the line silently, and never fabricate or guess a URL. For every run in
-this release "none" is the expected value, because draft-PR creation belongs to a
-later spec.
+Never omit the line silently, and never fabricate or guess a URL.
 
 **The artifact index enumerates what the run actually produced.** It **must not
 print a path that does not exist, and must not omit an artifact that does.** The
@@ -943,10 +939,10 @@ primary artifact — the one omission this index may never make.
 **The existence test is a read of the candidate path, and nothing more.** A path
 that reads is listed; a path that does not read is omitted. This is the only
 existence test inside this skill's declared grant, and it adds no machinery.
-Never add Grep, Glob, or Bash to widen that grant. Never infer a path from
-convention, and never list a path that was not tested. The pushed branch name is
-the one candidate that is not a path: it is listed from the branch step 7 pushed
-and needs no read, so the test above never applies to it.
+Never infer a path from convention, and never list a path that was not tested.
+The pushed branch name is the one candidate that is not a path: it is listed
+from the branch step 7 pushed and needs no read, so the test above never
+applies to it.
 
 **The next step is the hand-off command**, in the form the check selected. There
 is one rule because there is one heading. Scaffold names the planning stage as the

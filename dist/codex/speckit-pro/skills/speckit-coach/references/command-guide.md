@@ -18,10 +18,10 @@ Per-command coaching for the official SpecKit slash commands. This is NOT the co
 
 **Beyond per-command coverage:**
 - [Extension Commands (Installed)](#extension-commands-installed) — verify / verify-tasks / review / cleanup / doctor / retrospective / archive
-- [CLI Commands (v0.3.2)](#cli-commands-v032) — `specify init`, presets, extensions
+- [CLI Commands](#cli-commands) — `specify init`, presets, extensions
 - [Presets — Customizing Workflows](#presets--customizing-workflows) — stackable template overrides
 - [Extensions — Adding Capabilities](#extensions--adding-capabilities) — 26 community extensions + hook events
-- [Upgrade Guidance](#upgrade-guidance) — back up constitution, `specify init --here --force`, restore
+- [Upgrade Guidance](#upgrade-guidance) — route to `/speckit-pro:speckit-upgrade`: snapshot, `specify integration upgrade`, restore
 
 ## Command Chaining (The Official Workflow)
 
@@ -425,7 +425,7 @@ agents, features, scripts, extensions, and git status.
 
 ---
 
-## CLI Commands (v0.3.2)
+## CLI Commands
 
 Beyond the slash commands above, the `specify` CLI provides
 project management commands for initialization, presets,
@@ -722,23 +722,34 @@ Verify: `specify version` → should show latest version.
 
 ### Upgrading Project Files
 
+Run `/speckit-pro:speckit-upgrade`. It snapshots `.specify/` before it
+touches anything, runs the diff-aware `specify integration upgrade`, and
+restores your local edits from that snapshot afterward.
+
+The same steps by hand:
+
 ```text
-# 1. Back up constitution (WILL be overwritten)
-cp .specify/memory/constitution.md .specify/memory/constitution-backup.md
+# 1. Snapshot .specify/ before any mutation
+cp -r .specify /tmp/specify-upgrade-backup-<STAMP>
 
-# 2. Back up custom templates
-cp -r .specify/templates .specify/templates-backup
+# 2. Run the safe upgrade (no --force)
+specify integration upgrade claude --script sh
 
-# 3. Run upgrade
-specify init --here --force --integration claude
-
-# 4. Restore constitution
+# 3. Restore the constitution and any template edits you kept
 git restore .specify/memory/constitution.md
-# or: cp .specify/memory/constitution-backup.md .specify/memory/constitution.md
+# or: cp <backup>/memory/constitution.md .specify/memory/constitution.md
 
-# 5. Verify
+# 4. Verify
 specify check
 ```
+
+`specify integration upgrade` is diff-aware. When it finds locally-modified
+files it blocks and names them instead of overwriting them, which is the
+safety net rather than a failure. Escalate to
+`specify integration upgrade claude --force --script sh` only as a
+deliberate choice, only once the snapshot exists, and restore your edits
+on top from that snapshot. Do not reach for `specify init --here --force`
+as an upgrade path.
 
 ### What's Safe
 
@@ -747,6 +758,9 @@ specify check
 - **Preset configurations** — not touched by `specify init`
 
 ### What's Overwritten
+
+These are what a `--force` escalation replaces. The safe upgrade blocks
+on them instead.
 
 - **Constitution** (`constitution.md`) — always back up first
 - **Templates** (`.specify/templates/`) — custom modifications lost

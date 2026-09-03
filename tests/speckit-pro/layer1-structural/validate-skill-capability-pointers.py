@@ -41,8 +41,26 @@ DIST_CODEX = REPO_ROOT / "dist" / "codex"
 
 DIRECTIVE_MARKER = "capability-discovery.md"
 GROUNDING_MARKER = "grounding.md"
-PATH_TOKEN_RE = re.compile(r"speckit-pro/[A-Za-z0-9._/-]*capability-discovery\.md")
-GROUNDING_TOKEN_RE = re.compile(r"speckit-pro/[A-Za-z0-9._/-]*grounding\.md")
+# Two pointer forms resolve to the same payload file. ``speckit-pro/...`` is
+# repo-root-relative and is what the Codex surface writes; ``${CLAUDE_PLUGIN_ROOT}/...``
+# is what a Claude skill must write, because in an installed plugin the cache
+# directory, not the checkout, owns ``skills/``. Both normalize to the same
+# payload-relative token before the dist resolution check below.
+PLUGIN_ROOT_VAR = "${CLAUDE_PLUGIN_ROOT}/"
+PLUGIN_ROOT_PREFIX = "speckit-pro/"
+PATH_TOKEN_RE = re.compile(
+    r"(?:speckit-pro/|\$\{CLAUDE_PLUGIN_ROOT\}/)[A-Za-z0-9._/-]*capability-discovery\.md"
+)
+GROUNDING_TOKEN_RE = re.compile(
+    r"(?:speckit-pro/|\$\{CLAUDE_PLUGIN_ROOT\}/)[A-Za-z0-9._/-]*grounding\.md"
+)
+
+
+def _payload_relative(token: str) -> str:
+    """Normalize either pointer form to a path under a built payload tree."""
+    if token.startswith(PLUGIN_ROOT_VAR):
+        return PLUGIN_ROOT_PREFIX + token[len(PLUGIN_ROOT_VAR) :]
+    return token
 
 EXCLUSIONS = frozenset(
     {
@@ -100,8 +118,9 @@ class ValidateSkillCapabilityPointers(unittest.TestCase):
 
         matches = _unique_matches(pattern, text)
         for token in matches:
-            if not self._token_seen(token):
-                self.found_tokens.append(token)
+            payload_token = _payload_relative(token)
+            if not self._token_seen(payload_token):
+                self.found_tokens.append(payload_token)
         with self.subTest(msg=f"{runtime} skill '{skill}' {marker} reference yields a repo-root-relative path token"):
             self.assertTrue(
                 matches,

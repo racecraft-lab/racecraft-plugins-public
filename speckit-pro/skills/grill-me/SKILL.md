@@ -11,7 +11,7 @@ compatibility: "Requires Claude Code with AskUserQuestion tool support. Codex va
 
 ## Capability discovery & grounding
 
-Before researching or recommending, enumerate the tools and skills your session actually exposes — do not assume a fixed set; the user may have installed anything — and select the best fit per `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`. Ground every external fact you assert in a real tool, skill, or file result per `speckit-pro/skills/speckit-autopilot/references/grounding.md`, and abstain when nothing grounds it. (For grill-me, this governs your research-backed recommended answers, not the interview mechanics.)
+Before researching or recommending, enumerate the tools and skills your session actually exposes — do not assume a fixed set; the user may have installed anything — and select the best fit per `${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/capability-discovery.md`. Ground every external fact you assert in a real tool, skill, or file result per `${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/grounding.md`, and abstain when nothing grounds it. (For grill-me, this governs your research-backed recommended answers, not the interview mechanics.)
 
 ## Codex Skill-Selection Guard
 
@@ -45,8 +45,7 @@ it visible so users can re-tune it without leaving the repo:
 > resolving dependencies one by one. For each question provide your
 > recommended answer. Ask the questions one at a time."*
 
-Source: The Grill Me Skill / The Grill Me Protocol (see
-`~/Downloads/The Grill Me Skill_*.md` and `~/Downloads/The Grill Me Protocol_*.md`).
+Source: the Grill Me Skill / Grill Me Protocol prompt, reproduced above.
 
 <hard_constraints>
 
@@ -355,19 +354,6 @@ Open Questions section is correct (and a good sign). If you flagged
 items as deferred during the loop ("user said 'I don't know' or 'you
 decide'"), make sure those land in Open Questions during synthesis —
 that's where they belong, not the Q&A log.
-
-## Performance Notes
-
-- **Take your time.** The interview is supposed to feel slow and
-  deliberate. A 30-question session over 30 minutes produces better
-  alignment than a 10-question session over 5 minutes.
-- **Quality > speed.** A poorly-grounded recommendation is worse than
-  no recommendation. If you don't have a basis for a recommended
-  answer, mark it low-confidence in the option's description and lean
-  on the alternatives.
-- **Don't skip the design-tree-branch identification step.** Walking
-  branches in priority order (uncertainty × impact) is what makes the
-  output valuable. Going in random order produces noise.
 
 ## References
 

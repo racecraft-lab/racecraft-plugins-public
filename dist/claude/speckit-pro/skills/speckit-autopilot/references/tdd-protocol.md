@@ -53,7 +53,9 @@ WRONG:
 
 ## Banned Test Patterns
 
-The following are NOT tests and MUST NEVER appear:
+The following are NOT tests and MUST NEVER appear. The list is
+illustrative, not exhaustive: map each pattern to the equivalent
+in the project's own test framework.
 
 ```text
 BANNED (these are placeholders, not tests):
@@ -63,6 +65,11 @@ BANNED (these are placeholders, not tests):
   test.todo('should return results')
   it('should work', () => {})          ← empty body
   it('should work', () => { pass() })  ← no assertion
+
+  @pytest.mark.skip                    ← Python
+  pytest.skip('not implemented yet')   ← Python
+  t.Skip("not implemented yet")        ← Go
+  #[ignore]                            ← Rust
 ```
 
 Every test MUST have:

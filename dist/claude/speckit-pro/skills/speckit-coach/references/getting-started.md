@@ -49,7 +49,7 @@ specify init --integration claude
 | `--integration <key>` | Coding-agent integration (see table below); installs skills by default |
 | `--integration-options="--skills"` | Force agent-skills install — the standard mode (auto for Claude; required for Codex/Antigravity) |
 | `--integration-options="--commands-dir <path>"` | Custom command directory (for `--integration generic`) |
-| `--here` | Initialize in current directory (for upgrades) |
+| `--here` | Initialize in current directory (no new folder) |
 | `--force` | Overwrite without confirmation |
 | `--no-git` | Skip git initialization |
 | `--preset <name>` | Install a preset during initialization |
@@ -153,17 +153,22 @@ See the [Presets & Extensions Guide](./presets-extensions-guide.md) for the full
 
 ### Upgrading an Existing Project
 
-If you already have SpecKit installed and want the latest version:
+If you already have SpecKit installed and want the latest version, run
+`/speckit-pro:speckit-upgrade`. It snapshots `.specify/` first, runs the
+diff-aware `specify integration upgrade`, and restores your local edits
+from that snapshot.
+
+The same steps by hand:
 
 ```text
 # 1. Upgrade CLI
 uv tool install specify-cli --force --from git+https://github.com/github/spec-kit.git
 
-# 2. Back up constitution (will be overwritten)
-cp .specify/memory/constitution.md .specify/memory/constitution-backup.md
+# 2. Snapshot .specify/ before any mutation
+cp -r .specify /tmp/specify-upgrade-backup-<STAMP>
 
-# 3. Update project files
-specify init --here --force --integration claude
+# 3. Update project files with the safe upgrade (no --force)
+specify integration upgrade claude --script sh
 
 # 4. Restore constitution
 git restore .specify/memory/constitution.md
@@ -171,6 +176,11 @@ git restore .specify/memory/constitution.md
 # 5. Verify
 specify check
 ```
+
+When step 3 finds locally-modified files it blocks and names them rather
+than overwriting them. Add `--force` to that command only as a deliberate
+escalation, only once the snapshot exists, then restore your edits from
+the snapshot. `specify init --here --force` is not the upgrade path.
 
 **Safe:** `specs/` is never modified by upgrades.
 
@@ -616,7 +626,7 @@ After implementation, specs and code naturally diverge as bugs are fixed and req
 ```
 INSTALL:    uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
 INIT:       specify init --integration claude     # 25+ agents supported
-UPGRADE:    specify init --here --force --integration claude
+UPGRADE:    /speckit-pro:speckit-upgrade   # snapshot, specify integration upgrade, restore
 CHECK:      specify check
 VERSION:    specify version
 DOCTOR:     /speckit.doctor         # project health diagnostics

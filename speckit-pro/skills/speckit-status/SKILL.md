@@ -97,26 +97,27 @@ For each workflow file found, extract:
 
 ### 4. Present Unified Dashboard
 
-Combine technical roadmap and workflow data into a single report:
+Combine technical roadmap and workflow data into a single report (illustrative:
+the table skeletons pin the output format, and every cell holds a placeholder
+rather than real project data):
 
 ```markdown
 # SpecKit Project Status
 
 ## Summary
 
-- **Total specs:** 14
-- **Complete:** 3 (SPEC-006, SPEC-007, SPEC-013)
-- **In progress:** 0
-- **Remaining:** 11
-- **Tools:** 16 of 59 new tools implemented (28 existing → 44 current → 87 target)
+- **Total specs:** <n>
+- **Complete:** <n> (SPEC-XXX, SPEC-YYY)
+- **In progress:** <n>
+- **Remaining:** <n>
+- **Tools:** <n> of <n> new tools implemented
 
 ## Completed Specs
 
 | Spec | Name | Tools | PR | Notes |
 |------|------|-------|----|-------|
-| SPEC-006 | Notifications | 5 | #40 | 240 tests |
-| SPEC-007 | Repetition | 5 | #38 | 292 tests |
-| SPEC-013 | Task Status | 6 | #39 | 367 tests |
+| SPEC-XXX | <name> | <n> | #<pr> | <note> |
+| SPEC-YYY | <name> | <n> | #<pr> | <note> |
 
 ## Ready to Start (No Blockers)
 
@@ -124,19 +125,16 @@ These specs have no dependencies beyond the completed foundation and can start n
 
 | Spec | Name | Tools | Tier | Priority | Notes |
 |------|------|-------|------|----------|-------|
-| SPEC-009 | Search & Database | 10 | 2 | P1 | Largest spec |
-| SPEC-008 | Perspectives | 5 | 2 | P2 | 2 legacy tools to enhance |
-| SPEC-010 | Bulk Operations | 6 | 3 | P2 | |
-| SPEC-012 | TaskPaper | 3 | 3 | P2 | Smallest spec |
-| SPEC-011 | Attachments | 5 | 2 | P3 | |
+| SPEC-XXX | <name> | <n> | <tier> | P1 | <note> |
+| SPEC-YYY | <name> | <n> | <tier> | P2 | <note> |
 | ... | ... | ... | ... | ... | ... |
 
 ## Blocked
 
 | Spec | Name | Blocked By | Reason |
 |------|------|------------|--------|
-| SPEC-020 | Server Optimization | All above | Must know final tool set |
-| SPEC-021 | Plugin & Skills | SPEC-020 | Packages the optimized server |
+| SPEC-XXX | <name> | SPEC-YYY | <reason> |
+| SPEC-YYY | <name> | SPEC-ZZZ | <reason> |
 
 ## Active Workflows (Phase Detail)
 
@@ -148,8 +146,8 @@ what `/speckit-pro:speckit-scaffold-spec` produces today:
 
 | Spec | Name | DC | Specify | Clarify | Plan | Check | Tasks | Analyze | Impl | Next |
 |------|------|----|---------|---------|------|-------|-------|---------|------|------|
-| SPEC-XXX | Feature | ✅ | ✅ | ✅ | 🔄 | ⏳ | ⏳ | ⏳ | ⏳ | Plan |
-| SPEC-YYY | Feature | ⏳ | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | Clarify (no design concept — re-run `/speckit-pro:speckit-scaffold-spec` or grill manually) |
+| SPEC-XXX | <name> | ✅ | ✅ | ✅ | 🔄 | ⏳ | ⏳ | ⏳ | ⏳ | Plan |
+| SPEC-YYY | <name> | ⏳ | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | Clarify (no design concept — re-run `/speckit-pro:speckit-scaffold-spec` or grill manually) |
 ```
 
 Include an Archive Sweep summary when archive state exists:
@@ -213,7 +211,7 @@ of truth.
 Also surface final-gate re-slicing state when present in workflow or
 `autopilot-state.json`: a blocked `final_reviewability_gate` means PR creation
 has not started and status should point to the recorded re-slicing packet,
-blocked operations, and next PRSG-007/008/009 resume action instead of marking
+blocked operations, and the next re-slicing resume action instead of marking
 implementation complete.
 
 ### 5. Recommend Next Spec
@@ -236,20 +234,21 @@ that proposes the next spec to implement.
    level, especially if they are smaller (fewer tools) for a
    quicker win.
 
-**Output format:**
+**Output format** (illustrative: the shape is fixed, the values are
+placeholders):
 
 ```markdown
 ## Recommended Next
 
-**SPEC-009: Search & Database** (10 tools, P1, Tier 2)
+**SPEC-XXX: <name>** (<n> tools, P1, Tier <tier>)
 
-This is the highest-priority unblocked spec. It adds full-text search, smart
-queries, and database access — the most-requested capabilities for GTD workflows.
+This is the highest-priority unblocked spec. <one or two sentences of scope,
+taken from the spec's technical roadmap section.>
 
 To get started:
 
 ```text
-/speckit-pro:speckit-scaffold-spec SPEC-009
+/speckit-pro:speckit-scaffold-spec SPEC-XXX
 ```
 
 This creates the worktree, branch, and populated workflow file.
@@ -257,8 +256,8 @@ Then run `/speckit-pro:speckit-autopilot` to execute it.
 
 **Alternatives** (if you prefer a smaller spec first):
 
-- SPEC-008: Perspectives (5 tools, P2) — enhances 2 existing legacy tools
-- SPEC-010: Bulk Operations (6 tools, P2)
+- SPEC-YYY: <name> (<n> tools, P2)
+- SPEC-ZZZ: <name> (<n> tools, P2)
 ```
 
 **Edge cases:**

@@ -11,7 +11,7 @@ license: MIT
 
 ## Capability discovery & grounding
 
-Before researching or recommending, enumerate the tools and skills your session actually exposes — do not assume a fixed set; the user may have installed anything — and select the best fit per `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`. Ground every external fact you assert in a real tool, skill, or file result per `speckit-pro/skills/speckit-autopilot/references/grounding.md`, and abstain when nothing grounds it.
+Before researching or recommending, enumerate the tools and skills your session actually exposes — do not assume a fixed set; the user may have installed anything — and select the best fit per `${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/capability-discovery.md`. Ground every external fact you assert in a real tool, skill, or file result per `${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/grounding.md`, and abstain when nothing grounds it.
 
 ## Codex Skill-Selection Guard
 
@@ -79,8 +79,7 @@ on PR #<PR_NUMBER>" and stop.
 (same file), process serially — concurrent edits to the same file race
 on the `Edit` tool. Across partitions (different files), dispatch
 parallel background subagents in ONE assistant message. This is
-**Use site 6** of the [Agent Teams integration map](../skills/speckit-autopilot/references/agent-teams-integration.md)
-— the WS-F1 pattern.
+**Use site 6** of the [Agent Teams integration map](../speckit-autopilot/references/agent-teams-integration.md).
 
 #### 4a. Detect cross-file comments
 

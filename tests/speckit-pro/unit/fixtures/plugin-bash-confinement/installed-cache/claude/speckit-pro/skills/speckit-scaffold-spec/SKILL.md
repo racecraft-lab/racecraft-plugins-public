@@ -19,22 +19,22 @@ PowerShell-specific command-language requirement for installed workflows.
 
 ## Capability discovery & grounding
 
-Before researching or recommending, enumerate the tools and skills your session actually exposes — do not assume a fixed set; the user may have installed anything — and select the best fit per `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`. Ground every external fact you assert in a real tool, skill, or file result per `speckit-pro/skills/speckit-autopilot/references/grounding.md`, and abstain when nothing grounds it.
+Before researching or recommending, enumerate the tools and skills your session actually exposes — do not assume a fixed set; the user may have installed anything — and select the best fit per `${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/capability-discovery.md`. Ground every external fact you assert in a real tool, skill, or file result per `${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/grounding.md`, and abstain when nothing grounds it.
 
 ## Artifact tiering (CONTRACT vs EXHAUST)
 
 speckit-pro artifacts are tiered. **CONTRACT** artifacts (`spec.md`, `plan.md`,
-`tasks.md`, `research.md`, supporting design artifacts) are review-visible and stay
-at their existing location — this skill does not relocate them. The three authored
-**EXHAUST** artifacts (the design-concept doc, the workflow file, and the UAT
-runbook) are scaffolding, so they are written under a `.process/` directory:
-the design-concept doc and workflow file land under `docs/ai/specs/.process/`, and
-the UAT runbook lands under the feature's own `specs/<NNN>/.process/`. Nothing is
-deleted — every relocated file still exists and is readable at its `.process/` path.
+`tasks.md`, `research.md`, supporting design artifacts) are review-visible and
+live at their normal locations. The three authored **EXHAUST** artifacts (the
+design-concept doc, the workflow file, and the UAT runbook) are scaffolding, so
+they are written under a `.process/` directory: the design-concept doc and
+workflow file land under `docs/ai/specs/.process/`, and the UAT runbook lands
+under the feature's own `specs/<NNN>/.process/`. EXHAUST artifacts are kept, not
+discarded: each one stays readable at its `.process/` path.
 
 ## O5 monster-epic fallback
 
-Normal PRSG-007/008/009 routing, layer planning, and split-PR emission remain
+Normal reviewability re-slicing routing, layer planning, and split-PR emission remain
 the default path for oversized work. Describe or scaffold O5 only when the
 roadmap/design-concept evidence says ordinary O4 split planning cannot produce
 reviewable, independently ordered slices.
@@ -108,8 +108,9 @@ does not block the remaining scaffold workflow, but it must be recorded.
 Before parsing or mutating the repository, resolve the plugin root from this
 skill location and verify by filesystem reads that every bundled Claude Code
 `agents/*.md` file is present, including `uat-runbook-author.md`.
-`install-codex-agents` is deferred and unavailable; do not invoke it as a
-validator or repair operation. If the file inventory is incomplete, STOP and
+Do not use `install-codex-agents` as a Claude-side repair: Claude Code loads
+plugin agents from the plugin cache, so scaffold cannot safely self-heal a
+missing Claude agent file. If the file inventory is incomplete, STOP and
 tell the user to update/reinstall `speckit-pro`, run `/reload-plugins`, and
 retry. Claude Code
 loads plugin agents directly from the plugin cache, so scaffold cannot safely
@@ -258,10 +259,8 @@ this step sets out.
 </hard_constraints>
 
 **Engine.** The pass runs on the already-shipped read-only `codebase-analyst`,
-consumed unmodified. Do not add or edit an agent definition on either platform,
-and never add Grep, Glob, or Bash to this skill's `allowed-tools`, which stays
-exactly `Read Edit Write Skill Agent ToolSearch`. The existing `Agent` grant
-already makes the dispatch possible: this step needs **no new tool grant**.
+consumed unmodified. Do not add or edit an agent definition. The existing
+`Agent` grant already makes the dispatch possible.
 
 **Dispatch, then await.** Dispatch the analyst, then await its own final summary
 BEFORE the interview begins:
@@ -480,10 +479,9 @@ clause** the status line above carried. A pass that ran and raised nothing is
 the first shape with `N` and `M` both zero — which is what distinguishes it from
 a pass that never ran.
 
-Adding this key needs no schema change. Do **not** add a new section to the
-design concept, do **not** write a separate findings artifact — specifically not
-`.process/<SPEC-ID>-blind-spots.md` — and do **not** change what the interview
-produces.
+Do **not** add a new section to the design concept, do **not** write a separate
+findings artifact — specifically not `.process/<SPEC-ID>-blind-spots.md` — and
+do **not** change what the interview produces.
 
 **Presentation is informational.** The run flows straight from the findings into
 the first interview question. **No confirmation, no curation step, no
@@ -537,8 +535,8 @@ invocation — do not attempt to skip grilling.
    blockquote from the values already held at the moment the status line was
    rendered — the outcome, the `<reason>` clause, and N and M for the `ran`
    outcome. Nothing is derived a second time.
-   Read to check and Edit to repair. No new tool grant, no new machinery, no new
-   section, no separate findings artifact, and no grill-me edit.
+   Read to check and Edit to repair. No new section and no separate findings
+   artifact.
 ```
 
 When the interview does not return, nothing is owed. The run stops when no
@@ -548,9 +546,8 @@ the run does not continue, so there is no later reader to serve.
 
 The labelled block is the **only** channel the pass uses into the interview, and
 it travels in all three Step 3.6 outcomes — carrying only its status line in the
-degraded two. Do not add a new interview argument, do not change what the
-interview produces, and never edit any file under the grill-me skill on either
-platform. The `scope` argument already exists; this appends to it.
+degraded two. Do not add a new interview argument and do not change what the
+interview produces. The `scope` argument already exists; this appends to it.
 
 The Q&A log and Goals/Non-goals from this doc drive the next step's
 workflow prompts. Pass the doc path forward.
@@ -624,8 +621,8 @@ The written marker MUST carry:
 ### 6. Populate the Workflow File
 
 Read the copied workflow file (in the worktree) and replace
-ALL placeholders with spec-specific values from the master
-plan:
+ALL placeholders with spec-specific values from the technical
+roadmap:
 
 | Placeholder | Replace With |
 | ----------- | ------------ |
@@ -687,7 +684,7 @@ the decisions the roadmap left ambiguous.
 
 ### 7. Commit and Verify (IN the Worktree)
 
-All commits happen on the worktree branch — NEVER on main.
+All commits happen on the worktree branch (see hard constraints).
 
 ```text
 1. Stage and commit the design concept doc, the workflow file, AND the
@@ -750,16 +747,15 @@ WORKTREE (not on main) to mark the spec as `🔄 In Progress`:
    `chore(SPEC-XXX): mark as In Progress`, and push the branch.
 ```
 
-**NEVER push to main.** The technical roadmap update will reach
-main when the spec's PR is merged.
+The technical roadmap update will reach main when the spec's PR is
+merged (see hard constraints).
 
 ### 9. Hand Off to the Planning Stage
 
 The hand-off sits here, after Step 8, once the design concept, the workflow file,
 the SPEC-MOC marker, and the roadmap status flip are all committed and pushed.
-Placing it earlier is rejected for a stated reason: a planning stage that fails
-or is interrupted must never leave the roadmap claiming the spec is still Ready.
-Steps 4 through 8 keep their numbers.
+Never hand off earlier: a planning stage that fails or is interrupted must never
+leave the roadmap claiming the spec is still Ready.
 
 **Scaffold never invokes the autopilot or `/cd`. It prints both commands; the
 operator explicitly sends them in this same session.** On Claude Code the
@@ -875,7 +871,7 @@ The report is **printed, not written to a file.**
 ## <heading>
 
 **Outcome:** <one line>
-**Draft PR:** none, because draft-PR creation is not part of this release
+**Draft PR:** none (scaffold does not open one; autopilot does at PR time)
 
 **Artifacts:**
 - <repo-relative path>     (one line each; only paths that exist)
@@ -929,12 +925,10 @@ validation determines whether the normal hand-off or recovery is shown.
 plainly that there is none:
 
 ```text
-**Draft PR:** none, because draft-PR creation is not part of this release
+**Draft PR:** none (scaffold does not open one; autopilot does at PR time)
 ```
 
-Never omit the line silently, and never fabricate or guess a URL. For every run
-in this release "none" is the expected value, because draft-PR creation belongs
-to a later spec.
+Never omit the line silently, and never fabricate or guess a URL.
 
 **The artifact index enumerates what the run actually produced.** It **must not
 print a path that does not exist, and must not omit an artifact that does.** The
@@ -964,10 +958,10 @@ primary artifact — the one omission this index may never make.
 **The existence test is a read of the candidate path, and nothing more.** A path
 that reads is listed; a path that does not read is omitted. This is the only
 existence test inside this skill's declared grant, and it adds no machinery.
-Never add Grep, Glob, or Bash to widen that grant. Never infer a path from
-convention, and never list a path that was not tested. The pushed branch name is
-the one candidate that is not a path: it is listed from the branch Step 7 pushed
-and needs no read, so the test above never applies to it.
+Never infer a path from convention, and never list a path that was not tested.
+The pushed branch name is the one candidate that is not a path: it is listed
+from the branch Step 7 pushed and needs no read, so the test above never
+applies to it.
 
 **The next step is the Step 9 two-command hand-off**, in the form that step's
 check selected. There is one rule because there is one heading. Scaffold names

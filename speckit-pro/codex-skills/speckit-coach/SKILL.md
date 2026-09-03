@@ -17,7 +17,7 @@ This skill **enhances** the official SpecKit CLI — it does not replace it. The
 
 ```text
 uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
-specify init --integration claude     # 25+ agents: copilot, cursor-agent, gemini, codex, etc.
+specify init --integration claude     # the bundled agents: copilot, cursor-agent, gemini, codex, etc.
 ```
 
 After installation, Codex exposes the bundled skill entrypoints `$speckit-coach`, `$speckit-scaffold-spec`, `$speckit-autopilot`, `$speckit-status`, `$speckit-resolve-pr`, and `$grill-me`. This skill provides **coaching, guidance, and enhancement** on top of those entrypoints. Users invoke them via the `$skill-name` syntax, implicit description-match, or `@SpecKit Pro`.
@@ -70,7 +70,6 @@ When the developer asks about any SpecKit command, provide coaching from [the co
 | **Deep-Dive References** | |
 | "checklist domains", "what checklists", "which domains" | Guide domain selection from [checklist guide](../../skills/speckit-coach/references/checklist-domains-guide.md) |
 | "constitution design", "good principles", "constitution tips" | Guide constitution design from [constitution guide](../../skills/speckit-coach/references/constitution-guide.md) |
-| "upgrade speckit", "update templates" | Provide upgrade guidance from [command guide](../../skills/speckit-coach/references/command-guide.md) — see "Upgrade Guidance" |
 | **Plugin Usage** | |
 | "install codex agents", "subagents missing", "repair codex install", "refresh codex agents" | Route to the SpecKit Pro Codex `install` skill. Explain that `speckit-autopilot` and `speckit-coach` still own skill-local `agents/openai.yaml` metadata sidecars, but real custom agents register from `.codex/agents/*.toml` or `~/.codex/agents/*.toml`, so the install skill copies the bundled `codex-agents/*.toml` templates into place and the user must restart Codex afterward. |
 | "run autopilot", "execute workflow", "autonomous" | Guide to `$speckit-autopilot` — prerequisites, workflow file setup, and autonomous execution. See [autopilot guide](../../skills/speckit-coach/references/autopilot-guide.md) |
@@ -83,18 +82,18 @@ When the developer asks about any SpecKit command, provide coaching from [the co
 | "analyze automation", "finding remediation" | Explain analyze remediation loop — CRITICAL/HIGH findings auto-fixed via consensus. See [autopilot guide](../../skills/speckit-coach/references/autopilot-guide.md) |
 | "PR automation", "review loop", "copilot review" | Explain the post-PR review remediation loop — polling, auto-fix, comment resolution. See [autopilot guide](../../skills/speckit-coach/references/autopilot-guide.md) |
 | "branching", "worktree", "SPECIFY_FEATURE" | Explain branch detection hierarchy — env var → git branch → specs/ scan. See [autopilot guide](../../skills/speckit-coach/references/autopilot-guide.md) |
-| **Presets & Extensions (v0.8.x)** | |
+| **Presets & Extensions** | |
 | "preset", "customize templates", "override templates", "methodology" | Explain presets — stackable template overrides, resolution order, commands. See [presets & extensions guide](../../skills/speckit-coach/references/presets-extensions-guide.md) |
 | "extension", "add extension", "install extension", "community catalog" | Explain extensions and use the live catalog playbook. See [presets & extensions guide](../../skills/speckit-coach/references/presets-extensions-guide.md) — "Browsing the live catalog" section. |
 | "what extensions are available", "search extensions", "find an extension for X", "browse extensions", "list community extensions" | Run **Play 1 — Discovery**: `specify extension search [keyword]` (fallback to `gh api` against `catalog.community.json`, then WebFetch the raw URL). Render results grouped by category. See [presets & extensions guide](../../skills/speckit-coach/references/presets-extensions-guide.md) — "Browsing the live catalog". |
 | "tell me about the X extension", "info on X extension", "what does X extension do", "details on X extension" | Run **Play 2 — Deep dive**: `specify extension info <id>`. Fallback: fetch the extension's own `extension.yml` from its repo via `gh api` or WebFetch and read out `provides.commands`, `hooks`, `requires.speckit_version`, `tags`. Cross-reference against `specify --version`. |
-| "install X extension", "add the X extension", "remove X extension", "disable an extension", "enable an extension", "configure an extension" | Run **Play 3 — Install / configure / remove**. Always confirm with the user before mutating. Use `specify extension add/remove/enable/disable/set-priority`. **Every install / configure / hook-wiring response MUST end with a two-line closing block, verbatim** — do not paraphrase, do not skip, even if the rest of the response is long: <br>`**No plugin update or restart needed** — the autopilot re-reads `.specify/extensions.yml` at every phase boundary, so any hook you wire here fires on the next autopilot run. No `claude` / `codex` restart, no `/plugin marketplace update`, no session reload.`<br>`**Two config files to know:** `.specify/extensions/<id>/<id>-config.yml` (shared, commit to git) and `.specify/extensions/<id>/<id>-config.local.yml` (personal, gitignored).`<br>If the extension should fire automatically at a phase boundary, register it in `.specify/extensions.yml`. |
+| "install X extension", "add the X extension", "remove X extension", "disable an extension", "enable an extension", "configure an extension" | Run **Play 3 — Install / configure / remove**. Always confirm with the user before mutating. Use `specify extension add/remove/enable/disable/set-priority`. End every install / configure / hook-wiring response with this two-line block, verbatim: <br>`**No plugin update or restart needed** — the autopilot re-reads `.specify/extensions.yml` at every phase boundary, so any hook you wire here fires on the next autopilot run. No `claude` / `codex` restart, no `/plugin marketplace update`, no session reload.`<br>`**Two config files to know:** `.specify/extensions/<id>/<id>-config.yml` (shared, commit to git) and `.specify/extensions/<id>/<id>-config.local.yml` (personal, gitignored).`<br>If the extension should fire automatically at a phase boundary, register it in `.specify/extensions.yml`. |
 | "archive extension", "Archive Sweep", "archive cleanup", "spec graveyard", "remove merged specs", "provenance" | Explain the Racecraft archive extension path: install or vendor `racecraft-lab/spec-kit-archive` from a pinned tag/commit, run Archive Sweep at autopilot startup, exclude the current target spec, keep unsafe checkouts dry-run-only, and clean active `specs/**` only after archive success plus recovery commands. |
 | "hook events", "after_implement", "before_specify" | Explain the 8 hook events and how extensions use them. See [presets & extensions guide](../../skills/speckit-coach/references/presets-extensions-guide.md) |
 | "template resolution", "which template", "preset resolve" | Explain 4-tier resolution: overrides > presets > extensions > core. See [presets & extensions guide](../../skills/speckit-coach/references/presets-extensions-guide.md) |
 | "catalog", "custom catalog", "extension catalog", "preset catalog" | Explain multi-catalog stacks, custom catalogs, env vars. See [presets & extensions guide](../../skills/speckit-coach/references/presets-extensions-guide.md) |
 | "doctor", "project diagnostics", "health check" | If the doctor extension is installed, run `$speckit-doctor` for full project diagnostic (structure, agents, features, scripts, extensions, git); install via `specify extension add doctor`. See [presets & extensions guide](../../skills/speckit-coach/references/presets-extensions-guide.md) |
-| "upgrade speckit", "update speckit", "new version", "latest version" | Guide full upgrade: backup constitution → upgrade CLI → init --here --force → restore. See [command guide](../../skills/speckit-coach/references/command-guide.md) upgrade section |
+| "upgrade speckit", "update speckit", "update templates", "new version", "latest version" | Hand off to `$speckit-upgrade` (snapshot `.specify/`, then `specify integration upgrade`, then restore; never `init --here --force` first). |
 | "verify extension", "verify-tasks", "review extension", "cleanup extension" | Explain installed extensions and their commands. See [presets & extensions guide](../../skills/speckit-coach/references/presets-extensions-guide.md) |
 | **Troubleshooting & Recovery** | |
 | "I'm stuck", "don't know what to do", "what's next" | Diagnose current state and recommend next step from [getting started](../../skills/speckit-coach/references/getting-started.md) — see "Troubleshooting & Recovery" |
@@ -138,12 +137,12 @@ CLI upgrades.
 
 1. Confirm you are in the intended repository root and inspect `git status`
    before edits. Do not overwrite unrelated user changes.
-2. Ensure the generic speckit-pro reviewability preset exists by running
-   runner helper `ensure-reviewability-preset` for `"$PWD"`.
-   This generates `.specify/presets/speckit-pro-reviewability/` from the
-   project's current core templates, then adds reviewability budget and PR
-   review packet sections.
-3. Run runner helper `project-fixup-apply` in audit mode for `"$PWD"`.
+2. Audit `.specify/presets/` and run `specify preset resolve <template>` for
+   each core template. The generic speckit-pro reviewability preset
+   (`.specify/presets/speckit-pro-reviewability/`) adds reviewability budget
+   and PR review packet sections; if it is missing, create it by hand from
+   the project's current core templates.
+3. Migrate direct core-template edits into a project-local preset by hand.
 4. If the audit reports reviewability-related direct core template edits that
    are not covered by the generic preset, preserve those project-specific
    customizations in a repo-specific preset id instead of overwriting the
@@ -357,7 +356,7 @@ specs/<number>-<feature-name>/
 - **Invest in the first prompt** — "Having a very detailed first prompt will produce a much better specification"
 - **Commit between phases** — each phase produces artifacts worth preserving
 - **Run `/speckit-analyze` before implement** — it catches coverage gaps and constitution violations cheaply
-- **Back up constitution.md before upgrading** — `specify init --here --force` overwrites it
+- **Upgrade with `$speckit-upgrade`** — it snapshots `.specify/` before touching it
 
 ## References
 

@@ -97,9 +97,10 @@ The `speckit-pro:phase-executor` handles summary formatting and the
 ## Branch/Worktree Detection
 
 Before executing any phase, take the branch context from the
-`check-prerequisites` helper output recorded at Step 0.3. Do not
-recompute these facts from git commands or a branch-name pattern; the
-helper is the single source of truth.
+`check-prerequisites` helper output recorded at Step 0.1–0.7 — see
+[Prerequisites](./prerequisites.md). Do not recompute these facts from
+git commands or a branch-name pattern; the helper is the single
+source of truth.
 
 Record two facts from that JSON:
 
