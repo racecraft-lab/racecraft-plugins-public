@@ -297,6 +297,42 @@
       "path_boundary_policy": {"boundary": "repo_or_plugin", "rejects": ["traversal", "symlink_escape", "external_absolute_path"]},
       "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/read-only-helpers/requests/check-artifact-freshness.json",
       "rollback": "Use the registered check-artifact-freshness operation in read_only mode; the registered request fixture remains the parity source."
+    },
+    {
+      "helper_id": "partition-phase7-tasks",
+      "operation": "partition-phase7-tasks",
+      "promotion_status": "python_authoritative",
+      "failure_classes": ["invalid_input", "missing_input", "missing_file", "unsupported_path", "validation_failure"],
+      "rejected_stdout_schema": {"tool": "string", "error": "string", "errors": "array"},
+      "deterministic_remediation": {"summary": "Provide one readable tasks file and bounded partition settings.", "actions": ["Pass a repo-relative tasks_file.", "Keep wave_size a positive integer and project_agent_keywords an array of strings."]},
+      "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
+      "path_boundary_policy": {"boundary": "repo_or_plugin", "rejects": ["traversal", "symlink_escape", "external_absolute_path"]},
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/read-only-helpers/requests/partition-phase7-tasks.json",
+      "rollback": "Remove the partition registry entry and dispatch every Phase 7 task as its own singleton run."
+    },
+    {
+      "helper_id": "parse-consensus-categories",
+      "operation": "parse-consensus-categories",
+      "promotion_status": "python_authoritative",
+      "failure_classes": ["invalid_input", "missing_input"],
+      "rejected_stdout_schema": {"tags": "array", "analysts": "array", "reason": "string"},
+      "deterministic_remediation": {"summary": "Send one unresolved-item line per request.", "actions": ["Pass the item line in inputs.line.", "Keep the category prefix inside a single leading bracket."]},
+      "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
+      "path_boundary_policy": {"boundary": "not_applicable", "rejects": []},
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/read-only-helpers/requests/parse-consensus-categories.json",
+      "rollback": "Remove the registry entry and dispatch all three analysts for every unresolved item."
+    },
+    {
+      "helper_id": "aggregate-crl",
+      "operation": "aggregate-crl",
+      "promotion_status": "python_authoritative",
+      "failure_classes": ["invalid_input", "missing_input", "missing_file", "unsupported_path", "validation_failure"],
+      "rejected_stdout_schema": {"total_items": "number", "escape_rate_percent": "number", "exceeds_threshold": "boolean", "error": "string"},
+      "deterministic_remediation": {"summary": "Provide one readable workflow file and a percent threshold.", "actions": ["Pass a repo-relative workflow_file.", "Keep threshold_percent a number between 0 and 100."]},
+      "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
+      "path_boundary_policy": {"boundary": "repo_or_plugin", "rejects": ["traversal", "symlink_escape", "external_absolute_path"]},
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/read-only-helpers/requests/aggregate-crl.json",
+      "rollback": "Remove the registry entry and count the Consensus Resolution Log rows by hand during the 30-day review."
     }
   ]
 }

@@ -6,5 +6,5 @@ context", "outside my scope"), the orchestrator must fan out to the
 remaining analysts in Round 2. This protects against single-perspective
 routing on questions where that perspective lacked the answer.
 
-Pairs with `parse-consensus-categories.sh` (Layer 4) which encodes the
-escape-hatch keyword detection logic.
+Pairs with the `parse-consensus-categories` runner helper, which
+decides the Round 1 analyst set this fixture escalates from.

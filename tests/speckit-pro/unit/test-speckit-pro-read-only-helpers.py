@@ -49,6 +49,18 @@ PR_PACKET_SCHEMA_FIXTURE = (
     / "contracts"
     / "pr-packet.schema.json"
 )
+# Shipped runbooks that tell an operator what to do with the confidence-gate
+# JSON on the exit-2 path. All three describe the same loop, so they have to
+# agree on which field the loop reads first.
+CONFIDENCE_GATE_RUNBOOKS = (
+    PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "gate-validation.md",
+    PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "phase-execution.md",
+    PLUGIN_ROOT
+    / "codex-skills"
+    / "speckit-autopilot"
+    / "references"
+    / "phase-execution-codex.md",
+)
 
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
@@ -78,6 +90,9 @@ EXPECTED_HELPERS = [
     "sweep-pr-feedback",
     "sweep-isolation-session",
     "check-artifact-freshness",
+    "partition-phase7-tasks",
+    "parse-consensus-categories",
+    "aggregate-crl",
 ]
 
 JSON_STDOUT_PARITY_HELPERS = {"atomicity-route"}
@@ -90,7 +105,14 @@ JSON_STDOUT_PARITY_HELPERS = {"atomicity-route"}
 # reason: it reads an observation the orchestrator already took, so there was
 # never a script to delete. `check-artifact-freshness` is new behaviour with no
 # deleted `.sh` ancestor for the same reason, and inventing a `source_script` for
-# it would record a lie in a provenance manifest.
+# it would record a lie in a provenance manifest. `partition-phase7-tasks` is the
+# Phase 7 dispatch partition the orchestrator used to run in context, so it too
+# has no deleted script to compare against. The two consensus helpers,
+# `parse-consensus-categories` and `aggregate-crl`, are the one case where a
+# script did once exist: both were deleted with the rest of the Bash surface
+# before any parity capture was taken, so there is nothing left to run a
+# comparison against and naming a `source_script` here would point a
+# provenance manifest at a path that has not existed for several releases.
 NO_BASH_ANCESTOR = (
     "helper-registry-dispatch",
     "resolve-workflow-binding",
@@ -100,6 +122,9 @@ NO_BASH_ANCESTOR = (
     "sweep-pr-feedback",
     "sweep-isolation-session",
     "check-artifact-freshness",
+    "partition-phase7-tasks",
+    "parse-consensus-categories",
+    "aggregate-crl",
 )
 
 HELPER_CASES: dict[str, dict[str, object]] = {
@@ -129,6 +154,9 @@ HELPER_CASES: dict[str, dict[str, object]] = {
     "o5-topology": {"target": FEATURE_DIR},
     "atomicity-route": {"feature_dir": FEATURE_DIR},
     "plan-layers-feature-dir": {"feature_dir": FEATURE_DIR},
+    "partition-phase7-tasks": {"tasks_file": f"{FEATURE_DIR}/tasks.md", "wave_size": 4},
+    "parse-consensus-categories": {"line": "[codebase, domain] Q1: bcrypt or argon2?"},
+    "aggregate-crl": {"workflow_file": AUTOPILOT_STAGE_WORKFLOW_FILE},
     "validate-pr-workflow-contract": {"title": "feat(XPLAT-005): Add read-only helper port"},
     "validate-pr-packet-read-only": {"packet_path": "tests/speckit-pro/unit/fixtures/read-only-helpers/missing-pr-packet.json"},
     "estimate-spec-size": {"user_stories": 2, "files": 3, "frs": 4},
@@ -1378,6 +1406,266 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 self.assert_response(response, "input_error", 2)
                 self.assertTrue("invalid threshold" in response["data"]["stdout_json"]["error"] or "invalid mode" in response["data"]["stdout_json"]["error"])
                 self.assertEqual([diag["code"] for diag in stderr_records], [diag["code"] for diag in response["diagnostics"]])
+
+    def write_confidence_workflow(self, directory: str, body: str) -> str:
+        workflow = Path(directory) / "confidence-workflow.md"
+        workflow.write_text(body, encoding="utf-8")
+        return workflow.resolve().relative_to(REPO_ROOT).as_posix()
+
+    def run_confidence_gate(self, body: str, **inputs: object) -> dict[str, object]:
+        from speckit_pro_runner.helpers.read_only import confidence_gate
+
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as directory:
+            request = {"workflow_file": self.write_confidence_workflow(directory, body), "mode_name": "advisory"}
+            request.update(inputs)
+            result = confidence_gate(request, REPO_ROOT)
+        return {"exit_code": result["exit_code"], "stderr": result["stderr"], "json": json.loads(result["stdout"])}
+
+    ANALYSIS_HEADER = ("| ID | Severity | Issue | Resolution |", "|----|----------|-------|------------|")
+    SEVERITY_LEGEND = "\n".join(
+        (
+            "| Severity | Meaning | Action Required |",
+            "|----------|---------|-----------------|",
+            "| `CRITICAL` | Blocks implementation, violates constitution | **Must fix before G6 gate** |",
+            "| `HIGH` | Significant gap, impacts quality | Should fix |",
+            "| `MEDIUM` | Improvement opportunity | Review and decide |",
+            "| `LOW` | Minor inconsistency | Note for future |",
+        )
+    )
+
+    @classmethod
+    def analysis_table(cls, rows: tuple[tuple[str, str, str, str], ...]) -> str:
+        lines = list(cls.ANALYSIS_HEADER)
+        lines.extend("| " + " | ".join(row) + " |" for row in rows)
+        return "\n".join(lines)
+
+    @classmethod
+    def confidence_emit(
+        cls,
+        stated: str | None,
+        criteria: tuple[str, str, str, str, str] | None,
+        prose: str = "",
+        analysis_rows: tuple[tuple[str, str, str, str], ...] | None = None,
+    ) -> str:
+        lines = ["# Workflow", "", "## Phase 6: Analyze", ""]
+        if prose:
+            lines.extend([prose, ""])
+        if analysis_rows is not None:
+            lines.extend(["### Analysis Results", "", cls.analysis_table(analysis_rows), ""])
+        if stated is not None:
+            lines.extend([f"📊 Confidence: {stated}", ""])
+        if criteria is not None:
+            labels = ("Task understanding", "Approach clarity", "Requirements alignment", "Risk assessment", "Completeness")
+            lines.extend(f"- {label}: {score}" for label, score in zip(labels, criteria))
+        return "\n".join(lines) + "\n"
+
+    def test_confidence_gate_computes_composite_from_criterion_mean(self) -> None:
+        if self.helper_filter and self.helper_filter != "confidence-gate":
+            self.skipTest("confidence-gate composite case")
+        outcome = self.run_confidence_gate(self.confidence_emit("0.99", ("0.95", "0.85", "0.95", "0.90", "0.85")))
+        payload = outcome["json"]
+        self.assertEqual(payload["composite"], 0.90)
+        self.assertEqual(payload["composite_source"], "computed")
+        self.assertEqual(payload["criteria_mean"], 0.90)
+        self.assertEqual(payload["deductions"], {"critical": 0, "high": 0, "amount": 0.0})
+        self.assertFalse(payload["deductions_applied"])
+        self.assertTrue(payload["pass"])
+        self.assertEqual(outcome["exit_code"], 0)
+
+    def test_confidence_gate_rounds_the_criterion_mean_to_two_decimals(self) -> None:
+        if self.helper_filter and self.helper_filter != "confidence-gate":
+            self.skipTest("confidence-gate rounding case")
+        outcome = self.run_confidence_gate(self.confidence_emit(None, ("0.95", "0.80", "0.90", "0.75", "0.86")))
+        self.assertEqual(outcome["json"]["criteria_mean"], 0.85)
+        self.assertEqual(outcome["json"]["composite"], 0.85)
+        self.assertEqual(outcome["json"]["composite_source"], "computed")
+
+    def test_confidence_gate_deducts_for_unresolved_analysis_rows(self) -> None:
+        if self.helper_filter and self.helper_filter != "confidence-gate":
+            self.skipTest("confidence-gate deduction case")
+        cases = (
+            ((("A1", "CRITICAL", "contract undefined", ""),), 1, 0, 0.30, 0.70),
+            ((("A1", "HIGH", "cookie policy unspecified", ""),), 0, 1, 0.10, 0.90),
+            (
+                (("A1", "CRITICAL", "contract undefined", ""), ("A2", "HIGH", "cookie policy unspecified", "")),
+                1,
+                1,
+                0.40,
+                0.60,
+            ),
+        )
+        for rows, critical, high, amount, composite in cases:
+            with self.subTest(rows=rows):
+                outcome = self.run_confidence_gate(
+                    self.confidence_emit(None, ("1.00", "1.00", "1.00", "1.00", "1.00"), analysis_rows=rows)
+                )
+                payload = outcome["json"]
+                self.assertEqual(payload["criteria_mean"], 1.00)
+                self.assertEqual(payload["deductions"], {"critical": critical, "high": high, "amount": amount})
+                self.assertTrue(payload["deductions_applied"])
+                self.assertEqual(payload["composite"], composite)
+
+    def test_confidence_gate_stops_deducting_once_the_resolution_cell_is_filled(self) -> None:
+        if self.helper_filter and self.helper_filter != "confidence-gate":
+            self.skipTest("confidence-gate remediation case")
+        rows = (
+            ("A1", "CRITICAL", "contract undefined", "Contract added to `contracts/api.md`."),
+            ("A2", "HIGH", "cookie policy unspecified", "Policy stated in `plan.md`."),
+        )
+        outcome = self.run_confidence_gate(
+            self.confidence_emit(None, ("1.00", "1.00", "1.00", "1.00", "1.00"), analysis_rows=rows)
+        )
+        payload = outcome["json"]
+        self.assertEqual(payload["deductions"], {"critical": 0, "high": 0, "amount": 0.0})
+        self.assertFalse(payload["deductions_applied"])
+        self.assertEqual(payload["composite"], 1.00)
+        self.assertTrue(payload["pass"])
+        self.assertEqual(outcome["exit_code"], 0)
+
+    def test_confidence_gate_ignores_unresolved_medium_and_low_rows(self) -> None:
+        if self.helper_filter and self.helper_filter != "confidence-gate":
+            self.skipTest("confidence-gate severity scope case")
+        rows = (("A1", "MEDIUM", "naming inconsistency", ""), ("A2", "LOW", "typo in heading", ""))
+        outcome = self.run_confidence_gate(
+            self.confidence_emit(None, ("1.00", "1.00", "1.00", "1.00", "1.00"), analysis_rows=rows)
+        )
+        payload = outcome["json"]
+        self.assertEqual(payload["deductions"], {"critical": 0, "high": 0, "amount": 0.0})
+        self.assertEqual(payload["composite"], 1.00)
+
+    def test_confidence_gate_ignores_bracket_severity_prose_in_the_log(self) -> None:
+        if self.helper_filter and self.helper_filter != "confidence-gate":
+            self.skipTest("confidence-gate bracket prose case")
+        clean_scan = (
+            "| Marker scan | Clean | New Plan artifacts contain 0 `[NEEDS CLARIFICATION]`, 0 `[Gap]`, "
+            "0 `[CRITICAL]`, and 0 `[HIGH]` markers |"
+        )
+        remediated = "- F1 [HIGH]: Packet-validation fallback wording could be read as allowing a fallback."
+        for prose in (clean_scan, remediated, clean_scan + "\n" + remediated):
+            with self.subTest(prose=prose):
+                outcome = self.run_confidence_gate(
+                    self.confidence_emit(None, ("1.00", "1.00", "1.00", "1.00", "1.00"), prose=prose)
+                )
+                payload = outcome["json"]
+                self.assertEqual(payload["deductions"], {"critical": 0, "high": 0, "amount": 0.0})
+                self.assertFalse(payload["deductions_applied"])
+                self.assertEqual(payload["composite"], 1.00)
+                self.assertTrue(payload["pass"])
+                self.assertEqual(outcome["exit_code"], 0)
+
+    def test_confidence_gate_ignores_the_severity_legend_table(self) -> None:
+        if self.helper_filter and self.helper_filter != "confidence-gate":
+            self.skipTest("confidence-gate legend table case")
+        outcome = self.run_confidence_gate(
+            self.confidence_emit(None, ("1.00", "1.00", "1.00", "1.00", "1.00"), prose=self.SEVERITY_LEGEND)
+        )
+        payload = outcome["json"]
+        self.assertEqual(payload["deductions"], {"critical": 0, "high": 0, "amount": 0.0})
+        self.assertEqual(payload["composite"], 1.00)
+        self.assertEqual(outcome["exit_code"], 0)
+
+    def test_confidence_gate_reads_only_the_most_recent_analysis_table(self) -> None:
+        if self.helper_filter and self.helper_filter != "confidence-gate":
+            self.skipTest("confidence-gate latest table case")
+        earlier = self.analysis_table((("A1", "CRITICAL", "contract undefined", ""),))
+        body = self.confidence_emit(
+            None,
+            ("1.00", "1.00", "1.00", "1.00", "1.00"),
+            prose="### Analysis Results (pass 1)\n\n" + earlier,
+            analysis_rows=(("A1", "CRITICAL", "contract undefined", "Contract added to `contracts/api.md`."),),
+        )
+        outcome = self.run_confidence_gate(body)
+        payload = outcome["json"]
+        self.assertEqual(payload["deductions"], {"critical": 0, "high": 0, "amount": 0.0})
+        self.assertEqual(payload["composite"], 1.00)
+
+    def test_confidence_gate_floors_the_composite_at_zero(self) -> None:
+        if self.helper_filter and self.helper_filter != "confidence-gate":
+            self.skipTest("confidence-gate floor case")
+        rows = tuple((f"A{index}", "CRITICAL", "unresolved", "") for index in range(1, 5))
+        outcome = self.run_confidence_gate(
+            self.confidence_emit("0.95", ("0.20", "0.20", "0.20", "0.20", "0.20"), analysis_rows=rows)
+        )
+        payload = outcome["json"]
+        self.assertEqual(payload["deductions"]["amount"], 1.20)
+        self.assertEqual(payload["composite"], 0.00)
+        self.assertFalse(payload["pass"])
+        self.assertEqual(outcome["exit_code"], 2)
+
+    def test_confidence_gate_falls_back_to_the_stated_line_without_criteria(self) -> None:
+        if self.helper_filter and self.helper_filter != "confidence-gate":
+            self.skipTest("confidence-gate fallback case")
+        outcome = self.run_confidence_gate(
+            self.confidence_emit("0.92", None, analysis_rows=(("A1", "CRITICAL", "ignored", ""),))
+        )
+        payload = outcome["json"]
+        self.assertEqual(payload["composite"], 0.92)
+        self.assertEqual(payload["composite_source"], "stated")
+        self.assertIsNone(payload["criteria_mean"])
+        self.assertFalse(payload["deductions_applied"])
+        self.assertEqual(payload["deductions"], {"critical": 0, "high": 0, "amount": 0.0})
+        self.assertTrue(payload["pass"])
+
+    def test_confidence_gate_reads_a_deduction_as_agreement_not_mismatch(self) -> None:
+        if self.helper_filter and self.helper_filter != "confidence-gate":
+            self.skipTest("confidence-gate deduction agreement case")
+        outcome = self.run_confidence_gate(
+            self.confidence_emit(
+                "0.95",
+                ("0.95", "0.95", "0.95", "0.95", "0.95"),
+                analysis_rows=(("A1", "HIGH", "open finding", ""),),
+            )
+        )
+        payload = outcome["json"]
+        self.assertEqual(payload["criteria_mean"], 0.95)
+        self.assertEqual(payload["composite"], 0.85)
+        self.assertNotIn("stated", payload["reason"])
+
+    def test_confidence_gate_surfaces_a_stated_versus_computed_mismatch(self) -> None:
+        if self.helper_filter and self.helper_filter != "confidence-gate":
+            self.skipTest("confidence-gate mismatch case")
+        outcome = self.run_confidence_gate(self.confidence_emit("0.95", ("0.80", "0.80", "0.80", "0.80", "0.80")))
+        payload = outcome["json"]
+        self.assertEqual(payload["composite"], 0.80)
+        self.assertIn("stated 0.95", payload["reason"])
+        self.assertIn("criterion mean 0.80", payload["reason"])
+        agreeing = self.run_confidence_gate(self.confidence_emit("0.80", ("0.80", "0.80", "0.80", "0.80", "0.80")))
+        self.assertNotIn("stated", agreeing["json"]["reason"])
+
+    def test_confidence_gate_reports_no_data_without_either_source(self) -> None:
+        if self.helper_filter and self.helper_filter != "confidence-gate":
+            self.skipTest("confidence-gate no-data case")
+        outcome = self.run_confidence_gate(self.confidence_emit(None, None))
+        self.assertEqual(outcome["exit_code"], 1)
+        self.assertIsNone(outcome["json"]["pass"])
+        self.assertIn("NO_DATA", outcome["stderr"])
+
+    def test_confidence_gate_runbooks_route_exit_two_through_deductions_applied(self) -> None:
+        if self.helper_filter and self.helper_filter != "confidence-gate":
+            self.skipTest("confidence-gate runbook parity case")
+        for runbook in CONFIDENCE_GATE_RUNBOOKS:
+            with self.subTest(runbook=runbook.name):
+                self.assertIn(
+                    "deductions_applied",
+                    runbook.read_text(encoding="utf-8"),
+                    f"{runbook.name} documents the exit-2 loop without naming the field it reads first",
+                )
+
+    def test_confidence_gate_runbooks_do_not_route_remediation_by_risk_assessment(self) -> None:
+        if self.helper_filter and self.helper_filter != "confidence-gate":
+            self.skipTest("confidence-gate runbook routing case")
+        # The synthesizer no longer deducts for open findings under Risk
+        # assessment, so that criterion can never come back lowest because of
+        # them. A runbook that still routes remediation through it sends the
+        # operator down a branch that cannot fire.
+        routing = re.compile(r"risk_assessment\"?\s*(?:lowest\s*)?(?:→|->)")
+        for runbook in CONFIDENCE_GATE_RUNBOOKS:
+            with self.subTest(runbook=runbook.name):
+                collapsed = " ".join(runbook.read_text(encoding="utf-8").split())
+                self.assertIsNone(
+                    routing.search(collapsed),
+                    f"{runbook.name} still routes confidence remediation by the risk_assessment criterion",
+                )
 
     def test_generate_spec_index_ignores_symlinked_spec_children(self) -> None:
         if self.helper_filter and self.helper_filter != "generate-spec-index-check":

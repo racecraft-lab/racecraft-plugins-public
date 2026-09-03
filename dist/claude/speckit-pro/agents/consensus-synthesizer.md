@@ -171,12 +171,15 @@ output, after all per-finding `Consensus Result` blocks:
 - Completeness: 0.XX
 ```
 
-The aggregate on the first line is the arithmetic mean of the
-five criterion scores, rounded to two decimals. Each criterion
-is independently scored 0.00–1.00 against the rubric in
+The five criterion lines are the contract. Score each one
+independently, 0.00–1.00, against the rubric in
 [consensus-protocol.md §Pre-Implement Confidence Emit](../skills/speckit-autopilot/references/consensus-protocol.md#pre-implement-confidence-emit-end-of-phase-6-analyze).
-Do not omit this block on Analyze synthesis — the downstream
-Pre-Implement Confidence Gate (G6.5) depends on it.
+The first line is a courtesy for human readers: state the mean
+of the five if you like, but the `confidence-gate` helper
+recomputes the composite from the criterion lines and ignores
+your number whenever all five parse. Do not omit this block on
+Analyze synthesis — the downstream Pre-Implement Confidence
+Gate (G6.5) depends on it.
 
 **This block is Phase-6-only.** Do not emit it during Clarify or
 Checklist synthesis.

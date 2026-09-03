@@ -45,7 +45,7 @@
     },
     {
       "role_id": "consensus-synthesizer",
-      "source_digest": "sha256:b4a85e656a2ce312a224cd8f2ebf4ce130d3e8b53f6b2fd583f0f56a872c9ff6",
+      "source_digest": "sha256:6d4780a8b8cad212de62c807e9e4bb2a07484a4abf535584fb495a79345718ee",
       "cohort": "orchestration-support",
       "trust_boundary": "read_only_denylist",
       "memory_scope": null
@@ -111,5 +111,5 @@
     "native_fallback": "operator_override_only",
     "unqualified_delivered_model": "ineligible"
   },
-  "catalog_digest": "sha256:266fd90c51e41561909e44551cd70a2584e82854b5497f7859851191f8a509c5"
+  "catalog_digest": "sha256:17748ba64322e2b56640a007b2caf796af926206a811a6de18a95e5f5b9d8c9f"
 }

@@ -17,3 +17,13 @@ must NOT be dispatched because `[spec]` is absent from the tag.
 - `grill-me` is **never** dispatched (HITL guard)
 - No subagent spawns another `Agent()` (Anthropic constraint)
 - Dispatch count in [2, 3]
+
+## Keeping the item text keyword-free
+
+The item above must stay clear of the security keywords listed in
+`references/consensus-protocol.md`, in the singular and the plural. A
+keyword anywhere in the item text widens dispatch to all three analysts,
+which would contradict this fixture's `must_not_dispatch_to`. Replay mode
+never reads `prompt.txt`, so only a `--live` run would notice; the unit
+test `test-consensus-routing-helpers.py` routes this item text against the
+`parse-consensus-categories` helper to catch the drift without a live run.

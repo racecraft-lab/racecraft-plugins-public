@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-aggregate-crl",
+  "helper_id": "aggregate-crl",
+  "operation": "aggregate-crl",
+  "mode": "read_only",
+  "inputs": {
+    "workflow_file": "docs/ai/specs/.process/ART-006-workflow.md",
+    "threshold_percent": 10
+  }
+}
