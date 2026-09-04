@@ -16,13 +16,6 @@ Per-command coaching for the official SpecKit slash commands. This is NOT the co
 - [`/speckit-implement`](#speckit-implement--execute-tasks) — TDD, phase execution
 - [`/speckit-taskstoissues`](#speckit-taskstoissues--export-to-github-issues) — GH issue export
 
-**Beyond per-command coverage:**
-- [Extension Commands (Installed)](#extension-commands-installed) — verify / verify-tasks / review / cleanup / doctor / retrospective / archive
-- [CLI Commands](#cli-commands) — `specify init`, presets, extensions
-- [Presets — Customizing Workflows](#presets--customizing-workflows) — stackable template overrides
-- [Extensions — Adding Capabilities](#extensions--adding-capabilities) — 26 community extensions + hook events
-- [Upgrade Guidance](#upgrade-guidance) — route to `/speckit-pro:speckit-upgrade`: snapshot, `specify integration upgrade`, restore
-
 ## Command Chaining (The Official Workflow)
 
 ```
@@ -87,12 +80,6 @@ Each command depends on artifacts from previous commands. You cannot skip requir
 - Not defining Out of Scope — leads to unbounded features
 - Forgetting to commit spec.md before moving to the next phase
 
-### Gate G1
-- [ ] No `[NEEDS CLARIFICATION]` markers remain
-- [ ] Requirements are testable and unambiguous
-- [ ] Success criteria are measurable
-- [ ] User stories are independently testable
-
 ### What It Produces
 - `specs/<number>-<feature-name>/spec.md`
 - `specs/<number>-<feature-name>/checklists/requirements.md`
@@ -131,11 +118,6 @@ Each command depends on artifacts from previous commands. You cannot skip requir
 - Accepting all AI recommendations without thinking critically
 - Not reviewing the updated spec after clarification
 
-### Gate G2
-- [ ] All `[NEEDS CLARIFICATION]` markers resolved
-- [ ] All decisions documented in `## Clarifications` section
-- [ ] Updated spec reviewed and approved
-
 ### What It Produces
 - Updated `spec.md` with clarifications integrated
 - `## Clarifications` section with dated session logs
@@ -163,12 +145,6 @@ Each command depends on artifacts from previous commands. You cannot skip requir
 - Not reviewing research.md — it contains critical technical decisions
 - Including too much implementation detail in plan.md — use supporting files
 - Forgetting to review generated data models and contracts
-
-### Gate G3
-- [ ] Architecture approved
-- [ ] Constitution gates pass (Simplicity, Anti-Abstraction, Integration-First)
-- [ ] Dependencies identified
-- [ ] No unresolved technical unknowns in research.md
 
 ### What It Produces
 - `plan.md` — technical implementation plan
@@ -210,11 +186,6 @@ Checklists validate **requirement quality**, NOT implementation correctness.
 - Not addressing `[Gap]` items — they represent missing requirements
 - Choosing domains based on project type alone instead of analyzing what's actually in the spec
 
-### Gate G4
-- [ ] All `[Gap]` markers addressed (spec/plan updated)
-- [ ] Traceability ≥80% across all checklists
-- [ ] No unaddressed ambiguities
-
 ### What It Produces
 - `checklists/<domain>.md` — per-domain validation checklists
 
@@ -249,12 +220,6 @@ Checklists validate **requirement quality**, NOT implementation correctness.
 - Not marking parallel-safe tasks with `[P]`
 - Forgetting the foundational phase
 
-### Gate G5
-- [ ] Coverage verified — every FR and user story has tasks
-- [ ] Dependencies ordered correctly
-- [ ] Parallel opportunities identified with `[P]`
-- [ ] Each user story phase independently testable
-
 ### What It Produces
 - `tasks.md` — dependency-ordered task list
 
@@ -288,11 +253,6 @@ Checklists validate **requirement quality**, NOT implementation correctness.
 - Running analyze without tasks.md (it needs all three: spec, plan, tasks)
 - Not re-running after fixing issues from the report
 
-### Gate G6
-- [ ] No CRITICAL issues
-- [ ] HIGH issues reviewed and either fixed or justified
-- [ ] Coverage summary shows no unmapped requirements
-
 ### What It Produces
 - Analysis report with findings table, coverage summary, and recommendations
 
@@ -317,12 +277,6 @@ Checklists validate **requirement quality**, NOT implementation correctness.
 - Skipping the checklist pre-check prompt ("Do you want to proceed anyway?")
 - Not committing after each phase — makes rollback impossible
 - Trying to implement everything at once instead of phase-by-phase
-
-### Gate G7
-- [ ] All tasks marked complete in tasks.md
-- [ ] Tests pass
-- [ ] Manual verification complete
-- [ ] Code review done
 
 ### What It Produces
 - Working code implementing all tasks

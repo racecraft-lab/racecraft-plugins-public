@@ -4,11 +4,10 @@
     {
       "id": 1,
       "prompt": "I'm starting a brand new TypeScript project and want to use Spec-Driven Development from the beginning. I have nothing set up yet — no speckit, no specs directory, nothing. Walk me through getting started from zero.",
-      "expected_output": "Step-by-step onboarding: install SpecKit CLI via uv, initialize a selected integration with the current `specify init --here --integration <key>` form, create a constitution, and explain the SDD phases.",
+      "expected_output": "Routes first-time setup to `/speckit-pro:speckit-install`, then explains constitution creation and the post-install SDD flow.",
       "expectations": [
-        "Mentions installing SpecKit CLI with 'uv tool install specify-cli' from the git repo",
-        "Includes `specify init --here --integration <key>` or explains selecting an integration before initialization",
-        "Does not recommend the obsolete `--ai` flag",
+        "Routes installation to `/speckit-pro:speckit-install`",
+        "Does not prescribe a Git, PyPI, or package-source installation command",
         "Explains constitution creation and its purpose",
         "Lists or references the 7 SDD phases in order: specify, clarify, plan, checklist, tasks, analyze, implement"
       ]
@@ -50,11 +49,12 @@
     {
       "id": 5,
       "prompt": "I'm building a large e-commerce platform feature that covers product catalog, inventory management, order processing, and payment integration. This is way too big for a single spec. Help me decompose it into a technical roadmap with proper dependency ordering.",
-      "expected_output": "Breaks the feature into 3+ focused specs with clear boundaries, identifies dependencies between them, and suggests an implementation order.",
+      "expected_output": "Breaks the feature into independently valuable vertical slices with observable outcomes, real dependencies, and an implementation order; it does not reserve a catch-all integration-only final spec.",
       "expectations": [
-        "Decomposes into at least 3 separate specs with clear single-responsibility boundaries",
+        "Decomposes into at least 3 independently valuable vertical slices with observable outcomes",
         "Identifies dependency relationships between specs (e.g., catalog before inventory, inventory before orders)",
-        "Suggests a sequential or partially-parallel implementation order based on dependencies",
+        "Suggests a sequential or partially-parallel implementation order based on real dependencies",
+        "Does not propose a catch-all integration-only final spec",
         "Recommends using the technical roadmap template to track cross-spec progress"
       ]
     },
@@ -71,12 +71,12 @@
     },
     {
       "id": 7,
-      "prompt": "Can you just run the full autopilot for me right now on SPEC-025? I have the workflow file ready at docs/ai/specs/SPEC-025-workflow.md.",
-      "expected_output": "Redirects to /speckit-pro:autopilot as the correct command. The coach does not execute the autopilot itself.",
+      "prompt": "Can you just run the full autopilot for me right now on SPEC-025? I have the workflow file ready at docs/ai/specs/.process/SPEC-025-workflow.md.",
+      "expected_output": "Redirects to /speckit-pro:speckit-autopilot as the correct command. The coach does not execute the autopilot itself.",
       "expectations": [
         "Does NOT attempt to execute the autopilot workflow itself",
-        "Redirects the user to /speckit-pro:autopilot as the correct command",
-        "Mentions /speckit-pro:scaffold-spec OR correctly assumes the workflow file exists since the user stated they have it",
+        "Redirects the user to /speckit-pro:speckit-autopilot as the correct command",
+        "Mentions /speckit-pro:speckit-scaffold-spec OR correctly assumes the workflow file exists since the user stated they have it",
         "Provides brief guidance on what to expect when running the autopilot"
       ]
     },
@@ -93,23 +93,23 @@
     },
     {
       "id": 9,
-      "prompt": "I want to understand the workflow file that /speckit-pro:scaffold-spec creates. What sections does it have? What gets populated automatically vs what do I need to fill in?",
-      "expected_output": "Describes the workflow file structure: overview table with 7 phases, status tracking, SPEC-ID, feature branch, and configuration.",
+      "prompt": "I want to understand the workflow file that /speckit-pro:speckit-scaffold-spec creates. What sections does it have? What gets populated automatically vs what do I need to fill in?",
+      "expected_output": "Describes the workflow overview rows: Specify, Clarify, Plan, Checklist, Tasks, Analyze, Confidence Gate, Implement, and Post; plus status tracking, SPEC-ID, feature branch, and configuration.",
       "expectations": [
-        "Describes the workflow overview table showing all 7 phases with status columns",
+        "Describes the workflow overview rows: Specify, Clarify, Plan, Checklist, Tasks, Analyze, Confidence Gate, Implement, and Post",
         "Mentions the SPEC-ID and feature branch fields",
-        "Explains that /speckit-pro:scaffold-spec auto-populates the file from the technical roadmap and the Grill Me design concept doc",
-        "References the workflow file location pattern (docs/ai/specs/SPEC-NNN-workflow.md)",
-        "Mentions that /scaffold-spec also produces a Design Concept doc at docs/ai/specs/SPEC-NNN-design-concept.md from a Grill Me interview"
+        "Explains that /speckit-pro:speckit-scaffold-spec auto-populates the file from the technical roadmap and the Grill Me design concept doc",
+        "References the workflow file location pattern (docs/ai/specs/.process/SPEC-NNN-workflow.md)",
+        "Mentions that /speckit-pro:speckit-scaffold-spec also produces a Design Concept doc at docs/ai/specs/.process/SPEC-NNN-design-concept.md from a Grill Me interview"
       ]
     },
     {
       "id": 10,
-      "prompt": "Where does the Grill Me skill fit into the SDD workflow? Does it replace /speckit-clarify? Can I use it inside the autopilot, or only before? What's the relationship between Grill Me, /speckit-pro:scaffold-spec, and the autopilot's Clarify phase?",
-      "expected_output": "Explains that Grill Me is a pre-workflow human-in-the-loop scoping tool, distinct from autopilot's Clarify phase. /scaffold-spec always runs Grill Me before writing the workflow file. Inside autopilot, Grill Me is forbidden — clarification happens via /speckit-clarify and the consensus protocol.",
+      "prompt": "Where does the Grill Me skill fit into the SDD workflow? Does it replace /speckit-clarify? Can I use it inside the autopilot, or only before? What's the relationship between Grill Me, /speckit-pro:speckit-scaffold-spec, and the autopilot's Clarify phase?",
+      "expected_output": "Explains that Grill Me is a pre-workflow human-in-the-loop scoping tool, distinct from autopilot's Clarify phase. /speckit-pro:speckit-scaffold-spec always runs Grill Me before writing the workflow file. Inside autopilot, Grill Me is forbidden — clarification happens via /speckit-clarify and the consensus protocol.",
       "expectations": [
         "States that Grill Me is human-in-the-loop only and runs BEFORE the workflow file is created",
-        "Explains that /speckit-pro:scaffold-spec always runs Grill Me as part of its flow (no skip flag)",
+        "Explains that /speckit-pro:speckit-scaffold-spec always runs Grill Me as part of its flow (no skip flag)",
         "Explains that the autopilot's Clarify phase is a SEPARATE mechanism using /speckit-clarify and the multi-agent consensus protocol",
         "States explicitly that Grill Me is FORBIDDEN inside autopilot (cannot be invoked from any phase agent)",
         "Mentions that Grill Me can also be invoked standalone via /speckit-pro:grill-me on any input (raw idea, transcript, brief)"

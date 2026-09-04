@@ -49,20 +49,20 @@ it Pending is legitimate and does not make the rows below it read as out of
 order; record the verdict in [Phase 6.5](#phase-65-confidence-gate) when the
 gate runs.
 
-### Phase Gates (SpecKit Best Practice)
+### Phase Gates
 
-Each phase requires **human review and approval** before proceeding:
+Use the [current autopilot gate-validation reference](../speckit-autopilot/references/gate-validation.md) for the active criteria and escalation behavior.
 
-| Gate | Checkpoint | Approval Criteria |
-|------|------------|-------------------|
-| G1 | After Specify | All user stories clear, no `[NEEDS CLARIFICATION]` markers remain |
-| G2 | After Clarify | Ambiguities resolved, decisions documented |
-| G3 | After Plan | Architecture approved, constitution gates pass, dependencies identified |
-| G4 | After Checklist | All `[Gap]` markers addressed |
-| G5 | After Tasks | Task coverage verified, dependencies ordered |
-| G6 | After Analyze | No `CRITICAL` issues, `WARNING` items reviewed |
-| G6.5 | Before Implement | Composite confidence meets the autonomous implementation threshold |
-| G7 | After Each Implementation Phase | Tests pass, manual verification complete |
+| Gate | Checkpoint |
+|------|------------|
+| G1 | After Specify |
+| G2 | After Clarify |
+| G3 | After Plan |
+| G4 | After Checklist |
+| G5 | After Tasks |
+| G6 | After Analyze |
+| G6.5 | Before Implement |
+| G7 | After Each Implementation Phase |
 
 ---
 

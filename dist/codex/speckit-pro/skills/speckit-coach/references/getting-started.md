@@ -2,21 +2,11 @@
 
 ## Compact onboarding
 
-For a new repository, first choose the coding-agent integration. Install the
-CLI when missing, then initialize the first integration with the current CLI
-form:
-
-```text
-uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
-specify init --here --integration <integration-key>
-specify integration install <additional-integration-key>
-specify check
-specify integration list
-```
-
-Use `claude`, `codex`, or the key reported by `specify integration list`.
-Do not use the obsolete `--ai` flag. For an existing `.specify/` installation,
-inspect it first and use the upgrade workflow instead of reinitializing it.
+For a new repository, use the maintained installer for the active host:
+`/speckit-pro:speckit-install` on Claude or `$speckit-install` on Codex. It
+selects the integration and verifies the installed state. For an existing
+`.specify/` installation, inspect it first and use the upgrade workflow instead
+of reinitializing it.
 
 Create a constitution before the first feature, then follow
 `constitution → specify → clarify (as needed) → plan → checklist (as needed) →

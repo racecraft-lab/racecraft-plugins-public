@@ -21,7 +21,7 @@ Use the smallest relevant reference; do not load the whole library.
 | User goal | Read or do |
 |---|---|
 | Learn SDD, start a project, recover from a failed phase, or assess artifacts | [Getting started](../../skills/speckit-coach/references/getting-started.md) and [SDD methodology](../../skills/speckit-coach/references/sdd-methodology.md) as needed. |
-| Use an official command (`specify`, `clarify`, `plan`, `checklist`, `tasks`, `analyze`, `implement`, or `constitution`) | [Command guide](../../skills/speckit-coach/references/command-guide.md); apply its gates and failure recovery. |
+| Use an official command (`specify`, `clarify`, `plan`, `checklist`, `tasks`, `analyze`, `implement`, or `constitution`) | [Command guide](../../skills/speckit-coach/references/command-guide.md) for inputs, artifacts, mistakes, and recovery. For gate questions, read the [live autopilot contract](../speckit-autopilot/SKILL.md) as a reference only; do not execute or invoke it. |
 | Choose or author checklists | [Checklist domains](../../skills/speckit-coach/references/checklist-domains-guide.md). Read the feature's `spec.md` and `plan.md`, rank the relevant risks, and offer enriched prompts for two to four domains. |
 | Design a constitution | [Constitution guide](../../skills/speckit-coach/references/constitution-guide.md). |
 | Design a multi-spec roadmap or split a feature | [Technical-roadmap template](../../skills/speckit-coach/templates/technical-roadmap-template.md) and [slicing heuristics](../../skills/speckit-coach/references/slicing-heuristics.md). Derive independently executable vertical slices with observable outcomes and explicit real dependencies; review the graph before writing. |

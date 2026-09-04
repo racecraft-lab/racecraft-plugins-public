@@ -71,54 +71,6 @@ one with priority 10 when both provide the same template.
 `spec-template.md`, only the lower-priority one is used — they
 are not combined.
 
-### Creating a Custom Preset
-
-1. Create the directory structure **outside** `.specify/presets/`
-   (the `--dev` flag copies INTO `.specify/presets/`, so the
-   source must be elsewhere to avoid a self-referencing loop):
-
-```text
-mkdir -p /tmp/my-preset/{templates,commands}
-```
-
-2. Create `preset.yml` with the schema:
-
-```yaml
-schema_version: "1.0"                    # Required
-
-preset:
-  id: "my-preset"                        # Required, lowercase-hyphenated
-  name: "My Custom Preset"              # Required, human-readable
-  version: "1.0.0"                       # Required, semantic version
-  description: "Enforces team patterns"  # Required, <200 chars
-  author: "your-team"                    # Optional
-  repository: "https://github.com/..."   # Optional
-  license: "MIT"                         # Optional
-
-requires:
-  speckit_version: ">=0.5.1"             # Required (>=0.5.1 introduced the preset/extension system in its current shape)
-
-provides:
-  templates:                             # Required, at least one entry
-    - type: "template"                   # "template" or "command"
-      name: "tasks-template"            # template name to override
-      file: "templates/tasks-template.md"
-      description: "Custom tasks template with TDD enforcement"
-      replaces: "tasks-template"         # which core template this overrides
-
-tags:                                    # Optional
-  - "tdd"
-  - "custom"
-```
-
-**Critical fields:**
-- `schema_version: "1.0"` is REQUIRED (validation fails without it)
-- Fields are nested under `preset:` (not top-level)
-- `id`, `name`, `version`, `description` are required
-- `author`, `repository`, `license` are optional
-- Each template needs `type`, `name`, `file`, and `description`
-- `replaces` is optional but needed to override core templates
-
 3. Add template overrides in `templates/` — copy the core
    template from `.specify/templates/` and modify the sections
    you want to change. Only override templates you need to
