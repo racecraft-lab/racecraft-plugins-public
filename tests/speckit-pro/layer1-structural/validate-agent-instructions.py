@@ -40,7 +40,6 @@ SKIP_DIR_NAMES = {
 }
 SKIP_PREFIXES = (
     Path("docs-site/src/content/docs/reference"),
-    Path("tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache"),
 )
 INSTRUCTION_NAMES = {"AGENTS.md", "CLAUDE.md", "GEMINI.md"}
 FORBIDDEN_AGENT_PHRASES = (

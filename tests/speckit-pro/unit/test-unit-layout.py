@@ -71,10 +71,7 @@ SCRIPT_SUFFIXES = frozenset(
     }
 )
 SCRIPT_DIRECTORY_NAMES = frozenset({"bin", "hooks", "scripts"})
-GENERATED_SCRIPT_PREFIXES = (
-    "dist/",
-    "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/",
-)
+GENERATED_SCRIPT_PREFIXES = ("dist/",)
 NON_AUTHORED_DIRECTORY_NAMES = frozenset(
     {"node_modules", "third_party", "vendor", "vendored"}
 )
@@ -207,6 +204,7 @@ class UnitLayoutTests(unittest.TestCase):
         )
 
     def test_script_name_guard_covers_repository_authored_locations(self) -> None:
+        self.assertEqual(GENERATED_SCRIPT_PREFIXES, ("dist/",))
         covered = (
             ("scripts/test-alpha-002-capability-telemetry.py", "100644"),
             ("docs-site/scripts/alpha-002-reference.mjs", "100644"),
@@ -216,11 +214,6 @@ class UnitLayoutTests(unittest.TestCase):
         )
         excluded = (
             ("dist/codex/alpha-002-generated.py", "100644"),
-            (
-                "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/"
-                "installed-cache/codex/alpha-002-generated.py",
-                "100644",
-            ),
             ("vendor/alpha-002-upstream.sh", "100644"),
         )
         for path, mode in covered:
