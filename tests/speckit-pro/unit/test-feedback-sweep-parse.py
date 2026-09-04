@@ -270,6 +270,31 @@ class FeedbackSweepBehaviorTest(unittest.TestCase):
             self.assertEqual(result["exit_code"], 2)
             self.assertIn("row 1", result["stderr"])
 
+    def test_parse_trust_set_is_exact(self) -> None:
+        observed = [
+            comment("owner", EXPORT_LEAD, association="OWNER"),
+            comment("member", EXPORT_LEAD, association="MEMBER"),
+            comment("collaborator", EXPORT_LEAD, association="COLLABORATOR"),
+            comment("first-timer", EXPORT_LEAD, association="FIRST_TIMER"),
+            comment("contributor", EXPORT_LEAD, association="CONTRIBUTOR"),
+            comment("none", EXPORT_LEAD, association="NONE"),
+        ]
+        with tempfile.TemporaryDirectory() as raw:
+            result, envelope = parse(Path(raw), observed)
+        self.assertEqual(result["exit_code"], 0)
+        self.assertEqual(
+            [(entry["id"], entry["author_association"]) for entry in envelope["candidates"]],
+            [("owner", "OWNER"), ("member", "MEMBER"), ("collaborator", "COLLABORATOR")],
+        )
+        self.assertEqual(
+            envelope["excluded"],
+            [
+                {"id": "first-timer", "surface": "pr_conversation", "reason": "untrusted_author"},
+                {"id": "contributor", "surface": "pr_conversation", "reason": "untrusted_author"},
+                {"id": "none", "surface": "pr_conversation", "reason": "untrusted_author"},
+            ],
+        )
+
     def test_registry_population_and_parser_mechanics_use_independent_truth(self) -> None:
         actual = {
             (entry.line, entry.template_id, entry.kind)
@@ -281,24 +306,36 @@ class FeedbackSweepBehaviorTest(unittest.TestCase):
             len(read_only.SWEEP_EXPORT_REGISTRY),
             "duplicate registry line",
         )
-        for line, template_id, kind in sorted(EXPECTED_REGISTRY, key=lambda item: item[0]):
-            body = line
+        recognized = {}
+        for line, template_id, kind in EXPECTED_REGISTRY:
+            body = "Artifact: test\nFeature: test\n\n" + line
             if line.startswith("Artifact: "):
                 body += "\n" + SERIALIZATION_NEXT
             else:
                 body += "\nobjection (#anchor-1)"
             record = read_only.sweep_export_record(body)
-            with self.subTest(line=line[:32]):
-                self.assertIsNotNone(record)
-                self.assertEqual(record["template_id"], template_id)
-                self.assertEqual(record["kind"], kind)
-                self.assertEqual(record["matched_lines"], [1])
-                self.assertEqual(
-                    record["anchors"],
-                    []
-                    if kind == "empty" or line.startswith("Artifact: ")
-                    else ["anchor-1"],
-                )
+            recognized[line] = None if record is None else {
+                "template_id": record["template_id"],
+                "kind": record["kind"],
+                "matched_lines": record["matched_lines"],
+                "anchors": record["anchors"],
+            }
+        self.assertEqual(
+            recognized,
+            {
+                line: {
+                    "template_id": template_id,
+                    "kind": kind,
+                    "matched_lines": [4],
+                    "anchors": (
+                        []
+                        if kind == "empty" or line.startswith("Artifact: ")
+                        else ["anchor-1"]
+                    ),
+                }
+                for line, template_id, kind in EXPECTED_REGISTRY
+            },
+        )
         self.assertIsNone(
             read_only.sweep_export_record("Export kind: markdown\nArtifact: triage-board")
         )
@@ -308,6 +345,15 @@ class FeedbackSweepBehaviorTest(unittest.TestCase):
         )
         self.assertEqual(first["kind"], "markdown")
         self.assertEqual(first["matched_lines"], [1, 2])
+
+    def test_anchor_limit_keeps_first_64_and_counts_the_remainder(self) -> None:
+        body = EXPORT_LEAD + "\n" + "\n".join(
+            f"objection (#phase-{number})" for number in range(1, 66)
+        )
+        record = read_only.sweep_export_record(body)
+        self.assertIsNotNone(record)
+        self.assertEqual(record["anchors"], [f"phase-{number}" for number in range(1, 65)])
+        self.assertEqual(record["anchors_dropped"], 1)
 
     def test_analyst_payload_handles_adversarial_spans_delimiters_and_bounds(self) -> None:
         body = (
