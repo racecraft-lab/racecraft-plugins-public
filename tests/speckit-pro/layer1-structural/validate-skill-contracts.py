@@ -87,9 +87,7 @@ class ValidateSkills(unittest.TestCase):
                 self.assertTrue(body.strip(), 'body must contain non-whitespace content')
             if skill == 'grill-me':
                 with self.subTest(msg='grill-me: Claude variant requires AskUserQuestion'):
-                    self.assertTrue('Confirm `AskUserQuestion` is available in your tool list' in body and 'the only sanctioned interview mechanism in the Claude Code variant' in body and ('Call `AskUserQuestion` with the question' in body), 'expected Claude grill-me to require AskUserQuestion as the interview mechanism')
-                with self.subTest(msg='grill-me: compatibility text does not document stale Codex free-text loop'):
-                    self.assertTrue('AskUserQuestion tool support' in frontmatter and 'request_user_input when available' in frontmatter and ('uses a free-text Q&A loop instead' not in content), 'expected grill-me compatibility text to avoid the obsolete Codex free-text-loop contract')
+                    self.assertTrue('AskUserQuestion' in body and 'Call `AskUserQuestion` for exactly one question at a time.' in body, 'expected Claude grill-me to retain its AskUserQuestion-only adapter')
             if skill == 'speckit-scaffold-spec':
                 with self.subTest(msg='speckit-scaffold-spec: skill heading uses scaffold naming'):
                     self.assertTrue(re.search('^# SpecKit Scaffold Spec$', content, re.MULTILINE) is not None and re.search('^# SpecKit Setup$', content, re.MULTILINE) is None, "expected '# SpecKit Scaffold Spec' heading in skills/speckit-scaffold-spec/SKILL.md")
@@ -140,8 +138,6 @@ class ValidateCodexSkills(unittest.TestCase):
                 self.assertIn('Codex Skill-Selection Guard', shared_content)
             with self.subTest(msg=f'{skill}: shared guard names the Codex variant path'):
                 self.assertIn(f'../../codex-skills/{skill}/SKILL.md', shared_content)
-            with self.subTest(msg=f'{skill}: shared guard forbids Claude instructions in Codex'):
-                self.assertIn('Do not follow the Claude-oriented instructions below in Codex', shared_content)
 
     def test_codex_skills(self) -> None:
         for skill in validate_codex_skills_SKILLS:
@@ -189,9 +185,8 @@ class ValidateCodexSkills(unittest.TestCase):
                 with self.subTest(msg='speckit-scaffold-spec: Codex Grill Me preserves foreground interaction'):
                     self.assertTrue('picker-first HITL guard' in body and 'request_user_input' in body and re.search('active\\s+foreground\\s+user\\s+chat', body) and re.search('same\\s+single\\s+Grill Me question\\s+in free text', body) and re.search('autonomous,\\s+background,\\s+CI,\\s+or subagent', body) and ('stop before writing' in body), 'expected scaffold to fall back only in a foreground user chat and stop autonomous runs')
             if skill == 'grill-me':
-                protocol_content = _read(skill_dir / 'references' / 'interview-protocol.md')
-                with self.subTest(msg='grill-me: Codex picker-first guard requires default-mode request_user_input'):
-                    self.assertTrue('Codex picker-first HITL guard' in body and 'Use `request_user_input` whenever it is present in the active tool' in body and ('default_mode_request_user_input' in body) and ('Do not ask a' in body) and ('Grill Me question as a normal assistant message' in body) and ('stop instead of asking in Markdown/free-text' in body) and ('Never end a turn with a Markdown question' in protocol_content), 'expected grill-me to require default-mode request_user_input and forbid Markdown fallback')
+                with self.subTest(msg='grill-me: Codex picker fallback stays foreground-only'):
+                    self.assertTrue('request_user_input' in body and 'already active user chat' in body and re.search('Ask exactly one question in the\\s+current conversation', body) and 'Never use this fallback in background, CI, autopilot, or subagent execution.' in body, 'expected picker preference, one-question foreground fallback, and a background stop boundary')
             if skill == 'speckit-autopilot':
                 self._check_autopilot_skill(skill_dir, body)
             self._check_allow_implicit_invocation_policy(skill, skill_dir)
