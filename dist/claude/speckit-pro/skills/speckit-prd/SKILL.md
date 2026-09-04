@@ -16,8 +16,8 @@ roadmap-MOC that makes the spec tree navigable.
 ## Ground recommendations
 
 Inspect the tools and skills actually available. Follow the shared
-[capability-discovery](../speckit-autopilot/references/capability-discovery.md)
-and [grounding](../speckit-autopilot/references/grounding.md) contracts. Read
+[capability-discovery](${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/capability-discovery.md)
+and [grounding](${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/grounding.md) contracts. Read
 applicable project instructions, `.specify/memory/constitution.md`, prior
 roadmaps and decisions, and targeted code. Disclose uncertainty; do not guess.
 

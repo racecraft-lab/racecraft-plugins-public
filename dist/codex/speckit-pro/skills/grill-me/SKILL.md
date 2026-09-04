@@ -12,8 +12,8 @@ conversation.
 ## Ground recommendations
 
 Inspect the tools and skills actually available. Follow the shared
-[capability-discovery](../speckit-autopilot/references/capability-discovery.md)
-and [grounding](../speckit-autopilot/references/grounding.md) contracts.
+[capability-discovery](speckit-pro/skills/speckit-autopilot/references/capability-discovery.md)
+and [grounding](speckit-pro/skills/speckit-autopilot/references/grounding.md) contracts.
 Base recommendations on the project constitution, codebase evidence, or current
 authoritative sources; disclose uncertainty instead of guessing.
 

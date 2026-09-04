@@ -23,21 +23,28 @@ SKILLS = (
     PLUGIN_ROOT / "codex-skills" / "speckit-prd",
 )
 CODEX_SKILLS = tuple(skill for skill in SKILLS if "codex-skills" in skill.parts)
-MARKDOWN_LINK = re.compile(r"\[[^]]+\]\(([^)#]+\.md)(?:#[^)]+)?\)")
+CAPABILITY_LINK = re.compile(
+    r"\[[^]]+\]\((\$\{CLAUDE_PLUGIN_ROOT\}/|speckit-pro/)([^)#]+\.md)(?:#[^)]+)?\)"
+)
 
 
-def markdown_links(skill: Path) -> list[Path]:
+def capability_targets(skill: Path, root: Path) -> list[Path]:
     text = (skill / "SKILL.md").read_text(encoding="utf-8")
-    return [skill / link for link in MARKDOWN_LINK.findall(text) if not link.startswith(("http://", "https://"))]
+    return [root / (link if prefix.startswith("${") else Path(prefix) / link) for prefix, link in CAPABILITY_LINK.findall(text)]
 
 
 class GrillPrdContracts(unittest.TestCase):
-    def test_source_skill_references_resolve(self) -> None:
-        for skill in SKILLS:
+    def test_capability_pointers_resolve_from_runtime_roots(self) -> None:
+        for skill in SKILLS[:2]:
             with self.subTest(skill=skill.name):
-                links = markdown_links(skill)
-                self.assertTrue(links)
-                self.assertTrue(all(link.resolve().is_file() for link in links))
+                targets = capability_targets(skill, PLUGIN_ROOT)
+                self.assertTrue(targets)
+                self.assertTrue(all(target.is_file() for target in targets))
+        for skill in CODEX_SKILLS:
+            with self.subTest(skill=skill.name):
+                targets = capability_targets(skill, REPO_ROOT)
+                self.assertTrue(targets)
+                self.assertTrue(all(target.is_file() for target in targets))
 
     def test_codex_skills_are_explicit_invocation_only(self) -> None:
         for skill in CODEX_SKILLS:
@@ -55,9 +62,11 @@ class GrillPrdContracts(unittest.TestCase):
             for platform in ("claude", "codex"):
                 for name in ("grill-me", "speckit-prd"):
                     with self.subTest(platform=platform, skill=name):
-                        links = markdown_links(output / platform / "speckit-pro" / "skills" / name)
-                        self.assertTrue(links)
-                        self.assertTrue(all(link.resolve().is_file() for link in links))
+                        skill = output / platform / "speckit-pro" / "skills" / name
+                        root = output / platform / "speckit-pro" if platform == "claude" else output / platform
+                        targets = capability_targets(skill, root)
+                        self.assertTrue(targets)
+                        self.assertTrue(all(target.is_file() for target in targets))
 
     def test_claude_payload_removes_codex_selection_guard(self) -> None:
         sys.path.insert(0, str(PLUGIN_ROOT))
