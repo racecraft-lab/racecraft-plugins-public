@@ -1,12 +1,12 @@
 # Feature Specification: Feedback Sweep, slice 1 of 2 — the checkpoint
 
-**Feature Branch**: `art-008-feedback-sweep`
+**Feature Branch**: `spec-808-feedback-sweep`
 
 **Created**: 2026-08-20
 
 **Status**: Draft
 
-**Input**: User description: "ART-008 slice 1 of 2, the checkpoint. The plan stage ends at an open draft pull request whose body indexes the planning artifacts, and the gallery's draft-stage pages export a reader's objections as markdown meant to be pasted into a pull-request comment. Nothing reads those comments back, so an implement-stage run starts task work without looking at the pull request and the checkpoint is decoration. Make the implement stage open with a feedback sweep that reads unresolved review threads and pull-request conversation comments, acts only on write-capable authors, recognizes exported markdown blocks by their lead sentence, classifies each comment as amended, answered, deferred, or no action, routes amendments through the existing consensus machinery, records every handled comment in a Feedback Sweep Log in the workflow file, replies once per comment, and then stops for re-review when anything was amended or proceeds into task work when nothing was. Artifact regeneration, stale-page detection, and the draft-description refresh belong to slice 2."
+**Input**: User description: "SPEC-80 slice 1 of 2, the checkpoint. The plan stage ends at an open draft pull request whose body indexes the planning artifacts, and the gallery's draft-stage pages export a reader's objections as markdown meant to be pasted into a pull-request comment. Nothing reads those comments back, so an implement-stage run starts task work without looking at the pull request and the checkpoint is decoration. Make the implement stage open with a feedback sweep that reads unresolved review threads and pull-request conversation comments, acts only on write-capable authors, recognizes exported markdown blocks by their lead sentence, classifies each comment as amended, answered, deferred, or no action, routes amendments through the existing consensus machinery, records every handled comment in a Feedback Sweep Log in the workflow file, replies once per comment, and then stops for re-review when anything was amended or proceeds into task work when nothing was. Artifact regeneration, stale-page detection, and the draft-description refresh belong to slice 2."
 
 ## Clarifications
 
@@ -1803,7 +1803,7 @@ proceeds.
 
   **The amendment commit's subject is fixed-shape and carries no reviewer
   byte.** It is `docs(<feature-id>): amend <artifact> for <comment-id>`, with
-  no body: the scope is the feature's roadmap id in lowercase, `art-008` for
+  no body: the scope is the feature's roadmap id in lowercase, `spec-708` for
   this feature; `<artifact>` is one of `spec.md`, `plan.md`, and `tasks.md`;
   and `<comment-id>` is the id the observation carries for the comment
   amended. Every slot is an id or an enum, so no byte derived from a comment
@@ -2808,7 +2808,7 @@ proceeds.
   so they read as counted-and-excluded rather than overlooked: the new planning
   contract `contracts/sweep-classifier-output.md`, which fixes the classifier's
   structured record and the analyst's structured edit and follows the
-  agent-contract precedent in ART-007 in appearing in no count; the Layer 5
+  agent-contract precedent in appearing in no count; the Layer 5
   carve-out; and the captured-call fixture extensions. The plan's derivation
   table counts production paths only and this pass is counted the same way.
 
@@ -2892,7 +2892,7 @@ proceeds.
     infra, and upgrade, and this slice is net-new feature work: a new read-only
     parse, a new phase-execution sequence, a new consensus-routed comment class.
     Ratification is a roadmap-level pragma rather than a spec-level assertion,
-    and none exists for ART-008. Stretching a class to fit would be worse than
+    and none exists for SPEC-80. Stretching a class to fit would be worse than
     carrying the crossing honestly.
   Re-slicing remains the operator's call, made against real numbers rather than
   a rounded-down one, and the draft pull request this stage opens is where that
@@ -2908,7 +2908,7 @@ proceeds.
   is. Plan MUST size this slice by hand from its Declared File Operations block
   and record that hand figure, treating the helper's verdict as an absent
   measurement rather than a passing one.
-- **Split decision**: ART-008 is split into two stacked vertical slices along a
+- **Split decision**: SPEC-80 is split into two stacked vertical slices along a
   Path seam. This spec is slice 1, the checkpoint: the comment-driven path. It
   is followed by slice 2, artifact freshness, specified separately on a branch
   stacked on this one. The estimator's `suggested_slices` was 2, and each slice
@@ -2966,19 +2966,18 @@ proceeds.
 
 Named owners, so none of these is a silent omission.
 
-- **Owned by ART-008 slice 2 (artifact freshness, stacked on this branch)**:
+- **Owned by SPEC-80 slice 2 (artifact freshness, stacked on this branch)**:
   regenerating the whole draft page set after amendments; detecting stale pages
   from git history on a clean sweep; and refreshing the draft pull-request
   description, including the Resume block wording. Slice 1's stop report states
   that draft pages regenerate once slice 2 lands.
-- **Owned by ART-010**: flipping the draft pull request to ready, and the final
+- **Owned by the ready-transition contract**: flipping the draft pull request to ready, and the final
   writeup.
 - **Owned by the existing post-implementation loop**: remediating review
   comments left after implementation. That machinery is unchanged.
 - **Deliberately not built**: resolving review threads; reading review summary
   bodies; a state-file mirror of the sweep record; a new Workflow Overview
-  phase row; edits to any shipped gallery template; and edits to any of the
-  twelve governed Layer 6 corpus agent definitions.
+  phase row; and edits to any shipped gallery template.
 - **Owned by no spec yet, and deliberately so**: an operator flag to skip the
   sweep. Clarify surfaced the case that was missing at scoping — a fail-closed
   gate on a mandatory path normally ships with a documented override, and
@@ -3030,25 +3029,6 @@ Named owners, so none of these is a silent omission.
   points, with nothing amend-worthy present. Neither class routes to consensus
   or changes stop-or-proceed, so the choice has no behavioral consequence and
   no owner is assigned.
-- **Owned by no spec yet, and deliberately so**: qualifying `sweep-classifier`
-  and `sweep-analyst` into the governed Layer 6 corpus. The two agents ship
-  outside it. The corpus binds exactly twelve roles through a four-level sha256
-  digest chain over agent source bytes, it has no regeneration script, and
-  editing any governed definition restales the chain with an error that names a
-  digest rather than a file. The `artifact-author` agent is the precedent and it
-  is recent: it shipped on both platforms, outside the corpus, with a green
-  suite. This entry does not disturb the **Deliberately not built** bullet above
-  — no governed definition is edited here, and the twelve stay twelve; two new
-  agents simply ship beside them ungoverned. The disclosure is that a security
-  boundary nothing digest-binds is a gap: FR-008c pins these two definitions at
-  Layer 5, which catches a widened allowlist, and Layer 6 is the layer that
-  would catch a substituted definition. The destination is a future G56R-series
-  spec, because corpus qualification is its own workstream with its own
-  calibration run, and bolting two roles onto a hand-maintained digest chain
-  inside a slice that already crosses its file budget is how that chain gets
-  left broken. No spec is named because none has agreed to it, which is the
-  honest alternative to assigning it.
-
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes

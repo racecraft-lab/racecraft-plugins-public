@@ -1,11 +1,10 @@
 {
   "schema_version": "1.0",
-  "request_id": "xplat-007-us1-run-parity-suite",
+  "request_id": "run-parity-suite",
   "helper_id": "suite-gate",
   "operation": "run-parity-suite",
   "mode": "read_only",
   "inputs": {
-    "repo_root": ".",
-    "xplat_008_cutover_allowed": false
+    "repo_root": "."
   }
 }

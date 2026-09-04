@@ -2131,7 +2131,7 @@ do not generate a PR body, invoke any `gh pr create` variant, or run
 `multi-pr-emission` yet. This blocks only PR side effects. It is not a final
 response condition: read `autopilot_continuation`, the packet's
 `operator_steps`, and `resume.resume_from`; continue inside the same autopilot
-run through the named PRSG-007/008/009 phase until a valid slice PR stack is
+run through reviewability routing, layer planning, and split-PR emission until a valid slice PR stack is
 emitted or a typed exception is committed. Never report completion while
 `autopilot_continuation.required=true`. Recorded exit 2 is a gate error: state is
 written, no packet is valid, and the run stops for operator repair.

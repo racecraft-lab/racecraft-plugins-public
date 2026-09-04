@@ -1,16 +1,5 @@
 #!/usr/bin/env python3
-"""Spec-index helper contract check (port of validate-spec-index-determinism.sh).
-
-XPLAT-010 count-parity port (T038, US2). Python 3.11+ standard library only.
-Validates that the Python runner owns real spec-index checking and writing, that
-the intentionally stale fixture is detected without mutation, and that the
-roadmap-MOC template still exposes the INDEX sentinels. The validator preserves
-the historical 16-unit count while replacing the superseded deferred-write and
-false-current assertions with the active Python contract.
-
-Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-spec-index-determinism-baseline.txt``
-(TOTAL: 16).
-"""
+"""Validate deterministic spec-index generation."""
 
 from __future__ import annotations
 

@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
-"""Layer-4 regression tests for Claude/Codex eval runner skill selection.
-
-Port of ``test-eval-runner-skill-selection.sh`` (XPLAT-010 PR9 T084). The
-predecessor executes 13 assertions; the count-parity baseline is pinned at
-``tests/speckit-pro/parity/bash-to-python/test-eval-runner-skill-selection-baseline.txt``
-(TOTAL: 13).
-"""
+"""Layer-4 regression tests for Claude/Codex eval runner skill selection."""
 
 from __future__ import annotations
 
@@ -31,7 +25,6 @@ FUNCTIONAL_SCRIPT = TESTS_ROOT / "layer3-functional" / "run-functional-evals.py"
 TRIGGER_SCRIPT = TESTS_ROOT / "layer2-trigger" / "run-trigger-evals.py"
 CODEX_FUNCTIONAL_SCRIPT = TESTS_ROOT / "layer3-functional" / "run-functional-evals-codex.py"
 CODEX_TRIGGER_SCRIPT = TESTS_ROOT / "layer2-trigger" / "run-trigger-evals-codex.py"
-BASELINE = TESTS_ROOT / "parity" / "bash-to-python" / "test-eval-runner-skill-selection-baseline.txt"
 CODEX_SKILLS = ("speckit-scaffold-spec", "speckit-status", "speckit-resolve-pr", "install")
 LAYER3_CONTRACT_ROOTS = (
     TESTS_ROOT / "layer3-functional" / "evals",
@@ -62,7 +55,6 @@ SHIPPED_RUNTIME_CONTRACTS = (
 )
 EXPECTED_DEFERRED_HELPERS = frozenset(
     {
-        "ensure-reviewability-preset",
         "migrate-structure",
         "relocate-process-artifacts",
         "restack",
@@ -103,13 +95,11 @@ RETIRED_REPOSITORY_HELPERS = frozenset(
         "generate-pr-body.sh",
         "generate-spec-index.sh",
         "generate-uat-skeleton.sh",
-        "install-curated-set.sh",
         "migrate-structure.sh",
         "multi-pr-emission.sh",
         "o5-topology.sh",
         "parse-consensus-categories.sh",
         "plan-layers.sh",
-        "project-fixup.sh",
         "relocate-process-artifacts.sh",
         "resolve-confidence-mode.sh",
         "restack.sh",
@@ -182,22 +172,6 @@ LIB_DIR = TESTS_ROOT / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
 from test_result import run_counted  # noqa: E402
-
-
-def baseline_inventory(path: Path) -> list[str]:
-    if not path.is_file():
-        return []
-    names: list[str] = []
-    total: int | None = None
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if line.startswith("TOTAL: "):
-            total = int(line.removeprefix("TOTAL: "))
-            continue
-        _ordinal, name = line.split(" ", 1)
-        names.append(name)
-    if total != len(names):
-        raise AssertionError(f"baseline TOTAL {total} does not match {len(names)} names")
-    return names
 
 
 def merged_output(result: subprocess.CompletedProcess[str]) -> str:
@@ -388,7 +362,7 @@ def runtime_contract_parity_violations() -> list[str]:
             "scaffold",
             PLUGIN_ROOT / "skills" / "speckit-scaffold-spec" / "SKILL.md",
             PLUGIN_ROOT / "codex-skills" / "speckit-scaffold-spec" / "SKILL.md",
-            ("relocate-process-artifacts", "ensure-reviewability-preset", "deferred", "unavailable"),
+            ("relocate-process-artifacts", "deferred", "unavailable"),
         ),
         (
             "autopilot",
@@ -730,7 +704,6 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
                 self.assertTrue(post_implementation_outcome_violations({"Claude": mutated, "Codex": codex}))
 
     def test_eval_runner_skill_selection_contract(self) -> None:
-        self.assertEqual(baseline_inventory(BASELINE), CURRENT_INVENTORY)
         self.assertEqual(retired_contract_violations(), [])
         self.assertEqual(runtime_registry_violations(), [])
         self.assertEqual(runtime_contract_violations(), [])

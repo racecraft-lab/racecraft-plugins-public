@@ -28,12 +28,12 @@ from .read_only import find_repo_root, is_relative_to, repo_relative, resolve_in
 
 INVENTORY_NAME = "install_inventory.json"
 FAKE_HOME_FIXTURE_ROOT = Path("tests") / "speckit-pro" / "unit" / "fixtures"
-XPLAT_008_FIXTURE_ROOT = FAKE_HOME_FIXTURE_ROOT / "installed-plugin-release"
-DEFAULT_RUNNER_INVOCATION_CASES = XPLAT_008_FIXTURE_ROOT / "runner-invocation-cases.json"
-XPLAT_008_PROMOTION_RECORDS = XPLAT_008_FIXTURE_ROOT / "promotion-records.json"
-DEFAULT_INSTALL_HEALTH_CASES = XPLAT_008_FIXTURE_ROOT / "install-health-repair-cases.json"
+INSTALLED_PLUGIN_RELEASE_FIXTURE_ROOT = FAKE_HOME_FIXTURE_ROOT / "installed-plugin-release"
+DEFAULT_RUNNER_INVOCATION_CASES = INSTALLED_PLUGIN_RELEASE_FIXTURE_ROOT / "runner-invocation-cases.json"
+DEFAULT_INSTALL_HEALTH_CASES = INSTALLED_PLUGIN_RELEASE_FIXTURE_ROOT / "install-health-repair-cases.json"
 MINIMUM_PYTHON = (3, 11, 0)
 CODEX_OPTIONAL_HELPER_NAME = "autopilot-fast-helper"
+CODEX_LOW_EFFORT_AGENT_NAMES = frozenset({"codebase-analyst", "spec-context-analyst"})
 CODEX_REQUIRED_AGENT_NAMES = (
     "analyze-executor",
     "artifact-author",
@@ -2692,7 +2692,7 @@ def invalid_capability_snapshot(reason: str) -> dict[str, Any]:
         "Codex capability snapshot is invalid",
         details={"reason": reason},
         remediation_summary="Use one deterministic runner-owned capability snapshot for the route-aware invocation.",
-        remediation_actions=["Inject a valid fake snapshot in tests; do not run live discovery for G56R-006."],
+        remediation_actions=["Inject a valid fake snapshot in tests; do not run live discovery for static-agent-install."],
     )
 
 
@@ -4080,6 +4080,11 @@ def load_codex_agent_bundle(source_dir: Path, inputs: dict[str, Any]) -> tuple[d
             expected_source_model = "gpt-5.6-luna" if path.name == "autopilot-fast-helper.toml" else "gpt-5.6-sol"
             if source_policy.get("model") != expected_source_model:
                 raise ValueError(f"{path.name}: unexpected source model")
+            if (
+                path.stem in CODEX_LOW_EFFORT_AGENT_NAMES
+                and source_policy.get("model_reasoning_effort") != "low"
+            ):
+                raise ValueError(f"{path.name}: unexpected source reasoning effort")
 
             if raw_model != expected_source_model and expected_source_model == "gpt-5.6-sol":
                 rendered_text, replacement_count = re.subn(
@@ -4946,8 +4951,8 @@ def run_install_health_repair(entry: Any, request: Any, repo_root: Path) -> dict
     has_manual = any(action.get("action_type") == "manual_remediation" for action in repair_actions)
     health_status = "fail" if failures else "manual_remediation_required" if has_manual else "pass"
     install_health = {
-        "schema_version": "1.0",
-        "feature_id": "XPLAT-008",
+        "schema_version": "2.0",
+        "contract_id": "installed-plugin-release",
         "installed_cache_path": installed_cache_path,
         "findings": findings,
         "repair_actions": repair_actions,
@@ -5159,7 +5164,7 @@ def runner_invocation_record(case: dict[str, Any], request_id: str | None, repo_
     )
     surface_path = str(case.get("surface_path") or "speckit-pro/skills/speckit-status/SKILL.md")
     cache_root = str(case.get("cache_root") or ".")
-    request_id_value = request_id or f"xplat-008-{product}-{platform_name}-{operation}"
+    request_id_value = request_id or f"installed-runtime-{product}-{platform_name}-{operation}"
     resolution, diagnostics = resolve_python_interpreter(platform_name, case, cache_root)
     fixture_backed = isinstance(case.get("candidate_results"), list)
 
@@ -5170,7 +5175,7 @@ def runner_invocation_record(case: dict[str, Any], request_id: str | None, repo_
         "operation": "runtime-info",
         "mode": "read_only",
         "inputs": {
-            "source": "xplat-008-installed-runtime",
+            "source": "installed-plugin-runtime",
             "product": product,
             "platform": platform_name,
             "surface_path": surface_path,
@@ -5210,7 +5215,7 @@ def runner_invocation_record(case: dict[str, Any], request_id: str | None, repo_
             diagnostics = [execution_diag]
     passed = accepted and not diagnostics
     record = {
-        "schema_version": "1.0",
+        "schema_version": "2.0",
         "request_id": request_id_value,
         "product": product,
         "platform": platform_name,
@@ -5683,7 +5688,6 @@ def runner_invocation_base_data(entry: Any, operation: str, status: str) -> dict
         gate_status = "skipped"
     elif status == "input_error":
         gate_status = "input_error"
-    promotion_record = XPLAT_008_PROMOTION_RECORDS.as_posix()
     case_file = DEFAULT_RUNNER_INVOCATION_CASES.as_posix()
     return {
         "gate": {
@@ -5692,11 +5696,9 @@ def runner_invocation_base_data(entry: Any, operation: str, status: str) -> dict
             "gate_status": gate_status,
             "promoted": status != "input_error",
             "blocking": status != "ok",
-            "comparison_ids": [f"xplat-008-{operation}"],
-            "promotion_record": promotion_record,
+            "comparison_ids": [f"installed-plugin-release-{operation}"],
         },
         "artifacts": [
-            {"path": promotion_record, "kind": "promotion_record"},
             {"path": case_file, "kind": "fixture"},
         ],
     }

@@ -4,26 +4,26 @@
   "mode": "single",
   "target": {
     "base_branch": "main",
-    "head_branch": "prsg-012-reviewer-ready-pr-packet-contract"
+    "head_branch": "fixture-pr-packet"
   },
-  "source_feature_dir": "specs/prsg-012-reviewer-ready-pr-packet-contract",
+  "source_feature_dir": "specs/fixture-pr-packet",
   "generated_title": {
-    "value": "feat(PRSG-012): Add reviewer-ready PR packets",
+    "value": "feat(FEATURE-001): Add reviewer-ready PR packets",
     "type": "feat",
-    "scope": "PRSG-012",
+    "scope": "FEATURE-001",
     "description": "Add reviewer-ready PR packets",
     "source_evidence": {
       "kind": "feature_spec",
-      "source": "specs/prsg-012-reviewer-ready-pr-packet-contract/spec.md",
+      "source": "specs/fixture-pr-packet/spec.md",
       "summary": "Feature title normalized into a public action phrase."
     },
     "rejected_candidates": [
       {
-        "value": "PRSG-012 reviewer packet contract",
+        "value": "FEATURE-001 reviewer packet contract",
         "reason": "Contains an internal feature identifier."
       },
       {
-        "value": "prsg-012-reviewer-ready-pr-packet-contract",
+        "value": "fixture-pr-packet",
         "reason": "Uses the branch name instead of reviewer-facing prose."
       }
     ]
@@ -70,17 +70,17 @@
     {
       "marker_id": "feature-spec",
       "rendered_text": "Source: feature specification defines reviewer packet sections.",
-      "source": "specs/prsg-012-reviewer-ready-pr-packet-contract/spec.md"
+      "source": "specs/fixture-pr-packet/spec.md"
     },
     {
       "marker_id": "schema-contract",
       "rendered_text": "Source: schema contract defines editable field markers.",
-      "source": "specs/prsg-012-reviewer-ready-pr-packet-contract/contracts/pr-packet.schema.json"
+      "source": "specs/fixture-pr-packet/contracts/pr-packet.schema.json"
     },
     {
       "marker_id": "quickstart-verification",
       "rendered_text": "Source: quickstart defines single-packet validation evidence.",
-      "source": "specs/prsg-012-reviewer-ready-pr-packet-contract/quickstart.md"
+      "source": "specs/fixture-pr-packet/quickstart.md"
     }
   ],
   "editable_fields": [
@@ -105,7 +105,7 @@
   ],
   "protected_body_fingerprint": {
     "algorithm": "sha256",
-    "value": "6a6f8609bcf305f536e6e569e4a9b494d145a1b872226bafe965529bc8aedb14",
+    "value": "55df98665bf70dadc8539eedf83af166f2ce186cf4219513c0e1b0afa37f8db5",
     "normalization": "LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
     "elided_fields": [
       "summary",
@@ -113,5 +113,5 @@
       "why_it_matters"
     ]
   },
-  "validation_result_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/pr-packets/valid-single/validation.json"
+  "validation_result_path": "specs/fixture-pr-packet/.process/pr-packets/valid-single/validation.json"
 }

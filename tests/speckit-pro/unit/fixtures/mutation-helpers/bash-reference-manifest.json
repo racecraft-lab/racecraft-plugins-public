@@ -1,6 +1,5 @@
 {
   "schema_version": "1.0",
-  "feature_id": "XPLAT-006",
   "comparisons": [
     {
       "helper_id": "generate-pr-body",
@@ -11,12 +10,6 @@
     {
       "helper_id": "relocate-process-artifacts",
       "source_script": "speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh",
-      "stdout_comparison": "json_semantic",
-      "subprocess": {"shell": false, "timeout_seconds": 30}
-    },
-    {
-      "helper_id": "install-curated-set",
-      "source_script": "speckit-pro/scripts/install-curated-set.sh",
       "stdout_comparison": "json_semantic",
       "subprocess": {"shell": false, "timeout_seconds": 30}
     }

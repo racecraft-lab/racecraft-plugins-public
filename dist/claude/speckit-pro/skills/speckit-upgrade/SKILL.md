@@ -176,29 +176,23 @@ continue.
 
 ### 8. Offer to upgrade the curated set of extensions and presets
 
-speckit-pro maintains a small curated set of community extensions
-and presets that power the autopilot's post-implementation parallel
-group and the AskUserQuestion picker. The upgrade command can pull
-their latest released versions in the same pass as the SpecKit
-integration upgrade. See
+speckit-pro maintains a manual recommendation catalog of community extensions
+and presets. See
 [presets-extensions-guide.md → The curated set](../speckit-coach/references/presets-extensions-guide.md)
 for the full list.
 
 Compare `.specify/extensions/` and `.specify/presets/` against the entries
 in `${CLAUDE_PLUGIN_ROOT}/scripts/curated-set.json`.
 
-- If every entry is present and current: report "Curated extensions and
-  presets already current." Continue to Step 9.
+- If every entry is present: report "Curated extensions and presets already
+  installed." Continue to Step 9.
 
-- Otherwise, list the missing or outdated entries and ask which to install
-  or upgrade. Recommended default is **all**. For each accepted entry, give
-  the operator the `specify extension add <id>` or preset command from the
-  curated set and run it only after they confirm. Skipped entries leave the
+- Otherwise, list the missing entries and ask which to install. Recommended
+  default is **all**. For each accepted entry, give the operator the
+  `specify extension add <id>` or `specify preset add <id>` command and run it
+  only after they confirm. Skipped entries leave the
   autopilot's post-implementation parallel group running with reduced
   coverage; it does not fail.
-
-Append the outcome to `.specify/curated-install.json` — commit this file so
-the upgrade history is reproducible.
 
 ### 9. Report
 
@@ -255,10 +249,6 @@ STOP and report — do not improvise — when:
   upgrade. Their choice stands.
 - A restore step fails mid-flight. Report which files succeeded,
   which did not, and where the backup is.
-- `install-curated-set` reports that an extension
-  has neither a GitHub Release nor a git tag — surface the message
-  but do not block the upgrade over it. The operator can re-run
-  after the upstream extension publishes a tagged release.
 
 The backup at `/tmp/specify-upgrade-backup-<STAMP>/` is the
 operator's safety net. Tell them about it explicitly in the final

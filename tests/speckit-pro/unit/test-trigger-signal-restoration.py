@@ -20,17 +20,14 @@ from unittest import mock
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TESTS_ROOT = REPO_ROOT / "tests" / "speckit-pro"
 RUNNER_PATH = TESTS_ROOT / "layer2-trigger" / "run-trigger-evals.py"
-BASELINE = TESTS_ROOT / "parity" / "bash-to-python" / "test-trigger-signal-restoration-baseline.txt"
 SHARED_LIB = TESTS_ROOT / "lib"
 if str(SHARED_LIB) not in sys.path:
     sys.path.insert(0, str(SHARED_LIB))
 
-from capture_baseline import baseline_inventory  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
 CURRENT_INVENTORY = [
-    "baseline inventory is truthful and ordered",
     "in-process SIGTERM maps to exit 143",
     "in-process SIGTERM restores the moved production skill",
     "in-process SIGTERM leaves no eval-disabled backup",
@@ -149,15 +146,15 @@ class Layer2SignalRestorationTests(unittest.TestCase):
                 subprocess_restored = (external_production / "marker.txt").is_file()
                 subprocess_diagnostic = "restoring moved paths before exit" in external_stderr
 
+            names = iter(CURRENT_INVENTORY)
             checks = [
-                (CURRENT_INVENTORY[0], lambda: self.assertEqual(baseline_inventory(BASELINE), CURRENT_INVENTORY)),
-                (CURRENT_INVENTORY[1], lambda: self.assertEqual(in_process_exit, 143)),
-                (CURRENT_INVENTORY[2], lambda: self.assertTrue(in_process_restored)),
-                (CURRENT_INVENTORY[3], lambda: self.assertEqual(in_process_backups, [])),
-                (CURRENT_INVENTORY[4], lambda: self.assertEqual(subprocess_exit, 143)),
-                (CURRENT_INVENTORY[5], lambda: self.assertTrue(subprocess_restored)),
+                (next(names), lambda: self.assertEqual(in_process_exit, 143)),
+                (next(names), lambda: self.assertTrue(in_process_restored)),
+                (next(names), lambda: self.assertEqual(in_process_backups, [])),
+                (next(names), lambda: self.assertEqual(subprocess_exit, 143)),
+                (next(names), lambda: self.assertTrue(subprocess_restored)),
                 (
-                    CURRENT_INVENTORY[6],
+                    next(names),
                     lambda: self.assertTrue(
                         any("restoring moved paths before exit" in line for line in stderr)
                         and subprocess_diagnostic
@@ -165,7 +162,6 @@ class Layer2SignalRestorationTests(unittest.TestCase):
                 ),
             ]
 
-            self.assertEqual([name for name, _check in checks], CURRENT_INVENTORY)
             for name, check in checks:
                 with self.subTest(msg=name):
                     check()

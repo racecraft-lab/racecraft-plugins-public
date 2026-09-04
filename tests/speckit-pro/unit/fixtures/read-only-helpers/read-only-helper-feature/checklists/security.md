@@ -1,6 +1,6 @@
-# Security Checklist: XPLAT-005 Read-Only Helper Port
+# Security Checklist: SPEC-805 Read-Only Helper Port
 
-**Purpose**: Validate that the XPLAT-005 spec and plan define enough security requirements for shell-free helper ports, safe path handling, Python-standard-library-only execution, and read-only boundaries before tasks are generated.
+**Purpose**: Validate that the SPEC-805 spec and plan define enough security requirements for shell-free helper ports, safe path handling, Python-standard-library-only execution, and read-only boundaries before tasks are generated.
 **Created**: 2026-07-02
 **Feature**: [spec.md](../spec.md)
 
@@ -25,15 +25,15 @@
 
 - [x] CHK010 Do requirements lock new helper logic to Python 3.11+ standard library only? [Spec FR-009; Plan Language/Version]
 - [x] CHK011 Do requirements exclude new package installs, virtualenv restore, network access, Node, PowerShell, Go, Rust, Zig, and `jq` for promoted helper execution? [Spec FR-010; Plan Performance Goals]
-- [x] CHK012 Does the declared file plan avoid package-manager manifests, dependency lockfiles, installer behavior, generated payloads, marketplace metadata, and public documentation surfaces, while limiting runner source manifest/checksum updates to existing XPLAT-004 metadata? [Plan Declared File Operations; Spec FR-021; Spec FR-028]
-- [x] CHK013 Are XPLAT-004 runner manifest/checksum controls reused as existing runner metadata rather than expanding XPLAT-005 into a new supply-chain mechanism? [XPLAT-004 Archive Report; Plan Primary Dependencies]
+- [x] CHK012 Does the declared file plan avoid package-manager manifests, dependency lockfiles, installer behavior, generated payloads, marketplace metadata, and public documentation surfaces, while limiting runner source manifest/checksum updates to existing SPEC-804 metadata? [Plan Declared File Operations; Spec FR-021; Spec FR-028]
+- [x] CHK013 Are SPEC-804 runner manifest/checksum controls reused as existing runner metadata rather than expanding SPEC-805 into a new supply-chain mechanism? [SPEC-804 Archive Report; Plan Primary Dependencies]
 
 ## Read-Only And Mutation Boundaries
 
 - [x] CHK014 Do requirements explicitly exclude mutation helpers that write PR packets, generate PR bodies, emit split PR state, restack, relocate artifacts, install agents, modify generated payloads, or mutate repo/user-local state? [Spec FR-005; Spec Scope Boundaries]
 - [x] CHK015 Are mixed-mode helpers split so only read-only `generate-spec-index --check`, `plan-layers <feature-dir>`, and `validate-pr-packet` validation output/diagnostics/exit behavior are in scope? [Spec Helper And Mode Matrix; Plan Slice 2]
 - [x] CHK016 Does the helper registry model require `mode=read_only`, `writes_state=false`, and pre-execution rejection of unknown helper ids or mutation modes? [Data Model Helper Registry Entry; Data Model Helper Invocation Request; Contract Schema]
-- [x] CHK017 Does the promotion matrix label mutation-adjacent helpers and modes as `out_of_scope` with XPLAT-006 or later follow-up instead of leaving ambiguous statuses? [Plan Helper Promotion Matrix Plan; Spec Promotion Record]
+- [x] CHK017 Does the promotion matrix label mutation-adjacent helpers and modes as `out_of_scope` with SPEC-806 or later follow-up instead of leaving ambiguous statuses? [Plan Helper Promotion Matrix Plan; Spec Promotion Record]
 - [x] CHK018 Does the verification plan include a scope audit for zero active Claude/Codex skill, hook, generated payload, install, marketplace/public-doc, mutation-helper, PR-emission, split-state, restack, relocation, install repair, or autoheal cutover edits? [Plan Verification Plan; Spec SC-005]
 
 ## Release-Gate Evidence

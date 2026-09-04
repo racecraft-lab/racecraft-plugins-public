@@ -1,4 +1,4 @@
-"""Repo-local suite gate operations for XPLAT-007 US1."""
+"""Repo-local suite gate operations."""
 
 from __future__ import annotations
 
@@ -19,7 +19,6 @@ from ..path_utils import find_repo_root, is_relative_to, resolves_to_current_pyt
 
 CAPTURE_LIMIT_BYTES = 16 * 1024
 DEFAULT_TIMEOUT_SECONDS = 300
-PROMOTION_RECORD = "tests/speckit-pro/unit/fixtures/runner-gates/promotion-records.json"
 LAYER_SCRIPT_DISPATCHER = "tests/speckit-pro/run-layer-scripts.py"
 LAYER_SCRIPT_TIMEOUT_SECONDS = 1800
 SUITE_MANIFEST_PATH = "tests/speckit-pro/suite-manifest.json"
@@ -31,7 +30,7 @@ class SuiteManifestError(Exception):
     """Raised when tests/speckit-pro/suite-manifest.json is absent/unreadable/invalid.
 
     The suite manifest is the single per-layer source of truth for suite
-    composition (XPLAT-010 FR-007/FR-008). The gate derives its roster from it
+    composition. The gate derives its roster from it
     and fails closed — never falling back to a hardcoded default — when it
     cannot be loaded.
     """
@@ -75,25 +74,20 @@ def manifest_allowed_layers(manifest: dict[str, Any]) -> frozenset[str]:
     )
 
 
-def manifest_ai_eval_layers(manifest: dict[str, Any]) -> frozenset[str]:
-    return frozenset(layer["id"] for layer in manifest["layers"] if layer["live_only"])
-
-
 def _runner_repo_root() -> Path:
     # gates/suite.py -> gates -> speckit_pro_runner -> speckit-pro -> repo root.
     return Path(__file__).resolve().parents[3]
 
 
-def _derive_module_roster() -> tuple[tuple[str, ...], tuple[str, ...], frozenset[str], frozenset[str], str | None]:
+def _derive_module_roster() -> tuple[tuple[str, ...], tuple[str, ...], frozenset[str], str | None]:
     try:
         manifest = load_suite_manifest(_runner_repo_root())
     except SuiteManifestError as exc:
-        return (), (), frozenset(), frozenset(), str(exc)
+        return (), (), frozenset(), str(exc)
     return (
         manifest_default_suite(manifest),
         manifest_extended_suite(manifest),
         manifest_allowed_layers(manifest),
-        manifest_ai_eval_layers(manifest),
         None,
     )
 
@@ -101,7 +95,7 @@ def _derive_module_roster() -> tuple[tuple[str, ...], tuple[str, ...], frozenset
 # Derived solely from the manifest at import; the gate fails closed when the
 # manifest is unavailable (SUITE_MANIFEST_ERROR set) rather than using a
 # hardcoded default suite.
-DEFAULT_SUITE, EXTENDED_SUITE, ALLOWED_LAYERS, AI_EVAL_LAYERS, SUITE_MANIFEST_ERROR = _derive_module_roster()
+DEFAULT_SUITE, EXTENDED_SUITE, ALLOWED_LAYERS, SUITE_MANIFEST_ERROR = _derive_module_roster()
 STATUS_BY_EXIT_CODE = {
     0: "ok",
     1: "expected_failure",
@@ -130,12 +124,37 @@ class CommandSpec:
     internal: bool = False
 
 
+SUITE_INPUT_FIELDS = {
+    "run-default-suite": frozenset({"repo_root", "suite", "test_commands"}),
+    "run-integration-suite": frozenset({"repo_root", "test_commands"}),
+    "run-layer": frozenset({"layer", "repo_root", "test_commands"}),
+    "run-parity-suite": frozenset({"repo_root", "test_commands"}),
+    "run-toolchain-preflight": frozenset({"mode", "repo_root", "test_commands"}),
+}
+
+
 def run_suite_gate(entry: Any, request: Any) -> dict[str, Any]:
     repo_root_result = resolve_repo_root(request.inputs)
     if isinstance(repo_root_result, dict):
         status = "missing_prerequisite" if repo_root_result["code"] == "missing_prerequisite" else "input_error"
         return response(status, request_id=request.request_id, data=base_data(entry, request.operation, status), diagnostics=[repo_root_result])
     repo_root = repo_root_result
+
+    allowed_fields = SUITE_INPUT_FIELDS.get(request.operation)
+    if allowed_fields is not None:
+        unknown_fields = sorted(set(request.inputs) - allowed_fields)
+        if unknown_fields:
+            diag = diagnostic(
+                "unsupported_gate_inputs",
+                "suite gate received unsupported input fields",
+                details={"fields": unknown_fields},
+            )
+            return response(
+                "input_error",
+                request_id=request.request_id,
+                data=base_data(entry, request.operation, "input_error"),
+                diagnostics=[diag],
+            )
 
     if SUITE_MANIFEST_ERROR is not None:
         diag = diagnostic(
@@ -159,8 +178,6 @@ def run_suite_gate(entry: Any, request: Any) -> dict[str, Any]:
         return run_layer(entry, request, repo_root)
     if operation == "run-toolchain-preflight":
         return run_toolchain_preflight(entry, request, repo_root)
-    if operation == "run-ai-evals":
-        return run_ai_evals(entry, request, repo_root)
     if operation == "run-integration-suite":
         return run_command_set(entry, request, repo_root, ["layer-7"])
     if operation == "run-parity-suite":
@@ -215,60 +232,6 @@ def run_toolchain_preflight(entry: Any, request: Any, repo_root: Path) -> dict[s
     return run_command_set(entry, request, repo_root, ["toolchain"])
 
 
-def run_ai_evals(entry: Any, request: Any, repo_root: Path) -> dict[str, Any]:
-    layers_result = requested_ai_layers(request.inputs)
-    if isinstance(layers_result, dict):
-        return response("input_error", request_id=request.request_id, data=base_data(entry, request.operation, "input_error"), diagnostics=[layers_result])
-    layers = layers_result
-    available_tools = available_ai_tools(request.inputs)
-    try:
-        manifest = load_suite_manifest(repo_root)
-    except SuiteManifestError as exc:
-        diag = diagnostic(
-            "suite_manifest_unavailable",
-            "AI eval dispatch cannot resolve manifest-backed runner references",
-            details={"manifest_path": SUITE_MANIFEST_PATH, "error": str(exc)},
-            remediation_summary="Restore the suite manifest in the source checkout.",
-            remediation_actions=[f"Restore {SUITE_MANIFEST_PATH}.", "Retry run-ai-evals."],
-        )
-        return response(
-            "missing_prerequisite",
-            request_id=request.request_id,
-            data=base_data(entry, request.operation, "missing_prerequisite"),
-            diagnostics=[diag],
-        )
-    planned_dispatch = [ai_dispatch_plan(layer, repo_root, available_tools, manifest) for layer in layers]
-    missing_by_layer = {
-        plan["layer"]: plan["missing_tools"]
-        for plan in planned_dispatch
-        if plan["missing_tools"]
-    }
-    status = "missing_prerequisite" if missing_by_layer else "ok"
-    data = base_data(entry, request.operation, status)
-    data["suite"] = {
-        "operation": request.operation,
-        "summary": {
-            "total": len(planned_dispatch),
-            "passed": 0 if missing_by_layer else len(planned_dispatch),
-            "failed": 0,
-            "skipped": len(missing_by_layer),
-        },
-        "results": [],
-        "planned_dispatch": planned_dispatch,
-    }
-    if not missing_by_layer:
-        return response("ok", request_id=request.request_id, data=data)
-
-    diag = diagnostic(
-        "gate_missing_prerequisite",
-        "AI eval dispatch is missing required local runners",
-        details={"missing_by_layer": missing_by_layer},
-        remediation_summary="Install or expose the required local eval runners before dispatching AI eval layers.",
-        remediation_actions=["Install the missing runner CLIs.", "Retry run-ai-evals from the same source checkout."],
-    )
-    return response("missing_prerequisite", request_id=request.request_id, data=data, diagnostics=[diag])
-
-
 def run_command_set(entry: Any, request: Any, repo_root: Path, command_ids: list[str]) -> dict[str, Any]:
     commands: list[CommandSpec] = []
     for command_id in command_ids:
@@ -316,28 +279,6 @@ def requested_suite(inputs: dict[str, Any]) -> tuple[str, ...] | dict[str, Any]:
             details={"invalid": invalid, "supported_suite_items": list(EXTENDED_SUITE)},
             remediation_summary="Send only supported suite item ids.",
             remediation_actions=["Remove unsupported suite entries.", "Retry the request."],
-        )
-    return tuple(raw)
-
-
-def requested_ai_layers(inputs: dict[str, Any]) -> tuple[str, ...] | dict[str, Any]:
-    raw = inputs.get("layers", ["2", "3", "6"])
-    if not isinstance(raw, list) or not all(isinstance(item, str) for item in raw):
-        return diagnostic(
-            "invalid_ai_eval_layers",
-            "run-ai-evals inputs.layers must be a list of eval layer ids",
-            details={"supported_layers": sorted(AI_EVAL_LAYERS)},
-            remediation_summary="Send a supported AI eval layer list.",
-            remediation_actions=["Use layers 2, 3, and 6.", "Retry the request."],
-        )
-    invalid = [item for item in raw if item not in AI_EVAL_LAYERS]
-    if invalid:
-        return diagnostic(
-            "invalid_ai_eval_layers",
-            "run-ai-evals received unsupported layer ids",
-            details={"invalid": invalid, "supported_layers": sorted(AI_EVAL_LAYERS)},
-            remediation_summary="Send only supported AI eval layer ids.",
-            remediation_actions=["Remove unsupported layers.", "Retry the request."],
         )
     return tuple(raw)
 
@@ -581,23 +522,14 @@ def base_data(entry: Any, operation: str, status: str) -> dict[str, Any]:
             "promoted": status != "input_error",
             "blocking": status != "ok",
             "comparison_ids": comparison_ids(operation),
-            "promotion_record": PROMOTION_RECORD,
         },
-        "artifacts": [
-            {
-                "path": PROMOTION_RECORD,
-                "kind": "fixture",
-            }
-        ],
     }
 
 
 def comparison_ids(operation: str) -> list[str]:
     if operation == "run-default-suite":
-        return ["us1-default-suite-toolchain-l1-l4-l5-l7-l8"]
-    if operation == "run-ai-evals":
-        return ["us1-ai-eval-dispatch"]
-    return [f"us1-{operation}"]
+        return ["default-suite-toolchain-l1-l4-l5-l7-l8"]
+    return [operation]
 
 
 def gate_diagnostic(status: str, results: list[dict[str, Any]]) -> dict[str, Any]:
@@ -707,47 +639,6 @@ def missing_executable(executable: str, repo_root: Path) -> bool:
         candidate = path if path.is_absolute() else repo_root / path
         return not candidate.exists()
     return shutil.which(executable) is None
-
-
-def available_ai_tools(inputs: dict[str, Any]) -> set[str]:
-    overrides = inputs.get("test_overrides", {})
-    if isinstance(overrides, dict) and isinstance(overrides.get("available_tools"), list):
-        return {tool for tool in overrides["available_tools"] if isinstance(tool, str)}
-    return {tool for tool in ("claude", "codex") if shutil.which(tool) is not None}
-
-
-def ai_dispatch_plan(
-    layer: str,
-    repo_root: Path,
-    available_tools: set[str],
-    manifest: dict[str, Any],
-) -> dict[str, Any]:
-    required = ai_required_tools(layer)
-    missing = [tool for tool in required if tool not in available_tools]
-    return {
-        "layer": layer,
-        "command_id": f"layer-{layer}",
-        "required_tools": required,
-        "missing_tools": missing,
-        "bash_references": [],
-        "runner_references": manifest_runner_references(layer, manifest),
-        "python_entrypoint": "python -m speckit_pro_runner",
-        "repo_root": rel(repo_root, repo_root) or ".",
-    }
-
-
-def ai_required_tools(layer: str) -> list[str]:
-    if layer in {"2", "3"}:
-        return ["claude", "codex"]
-    return ["claude"]
-
-
-def manifest_runner_references(layer: str, manifest: dict[str, Any]) -> list[str]:
-    for entry in manifest["layers"]:
-        if entry["id"] != layer:
-            continue
-        return [script["path"] for script in entry["scripts"]]
-    return []
 
 
 __all__ = ("run_suite_gate",)

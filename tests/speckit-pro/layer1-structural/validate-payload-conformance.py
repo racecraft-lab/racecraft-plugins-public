@@ -1,18 +1,5 @@
 #!/usr/bin/env python3
-"""Layer 1 format conformance for built payloads (port of validate-payload-conformance.sh).
-
-XPLAT-010 count-parity port (T043, US2). Python 3.11+ standard library only.
-Asserts that the built ``dist/claude/speckit-pro`` and
-``dist/codex/speckit-pro`` payloads conform to each runtime's documented plugin
-and skill format. The bash predecessor required ``jq`` for JSON checks; this port
-uses stdlib ``json`` parsing instead. Every former ``_pass``/``_fail`` execution
-maps to one counted ``subTest`` unit, with the bash check name reproduced
-verbatim via ``subTest(msg=...)`` for 1:1 baseline parity.
-
-Baseline:
-``tests/speckit-pro/parity/bash-to-python/validate-payload-conformance-baseline.txt``
-(TOTAL: 209).
-"""
+"""Validate generated payload conformance."""
 
 from __future__ import annotations
 

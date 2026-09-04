@@ -3,7 +3,7 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "Invoke the Python runner with one JSON request on stdin using helper_id=check-prerequisites, operation=check-prerequisites, mode=read_only, and inputs.workflow_file=docs/ai/specs/.process/XPLAT-005-workflow.md. Report whether the SpecKit CLI, project initialization, workflow, and branch checks pass.",
+      "prompt": "Invoke the Python runner with one JSON request on stdin using helper_id=check-prerequisites, operation=check-prerequisites, mode=read_only, and inputs.workflow_file=docs/ai/specs/.process/SPEC-805-workflow.md. Report whether the SpecKit CLI, project initialization, workflow, and branch checks pass.",
       "expected_output": "Invokes [resolved_python, -m, speckit_pro_runner] with the structured check-prerequisites request and reads the response envelope's data.stdout_json. The all_pass field summarizes the per-check results.",
       "expectations": [
         "Invokes [resolved_python, -m, speckit_pro_runner] with one JSON request on stdin and no shell fallback",
@@ -289,27 +289,27 @@
     },
     {
       "id": 23,
-      "prompt": "During /speckit-pro:speckit-autopilot startup, the workflow target has adjacent legacy candidates: specs/prsg-011-legacy has root analysis.md and uat-report.md with no structureVersion and is not named by .specify/feature.json; specs/prsg-012-active is the active in-flight feature; specs/prsg-013-current already carries SPEC-MOC.md structureVersion: 1 and its process files are already under .process/; specs/prsg-014-empty has only CONTRACT artifacts; specs/team-123-legacy and specs/2026-06-legacy are outside the SpecKit namespace. What should the autopilot report before continuing, and may it run the Tier-2 codemod itself?",
+      "prompt": "During /speckit-pro:speckit-autopilot startup, the workflow target has adjacent legacy candidates: specs/spec-911-legacy has root analysis.md and uat-report.md with no structureVersion and is not named by .specify/feature.json; specs/spec-912-active is the active in-flight feature; specs/spec-913-current already carries SPEC-MOC.md structureVersion: 1 and its process files are already under .process/; specs/spec-914-empty has only CONTRACT artifacts; specs/team-123-legacy and specs/2026-06-legacy are outside the SpecKit namespace. What should the autopilot report before continuing, and may it run the Tier-2 codemod itself?",
       "expected_output": "Reports only the thawed eligible PRSG legacy spec as a Tier-2 relocation candidate, then states relocate-process-artifacts is promotion_status=deferred, has no authoritative runner request, and is unavailable. Leaves PROCESS artifacts unchanged, suppresses all ineligible candidates, and explicitly rejects invoking the retired relocate-process-artifacts.sh path or advertising runner modes.",
       "expectations": [
-        "Suggests Tier-2 relocation only for specs/prsg-011-legacy",
+        "Suggests Tier-2 relocation only for specs/spec-911-legacy",
         "Names relocate-process-artifacts as promotion_status=deferred with no authoritative runner request",
         "States no dry_run, apply, or replacement runner command is available",
         "Leaves the eligible candidate's PROCESS artifacts unchanged and records the deferred gap",
-        "Reports specs/prsg-012-active as frozen/in-flight and suppresses the Tier-2 suggestion",
-        "Reports specs/prsg-013-current as already current or already normalized and suppresses the Tier-2 suggestion",
-        "Reports specs/prsg-014-empty as no Tier-2 candidate because no relocatable PROCESS artifacts exist",
+        "Reports specs/spec-912-active as frozen/in-flight and suppresses the Tier-2 suggestion",
+        "Reports specs/spec-913-current as already current or already normalized and suppresses the Tier-2 suggestion",
+        "Reports specs/spec-914-empty as no Tier-2 candidate because no relocatable PROCESS artifacts exist",
         "Suppresses suggestions for specs/team-123-legacy with reason non_speckit_namespace and specs/2026-06-legacy with reason date_named_legacy_namespace",
         "States that /speckit-pro:speckit-autopilot must not invoke the retired relocate-process-artifacts.sh path, the deferred operation, or an invented replacement"
       ]
     },
     {
       "id": 24,
-      "prompt": "A completed feature has a PRSG-008 split-PR layer plan fixture with three increments in order: foundation, us1, and us2. The implementation and full default verification already passed. Walk through what /speckit-pro:speckit-autopilot must do during post-implementation PR creation for PRSG-009 multi-PR emission. Include branch/base topology, scoped verification, durable PRS rows, resume behavior, failed-slice blocking, restack, and the routing boundary.",
+      "prompt": "A completed feature has a SPEC-908 split-PR layer plan fixture with three increments in order: foundation, us1, and us2. The implementation and full default verification already passed. Walk through what /speckit-pro:speckit-autopilot must do during post-implementation PR creation for SPEC-909 multi-PR emission. Include branch/base topology, scoped verification, durable PRS rows, resume behavior, failed-slice blocking, restack, and the routing boundary.",
       "expected_output": "Explains that post-implementation consumes the plan-layers-feature-dir envelope as the only slice source and may use multi-pr-emission only for golden_only command-plan capture after full verification. The helper does not emit packets or execute PRs, so every slice emits or refreshes a feature-local packet with pr-packet-output, passes validate-pr-packet-read-only via data.stdout_json, checkpoints packet/body artifacts so validate-pr-packet-write can rerun current validation from a clean worktree and persist it, and then uses an explicit packet-owned gh pr create command. It keeps evidence under the source feature directory, records schemaVersion 2 PRS and resume state, blocks failed slices without rewinding earlier PRs, and treats restack as deferred with direct gh pr edit --base fallback.",
       "expectations": [
-        "States that PRSG-008 runner helper plan-layers-feature-dir output is the authoritative ordering and membership source",
-        "States that PRSG-009 does not infer, reroute, or re-slice work and does not add PRSG-010 routing/backstop heuristics",
+        "States that SPEC-908 runner helper plan-layers-feature-dir output is the authoritative ordering and membership source",
+        "States that SPEC-909 does not infer, reroute, or re-slice work and does not add SPEC-910 routing/backstop heuristics",
         "Uses multi-pr-emission only for golden_only command-plan capture after implementation and full default verification; it does not emit packets or execute live PR creation",
         "Uses --source-feature-dir specs/<feature> to keep the source evidence directory separate when the emitted branch prefix must differ to avoid Git ref namespace conflicts",
         "Emits N ordered PRs from the fixture increments rather than one flattened all-changes PR",
@@ -325,12 +325,12 @@
         "Stops before gh pr create when scoped verification or packet validation fails for a slice and keeps next_slice_id on the blocked slice",
         "States that a later failed slice does not rewind or invalidate earlier opened slice PRs",
         "States restack is deferred with no authoritative request and uses direct packet-owned gh pr edit <number> --base <branch> fallback preserving declared slice scope",
-        "States that PRSG-009 scoped CI is recorded evidence and must not modify .github/workflows/pr-checks.yml"
+        "States that SPEC-909 scoped CI is recorded evidence and must not modify .github/workflows/pr-checks.yml"
       ]
     },
     {
       "id": 25,
-      "prompt": "During /speckit-pro:speckit-autopilot, G5 has passed and committed task-mode reviewability evidence records mode=tasks, status=block, with size as the only reason. The installed reviewability-gate runner helper supports setup mode only, so tasks mode is deferred. The evidence path is specs/prsg-013-reviewability-markers/.process/reviewability/tasks-gate.json and the current marker-plan fingerprint matches all inputs. Later, current committed final reviewability evidence says the full diff is still too large; final-reviewability-backstop is also deferred. Should autopilot stop for manual re-slicing, rewrite tasks.md, or continue?",
+      "prompt": "During /speckit-pro:speckit-autopilot, G5 has passed and committed task-mode reviewability evidence records mode=tasks, status=block, with size as the only reason. The installed reviewability-gate runner helper supports setup mode only, so tasks mode is deferred. The evidence path is specs/spec-913-reviewability-markers/.process/reviewability/tasks-gate.json and the current marker-plan fingerprint matches all inputs. Later, current committed final reviewability evidence says the full diff is still too large; final-reviewability-backstop is also deferred. Should autopilot stop for manual re-slicing, rewrite tasks.md, or continue?",
       "expected_output": "Continues through the valid current size-only block with marker evidence and no manual re-slicing stop. Treats the G5 status=block as marker-planning input, persists top-level pr_marker_plan in autopilot-state.json, mirrors workflow evidence rather than authoring marker state in tasks.md, executes and checkpoints implementation in ordered marker IDs, and at the final backstop proceeds with final marker_split and marker-based PR emission. Records gate status/mode/exit/evidence path, fingerprint status, ordered marker IDs, checkpoints, warnings, final marker_split, packet validation, spec-scoped plain-English marker-derived PR titles/bodies, and PR mappings using repo-relative paths. Still stops on malformed/stale marker state, failed verification, invalid packet, unsafe output, unusable gate evidence, invalid JSON, unreadable artifacts, missing status/mode, stale fingerprints, generic marker titles, packet-mechanics PR bodies, raw evidence dumps in PR bodies, or non-size safety findings.",
       "expectations": [
         "States that a valid current size-only block continues and is not a manual re-slicing stop",
@@ -353,16 +353,16 @@
     },
     {
       "id": 26,
-      "prompt": "A post-implementation autopilot run is preparing documentation specs. DOC-004 has a single generated PR packet for specs/doc-004-codex-marketplace-installation-path. DOC-003 has final marker_split evidence plus .process/emission/candidate/commands.candidate.json with five gh_pr_create operations. What must the Claude autopilot do before opening PRs, and which title/splitting mistakes are forbidden?",
-      "expected_output": "Explains that the DOC-004 feature-local packet must be emitted or refreshed with a docs(DOC-004): title and pass validate-pr-packet-read-only through current data.stdout_json plus validate-pr-workflow-contract before gh pr create. generate-pr-body cannot create packet metadata. For DOC-003, final marker_split evidence and multiple candidate PR commands forbid an aggregate PR; Claude may use multi-pr-emission only for golden_only command-plan capture and must emit or refresh a valid packet per slice before PR creation.",
+      "prompt": "A post-implementation autopilot run is preparing documentation specs. SPEC-704 has a single generated PR packet for specs/spec-704-codex-marketplace-installation-path. SPEC-703 has final marker_split evidence plus .process/emission/candidate/commands.candidate.json with five gh_pr_create operations. What must the Claude autopilot do before opening PRs, and which title/splitting mistakes are forbidden?",
+      "expected_output": "Explains that the SPEC-704 feature-local packet must be emitted or refreshed with a docs(SPEC-704): title and pass validate-pr-packet-read-only through current data.stdout_json plus validate-pr-workflow-contract before gh pr create. generate-pr-body cannot create packet metadata. For SPEC-703, final marker_split evidence and multiple candidate PR commands forbid an aggregate PR; Claude may use multi-pr-emission only for golden_only command-plan capture and must emit or refresh a valid packet per slice before PR creation.",
       "expectations": [
-        "States that DOC-004 packet title scope must be DOC-004 and title type must be docs, e.g. docs(DOC-004): ...",
+        "States that SPEC-704 packet title scope must be SPEC-704 and title type must be docs, e.g. docs(SPEC-704): ...",
         "States that feat(speckit-pro): is forbidden for spec-backed DOC implementation PRs",
-        "Requires emitting or refreshing the feature-local DOC-004 packet and runs validate-pr-packet-read-only before a single PR",
+        "Requires emitting or refreshing the feature-local SPEC-704 packet and runs validate-pr-packet-read-only before a single PR",
         "States generate-pr-body writes only one Markdown body from output_path, title, and sections and does not create DOC packet metadata",
         "Runs runner helper validate-pr-workflow-contract with the generated packet title and changed-file list before any single gh pr create",
         "States that final marker_split evidence plus multiple gh_pr_create candidate operations forbids a single aggregate PR",
-        "Allows multi-pr-emission only for golden_only command-plan capture on the DOC-003 split route and otherwise stops with validator or packet-emission failure evidence",
+        "Allows multi-pr-emission only for golden_only command-plan capture on the SPEC-703 split route and otherwise stops with validator or packet-emission failure evidence",
         "States the agent must not manually issue one gh pr create for all changed files when split candidate artifacts exist",
         "Requires each split PR creation to use packet-owned --base, --head, --title, and --body-file arguments",
         "States invalid packet, invalid workflow contract, stale validation, or aggregate split-contract failures block before PR creation",

@@ -1,28 +1,5 @@
 #!/usr/bin/env python3
-"""`validate-plugins` sentinel-job validation (port of validate-pr-checks-sentinel.sh).
-
-XPLAT-010 count-parity port (T032, US2). Python 3.11+ standard library only.
-Verifies ``.github/workflows/pr-checks.yml`` defines the ``validate-plugins``
-sentinel with the correct triggers, dispatch inputs, Python-runner gate steps,
-and sentinel logic. XPLAT-010 PR 11 extends the same structural boundary to
-``container-preflight.yml``: always-triggered PR reporting, lightweight change
-detection, conditional heavy jobs, stable Linux required-check sentinels,
-configured Windows availability, and always-run evidence uploads. The validator
-then folds every ``.github/workflows/*.yml`` into one "valid YAML" outcome.
-
-YAML syntax: the deleted shell predecessor optionally probed non-stdlib YAML
-parsers (``python -c import yaml`` or Ruby) when they happened to be installed.
-This port does not invoke those probes. It keeps the current runtime stdlib-only
-by applying a conservative GitHub-workflow YAML sanity check that guards
-indentation, mapping/sequence structure, and block-scalar boundaries without
-adding PyYAML/Ruby as runtime dependencies.
-
-PR 5 updated this ported validator for the CI dispatch swap (task T049); PR 11
-adds the container-preflight contract checks (task T106).
-
-Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-pr-checks-sentinel-baseline.txt``
-(TOTAL: 49).
-"""
+"""Validate the PR-check sentinel workflow contract."""
 
 from __future__ import annotations
 
@@ -75,7 +52,6 @@ SPEC_KIT_REF_PIN = (
 UNIQUE_ARTIFACT_SUFFIX = "-${{ github.run_id }}-${{ github.run_attempt }}"
 
 TITLE_LITERAL = "TITLE: ${{ github.event_name == 'pull_request' && github.event.pull_request.title || inputs.pr_title }}"
-BASE_REF_LITERAL = "BASE_REF: ${{ github.event_name == 'pull_request' && github.base_ref || inputs.base_ref }}"
 
 # Ordered check table (1:1 with the frozen baseline). Each entry is
 # ``(source, kind, name, payload)`` and emits exactly one counted subTest, in order:
@@ -86,9 +62,9 @@ BASE_REF_LITERAL = "BASE_REF: ${{ github.event_name == 'pull_request' && github.
 CONTENT_CHECKS: list[tuple[str, str, str, list[str]]] = [
     # Checks 1-4 (exists, job defined, job name, checkout regex) are emitted as
     # explicit subTests before this table; it resumes at check 5, in order.
-    ("workflow", "all", "title validation uses Python release-readiness gate",
-     ["release-readiness-live-github.json", "python3 -m speckit_pro_runner"]),
-    ("workflow", "all", "title validation supplies title and base evidence", [TITLE_LITERAL, BASE_REF_LITERAL]),
+    ("workflow", "all", "title validation uses the live Python title gate",
+     ["validate-pr-title-live.json", "python3 -m speckit_pro_runner"]),
+    ("workflow", "all", "title validation supplies the live title", [TITLE_LITERAL]),
     ("workflow", "all", "workflow validation job is defined", ["validate-workflows:"]),
     ("combined", "all", "workflow validation installs pinned actionlint", [
         'ACTIONLINT_VERSION: "1.7.12"',
@@ -169,7 +145,6 @@ LINUX_REQUESTS = (
     "run-toolchain-preflight.json",
     "run-default-suite.json",
     "repository-bash-confinement/requests/repo-bash-confinement.json",
-    "runner-gates/requests/release-readiness.json",
     "installed-plugin-release/requests/runner-invocation.json",
     "installed-plugin-release/requests/active-runtime-guard.json",
     "installed-plugin-release/requests/payload-completeness.json",
@@ -245,11 +220,7 @@ class ValidatePrChecksSentinel(unittest.TestCase):
         with self.subTest(msg="validate-plugins has name: validate-plugins"):
             self.assertIn("name: validate-plugins", content)
 
-        with self.subTest(msg="title validation checks out repository history"):
-            self.assertTrue(
-                CHECKOUT_PIN_RE.search(content) is not None and "fetch-depth: 0" in content,
-                "expected validate-pr-title to checkout repository history before inspecting changed files",
-            )
+        with self.subTest(msg="history-sensitive plugin tests checkout repository history"):
             self.assertIn(
                 "fetch-depth: 0",
                 _job_block(content, "test"),

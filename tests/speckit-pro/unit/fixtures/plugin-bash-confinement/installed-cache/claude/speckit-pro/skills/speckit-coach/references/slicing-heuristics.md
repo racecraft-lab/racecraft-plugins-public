@@ -84,7 +84,7 @@ right-sizing aid for authoring time.
 
 It is **NOT** the authoritative reviewable-LOC count. The authoritative
 measurement of actual reviewable LOC — and the plan-phase budget gate that acts
-on it — is owned by **PRSG-006** (`estimate-reviewable-loc`). Do not over-trust
+on it — is owned by the deterministic `estimate-reviewable-loc` helper. Do not over-trust
 the forward guess or treat it as the final word; it exists to shape decomposition
 early, not to score a finished change.
 

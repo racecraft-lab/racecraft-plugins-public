@@ -1,22 +1,5 @@
 #!/usr/bin/env python3
-"""`.gitattributes` collapse-rule scope lint (port of validate-process-gitattributes.sh).
-
-XPLAT-010 count-parity port (T033, US2). Python 3.11+ standard library only.
-Verifies every ``linguist-generated`` rule in the repo-root ``.gitattributes`` is
-scoped to a ``.process/`` path segment (FR-012 / AC-2.4 / SC-005), guarding the
-intentional duplication between this static lint and the reviewability gate's
-hardcoded glob. Every former ``assert_*``/``_pass``/``_fail`` execution maps to
-one counted ``subTest`` unit; names reproduced verbatim via ``subTest(msg=...)``
-for a 1:1 baseline match.
-
-The bash predecessor materialized its positive/negative cases as ``mktemp``
-fixtures because ``rules_scoped`` read a file; the pure Python predicate here
-takes the rule text directly, so the same three cases run without touching the
-filesystem — behavior identical, one counted unit each.
-
-Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-process-gitattributes-baseline.txt``
-(TOTAL: 6).
-"""
+"""Validate generated-artifact merge attributes."""
 
 from __future__ import annotations
 

@@ -224,33 +224,23 @@ continue.
 
 ### 8. Offer to upgrade the curated set of extensions and presets
 
-speckit-pro maintains a small curated set of community extensions and
-presets that power the autopilot's post-implementation parallel group
-and the AskUserQuestion picker preset. The upgrade can pull the
-latest released versions in the same pass as the SpecKit integration
-upgrade. The full list is in
+speckit-pro maintains a manual recommendation catalog of community extensions
+and presets. The full list is in
 `speckit-pro/skills/speckit-coach/references/presets-extensions-guide.md`
 (section: "The curated set").
 
 Compare `.specify/extensions/` and `.specify/presets/` against the
 entries in `<plugin-root>/scripts/curated-set.json`.
 
-- If every entry is present and current: report "Curated extensions and
-  presets already current." Continue to Step 9.
+- If every entry is present: report "Curated extensions and presets already
+  installed." Continue to Step 9.
 
-- Otherwise, list the missing or outdated entries and ask which to
-  install or upgrade. Recommended default is **all**. For each accepted
-  entry, give the operator the `specify extension add <id>` or preset
-  command from the curated set and run it only after they confirm.
+- Otherwise, list the missing entries and ask which to install. Recommended
+  default is **all**. For each accepted entry, give the operator the
+  `specify extension add <id>` or `specify preset add <id>` command and run it
+  only after they confirm.
   Skipped entries leave the autopilot's post-implementation parallel
   group running with reduced coverage; it does not fail.
-
-Append the outcome to `.specify/curated-install.json` — commit this file
-so the upgrade history is reproducible.
-
-If the script reports that an entry has neither a GitHub Release nor
-a git tag, surface the message but do not block the upgrade. The
-operator can re-run after the upstream extension publishes a tag.
 
 ### 9. Report
 

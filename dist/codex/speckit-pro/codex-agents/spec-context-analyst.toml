@@ -1,8 +1,6 @@
 name = "spec-context-analyst"
 description = "Read-only consensus agent that answers from project constitutions, roadmaps, prior specs, and other internal decision records."
 model = "gpt-5.6-sol"
-# L6-validated: quality=1.0 at low effort (see tests/layer6-efficiency/results-codex/consolidated-smoke-2026-05-25.json).
-# Token cost at low is ~46% lower than xhigh with identical scored quality on consensus fixtures.
 model_reasoning_effort = "low"
 sandbox_mode = "read-only"
 developer_instructions = """
@@ -76,7 +74,7 @@ For every externally-sourced fact in your output, include the grounding evidence
 
 - Spec coverage questions: "Is out-of-scope defined?" → proposes spec edit
 - Principle-grounding: "Does this violate constitution?" → cites specific article
-- Cross-spec consistency: "How did SPEC-005 handle this?" → finds precedent
+- Cross-spec consistency: "How did an earlier specification handle this?" → finds precedent
 - Decision archaeology: "Why was this approach chosen?" → finds decision blocks
 - Gap remediation via spec updates: "Add this to the Assumptions section"
 

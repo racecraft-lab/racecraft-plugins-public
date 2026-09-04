@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Subprocess exit-code contract tests for the version-gated MOC lints.
-
-Port of ``test-moc-lint-exit-codes.sh`` (XPLAT-010 T045). The non-root
-count-parity baseline is pinned at TOTAL: 36.
-"""
+"""Validate MOC linter exit-code behavior."""
 
 from __future__ import annotations
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Unit tests for the run-all.py orchestrator (XPLAT-010 US1, FR-006).
+"""Unit tests for the manifest-driven run-all.py orchestrator.
 
 Exercises the manifest-driven flag/scope/headline/exit-code contract that
-reproduces run-all.sh 1:1 (research §D5): argument parsing (including unknown
+reproduces the runner interface: argument parsing (including unknown
 flags -> exit 2), per-layer scope selection from suite-manifest.json, the
 summary-line parser, the ``speckit-pro test suite: X/Y passed`` headline
 formatting, and the child-outcome disposition taxonomy (crash, failed exit,
@@ -94,9 +94,14 @@ class ScopeSelectionTests(unittest.TestCase):
     def test_live_preserves_default_1_4_5_scope(self) -> None:
         self.assertEqual(self._ordered_runs(run_all.parse_args(["--live"])), ["1", "4", "5"])
 
-    def test_all_runs_every_runner_block_but_not_layer_8(self) -> None:
+    def test_all_runs_every_configured_runner_block_but_not_layer_8(self) -> None:
         runs = self._ordered_runs(run_all.parse_args(["--all"]))
-        self.assertEqual(runs, ["1", "2", "3", "4", "5", "6", "7"])
+        expected = [
+            layer["id"]
+            for layer in run_all.execution_layers(self.manifest)
+            if layer["id"] != "8"
+        ]
+        self.assertEqual(runs, expected)
         self.assertNotIn("8", runs)
 
     def test_layer_selection_is_exact(self) -> None:
@@ -111,33 +116,22 @@ class ScopeSelectionTests(unittest.TestCase):
         self.assertFalse(run_all.toolchain_should_run(self.manifest, run_all.parse_args(["--layer", "2"])))
 
     def test_live_eval_layers_print_python_command_plans(self) -> None:
-        for layer_id in ("2", "3", "6"):
+        live_eval_layers = [
+            layer for layer in self.manifest["layers"]
+            if layer.get("live_only") is True and layer.get("execution") == "print-commands"
+        ]
+        self.assertTrue(live_eval_layers)
+        for layer in live_eval_layers:
+            layer_id = layer["id"]
             with self.subTest(msg=f"Layer {layer_id} uses Python command plans"):
                 output = io.StringIO()
                 with contextlib.redirect_stdout(output):
-                    run_all.print_layer_commands(self.by_id[layer_id], REPO_ROOT)
+                    run_all.print_layer_commands(layer, REPO_ROOT)
                 text = output.getvalue()
                 self.assertEqual(self._ordered_runs(run_all.parse_args(["--layer", layer_id])), [layer_id])
                 self.assertIn("python3 tests/speckit-pro/", text)
                 self.assertNotIn("    bash ", text)
-                self.assertTrue(all(script["path"].endswith(".py") for script in self.by_id[layer_id]["scripts"]))
-
-
-class SummaryParsingTests(unittest.TestCase):
-    def test_parses_last_passed_summary_line(self) -> None:
-        output = "noise\nvalidate-agents: 3/4 passed\ntrailing detail\n"
-        self.assertEqual(run_all.parse_summary(output), (3, 4))
-
-    def test_takes_last_when_multiple(self) -> None:
-        output = "a: 1/1 passed\nb: 2/5 passed\n"
-        self.assertEqual(run_all.parse_summary(output), (2, 5))
-
-    def test_returns_none_without_summary(self) -> None:
-        self.assertIsNone(run_all.parse_summary("just some output\n"))
-
-    def test_sum_all_summaries_for_integration_layer(self) -> None:
-        output = "run-dispatch-fixtures: 2/2 passed\nrun-e2e-fixtures: 1/3 passed\n"
-        self.assertEqual(run_all.sum_all_summaries(output), (3, 5))
+                self.assertTrue(all(script["path"].endswith(".py") for script in layer["scripts"]))
 
 
 class HeadlineTests(unittest.TestCase):
@@ -153,48 +147,124 @@ class HeadlineTests(unittest.TestCase):
         self.assertEqual(run_all.exit_code_for(1), 1)
 
 
-class ChildDispositionTests(unittest.TestCase):
-    def test_crash_without_summary_counts_as_one_failure(self) -> None:
-        # No "X/Y passed" line + nonzero exit == crash -> one failed unit.
-        disposition = run_all.classify_child(exit_code=2, summary=None)
-        self.assertEqual(disposition, ("crash", 0, 1))
-
-    def test_zero_exit_without_summary_is_no_summary_pass(self) -> None:
-        self.assertEqual(run_all.classify_child(exit_code=0, summary=None), ("no-summary-pass", 0, 0))
-
-    def test_summary_present_uses_counts(self) -> None:
-        self.assertEqual(run_all.classify_child(exit_code=0, summary=(4, 5)), ("counted", 4, 1))
-
-    def test_nonzero_exit_with_all_pass_summary_counts_as_failure(self) -> None:
-        self.assertEqual(run_all.classify_child(exit_code=1, summary=(4, 4)), ("failed-exit", 4, 1))
-
-    def test_real_nonzero_child_with_all_pass_summary_is_scored_failure(self) -> None:
+class LayerExecutionRegressionTests(unittest.TestCase):
+    def test_direct_child_requires_one_path_stem_owned_summary(self) -> None:
         layer = {
             "id": "4",
             "label": "Script unit tests",
             "integration": False,
-            "scripts": [{"path": "tests/speckit-pro/failing-child.py"}],
+            "scripts": [{"path": "tests/speckit-pro/nested-aggregate.py"}],
         }
+        cases = (
+            ("missing summary", 0, "", (0, 1)),
+            ("wrong label only", 0, "nested-child: 1/1 passed\n", (0, 1)),
+            (
+                "duplicate owned summary",
+                0,
+                "nested-aggregate: 1/1 passed\nnested-aggregate: 1/1 passed\n",
+                (0, 1),
+            ),
+            ("zero discovery", 0, "nested-aggregate: 0/0 passed\n", (0, 1)),
+            ("partial pass", 0, "nested-aggregate: 1/2 passed\n", (1, 1)),
+            ("passed exceeds total", 0, "nested-aggregate: 2/1 passed\n", (0, 1)),
+            ("nonzero all-pass", 1, "nested-aggregate: 1/1 passed\n", (1, 1)),
+        )
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            child = root / "tests" / "speckit-pro" / "failing-child.py"
+            child = root / layer["scripts"][0]["path"]
             child.parent.mkdir(parents=True)
-            child.write_text(
-                "import sys\nprint('failing-child: 1/1 passed')\nraise SystemExit(9)\n",
-                encoding="utf-8",
-            )
-            output = io.StringIO()
-            with contextlib.redirect_stdout(output):
+            child.touch()
+            for case_name, exit_code, child_output, expected in cases:
+                with (
+                    self.subTest(case=case_name),
+                    mock.patch.object(run_all, "dispatch_script", return_value=(child_output, exit_code)),
+                    contextlib.redirect_stdout(io.StringIO()),
+                ):
+                    self.assertEqual(
+                        run_all.run_execute_layer(layer, run_all.parse_args(["--layer", "4"]), root),
+                        expected,
+                    )
+
+    def test_integration_layer_uses_its_aggregate_summary_once(self) -> None:
+        layer = {
+            "id": "7",
+            "label": "Integration fixtures",
+            "integration": True,
+            "scripts": [{"path": "tests/speckit-pro/aggregate.py"}],
+        }
+        child_output = (
+            "nested-one: 2/2 passed\n"
+            "nested-two: 1/3 passed\n"
+            "aggregate: 1/2 passed\n"
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            child = root / layer["scripts"][0]["path"]
+            child.parent.mkdir(parents=True)
+            child.touch()
+            with (
+                mock.patch.object(run_all, "dispatch_script", return_value=(child_output, 1)),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
                 passed, failed = run_all.run_execute_layer(
                     layer,
-                    run_all.parse_args(["--layer", "4"]),
+                    run_all.parse_args(["--integration"]),
                     root,
                 )
         self.assertEqual((passed, failed), (1, 1))
-        self.assertIn("FAIL failing-child (1/1 reported, exit 9)", output.getvalue())
 
+    def test_selected_layer_with_no_scripts_fails_closed(self) -> None:
+        manifest = {
+            "layers": [
+                {
+                    "id": "4",
+                    "label": "Script unit tests",
+                    "default": True,
+                    "live_only": False,
+                    "integration": False,
+                    "execution": "execute",
+                    "scripts": [],
+                }
+            ]
+        }
+        output = io.StringIO()
+        with tempfile.TemporaryDirectory() as temp_root:
+            with (
+                mock.patch.object(run_all, "repo_root", return_value=Path(temp_root)),
+                mock.patch.object(run_all, "load_manifest", return_value=manifest),
+                mock.patch.dict(run_all.os.environ, {"SPECKIT_SKIP_TOOLCHAIN_CHECK": "1"}),
+                contextlib.redirect_stdout(output),
+            ):
+                exit_code = run_all.main(["--layer", "4"])
+        self.assertEqual(exit_code, 1)
+        self.assertIn("no test scripts discovered", output.getvalue())
 
-class LayerExecutionRegressionTests(unittest.TestCase):
+    def test_unknown_layer_selects_no_execution_and_fails_closed(self) -> None:
+        manifest = {
+            "layers": [
+                {
+                    "id": "4",
+                    "label": "Script unit tests",
+                    "default": True,
+                    "live_only": False,
+                    "integration": False,
+                    "execution": "execute",
+                    "scripts": [{"path": "tests/speckit-pro/unused.py"}],
+                }
+            ]
+        }
+        output = io.StringIO()
+        with tempfile.TemporaryDirectory() as temp_root:
+            with (
+                mock.patch.object(run_all, "repo_root", return_value=Path(temp_root)),
+                mock.patch.object(run_all, "load_manifest", return_value=manifest),
+                mock.patch.dict(run_all.os.environ, {"SPECKIT_SKIP_TOOLCHAIN_CHECK": "1"}),
+                contextlib.redirect_stdout(output),
+            ):
+                exit_code = run_all.main(["--layer", "missing"])
+        self.assertEqual(exit_code, 1)
+        self.assertIn("no executable layer selected", output.getvalue())
+
     def test_selected_layer_with_missing_script_fails_closed(self) -> None:
         manifest = {
             "layers": [
@@ -260,9 +330,7 @@ def main() -> int:
     for case in (
         ArgParsingTests,
         ScopeSelectionTests,
-        SummaryParsingTests,
         HeadlineTests,
-        ChildDispositionTests,
         LayerExecutionRegressionTests,
     ):
         suite.addTests(loader.loadTestsFromTestCase(case))

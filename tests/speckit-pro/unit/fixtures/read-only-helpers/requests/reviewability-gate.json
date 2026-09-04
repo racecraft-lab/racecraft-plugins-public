@@ -6,6 +6,6 @@
   "mode": "read_only",
   "inputs": {
     "mode_name": "setup",
-    "target": "docs/ai/specs/.process/XPLAT-005-workflow.md"
+    "target": "docs/ai/specs/.process/SPEC-805-workflow.md"
   }
 }

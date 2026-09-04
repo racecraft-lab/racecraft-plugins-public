@@ -36,19 +36,13 @@ speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json           merge=
 speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256                  merge=generated
 tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/** merge=generated
 tests/speckit-pro/unit/fixtures/plugin-bash-confinement/*proof*.json       merge=generated
-docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json               merge=generated
-docs/ai/specs/.process/XPLAT-009-payload-completeness-result.json         merge=generated
-docs/ai/specs/.process/XPLAT-009-zero-bash-guard-result.json              merge=generated
-docs/ai/specs/.process/XPLAT-009-release-readiness-result.json            merge=generated
+speckit-pro/gate-evidence/installed-cache-proof.json                              merge=generated
 
 # Generated the same way and conflicting the same way, but outside
 # CHECK_WORKTREE_PATHS because a different generator owns each.
 #
-# The Layer 6 corpus binds a sha256 chain over agent source bytes and has no
-# regeneration script at all; refresh-release-artifacts.py does not cover it.
 # The MOC index zones are rewritten by generate-spec-index. autopilot-state.json
 # is a single run's own pointer, so "merging" two runs' state is never right.
-tests/speckit-pro/layer6-efficiency/fixtures-codex/**                     merge=generated
 docs/ai/specs/*-MOC.md                                                    merge=generated
 specs/*/SPEC-MOC.md                                                       merge=generated
 docs/ai/specs/.process/autopilot-state.json                               merge=generated

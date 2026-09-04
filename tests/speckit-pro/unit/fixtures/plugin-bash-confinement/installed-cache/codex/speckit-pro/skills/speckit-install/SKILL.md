@@ -38,8 +38,6 @@ other skills.
   `~/.codex/agents/`. That is `$install`.
 - Methodology coaching. That is `$speckit-coach`.
 
-> **Codex implicit-trigger note (eval harness vs production):** Layer 2 trigger evals score this skill at 75% (15/20) on the Codex selector — but POS is a perfect 10/10 (every "install speckit" / "set up speckit" / "$speckit-install" query fires correctly). All 5 NEG misses are false-positives in single-skill staging where the harness loads only this skill, so the Codex selector has no alternative to route adjacent SDD queries to ("status of SPEC-014" → should go to `$speckit-status`, "scaffold spec SPEC-009" → `$speckit-scaffold-spec`, "upgrade my existing speckit installation" → `$speckit-upgrade`, "install the bundled SpecKit Pro Codex subagents" → `$install`). In production all six speckit-pro skills are loaded together and Codex routes those queries to their proper destinations. The eval results under-report real-world accuracy; positive-trigger reliability is the operationally-relevant number.
-
 ## Input
 
 Accept optional integration keys as arguments:
@@ -187,20 +185,13 @@ Compare `.specify/extensions/` and `.specify/presets/` against the
 entries in `<plugin-root>/scripts/curated-set.json`.
 
 - If every entry is present: report "Curated extensions and presets
-  already current." Continue to Step 6.
+  already installed." Continue to Step 6.
 
 - Otherwise, list the missing entries and ask which to install.
   Recommended default is **all**. For each accepted entry, give the
   operator the `specify extension add <id>` or preset command from the
   curated set and run it only after they confirm. Skipped entries can be
   installed later with `$speckit-upgrade`.
-
-Record the outcome in `.specify/curated-install.json` — commit this to
-git so the project's extension state is reproducible.
-
-If the script reports that an entry has neither a GitHub Release nor
-a git tag, surface the message but do not block the install. The
-operator can re-run after the upstream extension publishes a tag.
 
 ### 6. Verify
 

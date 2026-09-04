@@ -1,19 +1,5 @@
 #!/usr/bin/env python3
-"""Structural validation for all Claude agent files (port of validate-agents.sh).
-
-XPLAT-010 count-parity port (T018, US2). Python 3.11+ standard library only, no
-new runtime dependency. Every former ``assert_*`` / ``_pass`` / ``_fail``
-execution maps to exactly one counted ``subTest`` unit; each bash check name is
-reproduced verbatim via ``subTest(msg=...)`` so the ordered inventory matches the
-committed baseline 1:1.
-
-Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-agents-baseline.txt``
-(TOTAL: 182). Run standalone::
-
-    python3 tests/speckit-pro/layer1-structural/validate-agents.py
-
-prints ``validate-agents: {passed}/{total} passed`` (exit 0 iff all pass).
-"""
+"""Validate Claude agent definitions."""
 
 from __future__ import annotations
 

@@ -11,7 +11,7 @@
     {
       "helper_id": "check-prerequisites",
       "source_script": "speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh",
-      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh", "docs/ai/specs/.process/XPLAT-005-workflow.md"], "timeout_seconds": 30}
+      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh", "docs/ai/specs/.process/SPEC-805-workflow.md"], "timeout_seconds": 30}
     },
     {
       "helper_id": "detect-commands",
@@ -36,7 +36,7 @@
     {
       "helper_id": "reviewability-gate",
       "source_script": "speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh",
-      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh", "setup", "docs/ai/specs/.process/XPLAT-005-workflow.md"], "timeout_seconds": 30}
+      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh", "setup", "docs/ai/specs/.process/SPEC-805-workflow.md"], "timeout_seconds": 30}
     },
     {
       "helper_id": "estimate-reviewable-loc",
@@ -46,12 +46,12 @@
     {
       "helper_id": "resolve-confidence-mode",
       "source_script": "speckit-pro/skills/speckit-autopilot/scripts/resolve-confidence-mode.sh",
-      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/resolve-confidence-mode.sh", "--", "--advisory", "docs/ai/specs/.process/XPLAT-005-workflow.md"], "timeout_seconds": 30}
+      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/resolve-confidence-mode.sh", "--", "--advisory", "docs/ai/specs/.process/SPEC-805-workflow.md"], "timeout_seconds": 30}
     },
     {
       "helper_id": "confidence-gate",
       "source_script": "speckit-pro/skills/speckit-autopilot/scripts/confidence-gate.sh",
-      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/confidence-gate.sh", "docs/ai/specs/.process/XPLAT-005-workflow.md", "--mode", "advisory"], "timeout_seconds": 30}
+      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/confidence-gate.sh", "docs/ai/specs/.process/SPEC-805-workflow.md", "--mode", "advisory"], "timeout_seconds": 30}
     },
     {
       "helper_id": "generate-spec-index-check",
@@ -77,7 +77,7 @@
     {
       "helper_id": "validate-pr-workflow-contract",
       "source_script": "speckit-pro/skills/speckit-autopilot/scripts/validate-pr-workflow-contract.sh",
-      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/validate-pr-workflow-contract.sh", "--title", "feat(XPLAT-005): Add read-only helper port", "--repo-root", "."], "timeout_seconds": 30}
+      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/validate-pr-workflow-contract.sh", "--title", "feat(SPEC-805): Add read-only helper port", "--repo-root", "."], "timeout_seconds": 30}
     },
     {
       "helper_id": "validate-pr-packet-read-only",

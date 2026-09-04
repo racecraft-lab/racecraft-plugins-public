@@ -1,7 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://racecraft.dev/speckit-pro/xplat-008/payload-completeness.schema.json",
-  "title": "XPLAT-008 Payload Completeness Contract",
+  "title": "Payload completeness contract",
   "type": "object",
   "additionalProperties": false,
   "required": [

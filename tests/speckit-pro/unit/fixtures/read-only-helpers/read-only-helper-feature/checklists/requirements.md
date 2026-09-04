@@ -1,6 +1,6 @@
 # Requirements Checklist: Read-Only Helper Port
 
-**Purpose**: Validate that the Phase 1 specification is complete, bounded, testable, and aligned with the XPLAT-005 design concept before planning.
+**Purpose**: Validate that the Phase 1 specification is complete, bounded, testable, and aligned with the SPEC-805 design concept before planning.
 **Created**: 2026-07-02
 **Feature**: [spec.md](../spec.md)
 
@@ -20,7 +20,7 @@
 - [x] CHK009 Functional requirements require Python 3.11+ standard-library-only helper logic with no new runtime dependencies.
 - [x] CHK010 Functional requirements preserve the accepted two-slice strategy.
 - [x] CHK011 Edge cases cover optional files, duplicate markers, path portability, environment-sensitive output, source-checkout references, and late read-only `validate-pr-packet` behavior.
-- [x] CHK012 Success criteria are measurable and technology-scoped to XPLAT-005 without claiming installed-plugin or native matrix support.
+- [x] CHK012 Success criteria are measurable and technology-scoped to SPEC-805 without claiming installed-plugin or native matrix support.
 
 ## Scope And Reviewability
 
@@ -33,5 +33,5 @@
 
 - [x] CHK017 Every functional requirement has at least one user story, acceptance scenario, or measurable outcome that can validate it.
 - [x] CHK018 The spec identifies the main entities needed for planning: registry entries, helper modules, fixtures, Bash comparisons, promotion records, and smoke evidence.
-- [x] CHK019 Deferred work is clearly assigned to XPLAT-006 or XPLAT-007 where appropriate.
+- [x] CHK019 Deferred work is clearly assigned to SPEC-806 or SPEC-807 where appropriate.
 - [x] CHK020 The specification is ready for Plan without additional clarification markers.

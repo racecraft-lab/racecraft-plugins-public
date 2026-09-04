@@ -25,7 +25,7 @@ convention for that path.
 
 Accept any of these:
 
-- a SPEC-ID such as `DOC-007` or `PRSG-014`
+- a SPEC-ID such as `SPEC-007` or `SPEC-014`
 - an active spec directory under `specs/`
 - a workflow file under `docs/ai/specs/.process/`
 - a merged PR URL or number
@@ -76,7 +76,7 @@ remaining work.
 
 Add an archive report under `.specify/memory/archive-reports/` named with the
 date and SPEC-ID, for example
-`2026-06-17-doc-007-post-merge-hygiene.md`. Include:
+`2026-06-17-spec-007-post-merge-hygiene.md`. Include:
 
 - merged PR URL and title
 - merged-at timestamp and merge commit
@@ -179,9 +179,9 @@ skipped check and the practical impact.
 
 Commit intentionally after verification. For archive-only cleanup commits and
 PRs, use a lower-case Conventional Commit scope derived from the completed spec
-ID. For example, archive cleanup for `CAR-001` should use
-`docs(car-001): archive post-merge state`, not
-`docs(CAR-001): archive post-merge state`. The repository PR title gate checks
+ID. For example, archive cleanup for `SPEC-001` should use
+`docs(spec-001): archive post-merge state`, not
+`docs(SPEC-001): archive post-merge state`. The repository PR title gate checks
 the final PR title, so apply the same lower-case scope to `gh pr create` or
 `gh pr edit --title`. Use a separate `feat(skills): add archive cleanup
 workflow` commit only when this workflow becomes a plugin skill.

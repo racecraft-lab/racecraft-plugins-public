@@ -23,7 +23,6 @@ claims to the code and to the reference the skill points operators at.
 
 from __future__ import annotations
 
-import re
 import sys
 import unittest
 from pathlib import Path
@@ -51,12 +50,11 @@ OMISSION_RATIONALE_ANCHOR = (
     "That declaration also deliberately omits a command-execution tool."
 )
 
-# Only the XPLAT-009 guard classifies a command-execution token in a shipped
-# tool declaration as blocking. XPLAT-008 sees the same token and classifies it
-# source_checkout_helper, which does not block.
-BLOCKING_RELEASE_GUARD_IDS = frozenset({"XPLAT-009"})
-
-FEATURE_ID_RE = re.compile(r"XPLAT-\d+")
+# Only the plugin command-confinement release guard classifies a
+# command-execution token in a shipped tool declaration as blocking. The
+# general active-path classifier treats the same source token as a checkout
+# helper, which does not block.
+BLOCKING_RELEASE_GUARD_NAMES = frozenset({"plugin command-confinement release guard"})
 
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 if str(PLUGIN_ROOT) not in sys.path:
@@ -118,12 +116,16 @@ class AutopilotPermissionModeGuidanceTests(unittest.TestCase):
 
     def test_only_the_guard_that_blocks_is_credited_with_blocking(self) -> None:
         paragraph = paragraph_containing(body(SKILL), OMISSION_RATIONALE_ANCHOR)
-        credited = set(FEATURE_ID_RE.findall(paragraph))
+        credited = {
+            guard_name
+            for guard_name in BLOCKING_RELEASE_GUARD_NAMES
+            if guard_name in paragraph
+        }
         self.assertEqual(
             credited,
-            set(BLOCKING_RELEASE_GUARD_IDS),
+            set(BLOCKING_RELEASE_GUARD_NAMES),
             "the omission rationale credits guards that do not block the token; "
-            f"named {sorted(credited)}, only {sorted(BLOCKING_RELEASE_GUARD_IDS)} blocks",
+            f"named {sorted(credited)}, only {sorted(BLOCKING_RELEASE_GUARD_NAMES)} blocks",
         )
 
     def test_reference_explains_that_allowed_tools_is_pre_approval(self) -> None:
@@ -155,7 +157,7 @@ class AutopilotPermissionModeGuidanceTests(unittest.TestCase):
             "blocking_zero_bash",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 skill_path,
                 "bash",
                 "Bash",

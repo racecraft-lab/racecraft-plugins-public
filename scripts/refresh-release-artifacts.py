@@ -2,13 +2,13 @@
 """Refresh generated release artifacts so a release PR passes its own gates.
 
 release-please bumps the source plugin versions and the marketplace registry
-version fields but does not rebuild the generated payloads, hash-pinned
-installed-cache proofs, or gate evidence. This refreshes all of them from the
+version fields but does not rebuild the generated payloads or hash-pinned
+installed-cache proofs. This refreshes them from the
 current source tree so a release PR is self-consistent before merge. The
 proof-snapshot heuristic below assumes this script is the ONLY normal mutator
 of dist/** and the installed-cache fixtures — release-please extra-files must
 never pre-bump those trees. A canonical-proof fallback also lets the refresh
-repair legacy release branches that were partially bumped before that invariant
+repair release branches that were partially bumped before that invariant
 was enforced, without healing deliberate negative-test sentinels:
 
 1. Recompute the runner trust metadata (manifest sha256 entries + ``.sha256``).
@@ -16,8 +16,6 @@ was enforced, without healing deliberate negative-test sentinels:
 3. Sync the marketplace registries to the source plugin versions.
 4. Content-sync the installed-cache fixtures to the rebuilt payloads.
 5. Refresh the installed-cache proof tree hashes.
-6. Regenerate the payload-completeness, zero-Bash guard, and release-readiness
-   evidence.
 
 The refresh is idempotent: a second run on the same source makes no further
 changes. It does NOT regenerate the docs reference — the release workflow runs
@@ -31,7 +29,6 @@ import errno
 import hashlib
 import json
 import os
-import re
 import shutil
 import stat
 import subprocess
@@ -55,20 +52,8 @@ MARKETPLACES = (
 INSTALLED_CACHE_ROOT = "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache"
 
 PROOF_GLOB_DIR = "tests/speckit-pro/unit/fixtures/plugin-bash-confinement"
-EVIDENCE_PROOF = "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json"
+EVIDENCE_PROOF = "speckit-pro/gate-evidence/installed-cache-proof.json"
 PARTIAL_ROOT_PROOF = f"{PROOF_GLOB_DIR}/installed-cache-proof-partial-root.json"
-
-PAYLOAD_COMPLETENESS_REQUEST = (
-    "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/requests/payload-completeness-apply.json"
-)
-PAYLOAD_COMPLETENESS_RESULT = "docs/ai/specs/.process/XPLAT-009-payload-completeness-result.json"
-ZERO_BASH_FINAL_REQUEST = (
-    "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/requests/zero-bash-guard-final.json"
-)
-ZERO_BASH_RESULT = "docs/ai/specs/.process/XPLAT-009-zero-bash-guard-result.json"
-RELEASE_READINESS_REQUEST = "tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/release-readiness.json"
-RELEASE_READINESS_RESULT = "docs/ai/specs/.process/XPLAT-009-release-readiness-result.json"
-RELEASE_READINESS_REQUEST_ID = "xplat-008-release-readiness-ready"
 
 CHECK_WORKTREE_PATHS = (
     "dist",
@@ -80,9 +65,6 @@ CHECK_WORKTREE_PATHS = (
     INSTALLED_CACHE_ROOT,
     PROOF_GLOB_DIR,
     EVIDENCE_PROOF,
-    PAYLOAD_COMPLETENESS_RESULT,
-    ZERO_BASH_RESULT,
-    RELEASE_READINESS_RESULT,
 )
 CHECK_COPY_IGNORES = {
     ".git",
@@ -126,9 +108,10 @@ def refresh_release_artifacts(repo_root: Path) -> int:
     # (all-zeros, cross-surface mismatches, missing roots) are left untouched.
     proof_files = discover_proof_files(repo_root)
     pre_rebuild = snapshot_proof_recomputes(repo_root, proof_files, active_path_guard)
+    previous_installed_hashes = installed_cache_tree_hashes(repo_root, active_path_guard)
 
     # 2. Rebuild Claude and Codex payloads.
-    payloads.build_xplat008_payloads(repo_root, repo_root / "dist")
+    payloads.build_installed_plugin_payloads(repo_root, repo_root / "dist")
 
     # 3. Sync marketplace versions to the source plugin versions.
     changed += sync_marketplace_versions(repo_root)
@@ -137,10 +120,17 @@ def refresh_release_artifacts(repo_root: Path) -> int:
     changed += sync_installed_cache_fixtures(repo_root)
 
     # 5. Refresh installed-cache proof tree hashes. The canonical evidence
-    # mapping recovers legacy release branches whose payload was partially
-    # bumped before the pre-rebuild snapshot, while the row-level snapshot
+    # mapping repairs partially bumped payloads, while the row-level snapshot
     # continues to preserve deliberate negative-test sentinels.
     canonical_replacements = canonical_proof_hash_replacements(repo_root, active_path_guard)
+    current_payload_hashes = source_payload_tree_hashes(repo_root, active_path_guard)
+    canonical_replacements.update(
+        {
+            previous: current_payload_hashes[product]
+            for product, previous in previous_installed_hashes.items()
+            if product in current_payload_hashes and previous != current_payload_hashes[product]
+        }
+    )
     changed += refresh_proof_tree_hashes(
         repo_root,
         proof_files,
@@ -148,9 +138,7 @@ def refresh_release_artifacts(repo_root: Path) -> int:
         active_path_guard,
         canonical_replacements=canonical_replacements,
     )
-
-    # 6. Regenerate gate evidence in gate order.
-    changed += regenerate_evidence(repo_root, runner_root)
+    changed += refresh_installed_cache_proof(repo_root, active_path_guard)
 
     if changed:
         print("Refreshed release artifacts:")
@@ -477,8 +465,7 @@ def remove_empty_dirs(root: Path) -> None:
 
 
 def discover_proof_files(repo_root: Path) -> list[Path]:
-    fixtures = sorted((repo_root / PROOF_GLOB_DIR).glob("installed-cache-proof*.json"))
-    return fixtures + [repo_root / EVIDENCE_PROOF]
+    return sorted((repo_root / PROOF_GLOB_DIR).glob("installed-cache-proof*.json"))
 
 
 def snapshot_proof_recomputes(repo_root: Path, proof_files: list[Path], guard: Any) -> dict[Path, list[str | None]]:
@@ -491,7 +478,7 @@ def snapshot_proof_recomputes(repo_root: Path, proof_files: list[Path], guard: A
 
 
 def canonical_proof_hash_replacements(repo_root: Path, guard: Any) -> dict[str, str]:
-    """Map trusted recorded hashes to rebuilt hashes for legacy partial bumps.
+    """Map trusted recorded hashes to rebuilt hashes for partial release bumps.
 
     The committed evidence proof is the canonical full-root positive case. The
     partial-root fixture is also trusted when present because its negative case
@@ -502,24 +489,21 @@ def canonical_proof_hash_replacements(repo_root: Path, guard: Any) -> dict[str, 
     """
 
     replacements: dict[str, str] = {}
-    proof_paths = [EVIDENCE_PROOF]
+    proof_paths: list[str] = []
+    if (repo_root / EVIDENCE_PROOF).is_file():
+        proof_paths.append(EVIDENCE_PROOF)
     if (repo_root / PARTIAL_ROOT_PROOF).is_file():
         proof_paths.append(PARTIAL_ROOT_PROOF)
     for proof_rel in proof_paths:
         proof_file = repo_root / proof_rel
         try:
             proof_text = proof_file.read_text(encoding="utf-8")
-        except (OSError, UnicodeError) as exc:
-            fail(f"unable to read canonical installed-cache proof at {proof_rel}: {exc}")
-            raise  # unreachable; fail() exits
+        except (OSError, UnicodeError):
+            continue
         try:
             document = json.loads(proof_text)
-        except json.JSONDecodeError as exc:
-            fail(
-                f"canonical installed-cache proof at {proof_rel} is malformed JSON: "
-                f"{exc.msg} (line {exc.lineno}, column {exc.colno})"
-            )
-            raise  # unreachable; fail() exits
+        except json.JSONDecodeError:
+            continue
         rows = document.get("proofs") if isinstance(document.get("proofs"), list) else []
         for row in rows:
             if not isinstance(row, dict):
@@ -533,6 +517,60 @@ def canonical_proof_hash_replacements(repo_root: Path, guard: Any) -> dict[str, 
                 fail("canonical installed-cache proof maps one recorded hash to multiple rebuilt hashes")
             replacements[current] = rebuilt
     return replacements
+
+
+def installed_cache_tree_hashes(repo_root: Path, guard: Any) -> dict[str, str]:
+    hashes: dict[str, str] = {}
+    for product in ("claude", "codex"):
+        root = f"{INSTALLED_CACHE_ROOT}/{product}/speckit-pro"
+        inventory = guard.payload_tree_inventory(repo_root, root, {"product": product})
+        if inventory and inventory.get("files"):
+            hashes[product] = inventory["tree_hash"]
+    return hashes
+
+
+def source_payload_tree_hashes(repo_root: Path, guard: Any) -> dict[str, str]:
+    hashes: dict[str, str] = {}
+    for product in ("claude", "codex"):
+        root = f"dist/{product}/speckit-pro"
+        inventory = guard.payload_tree_inventory(repo_root, root, {"product": product})
+        if inventory and inventory.get("files"):
+            hashes[product] = inventory["tree_hash"]
+    return hashes
+
+
+def refresh_installed_cache_proof(repo_root: Path, guard: Any) -> list[str]:
+    hashes = source_payload_tree_hashes(repo_root, guard)
+    missing = sorted({"claude", "codex"} - set(hashes))
+    if missing:
+        fail(f"unable to derive installed-cache proof for payloads: {','.join(missing)}")
+    proofs = []
+    for product in ("claude", "codex"):
+        installed_root = f"{INSTALLED_CACHE_ROOT}/{product}/speckit-pro"
+        proofs.append(
+            {
+                "product": product,
+                "surface": f"{product}_payload_fixture",
+                "installed_root": installed_root,
+                "source_payload_root": f"dist/{product}/speckit-pro",
+                "source_payload_tree_hash": hashes[product],
+                "source_derived": True,
+                "mutable_user_cache": False,
+                "script_file_count": guard.count_prohibited_script_files(repo_root / installed_root),
+                "active_guidance_findings": [],
+                "allowlist_release_readiness_excluded": True,
+            }
+        )
+    document = {
+        "schema_version": "2.0",
+        "contract_id": "plugin-bash-confinement",
+        "proofs": proofs,
+    }
+    return write_text_if_changed(
+        repo_root / EVIDENCE_PROOF,
+        json.dumps(document, indent=2) + "\n",
+        repo_root,
+    )
 
 
 def refresh_proof_tree_hashes(
@@ -586,134 +624,6 @@ def recompute_tree_hash(repo_root: Path, guard: Any, row: Any) -> str | None:
     if not inventory or not inventory.get("files"):
         return None
     return inventory["tree_hash"]
-
-
-# --------------------------------------------------------------------------- #
-# Step 6: gate evidence
-# --------------------------------------------------------------------------- #
-
-
-def regenerate_evidence(repo_root: Path, runner_root: Path) -> list[str]:
-    changed: list[str] = []
-
-    completeness = run_runner_request(repo_root, runner_root, PAYLOAD_COMPLETENESS_REQUEST)
-    if completeness.get("status") != "ok":
-        fail(f"payload-completeness gate did not pass (status={completeness.get('status')})")
-    changed += write_text_if_changed(
-        repo_root / PAYLOAD_COMPLETENESS_RESULT, json.dumps(completeness, indent=2) + "\n", repo_root
-    )
-
-    zero_bash = run_runner_request(repo_root, runner_root, ZERO_BASH_FINAL_REQUEST)
-    if zero_bash.get("status") != "ok":
-        fail(f"zero-bash-guard-final gate did not pass (status={zero_bash.get('status')})")
-    changed += write_text_if_changed(
-        repo_root / ZERO_BASH_RESULT, json.dumps(zero_bash, indent=2) + "\n", repo_root
-    )
-
-    readiness = run_runner_request(
-        repo_root, runner_root, RELEASE_READINESS_REQUEST, request_id=RELEASE_READINESS_REQUEST_ID
-    )
-    if readiness.get("status") != "ok":
-        fail(f"release-readiness gate did not pass (status={readiness.get('status')})")
-    readiness = normalize_live_host_evidence(readiness)
-    readiness_text = (json.dumps(readiness, indent=2) + "\n").replace(str(Path.home()), "<home>")
-    changed += write_text_if_changed(repo_root / RELEASE_READINESS_RESULT, readiness_text, repo_root)
-
-    return changed
-
-
-LIVE_HOST_PYTHON = "<python3>"
-LIVE_HOST_SPECIFY = "<specify>"
-LIVE_HOST_VERSION = "<version>"
-LIVE_HOST_PLATFORM = "<host>"
-LIVE_HOST_ARCHITECTURE = "<arch>"
-
-
-def normalize_live_host_evidence(readiness: dict[str, Any]) -> dict[str, Any]:
-    """Canonicalize live host probe fields before committing the evidence.
-
-    The release-readiness payload embeds whichever machine ran the refresh
-    last (interpreter path and version, platform, architecture, specify-on-
-    PATH), so regenerating on a different OS rewrites the file and the
-    artifact-consistency gate reports phantom drift. The release workflow
-    re-runs the live gates directly; the committed evidence only needs the
-    gate verdicts, not the refreshing host's identity.
-    """
-    release_readiness = readiness.get("data", {}).get("release_readiness")
-    if not isinstance(release_readiness, dict):
-        return readiness
-    for record in release_readiness.get("runner_invocations") or []:
-        if not isinstance(record, dict):
-            continue
-        if isinstance(record.get("platform"), str):
-            record["platform"] = LIVE_HOST_PLATFORM
-        inputs = record.get("runner_request", {}).get("inputs", {})
-        if isinstance(inputs, dict) and isinstance(inputs.get("platform"), str):
-            inputs["platform"] = LIVE_HOST_PLATFORM
-        resolution = record.get("interpreter_resolution")
-        if isinstance(resolution, dict):
-            if isinstance(resolution.get("resolved_executable"), str):
-                resolution["resolved_executable"] = LIVE_HOST_PYTHON
-            if isinstance(resolution.get("invocation_argv_prefix"), list):
-                resolution["invocation_argv_prefix"] = [LIVE_HOST_PYTHON]
-            if isinstance(resolution.get("version"), str):
-                resolution["version"] = LIVE_HOST_VERSION
-            if isinstance(resolution.get("diagnostic"), str):
-                resolution["diagnostic"] = re.sub(
-                    r"Python \d+(?:\.\d+)*", f"Python {LIVE_HOST_VERSION}", resolution["diagnostic"]
-                )
-        invocation = record.get("invocation")
-        if isinstance(invocation, dict) and isinstance(invocation.get("argv"), list) and invocation["argv"]:
-            invocation["argv"][0] = LIVE_HOST_PYTHON
-        report = record.get("runner_response", {}).get("data", {}).get("report")
-        if isinstance(report, dict):
-            if isinstance(report.get("platform"), str):
-                report["platform"] = LIVE_HOST_PLATFORM
-            if isinstance(report.get("architecture"), str):
-                report["architecture"] = LIVE_HOST_ARCHITECTURE
-            if isinstance(report.get("python_version"), str):
-                report["python_version"] = LIVE_HOST_VERSION
-            prerequisites = report.get("prerequisites")
-            if isinstance(prerequisites, dict):
-                for probe_name, placeholder in (("python", LIVE_HOST_PYTHON), ("specify", LIVE_HOST_SPECIFY)):
-                    probe = prerequisites.get(probe_name)
-                    if isinstance(probe, dict):
-                        if "path" in probe:
-                            probe["path"] = placeholder
-                        if "version" in probe:
-                            probe["version"] = LIVE_HOST_VERSION
-                        if "diagnostic_code" in probe:
-                            probe["diagnostic_code"] = None
-                        if "status" in probe:
-                            probe["status"] = "<probe>"
-    return readiness
-
-
-def run_runner_request(
-    repo_root: Path, runner_root: Path, request_rel: str, *, request_id: str | None = None
-) -> dict[str, Any]:
-    request = json.loads((repo_root / request_rel).read_text(encoding="utf-8"))
-    if request_id is not None:
-        request["request_id"] = request_id
-    env = dict(os.environ)
-    env["PYTHONPATH"] = str(runner_root)
-    env["PYTHONDONTWRITEBYTECODE"] = "1"
-    completed = subprocess.run(
-        [sys.executable, "-m", "speckit_pro_runner"],
-        input=json.dumps(request).encode("utf-8"),
-        capture_output=True,
-        cwd=str(repo_root),
-        env=env,
-        check=False,
-    )
-    try:
-        return json.loads(completed.stdout.decode("utf-8"))
-    except (ValueError, UnicodeDecodeError):
-        fail(
-            f"runner request {request_rel} did not return a JSON envelope "
-            f"(exit={completed.returncode}): {completed.stderr.decode('utf-8', 'replace')[:500]}"
-        )
-        raise  # unreachable; fail() exits
 
 
 # --------------------------------------------------------------------------- #

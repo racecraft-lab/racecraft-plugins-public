@@ -50,9 +50,6 @@ FORBIDDEN_AGENT_PHRASES = (
     "## Active Technologies",
     "## Recent Changes",
     "### Test Layers",
-    "xplat-008",
-    "xplat-009",
-    "xplat-010",
 )
 
 

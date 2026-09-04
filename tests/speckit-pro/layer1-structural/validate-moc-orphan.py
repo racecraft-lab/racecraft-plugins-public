@@ -1,18 +1,5 @@
 #!/usr/bin/env python3
-"""Version-gated orphan lint for MOC markers (port of validate-moc-orphan.sh).
-
-XPLAT-010 count-parity port (T040, US2). Python 3.11+ standard library only.
-No-arg mode runs the committed fixture self-tests plus real-tree scan with every
-former ``assert_*``/``_pass``/``_fail`` execution mapped to one counted
-``subTest`` unit. Explicit scan-root mode scans only that root and preserves the
-predecessor's no-summary exit-code contract.
-
-Baselines:
-* ``tests/speckit-pro/parity/bash-to-python/validate-moc-orphan-baseline.txt``
-  (TOTAL: 29)
-* ``tests/speckit-pro/parity/bash-to-python/validate-moc-orphan-scan-root-baseline.txt``
-  (TOTAL: 0)
-"""
+"""Validate orphan MOC detection."""
 
 from __future__ import annotations
 

@@ -201,10 +201,10 @@ class ComposeReleaseNotesTests(unittest.TestCase):
             compare_payload(
                 "feat(autopilot): harden durable marker planning",
                 "docs(release): record composition coverage",
-                "Merge pull request #314 from racecraft-lab/xplat-010-review/03-us1"
-                "\n\nfeat(xplat-010): replace Bash suite orchestration with Python",
-                "Merge pull request #326 from racecraft-lab/xplat-010-review/15-release-contract"
-                "\n\nfeat(xplat-010): validate consumer release-note blocks",
+                "Merge pull request #314 from racecraft-lab/fixture-release-review/03-us1"
+                "\n\nfeat(speckit-pro): replace Bash suite orchestration with Python",
+                "Merge pull request #326 from racecraft-lab/fixture-release-review/15-release-contract"
+                "\n\nfeat(speckit-pro): validate consumer release-note blocks",
                 "Merge pull request #331 from racecraft-lab/docs-constitution-python",
                 "fix(tooling): complete repository Bash cleanup (#337)",
             ),
@@ -214,7 +214,7 @@ class ComposeReleaseNotesTests(unittest.TestCase):
         self.assertEqual([commit.kind for commit in commits], ["feat", "feat", "", "fix"])
         self.assertEqual(
             commits[0].subject,
-            "feat(xplat-010): replace Bash suite orchestration with Python",
+            "feat(speckit-pro): replace Bash suite orchestration with Python",
         )
 
         body = COMPOSER.compose_release_body(
@@ -222,10 +222,10 @@ class ComposeReleaseNotesTests(unittest.TestCase):
             commits,
             {
                 314: pull(
-                    "feat(xplat-010): replace Bash suite orchestration with Python",
+                    "feat(speckit-pro): replace Bash suite orchestration with Python",
                     "```release-note\nThe test suite now runs on Python alone.\n```",
                 ),
-                326: pull("feat(xplat-010): validate consumer release-note blocks"),
+                326: pull("feat(speckit-pro): validate consumer release-note blocks"),
                 331: pull("docs(constitution): align governance with Python tooling"),
                 337: pull("fix(tooling): complete repository Bash cleanup"),
             },

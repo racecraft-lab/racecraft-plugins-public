@@ -245,7 +245,7 @@ Read the workflow file's Prerequisites table. If already
 Before phase execution, validate that every bundled SpecKit Pro Codex custom
 agent is current on the selected official Codex runtime path. Run the promoted
 `install-codex-agents` runner helper in `dry_run` mode, using the same
-destination and model that `$install` would use:
+destination and request-level fallback that `$install` would use:
 
 ```text
 'runner helper install-codex-agents' mode=dry_run inputs={destination?, model?}

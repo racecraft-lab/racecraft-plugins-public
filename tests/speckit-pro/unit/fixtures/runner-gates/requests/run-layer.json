@@ -1,12 +1,11 @@
 {
   "schema_version": "1.0",
-  "request_id": "xplat-007-us1-run-layer",
+  "request_id": "run-layer",
   "helper_id": "suite-gate",
   "operation": "run-layer",
   "mode": "read_only",
   "inputs": {
     "repo_root": ".",
-    "layer": "4",
-    "xplat_008_cutover_allowed": false
+    "layer": "4"
   }
 }

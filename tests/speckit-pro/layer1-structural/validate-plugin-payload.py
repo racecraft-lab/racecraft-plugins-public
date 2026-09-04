@@ -1,25 +1,5 @@
 #!/usr/bin/env python3
-"""Guard: shipped platform payloads must be clean (port of validate-plugin-payload.sh).
-
-XPLAT-010 count-parity port (T030, US2). Python 3.11+ standard library only.
-``speckit-pro/`` is the rich authoring source tree (Claude + Codex variants side
-by side); the marketplaces install generated ``dist/`` payloads so each platform
-sees only its own manifest, skills, agents, hooks, and support files. This guard
-rebuilds the payloads and asserts they are complete, exclusive, deterministic,
-and installed from the ``dist/`` paths. Every former ``assert_*``/``_pass``/
-``_fail`` execution maps to one counted ``subTest`` unit; names reproduced
-verbatim via ``subTest(msg=...)`` for a 1:1 baseline match — including the two
-``forbidden``-exclusion loops (4 Claude + 3 Codex units).
-
-Behavior preserved from the bash predecessor: it invokes the real payload builder
-(``python3 scripts/build-plugin-payloads.py``) at the "rebuilds from scratch" and
-"deterministic" checks; the port does the same via ``subprocess`` (argv list,
-``shell=False``). The builder is deterministic, so re-running it leaves ``dist/``
-byte-identical.
-
-Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-plugin-payload-baseline.txt``
-(TOTAL: 23).
-"""
+"""Validate generated plugin payloads."""
 
 from __future__ import annotations
 

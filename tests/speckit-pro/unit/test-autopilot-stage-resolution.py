@@ -50,7 +50,7 @@ COVERAGE_VALIDATOR = (
 # A real, durable workflow file: the workflow record survives archiving of its
 # `specs/<id>/` directory, which is why it and not the state file is the
 # authoritative per-spec store (data-model.md:29-32).
-WORKFLOW_FILE = "docs/ai/specs/.process/ART-006-workflow.md"
+WORKFLOW_FILE = "tests/speckit-pro/unit/fixtures/autopilot-stage/workflow.md"
 OUTSIDE_TRUST_BOUNDARY = "../outside-the-trust-boundary-workflow.md"
 
 # --- Stage vocabulary (FR-001) -------------------------------------------
@@ -73,7 +73,7 @@ ARGV_RESOLUTION_CASES = (
     ([WORKFLOW_FILE, "--stage", "plan"], "plan", None),
     # Argument order in a synopsis is presentation only: the resolver reads argv
     # by name, so the Claude ordering and the Codex ordering agree.
-    (["--from-phase", "tasks", "--spec", "ART-006", "--stage", "plan"], "plan", "tasks"),
+    (["--from-phase", "tasks", "--spec", "FEATURE-001", "--stage", "plan"], "plan", "tasks"),
     (["--stage", "plan", "--strict", "--from-phase", "tasks"], "plan", "tasks"),
     # `--from-phase` inside the named stage's range moves only the start point.
     (["--stage", "plan", "--from-phase", "analyze"], "plan", "analyze"),
@@ -156,12 +156,12 @@ PARITY_INVOCATIONS = (
     ("stage plan with --strict", None, None, "plan", "--strict"),
     ("stage implement with --advisory", None, None, "implement", "--advisory"),
     ("stage full with --strict", None, None, "full", "--strict"),
-    ("stage plan with a spec and --advisory", None, "ART-006", "plan", "--advisory"),
+    ("stage plan with a spec and --advisory", None, "FEATURE-001", "plan", "--advisory"),
     ("stage plan with an in-range --from-phase", "analyze", None, "plan", "--strict"),
     ("stage implement with an in-range --from-phase", "implement", None, "implement", "--advisory"),
     # No stage named: rank 2 decides, and the mode flag must not perturb it.
     ("auto-detect with --from-phase implement", "implement", None, None, "--strict"),
-    ("auto-detect with a spec and a mode flag", None, "ART-006", None, "--advisory"),
+    ("auto-detect with a spec and a mode flag", None, "FEATURE-001", None, "--advisory"),
 )
 
 # Rejections must be byte-identical across the two orderings too: a run rejected
@@ -308,8 +308,8 @@ DRAFT_PR_GAP_NOTE_CASES = (
     # A note carrying a second Markdown link, for the same reason.
     (
         "a note containing another link",
-        "— see [the index](docs/ai/specs/.process/ART-007-index.md)",
-        "see [the index](docs/ai/specs/.process/ART-007-index.md)",
+        "— see [the index](docs/ai/specs/.process/FEATURE-007-index.md)",
+        "see [the index](docs/ai/specs/.process/FEATURE-007-index.md)",
     ),
 )
 
@@ -1441,7 +1441,7 @@ class DraftPrCorroborationTests(unittest.TestCase):
         # The new input is one optional key on the same stdin request; argv
         # stays reserved for `--help` and `--version` (…:52-55). The real runner
         # has to hand it through untouched and carry the ninth key back. The
-        # ART-006 workflow file predates the `Draft PR` row, so `no_record` is
+        # The workflow fixture omits the `Draft PR` row, so `no_record` is
         # the honest verdict for it — and that premise is asserted, not assumed,
         # so a row added there later fails loudly instead of mysteriously.
         observation = {"ok": True, "pull_requests": [OPEN_438]}
@@ -1495,7 +1495,7 @@ class ConfidenceGateVerdictTests(unittest.TestCase):
                 self.assertNotIn("0.88", str(envelope["confidence_gate_status"]))
 
     def test_the_rows_own_notes_cell_is_not_the_verdict(self) -> None:
-        # The shipped ART-006 row carries `composite 0.88, verdict **proceed**`
+        # A notes cell may carry `composite 0.88, verdict **proceed**`
         # in its Notes cell, immediately beside the status. The status cell is
         # the verdict; the cell next to it is commentary about the same run.
         blocked_row_with_proceed_notes = (
@@ -1727,7 +1727,7 @@ class CrossDistributionArgvParityTests(unittest.TestCase):
                 {
                     "workflow_file": WORKFLOW_FILE,
                     "autopilot_args": distribution_argv(
-                        distribution, spec="ART-006", stage="plan", mode="--strict"
+                        distribution, spec="FEATURE-001", stage="plan", mode="--strict"
                     ),
                 }
             )

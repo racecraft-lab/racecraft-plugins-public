@@ -190,16 +190,15 @@ class ValidateCodexSkills(unittest.TestCase):
                 self.assertTrue(body.strip(), "body must contain non-whitespace content")
 
             if skill == "speckit-scaffold-spec":
-                with self.subTest(msg="speckit-scaffold-spec: Codex Grill Me requires native picker config"):
+                with self.subTest(msg="speckit-scaffold-spec: Codex Grill Me preserves foreground interaction"):
                     self.assertTrue(
                         "picker-first HITL guard" in body
                         and "request_user_input" in body
-                        and "default_mode_request_user_input" in body
-                        and "Do not ask the Grill Me question as a normal assistant" in body
-                        and "If `request_user_input` is absent" in body
-                        and "unavailable, stop setup" in body
-                        and "codex features enable default_mode_request_user_input" in body,
-                        "expected scaffold to require native request_user_input config and forbid Markdown fallback",
+                        and re.search(r"active\s+foreground\s+user\s+chat", body)
+                        and re.search(r"same\s+single\s+Grill Me question\s+in free text", body)
+                        and re.search(r"autonomous,\s+background,\s+CI,\s+or subagent", body)
+                        and "stop before writing" in body,
+                        "expected scaffold to fall back only in a foreground user chat and stop autonomous runs",
                     )
 
             if skill == "grill-me":

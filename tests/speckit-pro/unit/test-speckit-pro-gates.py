@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-"""Foundation tests for XPLAT-007 runner gate dispatch."""
+"""Foundation tests for runner gate dispatch."""
 
 from __future__ import annotations
 
 import ast
+import copy
 from contextlib import ExitStack
 import importlib.util
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -20,20 +22,23 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
+TEST_LIB_ROOT = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "runner-gates"
-CONTRACT_DIR = FIXTURE_DIR / "contracts"
-PROMOTION_RECORDS = FIXTURE_DIR / "promotion-records.json"
 REQUESTS_DIR = FIXTURE_DIR / "requests"
 INSTALLED_RELEASE_FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "installed-plugin-release"
 INSTALLED_RELEASE_CONTRACT_DIR = INSTALLED_RELEASE_FIXTURE_DIR / "contracts"
 INSTALLED_RELEASE_REQUESTS_DIR = INSTALLED_RELEASE_FIXTURE_DIR / "requests"
-INSTALLED_RELEASE_PROMOTION_RECORD = "tests/speckit-pro/unit/fixtures/installed-plugin-release/promotion-records.json"
 PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "plugin-bash-confinement"
 PLUGIN_BASH_CONFINEMENT_REQUESTS_DIR = PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR / "requests"
 PLUGIN_BASH_CONFINEMENT_CONTRACT_DIR = PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR / "contracts"
+REPOSITORY_BASH_CONFINEMENT_FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "repository-bash-confinement"
 
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
+if str(TEST_LIB_ROOT) not in sys.path:
+    sys.path.insert(0, str(TEST_LIB_ROOT))
+
+from structural_helpers import iter_subschemas  # noqa: E402
 
 
 STATUS_EXIT_CODES = {
@@ -117,32 +122,44 @@ def plugin_bash_confinement_fixture_cases(name: str) -> dict[str, Any]:
     return json.loads((PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR / f"{name}-cases.json").read_text(encoding="utf-8"))
 
 
-def run_installed_release_readiness_case(case_id: str, *, live_evidence: dict[str, Any] | None = None) -> dict[str, Any]:
+def run_installed_release_readiness(
+    *,
+    repo_root: Path = REPO_ROOT,
+    live_evidence: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     from speckit_pro_runner.gates import registry, release as release_gate
 
     entry = next(
         operation
         for operation in registry.all_gate_operations()
-        if operation.operation == "release-readiness-xplat008"
+        if operation.operation == "installed-release-readiness"
     )
     request = SimpleNamespace(
-        request_id=f"test-installed-release-readiness-{case_id}",
-        operation="release-readiness-xplat008",
-        inputs={
-            "case_file": "tests/speckit-pro/unit/fixtures/installed-plugin-release/release-readiness-cases.json",
-            "case_id": case_id,
-        },
+        request_id="test-installed-release-readiness",
+        operation="installed-release-readiness",
+        inputs={},
     )
     if live_evidence is None:
-        return release_gate.release_readiness_xplat008(entry, request, REPO_ROOT)
-    with patch.object(release_gate, "live_xplat008_gate_evidence", return_value=live_evidence):
-        return release_gate.release_readiness_xplat008(entry, request, REPO_ROOT)
+        return release_gate.installed_release_readiness(entry, request, repo_root)
+    with patch.object(release_gate, "live_installed_release_gate_evidence", return_value=live_evidence):
+        return release_gate.installed_release_readiness(entry, request, repo_root)
+
+
+def copy_installed_release_tree(destination: Path) -> None:
+    for relative in (
+        ".agents/plugins",
+        ".claude-plugin",
+        "dist",
+        "speckit-pro",
+        "tests/speckit-pro/unit/fixtures",
+    ):
+        shutil.copytree(REPO_ROOT / relative, destination / relative)
+    shutil.copy2(REPO_ROOT / ".release-please-manifest.json", destination)
 
 
 def run_plugin_bash_confinement_case(
     case_id: str,
     *,
-    max_findings: int | None = None,
     skip_source_scan: bool = False,
     skip_repo_source_scan: bool = False,
 ) -> dict[str, Any]:
@@ -157,8 +174,6 @@ def run_plugin_bash_confinement_case(
         "case_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/zero-bash-guard-cases.json",
         "case_id": case_id,
     }
-    if max_findings is not None:
-        inputs["max_findings"] = max_findings
     request = SimpleNamespace(
         request_id=f"test-zero-bash-guard-{case_id}",
         operation="zero-bash-guard",
@@ -220,6 +235,20 @@ class GateFoundationTests(unittest.TestCase):
         self.assertIsInstance(response["diagnostics"], list)
         self.assertIsInstance(response["data"], dict)
 
+    def schema_failures(self, value: object, schema: dict) -> list[dict[str, Any]]:
+        from speckit_pro_runner.helpers import read_only
+
+        return read_only.json_schema_failures(value, schema, schema, "$")
+
+    def assert_schema_instance(self, value: object, schema: dict) -> None:
+        self.assertEqual(self.schema_failures(value, schema), [])
+
+    def assert_schema_rejected(self, value: object, schema: dict, rule: str) -> None:
+        self.assertTrue(
+            any(failure["rule"].endswith(rule) for failure in self.schema_failures(value, schema)),
+            self.schema_failures(value, schema),
+        )
+
     def assert_runner_ok(
         self,
         request: object,
@@ -255,11 +284,16 @@ class GateFoundationTests(unittest.TestCase):
             self.assertFalse(path.is_absolute(), artifact["path"])
             self.assertNotIn("..", path.parts)
 
-    def assert_installed_release_promotion_metadata(self, response: dict[str, Any], case_file: str) -> None:
-        self.assertEqual(response["data"]["gate"]["promotion_record"], INSTALLED_RELEASE_PROMOTION_RECORD)
+    def assert_no_release_promotion_metadata(
+        self,
+        response: dict[str, Any],
+        case_file: str | None = None,
+    ) -> None:
+        self.assertNotIn("promotion_record", response["data"]["gate"])
         artifacts = response["data"].get("artifacts", [])
-        self.assertIn({"path": INSTALLED_RELEASE_PROMOTION_RECORD, "kind": "promotion_record"}, artifacts)
-        self.assertIn({"path": case_file, "kind": "fixture"}, artifacts)
+        self.assertFalse(any(artifact.get("kind") == "promotion_record" for artifact in artifacts))
+        if case_file is not None:
+            self.assertIn({"path": case_file, "kind": "fixture"}, artifacts)
         self.assertEqual(len({artifact["path"] for artifact in artifacts}), len(artifacts))
 
     def assert_no_shell_argv(self, argv: list[str]) -> None:
@@ -289,47 +323,7 @@ class GateFoundationTests(unittest.TestCase):
 
     def assert_release_readiness_contract_subset(self, readiness: dict[str, Any]) -> None:
         schema = json.loads((INSTALLED_RELEASE_CONTRACT_DIR / "release-readiness.schema.json").read_text(encoding="utf-8"))
-        check_schema = schema["$defs"]["check"]["properties"]
-        check_ids = set(check_schema["check_id"]["enum"])
-        blocker_classes = set(check_schema["blocker_class"]["enum"])
-        payload_schema = schema["$defs"]["payload_result"]
-        payload_required = set(payload_schema["required"])
-        payload_allowed = set(payload_schema["properties"])
-        file_schema = schema["$defs"]["payload_file"]
-        file_required = set(file_schema["required"])
-        file_allowed = set(file_schema["properties"])
-        for result in readiness["payload_results"]:
-            with self.subTest(release_payload=result.get("payload_surface")):
-                self.assertLessEqual(payload_required, set(result), result.get("payload_surface"))
-                self.assertFalse(set(result) - payload_allowed, result.get("payload_surface"))
-                for files_key in ("expected_files", "actual_files"):
-                    for file_record in result[files_key]:
-                        self.assertLessEqual(file_required, set(file_record), file_record)
-                        self.assertFalse(set(file_record) - file_allowed, file_record)
-        evidence_ref_schema = schema["properties"]["evidence_refs"]
-        self.assertLessEqual(set(evidence_ref_schema["required"]), set(readiness["evidence_refs"]))
-        self.assertFalse(set(readiness["evidence_refs"]) - set(evidence_ref_schema["properties"]))
-        for check in readiness["checks"]:
-            with self.subTest(check_id=check["check_id"]):
-                self.assertIn(check["check_id"], check_ids)
-                self.assertIn(check["blocker_class"], blocker_classes)
-        runner_required = set(schema["$defs"]["runner_invocation"]["required"])
-        resolution_required = set(schema["$defs"]["interpreter_resolution"]["required"])
-        for record in readiness["runner_invocations"]:
-            with self.subTest(runner_invocation=record["request_id"]):
-                self.assertLessEqual(runner_required, set(record), record)
-                self.assertLessEqual(resolution_required, set(record["interpreter_resolution"]), record)
-                self.assertIsInstance(record["interpreter_resolution"]["invocation_argv_prefix"], list)
-
-    def assert_uat_matrix_contract_subset(self, matrix: dict[str, Any]) -> None:
-        schema = json.loads((INSTALLED_RELEASE_CONTRACT_DIR / "uat-matrix.schema.json").read_text(encoding="utf-8"))
-        self.assertLessEqual(set(schema["required"]), set(matrix))
-        self.assertFalse(set(matrix) - set(schema["properties"]))
-        check_ids = set(schema["$defs"]["check"]["properties"]["check_id"]["enum"])
-        blocker_classes = set(schema["$defs"]["check"]["properties"]["blocker_class"]["enum"])
-        for check in matrix["checks"]:
-            self.assertIn(check["check_id"], check_ids)
-            self.assertIn(check["blocker_class"], blocker_classes)
+        self.assertEqual(self.schema_failures(readiness, schema), [])
 
     def repo_rel(self, path: Path) -> str:
         return path.resolve(strict=False).relative_to(REPO_ROOT.resolve(strict=False)).as_posix()
@@ -344,109 +338,155 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual([diag["code"] for diag in response["diagnostics"]], [expected_code])
         return response
 
-    def test_registry_marks_us1_suite_operations_implemented_without_active_cutover(self) -> None:
-        from speckit_pro_runner.gates.registry import all_gate_operations, gate_registry_report
-
-        report = gate_registry_report()
-        self.assertEqual(report["schema_version"], "1.0")
-        self.assertEqual(report["feature_id"], "XPLAT-007+XPLAT-008+XPLAT-009+XPLAT-010")
-        self.assertEqual(report["promotion_status"], "mixed")
-        self.assertFalse(report["active_cutover"])
-        self.assertEqual(
-            set(report["groups"]),
-            {"runtime", "suite", "payload", "install", "release", "guard"},
+    def test_zero_bash_unknown_input_matches_the_public_result_schema(self) -> None:
+        completed, response, stderr_records = run_runner(
+            gate_request(
+                "active-path-guard",
+                "zero-bash-guard",
+                inputs={"max_findings": 3},
+            )
         )
+        self.assertEqual(completed.returncode, 2)
+        self.assert_response(response, "input_error")
+        self.assertEqual([item["code"] for item in stderr_records], ["unsupported_gate_inputs"])
+        self.assertEqual(response["diagnostics"][0]["details"], {"fields": ["max_findings"]})
+        self.assertEqual(response["data"]["status"], "fail")
+        self.assertEqual(response["data"]["blocking_count"], 1)
+        self.assertEqual(response["data"]["classified_counts"], {})
+        self.assertEqual(response["data"]["findings"], [])
+        schema = json.loads(
+            (PLUGIN_BASH_CONFINEMENT_CONTRACT_DIR / "zero-bash-guard-result.schema.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(set(response["data"]), set(schema["properties"]["data"]["properties"]))
+        self.assertEqual(set(response["data"]["gate"]), set(schema["properties"]["data"]["properties"]["gate"]["properties"]))
+        self.assert_schema_instance(response, schema)
 
-        operations = all_gate_operations()
-        self.assertGreaterEqual(len(operations), 21)
-        runtime_operations = {
-            "runner-invocation",
-        }
-        installed_release_guard_operations = {
-            "active-runtime-guard",
-        }
-        us1_operations = {
-            "run-default-suite",
-            "run-layer",
-            "run-toolchain-preflight",
-            "run-ai-evals",
-            "run-integration-suite",
-            "run-parity-suite",
-        }
-        us2_operations = {
-            "payload-completeness",
-            "build-test-payload-evidence",
-            "refresh-local-plugin-fixture",
-            "verify-install",
-            "detect-changed-plugin",
-            "aggregate-suite-results",
-            "check-marketplace-version-sync",
-            "validate-pr-title",
-            "validate-workflow-contract",
-            "check-payload-evidence",
-            "parse-release-pr-payload-sync",
-            "check-post-release-drift",
-            "release-readiness",
-            "release-readiness-xplat008",
-        }
-        us3_operations = {
-            "active-path-guard",
-            "zero-bash-guard",
-            "classify-shell-finding",
-            "repo-bash-confinement",
-        }
-        us4_operations = {
-            "uat-matrix",
-        }
-        for operation in operations:
-            if operation.operation in runtime_operations:
-                self.assertEqual(operation.group, "runtime")
-                self.assertEqual(operation.story, "US1")
-                self.assertTrue(operation.implemented)
-                self.assertEqual(operation.promotion_status, "python_authoritative")
-            elif operation.operation in installed_release_guard_operations:
-                self.assertEqual(operation.group, "guard")
-                self.assertEqual(operation.story, "US1")
-                self.assertTrue(operation.implemented)
-                self.assertEqual(operation.promotion_status, "python_authoritative")
-            elif operation.operation in us1_operations:
-                self.assertEqual(operation.group, "suite")
-                self.assertEqual(operation.story, "US1")
-                self.assertTrue(operation.implemented)
-                self.assertEqual(operation.promotion_status, "python_authoritative")
-            elif operation.operation in us2_operations:
-                self.assertEqual(operation.story, "US2")
-                self.assertTrue(operation.implemented)
-                self.assertEqual(operation.promotion_status, "python_authoritative")
-            elif operation.operation in us3_operations:
-                self.assertEqual(operation.group, "guard")
-                self.assertEqual(operation.story, "US3")
-                self.assertTrue(operation.implemented)
-                self.assertEqual(operation.promotion_status, "python_authoritative")
-            elif operation.operation in us4_operations:
-                self.assertEqual(operation.group, "release")
-                self.assertEqual(operation.story, "US4")
-                self.assertTrue(operation.implemented)
-                self.assertEqual(operation.promotion_status, "python_authoritative")
-            else:
-                self.assertEqual(operation.promotion_status, "planned")
-                self.assertFalse(operation.implemented)
-            self.assertIn(operation.group, report["groups"])
-            self.assertIn(operation.helper_id, report["gate_helper_ids"])
+    def test_repo_bash_unknown_input_matches_the_public_result_schema(self) -> None:
+        completed, response, stderr_records = run_runner(
+            gate_request(
+                "active-path-guard",
+                "repo-bash-confinement",
+                inputs={"unexpected": True},
+            )
+        )
+        self.assertEqual(completed.returncode, 2)
+        self.assert_response(response, "input_error")
+        self.assertEqual([item["code"] for item in stderr_records], ["unsupported_gate_inputs"])
+        self.assertEqual(response["diagnostics"][0]["details"], {"fields": ["unexpected"]})
+        self.assertEqual(response["data"]["status"], "fail")
+        self.assertEqual(response["data"]["blocking_count"], 1)
+        self.assertEqual(response["data"]["classified_counts"], {})
+        self.assertEqual(response["data"]["findings"], [])
+        schema = json.loads(
+            (REPOSITORY_BASH_CONFINEMENT_FIXTURE_DIR / "contracts/repo-bash-confinement-result.schema.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(set(response["data"]), set(schema["properties"]))
+        self.assertEqual(set(response["data"]["gate"]), set(schema["properties"]["gate"]["properties"]))
+        self.assert_schema_instance(response["data"], schema)
 
-    def test_us1_request_fixtures_cover_suite_operations(self) -> None:
+    def test_public_result_schema_validation_enforces_owned_assertion_keywords(self) -> None:
+        schema_paths = (
+            PLUGIN_BASH_CONFINEMENT_CONTRACT_DIR / "zero-bash-guard-result.schema.json",
+            REPOSITORY_BASH_CONFINEMENT_FIXTURE_DIR / "contracts/repo-bash-confinement-result.schema.json",
+            INSTALLED_RELEASE_CONTRACT_DIR / "release-readiness.schema.json",
+        )
+        annotations = {"$schema", "$id", "$defs", "title", "description", "default"}
+        supported = {
+            "$ref",
+            "type",
+            "const",
+            "enum",
+            "properties",
+            "required",
+            "additionalProperties",
+            "items",
+            "prefixItems",
+            "oneOf",
+            "allOf",
+            "if",
+            "then",
+            "else",
+            "not",
+            "minItems",
+            "maxItems",
+            "minLength",
+            "pattern",
+            "minimum",
+            "maximum",
+        }
+
+        for path in schema_paths:
+            schema = json.loads(path.read_text(encoding="utf-8"))
+            with self.subTest(schema=path.name):
+                assertion_keywords = {
+                    keyword
+                    for node in iter_subschemas(schema)
+                    for keyword in node
+                    if keyword not in annotations
+                }
+                self.assertEqual(assertion_keywords - supported, set())
+
+    def test_public_result_schema_validation_rejects_constraint_mutations(self) -> None:
+        zero_completed, zero_response, _ = run_runner(
+            gate_request("active-path-guard", "zero-bash-guard", inputs={"max_findings": 3})
+        )
+        self.assertEqual(zero_completed.returncode, 2)
+        zero_schema = json.loads(
+            (PLUGIN_BASH_CONFINEMENT_CONTRACT_DIR / "zero-bash-guard-result.schema.json").read_text(encoding="utf-8")
+        )
+        negative_count = copy.deepcopy(zero_response)
+        negative_count["data"]["blocking_count"] = -1
+        self.assert_schema_rejected(negative_count, zero_schema, "minimum")
+        empty_artifact = copy.deepcopy(zero_response)
+        empty_artifact["data"]["artifacts"][0]["path"] = ""
+        self.assert_schema_rejected(empty_artifact, zero_schema, "min_length")
+        escaping_artifact = copy.deepcopy(zero_response)
+        escaping_artifact["data"]["artifacts"][0]["path"] = "../artifact.json"
+        self.assert_schema_rejected(escaping_artifact, zero_schema, "not")
+        undeclared = copy.deepcopy(zero_response)
+        undeclared["data"]["unpublished"] = True
+        self.assert_schema_rejected(undeclared, zero_schema, "additional_properties")
+
+        _, repo_response, _ = run_runner(
+            gate_request("active-path-guard", "repo-bash-confinement", inputs={"unexpected": True})
+        )
+        repo_schema = json.loads(
+            (REPOSITORY_BASH_CONFINEMENT_FIXTURE_DIR / "contracts/repo-bash-confinement-result.schema.json").read_text(encoding="utf-8")
+        )
+        excessive_allowlist = copy.deepcopy(repo_response["data"])
+        excessive_allowlist["allowlist"]["entry_count"] = 12
+        self.assert_schema_rejected(excessive_allowlist, repo_schema, "maximum")
+
+        readiness_response = self.assert_runner_ok(installed_release_fixture_request("release-readiness"))
+        readiness = readiness_response["data"]["release_readiness"]
+        readiness_schema = json.loads(
+            (INSTALLED_RELEASE_CONTRACT_DIR / "release-readiness.schema.json").read_text(encoding="utf-8")
+        )
+        self.assert_schema_instance(readiness, readiness_schema)
+        inconsistent_status = copy.deepcopy(readiness)
+        inconsistent_status["blocking_count"] = 1
+        self.assert_schema_rejected(inconsistent_status, readiness_schema, "const")
+        inconsistent_failure = copy.deepcopy(readiness)
+        inconsistent_failure["status"] = "fail"
+        self.assert_schema_rejected(inconsistent_failure, readiness_schema, "minimum")
+        excessive_payloads = copy.deepcopy(readiness)
+        excessive_payloads["payload_results"].append(copy.deepcopy(readiness["payload_results"][0]))
+        self.assert_schema_rejected(excessive_payloads, readiness_schema, "max_items")
+        invalid_argv = copy.deepcopy(readiness)
+        invalid_argv["runner_invocations"][0]["invocation"]["argv"] = ["python3", "-m"]
+        self.assert_schema_rejected(invalid_argv, readiness_schema, "one_of")
+
+    def test_request_fixtures_cover_registered_suite_operations(self) -> None:
         expected = {
             "run-default-suite.json",
             "run-layer.json",
             "run-toolchain-preflight.json",
             "run-toolchain-preflight-docs.json",
-            "run-ai-evals.json",
             "run-integration-suite.json",
             "run-parity-suite.json",
             "test-payload-evidence.json",
             "install-verification.json",
-            "release-readiness.json",
-            "release-readiness-live-github.json",
+            "validate-pr-title-live.json",
             "active-path-guard.json",
             "classify-shell-finding.json",
         }
@@ -457,13 +497,11 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(default_request["operation"], "run-default-suite")
         self.assertEqual(default_request["mode"], "read_only")
         self.assertEqual(default_request["inputs"]["suite"], ["toolchain", "1", "4", "5", "7", "8"])
-        self.assertFalse(default_request["inputs"]["xplat_008_cutover_allowed"])
 
         for name in [
             "run-default-suite",
             "run-layer",
             "run-toolchain-preflight",
-            "run-ai-evals",
             "run-integration-suite",
             "run-parity-suite",
         ]:
@@ -476,7 +514,6 @@ class GateFoundationTests(unittest.TestCase):
                     "run-default-suite",
                     "run-layer",
                     "run-toolchain-preflight",
-                    "run-ai-evals",
                     "run-integration-suite",
                     "run-parity-suite",
                 })
@@ -485,40 +522,39 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(payload_request["helper_id"], "payload-gate")
         self.assertEqual(payload_request["operation"], "build-test-payload-evidence")
         self.assertEqual(payload_request["mode"], "read_only")
-        self.assertFalse(payload_request["inputs"]["release_payload_cutover"])
 
         install_request = fixture_request("install-verification")
         self.assertEqual(install_request["helper_id"], "install-verification")
         self.assertEqual(install_request["operation"], "verify-install")
         self.assertTrue(install_request["inputs"]["fake_home"])
 
-        release_request = fixture_request("release-readiness")
-        self.assertEqual(release_request["helper_id"], "release-readiness")
-        self.assertEqual(release_request["operation"], "release-readiness")
-        self.assertFalse(release_request["inputs"]["xplat_008_cutover_allowed"])
+        title_request = fixture_request("validate-pr-title-live")
+        self.assertEqual(title_request["helper_id"], "release-readiness")
+        self.assertEqual(title_request["operation"], "validate-pr-title")
+        self.assertEqual(title_request["inputs"], {"title_env": "TITLE"})
 
         active_guard_request = fixture_request("active-path-guard")
         self.assertEqual(active_guard_request["helper_id"], "active-path-guard")
         self.assertEqual(active_guard_request["operation"], "active-path-guard")
         self.assertEqual(active_guard_request["mode"], "read_only")
         self.assertEqual(active_guard_request["inputs"]["case_id"], "final-current-implementation")
-        self.assertFalse(active_guard_request["inputs"]["xplat_008_cutover_allowed"])
 
         classify_request = fixture_request("classify-shell-finding")
         self.assertEqual(classify_request["helper_id"], "active-path-guard")
         self.assertEqual(classify_request["operation"], "classify-shell-finding")
         self.assertEqual(classify_request["mode"], "read_only")
         self.assertIn("text", classify_request["inputs"])
-        self.assertFalse(classify_request["inputs"]["xplat_008_cutover_allowed"])
 
-    def test_us2_case_fixtures_cover_payload_install_and_release_failures(self) -> None:
+    def test_case_fixtures_cover_payload_install_and_guard_failures(self) -> None:
         payload_cases = fixture_cases("payload-evidence")
-        self.assertEqual(payload_cases["schema_version"], "1.0")
-        self.assertIn("release_payload_cutover=false", payload_cases["coverage"])
+        self.assertEqual(payload_cases["schema_version"], "2.0")
+        self.assertEqual(payload_cases["contract_id"], "runner-gates")
+        self.assertIn("fixture-or-temp-output-roots", payload_cases["coverage"])
         self.assertEqual({case["case_id"] for case in payload_cases["cases"]}, {"claude-codex-test-payloads", "stale-generated-files"})
 
         install_cases = fixture_cases("install-verification")
-        self.assertEqual(install_cases["schema_version"], "1.0")
+        self.assertEqual(install_cases["schema_version"], "2.0")
+        self.assertEqual(install_cases["contract_id"], "runner-gates")
         self.assertEqual(
             {case["case_id"] for case in install_cases["cases"]},
             {
@@ -530,26 +566,9 @@ class GateFoundationTests(unittest.TestCase):
             },
         )
 
-        release_cases = fixture_cases("release-readiness")
-        self.assertEqual(release_cases["schema_version"], "1.0")
-        self.assertEqual(
-            {case["case_id"] for case in release_cases["cases"]},
-            {
-                "ready",
-                "stale-version-data",
-                "missing-promotion-records",
-                "stale-payload-evidence",
-                "changed-plugin-false-positive",
-                "suite-aggregation-failure",
-                "release-pr-payload-sync-parse-failure",
-                "post-release-drift",
-                "workflow-contract-failure",
-                "xplat-008-handoff-items",
-            },
-        )
-
         active_cases = fixture_cases("active-path-guard")
-        self.assertEqual(active_cases["schema_version"], "1.0")
+        self.assertEqual(active_cases["schema_version"], "2.0")
+        self.assertEqual(active_cases["contract_id"], "runner-gates")
         self.assertEqual(
             {case["case_id"] for case in active_cases["cases"]},
             {
@@ -573,14 +592,14 @@ class GateFoundationTests(unittest.TestCase):
             "os.system",
             "command-string subprocess",
             "CI dispatch glue",
-            "XPLAT-008 cutover surface",
+            "installed-plugin cutover surface",
         ]:
             self.assertIn(label, active_cases["coverage"])
 
     def test_installed_release_runner_invocation_fixtures_cover_interpreter_resolution(self) -> None:
         cases = installed_release_fixture_cases("runner-invocation")
-        self.assertEqual(cases["schema_version"], "1.0")
-        self.assertEqual(cases["feature_id"], "XPLAT-008")
+        self.assertEqual(cases["schema_version"], "2.0")
+        self.assertEqual(cases["contract_id"], "installed-plugin-release")
         self.assertEqual(
             {case["case_id"] for case in cases["cases"]},
             {
@@ -630,7 +649,6 @@ class GateFoundationTests(unittest.TestCase):
             "missing_runner_invocation",
             release_contract["$defs"]["check"]["properties"]["blocker_class"]["enum"],
         )
-        self.assertIn("evidence_refs", release_contract["required"])
         self.assertEqual(release_contract["properties"]["runner_invocations"]["minItems"], 1)
         self.assertEqual(
             release_contract["$defs"]["interpreter_resolution"],
@@ -738,12 +756,12 @@ class GateFoundationTests(unittest.TestCase):
                 self.assert_response(response, "ok")
                 self.assert_status_exit_mapping(completed, response)
                 self.assertEqual(stderr_records, [])
-                self.assert_installed_release_promotion_metadata(
+                self.assert_no_release_promotion_metadata(
                     response,
                     "tests/speckit-pro/unit/fixtures/installed-plugin-release/runner-invocation-cases.json",
                 )
                 record = response["data"]["runner_invocation"]
-                self.assertEqual(record["schema_version"], "1.0")
+                self.assertEqual(record["schema_version"], "2.0")
                 self.assertEqual(record["request_id"], response["request_id"])
                 self.assertTrue(record["interpreter_resolution"]["accepted"])
                 self.assertEqual(record["interpreter_resolution"]["minimum_version"], "3.11")
@@ -791,7 +809,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assert_response(response, "ok")
         self.assert_status_exit_mapping(completed, response)
         self.assertEqual(stderr_records, [])
-        self.assert_installed_release_promotion_metadata(
+        self.assert_no_release_promotion_metadata(
             response,
             "tests/speckit-pro/unit/fixtures/installed-plugin-release/runner-invocation-cases.json",
         )
@@ -898,7 +916,7 @@ class GateFoundationTests(unittest.TestCase):
         from speckit_pro_runner.gates import active_path_guard
 
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "speckit-pro/skills/speckit-status/SKILL.md",
                 "bash",
                 "bash",
@@ -908,7 +926,7 @@ class GateFoundationTests(unittest.TestCase):
             "blocking_active_runtime",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "speckit-pro/codex-agents/implement-executor.toml",
                 "bash",
                 "Bash",
@@ -918,7 +936,7 @@ class GateFoundationTests(unittest.TestCase):
             "blocking_active_runtime",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "speckit-pro/skills/speckit-status/SKILL.md",
                 "shell_interpolation",
                 "`speckit-pro/skills/speckit-status/SKILL.md`",
@@ -928,7 +946,7 @@ class GateFoundationTests(unittest.TestCase):
             "source_checkout_helper",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "speckit-pro/skills/speckit-status/SKILL.md",
                 "jq",
                 "jq",
@@ -938,7 +956,7 @@ class GateFoundationTests(unittest.TestCase):
             "source_checkout_helper",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "speckit-pro/skills/speckit-status/SKILL.md",
                 "bash",
                 "Bash",
@@ -948,7 +966,7 @@ class GateFoundationTests(unittest.TestCase):
             "blocking_active_runtime",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "speckit-pro/skills/speckit-status/SKILL.md",
                 "bash",
                 "bash",
@@ -958,7 +976,7 @@ class GateFoundationTests(unittest.TestCase):
             "blocking_active_runtime",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "speckit-pro/skills/speckit-status/SKILL.md",
                 "shell_interpolation",
                 "`bash`",
@@ -969,8 +987,8 @@ class GateFoundationTests(unittest.TestCase):
         )
 
         cases = installed_release_fixture_cases("active-runtime-guard")
-        self.assertEqual(cases["schema_version"], "1.0")
-        self.assertEqual(cases["feature_id"], "XPLAT-008")
+        self.assertEqual(cases["schema_version"], "2.0")
+        self.assertEqual(cases["contract_id"], "installed-plugin-release")
         self.assertEqual(
             {case["case_id"] for case in cases["cases"]},
             {
@@ -993,7 +1011,7 @@ class GateFoundationTests(unittest.TestCase):
         )
         blocking_case = next(case for case in cases["cases"] if case["case_id"] == "blocking-active-runtime-patterns")
         blocking_yaml = next(file for file in blocking_case["files"] if file["path"] == "speckit-pro/codex-agents/openai.yaml")
-        blocking_yaml_findings = active_path_guard.scan_sources_xplat008(
+        blocking_yaml_findings = active_path_guard.scan_installed_runtime_sources(
             [active_path_guard.SourceFile(blocking_yaml["path"], blocking_yaml["content"], "fixture")],
             REPO_ROOT,
         )
@@ -1058,7 +1076,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(changed_sources.category, "diff_scan")
         self.assertNotIn("HEAD^", active_path_guard.review_base_ref.__code__.co_consts)
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "README.md",
                 "bash",
                 "bash",
@@ -1068,7 +1086,7 @@ class GateFoundationTests(unittest.TestCase):
             "blocking_active_runtime",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "README.md",
                 "bash",
                 "bash",
@@ -1078,7 +1096,7 @@ class GateFoundationTests(unittest.TestCase):
             "blocking_active_runtime",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "docs-site/src/content/docs/install/codex.md",
                 "jq",
                 "jq",
@@ -1088,7 +1106,7 @@ class GateFoundationTests(unittest.TestCase):
             "blocking_active_runtime",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "README.md",
                 "bash",
                 "bash",
@@ -1098,7 +1116,7 @@ class GateFoundationTests(unittest.TestCase):
             "docs_non_runtime",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "docs-site/src/content/docs/contribute-and-release.md",
                 "script_file",
                 "scripts/sync-marketplace-versions.sh",
@@ -1108,7 +1126,7 @@ class GateFoundationTests(unittest.TestCase):
             "docs_non_runtime",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "docs-site/src/content/docs/troubleshooting.md",
                 "bash",
                 "Bash",
@@ -1117,7 +1135,7 @@ class GateFoundationTests(unittest.TestCase):
             ),
             "docs_non_runtime",
         )
-        wrapped_negative_findings = active_path_guard.scan_sources_xplat008(
+        wrapped_negative_findings = active_path_guard.scan_installed_runtime_sources(
             [
                 active_path_guard.SourceFile(
                     "docs-site/src/content/docs/install/codex.md",
@@ -1131,7 +1149,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assertFalse(
             [finding for finding in wrapped_negative_findings if finding.classification == "blocking_active_runtime"]
         )
-        markdown_heading_findings = active_path_guard.scan_sources_xplat008(
+        markdown_heading_findings = active_path_guard.scan_installed_runtime_sources(
             [
                 active_path_guard.SourceFile(
                     "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
@@ -1144,7 +1162,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assertTrue(
             [finding for finding in markdown_heading_findings if finding.classification == "blocking_active_runtime"]
         )
-        script_suffix_findings = active_path_guard.scan_sources_xplat008(
+        script_suffix_findings = active_path_guard.scan_installed_runtime_sources(
             [
                 active_path_guard.SourceFile(
                     "dist/codex/speckit-pro/scripts/install.ps1",
@@ -1157,7 +1175,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assertTrue(
             [finding for finding in script_suffix_findings if finding.classification == "blocking_active_runtime"]
         )
-        payload_detector_findings = active_path_guard.scan_sources_xplat008(
+        payload_detector_findings = active_path_guard.scan_installed_runtime_sources(
             [
                 active_path_guard.SourceFile(
                     "dist/codex/speckit-pro/speckit_pro_runner/gates/payloads.py",
@@ -1171,7 +1189,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assertFalse(
             [finding for finding in payload_detector_findings if finding.classification == "blocking_active_runtime"]
         )
-        mixed_tool_guidance_findings = active_path_guard.scan_sources_xplat008(
+        mixed_tool_guidance_findings = active_path_guard.scan_installed_runtime_sources(
             [
                 active_path_guard.SourceFile(
                     "speckit-pro/agents/phase-executor.md",
@@ -1189,7 +1207,7 @@ class GateFoundationTests(unittest.TestCase):
             ]
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
                 "bash",
                 "bash",
@@ -1199,7 +1217,7 @@ class GateFoundationTests(unittest.TestCase):
             "blocking_active_runtime",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
                 "script_file",
                 "scripts/setup.sh",
@@ -1209,7 +1227,7 @@ class GateFoundationTests(unittest.TestCase):
             "blocking_active_runtime",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "dist/codex/speckit-pro/scripts/install.sh",
                 "script_file",
                 "*.sh",
@@ -1219,7 +1237,7 @@ class GateFoundationTests(unittest.TestCase):
             "blocking_active_runtime",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
                 "jq",
                 "jq",
@@ -1229,7 +1247,7 @@ class GateFoundationTests(unittest.TestCase):
             "blocking_active_runtime",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "speckit-pro/skills/speckit-status/SKILL.md",
                 "jq",
                 "jq",
@@ -1239,7 +1257,7 @@ class GateFoundationTests(unittest.TestCase):
             "blocking_active_runtime",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "speckit-pro/skills/speckit-status/SKILL.md",
                 "powershell",
                 "PowerShell",
@@ -1249,7 +1267,7 @@ class GateFoundationTests(unittest.TestCase):
             "blocking_active_runtime",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "speckit-pro/skills/speckit-status/SKILL.md",
                 "script_file",
                 "scripts/setup.sh",
@@ -1259,7 +1277,7 @@ class GateFoundationTests(unittest.TestCase):
             "blocking_active_runtime",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "speckit-pro/skills/speckit-status/SKILL.md",
                 "jq",
                 "jq",
@@ -1269,7 +1287,7 @@ class GateFoundationTests(unittest.TestCase):
             "blocking_active_runtime",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "speckit-pro/agents/phase-executor.md",
                 "shell_interpolation",
                 "`$SHELL`",
@@ -1279,7 +1297,7 @@ class GateFoundationTests(unittest.TestCase):
             "blocking_active_runtime",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "speckit-pro/skills/speckit-status/SKILL.md",
                 "bash",
                 "Bash",
@@ -1289,7 +1307,7 @@ class GateFoundationTests(unittest.TestCase):
             "source_checkout_helper",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "speckit-pro/skills/speckit-upgrade/SKILL.md",
                 "bash",
                 "Bash",
@@ -1299,7 +1317,7 @@ class GateFoundationTests(unittest.TestCase):
             "source_checkout_helper",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "speckit-pro/skills/speckit-upgrade/SKILL.md",
                 "bash",
                 "Bash",
@@ -1309,7 +1327,7 @@ class GateFoundationTests(unittest.TestCase):
             "blocking_active_runtime",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
                 "bash",
                 "Bash",
@@ -1319,7 +1337,7 @@ class GateFoundationTests(unittest.TestCase):
             "source_checkout_helper",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md",
                 "script_file",
                 "`estimate-reviewable-loc.sh",
@@ -1329,7 +1347,7 @@ class GateFoundationTests(unittest.TestCase):
             "source_checkout_helper",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
                 "jq",
                 "jq",
@@ -1339,7 +1357,7 @@ class GateFoundationTests(unittest.TestCase):
             "blocking_active_runtime",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
                 "jq",
                 "jq",
@@ -1349,7 +1367,7 @@ class GateFoundationTests(unittest.TestCase):
             "blocking_active_runtime",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
                 "bash",
                 "Bash",
@@ -1359,7 +1377,7 @@ class GateFoundationTests(unittest.TestCase):
             "source_checkout_helper",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "speckit-pro/agents/phase-executor.md",
                 "bash",
                 "Bash",
@@ -1369,7 +1387,7 @@ class GateFoundationTests(unittest.TestCase):
             "source_checkout_helper",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "speckit-pro/agents/clarify-executor.md",
                 "bash",
                 "Bash",
@@ -1379,7 +1397,7 @@ class GateFoundationTests(unittest.TestCase):
             "source_checkout_helper",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 "speckit-pro/agents/phase-executor.md",
                 "bash",
                 "Bash",
@@ -1432,7 +1450,7 @@ class GateFoundationTests(unittest.TestCase):
             ),
             "blocking_zero_bash",
         )
-        missing_roots = active_path_guard.missing_xplat008_scan_root_findings(
+        missing_roots = active_path_guard.missing_installed_runtime_scan_root_findings(
             REPO_ROOT,
             {"scan_roots": ["dist/missing-runtime-root"]},
         )
@@ -1441,7 +1459,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(missing_roots[0].category, "scan_root")
         for malformed_case in ({"scan_roots": []}, {"scan_roots": "speckit-pro/skills"}):
             with self.subTest(malformed_case=malformed_case):
-                malformed_roots = active_path_guard.missing_xplat008_scan_root_findings(REPO_ROOT, malformed_case)
+                malformed_roots = active_path_guard.missing_installed_runtime_scan_root_findings(REPO_ROOT, malformed_case)
                 self.assertEqual(len(malformed_roots), 1)
                 self.assertEqual(malformed_roots[0].classification, "blocking_active_runtime")
                 self.assertEqual(malformed_roots[0].category, "scan_root")
@@ -1461,8 +1479,8 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(completed.returncode, 3)
         self.assert_response(response, "missing_prerequisite")
         self.assertEqual([diag["code"] for diag in stderr_records], ["missing_prerequisite"])
-        self.assertEqual(response["data"]["gate"]["comparison_ids"], ["xplat-008-active-runtime-guard"])
-        self.assert_installed_release_promotion_metadata(
+        self.assertEqual(response["data"]["gate"]["comparison_ids"], ["installed-plugin-release-active-runtime-guard"])
+        self.assert_no_release_promotion_metadata(
             response,
             "tests/speckit-pro/unit/fixtures/installed-plugin-release/active-runtime-guard-cases.json",
         )
@@ -1542,8 +1560,8 @@ class GateFoundationTests(unittest.TestCase):
 
     def test_installed_release_payload_completeness_fixtures_cover_release_payload_blockers(self) -> None:
         cases = installed_release_fixture_cases("payload-completeness")
-        self.assertEqual(cases["schema_version"], "1.0")
-        self.assertEqual(cases["feature_id"], "XPLAT-008")
+        self.assertEqual(cases["schema_version"], "2.0")
+        self.assertEqual(cases["contract_id"], "installed-plugin-release")
         self.assertEqual(
             {case["case_id"] for case in cases["cases"]},
             {
@@ -1585,8 +1603,8 @@ class GateFoundationTests(unittest.TestCase):
         from speckit_pro_runner.gates import active_path_guard
 
         cases = plugin_bash_confinement_fixture_cases("zero-bash-guard")
-        self.assertEqual(cases["schema_version"], "1.0")
-        self.assertEqual(cases["feature_id"], "XPLAT-009")
+        self.assertEqual(cases["schema_version"], "2.0")
+        self.assertEqual(cases["contract_id"], "plugin-bash-confinement")
         self.assertEqual(
             {case["case_id"] for case in cases["cases"]},
             {
@@ -1612,17 +1630,6 @@ class GateFoundationTests(unittest.TestCase):
                 "empty-scan-roots",
                 "non-list-scan-roots",
                 "missing-installed-cache-proof",
-                "mutable-installed-cache-proof",
-                "stale-installed-cache-proof",
-                "single-product-installed-cache-proof",
-                "missing-source-root-installed-cache-proof",
-                "file-root-installed-cache-proof",
-                "source-mismatch-installed-cache-proof",
-                "same-root-installed-cache-proof",
-                "product-root-mismatch-installed-cache-proof",
-                "partial-root-installed-cache-proof",
-                "traversal-root-installed-cache-proof",
-                "missing-mutable-installed-cache-proof",
                 "final-current-implementation",
             },
         )
@@ -1631,11 +1638,8 @@ class GateFoundationTests(unittest.TestCase):
             {"speckit-pro", "scripts/build-plugin-payloads.py", "dist/claude/speckit-pro", "dist/codex/speckit-pro", "README.md"},
             set(final_case["scan_roots"]),
         )
-        self.assertEqual(final_case["installed_cache_proof"], "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json")
-        self.assertEqual(
-            json.loads((REPO_ROOT / final_case["installed_cache_proof"]).read_text(encoding="utf-8")),
-            json.loads((PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR / "installed-cache-proof.json").read_text(encoding="utf-8")),
-        )
+        self.assertEqual(final_case["installed_cache_proof"], "speckit-pro/gate-evidence/installed-cache-proof.json")
+        self.assertTrue((REPO_ROOT / final_case["installed_cache_proof"]).is_file())
         self.assertTrue(active_path_guard.command_argv_contains_forbidden(["/usr/bin/env", "-S bash -lc jq -r . package.json"]))
         self.assertTrue(active_path_guard.command_argv_contains_forbidden(["sh", "-c", "python -m speckit_pro_runner"]))
         self.assertTrue(active_path_guard.command_argv_contains_forbidden(["/bin/sh", "runner"]))
@@ -1705,15 +1709,11 @@ class GateFoundationTests(unittest.TestCase):
             self.assertEqual(completed.returncode, 3)
             self.assert_response(response, "missing_prerequisite")
             self.assertEqual([diag["code"] for diag in stderr_records], ["missing_prerequisite"])
-            self.assertEqual(response["data"]["gate"]["comparison_ids"], ["xplat-009-zero-bash-guard"])
+            self.assertEqual(response["data"]["gate"]["comparison_ids"], ["plugin-bash-confinement-zero-bash-guard"])
             self.assertEqual(response["data"]["gate"]["gate_status"], "fail")
-            self.assertEqual(response["data"]["feature_id"], "XPLAT-009")
+            self.assertEqual(response["data"]["contract_id"], "plugin-bash-confinement")
             self.assertEqual(response["data"]["status"], "fail")
             self.assertEqual(response["data"]["blocking_count"], 1)
-            self.assertEqual(
-                response["data"]["gate"]["promotion_record"],
-                "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/promotion-records.json",
-            )
 
         completed, response, stderr_records = run_runner(
             gate_request(
@@ -1726,13 +1726,13 @@ class GateFoundationTests(unittest.TestCase):
         self.assert_response(response, "input_error")
         self.assertEqual([diag["code"] for diag in stderr_records], ["invalid_case_file"])
         self.assertEqual(response["data"]["gate"]["gate_status"], "fail")
-        self.assertEqual(response["data"]["feature_id"], "XPLAT-009")
+        self.assertEqual(response["data"]["contract_id"], "plugin-bash-confinement")
         self.assertEqual(response["data"]["status"], "fail")
 
         response = self.assert_runner_ok(plugin_bash_confinement_fixture_request("zero-bash-guard"))
         clean_response = response
         result = response["data"]
-        self.assertEqual(result["feature_id"], "XPLAT-009")
+        self.assertEqual(result["contract_id"], "plugin-bash-confinement")
         self.assertEqual(result["status"], "pass")
         self.assertEqual(result["blocking_count"], 0)
         self.assertEqual(result["script_file_count"], 0)
@@ -1771,17 +1771,6 @@ class GateFoundationTests(unittest.TestCase):
             "empty-scan-roots",
             "non-list-scan-roots",
             "missing-installed-cache-proof",
-            "mutable-installed-cache-proof",
-            "stale-installed-cache-proof",
-            "single-product-installed-cache-proof",
-            "missing-source-root-installed-cache-proof",
-            "file-root-installed-cache-proof",
-            "source-mismatch-installed-cache-proof",
-            "same-root-installed-cache-proof",
-            "product-root-mismatch-installed-cache-proof",
-            "partial-root-installed-cache-proof",
-            "traversal-root-installed-cache-proof",
-            "missing-mutable-installed-cache-proof",
         ]:
             with self.subTest(case_id=case_id):
                 response = run_plugin_bash_confinement_case(
@@ -1824,36 +1813,41 @@ class GateFoundationTests(unittest.TestCase):
             "malformed-scan-root": {"scan_root"},
             "empty-scan-roots": {"scan_root"},
             "non-list-scan-roots": {"scan_root"},
-            "mutable-installed-cache-proof": {"mutable_user_cache"},
-            "stale-installed-cache-proof": {"source_payload_tree_hash"},
-            "single-product-installed-cache-proof": {"product_coverage"},
-            "missing-source-root-installed-cache-proof": {"source_payload_root"},
-            "file-root-installed-cache-proof": {"installed_root"},
-            "source-mismatch-installed-cache-proof": {"source_payload_tree_hash"},
-            "same-root-installed-cache-proof": {"installed_root"},
-            "product-root-mismatch-installed-cache-proof": {"installed_root", "source_payload_root"},
-            "partial-root-installed-cache-proof": {
-                "installed_root",
-                "source_payload_root",
-            },
-            "traversal-root-installed-cache-proof": {"installed_root", "source_payload_root"},
-            "missing-mutable-installed-cache-proof": {"mutable_user_cache"},
         }
-        exact_category_cases = {case_id for case_id in expected_categories if case_id.endswith("-installed-cache-proof")}
         for case_id, categories in expected_categories.items():
             with self.subTest(case_id=f"{case_id}-categories"):
                 response = run_plugin_bash_confinement_case(
                     case_id,
-                    max_findings=20,
                     skip_source_scan=case_id in scan_root_only_cases,
                     skip_repo_source_scan=True,
                 )
                 self.assert_response(response, "expected_failure")
                 actual_categories = {finding["category"] for finding in response["data"]["findings"]}
-                if case_id in exact_category_cases:
-                    self.assertEqual(actual_categories, categories)
-                else:
-                    self.assertLessEqual(categories, actual_categories)
+                self.assertLessEqual(categories, actual_categories)
+
+        proof_document_categories = {
+            "installed-cache-proof-mutable.json": {"mutable_user_cache"},
+            "installed-cache-proof-stale-hash.json": {"source_payload_tree_hash"},
+            "installed-cache-proof-single-product.json": {"product_coverage"},
+            "installed-cache-proof-missing-source-root.json": {"source_payload_root"},
+            "installed-cache-proof-file-root.json": {"installed_root"},
+            "installed-cache-proof-source-mismatch.json": {"source_payload_tree_hash"},
+            "installed-cache-proof-same-root.json": {"installed_root"},
+            "installed-cache-proof-root-mismatch.json": {"installed_root", "source_payload_root"},
+            "installed-cache-proof-partial-root.json": {"installed_root", "source_payload_root"},
+            "installed-cache-proof-traversal-root.json": {"installed_root", "source_payload_root"},
+            "installed-cache-proof-missing-mutable.json": {"mutable_user_cache"},
+        }
+        allowlist = json.loads(
+            (PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR / "allowlist.json").read_text(encoding="utf-8")
+        )["entries"]
+        for proof_name, categories in proof_document_categories.items():
+            with self.subTest(proof_name=proof_name):
+                proof_path = PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR / proof_name
+                proof = json.loads(proof_path.read_text(encoding="utf-8"))
+                with patch.object(active_path_guard, "zero_bash_source_findings", return_value=[]):
+                    findings = active_path_guard.installed_cache_proof_findings(REPO_ROOT, proof, allowlist)
+                self.assertEqual({finding.category for finding in findings}, categories)
 
         capped = active_path_guard.bounded_findings(
             [
@@ -1869,9 +1863,8 @@ class GateFoundationTests(unittest.TestCase):
                 )
                 for index in range(600)
             ],
-            {"max_findings": 10000},
         )
-        self.assertEqual(len(capped), 500)
+        self.assertEqual(len(capped), 25)
 
         yaml_case = next(case for case in cases["cases"] if case["case_id"] == "blocking-active-guidance-categories")
         yaml_source = next(file for file in yaml_case["files"] if file["path"] == "speckit-pro/codex-agents/openai.yaml")
@@ -1922,18 +1915,142 @@ class GateFoundationTests(unittest.TestCase):
 
         self.assert_plugin_bash_confinement_contracts_match_fixtures(clean_response)
 
+    def test_installed_cache_proof_is_gate_owned_and_excluded_from_payloads(self) -> None:
+        from speckit_pro_runner.gates import active_path_guard
+
+        proof_path = active_path_guard.INSTALLED_CACHE_PROOF
+        self.assertEqual(proof_path, "speckit-pro/gate-evidence/installed-cache-proof.json")
+        self.assertIsInstance(
+            active_path_guard.load_installed_cache_proof(
+                REPO_ROOT,
+                {"installed_cache_proof": proof_path},
+            ),
+            dict,
+        )
+        rejected = active_path_guard.load_installed_cache_proof(
+            REPO_ROOT,
+            {"installed_cache_proof": "unknown-installed-cache-proof.json"},
+        )
+        self.assertEqual(rejected["code"], "unsupported_installed_cache_proof")
+        scanned_paths = {
+            source.path
+            for source in active_path_guard.scan_repo_sources(REPO_ROOT, roots=("speckit-pro",))
+        }
+        self.assertNotIn(proof_path, scanned_paths)
+        for payload_root in (
+            "dist/claude/speckit-pro",
+            "dist/codex/speckit-pro",
+            "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro",
+            "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro",
+        ):
+            with self.subTest(payload_root=payload_root):
+                self.assertFalse((REPO_ROOT / payload_root / "gate-evidence").exists())
+
+    def test_plugin_bash_confinement_runner_rejects_malformed_proof_documents(self) -> None:
+        from speckit_pro_runner.gates import active_path_guard, registry
+
+        cases = plugin_bash_confinement_fixture_cases("zero-bash-guard")
+        clean_case = next(case for case in cases["cases"] if case["case_id"] == "clean-fixture")
+        canonical_proof = json.loads(
+            (REPO_ROOT / active_path_guard.INSTALLED_CACHE_PROOF).read_text(encoding="utf-8")
+        )
+        entry = next(
+            operation
+            for operation in registry.all_gate_operations()
+            if operation.operation == "zero-bash-guard"
+        )
+        malformed_documents = (
+            ("schema-version", {**canonical_proof, "schema_version": "future"}, "invalid_installed_cache_proof"),
+            ("contract-id", {**canonical_proof, "contract_id": "unknown-contract"}, "invalid_installed_cache_proof"),
+            ("proofs-shape", {**canonical_proof, "proofs": {}}, "invalid_installed_cache_proof"),
+            ("unknown-field", {**canonical_proof, "unexpected": True}, "invalid_installed_cache_proof"),
+        )
+
+        with tempfile.TemporaryDirectory(
+            prefix=".malformed-proof-",
+            dir=PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR,
+        ) as fixture_root:
+            fixture_dir = Path(fixture_root)
+            proof_file = fixture_dir / "proof.json"
+            case_file = fixture_dir / "cases.json"
+            proof_path = proof_file.relative_to(REPO_ROOT).as_posix()
+            case_path = case_file.relative_to(REPO_ROOT).as_posix()
+
+            for case_id, document, expected_category in malformed_documents:
+                with self.subTest(case_id=case_id):
+                    proof_file.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+                    case = {**clean_case, "case_id": case_id, "installed_cache_proof": proof_path}
+                    case_file.write_text(
+                        json.dumps(
+                            {
+                                "schema_version": "2.0",
+                                "contract_id": "plugin-bash-confinement",
+                                "cases": [case],
+                            },
+                            indent=2,
+                        )
+                        + "\n",
+                        encoding="utf-8",
+                    )
+                    request = SimpleNamespace(
+                        request_id=f"test-malformed-proof-{case_id}",
+                        operation="zero-bash-guard",
+                        inputs={"case_file": case_path, "case_id": case_id},
+                    )
+                    with (
+                        patch.object(active_path_guard, "INSTALLED_CACHE_PROOF", proof_path),
+                        patch.object(active_path_guard, "source_files", return_value=[]),
+                        patch.object(active_path_guard, "scan_repo_sources", return_value=[]),
+                    ):
+                        response = active_path_guard.run_active_path_guard(entry, request)
+                    self.assert_response(response, "expected_failure")
+                    self.assertEqual(
+                        {finding["category"] for finding in response["data"]["findings"]},
+                        {expected_category},
+                    )
+
+            canonical_path_case = {**clean_case, "case_id": "canonical-path", "installed_cache_proof": proof_path}
+            case_file.write_text(
+                json.dumps(
+                    {
+                        "schema_version": "2.0",
+                        "contract_id": "plugin-bash-confinement",
+                        "cases": [canonical_path_case],
+                    },
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            request = SimpleNamespace(
+                request_id="test-malformed-proof-canonical-path",
+                operation="zero-bash-guard",
+                inputs={"case_file": case_path, "case_id": "canonical-path"},
+            )
+            with (
+                patch.object(active_path_guard, "source_files", return_value=[]),
+                patch.object(active_path_guard, "scan_repo_sources", return_value=[]),
+            ):
+                response = active_path_guard.run_active_path_guard(entry, request)
+            self.assert_response(response, "expected_failure")
+            self.assertEqual(
+                {finding["category"] for finding in response["data"]["findings"]},
+                {"unsupported_installed_cache_proof"},
+            )
+
     def test_plugin_bash_confinement_installed_cache_proof_blocks_empty_payload_roots(self) -> None:
+        from speckit_pro_runner.gates import active_path_guard
+
         with tempfile.TemporaryDirectory(prefix="plugin-bash-confinement-empty-", dir=REPO_ROOT / "dist" / "claude") as claude_root:
             with tempfile.TemporaryDirectory(prefix="plugin-bash-confinement-empty-", dir=REPO_ROOT / "dist" / "codex") as codex_root:
                 with tempfile.TemporaryDirectory(prefix=".plugin-bash-confinement-proof-", dir=REPO_ROOT) as proof_root:
                     proof_dir = Path(proof_root)
                     proof_file = proof_dir / "installed-cache-proof-empty.json"
-                    case_file = proof_dir / "zero-bash-empty-root-case.json"
                     proof_file.write_text(
                         json.dumps(
                             {
-                                "schema_version": "1.0",
-                                "feature_id": "XPLAT-009",
+                                "schema_version": "2.0",
+                                "contract_id": "plugin-bash-confinement",
                                 "proofs": [
                                     {
                                         "product": "claude",
@@ -1966,96 +2083,33 @@ class GateFoundationTests(unittest.TestCase):
                         + "\n",
                         encoding="utf-8",
                     )
-                    case_file.write_text(
-                        json.dumps(
-                            {
-                                "schema_version": "1.0",
-                                "feature_id": "XPLAT-009",
-                                "cases": [
-                                    {
-                                        "case_id": "empty-installed-cache-proof",
-                                        "files": [
-                                            {
-                                                "path": "speckit-pro/skills/speckit-status/SKILL.md",
-                                                "content": "Use python -m speckit_pro_runner.\n",
-                                            }
-                                        ],
-                                        "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
-                                        "installed_cache_proof": proof_file.relative_to(REPO_ROOT).as_posix(),
-                                    }
-                                ],
-                            },
-                            indent=2,
-                        )
-                        + "\n",
-                        encoding="utf-8",
+
+                    proof = json.loads(proof_file.read_text(encoding="utf-8"))
+                    allowlist = json.loads(
+                        (PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR / "allowlist.json").read_text(encoding="utf-8")
+                    )["entries"]
+                    findings = active_path_guard.installed_cache_proof_findings(
+                        REPO_ROOT,
+                        proof,
+                        allowlist,
                     )
 
-                    completed, response, _ = run_runner(
-                        gate_request(
-                            "active-path-guard",
-                            "zero-bash-guard",
-                            inputs={
-                                "case_file": case_file.relative_to(REPO_ROOT).as_posix(),
-                                "case_id": "empty-installed-cache-proof",
-                            },
-                        )
-                    )
-
-        self.assertEqual(completed.returncode, 1)
-        self.assert_response(response, "expected_failure")
-        categories = {finding["category"] for finding in response["data"]["findings"]}
+        categories = {finding.category for finding in findings}
         self.assertLessEqual({"source_payload_root", "installed_root"}, categories)
 
     def test_plugin_bash_confinement_installed_cache_proof_blocks_schema_drift(self) -> None:
-        proof = json.loads((REPO_ROOT / "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json").read_text(encoding="utf-8"))
+        from speckit_pro_runner.gates import active_path_guard
+
+        proof = json.loads((REPO_ROOT / "speckit-pro/gate-evidence/installed-cache-proof.json").read_text(encoding="utf-8"))
         proof["proofs"][0].pop("surface")
         proof["proofs"][1]["product"] = "cursor"
         proof["proofs"][1]["unexpected_field"] = "drift"
-        with tempfile.TemporaryDirectory(prefix=".plugin-bash-confinement-proof-schema-", dir=REPO_ROOT) as proof_root:
-            proof_dir = Path(proof_root)
-            proof_file = proof_dir / "installed-cache-proof-schema-drift.json"
-            case_file = proof_dir / "zero-bash-proof-schema-drift-case.json"
-            proof_file.write_text(json.dumps(proof, indent=2) + "\n", encoding="utf-8")
-            case_file.write_text(
-                json.dumps(
-                    {
-                        "schema_version": "1.0",
-                        "feature_id": "XPLAT-009",
-                        "cases": [
-                            {
-                                "case_id": "schema-drift-installed-cache-proof",
-                                "files": [
-                                    {
-                                        "path": "speckit-pro/skills/speckit-status/SKILL.md",
-                                        "content": "Use python -m speckit_pro_runner.\n",
-                                    }
-                                ],
-                                "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
-                                "installed_cache_proof": proof_file.relative_to(REPO_ROOT).as_posix(),
-                            }
-                        ],
-                    },
-                    indent=2,
-                )
-                + "\n",
-                encoding="utf-8",
-            )
+        allowlist = json.loads(
+            (PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR / "allowlist.json").read_text(encoding="utf-8")
+        )["entries"]
+        findings = active_path_guard.installed_cache_proof_findings(REPO_ROOT, proof, allowlist)
 
-            completed, response, _ = run_runner(
-                gate_request(
-                    "active-path-guard",
-                    "zero-bash-guard",
-                    inputs={
-                        "case_file": case_file.relative_to(REPO_ROOT).as_posix(),
-                        "case_id": "schema-drift-installed-cache-proof",
-                    },
-                )
-            )
-
-        self.assertEqual(completed.returncode, 1)
-        self.assert_response(response, "expected_failure")
-        categories = {finding["category"] for finding in response["data"]["findings"]}
+        categories = {finding.category for finding in findings}
         self.assertLessEqual({"surface", "product", "malformed"}, categories)
 
     def test_plugin_bash_confinement_installed_cache_proof_scans_cache_text(self) -> None:
@@ -2084,8 +2138,8 @@ class GateFoundationTests(unittest.TestCase):
             case_file.write_text(
                 json.dumps(
                     {
-                        "schema_version": "1.0",
-                        "feature_id": "XPLAT-009",
+                        "schema_version": "2.0",
+                        "contract_id": "plugin-bash-confinement",
                         "cases": [
                             {
                                 "case_id": "optional-proof-clean-root",
@@ -2127,8 +2181,8 @@ class GateFoundationTests(unittest.TestCase):
             case_file.write_text(
                 json.dumps(
                     {
-                        "schema_version": "1.0",
-                        "feature_id": "XPLAT-009",
+                        "schema_version": "2.0",
+                        "contract_id": "plugin-bash-confinement",
                         "cases": [
                             {
                                 "case_id": "physical-uppercase-script",
@@ -2187,7 +2241,7 @@ class GateFoundationTests(unittest.TestCase):
             self.assertIn(finding["classification"], finding_schema["properties"]["classification"]["enum"])
             self.assertIn(finding["surface"], finding_schema["properties"]["surface"]["enum"])
 
-        proof = json.loads((PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR / "installed-cache-proof.json").read_text(encoding="utf-8"))
+        proof = json.loads((REPO_ROOT / "speckit-pro/gate-evidence/installed-cache-proof.json").read_text(encoding="utf-8"))
         self.assertLessEqual(set(proof_schema["required"]), set(proof))
         self.assertEqual({item["product"] for item in proof["proofs"]}, {"claude", "codex"})
         proof_item_schema = proof_schema["$defs"]["proof"]
@@ -2304,7 +2358,7 @@ class GateFoundationTests(unittest.TestCase):
                 script = payload_root / relative
                 script.parent.mkdir(parents=True, exist_ok=True)
                 script.write_text("echo unsafe\n", encoding="utf-8")
-            payload_gate.remove_payload_shell_scripts_xplat008(payload_root)
+            payload_gate.remove_payload_shell_scripts_installed_plugin(payload_root)
             for suffix in (".sh", ".bash", ".zsh", ".ps1", ".bat", ".cmd"):
                 self.assertFalse([path for path in payload_root.rglob(f"*{suffix}")], suffix)
             extensionless = payload_root / "bin" / "install"
@@ -2314,13 +2368,13 @@ class GateFoundationTests(unittest.TestCase):
             suffixful = payload_root / "bin" / "install.zsh"
             suffixful.write_text("#!/usr/bin/env zsh\n", encoding="utf-8")
             self.assertEqual(payload_gate.payload_script_file_count(payload_root, [{"path": "bin/install.zsh"}]), 1)
-            result = payload_gate.xplat008_payload_result(REPO_ROOT, "claude", payload_root, payload_root, {})
+            result = payload_gate.installed_plugin_payload_result(REPO_ROOT, "claude", payload_root, payload_root, {})
             self.assertEqual(result["script_file_count"], 2)
             self.assertEqual(result["status"], "fail")
 
     def test_installed_release_payload_completeness_current_dist_passes_after_runner_rebuild(self) -> None:
         response = self.assert_runner_ok(installed_release_fixture_request("payload-completeness"))
-        self.assert_installed_release_promotion_metadata(
+        self.assert_no_release_promotion_metadata(
             response,
             "tests/speckit-pro/unit/fixtures/installed-plugin-release/payload-completeness-cases.json",
         )
@@ -2343,7 +2397,7 @@ class GateFoundationTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             dist_root = Path(tmp) / "dist"
-            payload_gate.build_xplat008_payloads(REPO_ROOT, dist_root)
+            payload_gate.build_installed_plugin_payloads(REPO_ROOT, dist_root)
             payload_root = dist_root / "claude" / "speckit-pro"
             runner_file = payload_root / "speckit_pro_runner" / "__main__.py"
             runner_file.write_text(runner_file.read_text(encoding="utf-8") + "\n# stale trust metadata test\n", encoding="utf-8")
@@ -2358,57 +2412,10 @@ class GateFoundationTests(unittest.TestCase):
             },
         )
 
-    def test_installed_release_readiness_fixtures_cover_release_blockers(self) -> None:
-        promotion_records = json.loads((INSTALLED_RELEASE_FIXTURE_DIR / "promotion-records.json").read_text(encoding="utf-8"))
-        self.assertEqual(promotion_records["schema_version"], "1.0")
-        self.assertEqual(promotion_records["feature_id"], "XPLAT-008")
-        self.assertEqual(promotion_records["promotion_status"], "installed_cutover_release_authoritative")
-        self.assertLessEqual(
-            {"runner-invocation", "active-path-guard", "payload-gate", "release-readiness"},
-            {record["gate_id"] for record in promotion_records["records"]},
-        )
-        case_ids_by_operation = {
-            "runner-invocation": {case["case_id"] for case in installed_release_fixture_cases("runner-invocation")["cases"]},
-            "active-runtime-guard": {case["case_id"] for case in installed_release_fixture_cases("active-runtime-guard")["cases"]},
-            "payload-completeness": {case["case_id"] for case in installed_release_fixture_cases("payload-completeness")["cases"]},
-            "release-readiness-xplat008": {case["case_id"] for case in installed_release_fixture_cases("release-readiness")["cases"]},
-        }
-        for record in promotion_records["records"]:
-            with self.subTest(promotion=record["python_operation"]):
-                self.assertLessEqual(set(record["fixture_ids"]), case_ids_by_operation[record["python_operation"]])
-        cases = installed_release_fixture_cases("release-readiness")
-        self.assertEqual(cases["schema_version"], "1.0")
-        self.assertEqual(cases["feature_id"], "XPLAT-008")
-        self.assertEqual(
-            {case["case_id"] for case in cases["cases"]},
-            {
-                "ready",
-                "current-native-uat-pending",
-                "active-shell-dependency",
-                "incomplete-payload",
-                "missing-bundled-agent",
-                "missing-hook",
-                "missing-runner-file",
-                "stale-metadata",
-                "unsafe-public-claim",
-                "incomplete-uat",
-                "unsafe-repair-claim",
-                "missing-traceability",
-                "nondeterministic-dist",
-                "missing-release-evidence",
-                "live-evidence-disabled",
-                "failed-runner-invocation",
-                "placeholder-uat",
-                "smoke-only-uat",
-                "raw-html-uat",
-                "missing-uat-evidence-link",
-                "incomplete-update-proof",
-                "broad-reinstall-rejected",
-            },
-        )
+    def test_installed_release_readiness_registration_and_workflow_are_live(self) -> None:
         request = installed_release_fixture_request("release-readiness")
         self.assertEqual(request["helper_id"], "release-readiness")
-        self.assertEqual(request["operation"], "release-readiness-xplat008")
+        self.assertEqual(request["operation"], "installed-release-readiness")
         self.assertEqual(request["mode"], "read_only")
         runner_request = installed_release_fixture_request("runner-invocation")
         self.assertEqual(runner_request["inputs"]["case_id"], "live-host-runtime-info")
@@ -2421,86 +2428,10 @@ class GateFoundationTests(unittest.TestCase):
         ]:
             self.assertIn(f"tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/{request_name}", release_workflow)
 
-    def test_installed_release_uat_matrix_fixtures_cover_native_rows_and_blockers(self) -> None:
-        cases = installed_release_fixture_cases("uat-matrix")
-        self.assertEqual(cases["schema_version"], "1.0")
-        self.assertEqual(cases["feature_id"], "XPLAT-008")
-        ready_rows = cases["base_case"]["rows"]
-        self.assertEqual(len(ready_rows), 6)
-        self.assertEqual(
-            {(row["product"], row["platform"]) for row in ready_rows},
-            {
-                ("claude", "windows"),
-                ("claude", "macos"),
-                ("claude", "linux"),
-                ("codex", "windows"),
-                ("codex", "macos"),
-                ("codex", "linux"),
-            },
-        )
-        for row in ready_rows:
-            self.assertGreaterEqual(len(row["runner_invocation_ids"]), 3)
-            self.assertEqual(row["latest_tag_update"], "pass")
-            self.assertEqual(row["incomplete_install_repair"], "pass")
-            self.assertNotIn("<a", row["evidence_link"])
-        self.assertLessEqual(
-            {
-                "missing-row",
-                "placeholder-row",
-                "smoke-only-row",
-                "failing-update-row",
-                "raw-html-anchor",
-                "empty-expected-result",
-                "missing-evidence-link",
-                "unsupported-native-support-claim",
-            },
-            {case["case_id"] for case in cases["cases"]},
-        )
-        request = installed_release_fixture_request("uat-matrix")
-        self.assertEqual(request["helper_id"], "release-readiness")
-        self.assertEqual(request["operation"], "uat-matrix")
-
-    def test_installed_release_uat_matrix_reports_pass_and_seeded_blockers(self) -> None:
-        completed, response, stderr_records = run_runner(installed_release_fixture_request("uat-matrix"))
-        self.assertEqual(completed.returncode, 0)
-        self.assert_response(response, "ok")
-        self.assertEqual(stderr_records, [])
-        matrix = response["data"]["uat_matrix"]
-        self.assertEqual(matrix["status"], "pass")
-        self.assertEqual(matrix["blocking_count"], 0)
-        self.assertEqual(len(matrix["rows"]), 6)
-        self.assert_uat_matrix_contract_subset(matrix)
-
-        for case_id in [
-            "missing-row",
-            "placeholder-row",
-            "smoke-only-row",
-            "failing-update-row",
-            "raw-html-anchor",
-            "empty-expected-result",
-            "missing-evidence-link",
-            "unsupported-native-support-claim",
-        ]:
-            with self.subTest(case_id=case_id):
-                completed, response, stderr_records = run_runner(
-                    gate_request(
-                        "release-readiness",
-                        "uat-matrix",
-                        inputs={
-                            "case_file": "tests/speckit-pro/unit/fixtures/installed-plugin-release/uat-matrix-cases.json",
-                            "case_id": case_id,
-                        },
-                    )
-                )
-                self.assertEqual(completed.returncode, 1)
-                self.assert_response(response, "expected_failure")
-                self.assertEqual([diag["code"] for diag in stderr_records], ["uat_matrix_blocked"])
-                self.assertGreater(response["data"]["uat_matrix"]["blocking_count"], 0)
-
     def test_installed_release_install_health_repair_reports_safe_and_manual_outcomes(self) -> None:
         cases = installed_release_fixture_cases("install-health-repair")
-        self.assertEqual(cases["schema_version"], "1.0")
-        self.assertEqual(cases["feature_id"], "XPLAT-008")
+        self.assertEqual(cases["schema_version"], "2.0")
+        self.assertEqual(cases["contract_id"], "installed-plugin-release")
         self.assertLessEqual(
             {
                 "ready",
@@ -2572,310 +2503,89 @@ class GateFoundationTests(unittest.TestCase):
         self.assert_response(response, "expected_failure")
         self.assertEqual([diag["code"] for diag in stderr_records], ["install_health_repair_blocked"])
 
-    def test_installed_release_readiness_default_request_passes_after_native_uat_completion(self) -> None:
+    def test_installed_release_readiness_default_request_passes(self) -> None:
         response = self.assert_runner_ok(installed_release_fixture_request("release-readiness"))
+        self.assert_no_release_promotion_metadata(response)
         readiness = response["data"]["release_readiness"]
-        self.assertEqual(readiness["feature_id"], "XPLAT-008")
+        self.assertEqual(
+            set(readiness),
+            {
+                "schema_version",
+                "contract_id",
+                "status",
+                "blocking_count",
+                "checks",
+                "payload_results",
+                "runner_invocations",
+            },
+        )
+        self.assertEqual(readiness["contract_id"], "installed-plugin-release")
         self.assertEqual(readiness["status"], "pass")
         self.assertEqual(readiness["blocking_count"], 0)
-        self.assertEqual(len(readiness["uat_rows"]), 6)
         self.assertFalse(any(check["blocking"] for check in readiness["checks"]))
-        zero_bash_checks = [check for check in readiness["checks"] if check["check_id"] == "zero-bash-guard"]
-        self.assertEqual(len(zero_bash_checks), 1)
-        self.assertEqual(zero_bash_checks[0]["blocker_class"], "active_zero_bash_dependency")
-        self.assertIn("docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json", readiness["evidence_refs"]["zero_bash_guard"])
+        self.assertEqual(
+            {check["check_id"] for check in readiness["checks"]},
+            {
+                "active-runtime-guard",
+                "zero-bash-guard",
+                "repo_bash_confinement",
+                "payload-completeness",
+                "runner-invocations",
+                "version-sync",
+            },
+        )
+        version_check = next(check for check in readiness["checks"] if check["check_id"] == "version-sync")
+        expected_version = json.loads(
+            (REPO_ROOT / "speckit-pro/.claude-plugin/plugin.json").read_text(encoding="utf-8")
+        )["version"]
+        expected_sources = {
+            "speckit-pro/.claude-plugin/plugin.json",
+            "speckit-pro/.codex-plugin/plugin.json",
+            ".claude-plugin/marketplace.json",
+            ".agents/plugins/marketplace.json",
+            ".release-please-manifest.json",
+            "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+        }
+        self.assertEqual(
+            set(version_check["evidence"]),
+            {f"{path}={expected_version}" for path in expected_sources},
+        )
         self.assertTrue(all("script_file_count" in item for item in readiness["payload_results"]))
         self.assert_release_readiness_contract_subset(readiness)
 
-    def test_installed_release_readiness_pending_native_uat_still_blocks(self) -> None:
-        completed, response, stderr_records = run_runner(
-            gate_request(
-                "release-readiness",
-                "release-readiness-xplat008",
-                inputs={
-                    "case_file": "tests/speckit-pro/unit/fixtures/installed-plugin-release/release-readiness-cases.json",
-                    "case_id": "current-native-uat-pending",
-                },
-            )
-        )
-        self.assertEqual(completed.returncode, 1)
+    def test_installed_release_readiness_blocks_live_version_manifest_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            copy_installed_release_tree(root)
+            manifest_path = root / ".release-please-manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["speckit-pro"] = "9.9.9"
+            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            response = run_installed_release_readiness(repo_root=root)
+
         self.assert_response(response, "expected_failure")
-        self.assertEqual([diag["code"] for diag in stderr_records], ["release_readiness_xplat008_blocked"])
         readiness = response["data"]["release_readiness"]
-        self.assertEqual(readiness["feature_id"], "XPLAT-008")
-        self.assertEqual(readiness["status"], "fail")
-        self.assertEqual(readiness["blocking_count"], 1)
-        self.assertEqual(readiness["uat_rows"], [])
-        self.assertTrue(any(check["check_id"] == "uat-matrix" and check["blocking"] for check in readiness["checks"]))
-        self.assert_release_readiness_contract_subset(readiness)
+        version_check = next(check for check in readiness["checks"] if check["check_id"] == "version-sync")
+        self.assertTrue(version_check["blocking"])
+        self.assertIn(".release-please-manifest.json=9.9.9", version_check["evidence"])
 
-    def test_installed_release_readiness_ready_fixture_passes(self) -> None:
-        response = self.assert_runner_ok(installed_release_fixture_request("release-readiness-ready"))
-        self.assert_installed_release_promotion_metadata(
-            response,
-            "tests/speckit-pro/unit/fixtures/installed-plugin-release/release-readiness-cases.json",
-        )
+    def test_installed_release_readiness_blocks_live_platform_payload_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            copy_installed_release_tree(root)
+            manifest_path = root / "dist/codex/speckit-pro/.codex-plugin/plugin.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["version"] = "9.9.9"
+            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            response = run_installed_release_readiness(repo_root=root)
+
+        self.assert_response(response, "expected_failure")
         readiness = response["data"]["release_readiness"]
-        self.assertEqual(readiness["feature_id"], "XPLAT-008")
-        self.assertEqual(readiness["status"], "pass")
-        self.assertEqual(readiness["blocking_count"], 0)
-        self.assertEqual(len(readiness["payload_results"]), 2)
-        self.assertEqual({item["payload_surface"] for item in readiness["payload_results"]}, {"claude", "codex"})
-        self.assertEqual(len(readiness["uat_rows"]), 6)
-        self.assertTrue(readiness["traceability"])
-        self.assertNotIn("live_gate_requests", readiness["evidence_refs"])
-        self.assertTrue(
-            any(
-                item.get("request_id") == "xplat-008-release-readiness:runner-invocation"
-                for item in readiness["runner_invocations"]
-            )
+        payload_check = next(check for check in readiness["checks"] if check["check_id"] == "payload-completeness")
+        self.assertTrue(payload_check["blocking"])
+        self.assertFalse(
+            any("fixture" in evidence.lower() for check in readiness["checks"] for evidence in check["evidence"])
         )
-        live_runner_record = next(
-            item
-            for item in readiness["runner_invocations"]
-            if item.get("request_id") == "xplat-008-release-readiness:runner-invocation"
-        )
-        self.assertEqual(live_runner_record["runner_response"]["status"], "ok")
-        self.assertEqual(
-            live_runner_record["runner_response"]["data"]["report"]["source_vs_installed_context"],
-            "installed_payload",
-        )
-        self.assertTrue(
-            any(
-                file_record["path"] == "speckit_pro_runner/speckit-pro-runner.manifest.json"
-                for result in readiness["payload_results"]
-                for file_record in result.get("actual_files", [])
-            )
-        )
-        self.assert_release_readiness_contract_subset(readiness)
-
-    def test_installed_release_readiness_seeded_blocker_cases_fail(self) -> None:
-        blocker_cases = [
-            "active-shell-dependency",
-            "incomplete-payload",
-            "missing-bundled-agent",
-            "missing-hook",
-            "missing-runner-file",
-            "stale-metadata",
-            "unsafe-public-claim",
-            "incomplete-uat",
-            "unsafe-repair-claim",
-            "missing-traceability",
-            "nondeterministic-dist",
-            "missing-release-evidence",
-            "live-evidence-disabled",
-            "failed-runner-invocation",
-            "placeholder-uat",
-            "smoke-only-uat",
-            "raw-html-uat",
-            "missing-uat-evidence-link",
-            "incomplete-update-proof",
-            "broad-reinstall-rejected",
-        ]
-        for case_id in blocker_cases:
-            with self.subTest(case_id=case_id):
-                response = run_installed_release_readiness_case(case_id, live_evidence={})
-                self.assert_response(response, "expected_failure")
-                self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["release_readiness_xplat008_blocked"])
-                self.assertGreater(response["data"]["release_readiness"]["blocking_count"], 0)
-                self.assert_release_readiness_contract_subset(response["data"]["release_readiness"])
-
-    def test_installed_release_readiness_handles_partial_failure_records(self) -> None:
-        from speckit_pro_runner.gates import release as release_gate
-
-        checks = release_gate.computed_xplat008_checks(
-            payload_results=[{"status": "fail"}],
-            uat_rows=[],
-            repair_actions=[{"action_type": "manual_remediation"}],
-            public_claim_results=[{"status": "fail"}],
-            runner_invocations=[{"status": "blocked"}],
-            traceability=[],
-        )
-        collapsed = release_gate.collapse_checks(checks)
-
-        self.assertTrue(all("check_id" in check for check in collapsed))
-        self.assertTrue(any(check["check_id"] == "payload-completeness" and check["blocking"] for check in collapsed))
-        payload_check = next(check for check in collapsed if check["check_id"] == "payload-completeness")
-        evidence = "\n".join(item for check in checks for item in check["evidence"])
-        self.assertIn("unknown-payload", evidence)
-        self.assertIn("scripted_payloads=unknown-payload:script_file_count=None", evidence)
-        self.assertIn("unknown-repair-action", evidence)
-        self.assertIn("unknown-public-claim", evidence)
-        self.assertIn("unknown-runner-invocation", evidence)
-        self.assertGreaterEqual(sum(1 for check in checks if check["blocking"]), 5)
-
-        scripted_payload_checks = release_gate.computed_xplat008_checks(
-            payload_results=[
-                {"payload_surface": "claude", "status": "pass", "script_file_count": 1},
-                {"payload_surface": "codex", "status": "pass", "script_file_count": 0},
-            ],
-            uat_rows=[],
-            repair_actions=[{"action_id": "repair", "status": "completed"}],
-            public_claim_results=[{"claim_id": "python-runner", "status": "pass"}],
-            runner_invocations=[{"request_id": "runner", "status": "pass"}],
-            traceability=[{"requirement_id": "FR-006"}],
-        )
-        scripted_payload_check = next(check for check in scripted_payload_checks if check["check_id"] == "payload-completeness")
-        self.assertTrue(scripted_payload_check["blocking"])
-        self.assertIn("scripted_payloads=claude:script_file_count=1", scripted_payload_check["evidence"])
-
-        malformed_checks = release_gate.normalize_xplat008_checks(
-            [
-                {
-                    "check_id": "public-claims",
-                    "blocker_class": "unsafe_public_claim",
-                    "status": "maybe",
-                    "evidence": None,
-                }
-            ]
-        )
-        self.assertEqual(malformed_checks[0]["status"], "fail")
-        self.assertTrue(malformed_checks[0]["blocking"])
-        self.assertIn("malformed_check_record", malformed_checks[0]["evidence"])
-        unknown_checks = release_gate.normalize_xplat008_checks(
-            [
-                {
-                    "check_id": "unknown-check",
-                    "blocker_class": "unknown-blocker",
-                    "status": "pass",
-                    "evidence": [],
-                }
-            ]
-        )
-        self.assertEqual(unknown_checks[0]["status"], "fail")
-        self.assertTrue(unknown_checks[0]["blocking"])
-        self.assertEqual(unknown_checks[0]["check_id"], "release-packet-traceability")
-        self.assertIn("malformed_check_record", unknown_checks[0]["evidence"])
-
-        malformed_contract_checks = release_gate.validate_xplat008_evidence_contracts(
-            payload_results=release_gate.normalize_payload_results(
-                [
-                    "not-an-object",
-                    {
-                        "payload_surface": "claude",
-                        "plugin_version": "2.17.0",
-                        "runner_version": "0.1.0",
-                        "expected_files": [{}],
-                        "actual_files": ["bad-file-record"],
-                        "missing_paths": [123],
-                        "extra_paths": [None],
-                        "mismatched_paths": [False],
-                        "path_leaks": [{}],
-                        "file_tree_hash": "2" * 64,
-                        "status": "pass",
-                    },
-                ]
-            ),
-            uat_rows=[{"product": "codex", "platform": "macos", "status": "pass"}],
-            repair_actions=[
-                {
-                    "action_id": "repair",
-                    "finding_id": "finding",
-                    "action_type": "manual_remediation",
-                    "target_path": "install/cache",
-                    "status": "blocked",
-                    "message": "Manual remediation required.",
-                    "manual_steps": [123],
-                    "digest_verified": False,
-                }
-            ],
-            public_claim_results=[
-                {
-                    "claim_id": "claim",
-                    "surface": "docs",
-                    "claim_text_or_pattern": "safe install",
-                    "classification": "public",
-                    "status": "pass",
-                    "evidence": [123],
-                }
-            ],
-            runner_invocations=[{"request_id": "runner", "status": "pass", "diagnostics": ["bad-diagnostic"]}],
-            traceability=[{"requirement_id": "FR-006", "changed_files": [123], "verification_evidence": [None]}],
-        )
-        evidence = [evidence for check in malformed_contract_checks for evidence in check["evidence"]]
-        for marker in [
-            "malformed_payload_record:index=0",
-            "malformed_uat_record:index=0",
-            "malformed_repair_record:index=0",
-            "malformed_public_claim_record:index=0",
-            "malformed_runner_invocation_record:index=0",
-            "malformed_traceability_record:index=0",
-        ]:
-            self.assertIn(marker, evidence)
-        self.assertIn("missing_or_invalid=expected_files[0].path", evidence)
-        self.assertIn("missing_or_invalid=actual_files[0]", evidence)
-        self.assertIn("missing_or_invalid=missing_paths", evidence)
-        self.assertIn("missing_or_invalid=extra_paths", evidence)
-        self.assertIn("missing_or_invalid=mismatched_paths", evidence)
-        self.assertIn("missing_or_invalid=path_leaks", evidence)
-        self.assertIn("missing_or_invalid=manual_steps", evidence)
-        self.assertIn("missing_or_invalid=evidence", evidence)
-        self.assertIn("missing_or_invalid=diagnostics[0]", evidence)
-        self.assertIn("missing_or_invalid=changed_files", evidence)
-        self.assertIn("missing_or_invalid=verification_evidence", evidence)
-        self.assertIn("missing_or_invalid=runner_request", evidence)
-        self.assertIn("missing_or_invalid=surface_path", evidence)
-
-        valid_repair_checks = release_gate.validate_xplat008_evidence_contracts(
-            payload_results=[],
-            uat_rows=[],
-            repair_actions=[
-                {
-                    "action_id": "repair-1",
-                    "finding_id": "install-cache-drift",
-                    "action_type": "autoheal_refresh",
-                    "target_path": "speckit-pro/install_inventory.json",
-                    "source_path": "dist/codex/speckit-pro/install_inventory.json",
-                    "digest_verified": True,
-                    "status": "completed",
-                    "message": "Refreshed stale install inventory from generated payload.",
-                    "manual_steps": [],
-                }
-            ],
-            public_claim_results=[],
-            runner_invocations=[],
-            traceability=[],
-        )
-        self.assertFalse([check for check in valid_repair_checks if "repair" in ",".join(check["evidence"])])
-
-        duplicate_uat_rows = [release_gate.default_uat_row("claude", "windows", "pass") for _ in range(6)]
-        duplicate_uat_checks = release_gate.computed_xplat008_checks(
-            payload_results=[
-                release_gate.synthetic_payload_result("claude", "pass"),
-                release_gate.synthetic_payload_result("codex", "pass"),
-            ],
-            uat_rows=duplicate_uat_rows,
-            repair_actions=[],
-            public_claim_results=[
-                {
-                    "claim_id": "python-runner",
-                    "surface": "README.md",
-                    "claim_text_or_pattern": "Python runner",
-                    "classification": "implemented-control",
-                    "status": "pass",
-                    "evidence": ["speckit-pro/speckit_pro_runner/runtime.py"],
-                }
-            ],
-            runner_invocations=[
-                {
-                    "request_id": "runner",
-                    "product": "codex",
-                    "platform": "macos",
-                    "surface_path": "speckit-pro/codex-skills/speckit-status/SKILL.md",
-                    "operation": "status",
-                    "interpreter_resolution": {"accepted": True},
-                    "invocation": {"argv": ["python3", "-m", "speckit_pro_runner"], "shell_used": False},
-                    "runner_request": {"operation": "runtime-info", "mode": "read_only", "inputs": {}},
-                    "runner_response": {"status": "ok"},
-                    "status": "pass",
-                    "diagnostics": [],
-                }
-            ],
-            traceability=[{"requirement_id": "FR-006", "changed_files": ["README.md"], "verification_evidence": ["test"]}],
-        )
-        uat_check = next(check for check in duplicate_uat_checks if check["check_id"] == "uat-matrix")
-        self.assertTrue(uat_check["blocking"])
-        self.assertIn("duplicate_rows=claude:windows", uat_check["evidence"])
 
     def test_run_default_suite_aggregates_success_stdout_stderr_and_exit_behavior(self) -> None:
         request = gate_request(
@@ -2951,6 +2661,24 @@ class GateFoundationTests(unittest.TestCase):
             self.assertNotIn("jq", " ".join(argv).lower())
             self.assertFalse(any(arg.endswith(".sh") for arg in argv))
 
+    def test_layer_dispatcher_rejects_invalid_child_summaries(self) -> None:
+        dispatcher = load_layer_script_dispatcher()
+        test_path = REPO_ROOT / "tests" / "speckit-pro" / "run-layer-scripts.py"
+        invalid_children = (
+            ("exit-zero-missing-summary", 0, ""),
+            ("wrong-label-only", 0, "nested-child: 1/1 passed\n"),
+            ("duplicate-owned", 0, "run-layer-scripts: 1/1 passed\nrun-layer-scripts: 1/1 passed\n"),
+            ("zero-discovery", 0, "run-layer-scripts: 0/0 passed\n"),
+            ("exit-zero-partial", 0, "run-layer-scripts: 1/2 passed\n"),
+            ("passed-exceeds-total", 0, "run-layer-scripts: 2/1 passed\n"),
+            ("nonzero-all-pass", 1, "run-layer-scripts: 1/1 passed\n"),
+        )
+        for case_id, exit_code, stdout in invalid_children:
+            with self.subTest(case_id=case_id):
+                completed = subprocess.CompletedProcess([sys.executable, "child.py"], exit_code, stdout=stdout, stderr="")
+                with patch.object(dispatcher.subprocess, "run", return_value=completed):
+                    self.assertEqual(dispatcher.run_script_suite("layer", [test_path], REPO_ROOT), 1)
+
     def test_missing_executable_treats_windows_altsep_paths_as_repo_relative(self) -> None:
         from speckit_pro_runner.gates import suite as suite_gate
 
@@ -2984,8 +2712,8 @@ class GateFoundationTests(unittest.TestCase):
         )
 
     def test_suite_manifest_is_single_source_of_truth_for_roster_and_dispatch(self) -> None:
-        # FR-007 drift guard: the shipped gate's advertised roster AND dispatch
-        # kinds equal tests/speckit-pro/suite-manifest.json, exactly.
+        # The shipped gate's advertised roster and dispatch kinds equal the
+        # suite manifest exactly.
         from speckit_pro_runner.gates import suite as suite_gate
 
         manifest = json.loads((REPO_ROOT / "tests/speckit-pro/suite-manifest.json").read_text(encoding="utf-8"))
@@ -2995,13 +2723,10 @@ class GateFoundationTests(unittest.TestCase):
         default_suite = tuple(layer["id"] for layer in layers if layer["default"])
         extended_suite = tuple(layer["id"] for layer in layers if not layer["live_only"])
         allowed = frozenset(layer["id"] for layer in layers if not layer["live_only"] and layer["id"] != "toolchain")
-        ai_layers = frozenset(layer["id"] for layer in layers if layer["live_only"])
-
         # (1) The module roster derives solely from the manifest.
         self.assertEqual(suite_gate.DEFAULT_SUITE, default_suite)
         self.assertEqual(suite_gate.EXTENDED_SUITE, extended_suite)
         self.assertEqual(suite_gate.ALLOWED_LAYERS, allowed)
-        self.assertEqual(suite_gate.AI_EVAL_LAYERS, ai_layers)
         self.assertIsNone(suite_gate.SUITE_MANIFEST_ERROR)
 
         loaded = suite_gate.load_suite_manifest(REPO_ROOT)
@@ -3030,13 +2755,13 @@ class GateFoundationTests(unittest.TestCase):
         for layer in layers:
             for script in layer["scripts"]:
                 with self.subTest(path=script["path"]):
-                    self.assertEqual(set(script), {"path", "label", "baseline"})
+                    self.assertEqual(set(script), {"path", "label"})
                     self.assertTrue((REPO_ROOT / script["path"]).is_file(), script["path"])
 
         # (4) Manifest-integrity invariant (b): transitional Bash dispatch is
         # the only escape hatch permitted until PR 10; the current architecture
         # routes every layer via internal-check or a Python module, so none
-        # remain (the FR-007 terminal-absence assertion already holds).
+        # remain.
         self.assertEqual([layer["id"] for layer in layers if layer["dispatch"] == "shell-legacy-transitional"], [])
 
     def assert_ported_python_layer(
@@ -3081,7 +2806,6 @@ class GateFoundationTests(unittest.TestCase):
             {
                 "path": "tests/speckit-pro/layer7-integration/run-all-fixtures.py",
                 "label": "run-all-fixtures",
-                "baseline": "tests/speckit-pro/parity/bash-to-python/run-all-fixtures-baseline.txt",
             },
             "layer-7 integration fixtures",
         )
@@ -3092,7 +2816,6 @@ class GateFoundationTests(unittest.TestCase):
             {
                 "path": "tests/speckit-pro/layer8-parity/run-parity-fixtures.py",
                 "label": "run-parity-fixtures",
-                "baseline": "tests/speckit-pro/parity/bash-to-python/run-parity-fixtures-baseline.txt",
             },
             "layer-8 parity fixtures",
         )
@@ -3140,7 +2863,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(mismatch["diagnostics"][0]["details"]["expected_helper_id"], "suite-gate")
 
         unsupported = self.assert_input_error_code(
-            gate_request("release-readiness", "release-readiness", mode="apply"),
+            gate_request("release-readiness", "validate-pr-title", mode="apply"),
             "unsupported_gate_mode",
         )
         self.assertEqual(unsupported["diagnostics"][0]["details"]["supported_modes"], ["read_only"])
@@ -3209,44 +2932,6 @@ class GateFoundationTests(unittest.TestCase):
                 self.assertEqual(stderr_records, [])
                 self.assertEqual(response["data"]["suite"]["results"][0]["command_id"], command_id)
 
-    def test_run_ai_evals_dispatch_and_missing_prerequisites_are_stable(self) -> None:
-        success = gate_request(
-            "suite-gate",
-            "run-ai-evals",
-            inputs={"layers": ["2", "3", "6"], "test_overrides": {"available_tools": ["claude", "codex"]}},
-        )
-        completed, response, stderr_records = run_runner(success)
-        self.assert_stdout_json(completed)
-        self.assert_response(response, "ok")
-        self.assert_status_exit_mapping(completed, response)
-        self.assertEqual(stderr_records, [])
-        planned_dispatch = response["data"]["suite"]["planned_dispatch"]
-        self.assertEqual([plan["layer"] for plan in planned_dispatch], ["2", "3", "6"])
-        manifest = json.loads((REPO_ROOT / "tests/speckit-pro/suite-manifest.json").read_text(encoding="utf-8"))
-        manifest_paths = {
-            layer["id"]: [script["path"] for script in layer["scripts"]]
-            for layer in manifest["layers"]
-            if layer["id"] in {"2", "3", "6"}
-        }
-        for plan in planned_dispatch:
-            self.assertEqual(plan["runner_references"], manifest_paths[plan["layer"]])
-            self.assertEqual(plan["bash_references"], [])
-            self.assertTrue(all(path.endswith(".py") for path in plan["runner_references"]))
-
-        missing = gate_request(
-            "suite-gate",
-            "run-ai-evals",
-            inputs={"layers": ["2", "3", "6"], "test_overrides": {"available_tools": []}},
-        )
-        completed, response, stderr_records = run_runner(missing)
-        self.assert_stdout_json(completed)
-        self.assert_response(response, "missing_prerequisite")
-        self.assert_status_exit_mapping(completed, response)
-        self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["gate_missing_prerequisite"])
-        self.assertEqual([diag["code"] for diag in stderr_records], ["gate_missing_prerequisite"])
-        missing_by_layer = response["diagnostics"][0]["details"]["missing_by_layer"]
-        self.assertEqual(set(missing_by_layer), {"2", "3", "6"})
-
     def test_unsafe_command_specs_are_rejected(self) -> None:
         unsafe_cases = [
             {"layer-1": "python -c 'print(1)'"},
@@ -3282,6 +2967,20 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(result["exit_code"], 2)
         self.assertIn("active Python interpreter", result["stderr"]["text"])
 
+    def test_gate_modules_reject_unknown_input_fields_before_dispatch(self) -> None:
+        cases = (
+            ("payload-gate", "build-test-payload-evidence", {"unexpected_input": True}),
+            ("release-readiness", "installed-release-readiness", {"unexpected_input": True}),
+            ("active-path-guard", "active-path-guard", {"unexpected_input": True}),
+            ("suite-gate", "run-layer", {"layer": "unknown", "unexpected_input": True}),
+        )
+        for helper_id, operation, inputs in cases:
+            with self.subTest(operation=operation):
+                self.assert_input_error_code(
+                    gate_request(helper_id, operation, inputs=inputs),
+                    "unsupported_gate_inputs",
+                )
+
     def test_payload_evidence_modes_are_fixture_bound_and_cutover_safe(self) -> None:
         completed, response, stderr_records = run_runner(fixture_request("test-payload-evidence"))
         self.assertEqual(completed.returncode, 0)
@@ -3293,7 +2992,6 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual({item["payload_surface"] for item in evidence}, {"claude_test", "codex_test"})
         for item in evidence:
             self.assertEqual(item["mode"], "read_only")
-            self.assertFalse(item["release_payload_cutover"])
             self.assertRegex(item["file_tree_hash"], r"^[a-f0-9]{64}$")
             self.assertTrue(item["files"])
             self.assertTrue(item["output_root"].startswith("tests/speckit-pro/unit/fixtures/runner-gates/"))
@@ -3308,7 +3006,6 @@ class GateFoundationTests(unittest.TestCase):
                     "case_file": "tests/speckit-pro/unit/fixtures/runner-gates/payload-evidence-cases.json",
                     "case_id": "claude-codex-test-payloads",
                     "output_root": output_root,
-                    "release_payload_cutover": False,
                 },
             )
             completed, response, stderr_records = run_runner(dry_run_request)
@@ -3328,22 +3025,8 @@ class GateFoundationTests(unittest.TestCase):
             self.assertEqual(written, ["claude-test-payload-evidence.json", "codex-test-payload-evidence.json"])
             for item in response["data"]["payload_evidence"]:
                 self.assertEqual(item["mode"], "apply")
-                self.assertFalse(item["release_payload_cutover"])
 
-    def test_payload_evidence_rejects_release_cutover_and_stale_generated_payloads(self) -> None:
-        release_cutover = gate_request(
-            "payload-gate",
-            "build-test-payload-evidence",
-            inputs={
-                "case_file": "tests/speckit-pro/unit/fixtures/runner-gates/payload-evidence-cases.json",
-                "case_id": "claude-codex-test-payloads",
-                "output_root": "tests/speckit-pro/unit/fixtures/runner-gates/generated/payload-evidence",
-                "release_payload_cutover": True,
-            },
-        )
-        response = self.assert_input_error_code(release_cutover, "release_payload_cutover_refused")
-        self.assertEqual(response["data"]["gate"]["operation"], "build-test-payload-evidence")
-
+    def test_payload_evidence_rejects_stale_generated_payloads(self) -> None:
         stale = gate_request(
             "payload-gate",
             "build-test-payload-evidence",
@@ -3351,7 +3034,6 @@ class GateFoundationTests(unittest.TestCase):
                 "case_file": "tests/speckit-pro/unit/fixtures/runner-gates/payload-evidence-cases.json",
                 "case_id": "stale-generated-files",
                 "output_root": "tests/speckit-pro/unit/fixtures/runner-gates/generated/payload-evidence",
-                "release_payload_cutover": False,
             },
         )
         completed, response, stderr_records = run_runner(stale)
@@ -3430,158 +3112,31 @@ class GateFoundationTests(unittest.TestCase):
                 self.assertEqual(install["status"], "complete")
                 self.assertTrue(install["install_root"].startswith("tests/speckit-pro/unit/fixtures/runner-gates/"))
 
-    def test_release_readiness_operations_report_pass_and_blocking_failures(self) -> None:
-        pass_cases = [
-            ("detect-changed-plugin", "ready", "changed_plugin"),
-            ("detect-changed-plugin", "changed-plugin-false-positive", "changed_plugin"),
-            ("validate-pr-title", "ready", "pr_title"),
-        ]
-        for operation, case_id, data_key in pass_cases:
-            with self.subTest(operation=operation, case_id=case_id):
-                completed, response, stderr_records = run_runner(
-                    gate_request(
-                        "release-readiness",
-                        operation,
-                        inputs={
-                            "case_file": "tests/speckit-pro/unit/fixtures/runner-gates/release-readiness-cases.json",
-                            "case_id": case_id,
-                            "xplat_008_cutover_allowed": False,
-                        },
-                    )
-                )
-                self.assertEqual(completed.returncode, 0)
-                self.assert_response(response, "ok")
-                self.assertEqual(stderr_records, [])
-                self.assertIn(data_key, response["data"])
-                self.assertEqual(response["data"]["release_check"]["status"], "pass")
-
-        blocking_cases = [
-            ("aggregate-suite-results", "suite-aggregation-failure"),
-            ("check-marketplace-version-sync", "stale-version-data"),
-            ("validate-workflow-contract", "workflow-contract-failure"),
-            ("check-payload-evidence", "stale-payload-evidence"),
-            ("parse-release-pr-payload-sync", "release-pr-payload-sync-parse-failure"),
-            ("check-post-release-drift", "post-release-drift"),
-        ]
-        for operation, case_id in blocking_cases:
-            with self.subTest(operation=operation, case_id=case_id):
-                completed, response, stderr_records = run_runner(
-                    gate_request(
-                        "release-readiness",
-                        operation,
-                        inputs={
-                            "case_file": "tests/speckit-pro/unit/fixtures/runner-gates/release-readiness-cases.json",
-                            "case_id": case_id,
-                            "xplat_008_cutover_allowed": False,
-                        },
-                    )
-                )
-                self.assertEqual(completed.returncode, 1)
-                self.assert_response(response, "expected_failure")
-                self.assertEqual([diag["code"] for diag in stderr_records], ["release_check_failed"])
-                self.assertTrue(response["data"]["release_check"]["blocking"])
-
-    def test_release_readiness_aggregates_promotion_evidence_and_handoff_items(self) -> None:
-        response = self.assert_runner_ok(fixture_request("release-readiness"))
-        readiness = response["data"]["release_readiness"]
-        self.assertEqual(readiness["status"], "pass")
-        self.assertEqual(readiness["blocking_count"], 0)
-        self.assertGreaterEqual(readiness["promotion_record_count"], 12)
-        self.assertEqual(set(readiness["test_payload_evidence_ids"]), {"us2-claude-test-payload", "us2-codex-test-payload"})
-        self.assertEqual(readiness["install_verification_ids"], ["us2-install-complete-fake-home"])
-        self.assertEqual(readiness["active_path_guard_summary"], {"status": "ok", "blocking_count": 0})
-        self.assertTrue(readiness["xplat_008_handoff_items"])
-        self.assertEqual(
-            {item["category"] for item in readiness["xplat_008_handoff_items"]},
-            {
-                "active_invocation_cutover",
-                "generated_release_payload",
-                "public_docs",
-                "release_notes",
-                "installed_cache_uat",
-                "native_platform_uat",
-                "update",
-                "autoheal",
-                "public_release_readiness",
-            },
-        )
-        for item in readiness["xplat_008_handoff_items"]:
-            self.assertEqual(item["owner_spec"], "XPLAT-008")
-
-        missing_promotion = gate_request(
+    def test_validate_pr_title_reads_only_the_live_environment(self) -> None:
+        request = gate_request(
             "release-readiness",
-            "release-readiness",
-            inputs={
-                "case_file": "tests/speckit-pro/unit/fixtures/runner-gates/release-readiness-cases.json",
-                "case_id": "missing-promotion-records",
-                "xplat_008_cutover_allowed": False,
-            },
+            "validate-pr-title",
+            inputs={"title_env": "TITLE"},
         )
-        completed, response, stderr_records = run_runner(missing_promotion)
-        self.assertEqual(completed.returncode, 1)
-        self.assert_response(response, "expected_failure")
-        self.assertEqual([diag["code"] for diag in stderr_records], ["release_readiness_blocked"])
-        self.assertGreater(response["data"]["release_readiness"]["blocking_count"], 0)
-
-    def test_detect_changed_plugin_requires_boolean_expected_value(self) -> None:
-        from speckit_pro_runner.gates import release as release_gate
-
-        check, details = release_gate.build_check(
-            "detect-changed-plugin",
-            {"changed_files": ["speckit-pro/speckit_pro_runner/runtime.py"], "expected_changed_plugin": 1},
-        )
-        self.assertEqual(check["status"], "fail")
-        self.assertTrue(check["blocking"])
-        self.assertTrue(details["changed_plugin"]["changed"])
-
-    def test_release_readiness_live_github_context_uses_real_title_and_changed_files(self) -> None:
-        request = fixture_request("release-readiness-live-github")
-        request["inputs"]["github_context"]["changed_files"] = [
-            "speckit-pro/speckit_pro_runner/gates/release.py",
-            "tests/speckit-pro/unit/test-speckit-pro-gates.py",
-        ]
-        response = self.assert_runner_ok(
-            request,
-            extra_env={"TITLE": "feat(xplat): live release readiness", "BASE_REF": "main"},
-        )
-        readiness = response["data"]["release_readiness"]
-        self.assertEqual(readiness["status"], "pass")
-        checks = {check["check_id"]: check for check in readiness["checks"]}
-        self.assertEqual(checks["validate-pr-title"]["evidence"], ["feat(xplat): live release readiness"])
-        self.assertEqual(checks["detect-changed-plugin"]["evidence"], ["changed_plugin=true"])
-
-        request = fixture_request("release-readiness-live-github")
-        request["inputs"]["github_context"]["changed_files"] = [
-            "docs/prd-harness-engineering-uplift.md",
-            "docs/ai/specs/harness-engineering-uplift-technical-roadmap.md",
-        ]
-        response = self.assert_runner_ok(
-            request,
-            extra_env={"TITLE": "docs(specs): add harness engineering uplift roadmap", "BASE_REF": "main"},
-        )
-        readiness = response["data"]["release_readiness"]
-        self.assertEqual(readiness["status"], "pass")
-        checks = {check["check_id"]: check for check in readiness["checks"]}
-        self.assertEqual(checks["validate-pr-title"]["evidence"], ["docs(specs): add harness engineering uplift roadmap"])
-        self.assertEqual(checks["detect-changed-plugin"]["evidence"], ["changed_plugin=false"])
-
-        request = fixture_request("release-readiness-live-github")
-        request["inputs"]["github_context"]["changed_files"] = [
-            "speckit-pro/speckit_pro_runner/gates/release.py"
-        ]
         completed, response, stderr_records = run_runner(
             request,
-            extra_env={"TITLE": "invalid title", "BASE_REF": "main"},
+            extra_env={"TITLE": "fix(release): validate the current title"},
+        )
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok")
+        self.assertEqual(stderr_records, [])
+        self.assert_no_release_promotion_metadata(response)
+        self.assertEqual(response["data"]["pr_title"], "fix(release): validate the current title")
+
+        completed, response, stderr_records = run_runner(
+            request,
+            extra_env={"TITLE": "invalid title"},
         )
         self.assertEqual(completed.returncode, 1)
         self.assert_response(response, "expected_failure")
-        self.assertEqual([diag["code"] for diag in stderr_records], ["release_readiness_blocked"])
-        failed_checks = {
-            check["check_id"]
-            for check in response["data"]["release_readiness"]["checks"]
-            if check["blocking"]
-        }
-        self.assertIn("validate-pr-title", failed_checks)
+        self.assert_no_release_promotion_metadata(response)
+        self.assertEqual([item["code"] for item in stderr_records], ["release_check_failed"])
+        self.assertTrue(response["data"]["release_check"]["blocking"])
 
     def test_active_path_guard_blocks_active_findings_and_exit_1(self) -> None:
         completed, response, stderr_records = run_runner(
@@ -3591,7 +3146,6 @@ class GateFoundationTests(unittest.TestCase):
                 inputs={
                     "case_file": "tests/speckit-pro/unit/fixtures/runner-gates/active-path-guard-cases.json",
                     "case_id": "blocking-active-patterns",
-                    "xplat_008_cutover_allowed": False,
                 },
             )
         )
@@ -3632,7 +3186,6 @@ class GateFoundationTests(unittest.TestCase):
                 inputs={
                     "case_file": "tests/speckit-pro/unit/fixtures/runner-gates/active-path-guard-cases.json",
                     "case_id": "nonblocking-classifications",
-                    "xplat_008_cutover_allowed": False,
                 },
             )
         )
@@ -3651,7 +3204,7 @@ class GateFoundationTests(unittest.TestCase):
                 "generated_payload_mirror",
                 "docs_out_of_scope",
                 "ci_dispatch_glue",
-                "xplat_008_cutover_surface",
+                "installed_runtime_cutover_surface",
             },
         )
 
@@ -3678,7 +3231,6 @@ class GateFoundationTests(unittest.TestCase):
             inputs={
                 "case_file": "tests/speckit-pro/unit/fixtures/runner-gates/active-path-guard-cases.json",
                 "case_id": "workflow-dispatch-good",
-                "xplat_008_cutover_allowed": False,
             },
         )
         response = self.assert_runner_ok(good)
@@ -3691,7 +3243,6 @@ class GateFoundationTests(unittest.TestCase):
             inputs={
                 "case_file": "tests/speckit-pro/unit/fixtures/runner-gates/active-path-guard-cases.json",
                 "case_id": "workflow-dispatch-with-plugin-logic",
-                "xplat_008_cutover_allowed": False,
             },
         )
         completed, response, stderr_records = run_runner(bad)
@@ -3712,7 +3263,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(response["data"]["blocking_count"], 0)
         self.assertGreater(sum(response["data"]["classified_counts"].values()), 0)
 
-    def test_us2_gate_implementations_use_no_shell_true_os_system_or_command_string_subprocess(self) -> None:
+    def test_gate_implementations_avoid_shell_execution(self) -> None:
         for module in ["payloads.py", "release.py"]:
             with self.subTest(module=module):
                 path = PLUGIN_ROOT / "speckit_pro_runner" / "gates" / module
@@ -3770,111 +3321,6 @@ class GateFoundationTests(unittest.TestCase):
                                 isinstance(node.args[0], ast.Constant) and isinstance(node.args[0].value, str),
                                 "suite.py must not pass a command string to subprocess",
                             )
-
-    def test_promotion_records_cover_planned_groups(self) -> None:
-        promotion_schema = json.loads((CONTRACT_DIR / "promotion-record.schema.json").read_text(encoding="utf-8"))
-        document = json.loads(PROMOTION_RECORDS.read_text(encoding="utf-8"))
-        self.assertEqual(document["schema_version"], "1.0")
-        self.assertEqual(document["promotion_status"], "us3_python_authoritative")
-        records = document["records"]
-        self.assertLessEqual({"payload-gate", "install-verification", "release-readiness", "active-path-guard"}, {record["gate_id"] for record in records})
-        us1_operations = {
-            "run-default-suite": "tests/speckit-pro/run-all.sh",
-            "run-toolchain-preflight": "tests/speckit-pro/check-toolchain.sh",
-            "run-layer-1": "tests/speckit-pro/run-all.sh --layer 1",
-            "run-layer-4": "tests/speckit-pro/run-all.sh --layer 4",
-            "run-layer-5": "tests/speckit-pro/run-all.sh --layer 5",
-            "run-integration-suite": "tests/speckit-pro/layer7-integration/run-all-fixtures.sh",
-            "run-parity-suite": "tests/speckit-pro/layer8-parity/run-parity-fixtures.sh",
-            "run-ai-evals": "tests/speckit-pro/run-all.sh --layer 2/3/6",
-        }
-        records_by_operation = {record["python_operation"]: record for record in records}
-        for operation, bash_reference in us1_operations.items():
-            with self.subTest(operation=operation):
-                record = records_by_operation[operation]
-                self.assertEqual(record["gate_id"], "suite-gate")
-                self.assertEqual(record["prior_bash_gate"], bash_reference)
-                self.assertTrue(record["fixture_ids"])
-                self.assertTrue(record["bash_reference_ids"])
-                self.assertEqual(record["comparison_mode"], "command_plan")
-                self.assertEqual(record["exit_code_result"], "match")
-                self.assertEqual(record["stream_result"], "match")
-                self.assertEqual(record["artifact_result"], "not_applicable")
-                self.assertEqual(record["active_path_guard_result"], "pass")
-                self.assertEqual(record["bash_reference_retirement"], "inactive_parity_evidence")
-                self.assertIn("promoted_at", record)
-        us2_operations = {
-            "build-test-payload-evidence": "scripts/build-plugin-payloads.py",
-            "refresh-local-plugin-fixture": "scripts/refresh-local-plugin.sh",
-            "verify-install": "scripts/refresh-local-plugin.sh",
-            "detect-changed-plugin": ".github/workflows/pr-checks.yml",
-            "aggregate-suite-results": ".github/workflows/pr-checks.yml",
-            "check-marketplace-version-sync": "scripts/sync-marketplace-versions.sh",
-            "validate-pr-title": ".github/workflows/pr-checks.yml",
-            "validate-workflow-contract": ".github/workflows/pr-checks.yml",
-            "check-payload-evidence": ".github/workflows/release.yml",
-            "parse-release-pr-payload-sync": ".github/workflows/release.yml",
-            "check-post-release-drift": ".github/workflows/release.yml",
-            "release-readiness": ".github/workflows/release.yml",
-        }
-        for operation, bash_reference in us2_operations.items():
-            with self.subTest(operation=operation):
-                record = records_by_operation[operation]
-                self.assertEqual(record["prior_bash_gate"], bash_reference)
-                self.assertTrue(record["fixture_ids"])
-                self.assertTrue(record["bash_reference_ids"])
-                self.assertIn(record["comparison_mode"], {"artifact_hash", "command_plan", "json_semantic"})
-                self.assertEqual(record["exit_code_result"], "match")
-                self.assertEqual(record["stream_result"], "match")
-                self.assertIn(record["artifact_result"], {"match", "not_applicable"})
-                self.assertEqual(record["active_path_guard_result"], "pass")
-                self.assertEqual(record["bash_reference_retirement"], "inactive_parity_evidence")
-                self.assertIn("promoted_at", record)
-        guard_record = records_by_operation["active-path-guard"]
-        self.assertEqual(guard_record["gate_id"], "active-path-guard")
-        self.assertEqual(guard_record["fixture_ids"], [
-            "blocking-active-patterns",
-            "nonblocking-classifications",
-            "workflow-dispatch-good",
-            "workflow-dispatch-with-plugin-logic",
-            "final-current-implementation",
-        ])
-        self.assertEqual(guard_record["failure_classes"], ["active_path_guard_blocked", "xplat_008_cutover_refused"])
-        self.assertEqual(guard_record["active_path_guard_result"], "pass")
-        self.assertEqual(guard_record["bash_reference_retirement"], "not_applicable")
-        self.assertIn("promoted_at", guard_record)
-        required = set(promotion_schema["required"])
-        allowed = set(promotion_schema["properties"])
-        for record in records:
-            self.assertLessEqual(required, set(record), record["gate_id"])
-            self.assertFalse(set(record) - allowed, record["gate_id"])
-            self.assertEqual(record["schema_version"], "1.0")
-            self.assertTrue(record["rollback"])
-
-    def test_contract_schemas_parse_as_json_objects(self) -> None:
-        schema_paths = sorted(CONTRACT_DIR.glob("*.json"))
-        self.assertEqual(len(schema_paths), 7)
-        for schema_path in schema_paths:
-            with self.subTest(schema=schema_path.name):
-                parsed = json.loads(schema_path.read_text(encoding="utf-8"))
-                self.assertIsInstance(parsed, dict)
-                self.assertEqual(parsed["$schema"], "https://json-schema.org/draft/2020-12/schema")
-                self.assertEqual(parsed["type"], "object")
-                if schema_path.name == "migrated-gate-request.schema.json":
-                    operations = set(parsed["properties"]["operation"]["enum"])
-                    self.assertLessEqual(
-                        {
-                            "detect-changed-plugin",
-                            "aggregate-suite-results",
-                            "validate-pr-title",
-                            "validate-workflow-contract",
-                            "check-payload-evidence",
-                            "parse-release-pr-payload-sync",
-                            "check-post-release-drift",
-                        },
-                        operations,
-                    )
-
 
 if __name__ == "__main__":
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(GateFoundationTests)

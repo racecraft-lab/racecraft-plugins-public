@@ -1,6 +1,5 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://racecraft.local/speckit-pro/stack-manager-decision.schema.json",
   "title": "Stack Manager Decision",
   "type": "object",
   "additionalProperties": false,

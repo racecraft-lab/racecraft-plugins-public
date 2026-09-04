@@ -1,22 +1,5 @@
 #!/usr/bin/env python3
-"""Layer-1 pointer-coverage check (port of validate-capability-pointer.sh, FR-003).
-
-XPLAT-010 count-parity port (T019, US2). Python 3.11+ standard library only.
-Every former ``_pass``/``_fail`` execution maps to one counted ``subTest`` unit;
-bash check names are reproduced verbatim via ``subTest(msg=...)`` for a 1:1
-inventory match against the committed baseline.
-
-Environment-path normalization: the bash predecessor interpolates the *absolute*
-agents-directory path into the ``agents directory exists (...)`` check name. That
-absolute repo-root prefix is environment noise (it differs per checkout — CI
-checks out under a different absolute root), never part of the check identity, and
-would violate the privacy hard constraint if committed. The port emits — and the committed
-baseline records — the repo-relative directory (``speckit-pro/agents``). Count and
-check identity are preserved; only the environment-specific prefix is normalized.
-
-Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-capability-pointer-baseline.txt``
-(TOTAL: 52).
-"""
+"""Validate agent capability pointers."""
 
 from __future__ import annotations
 

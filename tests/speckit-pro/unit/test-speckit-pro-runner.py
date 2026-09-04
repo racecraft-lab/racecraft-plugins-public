@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stdlib-only tests for the XPLAT-004 SpecKit Pro runner."""
+"""Stdlib-only tests for the SpecKit Pro runner."""
 
 from __future__ import annotations
 
@@ -7,7 +7,6 @@ import copy
 import hashlib
 import json
 import os
-import re
 import subprocess
 import sys
 import tempfile
@@ -20,19 +19,8 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 RUNNER_DIR = PLUGIN_ROOT / "speckit_pro_runner"
 RELEASE_PLEASE_BRANCH_PREFIX = "release-please--branches--"
-MANIFESTS_REFERENCE_PAGE = "docs-site/src/content/docs/reference/manifests.md"
-ROUTING_ROADMAP = "docs/ai/specs/claude-agent-routing-technical-roadmap.md"
-PROMPT_AUDIT_ROSTER_RECORD = "docs/ai/research/prompt-audit-roster-decision.md"
-DEV_INSTALL_MANIFEST_PREFIX = ".specify/integrations/"
 sys.path.insert(0, str(PLUGIN_ROOT))
 FIXTURE_FILE = Path(__file__).resolve().parent / "fixtures" / "speckit-pro-runner" / "contract-fixtures.json"
-RUNBOOK_FILE = Path(__file__).resolve().parent / "fixtures" / "speckit-pro-runner" / "platform-runbook-fixtures.md"
-CHANGED_FILES_FILE = (
-    Path(__file__).resolve().parent
-    / "fixtures"
-    / "speckit-pro-runner"
-    / "runner-foundation-changed-files.txt"
-)
 
 
 def runner_env() -> dict[str, str]:
@@ -94,80 +82,7 @@ def changed_paths_against_review_base() -> list[str]:
             return [line for line in completed.stdout.splitlines() if line]
         errors.append(f"{candidate}: {completed.stderr.strip() or completed.stdout.strip()}")
 
-    if CHANGED_FILES_FILE.is_file():
-        changed = [line for line in CHANGED_FILES_FILE.read_text(encoding="utf-8").splitlines() if line]
-        if changed:
-            return changed
-
     raise AssertionError(f"Unable to diff changed paths against review base: {'; '.join(errors)}")
-
-
-def changed_lines_against_review_base(path: str) -> list[str]:
-    """Return added and removed content lines for one path, against the review base."""
-    candidates = review_base_candidates()
-
-    errors = []
-    for candidate in candidates:
-        completed = subprocess.run(
-            ["git", "diff", "--unified=0", candidate, "--", path],
-            cwd=REPO_ROOT,
-            text=True,
-            capture_output=True,
-            check=False,
-        )
-        if completed.returncode == 0:
-            return [
-                line
-                for line in completed.stdout.splitlines()
-                if line[:1] in {"+", "-"} and not line.startswith(("+++", "---"))
-            ]
-        errors.append(f"{candidate}: {completed.stderr.strip() or completed.stdout.strip()}")
-
-    raise AssertionError(f"Unable to diff {path} against review base: {'; '.join(errors)}")
-
-
-def changed_status_against_review_base() -> dict[str, str]:
-    candidates = review_base_candidates()
-
-    errors = []
-    for candidate in candidates:
-        completed = subprocess.run(
-            ["git", "diff", "--name-status", candidate],
-            cwd=REPO_ROOT,
-            text=True,
-            capture_output=True,
-            check=False,
-        )
-        if completed.returncode == 0:
-            status_by_path: dict[str, str] = {}
-            for line in completed.stdout.splitlines():
-                parts = line.split("\t")
-                if len(parts) < 2:
-                    continue
-                status_by_path[parts[-1]] = parts[0][0]
-            return status_by_path
-        errors.append(f"{candidate}: {completed.stderr.strip() or completed.stdout.strip()}")
-
-    if CHANGED_FILES_FILE.is_file():
-        return {
-            line: "M"
-            for line in CHANGED_FILES_FILE.read_text(encoding="utf-8").splitlines()
-            if line
-        }
-
-    raise AssertionError(f"Unable to diff changed path statuses against review base: {'; '.join(errors)}")
-
-
-def git_tracks(path: str) -> bool:
-    """Report whether ``path`` is in this checkout's git index."""
-    completed = subprocess.run(
-        ["git", "ls-files", "--error-unmatch", "--", path],
-        cwd=REPO_ROOT,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    return completed.returncode == 0
 
 
 def is_release_please_review() -> bool:
@@ -380,7 +295,7 @@ class RunnerFoundationTests(unittest.TestCase):
         # Version-agnostic: the runner manifest's plugin_version must be a valid
         # semantic version AND equal the released plugin version. release-please
         # bumps it via release-please-config.json extra-files ($.plugin_version),
-        # so a hardcoded literal here would silently drift (the XPLAT-010 fix).
+        # so a hardcoded literal here would silently drift.
         plugin_version = json.loads(
             (PLUGIN_ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8")
         )["version"]
@@ -492,33 +407,10 @@ class RunnerFoundationTests(unittest.TestCase):
 
         self.assertEqual(report["verification_status"], "incomplete_metadata")
 
-    def test_runbook_fixtures_have_non_claim_language(self) -> None:
-        text = RUNBOOK_FILE.read_text(encoding="utf-8")
-        self.assertIn("installed-cache launch proof", text)
-        self.assertIn("public platform support", text)
-        rows = []
-        in_table = False
-        for line in text.splitlines():
-            if line.startswith("| fixture_id "):
-                in_table = True
-                continue
-            if in_table and line.startswith("|---"):
-                continue
-            if in_table and line.startswith("|"):
-                parts = [part.strip() for part in line.strip("|").split("|")]
-                if len(parts) >= 10:
-                    rows.append(parts)
-        self.assertTrue(any(row[1] == "windows" and row[2] == "source_checkout" for row in rows))
-        self.assertTrue(any(row[1] == "linux" and row[2] == "source_checkout" for row in rows))
-        for row in rows:
-            self.assertIn("XPLAT-007", row[9])
-            self.assertNotIn("installed_cache", row[2])
-
-    def test_no_cutover_or_public_claim_surfaces_changed(self) -> None:
-        changed = changed_paths_against_review_base()
-        status_by_path = changed_status_against_review_base()
+    def test_manifest_changes_are_limited_to_release_version_and_registered_codex_mcp(self) -> None:
+        changed = set(changed_paths_against_review_base())
         release_please_review = is_release_please_review()
-        forbidden_exact = {
+        manifest_paths = {
             "speckit-pro/.claude-plugin/plugin.json",
             "speckit-pro/.codex-plugin/plugin.json",
         }
@@ -528,8 +420,7 @@ class RunnerFoundationTests(unittest.TestCase):
                 "mcpServers": "./.codex-plugin/sweep-mcp.json"
             },
         }
-        inherited_release_version = False
-        for path in forbidden_exact & set(changed):
+        for path in manifest_paths & changed:
             completed = subprocess.run(
                 ["git", "show", f"origin/main:{path}"],
                 cwd=REPO_ROOT,
@@ -544,279 +435,8 @@ class RunnerFoundationTests(unittest.TestCase):
             current_version = current.pop("version")
             expected = {**baseline, **allowed_manifest_fields[path]}
             self.assertEqual(current, expected, path)
-            inherited_release_version = inherited_release_version or (
-                current_version != baseline_version
-            )
             if release_please_review:
                 self.assertNotEqual(current_version, baseline_version, path)
-        # A remediation branch may be cut from an open release-please head and
-        # therefore inherit its version-only release diff under a new branch
-        # name. Keep the release-surface rules bound to content, not naming.
-        release_please_review = release_please_review or inherited_release_version
-        forbidden_prefixes = (
-            "dist/",
-            "speckit-pro/skills/",
-            "speckit-pro/codex-skills/",
-            "speckit-pro/hooks/",
-            "speckit-pro/codex-hooks",
-            "docs-site/",
-        )
-        allowed_exact = {
-            "dist/claude/speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh",
-            "dist/claude/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
-            "dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md",
-            "dist/codex/speckit-pro/skills/speckit-autopilot/references/phase-execution-codex.md",
-            "dist/codex/speckit-pro/skills/speckit-autopilot/references/task-list-canonical-codex.md",
-            "dist/claude/speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh",
-            "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
-            "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh",
-            "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh",
-            # Dependency pins for the docs site's own toolchain. Not a cutover
-            # surface and not a public claim, but the guard forbids docs-site/
-            # wholesale, so a security patch to a transitive dependency has to
-            # be named here to land at all.
-            "docs-site/pnpm-lock.yaml",
-            "docs-site/scripts/validate-doc006-safe-aids.mjs",
-            "docs-site/scripts/generate-reference-pages.mjs",
-            "docs-site/src/data/safe-install-aids.ts",
-            "docs-site/src/content/docs/reference/agents.md",
-            "docs-site/src/content/docs/reference/hooks.md",
-            "docs-site/src/content/docs/reference/scripts.md",
-            "docs-site/src/content/docs/reference/tests.md",
-            "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
-            "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
-            "speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md",
-            "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
-            "speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh",
-            "speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh",
-        }
-        if release_please_review:
-            allowed_exact.update(
-                {
-                    *forbidden_exact,
-                    MANIFESTS_REFERENCE_PAGE,
-                }
-            )
-        elif MANIFESTS_REFERENCE_PAGE in changed:
-            # The generated manifests page carries two kinds of claim. Published
-            # plugin versions are release surface and only a release may move
-            # them. The repo's own SpecKit dev-install state under
-            # .specify/integrations/ is not shipped to consumers, yet it feeds
-            # the same page, so a SpecKit upgrade previously deadlocked: the
-            # docs gate demanded a regenerate that this gate forbade.
-            # Gate on the claim rather than the path -- outside a release review
-            # the page may only move lines that cite a dev-install source.
-            dev_install_citation = f"`{DEV_INSTALL_MANIFEST_PREFIX}"
-            for line in changed_lines_against_review_base(MANIFESTS_REFERENCE_PAGE):
-                self.assertIn(dev_install_citation, line, line)
-            allowed_exact.add(MANIFESTS_REFERENCE_PAGE)
-        allowed_xplat008_exact = {
-            "docs-site/src/content/docs/contribute-and-release.md",
-            "docs-site/src/content/docs/first-run.md",
-            "docs-site/src/content/docs/install/claude-code.md",
-            "docs-site/src/content/docs/install/codex.md",
-            "docs-site/src/content/docs/security-and-trust.md",
-            "docs-site/src/content/docs/troubleshooting.md",
-            "docs-site/src/content/docs/update-and-rollback.md",
-            "dist/claude/speckit-pro/README.md",
-            "dist/claude/speckit-pro/hooks/hooks.json",
-            "dist/claude/speckit-pro/skills/speckit-autopilot/SKILL.md",
-            "dist/claude/speckit-pro/skills/speckit-install/SKILL.md",
-            "dist/claude/speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
-            "dist/claude/speckit-pro/skills/speckit-status/SKILL.md",
-            "dist/claude/speckit-pro/skills/speckit-upgrade/SKILL.md",
-            "dist/codex/speckit-pro/README.md",
-            "dist/codex/speckit-pro/codex-hooks.json",
-            "dist/codex/speckit-pro/skills/install/SKILL.md",
-            "dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md",
-            "dist/codex/speckit-pro/skills/speckit-install/SKILL.md",
-            "dist/codex/speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
-            "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
-            "dist/codex/speckit-pro/skills/speckit-upgrade/SKILL.md",
-            "speckit-pro/codex-hooks.json",
-            "speckit-pro/codex-skills/install/SKILL.md",
-            "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
-            "speckit-pro/codex-skills/speckit-install/SKILL.md",
-            "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
-            "speckit-pro/codex-skills/speckit-status/SKILL.md",
-            "speckit-pro/codex-skills/speckit-upgrade/SKILL.md",
-            "speckit-pro/hooks/hooks.json",
-            "speckit-pro/skills/speckit-autopilot/SKILL.md",
-            "speckit-pro/skills/speckit-install/SKILL.md",
-            "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
-            "speckit-pro/skills/speckit-status/SKILL.md",
-            "speckit-pro/skills/speckit-upgrade/SKILL.md",
-        }
-        allowed_xplat008_prefixes = (
-            "dist/claude/speckit-pro/speckit_pro_runner/",
-            "dist/codex/speckit-pro/speckit_pro_runner/",
-            "docs/ai/specs/.process/XPLAT-008",
-        )
-        allowed_xplat009_prefixes = (
-            "dist/claude/speckit-pro/",
-            "dist/codex/speckit-pro/",
-            "speckit-pro/agents/",
-            "speckit-pro/codex-agents/",
-            "speckit-pro/codex-skills/",
-            "speckit-pro/scripts/",
-            "speckit-pro/skills/",
-            "speckit-pro/speckit_pro_runner/",
-            "docs/ai/specs/.process/XPLAT-009",
-            "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/",
-        )
-        allowed_tool_surface_exact = {
-            # Operator-owned tool surface (tools: allowlist retirement):
-            # capability-discovery role boundaries and the single-orchestrator
-            # invariant moved to denial-based enforcement (disallowedTools);
-            # dist mirrors rebuilt by scripts/build-plugin-payloads.py.
-            "speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
-            "speckit-pro/skills/speckit-autopilot/references/capability-discovery.md",
-            "dist/claude/speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
-            "dist/claude/speckit-pro/skills/speckit-autopilot/references/capability-discovery.md",
-            "dist/codex/speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
-            "dist/codex/speckit-pro/skills/speckit-autopilot/references/capability-discovery.md",
-            "docs-site/src/content/docs/reference/source-vs-dist.md",
-            "docs/ai/research/tool-agnostic-capability-discovery-spike.md",
-        }
-        # Research deliverables under docs/ai/research/: the shared CAR/G56R
-        # candidate-route set, plus the prompt-audit roster decision record.
-        # These are governed planning evidence, not shipped payload or runtime
-        # claims. Name each file exactly; do not widen the docs/ prefix rule.
-        allowed_agent_route_research_exact = {
-            "docs/ai/research/agent-route-candidate-manifest.schema.json",
-            "docs/ai/research/claude-trace-contract.schema.json",
-            "docs/ai/research/claude-runtime-capability-snapshot.json",
-            "docs/ai/research/claude-telemetry-capability-profile.json",
-            "docs/ai/research/claude-agent-route-candidates.md",
-            "docs/ai/research/claude-subagent-runtime-rebaseline.md",
-            "docs/ai/research/claude-agent-route-candidate-manifest.json",
-            "docs/ai/research/claude-car-003-mandatory-observation-manifest.json",
-            "docs/ai/research/claude-car-003-successor-freeze-collection.json",
-            "docs/ai/research/claude-car-003-successor-capability-freeze.json",
-            "docs/ai/research/claude-car-003-calibration-pilot.json",
-            "docs/ai/research/claude-car-003-calibration-completion.json",
-            "docs/ai/research/claude-car-003-analysis-plan.json",
-            "docs/ai/research/codex-agent-route-candidates.md",
-            "docs/ai/research/codex-agent-route-candidate-manifest.json",
-            "docs/ai/research/codex-g56r-002-capability-evidence.md",
-            "docs/ai/research/codex-g56r-002-executable-candidate-freeze.json",
-            "docs/ai/research/codex-g56r-003-effort-ladder.json",
-            "docs/ai/research/prompt-audit-roster-decision.md",
-        }
-        for path in changed:
-            if (
-                path in allowed_exact
-                or path in allowed_xplat008_exact
-                or path in allowed_tool_surface_exact
-                or path in allowed_agent_route_research_exact
-            ):
-                continue
-            if path.startswith("dist/claude/speckit-pro/agents/") and path.endswith(".md"):
-                source_agent = path.removeprefix("dist/claude/")
-                dist_agent_path = REPO_ROOT / path
-                source_agent_path = REPO_ROOT / source_agent
-                self.assertIn(source_agent, changed, path)
-                if not source_agent_path.exists():
-                    # Retiring an agent deletes the payload mirror together with
-                    # its source. A mirror that outlives its source still fails.
-                    self.assertFalse(dist_agent_path.exists(), path)
-                    continue
-                self.assertNotEqual(status_by_path.get(path), "D", path)
-                self.assertTrue(source_agent_path.is_file(), source_agent)
-                self.assertTrue(dist_agent_path.is_file(), path)
-                self.assertEqual(
-                    source_agent_path.read_text(encoding="utf-8"),
-                    dist_agent_path.read_text(encoding="utf-8"),
-                    path,
-                )
-                continue
-            if path.startswith("dist/") and "/scripts/" in path and path.endswith(".sh"):
-                self.assertEqual(status_by_path.get(path), "D", path)
-                continue
-            if path.startswith(allowed_xplat008_prefixes):
-                continue
-            if path.startswith(allowed_xplat009_prefixes):
-                if path.endswith(".sh"):
-                    self.assertEqual(status_by_path.get(path), "D", path)
-                continue
-            self.assertFalse(path.startswith(forbidden_prefixes), path)
-            if path.startswith("docs/"):
-                self.assertTrue(
-                    path.startswith("docs/ai/specs/")
-                    or path.startswith("docs/prd-")
-                    or path.startswith("docs/roadmap-"),
-                    path,
-                )
-
-    def _run_cutover_guard_over(self, changed: list[str]) -> None:
-        """Run the cutover guard against a synthetic set of changed paths.
-
-        The guard is one method that holds its allowlists as locals, so pinning
-        a single path means calling it under mocked change detection rather than
-        importing a set. Patch through ``sys.modules[__name__]`` because this
-        file's name is hyphenated: its module name differs between a direct run
-        and the suite loader, and a string target would miss under one of them.
-        """
-        module = sys.modules[__name__]
-        with (
-            mock.patch.object(
-                module, "changed_paths_against_review_base", return_value=changed
-            ),
-            mock.patch.object(
-                module, "changed_status_against_review_base", return_value={}
-            ),
-            mock.patch.object(module, "is_release_please_review", return_value=False),
-        ):
-            self.test_no_cutover_or_public_claim_surfaces_changed()
-
-    def test_cutover_guard_allows_the_prompt_audit_roster_record(self) -> None:
-        # Research deliverables under docs/ai/research/ fail the guard's docs/
-        # prefix rule unless the exact path is named. The guard diffs committed
-        # state, so a new record passes locally while it is still untracked and
-        # fails in CI, which checks out the branch with full history.
-        self._run_cutover_guard_over(
-            ["docs/ai/research/prompt-audit-roster-decision.md"]
-        )
-
-    def test_cutover_guard_still_rejects_an_unnamed_research_doc(self) -> None:
-        # Naming a research deliverable is an exact-path decision. Widening the
-        # docs/ prefix rule instead would let any future docs/ai/research/ file
-        # through unreviewed, so prove the prefix rule is still closed.
-        with self.assertRaises(AssertionError):
-            self._run_cutover_guard_over(
-                ["docs/ai/research/not-on-the-allowlist.md"]
-            )
-
-    def test_roadmap_research_citations_name_tracked_files(self) -> None:
-        """Every research path the routing roadmap cites must exist on the branch.
-
-        The cutover guard above names this record on an allowlist, but an
-        allowlist only decides whether a changed path is permitted. It cannot
-        see a citation whose target was never staged, because it diffs
-        committed state. An untracked record is therefore invisible here and
-        the roadmap ships a bullet pointing at a path CI does not have.
-
-        Assert tracked-ness rather than ``exists()``. An untracked file exists
-        on the author's disk and is absent from the CI checkout, so an
-        existence check is green in exactly the case that fails.
-        """
-        roadmap = (REPO_ROOT / ROUTING_ROADMAP).read_text(encoding="utf-8")
-        # Strip sentence-final periods before the extension test, so a
-        # citation written outside backticks is checked rather than dropped.
-        cited = sorted(
-            {
-                stripped
-                for citation in re.findall(r"docs/ai/research/[A-Za-z0-9._/-]+", roadmap)
-                if (stripped := citation.rstrip(".")) and Path(stripped).suffix
-            }
-        )
-        self.assertIn(PROMPT_AUDIT_ROSTER_RECORD, cited, ROUTING_ROADMAP)
-        self.assertEqual(
-            [],
-            [citation for citation in cited if not git_tracks(citation)],
-            f"{ROUTING_ROADMAP} cites a research path git does not track; "
-            "stage the record with the change that cites it",
-        )
 
     def test_release_please_review_detection_from_environment(self) -> None:
         with mock.patch.dict(

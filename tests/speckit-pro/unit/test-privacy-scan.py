@@ -18,20 +18,17 @@ SHARED_LIB = TESTS_ROOT / "lib"
 if str(SHARED_LIB) not in sys.path:
     sys.path.insert(0, str(SHARED_LIB))
 
-from capture_baseline import baseline_inventory  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
-BASELINE = TESTS_ROOT / "parity" / "bash-to-python" / "test-privacy-scan-baseline.txt"
 SCHEMA_PATH = REPO_ROOT / "docs-site" / "src" / "lib" / "schema.ts"
 TOOLING_SOURCE_PATHS = (
     Path("tests/speckit-pro/unit/test-privacy-scan.py"),
     Path("tests/speckit-pro/layer7-integration/scrub-transcript.py"),
 )
-DOC014_PUBLIC_IDENTITY_PATHS = {
+PUBLIC_IDENTITY_PATHS = {
     Path("docs-site/src/lib/schema.ts"),
     Path("docs-site/tests/seo-schema-org.spec.mjs"),
-    Path("docs/ai/specs/.process/DOC-014-workflow.md"),
 }
 
 EMAIL_PATTERN = re.compile(r"[A-Za-z0-9_.%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}", re.IGNORECASE)
@@ -220,7 +217,7 @@ def dynamic_local_pattern() -> re.Pattern[str] | None:
     return re.compile("|".join(re.escape(term) for term in terms), re.IGNORECASE)
 
 
-def doc014_public_identity_literals() -> tuple[str, ...]:
+def public_identity_literals() -> tuple[str, ...]:
     try:
         source = SCHEMA_PATH.read_text(encoding="utf-8")
     except OSError:
@@ -241,16 +238,16 @@ def doc014_public_identity_literals() -> tuple[str, ...]:
 
 
 def dynamic_local_hits(pattern: re.Pattern[str], paths: Iterable[Path]) -> list[str]:
-    allowed_literals = doc014_public_identity_literals()
+    allowed_literals = public_identity_literals()
     hits: list[str] = []
     for relative_path in paths:
         for line_number, line in read_lines(relative_path):
             if pattern.search(line) is None:
                 continue
             sanitized = line
-            if relative_path in DOC014_PUBLIC_IDENTITY_PATHS:
+            if relative_path in PUBLIC_IDENTITY_PATHS:
                 for literal in allowed_literals:
-                    sanitized = sanitized.replace(literal, "<DOC014_PUBLIC_IDENTITY>")
+                    sanitized = sanitized.replace(literal, "<PUBLIC_IDENTITY>")
                 if pattern.search(sanitized) is None:
                     continue
             hits.append(f"./{relative_path.as_posix()}:{line_number}:{line}")
@@ -272,7 +269,6 @@ def assert_no_hits(test: unittest.TestCase, hits: list[str], label: str) -> None
 
 class PrivacyScanTests(unittest.TestCase):
     def test_privacy_scan_contract(self) -> None:
-        self.assertEqual(baseline_inventory(BASELINE), CURRENT_INVENTORY)
         paths = current_tree_files()
         local_pattern = dynamic_local_pattern()
 

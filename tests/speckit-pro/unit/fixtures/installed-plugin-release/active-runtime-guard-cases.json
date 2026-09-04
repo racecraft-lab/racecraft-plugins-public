@@ -1,6 +1,6 @@
 {
-  "schema_version": "1.0",
-  "feature_id": "XPLAT-008",
+  "schema_version": "2.0",
+  "contract_id": "installed-plugin-release",
   "coverage": [
     "active installed-runtime skills block prohibited shell behavior",
     "active hooks block jq and shell parsing",
@@ -40,7 +40,7 @@
       "case_id": "allowed-runtime-exceptions",
       "files": [
         {
-          "path": ".specify/memory/archive-reports/2026-07-04-xplat-006.md",
+          "path": ".specify/memory/archive-reports/2026-06-29-completed-active-specs-post-merge-hygiene.md",
           "content": "Historical command: bash tests/speckit-pro/run-all.sh"
         },
         {

@@ -1,23 +1,5 @@
 #!/usr/bin/env python3
-"""Release workflow structural validation (port of validate-release-workflow.sh).
-
-XPLAT-010 count-parity port (T034, US2). Python 3.11+ standard library only.
-Verifies ``.github/workflows/release.yml`` keeps release-please on the PR-backed
-payload/marketplace sync path, dispatches PR Checks for release PR branches, and
-does not bypass required checks or push generated changes directly to ``main``.
-Every former ``assert_*``/``_pass``/``_fail`` execution maps to one counted
-``subTest`` unit; names are reproduced verbatim via ``subTest(msg=...)`` for a
-1:1 baseline match.
-
-YAML syntax: the shell predecessor used optional non-stdlib YAML parsers
-(``python -c import yaml`` or Ruby). This port is intentionally stdlib-only per
-XPLAT-010, so it applies a conservative GitHub-workflow YAML sanity check that
-guards indentation, mapping/sequence structure, and block-scalar boundaries
-without adding PyYAML/Ruby as runtime dependencies.
-
-Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-release-workflow-baseline.txt``
-(TOTAL: 41).
-"""
+"""Validate the release workflow."""
 
 from __future__ import annotations
 
@@ -64,13 +46,10 @@ RELEASE_NOTE_EVENTS = (
 RELEASE_PR_FOUND_CONDITION = "steps.release_prs.outputs.found == 'true'"
 RELEASE_CREATED_CONDITION = "steps.release.outputs['speckit-pro--release_created'] == 'true'"
 RUNNER_REQUEST_PREFIX = "python3 scripts/run-runner-requests.py"
-RELEASE_READINESS_REQUEST = (
-    "tests/speckit-pro/unit/fixtures/runner-gates/requests/release-readiness.json"
-)
 TEST_PAYLOAD_EVIDENCE_REQUEST = (
     "tests/speckit-pro/unit/fixtures/runner-gates/requests/test-payload-evidence.json"
 )
-XPLAT_008_RELEASE_REQUESTS = (
+INSTALLED_PLUGIN_RELEASE_REQUESTS = (
     "tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/runner-invocation.json",
     "tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/active-runtime-guard.json",
     "tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/payload-completeness.json",
@@ -302,7 +281,7 @@ class ValidateReleaseWorkflow(unittest.TestCase):
                 _contains_all(
                     content,
                     (
-                        "Validate release PR readiness",
+                        "Validate installed-plugin release gates",
                         "steps.release_prs.outputs.found == 'true'",
                         'RELEASE_PRS: ${{ steps.release_prs.outputs.prs }}',
                         "scripts/run-runner-requests.py",
@@ -326,14 +305,9 @@ class ValidateReleaseWorkflow(unittest.TestCase):
             )
             runner_steps = (
                 (
-                    "Validate release PR readiness",
+                    "Validate installed-plugin release gates",
                     RELEASE_PR_FOUND_CONDITION,
-                    (RELEASE_READINESS_REQUEST,),
-                ),
-                (
-                    "Validate XPLAT-008 release gates",
-                    RELEASE_PR_FOUND_CONDITION,
-                    XPLAT_008_RELEASE_REQUESTS,
+                    INSTALLED_PLUGIN_RELEASE_REQUESTS,
                 ),
                 (
                     "Verify generated test payload evidence",
@@ -341,14 +315,9 @@ class ValidateReleaseWorkflow(unittest.TestCase):
                     (TEST_PAYLOAD_EVIDENCE_REQUEST,),
                 ),
                 (
-                    "Validate post-release readiness",
+                    "Validate post-release installed-plugin gates",
                     RELEASE_CREATED_CONDITION,
-                    (RELEASE_READINESS_REQUEST,),
-                ),
-                (
-                    "Validate post-release XPLAT-008 gates",
-                    RELEASE_CREATED_CONDITION,
-                    XPLAT_008_RELEASE_REQUESTS,
+                    INSTALLED_PLUGIN_RELEASE_REQUESTS,
                 ),
             )
             expected_runner_commands: list[str] = []
@@ -369,8 +338,7 @@ class ValidateReleaseWorkflow(unittest.TestCase):
             ordered_pre_release_steps = (
                 "Set up Node",
                 "Sync generated artifacts onto the release PR",
-                "Validate release PR readiness",
-                "Validate XPLAT-008 release gates",
+                "Validate installed-plugin release gates",
                 "Dispatch PR Checks for release PRs",
             )
             step_positions = [

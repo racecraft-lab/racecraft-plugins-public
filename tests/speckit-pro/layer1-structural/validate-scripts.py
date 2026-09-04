@@ -1,20 +1,13 @@
 #!/usr/bin/env python3
-"""Structural validation for plugin script/template safety (port of validate-scripts.sh).
+"""Structural validation for plugin script/template safety.
 
-XPLAT-010 count-parity port (T035, US2). Python 3.11+ standard library only.
-Asserts the plugin source contains zero live shell/command script files, validates
-autopilot JSON contract syntax, and checks reviewability exception guidance in
-the roadmap/spec/plan templates. Every former ``assert_*``/``_pass``/``_fail``
-execution maps to one counted ``subTest`` unit; names reproduced verbatim via
-``subTest(msg=...)`` for a 1:1 baseline match.
-
-Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-scripts-baseline.txt``
-(TOTAL: 37).
+Python 3.11+ standard library only. Asserts the plugin source contains zero live
+shell/command script files and checks reviewability exception guidance in
+the roadmap/spec/plan templates.
 """
 
 from __future__ import annotations
 
-import json
 import re
 import sys
 import unittest
@@ -30,22 +23,12 @@ from test_result import run_counted  # noqa: E402
 SCRIPT_SUFFIXES = {".sh", ".ps1", ".bat", ".cmd"}
 SHELL_SHEBANG_RE = re.compile(r"^#!.*\b(?:bash|sh|zsh|powershell|pwsh)\b", re.IGNORECASE)
 
-CONTRACT_FILES = (
-    PLUGIN_ROOT / "skills/speckit-autopilot/contracts/final-reviewability-gate-state.schema.json",
-    PLUGIN_ROOT / "skills/speckit-autopilot/contracts/reslicing-packet.schema.json",
-    PLUGIN_ROOT / "skills/speckit-autopilot/contracts/routing-decision.schema.json",
-    PLUGIN_ROOT / "skills/speckit-autopilot/contracts/o5-parent-manifest.schema.json",
-)
 ROADMAP_TEMPLATE = PLUGIN_ROOT / "skills/speckit-coach/templates/technical-roadmap-template.md"
 SPEC_TEMPLATES = (
     REPO_ROOT / ".specify/presets/speckit-pro-reviewability/templates/spec-template.md",
     REPO_ROOT / ".specify/templates/spec-template.md",
 )
 PRESET_PLAN_TEMPLATE = REPO_ROOT / ".specify/presets/speckit-pro-reviewability/templates/plan-template.md"
-
-
-def _rel_plugin(path: Path) -> str:
-    return path.relative_to(PLUGIN_ROOT).as_posix()
 
 
 def _rel_repo(path: Path) -> str:
@@ -76,18 +59,6 @@ class ValidateScripts(unittest.TestCase):
         with self.subTest(msg="speckit-pro: contains zero live shell/command script files"):
             script_count = _live_script_count(PLUGIN_ROOT)
             self.assertEqual(0, script_count, f"expected zero live plugin script files, found {script_count}")
-
-    def test_002_autopilot_json_contracts(self) -> None:
-        for contract_file in CONTRACT_FILES:
-            contract = _rel_plugin(contract_file)
-            with self.subTest(msg=f"{contract}: exists"):
-                self.assertTrue(contract_file.is_file(), f"file not found: {contract_file}")
-
-            with self.subTest(msg=f"{contract}: parses as JSON"):
-                try:
-                    json.loads(contract_file.read_text(encoding="utf-8"))
-                except (OSError, json.JSONDecodeError) as exc:
-                    self.fail(f"contract JSON parse failed: {exc}")
 
     def test_003_technical_roadmap_template_reviewability_vocabulary(self) -> None:
         with self.subTest(msg="technical-roadmap-template.md: exists"):

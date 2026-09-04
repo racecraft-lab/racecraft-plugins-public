@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "request_id": "xplat-008-install-health-repair",
+  "request_id": "install-health-repair",
   "helper_id": "install-health-repair",
   "operation": "install-health-repair",
   "mode": "read_only",

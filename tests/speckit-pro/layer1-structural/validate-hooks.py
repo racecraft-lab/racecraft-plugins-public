@@ -1,16 +1,5 @@
 #!/usr/bin/env python3
-"""Structural validation for hooks/hooks.json (port of validate-hooks.sh).
-
-XPLAT-010 count-parity port (T027, US2). Python 3.11+ standard library only.
-Asserts the plugin keeps command expansion scoped while installing the exact
-feedback-sweep attestation and receipt-validation hooks required by its security
-boundary. Every former ``assert_*``/``_pass``/
-``_fail`` execution maps to one counted ``subTest`` unit; names reproduced
-verbatim via ``subTest(msg=...)`` for a 1:1 baseline match.
-
-Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-hooks-baseline.txt``
-(TOTAL: 11).
-"""
+"""Validate Claude hook configuration."""
 
 from __future__ import annotations
 

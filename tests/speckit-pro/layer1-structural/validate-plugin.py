@@ -1,16 +1,5 @@
 #!/usr/bin/env python3
-"""Structural validation for .claude-plugin/plugin.json (port of validate-plugin.sh).
-
-XPLAT-010 count-parity port (T031, US2). Python 3.11+ standard library only.
-Asserts the shipped Claude plugin manifest exists, is valid JSON, and carries the
-required identity fields (kebab-case ``name`` == ``speckit-pro``, semver
-``version``, non-empty ``description``, present ``author``). Every former
-``assert_*``/``_pass``/``_fail`` execution maps to one counted ``subTest`` unit;
-names reproduced verbatim via ``subTest(msg=...)`` for a 1:1 baseline match.
-
-Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-plugin-baseline.txt``
-(TOTAL: 8).
-"""
+"""Validate the Claude plugin manifest."""
 
 from __future__ import annotations
 

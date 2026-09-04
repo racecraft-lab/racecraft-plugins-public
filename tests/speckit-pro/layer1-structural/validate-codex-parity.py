@@ -1,25 +1,5 @@
 #!/usr/bin/env python3
-"""Cross-platform Claude Code <-> Codex parity checks (port of validate-codex-parity.sh).
-
-XPLAT-010 count-parity port (T024, US2). Python 3.11+ standard library only.
-Asserts version/marketplace parity, agent parity in both directions (honouring
-the CC-only and Codex-only exception lists), full CC<->Codex skill coverage,
-Codex skill metadata sidecars, and that every ``../../skills/**.md`` reference in
-a Codex ``SKILL.md`` resolves. Every former ``assert_*``/``_pass``/``_fail``
-execution maps to one counted ``subTest`` unit; names reproduced verbatim via
-``subTest(msg=...)`` for a 1:1 baseline match.
-
-Two check names interpolate live data the script reads at runtime — the shared
-plugin version and the marketplace name — so ``.claude-plugin/plugin.json`` and
-the two ``marketplace.json`` files are baseline regeneration triggers alongside
-the agent/skill directory inventories (count-parity contract §2, rule 4).
-
-Directory globs and the reference-path ``sort -u`` are reproduced with sorted
-inventories; the reference extraction mirrors the bash ``grep -oE`` per-line
-match. Baseline:
-``tests/speckit-pro/parity/bash-to-python/validate-codex-parity-baseline.txt``
-(TOTAL: 81).
-"""
+"""Validate equivalent Claude and Codex plugin surfaces."""
 
 from __future__ import annotations
 

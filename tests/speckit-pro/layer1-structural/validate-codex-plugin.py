@@ -1,16 +1,5 @@
 #!/usr/bin/env python3
-"""Structural validation for .codex-plugin/plugin.json (port of validate-codex-plugin.sh).
-
-XPLAT-010 count-parity port (T025, US2). Python 3.11+ standard library only.
-Asserts the Codex plugin manifest exists, is valid JSON, uses scaffold naming,
-declares the required interface/skills fields and required Codex skill
-directories, and that its version matches ``.claude-plugin/plugin.json``. Every
-former ``assert_*``/``_pass``/``_fail`` execution maps to one counted ``subTest``
-unit; names reproduced verbatim via ``subTest(msg=...)`` for a 1:1 baseline match.
-
-Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-codex-plugin-baseline.txt``
-(TOTAL: 33).
-"""
+"""Validate the Codex plugin manifest."""
 
 from __future__ import annotations
 

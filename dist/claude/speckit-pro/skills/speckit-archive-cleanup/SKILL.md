@@ -11,7 +11,7 @@ license: MIT
 
 ## Inputs
 
-Accept a SPEC-ID such as `DOC-007` or `PRSG-014`, an active spec directory, a
+Accept a SPEC-ID such as `SPEC-007` or `SPEC-014`, an active spec directory, a
 workflow file path, or a merged PR URL/number. If more than one is provided,
 cross-check that they all point to the same completed work.
 
@@ -122,8 +122,8 @@ archive is fully verified when generated files or structural checks are stale.
 
 For archive-only cleanup commits and PRs, use a lower-case Conventional Commit
 scope derived from the completed spec ID. For example, archive cleanup for
-`CAR-001` should use `docs(car-001): archive post-merge state`, not
-`docs(CAR-001): archive post-merge state`. The repository PR title gate checks
+`SPEC-001` should use `docs(spec-001): archive post-merge state`, not
+`docs(SPEC-001): archive post-merge state`. The repository PR title gate checks
 the final PR title, so apply the same lower-case scope to `gh pr create` or
 `gh pr edit --title`.
 

@@ -4,7 +4,7 @@
   "mode": "single",
   "target": {
     "base_branch": "main",
-    "head_branch": "prsg-012-reviewer-ready-pr-packet-contract"
+    "head_branch": "fixture-pr-packet"
   },
   "generated_title": {
     "value": "feat(speckit-pro): Malformed packet should fail parsing",

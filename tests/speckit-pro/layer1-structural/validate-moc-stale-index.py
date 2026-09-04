@@ -1,13 +1,5 @@
 #!/usr/bin/env python3
-"""Version-gated stale-index lint for MOC markers (port of validate-moc-stale-index.sh).
-
-XPLAT-010 count-parity port (T041, US2). Python 3.11+ standard library only.
-Every former ``set_test``/``_pass``/``_fail`` execution maps to one counted
-``subTest`` unit with the bash check name reproduced verbatim.
-
-Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-moc-stale-index-baseline.txt``
-(TOTAL: 11).
-"""
+"""Validate stale MOC index detection."""
 
 from __future__ import annotations
 

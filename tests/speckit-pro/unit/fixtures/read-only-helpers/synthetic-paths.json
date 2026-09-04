@@ -3,7 +3,7 @@
   "cases": [
     {
       "case_id": "windows-style-repo-relative",
-      "input": "specs\\xplat-005-read-only-helper-port\\spec.md",
+      "input": "specs\\spec-805-read-only-helper-port\\spec.md",
       "expected": "accepted"
     },
     {

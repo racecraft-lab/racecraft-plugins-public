@@ -4,17 +4,17 @@
   "mode": "single",
   "target": {
     "base_branch": "main",
-    "head_branch": "prsg-012-reviewer-ready-pr-packet-contract"
+    "head_branch": "fixture-pr-packet"
   },
-  "source_feature_dir": "specs/prsg-012-reviewer-ready-pr-packet-contract",
+  "source_feature_dir": "specs/fixture-pr-packet",
   "generated_title": {
-    "value": "feat(speckit-pro): ELI5 PRSG-012 TODO packet",
+    "value": "feat(speckit-pro): ELI5 FEATURE-001 TODO packet",
     "type": "feat",
     "scope": "speckit-pro",
-    "description": "ELI5 PRSG-012 TODO packet for ${FEATURE_TITLE}",
+    "description": "ELI5 FEATURE-001 TODO packet for ${FEATURE_TITLE}",
     "source_evidence": {
       "kind": "feature_spec",
-      "source": "specs/prsg-012-reviewer-ready-pr-packet-contract/spec.md",
+      "source": "specs/fixture-pr-packet/spec.md",
       "summary": "Example: derive the title from {{SOURCE_BOUNDARY}}."
     },
     "rejected_candidates": [
@@ -31,15 +31,15 @@
         "reason": "Banned labels must not be promoted into titles."
       },
       {
-        "value": "refs/heads/prsg-012-reviewer-ready-pr-packet-contract",
+        "value": "refs/heads/fixture-pr-packet",
         "reason": "Branch refs must not be promoted into title descriptions."
       },
       {
-        "value": "prsg-012-reviewer-ready-pr-packet-contract",
+        "value": "fixture-pr-packet",
         "reason": "Branch names must not be promoted into title descriptions."
       },
       {
-        "value": "PRSG-012 reviewer packet contract",
+        "value": "FEATURE-001 reviewer packet contract",
         "reason": "Spec identifiers must not be promoted into public title descriptions."
       },
       {
@@ -75,7 +75,7 @@
         "reason": "Unsupported conventional types must be rejected even when offered as override metadata."
       },
       {
-        "value": "feat(PRSG-012): Add reviewer-ready PR packets",
+        "value": "feat(FEATURE-001): Add reviewer-ready PR packets",
         "reason": "Spec-derived scopes must be rejected because overrides must use valid public scopes."
       }
     ]
@@ -120,7 +120,7 @@
     {
       "marker_id": "template-comment",
       "rendered_text": "<!-- TODO: add real source marker -->",
-      "source": "specs/prsg-012-reviewer-ready-pr-packet-contract/spec.md"
+      "source": "specs/fixture-pr-packet/spec.md"
     }
   ],
   "editable_fields": [
@@ -153,5 +153,5 @@
       "why_it_matters"
     ]
   },
-  "validation_result_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/pr-packets/invalid-title-token/validation.json"
+  "validation_result_path": "specs/fixture-pr-packet/.process/pr-packets/invalid-title-token/validation.json"
 }

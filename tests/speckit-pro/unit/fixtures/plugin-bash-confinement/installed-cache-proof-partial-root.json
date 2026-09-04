@@ -1,13 +1,13 @@
 {
-  "schema_version": "1.0",
-  "feature_id": "XPLAT-009",
+  "schema_version": "2.0",
+  "contract_id": "plugin-bash-confinement",
   "proofs": [
     {
       "product": "claude",
       "surface": "claude_payload_fixture",
       "installed_root": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner",
       "source_payload_root": "dist/claude/speckit-pro/speckit_pro_runner",
-      "source_payload_tree_hash": "fe194efc351937bc35d560bcecf4fa2803c9fe1f5b65f3a03c5ef7c5325c3d80",
+      "source_payload_tree_hash": "b2644c31eb3c400e3f028b926c44801c62543d8a3e5d73a8591a5a845ee57efe",
       "source_derived": true,
       "mutable_user_cache": false,
       "script_file_count": 0,
@@ -19,7 +19,7 @@
       "surface": "codex_payload_fixture",
       "installed_root": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner",
       "source_payload_root": "dist/codex/speckit-pro/speckit_pro_runner",
-      "source_payload_tree_hash": "fe194efc351937bc35d560bcecf4fa2803c9fe1f5b65f3a03c5ef7c5325c3d80",
+      "source_payload_tree_hash": "b2644c31eb3c400e3f028b926c44801c62543d8a3e5d73a8591a5a845ee57efe",
       "source_derived": true,
       "mutable_user_cache": false,
       "script_file_count": 0,

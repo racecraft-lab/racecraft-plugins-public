@@ -1,27 +1,9 @@
 #!/usr/bin/env python3
-"""Structural validation for scripts/curated-set.json (port of validate-curated-set.sh).
-
-XPLAT-010 count-parity port (T026, US2). Python 3.11+ standard library only.
-Asserts the curated-set manifest is valid JSON with the schema
-``install-curated-set`` depends on, that the required curated ids are present,
-and that every entry carries the required fields, a valid ``kind``, and an
-``owner/name``-shaped repo. Every former ``assert_*``/``_pass``/``_fail``
-execution maps to one counted ``subTest`` unit; names reproduced verbatim via
-``subTest(msg=...)`` for a 1:1 baseline match.
-
-The check names embed live ``scripts/curated-set.json`` entry ids and iterate the
-entries in file order, so this data file is a baseline regeneration trigger
-(count-parity contract §2, rule 4): adding/removing/reordering an entry changes
-the inventory and requires recapturing the baseline.
-
-Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-curated-set-baseline.txt``
-(TOTAL: 58).
-"""
+"""Validate the manual extension and preset recommendation catalog."""
 
 from __future__ import annotations
 
 import json
-import re
 import sys
 import unittest
 from pathlib import Path
@@ -35,9 +17,14 @@ from test_result import run_counted  # noqa: E402
 
 MANIFEST = PLUGIN_ROOT / "scripts" / "curated-set.json"
 
-REQUIRED_IDS = ("review", "verify", "verify-tasks", "cleanup", "retrospective", "claude-ask-questions")
-REQUIRED_FIELDS = ("id", "kind", "repo", "recommended_default", "description", "min_speckit_version")
-REPO_SHAPE_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
+EXPECTED_ENTRIES = {
+    "review": "extension",
+    "verify": "extension",
+    "verify-tasks": "extension",
+    "cleanup": "extension",
+    "retrospective": "extension",
+    "claude-ask-questions": "preset",
+}
 
 
 def _jq_field(value: object) -> str:
@@ -69,6 +56,14 @@ class ValidateCuratedSet(unittest.TestCase):
         except json.JSONDecodeError:
             data = {}
 
+        with self.subTest(msg="manifest contains only live catalog fields"):
+            self.assertEqual(set(data), {"version", "description", "entries"})
+
+        with self.subTest(msg="catalog describes manual recommendations"):
+            description = str(data.get("description", "")).lower()
+            self.assertIn("manual recommendation", description)
+            self.assertNotIn("auto-install", description)
+
         with self.subTest(msg="manifest has version field set to 1"):
             version_val = data.get("version", "") if isinstance(data, dict) else ""
             rendered = "" if version_val == "" or version_val is None else _jq_field(version_val)
@@ -79,28 +74,24 @@ class ValidateCuratedSet(unittest.TestCase):
         with self.subTest(msg="manifest has non-empty entries array"):
             self.assertGreater(len(entries_list), 0, "entries is empty")
 
-        for curated_id in REQUIRED_IDS:
-            with self.subTest(msg=f"entry '{curated_id}' is present"):
-                found = any(isinstance(e, dict) and e.get("id") == curated_id for e in entries_list)
-                self.assertTrue(found, f"missing id '{curated_id}'")
-
+        catalog: dict[str, object] = {}
         for entry in entries_list:
             entry_id_val = entry.get("id") if isinstance(entry, dict) else None
             entry_id = str(entry_id_val) if entry_id_val is not None else "null"
 
-            for field in REQUIRED_FIELDS:
-                with self.subTest(msg=f"entry '{entry_id}' has field '{field}'"):
-                    rendered = _jq_field(entry.get(field) if isinstance(entry, dict) else None)
-                    self.assertTrue(rendered != "MISSING" and len(rendered) > 0, f"missing or empty '{field}'")
+            with self.subTest(msg=f"entry '{entry_id}' contains only operator-consumed fields"):
+                self.assertEqual(set(entry) if isinstance(entry, dict) else set(), {"id", "kind"})
 
             with self.subTest(msg=f"entry '{entry_id}' has valid kind (extension or preset)"):
                 kind = entry.get("kind") if isinstance(entry, dict) else None
                 self.assertIn(kind, ("extension", "preset"), f"kind='{kind}' is not extension or preset")
 
-            with self.subTest(msg=f"entry '{entry_id}' has plausibly-shaped repo (owner/name)"):
-                repo = entry.get("repo") if isinstance(entry, dict) else None
-                repo_str = repo if isinstance(repo, str) else ""
-                self.assertRegex(repo_str, REPO_SHAPE_RE, f"repo='{repo_str}' is not owner/name shape")
+            with self.subTest(msg=f"entry '{entry_id}' is unique"):
+                self.assertNotIn(entry_id, catalog)
+            catalog[entry_id] = entry.get("kind") if isinstance(entry, dict) else None
+
+        with self.subTest(msg="catalog retains the supported recommendations and kinds"):
+            self.assertEqual(catalog, EXPECTED_ENTRIES)
 
 
 def build_suite() -> unittest.TestSuite:

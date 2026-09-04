@@ -43,7 +43,7 @@ class Reporter:
 
     def finish(self, label: str) -> int:
         print(f"{label}: {self.passed}/{self.total} passed")
-        return 0 if self.passed == self.total else 1
+        return 0 if self.total > 0 and self.passed == self.total else 1
 
 
 def parse_runner_args(argv: list[str]) -> tuple[str, str | None, bool]:

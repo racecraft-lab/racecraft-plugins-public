@@ -468,7 +468,6 @@ def plan_commands(entry: Any, request: Any) -> dict[str, Any]:
             details={"helper_id": entry.helper_id, "active_cutover": False},
             remediation_summary="Use dry_run for command planning; execute live PR operations outside the runner until cutover.",
             remediation_actions=["Switch to dry_run.", "Use the existing GitHub PR path for live PR work."],
-            deferred_to="XPLAT-007/XPLAT-008",
         )
         return response(
             "expected_failure",

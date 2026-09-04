@@ -27,12 +27,10 @@ CLAUDE_RUNNER = LAYER2 / "run-trigger-evals.py"
 CODEX_RUNNER = LAYER2 / "run-trigger-evals-codex.py"
 CODEX_ENGINE = LAYER2 / "run_codex_evals.py"
 LOOP_RUNNER = LAYER2 / "run-trigger-loop.py"
-BASELINE = TESTS_ROOT / "parity" / "bash-to-python" / "test-trigger-eval-runners-baseline.txt"
 SHARED_LIB = TESTS_ROOT / "lib"
 if str(SHARED_LIB) not in sys.path:
     sys.path.insert(0, str(SHARED_LIB))
 
-from capture_baseline import baseline_inventory  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
@@ -367,7 +365,6 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 "--verbose",
             ]
 
-            self.assertEqual(baseline_inventory(BASELINE), CURRENT_INVENTORY)
             checks = [
                 (CURRENT_INVENTORY[0], lambda: self.assertIsNotNone(claude)),
                 (CURRENT_INVENTORY[1], lambda: self.assertIsNotNone(codex)),

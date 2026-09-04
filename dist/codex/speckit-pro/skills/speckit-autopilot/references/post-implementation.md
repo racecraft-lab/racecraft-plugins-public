@@ -281,7 +281,7 @@ test count, pass/fail, regressions found.
 ## 3.2 PR Creation
 
 For specs whose atomicity route is `split-PR`, PR creation is multi-PR
-emission. The PRSG-008 `plan-layers` output is the authoritative source of
+emission. The `plan-layers` output is the authoritative source of
 review order and slice membership. The post-implementation phase MUST NOT infer, reroute, or re-slice
 work from changed files, reviewability warnings, or fallback heuristics.
 
@@ -298,7 +298,7 @@ opens one slice PR.
 3. Capture the full-suite evidence path under
    specs/<feature>/.process/emission/.
 4. Read the persisted layer plan from autopilot-state.json or the workflow
-   evidence. It must be the exact PRSG-008 plan-layers envelope with
+   evidence. It must be the exact `plan-layers` envelope with
    status=ok.
 5. Apply the final reviewability boundary using current committed evidence. If
    no current evidence exists, stop before `generate-pr-body`, any
@@ -315,7 +315,7 @@ opens one slice PR.
    `final_reviewability_gate.status=block` plus a `reslicing_required` packet.
    This is an internal continuation boundary, not a final operator handoff: read
    `autopilot_continuation`, `operator_steps`, and `resume.resume_from`, then
-   continue through PRSG-007/008/009 until a valid slice PR stack is emitted or a
+   continue through reviewability routing, layer planning, and split-PR emission until a valid slice PR stack is emitted or a
    typed exception is committed. Never end the run or report completion while
    `autopilot_continuation.required=true`; on gate error, stop with state only
    and no packet. Correctness stops include
@@ -462,7 +462,7 @@ If `gh` is not installed, push the branch and tell the user
 to create the missing slice PRs manually using the same explicit base/head/body
 shape.
 
-**Scoped CI boundary:** PRSG-009 scoped CI is recorded reviewer evidence in slice
+**Scoped CI boundary:** Scoped CI is recorded reviewer evidence in slice
 packets, PR bodies, `.process/prs.json`, workflow evidence, and
 `autopilot-state.json`. It MUST NOT modify `.github/workflows/pr-checks.yml`;
 the existing PR Checks workflow remains unchanged.

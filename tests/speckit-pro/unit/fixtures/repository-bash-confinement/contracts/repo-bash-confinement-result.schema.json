@@ -1,37 +1,60 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://racecraft.dev/speckit-pro/xplat-010/repo-bash-confinement-result.schema.json",
-  "title": "XPLAT-010 Repository Bash Confinement Guard Result",
-  "description": "data payload of the runner response for the new active-path-guard operation 'repo-bash-confinement'. Mirrors the XPLAT-009 zero-bash-guard result shape. status pass iff blocking_count == 0. Error envelopes fail closed with a nonzero blocking_count and not_inspected enumeration states. Allowlisted vendored entries are surfaced under release_readiness_excluded and excluded from the positive Bash-free evidence set (FR-004).",
+  "title": "Repository Bash confinement result",
+  "description": "Data payload for repository Bash-confinement results. Status passes only when no blocking finding remains; error envelopes fail closed with an uninspected enumeration state.",
   "type": "object",
-  "additionalProperties": true,
+  "additionalProperties": false,
   "required": [
+    "gate",
+    "artifacts",
     "schema_version",
-    "feature_id",
+    "contract_id",
     "status",
     "blocking_count",
     "classified_counts",
     "findings",
+    "total_finding_count",
+    "truncated_finding_count",
+    "script_file_count",
     "enumeration",
     "allowlist"
   ],
   "properties": {
-    "schema_version": { "const": "1.0" },
-    "feature_id": { "const": "XPLAT-010" },
-    "status": { "enum": ["pass", "fail"] },
-    "blocking_count": { "type": "integer", "minimum": 0 },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gate_id", "operation", "gate_status", "promoted", "blocking", "comparison_ids"],
+      "properties": {
+        "gate_id": {"const": "active-path-guard"},
+        "operation": {"const": "repo-bash-confinement"},
+        "gate_status": {"enum": ["pass", "fail"]},
+        "promoted": {"type": "boolean"},
+        "blocking": {"type": "boolean"},
+        "comparison_ids": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "kind"],
+        "properties": {"path": {"type": "string", "minLength": 1}, "kind": {"type": "string", "minLength": 1}}
+      }
+    },
+    "schema_version": {"const": "2.0"},
+    "contract_id": {"const": "repository-bash-confinement"},
+    "status": {"enum": ["pass", "fail"]},
+    "blocking_count": {"type": "integer", "minimum": 0},
     "classified_counts": {
       "type": "object",
       "description": "Count of findings by classification (e.g. blocking_repo_bash, vendored_specify_helper).",
-      "additionalProperties": { "type": "integer", "minimum": 0 }
+      "additionalProperties": {"type": "integer", "minimum": 0}
     },
-    "findings": {
-      "type": "array",
-      "items": { "$ref": "#/$defs/finding" }
-    },
-    "total_finding_count": { "type": "integer", "minimum": 0 },
-    "truncated_finding_count": { "type": "integer", "minimum": 0 },
-    "script_file_count": { "type": "integer", "minimum": 0 },
+    "findings": {"type": "array", "items": {"$ref": "#/$defs/finding"}},
+    "total_finding_count": {"type": "integer", "minimum": 0},
+    "truncated_finding_count": {"type": "integer", "minimum": 0},
+    "script_file_count": {"type": "integer", "minimum": 0},
     "enumeration": {
       "type": "object",
       "additionalProperties": false,
@@ -53,7 +76,7 @@
           "enum": ["inspected", "not_inspected"],
           "description": "Every tracked GitHub workflow run value is inspected and limited to one approved direct dispatch or exact GitHub output/summary append."
         },
-        "tracked_file_count": { "type": "integer", "minimum": 0 }
+        "tracked_file_count": {"type": "integer", "minimum": 0}
       }
     },
     "allowlist": {
@@ -61,8 +84,8 @@
       "additionalProperties": false,
       "required": ["path", "entry_count", "release_readiness_excluded"],
       "properties": {
-        "path": { "type": "string", "minLength": 1 },
-        "entry_count": { "type": "integer", "minimum": 0, "maximum": 11 },
+        "path": {"type": "string", "minLength": 1},
+        "entry_count": {"type": "integer", "minimum": 0, "maximum": 11},
         "release_readiness_excluded": {
           "type": "boolean",
           "description": "True iff a loaded allowlist exists and every entry carries release_readiness_excluded: true."
@@ -76,8 +99,8 @@
       "additionalProperties": true,
       "required": ["path", "category", "classification"],
       "properties": {
-        "path": { "type": "string" },
-        "line": { "type": ["integer", "null"] },
+        "path": {"type": "string"},
+        "line": {"type": ["integer", "null"]},
         "category": {
           "type": "string",
           "description": "One of: script_file, command_argv_subprocess / os_system / shell_true, hooks_json_command, package_json_script, or a workflow run-value category."
@@ -86,7 +109,7 @@
           "type": "string",
           "description": "blocking_repo_bash for a violation; vendored_specify_helper for an allowlisted (release-readiness-excluded) vendored file."
         },
-        "reason": { "type": "string" }
+        "reason": {"type": "string"}
       }
     }
   }

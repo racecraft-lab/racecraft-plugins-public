@@ -1,5 +1,5 @@
 ---
-# Spec-level Map of Content (MOC). Frontmatter join-key contract (PRSG-002).
+# Spec-level Map of Content (MOC). Frontmatter join-key contract.
 # Consumed by speckit-scaffold-spec via token substitution (same {{TOKEN}} mechanism
 # as workflow-template.md). Substitute every {{TOKEN}} below when writing SPEC-MOC.md.
 #
@@ -12,7 +12,7 @@ up: "[{{ROADMAP_TITLE}}](../../docs/ai/specs/{{ROADMAP_FILENAME}}.md)"
 related: []                  # list of relative []() links; carried, unenforced in v1
 status: ""                   # carried, unenforced in v1
 rank:                        # carried, unenforced in v1
-spec_id: "{{SPEC_ID}}"       # e.g., PRSG-002 — namespace-matches the containing directory
+spec_id: "{{SPEC_ID}}"       # e.g., SPEC-002 — namespace-matches the containing directory
 structureVersion: 1          # keep in sync with the lint scripts' hardcoded literal
 ---
 

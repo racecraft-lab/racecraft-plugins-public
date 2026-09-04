@@ -1396,7 +1396,6 @@ def command_plan_apply_diagnostic(operations: list[dict[str, Any]], helper_id: s
         details={"helper_id": helper_id},
         remediation_summary="Use dry_run for command planning; execute live command plans outside the runner until cutover.",
         remediation_actions=["Switch to dry_run.", "Use the existing approved path for live command work."],
-        deferred_to="XPLAT-007/XPLAT-008",
     )
 
 

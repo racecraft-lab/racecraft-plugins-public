@@ -1,15 +1,5 @@
 #!/usr/bin/env python3
-"""Structural validation for codex-hooks.json (port of validate-codex-hooks.sh).
-
-XPLAT-010 count-parity port (T022, US2). Python 3.11+ standard library only.
-Asserts both the Codex hook file location and the manifest pointer, plus the
-UserPromptSubmit shape with an intentionally empty command list. Every former
-``_pass``/``_fail`` execution maps to one counted ``subTest`` unit; names
-reproduced verbatim via ``subTest(msg=...)`` for a 1:1 baseline match.
-
-Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-codex-hooks-baseline.txt``
-(TOTAL: 9).
-"""
+"""Validate Codex hook configuration."""
 
 from __future__ import annotations
 

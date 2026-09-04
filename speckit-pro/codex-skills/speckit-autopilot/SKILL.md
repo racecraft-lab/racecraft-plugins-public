@@ -177,17 +177,17 @@ decisions that cascade into expensive rework.
    session is explicitly on a mini, fast, Luna, or otherwise reduced-capability
    tier, STOP and instruct the user to relaunch the autopilot on a stronger
    model. If `gpt-5.6-sol` is unavailable, also verify the installed SpecKit Pro
-   executor and consensus subagents were installed with `--model gpt-5.5` or
-   `--model gpt-5.4` (or `SPECKIT_CODEX_MODEL` set to the selected fallback);
-   parent session model changes do not rewrite hard-pinned TOML files.
+   subagents were installed with `--model gpt-5.5` or `--model gpt-5.4` (or
+   `SPECKIT_CODEX_MODEL` set to the selected fallback) according to the
+   installer-owned bundled agent policy.
 
 **Reasoning effort is inherited, never checked.** Run at whatever
 `model_reasoning_effort` the session already has and do not stop, warn,
-or ask the operator to relaunch. The required bundled custom subagents keep
-their declared effort, normally `xhigh`; the optional `autopilot-fast-helper`
-is pinned to low effort on gpt-5.6-luna for latency-sensitive prep.
-Those pins only constrain worker effort and never refuse to run. The operator
-owns the session setting; the plugin does not veto it.
+or ask the operator to relaunch. Bundled subagents keep their declared effort;
+the optional `autopilot-fast-helper` is pinned to low effort on gpt-5.6-luna
+for latency-sensitive prep. Those pins only constrain worker effort and never
+refuse to run. The operator owns the session setting; the plugin does not veto
+it.
 
 The model check above is non-negotiable.
 
@@ -803,14 +803,14 @@ concurrency-sensitive change. It is advisory-only — no outcome blocks the
 run, and it never edits or calls the reviewability gate.
 
 **FLAG — this wires NO PR emission and NO branch creation.** Recording the
-route here only hands a decision to the downstream layer-planner (PRSG-008)
-and multi-PR emission (PRSG-009) work; actually emitting multiple PRs or
+route here only hands a decision to the downstream layer-planning and
+multi-PR emission phases; actually emitting multiple PRs or
 creating branches is out of scope for this step. The route is recorded ONLY
 in the workflow file — never in the spec map.
 
 **Layer Plan (post-route, pre-Analyze/pre-Implement):**
 Immediately after recording the atomicity route, decide whether the
-PRSG-008 layer planner is required:
+semantic layer planner is required:
 
 - If `route != "split-PR"`, do not run the planner. Record
   `layer_plan.status="skipped"` with the route reason in
@@ -831,7 +831,7 @@ PRSG-008 layer planner is required:
   message and include planner diagnostics from stdout/stderr.
 
 The planner is read-only. It creates no branches, PR bodies, stacked PR
-topology, or commits; PRSG-009 owns multi-PR emission.
+topology, or commits; the multi-PR emission phase owns those effects.
 
 **Post-implementation (after all 7 phases complete + G7 passes):**
 Items 10-19 are part of the same durable plan (Step 1.1's Canonical
@@ -982,7 +982,8 @@ procedures in [post-implementation-codex.md](./references/post-implementation-co
    `final_reviewability_gate` state plus a `reslicing_required` packet and
    stops only the unsafe PR side effects. It is not a final answer or operator
    handoff: read `autopilot_continuation`, `operator_steps`, and
-   `resume.resume_from`, then continue internally through PRSG-007/008/009
+   `resume.resume_from`, then continue internally through the recorded semantic
+   `atomicity-route`, `plan-layers`, and `multi-pr-emission` phases, continuing
    until a valid slice PR stack is emitted or a typed exception is committed.
    Never report completion while `autopilot_continuation.required=true`; a gate
    error writes state and stops without a packet. After a proceed result,

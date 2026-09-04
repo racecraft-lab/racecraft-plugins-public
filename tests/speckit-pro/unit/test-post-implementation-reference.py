@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PRSG-009 post-implementation reference contract checks."""
+"""Post-implementation reference contract checks."""
 
 from __future__ import annotations
 
@@ -26,19 +26,9 @@ CODEX_REF = (
     / "references"
     / "post-implementation-codex.md"
 )
-BASELINE = (
-    REPO_ROOT
-    / "tests"
-    / "speckit-pro"
-    / "parity"
-    / "bash-to-python"
-    / "test-post-implementation-reference-baseline.txt"
-)
-
 LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
-from capture_baseline import baseline_inventory  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
@@ -53,11 +43,11 @@ class PostImplementationReferenceTests(unittest.TestCase):
                 lambda: self.assertIn("multi-pr-emission", claude_body),
             ),
             (
-                "Claude reference consumes the PRSG-008 layer plan without new slicing heuristics",
+                "Claude reference consumes the layer plan without new slicing heuristics",
                 lambda: self.assertIn("plan-layers", claude_body),
             ),
             (
-                "Claude reference consumes the PRSG-008 layer plan without new slicing heuristics",
+                "Claude reference consumes the layer plan without new slicing heuristics",
                 lambda: self.assertIn("MUST NOT infer, reroute, or re-slice", claude_body),
             ),
             (
@@ -202,7 +192,6 @@ class PostImplementationReferenceTests(unittest.TestCase):
             ),
         ]
 
-        self.assertEqual(baseline_inventory(BASELINE), [name for name, _check in checks])
         for name, check in checks:
             with self.subTest(msg=name):
                 check()

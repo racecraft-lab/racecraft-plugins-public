@@ -1,6 +1,6 @@
 # Feature Specification: Read-Only Helper Port
 
-**Feature Branch**: `codex/xplat-005-read-only-helper-port`
+**Feature Branch**: `codex/spec-805-read-only-helper-port`
 
 **Created**: 2026-07-02
 
@@ -30,7 +30,7 @@ As a maintainer, I can run Python runner equivalents for prerequisite, detection
 
 As a helper-port implementer, I can add a read-only helper through a small registry plus per-helper module pattern and prove parity through golden fixtures and Bash-reference comparisons.
 
-**Why this priority**: XPLAT-006 needs a reusable extension point for later mutation helper ports, but XPLAT-005 must keep the abstraction small and bounded to read-only behavior.
+**Why this priority**: SPEC-806 needs a reusable extension point for later mutation helper ports, but SPEC-805 must keep the abstraction small and bounded to read-only behavior.
 
 **Independent Test**: Add or inspect a representative ported helper module, dispatch it through the registry, and verify its fixture parity tests are isolated from other helpers.
 
@@ -44,7 +44,7 @@ As a helper-port implementer, I can add a read-only helper through a small regis
 
 ### User Story 3 - Review Release-Gate Promotion And Scope Boundaries (Priority: P3)
 
-As a release reviewer, I can see which helpers have been promoted to Python release gates, which Bash helpers remain temporary references, and why no active Claude Code, Codex, install, or public platform support claim happened in XPLAT-005.
+As a release reviewer, I can see which helpers have been promoted to Python release gates, which Bash helpers remain temporary references, and why no active Claude Code, Codex, install, or public platform support claim happened in SPEC-805.
 
 **Why this priority**: Reviewers need clear migration evidence without mistaking helper parity for installed-plugin or native-platform support.
 
@@ -52,9 +52,9 @@ As a release reviewer, I can see which helpers have been promoted to Python rele
 
 **Acceptance Scenarios**:
 
-1. **Given** a helper has accepted fixture and Bash-reference parity, **When** release-gate status is reviewed, **Then** the Python standard-library test is identified as authoritative for that helper while the Bash helper remains only as a temporary reference until XPLAT-007 cutover.
+1. **Given** a helper has accepted fixture and Bash-reference parity, **When** release-gate status is reviewed, **Then** the Python standard-library test is identified as authoritative for that helper while the Bash helper remains only as a temporary reference until SPEC-807 cutover.
 2. **Given** unported or not-yet-promoted helpers remain, **When** release-gate status is reviewed, **Then** those helpers are clearly identified as still using the current Bash reference path and not counted as Python-promoted.
-3. **Given** XPLAT-005 has completed, **When** the scope is audited, **Then** there are no active Claude Code or Codex skill, hook, generated payload, install, public documentation, PR-emission, split-state, restack, or repository/user-local mutation cutovers, except for bounded PR-review packet rendering remediation that does not add runner mutation behavior.
+3. **Given** SPEC-805 has completed, **When** the scope is audited, **Then** there are no active Claude Code or Codex skill, hook, generated payload, install, public documentation, PR-emission, split-state, restack, or repository/user-local mutation cutovers, except for bounded PR-review packet rendering remediation that does not add runner mutation behavior.
 4. **Given** local macOS source-checkout smoke evidence exists, **When** a reviewer reads it, **Then** it proves the accepted source-checkout runner path only and does not claim installed-cache launch proof or full native Windows/macOS/Linux matrix support.
 
 ### Edge Cases
@@ -63,7 +63,7 @@ As a release reviewer, I can see which helpers have been promoted to Python rele
 - A helper currently emits duplicate or repeated markers, warnings, or advisory findings that must remain stable for downstream gates.
 - A helper currently accepts paths with spaces, symlinks, relative components, or Windows-style separators.
 - A fixture includes JSON object field ordering that must be compared semantically, while stream text and exit codes remain exact unless an explicit normalization rule applies.
-- A helper's current Bash reference depends on source-checkout state; installed-cache and user-local state are not used as parity inputs in XPLAT-005.
+- A helper's current Bash reference depends on source-checkout state; installed-cache and user-local state are not used as parity inputs in SPEC-805.
 - Late `validate-pr-packet` coverage must remain read-only validation only; PR body generation, PR emission, split PR state, and restack behavior are excluded.
 
 ## Requirements *(mandatory)*
@@ -71,7 +71,7 @@ As a release reviewer, I can see which helpers have been promoted to Python rele
 ### Functional Requirements
 
 - **FR-001**: The system MUST expose a Python runner helper registry/dispatch surface for read-only and advisory helpers.
-- **FR-002**: The system MUST organize each ported helper behind a per-helper module convention that XPLAT-006 can reuse without introducing a generic framework.
+- **FR-002**: The system MUST organize each ported helper behind a per-helper module convention that SPEC-806 can reuse without introducing a generic framework.
 - **FR-003**: Slice 1 MUST include registry/dispatch plus prerequisite, detection, marker, validation, and confidence helper ports.
 - **FR-004**: Slice 2 MUST include read-only/advisory ports for spec-index behavior, topology checks, atomicity routing, layer-planning analysis, workflow-contract validation, and late `validate-pr-packet` validation.
 - **FR-005**: The system MUST NOT port or invoke mutation helpers that write PR packets, generate PR bodies, emit split PR state, perform restack changes, relocate artifacts, install agents, modify generated payloads, or mutate repository or user-local state.
@@ -85,25 +85,25 @@ As a release reviewer, I can see which helpers have been promoted to Python rele
 - **FR-013**: The parity suite MUST compare JSON stdout semantically and MUST compare stderr diagnostics and exit codes according to each helper's documented behavior.
 - **FR-014**: Environment-sensitive output normalization MUST be explicit, deterministic, and limited to fields that cannot be stable across source checkouts.
 - **FR-015**: Python tests MUST become authoritative release gates per helper only after that helper's fixture parity and Bash-reference comparison are accepted.
-- **FR-016**: Bash helpers MUST remain available as temporary reference implementations for unported helpers and for ported helpers until active cutover in XPLAT-007.
-- **FR-017**: The implementation evidence MUST record, per helper, whether it is Python-promoted, Bash-reference-only, or intentionally out of XPLAT-005 scope.
+- **FR-016**: Bash helpers MUST remain available as temporary reference implementations for unported helpers and for ported helpers until active cutover in SPEC-807.
+- **FR-017**: The implementation evidence MUST record, per helper, whether it is Python-promoted, Bash-reference-only, or intentionally out of SPEC-805 scope.
 - **FR-018**: The implementation evidence MUST separate source-checkout parity from installed-plugin launch proof and public native-platform support claims.
 - **FR-019**: The local macOS smoke MUST run against the source checkout and MUST avoid claims about installed-cache execution or full native Windows/macOS/Linux support.
 - **FR-020**: The feature MUST preserve the accepted two-slice strategy: Slice 1 for foundational registry/dispatch and prerequisite/status helpers; Slice 2 for index/topology/planning validators and late read-only PR-packet validation.
-- **FR-021**: The feature MUST NOT update active Claude Code or Codex skill files, hook configuration, generated payloads, installer behavior, marketplace/public documentation, or install-facing invocation paths, except for bounded PR-review packet generator/validator remediation required to make the XPLAT-005 review packet describe the actual feature scope.
+- **FR-021**: The feature MUST NOT update active Claude Code or Codex skill files, hook configuration, generated payloads, installer behavior, marketplace/public documentation, or install-facing invocation paths, except for bounded PR-review packet generator/validator remediation required to make the SPEC-805 review packet describe the actual feature scope.
 - **FR-022**: The PR review packet MUST identify non-goals, helper promotion status, Bash-reference retention, verification evidence, known gaps, rollback expectations, and the review order for the two slices.
 - **FR-023**: For helpers that currently emit machine-readable failure output, rejected-input fixtures MUST define the expected stdout JSON schema, stderr diagnostics, diagnostic/remediation content where present, and exact nonzero exit class.
 - **FR-024**: The parity plan MUST map each applicable helper failure class to an exact nonzero exit code for invalid input, missing input, malformed JSON, missing file, unsupported path, prerequisite failure, validation failure, and subprocess/preflight failure.
 - **FR-025**: Each applicable helper MUST include fixture coverage for every rejected-input scenario class it supports, rather than relying on one generic rejected fixture per helper.
 - **FR-026**: New Python helper ports and Bash-reference comparison harnesses MUST NOT use `shell=True`, shell-command strings, `os.system`, shell interpolation, or unbounded subprocess input; unavoidable subprocess calls MUST use explicit argv sequences.
 - **FR-027**: Filesystem inputs MUST be resolved against the repo or plugin trust boundary before reading, including symlinks and relative components, and helpers MUST reject traversal or symlink escapes.
-- **FR-028**: Runner source manifest and checksum metadata MUST include every new or modified XPLAT-005 runner source file and MUST remain source-checkout metadata only, with generated-payload propagation deferred to XPLAT-007.
+- **FR-028**: Runner source manifest and checksum metadata MUST include every new or modified SPEC-805 runner source file and MUST remain source-checkout metadata only, with generated-payload propagation deferred to SPEC-807.
 
 ### Phase 2 Clarifications
 
 #### Helper And Mode Matrix
 
-| Scope | Helper or Mode | XPLAT-005 Decision |
+| Scope | Helper or Mode | SPEC-805 Decision |
 |---|---|---|
 | Slice 1 | Helper registry/dispatch | In scope as the small runner extension point for read-only/advisory helpers |
 | Slice 1 | `check-prerequisites`, `detect-commands`, `detect-presets` | In scope as prerequisite and detection helper ports |
@@ -113,7 +113,7 @@ As a release reviewer, I can see which helpers have been promoted to Python rele
 | Slice 2 | `o5-topology`, `atomicity-route`, `plan-layers <feature-dir>` | In scope as read-only topology, atomicity, and layer-planning analysis |
 | Slice 2 | `validate-pr-workflow-contract` | In scope as read-only workflow-contract validation |
 | Slice 2 | `validate-pr-packet` | In scope only for read-only validation output, stderr diagnostics, and exit-code parity |
-| Out of scope | `detect-stack-manager` | Deferred to XPLAT-006 because it is tied to PR emission/restack behavior and persistence |
+| Out of scope | `detect-stack-manager` | Deferred to SPEC-806 because it is tied to PR emission/restack behavior and persistence |
 | Out of scope | `generate-spec-index` default write/regenerate mode | Deferred because it mutates `SPEC-MOC.md` artifacts |
 | Out of scope | `plan-layers marker-plan ... <output>` | Deferred because it writes marker-plan output files |
 | Out of scope | `validate-pr-packet` validation-result persistence and workflow-event upserts | Deferred because they mutate repository artifacts |
@@ -134,7 +134,7 @@ As a release reviewer, I can see which helpers have been promoted to Python rele
 The smallest local macOS source-checkout smoke command is:
 
 ```bash
-printf '%s\n' '{"schema_version":"1.0","request_id":"xplat-005-smoke","helper_id":"runner","operation":"runtime-info","mode":"read_only","inputs":{}}' | PYTHONPATH=speckit-pro python3 -m speckit_pro_runner
+printf '%s\n' '{"schema_version":"1.0","request_id":"spec-805-smoke","helper_id":"runner","operation":"runtime-info","mode":"read_only","inputs":{}}' | PYTHONPATH=speckit-pro python3 -m speckit_pro_runner
 ```
 
 This smoke proves only that the source-checkout Python runner launches locally,
@@ -146,7 +146,7 @@ parity, mutation-helper safety, or full native Windows/macOS/Linux support.
 
 ### Reviewability Notes *(if applicable)*
 
-- XPLAT-005 is accepted as one workflow with two internal slices so the registry pattern and helper parity can be reviewed together while keeping mutation and active cutover work out of scope.
+- SPEC-805 is accepted as one workflow with two internal slices so the registry pattern and helper parity can be reviewed together while keeping mutation and active cutover work out of scope.
 - The setup reviewability gate warned that the planned surfaces span harness/adapter and docs/process concerns; this warning is accepted only for the read-only/advisory helper port scope.
 
 ### Reviewability Budget *(mandatory)*
@@ -157,7 +157,7 @@ parity, mutation-helper safety, or full native Windows/macOS/Linux support.
 - **Projected production files**: 4
 - **Projected total files**: 12
 - **Budget result**: warning accepted
-- **Split decision**: Remain one XPLAT-005 workflow with two internal slices. Split into child specs only if Plan or Tasks proves the helper registry plus read-only parity work cannot stay reviewable.
+- **Split decision**: Remain one SPEC-805 workflow with two internal slices. Split into child specs only if Plan or Tasks proves the helper registry plus read-only parity work cannot stay reviewable.
 
 ### PR Review Packet Requirements *(mandatory)*
 
@@ -170,13 +170,13 @@ parity, mutation-helper safety, or full native Windows/macOS/Linux support.
 
 ### Scope Boundaries
 
-- XPLAT-005 is limited to read-only and advisory helper ports plus their tests and internal evidence.
-- Active Claude Code and Codex skill, hook, generated payload, install, marketplace, and public documentation cutover remain XPLAT-007.
+- SPEC-805 is limited to read-only and advisory helper ports plus their tests and internal evidence.
+- Active Claude Code and Codex skill, hook, generated payload, install, marketplace, and public documentation cutover remain SPEC-807.
 - Bounded PR-review packet rendering remediation may update `generate-pr-body.sh`, `validate-pr-packet.sh`, their generated source copies, and generated reference docs only to keep this PR's reviewer packet truthful; the runner must still not invoke PR body generation or PR emission.
-- Mutation helpers for PR packets, PR bodies, split PR state, restack, artifact relocation, installer behavior, and repository/user-local writes remain out of scope for XPLAT-005.
-- `generate-spec-index` write/regenerate mode and `validate-pr-packet` validation-result or workflow-event persistence remain out of scope; XPLAT-005 may port only their read-only validation behavior.
-- Full native Windows/macOS/Linux installed-plugin UAT remains XPLAT-007.
-- Removing Bash helpers globally remains out of scope until XPLAT-007.
+- Mutation helpers for PR packets, PR bodies, split PR state, restack, artifact relocation, installer behavior, and repository/user-local writes remain out of scope for SPEC-805.
+- `generate-spec-index` write/regenerate mode and `validate-pr-packet` validation-result or workflow-event persistence remain out of scope; SPEC-805 may port only their read-only validation behavior.
+- Full native Windows/macOS/Linux installed-plugin UAT remains SPEC-807.
+- Removing Bash helpers globally remains out of scope until SPEC-807.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -193,16 +193,16 @@ parity, mutation-helper safety, or full native Windows/macOS/Linux support.
 
 - **SC-001**: For every Python-promoted Slice 1 helper, golden fixture comparison and Bash-reference comparison pass with matching JSON semantics, diagnostics, and exit-code behavior.
 - **SC-002**: For every Python-promoted Slice 2 helper, golden fixture comparison and Bash-reference comparison pass before the helper is listed as an authoritative Python gate.
-- **SC-003**: A helper promotion record identifies every XPLAT-005 helper as Python-promoted, Bash-reference-only, or out of scope, with no ambiguous status entries.
+- **SC-003**: A helper promotion record identifies every SPEC-805 helper as Python-promoted, Bash-reference-only, or out of scope, with no ambiguous status entries.
 - **SC-004**: Verification evidence includes the local macOS source-checkout `runtime-info` runner smoke for the accepted read-only path and includes no installed-plugin or native-matrix support claim.
-- **SC-005**: Scope audit finds zero active Claude Code or Codex skill/hook/generated-payload/install/public-doc cutover edits and zero mutation-helper ports in XPLAT-005, excluding the bounded PR-review packet rendering remediation files explicitly allowed above.
+- **SC-005**: Scope audit finds zero active Claude Code or Codex skill/hook/generated-payload/install/public-doc cutover edits and zero mutation-helper ports in SPEC-805, excluding the bounded PR-review packet rendering remediation files explicitly allowed above.
 - **SC-006**: The implementation remains reviewable as the accepted two-slice workflow or records a Plan/Tasks split decision before implementation begins.
 - **SC-007**: Runner source manifest and checksum metadata validate after the helper runner files are added or modified, without copying metadata into generated payloads or claiming installed-cache proof.
 
 ## Assumptions
 
-- XPLAT-004's Python 3.11+ standard-library runner foundation is present and remains the execution substrate for new helper ports.
-- Existing Bash helpers remain available in the source checkout as temporary reference implementations during XPLAT-005.
-- Fixture parity is sufficient for Windows-style path and no-Bash behavior in XPLAT-005; full native installed-plugin UAT is deferred to XPLAT-007.
+- SPEC-804's Python 3.11+ standard-library runner foundation is present and remains the execution substrate for new helper ports.
+- Existing Bash helpers remain available in the source checkout as temporary reference implementations during SPEC-805.
+- Fixture parity is sufficient for Windows-style path and no-Bash behavior in SPEC-805; full native installed-plugin UAT is deferred to SPEC-807.
 - The helper registry should be small and explicit, not a broad plugin framework.
-- Source-checkout local macOS smoke evidence is acceptable for this phase because installed-cache launch proof belongs to XPLAT-007.
+- Source-checkout local macOS smoke evidence is acceptable for this phase because installed-cache launch proof belongs to SPEC-807.

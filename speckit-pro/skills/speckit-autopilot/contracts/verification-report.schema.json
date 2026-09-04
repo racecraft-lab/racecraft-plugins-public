@@ -1,6 +1,5 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://racecraft.local/speckit-pro/verification-report.schema.json",
   "title": "SpecKit completed-marker verification report",
   "type": "object",
   "additionalProperties": false,

@@ -1,14 +1,5 @@
 #!/usr/bin/env python3
-"""Structural validation for bundled Codex custom subagent TOML templates.
-
-Port of validate-codex-agents.sh (XPLAT-010 count-parity port, T021, US2). Python
-3.11+ standard library only. Every former ``assert_*``/``_pass``/``_fail``
-execution maps to one counted ``subTest`` unit; bash check names reproduced
-verbatim via ``subTest(msg=...)`` for a 1:1 baseline match.
-
-Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-codex-agents-baseline.txt``
-(TOTAL: 148).
-"""
+"""Structural validation for bundled Codex custom subagent TOML templates."""
 
 from __future__ import annotations
 
@@ -38,6 +29,7 @@ AGENTS = (
     "spec-context-analyst",
     "domain-researcher",
 )
+LOW_EFFORT_ANALYST_ROLES = frozenset({"codebase-analyst", "spec-context-analyst"})
 
 CC_ONLY_FIELDS = ("tools", "disallowedTools", "permissionMode", "color", "maxTurns", "background", "effort")
 
@@ -112,8 +104,8 @@ class ValidateCodexAgents(unittest.TestCase):
                 ):
                     self.assertNotIn('model_reasoning_effort = "', content)
                 effort_val = ""
-            elif agent == "autopilot-fast-helper":
-                with self.subTest(msg="autopilot-fast-helper: has low model_reasoning_effort field"):
+            elif agent == "autopilot-fast-helper" or agent in LOW_EFFORT_ANALYST_ROLES:
+                with self.subTest(msg=f"{agent}: has low model_reasoning_effort field"):
                     self.assertIn('model_reasoning_effort = "low"', content)
                 effort_val = _extract_toml_string(content, "model_reasoning_effort")
             else:
@@ -191,14 +183,14 @@ class ValidateCodexAgents(unittest.TestCase):
                     f"expected gpt-5.6-sol / xhigh / workspace-write, got {model_val} / {effort_val} / {sandbox_val}",
                 )
         elif agent in ("codebase-analyst", "spec-context-analyst"):
-            with self.subTest(msg=f"{agent}: uses GPT-5.6 Sol read-only consensus profile (L6-validated effort)"):
+            with self.subTest(msg=f"{agent}: uses low-effort GPT-5.6 Sol in a read-only sandbox"):
                 self.assertTrue(
-                    model_val == "gpt-5.6-sol" and effort_val in ("low", "xhigh") and sandbox_val == "read-only",
-                    f"expected gpt-5.6-sol / low|xhigh / read-only, got {model_val} / {effort_val} / {sandbox_val}",
+                    model_val == "gpt-5.6-sol" and effort_val == "low" and sandbox_val == "read-only",
+                    f"expected gpt-5.6-sol / low / read-only, got {model_val} / {effort_val} / {sandbox_val}",
                 )
         elif agent == "domain-researcher":
             with self.subTest(
-                msg="domain-researcher: uses xhigh read-only GPT-5.6 Sol consensus profile (L6 has not validated lower effort)"
+                msg="domain-researcher: uses xhigh read-only GPT-5.6 Sol consensus profile"
             ):
                 self.assertTrue(
                     model_val == "gpt-5.6-sol" and effort_val == "xhigh" and sandbox_val == "read-only",

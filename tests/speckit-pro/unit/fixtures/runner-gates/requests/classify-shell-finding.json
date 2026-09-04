@@ -7,7 +7,6 @@
   "inputs": {
     "path": ".github/workflows/pr-checks.yml",
     "line": 1,
-    "text": "run: bash tests/speckit-pro/run-all.sh",
-    "xplat_008_cutover_allowed": false
+    "text": "run: bash tests/speckit-pro/run-all.sh"
   }
 }

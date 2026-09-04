@@ -1,6 +1,6 @@
 # Quickstart: validating the Feedback Sweep, slice 1 of 2
 
-**Feature**: `art-008-feedback-sweep` | **Date**: 2026-08-20
+**Feature**: `spec-808-feedback-sweep` | **Date**: 2026-08-20
 
 How to prove this slice works. Every scenario runs offline against fixtures: the
 helper takes the pull-request observation as data, so nothing here needs a live

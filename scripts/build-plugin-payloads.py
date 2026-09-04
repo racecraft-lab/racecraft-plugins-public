@@ -12,10 +12,10 @@ def main() -> int:
     runner_root = repo_root / "speckit-pro"
     sys.path.insert(0, str(runner_root))
 
-    from speckit_pro_runner.gates.payloads import build_xplat008_payloads
+    from speckit_pro_runner.gates.payloads import build_installed_plugin_payloads
 
     dist_root = repo_root / "dist"
-    build_xplat008_payloads(repo_root, dist_root)
+    build_installed_plugin_payloads(repo_root, dist_root)
     print("Built dist/claude/speckit-pro")
     print("Built dist/codex/speckit-pro")
     return 0

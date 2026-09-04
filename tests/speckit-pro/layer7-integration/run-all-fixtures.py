@@ -9,6 +9,12 @@ from pathlib import Path
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+TEST_LIB = SCRIPT_DIR.parent / "lib"
+if str(TEST_LIB) not in sys.path:
+    sys.path.insert(0, str(TEST_LIB))
+
+from test_result import child_check_status  # noqa: E402
+
 RUNNERS = {
     "1": SCRIPT_DIR / "run-dispatch-fixtures.py",
     "2": SCRIPT_DIR / "run-return-format-fixtures.py",
@@ -51,7 +57,14 @@ def run_class(class_id: str, mode: str) -> bool:
         print(completed.stdout, end="")
     if completed.stderr:
         print(completed.stderr, end="", file=sys.stderr)
-    return completed.returncode == 0
+    passed, detail = child_check_status(
+        completed.returncode,
+        completed.stdout,
+        RUNNERS[class_id].stem,
+    )
+    if not passed:
+        print(f"FAIL Layer 7 class {class_id}: {detail}", file=sys.stderr)
+    return passed
 
 
 def main(argv: list[str]) -> int:
@@ -62,10 +75,12 @@ def main(argv: list[str]) -> int:
         return 2
     classes = list(RUNNERS) if selected == "all" else [selected]
     results = [run_class(class_id, mode) for class_id in classes]
-    passed = all(results)
+    passed_count = sum(results)
+    passed = bool(results) and passed_count == len(results)
     print("\n" + "=" * 66)
     print(f"  Layer 7 {'PASSED' if passed else 'FAILED'}")
     print("=" * 66)
+    print(f"run-all-fixtures: {passed_count}/{len(results)} passed")
     return 0 if passed else 1
 
 

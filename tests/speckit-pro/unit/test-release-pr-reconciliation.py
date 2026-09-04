@@ -61,6 +61,10 @@ class FakeGuard:
     def payload_tree_inventory(cls, _repo_root: Path, source_root: str, _row: dict):
         return {"tree_hash": cls.HASHES[source_root], "files": ["manifest.json"]}
 
+    @staticmethod
+    def count_prohibited_script_files(_root: Path) -> int:
+        return 0
+
 
 def proof(rows: list[dict]) -> str:
     return json.dumps({"schema_version": "1.0", "proofs": rows}, indent=2) + "\n"
@@ -110,6 +114,53 @@ class ConflictingMergeRunner:
 
 
 class ReleasePrReconciliationTests(unittest.TestCase):
+    def test_refresh_overwrites_corrupt_authoritative_installed_cache_proof(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            proof_path = repo_root / refresh.EVIDENCE_PROOF
+            proof_path.parent.mkdir(parents=True)
+            proof_path.write_text('{"stale": true}\n', encoding="utf-8")
+
+            self.assertEqual(
+                refresh.refresh_installed_cache_proof(repo_root, FakeGuard),
+                [refresh.EVIDENCE_PROOF],
+            )
+            document = json.loads(proof_path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                document,
+                {
+                    "schema_version": "2.0",
+                    "contract_id": "plugin-bash-confinement",
+                    "proofs": [
+                        {
+                            "product": "claude",
+                            "surface": "claude_payload_fixture",
+                            "installed_root": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro",
+                            "source_payload_root": "dist/claude/speckit-pro",
+                            "source_payload_tree_hash": "c" * 64,
+                            "source_derived": True,
+                            "mutable_user_cache": False,
+                            "script_file_count": 0,
+                            "active_guidance_findings": [],
+                            "allowlist_release_readiness_excluded": True,
+                        },
+                        {
+                            "product": "codex",
+                            "surface": "codex_payload_fixture",
+                            "installed_root": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro",
+                            "source_payload_root": "dist/codex/speckit-pro",
+                            "source_payload_tree_hash": "d" * 64,
+                            "source_derived": True,
+                            "mutable_user_cache": False,
+                            "script_file_count": 0,
+                            "active_guidance_findings": [],
+                            "allowlist_release_readiness_excluded": True,
+                        },
+                    ],
+                },
+            )
+            self.assertEqual(refresh.refresh_installed_cache_proof(repo_root, FakeGuard), [])
+
     def test_mirror_tree_by_content_detects_mode_only_drift(self) -> None:
         if os.name == "nt":
             self.skipTest("POSIX mode drift regression")
@@ -196,8 +247,8 @@ class ReleasePrReconciliationTests(unittest.TestCase):
 
     def test_regenerated_artifact_conflicts_resolve_to_base_and_continue(self) -> None:
         conflicted = [
-            "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json",
-            "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json",
+            "speckit-pro/gate-evidence/installed-cache-proof.json",
+            "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-stale-hash.json",
         ]
         runner = ConflictingMergeRunner(conflicted)
         sync.sync_release_branch(REPO_ROOT, RELEASE_PR, "main", runner)
@@ -218,7 +269,7 @@ class ReleasePrReconciliationTests(unittest.TestCase):
     def test_conflict_outside_regenerated_artifacts_fails_the_sync(self) -> None:
         runner = ConflictingMergeRunner(
             [
-                "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json",
+                "speckit-pro/gate-evidence/installed-cache-proof.json",
                 "speckit-pro/speckit_pro_runner/__main__.py",
             ]
         )
@@ -241,12 +292,8 @@ class ReleasePrReconciliationTests(unittest.TestCase):
     def test_regenerated_artifact_paths_track_the_refresh_script(self) -> None:
         paths = sync.regenerated_artifact_paths(REPO_ROOT)
         self.assertEqual(paths, tuple(refresh.CHECK_WORKTREE_PATHS))
-        # The proof artifacts that deadlocked the release sync on 2026-07-27.
         for path in (
-            "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json",
-            "docs/ai/specs/.process/XPLAT-009-payload-completeness-result.json",
-            "docs/ai/specs/.process/XPLAT-009-release-readiness-result.json",
-            "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json",
+            "speckit-pro/gate-evidence/installed-cache-proof.json",
             "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-stale-hash.json",
         ):
             self.assertTrue(sync.is_regenerated_artifact(path, paths), path)
@@ -294,29 +341,6 @@ class ReleasePrReconciliationTests(unittest.TestCase):
                     old_partial: "e" * 64,
                 },
             )
-
-    def test_missing_canonical_proof_fails_with_targeted_diagnostic(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            stderr = io.StringIO()
-            with redirect_stderr(stderr), self.assertRaises(SystemExit) as raised:
-                refresh.canonical_proof_hash_replacements(Path(tmp), FakeGuard)
-
-            self.assertEqual(raised.exception.code, 1)
-            self.assertIn("unable to read canonical installed-cache proof", stderr.getvalue())
-            self.assertIn(refresh.EVIDENCE_PROOF, stderr.getvalue())
-
-    def test_malformed_canonical_proof_fails_with_targeted_diagnostic(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            proof_path = Path(tmp) / refresh.EVIDENCE_PROOF
-            proof_path.parent.mkdir(parents=True)
-            proof_path.write_text("{not-json\n", encoding="utf-8")
-            stderr = io.StringIO()
-            with redirect_stderr(stderr), self.assertRaises(SystemExit) as raised:
-                refresh.canonical_proof_hash_replacements(Path(tmp), FakeGuard)
-
-            self.assertEqual(raised.exception.code, 1)
-            self.assertIn("is malformed JSON", stderr.getvalue())
-            self.assertIn(refresh.EVIDENCE_PROOF, stderr.getvalue())
 
     def test_legacy_repair_preserves_deliberate_hash_sentinels(self) -> None:
         old_claude = "a" * 64
@@ -506,7 +530,7 @@ class ReleasePrLifecycleTests(unittest.TestCase):
             "Hold existing release PRs as draft",
             "id: release",
             "Sync generated artifacts onto the release PR",
-            "Validate XPLAT-008 release gates",
+            "Validate installed-plugin release gates",
             "Mark synchronized release PRs ready for review",
             "Dispatch PR Checks for release PRs",
         )

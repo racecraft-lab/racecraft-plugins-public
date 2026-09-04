@@ -5,7 +5,11 @@ from __future__ import annotations
 from typing import Any
 
 
-def gate_base_data(entry: Any, operation: str, status: str, promotion_record: str) -> dict[str, Any]:
+def gate_base_data(
+    entry: Any,
+    operation: str,
+    status: str,
+) -> dict[str, Any]:
     gate_status = "pass"
     if status in {"expected_failure", "subprocess_failure"}:
         gate_status = "fail"
@@ -13,15 +17,14 @@ def gate_base_data(entry: Any, operation: str, status: str, promotion_record: st
         gate_status = "skipped"
     elif status == "input_error":
         gate_status = "input_error"
-    return {
+    data = {
         "gate": {
             "gate_id": entry.helper_id,
             "operation": operation,
             "gate_status": gate_status,
             "promoted": status != "input_error",
             "blocking": status != "ok",
-            "comparison_ids": [f"us2-{operation}"],
-            "promotion_record": promotion_record,
+            "comparison_ids": [operation],
         },
-        "artifacts": [{"path": promotion_record, "kind": "fixture"}],
     }
+    return data

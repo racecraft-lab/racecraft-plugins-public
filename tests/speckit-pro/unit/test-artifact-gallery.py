@@ -61,35 +61,26 @@ PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 GALLERY_ROOT = PLUGIN_ROOT / "artifact-gallery"
 LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 
-# Group E reuses two hardened comparisons this repository already owns rather
-# than writing a third, and group F reuses the payload build's own rewriter
-# pattern. All three live outside this tree, so their directories join the
-# import path here.
+# Group E reuses a hardened comparison this repository already owns, and group
+# F reuses the payload build's own rewriter pattern. Both live outside this
+# tree, so their directories join the import path here.
 SCRIPTS_DIR = REPO_ROOT / "scripts"
-CAPABILITY_LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "layer6-efficiency" / "lib"
-for _import_path in (LIB_DIR, SCRIPTS_DIR, CAPABILITY_LIB_DIR, PLUGIN_ROOT):
+for _import_path in (LIB_DIR, SCRIPTS_DIR, PLUGIN_ROOT):
     if str(_import_path) not in sys.path:
         sys.path.insert(0, str(_import_path))
 
-import codex_capability_contract  # noqa: E402
 import release_note_policy  # noqa: E402
-from speckit_pro_runner.gates.payloads import REL_SKILL_PATH_XPLAT008  # noqa: E402
+from speckit_pro_runner.gates.payloads import RELATIVE_SKILL_PATH_PATTERN  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 # ``_validated_http_url`` rejects control, whitespace, and delimiter characters
-# *before* ``urlsplit``, which is E6; ``_openai_url`` asserts the canonical
-# round-trip, absent userinfo, and absent port conjunction, which is E5. Neither
-# was written for this feature and neither can be called directly here — one is
-# bound to a fixed OpenAI host-and-path allowlist, the other requires an
-# ``http(s)`` scheme and so rejects the relative references E7 admits. They are
-# bound as names so the checks below can be pinned to their behaviour rather
-# than only citing them in a comment.
+# *before* ``urlsplit``, which is E6. It requires an ``http(s)`` scheme and so
+# rejects the relative references E7 admits.
 _VALIDATED_HTTP_URL = release_note_policy._validated_http_url
-_OPENAI_URL = codex_capability_contract._openai_url
 
 
 # ---------------------------------------------------------------------------
-# Group A — marker-block drift (FR-002, FR-003, FR-006; SC-002)
+# Group A — marker-block drift
 # ---------------------------------------------------------------------------
 
 BRAND_BLOCK = "BRAND-KIT"
@@ -354,7 +345,7 @@ GROUP_A_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (
 class MarkerBlockDriftTests(unittest.TestCase):
     """Group A against the shipped gallery.
 
-    A3-A5 sweep an empty set here, because ART-001 ports no artifact. The
+    A3-A5 sweep an empty set here, because the initial release ports no artifact. The
     fixture case below is where they are actually exercised.
     """
 
@@ -407,7 +398,7 @@ class GalleryFixtureCase(unittest.TestCase):
         return path
 
     def assertReports(self, failures: list[str], *fragments: str) -> None:
-        """One failure naming every fragment — FR-006's message obligation."""
+        """One failure naming every fragment required to diagnose it."""
         self.assertTrue(failures, "expected a failure, got none")
         self.assertTrue(
             any(all(fragment in failure for fragment in fragments) for failure in failures),
@@ -619,7 +610,7 @@ class MarkerBlockDriftFixtureTests(GalleryFixtureCase):
 
 
 # ---------------------------------------------------------------------------
-# Group I — shared-block accessibility invariants (FR-004, FR-022, FR-023)
+# Group I — shared-block accessibility invariants
 # ---------------------------------------------------------------------------
 #
 # Every check here asserts that a construct the accessibility requirements
@@ -633,7 +624,7 @@ class MarkerBlockDriftFixtureTests(GalleryFixtureCase):
 # Those stay manual (M7, M8).
 
 
-# The two theme names FR-004 fixes: the closed set I5 requires a stored override
+# The two supported theme names: the closed set I5 requires a stored override
 # to be validated against, and the two forced themes I3 requires ``color-scheme``
 # to be set under.
 THEME_NAMES: tuple[str, ...] = ("dark", "light")
@@ -946,7 +937,7 @@ GROUP_I_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (
 class SharedBlockAccessibilityTests(unittest.TestCase):
     """Group I against the shipped canonical blocks.
 
-    Unlike group A's sweeps, nothing here is vacuous in ART-001: both canonical
+    Unlike group A's sweeps, nothing here is vacuous in the initial release: both canonical
     files ship in this feature, so every check reads a real region.
     """
 
@@ -1251,13 +1242,13 @@ class SharedBlockAccessibilityFixtureTests(GalleryFixtureCase):
 
 
 # ---------------------------------------------------------------------------
-# Group B — catalog shape (FR-007, FR-019; SC-003)
+# Group B — catalog shape
 # ---------------------------------------------------------------------------
 
 SCHEMA_VERSION = "1.0"
 CATALOG_KEYS = ("schema_version", "signals", "export_kinds", "templates")
 
-# The nine documented keys, in FR-007's declaration order. Only the *set* is
+# The nine documented keys. Only the *set* is
 # asserted: JSON object key order carries no meaning to any consumer, so a rule
 # about ordering would be one no check ever applies.
 ENTRY_KEYS = (
@@ -1329,7 +1320,7 @@ SEEDED_IDS: tuple[str, ...] = (
 )
 
 # Filename-safe kebab-case: lowercase alphanumerics in hyphen-separated
-# segments. Everything FR-019 bans falls out of it — a path separator, a ``..``
+# segments. The pattern excludes a path separator, a ``..``
 # segment, a dot, whitespace, and a leading, trailing, or repeated hyphen all
 # fail to match, which is what keeps ``templates/<id>.html`` inside the
 # artifact directory.
@@ -1697,7 +1688,7 @@ def check_b11(gallery_root: Path) -> list[str]:
     """B11 — ``source.file`` is unique across the catalog.
 
     Two entries naming one upstream file would give two artifacts the same
-    asserted provenance, which FR-020's per-artifact attribution cannot express.
+    asserted provenance, which per-artifact attribution cannot express.
     """
     entries = _entries(gallery_root)
     if entries is None:
@@ -1902,11 +1893,11 @@ class CatalogShapeTests(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Group B fixtures — catalog shape (FR-007, FR-019; SC-003)
+# Group B fixtures — catalog shape
 # ---------------------------------------------------------------------------
 
 # The five names the fixtures route on. They are deliberately **synthetic**:
-# FR-017 forbids this file holding a copy of the real vocabulary, and a fixture
+# This file must not hold a copy of the real vocabulary, and a fixture
 # is still this file. C1 asserts the count, so a fixture vocabulary has to be
 # five members long — it does not have to be, and must not be, the real five.
 FIXTURE_SIGNALS: tuple[str, ...] = (
@@ -1934,7 +1925,7 @@ class CatalogFixtureCase(GalleryFixtureCase):
     """
 
     def entry(self, index: int, identifier: str, **overrides: object) -> dict:
-        """One conforming entry: the nine keys, in FR-007's declaration order."""
+        """One conforming entry with all nine declared keys."""
         entry: dict = {
             "id": identifier,
             "category": "code-review",
@@ -2361,7 +2352,7 @@ class CatalogShapeFixtureTests(CatalogFixtureCase):
 
 
 # ---------------------------------------------------------------------------
-# Group C — triggers and signal closure (FR-008, FR-015, FR-016, FR-017)
+# Group C — triggers and signal closure
 # ---------------------------------------------------------------------------
 
 # The document carrying what each signal **means**, and the section inside it
@@ -2370,7 +2361,7 @@ class CatalogShapeFixtureTests(CatalogFixtureCase):
 SPA_CONTRACT_FILE = "SPA-CONTRACT.md"
 SIGNAL_SECTION_HEADING = "## Routing signals"
 
-# C1 is the FR-017 mechanism, and it is **the integer only**. This file holds no
+# C1 is **the integer only**. This file holds no
 # copy of the five names, because a copy edited in the same change as the
 # catalog is not an independent check — it is the catalog, written twice. C1
 # catches invention, since the count rises. C5 and C6 catch the disguise of
@@ -2639,7 +2630,7 @@ def check_c8(gallery_root: Path) -> list[str]:
 
     This is closure between two **shipped artifacts**, the same shape as C5 and
     C6 closing the vocabulary against the triggers — not a second copy of the
-    names held in this file, so FR-017's prohibition is untouched. It is the
+    names held in this file, so the no-duplicate-vocabulary invariant remains. It is the
     only check that makes a coordinated rename visible: renaming a signal in the
     vocabulary and in its consuming trigger together keeps the count at five and
     keeps closure intact in both directions, so C1, C5, and C6 all pass while
@@ -2689,7 +2680,7 @@ class TriggerClosureTests(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Group C fixtures — triggers and signal closure (FR-008, FR-015, FR-016, FR-017)
+# Group C fixtures — triggers and signal closure
 # ---------------------------------------------------------------------------
 
 
@@ -2941,7 +2932,7 @@ class TriggerClosureFixtureTests(CatalogFixtureCase):
 
 
 # ---------------------------------------------------------------------------
-# Group D — artifact existence and orphans (FR-009)
+# Group D — artifact existence and orphans
 # ---------------------------------------------------------------------------
 
 
@@ -3025,7 +3016,7 @@ def check_d2(gallery_root: Path) -> list[str]:
     A5 keys the brand-block byte-compare on ``shipped``, so a real artifact left
     under a ``planned`` entry would ship without its embedded block ever being
     compared — making ``status`` an opt-out from the drift check. It is also
-    what makes SC-004's "changes exactly one catalog value" enforceable rather
+    what makes the one-value catalog transition enforceable rather
     than aspirational: adding an artifact without flipping its status would
     otherwise pass.
     """
@@ -3107,7 +3098,7 @@ def check_d4(gallery_root: Path) -> list[str]:
 def check_d5(gallery_root: Path) -> list[str]:
     """D5 — an **absent** ``templates/`` directory counts as zero artifacts.
 
-    This is the state ART-001 actually ships: no artifact is ported, and version
+    This is the initial shipped state: no artifact is ported, and version
     control preserves no empty directory, so the directory is absent at merge
     and D1-D4 must pass vacuously rather than error on a missing path. The
     assertion left to make is that the sweep is empty because the directory is
@@ -3143,14 +3134,14 @@ class ArtifactExistenceTests(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Group D fixtures — artifact existence and orphans (FR-009)
+# Group D fixtures — artifact existence and orphans
 # ---------------------------------------------------------------------------
 
 
 class ArtifactExistenceFixtureTests(CatalogFixtureCase):
     """Group D against synthetic galleries built in a temporary directory.
 
-    The real gallery exercises only D5, because ART-001 ports no artifact and
+    The real gallery exercises only D5, because the initial release ports no artifact and
     ships no ``templates/`` directory. Everything D1-D4 assert is exercised
     here, where the artifacts they describe actually exist.
     """
@@ -3209,8 +3200,8 @@ class ArtifactExistenceFixtureTests(CatalogFixtureCase):
 
         A5 keys the brand-block byte-compare on ``shipped``, so a real artifact
         under a ``planned`` entry would ship without its embedded block ever
-        being compared. It is also what makes SC-004's "changes exactly one
-        catalog value" enforceable: adding the file without flipping the status
+        being compared. It also makes the one-value catalog transition
+        enforceable: adding the file without flipping the status
         would otherwise pass.
         """
         self.write_manifest(self.catalog())
@@ -3291,7 +3282,7 @@ class ArtifactExistenceFixtureTests(CatalogFixtureCase):
     # -- D5: the state this feature actually ships --
 
     def test_d5_accepts_an_absent_templates_directory(self) -> None:
-        """ART-001 ports no artifact, and version control preserves no empty directory."""
+        """The initial release ports no artifact, and version control preserves no empty directory."""
         self.write_manifest(self.catalog())
 
         self.assertFalse((self.gallery / TEMPLATES_DIR).exists())
@@ -3307,7 +3298,7 @@ class ArtifactExistenceFixtureTests(CatalogFixtureCase):
 
 
 # ---------------------------------------------------------------------------
-# Group E — external references (FR-011; SC-008)
+# Group E — external references
 # ---------------------------------------------------------------------------
 #
 # The scan is **default-deny with a closed exemption list**, not an enumeration
@@ -3563,8 +3554,8 @@ def _document_text(path: Path) -> str:
 def _gallery_files(gallery_root: Path) -> list[Path]:
     """Every file under the gallery, not only ``templates/``.
 
-    FR-011 says "every gallery artifact", and this feature ships none. Read that
-    way the whole group would be vacuous at merge. The canonical ``brand-kit.css``
+    The rule covers every gallery artifact, while the initial release ships none.
+    Reading it narrowly would make the whole group vacuous at merge. The canonical ``brand-kit.css``
     and ``theme-toggle.html`` are embedded verbatim into all 21 artifacts, so a
     foreign reference in either reaches every artifact and is fixable in none of
     them — which is why they are swept here rather than excluded as "not an
@@ -3978,7 +3969,7 @@ def check_e2(gallery_root: Path) -> list[str]:
     """E2 — the anchor exemption, bounded by scheme.
 
     ``href`` on an anchor is exempt from the host allowlist so the provenance
-    and attribution links FR-012 and FR-020 require survive. It is not exempt
+    and attribution links must survive. It is not exempt
     from everything: "navigation to any host" taken literally exempts
     ``javascript:`` and ``data:``, which navigate to no host at all.
     """
@@ -4006,8 +3997,8 @@ def check_e4(gallery_root: Path) -> list[str]:
     endpoint: the same request without the parameter returns a stylesheet
     carrying zero ``font-display`` declarations, leaving the descriptor at a
     blocking initial value with an invisible-text period, and with the parameter
-    returns ``font-display: swap`` on every face. FR-024's "never invisible
-    while waiting" therefore rests on one query parameter that no other check
+    returns ``font-display: swap`` on every face. The never-invisible-while-loading
+    behavior therefore rests on one query parameter that no other check
     would notice and that a port author can drop while still passing E1.
     """
     failures: list[str] = []
@@ -4034,13 +4025,7 @@ def check_e5(gallery_root: Path) -> list[str]:
     """E5 — the host comes from a structured parse that admits no ambiguity.
 
     Userinfo and port absent, and the parse round-tripping to the original
-    string. This is the conjunction ``_openai_url`` already asserts in
-    ``tests/speckit-pro/layer6-efficiency/lib/codex_capability_contract.py``
-    (``geturl() == value``, ``username is None``, ``password is None``,
-    ``port is None``, ``netloc.lower() == host``), reproduced here because that
-    one is bound to a fixed host-and-path allowlist and cannot be called for a
-    font request. ``test_e5_reuses_the_repositorys_hardened_conjunction`` pins
-    the two to the same behaviour.
+    string.
 
     The userinfo clause is what sees a reference whose userinfo segment reads as
     an allowlisted host: the parser reports the real host, but a reader — and a
@@ -4492,7 +4477,7 @@ class ExternalReferenceFixtureTests(ExternalReferenceFixtureCase):
     # -- E2: the anchor exemption, bounded by scheme --
 
     def test_e2_accepts_the_provenance_and_attribution_forms(self) -> None:
-        """Negative control: a scanner failing this rejects what FR-012 and FR-020 require."""
+        """Negative control: a scanner failing this rejects required attribution links."""
         self.write_document(
             '<a href="https://github.com/anthropics/html-effectiveness">upstream</a>\n'
             '<a href="mailto:security">report</a>\n'
@@ -4574,18 +4559,6 @@ class ExternalReferenceFixtureTests(ExternalReferenceFixtureCase):
         self.write_document('<link rel="stylesheet" href="HTTPS://fonts.googleapis.com/css2?display=swap">')
 
         self.assertReports(check_e5(self.gallery), "HTTPS://")
-
-    def test_e5_reuses_the_repositorys_hardened_conjunction(self) -> None:
-        """Behavioural pin: the same conjunction rejects the same shapes upstream."""
-        valid = "https://platform.openai.com/docs"
-        self.assertTrue(_OPENAI_URL(valid))
-        for mutated in (
-            f"{valid.replace('https://', 'HTTPS://')}",
-            "https://platform.openai.com:8443/docs",
-            _with_userinfo("https://" + FIXTURE_FOREIGN_HOST, "platform.openai.com/docs"),
-        ):
-            with self.subTest(msg=mutated):
-                self.assertFalse(_OPENAI_URL(mutated))
 
     # -- E6: pre-parse character rejection --
 
@@ -4867,7 +4840,7 @@ class ExternalReferenceFixtureTests(ExternalReferenceFixtureCase):
 
 
 # ---------------------------------------------------------------------------
-# Group J — prohibited constructs (FR-027)
+# Group J — prohibited constructs
 # ---------------------------------------------------------------------------
 
 
@@ -4918,10 +4891,10 @@ def _construct_documents(gallery_root: Path) -> list[tuple[str, str, list[_Eleme
     artifact and is fixable in none of them. The same is true of a prohibited
     construct and — more sharply — of the policy declaration, because the head
     block's marked region is copied verbatim into all 21 artifacts. A policy
-    deleted there is a policy deleted everywhere, and while ART-001 shipped no
+    deleted there is a policy deleted everywhere, and while the initial release shipped no
     artifact a templates-only sweep reached nothing at all: every construct and
     directive check would pass on an empty set while the shipped bytes went
-    unread. ART-002 ports the first artifacts, so the sweep is no longer empty —
+    unread. The next release ports the first artifacts, so the sweep is no longer empty —
     but the scoping stays, because the reason for it never depended on the
     templates directory being empty.
 
@@ -5227,7 +5200,7 @@ GROUP_J_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (
 class ProhibitedConstructTests(unittest.TestCase):
     """Group J against the shipped gallery.
 
-    Under ART-001 the ``templates/`` sweep was empty — but the group was **not**
+    Under the initial release the ``templates/`` sweep was empty — but the group was **not**
     vacuous even then, and it must not be. J1-J6, J9 and J10 read
     ``_construct_documents``, which adds the canonical head block, because that
     block's region is copied verbatim into all 21 artifacts: a construct or a
@@ -5247,9 +5220,9 @@ class ProhibitedConstructTests(unittest.TestCase):
     def test_the_shipped_gallery_carries_exactly_its_shipped_entries(self) -> None:
         """The artifact sweep equals the ``shipped`` identifier set, both ways.
 
-        This replaces ART-001's ``carries_no_artifact``, which asserted the
+        This replaces the initial release's ``carries_no_artifact``, which asserted the
         sweep was empty. That was a true and useful statement while nothing was
-        ported, and ART-002 is the change that makes it false — so it is
+        ported, and the first artifact release is the change that makes it false — so it is
         rewritten to state the new truth rather than deleted, because deleting a
         non-vacuity guard is how a group silently stops binding.
 
@@ -5458,7 +5431,7 @@ class ProhibitedConstructFixtureTests(ProhibitedConstructFixtureCase):
 
 
 # ---------------------------------------------------------------------------
-# Group G — upstream attribution (FR-020)
+# Group G — upstream attribution
 # ---------------------------------------------------------------------------
 
 UPSTREAM_NOTICE_FILE = "UPSTREAM-NOTICE.md"
@@ -5518,11 +5491,11 @@ SOFTWARE.
 # verbatim in every ported artifact are the same line, and two literals drift.
 UPSTREAM_COPYRIGHT = UPSTREAM_PERMISSION_NOTICE.split("\n\n")[1]
 
-# The attribution header's machine-readable shape. FR-020 fixes the header's
+# The attribution header's machine-readable shape. The contract fixes the header's
 # *contents* and ``SPA-CONTRACT.md`` records it for authors as an HTML comment
 # near the top of the file; the labels below are what make G6 and G7 possible at
 # all, because a value that cannot be located cannot be compared to the entry
-# that declares it. ART-002…005 inherit this shape along with the checks.
+# that declares it. Later artifact releases inherit this shape with the checks.
 REPOSITORY_LABEL = "Upstream repository:"
 UPSTREAM_FILE_LABEL = "Upstream file:"
 LICENSE_LABEL = "License:"
@@ -5543,7 +5516,7 @@ class _AttributionElement(NamedTuple):
     literals: tuple[str, ...]
 
 
-# The six elements FR-020 enumerates. G3 requires every one of them and G4
+# The six required elements. G3 requires every one of them and G4
 # refuses every one of them, off this single table — which is what makes the two
 # branches opposite directions on one claim rather than a claim on one side and
 # a symptom on the other.
@@ -5631,7 +5604,7 @@ def _attribution_header(text: str) -> str | None:
     """The comment carrying the attribution header, or ``None``.
 
     The first parser-recognized comment carrying any element. A header split
-    across two comments is therefore not a header: FR-020 requires the elements
+    across two comments is therefore not a header: the elements must
     in one, and a reader relying on the licensing claim reads one block.
     """
     for comment in _comments(text):
@@ -5720,7 +5693,7 @@ def check_g3(gallery_root: Path) -> list[str]:
         if header is None:
             failures.append(
                 f"{label}: {where}: field 'source': origin '{UPSTREAM}', but the artifact carries no "
-                "attribution header — FR-020 requires one as an HTML comment near the top of the file"
+                "attribution header — expected one as an HTML comment near the top of the file"
             )
             continue
         failures.extend(
@@ -5886,11 +5859,11 @@ class UpstreamAttributionTests(unittest.TestCase):
 
     G1, G2, and G5 read files the gallery has always shipped and are asserted
     non-vacuous below. G3, G4, G6, and G7 pair entries with artifacts, and under
-    ART-001 they swept an empty set — that vacuity was asserted rather than left
+    the initial release they swept an empty set — that vacuity was asserted rather than left
     implied, because a green attribution gate that never ran reads exactly like
     one that did.
 
-    ART-002 ports the first artifacts, so those four now bind for the first
+    The first artifact release ports the first artifacts, so those four now bind for the first
     time, and the assertion below inverts with them: it states which entries are
     paired rather than that none are. The obligation is unchanged — say out loud
     what this group is actually reading — and it is why the assertion was
@@ -5939,8 +5912,8 @@ class UpstreamAttributionTests(unittest.TestCase):
     def test_every_upstream_entry_status_agrees_with_its_artifact(self) -> None:
         """The biconditional, read at the origin G3 depends on.
 
-        ART-001's version asserted every upstream entry was still ``planned``,
-        which was the reason the pairing above swept nothing. ART-002 flips the
+        The initial version asserted every upstream entry was still ``planned``,
+        which was the reason the pairing above swept nothing. The next release flips the
         first of them, so that statement is now false and this one replaces it:
         an upstream entry reads ``shipped`` exactly when its artifact exists.
 
@@ -6223,7 +6196,7 @@ class UpstreamAttributionFixtureTests(UpstreamAttributionFixtureCase):
 
 
 # ---------------------------------------------------------------------------
-# Group F — payload reach (FR-018) — BLOCKING
+# Group F — payload reach — BLOCKING
 # ---------------------------------------------------------------------------
 
 DIST_ROOT = REPO_ROOT / "dist"
@@ -6254,7 +6227,7 @@ def _path_set_failures(gallery_root: Path, dist_root: Path, platform: str) -> li
     source = _relative_files(gallery_root)
     return [
         f"{relative}: under the gallery source but absent from the {platform} payload — "
-        "'copy_optional_xplat008' is fail-silent, so an absent name produces no build error"
+        "'copy_optional_installed_plugin' is fail-silent, so an absent name produces no build error"
         for relative in sorted(source - payload)
     ] + [
         f"{relative}: under the {platform} payload but absent from the gallery source — a stale copy the "
@@ -6307,7 +6280,7 @@ def check_f4(gallery_root: Path, dist_root: Path = DIST_ROOT) -> list[str]:
     """F4 — each source file is byte-identical to its **Codex** payload copy.
 
     Safe only because F5 holds. The Codex build runs
-    ``rewrite_payload_skill_paths_xplat008`` over every file in its payload and
+    ``rewrite_payload_skill_paths_installed_plugin`` over every file in its payload and
     writes the file back only if the substitution changed it, so on a file
     carrying no matching literal the rewrite is a verified no-op and this check
     is exactly as stable as F3.
@@ -6318,7 +6291,7 @@ def check_f4(gallery_root: Path, dist_root: Path = DIST_ROOT) -> list[str]:
 def check_f5(gallery_root: Path) -> list[str]:
     """F5 — no source gallery file carries a reference the rewriter would match.
 
-    Defined by ``REL_SKILL_PATH_XPLAT008`` itself, imported from the build
+    Defined by ``RELATIVE_SKILL_PATH_PATTERN`` itself, imported from the build
     rather than restated here, so the check and the build agree by construction.
     A substring search for the same path prefix would fail ``SPA-CONTRACT.md``
     for documenting this very rule to authors: the rewriter requires at least
@@ -6335,7 +6308,7 @@ def check_f5(gallery_root: Path) -> list[str]:
             text = path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
             continue
-        match = REL_SKILL_PATH_XPLAT008.search(text)
+        match = RELATIVE_SKILL_PATH_PATTERN.search(text)
         if match is not None:
             failures.append(
                 f"{_label(gallery_root, path)}: contains '{match.group(0)}', which the Codex payload build "
@@ -6374,7 +6347,7 @@ class PayloadReachTests(unittest.TestCase):
             with self.subTest(msg=platform):
                 self.assertTrue(
                     _relative_files(_payload_gallery(DIST_ROOT, platform)),
-                    f"the {platform} payload carries no gallery — the FR-018 failure this group exists for",
+                    f"the {platform} payload carries no gallery — the failure this group exists for",
                 )
 
     def test_f5_does_not_fire_on_the_contract_document_that_records_the_rule(self) -> None:
@@ -6385,7 +6358,7 @@ class PayloadReachTests(unittest.TestCase):
 
     def test_the_rewriter_pattern_is_the_live_one(self) -> None:
         """Non-vacuity: an unmatchable pattern would make F5 pass on anything."""
-        self.assertIsNotNone(REL_SKILL_PATH_XPLAT008.search("../skills/a/SKILL.md"))
+        self.assertIsNotNone(RELATIVE_SKILL_PATH_PATTERN.search("../skills/a/SKILL.md"))
 
 
 # --- Group F fixtures ------------------------------------------------------
@@ -6434,7 +6407,7 @@ class PayloadReachFixtureTests(PayloadReachFixtureCase):
     # -- F1/F2: the set equality, in both directions, on both platforms --
 
     def test_f1_and_f2_reject_a_gallery_absent_from_a_payload(self) -> None:
-        """The standing FR-018 failure: fail-silent copy, no build error, green suite."""
+        """The standing failure: fail-silent copy, no build error, green suite."""
         for platform, check in ((CLAUDE, check_f1), (CODEX, check_f2)):
             with self.subTest(msg=platform):
                 self.setUp()
@@ -6515,7 +6488,7 @@ class PayloadReachFixtureTests(PayloadReachFixtureCase):
 
 
 # ---------------------------------------------------------------------------
-# Group H — suite integration (FR-014)
+# Group H — suite integration
 # ---------------------------------------------------------------------------
 
 SUITE_MANIFEST = REPO_ROOT / "tests" / "speckit-pro" / "suite-manifest.json"
@@ -6649,7 +6622,7 @@ class SuiteRegistrationFixtureTests(SuiteRegistrationFixtureCase):
 
 
 # ---------------------------------------------------------------------------
-# Group K — Canonical-block cross-file agreement (FR-022, FR-024)
+# Group K — Canonical-block cross-file agreement
 # ---------------------------------------------------------------------------
 #
 # Both rows here are closure between the **two canonical files**, the same shape
@@ -7186,8 +7159,7 @@ class CanonicalBlockAgreementFixtureTests(CanonicalBlockAgreementFixtureCase):
 
 
 # ---------------------------------------------------------------------------
-# Group Q - ART-005 slide-deck reader contract (FR-003, FR-005, FR-006,
-# FR-013, FR-014, FR-022)
+# Group Q - slide-deck reader contract
 # ---------------------------------------------------------------------------
 
 SLIDE_DECK_ID = "slide-deck"
@@ -7329,7 +7301,7 @@ def check_q1(gallery_root: Path) -> list[str]:
     return failures
 
 
-# Group L — horizontal keyboard-scroll regions (FR-022, FR-023)
+# Group L — horizontal keyboard-scroll regions
 # ---------------------------------------------------------------------------
 
 KEYBOARD_SCROLL_ATTRIBUTE = "data-rc-keyboard-scroll"
@@ -8892,7 +8864,11 @@ def check_o2(gallery_root: Path) -> list[str]:
         absent_tokens = [token for token in source_tokens if token not in text]
         if absent_tokens:
             failures.append(f"{label}: live decision validation source is missing: {absent_tokens!r}")
-        if text.count("featureLine()") != 2 or "Feature: ART-004 Gallery Completion Design Prototyping" in text:
+        hard_coded_feature = re.search(
+            r"[\"']Feature:\s+[^\"']*Gallery Completion Design Prototyping[\"']",
+            text,
+        )
+        if text.count("featureLine()") != 2 or hard_coded_feature is not None:
             failures.append(
                 f"{label}: decision payload feature line is not derived once per export from the live feature header"
             )
@@ -9062,7 +9038,7 @@ class DecisionExportContractFixtureTests(DecisionPortContractFixtureTests):
         self.write_export_gallery()
         body = self.export_body("visual-designs").replace(
             "featureLine(),",
-            "'Feature: ART-004 Gallery Completion Design Prototyping',",
+            "'Feature: Synthetic Gallery Completion Design Prototyping',",
             1,
         )
         self.write_decision_artifact("visual-designs", body=body)
@@ -9443,8 +9419,7 @@ class DecisionAccessibilityContractTests(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Group R - ART-005 concept-explainer reader contract (FR-003, FR-005,
-# FR-006, FR-012-FR-014, FR-021-FR-022)
+# Group R - concept-explainer reader contract
 # ---------------------------------------------------------------------------
 
 CONCEPT_EXPLAINER_ID = "concept-explainer"
@@ -9539,8 +9514,7 @@ class ConceptExplainerReaderTests(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Group S - ART-005 status-report reader contract (FR-003, FR-005, FR-006,
-# FR-013, FR-014, FR-020, FR-022)
+# Group S - status-report reader contract
 # ---------------------------------------------------------------------------
 
 STATUS_REPORT_ID = "status-report"
@@ -9639,8 +9613,7 @@ class StatusReportReaderTests(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Group T - ART-005 incident-report reader contract (FR-003, FR-005, FR-006,
-# FR-013, FR-014, FR-020, FR-022)
+# Group T - incident-report reader contract
 # ---------------------------------------------------------------------------
 
 INCIDENT_REPORT_ID = "incident-report"
@@ -9743,8 +9716,7 @@ class IncidentReportReaderTests(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Group U - ART-005 triage-board producer contract (FR-003, FR-007,
-# FR-009-FR-014, FR-019-FR-023)
+# Group U - triage-board producer contract
 # ---------------------------------------------------------------------------
 
 TRIAGE_BOARD_ID = "triage-board"
@@ -9909,8 +9881,7 @@ class TriageBoardProducerTests(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Group V - ART-005 feature-flags producer contract (FR-003, FR-007-FR-014,
-# FR-019-FR-023)
+# Group V - feature-flags producer contract
 # ---------------------------------------------------------------------------
 
 FEATURE_FLAGS_ID = "feature-flags"
@@ -10055,8 +10026,7 @@ class FeatureFlagsProducerTests(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Group W - ART-005 prompt-tuner producer contract (FR-003, FR-007-FR-014,
-# FR-019-FR-023)
+# Group W - prompt-tuner producer contract
 # ---------------------------------------------------------------------------
 
 PROMPT_TUNER_ID = "prompt-tuner"

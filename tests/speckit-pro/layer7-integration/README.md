@@ -306,7 +306,6 @@ Defaults:
 | L3 | Functional evals (does each skill produce the right output?) | Slow (AI) |
 | L4 | Python unit and contract tests (incl. `transcript_helpers.py`) | Fast |
 | L5 | Agent tool-scoping | Fast |
-| L6 | Agent efficiency benchmarks | Slow (AI) |
 | **L7** | **Multi-agent dispatch graph** | **Fast (replay) / Slow (live)** |
 
 L7 replay is deterministic and runs through the integration suite. L7 live is

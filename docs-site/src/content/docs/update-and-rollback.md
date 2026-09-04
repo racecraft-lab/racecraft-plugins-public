@@ -54,8 +54,8 @@ reference is the desired recovery anchor.
 ### Stale Payload
 
 Use stale payload guidance when generated Claude or Codex payload files lag
-behind authoring source or a copied personal payload. The XPLAT-008 payload
-completeness runner flow is a source-owned rebuild and comparison path; it is
+behind authoring source or a copied personal payload. The payload-completeness
+runner flow is a source-owned rebuild and comparison path; it is
 not a direct edit of installed runtime state.
 
 ### Stale Cache

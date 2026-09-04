@@ -1,16 +1,5 @@
 #!/usr/bin/env python3
-"""Structural validation for .agents/plugins/marketplace.json (port of validate-codex-marketplace.sh).
-
-XPLAT-010 count-parity port (T023, US2). Python 3.11+ standard library only.
-Asserts the Codex marketplace descriptor exists, is valid JSON, carries the
-required fields, and that its first plugin's ``source.path`` is a repo-relative
-``./``-prefixed directory that resolves inside the repo root. Every former
-``assert_*``/``_pass``/``_fail`` execution maps to one counted ``subTest`` unit;
-names reproduced verbatim via ``subTest(msg=...)`` for a 1:1 baseline match.
-
-Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-codex-marketplace-baseline.txt``
-(TOTAL: 13).
-"""
+"""Validate the Codex marketplace manifest."""
 
 from __future__ import annotations
 

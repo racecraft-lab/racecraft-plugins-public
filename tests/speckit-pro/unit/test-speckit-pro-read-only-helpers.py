@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stdlib-only tests for XPLAT-005 read-only runner helpers."""
+"""Stdlib-only tests for read-only runner helpers."""
 
 from __future__ import annotations
 
@@ -24,16 +24,14 @@ PLAN_LAYERS_CAPTURE_LIMIT_BYTES = 256 * 1024
 FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "read-only-helpers"
 PLAN_LAYERS_FIXTURE_DIR = "tests/speckit-pro/unit/fixtures/plan-layers"
 FEATURE_DIR = "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature"
-ARCHIVED_FEATURE_DIR = "specs/xplat-005-read-only-helper-port"
+ARCHIVED_FEATURE_DIR = "specs/spec-900-archived-feature"
 REPOSITORY_BASH_CONFINEMENT_PLAN_DIR = (
     "tests/speckit-pro/unit/fixtures/plan-layers/repository-bash-confinement-plan"
 )
-WORKFLOW_FILE = "docs/ai/specs/.process/XPLAT-005-workflow.md"
-# resolve-autopilot-stage reads its workflow file, so its case needs one that is
-# actually on disk; the archived XPLAT-005 record no longer is.
-AUTOPILOT_STAGE_WORKFLOW_FILE = "docs/ai/specs/.process/ART-006-workflow.md"
+WORKFLOW_FILE = "tests/speckit-pro/unit/fixtures/autopilot-stage/workflow.md"
+AUTOPILOT_STAGE_WORKFLOW_FILE = WORKFLOW_FILE
 PR_PACKET_FIXTURE_DIR = REPO_ROOT / "tests" / "speckit-pro" / "unit" / "fixtures" / "pr-packet"
-DRAFT_PACKET_VALIDATION_DIR = "specs/art-007-draft-pr-emission/.process/pr-packets"
+DRAFT_PACKET_VALIDATION_DIR = "specs/fixture-draft-pr/.process/pr-packets"
 PR_PACKET_SCHEMA = (
     PLUGIN_ROOT / "skills" / "speckit-autopilot" / "contracts" / "pr-packet.schema.json"
 )
@@ -43,11 +41,7 @@ PR_PACKET_SCHEMA_FIXTURE = (
     / "speckit-pro"
     / "unit"
     / "fixtures"
-    / "pr-packet-feature"
-    / "specs"
-    / "prsg-012-reviewer-ready-pr-packet-contract"
-    / "contracts"
-    / "pr-packet.schema.json"
+    / "pr-packet-title-patterns.json"
 )
 # Shipped runbooks that tell an operator what to do with the confidence-gate
 # JSON on the exit-2 path. All three describe the same loop, so they have to
@@ -157,13 +151,13 @@ HELPER_CASES: dict[str, dict[str, object]] = {
     "partition-phase7-tasks": {"tasks_file": f"{FEATURE_DIR}/tasks.md", "wave_size": 4},
     "parse-consensus-categories": {"line": "[codebase, domain] Q1: bcrypt or argon2?"},
     "aggregate-crl": {"workflow_file": AUTOPILOT_STAGE_WORKFLOW_FILE},
-    "validate-pr-workflow-contract": {"title": "feat(XPLAT-005): Add read-only helper port"},
+    "validate-pr-workflow-contract": {"title": "feat(FEATURE-001): Validate helper contract"},
     "validate-pr-packet-read-only": {"packet_path": "tests/speckit-pro/unit/fixtures/read-only-helpers/missing-pr-packet.json"},
     "estimate-spec-size": {"user_stories": 2, "files": 3, "frs": 4},
     "sweep-pr-feedback": {
-        "workflow_file": "docs/ai/specs/.process/ART-008-workflow.md",
+        "workflow_file": "docs/ai/specs/.process/FEATURE-002-workflow.md",
         "self_login": "speckit-pro-bot",
-        "feature_dir": "specs/art-008-feedback-sweep",
+        "feature_dir": "specs/fixture-feedback-sweep",
         "pr_observation": {
             "ok": True,
             "comments": [
@@ -173,7 +167,7 @@ HELPER_CASES: dict[str, dict[str, object]] = {
                     "author": "octocat",
                     "author_association": "OWNER",
                     "body": (
-                        "Artifact: Implementation Plan\nFeature: ART-008\n\n"
+                        "Artifact: Implementation Plan\nFeature: FEATURE-002\n\n"
                         "Objections recorded while reviewing this plan.\n\n"
                         "Phase / Registry  (#phase-2)\n"
                         "The registry should cover every exporting template."
@@ -194,7 +188,7 @@ HELPER_CASES: dict[str, dict[str, object]] = {
     },
     "sweep-isolation-session": {"named_surface": "attest_claude"},
     "check-artifact-freshness": {
-        "workflow_file": "docs/ai/specs/.process/ART-008-workflow.md",
+        "workflow_file": "docs/ai/specs/.process/FEATURE-002-workflow.md",
         "artifacts_observation": {
             "ok": True,
             "artifacts_dir_state": "present",
@@ -234,6 +228,8 @@ def helper_request(helper_id: str, inputs: dict[str, object] | None = None) -> d
 def run_runner(
     request: object,
     env_override: dict[str, str] | None = None,
+    *,
+    cwd: Path = REPO_ROOT,
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, object], list[dict[str, object]]]:
     env = runner_env()
     if env_override:
@@ -243,7 +239,7 @@ def run_runner(
         input=json.dumps(request) if not isinstance(request, str) else request,
         text=True,
         capture_output=True,
-        cwd=REPO_ROOT,
+        cwd=cwd,
         env=env,
         shell=False,
         check=False,
@@ -717,7 +713,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
             self.skipTest("scaffold-placement cases use resolve-scaffold-worktree-placement")
         with tempfile.TemporaryDirectory() as temp:
             primary_root, task_root = self.build_scaffold_placement_worktrees(Path(temp))
-            branch = "rdl-010-dual-runtime-writing-boundary"
+            branch = "fixture-dual-runtime-writing-boundary"
             expected_root = task_root / ".worktrees" / branch
 
             worktree_listing = subprocess.run(
@@ -801,7 +797,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)
             primary_root, task_root = self.build_scaffold_placement_worktrees(base)
-            sibling_branch = "rdl-010-existing-sibling"
+            sibling_branch = "fixture-existing-sibling"
             sibling_root = base / "existing-sibling-worktree"
             subprocess.run(
                 ["git", "-C", str(primary_root), "worktree", "add", "-b", sibling_branch, str(sibling_root)],
@@ -819,7 +815,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
             self.assertEqual(payload["worktree_root"], sibling_root.resolve().as_posix())
 
             override_parent = base / "explicit-external-parent"
-            override_branch = "rdl-011-explicit-external"
+            override_branch = "fixture-explicit-external"
             payload, exit_code = self.placement_result(
                 task_root,
                 override_branch,
@@ -837,13 +833,13 @@ class ReadOnlyHelperTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temp:
             _, task_root = self.build_scaffold_placement_worktrees(Path(temp), ignore_worktrees=False)
-            payload, exit_code = self.placement_result(task_root, "rdl-012-unignored")
+            payload, exit_code = self.placement_result(task_root, "fixture-unignored")
             self.assertEqual((payload["placement_status"], exit_code), ("conflict", 1))
             self.assertTrue(any("ignored" in problem for problem in payload["problems"]))
 
         with tempfile.TemporaryDirectory() as temp:
             _, task_root = self.build_scaffold_placement_worktrees(Path(temp))
-            branch = "rdl-013-occupied"
+            branch = "fixture-occupied"
             occupied = task_root / ".worktrees" / branch
             occupied.mkdir(parents=True)
             (occupied / "foreign.txt").write_text("occupied\n", encoding="utf-8")
@@ -854,7 +850,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)
             _, task_root = self.build_scaffold_placement_worktrees(base)
-            branch = "rdl-014-symlinked"
+            branch = "fixture-symlinked"
             target = task_root / ".worktrees" / branch
             target.parent.mkdir(parents=True)
             outside = base / "symlink-target"
@@ -871,7 +867,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
             _, task_root = self.build_scaffold_placement_worktrees(Path(temp))
             payload, exit_code = self.placement_result(
                 task_root,
-                "rdl-015-traversal",
+                "fixture-traversal",
                 worktree_root_override="../outside",
             )
             self.assertEqual((payload["placement_status"], exit_code), ("invalid", 1))
@@ -887,7 +883,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temp:
             _, task_root = self.build_scaffold_placement_worktrees(Path(temp))
-            requested_branch = "rdl-016-mismatched"
+            requested_branch = "fixture-mismatched"
             mismatched_root = task_root / ".worktrees" / requested_branch
             mismatched_root.parent.mkdir(parents=True)
             subprocess.run(
@@ -912,7 +908,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temp:
             _, task_root = self.build_scaffold_placement_worktrees(Path(temp))
-            branch = "rdl-017-prunable"
+            branch = "fixture-prunable"
             prunable_root = task_root / ".worktrees" / branch
             prunable_root.parent.mkdir(parents=True)
             subprocess.run(
@@ -1368,7 +1364,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_redundant_confidence_gate_path_is_canonicalized_before_execution(self) -> None:
         if self.helper_filter and self.helper_filter != "confidence-gate":
             self.skipTest("confidence-gate canonical argv case")
-        redundant_workflow = "docs/ai/specs/.process/../.process/XPLAT-005-workflow.md"
+        redundant_workflow = "tests/speckit-pro/unit/fixtures/autopilot-stage/../autopilot-stage/workflow.md"
         response = self.assert_helper_matches_bash_reference(
             "confidence-gate",
             {"workflow_file": redundant_workflow, "mode_name": "advisory"},
@@ -1379,7 +1375,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_check_prerequisites_uses_canonical_input_for_replay(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
             self.skipTest("check-prerequisites canonical argv case")
-        redundant_workflow = "docs/ai/specs/.process/../.process/XPLAT-005-workflow.md"
+        redundant_workflow = "tests/speckit-pro/unit/fixtures/autopilot-stage/../autopilot-stage/workflow.md"
         response = self.assert_helper_matches_bash_reference(
             "check-prerequisites",
             {"workflow_file": redundant_workflow},
@@ -1838,7 +1834,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
                                 **valid_packet,
                                 "packet_id": "source-fingerprints",
                                 "validation_result_path": (
-                                    "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/"
+                                    "specs/fixture-pr-packet/.process/"
                                     "pr-packets/source-fingerprints/validation.json"
                                 ),
                                 "validation_result": {
@@ -1868,12 +1864,11 @@ class ReadOnlyHelperTests(unittest.TestCase):
         title_properties = schema["$defs"]["generated_title"]["properties"]
         scope_pattern = title_properties["scope"]["pattern"]
         value_pattern = title_properties["value"]["pattern"]
-        fixture_schema = json.loads(PR_PACKET_SCHEMA_FIXTURE.read_text(encoding="utf-8"))
-        fixture_title_properties = fixture_schema["$defs"]["generated_title"]["properties"]
-        self.assertEqual(fixture_title_properties["scope"]["pattern"], scope_pattern)
-        self.assertEqual(fixture_title_properties["value"]["pattern"], value_pattern)
+        fixture_patterns = json.loads(PR_PACKET_SCHEMA_FIXTURE.read_text(encoding="utf-8"))
+        self.assertEqual(fixture_patterns["scope_pattern"], scope_pattern)
+        self.assertEqual(fixture_patterns["value_pattern"], value_pattern)
 
-        for scope in ("speckit-pro", "PRSG-012", "SPEC-014C"):
+        for scope in ("speckit-pro", "FEATURE-001", "FIXTURE-014C"):
             with self.subTest(scope=scope, expected="accepted"):
                 self.assertIsNotNone(re.fullmatch(scope_pattern, scope))
                 self.assertIsNotNone(
@@ -1966,7 +1961,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
                         "packet_id": "invalid-body-utf8",
                         "body_file": body.relative_to(REPO_ROOT).as_posix(),
                         "validation_result_path": (
-                            "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/"
+                            "specs/fixture-pr-packet/.process/"
                             "pr-packets/invalid-body-utf8/validation.json"
                         ),
                     }
@@ -2016,10 +2011,18 @@ class ReadOnlyHelperTests(unittest.TestCase):
         if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
             self.skipTest("validate-pr-packet canonical ownership case")
         valid_packet = json.loads((PR_PACKET_FIXTURE_DIR / "valid-single.json").read_text(encoding="utf-8"))
-        specs_root = REPO_ROOT / "specs"
-        with tempfile.TemporaryDirectory(prefix="packet-identity-", dir=specs_root) as feature:
-            feature_dir = Path(feature)
-            source_feature_dir = feature_dir.relative_to(REPO_ROOT).as_posix()
+        with tempfile.TemporaryDirectory(prefix="packet-identity-") as project:
+            repo_root = Path(project)
+            subprocess.run(
+                ["git", "init", "--quiet", str(repo_root)],
+                text=True,
+                capture_output=True,
+                shell=False,
+                check=True,
+            )
+            (repo_root / ".specify").mkdir()
+            feature_dir = repo_root / "specs" / "fixture-feature"
+            source_feature_dir = feature_dir.relative_to(repo_root).as_posix()
             packet_id = "valid-single"
             packet_root = feature_dir / ".process" / "pr-packets"
             body_path = packet_root / packet_id / "body.md"
@@ -2033,17 +2036,18 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 **valid_packet,
                 "packet_id": packet_id,
                 "source_feature_dir": source_feature_dir,
-                "body_file": body_path.relative_to(REPO_ROOT).as_posix(),
+                "body_file": body_path.relative_to(repo_root).as_posix(),
                 "validation_result_path": f"{source_feature_dir}/.process/pr-packets/{packet_id}/validation.json",
             }
             packet_path.write_text(json.dumps(canonical_packet), encoding="utf-8")
             completed, response, stderr_records = run_runner(
                 helper_request(
                     "validate-pr-packet-read-only",
-                    {"packet_path": packet_path.relative_to(REPO_ROOT).as_posix()},
-                )
+                    {"packet_path": packet_path.relative_to(repo_root).as_posix()},
+                ),
+                cwd=repo_root,
             )
-            self.assertEqual(completed.returncode, 0)
+            self.assertEqual(completed.returncode, 0, response)
             self.assert_response(response, "ok", 0)
             self.assertEqual(stderr_records, [])
 
@@ -2053,7 +2057,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
                     "input.identity.source_feature_dir",
                 ),
                 "body_mismatch": (
-                    {"body_file": (PR_PACKET_FIXTURE_DIR / "bodies" / "valid-single.md").relative_to(REPO_ROOT).as_posix()},
+                    {"body_file": "fixtures/body.md"},
                     "input.identity.body_file",
                 ),
                 "validation_mismatch": (
@@ -2070,8 +2074,9 @@ class ReadOnlyHelperTests(unittest.TestCase):
                     completed, response, stderr_records = run_runner(
                         helper_request(
                             "validate-pr-packet-read-only",
-                            {"packet_path": packet_path.relative_to(REPO_ROOT).as_posix()},
-                        )
+                            {"packet_path": packet_path.relative_to(repo_root).as_posix()},
+                        ),
+                        cwd=repo_root,
                     )
                     self.assertEqual(completed.returncode, 1)
                     self.assert_response(response, "expected_failure", 1)
@@ -2131,7 +2136,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
                             PR_PACKET_FIXTURE_DIR / "bodies" / "valid-single-edited.md"
                         ).relative_to(REPO_ROOT).as_posix(),
                         "validation_result_path": (
-                            "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/"
+                            "specs/fixture-pr-packet/.process/"
                             "pr-packets/current-editable-packet/validation.json"
                         ),
                     }
@@ -2185,7 +2190,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
                         **valid_packet,
                         "packet_id": "wrong-id",
                         "validation_result_path": (
-                            "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/"
+                            "specs/fixture-pr-packet/.process/"
                             "pr-packets/expected-id/validation.json"
                         ),
                     }
@@ -2255,7 +2260,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
                                 "packet_id": f"{name}-packet",
                                 "body_file": body.relative_to(REPO_ROOT).as_posix(),
                                 "validation_result_path": (
-                                    "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/"
+                                    "specs/fixture-pr-packet/.process/"
                                     f"pr-packets/{name}-packet/validation.json"
                                 ),
                             }
@@ -2455,7 +2460,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
                     {"packet_path": packet.relative_to(REPO_ROOT).as_posix()},
                 )
             )
-        # FR-004 / FR-008: a run that generated no artifact still opens a valid draft.
+        # A run that generated no artifact still opens a valid draft.
         self.assertEqual(completed.returncode, 0)
         self.assert_response(response, "ok", 0)
         self.assertEqual(response["data"]["stdout_json"]["status"], "passed")
@@ -2479,7 +2484,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
                                 "packet_id": "unknown-mode",
                                 "mode": mode,
                                 "validation_result_path": (
-                                    "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/"
+                                    "specs/fixture-pr-packet/.process/"
                                     "pr-packets/unknown-mode/validation.json"
                                 ),
                             }
@@ -2561,7 +2566,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
                         "packet_id": "single-draft-headings",
                         "required_headings": ["Artifacts", "Resume"],
                         "validation_result_path": (
-                            "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/"
+                            "specs/fixture-pr-packet/.process/"
                             "pr-packets/single-draft-headings/validation.json"
                         ),
                     }
@@ -2569,7 +2574,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 encoding="utf-8",
             )
             rules = self.packet_failure_rules(packet)
-        # SC-008: moving the eight-heading pin into the else arm must keep binding
+        # Moving the reviewer-heading constraint into the else arm must keep binding
         # single mode. If the else arm were omitted, only body.required_headings
         # would survive here.
         self.assertEqual(
@@ -2608,7 +2613,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
             with patch.object(read_only, "trusted_text", return_value=None):
                 result = read_only.validate_pr_workflow_contract(
                     {
-                        "title": "feat(XPLAT-005): Scope check",
+                        "title": "feat(FEATURE-001): Scope check",
                         "repo_root": ".",
                         "changed_files": changed_files.relative_to(REPO_ROOT).as_posix(),
                     },
@@ -2626,7 +2631,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
         with patch("speckit_pro_runner.helpers.read_only.git_diff_changed_paths", return_value=None):
             result = validate_pr_workflow_contract(
                 {
-                    "title": "feat(XPLAT-005): Scope check",
+                    "title": "feat(FEATURE-001): Scope check",
                     "repo_root": ".",
                 },
                 REPO_ROOT,
@@ -2690,12 +2695,12 @@ class ReadOnlyHelperTests(unittest.TestCase):
             project_path = self._build_linked_worktree(
                 Path(workspace),
                 Path(checkout_parent),
-                worktree_relpath=".worktrees/codex-xplat-008-archive-cleanup",
-                branch="codex/xplat-008-archive-cleanup",
+                worktree_relpath=".worktrees/fixture-archive-cleanup",
+                branch="codex/fixture-archive-cleanup",
             )
             from speckit_pro_runner.helpers.read_only import git_branch
 
-            self.assertEqual(git_branch(project_path), "codex/xplat-008-archive-cleanup")
+            self.assertEqual(git_branch(project_path), "codex/fixture-archive-cleanup")
 
     def test_git_branch_accepts_same_repo_worktree_metadata_name(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
@@ -2705,12 +2710,12 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 Path(workspace),
                 Path(checkout_parent),
                 worktree_relpath=REPO_ROOT.name,
-                branch="codex/xplat-008-archive-cleanup",
+                branch="codex/fixture-archive-cleanup",
                 admin_name=f"{REPO_ROOT.name}1",
             )
             from speckit_pro_runner.helpers.read_only import git_branch
 
-            self.assertEqual(git_branch(project_path), "codex/xplat-008-archive-cleanup")
+            self.assertEqual(git_branch(project_path), "codex/fixture-archive-cleanup")
 
     def test_git_branch_rejects_worktree_metadata_without_backpointer(self) -> None:
         """A same-named directory is not proof of ownership.
@@ -2726,7 +2731,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 Path(workspace),
                 Path(checkout_parent),
                 worktree_relpath=REPO_ROOT.name,
-                branch="codex/xplat-008-archive-cleanup",
+                branch="codex/fixture-archive-cleanup",
                 backpointer=None,
             )
             from speckit_pro_runner.helpers.read_only import git_branch
@@ -2741,7 +2746,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 Path(workspace),
                 Path(checkout_parent),
                 worktree_relpath=REPO_ROOT.name,
-                branch="codex/xplat-008-archive-cleanup",
+                branch="codex/fixture-archive-cleanup",
                 backpointer=f"{Path(other) / '.git'}",
             )
             from speckit_pro_runner.helpers.read_only import git_branch
@@ -2769,7 +2774,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
             project_path = Path(project)
             (project_path / ".specify").mkdir()
             (project_path / ".specify" / "feature.json").write_text(
-                '{"feature_directory":"specs/art-006-autopilot-staging"}\n', encoding="utf-8"
+                '{"feature_directory":"specs/fixture-autopilot-staging"}\n', encoding="utf-8"
             )
             payload = self._feature_state(project_path)
             self.assertTrue(payload["on_feature_branch"])
@@ -2781,7 +2786,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
             project_path = Path(project)
             (project_path / ".specify").mkdir()
             with patch.dict(
-                os.environ, {"SPECIFY_FEATURE_DIRECTORY": "specs/car-005-availability"}, clear=False
+                os.environ, {"SPECIFY_FEATURE_DIRECTORY": "specs/fixture-availability"}, clear=False
             ):
                 payload = self._feature_state(project_path)
             self.assertTrue(payload["on_feature_branch"])

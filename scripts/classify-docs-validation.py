@@ -171,7 +171,7 @@ def _print_summary(classification: DocsClassification) -> None:
     print(f"Docs-validation contract changed: {fields['docs_contract']}")
     print(f"Docs validation mode: {fields['validation_mode']}")
     if not classification.should_validate_docs:
-        print("No DOC-010 docs validation surfaces changed; validate-docs skipped successfully.")
+        print("No docs validation surfaces changed; validate-docs skipped successfully.")
 
 
 def main(argv: Sequence[str] | None = None) -> int:

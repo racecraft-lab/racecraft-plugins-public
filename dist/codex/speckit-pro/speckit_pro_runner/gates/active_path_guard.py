@@ -1,4 +1,4 @@
-"""Active-path no-shell/no-jq guard operations for XPLAT-007 US3."""
+"""Active-path no-shell/no-jq guard operations."""
 
 from __future__ import annotations
 
@@ -17,18 +17,16 @@ from typing import Any
 from ..envelope import diagnostic, is_diagnostic, response
 from ..path_utils import find_repo_root, is_relative_to
 
-PROMOTION_RECORD = "tests/speckit-pro/unit/fixtures/runner-gates/promotion-records.json"
 DEFAULT_CASE_FILE = "tests/speckit-pro/unit/fixtures/runner-gates/active-path-guard-cases.json"
-XPLAT_008_PROMOTION_RECORD = "tests/speckit-pro/unit/fixtures/installed-plugin-release/promotion-records.json"
-XPLAT_008_DEFAULT_CASE_FILE = "tests/speckit-pro/unit/fixtures/installed-plugin-release/active-runtime-guard-cases.json"
-XPLAT_009_PROMOTION_RECORD = "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/promotion-records.json"
-XPLAT_009_DEFAULT_CASE_FILE = "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/zero-bash-guard-cases.json"
-XPLAT_009_ALLOWLIST = "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json"
-XPLAT_009_INSTALLED_CACHE_PREFIX = "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/"
-XPLAT_010_DEFAULT_CASE_FILE = "tests/speckit-pro/unit/fixtures/repository-bash-confinement/confinement-guard-cases.json"
-XPLAT_010_ALLOWLIST = "tests/speckit-pro/unit/fixtures/repository-bash-confinement/allowlist.json"
-XPLAT_010_CONTAINER_PREFLIGHT_WORKFLOW = ".github/workflows/container-preflight.yml"
-XPLAT_010_CANONICAL_ALLOWLIST_PATHS = frozenset(
+INSTALLED_RUNTIME_DEFAULT_CASE_FILE = "tests/speckit-pro/unit/fixtures/installed-plugin-release/active-runtime-guard-cases.json"
+PLUGIN_BASH_CONFINEMENT_DEFAULT_CASE_FILE = "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/zero-bash-guard-cases.json"
+PLUGIN_BASH_CONFINEMENT_ALLOWLIST = "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json"
+PLUGIN_INSTALLED_CACHE_PREFIX = "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/"
+INSTALLED_CACHE_PROOF = "speckit-pro/gate-evidence/installed-cache-proof.json"
+REPOSITORY_BASH_CONFINEMENT_DEFAULT_CASE_FILE = "tests/speckit-pro/unit/fixtures/repository-bash-confinement/confinement-guard-cases.json"
+REPOSITORY_BASH_CONFINEMENT_ALLOWLIST = "tests/speckit-pro/unit/fixtures/repository-bash-confinement/allowlist.json"
+CONTAINER_PREFLIGHT_WORKFLOW = ".github/workflows/container-preflight.yml"
+REPOSITORY_BASH_CONFINEMENT_ALLOWLIST_PATHS = frozenset(
     {
         ".specify/extensions/git/scripts/bash/auto-commit.sh",
         ".specify/extensions/git/scripts/bash/create-new-feature.sh",
@@ -116,12 +114,11 @@ REPO_BASH_WRAPPED_NEGATIVE = re.compile(
 )
 REPO_BASH_FIXTURE_PREFIXES = (
     "tests/speckit-pro/unit/fixtures/",
-    "tests/speckit-pro/parity/",
 )
 REPO_BASH_RESOLUTION_MAX_DEPTH = 12
 REPO_BASH_RESOLUTION_MAX_ITEMS = 64
 REPO_BASH_RESOLUTION_MAX_STRING = 4096
-XPLAT_009_REQUIRED_SCAN_ROOTS = frozenset(
+PLUGIN_BASH_CONFINEMENT_REQUIRED_SCAN_ROOTS = frozenset(
     {
         "speckit-pro",
         "scripts/build-plugin-payloads.py",
@@ -135,6 +132,7 @@ PROHIBITED_COMMAND_NAMES = {"bash", "bash.exe", "jq", "jq.exe", "wsl", "wsl.exe"
 SHELL_RUNTIME_COMMAND_NAMES = {"sh", "sh.exe", "zsh", "zsh.exe"}
 SHELL_COMMAND_NAMES = {"sh", "sh.exe", "bash", "bash.exe", "zsh", "zsh.exe", "powershell", "powershell.exe", "pwsh", "pwsh.exe"}
 VALID_INSTALLED_CACHE_PRODUCTS = frozenset({"claude", "codex"})
+INSTALLED_CACHE_PROOF_DOCUMENT_FIELDS = frozenset({"schema_version", "contract_id", "proofs"})
 SUBPROCESS_ARGV_FUNCTION_NAMES = {"run", "Popen", "call", "check_call", "check_output"}
 SUBPROCESS_SHELL_FUNCTION_NAMES = {"getoutput", "getstatusoutput"}
 OS_SHELL_FUNCTION_NAMES = {"system", "popen"}
@@ -308,7 +306,7 @@ CLASSIFICATIONS = (
     "consumer_spec_kit_helper",
     "upstream_spec_kit_helper",
     "generated_payload_mirror",
-    "xplat_008_cutover_surface",
+    "installed_runtime_cutover_surface",
     "source_checkout_helper",
     "docs_non_runtime",
     "test_fixture",
@@ -403,6 +401,15 @@ class RepoBashShellBindingEvent:
 
 REPO_BASH_UNKNOWN_RESOLUTION = RepoBashStaticResolution("unknown")
 REPO_BASH_NONE_RESOLUTION = RepoBashStaticResolution("none")
+ACTIVE_PATH_INPUT_FIELDS = {
+    "active-path-guard": frozenset({"case_file", "case_id", "repo_root"}),
+    "active-runtime-guard": frozenset({"case_file", "case_id", "repo_root"}),
+    "classify-shell-finding": frozenset({"category", "line", "path", "repo_root", "text"}),
+    "repo-bash-confinement": frozenset(
+        {"allowlist_file", "case_file", "case_id", "repo_root"}
+    ),
+    "zero-bash-guard": frozenset({"case_file", "case_id", "repo_root"}),
+}
 
 
 def run_active_path_guard(entry: Any, request: Any) -> dict[str, Any]:
@@ -421,6 +428,29 @@ def run_active_path_guard(entry: Any, request: Any) -> dict[str, Any]:
         return response(status, request_id=request.request_id, data=data, diagnostics=[repo_root_result])
     repo_root = repo_root_result
 
+    allowed_fields = ACTIVE_PATH_INPUT_FIELDS.get(request.operation)
+    if allowed_fields is not None:
+        unknown_fields = sorted(set(request.inputs) - allowed_fields)
+        if unknown_fields:
+            diag = diagnostic(
+                "unsupported_gate_inputs",
+                "active-path gate received unsupported input fields",
+                details={"fields": unknown_fields},
+            )
+            data = (
+                zero_bash_base_data(entry, request.operation, "input_error")
+                if request.operation == "zero-bash-guard"
+                else repo_bash_base_data(entry, request.operation, "input_error", request.inputs)
+                if request.operation == "repo-bash-confinement"
+                else base_data(entry, request.operation, "input_error")
+            )
+            return response(
+                "input_error",
+                request_id=request.request_id,
+                data=data,
+                diagnostics=[diag],
+            )
+
     if request.operation == "active-runtime-guard":
         return run_active_runtime_guard(entry, request, repo_root)
 
@@ -429,16 +459,6 @@ def run_active_path_guard(entry: Any, request: Any) -> dict[str, Any]:
 
     if request.operation == "repo-bash-confinement":
         return run_repo_bash_confinement(entry, request, repo_root)
-
-    if request.inputs.get("xplat_008_cutover_allowed") is not False:
-        diag = diagnostic(
-            "xplat_008_cutover_refused",
-            "active-path guard must not claim XPLAT-008 cutover surfaces",
-            remediation_summary="Keep active Claude/Codex invocation and public release cutover deferred.",
-            remediation_actions=["Set xplat_008_cutover_allowed to false.", "Record remaining cutover work as XPLAT-008 handoff evidence."],
-            deferred_to="XPLAT-008",
-        )
-        return response("input_error", request_id=request.request_id, data=base_data(entry, request.operation, "input_error"), diagnostics=[diag])
 
     if request.operation == "classify-shell-finding":
         return classify_shell_finding(entry, request, repo_root)
@@ -460,7 +480,7 @@ def run_active_path_guard(entry: Any, request: Any) -> dict[str, Any]:
 
 
 def run_active_runtime_guard(entry: Any, request: Any, repo_root: Path) -> dict[str, Any]:
-    case_result = load_case(repo_root, request.inputs, default_case_file=XPLAT_008_DEFAULT_CASE_FILE)
+    case_result = load_case(repo_root, request.inputs, default_case_file=INSTALLED_RUNTIME_DEFAULT_CASE_FILE)
     if is_diagnostic(case_result):
         return response(
             "input_error",
@@ -476,7 +496,7 @@ def run_active_runtime_guard(entry: Any, request: Any, repo_root: Path) -> dict[
             data=active_runtime_base_data(entry, request.operation, "input_error"),
             diagnostics=[source_result],
         )
-    coverage_findings = missing_xplat008_scan_root_findings(repo_root, case_result)
+    coverage_findings = missing_installed_runtime_scan_root_findings(repo_root, case_result)
     diff_finding: RawFinding | None = None
     if (
         "files" not in case_result
@@ -488,7 +508,7 @@ def run_active_runtime_guard(entry: Any, request: Any, repo_root: Path) -> dict[
             diff_finding = changed_result
         else:
             source_result.extend(changed_result)
-    findings = scan_sources_xplat008(source_result, repo_root)
+    findings = scan_installed_runtime_sources(source_result, repo_root)
     findings.extend(coverage_findings)
     if diff_finding is not None:
         findings.append(diff_finding)
@@ -540,14 +560,14 @@ def classify_shell_finding(entry: Any, request: Any, repo_root: Path) -> dict[st
         "active_path_guard_blocked",
         "classify-shell-finding found a shell-specific dependency in an active repo-local gate",
         details={"path": blocking[0].path, "category": blocking[0].category},
-        remediation_summary="Remove the active shell dependency or reclassify the retained path as inactive parity/XPLAT-008 evidence.",
+        remediation_summary="Remove the active shell dependency or reclassify the retained path as inactive parity evidence.",
         remediation_actions=["Inspect data.findings for the blocking_active_gate entry.", "Migrate the active path to a Python runner gate."],
     )
     return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diag])
 
 
 def run_zero_bash_guard(entry: Any, request: Any, repo_root: Path) -> dict[str, Any]:
-    case_result = load_case(repo_root, request.inputs, default_case_file=XPLAT_009_DEFAULT_CASE_FILE)
+    case_result = load_case(repo_root, request.inputs, default_case_file=PLUGIN_BASH_CONFINEMENT_DEFAULT_CASE_FILE)
     if is_diagnostic(case_result):
         return response("input_error", request_id=request.request_id, data=zero_bash_base_data(entry, request.operation, "input_error"), diagnostics=[case_result])
     case = case_result
@@ -598,12 +618,12 @@ def run_zero_bash_guard(entry: Any, request: Any, repo_root: Path) -> dict[str, 
     findings = [*allowlist_findings, *missing_roots, *source_findings, *proof_findings]
     blocking = [finding for finding in findings if finding.classification == "blocking_zero_bash"]
     status = "expected_failure" if blocking else "ok"
-    returned_findings = bounded_findings(blocking if blocking else findings, request.inputs)
+    returned_findings = bounded_findings(blocking if blocking else findings)
     data = zero_bash_base_data(entry, request.operation, status)
     data.update(
         {
-            "schema_version": "1.0",
-            "feature_id": "XPLAT-009",
+            "schema_version": "2.0",
+            "contract_id": "plugin-bash-confinement",
             "status": "pass" if status == "ok" else "fail",
             "blocking_count": len(blocking),
             "classified_counts": classified_counts(findings),
@@ -613,7 +633,7 @@ def run_zero_bash_guard(entry: Any, request: Any, repo_root: Path) -> dict[str, 
             "script_file_count": sum(1 for finding in findings if finding.category == "script_file" and finding.classification == "blocking_zero_bash"),
             "scan_roots": [root for root in case.get("scan_roots", []) if isinstance(root, str)],
             "allowlist": {
-                "path": case.get("allowlist_file", XPLAT_009_ALLOWLIST),
+                "path": case.get("allowlist_file", PLUGIN_BASH_CONFINEMENT_ALLOWLIST),
                 "entry_count": len(allowlist),
                 "release_readiness_excluded": all(entry.get("release_readiness_excluded") is True for entry in allowlist),
             },
@@ -644,7 +664,7 @@ def run_zero_bash_guard(entry: Any, request: Any, repo_root: Path) -> dict[str, 
 
 
 def run_repo_bash_confinement(entry: Any, request: Any, repo_root: Path) -> dict[str, Any]:
-    """Run the XPLAT-010 live tracked-file confinement scan."""
+    """Run the live tracked-file Bash confinement scan."""
     allowlist_result = load_repo_bash_allowlist(repo_root, request.inputs)
     if is_diagnostic(allowlist_result):
         return response(
@@ -668,7 +688,7 @@ def run_repo_bash_confinement(entry: Any, request: Any, repo_root: Path) -> dict
 
     tracked_paths = tracked_result
     tracked_path_set = set(tracked_paths)
-    missing_allowlisted_paths = sorted(XPLAT_010_CANONICAL_ALLOWLIST_PATHS - tracked_path_set)
+    missing_allowlisted_paths = sorted(REPOSITORY_BASH_CONFINEMENT_ALLOWLIST_PATHS - tracked_path_set)
     if missing_allowlisted_paths:
         data = repo_bash_base_data(entry, request.operation, "input_error", request.inputs)
         data.update(
@@ -717,8 +737,8 @@ def run_repo_bash_confinement(entry: Any, request: Any, repo_root: Path) -> dict
     data = repo_bash_base_data(entry, request.operation, status, request.inputs)
     data.update(
         {
-            "schema_version": "1.0",
-            "feature_id": "XPLAT-010",
+            "schema_version": "2.0",
+            "contract_id": "repository-bash-confinement",
             "status": "fail" if blocking else "pass",
             "blocking_count": len(blocking),
             "classified_counts": classified_counts(findings),
@@ -754,14 +774,14 @@ def run_repo_bash_confinement(entry: Any, request: Any, repo_root: Path) -> dict
         remediation_actions=[
             "Inspect data.findings for blocking_repo_bash entries.",
             "Port executable behavior to Python and keep each workflow run value to one approved direct dispatch.",
-            "Do not broaden or substitute the canonical XPLAT-010 allowlist.",
+            "Do not broaden or substitute the canonical repository Bash allowlist.",
         ],
     )
     return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diag])
 
 
 def load_repo_bash_allowlist(repo_root: Path, inputs: dict[str, Any]) -> list[dict[str, Any]] | dict[str, Any]:
-    raw = inputs.get("allowlist_file", XPLAT_010_ALLOWLIST)
+    raw = inputs.get("allowlist_file", REPOSITORY_BASH_CONFINEMENT_ALLOWLIST)
     if not isinstance(raw, str) or not raw:
         return diagnostic("invalid_allowlist", "repository Bash allowlist path must be a non-empty string")
     path = resolve_path(raw, repo_root)
@@ -776,11 +796,11 @@ def load_repo_bash_allowlist(repo_root: Path, inputs: dict[str, Any]) -> list[di
             "repository Bash allowlist could not be loaded",
             details={"allowlist_file": raw, "error": type(exc).__name__},
         )
-    if not isinstance(document, dict) or set(document) != {"schema_version", "feature_id", "entries"}:
+    if not isinstance(document, dict) or set(document) != {"schema_version", "contract_id", "entries"}:
         return diagnostic("invalid_allowlist", "repository Bash allowlist has unsupported top-level fields")
-    if document.get("schema_version") != "1.0" or document.get("feature_id") != "XPLAT-010":
-        return diagnostic("invalid_allowlist", "repository Bash allowlist identity must be XPLAT-010 schema 1.0")
-    expected_paths = XPLAT_010_CANONICAL_ALLOWLIST_PATHS
+    if document.get("schema_version") != "2.0" or document.get("contract_id") != "repository-bash-confinement":
+        return diagnostic("invalid_allowlist", "repository Bash allowlist identity must be repository-bash-confinement schema 2.0")
+    expected_paths = REPOSITORY_BASH_CONFINEMENT_ALLOWLIST_PATHS
     expected_count = len(expected_paths)
     entries = document.get("entries")
     if not isinstance(entries, list) or len(entries) != expected_count:
@@ -839,7 +859,7 @@ def load_repo_bash_allowlist(repo_root: Path, inputs: dict[str, Any]) -> list[di
 
 def repo_bash_allowlist_summary(inputs: dict[str, Any], allowlist: list[dict[str, Any]]) -> dict[str, Any]:
     return {
-        "path": inputs.get("allowlist_file", XPLAT_010_ALLOWLIST),
+        "path": inputs.get("allowlist_file", REPOSITORY_BASH_CONFINEMENT_ALLOWLIST),
         "entry_count": len(allowlist),
         "release_readiness_excluded": bool(allowlist)
         and all(entry.get("release_readiness_excluded") is True for entry in allowlist),
@@ -1072,7 +1092,7 @@ def repo_bash_instruction_findings(
         blocking_script_reference = False
         for match in script_matches:
             target = repo_bash_instruction_target(match.group("path"))
-            if target in XPLAT_010_CANONICAL_ALLOWLIST_PATHS or non_actionable:
+            if target in REPOSITORY_BASH_CONFINEMENT_ALLOWLIST_PATHS or non_actionable:
                 continue
             blocking_script_reference = True
             findings.append(
@@ -1091,7 +1111,7 @@ def repo_bash_instruction_findings(
         for match in REPO_BASH_DIRECT_COMMAND.finditer(line):
             command = executable_basename(match.group("command"))
             argument = repo_bash_instruction_target(match.group("argument"))
-            if command in {"bash", "sh"} and argument in XPLAT_010_CANONICAL_ALLOWLIST_PATHS:
+            if command in {"bash", "sh"} and argument in REPOSITORY_BASH_CONFINEMENT_ALLOWLIST_PATHS:
                 continue
             findings.append(
                 repo_bash_instruction_finding(
@@ -3204,7 +3224,7 @@ def zero_bash_classification(
     line_text = declaration_line or content
     if category != "script_file" and zero_bash_active_guidance(line_text):
         return "blocking_zero_bash"
-    if category != "script_file" and xplat008_agent_tool_declaration(path, line_text):
+    if category != "script_file" and installed_runtime_agent_tool_declaration(path, line_text):
         return "blocking_zero_bash" if zero_bash_active_tool_declaration(line_text) else "tool_declaration"
     if category != "script_file" and zero_bash_negative_policy_exception(content):
         return "negative_policy"
@@ -3343,7 +3363,7 @@ def zero_bash_text_scan_path(path: str) -> bool:
 
 
 def zero_bash_installed_cache_path(path: str) -> bool:
-    return normalize_path(path).startswith(XPLAT_009_INSTALLED_CACHE_PREFIX)
+    return normalize_path(path).startswith(PLUGIN_INSTALLED_CACHE_PREFIX)
 
 
 def zero_bash_scans_category(path: str, category: str) -> bool:
@@ -3987,7 +4007,7 @@ def zero_bash_finding_record(finding: RawFinding) -> dict[str, Any]:
 
 
 def load_zero_bash_allowlist(repo_root: Path, case: dict[str, Any]) -> list[dict[str, Any]] | dict[str, Any]:
-    raw = case.get("allowlist_file", XPLAT_009_ALLOWLIST)
+    raw = case.get("allowlist_file", PLUGIN_BASH_CONFINEMENT_ALLOWLIST)
     if not isinstance(raw, str) or not raw:
         return diagnostic("invalid_allowlist", "zero-Bash allowlist path must be a non-empty string")
     path = resolve_path(raw, repo_root)
@@ -3997,10 +4017,10 @@ def load_zero_bash_allowlist(repo_root: Path, case: dict[str, Any]) -> list[dict
         document = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         return diagnostic("invalid_allowlist", "zero-Bash allowlist could not be loaded", details={"allowlist_file": raw, "error": type(exc).__name__})
-    if document.get("schema_version") != "1.0":
-        return diagnostic("invalid_allowlist", "zero-Bash allowlist schema_version must be 1.0")
-    if document.get("feature_id") != "XPLAT-009":
-        return diagnostic("invalid_allowlist", "zero-Bash allowlist feature_id must be XPLAT-009")
+    if document.get("schema_version") != "2.0":
+        return diagnostic("invalid_allowlist", "zero-Bash allowlist schema_version must be 2.0")
+    if document.get("contract_id") != "plugin-bash-confinement":
+        return diagnostic("invalid_allowlist", "zero-Bash allowlist contract_id must be plugin-bash-confinement")
     entries = document.get("entries")
     if not isinstance(entries, list):
         return diagnostic("invalid_allowlist", "zero-Bash allowlist must contain an entries array")
@@ -4143,7 +4163,7 @@ def missing_zero_bash_scan_root_findings(repo_root: Path, case: dict[str, Any]) 
             for root in roots
             if isinstance(root, str) and root and invalid_scan_root_reason(root) is None
         }
-        for required_root in sorted(XPLAT_009_REQUIRED_SCAN_ROOTS):
+        for required_root in sorted(PLUGIN_BASH_CONFINEMENT_REQUIRED_SCAN_ROOTS):
             if any(required_root == root or required_root.startswith(f"{root}/") for root in configured_roots):
                 continue
             findings.append(
@@ -4164,9 +4184,15 @@ def missing_zero_bash_scan_root_findings(repo_root: Path, case: dict[str, Any]) 
 def load_installed_cache_proof(repo_root: Path, case: dict[str, Any]) -> dict[str, Any] | dict[str, Any]:
     raw = case.get("installed_cache_proof")
     if raw is None and case.get("require_installed_cache_proof") is False:
-        return {"schema_version": "1.0", "feature_id": "XPLAT-009", "proofs": [], "_proof_path": None}
+        return {"schema_version": "2.0", "contract_id": "plugin-bash-confinement", "proofs": [], "_proof_path": None}
     if not isinstance(raw, str) or not raw:
         return diagnostic("missing_installed_cache_proof", "zero-Bash guard requires bounded installed-cache proof")
+    if raw != INSTALLED_CACHE_PROOF:
+        return diagnostic(
+            "unsupported_installed_cache_proof",
+            "installed-cache proof must use the canonical generated path",
+            details={"proof": raw},
+        )
     path = resolve_path(raw, repo_root)
     if not is_relative_to(path.resolve(strict=False), repo_root.resolve(strict=False)):
         return diagnostic("invalid_installed_cache_proof", "installed-cache proof must stay inside the repository")
@@ -4174,10 +4200,19 @@ def load_installed_cache_proof(repo_root: Path, case: dict[str, Any]) -> dict[st
         document = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         return diagnostic("invalid_installed_cache_proof", "installed-cache proof could not be loaded", details={"proof": raw, "error": type(exc).__name__})
-    if document.get("schema_version") != "1.0":
-        return diagnostic("invalid_installed_cache_proof", "installed-cache proof schema_version must be 1.0")
-    if document.get("feature_id") != "XPLAT-009":
-        return diagnostic("invalid_installed_cache_proof", "installed-cache proof feature_id must be XPLAT-009")
+    if not isinstance(document, dict):
+        return diagnostic("invalid_installed_cache_proof", "installed-cache proof must contain an object")
+    unknown_fields = sorted(set(document) - INSTALLED_CACHE_PROOF_DOCUMENT_FIELDS)
+    if unknown_fields:
+        return diagnostic(
+            "invalid_installed_cache_proof",
+            "installed-cache proof contains unsupported fields",
+            details={"fields": unknown_fields},
+        )
+    if document.get("schema_version") != "2.0":
+        return diagnostic("invalid_installed_cache_proof", "installed-cache proof schema_version must be 2.0")
+    if document.get("contract_id") != "plugin-bash-confinement":
+        return diagnostic("invalid_installed_cache_proof", "installed-cache proof contract_id must be plugin-bash-confinement")
     if not isinstance(document.get("proofs"), list):
         return diagnostic("invalid_installed_cache_proof", "installed-cache proof must contain proofs array")
     document["_proof_path"] = raw
@@ -4449,7 +4484,7 @@ def guard_response(entry: Any, request: Any, findings: list[RawFinding]) -> dict
             "categories": sorted({finding.category for finding in blocking}),
             "paths": sorted({finding.path for finding in blocking})[:20],
         },
-        remediation_summary="Remove the active shell dependency or reclassify the retained path as inactive parity/XPLAT-008 evidence.",
+        remediation_summary="Remove the active shell dependency or reclassify the retained path as inactive parity evidence.",
         remediation_actions=["Inspect data.findings for blocking_active_gate entries.", "Migrate the active path to a Python runner gate."],
     )
     return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diag])
@@ -4458,12 +4493,12 @@ def guard_response(entry: Any, request: Any, findings: list[RawFinding]) -> dict
 def active_runtime_guard_response(entry: Any, request: Any, findings: list[RawFinding]) -> dict[str, Any]:
     blocking = [finding for finding in findings if finding.classification == "blocking_active_runtime"]
     status = "expected_failure" if blocking else "ok"
-    returned_findings = bounded_findings(findings, request.inputs)
+    returned_findings = bounded_findings(findings)
     data = active_runtime_base_data(entry, request.operation, status)
     data.update(
         {
-            "schema_version": "1.0",
-            "feature_id": "XPLAT-008",
+            "schema_version": "2.0",
+            "contract_id": "installed-plugin-release",
             "status": status,
             "blocking_count": len(blocking),
             "classified_counts": classified_counts(findings),
@@ -4492,13 +4527,11 @@ def active_runtime_guard_response(entry: Any, request: Any, findings: list[RawFi
     return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diag])
 
 
-def bounded_findings(findings: list[RawFinding], inputs: dict[str, Any]) -> list[RawFinding]:
-    raw_limit = inputs.get("max_findings", 25)
-    limit = min(raw_limit, 500) if isinstance(raw_limit, int) and raw_limit > 0 else 25
+def bounded_findings(findings: list[RawFinding]) -> list[RawFinding]:
     blocking = [finding for finding in findings if finding.classification == "blocking_active_runtime"]
     if blocking:
-        return blocking[:limit]
-    return findings[:limit]
+        return blocking[:25]
+    return findings[:25]
 
 
 def classified_counts(findings: list[RawFinding]) -> dict[str, int]:
@@ -4528,7 +4561,7 @@ def scan_sources(sources: list[SourceFile], repo_root: Path) -> list[RawFinding]
             for match in pattern.finditer(source.content):
                 line_number = line_number_for_offset(source.content, match.start())
                 context = workflow_context_for_line(workflow_contexts, line_number) or line_context(lines, line_number)
-                if path == XPLAT_010_CONTAINER_PREFLIGHT_WORKFLOW:
+                if path == CONTAINER_PREFLIGHT_WORKFLOW:
                     context = source.content
                 add_finding(
                     findings,
@@ -4544,7 +4577,7 @@ def scan_sources(sources: list[SourceFile], repo_root: Path) -> list[RawFinding]
                 if match is None:
                     continue
                 context = workflow_context_for_line(workflow_contexts, number) or line
-                if path == XPLAT_010_CONTAINER_PREFLIGHT_WORKFLOW:
+                if path == CONTAINER_PREFLIGHT_WORKFLOW:
                     context = source.content
                 add_finding(
                     findings,
@@ -4554,7 +4587,7 @@ def scan_sources(sources: list[SourceFile], repo_root: Path) -> list[RawFinding]
     return findings
 
 
-def scan_sources_xplat008(sources: list[SourceFile], repo_root: Path) -> list[RawFinding]:
+def scan_installed_runtime_sources(sources: list[SourceFile], repo_root: Path) -> list[RawFinding]:
     findings: list[RawFinding] = []
     seen: set[tuple[str, int | None, str, str]] = set()
     for source in sources:
@@ -4565,7 +4598,7 @@ def scan_sources_xplat008(sources: list[SourceFile], repo_root: Path) -> list[Ra
             add_finding(
                 findings,
                 seen,
-                classify_xplat008_raw_finding(
+                classify_installed_runtime_raw_finding(
                     path,
                     1,
                     "script_file",
@@ -4580,7 +4613,7 @@ def scan_sources_xplat008(sources: list[SourceFile], repo_root: Path) -> list[Ra
             add_finding(
                 findings,
                 seen,
-                classify_xplat008_raw_finding(
+                classify_installed_runtime_raw_finding(
                     path,
                     line,
                     "bash",
@@ -4594,12 +4627,12 @@ def scan_sources_xplat008(sources: list[SourceFile], repo_root: Path) -> list[Ra
             for match in pattern.finditer(source.content):
                 line_number = line_number_for_offset(source.content, match.start())
                 context = workflow_context_for_line(workflow_contexts, line_number) or line_context(lines, line_number)
-                if path == XPLAT_010_CONTAINER_PREFLIGHT_WORKFLOW:
+                if path == CONTAINER_PREFLIGHT_WORKFLOW:
                     context = source.content
                 add_finding(
                     findings,
                     seen,
-                    classify_xplat008_raw_finding(path, line_number, category, match.group(0), reason, context, source.source_kind),
+                    classify_installed_runtime_raw_finding(path, line_number, category, match.group(0), reason, context, source.source_kind),
                 )
         for number, line in enumerate(lines, start=1):
             stripped = line.strip()
@@ -4610,14 +4643,14 @@ def scan_sources_xplat008(sources: list[SourceFile], repo_root: Path) -> list[Ra
                 if match is None:
                     continue
                 context = workflow_context_for_line(workflow_contexts, number) or line_context(lines, number)
-                if path == XPLAT_010_CONTAINER_PREFLIGHT_WORKFLOW:
+                if path == CONTAINER_PREFLIGHT_WORKFLOW:
                     context = source.content
-                if xplat008_agent_tool_declaration(path, line):
+                if installed_runtime_agent_tool_declaration(path, line):
                     context = line
                 add_finding(
                     findings,
                     seen,
-                    classify_xplat008_raw_finding(path, number, category, match.group(0), reason, context, source.source_kind),
+                    classify_installed_runtime_raw_finding(path, number, category, match.group(0), reason, context, source.source_kind),
                 )
     return findings
 
@@ -4653,7 +4686,7 @@ def classify_raw_finding(
     )
 
 
-def classify_xplat008_raw_finding(
+def classify_installed_runtime_raw_finding(
     path: str,
     line: int | None,
     category: str,
@@ -4662,8 +4695,8 @@ def classify_xplat008_raw_finding(
     content: str,
     source_kind: str,
 ) -> RawFinding:
-    role = xplat008_active_role(path)
-    classification = classify_xplat008_path(path, category, pattern, content, source_kind)
+    role = installed_runtime_active_role(path)
+    classification = classify_installed_runtime_path(path, category, pattern, content, source_kind)
     return RawFinding(
         path=path,
         line=line,
@@ -4672,7 +4705,7 @@ def classify_xplat008_raw_finding(
         reason=reason,
         active_role=role,
         classification=classification,
-        remediation=xplat008_remediation_for(classification),
+        remediation=installed_runtime_remediation_for(classification),
     )
 
 
@@ -4688,11 +4721,11 @@ def classify_path(path: str, category: str, pattern: str, content: str, source_k
     if "/fixtures/" in path or path.endswith("bash-reference-manifest.json") or "layer8-parity/" in path:
         return "temporary_parity_evidence"
     if path.startswith("speckit-pro/codex-skills/") or path.startswith("speckit-pro/skills/") or path.startswith("speckit-pro/scripts/"):
-        return "xplat_008_cutover_surface"
+        return "installed_runtime_cutover_surface"
     if path.startswith(".github/workflows/"):
         if path == ".github/workflows/deploy-docs.yml":
             return "docs_out_of_scope"
-        if xplat010_container_preflight_dispatch_glue(path, content):
+        if repository_bash_container_preflight_dispatch_glue(path, content):
             return "ci_dispatch_glue"
         if category == "bash" and pattern.startswith("run:") and is_direct_python_gate_dispatch(content):
             return "ci_dispatch_glue"
@@ -4704,73 +4737,73 @@ def classify_path(path: str, category: str, pattern: str, content: str, source_k
     return "blocking_active_gate"
 
 
-def classify_xplat008_path(path: str, category: str, pattern: str, content: str, source_kind: str) -> str:
+def classify_installed_runtime_path(path: str, category: str, pattern: str, content: str, source_kind: str) -> str:
     if path.startswith(".specify/memory/"):
         return "archive_provenance"
     if path.startswith(".specify/scripts/bash/"):
         return "upstream_spec_kit_helper"
     if path.startswith("tests/") or "/fixtures/" in path or "layer8-parity/" in path:
         return "test_fixture"
-    if xplat008_payload_script_detector_reference(path, content):
+    if installed_runtime_payload_script_detector_reference(path, content):
         return "source_checkout_helper"
-    if xplat008_agent_tool_declaration(path, content):
+    if installed_runtime_agent_tool_declaration(path, content):
         return "source_checkout_helper"
     if path.startswith("speckit-pro/") and any(part in path for part in ("/scripts/", "/references/", "/templates/")):
         return "source_checkout_helper"
     if path.startswith(".github/workflows/"):
         if path == ".github/workflows/deploy-docs.yml" or is_docs_or_workflow_tooling(content):
             return "docs_non_runtime"
-        if xplat010_container_preflight_dispatch_glue(path, content):
+        if repository_bash_container_preflight_dispatch_glue(path, content):
             return "ci_dispatch_glue"
         if category == "bash" and pattern.startswith("run:") and is_direct_python_gate_dispatch(content):
             return "ci_dispatch_glue"
         return "blocking_active_runtime"
     if path in {"speckit-pro/codex-hooks.json", "speckit-pro/hooks/hooks.json"}:
         return "blocking_active_runtime"
-    if xplat008_installed_runtime_requirement_without_source_context(path, content):
+    if installed_runtime_installed_runtime_requirement_without_source_context(path, content):
         return "blocking_active_runtime"
     if path.startswith("dist/") and not path.endswith(("README.md", "CHANGELOG.md", "LICENSE")):
         if "/scripts/" in path:
             return "blocking_active_runtime"
-        if "/speckit_pro_runner/" in path and source_kind in {"repo", "repo_baseline"} and xplat008_source_checkout_helper_reference(path, content):
+        if "/speckit_pro_runner/" in path and source_kind in {"repo", "repo_baseline"} and installed_runtime_source_checkout_helper_reference(path, content):
             return "source_checkout_helper"
-        if source_kind == "repo_baseline" and xplat008_baseline_source_checkout_helper_reference(path, content):
+        if source_kind == "repo_baseline" and installed_runtime_baseline_source_checkout_helper_reference(path, content):
             return "source_checkout_helper"
         if source_kind in {"repo", "repo_baseline"} and (
-            (source_kind == "repo" and xplat008_changed_source_checkout_helper_reference(path, content))
-            or xplat008_repo_surface_exception(category, pattern, content)
+            (source_kind == "repo" and installed_runtime_changed_source_checkout_helper_reference(path, content))
+            or installed_runtime_repo_surface_exception(category, pattern, content)
         ):
             return "source_checkout_helper"
         return "blocking_active_runtime"
     if path.startswith("speckit-pro/skills/") or path.startswith("speckit-pro/codex-skills/"):
         if source_kind == "repo_baseline" and (
-            xplat008_baseline_source_checkout_helper_reference(path, content)
-            or xplat008_repo_surface_exception(category, pattern, content)
+            installed_runtime_baseline_source_checkout_helper_reference(path, content)
+            or installed_runtime_repo_surface_exception(category, pattern, content)
         ):
             return "source_checkout_helper"
         if source_kind == "repo" and (
-            xplat008_changed_source_checkout_helper_reference(path, content)
-            or xplat008_repo_surface_exception(category, pattern, content)
+            installed_runtime_changed_source_checkout_helper_reference(path, content)
+            or installed_runtime_repo_surface_exception(category, pattern, content)
         ):
             return "source_checkout_helper"
         return "blocking_active_runtime" if source_kind in {"fixture", "repo", "repo_baseline"} else "source_checkout_helper"
     if path.startswith("speckit-pro/agents/") or path.startswith("speckit-pro/codex-agents/"):
         if source_kind == "repo_baseline" and (
-            xplat008_baseline_source_checkout_helper_reference(path, content)
-            or xplat008_repo_surface_exception(category, pattern, content)
+            installed_runtime_baseline_source_checkout_helper_reference(path, content)
+            or installed_runtime_repo_surface_exception(category, pattern, content)
         ):
             return "source_checkout_helper"
         if source_kind == "repo" and (
-            xplat008_changed_source_checkout_helper_reference(path, content)
-            or xplat008_repo_surface_exception(category, pattern, content)
+            installed_runtime_changed_source_checkout_helper_reference(path, content)
+            or installed_runtime_repo_surface_exception(category, pattern, content)
         ):
             return "source_checkout_helper"
         return "blocking_active_runtime" if source_kind in {"fixture", "repo", "repo_baseline"} else "source_checkout_helper"
     if path in {"README.md", "speckit-pro/README.md"} or path.startswith("docs-site/src/content/docs/"):
         if (
             source_kind in {"fixture", "repo", "repo_baseline"}
-            and xplat008_installed_runtime_guidance_path(path)
-            and xplat008_install_guidance_requires_shell(category, pattern, content)
+            and installed_runtime_installed_runtime_guidance_path(path)
+            and installed_runtime_install_guidance_requires_shell(category, pattern, content)
         ):
             return "blocking_active_runtime"
         return "docs_non_runtime"
@@ -4795,7 +4828,7 @@ def active_role(path: str) -> str:
     return "repository_text"
 
 
-def xplat008_active_role(path: str) -> str:
+def installed_runtime_active_role(path: str) -> str:
     if path.startswith(".github/workflows/"):
         return "release_gate"
     if path.startswith("dist/"):
@@ -4817,7 +4850,7 @@ def xplat008_active_role(path: str) -> str:
     return "repository_text"
 
 
-def xplat008_repo_surface_exception(category: str, pattern: str, content: str) -> bool:
+def installed_runtime_repo_surface_exception(category: str, pattern: str, content: str) -> bool:
     lowered = content.lower()
     has_negative_context = any(
         marker in lowered
@@ -4856,13 +4889,13 @@ def xplat008_repo_surface_exception(category: str, pattern: str, content: str) -
         )
     )
     if category == "shell_interpolation" and pattern.startswith("`"):
-        return has_negative_context or not xplat008_backtick_requires_shell(pattern, content)
+        return has_negative_context or not installed_runtime_backtick_requires_shell(pattern, content)
     return has_negative_context
 
 
-def xplat010_container_preflight_dispatch_glue(path: str, content: str) -> bool:
+def repository_bash_container_preflight_dispatch_glue(path: str, content: str) -> bool:
     """Recognize the exact CI-only workflow without allowing shell helpers back in."""
-    if path != XPLAT_010_CONTAINER_PREFLIGHT_WORKFLOW:
+    if path != CONTAINER_PREFLIGHT_WORKFLOW:
         return False
     required_markers = (
         "permissions: {}",
@@ -4885,11 +4918,11 @@ def xplat010_container_preflight_dispatch_glue(path: str, content: str) -> bool:
     ) is None
 
 
-def xplat008_install_guidance_requires_shell(category: str, pattern: str, content: str) -> bool:
-    return not xplat008_repo_surface_exception(category, pattern, content)
+def installed_runtime_install_guidance_requires_shell(category: str, pattern: str, content: str) -> bool:
+    return not installed_runtime_repo_surface_exception(category, pattern, content)
 
 
-def xplat008_installed_runtime_guidance_path(path: str) -> bool:
+def installed_runtime_installed_runtime_guidance_path(path: str) -> bool:
     if path in {"README.md", "speckit-pro/README.md"}:
         return True
     if path.startswith("docs-site/src/content/docs/install/"):
@@ -4897,12 +4930,12 @@ def xplat008_installed_runtime_guidance_path(path: str) -> bool:
     return path == "docs-site/src/content/docs/troubleshooting.md"
 
 
-def xplat008_agent_tool_declaration(path: str, content: str) -> bool:
+def installed_runtime_agent_tool_declaration(path: str, content: str) -> bool:
     if not any(part in path for part in ("/agents/", "/codex-agents/", "/skills/", "/codex-skills/")):
         return False
     if "\n" in content or "\r" in content:
         return False
-    if xplat008_likely_active_runtime_requirement(content) and not xplat008_repo_surface_exception("bash", "Bash", content):
+    if installed_runtime_likely_active_runtime_requirement(content) and not installed_runtime_repo_surface_exception("bash", "Bash", content):
         return False
     lines = [line.strip().lower() for line in content.splitlines() if line.strip()]
     tool_items = {"- bash", "- grep", "- glob", "- read", "- write", "- edit", "- websearch", "- webfetch"}
@@ -4917,18 +4950,18 @@ def xplat008_agent_tool_declaration(path: str, content: str) -> bool:
     return False
 
 
-def xplat008_source_checkout_helper_reference(path: str, content: str) -> bool:
+def installed_runtime_source_checkout_helper_reference(path: str, content: str) -> bool:
     lowered_path = path.lower()
     lowered = content.lower()
     if lowered_path.endswith("speckit_pro_runner/gates/active_path_guard.py"):
         return True
-    if xplat008_payload_script_detector_reference(path, content):
+    if installed_runtime_payload_script_detector_reference(path, content):
         return True
     if any(part in lowered_path for part in ("/references/", "/templates/", "/contracts/", "/scripts/")):
         return True
     markers = (
-        "xplat008_likely_active_runtime_requirement",
-        "xplat008_generated_payload_helper_context",
+        "installed_runtime_likely_active_runtime_requirement",
+        "installed_runtime_generated_payload_helper_context",
         "allowed-tools:",
         "tools:",
         "bash(",
@@ -4961,7 +4994,7 @@ def xplat008_source_checkout_helper_reference(path: str, content: str) -> bool:
         "zero_bash_blocking_count",
         "repo-bash-confinement",
         "repo_bash_confinement",
-        "xplat-009-zero-bash",
+        "plugin-bash-confinement",
         "required_absent",
         "claude_plugin_root",
         "<skill_scripts>",
@@ -4980,7 +5013,7 @@ def xplat008_source_checkout_helper_reference(path: str, content: str) -> bool:
     return any(marker in lowered for marker in markers)
 
 
-def xplat008_payload_script_detector_reference(path: str, content: str) -> bool:
+def installed_runtime_payload_script_detector_reference(path: str, content: str) -> bool:
     lowered_path = path.lower()
     if not lowered_path.endswith("speckit_pro_runner/gates/payloads.py"):
         return False
@@ -4990,29 +5023,29 @@ def xplat008_payload_script_detector_reference(path: str, content: str) -> bool:
     return "first_line = handle.readline" in lowered and "re.search" in lowered and "first_line" in lowered
 
 
-def xplat008_changed_source_checkout_helper_reference(path: str, content: str) -> bool:
+def installed_runtime_changed_source_checkout_helper_reference(path: str, content: str) -> bool:
     lowered_path = path.lower()
     if any(part in lowered_path for part in ("/references/", "/templates/", "/contracts/", "/scripts/")):
         return True
-    if path.startswith("dist/") and xplat008_generated_payload_helper_reference(path, content):
+    if path.startswith("dist/") and installed_runtime_generated_payload_helper_reference(path, content):
         return True
-    return xplat008_explicit_source_checkout_context(content)
+    return installed_runtime_explicit_source_checkout_context(content)
 
 
-def xplat008_generated_payload_helper_reference(path: str, content: str) -> bool:
+def installed_runtime_generated_payload_helper_reference(path: str, content: str) -> bool:
     lowered_path = path.lower()
     if not any(part in lowered_path for part in ("/skills/", "/codex-skills/", "/agents/", "/codex-agents/")):
         return False
-    if xplat008_explicit_source_checkout_context(content):
+    if installed_runtime_explicit_source_checkout_context(content):
         return True
-    if xplat008_likely_active_runtime_requirement(content):
+    if installed_runtime_likely_active_runtime_requirement(content):
         return False
-    if xplat008_generated_payload_helper_context(content):
+    if installed_runtime_generated_payload_helper_context(content):
         return True
-    return xplat008_baseline_source_checkout_helper_reference(path, content)
+    return installed_runtime_baseline_source_checkout_helper_reference(path, content)
 
 
-def xplat008_generated_payload_helper_context(content: str) -> bool:
+def installed_runtime_generated_payload_helper_context(content: str) -> bool:
     lowered = content.lower()
     if ".sh" not in lowered and "bash" not in lowered and "jq" not in lowered:
         return False
@@ -5042,13 +5075,11 @@ def xplat008_generated_payload_helper_context(content: str) -> bool:
         "generate-pr-body.sh",
         "generate-spec-index.sh",
         "generate-uat-skeleton.sh",
-        "install-curated-set.sh",
         "migrate-structure.sh",
         "multi-pr-emission.sh",
         "o5-topology.sh",
         "parse-consensus-categories.sh",
         "plan-layers.sh",
-        "project-fixup.sh",
         "relocate-process-artifacts.sh",
         "resolve-confidence-mode.sh",
         "restack.sh",
@@ -5063,7 +5094,7 @@ def xplat008_generated_payload_helper_context(content: str) -> bool:
     return any(marker in lowered for marker in markers) or any(script in lowered for script in helper_scripts)
 
 
-def xplat008_likely_active_runtime_requirement(content: str) -> bool:
+def installed_runtime_likely_active_runtime_requirement(content: str) -> bool:
     lowered = content.lower()
     markers = (
         "command -v",
@@ -5084,20 +5115,20 @@ def xplat008_likely_active_runtime_requirement(content: str) -> bool:
     return any(marker in lowered for marker in markers)
 
 
-def xplat008_installed_runtime_requirement_without_source_context(path: str, content: str) -> bool:
-    if not xplat008_installed_runtime_surface(path):
+def installed_runtime_installed_runtime_requirement_without_source_context(path: str, content: str) -> bool:
+    if not installed_runtime_installed_runtime_surface(path):
         return False
     lowered_path = path.lower()
     if lowered_path.endswith("speckit_pro_runner/gates/active_path_guard.py"):
         return False
     if any(part in lowered_path for part in ("/references/", "/templates/", "/contracts/", "/scripts/")):
         return False
-    if xplat008_explicit_source_checkout_context(content) or xplat008_official_spec_kit_cli_context(content):
+    if installed_runtime_explicit_source_checkout_context(content) or installed_runtime_official_spec_kit_cli_context(content):
         return False
-    return xplat008_likely_active_runtime_requirement(content)
+    return installed_runtime_likely_active_runtime_requirement(content)
 
 
-def xplat008_official_spec_kit_cli_context(content: str) -> bool:
+def installed_runtime_official_spec_kit_cli_context(content: str) -> bool:
     lowered = content.lower()
     markers = (
         "official speckit cli",
@@ -5110,7 +5141,7 @@ def xplat008_official_spec_kit_cli_context(content: str) -> bool:
     return any(marker in lowered for marker in markers)
 
 
-def xplat008_installed_runtime_surface(path: str) -> bool:
+def installed_runtime_installed_runtime_surface(path: str) -> bool:
     if path.startswith("dist/") and not path.endswith(("README.md", "CHANGELOG.md", "LICENSE")):
         return True
     if path in {"speckit-pro/codex-hooks.json", "speckit-pro/hooks/hooks.json"}:
@@ -5125,7 +5156,7 @@ def xplat008_installed_runtime_surface(path: str) -> bool:
     )
 
 
-def xplat008_explicit_source_checkout_context(content: str) -> bool:
+def installed_runtime_explicit_source_checkout_context(content: str) -> bool:
     lowered = content.lower()
     markers = (
         "source-checkout",
@@ -5138,11 +5169,11 @@ def xplat008_explicit_source_checkout_context(content: str) -> bool:
     return any(marker in lowered for marker in markers)
 
 
-def xplat008_baseline_source_checkout_helper_reference(path: str, content: str) -> bool:
+def installed_runtime_baseline_source_checkout_helper_reference(path: str, content: str) -> bool:
     lowered_path = path.lower()
     if any(part in lowered_path for part in ("/references/", "/templates/", "/contracts/", "/scripts/")):
         return True
-    if xplat008_generated_payload_helper_context(content):
+    if installed_runtime_generated_payload_helper_context(content):
         return True
     lowered = content.lower()
     markers = (
@@ -5175,7 +5206,7 @@ def xplat008_baseline_source_checkout_helper_reference(path: str, content: str) 
         "zero_bash_blocking_count",
         "repo-bash-confinement",
         "repo_bash_confinement",
-        "xplat-009-zero-bash",
+        "plugin-bash-confinement",
         "required_absent",
         "claude_plugin_root",
         "<skill_scripts>",
@@ -5193,7 +5224,7 @@ def xplat008_baseline_source_checkout_helper_reference(path: str, content: str) 
     return any(marker in lowered for marker in markers)
 
 
-def xplat008_backtick_requires_shell(pattern: str, content: str) -> bool:
+def installed_runtime_backtick_requires_shell(pattern: str, content: str) -> bool:
     shell_markers = ("bash", "git bash", "wsl", "wsl.exe", "powershell", "pwsh", "$shell", "shell", "jq", ".sh", "grep", "sed", "awk")
     lowered_pattern = pattern.lower()
     if not any(marker in lowered_pattern for marker in shell_markers):
@@ -5208,20 +5239,20 @@ def remediation_for(classification: str) -> str:
         return "Migrate the active command path to a Python runner gate before release readiness can pass."
     if classification == "ci_dispatch_glue":
         return "Keep workflow shell limited to direct Python runner dispatch."
-    if classification == "xplat_008_cutover_surface":
-        return "Keep installed Claude/Codex invocation cutover deferred to XPLAT-008."
+    if classification == "installed_runtime_cutover_surface":
+        return "Keep installed Claude/Codex invocation cutover deferred."
     if classification == "temporary_parity_evidence":
         return "Retain only as inactive parity evidence while promotion records remain valid."
     if classification == "archive_provenance":
         return "No code change required for archived provenance text."
     if classification == "consumer_spec_kit_helper":
-        return "No XPLAT-007 change required for vendored consumer Spec Kit helper evidence."
+        return "No runner-gate change required for vendored consumer Spec Kit helper evidence."
     if classification == "generated_payload_mirror":
-        return "Do not cut over generated release payload mirrors until XPLAT-008."
-    return "No XPLAT-007 gate change required for documentation-only text."
+        return "Do not cut over generated release payload mirrors until installed-runtime verification passes."
+    return "No runner-gate change required for documentation-only text."
 
 
-def xplat008_remediation_for(classification: str) -> str:
+def installed_runtime_remediation_for(classification: str) -> str:
     if classification == "blocking_active_runtime":
         return "Replace the installed-runtime shell dependency with argv-only Python runner invocation."
     if classification == "ci_dispatch_glue":
@@ -5332,7 +5363,7 @@ def is_docs_or_workflow_tooling(content: str) -> bool:
         "actionlint",
         "playwright",
         "corepack",
-        "doc-010",
+        "docs-quality",
         "docs validation",
         "--mode docs",
         "validation_mode",
@@ -5347,7 +5378,7 @@ def is_docs_or_workflow_tooling(content: str) -> bool:
         "scripts/sync-marketplace-versions",
         ".claude-plugin/plugin.json",
     )
-    if any(marker in lowered for marker in {"doc-010", "docs validation", "validation_mode", "should_validate_docs", "--mode docs"}):
+    if any(marker in lowered for marker in {"docs-quality", "docs validation", "validation_mode", "should_validate_docs", "--mode docs"}):
         return True
     return any(marker in lowered for marker in markers) and not any(marker in lowered for marker in plugin_markers)
 
@@ -5391,7 +5422,7 @@ def changed_repo_sources(repo_root: Path, case: dict[str, Any]) -> list[SourceFi
                 category="scan_root",
                 pattern=root_pattern,
                 reason=invalid_reason,
-                active_role=xplat008_active_role(root_path),
+                active_role=installed_runtime_active_role(root_path),
                 classification="blocking_active_runtime",
                 remediation="Keep active-runtime scan roots normalized, repository-relative, and inside the repository.",
             )
@@ -5428,7 +5459,7 @@ def diff_scan_unavailable_finding(reason: str) -> RawFinding:
     )
 
 
-def missing_xplat008_scan_root_findings(repo_root: Path, case: dict[str, Any]) -> list[RawFinding]:
+def missing_installed_runtime_scan_root_findings(repo_root: Path, case: dict[str, Any]) -> list[RawFinding]:
     roots = case.get("scan_roots")
     if "scan_roots" not in case:
         return []
@@ -5469,7 +5500,7 @@ def missing_xplat008_scan_root_findings(repo_root: Path, case: dict[str, Any]) -
                     category="scan_root",
                     pattern=root_pattern,
                     reason=invalid_reason,
-                    active_role=xplat008_active_role(root_path),
+                    active_role=installed_runtime_active_role(root_path),
                     classification="blocking_active_runtime",
                     remediation="Keep active-runtime scan roots normalized, repository-relative, and inside the repository.",
                 )
@@ -5485,7 +5516,7 @@ def missing_xplat008_scan_root_findings(repo_root: Path, case: dict[str, Any]) -
                 category="scan_root",
                 pattern=root,
                 reason="configured active-runtime scan root is missing",
-                active_role=xplat008_active_role(root),
+                active_role=installed_runtime_active_role(root),
                 classification="blocking_active_runtime",
                 remediation="Restore the active-runtime scan root or remove it from the promoted final-current fixture.",
             )
@@ -5610,6 +5641,8 @@ def maybe_add_source(repo_root: Path, path: Path, sources: list[SourceFile], sou
         relative_path = path.relative_to(repo_root).as_posix()
     except ValueError:
         return
+    if relative_path == INSTALLED_CACHE_PROOF:
+        return
     if not is_relative_to(path.resolve(strict=False), repo_root.resolve(strict=False)):
         return
     if has_prohibited_script_suffix(relative_path):
@@ -5667,10 +5700,9 @@ def base_data(entry: Any, operation: str, status: str) -> dict[str, Any]:
             "gate_status": gate_status,
             "promoted": status != "input_error",
             "blocking": status != "ok",
-            "comparison_ids": [f"us3-{operation}"],
-            "promotion_record": PROMOTION_RECORD,
+            "comparison_ids": [operation],
         },
-        "artifacts": [{"path": PROMOTION_RECORD, "kind": "fixture"}, {"path": DEFAULT_CASE_FILE, "kind": "fixture"}],
+        "artifacts": [{"path": DEFAULT_CASE_FILE, "kind": "fixture"}],
     }
 
 
@@ -5683,12 +5715,10 @@ def active_runtime_base_data(entry: Any, operation: str, status: str) -> dict[st
             "gate_status": gate_status,
             "promoted": status != "input_error",
             "blocking": status != "ok",
-            "comparison_ids": [f"xplat-008-{operation}"],
-            "promotion_record": XPLAT_008_PROMOTION_RECORD,
+            "comparison_ids": [f"installed-plugin-release-{operation}"],
         },
         "artifacts": [
-            {"path": XPLAT_008_PROMOTION_RECORD, "kind": "promotion_record"},
-            {"path": XPLAT_008_DEFAULT_CASE_FILE, "kind": "fixture"},
+            {"path": INSTALLED_RUNTIME_DEFAULT_CASE_FILE, "kind": "fixture"},
         ],
     }
 
@@ -5702,15 +5732,14 @@ def zero_bash_base_data(entry: Any, operation: str, status: str) -> dict[str, An
             "gate_status": gate_status,
             "promoted": status != "input_error",
             "blocking": status != "ok",
-            "comparison_ids": [f"xplat-009-{operation}"],
-            "promotion_record": XPLAT_009_PROMOTION_RECORD,
+            "comparison_ids": [f"plugin-bash-confinement-{operation}"],
         },
         "artifacts": [
-            {"path": XPLAT_009_PROMOTION_RECORD, "kind": "promotion_record"},
-            {"path": XPLAT_009_DEFAULT_CASE_FILE, "kind": "fixture"},
-            {"path": XPLAT_009_ALLOWLIST, "kind": "allowlist"},
+            {"path": PLUGIN_BASH_CONFINEMENT_DEFAULT_CASE_FILE, "kind": "fixture"},
+            {"path": PLUGIN_BASH_CONFINEMENT_ALLOWLIST, "kind": "allowlist"},
         ],
-        "feature_id": "XPLAT-009",
+        "schema_version": "2.0",
+        "contract_id": "plugin-bash-confinement",
         "status": "pass" if status == "ok" else "fail",
         "blocking_count": 0 if status == "ok" else 1,
         "classified_counts": {},
@@ -5720,7 +5749,7 @@ def zero_bash_base_data(entry: Any, operation: str, status: str) -> dict[str, An
         "script_file_count": 0,
         "scan_roots": [],
         "allowlist": {
-            "path": XPLAT_009_ALLOWLIST,
+            "path": PLUGIN_BASH_CONFINEMENT_ALLOWLIST,
             "entry_count": 0,
             "release_readiness_excluded": False,
         },
@@ -5743,25 +5772,24 @@ def repo_bash_base_data(
 ) -> dict[str, Any]:
     passing = status == "ok"
     inspection_state = "inspected" if passing else "not_inspected"
-    allowlist_path = (inputs or {}).get("allowlist_file", XPLAT_010_ALLOWLIST)
+    allowlist_path = (inputs or {}).get("allowlist_file", REPOSITORY_BASH_CONFINEMENT_ALLOWLIST)
     if not isinstance(allowlist_path, str) or not allowlist_path:
-        allowlist_path = XPLAT_010_ALLOWLIST
+        allowlist_path = REPOSITORY_BASH_CONFINEMENT_ALLOWLIST
     return {
         "gate": {
             "gate_id": entry.helper_id,
             "operation": operation,
-            "gate_status": "pass" if passing else "fail" if status == "expected_failure" else status,
+            "gate_status": "pass" if passing else "fail",
             "promoted": status not in {"input_error", "missing_prerequisite"},
             "blocking": not passing,
-            "comparison_ids": ["xplat-010-repo-bash-confinement"],
-            "promotion_record": None,
+            "comparison_ids": ["repository-bash-confinement"],
         },
         "artifacts": [
-            {"path": XPLAT_010_DEFAULT_CASE_FILE, "kind": "fixture"},
-            {"path": XPLAT_010_ALLOWLIST, "kind": "allowlist"},
+            {"path": REPOSITORY_BASH_CONFINEMENT_DEFAULT_CASE_FILE, "kind": "fixture"},
+            {"path": REPOSITORY_BASH_CONFINEMENT_ALLOWLIST, "kind": "allowlist"},
         ],
-        "schema_version": "1.0",
-        "feature_id": "XPLAT-010",
+        "schema_version": "2.0",
+        "contract_id": "repository-bash-confinement",
         "status": "pass" if passing else "fail",
         "blocking_count": 0 if passing else 1,
         "classified_counts": {},
@@ -5778,7 +5806,7 @@ def repo_bash_base_data(
         },
         "allowlist": {
             "path": allowlist_path,
-            "entry_count": len(XPLAT_010_CANONICAL_ALLOWLIST_PATHS) if passing else 0,
+            "entry_count": len(REPOSITORY_BASH_CONFINEMENT_ALLOWLIST_PATHS) if passing else 0,
             "release_readiness_excluded": passing,
         },
     }
@@ -5851,7 +5879,7 @@ def zero_bash_extensionless_scan_path(path: str) -> bool:
             "speckit-pro/",
             "dist/claude/speckit-pro/",
             "dist/codex/speckit-pro/",
-            XPLAT_009_INSTALLED_CACHE_PREFIX,
+            PLUGIN_INSTALLED_CACHE_PREFIX,
         )
     )
 

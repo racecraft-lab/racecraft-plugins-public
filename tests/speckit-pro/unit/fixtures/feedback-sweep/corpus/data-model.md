@@ -1,6 +1,6 @@
 # Phase 1 Data Model: Feedback Sweep, slice 1 of 2
 
-**Feature**: `art-008-feedback-sweep` | **Date**: 2026-08-20
+**Feature**: `spec-808-feedback-sweep` | **Date**: 2026-08-20
 
 Entities are drawn from the spec's Key Entities section. Field names and
 validation rules are fixed here; the wire shape of the helper envelope is in

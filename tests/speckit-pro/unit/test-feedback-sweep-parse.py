@@ -1327,30 +1327,12 @@ ISSUER_PREFIX_CASES = (
     ),
 )
 
-FEATURE_ID = "art-008-feedback-sweep"
+FEATURE_ID = "spec-808-feedback-sweep"
 FEATURE_DIR = f"specs/{FEATURE_ID}"
 BYPRODUCT_DIR = f"{FEATURE_DIR}/.process/feedback-sweep"
 
-# Where those documents actually live now.
-#
-# ART-008 merged and was archived on 2026-08-25, and a shipped test may not
-# depend on a folder the archive procedure removes: this file read eight
-# documents out of `specs/art-008-feedback-sweep/` and went 21 assertions red
-# the moment that directory went away. The eight were copied here verbatim at
-# that archive.
-#
-# `FEATURE_DIR` above is unchanged on purpose. Every path this file asserts —
-# an edit's `file`, a write-point verdict, a byproduct location — keeps the
-# `specs/<feature>/` shape a real run produces, because that shape is part of
-# what the fixtures pin. Only the reads move, through `corpus_path` below, so
-# the relocation cost no fixture its realism.
-#
-# The documents are real authored prose, and that is the point: they carry the
-# deny-set's own negative examples, so a rule loosened back to a substring match
-# fails here before it fails on a reviewer's amendment. A fixture written to
-# pass could not do that, because whoever wrote it would write around the very
-# rules it is meant to catch. The bytes are frozen — do not refresh them from a
-# later spec, and do not repoint this at a live `specs/` directory.
+# The test-owned corpus survives archive cleanup while FEATURE_DIR preserves
+# the production path shape used by write and byproduct controls.
 CORPUS_DIR = "tests/speckit-pro/unit/fixtures/feedback-sweep/corpus"
 
 
@@ -3352,8 +3334,8 @@ def main(argv: list[str]) -> int:
         return 0 if result.wasSuccessful() else 1
     # The whole file, through the house counter. Without this the runner reports
     # "PASS test-feedback-sweep-parse (no summary)" and counts zero units, so
-    # every assertion in this file is invisible to the suite total and to any
-    # baseline comparison. A failure would still fail the run, because a nonzero
+    # every assertion in this file is invisible to the suite total. A failure
+    # would still fail the run, because a nonzero
     # exit is a FAIL whatever the summary says, but a silent zero is exactly the
     # shape of coverage that looks present and measures nothing.
     suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])

@@ -600,14 +600,10 @@ Budget result: within budget (see the scaffold amendment below for what moved)
   draft-PR row, corroborates via `gh`, logs discrepancies, and the workflow
   file wins (the inherited OQ-4 contract). The projected budget moves to ~287
   reviewable LOC / ~10 production files / ~14 total files
-  (`estimate-spec-size`: 327 LOC, ok, one slice). (3) `artifact-author` ships
-  outside the Layer 6 governed corpus; membership is a tracked deferral to
-  ART-009 (see that entry's amendment).
+  (`estimate-spec-size`: 327 LOC, ok, one slice).
 
 **Out of Scope:**
 - Reading feedback (ART-008); flipping to ready (ART-010).
-- Layer 6 corpus membership for `artifact-author` (tracked deferral to
-  ART-009).
 
 **Verification:** Layer 4 golden fixtures for the draft-mode packet path
 (including the fail-open artifact-generation branch); Layer 5 agent
@@ -787,14 +783,6 @@ Budget result: within budget
   task list and task-list-canonical reference updated.
 - Markdown runbook path retired from post-implementation; fail-open preserved
   (artifact failure logs and never blocks the PR).
-- **Amended 2026-08-17 during ART-007 scaffold:** ART-009 also owns Layer 6
-  corpus membership for `artifact-author`. ART-007 ships it ungoverned by
-  decision — an honest new-role entry needs an acceptance oracle, an authored
-  fixture, and an independent review that only a spec opening the corpus can
-  produce — and ART-009 already performs corpus surgery for the
-  `uat-runbook-author` → `uat-artifact-author` rename, so both roles' entries
-  land in one governed-corpus change. Re-derive this entry's reviewability
-  budget at its own scaffold time to price the corpus work in.
 - **Amended 2026-08-24 during ART-008 slice 2:** ART-009 also carries ART-008's
   undischarged live UAT. Slice 2's quickstart scenarios 3, 4, and 5 need an
   autopilot run that reaches Phase 7 on a draft pull request carrying reviewer
@@ -1456,8 +1444,7 @@ green.
   ART-011 leaves at 984 and 928 lines. Supersedes ART-011's FR-022, which forbade a
   `references/` directory for that spec's own size reasons.
 - **E. Frontmatter and agent hygiene.** Widen the frontmatter key allowlist to the
-  documented set, and land the agent-definition corrections atomically with the
-  Layer 6 Codex digest regeneration, which has no regeneration script.
+  documented set.
 - **F. Manifest validation wiring.** Add the marketplace `description` that makes
   `claude plugin validate . --strict` pass, and gate it. Highest conformance per line
   in the inventory.

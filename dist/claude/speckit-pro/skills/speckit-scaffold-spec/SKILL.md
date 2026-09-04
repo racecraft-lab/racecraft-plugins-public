@@ -558,9 +558,8 @@ All file operations happen in the worktree directory.
 
 ```text
 0. Require the generic `speckit-pro-reviewability` preset to already exist in
-   the worktree. `ensure-reviewability-preset` is deferred and unavailable, so
-   do not invoke it or claim setup generated preset files. If the preset is
-   absent, STOP and report the deferred capability gap.
+   the worktree. If the preset is absent, STOP and report the missing
+   prerequisite.
 
    Verify resolution from the worktree:
    From `.worktrees/<number>-<short-name>/`, run
@@ -604,7 +603,7 @@ namespace-matches the directory.
    | ----- | ------------ |
    | `{{ROADMAP_TITLE}}` | a short link text for the roadmap (e.g., the spec series name + " roadmap") |
    | `{{ROADMAP_FILENAME}}` | the existing `*-technical-roadmap.md` filename WITHOUT the `.md` extension (from Step 1) |
-   | `{{SPEC_ID}}` | the roadmap identity, e.g., `PRSG-002` (must namespace-match `<branch-name>`) |
+   | `{{SPEC_ID}}` | the roadmap identity, e.g., `SPEC-002` (must namespace-match `<branch-name>`) |
 ```
 
 The written marker MUST carry:
@@ -949,7 +948,7 @@ yet.
 
 **The `SPEC-<ID>` token above is the roadmap identity in full, including whatever
 namespace prefix it carries — it is not a literal `SPEC-` joined to an
-identifier.** An `ART-011` run tests `ART-011-design-concept.md`. The candidates
+identifier.** A `SPEC-011` run tests `SPEC-011-design-concept.md`. The candidates
 above must be the filenames Steps 4 and 5 actually wrote. Never test a literally
 `SPEC-`-prefixed name for a spec whose identity does not begin with `SPEC-`: that
 path was never written, the read fails, and the report silently omits its own

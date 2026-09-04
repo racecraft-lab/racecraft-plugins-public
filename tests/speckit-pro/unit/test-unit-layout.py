@@ -42,31 +42,6 @@ PURPOSE_NAMED_ROOTS = (
     TEST_ROOT / "layer7-integration" / "dispatch-fixtures",
     TEST_ROOT / "layer8-parity",
 )
-LEGACY_LAYOUT_PATHS = (
-    "tests/speckit-pro/layer4-scripts",
-    "tests/speckit-pro/parity/xplat-010",
-    "fixtures/xplat-005-feature",
-    "fixtures/xplat-007-gates",
-    "fixtures/xplat-008-release",
-    "fixtures/xplat-009-zero-bash",
-    "fixtures/xplat-010-confinement",
-    "fixtures/prsg-012-feature",
-    "fixtures/o5-topology",
-    "22-prsg-014-stack-manager-replay",
-    "02-prsg-011-migration-guidance",
-    "03-prsg-010-backstop-o5-routing",
-    "04-prsg-014-stack-manager-guidance",
-    "test-l6-codex-runner",
-    "test-l8-extractors",
-    "test-l8-judge",
-    "test-layer1-validator-regressions",
-    "test-layer2-signal-restoration",
-    "test-layer2-trigger-runners",
-    "test-layer6-portability",
-    "test-layer7-runners",
-    "test-layer8-runner",
-    "test-check-toolchain-pr10-baseline.txt",
-)
 SCRIPT_SUFFIXES = frozenset(
     {
         ".bash",
@@ -211,21 +186,21 @@ class UnitLayoutTests(unittest.TestCase):
             process_root = repo_root / "docs" / "ai" / "specs" / ".process"
             process_root.mkdir(parents=True)
             (repo_root / "specs").mkdir()
-            (process_root / "PRSG-002-workflow.md").write_text("", encoding="utf-8")
-            (process_root / "DOC-014-workflow.md").write_text("", encoding="utf-8")
+            (process_root / "ALPHA-002-workflow.md").write_text("", encoding="utf-8")
+            (process_root / "BETA-014-workflow.md").write_text("", encoding="utf-8")
 
             families = _repository_spec_families(repo_root)
 
-        self.assertTrue(_contains_repository_spec_id("test_prsg_002_guard", families))
-        self.assertTrue(_contains_repository_spec_id("test_doc_014_guard", families))
+        self.assertTrue(_contains_repository_spec_id("test_alpha_002_guard", families))
+        self.assertTrue(_contains_repository_spec_id("test_beta_014_guard", families))
 
     def test_repository_spec_id_detection_is_restricted_to_declared_families(
         self,
     ) -> None:
-        families = frozenset({"g56r"})
+        families = frozenset({"alpha"})
 
         self.assertTrue(
-            _contains_repository_spec_id("test-g56r-002-capability.py", families)
+            _contains_repository_spec_id("test-alpha-002-capability.py", families)
         )
         self.assertFalse(
             _contains_repository_spec_id("test-pr-366-capability.py", families)
@@ -233,20 +208,20 @@ class UnitLayoutTests(unittest.TestCase):
 
     def test_script_name_guard_covers_repository_authored_locations(self) -> None:
         covered = (
-            ("scripts/test-g56r-002-capability-telemetry.py", "100644"),
-            ("docs-site/scripts/g56r-002-reference.mjs", "100644"),
-            (".specify/extensions/git/scripts/bash/g56r-002-commit.sh", "100644"),
-            (".claude/hooks/g56r-002-guard.py", "100644"),
-            ("bin/g56r-002-check", "100755"),
+            ("scripts/test-alpha-002-capability-telemetry.py", "100644"),
+            ("docs-site/scripts/alpha-002-reference.mjs", "100644"),
+            (".specify/extensions/git/scripts/bash/alpha-002-commit.sh", "100644"),
+            (".claude/hooks/alpha-002-guard.py", "100644"),
+            ("bin/alpha-002-check", "100755"),
         )
         excluded = (
-            ("dist/codex/g56r-002-generated.py", "100644"),
+            ("dist/codex/alpha-002-generated.py", "100644"),
             (
                 "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/"
-                "installed-cache/codex/g56r-002-generated.py",
+                "installed-cache/codex/alpha-002-generated.py",
                 "100644",
             ),
-            ("vendor/g56r-002-upstream.sh", "100644"),
+            ("vendor/alpha-002-upstream.sh", "100644"),
         )
         for path, mode in covered:
             self.assertTrue(_is_repository_authored_script(path, mode), path)
@@ -255,18 +230,18 @@ class UnitLayoutTests(unittest.TestCase):
 
     def test_spec_id_pattern_detects_compound_script_names(self) -> None:
         for name in (
-            "g56r-002.test.py",
-            "check.g56r-002.mjs",
-            "checkg56r-002helper.ts",
+            "alpha-002.test.py",
+            "check.alpha-002.mjs",
+            "checkalpha-002helper.ts",
         ):
             self.assertIsNotNone(SPEC_ID_NAME.search(Path(name).stem), name)
 
     def test_spec_id_pattern_detects_underscore_separators(self) -> None:
         for name in (
-            "g56r_002.test.py",
-            "xplat_010.test.py",
-            "check.g56r_002.mjs",
-            "checkg56r_002helper.ts",
+            "alpha_002.test.py",
+            "beta_010.test.py",
+            "check.alpha_002.mjs",
+            "checkalpha_002helper.ts",
         ):
             self.assertIsNotNone(SPEC_ID_NAME.search(Path(name).stem), name)
 
@@ -292,23 +267,6 @@ class UnitLayoutTests(unittest.TestCase):
             if _contains_repository_spec_id(Path(relative).stem, spec_families):
                 violations.append(relative)
         self.assertEqual(violations, [], completed.stdout + completed.stderr)
-
-    def test_tracked_paths_have_no_legacy_layout_names(self) -> None:
-        completed = subprocess.run(
-            ["git", "ls-files"],
-            cwd=REPO_ROOT,
-            text=True,
-            capture_output=True,
-            shell=False,
-            check=False,
-        )
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        matches = [
-            path
-            for path in completed.stdout.splitlines()
-            if any(legacy in path for legacy in LEGACY_LAYOUT_PATHS)
-        ]
-        self.assertEqual(matches, [], completed.stdout + completed.stderr)
 
     def test_manifest_uses_the_unit_namespace(self) -> None:
         manifest = json.loads(

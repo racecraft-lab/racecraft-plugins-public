@@ -4,9 +4,9 @@
   "mode": "single",
   "target": {
     "base_branch": "main",
-    "head_branch": "prsg-012-reviewer-ready-pr-packet-contract"
+    "head_branch": "fixture-pr-packet"
   },
-  "source_feature_dir": "specs/prsg-012-reviewer-ready-pr-packet-contract",
+  "source_feature_dir": "specs/fixture-pr-packet",
   "generated_title": {
     "value": "feat(speckit-pro): Add reviewer packet validation",
     "type": "feat",
@@ -14,12 +14,12 @@
     "description": "Add reviewer packet validation",
     "source_evidence": {
       "kind": "feature_spec",
-      "source": "specs/prsg-012-reviewer-ready-pr-packet-contract/spec.md",
+      "source": "specs/fixture-pr-packet/spec.md",
       "summary": "Feature title normalized into a public action phrase."
     },
     "rejected_candidates": [
       {
-        "value": "prsg-012-reviewer-ready-pr-packet-contract",
+        "value": "fixture-pr-packet",
         "reason": "Uses the branch name instead of reviewer-facing prose."
       }
     ]
@@ -76,5 +76,5 @@
       "why_it_matters"
     ]
   },
-  "validation_result_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/pr-packets/invalid-missing-evidence/validation.json"
+  "validation_result_path": "specs/fixture-pr-packet/.process/pr-packets/invalid-missing-evidence/validation.json"
 }

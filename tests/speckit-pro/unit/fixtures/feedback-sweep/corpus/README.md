@@ -4,8 +4,8 @@ Eight documents, frozen. `../../../test-feedback-sweep-parse.py` reads them.
 
 ## What they are
 
-The planning documents of ART-008 slice 1, copied verbatim from
-`specs/art-008-feedback-sweep/` at commit `32043c45a60e7c38d15f0958bc4874f0362ea505`
+The planning documents of SPEC-80 slice 1, copied verbatim from
+`specs/spec-808-feedback-sweep/` at commit `32043c45a60e7c38d15f0958bc4874f0362ea505`
 when that spec was archived on 2026-08-25.
 
 ## Why they are real prose and not a written fixture
@@ -29,7 +29,7 @@ archive procedure should treat this directory as one.
 ## Verifying the copy is untouched
 
 ```text
-git diff 32043c45a60e7c38d15f0958bc4874f0362ea505:specs/art-008-feedback-sweep/spec.md \
+git diff 32043c45a60e7c38d15f0958bc4874f0362ea505:specs/spec-808-feedback-sweep/spec.md \
   tests/speckit-pro/unit/fixtures/feedback-sweep/corpus/spec.md
 ```
 
@@ -39,4 +39,4 @@ corpus still says what it said when it was captured; a non-empty one means
 someone edited the negative examples, which silently weakens the deny-set.
 
 `quickstart.md` doubles as slice 1's acceptance record, cited from
-`docs/ai/specs/.process/ART-008-workflow.md`.
+`docs/ai/specs/.process/SPEC-80-workflow.md`.

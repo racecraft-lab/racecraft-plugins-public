@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
-"""Golden-fixture tests for the restored estimate-spec-size runner operation.
+"""Golden-fixture tests for the estimate-spec-size runner operation.
 
-XPLAT-010 US7 / FR-025. The historical Bash predecessor was captured from
-commit ``c9176902`` and reported 33 named checks. This suite preserves that
-ordered inventory with ``subTest(msg=...)`` while exercising the restored
-read-only runner operation against the frozen golden fixtures under
+This suite exercises the read-only runner operation against the fixtures under
 ``fixtures/estimate-spec-size/``.
 
 The runner is exercised end-to-end through the same request envelope the
@@ -26,13 +23,11 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "estimate-spec-size"
-BASELINE = REPO_ROOT / "tests" / "speckit-pro" / "parity" / "bash-to-python" / "test-estimate-spec-size-baseline.txt"
 SHARED_LIB = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 if str(SHARED_LIB) not in sys.path:
     sys.path.insert(0, str(SHARED_LIB))
 
-from capture_baseline import baseline_inventory  # noqa: E402
-from test_result import CountingTestResult, run_counted  # noqa: E402
+from test_result import run_counted  # noqa: E402
 
 # Maps the deleted script's value-taking flags onto the runner's structured
 # input keys; --spike is a bare boolean flag handled separately.
@@ -161,20 +156,8 @@ def build_suite() -> unittest.TestSuite:
     return unittest.defaultTestLoader.loadTestsFromTestCase(EstimateSpecSizeGoldenTests)
 
 
-def assert_subtest_inventory_matches_baseline() -> None:
-    result = CountingTestResult(stream=None, descriptions=False, verbosity=0)
-    build_suite().run(result)
-    expected = baseline_inventory(BASELINE)
-    if result.subtest_names != expected:
-        raise AssertionError(
-            "subTest inventory does not match baseline: "
-            f"python={len(result.subtest_names)} baseline={len(expected)}"
-        )
-
-
 class EstimateSpecSizeGoldenTests(unittest.TestCase):
-    def test_estimator_contract_matches_historical_predecessor(self) -> None:
-        self.assertEqual(baseline_inventory(BASELINE), CURRENT_INVENTORY)
+    def test_estimator_contract(self) -> None:
         expected_fixture_names = [
             "all-absent",
             "at-ceiling",
@@ -320,11 +303,6 @@ class EstimateSpecSizeGoldenTests(unittest.TestCase):
 
 
 def main() -> int:
-    try:
-        assert_subtest_inventory_matches_baseline()
-    except AssertionError as exc:
-        print(f"test-estimate-spec-size inventory mismatch: {exc}", file=sys.stderr)
-        return 1
     return run_counted(build_suite(), label="test-estimate-spec-size")
 
 

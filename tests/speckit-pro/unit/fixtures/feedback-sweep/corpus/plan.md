@@ -1,8 +1,8 @@
 # Implementation Plan: Feedback Sweep, slice 1 of 2 — the checkpoint
 
-**Branch**: `art-008-feedback-sweep` | **Date**: 2026-08-20 | **Spec**: [spec.md](./spec.md)
+**Branch**: `spec-808-feedback-sweep` | **Date**: 2026-08-20 | **Spec**: [spec.md](./spec.md)
 
-**Input**: Feature specification from `specs/art-008-feedback-sweep/spec.md`
+**Input**: Feature specification from `specs/spec-808-feedback-sweep/spec.md`
 
 ## Summary
 
@@ -345,8 +345,7 @@ Members also deny the orchestration set and `Skill`, asserted in the
 `READ_ONLY_ROLES` style. The rationale goes in the module docstring, because a
 carve-out whose reason lives only in a spec is a carve-out the next reader
 widens. **This is the only policy change**, and it changes no existing agent
-definition: the twelve governed Layer 6 roles are untouched, so the digest
-chain does not restale.
+definition.
 
 **What this does not fix, stated as a residual.** The orchestrator remains a
 model with `Bash`, the network, and every installed MCP server. It is never
@@ -357,8 +356,7 @@ for itself. **This slice moves the untrusted-text reader inside a closed
 allowlist and leaves the untrusted-text router outside one.** That residual is
 smaller than the one this item previously recorded, and it is not zero. The
 earlier prerequisite sentence is withdrawn as taken: the policy reversal is the
-carve-out above, taken deliberately at the Layer 5 test, and the Layer 6 corpus
-is deferred rather than reversed (see the Non-Goals entry the spec adds).
+carve-out above, taken deliberately at the Layer 5 test.
 **FR-005 relaxation is still blocking.** The author-association allowlist is
 what keeps this text to text a write-capable account posted; admitting
 `CONTRIBUTOR` would put anonymous text in front of these agents, scoped or not.
@@ -782,8 +780,8 @@ fifteen inside a file already declared.
 
 Three things in this pass are authored and count **zero** reviewable LOC, named
 so they read as counted-and-excluded rather than forgotten: the new planning
-contract `specs/art-008-feedback-sweep/contracts/sweep-classifier-output.md`,
-which follows ART-007's `artifact-author-agent` contract in
+contract `specs/spec-808-feedback-sweep/contracts/sweep-classifier-output.md`,
+which follows the `artifact-author-agent` contract in
 appearing in no count; the Layer 5 carve-out in
 `tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.py`; and the
 captured-call fixture extensions. The plan's derivation table counts production
@@ -792,7 +790,7 @@ paths only, and this pass is counted the same way.
 The live figure is **1120 to 1720, midpoint near 1420**, over **12** production
 files and **22** authored files. Two blocks, both size-only, both
 operator-accepted: the trust boundary is not separable from the feature, and
-`docs/ai/specs/.process/PRSG-013-workflow.md:570` is the precedent for a
+`docs/ai/specs/.process/SPEC-913-workflow.md:570` is the precedent for a
 recorded size-only block whose run continued — `status=block,
 is_size_only=true, reviewable_loc=1800, total_files=78`, 2.25 times over its
 threshold, carried into marker planning. Read `spec.md`'s note, not this
@@ -874,12 +872,12 @@ Constitution version 1.2.0.
   a slice that ships the sweep without the scoped consumers ships the disclosed
   exposure and defers the fix behind the thing that creates it. The precedent
   for continuing past a recorded size-only block is
-  `docs/ai/specs/.process/PRSG-013-workflow.md:570`, which recorded
+  `docs/ai/specs/.process/SPEC-913-workflow.md:570`, which recorded
   `status=block, is_size_only=true, reviewable_loc=1800, total_files=78` and
   continued with the crossing captured as marker-planning input; 1420 is under
   that 1800. Carried into marker planning under the spec's size-crossing rule,
   with the rejected split recorded above.
-- **Split decision**: ART-008 is two stacked vertical slices along a Path seam.
+- **Split decision**: SPEC-80 is two stacked vertical slices along a Path seam.
   This is slice 1. Slice 2 (artifact freshness) is specified separately on a
   branch stacked on this one and owns page regeneration, stale-page detection,
   and the draft-description refresh.
@@ -903,12 +901,12 @@ than stopping the run.
 
 ## Slice Topology
 
-ART-008 ships as two stacked vertical slices along a Path seam. Both cut end to
+SPEC-80 ships as two stacked vertical slices along a Path seam. Both cut end to
 end through the Claude and Codex variants.
 
 | Slice | Branch | Scope | Status |
 |---|---|---|---|
-| 1 — the checkpoint | `art-008-feedback-sweep` | The comment-driven path: read, trust-filter, recognize, classify, amend through consensus, record, reply, stop or proceed. | This spec |
+| 1 — the checkpoint | `spec-808-feedback-sweep` | The comment-driven path: read, trust-filter, recognize, classify, amend through consensus, record, reply, stop or proceed. | This spec |
 | 2 — artifact freshness | stacked on slice 1 | Regenerating the draft page set after amendments, detecting stale pages from git history on a clean sweep, and refreshing the draft pull-request description including the Resume block. | Specified separately |
 
 ### The hooks slice 1 leaves for slice 2
@@ -942,7 +940,7 @@ detail. Changing either after slice 2 starts is a breaking change to it.
 ### Documentation (this feature)
 
 ```text
-specs/art-008-feedback-sweep/
+specs/spec-808-feedback-sweep/
 ├── plan.md              # This file (/speckit-plan command output)
 ├── research.md          # Phase 0 output (/speckit-plan command)
 ├── data-model.md        # Phase 1 output (/speckit-plan command)
@@ -1001,6 +999,6 @@ the consumer-scoping pass introduced with the four sweep agent definitions and
 the `install.py` inventory edit. Authored files sit at 22, a warn under the 25
 block. **Both crossings are operator-accepted at T014**, on the ground that the
 trust boundary is not separable from the feature; the precedent for continuing
-past a recorded size-only block is PRSG-013. Recorded, not hidden.
+past a recorded size-only block is SPEC-913. Recorded, not hidden.
 The warn, its derivation, its acceptance, and the split option that was
 considered and rejected are recorded in "Reviewability Budget, derived by hand".

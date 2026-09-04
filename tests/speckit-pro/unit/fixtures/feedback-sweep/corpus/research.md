@@ -1,6 +1,6 @@
 # Phase 0 Research: Feedback Sweep, slice 1 of 2
 
-**Feature**: `art-008-feedback-sweep` | **Date**: 2026-08-20
+**Feature**: `spec-808-feedback-sweep` | **Date**: 2026-08-20
 
 Every unknown the Technical Context could have carried is resolved here, and
 `plan.md` ships with no open clarification markers.

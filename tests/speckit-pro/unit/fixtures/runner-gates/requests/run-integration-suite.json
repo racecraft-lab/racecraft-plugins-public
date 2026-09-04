@@ -1,11 +1,10 @@
 {
   "schema_version": "1.0",
-  "request_id": "xplat-007-us1-run-integration-suite",
+  "request_id": "run-integration-suite",
   "helper_id": "suite-gate",
   "operation": "run-integration-suite",
   "mode": "read_only",
   "inputs": {
-    "repo_root": ".",
-    "xplat_008_cutover_allowed": false
+    "repo_root": "."
   }
 }

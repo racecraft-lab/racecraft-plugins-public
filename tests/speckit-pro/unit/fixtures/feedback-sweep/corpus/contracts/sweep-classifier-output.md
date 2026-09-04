@@ -1,6 +1,6 @@
 # Contract: `sweep-classifier` and `sweep-analyst` structured records
 
-**Feature**: `art-008-feedback-sweep` | **Date**: 2026-08-22
+**Feature**: `spec-808-feedback-sweep` | **Date**: 2026-08-22
 
 The records the sweep's two scoped agents return. Neither agent is a runner
 operation: no `helper_id`, no registration, no dispatch-table entry. These are
@@ -151,7 +151,7 @@ untouched. FR-011 gains a caller, not a protocol.
   "comment_id": "IC_kwDO...",
   "perspective": "codebase",
   "finding": "The registry is declared once per template, so covering every exporting template is a data change rather than a code change.",
-  "evidence": ["specs/art-008-feedback-sweep/plan.md:218"],
+  "evidence": ["specs/spec-808-feedback-sweep/plan.md:218"],
   "escape_hatch": false
 }
 ```

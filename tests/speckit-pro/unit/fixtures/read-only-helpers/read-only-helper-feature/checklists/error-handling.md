@@ -1,6 +1,6 @@
 # Error-Handling Checklist: Read-Only Helper Port
 
-**Purpose**: Validate that XPLAT-005 requirements define error-handling parity for read-only helper ports before implementation.
+**Purpose**: Validate that SPEC-805 requirements define error-handling parity for read-only helper ports before implementation.
 **Created**: 2026-07-02
 **Feature**: [spec.md](../spec.md)
 

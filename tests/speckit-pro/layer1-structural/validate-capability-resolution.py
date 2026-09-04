@@ -1,26 +1,5 @@
 #!/usr/bin/env python3
-"""Layer-1 target-resolution check (port of validate-capability-resolution.sh, FR-004).
-
-XPLAT-010 count-parity port (T020, US2). Python 3.11+ standard library only. For
-each in-scope agent's directive/grounding reference, extract the repo-root-relative
-path token verbatim and assert it re-roots under BOTH built trees
-(``dist/claude/<token>`` and ``dist/codex/<token>``).
-
-Every former ``_pass``/``_fail`` execution maps to one counted ``subTest`` unit;
-names reproduced verbatim via ``subTest(msg=...)`` for a 1:1 baseline match.
-
-Environment-path normalization (privacy hard constraint): the bash predecessor
-interpolates the *absolute* agents-directory and ``dist/**`` tree paths into four
-check names. That absolute repo-root prefix is environment noise (differs per
-checkout), not check identity, and cannot be committed. The port emits — and the
-committed baseline records — the repo-relative form (``speckit-pro/agents``,
-``dist/claude`` …). Count and identity preserved; only the environment prefix is
-normalized. The extracted path tokens themselves are already repo-relative
-(``speckit-pro/...``), so ``resolves under ...`` names are verbatim.
-
-Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-capability-resolution-baseline.txt``
-(TOTAL: 43).
-"""
+"""Validate capability resolution."""
 
 from __future__ import annotations
 

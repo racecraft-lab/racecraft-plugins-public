@@ -1,41 +1,5 @@
 #!/usr/bin/env python3
-"""Built-skill body-completeness guard (port of validate-payload-completeness.sh).
-
-XPLAT-010 count-parity port (T029, US2). Python 3.11+ standard library only.
-The Claude payload builder strips the ``## Codex Skill-Selection Guard`` section
-from each built Claude ``SKILL.md``; a past regression instead dropped the entire
-body of 8 of 10 skills, shipping empty installs. For every built
-``dist/claude/speckit-pro/skills/<name>/SKILL.md`` this guard asserts (1) the last
-non-guard level-2 heading in the source survives in the built body, and (2) the
-built body line count is within a small slack of source-minus-guard, with the
-guard section measured per skill using the builder's own heading boundary (FR-008).
-Every former ``assert_*``/``_pass``/``_fail`` execution maps to one counted
-``subTest`` unit; names reproduced via ``subTest(msg=...)`` for a 1:1 baseline
-match. Fail-closed on an empty glob or a missing source/built ``SKILL.md``.
-
-Environment/data normalization (count-parity contract §2, PR 3a precedent):
-  * The bash predecessor interpolated the *absolute* dist/source paths into three
-    check-name families (directory-exists, source-readable, built-readable). The
-    absolute repo-root prefix is environment noise (differs per checkout) and
-    would violate the privacy hard constraint; the port emits — and the committed
-    baseline records — the repo-relative path (``dist/claude/speckit-pro/skills``,
-    ``speckit-pro/skills/<name>/SKILL.md``, …).
-  * BSD ``wc -l`` right-justifies its count with leading blanks, so the macOS
-    capture rendered ``dist=     363``; GNU/Linux ``wc`` (CI) and this Python port
-    emit ``dist=363``. That leading whitespace is environment formatting noise,
-    normalized to the clean CI integer in both baseline and port.
-Only environment-specific formatting is normalized; the numeric identity and the
-check identity are preserved, so ``names_equal`` stays ``yes``.
-
-Data-driven baseline regeneration trigger: the per-skill check names embed the
-live skill set, each source's last non-guard heading text, and the source/built
-line counts + per-skill guard-section size. Adding/removing a skill or editing a
-source ``SKILL.md`` heading/length changes the inventory and requires recapturing
-this baseline.
-
-Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-payload-completeness-baseline.txt``
-(TOTAL: 52).
-"""
+"""Validate generated plugin payload completeness."""
 
 from __future__ import annotations
 

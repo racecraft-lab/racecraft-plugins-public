@@ -1,6 +1,6 @@
 {
-  "schema_version": "1.0",
-  "feature_id": "XPLAT-008",
+  "schema_version": "2.0",
+  "contract_id": "installed-plugin-release",
   "coverage": [
     "trusted missing artifact autoheal",
     "trusted stale artifact autoheal",

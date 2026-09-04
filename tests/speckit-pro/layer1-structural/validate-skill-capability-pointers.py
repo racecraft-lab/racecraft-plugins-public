@@ -1,24 +1,5 @@
 #!/usr/bin/env python3
-"""Layer-1 skill pointer-coverage check (port of validate-skill-capability-pointers.sh).
-
-XPLAT-010 count-parity port (T036, US2). Python 3.11+ standard library only.
-Enforces universal-scope capability-discovery / grounding pointers across both
-user-invocable skill surfaces:
-
-* ``speckit-pro/skills/<name>/SKILL.md`` (Claude)
-* ``speckit-pro/codex-skills/<name>/SKILL.md`` (Codex)
-
-Every former ``_pass``/``_fail`` execution maps to one counted ``subTest`` unit;
-names are reproduced via ``subTest(msg=...)`` for a 1:1 baseline match.
-
-Environment-path normalization: the bash predecessor interpolated absolute
-checkout paths into the skills-directory and built-payload-tree checks. As with
-the PR 3a pointer/resolution ports, the absolute repo-root prefix is environment
-noise and is normalized to repo-relative paths in both the port and baseline.
-
-Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-skill-capability-pointers-baseline.txt``
-(TOTAL: 55).
-"""
+"""Validate skill capability pointers."""
 
 from __future__ import annotations
 

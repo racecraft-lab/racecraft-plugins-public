@@ -225,50 +225,24 @@ prefix) — they match what's published in the upstream
 | Verify Tasks | `verify-tasks` | code | Track C step 2 — phantom task detector |
 | Retrospective | `retrospective` | docs | Sequential after Cleanup — post-impl reflection |
 
-**Gotcha — the website's "ID" column shows the GitHub repo name, not the
-extension ID.** A row labeled `spec-kit-archive` on the
-[community extensions page](https://github.github.io/spec-kit/community/extensions.html)
-is the repo `stn1slv/spec-kit-archive`, but the actual extension `id` (and
-the directory it installs into) is bare: `archive`. Trust the `id` field in
-the catalog JSON or the extension's own `extension.yml`, not the website's
-column header.
+Use the catalog's `id` value for native install commands; display names and
+repository names are not installation IDs.
 
-### The curated set — what `/speckit-pro:speckit-install` and `/speckit-pro:speckit-upgrade` auto-offer
+### The curated set
 
-speckit-pro keeps a small **curated set** of community extensions and
-presets that the install and upgrade commands offer to install in the
-same pass as SpecKit itself. The set is defined at
-`speckit-pro/scripts/curated-set.json` and ships with the plugin. The
-installer prompts the operator for confirmation — it does not auto-
-install silently.
+`speckit-pro/scripts/curated-set.json` is a manual recommendation catalog read
+by the install and upgrade skills. They list missing entries and ask the
+operator which ones to install. For each accepted entry, use the native
+`specify extension add <id>` or `specify preset add <id>` command.
 
-| ID | Kind | Repo | What speckit-pro uses it for |
-|----|------|------|-----------------------------|
-| `review` | extension | `ismaelJimenez/spec-kit-review` | Post-impl Code Review track |
-| `verify` | extension | `ismaelJimenez/spec-kit-verify` | Post-impl Verify chain — implementation-vs-spec |
-| `verify-tasks` | extension | `datastone-inc/spec-kit-verify-tasks` | Post-impl Verify chain — phantom-task detector |
-| `cleanup` | extension | `dsrednicki/spec-kit-cleanup` | Sequential after the parallel group — scout-rule cleanup |
-| `retrospective` | extension | `emi-dm/spec-kit-retrospective` | Sequential after Cleanup — post-impl reflection |
-| `claude-ask-questions` | preset | `0xrafasec/spec-kit-preset-claude-ask-questions` | Upgrades `/speckit-clarify` and `/speckit-checklist` to use the native AskUserQuestion picker on Claude Code |
-
-**Resolution rule — latest tagged release at invocation time.** The
-installer queries `gh release list` for each entry's most recent
-released tag, then installs from
-`https://github.com/<repo>/archive/refs/tags/<tag>.zip`. If a repo has
-no published Release, it falls back to `gh api repos/<repo>/tags` for
-the most recent git tag and installs from that ZIP — git tags without
-a Release are still immutable refs, so this preserves the pinned-ref
-discipline. The installer **never** falls back to `main`: if neither a
-Release nor a tag exists, the entry is skipped with an actionable
-message, not silently installed from an unreleased branch.
-
-**Why this rule.** Pinning each curated entry to a specific version in
-the plugin would push maintenance overhead onto every release; the
-plugin's own version cycle would carry the curated-set ref bumps.
-Resolving at invocation time means users always get the most recent
-released extension, while the per-entry ZIP install (vs. `--from main`)
-still gives them a reproducible artifact and the same supply-chain
-posture as the archive-extension rule (below).
+| ID | Kind | What speckit-pro uses it for |
+|----|------|-----------------------------|
+| `review` | extension | Post-impl Code Review track |
+| `verify` | extension | Post-impl Verify chain — implementation-vs-spec |
+| `verify-tasks` | extension | Post-impl Verify chain — phantom-task detector |
+| `cleanup` | extension | Sequential after the parallel group — scout-rule cleanup |
+| `retrospective` | extension | Sequential after Cleanup — post-impl reflection |
+| `claude-ask-questions` | preset | Upgrades `/speckit-clarify` and `/speckit-checklist` to use the native AskUserQuestion picker on Claude Code |
 
 **Carve-out — the archive extension stays pinned.** The Racecraft
 archive extension (`racecraft-lab/spec-kit-archive`) is **not** in the
@@ -276,56 +250,6 @@ curated set and keeps its existing pinned-tag rule documented in the
 Archive Extension section below. Different trust model (Racecraft-
 owned), different install discipline (vendored or pinned by the
 operator), different provenance bar (full recovery commands).
-
-**Provenance trail.** Every install or upgrade pass appends a structured
-record to `.specify/curated-install.json`:
-
-```json
-{
-  "history": [
-    {
-      "timestamp": "2026-05-25T17:42:13Z",
-      "mode": "install",
-      "actions": [
-        {
-          "id": "review",
-          "action": "installed",
-          "kind": "extension",
-          "ref_kind": "release",
-          "ref_tag": "v1.0.1",
-          "from_version": "",
-          "repo": "ismaelJimenez/spec-kit-review",
-          "zip_url": "https://github.com/ismaelJimenez/spec-kit-review/archive/refs/tags/v1.0.1.zip"
-        }
-      ]
-    }
-  ]
-}
-```
-
-Commit this file to git. It is the audit trail of what the curated-set
-installer did and when — useful for reproducing an exact extension
-state on another developer's clone or in CI.
-
-**Invoking the installer directly.** `/speckit-pro:speckit-install` and
-`/speckit-pro:speckit-upgrade` call the same script under the hood:
-
-```text
-# Check what would change without mutating anything:
-speckit-pro/scripts/install-curated-set --mode=check
-
-# Install all entries that are missing:
-speckit-pro/scripts/install-curated-set --mode=install
-
-# Install only a subset:
-speckit-pro/scripts/install-curated-set --mode=install --accept=review,verify
-
-# Upgrade installed entries to the latest released tag:
-speckit-pro/scripts/install-curated-set --mode=upgrade
-```
-
-The script is non-interactive — it never prompts. The install/upgrade
-slash commands handle prompting; the script only acts on `--accept`.
 
 ### Browsing the live catalog — three plays
 

@@ -69,7 +69,7 @@ orchestrator's core primitives; that declaration is not an MCP/vendor
 availability list and does not replace runtime capability discovery.
 
 That declaration also deliberately omits a command-execution tool. The
-XPLAT-009 release guard classifies such a token in any shipped tool
+plugin command-confinement release guard classifies such a token in any shipped tool
 declaration as blocking, and release readiness re-runs that guard, so
 the omission is policy rather than oversight. It also costs nothing:
 Claude Code treats `allowed-tools` as pre-approval for the turn that
@@ -620,7 +620,8 @@ for phase in PHASES starting from first_pending:
           Then show planner diagnostics from stdout/stderr.
         - exit 2: STOP before implementation with a distinct
           `input_error` message and include planner diagnostics.
-        This wires NO PR emission or branch creation (PRSG-009 owns that).
+        This wires NO PR emission or branch creation; the multi-PR emission
+        phase owns those effects.
     8e. Persist marker planning state when reviewability evidence requires it:
         top-level `pr_marker_plan` in `autopilot-state.json`, mirrored
         workflow evidence, and repo-relative evidence paths. Do not treat
@@ -752,7 +753,8 @@ detailed procedures in `references/post-implementation.md`:
    `final_reviewability_gate` state plus a `reslicing_required` packet and
    stops only the unsafe PR side effects. It is not a final answer or operator
    handoff: read `autopilot_continuation`, `operator_steps`, and
-   `resume.resume_from`, then continue internally through PRSG-007/008/009
+   `resume.resume_from`, then continue internally through the recorded semantic
+   `atomicity-route`, `plan-layers`, and `multi-pr-emission` phases, continuing
    until a valid slice PR stack is emitted or a typed exception is committed.
    Never report completion while `autopilot_continuation.required=true`; a gate
    error writes state and stops without a packet. After a proceed result,

@@ -27,7 +27,7 @@ The test:
    `tolerance.json`. PASS if all required fields match within
    tolerance; FAIL with field-level diff otherwise.
 
-The PRSG-012 packet boundary is part of the parity surface. This fixture starts
+The SPEC-912 packet boundary is part of the parity surface. This fixture starts
 without a current packet at
 `specs/parity-01-post-impl/.process/pr-packets/<packet-id>.json`. Both paths must
 use the active `pr-packet-output` helper to emit or refresh the packet before

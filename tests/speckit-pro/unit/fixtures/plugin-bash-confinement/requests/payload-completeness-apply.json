@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "request_id": "fixture-xplat-009-payload-completeness-apply",
+  "request_id": "plugin-bash-confinement-payload-completeness-apply",
   "helper_id": "payload-gate",
   "operation": "payload-completeness",
   "mode": "apply",

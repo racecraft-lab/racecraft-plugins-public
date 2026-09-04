@@ -1,7 +1,7 @@
 {
   "packet_id": "invalid-schema-with-feature-dir",
   "mode": "single",
-  "source_feature_dir": "specs/prsg-012-reviewer-ready-pr-packet-contract",
+  "source_feature_dir": "specs/fixture-pr-packet",
   "generated_title": {
     "value": "feat(speckit-pro): Missing packet fields",
     "type": "feat",

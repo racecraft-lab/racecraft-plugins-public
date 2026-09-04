@@ -30,33 +30,15 @@ default user-scope path above.
 
 ## What This Skill Installs
 
-This skill installs the bundled TOML subagent templates that the
-Codex autopilot expects to exist as real custom subagents:
-
-- `analyze-executor.toml`
-- `artifact-author.toml`
-- `autopilot-fast-helper.toml`
-- `checklist-executor.toml`
-- `clarify-executor.toml`
-- `codebase-analyst.toml`
-- `domain-researcher.toml`
-- `implement-executor.toml`
-- `phase-executor.toml`
-- `spec-context-analyst.toml`
-- `uat-runbook-author.toml`
-
-The bundled source inventory is strict: all 11 TOML files must be present
-before the installer plans either static or route-aware destination changes.
-In route-aware planning, 10 files are required destination agents and
-`autopilot-fast-helper.toml` is the only optional helper. The main autopilot
-may use that helper for tiny advisory text-only prep work when
-`gpt-5.6-luna` is available, but autopilot must continue without it if
-the helper is unavailable and no-helper continuation validates.
+The runner-owned catalog determines which bundled agents are required or
+optional. The response field `data.agent_files` supplies the concrete
+filenames for the invocation. The installer fails before planning when required
+source templates are missing, and route-aware mode may omit the optional helper
+only when no-helper continuation validates.
 
 These files follow the official Codex subagent format: one standalone
 TOML file per custom agent, with required `name`, `description`, and
-`developer_instructions` fields plus Codex config such as `model`,
-`model_reasoning_effort`, and `sandbox_mode`.
+`developer_instructions` fields plus Codex config such as `sandbox_mode`.
 
 Operator note: on Codex, `sandbox_mode = "read-only"` does **not** sandbox
 MCP server processes. The agent TOML cannot restrict tools, so to keep a
@@ -64,11 +46,10 @@ read-only agent provably unable to cause writes via MCP, the operator must
 curate write-capable MCP servers OUT at the profile/config level (`enabled =
 false`, or `enabled_tools`/`disabled_tools`).
 
-The bundled model policy runs every execution and consensus agent on
-`gpt-5.6-sol`. Reasoning effort remains exactly as declared by each bundled TOML.
-`autopilot-fast-helper` is the only model exception: it runs on
-`gpt-5.6-luna` at low effort for tiny advisory text-only prep, never for SDD
-reasoning.
+The runner-owned policy defines each bundled agent's model and reasoning effort.
+An explicit route manifest materializes its selected model-and-effort tuple. The optional
+`autopilot-fast-helper` remains pinned to `gpt-5.6-luna` at low effort for tiny
+advisory text-only prep, never for SDD reasoning.
 
 If `gpt-5.6-sol` is not available in the current Codex environment, set the
 installer's `model` input to `gpt-5.5` or `gpt-5.4` (or set
@@ -95,7 +76,7 @@ differs are planned for refresh, while current files are reported as no-ops.
 ## Static and Route-aware Modes
 
 The default install path is static compatibility mode. If the request does not
-include `route_policy_manifest`, the helper preserves the existing 13-file
+include `route_policy_manifest`, the helper preserves the installer-owned
 route-agnostic copy/verify behavior:
 
 - `data.routing` is absent.
@@ -109,8 +90,8 @@ Route-aware mode activates only when the request supplies an explicit
 `route_policy_manifest` path. Inline policy objects, inferred bundled defaults,
 or a vague "use routing" request must not activate route-aware mode. The
 manifest must be a supported, closed, repository-local document that binds the
-current 13-TOML source roster, declares exactly 12 required policies, declares
-the `autopilot-fast-helper` policy/no-helper state, and admits every route
+installer's required-agent catalog, declares the `autopilot-fast-helper`
+policy/no-helper state, and admits every route
 candidate and bounded probe used by the run. Every required policy's declared
 non-route contract digest must exactly match canonical materialization of its
 trusted current source TOML. Required-policy objects are closed-schema records,
@@ -123,25 +104,18 @@ Route-aware mode returns `data.routing` with:
 
 - one runtime capability snapshot for the whole invocation, with child probe
   evidence when native discovery is unavailable
-- required-agent resolution records in canonical 12-agent order
+- required-agent resolution records in canonical installer-owned order
 - optional-helper decision evidence
 - strict-override evidence when requested
 - recovery-or-mutation evidence for planned/applied writes, removals, rollback,
   restart requirement, and manual remediation
-
-G56R-006 route-aware evidence is deterministic framework evidence only. It uses
-injected discovery/probe fixtures and fake-home or temporary project
-destinations for acceptance. Do not use route-aware G56R-006 acceptance to write
-the operator's real `~/.codex/agents/`, and do not describe the result as live
-UAT or production route qualification. Production route qualification is owned
-by later G56R work.
 
 ### Strict override behavior
 
 If `strict_model_override` is supplied in route-aware mode, required agents
 evaluate exactly one override-derived tuple per required agent. The run does not
 walk preferred or fallback routes after an override miss. Required-agent
-incompatibility fails before mutation after all 12 required diagnostics are
+incompatibility fails before mutation after all required-agent diagnostics are
 complete.
 
 The optional helper follows the override only when a compatible helper tuple
@@ -223,9 +197,9 @@ model, effort, capabilities, and probe binding.
 - Overwrite only same-named SpecKit Pro agent files in the target directory.
 - If the source bundle is missing or incomplete, STOP and report the exact
   missing files.
-- Do not use the operator's real home directory for G56R-006 route-aware
-  acceptance evidence. Use a fake HOME/USERPROFILE or a temporary project
-  `.codex/agents/` destination.
+- Route-aware fixture evidence is not live UAT. Use a fake HOME/USERPROFILE or
+  a temporary project `.codex/agents/` destination, never the operator's real
+  home directory.
 - After an applied change, always finish by telling the user to restart Codex.
   A no-op verification does not require another restart.
 
@@ -241,7 +215,7 @@ Resolve all paths before mutating anything:
 3. Resolve the destination directory:
    - default: `~/.codex/agents/`
    - explicit project scope: `.codex/agents/` in the current project
-4. Resolve the executor/consensus model:
+4. Resolve the request-level fallback model for pinned bundled agents:
    - default: `gpt-5.6-sol`
    - fallback: `gpt-5.5` or `gpt-5.4` via the installer `model` input or
      `SPECKIT_CODEX_MODEL`
@@ -300,8 +274,8 @@ After the helper completes:
 2. Verify every expected TOML file now exists in the destination.
 3. Verify the copied files are the same filenames as the bundled source set.
 4. For `gpt-5.6-sol`, verify every destination file is byte-identical to its
-   bundled source. For `gpt-5.5` or `gpt-5.4`, verify only the supported model
-   assignment was rewritten in required-agent destination copies.
+   bundled source. For `gpt-5.5` or `gpt-5.4`, verify only bundled
+   `gpt-5.6-sol` assignments were rewritten.
 5. Preserve any unrelated user files in the destination.
 6. Require the helper's verification status to be `verified` before reporting
    success.
@@ -315,7 +289,7 @@ user:
 
 - where the files were installed
 - which files were copied or refreshed
-- the effective executor/consensus model
+- the request-level fallback model
 - that they must restart Codex now
 
 When the helper reports `no_op`, report that verification succeeded and no
@@ -335,18 +309,7 @@ Return a concise installation report like:
 **Source:** /absolute/path/to/plugin/codex-agents
 **Destination:** <HOME>/.codex/agents
 
-**Installed files:**
-- analyze-executor.toml
-- artifact-author.toml
-- autopilot-fast-helper.toml
-- checklist-executor.toml
-- clarify-executor.toml
-- codebase-analyst.toml
-- domain-researcher.toml
-- implement-executor.toml
-- phase-executor.toml
-- spec-context-analyst.toml
-- uat-runbook-author.toml
+**Installed files:** <render `data.agent_files`>
 
 **Next step:** Restart Codex now so the custom subagents are loaded.
 ```

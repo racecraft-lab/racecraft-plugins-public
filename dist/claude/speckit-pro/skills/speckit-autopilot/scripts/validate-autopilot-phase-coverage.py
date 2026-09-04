@@ -327,8 +327,8 @@ PROBLEM_KEY_INTENT: dict[str, dict[str, str]] = {
         "verdict": "gated",
         "reason": (
             "A state naming a workflow other than the one supplied means the run is "
-            "proceeding against a different specification. This is the one key ART-014 "
-            "arms, and the failure it exists to stop."
+            "proceeding against a different specification. This is the one key "
+            "workflow-authority check, and the failure it exists to stop."
         ),
     },
     # --- gated: armed by ``--rule coverage``. Kept out of the status-evidence
@@ -4392,7 +4392,7 @@ def build_report(
         **stage_result,
         **workflow_checkpoint_result,
         # Its own key, never folded into the gated path's. Folding would report it
-        # under a key FR-002 freezes, and would newly arm every gated-path error
+        # under a frozen key, and would newly arm every gated-path error
         # along with it. Present on every run, empty on a skip and on a pass, so
         # the classification record can never see it conditionally absent.
         "workflow_authority_errors": workflow_authority_errors,

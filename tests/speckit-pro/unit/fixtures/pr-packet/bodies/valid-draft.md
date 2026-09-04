@@ -6,8 +6,8 @@
 
 | Artifact | Purpose | Open |
 | --- | --- | --- |
-| Implementation Plan | Lay out the phases of a planned change so a reviewer can see the shape before any code exists. | `open specs/art-007-draft-pr-emission/artifacts/implementation-plan.html` |
-| Spec Explainer | Explain what the feature does and why it is worth building, in plain English. | `open specs/art-007-draft-pr-emission/artifacts/spec-explainer.html` |
+| Implementation Plan | Lay out the phases of a planned change so a reviewer can see the shape before any code exists. | `open specs/fixture-draft-pr/artifacts/implementation-plan.html` |
+| Spec Explainer | Explain what the feature does and why it is worth building, in plain English. | `open specs/fixture-draft-pr/artifacts/spec-explainer.html` |
 
 ## Resume
 
