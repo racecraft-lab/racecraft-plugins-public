@@ -91,22 +91,8 @@ EXPECTED_HELPERS = [
 
 JSON_STDOUT_PARITY_HELPERS = {"atomicity-route"}
 
-# Helpers with no bash predecessor to compare against, so they carry no
-# bash-reference record. `helper-registry-dispatch` is the runner's own registry
-# view and never had a script; `resolve-autopilot-stage` is new behaviour with no
-# deleted `.sh` ancestor, and inventing a `source_script` for it would record a
-# lie in a provenance manifest. `sweep-pr-feedback` is new behaviour for the same
-# reason: it reads an observation the orchestrator already took, so there was
-# never a script to delete. `check-artifact-freshness` is new behaviour with no
-# deleted `.sh` ancestor for the same reason, and inventing a `source_script` for
-# it would record a lie in a provenance manifest. `partition-phase7-tasks` is the
-# Phase 7 dispatch partition the orchestrator used to run in context, so it too
-# has no deleted script to compare against. The two consensus helpers,
-# `parse-consensus-categories` and `aggregate-crl`, are the one case where a
-# script did once exist: both were deleted with the rest of the Bash surface
-# before any parity capture was taken, so there is nothing left to run a
-# comparison against and naming a `source_script` here would point a
-# provenance manifest at a path that has not existed for several releases.
+# These helpers have no executable Bash predecessor, so their fixture manifest
+# intentionally has no `source_script`.
 NO_BASH_ANCESTOR = (
     "helper-registry-dispatch",
     "resolve-workflow-binding",
