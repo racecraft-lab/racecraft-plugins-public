@@ -175,7 +175,7 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 ### Speckit Coach
 
-- **Purpose:** SpecKit SDD coach. Invoke to explain, guide, walk through, or help troubleshoot Spec-Driven Development: getting started with SDD, which checklist domains to pick (api, security, observability, data-integrity, resilie...
+- **Purpose:** Coach developers through Spec-Driven Development and SpecKit Pro.
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro speckit-coach skill
 - **Claude Code:** /speckit-pro:speckit-coach
@@ -186,7 +186,7 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 - **Claude Code invocation:** `/speckit-pro:speckit-coach`
 - **Codex invocation:** `$speckit-coach`
-- **Purpose:** SpecKit SDD coach. Invoke to explain, guide, walk through, or help troubleshoot Spec-Driven Development: getting started with SDD, which checklist domains to pick (api, security, observability, data-integrity, resilie...
+- **Purpose:** Coach developers through Spec-Driven Development and SpecKit Pro.
 - **Expected output artifact:** SDD coaching guidance or next-step explanation.
 
 **Prerequisites**
