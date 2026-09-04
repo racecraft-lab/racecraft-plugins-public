@@ -1188,6 +1188,19 @@ class ReadOnlyHelperTests(unittest.TestCase):
 
             self.assertEqual(find_repo_root(nested), project_path.resolve())
 
+    def test_find_repo_root_prefers_nearest_specify_anchor_over_ancestor_runner(self) -> None:
+        if self.helper_filter and self.helper_filter != "check-prerequisites":
+            self.skipTest("repo-root discovery case uses check-prerequisites")
+        with tempfile.TemporaryDirectory() as tmp:
+            source_root = Path(tmp) / "source"
+            (source_root / "speckit-pro" / "speckit_pro_runner").mkdir(parents=True)
+            worktree_root = source_root / ".worktrees" / "feature"
+            (worktree_root / ".specify").mkdir(parents=True)
+
+            from speckit_pro_runner.helpers.read_only import find_repo_root
+
+            self.assertEqual(find_repo_root(worktree_root), worktree_root.resolve(strict=False))
+
     def test_find_repo_root_prefers_vendored_runner_over_specify_fallback(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
             self.skipTest("repo-root discovery case uses check-prerequisites")

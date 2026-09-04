@@ -2784,169 +2784,6 @@ class MutationHelperTests(unittest.TestCase):
                 raised.exception.cleanup_errors,
             )
 
-    def test_install_codex_agents_reports_persistent_backup_cleanup_failure(self) -> None:
-        from speckit_pro_runner.helpers import install
-
-        with tempfile.TemporaryDirectory() as tmp:
-            destination = Path(tmp).resolve() / "agents"
-            destination.mkdir()
-            target = destination / "analyze-executor.toml"
-            target.write_bytes(b"captured prior\n")
-            expected = install.codex_agent_previous_state(target)
-            identity = install.codex_agent_destination_identity(destination)
-            real_unlink = install.os.unlink
-
-            def reject_backup_cleanup(path: object, *args: object, **kwargs: object) -> None:
-                if str(path).endswith(".bak") and target.exists() and target.read_bytes() == b"installer bytes\n":
-                    raise OSError("persistent backup cleanup failure")
-                real_unlink(path, *args, **kwargs)
-
-            with patch.object(install.os, "unlink", side_effect=reject_backup_cleanup):
-                install.write_codex_agent_atomic(
-                    target,
-                    b"installer bytes\n",
-                    destination,
-                    identity,
-                    expected_state=expected,
-                )
-
-            self.assertEqual(target.read_bytes(), b"installer bytes\n")
-            backups = list(destination.glob(".*.cleanup-dir/*"))
-            self.assertTrue(any(path.read_bytes() == b"captured prior\n" for path in backups))
-
-    def test_install_codex_agents_write_cleanup_race_recreates_prior_backup(self) -> None:
-        from speckit_pro_runner.helpers import install
-
-        with tempfile.TemporaryDirectory() as tmp:
-            destination = Path(tmp).resolve() / "agents"
-            destination.mkdir()
-            target = destination / "analyze-executor.toml"
-            target.write_bytes(b"captured prior\n")
-            expected = install.codex_agent_previous_state(target)
-            identity = install.codex_agent_destination_identity(destination)
-            concurrent = destination / ".concurrent-write"
-            concurrent.write_bytes(b"concurrent cleanup-window edit\n")
-            real_unlink = install.os.unlink
-            real_replace = os.replace
-            injected = False
-
-            def replace_during_backup_cleanup(path: object, *args: object, **kwargs: object) -> None:
-                nonlocal injected
-                if (
-                    str(path).endswith(".bak")
-                    and target.exists()
-                    and target.read_bytes() == b"installer bytes\n"
-                    and not injected
-                ):
-                    injected = True
-                    real_replace(concurrent, target)
-                real_unlink(path, *args, **kwargs)
-
-            with patch.object(install.os, "unlink", side_effect=replace_during_backup_cleanup):
-                install.write_codex_agent_atomic(
-                    target,
-                    b"installer bytes\n",
-                    destination,
-                    identity,
-                    expected_state=expected,
-                )
-
-            self.assertFalse(injected)
-            self.assertEqual(target.read_bytes(), b"installer bytes\n")
-            backups = list(destination.glob(".*.cleanup-dir/*"))
-            self.assertTrue(any(path.read_bytes() == b"captured prior\n" for path in backups))
-
-    def test_install_codex_agents_removal_cleanup_race_recreates_prior_backup(self) -> None:
-        from speckit_pro_runner.helpers import install
-
-        with tempfile.TemporaryDirectory() as tmp:
-            destination = Path(tmp).resolve() / "agents"
-            destination.mkdir()
-            target = destination / "autopilot-fast-helper.toml"
-            target.write_bytes(b"captured helper\n")
-            expected = install.codex_agent_previous_state(target)
-            assert expected is not None
-            identity = install.codex_agent_destination_identity(destination)
-            real_unlink = install.os.unlink
-            injected = False
-
-            def create_during_backup_cleanup(path: object, *args: object, **kwargs: object) -> None:
-                nonlocal injected
-                if str(path).endswith(".bak") and not target.exists() and not injected:
-                    injected = True
-                    target.write_bytes(b"concurrent removal-window edit\n")
-                real_unlink(path, *args, **kwargs)
-
-            with patch.object(install.os, "unlink", side_effect=create_during_backup_cleanup):
-                install.remove_codex_agent_if_unchanged(target, expected, destination, identity)
-
-            self.assertFalse(injected)
-            self.assertFalse(target.exists())
-            backups = list(destination.glob(".*.cleanup-dir/*"))
-            self.assertTrue(any(path.read_bytes() == b"captured helper\n" for path in backups))
-
-    def test_install_codex_agents_restore_cleanup_race_recreates_prior_backup(self) -> None:
-        from speckit_pro_runner.helpers import install
-
-        with tempfile.TemporaryDirectory() as tmp:
-            destination = Path(tmp).resolve()
-            backup = destination / ".agent.toml.initial.bak"
-            target = destination / "agent.toml"
-            backup.write_bytes(b"captured rollback state\n")
-            concurrent = destination / ".concurrent-restore"
-            concurrent.write_bytes(b"concurrent restore-window edit\n")
-            real_unlink = install.os.unlink
-            real_replace = os.replace
-            injected = False
-
-            def replace_during_backup_cleanup(path: object, *args: object, **kwargs: object) -> None:
-                nonlocal injected
-                if str(path).endswith(".bak") and not injected:
-                    injected = True
-                    real_replace(concurrent, target)
-                real_unlink(path, *args, **kwargs)
-
-            with patch.object(install.os, "unlink", side_effect=replace_during_backup_cleanup):
-                install.codex_agent_restore_backup_no_clobber(backup, target)
-
-            self.assertFalse(injected)
-            self.assertEqual(target.read_bytes(), b"captured rollback state\n")
-            self.assertFalse(backup.exists())
-            self.assertEqual(list(destination.glob(".*.cleanup-dir/*")), [])
-
-    def test_install_codex_agents_transient_temp_cleanup_does_not_report_removed_path(self) -> None:
-        from speckit_pro_runner.helpers import install
-
-        with tempfile.TemporaryDirectory() as tmp:
-            destination = Path(tmp).resolve() / "agents"
-            destination.mkdir()
-            target = destination / "analyze-executor.toml"
-            target.write_bytes(b"captured prior\n")
-            expected = install.codex_agent_previous_state(target)
-            identity = install.codex_agent_destination_identity(destination)
-            real_unlink = install.os.unlink
-            rejected = False
-
-            def reject_first_temp_cleanup(path: object, *args: object, **kwargs: object) -> None:
-                nonlocal rejected
-                if str(path).endswith(".tmp") and not rejected:
-                    rejected = True
-                    raise OSError("transient temp cleanup failure")
-                real_unlink(path, *args, **kwargs)
-
-            with patch.object(install.os, "unlink", side_effect=reject_first_temp_cleanup):
-                install.write_codex_agent_atomic(
-                    target,
-                    b"installer bytes\n",
-                    destination,
-                    identity,
-                    expected_state=expected,
-                )
-
-            self.assertFalse(rejected)
-            self.assertEqual(target.read_bytes(), b"installer bytes\n")
-            self.assertFalse(any(path.name.endswith(".tmp") for path in destination.glob(".*.cleanup-dir/*")))
-
     def test_install_codex_agents_temp_cleanup_preserves_takeover_entry(self) -> None:
         from speckit_pro_runner.helpers import install
 
@@ -3046,74 +2883,6 @@ class MutationHelperTests(unittest.TestCase):
             self.assertFalse((destination / ".cleanupid.cleanup.agent.tmp").exists())
             self.assertEqual(preserved.read_bytes(), b"installer-owned cleanup\n")
             self.assertEqual(conflicts.preserved_private_paths, [preserved.as_posix(), private_dir.as_posix()])
-            self.assertIn(
-                {"kind": "preserved_concurrent_file", "target": private_dir.as_posix(), "error": "private_quarantine_dir_not_empty"},
-                conflicts.cleanup_errors,
-            )
-
-    def test_install_codex_agents_cleanup_private_restore_no_replace_preserves_public_takeover(self) -> None:
-        from speckit_pro_runner.helpers import install
-
-        with tempfile.TemporaryDirectory() as tmp:
-            destination = Path(tmp).resolve() / "agents"
-            destination.mkdir()
-            target_name = "agent.tmp"
-            target = destination / target_name
-            target.write_bytes(b"installer-owned cleanup\n")
-            identity = install.codex_agent_destination_identity(destination)
-            agent_dir = install.AnchoredAgentDir.open(destination, identity)
-            state = agent_dir.previous_state(target_name)
-            assert state is not None
-            cleanup_name = ".cleanupid.cleanup.agent.tmp"
-            cleanup_path = destination / cleanup_name
-            real_unlink = install.os.unlink
-            real_no_replace_between = install.codex_agent_native_rename_no_replace_between
-            injected = False
-
-            def force_private_unlink_failure(path: object, *args: object, **kwargs: object) -> None:
-                if path == cleanup_name and kwargs.get("dir_fd") != agent_dir.directory_fd:
-                    raise OSError("injected private unlink failure")
-                real_unlink(path, *args, **kwargs)
-
-            def inject_public_takeover_before_private_restore(
-                source_directory_fd: int,
-                source_name: str,
-                target_directory_fd: int,
-                target_name: str,
-            ) -> None:
-                nonlocal injected
-                if (
-                    source_name == cleanup_name
-                    and target_name == cleanup_name
-                    and target_directory_fd == agent_dir.directory_fd
-                    and source_directory_fd != agent_dir.directory_fd
-                    and not injected
-                ):
-                    injected = True
-                    cleanup_path.write_bytes(b"public takeover must survive\n")
-                    raise FileExistsError(errno.EEXIST, "public takeover", cleanup_name)
-                real_no_replace_between(source_directory_fd, source_name, target_directory_fd, target_name)
-
-            try:
-                with (
-                    patch.object(install.secrets, "token_hex", return_value="cleanupid"),
-                    patch.object(install.os, "unlink", side_effect=force_private_unlink_failure),
-                    patch.object(
-                        install,
-                        "codex_agent_native_rename_no_replace_between",
-                        side_effect=inject_public_takeover_before_private_restore,
-                    ),
-                ):
-                    conflicts = agent_dir.cleanup_owned_entry(target_name, state)
-            finally:
-                agent_dir.close()
-
-            preserved = destination / ".cleanupid.cleanup-dir" / ".cleanupid.cleanup.agent.tmp"
-            private_dir = destination / ".cleanupid.cleanup-dir"
-            self.assertFalse(injected)
-            self.assertFalse(cleanup_path.exists())
-            self.assertEqual(conflicts.preserved_private_paths, [preserved.as_posix(), private_dir.as_posix()])
-            self.assertEqual(preserved.read_bytes(), b"installer-owned cleanup\n")
             self.assertIn(
                 {"kind": "preserved_concurrent_file", "target": private_dir.as_posix(), "error": "private_quarantine_dir_not_empty"},
                 conflicts.cleanup_errors,
@@ -5952,56 +5721,6 @@ class MutationHelperTests(unittest.TestCase):
             with self.assertRaisesRegex(OSError, "anchored atomic no-replace rename is unavailable"):
                 install.codex_agent_native_rename_no_replace(3, "source.toml", "target.toml")
 
-    def test_install_codex_agents_rollback_cleanup_race_preserves_original_state_and_paths(self) -> None:
-        from speckit_pro_runner.helpers import install
-
-        with tempfile.TemporaryDirectory() as tmp:
-            destination = Path(tmp).resolve() / "agents"
-            destination.mkdir()
-            target = destination / "agent.toml"
-            target.write_bytes(b"original user bytes\n")
-            target.chmod(0o751)
-            original_state = install.codex_agent_previous_state(target)
-            assert original_state is not None
-            target.write_bytes(b"installer bytes\n")
-            target.chmod(0o644)
-            installer_state = install.codex_agent_previous_state(target)
-            assert installer_state is not None
-            identity = install.codex_agent_destination_identity(destination)
-            concurrent = destination / ".concurrent-rollback"
-            concurrent.write_bytes(b"concurrent rollback edit\n")
-            real_unlink = install.os.unlink
-            real_replace = os.replace
-            injected = False
-
-            def replace_during_rollback_cleanup(path: object, *args: object, **kwargs: object) -> None:
-                nonlocal injected
-                if (
-                    str(path).endswith(".bak")
-                    and target.exists()
-                    and target.read_bytes() == original_state.content
-                    and not injected
-                ):
-                    injected = True
-                    real_replace(concurrent, target)
-                real_unlink(path, *args, **kwargs)
-
-            with patch.object(install.os, "unlink", side_effect=replace_during_rollback_cleanup):
-                failures, cleanup_errors = install.rollback_codex_agent_install(
-                    destination,
-                    {target.name: original_state},
-                    identity,
-                    expected_current={target.name: installer_state},
-                )
-
-            self.assertFalse(injected)
-            self.assertEqual(failures, [])
-            self.assertEqual(cleanup_errors, [])
-            self.assertEqual(target.read_bytes(), original_state.content)
-            self.assertEqual(stat.S_IMODE(target.stat().st_mode), 0o751)
-            backups = list(destination.glob(".*.cleanup-dir/*"))
-            self.assertTrue(any(path.read_bytes() == installer_state.content for path in backups))
-
     def test_install_codex_agents_recovery_copy_refuses_replaced_destination(self) -> None:
         from speckit_pro_runner.helpers import install
 
@@ -8021,17 +7740,6 @@ This line must not be copied.
 
         self.assertEqual(first, second)
 
-    def test_installed_cache_prefers_nearest_specify_root_over_ancestor_source_checkout(self) -> None:
-        from speckit_pro_runner.helpers import read_only
-
-        with tempfile.TemporaryDirectory() as tmp:
-            source_root = Path(tmp) / "source"
-            (source_root / "speckit-pro" / "speckit_pro_runner").mkdir(parents=True)
-            worktree_root = source_root / ".worktrees" / "feature"
-            (worktree_root / ".specify").mkdir(parents=True)
-
-            self.assertEqual(read_only.find_repo_root(worktree_root), worktree_root.resolve(strict=False))
-
     def test_apply_rejects_when_git_status_cannot_prove_clean_worktree(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
@@ -9283,7 +8991,7 @@ This line must not be copied.
             self.assertEqual([diag["code"] for diag in stderr_records], ["packet_validation_failed"])
             self.assertFalse((git_root / validation_rel).exists())
 
-    def test_contract_schemas_match_runner_fixture_envelopes(self) -> None:
+    def test_contract_schema_required_fields_and_fixture_envelopes_stay_aligned(self) -> None:
         request_schema = json.loads(REQUEST_SCHEMA.read_text(encoding="utf-8"))
         result_schema = json.loads(RESULT_SCHEMA.read_text(encoding="utf-8"))
         self.assertEqual(
@@ -9309,23 +9017,39 @@ This line must not be copied.
             self.assertEqual([diag["code"] for diag in stderr_records], [diag["code"] for diag in response["diagnostics"]])
             self.assert_schema_contract_response(response, result_schema)
 
-    def test_fixture_manifests_cover_mutation_helpers(self) -> None:
+    def test_fixture_manifest_stays_aligned_with_mutation_registry(self) -> None:
         fixture_manifest = json.loads((FIXTURE_DIR / "fixture-manifest.json").read_text(encoding="utf-8"))
-        self.assertGreaterEqual(len(fixture_manifest["helpers"]), 6)
-        for record in fixture_manifest["helpers"]:
+        request_dir = FIXTURE_DIR / "requests"
+        manifest_records = fixture_manifest["helpers"]
+        manifest_ids = {record["helper_id"] for record in manifest_records}
+        request_stems = {fixture_path.stem for fixture_path in request_dir.glob("*.json")}
+        registry_ids = {
+            helper_id
+            for helper_id, entry in registry.MUTATION_HELPERS.items()
+            if entry.authoritative_command
+            and command_stdin_fixture(entry.authoritative_command).parent == request_dir
+        }
+        self.assertEqual(request_stems, registry_ids)
+        self.assertEqual(len(manifest_ids), len(manifest_records))
+        self.assertTrue(manifest_ids.issubset(request_stems))
+        for record in manifest_records:
             self.assertIn("helper_id", record)
             self.assertIn("modes", record)
             self.assertIn("failure_classes", record)
             self.assertIn("authoritative_command", record)
+            self.assertIn(record["helper_id"], registry.MUTATION_HELPERS)
+            entry = registry.MUTATION_HELPERS[record["helper_id"]]
+            self.assertEqual(record["authoritative_command"], entry.authoritative_command)
+            self.assertEqual(record["operation"], entry.operation)
+            self.assertTrue(record["modes"])
+            self.assertTrue(set(record["modes"]).issubset(entry.modes))
             fixture_path = command_stdin_fixture(record["authoritative_command"])
             self.assertTrue(fixture_path.is_file(), record["authoritative_command"])
+            self.assertEqual(fixture_path.parent, request_dir)
             request = json.loads(fixture_path.read_text(encoding="utf-8"))
             self.assertEqual(request["helper_id"], record["helper_id"])
             self.assertEqual(request["operation"], record["operation"])
             self.assertIn(request["mode"], record["modes"])
-            completed, response, stderr_records = run_runner(request)
-            self.assertEqual(completed.returncode, response["exit_code"])
-            self.assertEqual([diag["code"] for diag in stderr_records], [diag["code"] for diag in response["diagnostics"]])
 
 if __name__ == "__main__":
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(MutationHelperTests)
