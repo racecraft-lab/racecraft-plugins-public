@@ -233,7 +233,7 @@ def live_installed_release_gate_evidence(repo_root: Path) -> dict[str, Any]:
             "zero-bash-guard",
             "active_zero_bash_dependency",
             not zero_bash_blocking and zero_bash_count == 0,
-            "Live plugin Bash-confinement guard completed for source, payload, and bounded installed-cache proof.",
+            "Live plugin Bash-confinement guard completed for source and Claude/Codex payloads.",
             [
                 f"zero_bash_status={zero_bash_response.get('status', 'missing') if isinstance(zero_bash_response, dict) else 'missing'}",
                 f"zero_bash_blocking_count={zero_bash_count if isinstance(zero_bash_count, int) else 'unknown'}",

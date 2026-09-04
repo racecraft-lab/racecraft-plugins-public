@@ -2,7 +2,8 @@
   "schema_version": "2.0",
   "contract_id": "plugin-bash-confinement",
   "coverage": [
-    "source, generated payload, and installed-cache proof roots are scanned by one Python runner request",
+    "source and generated payload roots are scanned by the live Python runner request",
+    "installed-cache comparison behavior is covered by an independent compact oracle",
     "active Bash, .sh, jq, shell interpolation, Git Bash, WSL, and PowerShell-specific command language block",
     "negative policy and historical allowlist entries do not satisfy release readiness",
     "mutable real user cache proof is rejected",
@@ -22,7 +23,7 @@
         }
       ],
       "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
-      "installed_cache_proof": "speckit-pro/gate-evidence/installed-cache-proof.json"
+      "require_installed_cache_proof": false
     },
     {
       "case_id": "blocking-active-source",
@@ -53,7 +54,7 @@
         }
       ],
       "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
-      "installed_cache_proof": "speckit-pro/gate-evidence/installed-cache-proof.json"
+      "require_installed_cache_proof": false
     },
     {
       "case_id": "blocking-active-allowlist-entry",
@@ -64,7 +65,7 @@
         }
       ],
       "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist-active-path.json",
-      "installed_cache_proof": "speckit-pro/gate-evidence/installed-cache-proof.json"
+      "require_installed_cache_proof": false
     },
     {
       "case_id": "blocking-missing-allowlist-fields",
@@ -75,7 +76,7 @@
         }
       ],
       "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist-missing-fields.json",
-      "installed_cache_proof": "speckit-pro/gate-evidence/installed-cache-proof.json"
+      "require_installed_cache_proof": false
     },
     {
       "case_id": "blocking-unsupported-allowlist-field",
@@ -86,7 +87,7 @@
         }
       ],
       "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist-unsupported-field.json",
-      "installed_cache_proof": "speckit-pro/gate-evidence/installed-cache-proof.json"
+      "require_installed_cache_proof": false
     },
     {
       "case_id": "blocking-traversal-allowlist-path",
@@ -97,7 +98,7 @@
         }
       ],
       "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist-traversal.json",
-      "installed_cache_proof": "speckit-pro/gate-evidence/installed-cache-proof.json"
+      "require_installed_cache_proof": false
     },
     {
       "case_id": "blocking-invalid-allowlist-line-bounds",
@@ -108,7 +109,7 @@
         }
       ],
       "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist-line-bounds.json",
-      "installed_cache_proof": "speckit-pro/gate-evidence/installed-cache-proof.json"
+      "require_installed_cache_proof": false
     },
     {
       "case_id": "blocking-python-shell-exec",
@@ -123,7 +124,7 @@
         }
       ],
       "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
-      "installed_cache_proof": "speckit-pro/gate-evidence/installed-cache-proof.json"
+      "require_installed_cache_proof": false
     },
     {
       "case_id": "blocking-uppercase-script-file",
@@ -134,7 +135,7 @@
         }
       ],
       "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
-      "installed_cache_proof": "speckit-pro/gate-evidence/installed-cache-proof.json"
+      "require_installed_cache_proof": false
     },
     {
       "case_id": "blocking-suffixful-shell-script",
@@ -149,7 +150,7 @@
         }
       ],
       "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
-      "installed_cache_proof": "speckit-pro/gate-evidence/installed-cache-proof.json"
+      "require_installed_cache_proof": false
     },
     {
       "case_id": "blocking-extensionless-script",
@@ -168,7 +169,7 @@
         }
       ],
       "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
-      "installed_cache_proof": "speckit-pro/gate-evidence/installed-cache-proof.json"
+      "require_installed_cache_proof": false
     },
     {
       "case_id": "blocking-active-reference",
@@ -179,7 +180,7 @@
         }
       ],
       "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
-      "installed_cache_proof": "speckit-pro/gate-evidence/installed-cache-proof.json"
+      "require_installed_cache_proof": false
     },
     {
       "case_id": "blocking-active-source-tree-language",
@@ -190,7 +191,7 @@
         }
       ],
       "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
-      "installed_cache_proof": "speckit-pro/gate-evidence/installed-cache-proof.json"
+      "require_installed_cache_proof": false
     },
     {
       "case_id": "blocking-active-guidance-categories",
@@ -213,7 +214,7 @@
         }
       ],
       "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
-      "installed_cache_proof": "speckit-pro/gate-evidence/installed-cache-proof.json"
+      "require_installed_cache_proof": false
     },
     {
       "case_id": "blocking-active-tool-declaration",
@@ -224,7 +225,7 @@
         }
       ],
       "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
-      "installed_cache_proof": "speckit-pro/gate-evidence/installed-cache-proof.json"
+      "require_installed_cache_proof": false
     },
     {
       "case_id": "missing-scan-root",
@@ -232,7 +233,7 @@
         "dist/missing-zero-bash-root"
       ],
       "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
-      "installed_cache_proof": "speckit-pro/gate-evidence/installed-cache-proof.json"
+      "require_installed_cache_proof": false
     },
     {
       "case_id": "missing-required-scan-root",
@@ -243,7 +244,7 @@
         "README.md"
       ],
       "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
-      "installed_cache_proof": "speckit-pro/gate-evidence/installed-cache-proof.json"
+      "require_installed_cache_proof": false
     },
     {
       "case_id": "traversal-scan-root",
@@ -251,7 +252,7 @@
         "../outside-zero-bash-root"
       ],
       "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
-      "installed_cache_proof": "speckit-pro/gate-evidence/installed-cache-proof.json"
+      "require_installed_cache_proof": false
     },
     {
       "case_id": "malformed-scan-root",
@@ -261,19 +262,19 @@
         ""
       ],
       "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
-      "installed_cache_proof": "speckit-pro/gate-evidence/installed-cache-proof.json"
+      "require_installed_cache_proof": false
     },
     {
       "case_id": "empty-scan-roots",
       "scan_roots": [],
       "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
-      "installed_cache_proof": "speckit-pro/gate-evidence/installed-cache-proof.json"
+      "require_installed_cache_proof": false
     },
     {
       "case_id": "non-list-scan-roots",
       "scan_roots": "speckit-pro",
       "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
-      "installed_cache_proof": "speckit-pro/gate-evidence/installed-cache-proof.json"
+      "require_installed_cache_proof": false
     },
     {
       "case_id": "missing-installed-cache-proof",
@@ -295,7 +296,7 @@
         "README.md"
       ],
       "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
-      "installed_cache_proof": "speckit-pro/gate-evidence/installed-cache-proof.json"
+      "require_installed_cache_proof": false
     }
   ]
 }

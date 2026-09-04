@@ -50,34 +50,6 @@ runner_requests = load_module(
 )
 
 
-class FakeGuard:
-    HASHES = {
-        "dist/claude/speckit-pro": "c" * 64,
-        "dist/codex/speckit-pro": "d" * 64,
-        "dist/claude/speckit-pro/speckit_pro_runner": "e" * 64,
-    }
-
-    @classmethod
-    def payload_tree_inventory(cls, _repo_root: Path, source_root: str, _row: dict):
-        return {"tree_hash": cls.HASHES[source_root], "files": ["manifest.json"]}
-
-    @staticmethod
-    def count_prohibited_script_files(_root: Path) -> int:
-        return 0
-
-
-def proof(rows: list[dict]) -> str:
-    return json.dumps({"schema_version": "1.0", "proofs": rows}, indent=2) + "\n"
-
-
-def row(product: str, tree_hash: str) -> dict:
-    return {
-        "product": product,
-        "source_payload_root": f"dist/{product}/speckit-pro",
-        "source_payload_tree_hash": tree_hash,
-    }
-
-
 RELEASE_PR = {
     "number": 302,
     "title": "release",
@@ -114,74 +86,6 @@ class ConflictingMergeRunner:
 
 
 class ReleasePrReconciliationTests(unittest.TestCase):
-    def test_refresh_overwrites_corrupt_authoritative_installed_cache_proof(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo_root = Path(tmp)
-            proof_path = repo_root / refresh.EVIDENCE_PROOF
-            proof_path.parent.mkdir(parents=True)
-            proof_path.write_text('{"stale": true}\n', encoding="utf-8")
-
-            self.assertEqual(
-                refresh.refresh_installed_cache_proof(repo_root, FakeGuard),
-                [refresh.EVIDENCE_PROOF],
-            )
-            document = json.loads(proof_path.read_text(encoding="utf-8"))
-            self.assertEqual(
-                document,
-                {
-                    "schema_version": "2.0",
-                    "contract_id": "plugin-bash-confinement",
-                    "proofs": [
-                        {
-                            "product": "claude",
-                            "surface": "claude_payload_fixture",
-                            "installed_root": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro",
-                            "source_payload_root": "dist/claude/speckit-pro",
-                            "source_payload_tree_hash": "c" * 64,
-                            "source_derived": True,
-                            "mutable_user_cache": False,
-                            "script_file_count": 0,
-                            "active_guidance_findings": [],
-                            "allowlist_release_readiness_excluded": True,
-                        },
-                        {
-                            "product": "codex",
-                            "surface": "codex_payload_fixture",
-                            "installed_root": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro",
-                            "source_payload_root": "dist/codex/speckit-pro",
-                            "source_payload_tree_hash": "d" * 64,
-                            "source_derived": True,
-                            "mutable_user_cache": False,
-                            "script_file_count": 0,
-                            "active_guidance_findings": [],
-                            "allowlist_release_readiness_excluded": True,
-                        },
-                    ],
-                },
-            )
-            self.assertEqual(refresh.refresh_installed_cache_proof(repo_root, FakeGuard), [])
-
-    def test_mirror_tree_by_content_detects_mode_only_drift(self) -> None:
-        if os.name == "nt":
-            self.skipTest("POSIX mode drift regression")
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            source_root = root / "source"
-            target_root = root / "target"
-            source_root.mkdir()
-            target_root.mkdir()
-            source = source_root / "tool.sh"
-            target = target_root / "tool.sh"
-            source.write_text("#!/bin/sh\n", encoding="utf-8")
-            target.write_text("#!/bin/sh\n", encoding="utf-8")
-            source.chmod(0o755)
-            target.chmod(0o644)
-
-            changed = refresh.mirror_tree_by_content(source_root, target_root, root)
-
-            self.assertEqual(changed, ["target/tool.sh"])
-            self.assertEqual(os.stat(target).st_mode & 0o777, 0o755)
-
     def test_action_output_takes_precedence(self) -> None:
         created = [{"number": 302, "title": "release", "headBranchName": "release-please--branches--main--components--speckit-pro"}]
         unrelated = [{"number": 99, "title": "other", "headRefName": "feature/not-release", "baseRefName": "main"}]
@@ -247,8 +151,8 @@ class ReleasePrReconciliationTests(unittest.TestCase):
 
     def test_regenerated_artifact_conflicts_resolve_to_base_and_continue(self) -> None:
         conflicted = [
-            "speckit-pro/gate-evidence/installed-cache-proof.json",
-            "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-stale-hash.json",
+            "dist/claude/speckit-pro/.claude-plugin/plugin.json",
+            "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
         ]
         runner = ConflictingMergeRunner(conflicted)
         sync.sync_release_branch(REPO_ROOT, RELEASE_PR, "main", runner)
@@ -269,7 +173,7 @@ class ReleasePrReconciliationTests(unittest.TestCase):
     def test_conflict_outside_regenerated_artifacts_fails_the_sync(self) -> None:
         runner = ConflictingMergeRunner(
             [
-                "speckit-pro/gate-evidence/installed-cache-proof.json",
+                "dist/claude/speckit-pro/.claude-plugin/plugin.json",
                 "speckit-pro/speckit_pro_runner/__main__.py",
             ]
         )
@@ -293,82 +197,17 @@ class ReleasePrReconciliationTests(unittest.TestCase):
         paths = sync.regenerated_artifact_paths(REPO_ROOT)
         self.assertEqual(paths, tuple(refresh.CHECK_WORKTREE_PATHS))
         for path in (
-            "speckit-pro/gate-evidence/installed-cache-proof.json",
-            "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-stale-hash.json",
+            "dist/claude/speckit-pro/.claude-plugin/plugin.json",
+            "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
         ):
             self.assertTrue(sync.is_regenerated_artifact(path, paths), path)
-        for path in ("speckit-pro/speckit_pro_runner/__main__.py", "distribution/notes.md"):
+        for path in (
+            "speckit-pro/gate-evidence/installed-cache-proof.json",
+            "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/oracle.json",
+            "speckit-pro/speckit_pro_runner/__main__.py",
+            "distribution/notes.md",
+        ):
             self.assertFalse(sync.is_regenerated_artifact(path, paths), path)
-
-    def test_canonical_mapping_recovers_legacy_partial_bump(self) -> None:
-        old_claude = "a" * 64
-        old_codex = "b" * 64
-        with tempfile.TemporaryDirectory() as tmp:
-            repo_root = Path(tmp)
-            evidence = repo_root / refresh.EVIDENCE_PROOF
-            evidence.parent.mkdir(parents=True)
-            evidence.write_text(proof([row("claude", old_claude), row("codex", old_codex)]), encoding="utf-8")
-            self.assertEqual(
-                refresh.canonical_proof_hash_replacements(repo_root, FakeGuard),
-                {old_claude: "c" * 64, old_codex: "d" * 64},
-            )
-
-    def test_canonical_mapping_refreshes_partial_root_without_extra_category(self) -> None:
-        old_claude = "a" * 64
-        old_codex = "b" * 64
-        old_partial = "f" * 64
-        with tempfile.TemporaryDirectory() as tmp:
-            repo_root = Path(tmp)
-            evidence = repo_root / refresh.EVIDENCE_PROOF
-            partial = repo_root / refresh.PARTIAL_ROOT_PROOF
-            evidence.parent.mkdir(parents=True)
-            partial.parent.mkdir(parents=True, exist_ok=True)
-            evidence.write_text(
-                proof([row("claude", old_claude), row("codex", old_codex)]),
-                encoding="utf-8",
-            )
-            partial_row = row("claude", old_partial)
-            partial_row["source_payload_root"] = (
-                "dist/claude/speckit-pro/speckit_pro_runner"
-            )
-            partial.write_text(proof([partial_row]), encoding="utf-8")
-
-            self.assertEqual(
-                refresh.canonical_proof_hash_replacements(repo_root, FakeGuard),
-                {
-                    old_claude: "c" * 64,
-                    old_codex: "d" * 64,
-                    old_partial: "e" * 64,
-                },
-            )
-
-    def test_legacy_repair_preserves_deliberate_hash_sentinels(self) -> None:
-        old_claude = "a" * 64
-        old_codex = "b" * 64
-        zero_hash = "0" * 64
-        with tempfile.TemporaryDirectory() as tmp:
-            repo_root = Path(tmp)
-            canonical = repo_root / "canonical.json"
-            stale = repo_root / "stale.json"
-            mismatch = repo_root / "mismatch.json"
-            canonical.write_text(proof([row("claude", old_claude), row("codex", old_codex)]), encoding="utf-8")
-            stale.write_text(proof([row("claude", zero_hash), row("codex", old_codex)]), encoding="utf-8")
-            mismatch.write_text(proof([row("claude", old_claude), row("codex", old_claude)]), encoding="utf-8")
-            proof_files = [canonical, stale, mismatch]
-            pre_bumped = {path: ["e" * 64, "f" * 64] for path in proof_files}
-
-            refresh.refresh_proof_tree_hashes(
-                repo_root,
-                proof_files,
-                pre_bumped,
-                FakeGuard,
-                canonical_replacements={old_claude: "c" * 64, old_codex: "d" * 64},
-            )
-
-            self.assertIn(zero_hash, stale.read_text(encoding="utf-8"))
-            mismatch_rows = json.loads(mismatch.read_text(encoding="utf-8"))["proofs"]
-            self.assertEqual(mismatch_rows[1]["source_payload_tree_hash"], "c" * 64)
-            self.assertNotEqual(mismatch_rows[1]["source_payload_tree_hash"], "d" * 64)
 
 
 class ReleasePrDispatchTests(unittest.TestCase):

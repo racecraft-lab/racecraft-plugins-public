@@ -40,10 +40,6 @@ MARKER_PLAN_SCHEMA_PATHS = (
     REPO_ROOT / "speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
     REPO_ROOT / "dist/claude/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
     REPO_ROOT / "dist/codex/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
-    REPO_ROOT
-    / "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
-    REPO_ROOT
-    / "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
 )
 CHANGED_FILE_MANIFEST_SCHEMA_PATHS = tuple(
     path.with_name("changed-file-manifest.schema.json") for path in MARKER_PLAN_SCHEMA_PATHS

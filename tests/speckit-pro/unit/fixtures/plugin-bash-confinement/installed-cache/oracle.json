@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.0",
+  "surfaces": {
+    "claude": {
+      "files": [
+        {
+          "path": ".claude-plugin/plugin.json",
+          "content": "{\"name\": \"oracle\"}\n",
+          "source_path": "speckit-pro/.claude-plugin/plugin.json",
+          "kind": "manifest",
+          "transform": "none"
+        },
+        {
+          "path": "skills/speckit-status/SKILL.md",
+          "content": "---\nname: oracle-status\ndescription: Independent Claude payload oracle.\n---\n",
+          "source_path": "speckit-pro/skills/speckit-status/SKILL.md",
+          "kind": "skill",
+          "transform": "claude_guard_strip"
+        }
+      ]
+    },
+    "codex": {
+      "files": [
+        {
+          "path": ".codex-plugin/plugin.json",
+          "content": "{\"name\": \"oracle\", \"skills\": \"./skills/\"}\n",
+          "source_path": "speckit-pro/.codex-plugin/plugin.json",
+          "kind": "manifest",
+          "transform": "manifest_rewrite"
+        },
+        {
+          "path": "skills/speckit-status/SKILL.md",
+          "content": "---\nname: oracle-status\ndescription: Independent Codex payload oracle.\n---\n",
+          "source_path": "speckit-pro/codex-skills/speckit-status/SKILL.md",
+          "kind": "skill",
+          "transform": "codex_overlay"
+        },
+        {
+          "path": "skills/speckit-status/agents/openai.yaml",
+          "content": "interface:\n  display_name: Oracle Status\n",
+          "source_path": "speckit-pro/codex-skills/speckit-status/agents/openai.yaml",
+          "kind": "skill",
+          "transform": "path_normalization"
+        }
+      ]
+    }
+  }
+}

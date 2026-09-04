@@ -4157,27 +4157,26 @@ def missing_zero_bash_scan_root_findings(repo_root: Path, case: dict[str, Any]) 
                 remediation="Restore the scan root or update the promoted zero-Bash fixture.",
             )
         )
-    if case.get("require_installed_cache_proof") is not False:
-        configured_roots = {
-            normalize_path(str(root)).rstrip("/")
-            for root in roots
-            if isinstance(root, str) and root and invalid_scan_root_reason(root) is None
-        }
-        for required_root in sorted(PLUGIN_BASH_CONFINEMENT_REQUIRED_SCAN_ROOTS):
-            if any(required_root == root or required_root.startswith(f"{root}/") for root in configured_roots):
-                continue
-            findings.append(
-                RawFinding(
-                    path=required_root,
-                    line=None,
-                    category="scan_root",
-                    pattern=required_root,
-                    reason="zero-Bash guard requires source and generated payload scan roots",
-                    active_role="zero_bash_guard",
-                    classification="blocking_zero_bash",
-                    remediation="Declare source, generated payload, payload builder, and README roots in the promoted zero-Bash guard case.",
-                )
+    configured_roots = {
+        normalize_path(str(root)).rstrip("/")
+        for root in roots
+        if isinstance(root, str) and root and invalid_scan_root_reason(root) is None
+    }
+    for required_root in sorted(PLUGIN_BASH_CONFINEMENT_REQUIRED_SCAN_ROOTS):
+        if any(required_root == root or required_root.startswith(f"{root}/") for root in configured_roots):
+            continue
+        findings.append(
+            RawFinding(
+                path=required_root,
+                line=None,
+                category="scan_root",
+                pattern=required_root,
+                reason="zero-Bash guard requires source and generated payload scan roots",
+                active_role="zero_bash_guard",
+                classification="blocking_zero_bash",
+                remediation="Declare source, generated payload, payload builder, and README roots in the promoted zero-Bash guard case.",
             )
+        )
     return findings
 
 

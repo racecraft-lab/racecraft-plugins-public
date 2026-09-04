@@ -2,20 +2,13 @@
 """Refresh generated release artifacts so a release PR passes its own gates.
 
 release-please bumps the source plugin versions and the marketplace registry
-version fields but does not rebuild the generated payloads or hash-pinned
-installed-cache proofs. This refreshes them from the
-current source tree so a release PR is self-consistent before merge. The
-proof-snapshot heuristic below assumes this script is the ONLY normal mutator
-of dist/** and the installed-cache fixtures — release-please extra-files must
-never pre-bump those trees. A canonical-proof fallback also lets the refresh
-repair release branches that were partially bumped before that invariant
-was enforced, without healing deliberate negative-test sentinels:
+version fields but does not rebuild the generated payloads. This refreshes
+them from the current source tree so a release PR is self-consistent before
+merge:
 
 1. Recompute the runner trust metadata (manifest sha256 entries + ``.sha256``).
 2. Rebuild the Claude and Codex install payloads.
 3. Sync the marketplace registries to the source plugin versions.
-4. Content-sync the installed-cache fixtures to the rebuilt payloads.
-5. Refresh the installed-cache proof tree hashes.
 
 The refresh is idempotent: a second run on the same source makes no further
 changes. It does NOT regenerate the docs reference — the release workflow runs
@@ -25,7 +18,6 @@ changes. It does NOT regenerate the docs reference — the release workflow runs
 from __future__ import annotations
 
 import argparse
-import errno
 import hashlib
 import json
 import os
@@ -49,12 +41,6 @@ MARKETPLACES = (
     (".agents/plugins/marketplace.json", ".codex-plugin/plugin.json"),
 )
 
-INSTALLED_CACHE_ROOT = "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache"
-
-PROOF_GLOB_DIR = "tests/speckit-pro/unit/fixtures/plugin-bash-confinement"
-EVIDENCE_PROOF = "speckit-pro/gate-evidence/installed-cache-proof.json"
-PARTIAL_ROOT_PROOF = f"{PROOF_GLOB_DIR}/installed-cache-proof-partial-root.json"
-
 CHECK_WORKTREE_PATHS = (
     "dist",
     ".claude-plugin/marketplace.json",
@@ -62,9 +48,6 @@ CHECK_WORKTREE_PATHS = (
     "docs-site/src/content/docs/reference",
     RUNNER_MANIFEST_FILE,
     RUNNER_CHECKSUM_FILE,
-    INSTALLED_CACHE_ROOT,
-    PROOF_GLOB_DIR,
-    EVIDENCE_PROOF,
 )
 CHECK_COPY_IGNORES = {
     ".git",
@@ -96,49 +79,18 @@ def refresh_release_artifacts(repo_root: Path) -> int:
     runner_root = repo_root / "speckit-pro"
     sys.path.insert(0, str(runner_root))
 
-    from speckit_pro_runner.gates import active_path_guard, payloads
+    from speckit_pro_runner.gates import payloads
 
     changed: list[str] = []
 
     # 1. Runner trust metadata (manifest sha256 entries + .sha256 companion).
     changed += refresh_runner_trust_metadata(repo_root)
 
-    # Snapshot each proof row's pre-rebuild recompute so step 5 only refreshes
-    # rows whose hash was correct for the old payload; deliberate sentinels
-    # (all-zeros, cross-surface mismatches, missing roots) are left untouched.
-    proof_files = discover_proof_files(repo_root)
-    pre_rebuild = snapshot_proof_recomputes(repo_root, proof_files, active_path_guard)
-    previous_installed_hashes = installed_cache_tree_hashes(repo_root, active_path_guard)
-
     # 2. Rebuild Claude and Codex payloads.
     payloads.build_installed_plugin_payloads(repo_root, repo_root / "dist")
 
     # 3. Sync marketplace versions to the source plugin versions.
     changed += sync_marketplace_versions(repo_root)
-
-    # 4. Content-sync the installed-cache fixtures to the rebuilt payloads.
-    changed += sync_installed_cache_fixtures(repo_root)
-
-    # 5. Refresh installed-cache proof tree hashes. The canonical evidence
-    # mapping repairs partially bumped payloads, while the row-level snapshot
-    # continues to preserve deliberate negative-test sentinels.
-    canonical_replacements = canonical_proof_hash_replacements(repo_root, active_path_guard)
-    current_payload_hashes = source_payload_tree_hashes(repo_root, active_path_guard)
-    canonical_replacements.update(
-        {
-            previous: current_payload_hashes[product]
-            for product, previous in previous_installed_hashes.items()
-            if product in current_payload_hashes and previous != current_payload_hashes[product]
-        }
-    )
-    changed += refresh_proof_tree_hashes(
-        repo_root,
-        proof_files,
-        pre_rebuild,
-        active_path_guard,
-        canonical_replacements=canonical_replacements,
-    )
-    changed += refresh_installed_cache_proof(repo_root, active_path_guard)
 
     if changed:
         print("Refreshed release artifacts:")
@@ -389,241 +341,6 @@ def sync_marketplace_versions(repo_root: Path) -> list[str]:
                 marketplace_path, json.dumps(document, indent=2) + "\n", repo_root
             )
     return changed
-
-
-# --------------------------------------------------------------------------- #
-# Step 4: installed-cache fixtures
-# --------------------------------------------------------------------------- #
-
-
-def sync_installed_cache_fixtures(repo_root: Path) -> list[str]:
-    changed: list[str] = []
-    for product in ("claude", "codex"):
-        source_root = repo_root / "dist" / product / "speckit-pro"
-        target_root = repo_root / INSTALLED_CACHE_ROOT / product / "speckit-pro"
-        changed += mirror_tree_by_content(source_root, target_root, repo_root)
-    return changed
-
-
-def mirror_tree_by_content(source_root: Path, target_root: Path, repo_root: Path) -> list[str]:
-    changed: list[str] = []
-    source_files = {
-        path.relative_to(source_root).as_posix(): path
-        for path in source_root.rglob("*")
-        if path.is_file() and "__pycache__" not in path.parts
-    }
-    target_files = {
-        path.relative_to(target_root).as_posix(): path
-        for path in target_root.rglob("*")
-        if path.is_file() and "__pycache__" not in path.parts
-    }
-
-    for rel in sorted(set(target_files) - set(source_files)):
-        target_files[rel].unlink()
-        changed.append(rel_to_repo(target_files[rel], repo_root))
-
-    for rel, source_path in sorted(source_files.items()):
-        target_path = target_root / rel
-        if (
-            rel in target_files
-            and sha256_file(target_path) == sha256_file(source_path)
-            and normalized_file_mode(target_path) == normalized_file_mode(source_path)
-        ):
-            continue
-        target_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source_path, target_path)
-        changed.append(rel_to_repo(target_path, repo_root))
-
-    remove_empty_dirs(target_root)
-    return changed
-
-
-def normalized_file_mode(path: Path) -> int:
-    return stat.S_IMODE(path.stat().st_mode)
-
-
-def remove_empty_dirs(root: Path) -> None:
-    if not root.is_dir():
-        return
-    for directory in sorted(
-        (path for path in root.rglob("*") if path.is_dir()),
-        key=lambda item: len(item.parts),
-        reverse=True,
-    ):
-        try:
-            directory.rmdir()
-        except OSError as exc:
-            # Expected during cleanup when a directory is still non-empty or
-            # disappears between discovery and removal; re-raise anything else.
-            if exc.errno not in (errno.ENOTEMPTY, errno.ENOENT):
-                raise
-
-
-# --------------------------------------------------------------------------- #
-# Step 5: installed-cache proof tree hashes
-# --------------------------------------------------------------------------- #
-
-
-def discover_proof_files(repo_root: Path) -> list[Path]:
-    return sorted((repo_root / PROOF_GLOB_DIR).glob("installed-cache-proof*.json"))
-
-
-def snapshot_proof_recomputes(repo_root: Path, proof_files: list[Path], guard: Any) -> dict[Path, list[str | None]]:
-    snapshot: dict[Path, list[str | None]] = {}
-    for proof_file in proof_files:
-        document = json.loads(proof_file.read_text(encoding="utf-8"))
-        rows = document.get("proofs") if isinstance(document.get("proofs"), list) else []
-        snapshot[proof_file] = [recompute_tree_hash(repo_root, guard, row) for row in rows]
-    return snapshot
-
-
-def canonical_proof_hash_replacements(repo_root: Path, guard: Any) -> dict[str, str]:
-    """Map trusted recorded hashes to rebuilt hashes for partial release bumps.
-
-    The committed evidence proof is the canonical full-root positive case. The
-    partial-root fixture is also trusted when present because its negative case
-    must isolate root-boundary findings without adding a stale-hash finding.
-    Replacing those exact hashes across the fixture family preserves intentional
-    cross-product mismatches and all-zero stale sentinels while updating every
-    positive hash consistently.
-    """
-
-    replacements: dict[str, str] = {}
-    proof_paths: list[str] = []
-    if (repo_root / EVIDENCE_PROOF).is_file():
-        proof_paths.append(EVIDENCE_PROOF)
-    if (repo_root / PARTIAL_ROOT_PROOF).is_file():
-        proof_paths.append(PARTIAL_ROOT_PROOF)
-    for proof_rel in proof_paths:
-        proof_file = repo_root / proof_rel
-        try:
-            proof_text = proof_file.read_text(encoding="utf-8")
-        except (OSError, UnicodeError):
-            continue
-        try:
-            document = json.loads(proof_text)
-        except json.JSONDecodeError:
-            continue
-        rows = document.get("proofs") if isinstance(document.get("proofs"), list) else []
-        for row in rows:
-            if not isinstance(row, dict):
-                continue
-            current = row.get("source_payload_tree_hash")
-            rebuilt = recompute_tree_hash(repo_root, guard, row)
-            if not isinstance(current, str) or rebuilt is None or current == rebuilt:
-                continue
-            existing = replacements.get(current)
-            if existing is not None and existing != rebuilt:
-                fail("canonical installed-cache proof maps one recorded hash to multiple rebuilt hashes")
-            replacements[current] = rebuilt
-    return replacements
-
-
-def installed_cache_tree_hashes(repo_root: Path, guard: Any) -> dict[str, str]:
-    hashes: dict[str, str] = {}
-    for product in ("claude", "codex"):
-        root = f"{INSTALLED_CACHE_ROOT}/{product}/speckit-pro"
-        inventory = guard.payload_tree_inventory(repo_root, root, {"product": product})
-        if inventory and inventory.get("files"):
-            hashes[product] = inventory["tree_hash"]
-    return hashes
-
-
-def source_payload_tree_hashes(repo_root: Path, guard: Any) -> dict[str, str]:
-    hashes: dict[str, str] = {}
-    for product in ("claude", "codex"):
-        root = f"dist/{product}/speckit-pro"
-        inventory = guard.payload_tree_inventory(repo_root, root, {"product": product})
-        if inventory and inventory.get("files"):
-            hashes[product] = inventory["tree_hash"]
-    return hashes
-
-
-def refresh_installed_cache_proof(repo_root: Path, guard: Any) -> list[str]:
-    hashes = source_payload_tree_hashes(repo_root, guard)
-    missing = sorted({"claude", "codex"} - set(hashes))
-    if missing:
-        fail(f"unable to derive installed-cache proof for payloads: {','.join(missing)}")
-    proofs = []
-    for product in ("claude", "codex"):
-        installed_root = f"{INSTALLED_CACHE_ROOT}/{product}/speckit-pro"
-        proofs.append(
-            {
-                "product": product,
-                "surface": f"{product}_payload_fixture",
-                "installed_root": installed_root,
-                "source_payload_root": f"dist/{product}/speckit-pro",
-                "source_payload_tree_hash": hashes[product],
-                "source_derived": True,
-                "mutable_user_cache": False,
-                "script_file_count": guard.count_prohibited_script_files(repo_root / installed_root),
-                "active_guidance_findings": [],
-                "allowlist_release_readiness_excluded": True,
-            }
-        )
-    document = {
-        "schema_version": "2.0",
-        "contract_id": "plugin-bash-confinement",
-        "proofs": proofs,
-    }
-    return write_text_if_changed(
-        repo_root / EVIDENCE_PROOF,
-        json.dumps(document, indent=2) + "\n",
-        repo_root,
-    )
-
-
-def refresh_proof_tree_hashes(
-    repo_root: Path,
-    proof_files: list[Path],
-    pre_rebuild: dict[Path, list[str | None]],
-    guard: Any,
-    *,
-    canonical_replacements: dict[str, str] | None = None,
-) -> list[str]:
-    changed: list[str] = []
-    for proof_file in proof_files:
-        text = proof_file.read_text(encoding="utf-8")
-        document = json.loads(text)
-        rows = document.get("proofs") if isinstance(document.get("proofs"), list) else []
-        replacements = dict(canonical_replacements or {})
-        for index, row in enumerate(rows):
-            if not isinstance(row, dict):
-                continue
-            current = row.get("source_payload_tree_hash")
-            old = pre_rebuild.get(proof_file, [])[index] if index < len(pre_rebuild.get(proof_file, [])) else None
-            # Only refresh a row whose hash matched the pre-rebuild payload
-            # (a genuine, up-to-date proof); leave deliberate sentinels.
-            if not isinstance(current, str) or old is None or current != old:
-                continue
-            new = recompute_tree_hash(repo_root, guard, row)
-            if new is not None and new != current:
-                existing = replacements.get(current)
-                if existing is not None and existing != new:
-                    fail("installed-cache proof hash replacement is ambiguous")
-                replacements[current] = new
-        for current, new in replacements.items():
-            text = text.replace(
-                f'"source_payload_tree_hash": "{current}"',
-                f'"source_payload_tree_hash": "{new}"',
-            )
-        changed += write_text_if_changed(proof_file, text, repo_root)
-    return changed
-
-
-def recompute_tree_hash(repo_root: Path, guard: Any, row: Any) -> str | None:
-    if not isinstance(row, dict):
-        return None
-    source_root = row.get("source_payload_root")
-    if not isinstance(source_root, str) or not source_root:
-        return None
-    try:
-        inventory = guard.payload_tree_inventory(repo_root, source_root, row)
-    except (OSError, ValueError):
-        return None
-    if not inventory or not inventory.get("files"):
-        return None
-    return inventory["tree_hash"]
 
 
 # --------------------------------------------------------------------------- #

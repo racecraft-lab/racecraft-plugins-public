@@ -56,7 +56,7 @@
         "value": "speckit_pro_runner/gates/active_path_guard.py",
         "display": "speckit_pro_runner/gates/active_path_guard.py"
       },
-      "sha256": "654d0288d28d3e9645d02ea9ae66c9060b2d32d2b188a6f1c38189571c0f55dc"
+      "sha256": "c900ded726ed2a90ffb832b8491606610d6058f41fe6156f46968d39dd5414c1"
     },
     {
       "path": {
@@ -88,7 +88,7 @@
         "value": "speckit_pro_runner/gates/release.py",
         "display": "speckit_pro_runner/gates/release.py"
       },
-      "sha256": "6dd7886d44ca606789ccd9dd43fef955339bb4eb47279eb11e186a6c073bfab5"
+      "sha256": "3921762a24e858c918aa7e84cbd38c1103f5d0fca4e5841fde0080e08c33b320"
     },
     {
       "path": {
