@@ -91,8 +91,8 @@ EXPECTED_HELPERS = [
 
 JSON_STDOUT_PARITY_HELPERS = {"atomicity-route"}
 
-# These helpers have no executable Bash predecessor, so their fixture manifest
-# intentionally has no `source_script`.
+# These helpers have no runnable Bash reference available, so their fixture
+# manifest intentionally has no `source_script`.
 NO_BASH_ANCESTOR = (
     "helper-registry-dispatch",
     "resolve-workflow-binding",
