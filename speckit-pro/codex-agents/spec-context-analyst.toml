@@ -30,8 +30,6 @@ Each input includes the relevant context (spec.md excerpt, question text, gap de
 5. **Read CLAUDE.md** for tech stack constraints and project conventions
 6. **Check existing spec/plan artifacts** for the current spec for consistency
 
-### Search Strategy
-
 ## Output Format
 
 Return your answer as a structured response:
