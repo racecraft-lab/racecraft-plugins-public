@@ -56,134 +56,20 @@ installer's `model` input to `gpt-5.5` or `gpt-5.4` (or set
 `SPECKIT_CODEX_MODEL` to the selected fallback); the installer rewrites only
 destination copies.
 
-## Plugin Upgrade and Agent Refresh Boundary
+## Plugin Refresh and Route-aware Modes
 
-Codex plugin marketplace updates refresh the plugin cache but do **not** update
-the separately registered files under `~/.codex/agents/`. Run this skill after
-every SpecKit Pro upgrade, then restart Codex:
+After the plugin is upgraded through its maintained plugin path, run `$install`;
+restart Codex only if the helper applied changes. The helper resolves the
+installed plugin's `codex-agents/` source and does not mutate plugin caches.
 
-```
-codex plugin marketplace upgrade racecraft-plugins-public
-@SpecKit Pro -> install     (or `$install`)
-# Restart Codex
-```
-
-The runner resolves `codex-agents/` from the currently executing installed
-plugin. It does not mutate plugin caches or marketplace directories. Its
-`dry_run` is content-aware: same-named destination files whose rendered content
-differs are planned for refresh, while current files are reported as no-ops.
-
-## Static and Route-aware Modes
-
-The default install path is static compatibility mode. If the request does not
-include `route_policy_manifest`, the helper preserves the installer-owned
-route-agnostic copy/verify behavior:
-
-- `data.routing` is absent.
-- No capability discovery, bounded probe, route-policy evaluation, optional
-  helper omission/removal/preservation, or strict override validation runs.
-- Existing mechanical response fields remain authoritative for the copy:
-  `agent_files`, `model`, `source`, `destination`, `mutation`,
-  `verification`, `writes_state`, and `restart_required`.
-
-Route-aware mode activates only when the request supplies an explicit
-`route_policy_manifest` path. Inline policy objects, inferred bundled defaults,
-or a vague "use routing" request must not activate route-aware mode. The
-manifest must be a supported, closed, repository-local document that binds the
-installer's required-agent catalog, declares the `autopilot-fast-helper`
-policy/no-helper state, and admits every route
-candidate and bounded probe used by the run. Every required policy's declared
-non-route contract digest must exactly match canonical materialization of its
-trusted current source TOML. Required-policy objects are closed-schema records,
-and `required_capabilities` must be a duplicate-free list of non-empty strings.
-The optional helper's `no_helper` record is also closed: `allowed` is strictly
-boolean and `reason` is a non-empty string. String truthiness never authorizes
-helper omission.
-
-Route-aware mode returns `data.routing` with:
-
-- one runtime capability snapshot for the whole invocation, with child probe
-  evidence when native discovery is unavailable
-- required-agent resolution records in canonical installer-owned order
-- optional-helper decision evidence
-- strict-override evidence when requested
-- recovery-or-mutation evidence for planned/applied writes, removals, rollback,
-  restart requirement, and manual remediation
-
-### Strict override behavior
-
-If `strict_model_override` is supplied in route-aware mode, required agents
-evaluate exactly one override-derived tuple per required agent. The run does not
-walk preferred or fallback routes after an override miss. Required-agent
-incompatibility fails before mutation after all required-agent diagnostics are
-complete.
-
-The optional helper follows the override only when a compatible helper tuple
-exists. If the helper tuple is incompatible and no-helper continuation
-validates, the helper is omitted or the existing same-named helper is handled by
-the ownership rules below. If no-helper continuation does not validate, the
-route-aware batch fails before mutation.
-
-### Optional helper outcomes
-
-Route-aware optional-helper outcomes are:
-
-- `installed`: a manifest-admitted helper route resolves and materializes
-- `omitted`: no helper route is available, no existing helper file is present,
-  and no-helper continuation validates
-- `removed`: an existing helper is removed only when its bytes exactly match a
-  known rendered helper derived from the trusted current source and manifest
-- `preserved`: an existing same-named helper lacks managed ownership proof and
-  is left in place with bounded manual-remediation evidence
-- `unresolved`: neither a compatible helper nor validated no-helper
-  continuation is available, so the batch fails before mutation
-
-Filename, location, syntactic TOML validity, parsed equivalence, and normalized
-content do not prove helper ownership.
-Caller-supplied provenance is not an ownership authority and cannot authorize
-helper removal.
-
-### Recovery evidence
-
-Route-aware apply plans all required writes and managed-helper removals as one
-rollback-backed batch. Before mutation, it captures prior bytes and file modes
-for each planned destination action. It rechecks bytes, mode, and file identity
-immediately before each mutation and before rollback, preserving concurrent
-external edits and reporting uncertain state instead of overwriting them.
-Existing targets are moved aside and validated before installation or removal;
-replacement and restoration use exclusive no-clobber links so an entry created
-in the final mutation window is preserved. A collision retains both the moved
-prior entry and the concurrent target, reports every preserved path, and fails
-with bounded manual remediation. Temporary-file and backup cleanup failures are
-also explicit recovery errors rather than successful outcomes. After destructive
-backup cleanup, the installer recaptures the target; a cleanup-window race
-recreates the captured prior bytes and mode under a fresh exclusive backup path
-anchored to the captured destination identity and reports both surviving
-entries. Rollback carries the original pre-batch state into that recovery path.
-An incomplete recovery copy is reported separately and is never identified as
-a valid preserved file. Existing targets move through an anchored native atomic
-no-replace primitive; unsupported platforms or filesystems fail closed rather
-than falling back to a clobbering rename. Restore uses descriptor-relative
-state, link, and unlink operations, and evidence paths are emitted only while
-the destination still matches its captured identity. On failure:
-
-- recovery distinguishes staged actions from actions actually applied and
-  rolled back, reports the exact failed write or removal, and records real
-  destination-directory cleanup outcomes
-- successful rollback reports `rollback_outcome=restored`,
-  `writes_state=false`, `restart_required=false`, and no verification success
-- failed or uncertain rollback reports every unrestored action and error,
-  `writes_state=true` or uncertain state, `restart_required=true`, bounded
-  manual remediation, and no verification success
-- required-route pre-mutation failures report zero planned/applied writes and
-  removals, `writes_state=false`, and `restart_required=false`
-
-Bounded probe declarations use the closed manifest schema `probe_id`,
-`candidate_route_id`, `purpose`, `bounds`, and `expected_result_shape`. Each
-declaration must be keyed by its exact probe ID and bind to an admitted route
-that declares the same probe; aliases and partial records are rejected before
-capability discovery. A route ID may be reused only for the same normalized
-model, effort, capabilities, and probe binding.
+Static mode omits `route_policy_manifest` and uses the helper's normal
+copy/verify result. Route-aware mode activates only for an explicit trusted
+repository-local `route_policy_manifest`; inline policy, inferred defaults, or
+a vague routing request do not activate it. A strict override does not fall
+through after a required route misses. Helper omission is allowed only when the
+helper returns its validated no-helper result. Any unresolved required route or
+uncertain rollback stops and reports the helper response, including mutation,
+verification, recovery, `writes_state`, and `restart_required`.
 
 ## Hard Constraints
 

@@ -1,6 +1,6 @@
 ---
 name: speckit-upgrade
-description: "Upgrades an existing SpecKit installation safely with backup-and-restore for locally-modified files. Preserves the project constitution and template overrides. Handles the v0.8.13 slash-command to skills migration. Supports upgrading one or both integrations (Claude Code, Codex CLI) and refreshing the curated set of community extensions and presets. Use when the user says \"upgrade speckit\", \"update speckit\", \"refresh speckit\", \"new speckit version\", \"latest speckit\", \"upgrade specify cli\", \"safe speckit upgrade\", \"speckit migration to skills\", \"preserve my constitution during upgrade\", or asks how to upgrade without losing template edits. Hands off to /speckit-pro:speckit-install if .specify/ is missing."
+description: "Upgrades an existing SpecKit installation safely with backup-and-restore for locally-modified files. Preserves the project constitution and template overrides. Supports upgrading one or both integrations (Claude Code, Codex CLI) and offering missing curated community extensions and presets. Use when the user says \"upgrade speckit\", \"update speckit\", \"refresh speckit\", \"new speckit version\", \"latest speckit\", \"upgrade specify cli\", \"safe speckit upgrade\", \"preserve my constitution during upgrade\", or asks how to upgrade without losing template edits. Hands off to /speckit-pro:speckit-install if .specify/ is missing."
 argument-hint: "(optional) integration keys to upgrade, e.g. 'claude', 'codex', or omit for all"
 user-invocable: true
 allowed-tools: Read Edit Write
@@ -20,24 +20,10 @@ guard was triggered.
 
 Upgrade an existing SpecKit install safely. Preserves
 `.specify/memory/constitution.md` and any other locally-modified
-files via backup-then-force-then-restore. Handles the v0.8.13
-slash-command → skills migration. Supports upgrading one or both
+files via backup-then-force-then-restore. Supports upgrading one or both
 integrations.
 
 If `.specify/` is missing, hands off to `/speckit-pro:speckit-install`.
-
-## Repository Structure Migration Guidance
-
-For existing projects, after integration upgrade and verification, report that
-repository structure migration is not available through the current runner.
-The `migrate-structure` operation has `promotion_status=deferred` and no
-authoritative request. Neither `dry_run` nor `apply` is an operator contract;
-do not invoke the operation or claim that it will report or mutate repository
-state.
-
-Record the deferred capability gap and leave repository structure unchanged.
-Tier-2 PROCESS relocation is separate, but `relocate-process-artifacts` is also
-deferred and unavailable. Do not recommend or auto-run either operation.
 
 ## Invocation
 
@@ -152,7 +138,7 @@ backup verbatim. Templates, scripts, and gate validators are case-
 by-case (the CLI's new versions usually have fixes/features the
 operator wants).
 
-### 6. Handle the slash-command → skills migration (v0.8.13)
+### 6. Deduplicate legacy commands when both forms are present
 
 After upgrading, the new `.claude/skills/speckit-*/` and
 `.codex/skills/speckit-*/` directories may now exist alongside the
@@ -164,9 +150,8 @@ entries and current `.claude/skills/` entries.
 
 If BOTH exist:
 
-> Both legacy slash-commands and skills are installed for Claude. The
-> v0.8.13 default is skills-mode. The legacy commands still work but
-> create duplicate triggers. Options:
+> Both legacy slash-commands and skills are installed for Claude. The legacy
+> commands still work but create duplicate triggers. Options:
 > 1. `dedupe` — delete the legacy `.claude/commands/speckit.*.md`
 >    files. Recommended unless you have downstream tooling that
 >    references the slash-command names.
@@ -191,7 +176,7 @@ Confirm each upgraded integration shows `installed` and is on the
 new manifest. Report any verification mismatch — do not silently
 continue.
 
-### 8. Offer to upgrade the curated set of extensions and presets
+### 8. Offer missing curated extensions and presets
 
 speckit-pro maintains a manual recommendation catalog of community extensions
 and presets. See
@@ -219,7 +204,7 @@ Return a concise upgrade summary:
 ## SpecKit Upgrade Complete
 
 **CLI version:** specify <X.Y.Z>
-**Backup:** /tmp/specify-upgrade-backup-<STAMP>/ (preserved for 24h+)
+**Backup:** /tmp/specify-upgrade-backup-<STAMP>/
 **Integrations upgraded:**
 - claude → from manifest <oldhash> to <newhash> (N modified files restored)
 - codex  → from manifest <oldhash> to <newhash> (no modified files)
@@ -270,24 +255,3 @@ STOP and report — do not improvise — when:
 The backup at `/tmp/specify-upgrade-backup-<STAMP>/` is the
 operator's safety net. Tell them about it explicitly in the final
 report so they know it exists and where to find it.
-
-## Why This Skill
-
-The SpecKit CLI's `specify integration upgrade` is the canonical
-upgrade path and is diff-aware (blocks on modified files), but its
-`--force` flag overwrites those files without any backup. This skill
-wraps the CLI to provide:
-
-- Automatic timestamped snapshots before any mutation.
-- A structured "what's modified, what do you want to do" prompt
-  when the diff-aware path blocks.
-- File-by-file restore decisions after `--force`.
-- Awareness of the v0.8.13 slash-command → skills migration, with
-  explicit dedupe of legacy SpecKit commands (and a hard guarantee
-  to never touch extension commands or non-SpecKit slash commands).
-- Symmetric handling for Claude and Codex when both integrations
-  are installed (the consumer doesn't have to remember which
-  invocation goes where).
-
-For an initial install, use `/speckit-pro:speckit-install`. The two skills
-hand off to each other based on `.specify/` presence.

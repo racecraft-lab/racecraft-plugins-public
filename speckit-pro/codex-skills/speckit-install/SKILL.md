@@ -5,14 +5,6 @@ description: "Install the SpecKit CLI and initialize the current repository for 
 
 # SpecKit Install
 
-## Installed Runtime Contract
-
-Installed Claude and Codex surfaces resolve Python 3.11 or newer, invoke
-`[resolved_python, "-m", "speckit_pro_runner"]`, send one JSON request on
-stdin, read one JSON response from stdout, and surface stderr diagnostics.
-Do not add a shell fallback, `jq` parsing path, Git Bash, WSL, or
-PowerShell-specific command-language requirement for installed workflows.
-
 ## Scope
 
 Install the official SpecKit CLI (https://github.com/github/spec-kit)
@@ -251,20 +243,3 @@ STOP and report — do not improvise — when:
 If a partial install happened (e.g., `claude` succeeded but `codex`
 failed), report exactly what landed and what did not. Recommend
 running `specify integration list` to see current state.
-
-## Why This Skill Exists
-
-The official SpecKit CLI already provides `specify init`,
-`specify integration install`, and `specify integration list`. This
-skill is a thin orchestrator that:
-
-- Bootstraps the CLI itself via `uv tool install` when missing.
-- Detects existing installs and refuses to overwrite them
-  (handing off to `$speckit-upgrade` instead).
-- Asks explicitly about dual-integration vs single-integration
-  before mutating files.
-- Returns a consistent post-install summary so the operator knows
-  what restart and which next-step skill to invoke.
-
-The plugin does not duplicate any CLI behavior. It wraps the CLI
-with the consistency a plugin user expects.

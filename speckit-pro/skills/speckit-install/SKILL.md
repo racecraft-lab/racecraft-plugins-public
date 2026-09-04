@@ -9,14 +9,6 @@ license: MIT
 
 # SpecKit Install
 
-## Installed Runtime Contract
-
-Installed Claude and Codex surfaces resolve Python 3.11 or newer, invoke
-`[resolved_python, "-m", "speckit_pro_runner"]`, send one JSON request on
-stdin, read one JSON response from stdout, and surface stderr diagnostics.
-Do not add a shell fallback, `jq` parsing path, Git Bash, WSL, or
-PowerShell-specific command-language requirement for installed workflows.
-
 ## Codex Skill-Selection Guard
 
 If this file is loaded in Codex, the runtime selected the Claude Code
@@ -170,24 +162,3 @@ Stop and report — do not improvise — when:
 - The repo has detached HEAD or uncommitted changes that would
   conflict with the new files. Recommend committing or stashing
   first.
-
-## Why This Skill
-
-The SpecKit CLI's `specify init` and `specify integration install`
-commands are the canonical install path. This skill wraps them so
-the user gets:
-
-- A consistent up-front check for `uv` and the CLI.
-- A clean state-detection step that hands off to `/speckit-pro:speckit-upgrade`
-  for already-installed repos (no accidental overwrites).
-- An explicit prompt for dual-integration setup, which the CLI
-  supports natively (both `claude` and `codex` are marked
-  "Multi-install Safe").
-- An interactive offer to install recommended community extensions and presets
-  with native Spec Kit commands after operator confirmation.
-- A consistent post-install summary so the operator knows what to
-  do next.
-
-For upgrading an existing install (including the v0.8.13 migration
-from slash commands to skills, or moving from single- to
-dual-integration), use `/speckit-pro:speckit-upgrade` instead.
