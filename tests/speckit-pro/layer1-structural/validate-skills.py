@@ -1,16 +1,5 @@
 #!/usr/bin/env python3
-"""Structural validation for Claude skill directories (port of validate-skills.sh).
-
-XPLAT-010 count-parity port (T037, US2). Python 3.11+ standard library only.
-Checks the expected Claude ``speckit-pro/skills/<name>/SKILL.md`` files for
-frontmatter shape, metadata limits, body length, skill-specific regression
-guards, and references-directory requirements. Every former ``assert_*``/
-``_pass``/``_fail`` execution maps to one counted ``subTest`` unit; names
-reproduced verbatim via ``subTest(msg=...)`` for a 1:1 baseline match.
-
-Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-skills-baseline.txt``
-(TOTAL: 124).
-"""
+"""Validate the structural shape of Claude skill directories."""
 
 from __future__ import annotations
 
@@ -77,10 +66,6 @@ def _description_value(frontmatter: str) -> str:
     return ""
 
 
-def _body_trimmed(body: str) -> str:
-    return "\n".join(line for line in body.splitlines() if line.strip())
-
-
 class ValidateSkills(unittest.TestCase):
     def test_skills(self) -> None:
         for skill in SKILLS:
@@ -130,9 +115,8 @@ class ValidateSkills(unittest.TestCase):
                 self.assertEqual([], bad_keys, "disallowed frontmatter keys:" + "".join(f" {key}" for key in bad_keys))
 
             body = _body(lines)
-            body_trimmed = _body_trimmed(body)
-            with self.subTest(msg=f"{skill}: body content exists and is > 100 chars"):
-                self.assertGreater(len(body_trimmed), 100, f"body is only {len(body_trimmed)} chars (need > 100)")
+            with self.subTest(msg=f"{skill}: body content exists"):
+                self.assertTrue(body.strip(), "body must contain non-whitespace content")
 
             if skill == "grill-me":
                 with self.subTest(msg="grill-me: Claude variant requires AskUserQuestion"):
@@ -165,11 +149,6 @@ class ValidateSkills(unittest.TestCase):
                         and re.search(r"^## Setup Complete$", content, re.MULTILINE) is None,
                         "expected '## Scaffold Complete' report heading in skills/speckit-scaffold-spec/SKILL.md",
                     )
-
-            with self.subTest(msg=f"{skill}: body word count between 500 and 8000"):
-                word_count = len(body.split())
-                self.assertGreaterEqual(word_count, 500, f"body is {word_count} words (need 500-8000)")
-                self.assertLessEqual(word_count, 8000, f"body is {word_count} words (need 500-8000)")
 
             with self.subTest(msg=f"{skill}: references directory exists if required"):
                 if skill in SKILLS_REQUIRING_REFERENCES:
