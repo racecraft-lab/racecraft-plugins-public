@@ -103,6 +103,7 @@ def classify_changed_files(changed_files: Iterable[str]) -> DocsClassification:
 
         if (
             path_is_under(file_path, "docs-site/scripts")
+            or path_is_under(file_path, "speckit-pro/artifact-gallery")
             or file_path
             in {
                 "docs-site/src/data/safe-install-aids.ts",

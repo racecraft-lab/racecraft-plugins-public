@@ -103,6 +103,7 @@ const REQUIRED_DOC010_VALIDATE_CHAIN = Object.freeze([
   'pnpm validate:safe-aids',
   'pnpm validate:quality',
   'pnpm validate:smoke:preview',
+  'pnpm validate:gallery',
 ]);
 
 const SUPPORT_ANCHOR_INVENTORY = Object.freeze([
