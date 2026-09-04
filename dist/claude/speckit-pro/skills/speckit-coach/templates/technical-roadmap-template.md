@@ -25,9 +25,9 @@ The feature is decomposed into **{{N}} specifications** across **{{M}} dependenc
 
 | Tier | Specs | Purpose | Parallelization |
 |------|-------|---------|-----------------|
-| **1** | SPEC-001 | <!-- e.g., Backend foundation --> | Sequential |
-| **2** | SPEC-002, SPEC-003 | <!-- e.g., Tool integration, UI components --> | Parallel possible |
-| **3** | SPEC-004 | <!-- e.g., Full-stack integration --> | Sequential (depends on all above) |
+| **1** | SPEC-001 | <!-- e.g., First observable user journey --> | Sequential |
+| **2** | SPEC-002, SPEC-003 | <!-- e.g., Next independent user journeys --> | Parallel possible |
+| **3** | SPEC-004 | <!-- e.g., A separately valuable release or cross-slice outcome --> | Sequential (depends on all above) |
 
 **Execution Order:** SPEC-001 → SPEC-002 → SPEC-003 → SPEC-004
 
@@ -229,9 +229,14 @@ When breaking a feature into specs:
 
 1. **Each spec is independently executable** through the full SpecKit workflow (specify → implement)
 2. **Minimize cross-spec dependencies** — prefer sequential over deeply nested
-3. **Backend foundations first** — establish APIs before frontend integration
-4. **Mock data for blocked specs** — UI specs can use static data while backend specs complete
-5. **Integration spec last** — wire everything together as the final spec
+3. **Vertical slices first** — each spec delivers an observable outcome through
+   every layer it needs; do not split backend, UI, or integration into separate
+   specs merely by technical layer.
+4. **Shared enablers only when justified** — an enabling spec must have its own
+   independently observable contract; otherwise include the enabling work in the
+   first slice that needs it.
+5. **Cross-slice work earns its own spec** — do not reserve a final
+   integration-only spec unless it delivers a separately valuable outcome.
 6. **Each spec gets its own directory**: `specs/<number>-<name>/`
 
 ## Environment & Deployment Context

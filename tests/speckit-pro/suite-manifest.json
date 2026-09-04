@@ -90,6 +90,7 @@
         { "path": "tests/speckit-pro/unit/test-consensus-analyst-shared-prose.py", "label": "test-consensus-analyst-shared-prose" },
         { "path": "tests/speckit-pro/unit/test-feedback-sweep-parse.py", "label": "test-feedback-sweep-parse" },
         { "path": "tests/speckit-pro/unit/test-feedback-sweep-isolation.py", "label": "test-feedback-sweep-isolation" },
+        { "path": "tests/speckit-pro/unit/test-grill-prd-contracts.py", "label": "test-grill-prd-contracts" },
         { "path": "tests/speckit-pro/unit/test-artifact-freshness.py", "label": "test-artifact-freshness" }
       ]
     },
