@@ -58,9 +58,10 @@ destination copies.
 
 ## Plugin Refresh and Route-aware Modes
 
-After the plugin is upgraded through its maintained plugin path, run `$install`;
-restart Codex only if the helper applied changes. The helper resolves the
-installed plugin's `codex-agents/` source and does not mutate plugin caches.
+After the plugin is upgraded through its maintained plugin path, run `$install`.
+Follow the helper's `restart_required` result, including after failed or
+uncertain recovery. The helper resolves the installed plugin's `codex-agents/`
+source and does not mutate plugin caches.
 
 Static mode omits `route_policy_manifest` and uses the helper's normal
 copy/verify result. Route-aware mode activates only for an explicit trusted
@@ -86,8 +87,9 @@ verification, recovery, `writes_state`, and `restart_required`.
 - Route-aware fixture evidence is not live UAT. Use a fake HOME/USERPROFILE or
   a temporary project `.codex/agents/` destination, never the operator's real
   home directory.
-- After an applied change, always finish by telling the user to restart Codex.
-  A no-op verification does not require another restart.
+- Follow the helper's `restart_required` result. When it is true, including
+  after failed or uncertain recovery, tell the user to restart Codex; when it
+  is false, do not require a restart.
 
 ## Procedure
 
@@ -170,16 +172,17 @@ If verification fails, report the mismatch clearly and stop.
 
 ### 5. Report restart requirement
 
-When the helper applied changes, your closing output must explicitly tell the
-user:
+When the helper reports `restart_required=true`, your closing output must
+explicitly tell the user:
 
 - where the files were installed
 - which files were copied or refreshed
 - the request-level fallback model
 - that they must restart Codex now
 
-When the helper reports `no_op`, report that verification succeeded and no
-additional restart is required.
+When the helper reports `restart_required=false`, report that no additional
+restart is required. Do not claim verification succeeded after a failed or
+uncertain recovery.
 
 Do not continue into autopilot setup or workflow execution in the same skill.
 Installation ends once the files are copied, verified, and the user has been

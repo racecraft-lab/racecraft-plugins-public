@@ -1,6 +1,6 @@
 ---
 name: speckit-upgrade
-description: "Upgrade an existing SpecKit installation safely. Use when the operator says: 'upgrade speckit', 'update speckit', 'specify integration upgrade', 'safely upgrade spec-kit', 'bump speckit version', '$speckit-upgrade', or has an existing .specify/ directory and wants to move to the current spec-kit release. Preserves customizations (constitution.md, template overrides) via backup-and-restore. Supports upgrading one or both integrations (Claude Code, Codex CLI). Hands off to $speckit-install when .specify/ is missing. Not for installing speckit for the first time (use $speckit-install), not for scaffolding a new spec ($speckit-scaffold-spec), and not for installing this plugin's bundled Codex subagents ($install)."
+description: "Upgrade an existing SpecKit installation safely. Use when the operator says: 'upgrade speckit', 'update speckit', 'specify integration upgrade', 'speckit migration to skills', 'safely upgrade spec-kit', 'bump speckit version', '$speckit-upgrade', or has an existing .specify/ directory and wants to move to the current spec-kit release. Preserves customizations (constitution.md, template overrides) via backup-and-restore. Supports upgrading one or both integrations (Claude Code, Codex CLI). Hands off to $speckit-install when .specify/ is missing. Not for installing speckit for the first time (use $speckit-install), not for scaffolding a new spec ($speckit-scaffold-spec), and not for installing this plugin's bundled Codex subagents ($install)."
 ---
 
 # SpecKit Upgrade
