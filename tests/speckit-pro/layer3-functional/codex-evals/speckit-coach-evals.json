@@ -4,10 +4,11 @@
     {
       "id": 1,
       "prompt": "I'm starting a brand new TypeScript project and want to use Spec-Driven Development from the beginning. I have nothing set up yet — no speckit, no specs directory, nothing. Walk me through getting started from zero.",
-      "expected_output": "Step-by-step onboarding: install SpecKit CLI via uv, run specify init with the --ai flag for the user's AI tool, create a constitution file, and explain the 7 SDD phases.",
+      "expected_output": "Step-by-step onboarding: install SpecKit CLI via uv, initialize a selected integration with the current `specify init --here --integration <key>` form, create a constitution, and explain the SDD phases.",
       "expectations": [
         "Mentions installing SpecKit CLI with 'uv tool install specify-cli' from the git repo",
-        "Includes 'specify init' command with --ai flag",
+        "Includes `specify init --here --integration <key>` or explains selecting an integration before initialization",
+        "Does not recommend the obsolete `--ai` flag",
         "Explains constitution creation and its purpose",
         "Lists or references the 7 SDD phases in order: specify, clarify, plan, checklist, tasks, analyze, implement"
       ]
@@ -27,24 +28,23 @@
     {
       "id": 3,
       "prompt": "I keep hearing about 'gates' G1 through G7 in the SpecKit autopilot. What does each gate specifically validate? I want to understand what artifacts need to exist and what markers need to be absent before each phase transition succeeds.",
-      "expected_output": "Lists all 7 gates with their specific validation criteria — what files they check, what markers they scan for, and what conditions cause pass/fail.",
+      "expected_output": "Explains that Coach reads the live autopilot skill as a reference and describes the current gate contract without executing or invoking autopilot.",
       "expectations": [
-        "Lists all 7 gates G1 through G7 by name or number",
-        "Explains that G1 validates the specify phase output (spec.md exists, no [TBD] markers)",
-        "Explains that G4 validates checklist completion (no [Gap] markers in spec.md or plan.md)",
-        "Explains that G7 validates task completion (all tasks marked [x] in tasks.md)",
-        "Mentions how gate validation is performed through the validate-gate runner helper and programmatic marker checks"
+        "Uses the live autopilot skill or its authoritative references instead of a copied gate catalog",
+        "Does not claim `[TBD]` is the universal G1 marker contract",
+        "Does not execute or invoke autopilot while answering",
+        "States that the current phase artifacts and validation evidence determine whether a gate advances"
       ]
     },
     {
       "id": 4,
-      "prompt": "How does the consensus protocol work in the autopilot workflow? I heard there are 3 agents that vote on something but I don't understand when it kicks in or what happens when they disagree.",
-      "expected_output": "Explains the multi-agent consensus mechanism: 3 named agent roles, 2/3 majority voting, when consensus is triggered, and what happens on disagreement.",
+      "prompt": "How does the consensus protocol work in the autopilot workflow? I heard there are always 3 agents that vote, but I want the current contract.",
+      "expected_output": "Explains the current category-routed protocol from the live autopilot references: unresolved consensus items use one to three relevant analysts, and the Round 2 majority rule applies only when its current escalation conditions are met.",
       "expectations": [
-        "Names the 3 agent roles involved in consensus voting",
-        "States the 2/3 majority requirement for a gate to pass via consensus",
-        "Explains that consensus triggers when the primary gate validation fails or produces ambiguous results",
-        "Describes what happens on disagreement: the failing agent's reasoning is logged and the majority decision stands"
+        "Uses the current live autopilot skill or its consensus-protocol reference as the authority",
+        "States that routing selects one to three analysts by unresolved-item category rather than always dispatching three",
+        "Explains that Round 2 and a 2-of-3 majority are conditional escalation behavior, not the default",
+        "Explains that unresolved Round 2 disagreement is surfaced for human review and stops advancement"
       ]
     },
     {

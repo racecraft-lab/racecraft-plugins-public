@@ -6,28 +6,6 @@
 
 ---
 
-## How to Use This Template
-
-1. **Copy this template** to create a new workflow guide:
-
-   ```text
-   cp .github/skills/speckit/templates/workflow-template.md docs/ai/specs/{{SPEC_ID}}-workflow.md
-   ```
-
-2. **Replace placeholders** throughout the document:
-   - `{{SPEC_ID}}` → Your spec identifier (e.g., `SPEC-001`)
-   - `{{SPEC_NAME}}` → Human-readable name (e.g., `User Authentication`)
-   - `{{SPEC_DESCRIPTION}}` → One-line description
-   - `{{BRANCH_NAME}}` → Feature branch name (e.g., `feature/user-auth`)
-
-3. **Populate the prompts** in each phase section with your project-specific details (tech stack, constraints, project structure, checklist domains)
-
-4. **Copy-paste prompts** into your AI coding agent as you execute each phase
-
-5. **Track progress** using the status table below
-
----
-
 ## Design Concept
 
 This workflow file was enriched from a Grill Me interview run during
@@ -576,5 +554,3 @@ project/
 ```
 
 ---
-
-Template based on SpecKit best practices. Populate the prompts above with your project-specific tech stack, domains, and constraints.

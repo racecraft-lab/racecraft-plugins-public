@@ -363,71 +363,11 @@ hooks:
       prompt: "Run <extension-name> after implementation?"
 ```
 
-### extension.yml Schema (for creating extensions)
-
-```yaml
-schema_version: "1.0"                    # Required
-
-extension:
-  id: "my-extension"                     # Required, lowercase-hyphenated
-  name: "My Extension"                   # Required, human-readable
-  version: "1.0.0"                       # Required, semantic version
-  description: "Brief description"       # Required, <200 chars
-  author: "Your Name"                    # Required
-  repository: "https://github.com/..."   # Required
-  license: "MIT"                         # Required
-  homepage: "https://..."                # Optional
-
-requires:
-  speckit_version: ">=0.3.0"             # Required
-
-provides:
-  commands:                              # Required, at least one
-    - name: "speckit.my-ext.run"         # pattern: speckit.<ext-id>.<cmd>
-      file: "commands/run.md"            # relative path to command file
-      description: "What this command does"
-
-hooks:                                   # Optional
-  after_implement:
-    command: "speckit.my-ext.run"
-    optional: true
-    prompt: "Run my extension?"
-    description: "Hook description"
-
-tags: ["code", "review"]                 # Optional
-```
-
 ### Hook Events
 
-Extensions can register hooks that fire before or after core
-SpecKit commands. Configure in `.specify/extensions.yml`:
-
-```yaml
-installed:
-  - verify
-  - verify-tasks
-  - review
-  - retrospective
-
-hooks:
-  after_tasks:
-    - extension: verify-tasks
-      command: speckit.verify-tasks.run
-      enabled: true
-      optional: true
-      prompt: "Verify all tasks are properly specified?"
-  after_implement:
-    - extension: verify
-      command: speckit.verify.run
-      enabled: true
-      optional: true
-      prompt: "Verify implementation against spec?"
-    - extension: retrospective
-      command: speckit.retrospective.analyze
-      enabled: true
-      optional: true
-      prompt: "Run post-implementation retrospective?"
-```
+Extensions can register hooks that fire before or after core SpecKit commands.
+The install flow above supplies the focused hook block; inspect the installed
+extension manifest before changing it.
 
 **Available hook events:**
 

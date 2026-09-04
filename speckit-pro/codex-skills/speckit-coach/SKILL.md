@@ -20,16 +20,16 @@ Use the smallest relevant reference; do not load the whole library.
 
 | User goal | Read or do |
 |---|---|
-| Learn SDD, start a project, recover from a failed phase, or assess artifacts | [Getting started](../../skills/speckit-coach/references/getting-started.md), [SDD methodology](../../skills/speckit-coach/references/sdd-methodology.md), and [best practices](../../skills/speckit-coach/references/best-practices.md) as needed. |
+| Learn SDD, start a project, recover from a failed phase, or assess artifacts | [Getting started](../../skills/speckit-coach/references/getting-started.md) and [SDD methodology](../../skills/speckit-coach/references/sdd-methodology.md) as needed. |
 | Use an official command (`specify`, `clarify`, `plan`, `checklist`, `tasks`, `analyze`, `implement`, or `constitution`) | [Command guide](../../skills/speckit-coach/references/command-guide.md); apply its gates and failure recovery. |
 | Choose or author checklists | [Checklist domains](../../skills/speckit-coach/references/checklist-domains-guide.md). Read the feature's `spec.md` and `plan.md`, rank the relevant risks, and offer enriched prompts for two to four domains. |
 | Design a constitution | [Constitution guide](../../skills/speckit-coach/references/constitution-guide.md). |
-| Design a multi-spec roadmap or split a feature | [Technical-roadmap template](../../skills/speckit-coach/templates/technical-roadmap-template.md) and [slicing heuristics](../../skills/speckit-coach/references/slicing-heuristics.md). Derive independently executable specs, explicit dependencies, and an integration last; review the graph before writing. |
+| Design a multi-spec roadmap or split a feature | [Technical-roadmap template](../../skills/speckit-coach/templates/technical-roadmap-template.md) and [slicing heuristics](../../skills/speckit-coach/references/slicing-heuristics.md). Derive independently executable vertical slices with observable outcomes and explicit real dependencies; review the graph before writing. |
 | Create a PRD and roadmap from an unformed idea | Route to `$speckit-prd`; use its PRD and roadmap templates. |
 | Track one spec through phases | [Workflow template](../../skills/speckit-coach/templates/workflow-template.md). Keep artifacts, gates, and decisions current. |
 | Explain the roadmap home note | [Roadmap-MOC guide](../../skills/speckit-coach/references/roadmap-moc-guide.md). The curated zone is author-owned; the generated index is regenerated, not hand-edited. |
 | Explain or configure presets, extensions, hooks, catalogs, or upgrade recovery | [Presets and extensions guide](../../skills/speckit-coach/references/presets-extensions-guide.md). Discover and inspect first; confirm before any mutation. |
-| Explain autonomous execution, consensus, remediation, review loops, or configuration | [Autopilot guide](../../skills/speckit-coach/references/autopilot-guide.md). Route execution to `$speckit-autopilot`. |
+| Explain autonomous execution, consensus, remediation, review loops, or configuration | Read [the live autopilot skill](../speckit-autopilot/SKILL.md) as a reference only; explain its current contract without executing or invoking it. |
 | Scope a raw brief interactively | Route to `$grill-me`; do not conduct its interview here. |
 | Scaffold a roadmap item, inspect status, resolve a review, or repair Codex agents | Route respectively to `$speckit-scaffold-spec`, `$speckit-status`, `$speckit-resolve-pr`, or the SpecKit Pro `install` skill. |
 

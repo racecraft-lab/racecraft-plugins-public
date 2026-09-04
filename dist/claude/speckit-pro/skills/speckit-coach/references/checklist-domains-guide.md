@@ -88,49 +88,10 @@ Focus on POST /chat endpoint requirements:
 - Pay special attention to: consistency between spec FR sections, data-model, and OpenAPI contract
 ```
 
-```
-/speckit-checklist llm-integration
-
-Focus on Claude Agent SDK integration requirements:
-- Prompt/system instruction specification (is routing logic documented?)
-- Streaming event translation (SDK events → SSE protocol)
-- Error handling for model-specific failures (throttling, context window, auth)
-- Token efficiency and conversation context management
-- Pay special attention to: what happens when the LLM returns unexpected output formats
-```
-
-```
-/speckit-checklist streaming-protocol
-
-Focus on Vercel AI SDK UIMessage Stream Protocol requirements:
-- Complete event type catalog (text-delta, tool-call, tool-result, finish, error)
-- Wire format specification (JSON field names, exact casing, required vs optional fields)
-- Client disconnect handling and generator cleanup
-- Relationship between streaming events and whitespace/empty content
-- Pay special attention to: protocol version consistency across all artifacts (no v4/v5 mixing)
-```
-
 ### Step 4: Present Recommendations to the Developer
 
-Present the recommended domains with justification before running any checklists:
-
-```markdown
-Based on your spec, I recommend these domain checklists:
-
-1. **api-contracts** — Your spec defines 3 endpoints with Pydantic models,
-   streaming responses, and custom headers. High risk for inconsistencies
-   between spec, data-model, and contract artifacts.
-
-2. **llm-integration** — Your spec integrates Claude via Agent SDK with
-   prompt-based routing. The routing criteria and error handling for
-   LLM-specific failures need validation.
-
-3. **streaming-protocol** — SSE streaming is core to the feature. The
-   event format, termination signal, and header requirements need
-   cross-artifact consistency checks.
-
-Shall I run these, or would you like to adjust the domains?
-```
+Present two to four domains with one sentence tying each to an observed risk or
+coverage gap, then let the developer adjust them before any checklist is run.
 
 ---
 

@@ -28,16 +28,16 @@ Use the smallest relevant reference; do not load the whole library.
 
 | User goal | Read or do |
 |---|---|
-| Learn SDD, start a project, recover from a failed phase, or assess artifacts | [Getting started](./references/getting-started.md), [SDD methodology](./references/sdd-methodology.md), and [best practices](./references/best-practices.md) as needed. |
+| Learn SDD, start a project, recover from a failed phase, or assess artifacts | [Getting started](./references/getting-started.md) and [SDD methodology](./references/sdd-methodology.md) as needed. |
 | Use an official command (`specify`, `clarify`, `plan`, `checklist`, `tasks`, `analyze`, `implement`, or `constitution`) | [Command guide](./references/command-guide.md); apply its gates and failure recovery. |
 | Choose or author checklists | [Checklist domains](./references/checklist-domains-guide.md). Read the feature's `spec.md` and `plan.md`, rank the relevant risks, and offer enriched prompts for two to four domains. |
 | Design a constitution | [Constitution guide](./references/constitution-guide.md). |
-| Design a multi-spec roadmap or split a feature | [Technical-roadmap template](./templates/technical-roadmap-template.md) and [slicing heuristics](./references/slicing-heuristics.md). Derive independently executable specs, explicit dependencies, and an integration last; review the graph before writing. |
+| Design a multi-spec roadmap or split a feature | [Technical-roadmap template](./templates/technical-roadmap-template.md) and [slicing heuristics](./references/slicing-heuristics.md). Derive independently executable vertical slices with observable outcomes and explicit real dependencies; review the graph before writing. |
 | Create a PRD and roadmap from an unformed idea | Route to `/speckit-pro:speckit-prd`; use its PRD and roadmap templates. |
 | Track one spec through phases | [Workflow template](./templates/workflow-template.md). Keep artifacts, gates, and decisions current. |
 | Explain the roadmap home note | [Roadmap-MOC guide](./references/roadmap-moc-guide.md). The curated zone is author-owned; the generated index is regenerated, not hand-edited. |
 | Explain or configure presets, extensions, hooks, catalogs, or upgrade recovery | [Presets and extensions guide](./references/presets-extensions-guide.md). Discover and inspect first; confirm before any mutation. |
-| Explain autonomous execution, consensus, remediation, review loops, or configuration | [Autopilot guide](./references/autopilot-guide.md). Route execution to `/speckit-pro:speckit-autopilot`. |
+| Explain autonomous execution, consensus, remediation, review loops, or configuration | Read [the live autopilot skill](../speckit-autopilot/SKILL.md) as a reference only; explain its current contract without executing or invoking it. |
 | Scope a raw brief interactively | Route to `/speckit-pro:grill-me`; do not conduct its interview here. |
 | Scaffold a roadmap item, inspect status, or resolve a review | Route respectively to `/speckit-pro:speckit-scaffold-spec`, `/speckit-pro:speckit-status`, or `/speckit-pro:speckit-resolve-pr`. |
 
