@@ -53,21 +53,3 @@ For a request to repair an existing SpecKit Pro project:
 Use the extension guide's discovery and information paths before making a recommendation. For installation or configuration, show the proposed command and its scope, obtain confirmation, then verify the resulting configuration.
 
 For archive cleanup, require recorded provenance and recovery commands, exclude the current target spec, and keep unsafe or dirty worktrees dry-run-only. Delete active spec folders only as an explicit reviewed forward change after a successful archive record; never rewrite history.
-
-## References
-
-- [Command guide](../../skills/speckit-coach/references/command-guide.md)
-- [Getting started](../../skills/speckit-coach/references/getting-started.md)
-- [SDD methodology](../../skills/speckit-coach/references/sdd-methodology.md)
-- [Best practices](../../skills/speckit-coach/references/best-practices.md)
-- [Constitution guide](../../skills/speckit-coach/references/constitution-guide.md)
-- [Checklist domains guide](../../skills/speckit-coach/references/checklist-domains-guide.md)
-- [Slicing heuristics](../../skills/speckit-coach/references/slicing-heuristics.md)
-- [Presets and extensions guide](../../skills/speckit-coach/references/presets-extensions-guide.md)
-- [Autopilot guide](../../skills/speckit-coach/references/autopilot-guide.md)
-- [Roadmap-MOC guide](../../skills/speckit-coach/references/roadmap-moc-guide.md)
-- [PRD template](../../skills/speckit-coach/templates/prd-template.md)
-- [Technical-roadmap template](../../skills/speckit-coach/templates/technical-roadmap-template.md)
-- [Roadmap-MOC template](../../skills/speckit-coach/templates/roadmap-moc-template.md)
-- [Spec-MOC template](../../skills/speckit-coach/templates/spec-moc-template.md)
-- [Workflow template](../../skills/speckit-coach/templates/workflow-template.md)

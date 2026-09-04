@@ -53,21 +53,3 @@ For a request to repair an existing SpecKit Pro project:
 Use the extension guide's discovery and information paths before making a recommendation. For installation or configuration, show the proposed command and its scope, obtain confirmation, then verify the resulting configuration.
 
 For archive cleanup, require recorded provenance and recovery commands, exclude the current target spec, and keep unsafe or dirty worktrees dry-run-only. Delete active spec folders only as an explicit reviewed forward change after a successful archive record; never rewrite history.
-
-## References
-
-- [Command guide](references/command-guide.md)
-- [Getting started](references/getting-started.md)
-- [SDD methodology](references/sdd-methodology.md)
-- [Best practices](references/best-practices.md)
-- [Constitution guide](references/constitution-guide.md)
-- [Checklist domains guide](references/checklist-domains-guide.md)
-- [Slicing heuristics](references/slicing-heuristics.md)
-- [Presets and extensions guide](references/presets-extensions-guide.md)
-- [Autopilot guide](references/autopilot-guide.md)
-- [Roadmap-MOC guide](references/roadmap-moc-guide.md)
-- [PRD template](templates/prd-template.md)
-- [Technical-roadmap template](templates/technical-roadmap-template.md)
-- [Roadmap-MOC template](templates/roadmap-moc-template.md)
-- [Spec-MOC template](templates/spec-moc-template.md)
-- [Workflow template](templates/workflow-template.md)
