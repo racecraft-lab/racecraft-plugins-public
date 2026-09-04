@@ -655,6 +655,6 @@ PR URL.
   (off by default; never applied to PR bodies, logs, or artifacts)
 
 Active runner operations are named at their use sites and in the targeted
-references above; the runner registry is their deterministic authority. Treat
-deferred operations as unavailable unless a use site explicitly authorizes
-them.
+references above; the runner registry is their deterministic authority.
+Registry-deferred or out-of-scope operations are unavailable and MUST NOT be
+invoked, promoted, or inferred from use-site prose.
