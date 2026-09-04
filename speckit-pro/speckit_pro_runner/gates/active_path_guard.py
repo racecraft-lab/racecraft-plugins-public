@@ -21,8 +21,6 @@ DEFAULT_CASE_FILE = "tests/speckit-pro/unit/fixtures/runner-gates/active-path-gu
 INSTALLED_RUNTIME_DEFAULT_CASE_FILE = "tests/speckit-pro/unit/fixtures/installed-plugin-release/active-runtime-guard-cases.json"
 PLUGIN_BASH_CONFINEMENT_DEFAULT_CASE_FILE = "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/zero-bash-guard-cases.json"
 PLUGIN_BASH_CONFINEMENT_ALLOWLIST = "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json"
-PLUGIN_INSTALLED_CACHE_PREFIX = "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/"
-INSTALLED_CACHE_PROOF = "speckit-pro/gate-evidence/installed-cache-proof.json"
 REPOSITORY_BASH_CONFINEMENT_DEFAULT_CASE_FILE = "tests/speckit-pro/unit/fixtures/repository-bash-confinement/confinement-guard-cases.json"
 REPOSITORY_BASH_CONFINEMENT_ALLOWLIST = "tests/speckit-pro/unit/fixtures/repository-bash-confinement/allowlist.json"
 CONTAINER_PREFLIGHT_WORKFLOW = ".github/workflows/container-preflight.yml"
@@ -131,8 +129,6 @@ PROHIBITED_SCRIPT_SUFFIXES = (".sh", ".bash", ".zsh", ".ps1", ".bat", ".cmd")
 PROHIBITED_COMMAND_NAMES = {"bash", "bash.exe", "jq", "jq.exe", "wsl", "wsl.exe", "powershell", "powershell.exe", "pwsh", "pwsh.exe"}
 SHELL_RUNTIME_COMMAND_NAMES = {"sh", "sh.exe", "zsh", "zsh.exe"}
 SHELL_COMMAND_NAMES = {"sh", "sh.exe", "bash", "bash.exe", "zsh", "zsh.exe", "powershell", "powershell.exe", "pwsh", "pwsh.exe"}
-VALID_INSTALLED_CACHE_PRODUCTS = frozenset({"claude", "codex"})
-INSTALLED_CACHE_PROOF_DOCUMENT_FIELDS = frozenset({"schema_version", "contract_id", "proofs"})
 SUBPROCESS_ARGV_FUNCTION_NAMES = {"run", "Popen", "call", "check_call", "check_output"}
 SUBPROCESS_SHELL_FUNCTION_NAMES = {"getoutput", "getstatusoutput"}
 OS_SHELL_FUNCTION_NAMES = {"system", "popen"}
@@ -164,22 +160,6 @@ SCAN_ROOTS = (
     "docs-site/src/content/docs/contribute-and-release.md",
 )
 MAX_SCAN_BYTES = 512 * 1024
-INSTALLED_CACHE_PROOF_REQUIRED_FIELDS = frozenset(
-    {
-        "product",
-        "surface",
-        "installed_root",
-        "source_payload_root",
-        "source_payload_tree_hash",
-        "source_derived",
-        "mutable_user_cache",
-        "script_file_count",
-        "active_guidance_findings",
-        "allowlist_release_readiness_excluded",
-    }
-)
-INSTALLED_CACHE_PROOF_ALLOWED_FIELDS = INSTALLED_CACHE_PROOF_REQUIRED_FIELDS
-
 FORBIDDEN_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = (
     ("git_bash", re.compile(r"\bgit\s+bash\b", re.IGNORECASE), "Git Bash dependency"),
     ("wsl", re.compile(r"\b(?:wsl|wsl\.exe)\b", re.IGNORECASE), "WSL dependency"),
@@ -584,38 +564,7 @@ def run_zero_bash_guard(entry: Any, request: Any, repo_root: Path) -> dict[str, 
         return response("input_error", request_id=request.request_id, data=zero_bash_base_data(entry, request.operation, "input_error"), diagnostics=[source_result])
 
     source_findings = zero_bash_source_findings(source_result, allowlist)
-    proof_result = load_installed_cache_proof(repo_root, case)
-    proof_findings: list[RawFinding] = []
-    proof_summary: dict[str, Any] = {
-        "required": case.get("require_installed_cache_proof") is not False,
-        "proof_path": case.get("installed_cache_proof"),
-        "proof_count": 0,
-        "source_derived": False,
-        "mutable_user_cache": None,
-        "script_file_count": None,
-    }
-    require_installed_cache_proof = case.get("require_installed_cache_proof") is not False
-    if is_diagnostic(proof_result):
-        proof_findings.append(zero_bash_finding_from_diag(proof_result))
-    elif require_installed_cache_proof:
-        proof_findings.extend(installed_cache_proof_findings(repo_root, proof_result, allowlist))
-        proofs = proof_result.get("proofs") if isinstance(proof_result.get("proofs"), list) else []
-        script_count = sum(int(item.get("script_file_count", 0)) for item in proofs if isinstance(item, dict) and isinstance(item.get("script_file_count", 0), int))
-        proof_summary.update(
-            {
-                "proof_path": proof_result.get("_proof_path"),
-                "proof_count": len(proofs),
-                "source_derived": all(item.get("source_derived") is True for item in proofs if isinstance(item, dict)) if proofs else False,
-                "mutable_user_cache": (
-                    not all(item.get("mutable_user_cache") is False for item in proofs if isinstance(item, dict))
-                    if proofs
-                    else None
-                ),
-                "script_file_count": script_count,
-            }
-        )
-
-    findings = [*allowlist_findings, *missing_roots, *source_findings, *proof_findings]
+    findings = [*allowlist_findings, *missing_roots, *source_findings]
     blocking = [finding for finding in findings if finding.classification == "blocking_zero_bash"]
     status = "expected_failure" if blocking else "ok"
     returned_findings = bounded_findings(blocking if blocking else findings)
@@ -637,7 +586,6 @@ def run_zero_bash_guard(entry: Any, request: Any, repo_root: Path) -> dict[str, 
                 "entry_count": len(allowlist),
                 "release_readiness_excluded": all(entry.get("release_readiness_excluded") is True for entry in allowlist),
             },
-            "installed_cache_proof": proof_summary,
         }
     )
     if status == "ok":
@@ -647,17 +595,17 @@ def run_zero_bash_guard(entry: Any, request: Any, repo_root: Path) -> dict[str, 
     data["gate"]["blocking"] = True
     diag = diagnostic(
         "zero_bash_guard_blocked",
-        "zero-Bash guard found active shell-specific behavior or missing source-derived cache proof",
+        "zero-Bash guard found active shell-specific behavior",
         details={
             "blocking_count": len(blocking),
             "categories": sorted({finding.category for finding in blocking}),
             "paths": sorted({finding.path for finding in blocking})[:20],
         },
-        remediation_summary="Remove active shell behavior or provide bounded source-derived installed-cache proof.",
+        remediation_summary="Remove active shell behavior from the scanned source and generated payload roots.",
         remediation_actions=[
             "Inspect data.findings for blocking_zero_bash entries.",
             "Remove live script files and active Bash/jq guidance from in-scope plugin surfaces.",
-            "Regenerate payload/cache proof from cleaned source.",
+            "Regenerate both shipped payloads from cleaned source.",
         ],
     )
     return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diag])
@@ -3342,8 +3290,6 @@ def zero_bash_text_scan_path(path: str) -> bool:
     path = normalize_path(path)
     if zero_bash_historical_path(path) or path.endswith("CHANGELOG.md"):
         return False
-    if zero_bash_installed_cache_path(path):
-        return Path(path).suffix.lower() in TEXT_SUFFIXES or zero_bash_extensionless_scan_path(path)
     if path.startswith("tests/"):
         return False
     if path.startswith(("speckit-pro/", "dist/claude/speckit-pro/", "dist/codex/speckit-pro/")):
@@ -3360,10 +3306,6 @@ def zero_bash_text_scan_path(path: str) -> bool:
         "dist/codex/speckit-pro/README.md",
         "README.md",
     }
-
-
-def zero_bash_installed_cache_path(path: str) -> bool:
-    return normalize_path(path).startswith(PLUGIN_INSTALLED_CACHE_PREFIX)
 
 
 def zero_bash_scans_category(path: str, category: str) -> bool:
@@ -3959,8 +3901,6 @@ def zero_bash_active_role(path: str) -> str:
         return "installed_agent"
     if path.startswith("speckit-pro/hooks/") or path == "speckit-pro/codex-hooks.json":
         return "installed_hook"
-    if path.startswith("installed-cache-proof:") or zero_bash_installed_cache_path(path):
-        return "installed_cache_proof"
     return "plugin_source"
 
 
@@ -3985,8 +3925,6 @@ def zero_bash_allowlisted(path: str, category: str, allowlist: list[dict[str, An
 
 
 def zero_bash_remediation(path: str) -> str:
-    if path.startswith("installed-cache-proof:"):
-        return "Regenerate bounded installed-cache proof from rebuilt payloads."
     return "Remove active shell guidance or move historical prose into a release-readiness-excluded allowlist entry."
 
 
@@ -3996,8 +3934,6 @@ def zero_bash_finding_record(finding: RawFinding) -> dict[str, Any]:
         surface = "claude_payload"
     elif finding.path.startswith("dist/codex/"):
         surface = "codex_payload"
-    elif finding.path.startswith("installed-cache-proof:") or zero_bash_installed_cache_path(finding.path):
-        surface = "installed_cache_proof"
     elif finding.path.startswith("speckit-pro/"):
         surface = "plugin_source"
     else:
@@ -4109,7 +4045,7 @@ def missing_zero_bash_scan_root_findings(repo_root: Path, case: dict[str, Any]) 
                 reason="zero-Bash guard requires explicit scan roots",
                 active_role="zero_bash_guard",
                 classification="blocking_zero_bash",
-                remediation="Declare source, generated payload, and installed-cache proof roots in the guard case.",
+                remediation="Declare source and generated payload roots in the guard case.",
             )
         ]
     if not roots:
@@ -4122,7 +4058,7 @@ def missing_zero_bash_scan_root_findings(repo_root: Path, case: dict[str, Any]) 
                 reason="zero-Bash guard requires at least one scan root",
                 active_role="zero_bash_guard",
                 classification="blocking_zero_bash",
-                remediation="Declare source, generated payload, and installed-cache proof roots in the guard case.",
+                remediation="Declare source and generated payload roots in the guard case.",
             )
         ]
     findings: list[RawFinding] = []
@@ -4178,285 +4114,6 @@ def missing_zero_bash_scan_root_findings(repo_root: Path, case: dict[str, Any]) 
             )
         )
     return findings
-
-
-def load_installed_cache_proof(repo_root: Path, case: dict[str, Any]) -> dict[str, Any] | dict[str, Any]:
-    raw = case.get("installed_cache_proof")
-    if raw is None and case.get("require_installed_cache_proof") is False:
-        return {"schema_version": "2.0", "contract_id": "plugin-bash-confinement", "proofs": [], "_proof_path": None}
-    if not isinstance(raw, str) or not raw:
-        return diagnostic("missing_installed_cache_proof", "zero-Bash guard requires bounded installed-cache proof")
-    if raw != INSTALLED_CACHE_PROOF:
-        return diagnostic(
-            "unsupported_installed_cache_proof",
-            "installed-cache proof must use the canonical generated path",
-            details={"proof": raw},
-        )
-    path = resolve_path(raw, repo_root)
-    if not is_relative_to(path.resolve(strict=False), repo_root.resolve(strict=False)):
-        return diagnostic("invalid_installed_cache_proof", "installed-cache proof must stay inside the repository")
-    try:
-        document = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        return diagnostic("invalid_installed_cache_proof", "installed-cache proof could not be loaded", details={"proof": raw, "error": type(exc).__name__})
-    if not isinstance(document, dict):
-        return diagnostic("invalid_installed_cache_proof", "installed-cache proof must contain an object")
-    unknown_fields = sorted(set(document) - INSTALLED_CACHE_PROOF_DOCUMENT_FIELDS)
-    if unknown_fields:
-        return diagnostic(
-            "invalid_installed_cache_proof",
-            "installed-cache proof contains unsupported fields",
-            details={"fields": unknown_fields},
-        )
-    if document.get("schema_version") != "2.0":
-        return diagnostic("invalid_installed_cache_proof", "installed-cache proof schema_version must be 2.0")
-    if document.get("contract_id") != "plugin-bash-confinement":
-        return diagnostic("invalid_installed_cache_proof", "installed-cache proof contract_id must be plugin-bash-confinement")
-    if not isinstance(document.get("proofs"), list):
-        return diagnostic("invalid_installed_cache_proof", "installed-cache proof must contain proofs array")
-    document["_proof_path"] = raw
-    return document
-
-
-def installed_cache_proof_findings(repo_root: Path, proof: dict[str, Any], allowlist: list[dict[str, Any]]) -> list[RawFinding]:
-    findings: list[RawFinding] = []
-    proofs = proof.get("proofs") if isinstance(proof.get("proofs"), list) else []
-    if not proofs:
-        findings.append(installed_cache_finding("proof", "missing", "installed-cache proof contains no proof records"))
-        return findings
-    products = [item.get("product") for item in proofs if isinstance(item, dict)]
-    missing_products = sorted(VALID_INSTALLED_CACHE_PRODUCTS - {product for product in products if product in VALID_INSTALLED_CACHE_PRODUCTS})
-    if missing_products:
-        findings.append(
-            installed_cache_finding(
-                "proofs",
-                "product_coverage",
-                "installed-cache proof must include Claude and Codex proof records",
-            )
-        )
-    seen_products: set[str] = set()
-    seen_root_pairs: dict[tuple[str, str], str] = {}
-    for index, item in enumerate(proofs):
-        if not isinstance(item, dict):
-            findings.append(installed_cache_finding(f"proofs[{index}]", "malformed", "installed-cache proof record must be an object"))
-            continue
-        surface_name = item.get("surface")
-        prefix = f"installed-cache-proof:{surface_name if isinstance(surface_name, str) and surface_name else index}"
-        missing_fields = sorted(INSTALLED_CACHE_PROOF_REQUIRED_FIELDS - set(item))
-        extra_fields = sorted(set(item) - INSTALLED_CACHE_PROOF_ALLOWED_FIELDS)
-        for field in missing_fields:
-            findings.append(installed_cache_finding(prefix, field, f"installed-cache proof record requires {field}"))
-        for field in extra_fields:
-            findings.append(installed_cache_finding(prefix, "malformed", f"installed-cache proof record contains unsupported field {field}"))
-        product = item.get("product")
-        if product in VALID_INSTALLED_CACHE_PRODUCTS:
-            if str(product) in seen_products:
-                findings.append(installed_cache_finding(prefix, "product_coverage", "installed-cache proof must not duplicate product coverage"))
-            seen_products.add(str(product))
-        elif not isinstance(product, str):
-            findings.append(installed_cache_finding(prefix, "product", "installed-cache proof product must be a string"))
-        else:
-            findings.append(installed_cache_finding(prefix, "product", "installed-cache proof product must be claude or codex"))
-        if not isinstance(surface_name, str) or not surface_name:
-            findings.append(installed_cache_finding(prefix, "surface", "installed-cache proof record requires surface"))
-        surface = installed_payload_surface(str(item.get("installed_root") or ""), item)
-        if surface is None:
-            findings.append(installed_cache_finding(prefix, "product", "installed-cache proof product must identify Claude or Codex payload surface"))
-        if item.get("source_derived") is not True:
-            findings.append(installed_cache_finding(prefix, "source_derived", "installed-cache proof must be source-derived"))
-        if item.get("mutable_user_cache") is not False:
-            findings.append(installed_cache_finding(prefix, "mutable_user_cache", "installed-cache proof must explicitly set mutable_user_cache to false"))
-        if item.get("allowlist_release_readiness_excluded") is not True:
-            findings.append(installed_cache_finding(prefix, "allowlist", "allowlist evidence must be excluded from release readiness"))
-        script_count = item.get("script_file_count")
-        if type(script_count) is not int or script_count != 0:
-            findings.append(installed_cache_finding(prefix, "script_file", "installed-cache proof reports retained script files"))
-        active_findings = item.get("active_guidance_findings")
-        if not isinstance(active_findings, list):
-            findings.append(installed_cache_finding(prefix, "active_guidance", "installed-cache proof must include active_guidance_findings array"))
-        elif active_findings:
-            findings.append(installed_cache_finding(prefix, "active_guidance", "installed-cache proof reports active guidance findings"))
-        root = item.get("installed_root")
-        if not isinstance(root, str) or not root:
-            findings.append(installed_cache_finding(prefix, "installed_root", "installed-cache proof record requires installed_root"))
-            continue
-        installed_path = resolve_path(root, repo_root)
-        if not is_relative_to(installed_path.resolve(strict=False), repo_root.resolve(strict=False)):
-            findings.append(installed_cache_finding(prefix, "installed_root", "installed-cache root must stay inside the repository trust boundary"))
-            continue
-        if not installed_path.is_dir():
-            findings.append(installed_cache_finding(prefix, "installed_root", "installed-cache proof root must exist as a directory"))
-            continue
-        source_root = item.get("source_payload_root")
-        if not isinstance(source_root, str) or not source_root:
-            findings.append(installed_cache_finding(prefix, "source_payload_root", "installed-cache proof record requires source_payload_root"))
-            continue
-        source_path = resolve_path(source_root, repo_root)
-        if not is_relative_to(source_path.resolve(strict=False), repo_root.resolve(strict=False)):
-            findings.append(installed_cache_finding(prefix, "source_payload_root", "source payload root must stay inside the repository trust boundary"))
-            continue
-        if not source_path.is_dir():
-            findings.append(installed_cache_finding(prefix, "source_payload_root", "source payload root must exist as a directory"))
-            continue
-        if product in VALID_INSTALLED_CACHE_PRODUCTS:
-            declared_surface = str(product)
-            source_surface = payload_surface_from_root(source_root, repo_root)
-            if normalize_path(root) == normalize_path(source_root):
-                findings.append(
-                    installed_cache_finding(
-                        prefix,
-                        "installed_root",
-                        "installed-cache proof installed_root must be distinct from source_payload_root",
-                    )
-                )
-            elif not canonical_installed_cache_root(root, declared_surface):
-                findings.append(
-                    installed_cache_finding(
-                        prefix,
-                        "installed_root",
-                        f"installed-cache proof installed_root must be tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/{declared_surface}/speckit-pro",
-                    )
-                )
-            if not canonical_payload_root(source_root, declared_surface):
-                findings.append(
-                    installed_cache_finding(
-                        prefix,
-                        "source_payload_root",
-                        f"installed-cache proof source_payload_root must be dist/{declared_surface}/speckit-pro",
-                    )
-                )
-            elif source_surface != declared_surface:
-                findings.append(installed_cache_finding(prefix, "source_payload_root", "installed-cache proof source_payload_root must match the declared product"))
-        root_pair = (normalize_path(source_root), normalize_path(root))
-        if root_pair in seen_root_pairs:
-            findings.append(installed_cache_finding(prefix, "source_payload_root", "installed-cache proof must not reuse the same source/installed roots for multiple products"))
-        else:
-            seen_root_pairs[root_pair] = prefix
-        root_sources = scan_repo_sources(repo_root, roots=(root,), source_kind="repo")
-        findings.extend(zero_bash_source_findings(root_sources, allowlist))
-        actual_script_count = count_prohibited_script_files(installed_path)
-        if isinstance(script_count, int) and script_count != actual_script_count:
-            findings.append(
-                installed_cache_finding(
-                    prefix,
-                    "script_file_count",
-                    "installed-cache proof script_file_count does not match the scanned installed root",
-                )
-            )
-        expected_hash = item.get("source_payload_tree_hash")
-        source_inventory = payload_tree_inventory(repo_root, source_root, item)
-        installed_inventory = payload_tree_inventory(repo_root, root, item)
-        if not isinstance(expected_hash, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_hash):
-            findings.append(installed_cache_finding(prefix, "source_payload_tree_hash", "installed-cache proof requires a SHA-256 source_payload_tree_hash"))
-        elif source_inventory is None:
-            findings.append(installed_cache_finding(prefix, "source_payload_tree_hash", "installed-cache proof could not recompute the source payload tree hash"))
-        elif installed_inventory is None:
-            findings.append(installed_cache_finding(prefix, "source_payload_tree_hash", "installed-cache proof could not recompute the installed payload tree hash"))
-        else:
-            if not source_inventory["files"]:
-                findings.append(installed_cache_finding(prefix, "source_payload_root", "source payload root must contain payload files"))
-            if not installed_inventory["files"]:
-                findings.append(installed_cache_finding(prefix, "installed_root", "installed-cache proof root must contain payload files"))
-            if source_inventory["files"] and installed_inventory["files"]:
-                if expected_hash != source_inventory["tree_hash"]:
-                    findings.append(installed_cache_finding(prefix, "source_payload_tree_hash", "installed-cache proof source_payload_tree_hash is stale"))
-                elif source_inventory["files"] != installed_inventory["files"]:
-                    findings.append(installed_cache_finding(prefix, "source_payload_tree_hash", "installed-cache proof installed payload inventory does not match source payload inventory"))
-    return findings
-
-
-def installed_payload_tree_hash(repo_root: Path, root: str, item: dict[str, Any]) -> str | None:
-    inventory = payload_tree_inventory(repo_root, root, item)
-    return inventory["tree_hash"] if inventory is not None else None
-
-
-def payload_tree_inventory(repo_root: Path, root: str, item: dict[str, Any]) -> dict[str, Any] | None:
-    from . import payloads as payload_gate
-
-    surface = installed_payload_surface(root, item)
-    if surface is None:
-        return None
-    payload_root = resolve_path(root, repo_root)
-    records = payload_gate.scan_payload_files(payload_root, source_root=repo_root / "speckit-pro", surface=surface)
-    files = {record["path"]: record["sha256"] for record in records}
-    return {"tree_hash": payload_gate.payload_tree_hash(records), "files": files}
-
-
-def installed_payload_surface(root: str, item: dict[str, Any]) -> str | None:
-    product = item.get("product")
-    if product in VALID_INSTALLED_CACHE_PRODUCTS:
-        return str(product)
-    return payload_surface_from_root(root)
-
-
-def payload_surface_from_root(root: str, repo_root: Path | None = None) -> str | None:
-    normalized = normalize_path(root).rstrip("/")
-    if repo_root is None:
-        if normalized.startswith("dist/claude/"):
-            return "claude"
-        if normalized.startswith("dist/codex/"):
-            return "codex"
-    else:
-        resolved_root = repo_root.resolve(strict=False)
-        resolved_path = resolve_path(root, repo_root).resolve(strict=False)
-        if not is_relative_to(resolved_path, resolved_root):
-            return None
-        normalized = resolved_path.relative_to(resolved_root).as_posix().rstrip("/")
-        if normalized == "dist/claude/speckit-pro":
-            return "claude"
-        if normalized == "dist/codex/speckit-pro":
-            return "codex"
-    return None
-
-
-def canonical_payload_root(root: str, product: str) -> bool:
-    normalized = normalize_path(root)
-    if root != normalized or normalized != normalized.rstrip("/"):
-        return False
-    if normalized.startswith("/") or re.match(r"^[A-Za-z]:", root):
-        return False
-    parts = normalized.split("/")
-    if any(part in {"", ".", ".."} for part in parts):
-        return False
-    return normalized == f"dist/{product}/speckit-pro"
-
-
-def canonical_installed_cache_root(root: str, product: str) -> bool:
-    normalized = normalize_path(root)
-    if root != normalized or normalized != normalized.rstrip("/"):
-        return False
-    if normalized.startswith("/") or re.match(r"^[A-Za-z]:", root):
-        return False
-    parts = normalized.split("/")
-    if any(part in {"", ".", ".."} for part in parts):
-        return False
-    return normalized == f"tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/{product}/speckit-pro"
-
-
-def installed_cache_finding(path: str, category: str, reason: str) -> RawFinding:
-    return RawFinding(
-        path=f"installed-cache-proof:{path}",
-        line=None,
-        category=category,
-        pattern=category,
-        reason=reason,
-        active_role="installed_cache_proof",
-        classification="blocking_zero_bash",
-        remediation="Regenerate bounded source-derived installed-cache proof from rebuilt payloads.",
-    )
-
-
-def zero_bash_finding_from_diag(diag: dict[str, Any]) -> RawFinding:
-    return RawFinding(
-        path="installed-cache-proof",
-        line=None,
-        category=str(diag.get("code") or "installed_cache_proof"),
-        pattern=str(diag.get("code") or "installed_cache_proof"),
-        reason=str(diag.get("message") or "installed-cache proof is invalid"),
-        active_role="installed_cache_proof",
-        classification="blocking_zero_bash",
-        remediation="Provide bounded source-derived installed-cache proof.",
-    )
 
 
 def guard_response(entry: Any, request: Any, findings: list[RawFinding]) -> dict[str, Any]:
@@ -5640,8 +5297,6 @@ def maybe_add_source(repo_root: Path, path: Path, sources: list[SourceFile], sou
         relative_path = path.relative_to(repo_root).as_posix()
     except ValueError:
         return
-    if relative_path == INSTALLED_CACHE_PROOF:
-        return
     if not is_relative_to(path.resolve(strict=False), repo_root.resolve(strict=False)):
         return
     if has_prohibited_script_suffix(relative_path):
@@ -5752,14 +5407,6 @@ def zero_bash_base_data(entry: Any, operation: str, status: str) -> dict[str, An
             "entry_count": 0,
             "release_readiness_excluded": False,
         },
-        "installed_cache_proof": {
-            "required": True,
-            "proof_path": None,
-            "proof_count": 0,
-            "source_derived": False,
-            "mutable_user_cache": None,
-            "script_file_count": None,
-        },
     }
 
 
@@ -5857,18 +5504,6 @@ def scan_root_entry_validation(index: int, raw: object) -> tuple[str, str, str |
     return raw, raw, invalid_scan_root_reason(raw)
 
 
-def count_prohibited_script_files(root: Path) -> int:
-    if root.is_file():
-        return int(root.suffix.lower() in PROHIBITED_SCRIPT_SUFFIXES or has_prohibited_script_shebang(root))
-    if not root.is_dir():
-        return 0
-    return sum(
-        1
-        for candidate in root.rglob("*")
-        if candidate.is_file() and (candidate.suffix.lower() in PROHIBITED_SCRIPT_SUFFIXES or has_prohibited_script_shebang(candidate))
-    )
-
-
 def zero_bash_extensionless_scan_path(path: str) -> bool:
     normalized = normalize_path(path)
     if Path(normalized).suffix:
@@ -5878,7 +5513,6 @@ def zero_bash_extensionless_scan_path(path: str) -> bool:
             "speckit-pro/",
             "dist/claude/speckit-pro/",
             "dist/codex/speckit-pro/",
-            PLUGIN_INSTALLED_CACHE_PREFIX,
         )
     )
 

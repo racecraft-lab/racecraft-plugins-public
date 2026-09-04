@@ -813,7 +813,7 @@ jobs:
         with self.subTest(msg="release-please-config.json exists"):
             self.assertTrue(RELEASE_CONFIG_FILE.is_file(), f"file not found: {RELEASE_CONFIG_FILE}")
 
-        with self.subTest(msg="release-please extra-files never pre-bump proof-covered trees"):
+        with self.subTest(msg="release-please extra-files never pre-bump generated payloads"):
             forbidden: list[str] = []
             if RELEASE_CONFIG_FILE.is_file():
                 config = json.loads(RELEASE_CONFIG_FILE.read_text(encoding="utf-8"))
@@ -823,16 +823,12 @@ jobs:
                     for entry in package.get("extra-files") or []:
                         raw = entry.get("path", "") if isinstance(entry, dict) else str(entry)
                         normalized = posixpath.normpath(raw.lstrip("/")).lstrip("./")
-                        if (
-                            normalized == "dist"
-                            or normalized.startswith("dist/")
-                            or "installed-cache" in normalized
-                        ):
+                        if normalized == "dist" or normalized.startswith("dist/"):
                             forbidden.append(raw)
             self.assertEqual(
                 [],
                 forbidden,
-                "release-please extra-files must not target dist/** payloads or installed-cache fixtures; scripts/refresh-release-artifacts.py owns those trees",
+                "release-please extra-files must not target dist/** payloads; scripts/refresh-release-artifacts.py owns those trees",
             )
 
 

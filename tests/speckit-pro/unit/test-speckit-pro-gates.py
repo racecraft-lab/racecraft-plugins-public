@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import ast
 import copy
-from contextlib import ExitStack, contextmanager
+from contextlib import ExitStack
 import importlib.util
 import json
 import os
@@ -31,7 +31,6 @@ INSTALLED_RELEASE_REQUESTS_DIR = INSTALLED_RELEASE_FIXTURE_DIR / "requests"
 PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "plugin-bash-confinement"
 PLUGIN_BASH_CONFINEMENT_REQUESTS_DIR = PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR / "requests"
 PLUGIN_BASH_CONFINEMENT_CONTRACT_DIR = PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR / "contracts"
-INSTALLED_CACHE_ORACLE_PATH = PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR / "installed-cache/oracle.json"
 REPOSITORY_BASH_CONFINEMENT_FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "repository-bash-confinement"
 
 if str(PLUGIN_ROOT) not in sys.path:
@@ -121,93 +120,6 @@ def plugin_bash_confinement_fixture_request(name: str) -> dict[str, Any]:
 
 def plugin_bash_confinement_fixture_cases(name: str) -> dict[str, Any]:
     return json.loads((PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR / f"{name}-cases.json").read_text(encoding="utf-8"))
-
-
-def installed_cache_oracle() -> dict[str, Any]:
-    return json.loads(INSTALLED_CACHE_ORACLE_PATH.read_text(encoding="utf-8"))
-
-
-@contextmanager
-def materialized_installed_cache_oracle():
-    oracle = installed_cache_oracle()
-    with tempfile.TemporaryDirectory(
-        prefix=".oracle-roots-",
-        dir=INSTALLED_CACHE_ORACLE_PATH.parent,
-    ) as temporary:
-        temporary_root = Path(temporary)
-        roots: dict[str, dict[str, str]] = {}
-        for product, surface in oracle["surfaces"].items():
-            source_root = temporary_root / "source" / product / "speckit-pro"
-            installed_root = temporary_root / "installed" / product / "speckit-pro"
-            for root in (source_root, installed_root):
-                for record in surface["files"]:
-                    path = root / record["path"]
-                    path.parent.mkdir(parents=True, exist_ok=True)
-                    path.write_text(record["content"], encoding="utf-8")
-            roots[product] = {
-                "source_root": source_root.relative_to(REPO_ROOT).as_posix(),
-                "installed_root": installed_root.relative_to(REPO_ROOT).as_posix(),
-            }
-        yield oracle, roots
-
-
-def installed_cache_oracle_proof(roots: dict[str, dict[str, str]]) -> dict[str, Any]:
-    from speckit_pro_runner.gates import active_path_guard
-
-    proofs = []
-    for product in sorted(roots):
-        root = roots[product]
-        inventory = active_path_guard.payload_tree_inventory(
-            REPO_ROOT,
-            root["source_root"],
-            {"product": product},
-        )
-        proofs.append(
-            {
-                "product": product,
-                "surface": f"{product}_payload_fixture",
-                "installed_root": root["installed_root"],
-                "source_payload_root": root["source_root"],
-                "source_payload_tree_hash": inventory["tree_hash"],
-                "source_derived": True,
-                "mutable_user_cache": False,
-                "script_file_count": 0,
-                "active_guidance_findings": [],
-                "allowlist_release_readiness_excluded": True,
-            }
-        )
-    return {
-        "schema_version": "2.0",
-        "contract_id": "plugin-bash-confinement",
-        "proofs": proofs,
-    }
-
-
-@contextmanager
-def installed_cache_oracle_root_policy(roots: dict[str, dict[str, str]]):
-    from speckit_pro_runner.gates import active_path_guard
-
-    source_products = {
-        root["source_root"]: product for product, root in roots.items()
-    }
-    with (
-        patch.object(
-            active_path_guard,
-            "canonical_installed_cache_root",
-            side_effect=lambda root, product: root == roots.get(product, {}).get("installed_root"),
-        ),
-        patch.object(
-            active_path_guard,
-            "canonical_payload_root",
-            side_effect=lambda root, product: root == roots.get(product, {}).get("source_root"),
-        ),
-        patch.object(
-            active_path_guard,
-            "payload_surface_from_root",
-            side_effect=lambda root, _repo_root=None: source_products.get(root),
-        ),
-    ):
-        yield
 
 
 def run_installed_release_readiness(
@@ -1687,7 +1599,42 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(apply_request["mode"], "apply")
         self.assertTrue(apply_request["inputs"]["apply_dist"])
 
-    def test_plugin_bash_confinement_zero_bash_guard_fixtures_cover_source_payload_and_cache_proof(self) -> None:
+    def test_zero_bash_guard_exposes_no_dead_installed_cache_proof_contract(self) -> None:
+        from speckit_pro_runner.gates import active_path_guard
+
+        cases = plugin_bash_confinement_fixture_cases("zero-bash-guard")
+        response = self.assert_runner_ok(plugin_bash_confinement_fixture_request("zero-bash-guard"))
+        result_schema = json.loads(
+            (PLUGIN_BASH_CONFINEMENT_CONTRACT_DIR / "zero-bash-guard-result.schema.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        forbidden_attributes = {
+            "INSTALLED_CACHE_PROOF",
+            "PLUGIN_INSTALLED_CACHE_PREFIX",
+            "canonical_installed_cache_root",
+            "installed_cache_proof_findings",
+            "load_installed_cache_proof",
+            "payload_tree_inventory",
+        }
+        for attribute in sorted(forbidden_attributes):
+            with self.subTest(attribute=attribute):
+                self.assertFalse(hasattr(active_path_guard, attribute))
+        for case in cases["cases"]:
+            with self.subTest(case_id=case["case_id"]):
+                self.assertNotIn("installed_cache_proof", case)
+                self.assertNotIn("require_installed_cache_proof", case)
+        self.assertNotIn("installed_cache_proof", response["data"])
+        self.assertNotIn(
+            "installed_cache_proof",
+            result_schema["properties"]["data"]["properties"],
+        )
+        self.assertFalse(
+            (PLUGIN_BASH_CONFINEMENT_CONTRACT_DIR / "installed-cache-proof.schema.json").exists()
+        )
+        self.assertFalse((PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR / "installed-cache").exists())
+
+    def test_plugin_bash_confinement_zero_bash_guard_fixtures_cover_source_and_payloads(self) -> None:
         from speckit_pro_runner.gates import active_path_guard
 
         cases = plugin_bash_confinement_fixture_cases("zero-bash-guard")
@@ -1717,7 +1664,6 @@ class GateFoundationTests(unittest.TestCase):
                 "malformed-scan-root",
                 "empty-scan-roots",
                 "non-list-scan-roots",
-                "missing-installed-cache-proof",
                 "final-current-implementation",
             },
         )
@@ -1726,7 +1672,6 @@ class GateFoundationTests(unittest.TestCase):
             {"speckit-pro", "scripts/build-plugin-payloads.py", "dist/claude/speckit-pro", "dist/codex/speckit-pro", "README.md"},
             set(final_case["scan_roots"]),
         )
-        self.assertFalse(final_case["require_installed_cache_proof"])
         self.assertNotIn("installed_cache_proof", final_case)
         self.assertTrue(active_path_guard.command_argv_contains_forbidden(["/usr/bin/env", "-S bash -lc jq -r . package.json"]))
         self.assertTrue(active_path_guard.command_argv_contains_forbidden(["sh", "-c", "python -m speckit_pro_runner"]))
@@ -1739,19 +1684,6 @@ class GateFoundationTests(unittest.TestCase):
         self.assertTrue(active_path_guard.command_argv_contains_forbidden(["/bin/zsh", "-o", "pipefail", "-c", "python -m speckit_pro_runner"]))
         self.assertTrue(active_path_guard.command_argv_contains_forbidden(["/usr/bin/env", "-S", "sh -c python -m speckit_pro_runner"]))
         self.assertTrue(active_path_guard.command_argv_contains_forbidden(["/usr/bin/env", "-S sh -c python -m speckit_pro_runner"]))
-        with tempfile.TemporaryDirectory() as tmp:
-            extensionless = Path(tmp) / "install"
-            extensionless.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
-            self.assertEqual(active_path_guard.count_prohibited_script_files(extensionless), 1)
-            zsh_script = Path(tmp) / "install.zsh"
-            zsh_script.write_text("#!/usr/bin/env zsh\n", encoding="utf-8")
-            self.assertEqual(active_path_guard.count_prohibited_script_files(zsh_script), 1)
-            bash_script = Path(tmp) / "install.bash"
-            bash_script.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
-            self.assertEqual(active_path_guard.count_prohibited_script_files(bash_script), 1)
-            oversized = Path(tmp) / "large-install"
-            oversized.write_text("#!/usr/bin/env bash\n" + ("#" * (active_path_guard.MAX_SCAN_BYTES + 1)), encoding="utf-8")
-            self.assertEqual(active_path_guard.count_prohibited_script_files(oversized), 1)
         with tempfile.TemporaryDirectory(prefix=".plugin-bash-confinement-large-script-", dir=PLUGIN_ROOT) as tmp:
             temp_root = Path(tmp)
             large_suffix_script = temp_root / "install.sh"
@@ -1825,10 +1757,6 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(result["blocking_count"], 0)
         self.assertEqual(result["script_file_count"], 0)
         self.assertTrue(result["allowlist"]["release_readiness_excluded"])
-        self.assertFalse(result["installed_cache_proof"]["required"])
-        self.assertEqual(result["installed_cache_proof"]["proof_count"], 0)
-        self.assertFalse(result["installed_cache_proof"]["source_derived"])
-        self.assertIsNone(result["installed_cache_proof"]["mutable_user_cache"])
 
         scan_root_only_cases = {
             "missing-scan-root",
@@ -1859,7 +1787,6 @@ class GateFoundationTests(unittest.TestCase):
             "malformed-scan-root",
             "empty-scan-roots",
             "non-list-scan-roots",
-            "missing-installed-cache-proof",
         ]:
             with self.subTest(case_id=case_id):
                 response = run_plugin_bash_confinement_case(
@@ -1980,388 +1907,6 @@ class GateFoundationTests(unittest.TestCase):
 
         self.assert_plugin_bash_confinement_contracts_match_fixtures(clean_response)
 
-    def test_compact_installed_cache_oracle_covers_payload_shape_and_platform_transforms(self) -> None:
-        from speckit_pro_runner.gates import payloads as payload_gate
-
-        tracked_files = sorted(
-            path.relative_to(INSTALLED_CACHE_ORACLE_PATH.parent).as_posix()
-            for path in INSTALLED_CACHE_ORACLE_PATH.parent.rglob("*")
-            if path.is_file()
-        )
-        self.assertEqual(tracked_files, ["oracle.json"])
-
-        with materialized_installed_cache_oracle() as (oracle, roots):
-            for product, surface in oracle["surfaces"].items():
-                records = payload_gate.scan_payload_files(
-                    REPO_ROOT / roots[product]["installed_root"],
-                    source_root=REPO_ROOT / "speckit-pro",
-                    surface=product,
-                )
-                actual = [
-                    {
-                        key: record[key]
-                        for key in ("path", "source_path", "kind", "transform")
-                    }
-                    for record in records
-                ]
-                expected = [
-                    {
-                        key: record[key]
-                        for key in ("path", "source_path", "kind", "transform")
-                    }
-                    for record in surface["files"]
-                ]
-                self.assertEqual(actual, expected, product)
-
-    def test_installed_cache_oracle_detects_missing_extra_content_and_hash_mutations(self) -> None:
-        from speckit_pro_runner.gates import active_path_guard
-
-        allowlist = json.loads(
-            (PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR / "allowlist.json").read_text(encoding="utf-8")
-        )["entries"]
-        mutations = ("missing", "extra", "content", "hash")
-        for mutation in mutations:
-            with self.subTest(mutation=mutation):
-                with materialized_installed_cache_oracle() as (oracle, roots):
-                    proof = installed_cache_oracle_proof(roots)
-                    claude_root = REPO_ROOT / roots["claude"]["installed_root"]
-                    first_path = oracle["surfaces"]["claude"]["files"][0]["path"]
-                    if mutation == "missing":
-                        (claude_root / first_path).unlink()
-                    elif mutation == "extra":
-                        (claude_root / "unexpected.txt").write_text("extra\n", encoding="utf-8")
-                    elif mutation == "content":
-                        target = claude_root / first_path
-                        target.write_text(target.read_text(encoding="utf-8") + "changed\n", encoding="utf-8")
-                    else:
-                        proof["proofs"][0]["source_payload_tree_hash"] = "0" * 64
-
-                    with installed_cache_oracle_root_policy(roots):
-                        findings = active_path_guard.installed_cache_proof_findings(
-                            REPO_ROOT,
-                            proof,
-                            allowlist,
-                        )
-
-                hash_findings = [
-                    finding
-                    for finding in findings
-                    if finding.category == "source_payload_tree_hash"
-                ]
-                self.assertTrue(hash_findings, mutation)
-                if mutation == "hash":
-                    self.assertTrue(any("stale" in finding.reason for finding in hash_findings))
-                else:
-                    self.assertTrue(any("inventory does not match" in finding.reason for finding in hash_findings))
-
-    def test_installed_cache_oracle_detects_bash_and_root_failures(self) -> None:
-        from speckit_pro_runner.gates import active_path_guard
-
-        allowlist = json.loads(
-            (PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR / "allowlist.json").read_text(encoding="utf-8")
-        )["entries"]
-        with materialized_installed_cache_oracle() as (_, roots):
-            source_readme = REPO_ROOT / roots["claude"]["source_root"] / "README.md"
-            installed_readme = REPO_ROOT / roots["claude"]["installed_root"] / "README.md"
-            for readme in (source_readme, installed_readme):
-                readme.write_text("Run Bash before continuing.\n", encoding="utf-8")
-            proof = installed_cache_oracle_proof(roots)
-            with installed_cache_oracle_root_policy(roots):
-                findings = active_path_guard.installed_cache_proof_findings(
-                    REPO_ROOT,
-                    proof,
-                    allowlist,
-                )
-            self.assertIn("bash", {finding.category for finding in findings})
-
-            proof["proofs"][0]["installed_root"] = "../outside-repository"
-            with installed_cache_oracle_root_policy(roots):
-                findings = active_path_guard.installed_cache_proof_findings(
-                    REPO_ROOT,
-                    proof,
-                    allowlist,
-                )
-            self.assertIn("installed_root", {finding.category for finding in findings})
-
-    def test_installed_cache_oracle_detects_proof_failure_modes(self) -> None:
-        from speckit_pro_runner.gates import active_path_guard
-
-        allowlist = json.loads(
-            (PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR / "allowlist.json").read_text(encoding="utf-8")
-        )["entries"]
-        with materialized_installed_cache_oracle() as (_, roots):
-            clean = installed_cache_oracle_proof(roots)
-            with installed_cache_oracle_root_policy(roots):
-                self.assertEqual(
-                    active_path_guard.installed_cache_proof_findings(REPO_ROOT, clean, allowlist),
-                    [],
-                )
-
-            mutations = {
-                "mutable": ({**clean, "proofs": [{**clean["proofs"][0], "mutable_user_cache": True}, clean["proofs"][1]]}, "mutable_user_cache"),
-                "missing-product": ({**clean, "proofs": clean["proofs"][:1]}, "product_coverage"),
-                "missing-source": ({**clean, "proofs": [{key: value for key, value in clean["proofs"][0].items() if key != "source_payload_root"}, clean["proofs"][1]]}, "source_payload_root"),
-            }
-            for name, (proof, category) in mutations.items():
-                with self.subTest(name=name):
-                    with installed_cache_oracle_root_policy(roots):
-                        findings = active_path_guard.installed_cache_proof_findings(
-                            REPO_ROOT,
-                            proof,
-                            allowlist,
-                        )
-                    self.assertIn(category, {finding.category for finding in findings})
-
-    def test_installed_cache_proof_is_gate_owned_and_excluded_from_payloads(self) -> None:
-        from speckit_pro_runner.gates import active_path_guard
-
-        proof_path = active_path_guard.INSTALLED_CACHE_PROOF
-        self.assertEqual(proof_path, "speckit-pro/gate-evidence/installed-cache-proof.json")
-        self.assertFalse((REPO_ROOT / proof_path).exists())
-        self.assertEqual(
-            active_path_guard.load_installed_cache_proof(
-                REPO_ROOT,
-                {"require_installed_cache_proof": False},
-            )["proofs"],
-            [],
-        )
-        rejected = active_path_guard.load_installed_cache_proof(
-            REPO_ROOT,
-            {"installed_cache_proof": "unknown-installed-cache-proof.json"},
-        )
-        self.assertEqual(rejected["code"], "unsupported_installed_cache_proof")
-        scanned_paths = {
-            source.path
-            for source in active_path_guard.scan_repo_sources(REPO_ROOT, roots=("speckit-pro",))
-        }
-        self.assertNotIn(proof_path, scanned_paths)
-        for payload_root in ("dist/claude/speckit-pro", "dist/codex/speckit-pro"):
-            with self.subTest(payload_root=payload_root):
-                self.assertFalse((REPO_ROOT / payload_root / "gate-evidence").exists())
-
-    def test_plugin_bash_confinement_runner_rejects_malformed_proof_documents(self) -> None:
-        from speckit_pro_runner.gates import active_path_guard, registry
-
-        cases = plugin_bash_confinement_fixture_cases("zero-bash-guard")
-        clean_case = next(case for case in cases["cases"] if case["case_id"] == "clean-fixture")
-        canonical_proof = {
-            "schema_version": "2.0",
-            "contract_id": "plugin-bash-confinement",
-            "proofs": [],
-        }
-        entry = next(
-            operation
-            for operation in registry.all_gate_operations()
-            if operation.operation == "zero-bash-guard"
-        )
-        malformed_documents = (
-            ("schema-version", {**canonical_proof, "schema_version": "future"}, "invalid_installed_cache_proof"),
-            ("contract-id", {**canonical_proof, "contract_id": "unknown-contract"}, "invalid_installed_cache_proof"),
-            ("proofs-shape", {**canonical_proof, "proofs": {}}, "invalid_installed_cache_proof"),
-            ("unknown-field", {**canonical_proof, "unexpected": True}, "invalid_installed_cache_proof"),
-        )
-
-        with tempfile.TemporaryDirectory(
-            prefix=".malformed-proof-",
-            dir=PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR,
-        ) as fixture_root:
-            fixture_dir = Path(fixture_root)
-            proof_file = fixture_dir / "proof.json"
-            case_file = fixture_dir / "cases.json"
-            proof_path = proof_file.relative_to(REPO_ROOT).as_posix()
-            case_path = case_file.relative_to(REPO_ROOT).as_posix()
-
-            for case_id, document, expected_category in malformed_documents:
-                with self.subTest(case_id=case_id):
-                    proof_file.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
-                    case = {**clean_case, "case_id": case_id, "installed_cache_proof": proof_path}
-                    case_file.write_text(
-                        json.dumps(
-                            {
-                                "schema_version": "2.0",
-                                "contract_id": "plugin-bash-confinement",
-                                "cases": [case],
-                            },
-                            indent=2,
-                        )
-                        + "\n",
-                        encoding="utf-8",
-                    )
-                    request = SimpleNamespace(
-                        request_id=f"test-malformed-proof-{case_id}",
-                        operation="zero-bash-guard",
-                        inputs={"case_file": case_path, "case_id": case_id},
-                    )
-                    with (
-                        patch.object(active_path_guard, "INSTALLED_CACHE_PROOF", proof_path),
-                        patch.object(active_path_guard, "source_files", return_value=[]),
-                        patch.object(active_path_guard, "scan_repo_sources", return_value=[]),
-                    ):
-                        response = active_path_guard.run_active_path_guard(entry, request)
-                    self.assert_response(response, "expected_failure")
-                    self.assertEqual(
-                        {finding["category"] for finding in response["data"]["findings"]},
-                        {expected_category},
-                    )
-
-            canonical_path_case = {**clean_case, "case_id": "canonical-path", "installed_cache_proof": proof_path}
-            case_file.write_text(
-                json.dumps(
-                    {
-                        "schema_version": "2.0",
-                        "contract_id": "plugin-bash-confinement",
-                        "cases": [canonical_path_case],
-                    },
-                    indent=2,
-                )
-                + "\n",
-                encoding="utf-8",
-            )
-            request = SimpleNamespace(
-                request_id="test-malformed-proof-canonical-path",
-                operation="zero-bash-guard",
-                inputs={"case_file": case_path, "case_id": "canonical-path"},
-            )
-            with (
-                patch.object(active_path_guard, "source_files", return_value=[]),
-                patch.object(active_path_guard, "scan_repo_sources", return_value=[]),
-            ):
-                response = active_path_guard.run_active_path_guard(entry, request)
-            self.assert_response(response, "expected_failure")
-            self.assertEqual(
-                {finding["category"] for finding in response["data"]["findings"]},
-                {"unsupported_installed_cache_proof"},
-            )
-
-    def test_plugin_bash_confinement_installed_cache_proof_blocks_empty_payload_roots(self) -> None:
-        from speckit_pro_runner.gates import active_path_guard
-
-        with tempfile.TemporaryDirectory(prefix="plugin-bash-confinement-empty-", dir=REPO_ROOT / "dist" / "claude") as claude_root:
-            with tempfile.TemporaryDirectory(prefix="plugin-bash-confinement-empty-", dir=REPO_ROOT / "dist" / "codex") as codex_root:
-                with tempfile.TemporaryDirectory(prefix=".plugin-bash-confinement-proof-", dir=REPO_ROOT) as proof_root:
-                    proof_dir = Path(proof_root)
-                    proof_file = proof_dir / "installed-cache-proof-empty.json"
-                    proof_file.write_text(
-                        json.dumps(
-                            {
-                                "schema_version": "2.0",
-                                "contract_id": "plugin-bash-confinement",
-                                "proofs": [
-                                    {
-                                        "product": "claude",
-                                        "surface": "claude_payload_fixture",
-                                        "installed_root": Path(claude_root).relative_to(REPO_ROOT).as_posix(),
-                                        "source_payload_root": Path(claude_root).relative_to(REPO_ROOT).as_posix(),
-                                        "source_payload_tree_hash": "0" * 64,
-                                        "source_derived": True,
-                                        "mutable_user_cache": False,
-                                        "script_file_count": 0,
-                                        "active_guidance_findings": [],
-                                        "allowlist_release_readiness_excluded": True,
-                                    },
-                                    {
-                                        "product": "codex",
-                                        "surface": "codex_payload_fixture",
-                                        "installed_root": Path(codex_root).relative_to(REPO_ROOT).as_posix(),
-                                        "source_payload_root": Path(codex_root).relative_to(REPO_ROOT).as_posix(),
-                                        "source_payload_tree_hash": "0" * 64,
-                                        "source_derived": True,
-                                        "mutable_user_cache": False,
-                                        "script_file_count": 0,
-                                        "active_guidance_findings": [],
-                                        "allowlist_release_readiness_excluded": True,
-                                    },
-                                ],
-                            },
-                            indent=2,
-                        )
-                        + "\n",
-                        encoding="utf-8",
-                    )
-
-                    proof = json.loads(proof_file.read_text(encoding="utf-8"))
-                    allowlist = json.loads(
-                        (PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR / "allowlist.json").read_text(encoding="utf-8")
-                    )["entries"]
-                    findings = active_path_guard.installed_cache_proof_findings(
-                        REPO_ROOT,
-                        proof,
-                        allowlist,
-                    )
-
-        categories = {finding.category for finding in findings}
-        self.assertLessEqual({"source_payload_root", "installed_root"}, categories)
-
-    def test_plugin_bash_confinement_installed_cache_proof_blocks_schema_drift(self) -> None:
-        from speckit_pro_runner.gates import active_path_guard
-
-        allowlist = json.loads(
-            (PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR / "allowlist.json").read_text(encoding="utf-8")
-        )["entries"]
-        with materialized_installed_cache_oracle() as (_, roots):
-            proof = installed_cache_oracle_proof(roots)
-            proof["proofs"][0].pop("surface")
-            proof["proofs"][1]["product"] = "cursor"
-            proof["proofs"][1]["unexpected_field"] = "drift"
-            with installed_cache_oracle_root_policy(roots):
-                findings = active_path_guard.installed_cache_proof_findings(
-                    REPO_ROOT,
-                    proof,
-                    allowlist,
-                )
-
-        categories = {finding.category for finding in findings}
-        self.assertLessEqual({"surface", "product", "malformed"}, categories)
-
-    def test_plugin_bash_confinement_zero_bash_guard_allows_missing_optional_installed_cache_proof(self) -> None:
-        with tempfile.TemporaryDirectory(prefix=".plugin-bash-confinement-optional-proof-", dir=REPO_ROOT) as scan_root:
-            scan_dir = Path(scan_root)
-            (scan_dir / "README.md").write_text("Python runner only.\n", encoding="utf-8")
-            case_file = scan_dir / "zero-bash-optional-proof-case.json"
-            case_file.write_text(
-                json.dumps(
-                    {
-                        "schema_version": "2.0",
-                        "contract_id": "plugin-bash-confinement",
-                        "cases": [
-                            {
-                                "case_id": "optional-proof-clean-root",
-                                "scan_roots": [
-                                    "speckit-pro",
-                                    "scripts/build-plugin-payloads.py",
-                                    "dist/claude/speckit-pro",
-                                    "dist/codex/speckit-pro",
-                                    "README.md",
-                                ],
-                                "require_installed_cache_proof": False,
-                                "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
-                            }
-                        ],
-                    },
-                    indent=2,
-                )
-                + "\n",
-                encoding="utf-8",
-            )
-
-            completed, response, stderr_records = run_runner(
-                gate_request(
-                    "active-path-guard",
-                    "zero-bash-guard",
-                    inputs={
-                        "case_file": case_file.relative_to(REPO_ROOT).as_posix(),
-                        "case_id": "optional-proof-clean-root",
-                    },
-                )
-            )
-
-        self.assertEqual(completed.returncode, 0)
-        self.assert_response(response, "ok")
-        self.assertEqual(stderr_records, [])
-        self.assertFalse(response["data"]["installed_cache_proof"]["required"])
-        self.assertEqual(response["data"]["installed_cache_proof"]["proof_count"], 0)
-        self.assertEqual(response["data"]["blocking_count"], 0)
-
     def test_plugin_bash_confinement_zero_bash_guard_blocks_physical_uppercase_script_files(self) -> None:
         with tempfile.TemporaryDirectory(prefix=".plugin-bash-confinement-uppercase-", dir=REPO_ROOT) as scan_root:
             scan_dir = Path(scan_root)
@@ -2376,7 +1921,6 @@ class GateFoundationTests(unittest.TestCase):
                             {
                                 "case_id": "physical-uppercase-script",
                                 "scan_roots": [scan_dir.relative_to(REPO_ROOT).as_posix()],
-                                "require_installed_cache_proof": False,
                                 "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
                             }
                         ],
@@ -2406,7 +1950,6 @@ class GateFoundationTests(unittest.TestCase):
     def assert_plugin_bash_confinement_contracts_match_fixtures(self, response: dict[str, Any]) -> None:
         request_schema = json.loads((PLUGIN_BASH_CONFINEMENT_CONTRACT_DIR / "zero-bash-guard-request.schema.json").read_text(encoding="utf-8"))
         result_schema = json.loads((PLUGIN_BASH_CONFINEMENT_CONTRACT_DIR / "zero-bash-guard-result.schema.json").read_text(encoding="utf-8"))
-        proof_schema = json.loads((PLUGIN_BASH_CONFINEMENT_CONTRACT_DIR / "installed-cache-proof.schema.json").read_text(encoding="utf-8"))
         allowlist_schema = json.loads((PLUGIN_BASH_CONFINEMENT_CONTRACT_DIR / "historical-allowlist-entry.schema.json").read_text(encoding="utf-8"))
 
         request = plugin_bash_confinement_fixture_request("zero-bash-guard")
@@ -2429,16 +1972,6 @@ class GateFoundationTests(unittest.TestCase):
             self.assertFalse(set(finding) - set(finding_schema["properties"]))
             self.assertIn(finding["classification"], finding_schema["properties"]["classification"]["enum"])
             self.assertIn(finding["surface"], finding_schema["properties"]["surface"]["enum"])
-
-        with materialized_installed_cache_oracle() as (_, roots):
-            proof = installed_cache_oracle_proof(roots)
-        self.assertLessEqual(set(proof_schema["required"]), set(proof))
-        self.assertEqual({item["product"] for item in proof["proofs"]}, {"claude", "codex"})
-        proof_item_schema = proof_schema["$defs"]["proof"]
-        for item in proof["proofs"]:
-            self.assertLessEqual(set(proof_item_schema["required"]), set(item))
-            self.assertFalse(set(item) - set(proof_item_schema["properties"]))
-            self.assertNotEqual(item["installed_root"], item["source_payload_root"])
 
         allowlist = json.loads((PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR / "allowlist.json").read_text(encoding="utf-8"))
         entry_schema = allowlist_schema["$defs"]["entry"]

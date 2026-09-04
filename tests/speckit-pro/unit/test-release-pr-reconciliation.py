@@ -202,8 +202,6 @@ class ReleasePrReconciliationTests(unittest.TestCase):
         ):
             self.assertTrue(sync.is_regenerated_artifact(path, paths), path)
         for path in (
-            "speckit-pro/gate-evidence/installed-cache-proof.json",
-            "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/oracle.json",
             "speckit-pro/speckit_pro_runner/__main__.py",
             "distribution/notes.md",
         ):

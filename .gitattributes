@@ -34,10 +34,6 @@ dist/**                                                                   merge=
 docs-site/src/content/docs/reference/**                                   merge=generated
 speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json           merge=generated
 speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256                  merge=generated
-tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/** merge=generated
-tests/speckit-pro/unit/fixtures/plugin-bash-confinement/*proof*.json       merge=generated
-speckit-pro/gate-evidence/installed-cache-proof.json                              merge=generated
-
 # Generated the same way and conflicting the same way, but outside
 # CHECK_WORKTREE_PATHS because a different generator owns each.
 #

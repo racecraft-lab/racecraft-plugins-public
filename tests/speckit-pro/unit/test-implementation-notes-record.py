@@ -102,9 +102,9 @@ TERMINAL_DELIVERABLE_FIELDS = (
 )
 
 # Item 4's scope and expected answer: exactly these authored files under
-# speckit-pro/ carry a Task Result block. The generated copies under dist/ and
-# under the installed-cache fixture tree are regenerated from these three and
-# are never authored, so the scan must never leave speckit-pro/.
+# speckit-pro/ carry a Task Result block. The generated copies under dist/ are
+# regenerated from these three and are never authored, so the scan must never
+# leave speckit-pro/.
 PLUGIN_SOURCE_DIR = "speckit-pro"
 AUTHORED_TASK_RESULT_FILES = tuple(
     sorted((TDD_PROTOCOL, CLAUDE_IMPLEMENT_EXECUTOR, CODEX_IMPLEMENT_EXECUTOR))
@@ -406,9 +406,9 @@ class ImplementationNotesRecordTests(unittest.TestCase):
         """Reporting-field item 4: no fourth copy can skip the field unnoticed.
 
         Scoped to speckit-pro/. Tree-wide the same block also appears in the
-        dist/ payload copies, the installed-cache fixture copies, and the
-        contract document's own worked example, none of which are authored
-        plugin source, so an unscoped count of three is false on a clean tree.
+        dist/ payload copies and the contract document's own worked example,
+        neither of which is authored plugin source, so an unscoped count of
+        three is false on a clean tree.
         """
         self.assertEqual(
             _task_result_files(),

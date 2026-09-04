@@ -28,8 +28,7 @@
         "truncated_finding_count",
         "script_file_count",
         "scan_roots",
-        "allowlist",
-        "installed_cache_proof"
+        "allowlist"
       ],
       "properties": {
         "gate": {
@@ -62,19 +61,6 @@
             "path": {"type": "string", "minLength": 1},
             "entry_count": {"type": "integer", "minimum": 0},
             "release_readiness_excluded": {"type": "boolean"}
-          }
-        },
-        "installed_cache_proof": {
-          "type": "object",
-          "additionalProperties": true,
-          "required": ["required", "proof_count", "source_derived", "mutable_user_cache", "script_file_count"],
-          "properties": {
-            "required": {"type": "boolean"},
-            "proof_path": {"type": ["string", "null"]},
-            "proof_count": {"type": "integer", "minimum": 0},
-            "source_derived": {"type": "boolean"},
-            "mutable_user_cache": {"type": ["boolean", "null"]},
-            "script_file_count": {"type": ["integer", "null"], "minimum": 0}
           }
         },
         "artifacts": {
@@ -111,7 +97,7 @@
       "additionalProperties": false,
       "required": ["surface", "path", "line", "category", "pattern", "reason", "active_role", "classification", "remediation"],
       "properties": {
-        "surface": {"enum": ["plugin_source", "claude_payload", "codex_payload", "installed_cache_proof", "repository"]},
+        "surface": {"enum": ["plugin_source", "claude_payload", "codex_payload", "repository"]},
         "path": {"type": "string", "minLength": 1},
         "line": {"type": ["integer", "null"], "minimum": 1},
         "category": {"type": "string", "minLength": 1},

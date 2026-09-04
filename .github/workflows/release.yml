@@ -72,7 +72,7 @@ jobs:
           PYTHONDONTWRITEBYTECODE: "1"
           RELEASE_PRS: ${{ steps.release_prs.outputs.prs }}
         # release-please bumps only the source plugin versions and marketplace
-        # registries. The helper refreshes payloads and installed-cache proofs,
+        # registries. The helper refreshes payloads and runner trust metadata,
         # and reconciles unchanged release branches with main.
         run: python3 scripts/sync_release_pr.py
 
@@ -130,7 +130,7 @@ jobs:
         env:
           PYTHONDONTWRITEBYTECODE: "1"
         # The release PR should already carry the generated payload,
-        # marketplace, proof, and docs-reference sync.
+        # marketplace and docs-reference sync.
         run: python3 scripts/refresh-release-artifacts.py --check
 
   capture-release-note-inputs:

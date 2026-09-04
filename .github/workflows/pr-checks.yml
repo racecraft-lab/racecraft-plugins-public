@@ -230,8 +230,8 @@ jobs:
 
   # ───────────────────────────────────────────────────────────────────
   # Job 6: Generated release artifacts must match the source tree.
-  #         release-please bumps only source versions; the payload mirrors,
-  #         marketplace registries and installed-cache fixtures are regenerated
+  #         release-please bumps only source versions; the payload mirrors and
+  #         marketplace registries are regenerated
   #         by scripts/refresh-release-artifacts.py.
   #         The refresh is idempotent, so any diff after running it means the
   #         PR ships drifted artifacts (the failure mode Copilot flagged on

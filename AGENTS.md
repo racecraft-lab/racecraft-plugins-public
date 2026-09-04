@@ -120,8 +120,8 @@ and needs its own step when its inputs changed:
 
 ## Editing Boundaries
 
-- Do not hand-edit generated payloads, installed-cache proofs, generated
-  reference pages, or vendored upstream content.
+- Do not hand-edit generated payloads, generated reference pages, or vendored
+  upstream content.
 - Name repository-authored scripts and tests for durable behavior or capability;
   never couple their filenames to a temporary spec ID, and never have test code
   read a `specs/<feature>/` path from disk at run time. Archive cleanup deletes
@@ -151,8 +151,8 @@ the two in step when either changes.
   test filename coupled to a temporary spec ID, or test code that reads a
   `specs/<feature>/` path from disk at run time.
 - Treat style, naming, prose, and refactoring suggestions as minor at most.
-- Do not review generated reference pages, installed-cache proofs, generated
-  payloads, vendored upstream content, lockfiles, or archived specs.
+- Do not review generated reference pages, generated payloads, vendored upstream
+  content, lockfiles, or archived specs.
 - Do not report anything CI already enforces.
 - Require a `file:line` citation for any claim about behavior.
 

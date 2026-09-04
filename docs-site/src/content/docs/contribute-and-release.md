@@ -15,7 +15,7 @@ review evidence.
 | Plugin source | `speckit-pro/` | `dist/claude/speckit-pro/`, `dist/codex/speckit-pro/` | [Source vs dist](/racecraft-plugins-public/reference/source-vs-dist/) |
 | Claude marketplace | `.claude-plugin/marketplace.json` | Version values synced from the Claude payload manifest under the marketplace entry's `source` path | [Manifests](/racecraft-plugins-public/reference/manifests/) |
 | Codex marketplace | `.agents/plugins/marketplace.json` | Version values synced from the Codex payload manifest under the marketplace entry's `source.path` | [Manifests](/racecraft-plugins-public/reference/manifests/) |
-| Payload and release tools | `speckit-pro/speckit_pro_runner/`, `scripts/refresh-release-artifacts.py`, `scripts/sync_release_pr.py`, `scripts/compose-release-notes.py` | Generated payloads, installed-cache proofs, release-PR synchronization, and public release notes | [Scripts](/racecraft-plugins-public/reference/scripts/) |
+| Payload and release tools | `speckit-pro/speckit_pro_runner/`, `scripts/refresh-release-artifacts.py`, `scripts/sync_release_pr.py`, `scripts/compose-release-notes.py` | Generated payloads, release-PR synchronization, and public release notes | [Scripts](/racecraft-plugins-public/reference/scripts/) |
 | Tests | `tests/speckit-pro/suite-manifest.json`, `tests/speckit-pro/run-all.py`, `tests/speckit-pro/check-toolchain.py`, `tests/speckit-pro/unit/` | Manifest-driven deterministic and optional-layer evidence | [Tests](/racecraft-plugins-public/reference/tests/) |
 | Docs site | `docs-site/src/content/docs/` and `docs-site/package.json` | Static Astro/Starlight site output | [Reference overview](/racecraft-plugins-public/reference/) |
 | Generated references | `docs-site/scripts/generate-reference-pages.mjs` | `docs-site/src/content/docs/reference/*.md` | [Reference overview](/racecraft-plugins-public/reference/) |
@@ -28,8 +28,8 @@ Primary sources: [suite manifest](https://github.com/racecraft-lab/racecraft-plu
 |-------------|----------------|-----------------------------------|-------------------|
 | Docs-only, outside docs site | Markdown docs outside `docs-site/` | None by default | Explain changed docs and include any relevant source review evidence. |
 | Docs-site content | `docs-site/src/content/docs/` | Astro/Starlight build output | `pnpm --dir docs-site validate`; use `reference:check` when generated references are involved. |
-| Plugin source | `speckit-pro/` | `dist/claude/speckit-pro/`, `dist/codex/speckit-pro/`, and installed-cache proofs | Generated-artifact consistency and `python3 tests/speckit-pro/run-all.py`. |
-| Generated payload/dist | `scripts/refresh-release-artifacts.py` or the Release workflow's release-PR sync | `dist/**` and proof fixtures | Explain the source change or workflow run that generated the outputs. |
+| Plugin source | `speckit-pro/` | `dist/claude/speckit-pro/` and `dist/codex/speckit-pro/` | Generated-artifact consistency and `python3 tests/speckit-pro/run-all.py`. |
+| Generated payload/dist | `scripts/refresh-release-artifacts.py` or the Release workflow's release-PR sync | `dist/**` | Explain the source change or workflow run that generated the outputs. |
 | Marketplace registry | `.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json` | Release-please version bumps, then synchronization from platform plugin manifests during artifact refresh | Manifest version consistency and generated-artifact evidence. |
 | Release automation | `.github/workflows/release.yml`, `scripts/sync_release_pr.py`, `scripts/compose-release-notes.py`, `release-please-config.json` | Release PRs, synchronized release artifacts, immutable release-input snapshots, GitHub Releases, and release-note audits | Workflow rationale, PR Checks evidence, snapshot/composer contract evidence, and rollback notes. |
 
@@ -81,7 +81,7 @@ What each command proves:
 | Command | Use when | Evidence it provides |
 |---------|----------|----------------------|
 | `python3 tests/speckit-pro/check-toolchain.py --mode tests` | Before repository validation or when tool versions are in question | Requires Python 3.11+ and `git`; reports optional `gh`, `specify`, `claude`, and `codex` tools without making them prerequisites for the deterministic suite. |
-| `PYTHONDONTWRITEBYTECODE=1 python3 scripts/refresh-release-artifacts.py` | Plugin source, runner trust metadata, versions, payloads, or installed-cache proofs changed | Idempotently rebuilds Claude and Codex payloads, synchronizes marketplace versions, and refreshes proof fixtures. PR Checks runs the same refresh and fails if it produces an uncommitted diff. |
+| `PYTHONDONTWRITEBYTECODE=1 python3 scripts/refresh-release-artifacts.py` | Plugin source, runner trust metadata, versions, or payloads changed | Idempotently rebuilds Claude and Codex payloads and synchronizes marketplace versions. PR Checks runs the same refresh and fails if it produces an uncommitted diff. |
 | `python3 tests/speckit-pro/run-all.py` | Release readiness, especially plugin or release-affecting work | Runs the automatic toolchain gate and default deterministic Layers 1, 4, and 5 from `suite-manifest.json`. |
 | `python3 tests/speckit-pro/check-toolchain.py --mode docs` | Before docs-site validation | Verifies Node 22+, Corepack, `pnpm@10.25.0`, installed docs dependencies, and Playwright. |
 | `pnpm --dir docs-site reference:check` | Generated reference drift is possible | Verifies generated reference pages match the generator. |
@@ -119,7 +119,7 @@ Treat version fields as owned by their source hierarchy:
   registry version fields configured in `release-please-config.json`.
 - `scripts/refresh-release-artifacts.py` recomputes runner trust metadata,
   rebuilds generated payloads under `dist/`, synchronizes marketplace versions
-  from source manifests, and refreshes installed-cache proofs.
+  from source manifests.
 - `scripts/sync_release_pr.py` runs that refresh and the docs reference generator
   on the release PR branch, then commits and pushes the generated outputs when
   they changed.
@@ -139,7 +139,7 @@ The maintainer-facing release flow is:
 3. The workflow resolves both newly created and already open release PRs,
    validates release readiness, merges current `main` into each resolved
    release branch, and runs `scripts/sync_release_pr.py`. That helper refreshes
-   payloads, marketplace versions, installed-cache proofs, and
+   payloads, marketplace versions, and
    generated references, then commits and pushes any changes onto the release
    PR branch. The workflow also dispatches `PR Checks` as a fallback.
 4. When the release PR is merged, release-please publishes the GitHub Release.
@@ -178,8 +178,8 @@ Current behavior to account for in review:
 - `detect` currently emits the fixed Python-gated `speckit-pro` matrix, so every
   non-draft PR runs the toolchain and default-suite runner gates.
 - `artifact-consistency` runs `scripts/refresh-release-artifacts.py`, stages the
-  result, and fails when generated payloads, marketplace registries,
-  or installed-cache fixtures drift from source.
+  result, and fails when generated payloads or marketplace registries drift
+  from source.
 - `validate-plugins` is the stable branch-protection sentinel for the plugin
   matrix and artifact-consistency result.
 - `validate-pr-title` checks the Conventional Commit title contract.
