@@ -13,8 +13,15 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-ORPHAN = REPO_ROOT / "tests" / "speckit-pro" / "layer1-structural" / "validate-moc-orphan.py"
-STALE = REPO_ROOT / "tests" / "speckit-pro" / "layer1-structural" / "validate-moc-stale-index.py"
+LIFECYCLE = (
+    REPO_ROOT
+    / "tests"
+    / "speckit-pro"
+    / "layer1-structural"
+    / "validate-spec-lifecycle-contracts.py"
+)
+ORPHAN_MODE = "--moc-orphan"
+STALE_MODE = "--moc-stale"
 STALE_RUNTIME_SYMLINK = (
     REPO_ROOT
     / "tests"
@@ -33,8 +40,8 @@ if str(LIB_DIR) not in sys.path:
 from test_result import run_counted  # noqa: E402
 
 
-def run_lint(script: Path, root: Path | None = None) -> subprocess.CompletedProcess[str]:
-    argv = [sys.executable, str(script)]
+def run_lint(mode: str, root: Path | None = None) -> subprocess.CompletedProcess[str]:
+    argv = [sys.executable, str(LIFECYCLE), mode]
     if root is not None:
         argv.append(str(root))
     return subprocess.run(
@@ -147,7 +154,7 @@ def force_stale_mode_b_internal_error() -> subprocess.CompletedProcess[str]:
         import pathlib
         import sys
 
-        module_path = pathlib.Path({str(STALE)!r})
+        module_path = pathlib.Path({str(LIFECYCLE)!r})
         spec = importlib.util.spec_from_file_location("validate_moc_stale_index_forced", module_path)
         module = importlib.util.module_from_spec(spec)
         assert spec.loader is not None
@@ -157,7 +164,7 @@ def force_stale_mode_b_internal_error() -> subprocess.CompletedProcess[str]:
             raise RuntimeError("forced run_counted failure")
 
         module.run_counted = boom
-        raise SystemExit(module.main())
+        raise SystemExit(module.run_moc_stale([]))
         """
     )
     return subprocess.run(
@@ -177,7 +184,7 @@ def force_orphan_scan_root_internal_error(root: Path) -> subprocess.CompletedPro
         import pathlib
         import sys
 
-        module_path = pathlib.Path({str(ORPHAN)!r})
+        module_path = pathlib.Path({str(LIFECYCLE)!r})
         scan_root = pathlib.Path({str(root)!r})
         spec = importlib.util.spec_from_file_location("validate_moc_orphan_forced", module_path)
         module = importlib.util.module_from_spec(spec)
@@ -187,8 +194,8 @@ def force_orphan_scan_root_internal_error(root: Path) -> subprocess.CompletedPro
         def boom(_root):
             raise PermissionError("forced unreadable root")
 
-        module.scan_root = boom
-        raise SystemExit(module.main([str(scan_root)]))
+        module.scan_moc_orphans = boom
+        raise SystemExit(module.run_moc_orphan([str(scan_root)]))
         """
     )
     return subprocess.run(
@@ -208,7 +215,7 @@ def force_stale_scan_root_internal_error(root: Path) -> subprocess.CompletedProc
         import pathlib
         import sys
 
-        module_path = pathlib.Path({str(STALE)!r})
+        module_path = pathlib.Path({str(LIFECYCLE)!r})
         scan_root = pathlib.Path({str(root)!r})
         spec = importlib.util.spec_from_file_location("validate_moc_stale_index_forced_root", module_path)
         module = importlib.util.module_from_spec(spec)
@@ -218,9 +225,8 @@ def force_stale_scan_root_internal_error(root: Path) -> subprocess.CompletedProc
         def boom(_root, *, emit=False):
             raise PermissionError("forced unreadable root")
 
-        module.scan_root = boom
-        sys.argv = [str(module_path), str(scan_root)]
-        raise SystemExit(module.main())
+        module.scan_stale_moc_links = boom
+        raise SystemExit(module.run_moc_stale([str(scan_root)]))
         """
     )
     return subprocess.run(
@@ -233,13 +239,11 @@ def force_stale_scan_root_internal_error(root: Path) -> subprocess.CompletedProc
     )
 
 
-def force_unreadable_marker(script: Path, root: Path) -> subprocess.CompletedProcess[str]:
-    if script == ORPHAN:
-        entrypoint = "module.main([str(scan_root)])"
-        argv_patch = ""
+def force_unreadable_marker(mode: str, root: Path) -> subprocess.CompletedProcess[str]:
+    if mode == ORPHAN_MODE:
+        entrypoint = "module.run_moc_orphan([str(scan_root)])"
     else:
-        entrypoint = "module.main()"
-        argv_patch = "        sys.argv = [str(module_path), str(scan_root)]\n"
+        entrypoint = "module.run_moc_stale([str(scan_root)])"
     code = textwrap.dedent(
         f"""\
         import importlib.util
@@ -247,7 +251,7 @@ def force_unreadable_marker(script: Path, root: Path) -> subprocess.CompletedPro
         import pathlib
         import sys
 
-        module_path = pathlib.Path({str(script)!r})
+        module_path = pathlib.Path({str(LIFECYCLE)!r})
         scan_root = pathlib.Path({str(root)!r})
         marker = scan_root / "unreadable-spec" / "SPEC-MOC.md"
         spec = importlib.util.spec_from_file_location("forced_unreadable_marker", module_path)
@@ -264,7 +268,7 @@ def force_unreadable_marker(script: Path, root: Path) -> subprocess.CompletedPro
             return real_access(path, mode)
 
         module.os.access = fake_access
-{argv_patch}        raise SystemExit({entrypoint})
+        raise SystemExit({entrypoint})
         """
     )
     return subprocess.run(
@@ -312,7 +316,7 @@ class MocLintExitCodeTests(unittest.TestCase):
         make_gated_spec(root_b, "unreadable-spec")
 
         with self.subTest(msg="orphan: unreadable marker -> exit 0 (no content violation)"):
-            result = force_unreadable_marker(ORPHAN, root_b)
+            result = force_unreadable_marker(ORPHAN_MODE, root_b)
             self.assertEqual(result.returncode, 0, result.stderr)
         with self.subTest(msg="orphan: unreadable marker -> stderr carries a warning"):
             self.assertIn("unreadable marker", result.stderr)
@@ -320,7 +324,7 @@ class MocLintExitCodeTests(unittest.TestCase):
             self.assertNotIn("VIOLATION", result.stdout)
 
         with self.subTest(msg="stale-index: unreadable marker -> exit 0 (no content violation)"):
-            result = force_unreadable_marker(STALE, root_b)
+            result = force_unreadable_marker(STALE_MODE, root_b)
             self.assertEqual(result.returncode, 0, result.stderr)
         with self.subTest(msg="stale-index: unreadable marker -> stderr carries a warning"):
             self.assertIn("unreadable marker", result.stderr)
@@ -329,34 +333,34 @@ class MocLintExitCodeTests(unittest.TestCase):
 
         nonexistent = self.work / "does-not-exist-root"
         with self.subTest(msg="orphan: nonexistent scan root -> exit 0"):
-            self.assertEqual(run_lint(ORPHAN, nonexistent).returncode, 0)
+            self.assertEqual(run_lint(ORPHAN_MODE, nonexistent).returncode, 0)
         with self.subTest(msg="stale-index: nonexistent scan root -> exit 0"):
-            self.assertEqual(run_lint(STALE, nonexistent).returncode, 0)
+            self.assertEqual(run_lint(STALE_MODE, nonexistent).returncode, 0)
 
         empty_root = self.work / "empty"
         empty_root.mkdir()
         with self.subTest(msg="orphan: empty scan root -> exit 0"):
-            self.assertEqual(run_lint(ORPHAN, empty_root).returncode, 0)
+            self.assertEqual(run_lint(ORPHAN_MODE, empty_root).returncode, 0)
         with self.subTest(msg="stale-index: empty scan root -> exit 0"):
-            self.assertEqual(run_lint(STALE, empty_root).returncode, 0)
+            self.assertEqual(run_lint(STALE_MODE, empty_root).returncode, 0)
 
         markerless_root = self.work / "markerless"
         (markerless_root / "spec-without-marker").mkdir(parents=True)
         (markerless_root / "spec-without-marker" / "README.md").write_text("# just a readme\n", encoding="utf-8")
         with self.subTest(msg="orphan: markerless tree (no SPEC-MOC.md) -> exit 0"):
-            self.assertEqual(run_lint(ORPHAN, markerless_root).returncode, 0)
+            self.assertEqual(run_lint(ORPHAN_MODE, markerless_root).returncode, 0)
         with self.subTest(msg="stale-index: markerless tree (no SPEC-MOC.md) -> exit 0"):
-            self.assertEqual(run_lint(STALE, markerless_root).returncode, 0)
+            self.assertEqual(run_lint(STALE_MODE, markerless_root).returncode, 0)
 
         root_d = self.work / "d"
         make_legacy_spec(root_d, "legacy-spec")
         with self.subTest(msg="orphan: non-gated marker with broken body -> exit 0 (skipped before read)"):
-            result = run_lint(ORPHAN, root_d)
+            result = run_lint(ORPHAN_MODE, root_d)
             self.assertEqual(result.returncode, 0, result.stderr)
         with self.subTest(msg="orphan: non-gated marker -> no VIOLATION emitted"):
             self.assertNotIn("VIOLATION", result.stdout)
         with self.subTest(msg="stale-index: non-gated marker with broken body -> exit 0 (skipped before read)"):
-            result = run_lint(STALE, root_d)
+            result = run_lint(STALE_MODE, root_d)
             self.assertEqual(result.returncode, 0, result.stderr)
         with self.subTest(msg="stale-index: non-gated marker -> no VIOLATION emitted"):
             self.assertNotIn("VIOLATION", result.stdout)
@@ -364,7 +368,7 @@ class MocLintExitCodeTests(unittest.TestCase):
         root_e_orphan = self.work / "e-orphan"
         make_orphan_violation_spec(root_e_orphan, "orphan-missing-up")
         with self.subTest(msg="orphan: content violation -> exit 1"):
-            result = run_lint(ORPHAN, root_e_orphan)
+            result = run_lint(ORPHAN_MODE, root_e_orphan)
             self.assertEqual(result.returncode, 1, result.stderr)
         with self.subTest(msg="orphan: content violation -> path + rule on STDOUT"):
             self.assertIn("VIOLATION", result.stdout)
@@ -376,7 +380,7 @@ class MocLintExitCodeTests(unittest.TestCase):
         root_e_stale = self.work / "e-stale"
         make_dangling_spec(root_e_stale, "stale-dangling")
         with self.subTest(msg="stale-index: content violation -> exit 1"):
-            result = run_lint(STALE, root_e_stale)
+            result = run_lint(STALE_MODE, root_e_stale)
             self.assertEqual(result.returncode, 1, result.stderr)
         with self.subTest(msg="stale-index: content violation -> path + rule on STDOUT"):
             self.assertIn("VIOLATION", result.stdout)

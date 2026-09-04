@@ -2415,10 +2415,19 @@ class GateFoundationTests(unittest.TestCase):
         dispatcher = load_layer_script_dispatcher()
         layer1_scripts = [self.repo_rel(path) for path in dispatcher.canonical_test_scripts(REPO_ROOT, "1")]
         layer4_scripts = [self.repo_rel(path) for path in dispatcher.canonical_test_scripts(REPO_ROOT, "4")]
-        self.assertGreaterEqual(len(layer1_scripts), 20)
+        expected_layer1_scripts = {
+            "tests/speckit-pro/layer1-structural/validate-plugin-metadata.py",
+            "tests/speckit-pro/layer1-structural/validate-hook-contracts.py",
+            "tests/speckit-pro/layer1-structural/validate-agent-contracts.py",
+            "tests/speckit-pro/layer1-structural/validate-skill-contracts.py",
+            "tests/speckit-pro/layer1-structural/validate-payload-contracts.py",
+            "tests/speckit-pro/layer1-structural/validate-ci-release-contracts.py",
+            "tests/speckit-pro/layer1-structural/validate-spec-lifecycle-contracts.py",
+            "tests/speckit-pro/layer1-structural/test-structural-regressions.py",
+        }
+        self.assertEqual(set(layer1_scripts), expected_layer1_scripts)
+        self.assertEqual(len(layer1_scripts), len(expected_layer1_scripts))
         self.assertGreaterEqual(len(layer4_scripts), 17)
-        self.assertIn("tests/speckit-pro/layer1-structural/validate-pr-checks-sentinel.py", layer1_scripts)
-        self.assertIn("tests/speckit-pro/layer1-structural/validate-release-workflow.py", layer1_scripts)
         manifest = json.loads((REPO_ROOT / "tests/speckit-pro/suite-manifest.json").read_text(encoding="utf-8"))
         manifest_layer4 = next(layer for layer in manifest["layers"] if layer["id"] == "4")
         self.assertEqual(layer4_scripts, [script["path"] for script in manifest_layer4["scripts"]])
