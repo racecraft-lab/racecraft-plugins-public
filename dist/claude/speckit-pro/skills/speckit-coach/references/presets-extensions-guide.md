@@ -71,33 +71,6 @@ one with priority 10 when both provide the same template.
 `spec-template.md`, only the lower-priority one is used — they
 are not combined.
 
-3. Add template overrides in `templates/` — copy the core
-   template from `.specify/templates/` and modify the sections
-   you want to change. Only override templates you need to
-   customize.
-
-4. Install from the external directory:
-
-```text
-specify preset add --dev /tmp/my-preset
-specify preset resolve tasks-template
-# Should show: .specify/presets/my-preset/templates/tasks-template.md
-```
-
-**Gotcha:** Do NOT run `specify preset add --dev .specify/presets/my-preset` —
-the CLI deletes the destination before copying, and if source = destination,
-the source gets deleted too. Always build presets in a separate directory
-and install with `--dev <external-path>`.
-
-5. Clean up the external source after install:
-
-```text
-rm -rf /tmp/my-preset
-```
-
-The preset is now installed in `.specify/presets/my-preset/` and
-survives SpecKit upgrades.
-
 ### Preset Configuration
 
 | Location | Scope |
