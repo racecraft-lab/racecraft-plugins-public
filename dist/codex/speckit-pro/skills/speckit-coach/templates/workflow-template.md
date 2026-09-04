@@ -51,7 +51,7 @@ gate runs.
 
 ### Phase Gates
 
-Use the [current autopilot gate-validation reference](../../speckit-autopilot/references/gate-validation.md) for the active criteria and escalation behavior.
+Use `references/gate-validation.md` from the installed `speckit-autopilot` skill as the authority for active criteria and escalation behavior.
 
 | Gate | Checkpoint |
 |------|------------|
