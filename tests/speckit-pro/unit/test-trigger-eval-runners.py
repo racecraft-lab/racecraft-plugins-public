@@ -59,6 +59,15 @@ def calls_forbidden_process_api(path: Path) -> bool:
     return False
 
 
+def has_hardcoded_python3_command(path: Path) -> bool:
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    return any(
+        isinstance(node, (ast.List, ast.Tuple))
+        and any(isinstance(item, ast.Constant) and item.value == "python3" for item in node.elts)
+        for node in ast.walk(tree)
+    )
+
+
 def claude_stream(
     plugin_root: Path,
     plugin_name: str,
@@ -336,7 +345,13 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             )
 
             corpus = root / "corpus.json"
-            invalid_corpora = ("[]", "{}", "{", '[{"query":"q"}]')
+            invalid_corpora = (
+                "[]",
+                "{}",
+                "{",
+                '[{"query":"q"}]',
+                '[{"query":"q","should_trigger":true},{"query":"q","should_trigger":false}]',
+            )
             corpus_results = []
             for body in invalid_corpora:
                 corpus.write_text(body, encoding="utf-8")
@@ -435,7 +450,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 "negative two-of-three selection fails": not claude.case_passes(False, selected=2, invalid=0),
                 "invalid evidence fails either polarity": not claude.case_passes(False, selected=0, invalid=1)
                 and not claude.case_passes(True, selected=3, invalid=1),
-                "empty and malformed corpora fail": corpus_results == [None, None, None, None],
+                "empty, malformed, and duplicate corpora fail": all(result is None for result in corpus_results),
                 "main executes exactly three trials per selected case": main_exit == 0
                 and main_run.call_count == 3
                 and len(list(main_evidence.glob("*.jsonl"))) == 3,
@@ -460,16 +475,39 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             source.write_text("---\nname: demo\ndescription: Demo.\n---\n\nBody.\n", encoding="utf-8")
             workspace = root / "workspace"
             workspace.mkdir()
+            auth_home = root / "codex-home"
+            auth_home.mkdir()
+            auth_file = auth_home / "auth.json"
+            auth_file.write_text("credential sentinel\n", encoding="utf-8")
             marker = "CODEX_SKILL_FIRED:demo-eval"
-            staged = engine.stage_repository_skill(source, workspace, "demo-eval", marker)
+            with mock.patch.object(engine.shutil, "copy2") as credential_copy:
+                staged = engine.stage_repository_skill(source, workspace, "demo-eval", marker)
             valid = "\n".join(
                 [
                     json.dumps({"type": "thread.started", "thread_id": "thread-1"}),
                     json.dumps({"type": "turn.started"}),
                     json.dumps(
                         {
-                            "type": "item.completed",
+                            "type": "item.started",
                             "item": {"type": "agent_message", "text": marker},
+                        }
+                    ),
+                    json.dumps(
+                        {
+                            "type": "item.updated",
+                            "item": {"type": "agent_message", "text": marker},
+                        }
+                    ),
+                    json.dumps(
+                        {
+                            "type": "item.completed",
+                            "item": {"type": "agent_message", "text": "Preparing to answer."},
+                        }
+                    ),
+                    json.dumps(
+                        {
+                            "type": "item.completed",
+                            "item": {"type": "agent_message", "text": f"{marker}\nDone."},
                         }
                     ),
                     json.dumps({"type": "turn.completed"}),
@@ -477,19 +515,116 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             ).encode("utf-8")
             parsed = engine.inspect_codex_jsonl(valid, marker, requested_model="gpt-5.6-sol")
             competing = engine.inspect_codex_jsonl(
-                valid.replace(marker.encode(), b"CODEX_SKILL_FIRED:other"),
+                valid.replace(b"Done.", b"CODEX_SKILL_FIRED:other"),
                 marker,
             )
-            failed = engine.inspect_codex_jsonl(
+            marker_not_first = engine.inspect_codex_jsonl(
+                valid.replace(
+                    f"{marker}\\nDone.".encode(),
+                    f"Progress\\n{marker}".encode(),
+                ),
+                marker,
+            )
+            missing_lifecycle = engine.inspect_codex_jsonl(
+                json.dumps(
+                    {
+                        "type": "item.completed",
+                        "item": {"type": "agent_message", "text": marker},
+                    }
+                ),
+                marker,
+            )
+            wrong_order = engine.inspect_codex_jsonl(
+                "\n".join(
+                    [
+                        json.dumps({"type": "turn.completed"}),
+                        json.dumps({"type": "thread.started", "thread_id": "thread-1"}),
+                        json.dumps({"type": "turn.started"}),
+                    ]
+                ),
+                marker,
+            )
+            no_response = engine.inspect_codex_jsonl(
+                "\n".join(
+                    [
+                        json.dumps({"type": "thread.started", "thread_id": "thread-1"}),
+                        json.dumps({"type": "turn.started"}),
+                        json.dumps({"type": "turn.completed"}),
+                    ]
+                ),
+                marker,
+            )
+            top_error = engine.inspect_codex_jsonl(
                 valid.replace(
                     b'{"type": "turn.completed"}',
                     b'{"type": "error"}\n{"type": "turn.completed"}',
                 ),
                 marker,
             )
+            item_error = engine.inspect_codex_jsonl(
+                valid.replace(
+                    b'{"type": "item.completed", "item": {"type": "agent_message", "text": "Preparing to answer."}}',
+                    b'{"type": "item.completed", "item": {"type": "error", "message": "failed"}}',
+                ),
+                marker,
+            )
+            domain_payload = engine.inspect_codex_jsonl(
+                valid.replace(
+                    b'"text": "Preparing to answer."',
+                    b'"text": "Preparing to answer.", "error": {"kind": "domain-data"}',
+                ),
+                marker,
+            )
             evidence_dir = root / "evidence"
             evidence_dir.mkdir()
             evidence = engine.retain_run_evidence(evidence_dir, 1, 1, valid, b"stderr\r\n")
+            invalid_utf8 = b'{"type":"thread.started"}\r\n\xff'
+            invalid_evidence_dir = root / "invalid-evidence"
+            invalid_evidence_dir.mkdir()
+            invalid_evidence = engine.retain_run_evidence(
+                invalid_evidence_dir,
+                1,
+                1,
+                invalid_utf8,
+                b"stderr\xff",
+            )
+            invalid_utf8_result = engine.inspect_codex_jsonl(invalid_utf8, marker)
+
+            residue = root / "residue"
+            residue.mkdir()
+            with mock.patch.object(engine.shutil, "rmtree", return_value=None):
+                cleanup_residue = engine.remove_workspace(residue)
+
+            invalid_corpus_paths: list[Path] = []
+            unreadable = root / "unreadable-corpus"
+            unreadable.mkdir()
+            invalid_corpus_paths.append(unreadable)
+            for name, body in (
+                ("malformed", "{"),
+                ("non-list", "{}"),
+                ("empty", "[]"),
+                ("invalid-case", '[{"query":"q"}]'),
+                (
+                    "duplicate",
+                    '[{"query":"q","should_trigger":true},{"query":"q","should_trigger":false}]',
+                ),
+            ):
+                path = root / f"{name}.json"
+                path.write_text(body, encoding="utf-8")
+                invalid_corpus_paths.append(path)
+            invalid_corpus_messages: list[str] = []
+            invalid_corpus_subprocess_calls = 0
+            for path in invalid_corpus_paths:
+                with (
+                    mock.patch.object(engine, "find_eval_file", return_value=path),
+                    mock.patch.object(engine, "find_skill_source", return_value=source),
+                    mock.patch.object(engine.subprocess, "run") as invalid_run,
+                    mock.patch.object(sys, "argv", [str(CODEX_ENGINE), "demo"]),
+                    self.assertRaises(SystemExit) as invalid_exit,
+                ):
+                    engine.main()
+                invalid_corpus_subprocess_calls += invalid_run.call_count
+                invalid_corpus_messages.append(str(invalid_exit.exception))
 
             captured: dict[str, object] = {}
 
@@ -498,14 +633,63 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 captured["kwargs"] = kwargs
                 return subprocess.CompletedProcess(command, 0, valid, b"")
 
-            with mock.patch.object(engine.subprocess, "run", side_effect=fake_run):
-                rc, stdout, stderr = engine.run_codex_query(
-                    workspace,
-                    "query",
-                    "low",
-                    "gpt-5.6-sol",
-                    30,
-                )
+            with (
+                mock.patch.dict(os.environ, {"CODEX_HOME": str(auth_home)}, clear=False),
+                mock.patch.object(engine.subprocess, "run", side_effect=fake_run),
+            ):
+                rc, stdout, stderr = engine.run_codex_query(workspace, "query", "low", "gpt-5.6-sol", 30)
+
+            fixture_root = root / "fixture"
+            plugin_root = fixture_root / "speckit-pro"
+            (plugin_root / "codex-skills" / "demo").mkdir(parents=True)
+            (plugin_root / "skills" / "demo").mkdir(parents=True)
+            codex_eval = fixture_root / "tests/speckit-pro/layer2-trigger/codex-evals/demo-trigger.json"
+            shared_eval = fixture_root / "tests/speckit-pro/layer2-trigger/evals/demo-trigger.json"
+            codex_eval.parent.mkdir(parents=True)
+            shared_eval.parent.mkdir(parents=True)
+            codex_eval.write_text("{}\n", encoding="utf-8")
+            shared_eval.write_text("{}\n", encoding="utf-8")
+            codex.PLUGIN_ROOT = plugin_root
+            loop.PLUGIN_ROOT = plugin_root
+
+            with (
+                mock.patch.object(codex.shutil, "which", return_value=str(root / "codex")) as which_codex,
+                mock.patch.object(codex.os, "execv", side_effect=RuntimeError("intercept")) as execv,
+                self.assertRaisesRegex(RuntimeError, "intercept"),
+            ):
+                codex.main(["demo", "--run", "--profile", "fast", "--run", "tail"])
+            delegated_executable, delegated_argv = execv.call_args.args
+
+            skill_creator = root / "skill-creator"
+            skill_creator.mkdir()
+            with (
+                mock.patch.dict(os.environ, {"SKILL_CREATOR_ROOT": str(skill_creator)}, clear=False),
+                mock.patch.object(
+                    loop.subprocess,
+                    "run",
+                    return_value=SimpleNamespace(returncode=37),
+                ) as loop_run,
+            ):
+                loop_returncode = loop.main(["demo"])
+            loop_command = list(loop_run.call_args.args[0])
+            expected_loop_command = [
+                sys.executable,
+                "-m",
+                "scripts.run_loop",
+                "--eval-set",
+                str(plugin_root / "../tests/speckit-pro/layer2-trigger/evals/demo-trigger.json"),
+                "--skill-path",
+                str(plugin_root / "skills/demo"),
+                "--max-iterations",
+                "5",
+                "--holdout",
+                "0.4",
+                "--runs-per-query",
+                "3",
+                "--trigger-threshold",
+                "0.5",
+                "--verbose",
+            ]
 
             checks = {
                 "imports Codex wrapper": codex is not None,
@@ -514,23 +698,67 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     calls_forbidden_process_api(path)
                     for path in (CLAUDE_RUNNER, CODEX_RUNNER, CODEX_ENGINE, LOOP_RUNNER)
                 ),
+                "Layer-2 command vectors avoid hard-coded python3": not any(
+                    has_hardcoded_python3_command(path)
+                    for path in (CLAUDE_RUNNER, CODEX_RUNNER, CODEX_ENGINE, LOOP_RUNNER)
+                ),
+                "Codex --run checks the executable": which_codex.call_args_list == [mock.call("codex")],
+                "Codex --run delegates through the current Python": delegated_executable == sys.executable
+                and delegated_argv[:2] == [sys.executable, str(LAYER2 / "run_codex_evals.py")],
+                "Codex --run strips control flags and preserves arguments": "--run" not in delegated_argv
+                and delegated_argv[2:] == ["demo", "--profile", "fast", "tail"],
+                "trigger loop preserves exact command and execution boundary": loop_returncode == 37
+                and loop_command == expected_loop_command
+                and loop_run.call_args.kwargs["cwd"] == skill_creator
+                and loop_run.call_args.kwargs["shell"] is False,
                 "Codex default effort remains low": engine.DEFAULT_REASONING_EFFORT == "low",
                 "Codex default model remains approved": engine.DEFAULT_MODEL == "gpt-5.6-sol",
                 "Codex skill remains repository scoped": staged == workspace / ".agents" / "skills" / "demo-eval",
+                "Codex staging never copies credentials": credential_copy.call_count == 0
+                and auth_file.read_text(encoding="utf-8") == "credential sentinel\n"
+                and "auth.json" not in CODEX_ENGINE.read_text(encoding="utf-8"),
                 "Codex exact marker remains selected": parsed["valid"] and parsed["selected"],
                 "Codex competing marker remains invalid": not competing["valid"],
-                "Codex provider error remains invalid": not failed["valid"],
+                "Codex marker must lead its completed message": not marker_not_first["valid"]
+                and "not first" in str(marker_not_first["reason"]),
+                "Codex lifecycle requires one ordered completed turn": not missing_lifecycle["valid"]
+                and "lifecycle" in str(missing_lifecycle["reason"])
+                and not wrong_order["valid"]
+                and "out of order" in str(wrong_order["reason"])
+                and not no_response["valid"]
+                and "response" in str(no_response["reason"]),
+                "Codex ignores started copies and permits prior completed progress": parsed["valid"]
+                and parsed["selected_marker"] == marker,
+                "Codex provider errors fail without confusing domain payloads": not top_error["valid"]
+                and not item_error["valid"]
+                and domain_payload["valid"],
                 "Codex requested and unresolved model remain distinct": parsed["requested_model"] == "gpt-5.6-sol"
                 and parsed["resolved_model"] is None,
-                "Codex raw bytes remain exact": Path(evidence["jsonl_path"]).read_bytes() == valid,
-                "Codex raw hash remains exact": evidence["jsonl_sha256"] == hashlib.sha256(valid).hexdigest(),
+                "Codex raw streams remain exact": Path(evidence["jsonl_path"]).read_bytes() == valid
+                and Path(evidence["stderr_path"]).read_bytes() == b"stderr\r\n",
+                "Codex raw hashes remain exact": evidence["jsonl_sha256"] == hashlib.sha256(valid).hexdigest()
+                and evidence["stderr_sha256"] == hashlib.sha256(b"stderr\r\n").hexdigest(),
+                "Codex retains undecodable bytes before rejecting semantics": not invalid_utf8_result["valid"]
+                and Path(invalid_evidence["jsonl_path"]).read_bytes() == invalid_utf8
+                and invalid_evidence["jsonl_sha256"] == hashlib.sha256(invalid_utf8).hexdigest(),
+                "Codex cleanup reports disposable residue": cleanup_residue is not None,
+                "Codex rejects invalid corpora before subprocess": invalid_corpus_subprocess_calls == 0
+                and len(invalid_corpus_messages) == len(invalid_corpus_paths)
+                and any("at least one" in message for message in invalid_corpus_messages)
+                and any("duplicates" in message for message in invalid_corpus_messages),
                 "Codex direct result remains binary": (rc, stdout, stderr) == (0, valid, b""),
-                "Codex retains existing login environment": captured["kwargs"]["env"].get("PATH")
-                == os.environ.get("PATH"),
+                "Codex retains existing login environment": captured["kwargs"]["env"].get("CODEX_HOME")
+                == str(auth_home),
                 "Codex keeps least privilege flags": "--sandbox" in captured["command"]
-                and "read-only" in captured["command"]
-                and "--ephemeral" in captured["command"],
-                "Codex keeps rules enabled": "--ignore-rules" not in captured["command"],
+                and captured["command"][captured["command"].index("--sandbox") + 1] == "read-only"
+                and "--ephemeral" in captured["command"]
+                and "--ignore-user-config" in captured["command"]
+                and "--json" in captured["command"]
+                and captured["command"][captured["command"].index("-m") + 1] == "gpt-5.6-sol"
+                and 'model_reasoning_effort="low"' in captured["command"],
+                "Codex keeps rules and approval boundaries enabled": "--ignore-rules" not in captured["command"]
+                and "--dangerously-bypass-approvals-and-sandbox" not in captured["command"]
+                and "--full-auto" not in captured["command"],
                 "Codex negative transport remains fail closed": not engine.case_passes(
                     False, triggers=0, runs=3, threshold=0.5, invalid_runs=1
                 ),
