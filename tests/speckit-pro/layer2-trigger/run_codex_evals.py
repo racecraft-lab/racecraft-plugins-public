@@ -259,8 +259,10 @@ def inspect_catalog_prompt(
     output: bytes,
     target_name: str,
     target_description: str,
+    target_skill: pathlib.Path,
+    workspace: pathlib.Path,
 ) -> tuple[dict[str, object] | None, str]:
-    """Return only sanitized catalog facts; never return the rendered prompt."""
+    """Prove exact target catalog identity without returning the rendered prompt."""
     try:
         prompt_input = json.loads(output.decode("utf-8", errors="strict"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
@@ -274,19 +276,71 @@ def inspect_catalog_prompt(
     catalogs = [text for text in prompt_strings if "### Available skills" in text]
     if len(catalogs) != 1:
         return None, f"Codex catalog preflight found {len(catalogs)} rendered catalogs"
-    available = catalogs[0].split("### Available skills", 1)[1]
+    catalog = catalogs[0]
+    catalog_roots: dict[str, str] = {}
+    catalog_roots_valid = True
+    if "### Skill roots" in catalog:
+        roots_section = catalog.split("### Skill roots", 1)[1].split("### Available skills", 1)[0]
+        for line in roots_section.splitlines():
+            match = re.fullmatch(r"- `(r[0-9]+)` = `(.+)`", line)
+            if match is None:
+                continue
+            alias, root_text = match.groups()
+            if alias in catalog_roots:
+                catalog_roots_valid = False
+            catalog_roots[alias] = root_text
+    available = catalog.split("### Available skills", 1)[1]
     available = available.split("### How to use skills", 1)[0]
     entries = [line for line in available.splitlines() if line.startswith("- ")]
     target_prefix = f"- {target_name}: "
     target_entries = [entry for entry in entries if entry.startswith(target_prefix)]
     target_description_exact = False
-    if len(target_entries) == 1 and " (file: " in target_entries[0]:
-        rendered_description = target_entries[0][len(target_prefix) :].rsplit(" (file: ", 1)[0]
+    rendered_file_valid = False
+    target_file_exact = False
+    root_alias_valid = False
+    try:
+        repository_skill_root = (workspace / ".agents" / "skills").resolve(strict=True)
+        target_file = target_skill.resolve(strict=True)
+        target_file_valid = (
+            target_file.is_file()
+            and target_file.parent.parent == repository_skill_root
+        )
+    except (OSError, RuntimeError, ValueError):
+        repository_skill_root = None
+        target_file = None
+        target_file_valid = False
+    entry_payload = target_entries[0][len(target_prefix) :] if len(target_entries) == 1 else ""
+    if entry_payload.endswith(")") and " (file: " in entry_payload:
+        rendered_description, rendered_file_text = entry_payload[:-1].rsplit(" (file: ", 1)
         target_description_exact = rendered_description == target_description
+        rendered_file_path = pathlib.Path(rendered_file_text)
+        rendered_candidate: pathlib.Path | None = None
+        if rendered_file_path.is_absolute():
+            rendered_candidate = rendered_file_path
+            root_alias_valid = True
+        elif len(rendered_file_path.parts) >= 2 and catalog_roots_valid:
+            root_text = catalog_roots.get(rendered_file_path.parts[0])
+            if root_text is not None and pathlib.Path(root_text).is_absolute():
+                rendered_candidate = pathlib.Path(root_text).joinpath(*rendered_file_path.parts[1:])
+                root_alias_valid = True
+        if rendered_file_text and rendered_candidate is not None:
+            try:
+                rendered_file = rendered_candidate.resolve(strict=True)
+                rendered_file_valid = rendered_file.is_file()
+                target_file_exact = (
+                    rendered_file_valid
+                    and target_file_valid
+                    and rendered_file == target_file
+                )
+            except (OSError, RuntimeError, ValueError):
+                pass
     readiness = {
         "catalog_skill_entries": len(entries),
         "target_entries": len(target_entries),
         "target_description_exact": target_description_exact,
+        "root_alias_valid": root_alias_valid,
+        "rendered_file_valid": rendered_file_valid,
+        "target_file_exact": target_file_exact,
         "target_description_chars": len(target_description),
         "warning_present": warning_present,
         "other_skill_entries": len(entries) - len(target_entries),
@@ -296,6 +350,7 @@ def inspect_catalog_prompt(
         len(entries) == 1
         and len(target_entries) == 1
         and target_description_exact
+        and target_file_exact
         and not warning_present
     ):
         return None, f"Codex catalog preflight failed: {json.dumps(readiness, sort_keys=True)}"
@@ -306,6 +361,7 @@ def offline_catalog_preflight(
     workspace: pathlib.Path,
     target_name: str,
     target_description: str,
+    target_skill: pathlib.Path,
     isolation_args: list[str],
     timeout: int,
 ) -> tuple[dict[str, object] | None, str]:
@@ -330,7 +386,13 @@ def offline_catalog_preflight(
         return None, f"Codex catalog preflight could not run: {exc}"
     if completed.returncode != 0:
         return None, f"Codex catalog preflight exited {completed.returncode}"
-    return inspect_catalog_prompt(completed.stdout, target_name, target_description)
+    return inspect_catalog_prompt(
+        completed.stdout,
+        target_name,
+        target_description,
+        target_skill,
+        workspace,
+    )
 
 
 def _reported_failure(event: dict[str, object]) -> bool:
@@ -614,6 +676,7 @@ def main() -> int:
             workspace,
             test_skill_name,
             target_description,
+            target_skill,
             isolation_args,
             args.timeout,
         )

@@ -888,6 +888,23 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 prompt_output,
                 "demo-eval",
                 "Demo.",
+                staged / "SKILL.md",
+                workspace,
+            )
+            relative_catalog_text = catalog_text.replace(
+                "### Available skills",
+                f"### Skill roots\n- `r0` = `{workspace / '.agents' / 'skills'}`\n### Available skills",
+            ).replace(
+                str((staged / "SKILL.md").resolve()),
+                "r0/demo-eval/SKILL.md",
+            )
+            relative_prompt_output = json.dumps([{"text": relative_catalog_text}]).encode("utf-8")
+            relative_catalog_readiness, relative_catalog_reason = engine.inspect_catalog_prompt(
+                relative_prompt_output,
+                "demo-eval",
+                "Demo.",
+                staged / "SKILL.md",
+                workspace,
             )
             shortened_readiness, shortened_reason = engine.inspect_catalog_prompt(
                 json.dumps(
@@ -900,6 +917,8 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 ).encode("utf-8"),
                 "demo-eval",
                 "Demo.",
+                staged / "SKILL.md",
+                workspace,
             )
             extra_readiness, extra_reason = engine.inspect_catalog_prompt(
                 json.dumps(
@@ -914,6 +933,53 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 ).encode("utf-8"),
                 "demo-eval",
                 "Demo.",
+                staged / "SKILL.md",
+                workspace,
+            )
+
+            wrong_skill = root / "wrong-skill" / "SKILL.md"
+            wrong_skill.parent.mkdir()
+            wrong_skill.write_text("---\nname: demo-eval\ndescription: Demo.\n---\n", encoding="utf-8")
+            wrong_path_output = prompt_output.replace(
+                str((staged / "SKILL.md").resolve()).encode("utf-8"),
+                str(wrong_skill.resolve()).encode("utf-8"),
+            )
+            wrong_path_readiness, wrong_path_reason = engine.inspect_catalog_prompt(
+                wrong_path_output,
+                "demo-eval",
+                "Demo.",
+                staged / "SKILL.md",
+                workspace,
+            )
+            missing_path_readiness, missing_path_reason = engine.inspect_catalog_prompt(
+                prompt_output.replace(
+                    str((staged / "SKILL.md").resolve()).encode("utf-8"),
+                    str(root / "missing-skill" / "SKILL.md").encode("utf-8"),
+                ),
+                "demo-eval",
+                "Demo.",
+                staged / "SKILL.md",
+                workspace,
+            )
+            malformed_path_readiness, malformed_path_reason = engine.inspect_catalog_prompt(
+                prompt_output.replace(
+                    str((staged / "SKILL.md").resolve()).encode("utf-8"),
+                    b"relative/SKILL.md",
+                ),
+                "demo-eval",
+                "Demo.",
+                staged / "SKILL.md",
+                workspace,
+            )
+            missing_identity_readiness, missing_identity_reason = engine.inspect_catalog_prompt(
+                prompt_output.replace(
+                    f" (file: {(staged / 'SKILL.md').resolve()})".encode("utf-8"),
+                    b"",
+                ),
+                "demo-eval",
+                "Demo.",
+                staged / "SKILL.md",
+                workspace,
             )
 
             preflight_captured: dict[str, object] = {}
@@ -934,6 +1000,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     workspace,
                     "demo-eval",
                     "Demo.",
+                    staged / "SKILL.md",
                     isolation_args,
                     30,
                 )
@@ -955,6 +1022,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                             workspace,
                             "demo-eval",
                             "Demo.",
+                            staged / "SKILL.md",
                             isolation_args,
                             30,
                         )
@@ -1106,6 +1174,11 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                         main_enumerate.call_count,
                         main_preflight.call_args,
                         rejected_provider.call_count,
+                        main_workspace
+                        / ".agents"
+                        / "skills"
+                        / f"demo-eval-{case_index:08d}"
+                        / "SKILL.md",
                     )
                 )
 
@@ -1230,14 +1303,30 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 and catalog_readiness["catalog_skill_entries"] == 1
                 and catalog_readiness["target_entries"] == 1
                 and catalog_readiness["target_description_exact"] is True
+                and catalog_readiness["rendered_file_valid"] is True
+                and catalog_readiness["target_file_exact"] is True
                 and catalog_readiness["warning_present"] is False
                 and catalog_readiness["other_skill_entries"] == 0
                 and catalog_readiness["proof_scope"]
                 == "catalog-only; debug prompt-input loads user config",
+                "Codex catalog proof canonicalizes the CLI relative file identity": relative_catalog_readiness
+                is not None
+                and relative_catalog_reason == "Codex catalog preflight passed"
+                and relative_catalog_readiness["root_alias_valid"] is True
+                and relative_catalog_readiness["target_file_exact"] is True,
                 "Codex catalog proof rejects shortening warnings and extra entries": shortened_readiness is None
                 and "warning_present" in shortened_reason
                 and extra_readiness is None
                 and "catalog_skill_entries" in extra_reason,
+                "Codex catalog proof rejects same-name same-description wrong or invalid file identity": wrong_path_readiness
+                is None
+                and "target_file_exact" in wrong_path_reason
+                and missing_path_readiness is None
+                and "rendered_file_valid" in missing_path_reason
+                and malformed_path_readiness is None
+                and "rendered_file_valid" in malformed_path_reason
+                and missing_identity_readiness is None
+                and "rendered_file_valid" in missing_identity_reason,
                 "Codex offline probe preserves matched isolation overrides without claiming exec equivalence": preflight_captured[
                     "command"
                 ]
@@ -1318,7 +1407,8 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     and evidence_files == []
                     and provider_calls == 0
                     and preflight_call is not None
-                    and preflight_call.args[3] == engine.skill_isolation_args(disabled_skills)
+                    and preflight_call.args[3] == expected_target_skill
+                    and preflight_call.args[4] == engine.skill_isolation_args(disabled_skills)
                     and enumerate_calls == (1 if failure_kind == "preflight" else 2)
                     for (
                         failure_kind,
@@ -1330,6 +1420,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                         enumerate_calls,
                         preflight_call,
                         provider_calls,
+                        expected_target_skill,
                     ) in main_isolation_failures
                 ),
             }
