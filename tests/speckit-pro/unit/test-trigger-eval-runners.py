@@ -371,40 +371,37 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     (result, expected_reason, discovery.call_args_list, preflight_run.call_count)
                 )
 
-            query_identity_evidence_dir = root / "query-identity-evidence"
-            query_identity_evidence_dir.mkdir()
             query_identity_rejections = []
-            for case_index, (discovered, expected_error) in enumerate(
+            for discovered, expected_exception, expected_error in (
+                (None, OSError, "Claude CLI disappeared after initial resolution"),
                 (
-                    (None, b"Claude CLI disappeared after initial resolution"),
-                    ("/different/bin/claude", b"Claude runtime changed after initial resolution"),
+                    "/different/bin/claude",
+                    ValueError,
+                    "Claude runtime changed after initial resolution",
                 ),
-                start=1,
             ):
                 with (
                     mock.patch.object(claude.shutil, "which", return_value=discovered) as discovery,
                     mock.patch.object(claude.subprocess, "Popen") as rejected_popen,
                 ):
-                    result = claude.run_claude_query(
-                        "/usr/local/bin/claude",
-                        plugin_root,
-                        mcp_config,
-                        "query",
-                        "claude-sonnet-test",
-                        30,
-                    )
-                evidence = claude.retain_trial_evidence(
-                    query_identity_evidence_dir,
-                    case_index,
-                    1,
-                    result[1],
-                    result[2],
-                )
+                    try:
+                        claude.run_claude_query(
+                            "/usr/local/bin/claude",
+                            plugin_root,
+                            mcp_config,
+                            "query",
+                            "claude-sonnet-test",
+                            30,
+                        )
+                    except (OSError, ValueError) as exc:
+                        result = (type(exc), str(exc))
+                    else:
+                        result = (None, "")
                 query_identity_rejections.append(
                     (
                         result,
+                        expected_exception,
                         expected_error,
-                        evidence,
                         discovery.call_args_list,
                         rejected_popen.call_count,
                     )
@@ -494,6 +491,63 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 main_exit = claude.main(["demo", "--model", "claude-sonnet-test"])
             main_report = json.loads(main_stdout.getvalue())
 
+            main_identity_rejections = []
+            for case_index, (discovered, expected_error) in enumerate(
+                (
+                    (None, "Claude CLI disappeared after initial resolution"),
+                    ("/different/bin/claude", "Claude runtime changed after initial resolution"),
+                ),
+                start=1,
+            ):
+                rejected_staged = root / f"rejected-staged-{case_index}"
+                rejected_evidence = root / f"rejected-evidence-{case_index}"
+                rejected_stdout = io.StringIO()
+                rejected_stderr = io.StringIO()
+                with (
+                    mock.patch.object(
+                        claude.shutil,
+                        "which",
+                        side_effect=["/usr/local/bin/claude", discovered],
+                    ) as discovery,
+                    mock.patch.object(
+                        claude,
+                        "cli_preflight",
+                        return_value=({"version": "2.1.261", "supported_flags": []}, "ok"),
+                    ),
+                    mock.patch.object(
+                        claude.uuid,
+                        "uuid4",
+                        return_value=SimpleNamespace(hex=f"{case_index:012d}"),
+                    ),
+                    mock.patch.object(claude.tempfile, "mkdtemp", return_value=str(rejected_staged)),
+                    mock.patch.object(claude.subprocess, "Popen") as rejected_popen,
+                    mock.patch.object(claude, "retain_trial_evidence") as rejected_retain,
+                    contextlib.redirect_stdout(rejected_stdout),
+                    contextlib.redirect_stderr(rejected_stderr),
+                ):
+                    rejected_exit = claude.main(
+                        [
+                            "demo",
+                            "--model",
+                            "claude-sonnet-test",
+                            "--evidence-dir",
+                            str(rejected_evidence),
+                        ]
+                    )
+                main_identity_rejections.append(
+                    (
+                        rejected_exit,
+                        rejected_stdout.getvalue(),
+                        rejected_stderr.getvalue(),
+                        expected_error,
+                        discovery.call_args_list,
+                        rejected_popen.call_count,
+                        rejected_retain.call_count,
+                        rejected_staged.exists(),
+                        sorted(rejected_evidence.iterdir()),
+                    )
+                )
+
             checks = {
                 "source description copied exactly": "description: Exact source description." in staged_text,
                 "full functional body not copied": "Full body must not copy" not in staged_text,
@@ -547,19 +601,14 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     and run_calls == 0
                     for result, expected_reason, discovery_calls, run_calls in preflight_identity_rejections
                 ),
-                "query rejects missing or changed Claude identity with retained raw evidence": all(
-                    result == (-1, b"", expected_error, False)
-                    and evidence["stdout_sha256"] == hashlib.sha256(b"").hexdigest()
-                    and evidence["stderr_sha256"] == hashlib.sha256(expected_error).hexdigest()
-                    and Path(evidence["stdout_path"]).read_bytes() == b""
-                    and Path(evidence["stderr_path"]).read_bytes() == expected_error
+                "query rejects missing or changed Claude identity before subprocess": all(
+                    result == (expected_exception, expected_error)
                     and discovery_calls == [mock.call("claude")]
                     and popen_calls == 0
-                    and not claude.case_passes(False, selected=0, invalid=1)
                     for (
                         result,
+                        expected_exception,
                         expected_error,
-                        evidence,
                         discovery_calls,
                         popen_calls,
                     ) in query_identity_rejections
@@ -581,6 +630,27 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 "main report retains threshold and model metadata": main_report["metadata"]["runs_per_query"] == 3
                 and main_report["metadata"]["trigger_threshold"] == 0.5
                 and main_report["metadata"]["requested_model"] == "claude-sonnet-test",
+                "main identity failures are controlled, cleaned, and never retained as provider trials": all(
+                    exit_code == 1
+                    and stdout == ""
+                    and stderr == f"ERROR: {expected_error}\n"
+                    and discovery_calls == [mock.call("claude"), mock.call("claude")]
+                    and popen_calls == 0
+                    and retain_calls == 0
+                    and not staged_exists
+                    and evidence_files == []
+                    for (
+                        exit_code,
+                        stdout,
+                        stderr,
+                        expected_error,
+                        discovery_calls,
+                        popen_calls,
+                        retain_calls,
+                        staged_exists,
+                        evidence_files,
+                    ) in main_identity_rejections
+                ),
                 "Claude runner never mutates global paths": "shutil.move" not in CLAUDE_RUNNER.read_text(encoding="utf-8")
                 and ".claude/" not in CLAUDE_RUNNER.read_text(encoding="utf-8")
                 and "auth.json" not in CLAUDE_RUNNER.read_text(encoding="utf-8"),

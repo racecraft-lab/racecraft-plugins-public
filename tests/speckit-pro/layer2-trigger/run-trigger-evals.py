@@ -387,9 +387,9 @@ def run_claude_query(
     global ACTIVE_CHILD
     candidate = shutil.which("claude")
     if candidate is None:
-        return -1, b"", b"Claude CLI disappeared after initial resolution", False
+        raise OSError("Claude CLI disappeared after initial resolution")
     if candidate != executable:
-        return -1, b"", b"Claude runtime changed after initial resolution", False
+        raise ValueError("Claude runtime changed after initial resolution")
     command = [
         candidate,
         "--restricted",
