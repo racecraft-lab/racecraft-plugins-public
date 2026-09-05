@@ -355,28 +355,26 @@ SpecKit Pro validation layers and test-only files.
 - **Purpose:** Validation files in layer2-trigger.
 - **Classification:** `test-only`
 - **Platform concept:** SpecKit Pro validation layer
-- **Claude Code:** tests/speckit-pro/layer2-trigger/run-trigger-evals-codex.py, tests/speckit-pro/layer2-trigger/run-trigger-evals.py, tests/speckit-pro/layer2-trigger/run-trigger-loop.py, tests/speckit-pro/layer2-trigger/run_codex_evals.py
-- **Codex:** tests/speckit-pro/layer2-trigger/run-trigger-evals-codex.py, tests/speckit-pro/layer2-trigger/run-trigger-evals.py, tests/speckit-pro/layer2-trigger/run-trigger-loop.py, tests/speckit-pro/layer2-trigger/run_codex_evals.py
+- **Claude Code:** tests/speckit-pro/layer2-trigger/run-trigger-evals-codex.py, tests/speckit-pro/layer2-trigger/run-trigger-evals.py, tests/speckit-pro/layer2-trigger/run_codex_evals.py
+- **Codex:** tests/speckit-pro/layer2-trigger/run-trigger-evals-codex.py, tests/speckit-pro/layer2-trigger/run-trigger-evals.py, tests/speckit-pro/layer2-trigger/run_codex_evals.py
 - **Runtime difference:** Layer 1 includes separate Claude Code and Codex structural checks where the repository has runtime-specific plugin surfaces.
 
 #### Source Facts
 
 - tests/speckit-pro/layer2-trigger/run-trigger-evals-codex.py is checked in under the SpecKit Pro test suite. Source refs: `tests/speckit-pro/layer2-trigger/run-trigger-evals-codex.py`.
 - tests/speckit-pro/layer2-trigger/run-trigger-evals.py is checked in under the SpecKit Pro test suite. Source refs: `tests/speckit-pro/layer2-trigger/run-trigger-evals.py`.
-- tests/speckit-pro/layer2-trigger/run-trigger-loop.py is checked in under the SpecKit Pro test suite. Source refs: `tests/speckit-pro/layer2-trigger/run-trigger-loop.py`.
 - tests/speckit-pro/layer2-trigger/run_codex_evals.py is checked in under the SpecKit Pro test suite. Source refs: `tests/speckit-pro/layer2-trigger/run_codex_evals.py`.
 
 #### Sources
 
 - [tests/speckit-pro/layer2-trigger/run-trigger-evals-codex.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/layer2-trigger/run-trigger-evals-codex.py)
 - [tests/speckit-pro/layer2-trigger/run-trigger-evals.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/layer2-trigger/run-trigger-evals.py)
-- [tests/speckit-pro/layer2-trigger/run-trigger-loop.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/layer2-trigger/run-trigger-loop.py)
 - [tests/speckit-pro/layer2-trigger/run_codex_evals.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/layer2-trigger/run_codex_evals.py)
 
 #### Inferred Notes
 
 - These files are validation evidence only; DOC-007 does not change test semantics unless a docs-site validation need explicitly requires it.
-  - Based on: `tests/speckit-pro/layer2-trigger/run-trigger-evals-codex.py`, `tests/speckit-pro/layer2-trigger/run-trigger-evals.py`, `tests/speckit-pro/layer2-trigger/run-trigger-loop.py`, `tests/speckit-pro/layer2-trigger/run_codex_evals.py`
+  - Based on: `tests/speckit-pro/layer2-trigger/run-trigger-evals-codex.py`, `tests/speckit-pro/layer2-trigger/run-trigger-evals.py`, `tests/speckit-pro/layer2-trigger/run_codex_evals.py`
 
 ### tests/speckit-pro/layer3-functional
 

@@ -20,19 +20,15 @@ class Reporter:
     def __init__(self) -> None:
         self.passed = 0
         self.total = 0
-        self.failures: list[str] = []
-        self.names: list[str] = []
         self.verbose = os.environ.get("VERBOSE", "").lower() == "true"
 
     def check(self, name: str, condition: bool, detail: str = "") -> bool:
         self.total += 1
-        self.names.append(name)
         if condition:
             self.passed += 1
             if self.verbose:
                 print(f"  {name} ... PASS")
             return True
-        self.failures.append(f"{name}: {detail}" if detail else name)
         if self.verbose:
             print(f"  {name} ... FAIL")
         elif detail:

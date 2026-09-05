@@ -25,7 +25,6 @@ LAYER2 = TESTS_ROOT / "layer2-trigger"
 CLAUDE_RUNNER = LAYER2 / "run-trigger-evals.py"
 CODEX_RUNNER = LAYER2 / "run-trigger-evals-codex.py"
 CODEX_ENGINE = LAYER2 / "run_codex_evals.py"
-LOOP_RUNNER = LAYER2 / "run-trigger-loop.py"
 SHARED_LIB = TESTS_ROOT / "lib"
 if str(SHARED_LIB) not in sys.path:
     sys.path.insert(0, str(SHARED_LIB))
@@ -753,7 +752,6 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
     def test_codex_contracts_remain_unchanged(self) -> None:
         codex = import_script(CODEX_RUNNER, "layer2_codex_wrapper")
         engine = import_script(CODEX_ENGINE, "layer2_codex_engine")
-        loop = import_script(LOOP_RUNNER, "layer2_loop_runner")
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             source = root / "SKILL.md"
@@ -1276,7 +1274,6 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             fixture_root = root / "fixture"
             plugin_root = fixture_root / "speckit-pro"
             (plugin_root / "codex-skills" / "demo").mkdir(parents=True)
-            (plugin_root / "skills" / "demo").mkdir(parents=True)
             codex_eval = fixture_root / "tests/speckit-pro/layer2-trigger/codex-evals/demo-trigger.json"
             shared_eval = fixture_root / "tests/speckit-pro/layer2-trigger/evals/demo-trigger.json"
             codex_eval.parent.mkdir(parents=True)
@@ -1284,7 +1281,6 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             codex_eval.write_text("{}\n", encoding="utf-8")
             shared_eval.write_text("{}\n", encoding="utf-8")
             codex.PLUGIN_ROOT = plugin_root
-            loop.PLUGIN_ROOT = plugin_root
 
             with (
                 mock.patch.object(codex.shutil, "which", return_value=str(root / "codex")) as which_codex,
@@ -1294,57 +1290,21 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 codex.main(["demo", "--run", "--profile", "fast", "--run", "tail"])
             delegated_executable, delegated_argv = execv.call_args.args
 
-            skill_creator = root / "skill-creator"
-            skill_creator.mkdir()
-            with (
-                mock.patch.dict(os.environ, {"SKILL_CREATOR_ROOT": str(skill_creator)}, clear=False),
-                mock.patch.object(
-                    loop.subprocess,
-                    "run",
-                    return_value=SimpleNamespace(returncode=37),
-                ) as loop_run,
-            ):
-                loop_returncode = loop.main(["demo"])
-            loop_command = list(loop_run.call_args.args[0])
-            expected_loop_command = [
-                sys.executable,
-                "-m",
-                "scripts.run_loop",
-                "--eval-set",
-                str(plugin_root / "../tests/speckit-pro/layer2-trigger/evals/demo-trigger.json"),
-                "--skill-path",
-                str(plugin_root / "skills/demo"),
-                "--max-iterations",
-                "5",
-                "--holdout",
-                "0.4",
-                "--runs-per-query",
-                "3",
-                "--trigger-threshold",
-                "0.5",
-                "--verbose",
-            ]
-
             checks = {
                 "imports Codex wrapper": codex is not None,
-                "imports trigger loop": loop is not None,
                 "all runners avoid shell execution": not any(
                     calls_forbidden_process_api(path)
-                    for path in (CLAUDE_RUNNER, CODEX_RUNNER, CODEX_ENGINE, LOOP_RUNNER)
+                    for path in (CLAUDE_RUNNER, CODEX_RUNNER, CODEX_ENGINE)
                 ),
                 "Layer-2 command vectors avoid hard-coded python3": not any(
                     has_hardcoded_python3_command(path)
-                    for path in (CLAUDE_RUNNER, CODEX_RUNNER, CODEX_ENGINE, LOOP_RUNNER)
+                    for path in (CLAUDE_RUNNER, CODEX_RUNNER, CODEX_ENGINE)
                 ),
                 "Codex --run checks the executable": which_codex.call_args_list == [mock.call("codex")],
                 "Codex --run delegates through the current Python": delegated_executable == sys.executable
                 and delegated_argv[:2] == [sys.executable, str(LAYER2 / "run_codex_evals.py")],
                 "Codex --run strips control flags and preserves arguments": "--run" not in delegated_argv
                 and delegated_argv[2:] == ["demo", "--profile", "fast", "tail"],
-                "trigger loop preserves exact command and execution boundary": loop_returncode == 37
-                and loop_command == expected_loop_command
-                and loop_run.call_args.kwargs["cwd"] == skill_creator
-                and loop_run.call_args.kwargs["shell"] is False,
                 "Codex default effort remains low": engine.DEFAULT_REASONING_EFFORT == "low",
                 "Codex default model remains approved": engine.DEFAULT_MODEL == "gpt-5.6-sol",
                 "Codex skill remains repository scoped": staged == workspace / ".agents" / "skills" / "demo-eval",
