@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression coverage for unchanged release PR reconciliation."""
+"""Regression coverage for release PR reconciliation."""
 
 from __future__ import annotations
 

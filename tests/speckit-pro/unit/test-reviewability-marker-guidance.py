@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""reviewability markers reviewability marker guidance parity checks."""
+"""Reviewability marker guidance parity checks."""
 
 from __future__ import annotations
 
@@ -49,85 +49,119 @@ VERIFICATION_REPORT_SCHEMA_PATHS = tuple(
 )
 
 
-CHECKS = (
+PAIRED_GUIDANCE_CHECKS = (
     (
         "Claude guidance says valid current size-only block continues to marker planning",
-        "claude_combined",
+        "Codex guidance mirrors valid size-only continuation",
         "valid current size-only",
     ),
     (
         "Claude guidance says size-only block is not a manual re-slicing stop",
-        "claude_combined",
+        "Codex guidance mirrors no manual re-slicing stop",
         "not a manual re-slicing stop",
     ),
-    ("Claude guidance sends size-only block into marker planning", "claude_combined", "marker planning"),
-    ("Claude guidance sends size-only block into marker emission", "claude_combined", "marker emission"),
-    ("Codex guidance mirrors valid size-only continuation", "codex_combined", "valid current size-only"),
-    ("Codex guidance mirrors no manual re-slicing stop", "codex_combined", "not a manual re-slicing stop"),
-    ("Codex guidance mirrors marker planning", "codex_combined", "marker planning"),
-    ("Codex guidance mirrors marker emission", "codex_combined", "marker emission"),
+    (
+        "Claude guidance sends size-only block into marker planning",
+        "Codex guidance mirrors marker planning",
+        "marker planning",
+    ),
+    (
+        "Claude guidance sends size-only block into marker emission",
+        "Codex guidance mirrors marker emission",
+        "marker emission",
+    ),
     (
         "Guidance preserves malformed/stale marker correctness stops",
-        "claude_combined",
-        "malformed/stale marker state",
-    ),
-    ("Guidance preserves failed verification stop", "claude_combined", "failed verification"),
-    ("Guidance preserves invalid packet stop", "claude_combined", "invalid packet"),
-    ("Guidance preserves unsafe output stop", "claude_combined", "unsafe output"),
-    ("Guidance preserves unusable gate evidence stop", "claude_combined", "unusable gate evidence"),
-    (
         "Codex guidance preserves malformed/stale marker correctness stops",
-        "codex_combined",
         "malformed/stale marker state",
     ),
-    ("Codex guidance preserves failed verification stop", "codex_combined", "failed verification"),
-    ("Codex guidance preserves invalid packet stop", "codex_combined", "invalid packet"),
-    ("Codex guidance preserves unsafe output stop", "codex_combined", "unsafe output"),
-    ("Codex guidance preserves unusable gate evidence stop", "codex_combined", "unusable gate evidence"),
+    (
+        "Guidance preserves failed verification stop",
+        "Codex guidance preserves failed verification stop",
+        "failed verification",
+    ),
+    (
+        "Guidance preserves invalid packet stop",
+        "Codex guidance preserves invalid packet stop",
+        "invalid packet",
+    ),
+    (
+        "Guidance preserves unsafe output stop",
+        "Codex guidance preserves unsafe output stop",
+        "unsafe output",
+    ),
+    (
+        "Guidance preserves unusable gate evidence stop",
+        "Codex guidance preserves unusable gate evidence stop",
+        "unusable gate evidence",
+    ),
     (
         "Claude evidence prompts include gate status/mode/exit/evidence path",
-        "claude_combined",
+        "Codex evidence prompts include gate status/mode/exit/evidence path",
         "gate status/mode/exit/evidence path",
     ),
-    ("Claude evidence prompts include fingerprint status", "claude_combined", "fingerprint status"),
-    ("Claude evidence prompts include ordered marker IDs", "claude_combined", "ordered marker IDs"),
-    ("Claude evidence prompts include checkpoints", "claude_combined", "checkpoints"),
-    ("Claude evidence prompts include warnings", "claude_combined", "warnings"),
-    ("Claude evidence prompts include final marker_split", "claude_combined", "final marker_split"),
-    ("Claude evidence prompts include packet validation", "claude_combined", "packet validation"),
-    ("Claude evidence prompts include PR mappings", "claude_combined", "PR mappings"),
+    (
+        "Claude evidence prompts include fingerprint status",
+        "Codex evidence prompts include fingerprint status",
+        "fingerprint status",
+    ),
+    (
+        "Claude evidence prompts include ordered marker IDs",
+        "Codex evidence prompts include ordered marker IDs",
+        "ordered marker IDs",
+    ),
+    (
+        "Claude evidence prompts include checkpoints",
+        "Codex evidence prompts include checkpoints",
+        "checkpoints",
+    ),
+    (
+        "Claude evidence prompts include warnings",
+        "Codex evidence prompts include warnings",
+        "warnings",
+    ),
+    (
+        "Claude evidence prompts include final marker_split",
+        "Codex evidence prompts include final marker_split",
+        "final marker_split",
+    ),
+    (
+        "Claude evidence prompts include packet validation",
+        "Codex evidence prompts include packet validation",
+        "packet validation",
+    ),
+    (
+        "Claude evidence prompts include PR mappings",
+        "Codex evidence prompts include PR mappings",
+        "PR mappings",
+    ),
     (
         "Claude marker emission guidance separates source feature dir from branch prefix",
-        "claude_combined",
+        "Codex marker emission guidance separates source feature dir from branch prefix",
         "--source-feature-dir specs/<feature>",
     ),
     (
         "Claude marker emission guidance preserves source evidence paths",
-        "claude_combined",
-        "Full verification evidence, scoped evidence, PRS, and MOC files stay under",
-    ),
-    (
-        "Codex evidence prompts include gate status/mode/exit/evidence path",
-        "codex_combined",
-        "gate status/mode/exit/evidence path",
-    ),
-    ("Codex evidence prompts include fingerprint status", "codex_combined", "fingerprint status"),
-    ("Codex evidence prompts include ordered marker IDs", "codex_combined", "ordered marker IDs"),
-    ("Codex evidence prompts include checkpoints", "codex_combined", "checkpoints"),
-    ("Codex evidence prompts include warnings", "codex_combined", "warnings"),
-    ("Codex evidence prompts include final marker_split", "codex_combined", "final marker_split"),
-    ("Codex evidence prompts include packet validation", "codex_combined", "packet validation"),
-    ("Codex evidence prompts include PR mappings", "codex_combined", "PR mappings"),
-    (
-        "Codex marker emission guidance separates source feature dir from branch prefix",
-        "codex_combined",
-        "--source-feature-dir specs/<feature>",
-    ),
-    (
         "Codex marker emission guidance preserves source evidence paths",
-        "codex_combined",
         "Full verification evidence, scoped evidence, PRS, and MOC files stay under",
     ),
+)
+PAIRED_GUIDANCE_GROUP_SIZES = (4, 5, 10)
+
+
+def expanded_paired_guidance_checks() -> tuple[tuple[str, str, str], ...]:
+    checks: list[tuple[str, str, str]] = []
+    offset = 0
+    for group_size in PAIRED_GUIDANCE_GROUP_SIZES:
+        group = PAIRED_GUIDANCE_CHECKS[offset : offset + group_size]
+        checks.extend((claude_label, "claude_combined", expected) for claude_label, _, expected in group)
+        checks.extend((codex_label, "codex_combined", expected) for _, codex_label, expected in group)
+        offset += group_size
+    return tuple(checks)
+
+
+CHECKS = (
+    *expanded_paired_guidance_checks(),
     (
         "Workflow guidance persists pr_marker_plan outside tasks.md",
         "claude_workflow",

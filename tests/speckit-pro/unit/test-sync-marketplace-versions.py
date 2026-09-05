@@ -120,11 +120,11 @@ class SyncMarketplaceVersionsTests(unittest.TestCase):
             self.assertEqual(marketplace_version(root), "1.0.0")
 
         root = self._marketplace("missing-plugin", '{"name":"test","plugins":[{"name":"ghost-plugin","source":"./ghost-plugin","description":"No plugin"}]}')
-        result = run_sync(root)
+        missing_plugin_result = run_sync(root)
         with self.subTest(msg="Missing plugin.json — exit 1"):
-            self.assertEqual(result.returncode, 1)
+            self.assertEqual(missing_plugin_result.returncode, 1)
         with self.subTest(msg="Missing plugin.json — stderr has error message"):
-            self.assertIn("not found", result.stderr)
+            self.assertIn("not found", missing_plugin_result.stderr)
 
         root = self._marketplace(
             "multi",
@@ -147,9 +147,9 @@ class SyncMarketplaceVersionsTests(unittest.TestCase):
         root = self.work / "bad-marketplace"
         (root / ".claude-plugin").mkdir(parents=True)
         (root / ".claude-plugin" / "marketplace.json").write_text("{ INVALID JSON !!!\n", encoding="utf-8")
-        result = run_sync(root)
+        malformed_marketplace_result = run_sync(root)
         with self.subTest(msg="Malformed marketplace.json — exit 1"):
-            self.assertEqual(result.returncode, 1)
+            self.assertEqual(malformed_marketplace_result.returncode, 1)
 
         root = self._marketplace("bad-plugin", '{"name":"test","plugins":[{"name":"bad-plugin","source":"./bad-plugin"}]}')
         bad_plugin = root / "bad-plugin" / ".claude-plugin" / "plugin.json"
@@ -169,11 +169,11 @@ class SyncMarketplaceVersionsTests(unittest.TestCase):
 
         root = self.work / "empty"
         root.mkdir()
-        result = run_sync(root)
+        missing_marketplace_result = run_sync(root)
         with self.subTest(msg="No marketplace.json in cwd — exit 1"):
-            self.assertEqual(result.returncode, 1)
+            self.assertEqual(missing_marketplace_result.returncode, 1)
         with self.subTest(msg="Wrong cwd — stderr mentions marketplace.json"):
-            self.assertIn("marketplace.json", result.stderr)
+            self.assertIn("marketplace.json", missing_marketplace_result.stderr)
 
         root = self._marketplace("external-source", '{"name":"test","plugins":[{"name":"ext","source":"https://github.com/example/plugin.git"}]}')
         result = run_sync(root)
@@ -206,28 +206,10 @@ class SyncMarketplaceVersionsTests(unittest.TestCase):
         with self.subTest(msg="Version 'abc' — stderr mentions semver"):
             self.assertIn("semver", result.stderr)
 
-        root = self._marketplace("error-routing", '{"name":"test","plugins":[{"name":"missing","source":"./missing"}]}')
-        result = run_sync(root)
         with self.subTest(msg="Error scenario (missing plugin.json) — stdout is empty"):
-            self.assertEqual(result.stdout, "")
+            self.assertEqual(missing_plugin_result.stdout, "")
         with self.subTest(msg="Error scenario — stderr has error message"):
-            self.assertIn("Error", result.stderr)
-
-        root = self._marketplace("propagate-missing-plugin", '{"name":"test","plugins":[{"name":"missing","source":"./missing"}]}')
-        result = run_sync(root)
-        with self.subTest(msg="Missing plugin.json → exit 1"):
-            self.assertEqual(result.returncode, 1)
-
-        root = self._marketplace("propagate-malformed-marketplace", "{ NOT JSON")
-        result = run_sync(root)
-        with self.subTest(msg="Malformed marketplace → exit 1"):
-            self.assertEqual(result.returncode, 1)
-
-        root = self.work / "propagate-missing-marketplace"
-        root.mkdir()
-        result = run_sync(root)
-        with self.subTest(msg="No marketplace.json → exit 1"):
-            self.assertEqual(result.returncode, 1)
+            self.assertIn("Error", missing_plugin_result.stderr)
 
         root = self._marketplace("missing-source", '{"name":"test","plugins":[{"name":"no-source","description":"No source"}]}')
         result = run_sync(root)
@@ -294,8 +276,6 @@ class SyncMarketplaceVersionsTests(unittest.TestCase):
         with self.subTest(msg="Codex source.path schema — stdout reports the change"):
             self.assertIn("dist/codex/codex-plugin", result.stdout)
 
-        # Count-neutral hardening checks supplement the 49-entry predecessor
-        # inventory without changing its parity total.
         root = self._marketplace("nonfinite-json", '{"name":"test","plugins":[],"value":NaN}')
         result = run_sync(root)
         self.assertEqual(result.returncode, 1)
