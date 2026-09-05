@@ -31,6 +31,7 @@ import os
 import pathlib
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -43,6 +44,10 @@ PLUGIN_ROOT = TESTS_ROOT.parents[1] / "speckit-pro"           # <repo>/speckit-p
 DEFAULT_REASONING_EFFORT = "low"
 DEFAULT_MODEL = "gpt-5.6-sol"
 MARKER_PATTERN = re.compile(r"CODEX_SKILL_FIRED:[A-Za-z0-9_-]+")
+SKILL_CATALOG_WARNINGS = (
+    "Skill descriptions were shortened to fit the skills context budget.",
+    "Exceeded skills context budget.",
+)
 
 
 def load_eval_corpus(path: pathlib.Path) -> tuple[list[dict[str, object]] | None, str]:
@@ -123,6 +128,209 @@ def stage_repository_skill(
     destination = workspace / ".agents" / "skills" / new_name
     stage_skill_with_marker(src, destination, new_name, marker)
     return destination
+
+
+def source_skill_description(skill_file: pathlib.Path) -> str:
+    """Return the model-visible YAML description for supported repository skills."""
+    lines = skill_file.read_text(encoding="utf-8").splitlines()
+    if not lines or lines[0] != "---":
+        raise ValueError(f"source skill has no YAML frontmatter: {skill_file}")
+    for index, line in enumerate(lines[1:], start=1):
+        if line == "---":
+            break
+        if not line.startswith("description:"):
+            continue
+        value = line.removeprefix("description:").strip()
+        if value in {">", ">-", "|", "|-"}:
+            block: list[str] = []
+            for continuation in lines[index + 1 :]:
+                if continuation == "":
+                    block.append("")
+                    continue
+                if not continuation.startswith((" ", "\t")):
+                    break
+                block.append(continuation.strip())
+            description = (
+                " ".join(part for part in block if part)
+                if value.startswith(">")
+                else "\n".join(block)
+            )
+        elif len(value) >= 2 and value[0] == value[-1] == '"':
+            try:
+                description = json.loads(value)
+            except json.JSONDecodeError as exc:
+                raise ValueError(f"source skill has an invalid quoted description: {skill_file}") from exc
+        elif len(value) >= 2 and value[0] == value[-1] == "'":
+            description = value[1:-1].replace("''", "'")
+        else:
+            description = value
+        if not description.strip():
+            raise ValueError(f"source skill has an empty description: {skill_file}")
+        return description.strip()
+    raise ValueError(f"source skill has no description: {skill_file}")
+
+
+def skill_source_roots() -> tuple[pathlib.Path, ...]:
+    """Return documented host skill roots without reading user configuration."""
+    home = pathlib.Path.home()
+    codex_home_value = os.environ.get("CODEX_HOME")
+    if codex_home_value is not None and not codex_home_value.strip():
+        raise ValueError("CODEX_HOME is empty")
+    codex_home = pathlib.Path(codex_home_value).expanduser() if codex_home_value else home / ".codex"
+    if not codex_home.is_absolute():
+        raise ValueError("CODEX_HOME must be absolute")
+    return home / ".agents" / "skills", codex_home / "skills", pathlib.Path("/etc/codex/skills")
+
+
+def _canonical_skill_files(root: pathlib.Path) -> set[pathlib.Path]:
+    """Enumerate one root, following symlinked directories without allowing cycles."""
+    try:
+        root_status = root.stat()
+    except FileNotFoundError:
+        return set()
+    except OSError as exc:
+        raise OSError(f"could not inspect Codex skill root {root}: {exc}") from exc
+    if not stat.S_ISDIR(root_status.st_mode):
+        raise ValueError(f"Codex skill root is not a directory: {root}")
+
+    pending = [root.resolve(strict=True)]
+    visited: set[tuple[int, int]] = set()
+    skills: set[pathlib.Path] = set()
+    while pending:
+        directory = pending.pop()
+        try:
+            canonical_directory = directory.resolve(strict=True)
+            directory_status = canonical_directory.stat()
+            identity = (directory_status.st_dev, directory_status.st_ino)
+            if identity in visited:
+                continue
+            visited.add(identity)
+            with os.scandir(canonical_directory) as entries:
+                children = list(entries)
+        except OSError as exc:
+            raise OSError(f"could not inspect Codex skill root {directory}: {exc}") from exc
+        for entry in children:
+            try:
+                if entry.name == "SKILL.md":
+                    if not entry.is_file(follow_symlinks=True):
+                        raise ValueError(f"Codex skill path is not a file: {entry.path}")
+                    skills.add(pathlib.Path(entry.path).resolve(strict=True))
+                elif entry.is_dir(follow_symlinks=True):
+                    pending.append(pathlib.Path(entry.path))
+            except OSError as exc:
+                raise OSError(f"could not inspect Codex skill path {entry.path}: {exc}") from exc
+    return skills
+
+
+def enumerate_non_target_skills(target_skill: pathlib.Path) -> tuple[pathlib.Path, ...]:
+    """Build a fresh canonical deny list for every non-target host skill."""
+    target = target_skill.resolve(strict=True)
+    discovered: set[pathlib.Path] = set()
+    for root in skill_source_roots():
+        discovered.update(_canonical_skill_files(root))
+    discovered.discard(target)
+    return tuple(sorted(discovered, key=str))
+
+
+def skill_isolation_args(disabled_skills: tuple[pathlib.Path, ...]) -> list[str]:
+    """Build process-local session overrides without mutating saved configuration."""
+    entries = ",".join(
+        f"{{path={json.dumps(str(path))},enabled=false}}"
+        for path in disabled_skills
+    )
+    return [
+        "--disable", "plugins",
+        "-c", "skills.bundled.enabled=false",
+        "-c", f"skills.config=[{entries}]",
+    ]
+
+
+def _prompt_strings(value: object) -> list[str]:
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list):
+        return [text for item in value for text in _prompt_strings(item)]
+    if isinstance(value, dict):
+        return [text for item in value.values() for text in _prompt_strings(item)]
+    return []
+
+
+def inspect_catalog_prompt(
+    output: bytes,
+    target_name: str,
+    target_description: str,
+) -> tuple[dict[str, object] | None, str]:
+    """Return only sanitized catalog facts; never return the rendered prompt."""
+    try:
+        prompt_input = json.loads(output.decode("utf-8", errors="strict"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        return None, f"Codex catalog preflight returned invalid JSON: {exc}"
+    prompt_strings = _prompt_strings(prompt_input)
+    warning_present = any(
+        warning in text
+        for text in prompt_strings
+        for warning in SKILL_CATALOG_WARNINGS
+    )
+    catalogs = [text for text in prompt_strings if "### Available skills" in text]
+    if len(catalogs) != 1:
+        return None, f"Codex catalog preflight found {len(catalogs)} rendered catalogs"
+    available = catalogs[0].split("### Available skills", 1)[1]
+    available = available.split("### How to use skills", 1)[0]
+    entries = [line for line in available.splitlines() if line.startswith("- ")]
+    target_prefix = f"- {target_name}: "
+    target_entries = [entry for entry in entries if entry.startswith(target_prefix)]
+    target_description_exact = False
+    if len(target_entries) == 1 and " (file: " in target_entries[0]:
+        rendered_description = target_entries[0][len(target_prefix) :].rsplit(" (file: ", 1)[0]
+        target_description_exact = rendered_description == target_description
+    readiness = {
+        "catalog_skill_entries": len(entries),
+        "target_entries": len(target_entries),
+        "target_description_exact": target_description_exact,
+        "target_description_chars": len(target_description),
+        "warning_present": warning_present,
+        "other_skill_entries": len(entries) - len(target_entries),
+        "proof_scope": "catalog-only; debug prompt-input loads user config",
+    }
+    if not (
+        len(entries) == 1
+        and len(target_entries) == 1
+        and target_description_exact
+        and not warning_present
+    ):
+        return None, f"Codex catalog preflight failed: {json.dumps(readiness, sort_keys=True)}"
+    return readiness, "Codex catalog preflight passed"
+
+
+def offline_catalog_preflight(
+    workspace: pathlib.Path,
+    target_name: str,
+    target_description: str,
+    isolation_args: list[str],
+    timeout: int,
+) -> tuple[dict[str, object] | None, str]:
+    """Render the catalog offline with matching supported session overrides."""
+    command = ["codex", "debug", "prompt-input", *isolation_args]
+    try:
+        completed = subprocess.run(
+            command,
+            cwd=workspace,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=False,
+            timeout=timeout,
+            env=os.environ.copy(),
+            shell=False,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return None, "Codex catalog preflight timed out"
+    except OSError as exc:
+        return None, f"Codex catalog preflight could not run: {exc}"
+    if completed.returncode != 0:
+        return None, f"Codex catalog preflight exited {completed.returncode}"
+    return inspect_catalog_prompt(completed.stdout, target_name, target_description)
 
 
 def _reported_failure(event: dict[str, object]) -> bool:
@@ -305,6 +513,7 @@ def run_codex_query(
     reasoning: str,
     model: str,
     timeout: int,
+    isolation_args: list[str],
 ) -> tuple[int, bytes, bytes, bool]:
     cmd = [
         "codex", "exec",
@@ -316,6 +525,7 @@ def run_codex_query(
         "-m", model,
         "-c", f'model_reasoning_effort="{reasoning}"',
     ]
+    cmd.extend(isolation_args)
     cmd.append(query)
     env = os.environ.copy()
     try:
@@ -394,6 +604,21 @@ def main() -> int:
         if initialized.returncode != 0:
             sys.exit(f"ERROR: could not initialize disposable eval repository: {initialized.stderr.strip()}")
         skill_dir = stage_repository_skill(skill_src, workspace, test_skill_name, marker)
+        target_skill = skill_dir / "SKILL.md"
+        target_description = source_skill_description(skill_src)
+        if source_skill_description(target_skill) != target_description:
+            raise ValueError("staged Codex skill description differs from its source")
+        disabled_skills = enumerate_non_target_skills(target_skill)
+        isolation_args = skill_isolation_args(disabled_skills)
+        readiness, readiness_reason = offline_catalog_preflight(
+            workspace,
+            test_skill_name,
+            target_description,
+            isolation_args,
+            args.timeout,
+        )
+        if readiness is None:
+            raise ValueError(readiness_reason)
 
         print(f"Codex Layer 2 trigger eval: {args.skill}", file=sys.stderr)
         print(f"  Eval file:  {eval_file}", file=sys.stderr)
@@ -405,6 +630,11 @@ def main() -> int:
         print(f"  Queries:    {len(eval_data)} (x{args.runs} runs)", file=sys.stderr)
         print(f"  Reasoning:  {args.reasoning}", file=sys.stderr)
         print(f"  Model:      {args.model}", file=sys.stderr)
+        print(
+            "  Catalog:    exactly one target with exact source description "
+            "(offline catalog-only proof)",
+            file=sys.stderr,
+        )
         print("", file=sys.stderr)
 
         results = []
@@ -416,12 +646,15 @@ def main() -> int:
             invalid_runs = 0
             run_evidence = []
             for run in range(1, args.runs + 1):
+                if enumerate_non_target_skills(target_skill) != disabled_skills:
+                    raise ValueError("Codex skill roots changed after catalog preflight")
                 rc, output, error_output, timed_out = run_codex_query(
                     workspace,
                     query,
                     args.reasoning,
                     args.model,
                     args.timeout,
+                    isolation_args,
                 )
                 raw_evidence = retain_run_evidence(evidence_dir, idx, run, output, error_output)
                 evidence = inspect_codex_jsonl(output, marker, requested_model=args.model)
@@ -506,6 +739,9 @@ def main() -> int:
 
         print(json.dumps(report, indent=2))
         exit_code = 0 if failed == 0 else 1
+    except (OSError, UnicodeError, ValueError) as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        exit_code = 1
     finally:
         cleanup_error = remove_workspace(workspace)
         if cleanup_error is not None:

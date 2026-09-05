@@ -762,6 +762,25 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 ),
                 marker,
             )
+            completed_error_items = [
+                engine.inspect_codex_jsonl(
+                    valid.replace(
+                        b'{"type": "item.completed", "item": {"type": "agent_message", "text": "Preparing to answer."}}',
+                        json.dumps(
+                            {
+                                "type": "item.completed",
+                                "item": {"type": "error", field: value},
+                            }
+                        ).encode("utf-8"),
+                    ),
+                    marker,
+                )
+                for field, value in (
+                    ("message", "failed"),
+                    ("error", "budget warning"),
+                    ("status", "failed"),
+                )
+            ]
             domain_payload = engine.inspect_codex_jsonl(
                 valid.replace(
                     b'"text": "Preparing to answer."',
@@ -820,6 +839,127 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 invalid_corpus_subprocess_calls += invalid_run.call_count
                 invalid_corpus_messages.append(str(invalid_exit.exception))
 
+            agents_skills = root / "home" / ".agents" / "skills"
+            legacy_skills = auth_home / "skills"
+            for skill_root, skill_name in (
+                (agents_skills, "user-skill"),
+                (legacy_skills, "legacy-skill"),
+            ):
+                skill_file = skill_root / skill_name / "SKILL.md"
+                skill_file.parent.mkdir(parents=True)
+                skill_file.write_text(
+                    f"---\nname: {skill_name}\ndescription: {skill_name}.\n---\n",
+                    encoding="utf-8",
+                )
+            with mock.patch.object(
+                engine,
+                "skill_source_roots",
+                return_value=(agents_skills, legacy_skills, root / "missing-admin-skills"),
+            ):
+                disabled_skills = engine.enumerate_non_target_skills(staged / "SKILL.md")
+            isolation_args = engine.skill_isolation_args(disabled_skills)
+
+            invalid_skill_root = root / "invalid-skill-root"
+            invalid_skill_root.write_text("not a directory\n", encoding="utf-8")
+            with (
+                mock.patch.object(engine, "skill_source_roots", return_value=(invalid_skill_root,)),
+                self.assertRaisesRegex(ValueError, "not a directory"),
+            ):
+                engine.enumerate_non_target_skills(staged / "SKILL.md")
+            with (
+                mock.patch.dict(os.environ, {"CODEX_HOME": "relative-codex-home"}, clear=False),
+                self.assertRaisesRegex(ValueError, "must be absolute"),
+            ):
+                engine.skill_source_roots()
+
+            catalog_text = "\n".join(
+                [
+                    "## Skills",
+                    "### Available skills",
+                    f"- demo-eval: Demo. (file: {(staged / 'SKILL.md').resolve()})",
+                    "### How to use skills",
+                    "- Follow the selected skill.",
+                ]
+            )
+            prompt_output = json.dumps(
+                [{"role": "developer", "content": [{"type": "input_text", "text": catalog_text}]}]
+            ).encode("utf-8")
+            catalog_readiness, catalog_reason = engine.inspect_catalog_prompt(
+                prompt_output,
+                "demo-eval",
+                "Demo.",
+            )
+            shortened_readiness, shortened_reason = engine.inspect_catalog_prompt(
+                json.dumps(
+                    [
+                        {
+                            "text": catalog_text
+                            + "\nSkill descriptions were shortened to fit the skills context budget."
+                        }
+                    ]
+                ).encode("utf-8"),
+                "demo-eval",
+                "Demo.",
+            )
+            extra_readiness, extra_reason = engine.inspect_catalog_prompt(
+                json.dumps(
+                    [
+                        {
+                            "text": catalog_text.replace(
+                                "### How to use skills",
+                                "- other: Other. (file: /tmp/other/SKILL.md)\n### How to use skills",
+                            )
+                        }
+                    ]
+                ).encode("utf-8"),
+                "demo-eval",
+                "Demo.",
+            )
+
+            preflight_captured: dict[str, object] = {}
+
+            def fake_preflight_run(
+                command: list[str],
+                **kwargs: object,
+            ) -> subprocess.CompletedProcess[bytes]:
+                preflight_captured["command"] = command
+                preflight_captured["kwargs"] = kwargs
+                return subprocess.CompletedProcess(command, 0, prompt_output, b"local warning")
+
+            with (
+                mock.patch.dict(os.environ, {"CODEX_HOME": str(auth_home)}, clear=False),
+                mock.patch.object(engine.subprocess, "run", side_effect=fake_preflight_run),
+            ):
+                offline_readiness, offline_reason = engine.offline_catalog_preflight(
+                    workspace,
+                    "demo-eval",
+                    "Demo.",
+                    isolation_args,
+                    30,
+                )
+            probe_failures = []
+            for failure in (
+                subprocess.TimeoutExpired(["codex"], 30),
+                OSError("unavailable"),
+                subprocess.CompletedProcess([], 2, b"", b"failure"),
+                subprocess.CompletedProcess([], 0, b"not-json", b""),
+            ):
+                with mock.patch.object(
+                    engine.subprocess,
+                    "run",
+                    side_effect=failure if isinstance(failure, BaseException) else None,
+                    return_value=None if isinstance(failure, BaseException) else failure,
+                ):
+                    probe_failures.append(
+                        engine.offline_catalog_preflight(
+                            workspace,
+                            "demo-eval",
+                            "Demo.",
+                            isolation_args,
+                            30,
+                        )
+                    )
+
             captured: dict[str, object] = {}
 
             def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[bytes]:
@@ -837,6 +977,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     "low",
                     "gpt-5.6-sol",
                     30,
+                    isolation_args,
                 )
 
             timeout_stdout = b"partial-jsonl\r\n"
@@ -860,6 +1001,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                         "low",
                         "gpt-5.6-sol",
                         7,
+                        isolation_args,
                     )
                 )
             timeout_evidence = engine.retain_run_evidence(
@@ -886,6 +1028,84 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                         "low",
                         "gpt-5.6-sol",
                         7,
+                        isolation_args,
+                    )
+                )
+
+            main_corpus = root / "main-codex-corpus.json"
+            main_corpus.write_text(
+                json.dumps([{"query": "q", "should_trigger": True}]) + "\n",
+                encoding="utf-8",
+            )
+            main_isolation_failures = []
+            for case_index, failure_kind in enumerate(("preflight", "roots-changed"), start=1):
+                main_workspace = root / f"main-workspace-{case_index}"
+                main_evidence = root / f"main-codex-evidence-{case_index}"
+                main_stdout = io.StringIO()
+                main_stderr = io.StringIO()
+                enumerated = (
+                    [disabled_skills]
+                    if failure_kind == "preflight"
+                    else [disabled_skills, (*disabled_skills, root / "new-skill" / "SKILL.md")]
+                )
+                preflight_result = (
+                    (None, "catalog proof rejected")
+                    if failure_kind == "preflight"
+                    else (catalog_readiness, "Codex catalog preflight passed")
+                )
+                with (
+                    mock.patch.object(engine, "find_eval_file", return_value=main_corpus),
+                    mock.patch.object(engine, "find_skill_source", return_value=source),
+                    mock.patch.object(engine.shutil, "which", return_value="/usr/local/bin/codex"),
+                    mock.patch.object(
+                        engine.subprocess,
+                        "run",
+                        return_value=subprocess.CompletedProcess([], 0, b"", b""),
+                    ),
+                    mock.patch.object(
+                        engine,
+                        "enumerate_non_target_skills",
+                        side_effect=enumerated,
+                    ) as main_enumerate,
+                    mock.patch.object(
+                        engine,
+                        "offline_catalog_preflight",
+                        return_value=preflight_result,
+                    ) as main_preflight,
+                    mock.patch.object(engine, "run_codex_query") as rejected_provider,
+                    mock.patch.object(
+                        engine.uuid,
+                        "uuid4",
+                        return_value=SimpleNamespace(hex=f"{case_index:08d}"),
+                    ),
+                    mock.patch.object(engine.tempfile, "mkdtemp", return_value=str(main_workspace)),
+                    mock.patch.object(
+                        sys,
+                        "argv",
+                        [
+                            str(CODEX_ENGINE),
+                            "demo",
+                            "--runs",
+                            "1",
+                            "--evidence-dir",
+                            str(main_evidence),
+                        ],
+                    ),
+                    contextlib.redirect_stdout(main_stdout),
+                    contextlib.redirect_stderr(main_stderr),
+                ):
+                    main_exit = engine.main()
+                main_isolation_failures.append(
+                    (
+                        failure_kind,
+                        main_exit,
+                        main_stdout.getvalue(),
+                        main_stderr.getvalue(),
+                        main_workspace.exists(),
+                        sorted(main_evidence.iterdir()),
+                        main_enumerate.call_count,
+                        main_preflight.call_args,
+                        rejected_provider.call_count,
                     )
                 )
 
@@ -964,6 +1184,28 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 "Codex default effort remains low": engine.DEFAULT_REASONING_EFFORT == "low",
                 "Codex default model remains approved": engine.DEFAULT_MODEL == "gpt-5.6-sol",
                 "Codex skill remains repository scoped": staged == workspace / ".agents" / "skills" / "demo-eval",
+                "Codex source description parser preserves the staged routing description": engine.source_skill_description(
+                    staged / "SKILL.md"
+                )
+                == "Demo.",
+                "Codex isolation deny list is fresh canonical and excludes only the target": disabled_skills
+                == tuple(
+                    sorted(
+                        (
+                            (agents_skills / "user-skill" / "SKILL.md").resolve(),
+                            (legacy_skills / "legacy-skill" / "SKILL.md").resolve(),
+                        ),
+                        key=str,
+                    )
+                )
+                and (staged / "SKILL.md").resolve() not in disabled_skills,
+                "Codex isolation uses only process-local negative skill controls": isolation_args[:4]
+                == ["--disable", "plugins", "-c", "skills.bundled.enabled=false"]
+                and isolation_args[4] == "-c"
+                and isolation_args[5].startswith("skills.config=[")
+                and all(f"path={json.dumps(str(path))},enabled=false" in isolation_args[5] for path in disabled_skills)
+                and "enabled=true" not in isolation_args[5]
+                and "max_context_tokens" not in " ".join(isolation_args),
                 "Codex staging never copies credentials": credential_copy.call_count == 0
                 and auth_file.read_text(encoding="utf-8") == "credential sentinel\n"
                 and "auth.json" not in CODEX_ENGINE.read_text(encoding="utf-8"),
@@ -981,7 +1223,35 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 and parsed["selected_marker"] == marker,
                 "Codex provider errors fail without confusing domain payloads": not top_error["valid"]
                 and not item_error["valid"]
+                and all(not result["valid"] for result in completed_error_items)
                 and domain_payload["valid"],
+                "Codex catalog proof requires one exact unshortened target": catalog_readiness is not None
+                and catalog_reason == "Codex catalog preflight passed"
+                and catalog_readiness["catalog_skill_entries"] == 1
+                and catalog_readiness["target_entries"] == 1
+                and catalog_readiness["target_description_exact"] is True
+                and catalog_readiness["warning_present"] is False
+                and catalog_readiness["other_skill_entries"] == 0
+                and catalog_readiness["proof_scope"]
+                == "catalog-only; debug prompt-input loads user config",
+                "Codex catalog proof rejects shortening warnings and extra entries": shortened_readiness is None
+                and "warning_present" in shortened_reason
+                and extra_readiness is None
+                and "catalog_skill_entries" in extra_reason,
+                "Codex offline probe preserves matched isolation overrides without claiming exec equivalence": preflight_captured[
+                    "command"
+                ]
+                == ["codex", "debug", "prompt-input", *isolation_args]
+                and "--ignore-user-config" not in preflight_captured["command"]
+                and preflight_captured["kwargs"]["cwd"] == workspace
+                and preflight_captured["kwargs"]["env"].get("CODEX_HOME") == str(auth_home)
+                and preflight_captured["kwargs"]["shell"] is False
+                and offline_readiness == catalog_readiness
+                and offline_reason == "Codex catalog preflight passed",
+                "Codex offline probe errors all fail closed without rendered-prompt evidence": all(
+                    readiness is None and reason.startswith("Codex catalog preflight")
+                    for readiness, reason in probe_failures
+                ),
                 "Codex requested and unresolved model remain distinct": parsed["requested_model"] == "gpt-5.6-sol"
                 and parsed["resolved_model"] is None,
                 "Codex raw streams remain exact": Path(evidence["jsonl_path"]).read_bytes() == valid
@@ -998,6 +1268,10 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 and any("duplicates" in message for message in invalid_corpus_messages),
                 "Codex direct result remains binary": (rc, stdout, stderr, timed_out)
                 == (0, valid, b"", False),
+                "Codex execution receives the exact proved isolation overrides": captured["command"][
+                    -len(isolation_args) - 1 :
+                ]
+                == [*isolation_args, "query"],
                 "Codex timeout retains partial raw streams and hashes": timeout_rc == -1
                 and timeout_timed_out
                 and retained_timeout_stdout == timeout_stdout
@@ -1018,12 +1292,16 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 and signal_stdout == b"signal-output"
                 and signal_stderr == b"signal-stderr",
                 "Codex retains existing login environment": captured["kwargs"]["env"].get("CODEX_HOME")
-                == str(auth_home),
+                == str(auth_home)
+                and captured["kwargs"]["env"].get("HOME") == os.environ.get("HOME"),
                 "Codex keeps least privilege flags": "--sandbox" in captured["command"]
                 and captured["command"][captured["command"].index("--sandbox") + 1] == "read-only"
                 and "--ephemeral" in captured["command"]
                 and "--ignore-user-config" in captured["command"]
                 and "--json" in captured["command"]
+                and "--disable" in captured["command"]
+                and captured["command"][captured["command"].index("--disable") + 1] == "plugins"
+                and "skills.bundled.enabled=false" in captured["command"]
                 and captured["command"][captured["command"].index("-m") + 1] == "gpt-5.6-sol"
                 and 'model_reasoning_effort="low"' in captured["command"],
                 "Codex keeps rules and approval boundaries enabled": "--ignore-rules" not in captured["command"]
@@ -1031,6 +1309,28 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 and "--full-auto" not in captured["command"],
                 "Codex negative transport remains fail closed": not engine.case_passes(
                     False, triggers=0, runs=3, threshold=0.5, invalid_runs=1
+                ),
+                "Codex rejects catalog or root drift before provider launch and cleans workspace": all(
+                    exit_code == 1
+                    and stdout == ""
+                    and "ERROR:" in stderr
+                    and not workspace_exists
+                    and evidence_files == []
+                    and provider_calls == 0
+                    and preflight_call is not None
+                    and preflight_call.args[3] == engine.skill_isolation_args(disabled_skills)
+                    and enumerate_calls == (1 if failure_kind == "preflight" else 2)
+                    for (
+                        failure_kind,
+                        exit_code,
+                        stdout,
+                        stderr,
+                        workspace_exists,
+                        evidence_files,
+                        enumerate_calls,
+                        preflight_call,
+                        provider_calls,
+                    ) in main_isolation_failures
                 ),
             }
             for name, condition in checks.items():
