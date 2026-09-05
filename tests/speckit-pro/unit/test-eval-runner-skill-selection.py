@@ -12,7 +12,6 @@ import re
 import subprocess
 import sys
 import tempfile
-import textwrap
 import unittest
 from pathlib import Path
 
@@ -590,39 +589,28 @@ def run_script(script: Path, *args: str, env_overrides: dict[str, str] | None = 
     )
 
 
-def write_fake_skill_creator(root: Path) -> Path:
-    skill_creator = root / "skill-creator"
-    scripts = skill_creator / "scripts"
-    scripts.mkdir(parents=True)
-    (scripts / "__init__.py").write_text("", encoding="utf-8")
-    (scripts / "run_eval.py").write_text(
-        textwrap.dedent(
-            """\
-            import json
-            import sys
-
-            eval_path = sys.argv[sys.argv.index("--eval-set") + 1]
-            evals = json.loads(open(eval_path, encoding="utf-8").read())
-            runs = int(sys.argv[sys.argv.index("--runs-per-query") + 1])
-            print(json.dumps({
-                "results": [
-                    {
-                        "query": entry["query"],
-                        "should_trigger": bool(entry["should_trigger"]),
-                        "trigger_rate": 1.0 if entry["should_trigger"] else 0.0,
-                        "triggers": runs if entry["should_trigger"] else 0,
-                        "runs": runs,
-                        "pass": True,
-                    }
-                    for entry in evals
-                ],
-                "summary": {"total": len(evals), "passed": len(evals), "failed": 0},
-            }))
-            """
-        ),
+def write_fake_claude(root: Path) -> Path:
+    binary_dir = root / "bin"
+    binary_dir.mkdir()
+    script = binary_dir / "claude-stub.py"
+    script.write_text(
+        "import sys\n"
+        "if '--version' in sys.argv:\n"
+        "    print('2.1.261')\n"
+        "elif '--help' in sys.argv:\n"
+        "    print('--restricted --plugin-dir --strict-mcp-config --mcp-config --output-format --verbose --no-session-persistence')\n"
+        "else:\n"
+        "    raise SystemExit(97)\n",
         encoding="utf-8",
     )
-    return skill_creator
+    if os.name == "nt":
+        launcher = binary_dir / "claude.cmd"
+        launcher.write_text(f'@"{sys.executable}" "{script}" %*\r\n', encoding="utf-8")
+    else:
+        launcher = binary_dir / "claude"
+        launcher.write_text(f"#!{sys.executable}\nimport runpy\nrunpy.run_path({str(script)!r}, run_name='__main__')\n", encoding="utf-8")
+        launcher.chmod(0o755)
+    return binary_dir
 
 
 class EvalRunnerSkillSelectionTests(unittest.TestCase):
@@ -770,9 +758,7 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            fake_skill_creator = write_fake_skill_creator(root)
-            fake_home = root / "home"
-            fake_home.mkdir()
+            fake_claude_dir = write_fake_claude(root)
 
             name = CURRENT_INVENTORY[0]
             result = run_script(FUNCTIONAL_SCRIPT, "speckit-coach")
@@ -788,14 +774,19 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
             result = run_script(
                 TRIGGER_SCRIPT,
                 "speckit-coach",
-                env_overrides={"SKILL_CREATOR_ROOT": str(fake_skill_creator), "HOME": str(fake_home)},
+                "--preflight",
+                env_overrides={"PATH": f"{fake_claude_dir}{os.pathsep}{os.environ.get('PATH', '')}"},
             )
             with self.subTest(msg=name):
                 self.assertEqual(result.returncode, 0, merged_output(result))
 
             name = CURRENT_INVENTORY[2]
             with self.subTest(msg=name):
-                self.assertIn(f"Skill path: {PLUGIN_ROOT / 'skills' / 'speckit-coach'}", merged_output(result))
+                report = json.loads(result.stdout)
+                self.assertEqual(
+                    report["preflight"]["skill_source"],
+                    str(PLUGIN_ROOT / "skills" / "speckit-coach" / "SKILL.md"),
+                )
 
             name = CURRENT_INVENTORY[3]
             result = run_script(CODEX_FUNCTIONAL_SCRIPT, "speckit-coach")
