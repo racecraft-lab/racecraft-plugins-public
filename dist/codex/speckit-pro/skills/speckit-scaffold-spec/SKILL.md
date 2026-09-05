@@ -103,8 +103,6 @@ Do not invoke the deferred operation, advertise either runner mode, or invent a
 replacement command. Leave the PROCESS artifacts unchanged. This advisory gap
 does not block the remaining scaffold workflow, but it must be recorded.
 
-> **Codex implicit-trigger note (eval harness vs production):** Layer 2 trigger evals score this skill at 69% (11/16) on the Codex selector — but POS is a perfect 8/8 (every "scaffold SPEC-009" / "create a new spec branch" / "prep SPEC-022 for autopilot" query fires correctly). All 5 NEG misses are false-positives in single-skill staging where the harness loads only this skill, so the Codex selector has no alternative to route adjacent SDD queries to ("roadmap status" / "what's the progress on SPEC-009" → should go to `$speckit-status`, "run the fully populated workflow" → `$speckit-autopilot`, "resolve PR review comments" → `$speckit-resolve-pr`). In production all six speckit-pro skills are loaded together and Codex routes those queries to their proper destinations. The eval results under-report real-world accuracy; positive-trigger reliability is the operationally-relevant number. (This skill was renamed from `speckit-setup` in v1.12; the rename did not regress trigger behavior — same POS pass rate as before.)
-
 ## Input
 
 Accept:

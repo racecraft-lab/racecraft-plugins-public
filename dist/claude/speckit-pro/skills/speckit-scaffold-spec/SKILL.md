@@ -112,9 +112,7 @@ Do not use `install-codex-agents` as a Claude-side repair: Claude Code loads
 plugin agents from the plugin cache, so scaffold cannot safely self-heal a
 missing Claude agent file. If the file inventory is incomplete, STOP and
 tell the user to update/reinstall `speckit-pro`, run `/reload-plugins`, and
-retry. Claude Code
-loads plugin agents directly from the plugin cache, so scaffold cannot safely
-self-heal a missing Claude agent file.
+retry.
 
 ### 0. Ensure SpecKit CLI
 
