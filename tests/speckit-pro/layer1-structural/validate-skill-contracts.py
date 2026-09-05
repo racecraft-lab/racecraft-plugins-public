@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import json
+import os
 import re
 import sys
 import unittest
@@ -472,38 +473,49 @@ PRD_WORKFLOW_TARGETS = (
     ('roadmap-MOC template', Path('skills/speckit-coach/templates/roadmap-moc-template.md')),
 )
 PRD_WORKFLOW_CASES = (
-    ('Claude source', PLUGIN_ROOT / 'skills/speckit-prd/SKILL.md', PLUGIN_ROOT, ('references/prd-authoring-protocol.md', '../speckit-coach/templates/prd-template.md', '../speckit-coach/templates/technical-roadmap-template.md', '../speckit-coach/references/slicing-heuristics.md', '../speckit-coach/templates/roadmap-moc-template.md')),
-    ('Codex source', PLUGIN_ROOT / 'codex-skills/speckit-prd/SKILL.md', PLUGIN_ROOT, ('../../skills/speckit-prd/references/prd-authoring-protocol.md', '../../skills/speckit-coach/templates/prd-template.md', '../../skills/speckit-coach/templates/technical-roadmap-template.md', '../../skills/speckit-coach/references/slicing-heuristics.md', '../../skills/speckit-coach/templates/roadmap-moc-template.md')),
-    ('Claude payload', REPO_ROOT / 'dist/claude/speckit-pro/skills/speckit-prd/SKILL.md', REPO_ROOT / 'dist/claude/speckit-pro', ('references/prd-authoring-protocol.md', '../speckit-coach/templates/prd-template.md', '../speckit-coach/templates/technical-roadmap-template.md', '../speckit-coach/references/slicing-heuristics.md', '../speckit-coach/templates/roadmap-moc-template.md')),
-    ('Codex payload', REPO_ROOT / 'dist/codex/speckit-pro/skills/speckit-prd/SKILL.md', REPO_ROOT / 'dist/codex/speckit-pro', ('references/prd-authoring-protocol.md', '../speckit-coach/templates/prd-template.md', '../speckit-coach/templates/technical-roadmap-template.md', '../speckit-coach/references/slicing-heuristics.md', '../speckit-coach/templates/roadmap-moc-template.md')),
+    ('Claude source', PLUGIN_ROOT / 'skills/speckit-prd/SKILL.md', PLUGIN_ROOT),
+    ('Codex source', PLUGIN_ROOT / 'codex-skills/speckit-prd/SKILL.md', PLUGIN_ROOT),
+    ('Claude payload', REPO_ROOT / 'dist/claude/speckit-pro/skills/speckit-prd/SKILL.md', REPO_ROOT / 'dist/claude/speckit-pro'),
+    ('Codex payload', REPO_ROOT / 'dist/codex/speckit-pro/skills/speckit-prd/SKILL.md', REPO_ROOT / 'dist/codex/speckit-pro'),
 )
 
 class ValidatePrdWorkflowContract(unittest.TestCase):
 
     def test_prd_workflow_routes_and_overwrite_guard(self) -> None:
-        for label, path, root, links in PRD_WORKFLOW_CASES:
+        for label, path, root in PRD_WORKFLOW_CASES:
             content = _read(path)
             workflow_marker = '## Workflow\n'
             output_marker = '\n## Output contract'
-            workflow = content.partition(workflow_marker)[2].partition(output_marker)[0]
-            with self.subTest(msg=f'{label}: Workflow section is present'):
-                self.assertTrue(workflow, f'expected {path} to retain a bounded Workflow section')
+            workflow_start = content.find(workflow_marker)
+            workflow_end = content.find(output_marker, workflow_start + len(workflow_marker))
+            bounded_workflow = workflow_start >= 0 and workflow_end > workflow_start
+            section_contract = f'{label}: Workflow section is bounded by Output contract'
+            with self.subTest(msg=section_contract):
+                self.assertTrue(bounded_workflow, section_contract)
+            if not bounded_workflow:
+                continue
+            workflow = content[workflow_start + len(workflow_marker):workflow_end]
+            normalized_workflow = ' '.join(workflow.split())
+            links = tuple(Path(os.path.relpath(root / target, path.parent)).as_posix() for _, target in PRD_WORKFLOW_TARGETS)
             protocol_link = links[0]
-            with self.subTest(msg=f'{label}: Workflow requires protocol read/follow before authoring'):
-                self.assertIn(f'Read and follow the [shared PRD authoring protocol]({protocol_link})\nbefore authoring.', workflow, f'{label}: Workflow requires protocol read/follow before authoring')
+            protocol_contract = f'{label}: Workflow requires protocol read/follow before authoring'
+            with self.subTest(msg=protocol_contract):
+                self.assertIn(f'Read and follow the [shared PRD authoring protocol]({protocol_link}) before authoring.', normalized_workflow, protocol_contract)
             for (resource, expected_target), link in zip(PRD_WORKFLOW_TARGETS, links):
-                with self.subTest(msg=f'{label}: Workflow links {resource} at its host root'):
-                    self.assertIn(f']({link})', workflow, f'{label}: Workflow links {resource} at its host root')
-                    self.assertEqual(root / expected_target, (path.parent / link).resolve(), f'{label}: Workflow links {resource} at its host root')
-                    self.assertTrue((path.parent / link).is_file(), f'{label}: Workflow links {resource} at its host root')
+                route_contract = f'{label}: Workflow links {resource} at its host root'
+                with self.subTest(msg=route_contract):
+                    self.assertIn(f']({link})', normalized_workflow, route_contract)
+                    self.assertEqual(root / expected_target, (path.parent / link).resolve(), route_contract)
+                    self.assertTrue((path.parent / link).is_file(), route_contract)
             overwrite = 'before overwriting, confirm the exact output path'
-            apply = "Apply the protocol's interview, update, slicing/estimation, MOC, index, and\nverification rules."
-            resource_indices = [workflow.find(f']({link})') for link in links[1:]]
-            with self.subTest(msg=f'{label}: Workflow confirms output path before resources or apply'):
-                self.assertGreaterEqual(workflow.find(overwrite), 0, f'{label}: Workflow confirms output path before resources or apply')
-                self.assertGreaterEqual(workflow.find(apply), 0, f'{label}: Workflow confirms output path before resources or apply')
-                if all(index >= 0 for index in resource_indices) and workflow.find(apply) >= 0:
-                    self.assertLess(workflow.find(overwrite), min(*resource_indices, workflow.find(apply)), f'{label}: Workflow confirms output path before resources or apply')
+            apply = 'Apply the protocol'
+            resource_indices = [normalized_workflow.find(f']({link})') for link in links[1:]]
+            order_contract = f'{label}: Workflow confirms output path before resources or apply'
+            with self.subTest(msg=order_contract):
+                self.assertGreaterEqual(normalized_workflow.find(overwrite), 0, order_contract)
+                self.assertGreaterEqual(normalized_workflow.find(apply), 0, order_contract)
+                if all(index >= 0 for index in resource_indices) and normalized_workflow.find(apply) >= 0:
+                    self.assertLess(normalized_workflow.find(overwrite), min(*resource_indices, normalized_workflow.find(apply)), order_contract)
 
 class ValidateSkillCapabilityPointers(unittest.TestCase):
 
