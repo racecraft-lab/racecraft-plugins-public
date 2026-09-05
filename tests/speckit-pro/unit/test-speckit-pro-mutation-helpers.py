@@ -359,7 +359,7 @@ if str(PLUGIN_ROOT) not in sys.path:
 
 from speckit_pro_runner.envelope import RunnerRequest
 from speckit_pro_runner.agent_materialization import materialize_agent_policy
-from speckit_pro_runner.helpers import mutation, registry
+from speckit_pro_runner.helpers import mutation, pr_emission, registry
 
 
 def runner_env() -> dict[str, str]:
@@ -7096,23 +7096,30 @@ This line must not be copied.
 
     def test_unpromoted_helpers_fail_closed_before_dispatch_in_all_mutation_modes(self) -> None:
         cases = [
-            (
-                "detect-stack-manager-plan",
-                "out_of_scope",
-                {
-                    "commands": [["gh", "pr", "create"]],
-                    "output_path": "generated/adversarial.md",
-                    "content": "out-of-scope dispatch must not write\n",
-                },
-            ),
+            ("final-reviewability-backstop", "deferred"),
+            ("validate-pr-workflow-contract-write", "deferred"),
+            ("restack", "deferred"),
+            ("relocate-process-artifacts", "deferred"),
+            ("plan-layers-marker-plan", "deferred"),
+            ("detect-stack-manager-plan", "out_of_scope"),
         ]
+        commands_by_helper = {
+            "restack": [["gh", "pr", "edit"]],
+            "detect-stack-manager-plan": [["gh", "pr", "create"]],
+        }
 
-        for helper_id, promotion_status, inputs in cases:
+        for helper_id, promotion_status in cases:
             for mode in ("dry_run", "apply"):
                 with self.subTest(helper_id=helper_id, mode=mode):
                     tmp, git_root = self.temp_clean_git_repo()
                     with tmp:
                         target = git_root / "generated" / "adversarial.md"
+                        inputs = {
+                            "output_path": "generated/adversarial.md",
+                            "content": "unpromoted dispatch must not write\n",
+                        }
+                        if helper_id in commands_by_helper:
+                            inputs["commands"] = commands_by_helper[helper_id]
                         completed, response, stderr_records = run_runner(
                             helper_request(helper_id, mode=mode, inputs=inputs),
                             cwd=git_root,
@@ -7132,6 +7139,34 @@ This line must not be copied.
                         self.assertEqual(mutation["touched_paths"], [])
                         self.assertFalse(mutation["live_mutation"])
                         self.assertFalse(target.exists())
+
+    def test_pr_emission_dispatch_rejects_unmatched_helper_without_mutation(self) -> None:
+        entry = SimpleNamespace(
+            helper_id="unmatched-pr-route",
+            operation="unmatched-pr-route",
+            promotion_status="golden_only",
+            comparison_mode="fixture_semantic",
+        )
+        for mode in ("dry_run", "apply"):
+            with self.subTest(mode=mode), patch.object(pr_emission, "run_mutation_helper") as run_mutation:
+                request = RunnerRequest(
+                    request_id=f"test-unmatched-pr-route-{mode}",
+                    helper_id=entry.helper_id,
+                    operation=entry.operation,
+                    mode=mode,
+                    inputs={
+                        "output_path": "generated/unmatched.md",
+                        "content": "unmatched dispatch must not plan or write\n",
+                    },
+                )
+
+                response = pr_emission.run_pr_emission_helper(entry, request)
+
+                run_mutation.assert_not_called()
+                self.assert_response(response, "input_error", 2)
+                self.assertEqual(response["data"], {})
+                self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["invalid_input"])
+                self.assertEqual(response["diagnostics"][0]["details"], {"helper_id": entry.helper_id})
 
     def test_install_codex_agents_refreshes_stale_files_and_preserves_unrelated_agents(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()

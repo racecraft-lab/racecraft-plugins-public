@@ -275,7 +275,6 @@ When breaking a feature into specs:
 
 - **Source PRD:** {{PRD_LINK}} — the SPEC catalog above is derived from its Features / Acceptance Criteria
 - **PRD Template:** `prd-template.md` (same `templates/` directory) — author with `/speckit-pro:speckit-prd`
-- **SpecKit Workflow Template:** `docs/ai/speckit-workflow-template.md`
 - **Constitution:** `.specify/memory/constitution.md`
 - **Project Standards:** <!-- Link to AGENTS.md, CLAUDE.md, or equivalent -->
 <!-- Add references to key documentation, SDKs, design tools, related branches, etc. -->

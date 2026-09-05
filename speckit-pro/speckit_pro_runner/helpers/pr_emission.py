@@ -64,7 +64,11 @@ def run_pr_emission_helper(entry: Any, request: Any) -> dict[str, Any]:
         return validate_pr_packet_write(entry, request)
     if request.helper_id in {"multi-pr-emission", "restack", "detect-stack-manager-plan"}:
         return plan_commands(entry, request)
-    return generated_output(entry, request)
+    return input_error(
+        request,
+        "helper_id is not implemented by PR-emission dispatcher",
+        details={"helper_id": request.helper_id},
+    )
 
 
 def generate_uat_skeleton(entry: Any, request: Any) -> dict[str, Any]:
@@ -414,35 +418,6 @@ def validate_pr_packet_write(entry: Any, request: Any) -> dict[str, Any]:
             "packet_id": packet_id,
             "validation_source": validation_source,
         },
-    )
-
-
-def generated_output(entry: Any, request: Any) -> dict[str, Any]:
-    output_path = request.inputs.get("output_path")
-    content = request.inputs.get("content")
-    if isinstance(output_path, str) and output_path and isinstance(content, str):
-        operation = {
-            "operation_id": entry.helper_id,
-            "kind": "write_file",
-            "target": output_path,
-            "content": content,
-        }
-        return run_mutation_helper(entry, request, operations=[operation])
-
-    operations = request.inputs.get("operations")
-    if isinstance(operations, list):
-        return run_mutation_helper(entry, request)
-
-    return run_mutation_helper(
-        entry,
-        request,
-        operations=[
-            {
-                "operation_id": entry.helper_id,
-                "kind": "command_plan",
-                "command": ["python", "-m", "speckit_pro_runner", entry.helper_id],
-            }
-        ],
     )
 
 

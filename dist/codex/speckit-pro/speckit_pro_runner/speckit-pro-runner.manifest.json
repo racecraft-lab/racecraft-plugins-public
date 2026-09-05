@@ -104,7 +104,7 @@
         "value": "speckit_pro_runner/helpers/__init__.py",
         "display": "speckit_pro_runner/helpers/__init__.py"
       },
-      "sha256": "00fe68ad0f274c880dfd550325423d301d61e8c9eb066611080f9e378191a4f1"
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "path": {
@@ -128,7 +128,7 @@
         "value": "speckit_pro_runner/helpers/pr_emission.py",
         "display": "speckit_pro_runner/helpers/pr_emission.py"
       },
-      "sha256": "95d9883342fef73e48e6b068d858b871048135499dadd4526e1e12788a03b773"
+      "sha256": "09c59d4c1152b0032444599ac4270147b0481205db39273555d177ef03bf09a9"
     },
     {
       "path": {
