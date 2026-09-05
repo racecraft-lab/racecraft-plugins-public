@@ -55,12 +55,6 @@ stale.
    - `brownfield_change` — the change edits existing code a reviewer has to
      understand before they can read the edit.
 
-As the manifest stands today that routing selects the implementation-plan and
-spec-explainer pages on every run, the code-approaches page when the feature has
-competing approaches, and the module-map page when it is a brownfield change.
-Confirm it against the manifest you actually read: the manifest wins over this
-paragraph.
-
 ## Fill — write only between the markers
 
 Each template carries paired HTML-comment markers around every region you fill,

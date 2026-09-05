@@ -36,26 +36,9 @@ checklist and fix the gaps — all in one agent.
    fall back to local, native platform, or repo-local sources when no
    installed capability is available or usable.
 
-   a. **Codebase exploration** — ask "How should we close this
-      gap?" with the gap text and spec/plan excerpts. Explore
-      the codebase for established patterns that inform the fix.
-      - Use the selected codebase context capability for the need.
-
-   b. **Web research** — search for API docs, standards, or
-      best practices relevant to the gap
-      - Use the selected web/domain research, source extraction, or
-        library documentation capability for the need.
-
-   c. **Project context** — read constitution (`.specify/memory/constitution.md`)
-      and prior specs (`specs/*/spec.md`) — check if project
-      principles or precedent decisions address the gap
-
-   d. **Determine the fix:**
-      - Which artifact to edit (spec.md, plan.md, or both)
-      - What exact text to add or modify
-      - Where in the artifact the edit goes (section name)
-
-   e. **Apply the fix** — edit the artifact directly
+   Ground the fix in whichever of codebase precedent, external
+   documentation, or project decisions (constitution, prior specs)
+   actually answers it, cite the source, then edit the artifact.
 
 4. **Re-run the checklist to verify.** After fixing all gaps,
    re-run the same `$speckit-checklist` domain then run runner helper
@@ -100,12 +83,6 @@ checklist and fix the gaps — all in one agent.
    pre-workflow scoping that consensus cannot resolve, flag it
    under "Unresolved for consensus" and let the orchestrator
    decide.
-
-## Performance
-
-Take your time to do this thoroughly. Quality is more
-important than speed. Do not skip validation steps. Every
-gap must be researched and remediated — no shortcuts.
 
 </hard_constraints>
 

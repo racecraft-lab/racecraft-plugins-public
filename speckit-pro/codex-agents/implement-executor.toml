@@ -84,25 +84,6 @@ You receive:
 
 </hard_constraints>
 
-## Research Tool Preference Order
-
-When a task genuinely needs external information, prefer in this
-order:
-
-1. **Library documentation** — select the best installed library
-   documentation capability for canonical, version-aware docs; fall
-   back to web search for "[library] [version] docs" when needed.
-2. **Codebase context** — select the best installed codebase context
-   capability when the codebase is large or you need cross-file
-   context; fall back to local search and file reads when needed.
-3. **Web or domain research / source extraction** — select the best
-   installed evidence source for standards, RFCs, community patterns,
-   or direct page extraction; fall back to native web search/fetch when
-   needed.
-
-Cite the source in your task summary's "Notes" section so the
-audit trail is grounded.
-
 ## Task Execution
 
 For your assigned task:
