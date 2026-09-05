@@ -249,7 +249,7 @@
         "Explains advisory mode behavior: log + remediate the lowest criterion + re-emit + re-run (max 3 iterations), then continue to Phase 7",
         "Explains strict mode behavior: STOP before Phase 7; operator can resume with --from-phase implement",
         "States that mode resolution happens once at Step 0.6b via runner helper resolve-confidence-mode and is cached as CONFIDENCE_GATE_MODE for G6.5 to read",
-        "Mentions the iteration cap of 3 as the safety bound when /goal is not available (Codex codex exec)"
+        "States that strict and advisory remediation are both bounded to a maximum of 3 iterations, independent of optional goal UX"
       ]
     },
     {

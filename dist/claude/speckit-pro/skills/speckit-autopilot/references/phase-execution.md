@@ -1,32 +1,5 @@
 # Phase Execution Reference
 
-**RULES (from SKILL.md — repeated here for clarity):**
-
-1. **SUBAGENT PER PHASE** — Spawn a foreground subagent for
-   each phase via the Agent tool. The subagent runs the
-   `/speckit-*` command and returns a summary. The parent
-   receives the result as a tool response, keeping the agent
-   loop alive.
-2. **MULTI-PROMPT** — Clarify and Checklist have multiple
-   prompts. Spawn a separate subagent for each prompt.
-3. **TWO-LAYER RESOLUTION (BATCHED)** — After executor subagents
-   return, the main session parses "Unresolved for consensus"
-   items and BATCHES dispatch: all routed analysts for all items
-   spawned in ONE assistant message (per-item category routing),
-   then all synthesizers in ONE message, then serial Artifact
-   Edit application. See consensus-protocol.md §Batched Dispatch.
-4. **TASK LIST DRIVES EXECUTION** — Check the task list
-   after each subagent returns to know what's next.
-
----
-
-How each SDD phase is executed by the autopilot. Each phase
-is delegated to a **foreground subagent** that runs the real
-`/speckit-*` command via the `Skill` tool. The subagent
-operates in its own context — the command's noise (template
-reads, file exploration, completion reports) stays there and
-never touches the parent. The parent receives only a summary.
-
 ## Contents
 
 - [SpecKit Infrastructure](#speckit-infrastructure) — commands, scripts, templates, constitution
@@ -639,17 +612,11 @@ to proceed, surface a remediation hint, or stop.
    threshold override is out of scope for this gate; only the mode
    flag is invocation-overridable.)
 
-3. On entry, print the /goal tip (Claude Code interactive only):
-   "Tip: run `/goal achieve confidence ≥<threshold> on the
-   pre-Implement gate` in a separate Claude Code message to get the
-   live ◎ /goal active indicator. In Codex `codex exec`, /goal is
-   not first-class — the 3-iteration cap is the safety bound."
-
-4. Run the gate:
+3. Run the gate:
      runner helper confidence-gate \
        <workflow-file> --threshold <T> --mode <M>
 
-5. Parse exit code + JSON:
+4. Parse exit code + JSON:
    - exit 0 (PASS): TaskUpdate G6.5 → completed; advance to Phase 7.
    - exit 1 (NO_DATA): log a warning, surface to operator that the
      synthesizer skipped its confidence emit (treat as a plugin
@@ -691,11 +658,6 @@ to proceed, surface a remediation hint, or stop.
               reports that it is crossing a refused boundary. The
               older `--from-phase implement` form keeps working.
 ```
-
-The iteration cap of 3 is the only safety bound when `/goal` is
-not available (Codex `codex exec` headless mode). In Claude Code
-interactive mode, an operator-set `/goal` provides an additional
-turn-based check layered on top.
 
 **Why this gate is opt-in for blocking:** the autopilot already
 runs Clarify (G2) and Analyze (G6) gates before this point, so
@@ -847,14 +809,6 @@ orchestrator names no page list of its own. The agent reads
 `draft-pr`, and applies each surviving entry's `trigger`: `{"always": true}`
 selects on every run, and `{"any_of": [...]}` selects only when the feature
 carries at least one signal the entry names.
-
-As the manifest stands, that routing selects the implementation-plan and
-spec-explainer pages on every run, the code-approaches page only on the
-`competing_approaches` signal, and the module-map page only on the
-`brownfield_change` signal. **The manifest is read at run time and wins over
-that sentence.** It is the routing's source of truth and it grows, so a page
-list memorized from this paragraph goes stale, and a draft-stage entry shipped
-later must route from the manifest alone with no edit here.
 
 **The gallery is input, never output.** `speckit-pro/artifact-gallery/` holds
 the shipped manifest and the shipped templates, and writing anything into that
@@ -2479,10 +2433,8 @@ they are what a reader should check the helper against:
    implementation work to `orchestrator-direct`, the one route that dispatches
    no agent and injects no TDD protocol: "Add the required
    validate-release-note check (workflow)" and "Register the helper in the
-   dispatch table and check the manifest" both landed there. Measured over this
-   repository's task lists with no project agent set, the anywhere form
-   misrouted roughly one task in seven; the leading-verb form leaves one known
-   false positive. `build` at the head is that one, because it reads both ways
+   dispatch table and check the manifest" both landed there. At the head,
+   `build` reads both ways
    and verification wins it. An author who means implementation opens with
    `Implement`, `Add`, or `Create`.
 9. Branch (a) applies only when the request carries both a project agent name

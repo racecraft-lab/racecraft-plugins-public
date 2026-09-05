@@ -303,7 +303,7 @@
     },
     {
       "id": 24,
-      "prompt": "Pretend you just finished Phase 6 (Analyze) for a feature and the consensus-synthesizer wrote this block to the workflow log:\n\n```\n📊 Confidence: 0.85\n\n- Task understanding: 0.95\n- Approach clarity: 0.80\n- Requirements alignment: 0.90\n- Risk assessment: 0.75\n- Completeness: 0.85\n```\n\nThe project's `.codex/speckit-pro.local.md` has no `confidence_gate_mode` key. The operator is about to start Phase 7 (Implement) via `$speckit-autopilot`. Walk through the resolve-confidence-mode and confidence-gate runner requests, the helper exit code, remediation behavior, and the alternate behavior for `--strict`. Explain why `/goal` cannot be the safety bound in headless `codex exec`.",
+      "prompt": "Pretend you just finished Phase 6 (Analyze) for a feature and the consensus-synthesizer wrote this block to the workflow log:\n\n```\n📊 Confidence: 0.85\n\n- Task understanding: 0.95\n- Approach clarity: 0.80\n- Requirements alignment: 0.90\n- Risk assessment: 0.75\n- Completeness: 0.85\n```\n\nThe project's `.codex/speckit-pro.local.md` has no `confidence_gate_mode` key. The operator is about to start Phase 7 (Implement) via `$speckit-autopilot`. Walk through the resolve-confidence-mode and confidence-gate runner requests, the helper exit code, remediation behavior, and the alternate behavior for `--strict`. Explain how the maximum 3-iteration remediation loop is enforced in both advisory and strict modes, independent of optional goal UX.",
       "expected_output": "Explains the G6.5 behavior end-to-end in Codex: resolve-confidence-mode runs once during pre-flight and returns advisory, then confidence-gate reads the workflow emit with mode_name=advisory and threshold 0.90. Its data.exit_code is 2 with stdout_json.pass=false because 0.85 is below 0.90. The orchestrator identifies Risk Assessment at 0.75, dispatches focused remediation through spawn_agent, re-emits, and re-runs up to 3 times. Strict mode stops before Phase 7 after remediation remains below threshold.",
       "expectations": [
         "Names the confidence-gate read-only runner helper and its workflow_file, mode_name, and threshold inputs",
@@ -312,7 +312,7 @@
         "Explains advisory mode behavior: log + remediate the lowest criterion + re-emit via spawn_agent consensus-synthesizer + re-run (max 3 iterations), then continue to Phase 7",
         "Explains strict mode behavior: STOP before Phase 7",
         "States that mode resolution happens once at Step 0.6b via runner helper resolve-confidence-mode and is cached as CONFIDENCE_GATE_MODE for G6.5 to read",
-        "Explains explicitly that /goal is not first-class in codex exec (cites openai/codex#21764 maintainer reply or equivalent) and that the 3-iteration cap is therefore the only safety bound in headless mode",
+        "States that strict and advisory remediation are both bounded to a maximum of 3 iterations, independent of optional goal UX",
         "Notes that resolve-confidence-mode checks both .claude/speckit-pro.local.md and .codex/speckit-pro.local.md as default config paths"
       ]
     },
