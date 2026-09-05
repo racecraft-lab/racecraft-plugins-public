@@ -112,7 +112,7 @@
         "value": "speckit_pro_runner/helpers/install.py",
         "display": "speckit_pro_runner/helpers/install.py"
       },
-      "sha256": "e567769316495dfc509fb20bd674ca65e7d0ffb8bbdc79eb61709411b9d514d0"
+      "sha256": "81b5dff7058ccdb957ebf200f7b49b0b8bf986e7f9648161a574e4604efd49e9"
     },
     {
       "path": {
@@ -152,15 +152,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "206a845045d4ac4608933622f1fc938e7b9c22579c7ea5519f289ed3961918d9"
-    },
-    {
-      "path": {
-        "kind": "plugin_relative",
-        "value": "speckit_pro_runner/merge_utils.py",
-        "display": "speckit_pro_runner/merge_utils.py"
-      },
-      "sha256": "a4a0a7ba1ac82c30e4f2bf54181b661a738ae524cfc98c490210dce15300c6ed"
+      "sha256": "828aa14cbad8bd050416d8f7436e7729ce12a83695582feacc8816a8dbcee313"
     },
     {
       "path": {
