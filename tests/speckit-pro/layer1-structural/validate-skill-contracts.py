@@ -504,7 +504,7 @@ class ValidatePrdWorkflowContract(unittest.TestCase):
             for (resource, expected_target), link in zip(PRD_WORKFLOW_TARGETS, links):
                 route_contract = f'{label}: Workflow links {resource} at its host root'
                 with self.subTest(msg=route_contract):
-                    self.assertIn(f']({link})', normalized_workflow, route_contract)
+                    self.assertIn(f'[{resource}]({link})', normalized_workflow, route_contract)
                     self.assertEqual(root / expected_target, (path.parent / link).resolve(), route_contract)
                     self.assertTrue((path.parent / link).is_file(), route_contract)
             overwrite = 'before overwriting, confirm the exact output path'
