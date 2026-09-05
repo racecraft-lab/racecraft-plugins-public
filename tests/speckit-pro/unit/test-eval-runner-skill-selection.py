@@ -397,7 +397,11 @@ def runtime_contract_parity_violations() -> list[str]:
             for token in required:
                 if token.casefold() not in body:
                     violations.append(f"{label}: {surface} missing parity token {token}")
-    entrypoint_paths = pairs[2][1:3]
+    entrypoint_paths = next(
+        (claude_path, codex_path)
+        for label, claude_path, codex_path, _required in pairs
+        if label == "autopilot"
+    )
     violations.extend(
         autopilot_entrypoint_post_contract_violations(
             {
