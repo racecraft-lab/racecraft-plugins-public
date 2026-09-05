@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import copy
 import hashlib
 import json
 import os
@@ -111,19 +110,22 @@ def base_request(operation: str = "runtime-info", inputs: dict[str, object] | No
     }
 
 
-def fixture_request(value: object) -> object:
-    copied = copy.deepcopy(value)
+def preflight_with(
+    *,
+    python_version: str = "3.12.4",
+    specify_path: str | None = "/usr/local/bin/specify",
+    plugin_root: Path | None = PLUGIN_ROOT,
+    metadata_status: str = "verified",
+) -> dict[str, object]:
+    from speckit_pro_runner import runtime
 
-    def replace(node: object) -> object:
-        if isinstance(node, list):
-            return [replace(item) for item in node]
-        if isinstance(node, dict):
-            return {key: replace(item) for key, item in node.items()}
-        if node == "__PYTHON__":
-            return sys.executable
-        return node
-
-    return replace(copied)
+    with (
+        mock.patch.object(runtime.platform, "python_version", return_value=python_version),
+        mock.patch.object(runtime.shutil, "which", return_value=specify_path),
+        mock.patch.object(runtime, "detect_plugin_root", return_value=plugin_root),
+        mock.patch.object(runtime, "metadata_report", return_value={"verification_status": metadata_status}),
+    ):
+        return runtime.preflight("test-preflight", {})
 
 
 class RunnerFoundationTests(unittest.TestCase):
@@ -167,7 +169,13 @@ class RunnerFoundationTests(unittest.TestCase):
         self.assertEqual(findings, [])
 
     def test_runtime_info_reports_source_checkout_identity(self) -> None:
-        completed, response, stderr_records = run_runner(base_request("runtime-info"))
+        contextual_inputs = {
+            "source": "installed-plugin-runtime",
+            "product": "codex",
+            "platform": "macos",
+            "surface_path": "speckit-pro/codex-skills/speckit-status/SKILL.md",
+        }
+        completed, response, stderr_records = run_runner(base_request("runtime-info", contextual_inputs))
         self.assertEqual(completed.returncode, 0)
         self.assertEqual(len(completed.stdout.strip().splitlines()), 1)
         self.assertEqual(stderr_records, [])
@@ -187,20 +195,8 @@ class RunnerFoundationTests(unittest.TestCase):
             self.assertEqual(path_record["kind"], "plugin_relative")
             self.assertFalse(Path(path_record["value"]).is_absolute())
 
-    def test_preflight_ok_with_test_controlled_prerequisites(self) -> None:
-        completed, response, stderr_records = run_runner(
-            base_request(
-                "preflight",
-                {
-                    "test_overrides": {
-                        "specify": {"available": True, "path": "specify", "version": "0.11.8"},
-                        "metadata_status": "verified",
-                    }
-                },
-            )
-        )
-        self.assertEqual(completed.returncode, 0)
-        self.assertEqual(stderr_records, [])
+    def test_preflight_ok_with_detected_prerequisites(self) -> None:
+        response = preflight_with()
         self.assert_response(response, "ok", 0)
         report = response["data"]["report"]
         self.assertEqual(report["prerequisites"]["python"]["status"], "available")
@@ -209,20 +205,48 @@ class RunnerFoundationTests(unittest.TestCase):
 
     def test_preflight_fail_closed_missing_prerequisites(self) -> None:
         cases = [
-            ({"python_version": "3.10.9", "specify": {"available": True}, "metadata_status": "verified"}, "python_too_old"),
-            ({"specify": {"available": False}, "metadata_status": "verified"}, "specify_missing"),
-            ({"plugin_root": "missing", "specify": {"available": True}, "metadata_status": "verified"}, "plugin_root_missing"),
+            ({"python_version": "3.10.9"}, "python_too_old"),
+            ({"specify_path": None}, "specify_missing"),
+            ({"plugin_root": None}, "plugin_root_missing"),
         ]
-        for overrides, expected_code in cases:
+        for detected_state, expected_code in cases:
             with self.subTest(expected_code=expected_code):
-                completed, response, stderr_records = run_runner(base_request("preflight", {"test_overrides": overrides}))
-                self.assertEqual(completed.returncode, 3)
+                response = preflight_with(**detected_state)
                 self.assert_response(response, "missing_prerequisite", 3)
                 codes = [diag["code"] for diag in response["diagnostics"]]
                 self.assertIn(expected_code, codes)
-                self.assertEqual([diag["code"] for diag in stderr_records], codes)
                 for diag in response["diagnostics"]:
                     self.assert_diagnostic_shape(diag)
+
+    def test_retired_runner_inputs_are_rejected_before_runtime_work(self) -> None:
+        from speckit_pro_runner import runtime
+        from speckit_pro_runner.envelope import RunnerRequest
+
+        retired_values = {
+            "fixture_category": ("typed_path", None),
+            "test_overrides": ({"metadata_status": "verified"}, None),
+        }
+        for operation in ("runtime-info", "preflight"):
+            for key, values in retired_values.items():
+                for value in values:
+                    with self.subTest(operation=operation, key=key, value=value):
+                        request = RunnerRequest(
+                            request_id="retired-input",
+                            helper_id="runner",
+                            operation=operation,
+                            mode="read_only",
+                            inputs={key: value},
+                        )
+                        with (
+                            mock.patch.object(runtime, "runtime_info") as runtime_info,
+                            mock.patch.object(runtime, "preflight") as preflight,
+                        ):
+                            response = runtime.handle_request(request)
+                        self.assert_response(response, "input_error", 2)
+                        self.assert_diagnostic_shape(response["diagnostics"][0], "invalid_envelope")
+                        self.assertEqual(response["diagnostics"][0]["details"]["unexpected_inputs"], [key])
+                        runtime_info.assert_not_called()
+                        preflight.assert_not_called()
 
     def test_validation_failures(self) -> None:
         cases = [
@@ -244,22 +268,19 @@ class RunnerFoundationTests(unittest.TestCase):
 
     def test_contract_fixtures(self) -> None:
         fixtures = json.loads(FIXTURE_FILE.read_text(encoding="utf-8"))["fixtures"]
-        self.assertGreaterEqual(len(fixtures), 10)
-        forbidden = (
-            "generate-spec-index.sh",
-            "speckit-scaffold",
-            "speckit-status",
-            "speckit-autopilot",
-            "install",
-            "pr-packet",
+        self.assertEqual(
+            [fixture["case_id"] for fixture in fixtures],
+            [
+                "valid-runtime-info",
+                "invalid-json",
+                "invalid-envelope-extra-field",
+                "unsupported-schema-version",
+                "missing-required-field",
+            ],
         )
         for fixture in fixtures:
             with self.subTest(case_id=fixture["case_id"]):
-                request = fixture["raw_request"] if "raw_request" in fixture else fixture_request(fixture["request"])
-                request_blob = encode_request(request)
-                if fixture["category"] not in {"envelope", "runtime-info"}:
-                    for forbidden_text in forbidden:
-                        self.assertNotIn(forbidden_text, request_blob)
+                request = fixture["raw_request"] if "raw_request" in fixture else fixture["request"]
                 completed, response, stderr_records = run_runner(request)
                 self.assertEqual(completed.returncode, fixture["expected_exit_code"])
                 self.assert_response(response, fixture["expected_status"], fixture["expected_exit_code"])
@@ -270,21 +291,6 @@ class RunnerFoundationTests(unittest.TestCase):
                     self.assert_diagnostic_shape(diag)
                 if fixture.get("expected_remediation"):
                     self.assertTrue(response["diagnostics"][0]["remediation"]["actions"])
-                if fixture["category"] == "typed_path" and fixture["expected_status"] == "ok":
-                    result = response["data"]["fixture_result"]
-                    self.assertTrue(result["accepted"])
-                    self.assertEqual(result["path"]["value"], fixture["request"]["inputs"]["path"]["value"])
-                if fixture["category"] == "subprocess":
-                    result = response["data"]["subprocess"]
-                    self.assertFalse(result["shell"])
-                    self.assertIsInstance(result["argv"], list)
-                    self.assertLessEqual(result["timeout_seconds"], 5)
-                    self.assertIn("duration_ms", result)
-                    for stream in ("stdout", "stderr"):
-                        capture = result[stream]
-                        self.assertEqual(capture["limit_bytes"], 16384)
-                        self.assertIn("byte_count", capture)
-                        self.assertIn("truncated", capture)
 
     def test_manifest_and_checksum_cover_runner_sources(self) -> None:
         manifest = json.loads((RUNNER_DIR / "speckit-pro-runner.manifest.json").read_text(encoding="utf-8"))
@@ -362,21 +368,9 @@ class RunnerFoundationTests(unittest.TestCase):
         }
         for status, code in expected.items():
             with self.subTest(status=status):
-                completed, response, stderr_records = run_runner(
-                    base_request(
-                        "preflight",
-                        {
-                            "test_overrides": {
-                                "specify": {"available": True},
-                                "metadata_status": status,
-                            }
-                        },
-                    )
-                )
-                self.assertEqual(completed.returncode, 3)
+                response = preflight_with(metadata_status=status)
                 self.assert_response(response, "missing_prerequisite", 3)
                 self.assertIn(code, [diag["code"] for diag in response["diagnostics"]])
-                self.assertEqual([diag["code"] for diag in stderr_records], [diag["code"] for diag in response["diagnostics"]])
 
     def test_malformed_checksum_metadata_reports_incomplete(self) -> None:
         from speckit_pro_runner import runtime
@@ -403,7 +397,7 @@ class RunnerFoundationTests(unittest.TestCase):
             )
             (package_dir / runtime.CHECKSUM_NAME).write_text("malformed-without-path\n", encoding="utf-8")
 
-            report = runtime.metadata_report(plugin_root, package_dir, check_metadata=True, overrides={})
+            report = runtime.metadata_report(plugin_root, package_dir, check_metadata=True)
 
         self.assertEqual(report["verification_status"], "incomplete_metadata")
 
