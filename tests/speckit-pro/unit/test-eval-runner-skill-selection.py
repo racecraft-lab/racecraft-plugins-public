@@ -362,7 +362,7 @@ def runtime_contract_parity_violations() -> list[str]:
             "autopilot",
             PLUGIN_ROOT / "skills" / "speckit-autopilot" / "SKILL.md",
             PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "SKILL.md",
-            (PACKET_PATH_CONTRACT, "pr-packet-output", "data.stdout_json", "writes_state=false", "output_path", "sections"),
+            (),
         ),
         (
             "phase execution",
@@ -374,7 +374,18 @@ def runtime_contract_parity_violations() -> list[str]:
             "post implementation",
             PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "post-implementation.md",
             PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "references" / "post-implementation-codex.md",
-            (),
+            (
+                PACKET_PATH_CONTRACT,
+                "pr-packet-output",
+                "data.stdout_json",
+                "writes_state=false",
+                "validation_result_path",
+                "packet-owned",
+                "--base",
+                "--head",
+                "--title",
+                "--body-file",
+            ),
         ),
     )
     for label, claude_path, codex_path, required in pairs:
@@ -386,6 +397,15 @@ def runtime_contract_parity_violations() -> list[str]:
             for token in required:
                 if token.casefold() not in body:
                     violations.append(f"{label}: {surface} missing parity token {token}")
+    entrypoint_paths = pairs[2][1:3]
+    violations.extend(
+        autopilot_entrypoint_post_contract_violations(
+            {
+                "Claude": entrypoint_paths[0].read_text(encoding="utf-8"),
+                "Codex": entrypoint_paths[1].read_text(encoding="utf-8"),
+            }
+        )
+    )
     post_paths = pairs[-1][1:3]
     violations.extend(
         post_implementation_outcome_violations(
@@ -395,6 +415,31 @@ def runtime_contract_parity_violations() -> list[str]:
             }
         )
     )
+    return violations
+
+
+def autopilot_entrypoint_post_contract_violations(bodies: dict[str, str]) -> list[str]:
+    reference_names = {
+        "Claude": "post-implementation.md",
+        "Codex": "post-implementation-codex.md",
+    }
+    reference_labels = {
+        "Claude": "references/post-implementation.md",
+        "Codex": "post-implementation-codex.md",
+    }
+    violations: list[str] = []
+    for surface, raw_body in bodies.items():
+        body = re.sub(r"\s+", " ", raw_body.casefold())
+        reference = reference_names[surface]
+        label = reference_labels[surface]
+        mandatory_read = re.escape(
+            f"after phase 7 passes g7, read and execute [`{label}`](./references/{reference}) in canonical order."
+        )
+        packet_spine = rf"{mandatory_read}.{{0,700}}do not start pr side effects.{{0,300}}never report completion while"
+        if re.search(packet_spine, body) is None:
+            violations.append(
+                f"autopilot: {surface} missing mandatory canonical Post read with no-side-effect/no-completion spine"
+            )
     return violations
 
 

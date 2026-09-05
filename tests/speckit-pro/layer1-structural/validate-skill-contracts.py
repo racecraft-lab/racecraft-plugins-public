@@ -202,9 +202,9 @@ class ValidateCodexSkills(unittest.TestCase):
 
     def _check_autopilot_skill(self, skill_dir: Path, body: str) -> None:
         runtime_doc = body
-        for ref_file in (skill_dir / 'references' / 'phase-execution-codex.md', skill_dir / 'references' / 'post-implementation-codex.md', skill_dir / 'references' / 'error-recovery-codex.md'):
-            if ref_file.is_file():
-                runtime_doc = f"{runtime_doc}\n{ref_file.read_text(encoding='utf-8')}"
+        phase_execution = _read(skill_dir / 'references' / 'phase-execution-codex.md')
+        post_implementation = _read(skill_dir / 'references' / 'post-implementation-codex.md')
+        error_recovery = _read(skill_dir / 'references' / 'error-recovery-codex.md')
         with self.subTest(msg='speckit-autopilot: requires update_plan as the progress contract'):
             self.assertIn('update_plan', runtime_doc)
         with self.subTest(msg='speckit-autopilot: requires durable autopilot-state.json persistence'):
@@ -222,17 +222,48 @@ class ValidateCodexSkills(unittest.TestCase):
         with self.subTest(msg='speckit-autopilot: validates a single in_progress item before phase execution'):
             self.assertIn('Exactly one plan item is `in_progress`', body)
         with self.subTest(msg='speckit-autopilot: requires all canonical phase families before execution'):
-            self.assertTrue('phase family coverage is mandatory' in runtime_doc and 'Phase 7: Implement - Pending task decomposition' in runtime_doc and ('Post: Doctor Extension Check' in runtime_doc) and ('Post: Retrospective' in runtime_doc), 'expected all-phase coverage, Phase 7 placeholder, and the canonical Post item list (Doctor Extension Check -> Retrospective) in the Codex autopilot skill')
+            self.assertTrue(
+                'phase family coverage is mandatory' in body
+                and 'Phase 7: Implement - Pending task decomposition' in phase_execution
+                and ('Post: Doctor Extension Check' in body)
+                and ('Post: Retrospective' in body),
+                'expected all-phase coverage, Phase 7 placeholder, and the canonical Post item list (Doctor Extension Check -> Retrospective) in the Codex autopilot skill',
+            )
         with self.subTest(msg='speckit-autopilot: documents canonical PHASES order'):
             self.assertIn('PHASES = [specify, clarify, plan, checklist, tasks, analyze, implement]', runtime_doc)
         with self.subTest(msg='speckit-autopilot: prevents from-phase from dropping later phases'):
-            self.assertIn('`--from-phase` changes only the starting index', runtime_doc)
+            self.assertTrue(
+                'Read the workflow file and apply\n[`phase-execution-codex.md`](./references/phase-execution-codex.md)\n§Stage-Bounded Execution.' in body
+                and '`--from-phase` changes the first phase to execute, not the required plan\ncoverage.' in phase_execution
+                and 'all seven SDD phases, and Post before any subagent is spawned.' in phase_execution
+                and 'a value outside an explicitly named stage\'s range is rejected at Step\n0.6c before any phase work begins.' in phase_execution,
+                'expected the entrypoint to require the stage-bounded reference, which keeps whole-plan coverage visible and rejects out-of-stage --from-phase values',
+            )
         with self.subTest(msg='speckit-autopilot: requires concrete Phase 7 tasks after G5'):
-            self.assertTrue('After the Tasks phase and G5 pass' in runtime_doc and 'the placeholder no longer exists' in runtime_doc and ('each concrete Phase 7 item names task IDs' in runtime_doc), 'expected G5 Phase 7 placeholder replacement guardrails')
+            self.assertTrue(
+                'Before performing it, read\n[`phase-execution-codex.md`](./references/phase-execution-codex.md)\n§Phase 7: Implement' in body
+                and 'After G5 passes, the placeholder is invalid.' in phase_execution
+                and '- no `Phase 7: Implement - Pending task decomposition` item remains' in phase_execution
+                and '- each concrete item names one or more task IDs parsed from `tasks.md`' in phase_execution
+                and 'Correctness stops remain blocking:' in phase_execution,
+                'expected the entrypoint to require Phase 7 guidance that removes the G5 placeholder, names concrete task IDs, and retains correctness stops',
+            )
         with self.subTest(msg='speckit-autopilot: resumes into Post before reporting complete'):
-            self.assertTrue('all seven SDD phases are complete' in runtime_doc and 'items are missing, pending, or in progress' in runtime_doc and ('execute Step 3' in runtime_doc), 'expected all-phases-complete resume to continue into Post')
+            self.assertTrue(
+                'After Phase 7 passes G7, read and execute\n[`post-implementation-codex.md`](./references/post-implementation-codex.md)\nin canonical order.' in body
+                and 'all seven SDD phases being complete is not sufficient to stop.' in post_implementation
+                and 'continue with the first incomplete Post item.' in post_implementation
+                and 'resume at the first incomplete Post\n   item. Do not summarize completion from a `Phase 7: Implement Complete`\n   state.' in error_recovery,
+                'expected the Post entrypoint and recovery reference to continue from the first incomplete Post item without a premature completion summary',
+            )
         with self.subTest(msg='speckit-autopilot: blocks final answers while Post items remain incomplete'):
-            self.assertTrue('Pre-final completion audit' in runtime_doc and 'MUST NOT send a final response' in runtime_doc and ('any Post item is pending, in_progress, or missing' in runtime_doc) and ('Post: Retrospective' in runtime_doc), 'expected a pre-final guard that prevents stopping after implementation while post items remain incomplete')
+            self.assertTrue(
+                '### 3.4 Pre-final completion audit' in body
+                and 'You MUST NOT send a\nfinal response if any `Post:` item is `pending`, `in_progress`, or missing.' in body
+                and 'set the first\nincomplete item to `in_progress` in both state stores and continue the\nautopilot loop instead of summarizing.' in body
+                and '`Post: Retrospective` is the final\nPost item; it must be completed or explicitly skipped before the\nautopilot can report completion.' in body,
+                'expected the direct final audit to forbid completion, continue the first incomplete Post item, and require Retrospective',
+            )
         with self.subTest(msg='speckit-autopilot: documents skill-local agents/openai.yaml metadata'):
             self.assertIn('agents/openai.yaml', body)
         with self.subTest(msg='speckit-autopilot: validates installed Codex subagent paths'):
