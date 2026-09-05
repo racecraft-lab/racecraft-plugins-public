@@ -30,6 +30,8 @@ def load_eval_corpus(path: Path) -> tuple[list[dict[str, object]] | None, str]:
         return None, f"could not read eval file: {exc}"
     if not isinstance(value, list):
         return None, "eval file must contain a JSON list"
+    if not value:
+        return None, "eval file must contain at least one case"
     seen_queries: set[str] = set()
     for index, entry in enumerate(value, start=1):
         if not isinstance(entry, dict):
@@ -274,30 +276,22 @@ def validate_eval_result(
 
 def retain_upstream_evidence(
     evidence_dir: Path,
-    stdout: str,
-    stderr: str,
+    stdout: bytes,
+    stderr: bytes,
     requested_model: str,
 ) -> dict[str, object]:
     """Retain exact upstream output; the upstream report is the direct trial evidence available here."""
     stdout_path = evidence_dir / "upstream-result.json"
     stderr_path = evidence_dir / "upstream-stderr.log"
-    stdout_path.write_text(stdout, encoding="utf-8", newline="")
-    stderr_path.write_text(stderr, encoding="utf-8", newline="")
-    resolved_model: str | None = None
-    try:
-        report = json.loads(stdout)
-        summary = report.get("summary") if isinstance(report, dict) else None
-        candidate = summary.get("model") if isinstance(summary, dict) else None
-        resolved_model = candidate if isinstance(candidate, str) and candidate else None
-    except json.JSONDecodeError:
-        pass
+    stdout_path.write_bytes(stdout)
+    stderr_path.write_bytes(stderr)
     evidence = {
         "requested_model": requested_model,
-        "resolved_model": resolved_model,
+        "resolved_model": None,
         "stdout_path": str(stdout_path.resolve()),
-        "stdout_sha256": hashlib.sha256(stdout.encode("utf-8")).hexdigest(),
+        "stdout_sha256": hashlib.sha256(stdout).hexdigest(),
         "stderr_path": str(stderr_path.resolve()),
-        "stderr_sha256": hashlib.sha256(stderr.encode("utf-8")).hexdigest(),
+        "stderr_sha256": hashlib.sha256(stderr).hexdigest(),
     }
     (evidence_dir / "evidence.json").write_text(json.dumps(evidence, indent=2) + "\n", encoding="utf-8")
     return evidence
@@ -460,7 +454,7 @@ def main(argv: list[str]) -> int:
             env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True,
+            text=False,
             shell=False,
             check=False,
         )
@@ -470,13 +464,21 @@ def main(argv: list[str]) -> int:
             "Requested model: "
             f"{evidence['requested_model']}; resolved model: {evidence['resolved_model'] or 'unknown'}"
         )
-        sys.stdout.write(completed.stdout)
-        sys.stderr.write(completed.stderr)
+        try:
+            decoded_stdout = completed.stdout.decode("utf-8", errors="strict")
+            decoded_stderr = completed.stderr.decode("utf-8", errors="strict")
+        except UnicodeDecodeError as exc:
+            eprint(f"ERROR: upstream evaluator output is not valid UTF-8: {exc}")
+            result = 1
+            decoded_stdout = completed.stdout.decode("utf-8", errors="replace")
+            decoded_stderr = completed.stderr.decode("utf-8", errors="replace")
+        sys.stdout.write(decoded_stdout)
+        sys.stderr.write(decoded_stderr)
         if completed.returncode != 0:
             result = completed.returncode
-        else:
+        elif result == 0:
             valid, reason = validate_eval_result(
-                completed.stdout,
+                decoded_stdout,
                 expected_cases=eval_data,
                 runs_per_query=RUNS_PER_QUERY,
                 trigger_threshold=TRIGGER_THRESHOLD,

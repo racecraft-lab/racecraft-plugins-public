@@ -53,6 +53,8 @@ def load_eval_corpus(path: pathlib.Path) -> tuple[list[dict[str, object]] | None
         return None, f"could not read eval file: {exc}"
     if not isinstance(value, list):
         return None, "eval file must contain a JSON list"
+    if not value:
+        return None, "eval file must contain at least one case"
     seen_queries: set[str] = set()
     for index, entry in enumerate(value, start=1):
         if not isinstance(entry, dict):
@@ -123,30 +125,31 @@ def stage_repository_skill(
     return destination
 
 
-def _nested_failure(value: object) -> bool:
-    if isinstance(value, dict):
-        event_type = value.get("type")
-        if event_type in {"error", "turn.failed"}:
-            return True
-        if value.get("error") not in (None, False, "", [], {}):
-            return True
-        return any(_nested_failure(child) for child in value.values())
-    if isinstance(value, list):
-        return any(_nested_failure(child) for child in value)
-    return False
+def _reported_failure(event: dict[str, object]) -> bool:
+    """Recognize only failures in Codex's documented JSONL event union."""
+    if event.get("type") in {"error", "turn.failed"}:
+        return True
+    item = event.get("item")
+    return isinstance(item, dict) and item.get("type") == "error"
 
 
-def inspect_codex_jsonl(output: str, marker: str, requested_model: str | None = None) -> dict[str, object]:
+def inspect_codex_jsonl(
+    output: bytes | str,
+    marker: str,
+    requested_model: str | None = None,
+) -> dict[str, object]:
     """Validate one Codex JSONL run and identify only the exact staged marker."""
     events: list[dict[str, object]] = []
     try:
+        if isinstance(output, bytes):
+            output = output.decode("utf-8", errors="strict")
         for line in output.splitlines():
             if line.strip():
                 event = json.loads(line)
                 if not isinstance(event, dict):
                     raise ValueError("event is not an object")
                 events.append(event)
-    except (json.JSONDecodeError, ValueError) as exc:
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
         return {"valid": False, "selected": False, "selected_marker": None, "reason": f"invalid JSONL: {exc}"}
 
     event_types = [event.get("type") for event in events]
@@ -166,21 +169,32 @@ def inspect_codex_jsonl(output: str, marker: str, requested_model: str | None = 
             "selected_marker": None,
             "reason": "thread/turn lifecycle is out of order",
         }
-    if any(_nested_failure(event) for event in events):
+    if any(_reported_failure(event) for event in events):
         return {"valid": False, "selected": False, "selected_marker": None, "reason": "Codex reported a failed run"}
     thread_event = next(event for event in events if event.get("type") == "thread.started")
     thread_id = thread_event.get("thread_id") or thread_event.get("threadId")
     if not isinstance(thread_id, str) or not thread_id:
         return {"valid": False, "selected": False, "selected_marker": None, "reason": "thread start omitted its id"}
 
+    turn_start = lifecycle_positions[1]
+    turn_complete = lifecycle_positions[2]
     completed_agent_messages = [
         item.get("text")
-        for event in events
+        for index, event in enumerate(events)
+        if turn_start < index < turn_complete
         if event.get("type") == "item.completed"
         and isinstance((item := event.get("item")), dict)
         and item.get("type") == "agent_message"
         and isinstance(item.get("text"), str)
+        and bool(item.get("text").strip())
     ]
+    if not completed_agent_messages:
+        return {
+            "valid": False,
+            "selected": False,
+            "selected_marker": None,
+            "reason": "completed turn omitted its agent response",
+        }
     markers = MARKER_PATTERN.findall("\n".join(completed_agent_messages))
     competing = sorted(set(markers) - {marker})
     if competing:
@@ -244,20 +258,20 @@ def retain_run_evidence(
     evidence_dir: pathlib.Path,
     case_number: int,
     run_number: int,
-    output: str,
-    error_output: str,
+    output: bytes,
+    error_output: bytes,
 ) -> dict[str, str]:
     """Persist the exact provider streams and return immutable path/digest evidence."""
     stem = f"case-{case_number:03d}-trial-{run_number:02d}"
     jsonl_path = evidence_dir / f"{stem}.jsonl"
     stderr_path = evidence_dir / f"{stem}.stderr.log"
-    jsonl_path.write_text(output, encoding="utf-8", newline="")
-    stderr_path.write_text(error_output, encoding="utf-8", newline="")
+    jsonl_path.write_bytes(output)
+    stderr_path.write_bytes(error_output)
     return {
         "jsonl_path": str(jsonl_path.resolve()),
-        "jsonl_sha256": hashlib.sha256(output.encode("utf-8")).hexdigest(),
+        "jsonl_sha256": hashlib.sha256(output).hexdigest(),
         "stderr_path": str(stderr_path.resolve()),
-        "stderr_sha256": hashlib.sha256(error_output.encode("utf-8")).hexdigest(),
+        "stderr_sha256": hashlib.sha256(error_output).hexdigest(),
     }
 
 
@@ -291,7 +305,7 @@ def run_codex_query(
     reasoning: str,
     model: str,
     timeout: int,
-) -> tuple[int, str, str]:
+) -> tuple[int, bytes, bytes]:
     cmd = [
         "codex", "exec",
         "--cd", str(workspace),
@@ -310,7 +324,7 @@ def run_codex_query(
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True,
+            text=False,
             timeout=timeout,
             env=env,
             shell=False,
@@ -318,7 +332,7 @@ def run_codex_query(
         )
         return proc.returncode, proc.stdout, proc.stderr
     except subprocess.TimeoutExpired as e:
-        return -1, "", f"TIMEOUT after {timeout}s: {e}"
+        return -1, b"", f"TIMEOUT after {timeout}s: {e}".encode("utf-8")
 
 
 def main() -> int:
@@ -415,7 +429,10 @@ def main() -> int:
                     invalid_runs += 1
                     evidence = {
                         **evidence,
-                        "reason": f"exit={rc}; {evidence['reason']}; stderr={error_output.strip()[:200]}",
+                        "reason": (
+                            f"exit={rc}; {evidence['reason']}; stderr="
+                            f"{error_output.decode('utf-8', errors='replace').strip()[:200]}"
+                        ),
                     }
                 if run_valid and evidence["selected"]:
                     triggers += 1

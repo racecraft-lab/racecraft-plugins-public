@@ -74,7 +74,7 @@ CURRENT_INVENTORY = [
     "Codex selection requires the exact staged marker first in its completed message",
     "Codex selection rejects a competing marker",
     "Codex selection rejects an out-of-order lifecycle",
-    "Codex selection rejects nested provider errors",
+    "Codex selection rejects documented provider errors",
     "Codex selection distinguishes requested from unresolved model",
     "Codex raw JSONL and stderr retain exact bytes and hashes",
     "Codex cleanup reports disposable repository residue",
@@ -88,6 +88,11 @@ CURRENT_INVENTORY = [
     "Claude result validation rejects inconsistent trigger accounting",
     "Claude rejects malformed corpus before any subprocess",
     "Claude retains exact output hashes and distinguishes unresolved model",
+    "Codex requires a completed agent response inside the measured turn",
+    "Codex retains undecodable provider bytes before semantic rejection",
+    "Codex rejects an empty corpus before subprocess",
+    "Claude rejects an empty corpus before subprocess",
+    "Claude retains undecodable provider bytes before semantic rejection",
 ]
 
 
@@ -231,7 +236,22 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 / "demo-trigger.json"
             )
             claude_eval.parent.mkdir(parents=True)
-            claude_eval.write_text("[]\n", encoding="utf-8")
+            valid_case = [{"query": "q", "should_trigger": True}]
+            passing_report = {
+                "results": [
+                    {
+                        "query": "q",
+                        "should_trigger": True,
+                        "trigger_rate": 1.0,
+                        "triggers": 3,
+                        "runs": 3,
+                        "pass": True,
+                    }
+                ],
+                "summary": {"total": 1, "passed": 1, "failed": 0},
+            }
+            passing_report_bytes = json.dumps(passing_report).encode("utf-8")
+            claude_eval.write_text(json.dumps(valid_case) + "\n", encoding="utf-8")
             claude.PLUGIN_ROOT = claude_plugin_root
             fake_home = root / "fake-home"
             fake_home.mkdir()
@@ -256,13 +276,8 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     "run",
                     return_value=SimpleNamespace(
                         returncode=0,
-                        stdout=json.dumps(
-                            {
-                                "results": [],
-                                "summary": {"total": 0, "passed": 0, "failed": 0},
-                            }
-                        ),
-                        stderr="",
+                        stdout=passing_report_bytes,
+                        stderr=b"",
                     ),
                 ) as settings_only_run,
                 mock.patch.object(claude, "write_claude_wrapper", wraps=claude.write_claude_wrapper) as settings_wrap,
@@ -287,13 +302,8 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     "run",
                     return_value=SimpleNamespace(
                         returncode=0,
-                        stdout=json.dumps(
-                            {
-                                "results": [],
-                                "summary": {"total": 0, "passed": 0, "failed": 0},
-                            }
-                        ),
-                        stderr="",
+                        stdout=passing_report_bytes,
+                        stderr=b"",
                     ),
                 ) as direct_mode_run,
                 mock.patch.object(claude, "write_claude_wrapper", wraps=claude.write_claude_wrapper) as direct_wrap,
@@ -444,8 +454,8 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     "run",
                     return_value=SimpleNamespace(
                         returncode=0,
-                        stdout=failed_summary,
-                        stderr="",
+                        stdout=failed_summary.encode("utf-8"),
+                        stderr=b"",
                     ),
                 ),
             ):
@@ -473,10 +483,50 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 mock.patch.object(claude.subprocess, "run") as malformed_claude_run,
             ):
                 malformed_claude_exit = claude.main(["demo"])
+            claude_eval.write_text("[]\n", encoding="utf-8")
+            with (
+                mock.patch.dict(
+                    os.environ,
+                    {
+                        "HOME": str(fake_home),
+                        "PATH": wrapper_env.get("PATH", ""),
+                        "SKILL_CREATOR_ROOT": str(skill_creator),
+                    },
+                    clear=True,
+                ),
+                mock.patch.object(claude.subprocess, "run") as empty_claude_run,
+            ):
+                empty_claude_exit = claude.main(["demo"])
             claude_eval.write_text(
                 json.dumps([{"query": "q", "should_trigger": True}]) + "\n",
                 encoding="utf-8",
             )
+            invalid_claude_bytes = b'{"summary":{}}\r\n\xff'
+            invalid_claude_stderr = b"provider stderr\xff"
+            invalid_claude_evidence_dir = root / "claude-invalid-utf8-evidence"
+            with (
+                mock.patch.dict(
+                    os.environ,
+                    {
+                        "HOME": str(fake_home),
+                        "PATH": wrapper_env.get("PATH", ""),
+                        "SKILL_CREATOR_ROOT": str(skill_creator),
+                    },
+                    clear=True,
+                ),
+                mock.patch.object(
+                    claude.subprocess,
+                    "run",
+                    return_value=SimpleNamespace(
+                        returncode=0,
+                        stdout=invalid_claude_bytes,
+                        stderr=invalid_claude_stderr,
+                    ),
+                ),
+            ):
+                invalid_claude_exit = claude.main(
+                    ["demo", "--evidence-dir", str(invalid_claude_evidence_dir)]
+                )
 
             direct_evidence_record = json.loads(
                 (direct_mode_evidence / "evidence.json").read_text(encoding="utf-8")
@@ -625,11 +675,68 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 ]
             )
             wrong_order_evidence = codex_engine.inspect_codex_jsonl(wrong_order_jsonl, exact_marker)
-            nested_error_jsonl = valid_jsonl.replace(
-                '"text": "Preparing to answer."',
-                '"text": "Preparing to answer.", "error": {"message": "provider failed"}',
+            marker_before_turn_jsonl = "\n".join(
+                [
+                    json.dumps(
+                        {
+                            "type": "item.completed",
+                            "item": {"type": "agent_message", "text": exact_marker},
+                        }
+                    ),
+                    json.dumps({"type": "thread.started", "thread_id": "thread-1"}),
+                    json.dumps({"type": "turn.started"}),
+                    json.dumps({"type": "turn.completed"}),
+                ]
             )
-            nested_error_evidence = codex_engine.inspect_codex_jsonl(nested_error_jsonl, exact_marker)
+            no_response_jsonl = "\n".join(
+                [
+                    json.dumps({"type": "thread.started", "thread_id": "thread-1"}),
+                    json.dumps({"type": "turn.started"}),
+                    json.dumps({"type": "turn.completed"}),
+                ]
+            )
+            marker_before_turn_evidence = codex_engine.inspect_codex_jsonl(
+                marker_before_turn_jsonl,
+                exact_marker,
+            )
+            no_response_evidence = codex_engine.inspect_codex_jsonl(no_response_jsonl, exact_marker)
+            top_error_jsonl = valid_jsonl.replace(
+                json.dumps({"type": "turn.completed", "usage": {"input_tokens": 1, "output_tokens": 1}}),
+                "\n".join(
+                    [
+                        json.dumps({"type": "error", "message": "provider failed"}),
+                        json.dumps({"type": "turn.completed", "usage": {"input_tokens": 1, "output_tokens": 1}}),
+                    ]
+                ),
+            )
+            item_error_jsonl = valid_jsonl.replace(
+                json.dumps(
+                    {
+                        "type": "item.completed",
+                        "item": {
+                            "id": "item-progress",
+                            "type": "agent_message",
+                            "text": "Preparing to answer.",
+                        },
+                    }
+                ),
+                json.dumps(
+                    {
+                        "type": "item.completed",
+                        "item": {"id": "item-error", "type": "error", "message": "provider failed"},
+                    }
+                ),
+            )
+            top_error_evidence = codex_engine.inspect_codex_jsonl(top_error_jsonl, exact_marker)
+            item_error_evidence = codex_engine.inspect_codex_jsonl(item_error_jsonl, exact_marker)
+            domain_payload_jsonl = valid_jsonl.replace(
+                '"text": "Preparing to answer."',
+                '"text": "Preparing to answer.", "error": {"kind": "domain-data"}',
+            )
+            domain_payload_evidence = codex_engine.inspect_codex_jsonl(
+                domain_payload_jsonl,
+                exact_marker,
+            )
             model_evidence = codex_engine.inspect_codex_jsonl(
                 valid_jsonl,
                 exact_marker,
@@ -641,9 +748,20 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 raw_evidence_dir,
                 1,
                 1,
-                valid_jsonl,
-                "provider stderr\n",
+                valid_jsonl.encode("utf-8"),
+                b"provider stderr\r\n",
             )
+            invalid_utf8 = b'{"type":"thread.started"}\r\n\xff'
+            invalid_utf8_dir = root / "codex-invalid-utf8-evidence"
+            invalid_utf8_dir.mkdir()
+            invalid_utf8_evidence = codex_engine.retain_run_evidence(
+                invalid_utf8_dir,
+                1,
+                1,
+                invalid_utf8,
+                b"stderr\xff",
+            )
+            invalid_utf8_result = codex_engine.inspect_codex_jsonl(invalid_utf8, exact_marker)
             residue_workspace = root / "residue-workspace"
             residue_workspace.mkdir()
             with mock.patch.object(codex_engine.shutil, "rmtree", return_value=None):
@@ -655,6 +773,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             for name, body in (
                 ("malformed", "{"),
                 ("non-list", "{}\n"),
+                ("empty", "[]\n"),
                 ("invalid-case", '[{"query": "q"}]\n'),
             ):
                 path = root / f"{name}-codex-corpus.json"
@@ -680,7 +799,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 mock.patch.object(
                     codex_engine.subprocess,
                     "run",
-                    return_value=subprocess.CompletedProcess([], 0, valid_jsonl, ""),
+                    return_value=subprocess.CompletedProcess([], 0, valid_jsonl.encode("utf-8"), b""),
                 ) as codex_run,
             ):
                 codex_rc, codex_stdout, codex_stderr = codex_engine.run_codex_query(
@@ -895,8 +1014,8 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     CURRENT_INVENTORY[31],
                     lambda: self.assertTrue(
                         codex_rc == 0
-                        and codex_stdout == valid_jsonl
-                        and codex_stderr == ""
+                        and codex_stdout == valid_jsonl.encode("utf-8")
+                        and codex_stderr == b""
                         and "--sandbox" in codex_command
                         and codex_command[codex_command.index("--sandbox") + 1] == "read-only"
                         and "--ephemeral" in codex_command
@@ -948,8 +1067,11 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 (
                     CURRENT_INVENTORY[38],
                     lambda: self.assertTrue(
-                        not nested_error_evidence["valid"]
-                        and "failed" in str(nested_error_evidence["reason"]).lower()
+                        not top_error_evidence["valid"]
+                        and not item_error_evidence["valid"]
+                        and domain_payload_evidence["valid"]
+                        and "failed" in str(top_error_evidence["reason"]).lower()
+                        and "failed" in str(item_error_evidence["reason"]).lower()
                     ),
                 ),
                 (
@@ -962,13 +1084,13 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 (
                     CURRENT_INVENTORY[40],
                     lambda: self.assertTrue(
-                        Path(str(raw_evidence["jsonl_path"])).read_text(encoding="utf-8") == valid_jsonl
-                        and Path(str(raw_evidence["stderr_path"])).read_text(encoding="utf-8")
-                        == "provider stderr\n"
+                        Path(str(raw_evidence["jsonl_path"])).read_bytes() == valid_jsonl.encode("utf-8")
+                        and Path(str(raw_evidence["stderr_path"])).read_bytes()
+                        == b"provider stderr\r\n"
                         and raw_evidence["jsonl_sha256"]
                         == hashlib.sha256(valid_jsonl.encode("utf-8")).hexdigest()
                         and raw_evidence["stderr_sha256"]
-                        == hashlib.sha256(b"provider stderr\n").hexdigest()
+                        == hashlib.sha256(b"provider stderr\r\n").hexdigest()
                     ),
                 ),
                 (CURRENT_INVENTORY[41], lambda: self.assertIsNotNone(cleanup_residue)),
@@ -976,8 +1098,9 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     CURRENT_INVENTORY[42],
                     lambda: self.assertTrue(
                         invalid_codex_subprocess_calls == 0
-                        and len(invalid_codex_messages) == 4
+                        and len(invalid_codex_messages) == 5
                         and any("JSON list" in message for message in invalid_codex_messages)
+                        and any("at least one" in message for message in invalid_codex_messages)
                         and any("requires" in message for message in invalid_codex_messages)
                         and sum("could not read" in message for message in invalid_codex_messages) == 2
                     ),
@@ -1022,6 +1145,51 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                         == hashlib.sha256(
                             Path(direct_evidence_record["stdout_path"]).read_bytes()
                         ).hexdigest()
+                    ),
+                ),
+                (
+                    CURRENT_INVENTORY[52],
+                    lambda: self.assertTrue(
+                        not marker_before_turn_evidence["valid"]
+                        and not no_response_evidence["valid"]
+                        and "response" in str(no_response_evidence["reason"]).lower()
+                    ),
+                ),
+                (
+                    CURRENT_INVENTORY[53],
+                    lambda: self.assertTrue(
+                        not invalid_utf8_result["valid"]
+                        and Path(str(invalid_utf8_evidence["jsonl_path"])).read_bytes()
+                        == invalid_utf8
+                        and invalid_utf8_evidence["jsonl_sha256"]
+                        == hashlib.sha256(invalid_utf8).hexdigest()
+                    ),
+                ),
+                (
+                    CURRENT_INVENTORY[54],
+                    lambda: self.assertTrue(
+                        any("at least one" in message for message in invalid_codex_messages)
+                        and invalid_codex_subprocess_calls == 0
+                    ),
+                ),
+                (
+                    CURRENT_INVENTORY[55],
+                    lambda: self.assertTrue(
+                        empty_claude_exit == 1 and empty_claude_run.call_count == 0
+                    ),
+                ),
+                (
+                    CURRENT_INVENTORY[56],
+                    lambda: self.assertTrue(
+                        invalid_claude_exit == 1
+                        and (invalid_claude_evidence_dir / "upstream-result.json").read_bytes()
+                        == invalid_claude_bytes
+                        and (invalid_claude_evidence_dir / "upstream-stderr.log").read_bytes()
+                        == invalid_claude_stderr
+                        and json.loads(
+                            (invalid_claude_evidence_dir / "evidence.json").read_text(encoding="utf-8")
+                        )["resolved_model"]
+                        is None
                     ),
                 ),
             ]
