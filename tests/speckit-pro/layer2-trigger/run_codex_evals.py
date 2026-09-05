@@ -305,7 +305,7 @@ def run_codex_query(
     reasoning: str,
     model: str,
     timeout: int,
-) -> tuple[int, bytes, bytes]:
+) -> tuple[int, bytes, bytes, bool]:
     cmd = [
         "codex", "exec",
         "--cd", str(workspace),
@@ -330,9 +330,11 @@ def run_codex_query(
             shell=False,
             check=False,
         )
-        return proc.returncode, proc.stdout, proc.stderr
+        return proc.returncode, proc.stdout, proc.stderr, False
     except subprocess.TimeoutExpired as e:
-        return -1, b"", f"TIMEOUT after {timeout}s: {e}".encode("utf-8")
+        stdout = e.stdout if isinstance(e.stdout, bytes) else b""
+        stderr = e.stderr if isinstance(e.stderr, bytes) else b""
+        return -1, stdout, stderr, True
 
 
 def main() -> int:
@@ -414,7 +416,7 @@ def main() -> int:
             invalid_runs = 0
             run_evidence = []
             for run in range(1, args.runs + 1):
-                rc, output, error_output = run_codex_query(
+                rc, output, error_output, timed_out = run_codex_query(
                     workspace,
                     query,
                     args.reasoning,
@@ -423,14 +425,14 @@ def main() -> int:
                 )
                 raw_evidence = retain_run_evidence(evidence_dir, idx, run, output, error_output)
                 evidence = inspect_codex_jsonl(output, marker, requested_model=args.model)
-                evidence = {**evidence, **raw_evidence}
-                run_valid = rc == 0 and bool(evidence["valid"])
+                evidence = {**evidence, **raw_evidence, "timed_out": timed_out}
+                run_valid = not timed_out and rc == 0 and bool(evidence["valid"])
                 if not run_valid:
                     invalid_runs += 1
                     evidence = {
                         **evidence,
                         "reason": (
-                            f"exit={rc}; {evidence['reason']}; stderr="
+                            f"timed_out={timed_out}; exit={rc}; {evidence['reason']}; stderr="
                             f"{error_output.decode('utf-8', errors='replace').strip()[:200]}"
                         ),
                     }

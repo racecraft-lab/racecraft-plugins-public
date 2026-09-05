@@ -678,7 +678,63 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 mock.patch.dict(os.environ, {"CODEX_HOME": str(auth_home)}, clear=False),
                 mock.patch.object(engine.subprocess, "run", side_effect=fake_run),
             ):
-                rc, stdout, stderr = engine.run_codex_query(workspace, "query", "low", "gpt-5.6-sol", 30)
+                rc, stdout, stderr, timed_out = engine.run_codex_query(
+                    workspace,
+                    "query",
+                    "low",
+                    "gpt-5.6-sol",
+                    30,
+                )
+
+            timeout_stdout = b"partial-jsonl\r\n"
+            timeout_stderr = b"partial-stderr\r\n"
+            timeout_evidence_dir = root / "timeout-evidence"
+            timeout_evidence_dir.mkdir()
+            with mock.patch.object(
+                engine.subprocess,
+                "run",
+                side_effect=subprocess.TimeoutExpired(
+                    ["codex"],
+                    7,
+                    output=timeout_stdout,
+                    stderr=timeout_stderr,
+                ),
+            ):
+                timeout_rc, retained_timeout_stdout, retained_timeout_stderr, timeout_timed_out = (
+                    engine.run_codex_query(
+                        workspace,
+                        "query that times out",
+                        "low",
+                        "gpt-5.6-sol",
+                        7,
+                    )
+                )
+            timeout_evidence = engine.retain_run_evidence(
+                timeout_evidence_dir,
+                1,
+                2,
+                retained_timeout_stdout,
+                retained_timeout_stderr,
+            )
+            with mock.patch.object(
+                engine.subprocess,
+                "run",
+                return_value=subprocess.CompletedProcess(
+                    [],
+                    -1,
+                    b"signal-output",
+                    b"signal-stderr",
+                ),
+            ):
+                signal_rc, signal_stdout, signal_stderr, signal_timed_out = (
+                    engine.run_codex_query(
+                        workspace,
+                        "query interrupted by signal",
+                        "low",
+                        "gpt-5.6-sol",
+                        7,
+                    )
+                )
 
             fixture_root = root / "fixture"
             plugin_root = fixture_root / "speckit-pro"
@@ -787,7 +843,27 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 and len(invalid_corpus_messages) == len(invalid_corpus_paths)
                 and any("at least one" in message for message in invalid_corpus_messages)
                 and any("duplicates" in message for message in invalid_corpus_messages),
-                "Codex direct result remains binary": (rc, stdout, stderr) == (0, valid, b""),
+                "Codex direct result remains binary": (rc, stdout, stderr, timed_out)
+                == (0, valid, b"", False),
+                "Codex timeout retains partial raw streams and hashes": timeout_rc == -1
+                and timeout_timed_out
+                and retained_timeout_stdout == timeout_stdout
+                and retained_timeout_stderr == timeout_stderr
+                and Path(timeout_evidence["jsonl_path"]).read_bytes() == timeout_stdout
+                and Path(timeout_evidence["stderr_path"]).read_bytes() == timeout_stderr
+                and timeout_evidence["jsonl_sha256"] == hashlib.sha256(timeout_stdout).hexdigest()
+                and timeout_evidence["stderr_sha256"] == hashlib.sha256(timeout_stderr).hexdigest(),
+                "Codex timeout invalidates a negative case": not engine.case_passes(
+                    False,
+                    triggers=0,
+                    runs=3,
+                    threshold=0.5,
+                    invalid_runs=int(timeout_timed_out),
+                ),
+                "Codex signal exit remains distinct from timeout": signal_rc == -1
+                and not signal_timed_out
+                and signal_stdout == b"signal-output"
+                and signal_stderr == b"signal-stderr",
                 "Codex retains existing login environment": captured["kwargs"]["env"].get("CODEX_HOME")
                 == str(auth_home),
                 "Codex keeps least privilege flags": "--sandbox" in captured["command"]
