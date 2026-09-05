@@ -385,8 +385,13 @@ def run_claude_query(
     timeout: int,
 ) -> tuple[int, bytes, bytes, bool]:
     global ACTIVE_CHILD
+    candidate = shutil.which("claude")
+    if candidate is None:
+        return -1, b"", b"Claude CLI disappeared after initial resolution", False
+    if candidate != executable:
+        return -1, b"", b"Claude runtime changed after initial resolution", False
     command = [
-        executable,
+        candidate,
         "--restricted",
         "--plugin-dir", str(plugin_root),
         "--strict-mcp-config",
@@ -451,8 +456,13 @@ def case_passes(should_trigger: bool, selected: int, invalid: int) -> bool:
 
 
 def cli_preflight(executable: str) -> tuple[dict[str, object] | None, str]:
+    candidate = shutil.which("claude")
+    if candidate is None:
+        return None, "Claude CLI disappeared before preflight"
+    if candidate != executable:
+        return None, "Claude runtime changed before preflight"
     version = subprocess.run(
-        [executable, "--version"],
+        [candidate, "--version"],
         stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -460,7 +470,7 @@ def cli_preflight(executable: str) -> tuple[dict[str, object] | None, str]:
         check=False,
     )
     help_result = subprocess.run(
-        [executable, "--help"],
+        [candidate, "--help"],
         stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,

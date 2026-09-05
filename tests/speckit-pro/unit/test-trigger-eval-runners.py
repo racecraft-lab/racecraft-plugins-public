@@ -326,7 +326,10 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 captured["kwargs"] = kwargs
                 return fake
 
-            with mock.patch.object(claude.subprocess, "Popen", side_effect=fake_popen):
+            with (
+                mock.patch.object(claude.shutil, "which", return_value="/usr/local/bin/claude"),
+                mock.patch.object(claude.subprocess, "Popen", side_effect=fake_popen),
+            ):
                 rc, launched_stdout, launched_stderr, timed_out = claude.run_claude_query(
                     "/usr/local/bin/claude",
                     plugin_root,
@@ -341,21 +344,78 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 supported_help = " ".join(
                     flag for flag in claude.REQUIRED_FLAGS if flag != omitted_flag
                 ).encode("utf-8")
-                with mock.patch.object(
-                    claude.subprocess,
-                    "run",
-                    side_effect=[
-                        SimpleNamespace(returncode=0, stdout=b"2.1.261\n", stderr=b""),
-                        SimpleNamespace(returncode=0, stdout=supported_help, stderr=b""),
-                    ],
+                with (
+                    mock.patch.object(claude.shutil, "which", return_value="/usr/local/bin/claude"),
+                    mock.patch.object(
+                        claude.subprocess,
+                        "run",
+                        side_effect=[
+                            SimpleNamespace(returncode=0, stdout=b"2.1.261\n", stderr=b""),
+                            SimpleNamespace(returncode=0, stdout=supported_help, stderr=b""),
+                        ],
+                    ),
                 ):
                     missing_tool_preflights.append(claude.cli_preflight("/usr/local/bin/claude"))
+
+            preflight_identity_rejections = []
+            for discovered, expected_reason in (
+                (None, "Claude CLI disappeared before preflight"),
+                ("/different/bin/claude", "Claude runtime changed before preflight"),
+            ):
+                with (
+                    mock.patch.object(claude.shutil, "which", return_value=discovered) as discovery,
+                    mock.patch.object(claude.subprocess, "run") as preflight_run,
+                ):
+                    result = claude.cli_preflight("/usr/local/bin/claude")
+                preflight_identity_rejections.append(
+                    (result, expected_reason, discovery.call_args_list, preflight_run.call_count)
+                )
+
+            query_identity_evidence_dir = root / "query-identity-evidence"
+            query_identity_evidence_dir.mkdir()
+            query_identity_rejections = []
+            for case_index, (discovered, expected_error) in enumerate(
+                (
+                    (None, b"Claude CLI disappeared after initial resolution"),
+                    ("/different/bin/claude", b"Claude runtime changed after initial resolution"),
+                ),
+                start=1,
+            ):
+                with (
+                    mock.patch.object(claude.shutil, "which", return_value=discovered) as discovery,
+                    mock.patch.object(claude.subprocess, "Popen") as rejected_popen,
+                ):
+                    result = claude.run_claude_query(
+                        "/usr/local/bin/claude",
+                        plugin_root,
+                        mcp_config,
+                        "query",
+                        "claude-sonnet-test",
+                        30,
+                    )
+                evidence = claude.retain_trial_evidence(
+                    query_identity_evidence_dir,
+                    case_index,
+                    1,
+                    result[1],
+                    result[2],
+                )
+                query_identity_rejections.append(
+                    (
+                        result,
+                        expected_error,
+                        evidence,
+                        discovery.call_args_list,
+                        rejected_popen.call_count,
+                    )
+                )
 
             timeout_bytes = b'{"type":"system","subtype":"init"}\r\n'
             timeout_stderr = b"partial stderr\r\n"
             timeout_child = FakePopen(timeout_bytes, timeout_stderr)
             timeout_child.timeout = True
             with (
+                mock.patch.object(claude.shutil, "which", return_value="/usr/local/bin/claude"),
                 mock.patch.object(claude.subprocess, "Popen", return_value=timeout_child),
                 mock.patch.object(claude.os, "killpg", create=True) as killpg,
             ):
@@ -481,6 +541,29 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 "direct launch uses binary pipes": "text" not in captured["kwargs"],
                 "direct launch result preserved": (rc, launched_stdout, launched_stderr, timed_out)
                 == (0, stream, b"warning\r\n", False),
+                "preflight rejects missing or changed Claude identity before subprocess": all(
+                    result == (None, expected_reason)
+                    and discovery_calls == [mock.call("claude")]
+                    and run_calls == 0
+                    for result, expected_reason, discovery_calls, run_calls in preflight_identity_rejections
+                ),
+                "query rejects missing or changed Claude identity with retained raw evidence": all(
+                    result == (-1, b"", expected_error, False)
+                    and evidence["stdout_sha256"] == hashlib.sha256(b"").hexdigest()
+                    and evidence["stderr_sha256"] == hashlib.sha256(expected_error).hexdigest()
+                    and Path(evidence["stdout_path"]).read_bytes() == b""
+                    and Path(evidence["stderr_path"]).read_bytes() == expected_error
+                    and discovery_calls == [mock.call("claude")]
+                    and popen_calls == 0
+                    and not claude.case_passes(False, selected=0, invalid=1)
+                    for (
+                        result,
+                        expected_error,
+                        evidence,
+                        discovery_calls,
+                        popen_calls,
+                    ) in query_identity_rejections
+                ),
                 "timeout preserves partial stdout": timeout_state and timeout_rc == -1 and timeout_stdout == timeout_bytes,
                 "timeout preserves partial stderr": timeout_error == timeout_stderr,
                 "timeout evidence hashes partial bytes": timeout_evidence["stdout_sha256"]
