@@ -25,6 +25,7 @@ Examples:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import pathlib
@@ -42,6 +43,28 @@ PLUGIN_ROOT = TESTS_ROOT.parents[1] / "speckit-pro"           # <repo>/speckit-p
 DEFAULT_REASONING_EFFORT = "low"
 DEFAULT_MODEL = "gpt-5.6-sol"
 MARKER_PATTERN = re.compile(r"CODEX_SKILL_FIRED:[A-Za-z0-9_-]+")
+
+
+def load_eval_corpus(path: pathlib.Path) -> tuple[list[dict[str, object]] | None, str]:
+    """Load a complete trigger corpus before any provider subprocess can run."""
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        return None, f"could not read eval file: {exc}"
+    if not isinstance(value, list):
+        return None, "eval file must contain a JSON list"
+    seen_queries: set[str] = set()
+    for index, entry in enumerate(value, start=1):
+        if not isinstance(entry, dict):
+            return None, f"eval case {index} must be an object"
+        query = entry.get("query")
+        should_trigger = entry.get("should_trigger")
+        if not isinstance(query, str) or not query.strip() or not isinstance(should_trigger, bool):
+            return None, f"eval case {index} requires a non-empty query and boolean should_trigger"
+        if query in seen_queries:
+            return None, f"eval case {index} duplicates query {query!r}"
+        seen_queries.add(query)
+    return value, "valid eval corpus"
 
 
 def find_eval_file(skill: str) -> pathlib.Path:
@@ -100,7 +123,20 @@ def stage_repository_skill(
     return destination
 
 
-def inspect_codex_jsonl(output: str, marker: str) -> dict[str, object]:
+def _nested_failure(value: object) -> bool:
+    if isinstance(value, dict):
+        event_type = value.get("type")
+        if event_type in {"error", "turn.failed"}:
+            return True
+        if value.get("error") not in (None, False, "", [], {}):
+            return True
+        return any(_nested_failure(child) for child in value.values())
+    if isinstance(value, list):
+        return any(_nested_failure(child) for child in value)
+    return False
+
+
+def inspect_codex_jsonl(output: str, marker: str, requested_model: str | None = None) -> dict[str, object]:
     """Validate one Codex JSONL run and identify only the exact staged marker."""
     events: list[dict[str, object]] = []
     try:
@@ -114,28 +150,38 @@ def inspect_codex_jsonl(output: str, marker: str) -> dict[str, object]:
         return {"valid": False, "selected": False, "selected_marker": None, "reason": f"invalid JSONL: {exc}"}
 
     event_types = [event.get("type") for event in events]
-    if event_types.count("thread.started") != 1 or event_types.count("turn.completed") != 1:
+    lifecycle = ("thread.started", "turn.started", "turn.completed")
+    if any(event_types.count(event_type) != 1 for event_type in lifecycle):
         return {
             "valid": False,
             "selected": False,
             "selected_marker": None,
             "reason": "missing or ambiguous thread/turn lifecycle",
         }
-    if any(event_type in {"error", "turn.failed"} for event_type in event_types):
+    lifecycle_positions = tuple(event_types.index(event_type) for event_type in lifecycle)
+    if lifecycle_positions != tuple(sorted(lifecycle_positions)):
+        return {
+            "valid": False,
+            "selected": False,
+            "selected_marker": None,
+            "reason": "thread/turn lifecycle is out of order",
+        }
+    if any(_nested_failure(event) for event in events):
         return {"valid": False, "selected": False, "selected_marker": None, "reason": "Codex reported a failed run"}
     thread_event = next(event for event in events if event.get("type") == "thread.started")
     thread_id = thread_event.get("thread_id") or thread_event.get("threadId")
     if not isinstance(thread_id, str) or not thread_id:
         return {"valid": False, "selected": False, "selected_marker": None, "reason": "thread start omitted its id"}
 
-    agent_messages = [
+    completed_agent_messages = [
         item.get("text")
         for event in events
-        if isinstance((item := event.get("item")), dict)
+        if event.get("type") == "item.completed"
+        and isinstance((item := event.get("item")), dict)
         and item.get("type") == "agent_message"
         and isinstance(item.get("text"), str)
     ]
-    markers = MARKER_PATTERN.findall("\n".join(agent_messages))
+    markers = MARKER_PATTERN.findall("\n".join(completed_agent_messages))
     competing = sorted(set(markers) - {marker})
     if competing:
         return {
@@ -149,16 +195,81 @@ def inspect_codex_jsonl(output: str, marker: str) -> dict[str, object]:
     if marker_count > 1:
         return {"valid": False, "selected": False, "selected_marker": None, "reason": "ambiguous repeated staged marker"}
     if selected:
-        first_lines = [line.strip() for message in agent_messages for line in message.splitlines() if line.strip()]
+        marker_messages = [message for message in completed_agent_messages if marker in MARKER_PATTERN.findall(message)]
+        first_lines = [line.strip() for line in marker_messages[0].splitlines() if line.strip()]
         if not first_lines or first_lines[0] != marker:
-            return {"valid": False, "selected": False, "selected_marker": None, "reason": "staged marker was not first"}
+            return {
+                "valid": False,
+                "selected": False,
+                "selected_marker": None,
+                "reason": "staged marker was not first in its completed message",
+            }
+
+    resolved_models = {
+        model
+        for event in events
+        if event.get("type") in {"thread.started", "turn.started"}
+        and isinstance((model := event.get("model")), str)
+        and model
+    }
+    if len(resolved_models) > 1:
+        return {
+            "valid": False,
+            "selected": False,
+            "selected_marker": None,
+            "reason": "Codex reported ambiguous resolved models",
+        }
+    resolved_model = next(iter(resolved_models), None)
+    if requested_model is not None and resolved_model is not None and resolved_model != requested_model:
+        return {
+            "valid": False,
+            "selected": False,
+            "selected_marker": None,
+            "requested_model": requested_model,
+            "resolved_model": resolved_model,
+            "reason": "Codex resolved a different model than requested",
+        }
     return {
         "valid": True,
         "selected": selected,
         "selected_marker": marker if selected else None,
         "thread_id": thread_id,
+        "requested_model": requested_model,
+        "resolved_model": resolved_model,
         "reason": "exact staged marker" if selected else "no staged marker",
     }
+
+
+def retain_run_evidence(
+    evidence_dir: pathlib.Path,
+    case_number: int,
+    run_number: int,
+    output: str,
+    error_output: str,
+) -> dict[str, str]:
+    """Persist the exact provider streams and return immutable path/digest evidence."""
+    stem = f"case-{case_number:03d}-trial-{run_number:02d}"
+    jsonl_path = evidence_dir / f"{stem}.jsonl"
+    stderr_path = evidence_dir / f"{stem}.stderr.log"
+    jsonl_path.write_text(output, encoding="utf-8", newline="")
+    stderr_path.write_text(error_output, encoding="utf-8", newline="")
+    return {
+        "jsonl_path": str(jsonl_path.resolve()),
+        "jsonl_sha256": hashlib.sha256(output.encode("utf-8")).hexdigest(),
+        "stderr_path": str(stderr_path.resolve()),
+        "stderr_sha256": hashlib.sha256(error_output.encode("utf-8")).hexdigest(),
+    }
+
+
+def remove_workspace(workspace: pathlib.Path) -> str | None:
+    """Remove the staged repository and fail loud if any residue remains."""
+    try:
+        shutil.rmtree(workspace)
+    except OSError as exc:
+        return f"could not remove disposable eval repository {workspace}: {exc}"
+    if workspace.exists():
+        return f"disposable eval repository cleanup left residue at {workspace}"
+    return None
 
 
 def case_passes(
@@ -224,22 +335,35 @@ def main() -> int:
     ap.add_argument("--threshold", type=float, default=0.5, help="Trigger-rate threshold for pass (default 0.5)")
     ap.add_argument("--timeout", type=int, default=180, help="Per-query timeout seconds (default 180)")
     ap.add_argument("--out", help="Write detailed JSON results to this file")
+    ap.add_argument("--evidence-dir", help="Directory for exact per-trial JSONL and stderr evidence")
     args = ap.parse_args()
-
-    if shutil.which("codex") is None:
-        sys.exit("ERROR: codex CLI not on PATH")
 
     eval_file = find_eval_file(args.skill)
     skill_src = find_skill_source(args.skill)
-    eval_data = json.loads(eval_file.read_text())
-    if args.limit:
+    eval_data, corpus_reason = load_eval_corpus(eval_file)
+    if eval_data is None:
+        sys.exit(f"ERROR: {corpus_reason}")
+    if args.runs <= 0 or not 0.0 <= args.threshold <= 1.0:
+        sys.exit("ERROR: --runs must be positive and --threshold must be between 0 and 1")
+    if args.limit is not None and args.limit <= 0:
+        sys.exit("ERROR: --limit must be positive")
+    if args.limit is not None:
         eval_data = eval_data[: args.limit]
+
+    if shutil.which("codex") is None:
+        sys.exit("ERROR: codex CLI not on PATH")
 
     test_uuid = uuid.uuid4().hex[:8]
     test_skill_name = f"{args.skill}-eval-{test_uuid}"
     marker = f"CODEX_SKILL_FIRED:{test_skill_name}"
 
+    if args.evidence_dir:
+        evidence_dir = pathlib.Path(args.evidence_dir).resolve()
+        evidence_dir.mkdir(parents=True, exist_ok=False)
+    else:
+        evidence_dir = pathlib.Path(tempfile.mkdtemp(prefix=f"codex-eval-evidence-{args.skill}-"))
     workspace = pathlib.Path(tempfile.mkdtemp(prefix=f"codex-eval-{args.skill}-"))
+    exit_code = 1
     try:
         initialized = subprocess.run(
             ["git", "init", "--quiet"],
@@ -260,6 +384,7 @@ def main() -> int:
         print(f"  Skill src:  {skill_src}", file=sys.stderr)
         print(f"  Test skill: {test_skill_name}", file=sys.stderr)
         print(f"  Workspace:  {workspace}", file=sys.stderr)
+        print(f"  Evidence:   {evidence_dir}", file=sys.stderr)
         print("  Login:      existing Codex session (credential files are not copied)", file=sys.stderr)
         print(f"  Queries:    {len(eval_data)} (x{args.runs} runs)", file=sys.stderr)
         print(f"  Reasoning:  {args.reasoning}", file=sys.stderr)
@@ -274,7 +399,7 @@ def main() -> int:
             triggers = 0
             invalid_runs = 0
             run_evidence = []
-            for run in range(args.runs):
+            for run in range(1, args.runs + 1):
                 rc, output, error_output = run_codex_query(
                     workspace,
                     query,
@@ -282,7 +407,9 @@ def main() -> int:
                     args.model,
                     args.timeout,
                 )
-                evidence = inspect_codex_jsonl(output, marker)
+                raw_evidence = retain_run_evidence(evidence_dir, idx, run, output, error_output)
+                evidence = inspect_codex_jsonl(output, marker, requested_model=args.model)
+                evidence = {**evidence, **raw_evidence}
                 run_valid = rc == 0 and bool(evidence["valid"])
                 if not run_valid:
                     invalid_runs += 1
@@ -323,6 +450,17 @@ def main() -> int:
                 "pass": is_pass,
             })
 
+        resolved_models = [
+            evidence.get("resolved_model")
+            for result in results
+            for evidence in result["selection_evidence"]
+        ]
+        resolved_model = (
+            resolved_models[0]
+            if resolved_models
+            and all(model == resolved_models[0] and isinstance(model, str) for model in resolved_models)
+            else None
+        )
         summary = {
             "skill": args.skill,
             "total": len(eval_data),
@@ -331,7 +469,8 @@ def main() -> int:
             "pass_rate": round(passed / len(eval_data), 3) if eval_data else 0.0,
             "runs_per_query": args.runs,
             "reasoning": args.reasoning,
-            "model": args.model,
+            "requested_model": args.model,
+            "resolved_model": resolved_model,
         }
 
         report = {"summary": summary, "results": results}
@@ -347,9 +486,13 @@ def main() -> int:
             print(f"Wrote detailed results to: {args.out}", file=sys.stderr)
 
         print(json.dumps(report, indent=2))
-        return 0 if failed == 0 else 1
+        exit_code = 0 if failed == 0 else 1
     finally:
-        shutil.rmtree(workspace, ignore_errors=True)
+        cleanup_error = remove_workspace(workspace)
+        if cleanup_error is not None:
+            print(f"ERROR: {cleanup_error}", file=sys.stderr)
+            exit_code = 2
+    return exit_code
 
 
 if __name__ == "__main__":

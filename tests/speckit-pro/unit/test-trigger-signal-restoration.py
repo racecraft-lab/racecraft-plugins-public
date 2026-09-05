@@ -70,7 +70,10 @@ class Layer2SignalRestorationTests(unittest.TestCase):
             (plugin_root / "skills" / "demo").mkdir(parents=True)
             eval_file = plugin_root.parent / "tests" / "speckit-pro" / "layer2-trigger" / "evals" / "demo-trigger.json"
             eval_file.parent.mkdir(parents=True)
-            eval_file.write_text("{}\n", encoding="utf-8")
+            eval_file.write_text(
+                json.dumps([{"query": "Run the demo skill.", "should_trigger": True}]) + "\n",
+                encoding="utf-8",
+            )
             skill_creator = root / "skill-creator"
             skill_creator.mkdir()
             runner.PLUGIN_ROOT = plugin_root

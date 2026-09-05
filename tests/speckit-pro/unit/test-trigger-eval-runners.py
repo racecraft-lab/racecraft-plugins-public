@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import ast
 from contextlib import redirect_stderr
+import hashlib
 import importlib.util
 import io
 import json
@@ -69,12 +70,24 @@ CURRENT_INVENTORY = [
     "Codex invocation uses explicit model effort JSON and least privilege",
     "Codex invocation retains applicable execution rules",
     "Codex selection requires a successful JSON lifecycle",
-    "Codex selection requires the exact staged marker first",
+    "Codex selection ignores started copies and allows prior completed progress",
+    "Codex selection requires the exact staged marker first in its completed message",
     "Codex selection rejects a competing marker",
+    "Codex selection rejects an out-of-order lifecycle",
+    "Codex selection rejects nested provider errors",
+    "Codex selection distinguishes requested from unresolved model",
+    "Codex raw JSONL and stderr retain exact bytes and hashes",
+    "Codex cleanup reports disposable repository residue",
+    "Codex rejects unreadable, malformed, non-list, and invalid cases before subprocess",
     "Codex failed transport cannot pass a negative case",
     "Claude invocation propagates an explicit model",
     "Claude result validation rejects failed cases despite exit zero",
     "Claude result validation rejects incomplete trial denominators",
+    "Claude result validation rejects duplicate or missing query roster",
+    "Claude result validation rejects wrong expected polarity",
+    "Claude result validation rejects inconsistent trigger accounting",
+    "Claude rejects malformed corpus before any subprocess",
+    "Claude retains exact output hashes and distinguishes unresolved model",
 ]
 
 
@@ -226,6 +239,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             skill_creator.mkdir()
 
             settings_only_stderr = io.StringIO()
+            settings_only_evidence = root / "settings-only-evidence"
             with (
                 mock.patch.dict(
                     os.environ,
@@ -254,9 +268,10 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 mock.patch.object(claude, "write_claude_wrapper", wraps=claude.write_claude_wrapper) as settings_wrap,
                 redirect_stderr(settings_only_stderr),
             ):
-                settings_only_exit = claude.main(["demo"])
+                settings_only_exit = claude.main(["demo", "--evidence-dir", str(settings_only_evidence)])
 
             direct_mode_stderr = io.StringIO()
+            direct_mode_evidence = root / "direct-mode-evidence"
             with (
                 mock.patch.dict(
                     os.environ,
@@ -284,7 +299,15 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 mock.patch.object(claude, "write_claude_wrapper", wraps=claude.write_claude_wrapper) as direct_wrap,
                 redirect_stderr(direct_mode_stderr),
             ):
-                direct_mode_exit = claude.main(["demo", "--model", "claude-sonnet-test"])
+                direct_mode_exit = claude.main(
+                    [
+                        "demo",
+                        "--model",
+                        "claude-sonnet-test",
+                        "--evidence-dir",
+                        str(direct_mode_evidence),
+                    ]
+                )
 
             failed_summary = json.dumps(
                 {
@@ -318,13 +341,89 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             )
             failed_summary_valid, _failed_summary_reason = claude.validate_eval_result(
                 failed_summary,
-                expected_total=1,
+                expected_cases=[{"query": "q", "should_trigger": True}],
                 runs_per_query=3,
+                trigger_threshold=0.5,
             )
             incomplete_trials_valid, _incomplete_trials_reason = claude.validate_eval_result(
                 incomplete_trials,
-                expected_total=1,
+                expected_cases=[{"query": "q", "should_trigger": True}],
                 runs_per_query=3,
+                trigger_threshold=0.5,
+            )
+            duplicate_result = json.dumps(
+                {
+                    "results": [
+                        {
+                            "query": "first",
+                            "should_trigger": True,
+                            "trigger_rate": 1.0,
+                            "triggers": 3,
+                            "runs": 3,
+                            "pass": True,
+                        },
+                        {
+                            "query": "first",
+                            "should_trigger": True,
+                            "trigger_rate": 1.0,
+                            "triggers": 3,
+                            "runs": 3,
+                            "pass": True,
+                        },
+                    ],
+                    "summary": {"total": 2, "passed": 2, "failed": 0},
+                }
+            )
+            duplicate_result_valid, _duplicate_reason = claude.validate_eval_result(
+                duplicate_result,
+                expected_cases=[
+                    {"query": "first", "should_trigger": True},
+                    {"query": "second", "should_trigger": False},
+                ],
+                runs_per_query=3,
+                trigger_threshold=0.5,
+            )
+            wrong_polarity = json.dumps(
+                {
+                    "results": [
+                        {
+                            "query": "q",
+                            "should_trigger": False,
+                            "trigger_rate": 0.0,
+                            "triggers": 0,
+                            "runs": 3,
+                            "pass": True,
+                        }
+                    ],
+                    "summary": {"total": 1, "passed": 1, "failed": 0},
+                }
+            )
+            wrong_polarity_valid, _wrong_polarity_reason = claude.validate_eval_result(
+                wrong_polarity,
+                expected_cases=[{"query": "q", "should_trigger": True}],
+                runs_per_query=3,
+                trigger_threshold=0.5,
+            )
+            inconsistent_rate = json.dumps(
+                {
+                    "results": [
+                        {
+                            "query": "q",
+                            "should_trigger": True,
+                            "trigger_rate": 1.0,
+                            "triggers": 2,
+                            "runs": 3,
+                            "pass": True,
+                        }
+                    ],
+                    "summary": {"total": 1, "passed": 1, "failed": 0},
+                }
+            )
+            inconsistent_rate_valid, _inconsistent_rate_reason = claude.validate_eval_result(
+                inconsistent_rate,
+                expected_cases=[{"query": "q", "should_trigger": True}],
+                runs_per_query=3,
+                trigger_threshold=0.5,
             )
             claude_eval.write_text(
                 json.dumps([{"query": "q", "should_trigger": True}]) + "\n",
@@ -350,7 +449,38 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     ),
                 ),
             ):
-                failed_mode_exit = claude.main(["demo", "--model", "claude-sonnet-test"])
+                failed_mode_exit = claude.main(
+                    [
+                        "demo",
+                        "--model",
+                        "claude-sonnet-test",
+                        "--evidence-dir",
+                        str(root / "failed-mode-evidence"),
+                    ]
+                )
+
+            claude_eval.write_text("{", encoding="utf-8")
+            with (
+                mock.patch.dict(
+                    os.environ,
+                    {
+                        "HOME": str(fake_home),
+                        "PATH": wrapper_env.get("PATH", ""),
+                        "SKILL_CREATOR_ROOT": str(skill_creator),
+                    },
+                    clear=True,
+                ),
+                mock.patch.object(claude.subprocess, "run") as malformed_claude_run,
+            ):
+                malformed_claude_exit = claude.main(["demo"])
+            claude_eval.write_text(
+                json.dumps([{"query": "q", "should_trigger": True}]) + "\n",
+                encoding="utf-8",
+            )
+
+            direct_evidence_record = json.loads(
+                (direct_mode_evidence / "evidence.json").read_text(encoding="utf-8")
+            )
 
             move_source = root / "move-source"
             move_source.write_text("source", encoding="utf-8")
@@ -423,6 +553,37 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             valid_jsonl = "\n".join(
                 [
                     json.dumps({"type": "thread.started", "thread_id": "thread-1"}),
+                    json.dumps({"type": "turn.started"}),
+                    json.dumps(
+                        {
+                            "type": "item.started",
+                            "item": {
+                                "id": "item-start-copy",
+                                "type": "agent_message",
+                                "text": exact_marker,
+                            },
+                        }
+                    ),
+                    json.dumps(
+                        {
+                            "type": "item.updated",
+                            "item": {
+                                "id": "item-start-copy",
+                                "type": "agent_message",
+                                "text": exact_marker,
+                            },
+                        }
+                    ),
+                    json.dumps(
+                        {
+                            "type": "item.completed",
+                            "item": {
+                                "id": "item-progress",
+                                "type": "agent_message",
+                                "text": "Preparing to answer.",
+                            },
+                        }
+                    ),
                     json.dumps(
                         {
                             "type": "item.completed",
@@ -456,6 +617,63 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 exact_marker,
             )
             competing_evidence = codex_engine.inspect_codex_jsonl(competing_jsonl, exact_marker)
+            wrong_order_jsonl = "\n".join(
+                [
+                    json.dumps({"type": "turn.completed"}),
+                    json.dumps({"type": "thread.started", "thread_id": "thread-1"}),
+                    json.dumps({"type": "turn.started"}),
+                ]
+            )
+            wrong_order_evidence = codex_engine.inspect_codex_jsonl(wrong_order_jsonl, exact_marker)
+            nested_error_jsonl = valid_jsonl.replace(
+                '"text": "Preparing to answer."',
+                '"text": "Preparing to answer.", "error": {"message": "provider failed"}',
+            )
+            nested_error_evidence = codex_engine.inspect_codex_jsonl(nested_error_jsonl, exact_marker)
+            model_evidence = codex_engine.inspect_codex_jsonl(
+                valid_jsonl,
+                exact_marker,
+                requested_model="gpt-5.6-sol",
+            )
+            raw_evidence_dir = root / "codex-raw-evidence"
+            raw_evidence_dir.mkdir()
+            raw_evidence = codex_engine.retain_run_evidence(
+                raw_evidence_dir,
+                1,
+                1,
+                valid_jsonl,
+                "provider stderr\n",
+            )
+            residue_workspace = root / "residue-workspace"
+            residue_workspace.mkdir()
+            with mock.patch.object(codex_engine.shutil, "rmtree", return_value=None):
+                cleanup_residue = codex_engine.remove_workspace(residue_workspace)
+
+            unreadable_codex_corpus = root / "unreadable-codex-corpus"
+            unreadable_codex_corpus.mkdir()
+            invalid_codex_corpora = []
+            for name, body in (
+                ("malformed", "{"),
+                ("non-list", "{}\n"),
+                ("invalid-case", '[{"query": "q"}]\n'),
+            ):
+                path = root / f"{name}-codex-corpus.json"
+                path.write_text(body, encoding="utf-8")
+                invalid_codex_corpora.append(path)
+            invalid_codex_corpora.append(unreadable_codex_corpus)
+            invalid_codex_subprocess_calls = 0
+            invalid_codex_messages = []
+            for invalid_codex_corpus in invalid_codex_corpora:
+                with (
+                    mock.patch.object(codex_engine, "find_eval_file", return_value=invalid_codex_corpus),
+                    mock.patch.object(codex_engine, "find_skill_source", return_value=codex_skill_source),
+                    mock.patch.object(codex_engine.subprocess, "run") as invalid_codex_run,
+                    mock.patch.object(sys, "argv", [str(CODEX_ENGINE), "demo"]),
+                    self.assertRaises(SystemExit) as invalid_codex_exit,
+                ):
+                    codex_engine.main()
+                invalid_codex_subprocess_calls += invalid_codex_run.call_count
+                invalid_codex_messages.append(str(invalid_codex_exit.exception))
 
             with (
                 mock.patch.dict(os.environ, {"CODEX_HOME": str(auth_home)}, clear=False),
@@ -706,25 +924,72 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 (
                     CURRENT_INVENTORY[34],
                     lambda: self.assertTrue(
-                        valid_evidence["selected"]
-                        and valid_evidence["selected_marker"] == exact_marker
+                        valid_evidence["valid"] and valid_evidence["selected"]
                     ),
                 ),
                 (
                     CURRENT_INVENTORY[35],
+                    lambda: self.assertEqual(valid_evidence["selected_marker"], exact_marker),
+                ),
+                (
+                    CURRENT_INVENTORY[36],
                     lambda: self.assertTrue(
                         not competing_evidence["valid"]
                         and "competing" in str(competing_evidence["reason"]).lower()
                     ),
                 ),
                 (
-                    CURRENT_INVENTORY[36],
+                    CURRENT_INVENTORY[37],
+                    lambda: self.assertTrue(
+                        not wrong_order_evidence["valid"]
+                        and "order" in str(wrong_order_evidence["reason"]).lower()
+                    ),
+                ),
+                (
+                    CURRENT_INVENTORY[38],
+                    lambda: self.assertTrue(
+                        not nested_error_evidence["valid"]
+                        and "failed" in str(nested_error_evidence["reason"]).lower()
+                    ),
+                ),
+                (
+                    CURRENT_INVENTORY[39],
+                    lambda: self.assertTrue(
+                        model_evidence["requested_model"] == "gpt-5.6-sol"
+                        and model_evidence["resolved_model"] is None
+                    ),
+                ),
+                (
+                    CURRENT_INVENTORY[40],
+                    lambda: self.assertTrue(
+                        Path(str(raw_evidence["jsonl_path"])).read_text(encoding="utf-8") == valid_jsonl
+                        and Path(str(raw_evidence["stderr_path"])).read_text(encoding="utf-8")
+                        == "provider stderr\n"
+                        and raw_evidence["jsonl_sha256"]
+                        == hashlib.sha256(valid_jsonl.encode("utf-8")).hexdigest()
+                        and raw_evidence["stderr_sha256"]
+                        == hashlib.sha256(b"provider stderr\n").hexdigest()
+                    ),
+                ),
+                (CURRENT_INVENTORY[41], lambda: self.assertIsNotNone(cleanup_residue)),
+                (
+                    CURRENT_INVENTORY[42],
+                    lambda: self.assertTrue(
+                        invalid_codex_subprocess_calls == 0
+                        and len(invalid_codex_messages) == 4
+                        and any("JSON list" in message for message in invalid_codex_messages)
+                        and any("requires" in message for message in invalid_codex_messages)
+                        and sum("could not read" in message for message in invalid_codex_messages) == 2
+                    ),
+                ),
+                (
+                    CURRENT_INVENTORY[43],
                     lambda: self.assertFalse(
                         codex_engine.case_passes(False, triggers=0, runs=3, threshold=0.5, invalid_runs=1)
                     ),
                 ),
                 (
-                    CURRENT_INVENTORY[37],
+                    CURRENT_INVENTORY[44],
                     lambda: self.assertIn(
                         ["--model", "claude-sonnet-test"],
                         [
@@ -734,10 +999,31 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     ),
                 ),
                 (
-                    CURRENT_INVENTORY[38],
+                    CURRENT_INVENTORY[45],
                     lambda: self.assertTrue(not failed_summary_valid and failed_mode_exit == 1),
                 ),
-                (CURRENT_INVENTORY[39], lambda: self.assertFalse(incomplete_trials_valid)),
+                (CURRENT_INVENTORY[46], lambda: self.assertFalse(incomplete_trials_valid)),
+                (CURRENT_INVENTORY[47], lambda: self.assertFalse(duplicate_result_valid)),
+                (CURRENT_INVENTORY[48], lambda: self.assertFalse(wrong_polarity_valid)),
+                (CURRENT_INVENTORY[49], lambda: self.assertFalse(inconsistent_rate_valid)),
+                (
+                    CURRENT_INVENTORY[50],
+                    lambda: self.assertTrue(
+                        malformed_claude_exit == 1 and malformed_claude_run.call_count == 0
+                    ),
+                ),
+                (
+                    CURRENT_INVENTORY[51],
+                    lambda: self.assertTrue(
+                        direct_evidence_record["requested_model"] == "claude-sonnet-test"
+                        and direct_evidence_record["resolved_model"] is None
+                        and Path(direct_evidence_record["stdout_path"]).is_file()
+                        and direct_evidence_record["stdout_sha256"]
+                        == hashlib.sha256(
+                            Path(direct_evidence_record["stdout_path"]).read_bytes()
+                        ).hexdigest()
+                    ),
+                ),
             ]
 
             self.assertEqual([name for name, _check in checks], CURRENT_INVENTORY)
