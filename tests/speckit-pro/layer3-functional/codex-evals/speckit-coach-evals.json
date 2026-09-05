@@ -83,11 +83,11 @@
     {
       "id": 8,
       "prompt": "What are SpecKit extensions? I see references to 'verify', 'review', 'cleanup', and 'retrospective' extensions in the autopilot workflow. How do I install them and what do they do?",
-      "expected_output": "Explains extensions as optional workflow additions, then inspects the active project, host, installed CLI help, manifests, and configuration before describing which user-named examples are actually available or configured.",
+      "expected_output": "Explains extensions as optional workflow additions, then inspects the active project, host, installed CLI help, manifests, and configuration before describing which user-named examples are actually available or configured and the evidence-backed purpose of each observed entry.",
       "expectations": [
         "Explains that extensions are optional workflow additions rather than mandatory built-in phases",
         "Inspects the active project, host, installed CLI help, manifests, and configuration before claiming availability or behavior",
-        "Treats verify, review, cleanup, and retrospective as user-named investigation targets; reports each as observed, unavailable, or unverified without inventing behavior, and states that the list is non-exhaustive",
+        "Treats verify, review, cleanup, and retrospective as user-named investigation targets; reports each as observed, unavailable, or unverified, explains the evidence-backed purpose or behavior of every observed requested entry (at least 2 descriptions when the fixture supplies at least 2), and explicitly limits the answer when fewer are observed rather than inventing behavior; states that the list is non-exhaustive",
         "Names .specify/extensions.yml or another configuration path only when the active installed evidence confirms that path"
       ]
     },
