@@ -464,6 +464,47 @@ def _skill_dirs(directory: Path) -> list[Path]:
 def _unique_matches(pattern: re.Pattern[str], text: str) -> list[str]:
     return sorted(set(pattern.findall(text)))
 
+PRD_WORKFLOW_TARGETS = (
+    ('shared PRD authoring protocol', Path('skills/speckit-prd/references/prd-authoring-protocol.md')),
+    ('PRD template', Path('skills/speckit-coach/templates/prd-template.md')),
+    ('technical-roadmap template', Path('skills/speckit-coach/templates/technical-roadmap-template.md')),
+    ('slicing heuristics', Path('skills/speckit-coach/references/slicing-heuristics.md')),
+    ('roadmap-MOC template', Path('skills/speckit-coach/templates/roadmap-moc-template.md')),
+)
+PRD_WORKFLOW_CASES = (
+    ('Claude source', PLUGIN_ROOT / 'skills/speckit-prd/SKILL.md', PLUGIN_ROOT, ('references/prd-authoring-protocol.md', '../speckit-coach/templates/prd-template.md', '../speckit-coach/templates/technical-roadmap-template.md', '../speckit-coach/references/slicing-heuristics.md', '../speckit-coach/templates/roadmap-moc-template.md')),
+    ('Codex source', PLUGIN_ROOT / 'codex-skills/speckit-prd/SKILL.md', PLUGIN_ROOT, ('../../skills/speckit-prd/references/prd-authoring-protocol.md', '../../skills/speckit-coach/templates/prd-template.md', '../../skills/speckit-coach/templates/technical-roadmap-template.md', '../../skills/speckit-coach/references/slicing-heuristics.md', '../../skills/speckit-coach/templates/roadmap-moc-template.md')),
+    ('Claude payload', REPO_ROOT / 'dist/claude/speckit-pro/skills/speckit-prd/SKILL.md', REPO_ROOT / 'dist/claude/speckit-pro', ('references/prd-authoring-protocol.md', '../speckit-coach/templates/prd-template.md', '../speckit-coach/templates/technical-roadmap-template.md', '../speckit-coach/references/slicing-heuristics.md', '../speckit-coach/templates/roadmap-moc-template.md')),
+    ('Codex payload', REPO_ROOT / 'dist/codex/speckit-pro/skills/speckit-prd/SKILL.md', REPO_ROOT / 'dist/codex/speckit-pro', ('references/prd-authoring-protocol.md', '../speckit-coach/templates/prd-template.md', '../speckit-coach/templates/technical-roadmap-template.md', '../speckit-coach/references/slicing-heuristics.md', '../speckit-coach/templates/roadmap-moc-template.md')),
+)
+
+class ValidatePrdWorkflowContract(unittest.TestCase):
+
+    def test_prd_workflow_routes_and_overwrite_guard(self) -> None:
+        for label, path, root, links in PRD_WORKFLOW_CASES:
+            content = _read(path)
+            workflow_marker = '## Workflow\n'
+            output_marker = '\n## Output contract'
+            workflow = content.partition(workflow_marker)[2].partition(output_marker)[0]
+            with self.subTest(msg=f'{label}: Workflow section is present'):
+                self.assertTrue(workflow, f'expected {path} to retain a bounded Workflow section')
+            protocol_link = links[0]
+            with self.subTest(msg=f'{label}: Workflow requires protocol read/follow before authoring'):
+                self.assertIn(f'Read and follow the [shared PRD authoring protocol]({protocol_link})\nbefore authoring.', workflow, f'{label}: Workflow requires protocol read/follow before authoring')
+            for (resource, expected_target), link in zip(PRD_WORKFLOW_TARGETS, links):
+                with self.subTest(msg=f'{label}: Workflow links {resource} at its host root'):
+                    self.assertIn(f']({link})', workflow, f'{label}: Workflow links {resource} at its host root')
+                    self.assertEqual(root / expected_target, (path.parent / link).resolve(), f'{label}: Workflow links {resource} at its host root')
+                    self.assertTrue((path.parent / link).is_file(), f'{label}: Workflow links {resource} at its host root')
+            overwrite = 'before overwriting, confirm the exact output path'
+            apply = "Apply the protocol's interview, update, slicing/estimation, MOC, index, and\nverification rules."
+            resource_indices = [workflow.find(f']({link})') for link in links[1:]]
+            with self.subTest(msg=f'{label}: Workflow confirms output path before resources or apply'):
+                self.assertGreaterEqual(workflow.find(overwrite), 0, f'{label}: Workflow confirms output path before resources or apply')
+                self.assertGreaterEqual(workflow.find(apply), 0, f'{label}: Workflow confirms output path before resources or apply')
+                if all(index >= 0 for index in resource_indices) and workflow.find(apply) >= 0:
+                    self.assertLess(workflow.find(overwrite), min(*resource_indices, workflow.find(apply)), f'{label}: Workflow confirms output path before resources or apply')
+
 class ValidateSkillCapabilityPointers(unittest.TestCase):
 
     def setUp(self) -> None:
