@@ -37,14 +37,12 @@ shape the design. A plan that needs an exception should state the principle,
 the deviation, and its justification. On review, resolve violations by changing
 the artifact or recording a justified exception rather than diluting the rule.
 
-## Upgrade safely
+## Lifecycle boundary
 
-Treat the constitution as project-owned content. Before changing an existing
-installation, inspect the current files and use the upgrade workflow's backup
-and diff-aware path. Verify the live constitution remains present afterward;
-do not attempt to propagate its prose into templates by hand.
+For an installation upgrade, route to the maintained upgrade skill for the
+active host. Treat the constitution as project-owned content and do not copy its
+prose into command or plan templates by hand.
 
 ## Further reference
 
 - [Official Spec Kit constitution command](https://github.com/github/spec-kit/blob/main/templates/commands/constitution.md)
-- [Official Spec Kit upgrade guidance](https://github.com/github/spec-kit/blob/main/docs/upgrade.md)

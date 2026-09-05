@@ -9,28 +9,12 @@ This guidance is **advisory**. Nothing here blocks, gates, or rejects a spec.
 The companion estimator (`estimate-spec-size`) and these heuristics exist to
 make the right-sizing visible at authoring time, not to enforce a hard limit.
 
-## Contents
-
-- [The ~400 reviewable-LOC ceiling](#the-400-reviewable-loc-ceiling)
-- [SPIDR — how to split a story](#spidr--how-to-split-a-story)
-- [INVEST — what a good slice looks like](#invest--what-a-good-slice-looks-like)
-- [Vertical slicing — cut end-to-end, not by layer](#vertical-slicing--cut-end-to-end-not-by-layer)
-- [The estimate is a forward guess, not the authoritative count](#the-estimate-is-a-forward-guess-not-the-authoritative-count)
-- [Spikes are sized by timebox, not LOC](#spikes-are-sized-by-timebox-not-loc)
-- [The at-ceiling boundary rule](#the-at-ceiling-boundary-rule)
-- [How the estimator turns signals into a guess](#how-the-estimator-turns-signals-into-a-guess)
-
 ## The ~400 reviewable-LOC ceiling
 
-A single spec (and the PR that implements it) should stay at or under
-**~400 reviewable lines of code**. Above that, a reviewer's defect-detection
-rate drops sharply and the change becomes hard to reason about as one unit.
-
-This ceiling is the **single source-of-truth constant**. It lives as one
-hardcoded value in `estimate-spec-size` (carrying a "keep in sync with the
-documented ceiling in slicing-heuristics.md" comment) and is referenced by value
-here and summarized in both skills. If the ceiling ever changes, it changes in
-the script and this doc together — there is no second copy.
+The `estimate-spec-size` runner operation owns the exact `400` behavioral
+threshold. This reference explains its user-facing advisory: prefer a split when
+the forward estimate is over 400 reviewable lines, but never treat that estimate
+as a gate or final measurement.
 
 ## SPIDR — how to split a story
 

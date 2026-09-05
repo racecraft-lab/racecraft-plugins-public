@@ -1,299 +1,64 @@
-# SpecKit Command Guide
+# Spec Kit Command Guide
 
-Per-command coaching for the official SpecKit slash commands. This is NOT the command logic itself (that's installed by `specify init` in `.specify/` and your agent's command directory). This guide covers **when to use each command, how to get the best results, common mistakes, and phase gates**.
+Use this reference to explain when an installed official Spec Kit command fits,
+what artifact or result it owns, and how to recover when its prerequisites are
+missing. This is coaching, not command logic.
 
-## Contents
+## Read the active command first
 
-**SDD workflow commands** (in canonical order):
-- [Command Chaining (The Official Workflow)](#command-chaining-the-official-workflow) — full sequence + when each is optional
-- [`/speckit-constitution`](#speckit-constitution--project-governance) — project governance, principles, gates
-- [`/speckit-specify`](#speckit-specify--create-feature-specification) — spec creation, user stories, FRs
-- [`/speckit-clarify`](#speckit-clarify--resolve-ambiguities) — `[NEEDS CLARIFICATION]` resolution
-- [`/speckit-plan`](#speckit-plan--implementation-planning) — Phase 0 research, gates, data model
-- [`/speckit-checklist`](#speckit-checklist--validate-requirement-quality) — domain selection, `[Gap]` markers
-- [`/speckit-tasks`](#speckit-tasks--generate-task-breakdown) — `[P]` parallel markers, user-story-first
-- [`/speckit-analyze`](#speckit-analyze--cross-artifact-consistency) — severity levels, CRITICAL blocks
-- [`/speckit-implement`](#speckit-implement--execute-tasks) — TDD, phase execution
-- [`/speckit-taskstoissues`](#speckit-taskstoissues--export-to-github-issues) — GH issue export
+Before giving version-specific instructions, inspect the command or skill that
+is installed for the active host and project. Its definition owns exact inputs,
+limits, files, hooks, and execution steps.
 
-## Command Chaining (The Official Workflow)
+If the requested command is not installed or its definition cannot be read:
 
+1. Give only stable conceptual help from this guide.
+2. Say that version-specific mechanics could not be verified.
+3. Do not invent paths, limits, flags, or outputs, and do not install or upgrade
+   anything unless the user separately requests that lifecycle action.
+
+For Autopilot gate questions, read the installed `speckit-autopilot` skill as a
+reference only. Do not invoke or execute Autopilot while answering.
+
+## Workflow shape
+
+The normal core progression is:
+
+```text
+constitution → specify → clarify (as needed) → plan → checklist (as needed) → tasks → analyze (as needed) → implement
 ```
-constitution → specify → clarify (opt) → plan → checklist (opt) → tasks → analyze (opt) → implement
-```
 
-- **Required**: constitution, specify, plan, tasks, implement
-- **Recommended**: clarify, analyze (always run before implement)
-- **Optional**: checklist (skip for trivial features)
-
-Each command depends on artifacts from previous commands. You cannot skip required commands.
-
----
-
-## `/speckit-constitution` — Project Governance
-
-### When to Run
-- **First** — before any specs. Run this when initializing a new project or when project principles need updating.
-- Re-run when adding new architectural principles or amending existing ones.
-
-### How to Get the Best Results
-- Define **testable** principles, not aspirational statements. "All functions must have type annotations" is testable. "Code should be clean" is not.
-- Keep to 5-8 principles maximum. Too many principles create contradictions.
-- Use semantic versioning: MAJOR for backward-incompatible governance, MINOR for a new principle or material expansion, PATCH for clarifications.
-- Include quality gates — specific commands that verify principle compliance (e.g., `pyright .`, `npm run build`).
-
-### Common Mistakes
-- Writing principles that are too vague to enforce ("write good code")
-- Technology-locked principles that prevent future migration
-- Too many principles that create contradictions
-- **Known issue**: Codex may modify templates during constitution creation ([Issue #1229](https://github.com/github/spec-kit/issues/1229))
-
-### What It Produces
-- `.specify/memory/constitution.md` — the project's governing principles
-
-### Next Command
-→ `/speckit-specify` to start creating feature specifications
-
----
-
-## `/speckit-specify` — Create Feature Specification
-
-### When to Run
-- When starting a new feature. Focus on WHAT and WHY, never HOW.
-
-### How to Get the Best Results
-
-**The most important tip**: "Having a very detailed first prompt will produce a much better specification." Think through what you want and don't want before invoking `/specify`.
-
-- Write **independently testable user stories** — each story should be deliverable as a standalone MVP slice
-- Prioritize stories: P1 (must-have), P2 (should-have), P3 (nice-to-have)
-- Use Given/When/Then format for acceptance scenarios
-- Use `[NEEDS CLARIFICATION: specific question]` markers for any ambiguity — don't guess
-- Define **measurable** success criteria, not vague outcomes
-- Include explicit "Out of Scope" section to prevent scope creep
-- SpecKit auto-detects your feature from the current Git branch
-
-### Common Mistakes
-- Too vague initial prompt — cascading quality issues through all downstream commands
-- Including implementation details (tech stack, APIs, code structure) — keep it business-level
-- Writing untestable requirements ("the system should be fast")
-- Not defining Out of Scope — leads to unbounded features
-- Forgetting to commit spec.md before moving to the next phase
-
-### What It Produces
-- `specs/<number>-<feature-name>/spec.md`
-- `specs/<number>-<feature-name>/checklists/requirements.md`
-
-### Next Command
-→ `/speckit-clarify` (if spec has `[NEEDS CLARIFICATION]` markers) or `/speckit-plan` (if spec is clean)
-
----
-
-## `/speckit-clarify` — Resolve Ambiguities
-
-### When to Run
-- When spec has `[NEEDS CLARIFICATION]` markers
-- When areas could be interpreted multiple ways
-- "10-20 minutes here saves hours of rework later"
-
-### When to Skip
-- Spec has zero `[NEEDS CLARIFICATION]` markers
-- All requirements are clearly testable and unambiguous
-- You're working on a trivial feature
-
-### How to Get the Best Results
-- Focus each clarify session on a specific domain (e.g., "Focus on UX" or "Focus on API contracts")
-- Evaluate AI recommendations critically — they're suggestions, not mandates
-- Maximum 5 questions per session
-- Each accepted answer is immediately integrated into spec.md
-- You can say "recommended" or "suggested" to accept the AI's recommendation
-
-### When Enough is Enough
-- All `[NEEDS CLARIFICATION]` markers are resolved
-- No remaining ambiguities in acceptance scenarios
-- You've done 2-3 sessions without surfacing new issues
-
-### Common Mistakes
-- Running too many sessions on a simple feature
-- Accepting all AI recommendations without thinking critically
-- Not reviewing the updated spec after clarification
-
-### What It Produces
-- Updated `spec.md` with clarifications integrated
-- `## Clarifications` section with dated session logs
-
-### Next Command
-→ `/speckit-plan`
-
----
-
-## `/speckit-plan` — Implementation Planning
-
-### When to Run
-- After spec is finalized (G1/G2 gates passed). Now you define HOW.
-
-### How to Get the Best Results
-- Provide your tech stack and architecture preferences — the plan needs this context
-- Constitution gates run automatically — review the Simplicity, Anti-Abstraction, and Integration-First gates
-- Phase 0 generates `research.md` to resolve technical unknowns
-- Phase 1 generates supporting artifacts: `data-model.md`, `contracts/`, `quickstart.md`
-- File creation order matters: contracts → tests → implementation
-- Keep the plan high-level and readable — detailed algorithms go in supporting files
-
-### Common Mistakes
-- Skipping constitution gate pre-check — violations surface late and are expensive to fix
-- Not reviewing research.md — it contains critical technical decisions
-- Including too much implementation detail in plan.md — use supporting files
-- Forgetting to review generated data models and contracts
-
-### What It Produces
-- `plan.md` — technical implementation plan
-- `research.md` — decision rationales (Phase 0)
-- `data-model.md` — entities and types (Phase 1)
-- `contracts/` — API specifications (Phase 1)
-- `quickstart.md` — developer onboarding (Phase 1)
-
-### Next Command
-→ `/speckit-checklist` (recommended) or `/speckit-tasks`
-
----
-
-## `/speckit-checklist` — Validate Requirement Quality
-
-### When to Run
-- After plan is complete. Validates both spec AND plan together.
-- Run multiple times for different domains.
-
-### The Key Concept: "Unit Tests for English"
-Checklists validate **requirement quality**, NOT implementation correctness.
-
-- WRONG: "Verify button clicks correctly" (testing implementation)
-- CORRECT: "Are visual hierarchy requirements defined with measurable criteria?" (testing requirement quality)
-
-### How to Get the Best Results
-- **Analyze the spec first** — don't pick domains from a generic list. Read `spec.md` and `plan.md` to identify which domains have the highest risk and most ambiguity.
-- **Use enriched prompts** — don't just run `/speckit-checklist security`. Add spec-specific focus areas: "Focus on JWT validation for the auth middleware, input sanitization for the search field, and Bedrock API key management."
-- Each run creates a NEW checklist file (never overwrites previous)
-- Items should include traceability references: `[Spec §X.Y]`, `[Gap]`, `[Ambiguity]`
-- Minimum 80% of items should include traceability to spec sections
-- Address all `[Gap]` markers by updating spec.md or plan.md
-- See [Checklist Domains Guide](./checklist-domains-guide.md) for the full signal extraction algorithm and enriched prompt patterns
-
-### Common Mistakes
-- **Running bare domain prompts** — `/speckit-checklist security` without focus areas produces generic items that don't test YOUR spec's specific requirements
-- Writing checklist items that test implementation instead of requirements
-- Using generic checklists instead of domain-specific ones
-- Not addressing `[Gap]` items — they represent missing requirements
-- Choosing domains based on project type alone instead of analyzing what's actually in the spec
-
-### What It Produces
-- `checklists/<domain>.md` — per-domain validation checklists
-
-### Next Command
-→ `/speckit-tasks`
-
----
-
-## `/speckit-tasks` — Generate Task Breakdown
-
-### When to Run
-- After checklist gaps are resolved. Generates atomic, ordered implementation tasks.
-
-### How to Get the Best Results
-- Tasks are organized **by user story** (P1, P2, P3...), NOT by technical layer
-- Each user story phase should be **independently testable**
-- Task format: `- [ ] [T001] [P] [US1] Description with exact file path`
-- `[P]` marks tasks safe for parallel execution
-- Foundational phase blocks ALL user stories — it's critical shared infrastructure
-- Tests are OPTIONAL — only if explicitly requested in spec or by user
-
-### Phase Structure
-1. **Phase 1: Setup** — Project initialization, shared infrastructure
-2. **Phase 2: Foundational** — MUST complete before ANY user story
-3. **Phase 3+: User Story phases** — One phase per story (P1, P2, P3...)
-4. **Final Phase: Polish** — Cross-cutting concerns
-
-### Common Mistakes
-- Organizing by tech layer (all backend, then all frontend) — breaks independent delivery
-- Tasks that touch too many files (keep to 2-3 files max)
-- Missing exact file paths — tasks should be precise enough to execute
-- Not marking parallel-safe tasks with `[P]`
-- Forgetting the foundational phase
-
-### What It Produces
-- `tasks.md` — dependency-ordered task list
-
-### Next Command
-→ `/speckit-analyze` (recommended — always run before implement)
-
----
-
-## `/speckit-analyze` — Cross-Artifact Consistency
-
-### When to Run
-- **Always** run after generating tasks, before implementing. It catches issues cheaply.
-
-### How to Get the Best Results
-- This is STRICTLY read-only — it only produces a report, never modifies files
-- Maximum 50 findings to stay actionable
-- Constitution alignment violations are automatically marked CRITICAL
-- Review the coverage summary table — unmapped requirements are gaps
-
-### How to Interpret Results
-
-| Severity | Meaning | Action |
-|----------|---------|--------|
-| CRITICAL | Blocks implementation, violates constitution | **Must fix before implementing** |
-| HIGH | Significant gap in coverage or consistency | Should fix |
-| MEDIUM | Quality improvement opportunity | Review and decide |
-| LOW | Minor inconsistency or optimization | Note for future |
-
-### Common Mistakes
-- Ignoring CRITICAL findings — they will cause implementation failures
-- Running analyze without tasks.md (it needs all three: spec, plan, tasks)
-- Not re-running after fixing issues from the report
-
-### What It Produces
-- Analysis report with findings table, coverage summary, and recommendations
-
-### Next Command
-→ `/speckit-implement`
-
----
-
-## `/speckit-implement` — Execute Tasks
-
-### When to Run
-- After all gates passed. This is the code generation phase.
-
-### How to Get the Best Results
-- Implementation checks checklists first — if incomplete, it will ask whether to proceed
-- Execution is phase-by-phase, respecting task dependencies
-- Tasks marked `[P]` can run in parallel within a phase
-- TDD approach: Red (write failing test) → Green (make it pass) → Refactor
-- Completed tasks are marked `[X]` in tasks.md
-
-### Common Mistakes
-- Skipping the checklist pre-check prompt ("Do you want to proceed anyway?")
-- Not committing after each phase — makes rollback impossible
-- Trying to implement everything at once instead of phase-by-phase
-
-### What It Produces
-- Working code implementing all tasks
-- Updated tasks.md with completed task markers
-
----
-
-## `/speckit-taskstoissues` — Export to GitHub Issues
-
-### When to Run
-- After tasks.md is finalized and you want to track tasks as GitHub Issues.
-
-### What It Does
-- Converts tasks.md entries into dependency-ordered GitHub Issues
-- Requires GitHub MCP server connection
-
-### What It Produces
-- GitHub Issues for each task with labels, dependencies, and descriptions
-
----
+Treat Clarify, Checklist, and Analyze as conditional quality passes. A project or
+installed Spec Kit version may expose additional commands; inspect their active
+definitions rather than treating this sequence as a closed command catalog.
+
+Do not advance around a missing prerequisite or failed gate. Name the artifact
+or evidence that must change, route back to its owning command, and re-check the
+active definition before continuing.
+
+## Common command responsibilities
+
+This table is a conceptual router, not an exhaustive command inventory.
+
+| Command | Use it for | Primary result or recovery direction |
+|---|---|---|
+| Constitution | Establish or amend testable project governance. | Update the live constitution; use the [constitution guide](./constitution-guide.md) for amendment decisions. |
+| Specify | Capture user outcomes, requirements, acceptance criteria, and scope without inventing implementation design. | Produce or repair the feature specification before planning. |
+| Clarify | Resolve material ambiguity in a specification instead of guessing. | Record decisions in the specification; return to Specify when the capability boundary itself changed. |
+| Plan | Make the technical design, contracts, and constitution alignment explicit. | Produce or repair the implementation plan and only the supporting artifacts required by the active command. |
+| Checklist | Test whether requirements are complete, clear, consistent, measurable, and scenario-complete. | Produce a requirement-quality checklist; use the [checklist domains guide](./checklist-domains-guide.md) to choose evidence-based focus areas. |
+| Tasks | Turn accepted design artifacts into dependency-ordered, independently verifiable work. | Produce or repair the task list while preserving its active marker format. |
+| Analyze | Check the specification, plan, and tasks for conflicts, gaps, and missing coverage. | Return a read-only report; repair the named source artifact before rerunning. |
+| Implement | Execute accepted tasks while respecting their dependencies and project verification rules. | Update implementation and task state; do not treat partial or failed evidence as completion. |
+| Issue export or another installed command | Perform only the behavior declared by its active definition. | Confirm external writes before creating or changing remote records; report missing capability rather than substituting another command. |
+
+## Coaching rules
+
+- Keep user outcomes and acceptance criteria in the specification; keep technical
+  decisions in the plan.
+- Preserve identifiers and traceability markers defined by the active artifacts.
+- A Checklist evaluates requirements, not whether implementation works.
+- Analyze is read-only. Do not turn an explanation of its findings into an
+  unapproved edit.
+- Report the artifacts inspected, what changed, checks actually observed, and
+  unresolved evidence. Never infer that a command or gate passed.

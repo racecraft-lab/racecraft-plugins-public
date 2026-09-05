@@ -21,7 +21,7 @@ Use the smallest relevant reference; do not load the whole library.
 | User goal | Read or do |
 |---|---|
 | Learn SDD, start a project, recover from a failed phase, or assess artifacts | [Getting started](references/getting-started.md) and [SDD methodology](references/sdd-methodology.md) as needed. |
-| Use an official command (`specify`, `clarify`, `plan`, `checklist`, `tasks`, `analyze`, `implement`, or `constitution`) | [Command guide](references/command-guide.md) for inputs, artifacts, mistakes, and recovery. For gate questions, read the [live autopilot contract](../speckit-autopilot/SKILL.md) as a reference only; do not execute or invoke it. |
+| Use an installed official Spec Kit command | [Command guide](references/command-guide.md) for inputs, artifacts, mistakes, and recovery. Inspect the active installed command definition for version-specific mechanics. For gate questions, read the [live autopilot contract](../speckit-autopilot/SKILL.md) as a reference only; do not execute or invoke it. |
 | Choose or author checklists | [Checklist domains](references/checklist-domains-guide.md). Read the feature's `spec.md` and `plan.md`, rank the relevant risks, and offer enriched prompts for two to four domains. |
 | Design a constitution | [Constitution guide](references/constitution-guide.md). |
 | Design a multi-spec roadmap or split a feature | [Technical-roadmap template](templates/technical-roadmap-template.md) and [slicing heuristics](references/slicing-heuristics.md). Derive independently executable vertical slices with observable outcomes and explicit real dependencies; review the graph before writing. |
@@ -32,6 +32,7 @@ Use the smallest relevant reference; do not load the whole library.
 | Explain autonomous execution, consensus, remediation, review loops, or configuration | Read [the live autopilot skill](../speckit-autopilot/SKILL.md) as a reference only; explain its current contract without executing or invoking it. |
 | Scope a raw brief interactively | Route to `$grill-me`; do not conduct its interview here. |
 | Scaffold a roadmap item, inspect status, resolve a review, or repair Codex agents | Route respectively to `$speckit-scaffold-spec`, `$speckit-status`, `$speckit-resolve-pr`, or the SpecKit Pro `install` skill. |
+| Archive merged-spec records or clean up archived specs | Route to `$speckit-archive-cleanup`; do not copy or execute its cleanup workflow here. |
 
 ## Essential SDD guidance
 
@@ -47,9 +48,3 @@ For a request to repair an existing SpecKit Pro project:
 2. Inspect presets and resolve each affected core template with `specify preset resolve`. Move durable local customizations into a project preset rather than modifying core templates.
 3. Restore a core template only from a reviewed source (version control, verified backup, or official template); never reconstruct it by guesswork.
 4. Preserve any host PR template and run the relevant project checks before reporting the resolved template paths, restored files, and remaining manual follow-up.
-
-## Extension and archive safety
-
-Use the extension guide's discovery and information paths before making a recommendation. For installation or configuration, show the proposed command and its scope, obtain confirmation, then verify the resulting configuration.
-
-For archive cleanup, require recorded provenance and recovery commands, exclude the current target spec, and keep unsafe or dirty worktrees dry-run-only. Delete active spec folders only as an explicit reviewed forward change after a successful archive record; never rewrite history.

@@ -34,14 +34,6 @@ agents.
 - If an installation is dirty or an upgrade reports modified files, preserve
   them and use the upgrade workflow's reviewed backup path.
 
-## Team workflow
-
-Review the constitution and feature specification before implementation starts.
-Keep implementation, requirement changes, and verification evidence traceable
-to the feature artifacts. A pull request should identify the artifact changes,
-the checks actually run, and any intentional deviations rather than claiming a
-gate passed without evidence.
-
 For command-specific inputs, artifacts, and gates, read
 [Command guide](./command-guide.md). For current preset or extension lifecycle
 guidance, read [Presets & extensions guide](./presets-extensions-guide.md).
