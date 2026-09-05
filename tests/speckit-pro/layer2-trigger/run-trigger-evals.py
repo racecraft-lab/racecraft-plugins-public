@@ -613,7 +613,6 @@ def main(argv: list[str]) -> int:
                 trial.get("resolved_model")
                 for result in results
                 for trial in result["selection_evidence"]
-                if isinstance(trial.get("resolved_model"), str)
             ]
             report = {
                 "metadata": metadata,
@@ -622,7 +621,10 @@ def main(argv: list[str]) -> int:
                     "passed": passed,
                     "failed": failed,
                     "requested_model": args.model,
-                    "resolved_model": resolved[0] if resolved and all(model == resolved[0] for model in resolved) else None,
+                    "resolved_model": resolved[0]
+                    if resolved
+                    and all(isinstance(model, str) and model and model == resolved[0] for model in resolved)
+                    else None,
                 },
                 "results": results,
             }

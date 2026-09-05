@@ -659,6 +659,97 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 with self.subTest(msg=name):
                     self.assertTrue(condition)
 
+    def test_claude_summary_requires_every_trial_model(self) -> None:
+        claude = import_script(CLAUDE_RUNNER, "layer2_claude_model_summary")
+        scenarios = (
+            ("all-known-same", ("claude-sonnet-test",) * 3, "claude-sonnet-test"),
+            ("mixed-known-missing", ("claude-sonnet-test", None, "claude-sonnet-test"), None),
+            ("known-different", ("claude-sonnet-test", "claude-opus-test", "claude-sonnet-test"), None),
+            ("all-missing", (None, None, None), None),
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            plugin = root / "fixture" / "speckit-pro"
+            source = plugin / "skills" / "demo" / "SKILL.md"
+            source.parent.mkdir(parents=True)
+            source.write_text(
+                "---\nname: demo\ndescription: Exact source description.\n---\n\nBody.\n",
+                encoding="utf-8",
+            )
+            corpus = (
+                root
+                / "fixture"
+                / "tests"
+                / "speckit-pro"
+                / "layer2-trigger"
+                / "evals"
+                / "demo-trigger.json"
+            )
+            corpus.parent.mkdir(parents=True)
+            corpus.write_text(
+                json.dumps([{"query": "q", "should_trigger": True}]) + "\n",
+                encoding="utf-8",
+            )
+            claude.PLUGIN_ROOT = plugin
+
+            for index, (label, models, expected) in enumerate(scenarios, start=1):
+                with self.subTest(label=label):
+                    fixed_id = f"{index:012d}"
+                    staged = root / f"{label}-staged"
+                    evidence = root / f"{label}-evidence"
+                    evidence.mkdir()
+                    plugin_name = f"speckit-pro-eval-{fixed_id}"
+                    expected_skill = f"{plugin_name}:demo-eval-{fixed_id}"
+                    nonce = f"CLAUDE_SKILL_SELECTED_{fixed_id}"
+                    trial_results = [
+                        (
+                            0,
+                            claude_stream(
+                                staged,
+                                plugin_name,
+                                expected_skill,
+                                nonce,
+                                model=model,
+                            ),
+                            b"",
+                            False,
+                        )
+                        for model in models
+                    ]
+                    output = io.StringIO()
+                    with (
+                        mock.patch.object(
+                            claude.shutil,
+                            "which",
+                            return_value="/usr/local/bin/claude",
+                        ),
+                        mock.patch.object(
+                            claude,
+                            "cli_preflight",
+                            return_value=({"version": "2.1.261", "supported_flags": []}, "ok"),
+                        ),
+                        mock.patch.object(
+                            claude.uuid,
+                            "uuid4",
+                            return_value=SimpleNamespace(hex=fixed_id),
+                        ),
+                        mock.patch.object(
+                            claude.tempfile,
+                            "mkdtemp",
+                            side_effect=[str(staged), str(evidence)],
+                        ),
+                        mock.patch.object(
+                            claude,
+                            "run_claude_query",
+                            side_effect=trial_results,
+                        ),
+                        contextlib.redirect_stdout(output),
+                    ):
+                        exit_code = claude.main(["demo", "--model", "claude-sonnet-test"])
+                    report = json.loads(output.getvalue())
+                    self.assertEqual(exit_code, 0)
+                    self.assertEqual(report["summary"]["resolved_model"], expected)
+
     def test_codex_contracts_remain_unchanged(self) -> None:
         codex = import_script(CODEX_RUNNER, "layer2_codex_wrapper")
         engine = import_script(CODEX_ENGINE, "layer2_codex_engine")
