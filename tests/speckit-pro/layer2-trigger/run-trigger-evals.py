@@ -27,6 +27,8 @@ REQUIRED_FLAGS = (
     "--plugin-dir",
     "--strict-mcp-config",
     "--mcp-config",
+    "--tools",
+    "--allowedTools",
     "--output-format",
     "--verbose",
     "--no-session-persistence",
@@ -211,6 +213,14 @@ def inspect_claude_stream(
     if len(init_events) != 1:
         return {"valid": False, "selected": False, "reason": "missing or ambiguous system init"}
     init_index, init = init_events[0]
+    tools = init.get("tools")
+    if (
+        not isinstance(tools, list)
+        or any(not isinstance(tool, str) for tool in tools)
+        or len(tools) != len(set(tools))
+        or set(tools) not in ({"Skill"}, {"Skill", "EndConversation"})
+    ):
+        return {"valid": False, "selected": False, "reason": "Skill-only tool inventory was not honored"}
     plugins = init.get("plugins")
     if not isinstance(plugins, list):
         return {"valid": False, "selected": False, "reason": "system init omitted plugin inventory"}
@@ -381,6 +391,8 @@ def run_claude_query(
         "--plugin-dir", str(plugin_root),
         "--strict-mcp-config",
         "--mcp-config", str(mcp_config),
+        "--tools", "Skill",
+        "--allowedTools", "Skill",
         "-p", query,
         "--model", model,
         "--output-format", "stream-json",

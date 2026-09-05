@@ -598,7 +598,7 @@ def write_fake_claude(root: Path) -> Path:
         "if '--version' in sys.argv:\n"
         "    print('2.1.261')\n"
         "elif '--help' in sys.argv:\n"
-        "    print('--restricted --plugin-dir --strict-mcp-config --mcp-config --output-format --verbose --no-session-persistence')\n"
+        "    print('--restricted --plugin-dir --strict-mcp-config --mcp-config --tools --allowedTools --output-format --verbose --no-session-persistence')\n"
         "else:\n"
         "    raise SystemExit(97)\n",
         encoding="utf-8",

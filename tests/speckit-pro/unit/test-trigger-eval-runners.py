@@ -84,6 +84,7 @@ def claude_stream(
         "plugin_errors": [],
         "mcp_servers": [],
         "mcp_server_errors": [],
+        "tools": ["Skill"],
     }
     if model is not None:
         init["model"] = model
@@ -204,6 +205,18 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 nonce,
                 "claude-sonnet-test",
             )
+            end_conversation_events = [
+                json.loads(line) for line in stream.decode("utf-8").splitlines()
+            ]
+            end_conversation_events[0]["tools"] = ["Skill", "EndConversation"]
+            end_conversation = claude.inspect_claude_stream(
+                ("\n".join(json.dumps(event) for event in end_conversation_events) + "\n").encode("utf-8"),
+                plugin_name,
+                plugin_root,
+                expected_skill,
+                nonce,
+                "claude-sonnet-test",
+            )
             empty_response_events = [
                 json.loads(line) for line in nonselected_stream.decode("utf-8").splitlines()
             ]
@@ -245,6 +258,11 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     plugin_errors=[{"plugin": plugin_name, "message": "failed"}]
                 ),
                 "unexpected MCP": lambda events: events[0].update(mcp_servers=[{"name": "extra"}]),
+                "missing tools": lambda events: events[0].pop("tools"),
+                "malformed tools": lambda events: events[0].update(tools=["Skill", {"name": "Grep"}]),
+                "duplicate tools": lambda events: events[0].update(tools=["Skill", "Skill"]),
+                "missing Skill": lambda events: events[0].update(tools=["EndConversation"]),
+                "broader tools": lambda events: events[0].update(tools=["Skill", "Grep"]),
                 "malformed skill input": lambda events: blocks(events)[0].update(input={}),
                 "competing skill": lambda events: blocks(events)[0].update(input={"skill": "other:skill"}),
                 "missing tool result": lambda events: events.pop(2),
@@ -317,6 +335,21 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     "claude-sonnet-test",
                     30,
                 )
+
+            missing_tool_preflights = []
+            for omitted_flag in ("--tools", "--allowedTools"):
+                supported_help = " ".join(
+                    flag for flag in claude.REQUIRED_FLAGS if flag != omitted_flag
+                ).encode("utf-8")
+                with mock.patch.object(
+                    claude.subprocess,
+                    "run",
+                    side_effect=[
+                        SimpleNamespace(returncode=0, stdout=b"2.1.261\n", stderr=b""),
+                        SimpleNamespace(returncode=0, stdout=supported_help, stderr=b""),
+                    ],
+                ):
+                    missing_tool_preflights.append(claude.cli_preflight("/usr/local/bin/claude"))
 
             timeout_bytes = b'{"type":"system","subtype":"init"}\r\n'
             timeout_stderr = b"partial stderr\r\n"
@@ -408,7 +441,10 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 "unique plugin manifest": json.loads(
                     (plugin_root / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8")
                 )["name"] == plugin_name,
-                "exact intended Skill selection": selected["valid"] and selected["selected"],
+                "exact intended Skill selection": selected["valid"]
+                and selected["selected"]
+                and end_conversation["valid"]
+                and end_conversation["selected"],
                 "init supplies resolved model": selected["resolved_model"] == "claude-sonnet-test",
                 "result model is not resolution evidence": nonselected["resolved_model"] is None,
                 "completed response without Skill is valid": nonselected["valid"] and not nonselected["selected"],
@@ -425,10 +461,15 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 "raw hashes cover actual bytes": raw_evidence["stdout_sha256"] == hashlib.sha256(stream).hexdigest(),
                 "direct argv uses restricted session plugin": captured["command"][:3]
                 == ["/usr/local/bin/claude", "--restricted", "--plugin-dir"],
-                "direct argv pins strict MCP and model": all(
+                "direct argv and preflight pin Skill-only tools": all(
                     flag in captured["command"]
                     for flag in ("--strict-mcp-config", "--mcp-config", "--model", "--output-format")
-                ),
+                )
+                and captured["command"].count("--tools") == 1
+                and captured["command"][captured["command"].index("--tools") + 1] == "Skill"
+                and captured["command"].count("--allowedTools") == 1
+                and captured["command"][captured["command"].index("--allowedTools") + 1] == "Skill"
+                and all(result is None for result, _reason in missing_tool_preflights),
                 "direct argv uses no persistence": "--no-session-persistence" in captured["command"],
                 "direct launch inherits environment": captured["kwargs"]["env"].get("PATH") == os.environ.get("PATH"),
                 "direct launch is confined to disposable root": Path(captured["kwargs"]["cwd"]).resolve()
