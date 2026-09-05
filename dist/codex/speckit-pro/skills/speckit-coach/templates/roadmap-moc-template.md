@@ -1,8 +1,5 @@
 ---
 # Roadmap-level Map of Content (MOC). Frontmatter join-key contract.
-# Authored by maintainers (not scaffold-substituted). Single shared, runtime-agnostic
-# copy. The instance filename convention belongs to the roadmap-MOC contract
-# (out of scope here).
 #
 # up: MUST be a quoted relative markdown link — "[text](relative/path.md)", NEVER a
 #     [[wikilink]]. The () target is load-bearing: the stale-index lint parses the
