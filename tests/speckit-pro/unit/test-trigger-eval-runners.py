@@ -62,6 +62,19 @@ CURRENT_INVENTORY = [
     "Layer-2 runners never enable shell=True",
     "Layer-2 runners never call os.system",
     "Codex trigger engine defaults to supported low reasoning",
+    "Codex trigger engine defaults to the approved model",
+    "Codex stages the exact marked skill under repository .agents",
+    "Codex staging never copies a credential file",
+    "Codex invocation keeps the existing login environment",
+    "Codex invocation uses explicit model effort JSON and least privilege",
+    "Codex invocation retains applicable execution rules",
+    "Codex selection requires a successful JSON lifecycle",
+    "Codex selection requires the exact staged marker first",
+    "Codex selection rejects a competing marker",
+    "Codex failed transport cannot pass a negative case",
+    "Claude invocation propagates an explicit model",
+    "Claude result validation rejects failed cases despite exit zero",
+    "Claude result validation rejects incomplete trial denominators",
 ]
 
 
@@ -205,7 +218,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 / "demo-trigger.json"
             )
             claude_eval.parent.mkdir(parents=True)
-            claude_eval.write_text("{}\n", encoding="utf-8")
+            claude_eval.write_text("[]\n", encoding="utf-8")
             claude.PLUGIN_ROOT = claude_plugin_root
             fake_home = root / "fake-home"
             fake_home.mkdir()
@@ -227,7 +240,16 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 mock.patch.object(
                     claude.subprocess,
                     "run",
-                    return_value=SimpleNamespace(returncode=0),
+                    return_value=SimpleNamespace(
+                        returncode=0,
+                        stdout=json.dumps(
+                            {
+                                "results": [],
+                                "summary": {"total": 0, "passed": 0, "failed": 0},
+                            }
+                        ),
+                        stderr="",
+                    ),
                 ) as settings_only_run,
                 mock.patch.object(claude, "write_claude_wrapper", wraps=claude.write_claude_wrapper) as settings_wrap,
                 redirect_stderr(settings_only_stderr),
@@ -248,12 +270,87 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 mock.patch.object(
                     claude.subprocess,
                     "run",
-                    return_value=SimpleNamespace(returncode=0),
+                    return_value=SimpleNamespace(
+                        returncode=0,
+                        stdout=json.dumps(
+                            {
+                                "results": [],
+                                "summary": {"total": 0, "passed": 0, "failed": 0},
+                            }
+                        ),
+                        stderr="",
+                    ),
                 ) as direct_mode_run,
                 mock.patch.object(claude, "write_claude_wrapper", wraps=claude.write_claude_wrapper) as direct_wrap,
                 redirect_stderr(direct_mode_stderr),
             ):
-                direct_mode_exit = claude.main(["demo"])
+                direct_mode_exit = claude.main(["demo", "--model", "claude-sonnet-test"])
+
+            failed_summary = json.dumps(
+                {
+                    "results": [
+                        {
+                            "query": "q",
+                            "should_trigger": True,
+                            "trigger_rate": 0.0,
+                            "triggers": 0,
+                            "runs": 3,
+                            "pass": False,
+                        }
+                    ],
+                    "summary": {"total": 1, "passed": 0, "failed": 1},
+                }
+            )
+            incomplete_trials = json.dumps(
+                {
+                    "results": [
+                        {
+                            "query": "q",
+                            "should_trigger": True,
+                            "trigger_rate": 1.0,
+                            "triggers": 1,
+                            "runs": 1,
+                            "pass": True,
+                        }
+                    ],
+                    "summary": {"total": 1, "passed": 1, "failed": 0},
+                }
+            )
+            failed_summary_valid, _failed_summary_reason = claude.validate_eval_result(
+                failed_summary,
+                expected_total=1,
+                runs_per_query=3,
+            )
+            incomplete_trials_valid, _incomplete_trials_reason = claude.validate_eval_result(
+                incomplete_trials,
+                expected_total=1,
+                runs_per_query=3,
+            )
+            claude_eval.write_text(
+                json.dumps([{"query": "q", "should_trigger": True}]) + "\n",
+                encoding="utf-8",
+            )
+            with (
+                mock.patch.dict(
+                    os.environ,
+                    {
+                        "HOME": str(fake_home),
+                        "PATH": wrapper_env.get("PATH", ""),
+                        "SKILL_CREATOR_ROOT": str(skill_creator),
+                    },
+                    clear=True,
+                ),
+                mock.patch.object(
+                    claude.subprocess,
+                    "run",
+                    return_value=SimpleNamespace(
+                        returncode=0,
+                        stdout=failed_summary,
+                        stderr="",
+                    ),
+                ),
+            ):
+                failed_mode_exit = claude.main(["demo", "--model", "claude-sonnet-test"])
 
             move_source = root / "move-source"
             move_source.write_text("source", encoding="utf-8")
@@ -301,6 +398,82 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             codex_eval.parent.mkdir(parents=True)
             codex_eval.write_text("{}\n", encoding="utf-8")
             codex.PLUGIN_ROOT = plugin_root
+
+            codex_skill_source = plugin_root / "codex-skills" / "demo" / "SKILL.md"
+            codex_skill_source.write_text(
+                "---\nname: demo\ndescription: Demo skill.\n---\n\nDo the demo.\n",
+                encoding="utf-8",
+            )
+            staged_workspace = root / "codex-workspace"
+            staged_workspace.mkdir()
+            auth_home = root / "existing-codex-home"
+            auth_home.mkdir()
+            auth_file = auth_home / "auth.json"
+            auth_file.write_text("credential sentinel\n", encoding="utf-8")
+            exact_skill_name = "demo-eval-exact"
+            exact_marker = f"CODEX_SKILL_FIRED:{exact_skill_name}"
+            with mock.patch.object(codex_engine.shutil, "copy2") as copy_mock:
+                staged_skill_dir = codex_engine.stage_repository_skill(
+                    codex_skill_source,
+                    staged_workspace,
+                    exact_skill_name,
+                    exact_marker,
+                )
+
+            valid_jsonl = "\n".join(
+                [
+                    json.dumps({"type": "thread.started", "thread_id": "thread-1"}),
+                    json.dumps(
+                        {
+                            "type": "item.completed",
+                            "item": {
+                                "id": "item-1",
+                                "type": "agent_message",
+                                "text": f"{exact_marker}\nProceeding with the exact staged skill.",
+                            },
+                        }
+                    ),
+                    json.dumps(
+                        {
+                            "type": "turn.completed",
+                            "usage": {"input_tokens": 1, "output_tokens": 1},
+                        }
+                    ),
+                ]
+            )
+            competing_jsonl = valid_jsonl.replace(
+                "Proceeding with the exact staged skill.",
+                "CODEX_SKILL_FIRED:other-eval-skill",
+            )
+            valid_evidence = codex_engine.inspect_codex_jsonl(valid_jsonl, exact_marker)
+            missing_lifecycle_evidence = codex_engine.inspect_codex_jsonl(
+                json.dumps(
+                    {
+                        "type": "item.completed",
+                        "item": {"type": "agent_message", "text": exact_marker},
+                    }
+                ),
+                exact_marker,
+            )
+            competing_evidence = codex_engine.inspect_codex_jsonl(competing_jsonl, exact_marker)
+
+            with (
+                mock.patch.dict(os.environ, {"CODEX_HOME": str(auth_home)}, clear=False),
+                mock.patch.object(
+                    codex_engine.subprocess,
+                    "run",
+                    return_value=subprocess.CompletedProcess([], 0, valid_jsonl, ""),
+                ) as codex_run,
+            ):
+                codex_rc, codex_stdout, codex_stderr = codex_engine.run_codex_query(
+                    staged_workspace,
+                    "query without the private marker",
+                    "low",
+                    "gpt-5.6-sol",
+                    30,
+                )
+            codex_command = list(codex_run.call_args.args[0])
+            codex_env = codex_run.call_args.kwargs["env"]
 
             exec_mocks: dict[str, mock.Mock] = {}
             with mock.patch.object(codex.shutil, "which", return_value=str(root / "codex")) as which_mock:
@@ -477,6 +650,94 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     CURRENT_INVENTORY[26],
                     lambda: self.assertEqual(codex_engine.DEFAULT_REASONING_EFFORT, "low"),
                 ),
+                (
+                    CURRENT_INVENTORY[27],
+                    lambda: self.assertEqual(codex_engine.DEFAULT_MODEL, "gpt-5.6-sol"),
+                ),
+                (
+                    CURRENT_INVENTORY[28],
+                    lambda: self.assertEqual(
+                        staged_skill_dir,
+                        staged_workspace / ".agents" / "skills" / exact_skill_name,
+                    ),
+                ),
+                (
+                    CURRENT_INVENTORY[29],
+                    lambda: self.assertTrue(
+                        copy_mock.call_count == 0
+                        and auth_file.read_text(encoding="utf-8") == "credential sentinel\n"
+                        and "auth.json" not in CODEX_ENGINE.read_text(encoding="utf-8")
+                    ),
+                ),
+                (
+                    CURRENT_INVENTORY[30],
+                    lambda: self.assertEqual(codex_env.get("CODEX_HOME"), str(auth_home)),
+                ),
+                (
+                    CURRENT_INVENTORY[31],
+                    lambda: self.assertTrue(
+                        codex_rc == 0
+                        and codex_stdout == valid_jsonl
+                        and codex_stderr == ""
+                        and "--sandbox" in codex_command
+                        and codex_command[codex_command.index("--sandbox") + 1] == "read-only"
+                        and "--ephemeral" in codex_command
+                        and "--ignore-user-config" in codex_command
+                        and "--json" in codex_command
+                        and codex_command[codex_command.index("-m") + 1] == "gpt-5.6-sol"
+                        and 'model_reasoning_effort="low"' in codex_command
+                    ),
+                ),
+                (
+                    CURRENT_INVENTORY[32],
+                    lambda: self.assertTrue(
+                        "--ignore-rules" not in codex_command
+                        and "--dangerously-bypass-approvals-and-sandbox" not in codex_command
+                        and "--full-auto" not in codex_command
+                    ),
+                ),
+                (
+                    CURRENT_INVENTORY[33],
+                    lambda: self.assertTrue(
+                        valid_evidence["valid"]
+                        and not missing_lifecycle_evidence["valid"]
+                    ),
+                ),
+                (
+                    CURRENT_INVENTORY[34],
+                    lambda: self.assertTrue(
+                        valid_evidence["selected"]
+                        and valid_evidence["selected_marker"] == exact_marker
+                    ),
+                ),
+                (
+                    CURRENT_INVENTORY[35],
+                    lambda: self.assertTrue(
+                        not competing_evidence["valid"]
+                        and "competing" in str(competing_evidence["reason"]).lower()
+                    ),
+                ),
+                (
+                    CURRENT_INVENTORY[36],
+                    lambda: self.assertFalse(
+                        codex_engine.case_passes(False, triggers=0, runs=3, threshold=0.5, invalid_runs=1)
+                    ),
+                ),
+                (
+                    CURRENT_INVENTORY[37],
+                    lambda: self.assertIn(
+                        ["--model", "claude-sonnet-test"],
+                        [
+                            list(direct_mode_run.call_args.args[0])[index : index + 2]
+                            for index in range(len(direct_mode_run.call_args.args[0]) - 1)
+                        ],
+                    ),
+                ),
+                (
+                    CURRENT_INVENTORY[38],
+                    lambda: self.assertTrue(not failed_summary_valid and failed_mode_exit == 1),
+                ),
+                (CURRENT_INVENTORY[39], lambda: self.assertFalse(incomplete_trials_valid)),
             ]
 
             self.assertEqual([name for name, _check in checks], CURRENT_INVENTORY)

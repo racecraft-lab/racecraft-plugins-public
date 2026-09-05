@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 from pathlib import Path
@@ -15,6 +16,9 @@ import tempfile
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PLUGIN_ROOT = (SCRIPT_DIR / "../../../speckit-pro").resolve()
+DEFAULT_MODEL = "sonnet"
+RUNS_PER_QUERY = 3
+TRIGGER_THRESHOLD = 0.5
 
 
 class TerminationRequested(Exception):
@@ -185,7 +189,42 @@ def wrapper_mode_message(skill: str, settings_enabled: bool, bare_enabled: bool)
     return f"Running Claude directly (no wrapper, no --settings, no --bare) for '{skill}'"
 
 
+def validate_eval_result(output: str, expected_total: int, runs_per_query: int) -> tuple[bool, str]:
+    """Fail closed unless the upstream evaluator reports every expected trial passing."""
+    try:
+        report = json.loads(output)
+    except json.JSONDecodeError as exc:
+        return False, f"upstream evaluator did not emit valid JSON: {exc}"
+    if not isinstance(report, dict) or not isinstance(report.get("summary"), dict):
+        return False, "upstream evaluator result is missing summary"
+    summary = report["summary"]
+    results = report.get("results")
+    if not isinstance(results, list):
+        return False, "upstream evaluator result is missing per-case results"
+    expected_summary = {
+        "total": expected_total,
+        "passed": expected_total,
+        "failed": 0,
+    }
+    if any(summary.get(key) != value for key, value in expected_summary.items()):
+        return False, f"upstream evaluator summary did not pass all {expected_total} cases"
+    if len(results) != expected_total:
+        return False, f"upstream evaluator returned {len(results)} of {expected_total} case results"
+    for index, result in enumerate(results, start=1):
+        if not isinstance(result, dict) or result.get("runs") != runs_per_query or result.get("pass") is not True:
+            return False, f"upstream evaluator case {index} has incomplete trials or failed"
+    return True, "all cases and trials passed"
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("skill", nargs="?", default="speckit-coach")
+    parser.add_argument("--model", default=os.environ.get("EVAL_MODEL", DEFAULT_MODEL))
+    return parser.parse_args(argv)
+
+
 def main(argv: list[str]) -> int:
+    args = parse_args(argv)
     previous_handlers = install_termination_handlers()
     home = Path(os.environ.get("HOME", str(Path.home())))
     skill_creator = Path(
@@ -194,7 +233,7 @@ def main(argv: list[str]) -> int:
             str(home / ".claude/plugins/marketplaces/claude-plugins-official/plugins/skill-creator/skills/skill-creator"),
         )
     )
-    skill = argv[0] if argv else "speckit-coach"
+    skill = args.skill
 
     installed_marketplace = detect_installed_marketplace(home)
 
@@ -290,7 +329,15 @@ def main(argv: list[str]) -> int:
             eprint(f"Running trigger evals for: {skill}")
             eprint(f"Eval file: {eval_file}")
             eprint(f"Skill path: {skill_path}")
+            eprint(f"Model: {args.model}")
             eprint()
+
+            try:
+                eval_data = json.loads(eval_file.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                eprint(f"ERROR: could not read eval file: {exc}")
+                result = 1
+                eval_data = None
 
             cmd = [
                 sys.executable,
@@ -301,16 +348,46 @@ def main(argv: list[str]) -> int:
                 "--skill-path",
                 str(skill_path),
                 "--runs-per-query",
-                "3",
+                str(RUNS_PER_QUERY),
                 "--trigger-threshold",
-                "0.5",
+                str(TRIGGER_THRESHOLD),
+                "--model",
+                args.model,
                 "--verbose",
             ]
             if disable_plugins:
                 eprint("Forcing --num-workers 1 (parallelism + --settings is racy)")
                 cmd.extend(["--num-workers", "1"])
 
-            result = subprocess.run(cmd, cwd=skill_creator, env=env, shell=False).returncode
+            completed = subprocess.run(
+                cmd,
+                cwd=skill_creator,
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                shell=False,
+                check=False,
+            )
+            if not isinstance(eval_data, list):
+                eprint("ERROR: eval file must contain a JSON list")
+                result = 1
+            else:
+                sys.stdout.write(completed.stdout)
+                sys.stderr.write(completed.stderr)
+                if completed.returncode != 0:
+                    result = completed.returncode
+                else:
+                    valid, reason = validate_eval_result(
+                        completed.stdout,
+                        expected_total=len(eval_data),
+                        runs_per_query=RUNS_PER_QUERY,
+                    )
+                    if not valid:
+                        eprint(f"ERROR: {reason}")
+                        result = 1
+                    else:
+                        result = 0
     except TerminationRequested as exc:
         termination_signal = exc.signum
         eprint(f"Termination requested by signal {exc.signum}; restoring moved paths before exit.")

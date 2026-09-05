@@ -598,10 +598,26 @@ def write_fake_skill_creator(root: Path) -> Path:
     (scripts / "run_eval.py").write_text(
         textwrap.dedent(
             """\
+            import json
             import sys
 
-            print("fake run_eval invoked")
-            print("args:", " ".join(sys.argv[1:]))
+            eval_path = sys.argv[sys.argv.index("--eval-set") + 1]
+            evals = json.loads(open(eval_path, encoding="utf-8").read())
+            runs = int(sys.argv[sys.argv.index("--runs-per-query") + 1])
+            print(json.dumps({
+                "results": [
+                    {
+                        "query": entry["query"],
+                        "should_trigger": bool(entry["should_trigger"]),
+                        "trigger_rate": 1.0 if entry["should_trigger"] else 0.0,
+                        "triggers": runs if entry["should_trigger"] else 0,
+                        "runs": runs,
+                        "pass": True,
+                    }
+                    for entry in evals
+                ],
+                "summary": {"total": len(evals), "passed": len(evals), "failed": 0},
+            }))
             """
         ),
         encoding="utf-8",

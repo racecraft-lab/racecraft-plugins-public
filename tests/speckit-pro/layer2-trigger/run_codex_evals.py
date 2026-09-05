@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Run Layer 2 trigger evals against a Codex skill via the codex CLI.
 
-Mirrors skill-creator's run_eval.py for Claude. Stages the skill into an
-isolated workspace with a marker injected into the body, runs each query
-through `codex` non-interactively, scans stdout for the marker, scores
-trigger/no-trigger correctness against the eval fixture.
+Mirrors skill-creator's run_eval.py for Claude. Stages the skill into a
+disposable repository with a marker injected into the body, runs each query
+through `codex` non-interactively, validates the JSONL lifecycle and exact
+marker, then scores trigger/no-trigger correctness against the eval fixture.
 
 Subprocess invocations use `subprocess.run` with a list argument (no shell
 involvement), so query strings are passed directly as argv entries and
@@ -40,36 +40,8 @@ import uuid
 TESTS_ROOT = pathlib.Path(__file__).resolve().parents[1]      # <repo>/tests/speckit-pro
 PLUGIN_ROOT = TESTS_ROOT.parents[1] / "speckit-pro"           # <repo>/speckit-pro
 DEFAULT_REASONING_EFFORT = "low"
-
-
-def setup_isolated_codex_home() -> pathlib.Path:
-    """Create a fresh CODEX_HOME directory with only auth.json copied in.
-
-    Why isolation: Codex discovers skills from `${CODEX_HOME:-$HOME/.codex}/skills/`
-    (user scope) and loads plugins registered under `$CODEX_HOME/plugins/`. If a
-    user has the speckit-pro plugin installed, its codex-skills compete with the
-    test-staged skill and routinely win the selector — causing 100% of
-    `should_trigger: true` eval queries to score 0/N. Setting CODEX_HOME to a
-    fresh temp dir hides both the user's personal skills and any installed
-    plugins, so the test skill has no rival.
-
-    Following OpenAI's own pattern from codex PR #22563
-    ("tests: isolate codex home for live cli").
-
-    Auth: copy auth.json from the real ~/.codex (or $CODEX_HOME if user has
-    set it). One-shot per eval run, so file copy is fine — no token-refresh
-    write-back concern.
-    """
-    real_codex_home = pathlib.Path(os.environ.get("CODEX_HOME", os.path.expanduser("~/.codex")))
-    real_auth = real_codex_home / "auth.json"
-    if not real_auth.exists():
-        sys.exit(
-            f"ERROR: cannot isolate CODEX_HOME — no auth.json at {real_auth}. "
-            f"Run `codex login` first, or set CODEX_HOME to a path that has one."
-        )
-    temp_codex_home = pathlib.Path(tempfile.mkdtemp(prefix="codex-eval-home-"))
-    shutil.copy2(real_auth, temp_codex_home / "auth.json")
-    return temp_codex_home
+DEFAULT_MODEL = "gpt-5.6-sol"
+MARKER_PATTERN = re.compile(r"CODEX_SKILL_FIRED:[A-Za-z0-9_-]+")
 
 
 def find_eval_file(skill: str) -> pathlib.Path:
@@ -116,42 +88,126 @@ def stage_skill_with_marker(src: pathlib.Path, dst_dir: pathlib.Path, new_name: 
     (dst_dir / "SKILL.md").write_text(f"---\n{fm}\n---\n\n{marker_block}{skill_body}")
 
 
+def stage_repository_skill(
+    src: pathlib.Path,
+    workspace: pathlib.Path,
+    new_name: str,
+    marker: str,
+) -> pathlib.Path:
+    """Stage one uniquely named skill at Codex's documented repository scope."""
+    destination = workspace / ".agents" / "skills" / new_name
+    stage_skill_with_marker(src, destination, new_name, marker)
+    return destination
+
+
+def inspect_codex_jsonl(output: str, marker: str) -> dict[str, object]:
+    """Validate one Codex JSONL run and identify only the exact staged marker."""
+    events: list[dict[str, object]] = []
+    try:
+        for line in output.splitlines():
+            if line.strip():
+                event = json.loads(line)
+                if not isinstance(event, dict):
+                    raise ValueError("event is not an object")
+                events.append(event)
+    except (json.JSONDecodeError, ValueError) as exc:
+        return {"valid": False, "selected": False, "selected_marker": None, "reason": f"invalid JSONL: {exc}"}
+
+    event_types = [event.get("type") for event in events]
+    if event_types.count("thread.started") != 1 or event_types.count("turn.completed") != 1:
+        return {
+            "valid": False,
+            "selected": False,
+            "selected_marker": None,
+            "reason": "missing or ambiguous thread/turn lifecycle",
+        }
+    if any(event_type in {"error", "turn.failed"} for event_type in event_types):
+        return {"valid": False, "selected": False, "selected_marker": None, "reason": "Codex reported a failed run"}
+    thread_event = next(event for event in events if event.get("type") == "thread.started")
+    thread_id = thread_event.get("thread_id") or thread_event.get("threadId")
+    if not isinstance(thread_id, str) or not thread_id:
+        return {"valid": False, "selected": False, "selected_marker": None, "reason": "thread start omitted its id"}
+
+    agent_messages = [
+        item.get("text")
+        for event in events
+        if isinstance((item := event.get("item")), dict)
+        and item.get("type") == "agent_message"
+        and isinstance(item.get("text"), str)
+    ]
+    markers = MARKER_PATTERN.findall("\n".join(agent_messages))
+    competing = sorted(set(markers) - {marker})
+    if competing:
+        return {
+            "valid": False,
+            "selected": False,
+            "selected_marker": None,
+            "reason": f"competing staged marker(s): {', '.join(competing)}",
+        }
+    marker_count = markers.count(marker)
+    selected = marker_count == 1
+    if marker_count > 1:
+        return {"valid": False, "selected": False, "selected_marker": None, "reason": "ambiguous repeated staged marker"}
+    if selected:
+        first_lines = [line.strip() for message in agent_messages for line in message.splitlines() if line.strip()]
+        if not first_lines or first_lines[0] != marker:
+            return {"valid": False, "selected": False, "selected_marker": None, "reason": "staged marker was not first"}
+    return {
+        "valid": True,
+        "selected": selected,
+        "selected_marker": marker if selected else None,
+        "thread_id": thread_id,
+        "reason": "exact staged marker" if selected else "no staged marker",
+    }
+
+
+def case_passes(
+    should_trigger: bool,
+    triggers: int,
+    runs: int,
+    threshold: float,
+    invalid_runs: int,
+) -> bool:
+    """Score a case only when every provider run completed truthfully."""
+    if runs <= 0 or invalid_runs != 0:
+        return False
+    return ((triggers / runs) >= threshold) == should_trigger
+
+
 def run_codex_query(
     workspace: pathlib.Path,
-    codex_home: pathlib.Path | None,
     query: str,
     reasoning: str,
-    model: str | None,
+    model: str,
     timeout: int,
-) -> tuple[int, str]:
+) -> tuple[int, str, str]:
     cmd = [
         "codex", "exec",
         "--cd", str(workspace),
-        "--skip-git-repo-check",
         "--sandbox", "read-only",
         "--ephemeral",
         "--ignore-user-config",
+        "--json",
+        "-m", model,
         "-c", f'model_reasoning_effort="{reasoning}"',
     ]
-    if model:
-        cmd += ["-c", f'model="{model}"']
     cmd.append(query)
     env = os.environ.copy()
-    if codex_home is not None:
-        env["CODEX_HOME"] = str(codex_home)
     try:
         proc = subprocess.run(
             cmd,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
+            stderr=subprocess.PIPE,
             text=True,
             timeout=timeout,
             env=env,
+            shell=False,
+            check=False,
         )
-        return proc.returncode, proc.stdout
+        return proc.returncode, proc.stdout, proc.stderr
     except subprocess.TimeoutExpired as e:
-        return -1, f"TIMEOUT after {timeout}s: {e}"
+        return -1, "", f"TIMEOUT after {timeout}s: {e}"
 
 
 def main() -> int:
@@ -164,15 +220,10 @@ def main() -> int:
         default=DEFAULT_REASONING_EFFORT,
         help=f"codex model_reasoning_effort (default: {DEFAULT_REASONING_EFFORT})",
     )
-    ap.add_argument("--model", help="Override codex model id")
+    ap.add_argument("--model", default=DEFAULT_MODEL, help=f"Codex model id (default: {DEFAULT_MODEL})")
     ap.add_argument("--threshold", type=float, default=0.5, help="Trigger-rate threshold for pass (default 0.5)")
     ap.add_argument("--timeout", type=int, default=180, help="Per-query timeout seconds (default 180)")
     ap.add_argument("--out", help="Write detailed JSON results to this file")
-    ap.add_argument(
-        "--no-isolate-codex-home",
-        action="store_true",
-        help="Disable CODEX_HOME isolation (loads real user skills + plugins; for debugging only).",
-    )
     args = ap.parse_args()
 
     if shutil.which("codex") is None:
@@ -189,31 +240,30 @@ def main() -> int:
     marker = f"CODEX_SKILL_FIRED:{test_skill_name}"
 
     workspace = pathlib.Path(tempfile.mkdtemp(prefix=f"codex-eval-{args.skill}-"))
-    codex_home: pathlib.Path | None = None
-    if not args.no_isolate_codex_home:
-        codex_home = setup_isolated_codex_home()
-        # User-scope discovery path per Codex docs: $CODEX_HOME/skills/<name>/SKILL.md
-        skill_dir = codex_home / "skills" / test_skill_name
-    else:
-        # Legacy path — kept for debugging only. NOT a documented Codex discovery
-        # path; the test skill likely never loads here.
-        skill_dir = workspace / ".codex/skills" / test_skill_name
     try:
-        stage_skill_with_marker(skill_src, skill_dir, test_skill_name, marker)
+        initialized = subprocess.run(
+            ["git", "init", "--quiet"],
+            cwd=workspace,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            shell=False,
+            check=False,
+        )
+        if initialized.returncode != 0:
+            sys.exit(f"ERROR: could not initialize disposable eval repository: {initialized.stderr.strip()}")
+        skill_dir = stage_repository_skill(skill_src, workspace, test_skill_name, marker)
 
         print(f"Codex Layer 2 trigger eval: {args.skill}", file=sys.stderr)
         print(f"  Eval file:  {eval_file}", file=sys.stderr)
         print(f"  Skill src:  {skill_src}", file=sys.stderr)
         print(f"  Test skill: {test_skill_name}", file=sys.stderr)
         print(f"  Workspace:  {workspace}", file=sys.stderr)
-        if codex_home is not None:
-            print(f"  CODEX_HOME: {codex_home} (isolated)", file=sys.stderr)
-        else:
-            print(f"  CODEX_HOME: real (user skills + plugins active)", file=sys.stderr)
+        print("  Login:      existing Codex session (credential files are not copied)", file=sys.stderr)
         print(f"  Queries:    {len(eval_data)} (x{args.runs} runs)", file=sys.stderr)
         print(f"  Reasoning:  {args.reasoning}", file=sys.stderr)
-        if args.model:
-            print(f"  Model:      {args.model}", file=sys.stderr)
+        print(f"  Model:      {args.model}", file=sys.stderr)
         print("", file=sys.stderr)
 
         results = []
@@ -222,25 +272,54 @@ def main() -> int:
             query = entry["query"]
             should_trigger = bool(entry["should_trigger"])
             triggers = 0
+            invalid_runs = 0
+            run_evidence = []
             for run in range(args.runs):
-                rc, output = run_codex_query(workspace, codex_home, query, args.reasoning, args.model, args.timeout)
-                if marker in output:
+                rc, output, error_output = run_codex_query(
+                    workspace,
+                    query,
+                    args.reasoning,
+                    args.model,
+                    args.timeout,
+                )
+                evidence = inspect_codex_jsonl(output, marker)
+                run_valid = rc == 0 and bool(evidence["valid"])
+                if not run_valid:
+                    invalid_runs += 1
+                    evidence = {
+                        **evidence,
+                        "reason": f"exit={rc}; {evidence['reason']}; stderr={error_output.strip()[:200]}",
+                    }
+                if run_valid and evidence["selected"]:
                     triggers += 1
+                run_evidence.append(evidence)
             trigger_rate = triggers / args.runs
-            is_pass = (trigger_rate >= args.threshold) == should_trigger
+            is_pass = case_passes(
+                should_trigger,
+                triggers,
+                args.runs,
+                args.threshold,
+                invalid_runs,
+            )
             if is_pass:
                 passed += 1
             else:
                 failed += 1
             mark = "PASS" if is_pass else "FAIL"
             expect = "TRIG" if should_trigger else "NOOP"
-            print(f"  [{idx:2d}/{len(eval_data)}] expect={expect} trig={triggers}/{args.runs} {mark}  {query[:70]}", file=sys.stderr)
+            print(
+                f"  [{idx:2d}/{len(eval_data)}] expect={expect} trig={triggers}/{args.runs} "
+                f"invalid={invalid_runs} {mark}  {query[:70]}",
+                file=sys.stderr,
+            )
             results.append({
                 "query": query,
                 "should_trigger": should_trigger,
                 "triggers": triggers,
                 "runs": args.runs,
                 "trigger_rate": round(trigger_rate, 3),
+                "invalid_runs": invalid_runs,
+                "selection_evidence": run_evidence,
                 "pass": is_pass,
             })
 
@@ -271,8 +350,6 @@ def main() -> int:
         return 0 if failed == 0 else 1
     finally:
         shutil.rmtree(workspace, ignore_errors=True)
-        if codex_home is not None:
-            shutil.rmtree(codex_home, ignore_errors=True)
 
 
 if __name__ == "__main__":
