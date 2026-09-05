@@ -16,7 +16,7 @@
         "value": "speckit_pro_runner/__init__.py",
         "display": "speckit_pro_runner/__init__.py"
       },
-      "sha256": "da73c7c2e5fbf485936f5afab668fe74779c1581f82293bedad6ce746b3c8b46"
+      "sha256": "1f70a6bd33acbb6b0d3e104ce1d226b5f9ae9e1f85b893fc649d7be3670a419b"
     },
     {
       "path": {
@@ -32,7 +32,7 @@
         "value": "speckit_pro_runner/agent_materialization.py",
         "display": "speckit_pro_runner/agent_materialization.py"
       },
-      "sha256": "6ca2db5af2f88fcf3b1eda08275aa94bc7d4d8205c97f9466ed453b1a1239183"
+      "sha256": "c8c4ee57343e78b32e167e4434fa74f88406d963b6602a76f1d606d7bed08dca"
     },
     {
       "path": {
@@ -48,7 +48,7 @@
         "value": "speckit_pro_runner/gates/__init__.py",
         "display": "speckit_pro_runner/gates/__init__.py"
       },
-      "sha256": "44da458d8106aca91f6160a1d1bd8062978991a8e613e82c07ed963531779635"
+      "sha256": "5383fea6a66eec6c69ad8c098926efc6e6b506731630a47b42db75ad747a6463"
     },
     {
       "path": {
@@ -80,7 +80,7 @@
         "value": "speckit_pro_runner/gates/registry.py",
         "display": "speckit_pro_runner/gates/registry.py"
       },
-      "sha256": "a12cd160c6ec9d9a7825c2f881e70291a85df282514d03754d3710f6656f0e6a"
+      "sha256": "f9c526dab21a88d93397120fe8080b9ca3fec70814baccd67129f1bf7de47bcc"
     },
     {
       "path": {
@@ -96,7 +96,7 @@
         "value": "speckit_pro_runner/gates/suite.py",
         "display": "speckit_pro_runner/gates/suite.py"
       },
-      "sha256": "5525b70d9ff74e83a2fa91a205a518af5ea8832ec9bd05f99a89c30f2007b04e"
+      "sha256": "952ba73a708e849af054dcf324423f4c6cf89fd3edc76f6f02d2ca9c966bfa8f"
     },
     {
       "path": {
@@ -152,7 +152,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "828aa14cbad8bd050416d8f7436e7729ce12a83695582feacc8816a8dbcee313"
+      "sha256": "5792b25cef9e8c37d3501e7aa1c3eb15499d3fe0f7c17a8939538aa33e9f0838"
     },
     {
       "path": {

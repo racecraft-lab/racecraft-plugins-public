@@ -1034,7 +1034,6 @@ class RepoBashConfinementDurabilityTests(unittest.TestCase):
 
         operations = [item for item in registry.GATE_OPERATIONS if item.operation == "repo-bash-confinement"]
         self.assertEqual(len(operations), 1)
-        self.assertTrue(operations[0].implemented)
 
         source = inspect.getsource(release.live_installed_release_gate_evidence)
         tree = ast.parse(source)

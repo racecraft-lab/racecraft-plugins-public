@@ -22,7 +22,6 @@ class GateOperation:
     operation: str
     group: str
     modes: tuple[str, ...]
-    implemented: bool = True
 
 
 GATE_OPERATIONS: tuple[GateOperation, ...] = (
@@ -138,10 +137,6 @@ _OPERATIONS_BY_HELPER = {
 }
 
 
-def all_gate_operations() -> tuple[GateOperation, ...]:
-    return GATE_OPERATIONS
-
-
 def is_gate_helper_id(helper_id: str) -> bool:
     return helper_id in GATE_HELPER_IDS
 
@@ -191,21 +186,6 @@ def dispatch_gate(request: Any) -> dict[str, Any]:
             },
             remediation_summary="Use one of the modes declared by the gate registry.",
             remediation_actions=[f"Set mode to {entry.modes[0]}.", "Retry the request."],
-        )
-
-    if not entry.implemented:
-        return _gate_input_error(
-            request,
-            "gate_operation_not_implemented",
-            "gate operation is planned but not implemented in this foundation marker",
-            entry=entry,
-            details={
-                "helper_id": entry.helper_id,
-                "operation": entry.operation,
-                "group": entry.group,
-            },
-            remediation_summary="Implement the requested runner gate before executing it.",
-            remediation_actions=["Add the gate implementation.", "Retry the request after enabling the operation."],
         )
 
     if entry.group == "suite":

@@ -23,7 +23,7 @@ from test_result import run_counted  # noqa: E402
 class SemanticContractIdentifierTests(unittest.TestCase):
     def test_release_dispatch_uses_semantic_operations_and_rejects_unknown_inputs(self) -> None:
         release_operations = {
-            item.operation for item in registry.all_gate_operations() if item.group == "release"
+            item.operation for item in registry.GATE_OPERATIONS if item.group == "release"
         }
         self.assertEqual(
             release_operations,
@@ -37,7 +37,7 @@ class SemanticContractIdentifierTests(unittest.TestCase):
             inputs={},
         )
         registered = next(
-            item for item in registry.all_gate_operations()
+            item for item in registry.GATE_OPERATIONS
             if item.operation == canonical.operation
         )
         self.assertEqual(registered.helper_id, canonical.helper_id)

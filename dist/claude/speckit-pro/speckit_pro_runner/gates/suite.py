@@ -16,6 +16,7 @@ from typing import Any
 
 from ..envelope import diagnostic, response
 from ..path_utils import find_repo_root, is_relative_to, resolves_to_current_python
+from .gate_response import gate_base_data
 
 CAPTURE_LIMIT_BYTES = 16 * 1024
 DEFAULT_TIMEOUT_SECONDS = 300
@@ -507,23 +508,9 @@ def summarize_results(results: list[dict[str, Any]]) -> dict[str, int]:
 
 
 def base_data(entry: Any, operation: str, status: str) -> dict[str, Any]:
-    gate_status = "pass"
-    if status in {"expected_failure", "subprocess_failure"}:
-        gate_status = "fail"
-    elif status == "missing_prerequisite":
-        gate_status = "skipped"
-    elif status == "input_error":
-        gate_status = "input_error"
-    return {
-        "gate": {
-            "gate_id": entry.helper_id,
-            "operation": operation,
-            "gate_status": gate_status,
-            "promoted": status != "input_error",
-            "blocking": status != "ok",
-            "comparison_ids": comparison_ids(operation),
-        },
-    }
+    data = gate_base_data(entry, operation, status)
+    data["gate"]["comparison_ids"] = comparison_ids(operation)
+    return data
 
 
 def comparison_ids(operation: str) -> list[str]:
@@ -626,10 +613,6 @@ def resolve_repo_root(inputs: dict[str, Any]) -> Path | dict[str, Any]:
             remediation_actions=["Set repo_root to the repository root.", "Retry the request."],
         )
     return resolved
-
-
-def rel(path: Path, repo_root: Path) -> str:
-    return path.resolve(strict=False).relative_to(repo_root.resolve(strict=False)).as_posix()
 
 
 def missing_executable(executable: str, repo_root: Path) -> bool:

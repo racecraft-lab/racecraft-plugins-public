@@ -251,7 +251,7 @@ class AgentMaterializationTests(unittest.TestCase):
         )
 
         self.assertEqual(result.destination_bytes, source_bytes)
-        self.assertTrue(module.verify_destination_bytes(result, source_bytes))
+        self.assertEqual(result.destination_bytes_digest, sha256_digest(source_bytes))
         self.assertEqual(
             result.candidate_route,
             {
@@ -318,7 +318,7 @@ class AgentMaterializationTests(unittest.TestCase):
         )
 
         self.assertEqual(result.destination_bytes, source_bytes)
-        self.assertTrue(module.verify_destination_bytes(result, source_bytes))
+        self.assertEqual(result.destination_bytes_digest, sha256_digest(source_bytes))
 
     def test_route_materialization_preserves_non_route_fields(self) -> None:
         result = self.materialize_selected_route()
@@ -374,7 +374,6 @@ class AgentMaterializationTests(unittest.TestCase):
         self.assertEqual(first.materialization_id, second.materialization_id)
 
     def test_rejects_parsed_equivalent_toml_as_byte_proof(self) -> None:
-        module = self.materializer()
         original = self.materialize()
         equivalent = self.materialize(source_bytes=PARSED_EQUIVALENT_BYTES)
 
@@ -388,8 +387,8 @@ class AgentMaterializationTests(unittest.TestCase):
             original.destination_bytes_digest,
             equivalent.destination_bytes_digest,
         )
-        self.assertTrue(module.verify_destination_bytes(original, EXPECTED_DESTINATION_BYTES))
-        self.assertFalse(module.verify_destination_bytes(original, PARSED_EQUIVALENT_BYTES))
+        self.assertEqual(original.destination_bytes, EXPECTED_DESTINATION_BYTES)
+        self.assertNotEqual(original.destination_bytes, PARSED_EQUIVALENT_BYTES)
 
     def test_rejects_route_or_parent_control_mismatch(self) -> None:
         module = self.materializer()

@@ -81,14 +81,6 @@ SCRIPT_BASE = "speckit-pro/skills/speckit-autopilot/scripts"
 REQUEST_FIXTURE_BASE = "tests/speckit-pro/unit/fixtures/read-only-helpers/requests"
 MUTATION_REQUEST_FIXTURE_BASE = "tests/speckit-pro/unit/fixtures/mutation-helpers/requests"
 DISPATCHABLE_MUTATION_PROMOTION_STATUSES = frozenset({"golden_only", "bash_compared"})
-CODEX_MANAGED_HELPER_PROVENANCE_KEYS = (
-    "helper_name",
-    "destination",
-    "installer_id",
-    "source_roster_id",
-    "manifest_id",
-    "destination_digest",
-)
 
 
 def authoritative_request(helper_id: str) -> str:

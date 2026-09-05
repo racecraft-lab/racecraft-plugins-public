@@ -131,7 +131,7 @@ def run_installed_release_readiness(
 
     entry = next(
         operation
-        for operation in registry.all_gate_operations()
+        for operation in registry.GATE_OPERATIONS
         if operation.operation == "installed-release-readiness"
     )
     request = SimpleNamespace(
@@ -167,7 +167,7 @@ def run_plugin_bash_confinement_case(
 
     entry = next(
         operation
-        for operation in registry.all_gate_operations()
+        for operation in registry.GATE_OPERATIONS
         if operation.operation == "zero-bash-guard"
     )
     inputs: dict[str, Any] = {
@@ -2263,6 +2263,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(gate["gate_status"], "pass")
         self.assertTrue(gate["promoted"])
         self.assertFalse(gate["blocking"])
+        self.assertEqual(gate["comparison_ids"], ["default-suite-toolchain-l1-l4-l5-l7-l8"])
         summary = response["data"]["suite"]["summary"]
         self.assertEqual(summary, {"total": 6, "passed": 6, "failed": 0, "skipped": 0})
         results = response["data"]["suite"]["results"]

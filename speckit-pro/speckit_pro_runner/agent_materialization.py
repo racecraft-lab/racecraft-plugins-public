@@ -24,7 +24,6 @@ __all__ = (
     "canonical_bytes",
     "digest",
     "materialize_agent_policy",
-    "verify_destination_bytes",
 )
 
 
@@ -146,27 +145,6 @@ def materialize_agent_policy(
         configuration_digest=configuration_digest,
         byte_count=len(destination_bytes),
     )
-
-
-def verify_destination_bytes(
-    materialization: AgentMaterialization | Mapping[str, Any],
-    observed_bytes: bytes,
-) -> bool:
-    if not isinstance(observed_bytes, bytes):
-        return False
-    expected_digest = _field(materialization, "destination_bytes_digest")
-    if not isinstance(expected_digest, str) or digest(observed_bytes) != expected_digest:
-        return False
-    expected_bytes = _field(materialization, "destination_bytes")
-    if isinstance(expected_bytes, bytes) and observed_bytes != expected_bytes:
-        return False
-    return True
-
-
-def _field(materialization: AgentMaterialization | Mapping[str, Any], key: str) -> Any:
-    if isinstance(materialization, Mapping):
-        return materialization.get(key)
-    return getattr(materialization, key, None)
 
 
 def _safe_source_relative_path(value: str) -> str:
