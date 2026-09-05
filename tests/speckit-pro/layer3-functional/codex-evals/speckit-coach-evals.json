@@ -83,12 +83,12 @@
     {
       "id": 8,
       "prompt": "What are SpecKit extensions? I see references to 'verify', 'review', 'cleanup', and 'retrospective' extensions in the autopilot workflow. How do I install them and what do they do?",
-      "expected_output": "Explains the extension system: extensions are optional post-implementation workflow steps. Lists available extensions and what each does.",
+      "expected_output": "Explains extensions as optional workflow additions, then inspects the active project, host, installed CLI help, manifests, and configuration before describing which user-named examples are actually available or configured.",
       "expectations": [
-        "Explains that extensions are optional post-implementation workflow steps",
-        "Lists at least 4 extensions: verify, review, cleanup, retrospective",
-        "Explains that extensions are configured in .specify/extensions.yml",
-        "Describes what at least 2 extensions do (e.g., verify checks implementation against spec, review runs code review)"
+        "Explains that extensions are optional workflow additions rather than mandatory built-in phases",
+        "Inspects the active project, host, installed CLI help, manifests, and configuration before claiming availability or behavior",
+        "Treats verify, review, cleanup, and retrospective as user-named investigation targets; reports each as observed, unavailable, or unverified without inventing behavior, and states that the list is non-exhaustive",
+        "Names .specify/extensions.yml or another configuration path only when the active installed evidence confirms that path"
       ]
     },
     {
@@ -140,24 +140,24 @@
     {
       "id": 13,
       "prompt": "What community extensions are available that help with code review? I want to see what the actual SpecKit community catalog has — not a stale list from documentation, the real current state. Find me 2-3 candidates and tell me which one looks most active.",
-      "expected_output": "Coach runs `specify extension search` (or a documented fallback against the upstream catalog.community.json), surfaces real catalog entries by their bare ids, and recommends candidates based on the live data — not a snapshotted table.",
+      "expected_output": "Coach uses the best observed installed catalog/search capability or a disclosed current official source, then reports evidence-bearing candidates and an explicit activity metric; if freshness cannot be established, it reports the request as blocked instead of fabricating a current result.",
       "expectations": [
-        "References running `specify extension search` (or `gh api` / WebFetch against `catalog.community.json`) as the lookup mechanism — does NOT recite a hardcoded snapshot",
-        "Lists at least 2 candidate extensions by their bare id (e.g., `review`, `multi-model-review`, `staff-review`, `security-review`) — not by GitHub repo name",
-        "Avoids citing a stale catalog count (no '26 extensions', no fixed-row table from the reference doc)",
-        "Surfaces a category or tag for each candidate so the user understands the difference between them"
+        "Uses the best observed installed catalog/search capability first, or a current official source with the source and observation time disclosed; does not require a particular transport or tool",
+        "When freshness is established, lists 2-3 observed candidates by bare id with their observed categories or tags; otherwise explicitly reports that current candidates are unavailable and does not fabricate them",
+        "Defines 'most active' using an available observed field and its timestamp, or states that the comparison is blocked when no defensible activity metric is available",
+        "Does not recite a fixed catalog count or stale snapshot as current evidence, and does not mark the request complete when freshness could not be established"
       ]
     },
     {
       "id": 14,
       "prompt": "I want to install the archive extension into this project and have it fire automatically after each implement phase so merged specs get archived without me thinking about it. Walk me through the install + the hook wiring step by step.",
-      "expected_output": "Coach proposes the install command using `specify extension add archive --from <zip-url>`, confirms with the user before running anything, then describes the `.specify/extensions.yml` hook block that wires the archive command to fire after_implement.",
+      "expected_output": "Coach inspects the active project, installed CLI and integration, catalog source, and archive manifest; it then proposes the exact evidence-backed operation and targets and asks for confirmation without mutating anything on this first turn.",
       "expectations": [
-        "Proposes a concrete `specify extension add archive --from ...` command (community extensions are discovery-only, --from is required)",
-        "Asks for user confirmation before running any mutation — does not silently execute install/remove",
-        "Describes the `.specify/extensions.yml` hook block with `after_implement`, the extension id, the command (`speckit.archive.run`), and the `optional`/`prompt` keys",
-        "Mentions that the autopilot picks up `.specify/extensions.yml` hooks dynamically — no plugin update or restart needed",
-        "Points the user at `.specify/extensions/archive/archive-config.yml` (shared) and `archive-config.local.yml` (personal) for further configuration"
+        "Inspects the active project, installed CLI version/help and integration, catalog source, archive URL or manifest, and pre-state before proposing an operation",
+        "Shows the exact evidence-backed operation and target paths, asks for confirmation, and performs no install, configuration, or hook mutation on this first turn",
+        "Does not attribute a hook, command, or configuration filename to archive unless the observed archive manifest declares it; explicitly discloses zero hooks when that is what the manifest shows",
+        "Keeps any generic after_implement explanation separate from archive claims and explains that optional: false is automatic while optional: true is prompted or skippable",
+        "States reload, restart, and path behavior only when supported by the active Codex host and installed-runtime evidence"
       ]
     },
     {

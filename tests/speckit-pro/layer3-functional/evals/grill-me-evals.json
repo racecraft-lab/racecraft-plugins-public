@@ -46,7 +46,7 @@
         "Every AskUserQuestion call has between 2 and 3 explicit options (Other is appended automatically by the tool)",
         "The first option in every call has its label suffixed with '(Recommended)'",
         "The first option's description includes the AI's reasoning for why it's recommended",
-        "Each option's 'header' field is 12 characters or fewer",
+        "Each AskUserQuestion call's question-level 'header' field is 12 characters or fewer",
         "No call sets multiSelect to true — every question is mutually exclusive"
       ]
     },
