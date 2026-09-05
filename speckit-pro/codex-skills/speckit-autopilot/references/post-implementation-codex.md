@@ -105,8 +105,7 @@ have Agent Teams primitives — Codex always uses the parallel
 Dispatch the 3 tracks via `spawn_agent`, then loop bounded `wait_agent` calls
 until each track's actual result is consumed. A terminal status corroborates
 completion but cannot replace the result. Record each result and call
-`close_agent` only when the current surface exposes it. Three tracks fits the
-hosted Responses default of three active subagents; if derived
+`close_agent` only when the current surface exposes it. If derived
 `subagent_slots` is lower, dispatch in cap-bounded waves rather than all at
 once. The Lead synthesizes findings
 into the workflow file's Post-Implementation Checklist, then continues serial

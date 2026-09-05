@@ -257,19 +257,6 @@ the rendered files with either selected runtime path:
 1. `.codex/agents/<agent>.toml`
 2. `~/.codex/agents/<agent>.toml`
 
-Bundled agents:
-
-- `phase-executor`
-- `clarify-executor`
-- `checklist-executor`
-- `analyze-executor`
-- `implement-executor`
-- `codebase-analyst`
-- `spec-context-analyst`
-- `domain-researcher`
-- `autopilot-fast-helper`
-- `uat-runbook-author`
-
 Continue only when the helper returns `ok` with mutation status `no_op`. If it
 reports planned files, fails validation, or cannot inspect the selected path,
 STOP with its diagnostics. Tell the user to run `$install`, approve the expected

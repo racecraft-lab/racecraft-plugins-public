@@ -483,8 +483,7 @@ same-manager recovery evidence or block; do not mix managers.
 command to schedule recurring review comment monitoring.
 
 Before invoking `/loop`, extract these values and substitute them
-as literal strings into the loop prompt; the `/loop` fires in a fresh
-context where template placeholders are not resolved.
+as literal strings into the loop prompt.
 
 ```text
 PR_NUMBER = <from gh pr create output>
@@ -588,16 +587,9 @@ Skill("loop", args: "5m
 ")
 ```
 
-**Why `/loop`:** The loop runs every 5 minutes in the background,
-checking for new review comments from GitHub Copilot or human
-reviewers. It automatically expires after 3 days (Claude Code's
-built-in safety limit). The autopilot doesn't need to wait --
-it schedules the loop and reports completion.
-
-**Critical:** The loop prompt must be **self-contained** -- each
-cron fire runs in a fresh context with no memory of prior
-iterations. All values (PR number, repo, branch) must be
-hardcoded in the prompt, not referenced as variables.
+**Critical:** The loop prompt must be **self-contained**. All values
+(PR number, repo, branch) must be hardcoded in the prompt, not referenced as
+variables.
 
 **After scheduling the loop, the autopilot is DONE.** Report the
 final summary with PR URL and note that review remediation is
