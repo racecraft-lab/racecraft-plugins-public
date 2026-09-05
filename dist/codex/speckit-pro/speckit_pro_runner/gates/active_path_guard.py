@@ -5517,10 +5517,6 @@ def zero_bash_extensionless_scan_path(path: str) -> bool:
     )
 
 
-def has_prohibited_script_shebang(path: Path) -> bool:
-    return has_prohibited_script_shebang_content(read_first_line(path))
-
-
 def read_first_line(path: Path) -> str:
     try:
         with path.open("r", encoding="utf-8") as handle:

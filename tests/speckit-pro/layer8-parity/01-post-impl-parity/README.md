@@ -49,14 +49,6 @@ cross-references, and every row in `## Required Invariants` without invoking
 claude -p. Live mode enforces those rows against both captured workflow
 outputs before comparing the two paths.
 
-## Cost
-
-Per-fixture-pair budget: \$20 (configurable via
-`L8_FIXTURE_BUDGET_USD`). A typical 7-phase + post-impl autopilot run
-on this synthetic workflow.md costs \$3-5 in subagents mode and \$5-10
-in teams mode (additional teammate context windows). Two runs per
-fixture invocation.
-
 ## Status
 
 **Ready.** The fixture structure validates via dry-run, including the

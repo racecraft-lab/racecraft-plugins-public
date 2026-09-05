@@ -5,7 +5,6 @@
   "contract_version": "1.0",
   "plugin_version": "2.30.0",
   "runner_version": "0.1.0",
-  "source_revision": "unknown",
   "python_minimum_version": "3.11",
   "specify_required": true,
   "checksum_algorithm": "sha256",
@@ -56,7 +55,7 @@
         "value": "speckit_pro_runner/gates/active_path_guard.py",
         "display": "speckit_pro_runner/gates/active_path_guard.py"
       },
-      "sha256": "ea79001992d0d294d8b240f422ed9009242bd402a9cd19ca41b6dbbf6f274e8e"
+      "sha256": "aadf8f45b599a37bd580dd512ed9cd502d0b115702052fc0039661611b6d5d5f"
     },
     {
       "path": {

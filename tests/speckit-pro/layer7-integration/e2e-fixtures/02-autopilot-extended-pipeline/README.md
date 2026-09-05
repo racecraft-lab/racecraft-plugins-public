@@ -36,12 +36,6 @@ sometimes writes a TDD test file even when asked not to — see the
 "Live-mode side effects" section in the parent L7 README). The
 `--max-budget-usd` cost guard caps total spend regardless.
 
-Default budget cap: **$10.00** (`E2E_FIXTURE_BUDGET_USD`). This is
-the most expensive fixture in the suite — run sparingly. The
-captured transcript on disk shows the actual cost was ~$1.27 in the
-canonical run, so the $10 default leaves substantial headroom for
-the LLM to take a longer path on rerun.
-
 ## Required setup
 
 The fixture is self-contained. The minimal spec (`sample-spec.md`) is
