@@ -1275,11 +1275,8 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             plugin_root = fixture_root / "speckit-pro"
             (plugin_root / "codex-skills" / "demo").mkdir(parents=True)
             codex_eval = fixture_root / "tests/speckit-pro/layer2-trigger/codex-evals/demo-trigger.json"
-            shared_eval = fixture_root / "tests/speckit-pro/layer2-trigger/evals/demo-trigger.json"
             codex_eval.parent.mkdir(parents=True)
-            shared_eval.parent.mkdir(parents=True)
             codex_eval.write_text("{}\n", encoding="utf-8")
-            shared_eval.write_text("{}\n", encoding="utf-8")
             codex.PLUGIN_ROOT = plugin_root
 
             with (
