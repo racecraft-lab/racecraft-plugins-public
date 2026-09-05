@@ -201,10 +201,10 @@ class ValidateCodexSkills(unittest.TestCase):
                     self.assertTrue('install-codex-agents' in body and 'dry_run' in body and ('apply' in body) and ('verified' in body) and (entry.promotion_status == 'golden_only') and bool(entry.authoritative_command), 'expected a promoted, fixture-backed install-codex-agents dry-run/apply contract')
 
     def _check_autopilot_skill(self, skill_dir: Path, body: str) -> None:
-        runtime_doc = body
         phase_execution = _read(skill_dir / 'references' / 'phase-execution-codex.md')
         post_implementation = _read(skill_dir / 'references' / 'post-implementation-codex.md')
         error_recovery = _read(skill_dir / 'references' / 'error-recovery-codex.md')
+        runtime_doc = f"{body}\n{phase_execution}\n{post_implementation}\n{error_recovery}"
         with self.subTest(msg='speckit-autopilot: requires update_plan as the progress contract'):
             self.assertIn('update_plan', runtime_doc)
         with self.subTest(msg='speckit-autopilot: requires durable autopilot-state.json persistence'):
@@ -222,13 +222,7 @@ class ValidateCodexSkills(unittest.TestCase):
         with self.subTest(msg='speckit-autopilot: validates a single in_progress item before phase execution'):
             self.assertIn('Exactly one plan item is `in_progress`', body)
         with self.subTest(msg='speckit-autopilot: requires all canonical phase families before execution'):
-            self.assertTrue(
-                'phase family coverage is mandatory' in body
-                and 'Phase 7: Implement - Pending task decomposition' in phase_execution
-                and ('Post: Doctor Extension Check' in body)
-                and ('Post: Retrospective' in body),
-                'expected all-phase coverage, Phase 7 placeholder, and the canonical Post item list (Doctor Extension Check -> Retrospective) in the Codex autopilot skill',
-            )
+            self.assertTrue('phase family coverage is mandatory' in runtime_doc and 'Phase 7: Implement - Pending task decomposition' in runtime_doc and ('Post: Doctor Extension Check' in runtime_doc) and ('Post: Retrospective' in runtime_doc), 'expected all-phase coverage, Phase 7 placeholder, and the canonical Post item list (Doctor Extension Check -> Retrospective) in the Codex autopilot skill')
         with self.subTest(msg='speckit-autopilot: documents canonical PHASES order'):
             self.assertIn('PHASES = [specify, clarify, plan, checklist, tasks, analyze, implement]', runtime_doc)
         with self.subTest(msg='speckit-autopilot: prevents from-phase from dropping later phases'):
