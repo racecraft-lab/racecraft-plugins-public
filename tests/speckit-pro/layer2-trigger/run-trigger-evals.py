@@ -237,7 +237,7 @@ def inspect_claude_stream(
     assistant_events = [
         (index, event)
         for index, event in enumerate(events[:result_index])
-        if event.get("type") == "assistant"
+        if event.get("type") == "assistant" and stream_content(event)
     ]
     if not assistant_events:
         return {"valid": False, "selected": False, "reason": "completed run omitted an assistant response"}
@@ -389,6 +389,7 @@ def run_claude_query(
     ]
     child = subprocess.Popen(
         command,
+        cwd=plugin_root,
         stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,

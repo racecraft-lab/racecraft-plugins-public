@@ -195,6 +195,18 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 nonce,
                 "claude-sonnet-test",
             )
+            empty_response_events = [
+                json.loads(line) for line in nonselected_stream.decode("utf-8").splitlines()
+            ]
+            empty_response_events[1]["message"]["content"] = []
+            empty_response = claude.inspect_claude_stream(
+                ("\n".join(json.dumps(event) for event in empty_response_events) + "\n").encode("utf-8"),
+                plugin_name,
+                plugin_root,
+                expected_skill,
+                nonce,
+                "claude-sonnet-test",
+            )
 
             def inspect_mutation(transform: object) -> dict[str, object]:
                 events = [json.loads(line) for line in stream.decode("utf-8").splitlines()]
@@ -279,6 +291,8 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
 
             fake = FakePopen(stream, b"warning\r\n")
             captured: dict[str, object] = {}
+            mcp_config = plugin_root / "empty-mcp.json"
+            claude.write_empty_mcp_config(mcp_config)
 
             def fake_popen(command: list[str], **kwargs: object) -> FakePopen:
                 captured["command"] = command
@@ -289,7 +303,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 rc, launched_stdout, launched_stderr, timed_out = claude.run_claude_query(
                     "/usr/local/bin/claude",
                     plugin_root,
-                    plugin_root / "empty-mcp.json",
+                    mcp_config,
                     "query",
                     "claude-sonnet-test",
                     30,
@@ -383,6 +397,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 "init supplies resolved model": selected["resolved_model"] == "claude-sonnet-test",
                 "result model is not resolution evidence": nonselected["resolved_model"] is None,
                 "completed response without Skill is valid": nonselected["valid"] and not nonselected["selected"],
+                "empty completed assistant body is invalid": not empty_response["valid"],
                 "nonce alone does not select": nonce_only["valid"] and not nonce_only["selected"],
                 "nonce absence does not suppress selection": no_nonce["valid"] and no_nonce["selected"],
                 "every malformed or competing selection fails": all(
@@ -401,6 +416,12 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 ),
                 "direct argv uses no persistence": "--no-session-persistence" in captured["command"],
                 "direct launch inherits environment": captured["kwargs"]["env"].get("PATH") == os.environ.get("PATH"),
+                "direct launch is confined to disposable root": Path(captured["kwargs"]["cwd"]).resolve()
+                == plugin_root.resolve()
+                and plugin_root.resolve() != Path.cwd().resolve()
+                and mcp_config.is_file()
+                and str(plugin_root) in captured["command"]
+                and str(mcp_config) in captured["command"],
                 "direct launch uses binary pipes": "text" not in captured["kwargs"],
                 "direct launch result preserved": (rc, launched_stdout, launched_stderr, timed_out)
                 == (0, stream, b"warning\r\n", False),
