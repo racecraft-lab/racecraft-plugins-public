@@ -33,6 +33,9 @@ If just a number:
   PR_NUMBER = the provided number
 ```
 
+Check out the PR branch and verify the actual code behavior in that
+checkout. Never review or remediate from the diff alone.
+
 ### 2. Discover Project Commands
 
 Read CLAUDE.md and package.json (or equivalent) to find:
@@ -43,7 +46,13 @@ Read CLAUDE.md and package.json (or equivalent) to find:
 - UNIT_TEST command
 - INTEGRATION_TEST command
 
-Detect package manager from lockfile if Node.js project.
+Detect package manager from lockfile if Node.js project; the
+plugin's PreToolUse hook denies a shell command that uses a different
+manager than the lockfile names.
+
+Run TYPECHECK and UNIT_TEST locally before posting any review comment
+or reply. Scope every finding to files the PR changed unless the user
+explicitly asks for a broader review.
 
 ### 3. Fetch All Unresolved Review Threads
 
@@ -176,11 +185,23 @@ The `<thread_id>` comes from the GraphQL query in Step 3
 (each thread's `id` field). Do NOT use the comment's
 node_id — thread resolution requires the thread ID.
 
-### 6. Push All Changes
+A new finding of your own (not a reply) goes inline: `POST
+repos/<OWNER>/<REPO>/pulls/<PR_NUMBER>/comments` with `path`, `line`,
+`side`, and `commit_id` targeting the exact diff line. A summary
+comment is not a substitute for an inline one.
 
-After all comments are addressed:
+### 6. Verify, Push, Confirm
 
-Run `git push`.
+After all comments are addressed, finish in one pass:
+
+1. Run the full suite: FULL_VERIFY, or BUILD && TYPECHECK && LINT &&
+   UNIT_TEST && INTEGRATION_TEST. A failure here reopens Step 4; do
+   not push a red branch.
+2. Run `git push`.
+3. Confirm with `git status -sb`: the branch line must not read
+   `ahead`. Do not report completion until that confirmation is in
+   hand. While an autopilot workflow is active, the plugin's Stop hook
+   blocks ending the turn with unpushed commits.
 
 ### 7. Report Summary
 

@@ -39,7 +39,9 @@ Never assume the remote is named `origin`; inspect the actual remotes first.
 
 Before editing anything:
 
-- ensure the current checkout is on the PR branch or switch to it safely
+- ensure the current checkout is on the PR branch or switch to it safely, and
+  verify the actual code behavior in that checkout; never review or remediate
+  from the diff alone
 - confirm `gh` is available and authenticated if thread resolution is required
 - inspect the repo state with `git status` so you know whether unrelated user
   changes are already present
@@ -124,8 +126,12 @@ with a grounded explanation instead.
 Do not resolve a thread until the relevant code path has been verified. At
 minimum:
 
+- run typecheck and the unit tests locally before posting any review comment or
+  reply
 - run the targeted tests or checks needed for the fix
 - ensure the broader project verification required by the repo still passes
+- scope every finding to files the PR changed unless the user explicitly asks
+  for a broader review
 
 If verification fails, keep working until you either fix it or can clearly
 explain why the repo was already failing independently. Never reply “fixed” on
@@ -135,7 +141,10 @@ a thread while the branch is still broken.
 
 Group related review fixes into intentional commits. Avoid one commit per
 comment if several comments are part of the same issue. Use clear commit
-messages and push the branch after the fixes are verified.
+messages. Then finish in one pass: run the full project verification, push the
+branch, and confirm with `git status -sb` that the branch line does not read
+`ahead`. Do not report completion until that confirmation is in hand. Use the
+package manager the lockfile names for every command.
 
 Do not amend or rewrite history unless the user explicitly asks for it. If the
 repo already has unrelated local changes, work around them rather than
@@ -146,6 +155,8 @@ reverting them.
 After a thread is addressed:
 
 - reply with what changed, or with the rationale for no code change
+- post a new finding of your own inline through `gh api` on the exact diff
+  `path`, `line`, `side`, and `commit_id`, not as a summary comment
 - resolve the review thread using the real thread ID, not just the comment ID
 
 If GitHub tooling is unavailable, stop after making and verifying the fix and
@@ -160,7 +171,7 @@ Finish with a concise summary that includes:
 - number of threads processed
 - whether fixes were code changes, replies only, or both
 - verification commands run
-- whether the branch was pushed
+- whether the push was confirmed (`git status -sb` with no `ahead`)
 - whether all unresolved threads were resolved
 
 If anything remains open, list the blocker explicitly: missing auth, failing
