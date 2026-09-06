@@ -47,7 +47,7 @@
         "value": "speckit_pro_runner/gate_discovery.py",
         "display": "speckit_pro_runner/gate_discovery.py"
       },
-      "sha256": "ab03adc6c354dcacac762c6f7d2dd5af9fd47d1cd66368245afc5928b0c0441b"
+      "sha256": "08d88c3a8ac2f43379fca9894895c57917f243b70206c433c02a6750822747f0"
     },
     {
       "path": {
@@ -151,7 +151,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "026f08e09788908ed41e21c6c4048eeea780cba44487a47d5d99ac2319a397b2"
+      "sha256": "8f225bda0fde21b808237269730ecc0c3340738b07e65da0a658a7df9ddfd131"
     },
     {
       "path": {
@@ -168,6 +168,14 @@
         "display": "speckit_pro_runner/path_utils.py"
       },
       "sha256": "02840b01a30d3d891b219df26cf2efcd66325d196e6959317acee7353afddb29"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/quality_gates.py",
+        "display": "speckit_pro_runner/quality_gates.py"
+      },
+      "sha256": "bed5bf6918cd457e118ea4fceb174a069bd67c7ebf81d306d07b7a045e46860f"
     },
     {
       "path": {

@@ -187,6 +187,20 @@ class GateSlotResolutionTests(unittest.TestCase):
                 slots = self._resolve(root, "python")
                 self.assertEqual("lint-imports --config .importlinter", slots["DEPENDENCY_RULES"]["command"])
                 self.assertTrue(any("rows[0]" in p for p in slots["DEPENDENCY_RULES"]["override_ignored"]))
+            override.unlink()
+            with self.subTest(msg="thresholds from quality-gates.json replace the shipped defaults"):
+                cmd = gate_discovery.resolve_slots(
+                    root, "python", file_exists=lambda p: p.is_file(), which=lambda n: False,
+                    thresholds={"ceiling": "12", "complexity_ceiling": "5", "floor": "70", "survival_ceiling": "30"},
+                )["COMPLEXITY"]["command"]
+                self.assertIn("--ceiling 12 --complexity-ceiling 5", cmd)
+            with self.subTest(msg="a repository skip wins over a matching signal"):
+                slots = gate_discovery.resolve_slots(
+                    root, "python", file_exists=lambda p: p.is_file(), which=lambda n: False,
+                    skips={"COMPLEXITY": {"reason": "legacy tree"}},
+                )
+                self.assertEqual({"status": "skipped", "command": "N/A", "reason": "legacy tree"}, slots["COMPLEXITY"])
+                self.assertEqual("populated", slots["DEPENDENCY_RULES"]["status"])
             with self.subTest(msg="nodejs maps to typescript rows"):
                 (root / "package.json").write_text("{}", encoding="utf-8")
                 self.assertIn("--language typescript", self._resolve(root, "nodejs")["COMPLEXITY"]["command"])

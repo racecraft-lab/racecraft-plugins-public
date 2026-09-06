@@ -18,6 +18,7 @@ from typing import Any, Callable
 
 from ..envelope import diagnostic, response
 from ..gate_discovery import SLOTS as GATE_SLOTS, resolve_slots as resolve_gate_slots
+from .. import quality_gates
 from ..runtime import detect_plugin_root
 
 CAPTURE_LIMIT_BYTES = 16 * 1024
@@ -1490,11 +1491,39 @@ def detect_commands(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     # Quality-gate slots come from the discovery table, not from package
     # scripts. {paths} and {plugin_root} stay literal: the orchestrator fills
     # them at run time, and an empty {paths} passes vacuously.
+    # .specify/quality-gates.json is the threshold authority. Without it the
+    # slots still show what would run, and quality_gates.status tells the
+    # orchestrator to fail G0 until the coach flow creates the file.
+    quality: dict[str, Any] = {
+        "path": quality_gates.FILE_PATH,
+        "status": "missing",
+        "thresholds": None,
+        "skips": {},
+        "coach": "speckit-coach quality gates",
+    }
+    quality_text = trusted_text(root / quality_gates.FILE_PATH, repo_root)
+    if quality_text is not None:
+        try:
+            quality_data = json.loads(quality_text)
+        except ValueError as exc:
+            quality["status"] = "invalid"
+            quality["problems"] = [f"cannot parse JSON: {exc}"]
+        else:
+            problems = quality_gates.validate(quality_data)
+            if problems:
+                quality["status"] = "invalid"
+                quality["problems"] = problems
+            else:
+                quality["status"] = "present"
+                quality["thresholds"] = quality_data["thresholds"]
+                quality["skips"] = quality_data.get("skips", {})
     gates = resolve_gate_slots(
         root,
         stack,
         file_exists=lambda path: trusted_file_exists(path, repo_root),
         which=lambda name: bool(shutil.which(name)) or trusted_file_exists(root / "node_modules" / ".bin" / name, repo_root),
+        thresholds=quality_gates.substitutions(quality["thresholds"]) if quality["thresholds"] else None,
+        skips=quality["skips"],
     )
     for slot in GATE_SLOTS:
         commands[slot] = gates[slot]["command"]
@@ -1508,7 +1537,7 @@ def detect_commands(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
             "No packaging marker or tests/ runner script found. Supply commands from the "
             "project's own documentation instead of treating N/A as 'no checks exist'."
         )
-    return make_result(json_text({"stack": stack, "package_manager": package_manager, "commands": commands, "gates": gates, "plugin_root": plugin_root.as_posix() if plugin_root else "", "detection": detection}))
+    return make_result(json_text({"stack": stack, "package_manager": package_manager, "commands": commands, "gates": gates, "quality_gates": quality, "plugin_root": plugin_root.as_posix() if plugin_root else "", "detection": detection}))
 
 
 def detect_presets(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:

@@ -324,9 +324,23 @@ discovery table (`speckit_pro_runner/gate_discovery_table.json`),
 consulting `.specify/gate-discovery.json` first when that
 override validates. A slot is `populated` when one of its signal
 files exists in the repository, otherwise `unconfigured` and
-`"N/A"`. Thresholds are the shipped fallbacks (complexity 8,
-CRAP 30, mutation-score floor 60) until a `quality-gates.json`
-exists.
+`"N/A"`; a slot named in the file's `skips` is `skipped` and
+`"N/A"` without a question.
+
+**`.specify/quality-gates.json` is the threshold authority.** The
+result's `quality_gates.status` is `present`, `missing`, or
+`invalid` (with `problems`). Anything but `present` fails G0
+with this message, verbatim, and STOP:
+
+```text
+G0 blocked: .specify/quality-gates.json is <missing|invalid: first problem>.
+Run `$speckit-coach quality gates` to create it. Agents never edit this file.
+```
+
+With the file missing, the slot commands still show the shipped
+defaults (complexity 8, CRAP 30, mutation-score floor 60) so the
+operator can see what would run; they are not authoritative and
+do not unblock G0.
 
 Two placeholders stay literal in the recorded command and are
 filled at every run:
@@ -346,9 +360,11 @@ red gate, not a warning to note and move past.
 
 **Missing tool, one question per tool per repository.** For each
 populated slot with `tool_present: false`, look for a recorded
-answer for that tool: first the workflow file's Quality Gates
-table, then a `skip (repo)` row for the same tool in any other
-`docs/ai/specs/.process/*-workflow.md`. If none exists, ask once
+answer for that tool: first `skips` in `.specify/quality-gates.json`,
+then the workflow file's Quality Gates table, then (only while no
+`quality-gates.json` exists yet) a `skip (repo)` row for the same
+tool in any other `docs/ai/specs/.process/*-workflow.md`. If none
+exists, ask once
 with `request_user_input` (free-text fallback when the picker is
 absent, same rule as grill-me):
 
@@ -364,8 +380,11 @@ Record the answer in the Quality Gates table before continuing:
 - `install`: run the install command, re-run `detect-commands`,
   and require `tool_present: true`. If it is still false, STOP.
 - `skip (spec)`: the slot is `"N/A"` for this workflow only.
-- `skip (repo)`: the slot is `"N/A"` here, and later workflows
-  in this repository honor the row without asking again.
+- `skip (repo)`: the durable record is a `skips` entry in
+  `.specify/quality-gates.json`, written by the operator through
+  the coach flow, never by an agent. Record `skip (repo)` in the
+  table, point the operator at the coach flow, and continue with
+  the slot as `"N/A"`.
 
 When no interactive runtime is available, record `unanswered`
 for the tool, then STOP naming the tool and the three options;
