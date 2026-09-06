@@ -127,7 +127,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                 "inputs": {"gate": "G7", "feature_dir": case["fixture_root"]},
             }
             result = subprocess.run(
-                [str(Path(sys.executable).resolve()), "-m", "speckit_pro_runner"],
+                [sys.executable, "-m", "speckit_pro_runner"],
                 input=json.dumps(request),
                 text=True,
                 capture_output=True,
