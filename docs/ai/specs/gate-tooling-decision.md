@@ -87,26 +87,31 @@ and repository were unreachable on 2026-09-06, so 30 rests on that one source.
   `--include` globs; Jest also has `--changedSince`.
 - **Threshold evidence:** ESLint's documented default for `complexity` is 20.
 
-### Threshold: the record surfaces a conflict for the operator
+### Threshold: shipped defaults (operator decision, 2026-09-06)
 
-The memo's item 3 decision says the CRAP ceiling starts at 6 "per Bob". Bob's
+The memo's item 3 decision said the CRAP ceiling starts at 6 "per Bob". Bob's
 own words are that he widened a threshold from 4 to 6 and is considering 8.
-At full coverage CRAP equals raw complexity, so a CRAP ceiling of 6 fails
-every function with complexity above 6 regardless of tests, and fails
-complexity 3 at zero coverage (3^2 x 1 + 3 = 12). Savoia's threshold of 30 is
-the only documented CRAP cutoff.
-
-Proposed defaults, pending the operator's confirmation at this stop:
+At full coverage CRAP equals raw complexity, so a single ceiling of 6 on CRAP
+would fail every function above complexity 6 regardless of tests, and the
+operator judged that 6 on both metrics risks the agent fragmenting functions
+into shallow helpers, which is the Pocock failure mode. The two metrics are
+therefore kept separate:
 
 | Language | Raw complexity ceiling | CRAP ceiling |
 | --- | --- | --- |
-| python | 10 (radon rank B upper bound) | 30 (Savoia) |
-| typescript | 20 (ESLint documented default) | 30 (Savoia) |
+| python | 8 | 30 |
+| typescript | 8 | 30 |
 
-Bob's 6 is offered as the coached fallback in the thresholds file layer when
-a repository has no code to measure, as the operator directed. Question for
-the stop: keep 6 as a CRAP ceiling, or treat 6 as the raw complexity ceiling
-and keep CRAP at 30.
+- Raw complexity 8 is Bob's upper agent threshold, applied to the functions
+  changed in the diff. A strict ceiling that fails the first PR touching an
+  over-limit function is an intended ratchet.
+- CRAP 30 (Savoia) stays separate so it catches complex code that lacks tests
+  instead of degenerating to a second complexity check.
+- Bob's 6 remains the coached no-code fallback for raw complexity only, in
+  the thresholds file layer, when a repository has no code to measure.
+
+These are the fallbacks the gate layer hard-codes when no `quality-gates.json`
+exists; the thresholds file layer makes that file authoritative.
 
 ## MUTATION
 
@@ -155,9 +160,11 @@ and keep CRAP at 30.
 
 ### Threshold
 
-Stryker documents high 80, low 60, break null. Proposed floor per language:
-60, which is Stryker's documented "low" mark. Python has no native default;
-60 is mirrored from Stryker and maps to `cr-rate --fail-over 40`.
+Stryker documents high 80, low 60, break null. Shipped default floor per
+language: 60, scoped to changed files, which is Stryker's documented "low"
+mark. Python has no native default; 60 is mirrored from Stryker and cosmic-ray
+is configured to fail at the same number through `cr-rate --fail-over 40`.
+Per-repository coaching in the thresholds file layer may raise it.
 
 ## DEPENDENCY_RULES
 
@@ -268,7 +275,7 @@ Rules the validator enforces:
    the installed ESLint version.
 4. Confirm `depcruise --output-type err` returns the violation count on the
    docs-site tree, which is the first dogfood target.
-5. Decide the CRAP ceiling question above before the thresholds file layer.
+5. Confirm the raw complexity 8 / CRAP 30 split holds on the first dogfood run before the thresholds file layer coaches per-repo values.
 
 ## Sources
 
