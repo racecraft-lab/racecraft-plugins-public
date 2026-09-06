@@ -11,6 +11,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from unittest import mock
 
@@ -375,7 +376,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                 with (
                     mock.patch.object(self.runner, "require_source_identity"),
                     mock.patch.object(self.runner, "probe_cli_version", return_value="test-cli"),
-                    mock.patch.object(self.runner, "build_process_env", return_value={}),
+                    mock.patch.object(self.runner, "build_process_env", return_value={"DISABLE_AUTOUPDATER": "1", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1"}),
                     mock.patch.object(self.runner, "capture_process", return_value={"status": "completed_ungraded", "stdout": "synthetic", "stderr": ""}) as capture,
                     mock.patch.object(self.runner, "parse_events", return_value=observed),
                 ):
@@ -392,6 +393,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                 command = capture.call_args.args[1]
                 self.assertEqual(json.loads(command[command.index("--settings") + 1]), policy["settings"])
                 self.assertEqual(manifest["semantic_grade"], "not_performed")
+                self.assertEqual(manifest["claude_startup_environment"], {"DISABLE_AUTOUPDATER": "1", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1", "FORCE_AUTOUPDATE_PLUGINS": None})
 
     def test_claude_stage_change_stops_before_provider_launch(self) -> None:
         original_build = self.runner.build_command
@@ -456,16 +458,243 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
             with (
                 mock.patch.object(self.runner.shutil, "which", return_value=str(cli)),
                 mock.patch.object(self.runner.subprocess, "Popen", return_value=process) as popen,
-                mock.patch.object(self.runner.os, "killpg") as killpg,
+                mock.patch.object(self.runner.os, "killpg", side_effect=[None, None, ProcessLookupError()]) as killpg,
             ):
                 result = self.runner.capture_process(
                     "claude", [str(cli)], b"prompt", evidence, Path(temporary), {}, 1
                 )
         self.assertTrue(popen.call_args.kwargs["start_new_session"])
-        killpg.assert_called_once_with(31415, signal.SIGKILL)
+        self.assertEqual(killpg.call_args_list, [mock.call(31415, 0), mock.call(31415, signal.SIGTERM), mock.call(31415, 0)])
         self.assertEqual(result["status"], "timeout")
+        self.assertIs(result["process_group_cleanup"]["verified_absent"], True)
         self.assertIn("decode_error", result)
         self.assertEqual(result["stdout_sha256"], self.runner.sha256_bytes(b"\xff"))
+
+    def test_normal_capture_checks_group_even_when_leader_exited(self) -> None:
+        for descendant in (False, True):
+            process = mock.Mock(pid=31415, returncode=0)
+            process.communicate.return_value = (b"raw output", b"raw error")
+            process.poll.return_value = 0
+            effects = [*([None] * 6), ProcessLookupError()] if descendant else [ProcessLookupError()]
+            with self.subTest(descendant=descendant), tempfile.TemporaryDirectory() as temporary:
+                cli = Path(temporary) / "claude"
+                cli.write_text("placeholder\n")
+                with (
+                    mock.patch.object(self.runner.shutil, "which", return_value=str(cli)),
+                    mock.patch.object(self.runner.subprocess, "Popen", return_value=process),
+                    mock.patch.object(self.runner.os, "killpg", side_effect=effects) as killpg,
+                    mock.patch.object(self.runner.time, "sleep"),
+                ):
+                    result = self.runner.capture_process("claude", [str(cli)], b"prompt", Path(temporary) / "evidence", Path(temporary), {}, 1)
+            self.assertEqual(result["status"], "unexpected_descendants" if descendant else "completed_ungraded")
+            self.assertEqual(result["capture_status"], "completed_ungraded")
+            self.assertEqual(result["stdout"], "raw output")
+            self.assertEqual(result["stderr"], "raw error")
+            self.assertIs(result["process_group_cleanup"]["verified_absent"], True)
+            self.assertEqual(killpg.call_args_list[0], mock.call(31415, 0))
+
+    def test_normal_group_transient_within_grace_is_recorded_without_termination(self) -> None:
+        with mock.patch.object(self.runner.os, "killpg", side_effect=[None, ProcessLookupError()]), mock.patch.object(self.runner.time, "sleep"):
+            cleanup = self.runner.cleanup_process_group(mock.Mock(pid=31415, returncode=0))
+        self.assertIs(cleanup["initially_present"], True)
+        self.assertIs(cleanup["verified_absent"], True)
+        self.assertEqual(cleanup["signals_sent"], [])
+        self.assertEqual(cleanup["natural_exit_grace_seconds"], 0.2)
+        self.assertGreaterEqual(cleanup["duration_seconds"], 0)
+
+    def test_cleanup_escalates_term_ignoring_descendant_and_verifies_absence(self) -> None:
+        process = mock.Mock(pid=31415, returncode=0)
+        process.poll.return_value = 0
+        alive = True
+
+        def signal_group(pgid, sent):
+            nonlocal alive
+            self.assertEqual(pgid, 31415)
+            if sent == signal.SIGKILL:
+                alive = False
+            elif sent == 0 and not alive:
+                raise ProcessLookupError()
+
+        with mock.patch.object(self.runner.os, "killpg", side_effect=signal_group) as killpg, mock.patch.object(self.runner.time, "sleep"):
+            cleanup = self.runner.cleanup_process_group(process)
+        self.assertIs(cleanup["verified_absent"], True)
+        self.assertEqual(cleanup["signals_sent"], ["SIGTERM", "SIGKILL"])
+        self.assertIn(mock.call(31415, signal.SIGKILL), killpg.call_args_list)
+
+    @unittest.skipUnless(os.name == "posix", "POSIX process-group witness")
+    def test_real_exited_leader_leaves_term_ignoring_child_that_is_drained(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            cli = Path(temporary) / "claude"
+            cli.write_text(
+                f"#!{sys.executable}\n"
+                "import subprocess, sys\n"
+                "child = subprocess.Popen([sys.executable, '-c', "
+                "\"import signal,time; signal.signal(signal.SIGTERM, signal.SIG_IGN); print('ready', flush=True); time.sleep(30)\"], "
+                "stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)\n"
+                "assert child.stdout.readline() == b'ready\\n'\n"
+                "print('child=' + str(child.pid), flush=True)\n",
+                encoding="utf-8",
+            )
+            cli.chmod(0o755)
+            with mock.patch.object(self.runner.shutil, "which", return_value=str(cli)):
+                result = self.runner.capture_process("claude", [str(cli)], b"", Path(temporary) / "evidence", Path(temporary), os.environ.copy(), 5)
+            cleanup = result["process_group_cleanup"]
+            try:
+                self.assertEqual(result["status"], "unexpected_descendants")
+                self.assertEqual(result["exit_code_before_cleanup"], 0)
+                self.assertEqual(cleanup["signals_sent"], ["SIGTERM", "SIGKILL"])
+                self.assertIs(cleanup["verified_absent"], True)
+                self.assertTrue(result["stdout"].startswith("child="))
+                with self.assertRaises(ProcessLookupError):
+                    os.killpg(cleanup["pgid"], 0)
+            finally:
+                if not cleanup["verified_absent"]:
+                    try:
+                        os.killpg(cleanup["pgid"], signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+
+    def test_cleanup_cannot_convert_permission_error_or_surviving_group_to_success(self) -> None:
+        for failure in (PermissionError("denied"), None):
+            with self.subTest(failure=failure), mock.patch.object(self.runner.os, "killpg", side_effect=failure), mock.patch.object(self.runner.time, "sleep"):
+                cleanup = self.runner.cleanup_process_group(mock.Mock(pid=31415, returncode=0))
+                self.assertIs(cleanup["verified_absent"], False)
+                self.assertTrue(cleanup["error"])
+
+    def test_cleanup_rejects_invalid_and_self_group_identities_without_signaling(self) -> None:
+        for pid in (0, 1, -1, None, True, os.getpid(), os.getpgrp()):
+            with self.subTest(pid=pid), mock.patch.object(self.runner.os, "killpg") as killpg:
+                cleanup = self.runner.cleanup_process_group(mock.Mock(pid=pid))
+                self.assertIs(cleanup["verified_absent"], False)
+                self.assertIn("identity", cleanup["error"])
+                killpg.assert_not_called()
+
+    def test_only_post_kill_permission_probe_can_settle_with_later_explicit_absence(self) -> None:
+        for failure_point in ("initial", "term_send", "term_probe", "kill_send", "persistent", "transient"):
+            phase = "initial"
+            post_kill_probes = 0
+
+            def signal_group(_pgid, sent):
+                nonlocal phase, post_kill_probes
+                if sent == signal.SIGTERM:
+                    if failure_point == "term_send":
+                        raise PermissionError("TERM denied")
+                    phase = "term_probe"
+                elif sent == signal.SIGKILL:
+                    if failure_point == "kill_send":
+                        raise PermissionError("KILL denied")
+                    phase = "kill_probe"
+                elif phase == "kill_probe":
+                    post_kill_probes += 1
+                    if failure_point == "persistent" or post_kill_probes == 1:
+                        raise PermissionError("post-KILL probe unresolved")
+                    raise ProcessLookupError()
+                elif failure_point == phase:
+                    raise PermissionError("probe denied")
+
+            with self.subTest(failure_point=failure_point), mock.patch.object(self.runner.os, "killpg", side_effect=signal_group), mock.patch.object(self.runner.time, "sleep"):
+                cleanup = self.runner.cleanup_process_group(mock.Mock(pid=31415, returncode=0), natural_exit_grace=False)
+            self.assertIs(cleanup["verified_absent"], failure_point == "transient")
+            if failure_point == "transient":
+                self.assertEqual(post_kill_probes, 2)
+                self.assertEqual(len(cleanup["post_kill_probe_errors"]), 1)
+                self.assertIsNone(cleanup["error"])
+            elif failure_point == "persistent":
+                self.assertEqual(post_kill_probes, 20)
+                self.assertEqual(len(cleanup["post_kill_probe_errors"]), 20)
+                self.assertTrue(cleanup["error"])
+            else:
+                self.assertEqual(cleanup["post_kill_probe_errors"], [])
+                self.assertTrue(cleanup["error"])
+
+    @unittest.skipUnless(os.name == "posix", "POSIX supervisor signal witness")
+    def test_real_supervisor_signals_preserve_raw_evidence_and_restore_handlers(self) -> None:
+        for sent in (signal.SIGTERM, signal.SIGHUP):
+            with self.subTest(signal=sent.name), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                ready = root / "ready.json"
+                result_path = root / "result.json"
+                cli = root / "claude"
+                cli.write_text(
+                    f"#!{sys.executable}\n"
+                    "import json,os,signal,time\nfrom pathlib import Path\n"
+                    "signal.signal(signal.SIGTERM, signal.SIG_IGN)\n"
+                    "print('before supervisor signal', flush=True)\n"
+                    f"ready=Path({str(ready)!r})\n"
+                    "ready.with_suffix('.tmp').write_text(json.dumps({'pid':os.getpid(),'pgid':os.getpgrp()}))\n"
+                    "ready.with_suffix('.tmp').replace(ready)\n"
+                    "time.sleep(30)\n",
+                    encoding="utf-8",
+                )
+                cli.chmod(0o755)
+                supervisor = root / "supervisor.py"
+                supervisor.write_text(
+                    "import importlib.util,json,os,signal,sys\nfrom pathlib import Path\n"
+                    f"spec=importlib.util.spec_from_file_location('signal_witness_collector', {str(RUNNER_PATH)!r})\n"
+                    "runner=importlib.util.module_from_spec(spec)\nsys.modules[spec.name]=runner\nspec.loader.exec_module(runner)\n"
+                    f"runner.shutil.which=lambda host:{str(cli)!r}\n"
+                    "before={s:signal.getsignal(s) for s in (signal.SIGTERM,signal.SIGHUP)}\n"
+                    f"result=runner.capture_process('claude',[{str(cli)!r}],b'',Path({str(root / 'evidence')!r}),Path({str(root)!r}),os.environ.copy(),30)\n"
+                    "result['handlers_restored']=all(signal.getsignal(s)==h for s,h in before.items())\n"
+                    f"Path({str(result_path)!r}).write_text(json.dumps(result))\n",
+                    encoding="utf-8",
+                )
+                process = subprocess.Popen([sys.executable, str(supervisor)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
+                actor_group = None
+                try:
+                    deadline = time.monotonic() + 5
+                    while not ready.is_file() and process.poll() is None and time.monotonic() < deadline:
+                        time.sleep(0.01)
+                    self.assertTrue(ready.is_file(), "local actor did not become ready")
+                    actor_group = json.loads(ready.read_text())["pgid"]
+                    os.kill(process.pid, sent)
+                    stdout, stderr = process.communicate(timeout=8)
+                    self.assertEqual(process.returncode, 0, (stdout, stderr))
+                    result = json.loads(result_path.read_text())
+                    self.assertEqual(result["interruption_signal"], sent.name)
+                    self.assertEqual(result["status"], "interrupted", json.dumps(result, sort_keys=True))
+                    self.assertIs(result["handlers_restored"], True)
+                    self.assertIs(result["process_group_cleanup"]["verified_absent"], True)
+                    self.assertEqual(result["process_group_cleanup"]["pgid"], actor_group)
+                    self.assertIn(b"before supervisor signal", (root / "evidence/stdout.bin").read_bytes())
+                    with self.assertRaises(ProcessLookupError):
+                        os.killpg(actor_group, 0)
+                finally:
+                    for owned_group in (actor_group, process.pid):
+                        if isinstance(owned_group, int) and owned_group > 1 and owned_group != os.getpgrp():
+                            try:
+                                os.killpg(owned_group, signal.SIGKILL)
+                            except ProcessLookupError:
+                                pass
+                    process.communicate(timeout=5)
+
+    def test_capture_signal_handler_installation_failure_stops_before_launch(self) -> None:
+        with mock.patch.object(self.runner.signal, "signal", side_effect=ValueError("not the main thread")), mock.patch.object(self.runner.subprocess, "Popen") as popen:
+            result = self.runner.capture_process("claude", ["/unused"], b"", Path("/unused"), Path("/unused"), {}, 1)
+        self.assertEqual(result["status"], "launch_error")
+        self.assertIn("scoped capture signal handlers", result["error"])
+        popen.assert_not_called()
+
+    def test_interruption_and_cleanup_failure_retain_raw_capture_evidence(self) -> None:
+        for interrupted, cleanup_error in ((True, False), (False, True)):
+            process = mock.Mock(pid=31415, returncode=0)
+            process.communicate.side_effect = [KeyboardInterrupt(), (b"partial", b"stderr")] if interrupted else [(b"partial", b"stderr")]
+            effects = [None, None, ProcessLookupError()] if interrupted else PermissionError("denied")
+            with self.subTest(interrupted=interrupted), tempfile.TemporaryDirectory() as temporary:
+                cli = Path(temporary) / "claude"
+                cli.write_text("placeholder\n")
+                evidence = Path(temporary) / "evidence"
+                with (
+                    mock.patch.object(self.runner.shutil, "which", return_value=str(cli)),
+                    mock.patch.object(self.runner.subprocess, "Popen", return_value=process),
+                    mock.patch.object(self.runner.os, "killpg", side_effect=effects),
+                ):
+                    result = self.runner.capture_process("claude", [str(cli)], b"prompt", evidence, Path(temporary), {}, 1)
+                self.assertEqual((evidence / "stdout.bin").read_bytes(), b"partial")
+            self.assertEqual(result["status"], "interrupted" if interrupted else "process_cleanup_error")
+            self.assertIs(result["process_group_cleanup"]["verified_absent"], not cleanup_error)
+            if cleanup_error:
+                self.assertIn("denied", result["termination_error"])
 
     def test_live_collection_holds_without_posix_process_group_termination(self) -> None:
         self.runner.require_execution_platform("posix")
@@ -597,12 +826,24 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
 
     def test_process_environment_preserves_home_and_rejects_api_key_override(self) -> None:
         incoming = {"HOME": "/saved/home", "CODEX_HOME": "/saved/codex", "PATH": "/bin"}
-        built = self.runner.build_process_env(incoming, Path("/plugin"))
+        built = self.runner.build_process_env(incoming, Path("/plugin"), host="claude")
         self.assertEqual(built["HOME"], incoming["HOME"])
         self.assertEqual(built["CODEX_HOME"], incoming["CODEX_HOME"])
         self.assertNotIn("auth.json", RUNNER_PATH.read_text(encoding="utf-8"))
         with self.assertRaises(self.runner.EvidenceError):
-            self.runner.build_process_env({**incoming, "OPENAI_API_KEY": "present"}, Path("/plugin"))
+            self.runner.build_process_env({**incoming, "OPENAI_API_KEY": "present"}, Path("/plugin"), host="claude")
+
+    def test_startup_traffic_controls_are_claude_only_and_do_not_mutate_parent(self) -> None:
+        incoming = {"HOME": "/saved/home", "DISABLE_AUTOUPDATER": "0", "FORCE_AUTOUPDATE_PLUGINS": "1", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "0"}
+        original = dict(incoming)
+        claude = self.runner.build_process_env(incoming, Path("/plugin"), host="claude")
+        self.assertEqual(claude["DISABLE_AUTOUPDATER"], "1")
+        self.assertEqual(claude["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"], "1")
+        self.assertNotIn("FORCE_AUTOUPDATE_PLUGINS", claude)
+        self.assertFalse(any("AUTOINSTALL" in key for key in claude))
+        codex = self.runner.build_process_env(incoming, Path("/plugin"), host="codex")
+        self.assertEqual({key: codex[key] for key in incoming}, incoming)
+        self.assertEqual(incoming, original)
 
     def test_cli_version_probe_fails_loud_on_missing_version(self) -> None:
         with mock.patch.object(self.runner.shutil, "which", return_value=sys.executable):
