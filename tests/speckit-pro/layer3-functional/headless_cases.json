@@ -1554,6 +1554,326 @@
         "command_execution"
       ],
       "launch_policy": "read_only"
+    },
+    {
+      "host": "claude",
+      "skill": "speckit-scaffold-spec",
+      "invocation": "/speckit-pro:speckit-scaffold-spec",
+      "eval_file": "evals/speckit-scaffold-spec-evals.json",
+      "eval_id": 1,
+      "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
+      "fixture_note": "Use this frozen project as local context for the explanatory request.",
+      "allowed_tools": [
+        "Skill",
+        "Read",
+        "Glob",
+        "Grep"
+      ],
+      "required_tools": [
+        "Skill",
+        "Read"
+      ],
+      "launch_policy": "restricted_read_only"
+    },
+    {
+      "host": "claude",
+      "skill": "speckit-scaffold-spec",
+      "invocation": "/speckit-pro:speckit-scaffold-spec",
+      "eval_file": "evals/speckit-scaffold-spec-evals.json",
+      "eval_id": 2,
+      "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
+      "fixture_note": "Use this frozen project as local context for the explanatory request.",
+      "allowed_tools": [
+        "Skill",
+        "Read",
+        "Glob",
+        "Grep"
+      ],
+      "required_tools": [
+        "Skill",
+        "Read"
+      ],
+      "launch_policy": "restricted_read_only"
+    },
+    {
+      "host": "claude",
+      "skill": "speckit-upgrade",
+      "invocation": "/speckit-pro:speckit-upgrade",
+      "eval_file": "evals/speckit-upgrade-evals.json",
+      "eval_id": 1,
+      "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
+      "fixture_note": "Use this frozen project as local context for the explanatory request.",
+      "allowed_tools": [
+        "Skill",
+        "Read",
+        "Glob",
+        "Grep"
+      ],
+      "required_tools": [
+        "Skill",
+        "Read"
+      ],
+      "launch_policy": "restricted_read_only"
+    },
+    {
+      "host": "codex",
+      "skill": "speckit-resolve-pr",
+      "invocation": "$speckit-resolve-pr",
+      "eval_file": "codex-evals/speckit-resolve-pr-evals.json",
+      "eval_id": 2,
+      "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
+      "fixture_note": "Use this frozen project as local context for the explanatory request.",
+      "required_tools": [
+        "command_execution"
+      ],
+      "launch_policy": "read_only"
+    },
+    {
+      "host": "codex",
+      "skill": "speckit-resolve-pr",
+      "invocation": "$speckit-resolve-pr",
+      "eval_file": "codex-evals/speckit-resolve-pr-evals.json",
+      "eval_id": 3,
+      "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
+      "fixture_note": "Use this frozen project as local context for the explanatory request.",
+      "required_tools": [
+        "command_execution"
+      ],
+      "launch_policy": "read_only"
+    },
+    {
+      "host": "codex",
+      "skill": "speckit-resolve-pr",
+      "invocation": "$speckit-resolve-pr",
+      "eval_file": "codex-evals/speckit-resolve-pr-evals.json",
+      "eval_id": 4,
+      "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
+      "fixture_note": "Use this frozen project as local context for the explanatory request.",
+      "required_tools": [
+        "command_execution"
+      ],
+      "launch_policy": "read_only"
+    },
+    {
+      "host": "codex",
+      "skill": "speckit-resolve-pr",
+      "invocation": "$speckit-resolve-pr",
+      "eval_file": "codex-evals/speckit-resolve-pr-evals.json",
+      "eval_id": 5,
+      "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
+      "fixture_note": "Use this frozen project as local context for the explanatory request.",
+      "required_tools": [
+        "command_execution"
+      ],
+      "launch_policy": "read_only"
+    },
+    {
+      "host": "codex",
+      "skill": "speckit-resolve-pr",
+      "invocation": "$speckit-resolve-pr",
+      "eval_file": "codex-evals/speckit-resolve-pr-evals.json",
+      "eval_id": 6,
+      "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
+      "fixture_note": "Use this frozen project as local context for the explanatory request.",
+      "required_tools": [
+        "command_execution"
+      ],
+      "launch_policy": "read_only"
+    },
+    {
+      "host": "codex",
+      "skill": "speckit-scaffold-spec",
+      "invocation": "$speckit-scaffold-spec",
+      "eval_file": "codex-evals/speckit-scaffold-spec-evals.json",
+      "eval_id": 2,
+      "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
+      "fixture_note": "Use this frozen project as local context for the explanatory request.",
+      "required_tools": [
+        "command_execution"
+      ],
+      "launch_policy": "read_only"
+    },
+    {
+      "host": "codex",
+      "skill": "speckit-scaffold-spec",
+      "invocation": "$speckit-scaffold-spec",
+      "eval_file": "codex-evals/speckit-scaffold-spec-evals.json",
+      "eval_id": 3,
+      "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
+      "fixture_note": "Use this frozen project as local context for the explanatory request.",
+      "required_tools": [
+        "command_execution"
+      ],
+      "launch_policy": "read_only"
+    },
+    {
+      "host": "codex",
+      "skill": "speckit-scaffold-spec",
+      "invocation": "$speckit-scaffold-spec",
+      "eval_file": "codex-evals/speckit-scaffold-spec-evals.json",
+      "eval_id": 4,
+      "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
+      "fixture_note": "Use this frozen project as local context for the explanatory request.",
+      "required_tools": [
+        "command_execution"
+      ],
+      "launch_policy": "read_only"
+    },
+    {
+      "host": "codex",
+      "skill": "speckit-scaffold-spec",
+      "invocation": "$speckit-scaffold-spec",
+      "eval_file": "codex-evals/speckit-scaffold-spec-evals.json",
+      "eval_id": 5,
+      "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
+      "fixture_note": "Use this frozen project as local context for the explanatory request.",
+      "required_tools": [
+        "command_execution"
+      ],
+      "launch_policy": "read_only"
+    },
+    {
+      "host": "codex",
+      "skill": "speckit-scaffold-spec",
+      "invocation": "$speckit-scaffold-spec",
+      "eval_file": "codex-evals/speckit-scaffold-spec-evals.json",
+      "eval_id": 6,
+      "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
+      "fixture_note": "Use this frozen project as local context for the explanatory request.",
+      "required_tools": [
+        "command_execution"
+      ],
+      "launch_policy": "read_only"
+    },
+    {
+      "host": "codex",
+      "skill": "speckit-scaffold-spec",
+      "invocation": "$speckit-scaffold-spec",
+      "eval_file": "codex-evals/speckit-scaffold-spec-evals.json",
+      "eval_id": 8,
+      "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
+      "fixture_note": "Use this frozen project as local context for the explanatory request.",
+      "required_tools": [
+        "command_execution"
+      ],
+      "launch_policy": "read_only"
+    },
+    {
+      "host": "codex",
+      "skill": "speckit-scaffold-spec",
+      "invocation": "$speckit-scaffold-spec",
+      "eval_file": "codex-evals/speckit-scaffold-spec-evals.json",
+      "eval_id": 9,
+      "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
+      "fixture_note": "Use this frozen project as local context for the explanatory request.",
+      "required_tools": [
+        "command_execution"
+      ],
+      "launch_policy": "read_only"
+    },
+    {
+      "host": "codex",
+      "skill": "speckit-scaffold-spec",
+      "invocation": "$speckit-scaffold-spec",
+      "eval_file": "codex-evals/speckit-scaffold-spec-evals.json",
+      "eval_id": 10,
+      "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
+      "fixture_note": "Use this frozen project as local context for the explanatory request.",
+      "required_tools": [
+        "command_execution"
+      ],
+      "launch_policy": "read_only"
+    },
+    {
+      "host": "codex",
+      "skill": "speckit-status",
+      "invocation": "$speckit-status",
+      "eval_file": "codex-evals/speckit-status-evals.json",
+      "eval_id": 2,
+      "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/status/scenario-roots/spec-specific",
+      "fixture_note": "Use this frozen scenario as the complete project input for the read-only status request.",
+      "required_tools": [
+        "command_execution"
+      ],
+      "launch_policy": "read_only"
+    },
+    {
+      "host": "codex",
+      "skill": "speckit-status",
+      "invocation": "$speckit-status",
+      "eval_file": "codex-evals/speckit-status-evals.json",
+      "eval_id": 3,
+      "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/status/scenario-roots/workflow-without-roadmap",
+      "fixture_note": "Use this frozen scenario as the complete project input for the read-only status request.",
+      "required_tools": [
+        "command_execution"
+      ],
+      "launch_policy": "read_only"
+    },
+    {
+      "host": "codex",
+      "skill": "speckit-status",
+      "invocation": "$speckit-status",
+      "eval_file": "codex-evals/speckit-status-evals.json",
+      "eval_id": 5,
+      "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/status/scenario-roots/multiple-roadmaps",
+      "fixture_note": "Use this frozen scenario as the complete project input for the read-only status request.",
+      "required_tools": [
+        "command_execution"
+      ],
+      "launch_policy": "read_only"
+    },
+    {
+      "host": "codex",
+      "skill": "speckit-status",
+      "invocation": "$speckit-status",
+      "eval_file": "codex-evals/speckit-status-evals.json",
+      "eval_id": 6,
+      "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/status/scenario-roots/all-blocked",
+      "fixture_note": "Use this frozen scenario as the complete project input for the read-only status request.",
+      "required_tools": [
+        "command_execution"
+      ],
+      "launch_policy": "read_only"
+    },
+    {
+      "host": "codex",
+      "skill": "speckit-status",
+      "invocation": "$speckit-status",
+      "eval_file": "codex-evals/speckit-status-evals.json",
+      "eval_id": 7,
+      "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/status/scenario-roots/empty-project",
+      "fixture_note": "Use this frozen scenario as the complete project input for the read-only status request.",
+      "required_tools": [
+        "command_execution"
+      ],
+      "launch_policy": "read_only"
+    },
+    {
+      "host": "codex",
+      "skill": "speckit-upgrade",
+      "invocation": "$speckit-upgrade",
+      "eval_file": "codex-evals/speckit-upgrade-evals.json",
+      "eval_id": 4,
+      "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-empty-project",
+      "fixture_note": "Use this frozen empty project as the complete project input for the read-only request.",
+      "required_tools": [
+        "command_execution"
+      ],
+      "launch_policy": "read_only"
+    },
+    {
+      "host": "codex",
+      "skill": "speckit-upgrade",
+      "invocation": "$speckit-upgrade",
+      "eval_file": "codex-evals/speckit-upgrade-evals.json",
+      "eval_id": 5,
+      "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
+      "fixture_note": "Use this frozen project as local context for the explanatory request.",
+      "required_tools": [
+        "command_execution"
+      ],
+      "launch_policy": "read_only"
     }
   ]
 }
