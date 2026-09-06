@@ -22,8 +22,12 @@ import uuid
 LAYER_ROOT = Path(__file__).resolve().parent
 if str(LAYER_ROOT) not in sys.path:
     sys.path.insert(0, str(LAYER_ROOT))
+LAYER2_ROOT = LAYER_ROOT.parent / "layer2-trigger"
+if str(LAYER2_ROOT) not in sys.path:
+    sys.path.insert(0, str(LAYER2_ROOT))
 
 from preview_helpers import read_eval_data
+import run_codex_evals as codex_trigger_evals
 
 
 CATALOG_PATH = LAYER_ROOT / "headless_cases.json"
@@ -50,6 +54,8 @@ class Stage:
     plugin_root: Path
     runtime_root: Path
     workspace: Path
+    target_skill: Path
+    mcp_config: Path
     plugin_digest: str
     fixture_digest: str
     skill_digest: str
@@ -229,6 +235,10 @@ def stage_case(root: Path, case: Mapping[str, Any], stage_root: Path) -> Stage:
         ignore=shutil.ignore_patterns("PROVENANCE.json"),
     )
     runtime_root = plugin_root
+    staged_skill = plugin_root / "skills" / skill / "SKILL.md"
+    target_skill = staged_skill
+    if not staged_skill.is_file():
+        raise EvidenceError(f"rendered skill is missing: {staged_skill}")
 
     if host == "codex":
         runtime_root = workspace / "speckit-pro"
@@ -239,6 +249,9 @@ def stage_case(root: Path, case: Mapping[str, Any], stage_root: Path) -> Stage:
             raise EvidenceError(f"rendered Codex skills are missing: {source_skills}")
         target_skills.parent.mkdir(parents=True, exist_ok=True)
         shutil.copytree(source_skills, target_skills)
+        target_skill = target_skills / skill / "SKILL.md"
+        if not target_skill.is_file() or sha256_file(target_skill) != sha256_file(staged_skill):
+            raise EvidenceError("staged Codex target skill differs from rendered source")
         initialized = subprocess.run(
             ["git", "init", "--quiet", str(workspace)],
             stdout=subprocess.PIPE,
@@ -248,18 +261,47 @@ def stage_case(root: Path, case: Mapping[str, Any], stage_root: Path) -> Stage:
         if initialized.returncode != 0:
             raise EvidenceError("unable to initialize disposable Codex fixture repository")
 
-    staged_skill = plugin_root / "skills" / skill / "SKILL.md"
-    if not staged_skill.is_file():
-        raise EvidenceError(f"rendered skill is missing: {staged_skill}")
+    mcp_config = stage_root / "empty-mcp.json"
+    mcp_config.write_text(json.dumps({"mcpServers": {}}, indent=2) + "\n", encoding="utf-8")
     return Stage(
         root=stage_root,
         plugin_root=plugin_root,
         runtime_root=runtime_root,
         workspace=workspace,
+        target_skill=target_skill,
+        mcp_config=mcp_config,
         plugin_digest=tree_digest(plugin_root),
         fixture_digest=tree_digest(fixture_path(root, case)),
         skill_digest=sha256_file(staged_skill),
     )
+
+
+def enumerate_non_target_skills(stage: Stage) -> tuple[Path, ...]:
+    """Extend Layer 2's host deny list with this stage's sibling skills."""
+    try:
+        target = stage.target_skill.resolve(strict=True)
+        discovered = set(codex_trigger_evals.enumerate_non_target_skills(target))
+        discovered.update(codex_trigger_evals._canonical_skill_files(stage.workspace / ".agents" / "skills"))
+    except (OSError, ValueError) as error:
+        raise EvidenceError(f"could not inspect Codex skill roots: {error}") from error
+    discovered.discard(target)
+    return tuple(sorted(discovered, key=str))
+
+
+def skill_isolation_args(disabled_skills: tuple[Path, ...]) -> list[str]:
+    """Build process-local Codex isolation overrides without saved-config mutation."""
+    entries = ",".join(
+        f"{{path={json.dumps(str(path))},enabled=false}}"
+        for path in disabled_skills
+    )
+    return [
+        "--disable", "plugins",
+        "--disable", "hooks",
+        "--disable", "apps",
+        "--config", "skills.bundled.enabled=false",
+        "--config", f"skills.config=[{entries}]",
+        "--config", "mcp_servers={}",
+    ]
 
 
 def build_command(
@@ -268,6 +310,7 @@ def build_command(
     cli: Path,
     model: str,
     reasoning: str | None,
+    disabled_skills: tuple[Path, ...] | None = None,
 ) -> list[str]:
     if not cli.is_absolute() or not model.strip():
         raise EvidenceError("an absolute CLI path and explicit model are required")
@@ -291,6 +334,12 @@ def build_command(
             "none",
             "--tools",
             tools,
+            "--strict-mcp-config",
+            "--mcp-config",
+            str(stage.mcp_config),
+            "--settings",
+            '{"disableClaudeAiConnectors":true}',
+            "--no-chrome",
             "--add-dir",
             str(stage.plugin_root),
             "--plugin-dir",
@@ -299,13 +348,16 @@ def build_command(
     if case["host"] == "codex":
         if not reasoning:
             raise EvidenceError("Codex requires an explicit reasoning effort")
-        return [
+        if disabled_skills is None:
+            disabled_skills = enumerate_non_target_skills(stage)
+        command = [
             str(cli),
             "exec",
             "--json",
             "--ephemeral",
             "--sandbox",
             "read-only",
+            "--ignore-user-config",
             "--model",
             model,
             "--config",
@@ -319,8 +371,10 @@ def build_command(
             "}",
             "--cd",
             str(stage.workspace),
-            "-",
         ]
+        command.extend(skill_isolation_args(disabled_skills))
+        command.append("-")
+        return command
     raise EvidenceError(f"unsupported host: {case['host']}")
 
 
@@ -334,9 +388,22 @@ def build_process_env(incoming: Mapping[str, str], plugin_root: Path) -> dict[st
     return result
 
 
-def probe_cli_version(cli: Path) -> str:
+def probe_cli_version(host: str, cli: Path) -> str:
+    if host == "claude":
+        executable = shutil.which("claude")
+    elif host == "codex":
+        executable = shutil.which("codex")
+    else:
+        raise EvidenceError(f"unsupported host: {host}")
+    if executable is None:
+        raise EvidenceError(f"{host} CLI disappeared before version probe")
+    try:
+        if Path(executable).resolve(strict=True) != cli.resolve(strict=True):
+            raise EvidenceError(f"{host} CLI changed before version probe")
+    except OSError as error:
+        raise EvidenceError(f"could not resolve {host} CLI before version probe: {error}") from error
     completed = subprocess.run(
-        [str(cli), "--version"],
+        [executable, "--version"],
         stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -363,6 +430,7 @@ def require_execution_platform(platform_name: str) -> None:
 
 
 def capture_process(
+    host: str,
     command: list[str],
     stdin_bytes: bytes,
     evidence_dir: Path,
@@ -373,9 +441,40 @@ def capture_process(
     evidence_dir.mkdir(parents=True, exist_ok=True)
     started_at = utc_now()
     started = time.monotonic()
+    if host == "claude":
+        executable = shutil.which("claude")
+    elif host == "codex":
+        executable = shutil.which("codex")
+    else:
+        return {
+            "status": "launch_error",
+            "error": f"unsupported host: {host}",
+            "started_at": started_at,
+            "finished_at": utc_now(),
+            "duration_seconds": time.monotonic() - started,
+        }
+    if executable is None:
+        return {
+            "status": "launch_error",
+            "error": f"{host} CLI disappeared before execution",
+            "started_at": started_at,
+            "finished_at": utc_now(),
+            "duration_seconds": time.monotonic() - started,
+        }
+    try:
+        if not command or Path(executable).resolve(strict=True) != Path(command[0]).resolve(strict=True):
+            raise OSError(f"{host} CLI changed before execution")
+    except OSError as error:
+        return {
+            "status": "launch_error",
+            "error": str(error),
+            "started_at": started_at,
+            "finished_at": utc_now(),
+            "duration_seconds": time.monotonic() - started,
+        }
     try:
         process = subprocess.Popen(
-            command,
+            [executable, *command[1:]],
             cwd=cwd,
             env=dict(env),
             stdin=subprocess.PIPE,
@@ -542,7 +641,9 @@ def require_provider_evidence(case: Mapping[str, Any], parsed: Mapping[str, Any]
     if case["host"] == "claude":
         available_raw = parsed.get("available_tools")
         available = {str(item) for item in available_raw} if isinstance(available_raw, list) else set()
-        missing = sorted(required - available)
+        allowed = {str(item) for item in case.get("allowed_tools", [])}
+        missing = sorted(allowed - available)
+        unexpected = sorted(available - allowed)
         plugins = parsed.get("plugins")
         plugin_names = {
             str(item.get("name")) if isinstance(item, dict) else str(item)
@@ -550,8 +651,13 @@ def require_provider_evidence(case: Mapping[str, Any], parsed: Mapping[str, Any]
         } if isinstance(plugins, list) else set()
         if "speckit-pro" not in plugin_names:
             raise EvidenceError("Claude system/init did not prove the speckit-pro plugin loaded")
-        if missing:
-            raise EvidenceError("Claude system/init is missing required tools: " + ", ".join(missing))
+        if missing or unexpected:
+            details = []
+            if missing:
+                details.append("missing tools: " + ", ".join(missing))
+            if unexpected:
+                details.append("unexpected tools: " + ", ".join(unexpected))
+            raise EvidenceError("Claude system/init tool catalog differs from the allowed set: " + "; ".join(details))
         if parsed.get("resolved_model") is None:
             raise EvidenceError("Claude system/init did not report a resolved model")
         expected_skill = str(case["invocation"]).removeprefix("/")
@@ -638,7 +744,7 @@ def main(argv: list[str]) -> int:
         require_source_identity(root, args.source_commit, args.source_tree, require_clean=True)
         if not args.cli.is_absolute() or not args.cli.is_file() or not os.access(args.cli, os.X_OK):
             raise EvidenceError("CLI must be an existing executable absolute path")
-        manifest["cli_version"] = probe_cli_version(args.cli)
+        manifest["cli_version"] = probe_cli_version(args.host, args.cli)
         catalog = load_case_catalog(root)
         case = find_case(catalog, args.host, args.skill, args.eval_id)
         actor_input = build_actor_input(root, case)
@@ -653,6 +759,11 @@ def main(argv: list[str]) -> int:
         )
         stage_root = Path(tempfile.mkdtemp(prefix=f"speckit-l3-{opaque_id}-"))
         stage = stage_case(root, case, stage_root)
+        disabled_skills = (
+            enumerate_non_target_skills(stage)
+            if args.host == "codex"
+            else None
+        )
         before = snapshot_tree(stage.workspace)
         before_path = case_evidence / "workspace-before.json"
         before_path.write_text(json.dumps(before, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -671,7 +782,14 @@ def main(argv: list[str]) -> int:
             }
         )
         try:
-            command = build_command(case, stage, args.cli, args.model, args.reasoning)
+            command = build_command(
+                case,
+                stage,
+                args.cli,
+                args.model,
+                args.reasoning,
+                disabled_skills,
+            )
         except HeldLaunch as error:
             manifest.update({"status": "held", "hold_reason": str(error)})
             exit_code = 4
@@ -688,8 +806,11 @@ def main(argv: list[str]) -> int:
                     exit_code = 4
                     process_result = None
                 else:
+                    if args.host == "codex" and enumerate_non_target_skills(stage) != disabled_skills:
+                        raise EvidenceError("Codex skill roots changed after command assembly")
                     env = build_process_env(os.environ, stage.runtime_root)
                     process_result = capture_process(
+                        args.host,
                         command,
                         render_actor_prompt(actor_input),
                         case_evidence,

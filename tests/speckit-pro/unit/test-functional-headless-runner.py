@@ -85,6 +85,15 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
             self.assertTrue((stage.workspace / ".agents" / "skills" / "speckit-coach" / "SKILL.md").is_file())
             self.assertTrue((stage.workspace / "speckit-pro" / "speckit_pro_runner" / "__main__.py").is_file())
             self.assertEqual(stage.runtime_root, stage.workspace / "speckit-pro")
+            self.assertEqual(
+                stage.target_skill,
+                stage.workspace / ".agents" / "skills" / "speckit-autopilot" / "SKILL.md",
+            )
+            self.assertEqual(
+                self.runner.sha256_file(stage.target_skill),
+                self.runner.sha256_file(stage.plugin_root / "skills" / "speckit-autopilot" / "SKILL.md"),
+            )
+            self.assertEqual(json.loads(stage.mcp_config.read_text(encoding="utf-8")), {"mcpServers": {}})
             self.assertTrue((stage.workspace / "tasks.md").is_file())
             self.assertFalse((stage.workspace / "PROVENANCE.json").exists())
 
@@ -119,7 +128,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
             self.assertFalse((stage.workspace / "PROVENANCE.json").exists())
             self.assertTrue((stage.workspace / ".specify" / "extensions.yml").is_file())
 
-    def test_codex_command_is_ephemeral_read_only_and_keeps_user_configuration(self) -> None:
+    def test_codex_command_is_ephemeral_read_only_and_isolates_the_staged_target(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             case = self.case("codex", "speckit-autopilot", 2)
             stage = self.runner.stage_case(REPO_ROOT, case, Path(temporary))
@@ -131,9 +140,58 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
         self.assertIn("model-id", command)
         self.assertIn('shell_environment_policy.inherit="none"', command)
         self.assertTrue(any(item.startswith("shell_environment_policy.set=") for item in command))
-        self.assertNotIn("--ignore-user-config", command)
+        self.assertIn("--ignore-user-config", command)
         self.assertNotIn("--ignore-rules", command)
+        self.assertEqual(command.count("--disable"), 3)
+        self.assertEqual(
+            [command[index + 1] for index, item in enumerate(command) if item == "--disable"],
+            ["plugins", "hooks", "apps"],
+        )
+        self.assertIn("skills.bundled.enabled=false", command)
+        self.assertIn("mcp_servers={}", command)
+        skill_config = next(item for item in command if item.startswith("skills.config=["))
+        self.assertNotIn(str(stage.target_skill), skill_config)
+        self.assertIn(str(stage.workspace / ".agents" / "skills" / "speckit-coach" / "SKILL.md"), skill_config)
         self.assertNotIn("dangerously", joined)
+
+    def test_codex_deny_list_keeps_only_the_runtime_target_enabled(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            host_root = root / "host-skills"
+            host_skill = host_root / "host-only" / "SKILL.md"
+            host_skill.parent.mkdir(parents=True)
+            host_skill.write_text("---\nname: host-only\n---\n", encoding="utf-8")
+            stage = self.runner.stage_case(
+                REPO_ROOT,
+                self.case("codex", "speckit-autopilot", 2),
+                root / "stage",
+            )
+            with mock.patch.object(
+                self.runner.codex_trigger_evals,
+                "skill_source_roots",
+                return_value=(host_root,),
+            ):
+                disabled = self.runner.enumerate_non_target_skills(stage)
+                command = self.runner.build_command(
+                    self.case("codex", "speckit-autopilot", 2),
+                    stage,
+                    Path("/bin/codex"),
+                    "model-id",
+                    "low",
+                    disabled,
+                )
+        self.assertNotIn(stage.target_skill.resolve(), disabled)
+        self.assertIn(host_skill.resolve(), disabled)
+        self.assertIn(
+            (stage.workspace / ".agents" / "skills" / "speckit-coach" / "SKILL.md").resolve(),
+            disabled,
+        )
+        skill_config = next(item for item in command if item.startswith("skills.config=["))
+        self.assertIn(str(host_skill.resolve()), skill_config)
+        self.assertIn(
+            str((stage.workspace / ".agents" / "skills" / "speckit-coach" / "SKILL.md").resolve()),
+            skill_config,
+        )
 
     def test_claude_coach_command_is_restricted_to_read_tools(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -144,6 +202,13 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
         for value in ("--restricted", "--permission-mode", "dontAsk", "--permission-prompts", "none"):
             self.assertIn(value, command)
         self.assertIn("Skill,Read,Glob,Grep", command)
+        self.assertIn("--strict-mcp-config", command)
+        self.assertEqual(command[command.index("--mcp-config") + 1], str(stage.mcp_config))
+        self.assertEqual(
+            command[command.index("--settings") + 1],
+            '{"disableClaudeAiConnectors":true}',
+        )
+        self.assertIn("--no-chrome", command)
         self.assertEqual(command[command.index("--add-dir") + 1], str(stage.plugin_root))
         self.assertEqual(command[command.index("--plugin-dir") + 1], str(stage.plugin_root))
         self.assertNotIn("--bare", command)
@@ -158,15 +223,17 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
 
     def test_process_capture_writes_exact_bytes_before_strict_decode_failure(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            evidence = Path(temporary) / "evidence"
-            result = self.runner.capture_process(
-                [sys.executable, "-c", "import sys; sys.stdout.buffer.write(b'\\xff')"],
-                b"prompt",
-                evidence,
-                Path(temporary),
-                os.environ.copy(),
-                5,
+            cli = Path(temporary) / "claude"
+            cli.write_text(
+                f"#!{sys.executable}\nimport sys\nsys.stdout.buffer.write(b'\\xff')\n",
+                encoding="utf-8",
             )
+            cli.chmod(0o755)
+            evidence = Path(temporary) / "evidence"
+            with mock.patch.object(self.runner.shutil, "which", return_value=str(cli)):
+                result = self.runner.capture_process(
+                    "claude", [str(cli)], b"prompt", evidence, Path(temporary), os.environ.copy(), 5
+                )
             self.assertEqual((evidence / "stdout.bin").read_bytes(), b"\xff")
             self.assertEqual(result["status"], "output_decode_error")
             self.assertEqual(result["stdout_sha256"], self.runner.sha256_bytes(b"\xff"))
@@ -178,12 +245,17 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
             (b"\xff", b"timed out"),
         ]
         with tempfile.TemporaryDirectory() as temporary:
+            cli = Path(temporary) / "claude"
+            cli.write_text("placeholder\n", encoding="utf-8")
             evidence = Path(temporary) / "evidence"
-            with mock.patch.object(self.runner.subprocess, "Popen", return_value=process) as popen:
-                with mock.patch.object(self.runner.os, "killpg") as killpg:
-                    result = self.runner.capture_process(
-                        ["actor"], b"prompt", evidence, Path(temporary), {}, 1
-                    )
+            with (
+                mock.patch.object(self.runner.shutil, "which", return_value=str(cli)),
+                mock.patch.object(self.runner.subprocess, "Popen", return_value=process) as popen,
+                mock.patch.object(self.runner.os, "killpg") as killpg,
+            ):
+                result = self.runner.capture_process(
+                    "claude", [str(cli)], b"prompt", evidence, Path(temporary), {}, 1
+                )
         self.assertTrue(popen.call_args.kwargs["start_new_session"])
         killpg.assert_called_once_with(31415, signal.SIGKILL)
         self.assertEqual(result["status"], "timeout")
@@ -231,7 +303,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                     "subtype": "init",
                     "model": "resolved-model",
                     "plugins": [{"name": "speckit-pro"}],
-                    "tools": ["Skill", "Read"],
+                    "tools": ["Skill", "Read", "Glob", "Grep"],
                 },
                 {
                     "type": "assistant",
@@ -259,6 +331,9 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
         self.assertEqual(parsed["terminal_type"], "result")
         self.assertEqual(parsed["completed_tool_use_ids"], ["skill-1"])
         self.runner.require_provider_evidence(self.case("claude", "speckit-coach", 8), parsed)
+        contaminated = {**parsed, "available_tools": [*parsed["available_tools"], "mcp__global__write"]}
+        with self.assertRaisesRegex(self.runner.EvidenceError, "unexpected tools"):
+            self.runner.require_provider_evidence(self.case("claude", "speckit-coach", 8), contaminated)
         with self.assertRaises(self.runner.EvidenceError):
             self.runner.parse_events("claude", json.dumps({"type": "result", "is_error": False}))
 
@@ -328,13 +403,30 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
             self.runner.build_process_env({**incoming, "OPENAI_API_KEY": "present"}, Path("/plugin"))
 
     def test_cli_version_probe_fails_loud_on_missing_version(self) -> None:
-        self.assertTrue(self.runner.probe_cli_version(Path(sys.executable)).startswith("Python "))
+        with mock.patch.object(self.runner.shutil, "which", return_value=sys.executable):
+            self.assertTrue(self.runner.probe_cli_version("claude", Path(sys.executable)).startswith("Python "))
         with tempfile.TemporaryDirectory() as temporary:
             empty = Path(temporary) / "empty-version"
             empty.write_text(f"#!{sys.executable}\n", encoding="utf-8")
             empty.chmod(0o755)
-            with self.assertRaises(self.runner.EvidenceError):
-                self.runner.probe_cli_version(empty)
+            with mock.patch.object(self.runner.shutil, "which", return_value=str(empty)):
+                with self.assertRaises(self.runner.EvidenceError):
+                    self.runner.probe_cli_version("claude", empty)
+
+    def test_host_cli_must_still_match_the_fixed_host_executable(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            resolved = Path(temporary) / "claude"
+            requested = Path(temporary) / "other-cli"
+            for path in (resolved, requested):
+                path.write_text("placeholder\n", encoding="utf-8")
+            with mock.patch.object(self.runner.shutil, "which", return_value=str(resolved)):
+                with self.assertRaisesRegex(self.runner.EvidenceError, "changed"):
+                    self.runner.probe_cli_version("claude", requested)
+                result = self.runner.capture_process(
+                    "claude", [str(requested)], b"", Path(temporary) / "evidence", Path(temporary), {}, 1
+                )
+        self.assertEqual(result["status"], "launch_error")
+        self.assertIn("changed", result["error"])
 
     def test_unit_owner_is_enrolled_in_layer_four_manifest(self) -> None:
         manifest = json.loads((TESTS_ROOT / "suite-manifest.json").read_text(encoding="utf-8"))
