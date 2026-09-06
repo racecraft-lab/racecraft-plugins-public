@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import errno
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
@@ -547,6 +548,73 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
             self.assertEqual(result, 1)
             manifest = json.loads((evidence / "manifest.json").read_text())
             self.assertIn("changed after command assembly", manifest["error"])
+
+    def test_cli_registered_non_coach_cases_reach_readiness_without_provider(self) -> None:
+        for host, skill, eval_id in (("claude", "speckit-scaffold-spec", 1), ("codex", "speckit-status", 2)):
+            case = self.case(host, skill, eval_id)
+            with self.subTest(host=host, skill=skill), tempfile.TemporaryDirectory() as temporary:
+                evidence = Path(temporary) / "evidence"
+                with (
+                    mock.patch.object(self.runner, "require_source_identity"),
+                    mock.patch.object(self.runner, "probe_cli_version", return_value="test-cli"),
+                    mock.patch.object(self.runner, "build_process_env", return_value={}),
+                    mock.patch.object(self.runner, "enumerate_non_target_skills", return_value=()),
+                    mock.patch.object(self.runner, "capture_process") as capture,
+                ):
+                    result = self.runner.main([
+                        "--host", host, "--skill", skill, "--eval-id", str(eval_id),
+                        "--source-commit", "test-commit", "--source-tree", "test-tree", "--model", "model-id",
+                        "--reasoning", "low", "--cli", sys.executable, "--evidence-dir", str(evidence),
+                    ])
+                capture.assert_not_called()
+                self.assertEqual(result, 0)
+                manifest = json.loads((evidence / "manifest.json").read_text())
+                self.assertEqual(manifest["status"], "preflight_only")
+                self.assertEqual(manifest["case_identity"], {"skill": skill, "eval_id": eval_id})
+                self.assertEqual(manifest["eval_file"], case["eval_file"])
+                self.assertEqual(manifest["skill_sha256"], self.runner.sha256_file(REPO_ROOT / "dist" / host / "speckit-pro" / "skills" / skill / "SKILL.md"))
+
+    def test_cli_unknown_skill_rejects_before_readiness(self) -> None:
+        for skill in ("not-a-registered-skill", "../../speckit-coach"):
+            with self.subTest(skill=skill), tempfile.TemporaryDirectory() as temporary:
+                evidence = Path(temporary) / "evidence"
+                with (
+                    mock.patch.object(sys, "stderr", io.StringIO()),
+                    mock.patch.object(self.runner, "probe_cli_version") as probe,
+                    mock.patch.object(self.runner, "capture_process") as capture,
+                    self.assertRaises(SystemExit) as stopped,
+                ):
+                    self.runner.main([
+                        "--host", "codex", "--skill", skill, "--eval-id", "2",
+                        "--source-commit", "test-commit", "--source-tree", "test-tree", "--model", "model-id",
+                        "--cli", sys.executable, "--evidence-dir", str(evidence),
+                    ])
+                self.assertEqual(stopped.exception.code, 2)
+                probe.assert_not_called()
+                capture.assert_not_called()
+                self.assertFalse(evidence.exists())
+
+    def test_cli_catalog_skill_still_requires_exact_host_and_eval_id(self) -> None:
+        for host, eval_id in (("claude", 2), ("codex", 9999)):
+            with self.subTest(host=host, eval_id=eval_id), tempfile.TemporaryDirectory() as temporary:
+                evidence = Path(temporary) / "evidence"
+                with (
+                    mock.patch.object(self.runner, "require_source_identity"),
+                    mock.patch.object(self.runner, "probe_cli_version", return_value="test-cli"),
+                    mock.patch.object(self.runner, "stage_case") as stage,
+                    mock.patch.object(self.runner, "capture_process") as capture,
+                ):
+                    result = self.runner.main([
+                        "--host", host, "--skill", "speckit-status", "--eval-id", str(eval_id),
+                        "--source-commit", "test-commit", "--source-tree", "test-tree", "--model", "model-id",
+                        "--cli", sys.executable, "--evidence-dir", str(evidence),
+                    ])
+                stage.assert_not_called()
+                capture.assert_not_called()
+                self.assertEqual(result, 1)
+                manifest = json.loads((evidence / "manifest.json").read_text())
+                self.assertEqual(manifest["status"], "setup_error")
+                self.assertIn(f"{host}:speckit-status:{eval_id}, found 0", manifest["error"])
 
     def test_claude_autopilot_launch_is_held_without_safe_command_confinement(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

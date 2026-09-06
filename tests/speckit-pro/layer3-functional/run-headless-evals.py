@@ -900,7 +900,11 @@ def write_checksum_index(root: Path) -> None:
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(description=__doc__)
     result.add_argument("--host", choices=("claude", "codex"), required=True)
-    result.add_argument("--skill", choices=("speckit-autopilot", "speckit-coach"), required=True)
+    result.add_argument(
+        "--skill",
+        choices=sorted({case["skill"] for case in load_case_catalog(repo_root())["cases"]}),
+        required=True,
+    )
     result.add_argument("--eval-id", type=int, required=True)
     result.add_argument("--source-commit", required=True)
     result.add_argument("--source-tree", required=True)
