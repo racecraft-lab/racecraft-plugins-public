@@ -17,9 +17,12 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SHARED_LIB = REPO_ROOT / "tests" / "speckit-pro" / "lib"
-if str(SHARED_LIB) not in sys.path:
-    sys.path.insert(0, str(SHARED_LIB))
+PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
+for _root in (SHARED_LIB, PLUGIN_ROOT):
+    if str(_root) not in sys.path:
+        sys.path.insert(0, str(_root))
 
+from speckit_pro_runner.gates import active_path_guard  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 HOOK = REPO_ROOT / "speckit-pro" / "scripts" / "workflow-guard-hook.py"
@@ -125,8 +128,35 @@ class WorkflowGuardHookTests(unittest.TestCase):
                 self.assertEqual({}, run_hook("unpushed", stop)[1])
 
 
+class HookMatcherExemptionTests(unittest.TestCase):
+    """The installed-runtime guard exempts exactly the matcher field of the two hook manifests."""
+
+    def test_matcher_exemption_is_narrow(self) -> None:
+        shell = "B" + "ash"  # the shell tool's name, kept out of this file's own scan surface
+        cases = {
+            "hooks.json matcher line is exempt": ("speckit-pro/hooks/hooks.json", f'        "matcher": "{shell}",', True),
+            "codex-hooks.json matcher line is exempt": ("speckit-pro/codex-hooks.json", f'  "matcher": "{shell}"', True),
+            "a command field in hooks.json is not exempt": ("speckit-pro/hooks/hooks.json", f'        "command": "{shell} -c true",', False),
+            "a matcher-shaped line in a script is not exempt": ("speckit-pro/scripts/x.py", f'"matcher": "{shell}"', False),
+            "a matcher-shaped line in prose is not exempt": ("speckit-pro/skills/a/SKILL.md", f'"matcher": "{shell}"', False),
+        }
+        for label, (path, line, exempt) in cases.items():
+            with self.subTest(msg=label):
+                self.assertIs(exempt, active_path_guard.is_hook_matcher_line(path, line))
+        with self.subTest(msg="scan_installed_runtime_sources drops the matcher finding and keeps the command finding"):
+            content = '{"hooks": {"PreToolUse": [{"matcher": "%s", "hooks": [{"type": "command", "command": "%s -c true"}]}]}}' % (shell, shell)
+            pretty = content.replace('"matcher"', '\n"matcher"').replace(', "hooks"', ',\n"hooks"')
+            source = active_path_guard.SourceFile(path="speckit-pro/hooks/hooks.json", content=pretty, source_kind="repo")
+            findings = active_path_guard.scan_installed_runtime_sources([source], REPO_ROOT)
+            lines = sorted(f.line for f in findings if f.category == "bash")
+            self.assertEqual([3], lines, findings)
+
+
 def build_suite() -> unittest.TestSuite:
-    return unittest.defaultTestLoader.loadTestsFromTestCase(WorkflowGuardHookTests)
+    suite = unittest.TestSuite()
+    for case in (WorkflowGuardHookTests, HookMatcherExemptionTests):
+        suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(case))
+    return suite
 
 
 def main() -> int:

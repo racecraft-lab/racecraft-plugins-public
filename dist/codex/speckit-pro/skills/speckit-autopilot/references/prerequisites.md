@@ -394,7 +394,7 @@ recorded answer.
 
 Two plugin hooks enforce rules the orchestrator must also honor by hand:
 
-- **Lockfile package manager** (`PreToolUse`, every tool): when exactly one
+- **Lockfile package manager** (`PreToolUse` on the shell tool): when exactly one
   JavaScript lockfile kind exists, a command that invokes another
   package manager is denied. Use the manager the lockfile names.
 - **No unpushed commits at turn end** (`Stop`): while

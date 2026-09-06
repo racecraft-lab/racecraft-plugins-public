@@ -398,7 +398,7 @@ Codex manifest declares no executable hook (Layer 1 forbids it, since a
 static manifest cannot resolve the required interpreter), so the Codex
 orchestrator honors them by hand:
 
-- **Lockfile package manager** (Claude: `PreToolUse`, every tool): when exactly one
+- **Lockfile package manager** (Claude: `PreToolUse` on the shell tool): when exactly one
   JavaScript lockfile kind exists, a command that invokes another
   package manager is denied. Use the manager the lockfile names.
 - **No unpushed commits at turn end** (Claude: `Stop`): while
