@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "fixture_kind": "synthetic-project-with-captured-installed-cli-help",
+  "captured_for_source_commit": "7fb712cba2146c0efe3877cca7cd608c96e88024",
+  "curated_id_source": "speckit-pro/scripts/curated-set.json",
+  "curated_id_source_blob": "319e5ce46a1c4dc5a8b38135f3225d6f0e3b5974",
+  "purpose_authority": "fixture-local installed extension manifests; descriptions are synthetic deterministic inputs, not upstream catalog claims",
+  "cli_help_capture": {
+    "specify_version": "1.0.1",
+    "observed_at": "2026-09-06T13:27:37.668123+00:00",
+    "file": "specify-1.0.1-help.json",
+    "file_sha256": "15c24129e040555fb86d5e6ca9a8877b01283b48025ffc5e94b542110b7fd3a0",
+    "executable_sha256": "2692accd323344f8619c8c1787cd12eecde88fa40b70e10f3ccfdcd333628c40",
+    "raw_capture_sha256": "18f5fc19a083565b656e9e1e04b26ce502ecaff7075da68a810f721dba0372c3",
+    "transformation": "Retains exact stdout/stderr bytes as JSON strings and their hashes; replaces absolute host executable paths with the executable basename and argument arrays."
+  },
+  "limitations": [
+    "This fixture is not evidence of the current community catalog.",
+    "Only review and verify are observed as installed.",
+    "cleanup and retrospective are intentionally absent and must not be assigned invented behavior.",
+    "Project settings and extension manifests are synthetic; captured CLI help does not prove their live installation.",
+    "CLI help is an immutable observation of installed 1.0.1, not evidence of compatibility with 0.9.4 or any other version.",
+    "The original 0.9.4/null-help fixture and H0 results remain historical evidence at source commit a7e8d5d8cfbf1ae6759945c3ef7a07d124a48bb2."
+  ]
+}

@@ -50,6 +50,7 @@
         { "path": "tests/speckit-pro/unit/test-post-implementation-reference.py", "label": "test-post-implementation-reference" },
         { "path": "tests/speckit-pro/unit/test-reviewability-marker-guidance.py", "label": "test-reviewability-marker-guidance" },
         { "path": "tests/speckit-pro/unit/test-eval-runner-skill-selection.py", "label": "test-eval-runner-skill-selection" },
+        { "path": "tests/speckit-pro/unit/test-functional-headless-runner.py", "label": "test-functional-headless-runner" },
         { "path": "tests/speckit-pro/unit/test-trigger-eval-runners.py", "label": "test-trigger-eval-runners" },
         { "path": "tests/speckit-pro/unit/test-trigger-signal-restoration.py", "label": "test-trigger-signal-restoration" },
         { "path": "tests/speckit-pro/unit/test-trigger-eval-coverage.py", "label": "test-trigger-eval-coverage" },
