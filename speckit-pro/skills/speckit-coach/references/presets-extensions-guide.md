@@ -32,6 +32,9 @@ the roster into this guide or infer that an entry outside it should be removed.
 - Explain an extension from its installed `extension.yml`, registered commands,
   and active configuration. Derive supported hook events and fields from that
   evidence, not from a generic example.
+- When discussing user-named or observed extensions, identify the scope of the
+  list and explicitly state that it is non-exhaustive; do not imply it is the
+  complete catalog.
 - For catalog discovery, use the catalog stack and search capability exposed by
   the installed CLI. Clearly label information that is available only from an
   external current source.

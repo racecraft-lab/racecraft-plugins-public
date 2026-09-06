@@ -1,6 +1,6 @@
 ---
 name: speckit-coach
-description: Coach developers through Spec-Driven Development and SpecKit Pro. Use for SDD methodology, SpecKit command and gate guidance, technical-roadmap and workflow design, checklist selection, project fixup, or preset and extension discovery and configuration. Not for running autopilot, conducting grill-me, or unrelated engineering work.
+description: Coach developers through Spec-Driven Development and SpecKit Pro. Use for SDD methodology, SpecKit command and gate guidance, technical-roadmap and workflow design, roadmap-MOC guidance, checklist selection, SpecKit project repair, or SpecKit preset and extension discovery and configuration. Not for running autopilot, conducting grill-me, or unrelated coding (including MCP tool implementation).
 ---
 
 # SpecKit Coach

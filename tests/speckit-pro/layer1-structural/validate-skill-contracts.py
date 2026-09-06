@@ -47,6 +47,23 @@ def _description_value(frontmatter: str) -> str:
 
 class ValidateSkills(unittest.TestCase):
 
+    def test_coach_descriptions_preserve_sdd_scope_and_execution_boundary(self) -> None:
+        for host in ('skills', 'codex-skills'):
+            with self.subTest(host=host):
+                source = (PLUGIN_ROOT / host / 'speckit-coach' / 'SKILL.md').read_text(encoding='utf-8')
+                description = _description_value(_frontmatter(source.splitlines()))
+                for purpose in ('SDD methodology', 'command and gate guidance',
+                                'technical-roadmap and workflow design', 'roadmap-MOC',
+                                'checklist selection', 'SpecKit project repair',
+                                'SpecKit preset and extension discovery'):
+                    self.assertIn(purpose, description)
+                self.assertRegex(description, r'Not for running autopilot, conducting grill-me, or unrelated coding.*MCP tool implementation')
+
+    def test_coach_extension_discovery_discloses_non_exhaustive_scope(self) -> None:
+        guide = (PLUGIN_ROOT / 'skills' / 'speckit-coach' / 'references' / 'presets-extensions-guide.md').read_text(encoding='utf-8')
+        discovery = ' '.join(guide.split('## Explain or discover', 1)[1].split('## Change state', 1)[0].split())
+        self.assertRegex(discovery, r'user-named or observed extensions.*scope of the list.*explicitly state that it is non-exhaustive')
+
     def test_skills(self) -> None:
         for skill in validate_skills_SKILLS:
             skill_dir = validate_skills_SKILLS_DIR / skill
