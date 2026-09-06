@@ -2021,7 +2021,9 @@ that attempt's own result reaches the parent session, before dispatching further
 work. The bounded `wait_agent` loop already delivers each worker's summary
 individually, so a member of a cap-bounded `[P]` wave does not wait for the rest
 of its wave: its entry is written when that summary is consumed, not when the
-wave reaches its TYPECHECK and UNIT_TEST safety net. Never batched to phase end,
+wave reaches its TYPECHECK and UNIT_TEST safety net (which also runs the
+populated `COMPLEXITY` and `DEPENDENCY_RULES` slots on the files the wave
+changed; a populated slot that fails blocks like a red test). Never batched to phase end,
 and never deferred to a wave boundary. Where several summaries are consumed on
 the same turn, each still gets its own entry on that turn, in the order they are
 presented.

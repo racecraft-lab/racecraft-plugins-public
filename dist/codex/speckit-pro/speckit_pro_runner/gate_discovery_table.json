@@ -7,7 +7,8 @@
       "signal": { "kind": "file", "path": "pyproject.toml" },
       "tool": "radon + coverage.py (CRAP join)",
       "install": "pip install radon coverage",
-      "command": "python3 scripts/crap-score.py --language python --ceiling {ceiling} --complexity-ceiling {complexity_ceiling} -- {paths}"
+      "probe": ["radon", "coverage"],
+      "command": "coverage run -m pytest -q && python3 {plugin_root}/scripts/crap-score.py --language python --ceiling {ceiling} --complexity-ceiling {complexity_ceiling} -- {paths}"
     },
     {
       "language": "python",
@@ -15,6 +16,7 @@
       "signal": { "kind": "file", "path": "cosmic-ray.toml" },
       "tool": "cosmic-ray",
       "install": "pip install cosmic-ray",
+      "probe": ["cosmic-ray", "cr-filter-git", "cr-rate"],
       "command": "cosmic-ray init cosmic-ray.toml .cosmic-ray.sqlite --force && cr-filter-git .cosmic-ray.sqlite && cosmic-ray baseline cosmic-ray.toml && cosmic-ray exec cosmic-ray.toml .cosmic-ray.sqlite && cr-rate .cosmic-ray.sqlite --fail-over {survival_ceiling}"
     },
     {
@@ -23,6 +25,7 @@
       "signal": { "kind": "file", "path": ".importlinter" },
       "tool": "import-linter",
       "install": "pip install import-linter",
+      "probe": ["lint-imports"],
       "command": "lint-imports --config {rules_path}"
     },
     {
@@ -31,6 +34,7 @@
       "signal": { "kind": "file", "path": "pyproject.toml" },
       "tool": "import-linter",
       "install": "pip install import-linter",
+      "probe": ["lint-imports"],
       "command": "lint-imports --config {rules_path}"
     },
     {
@@ -39,7 +43,8 @@
       "signal": { "kind": "file", "path": "vitest.config.ts" },
       "tool": "ESLint complexity + Vitest coverage (CRAP join)",
       "install": "pnpm add -D eslint typescript-eslint @vitest/coverage-v8",
-      "command": "python3 scripts/crap-score.py --language typescript --ceiling {ceiling} --complexity-ceiling {complexity_ceiling} --coverage-command \"pnpm exec vitest run --coverage --coverage.reporter=json\" -- {paths}"
+      "probe": ["eslint"],
+      "command": "pnpm exec vitest run --coverage --coverage.reporter=json && python3 {plugin_root}/scripts/crap-score.py --language typescript --ceiling {ceiling} --complexity-ceiling {complexity_ceiling} -- {paths}"
     },
     {
       "language": "typescript",
@@ -47,7 +52,8 @@
       "signal": { "kind": "file", "path": "jest.config.js" },
       "tool": "ESLint complexity + Jest coverage (CRAP join)",
       "install": "pnpm add -D eslint typescript-eslint jest",
-      "command": "python3 scripts/crap-score.py --language typescript --ceiling {ceiling} --complexity-ceiling {complexity_ceiling} --coverage-command \"pnpm exec jest --coverage --coverageReporters=json\" -- {paths}"
+      "probe": ["eslint"],
+      "command": "pnpm exec jest --coverage --coverageReporters=json && python3 {plugin_root}/scripts/crap-score.py --language typescript --ceiling {ceiling} --complexity-ceiling {complexity_ceiling} -- {paths}"
     },
     {
       "language": "typescript",
@@ -55,7 +61,8 @@
       "signal": { "kind": "file", "path": "package.json" },
       "tool": "ESLint complexity + c8 coverage (CRAP join)",
       "install": "pnpm add -D eslint typescript-eslint c8",
-      "command": "python3 scripts/crap-score.py --language typescript --ceiling {ceiling} --complexity-ceiling {complexity_ceiling} --coverage-command \"pnpm exec c8 --reporter=json pnpm test\" -- {paths}"
+      "probe": ["eslint"],
+      "command": "pnpm exec c8 --reporter=json pnpm test && python3 {plugin_root}/scripts/crap-score.py --language typescript --ceiling {ceiling} --complexity-ceiling {complexity_ceiling} -- {paths}"
     },
     {
       "language": "typescript",
@@ -63,6 +70,7 @@
       "signal": { "kind": "file", "path": "stryker.config.json" },
       "tool": "StrykerJS",
       "install": "pnpm add -D @stryker-mutator/core",
+      "probe": ["stryker"],
       "command": "pnpm exec stryker run --reporters json,progress --incremental --mutate {paths}"
     },
     {
@@ -71,6 +79,7 @@
       "signal": { "kind": "file", "path": ".dependency-cruiser.cjs" },
       "tool": "dependency-cruiser",
       "install": "pnpm add -D dependency-cruiser",
+      "probe": ["depcruise"],
       "command": "pnpm exec depcruise --config {rules_path} --output-type err {paths}"
     }
   ]

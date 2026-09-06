@@ -237,8 +237,12 @@ Read the workflow file's Prerequisites table. If already
    check (typecheck, test suite, build, lint). For code review
    items (KISS, YAGNI, SOLID), mark `Verified` — these are
    validated during implementation.
-3. Update the workflow file's table with results and baselines
-4. If any check fails, STOP — do not proceed to Phase 1
+3. Run every populated quality-gate slot from Step 0.11 with an
+   empty `{paths}` (only `DEPENDENCY_RULES` does real work here)
+   and record the baseline in the Quality Gates table
+4. Update the workflow file's table with results and baselines
+5. If any check or populated gate fails, STOP — do not proceed
+   to Phase 1
 
 ### 0.10 Codex Agent Availability Check
 
@@ -310,6 +314,63 @@ the most authoritative source and may override script results.
 
 Record PROJECT_COMMANDS in the workflow file so they persist
 across context compactions. Pass them to every subagent.
+
+#### Quality-gate slots
+
+The same result carries three more slots, `COMPLEXITY`,
+`MUTATION`, and `DEPENDENCY_RULES`, plus a `gates` object that
+describes each one. The runner fills them from the shipped
+discovery table (`speckit_pro_runner/gate_discovery_table.json`),
+consulting `.specify/gate-discovery.json` first when that
+override validates. A slot is `populated` when one of its signal
+files exists in the repository, otherwise `unconfigured` and
+`"N/A"`. Thresholds are the shipped fallbacks (complexity 8,
+CRAP 30, mutation-score floor 60) until a `quality-gates.json`
+exists.
+
+Two placeholders stay literal in the recorded command and are
+filled at every run:
+
+- `{plugin_root}`: the `<plugin-root>` the runner reported as
+  `plugin_root`. Never record the expanded path in the workflow
+  file.
+- `{paths}`: the changed source files of the detected language,
+  tests excluded, from `git diff --name-only --diff-filter=AM
+  <base>...HEAD`. An empty list checks nothing and passes. At G0
+  there is no diff, so `COMPLEXITY` and `MUTATION` pass vacuously
+  and only `DEPENDENCY_RULES` runs, against the whole graph.
+
+**A populated slot that fails blocks**, at G0, at every
+phase-group verification, and at final verification. It is a
+red gate, not a warning to note and move past.
+
+**Missing tool, one question per tool per repository.** For each
+populated slot with `tool_present: false`, look for a recorded
+answer for that tool: first the workflow file's Quality Gates
+table, then a `skip (repo)` row for the same tool in any other
+`docs/ai/specs/.process/*-workflow.md`. If none exists, ask once
+with `request_user_input` (free-text fallback when the picker is
+absent, same rule as grill-me):
+
+```text
+<tool> is not installed, but this repository configures the
+<slot> gate (signal: <signal>). Install it, skip it for this
+spec, or skip it for this repository?
+  1. Install (<install>)   2. Skip this spec   3. Skip this repo
+```
+
+Record the answer in the Quality Gates table before continuing:
+
+- `install`: run the install command, re-run `detect-commands`,
+  and require `tool_present: true`. If it is still false, STOP.
+- `skip (spec)`: the slot is `"N/A"` for this workflow only.
+- `skip (repo)`: the slot is `"N/A"` here, and later workflows
+  in this repository honor the row without asking again.
+
+When no interactive runtime is available, record `unanswered`
+for the tool, then STOP naming the tool and the three options;
+a resume after the operator edits the table proceeds from the
+recorded answer.
 
 ### 0.12 Preset and Extension Detection
 

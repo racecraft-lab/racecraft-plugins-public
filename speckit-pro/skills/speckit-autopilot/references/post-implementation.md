@@ -293,7 +293,10 @@ opens one slice PR.
 ```text
 1. Run final verification once for the completed implementation:
    <BUILD> && <TYPECHECK> && <LINT> && <UNIT_TEST> && <INTEGRATION_TEST>
-   (use PROJECT_COMMANDS discovered in Step 0)
+   then <COMPLEXITY> && <MUTATION> && <DEPENDENCY_RULES> for every
+   populated slot, with {paths} = changed source files
+   (use PROJECT_COMMANDS discovered in Step 0; a populated slot
+   that fails blocks)
 2. Detect remote: git remote -v
 3. Capture the full-suite evidence path under
    specs/<feature>/.process/emission/.
@@ -609,8 +612,8 @@ silently dropped, and TODOs the autopilot meant to leave behind.
 The four questions, in order:
 
 1. **Tests executed?** Did each of `BUILD`, `TYPECHECK`, `LINT`,
-   `UNIT_TEST`, and `INTEGRATION_TEST` actually run in this
-   session and exit zero, or did the autopilot infer "no errors
+   `UNIT_TEST`, and `INTEGRATION_TEST`, plus every populated
+   quality-gate slot, actually run in this session and exit zero, or did the autopilot infer "no errors
    reported" from a phase that never invoked them? Cite the most
    recent test run with timestamp from the workflow log.
 
@@ -643,7 +646,9 @@ The four questions, in order:
 ### Self-Review (auto-generated)
 
 **Tests executed:** All five (BUILD, TYPECHECK, LINT, UNIT_TEST,
-INTEGRATION_TEST) ran at 2026-05-25T17:42:11Z and exited zero.
+INTEGRATION_TEST) and the populated quality gates (COMPLEXITY,
+DEPENDENCY_RULES; MUTATION unconfigured) ran at
+2026-05-25T17:42:11Z and exited zero.
 Evidence: workflow log §G7 Verification.
 
 **Edge cases:** All 7 acceptance criteria have non-happy-path

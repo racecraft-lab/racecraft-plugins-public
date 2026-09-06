@@ -12,6 +12,7 @@ import copy
 import json
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -79,6 +80,11 @@ class GateDiscoveryTableTests(unittest.TestCase):
 
         with self.subTest(msg="minimal valid table passes"):
             self.assertEqual([], gate_discovery.validate_table(valid_table()))
+        with self.subTest(msg="optional probe is accepted"):
+            self.assertEqual([], gate_discovery.validate_table(mutated(probe=["lint-imports"])))
+        with self.subTest(msg="schema declares probe optional with the same shape"):
+            self.assertIn("probe", row_props)
+            self.assertNotIn("probe", schema["properties"]["rows"]["items"]["required"])
 
         negatives = {
             "top level not an object": [],
@@ -97,6 +103,9 @@ class GateDiscoveryTableTests(unittest.TestCase):
             "signal absolute path": mutated(signal={"kind": "file", "path": "/etc/passwd"}),
             "signal parent segment": mutated(signal={"kind": "file", "path": "../x"}),
             "unknown placeholder": mutated(command="tool {bogus}"),
+            "probe not a list": mutated(probe="lint-imports"),
+            "probe empty": mutated(probe=[]),
+            "probe with path": mutated(probe=["bin/lint-imports"]),
         }
         for label, table in negatives.items():
             with self.subTest(msg=f"rejects: {label}"):
@@ -131,8 +140,63 @@ class GateDiscoveryTableTests(unittest.TestCase):
             self.assertIn("rows[0].slot", result.stderr)
 
 
+class GateSlotResolutionTests(unittest.TestCase):
+    """resolve_slots fills PROJECT_COMMANDS slots from the table."""
+
+    def _resolve(self, root: Path, stack: str, present: set[str] = frozenset()) -> dict:
+        return gate_discovery.resolve_slots(
+            root, stack, file_exists=lambda path: path.is_file(), which=lambda name: name in present
+        )
+
+    def test_resolve_slots(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with self.subTest(msg="unknown stack leaves every slot unconfigured"):
+                slots = self._resolve(root, "rust")
+                self.assertEqual({"status": "unconfigured", "command": "N/A"}, slots["COMPLEXITY"])
+            with self.subTest(msg="python with no signal files stays unconfigured"):
+                self.assertTrue(all(s["status"] == "unconfigured" for s in self._resolve(root, "python").values()))
+            (root / "pyproject.toml").write_text("", encoding="utf-8")
+            slots = self._resolve(root, "python", {"radon"})
+            with self.subTest(msg="thresholds and rules_path substituted; paths and plugin_root left literal"):
+                cmd = slots["COMPLEXITY"]["command"]
+                self.assertIn("--ceiling 30 --complexity-ceiling 8", cmd)
+                self.assertIn("{paths}", cmd)
+                self.assertIn("{plugin_root}/scripts/crap-score.py", cmd)
+                self.assertEqual("lint-imports --config pyproject.toml", slots["DEPENDENCY_RULES"]["command"])
+            with self.subTest(msg="tool_present is false when any probe name is missing"):
+                self.assertIs(False, slots["COMPLEXITY"]["tool_present"])
+                self.assertIs(True, self._resolve(root, "python", {"radon", "coverage"})["COMPLEXITY"]["tool_present"])
+            with self.subTest(msg="populated slot carries tool, install, and signal"):
+                self.assertEqual({"populated", "pip install radon coverage", "pyproject.toml"},
+                                 {slots["COMPLEXITY"]["status"], slots["COMPLEXITY"]["install"], slots["COMPLEXITY"]["signal"]})
+            with self.subTest(msg="mutation slot unconfigured without its signal"):
+                self.assertEqual("N/A", slots["MUTATION"]["command"])
+            (root / ".importlinter").write_text("", encoding="utf-8")
+            with self.subTest(msg="first matching row in file order wins"):
+                self.assertEqual("lint-imports --config .importlinter", self._resolve(root, "python")["DEPENDENCY_RULES"]["command"])
+            override = root / ".specify" / "gate-discovery.json"
+            override.parent.mkdir()
+            override.write_text(json.dumps({"schema_version": "1.0", "rows": [{
+                "language": "python", "slot": "DEPENDENCY_RULES", "signal": {"kind": "file", "path": "pyproject.toml"},
+                "tool": "custom", "install": "none", "command": "custom-lint {rules_path}"}]}), encoding="utf-8")
+            with self.subTest(msg="valid repository override outranks the shipped table"):
+                self.assertEqual("custom-lint pyproject.toml", self._resolve(root, "python")["DEPENDENCY_RULES"]["command"])
+            override.write_text(json.dumps({"schema_version": "1.0", "rows": [{"slot": "BOGUS"}]}), encoding="utf-8")
+            with self.subTest(msg="invalid override is reported and ignored"):
+                slots = self._resolve(root, "python")
+                self.assertEqual("lint-imports --config .importlinter", slots["DEPENDENCY_RULES"]["command"])
+                self.assertTrue(any("rows[0]" in p for p in slots["DEPENDENCY_RULES"]["override_ignored"]))
+            with self.subTest(msg="nodejs maps to typescript rows"):
+                (root / "package.json").write_text("{}", encoding="utf-8")
+                self.assertIn("--language typescript", self._resolve(root, "nodejs")["COMPLEXITY"]["command"])
+
+
 def build_suite() -> unittest.TestSuite:
-    return unittest.defaultTestLoader.loadTestsFromTestCase(GateDiscoveryTableTests)
+    suite = unittest.TestSuite()
+    for case in (GateDiscoveryTableTests, GateSlotResolutionTests):
+        suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(case))
+    return suite
 
 
 def main() -> int:

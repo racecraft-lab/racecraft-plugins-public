@@ -206,15 +206,17 @@ it does NOT invoke a `/speckit-*` command.
 1. Read `.specify/memory/constitution.md` — extract all
    numbered principles
 2. Run automated checks using PROJECT_COMMANDS from Step
-   0.10 (BUILD, TYPECHECK, LINT, UNIT_TEST, INTEGRATION_TEST)
+   0.11 (BUILD, TYPECHECK, LINT, UNIT_TEST, INTEGRATION_TEST),
+   then every populated quality-gate slot with an empty
+   `{paths}`; only `DEPENDENCY_RULES` does real work at G0
 3. Verify structural patterns documented in CLAUDE.md
    (e.g., source code organization, module boundaries)
 4. Record baselines in the workflow file's Prerequisites
    table
 5. Set the "Constitution Check" summary line
 
-**Gate:** G0 — all automated checks must pass. If any
-fail, STOP.
+**Gate:** G0 — all automated checks and every populated
+quality-gate slot must pass. If any fail, STOP.
 
 **Doctor Health Check (ALWAYS — plugin skill):**
 After G0 passes, run `/speckit.speckit-utils.doctor` for a full
@@ -2534,6 +2536,7 @@ For each phase group in the helper's runs (grouped by run.group):
         UNIT_TEST: <cmd>  INTEGRATION_TEST: <cmd>
         SINGLE_FILE_TEST: <cmd>
         SINGLE_FILE_INTEGRATION: <cmd>
+        COMPLEXITY: <cmd or N/A>  DEPENDENCY_RULES: <cmd or N/A>
 
       <if PRESET_CONVENTIONS>
       PRESET_CONVENTIONS: ...
@@ -2558,8 +2561,11 @@ For each phase group in the helper's runs (grouped by run.group):
 
   Phase-group verification (orchestrator-direct):
     Command(BUILD) && Command(TYPECHECK) && Command(LINT) &&
-    Command(UNIT_TEST)
-    If any fail → dispatch fix agent, re-run.
+    Command(UNIT_TEST) &&
+    Command(COMPLEXITY) && Command(DEPENDENCY_RULES)
+      with {paths} = files this group changed (populated slots only)
+    If any fail → dispatch fix agent, re-run. A populated
+    quality-gate slot failing blocks like a red test.
 
   TaskUpdate: "<Phase 7: group name>" → completed
 ```
@@ -2627,6 +2633,10 @@ After all phase groups complete:
 Run FULL_VERIFY:
   Command(BUILD) && Command(TYPECHECK) && Command(LINT) &&
   Command(UNIT_TEST) && Command(INTEGRATION_TEST)
+Then every populated quality-gate slot on the whole diff:
+  Command(COMPLEXITY) && Command(MUTATION) && Command(DEPENDENCY_RULES)
+    with {paths} = changed source files, origin/main...HEAD
+  Any failure blocks. Record each result in the Quality Gates table.
 ```
 
 #### Agent Routing Table

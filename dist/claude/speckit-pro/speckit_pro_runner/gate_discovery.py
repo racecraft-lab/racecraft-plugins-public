@@ -27,10 +27,21 @@ LANGUAGES = ("python", "typescript")
 SLOTS = ("COMPLEXITY", "MUTATION", "DEPENDENCY_RULES")
 SIGNAL_KINDS = ("file",)
 ROW_FIELDS = ("language", "slot", "signal", "tool", "install", "command")
+OPTIONAL_ROW_FIELDS = ("probe",)
 PLACEHOLDERS = frozenset(
-    {"ceiling", "complexity_ceiling", "floor", "survival_ceiling", "rules_path", "paths"}
+    {"ceiling", "complexity_ceiling", "floor", "survival_ceiling", "rules_path", "paths", "plugin_root"}
 )
 DEFAULT_TABLE = Path(__file__).resolve().parent / "gate_discovery_table.json"
+REPO_OVERRIDE = ".specify/gate-discovery.json"
+STACK_LANGUAGE = {"python": "python", "nodejs": "typescript"}
+# Hard-coded fallbacks. A repository quality-gates.json, once it exists,
+# replaces these; until then every populated slot runs against them.
+DEFAULT_THRESHOLDS = {
+    "ceiling": "30",
+    "complexity_ceiling": "8",
+    "floor": "60",
+    "survival_ceiling": "40",
+}
 
 _PLACEHOLDER_RE = re.compile(r"\{([^{}]*)\}")
 
@@ -62,7 +73,7 @@ def validate_table(data: Any) -> list[str]:
             problems.append(f"{prefix}: must be an object")
             continue
         missing = [field for field in ROW_FIELDS if field not in row]
-        unknown = sorted(set(row) - set(ROW_FIELDS))
+        unknown = sorted(set(row) - set(ROW_FIELDS) - set(OPTIONAL_ROW_FIELDS))
         if missing:
             problems.append(f"{prefix}: missing fields: " + ", ".join(missing))
         if unknown:
@@ -71,6 +82,13 @@ def validate_table(data: Any) -> list[str]:
             value = row.get(field)
             if field in row and (not isinstance(value, str) or not value.strip()):
                 problems.append(f"{prefix}.{field}: must be a non-empty string")
+        probe = row.get("probe")
+        if "probe" in row and (
+            not isinstance(probe, list)
+            or not probe
+            or any(not isinstance(name, str) or not name.strip() or "/" in name for name in probe)
+        ):
+            problems.append(f"{prefix}.probe: must be a non-empty array of bare executable names")
         language = row.get("language")
         if "language" in row and language not in LANGUAGES:
             problems.append(f"{prefix}.language: must be one of {', '.join(LANGUAGES)}")
@@ -111,6 +129,71 @@ def _validate_signal(prefix: str, signal: Any, problems: list[str]) -> str | Non
         problems.append(f"{prefix}.signal.path: must be repository-relative without '..'")
         return None
     return path
+
+
+def resolve_slots(
+    repo_root: Path,
+    stack: str,
+    *,
+    file_exists: Any,
+    which: Any,
+) -> dict[str, dict[str, Any]]:
+    """Fill the quality-gate slots for ``stack`` from the discovery table.
+
+    A repository override at ``.specify/gate-discovery.json`` is consulted
+    before the shipped table when it validates; an invalid override is
+    reported and ignored. Within one slot the first row whose signal file
+    exists wins. Thresholds and ``{rules_path}`` are substituted here;
+    ``{paths}`` and ``{plugin_root}`` stay literal because the orchestrator
+    fills them at run time, which also keeps machine-specific paths out of
+    the recorded workflow file. ``file_exists(path)`` and ``which(name)`` are
+    injected so the caller keeps its own trust rules for filesystem access.
+    """
+    slots: dict[str, dict[str, Any]] = {
+        slot: {"status": "unconfigured", "command": "N/A"} for slot in SLOTS
+    }
+    language = STACK_LANGUAGE.get(stack)
+    if language is None:
+        return slots
+    rows: list[dict[str, Any]] = []
+    override_path = repo_root / REPO_OVERRIDE
+    if file_exists(override_path):
+        try:
+            override = load_table(override_path)
+        except (OSError, ValueError) as exc:
+            override_problems = [f"cannot read table: {exc}"]
+        else:
+            override_problems = validate_table(override)
+        if override_problems:
+            for slot_entry in slots.values():
+                slot_entry["override_ignored"] = override_problems
+        else:
+            rows.extend(override["rows"])
+    rows.extend(load_table()["rows"])
+    for row in rows:
+        if row["language"] != language:
+            continue
+        entry = slots[row["slot"]]
+        if entry["status"] == "populated":
+            continue
+        signal_path = row["signal"]["path"]
+        if not file_exists(repo_root / signal_path):
+            continue
+        command = row["command"]
+        for name, value in {**DEFAULT_THRESHOLDS, "rules_path": signal_path}.items():
+            command = command.replace("{" + name + "}", value)
+        probe = row.get("probe", [])
+        entry.update(
+            {
+                "status": "populated",
+                "command": command,
+                "tool": row["tool"],
+                "install": row["install"],
+                "signal": signal_path,
+                "tool_present": all(which(name) for name in probe) if probe else None,
+            }
+        )
+    return slots
 
 
 def main(argv: list[str] | None = None) -> int:

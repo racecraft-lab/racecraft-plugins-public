@@ -1,0 +1,11 @@
+[
+  {
+    "filePath": "tests/speckit-pro/unit/fixtures/crap-score/sample.ts",
+    "messages": [
+      {"ruleId": "complexity", "severity": 1, "message": "Function 'simple' has a complexity of 1. Maximum allowed is 0.", "line": 1, "column": 8},
+      {"ruleId": "complexity", "severity": 1, "message": "Function 'tangled' has a complexity of 9. Maximum allowed is 0.", "line": 5, "column": 8},
+      {"ruleId": "no-unused-vars", "severity": 2, "message": "'x' is defined but never used.", "line": 1, "column": 24}
+    ],
+    "errorCount": 1, "warningCount": 2
+  }
+]

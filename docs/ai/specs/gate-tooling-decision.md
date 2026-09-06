@@ -24,10 +24,14 @@ agent, or runner helper changes. The gate wiring is the next layer.
 
 The CRAP slot is a script, not a tool. Neither language has a single command
 that emits per-function complexity and per-function coverage together. The
-script ships with the plugin in the next layer at
+script ships with the plugin at
 `speckit-pro/scripts/crap-score.py`, Python 3.11 standard library only, and
-accepts either input pair. This record fixes its inputs and exit contract so
-the table can name it now.
+accepts either input pair. The script runs only radon, ESLint, and
+`coverage json` with fixed argument lists; the test run that produces
+coverage data is the first step of the slot command, because the repository
+Bash-confinement guard forbids plugin Python from spawning an
+operator-supplied executable. This record fixes the script's inputs and exit
+contract so the table can name it now.
 
 ## COMPLEXITY (CRAP)
 
@@ -220,10 +224,11 @@ records the rules file path only.
 
 ## Discovery table
 
-The next layer's Step 0.10 discovery reads a JSON table shipped in the plugin
+Step 0.11 (`detect-commands`) discovery reads a JSON table shipped in the plugin
 at `speckit-pro/speckit_pro_runner/gate_discovery_table.json`. A repository
-may override rows with a table of the same shape; override precedence is
-defined in that layer, not here. The schema is documented at
+may override rows with a table of the same shape at
+`.specify/gate-discovery.json`; a valid override's rows are consulted before
+the shipped rows, and an invalid override is reported and ignored. The schema is documented at
 `speckit-pro/speckit_pro_runner/contracts/gate-discovery-table.schema.json`
 and enforced by `speckit-pro/speckit_pro_runner/gate_discovery.py`, standard
 library only. Neither is registered as a runner helper or gate operation.
@@ -237,19 +242,20 @@ Row fields:
 | `signal` | object `{ "kind": "file", "path": "<repo-relative path>" }` | Detection evidence. A row matches when the file exists. One kind for now; new kinds are schema changes. |
 | `tool` | string | Human name used in the missing-tool prompt and the Prerequisites table. |
 | `install` | string | Exact install command. Needed by the "install" answer in the missing-tool prompt. |
-| `command` | string | Exact command written into the PROJECT_COMMANDS slot. Placeholders `{ceiling}`, `{complexity_ceiling}`, `{floor}`, `{survival_ceiling}`, `{rules_path}`, and `{paths}` are filled from the thresholds file and the diff. |
+| `probe` | array of bare executable names, optional | Discovery reports `tool_present: true` only when every name resolves on PATH or under `node_modules/.bin`. Absent means presence is unknown. |
+| `command` | string | Exact command written into the PROJECT_COMMANDS slot. `{ceiling}`, `{complexity_ceiling}`, `{floor}`, `{survival_ceiling}`, and `{rules_path}` are filled at discovery from the thresholds (shipped fallbacks until `quality-gates.json` exists) and the signal path. `{paths}` and `{plugin_root}` stay literal and are filled at each run, which keeps machine-specific paths out of the workflow file. |
 
 Rules the validator enforces:
 
 - Top level is an object with `schema_version` `"1.0"` and a non-empty `rows` array.
-- Every row has exactly the six fields above, all non-empty.
+- Every row has the six required fields above, all non-empty; `probe` is the only optional field.
 - `language` and `slot` are drawn from the closed enums.
 - `signal.path` is repo-relative: no leading `/`, no `..` segment.
 - No two rows share the same `(language, slot, signal.path)`.
 - Within one `(language, slot)`, the first matching row in file order wins.
   This is how TypeScript carries c8, Vitest, and Jest coverage rows for the
   same slot without a priority field.
-- Every `{placeholder}` in `command` is one of the six names above.
+- Every `{placeholder}` in `command` is one of the seven names above.
 
 ## Unverified, carried forward from the research
 

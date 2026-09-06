@@ -29,7 +29,7 @@ in order; do not collapse or defer.
 | 11 | Verify Implementation | verify ext | `$speckit-verify` |
 | 12 | Verify Tasks Phantom Check | verify-tasks ext | `$speckit-verify-tasks` |
 | 13 | Code Review | (none) — built-in | spawn a subagent to independently review the diff `origin/main...HEAD`; report findings by severity |
-| 14 | Integration Suite | (none) | `PROJECT_COMMANDS.FULL_VERIFY` or detected full test command |
+| 14 | Integration Suite | (none) | `PROJECT_COMMANDS.FULL_VERIFY` or detected full test command, then every populated quality-gate slot (`COMPLEXITY`, `MUTATION`, `DEPENDENCY_RULES`) with `{paths}` = changed source files in `origin/main...HEAD`; a populated slot that fails blocks; record each result in the Quality Gates table |
 | 15 | Final Reviewability Backstop | (none) | deferred helper; use current committed evidence or stop before PR side effects |
 | 16 | PR Packet/Body Generation | final backstop proceeded | emit or refresh current `specs/<feature>/.process/pr-packets/<packet-id>.json` with `pr-packet-output` `dry_run` then `apply`; stop if emission or validation fails |
 | 17 | PR Creation | current packet validation passed | single-PR path only when no split route and no current `pr_marker_plan`; `multi-pr-emission` for split-PR routes or marker-ready plans |
@@ -358,7 +358,8 @@ the autopilot meant to leave behind.
 Questions (Codex orchestrator answers each in order):
 
 1. **Tests executed?** Did `BUILD`, `TYPECHECK`, `LINT`, `UNIT_TEST`, and
-   `INTEGRATION_TEST` each actually run this session and exit zero — or did
+   `INTEGRATION_TEST`, plus every populated quality-gate slot, each actually
+   run this session and exit zero — or did
    the autopilot infer "no errors reported" from a phase that never invoked
    them? Cite the most recent test run with timestamp from the workflow log.
 
