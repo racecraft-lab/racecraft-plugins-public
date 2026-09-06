@@ -59,7 +59,7 @@ Runtime hook configuration surfaces and source boundaries.
 
 #### Source Facts
 
-- Codex hook events: UserPromptSubmit. Source refs: `speckit-pro/codex-hooks.json`.
+- Codex hook events: UserPromptSubmit, PreToolUse, Stop. Source refs: `speckit-pro/codex-hooks.json`.
 - The declared Codex UserPromptSubmit matcher group contains no hook handlers and executes no command. Source refs: `speckit-pro/codex-hooks.json`.
 
 #### Sources

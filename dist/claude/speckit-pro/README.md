@@ -140,9 +140,12 @@ still apply. Git-backed marketplace setup can require network access or network
 approval, and the default `~/.codex/agents/` write is outside most project
 workspaces. Approve only the expected local write of the named SpecKit Pro TOML
 files, or rerun with `.codex/agents/` or narrower permissions. The generated
-Codex payload can include lifecycle hook configuration such as
-`codex-hooks.json`; hook behavior remains governed by Codex sandbox, approval,
-hook trust, and configured policy controls.
+Codex payload includes lifecycle hook configuration in `codex-hooks.json`:
+two workflow guard commands (lockfile package-manager deny on `PreToolUse`,
+unpushed-commit block on `Stop`) that Codex skips until you review and trust
+them once in `/hooks`. Hook behavior remains governed by Codex sandbox,
+approval, hook trust, and configured policy controls, and the guard script
+fails open on an interpreter below Python 3.11.
 
 For the detailed Codex install page, use
 [`docs-site/src/content/docs/install/codex.md`](../docs-site/src/content/docs/install/codex.md).
