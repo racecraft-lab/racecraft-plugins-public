@@ -10,6 +10,7 @@ import importlib.util
 import io
 import json
 import os
+import shutil
 from pathlib import Path
 import signal
 import subprocess
@@ -1112,6 +1113,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             self.assertEqual(names, ("fixture-server", "server.with.dots"))
             self.assertIn("mcp", probe.call_args.args[0])
             self.assertIn("list", probe.call_args.args[0])
+            self.assertEqual(probe.call_args.kwargs["executable"], shutil.which("codex"))
             args = engine.skill_isolation_args((), names)
             for feature in ("apps", "browser_use", "computer_use", "hooks", "plugins", "skill_mcp_dependency_install"):
                 self.assertIn(["--disable", feature], [args[i:i + 2] for i in range(len(args) - 1)])
@@ -1849,6 +1851,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 and preflight_captured["kwargs"]["cwd"] == workspace
                 and preflight_captured["kwargs"]["env"].get("CODEX_HOME") == str(auth_home)
                 and preflight_captured["kwargs"]["shell"] is False
+                and preflight_captured["kwargs"]["executable"] == shutil.which("codex")
                 and offline_readiness == catalog_readiness
                 and offline_reason == "Codex catalog preflight passed",
                 "Codex offline probe errors all fail closed without rendered-prompt evidence": all(
@@ -1897,6 +1900,8 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 "Codex retains existing login environment": captured["kwargs"]["env"].get("CODEX_HOME")
                 == str(auth_home)
                 and captured["kwargs"]["env"].get("HOME") == os.environ.get("HOME"),
+                "Codex executable override retains statically verified provenance": captured["kwargs"]["executable"]
+                == shutil.which("codex"),
                 "Codex keeps least privilege flags": "--sandbox" not in captured["command"]
                 and 'default_permissions="trigger-fixture"' in captured["command"]
                 and "permissions.trigger-fixture.network.enabled=false" in captured["command"]

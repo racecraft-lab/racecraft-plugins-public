@@ -273,6 +273,7 @@ def enumerate_mcp_servers(workspace: pathlib.Path, timeout: int) -> tuple[str, .
         completed = subprocess.run(
             command, cwd=workspace, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, timeout=timeout, env=codex_environment(),
+            executable=shutil.which("codex"),
             shell=False, check=False,
         )
         if completed.returncode != 0:
@@ -451,6 +452,7 @@ def offline_catalog_preflight(
     try:
         completed = subprocess.run(
             command,
+            executable=shutil.which("codex"),
             cwd=workspace,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
@@ -695,6 +697,7 @@ def run_codex_query(
     try:
         proc = subprocess.run(
             cmd,
+            executable=shutil.which("codex"),
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
