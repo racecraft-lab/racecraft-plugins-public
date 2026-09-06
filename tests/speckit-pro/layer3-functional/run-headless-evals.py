@@ -10,6 +10,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import signal
 import shutil
 import subprocess
@@ -309,6 +310,48 @@ def skill_isolation_args(disabled_skills: tuple[Path, ...]) -> list[str]:
     ]
 
 
+def claude_skill_policy(case: Mapping[str, Any], stage: Stage) -> dict[str, Any]:
+    """Bind the full staged catalog while permitting only the requested Skill."""
+    manifest = json.loads((stage.plugin_root / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+    if not isinstance(manifest, dict):
+        raise EvidenceError("Claude staged plugin manifest must be an object")
+    namespace = manifest.get("name")
+    if namespace != "speckit-pro" or any(key in manifest for key in ("skills", "commands")):
+        raise EvidenceError("Claude staged plugin namespace or custom skill paths are ambiguous")
+    if (stage.plugin_root / "commands").exists():
+        raise EvidenceError("Claude staged command catalog is not supported")
+    names = []
+    for directory in sorted((stage.plugin_root / "skills").iterdir()):
+        entry = directory / "SKILL.md"
+        if directory.is_symlink() or not directory.is_dir() or entry.is_symlink() or not entry.is_file():
+            raise EvidenceError("Claude staged skill catalog contains an ambiguous entry")
+        text = entry.read_text(encoding="utf-8")
+        parts = text.split("---", 2)
+        if len(parts) != 3 or parts[0].strip():
+            raise EvidenceError("Claude staged skill entry has no valid frontmatter")
+        declared = [line.removeprefix("name:").strip() for line in parts[1].splitlines() if line.startswith("name:")]
+        if declared != [directory.name] or re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", directory.name) is None:
+            raise EvidenceError("Claude staged skill name is malformed or ambiguous")
+        names.append(f"{namespace}:{directory.name}")
+    target = str(case["invocation"]).removeprefix("/")
+    if target not in names or target != f"{namespace}:{stage.target_skill.parent.name}":
+        raise EvidenceError("Claude requested target is not the staged target skill")
+    denied = [name for name in names if name != target] + ["init", "security-review"]
+    return {
+        "target_skill": target,
+        "expected_skills": names,
+        "settings": {
+            "disableClaudeAiConnectors": True,
+            "disableBundledSkills": True,
+            "skillOverrides": {"doctor": "off"},
+            "permissions": {
+                "allow": [f"Skill({target})", f"Skill({target} *)"],
+                "deny": [rule for name in denied for rule in (f"Skill({name})", f"Skill({name} *)")],
+            },
+        },
+    }
+
+
 def build_command(
     case: Mapping[str, Any],
     stage: Stage,
@@ -323,6 +366,7 @@ def build_command(
         raise HeldLaunch(str(case.get("hold_reason", "launch held")))
     if case["host"] == "claude":
         tools = ",".join(str(item) for item in case["allowed_tools"])
+        policy = claude_skill_policy(case, stage)
         return [
             str(cli),
             "-p",
@@ -343,7 +387,7 @@ def build_command(
             "--mcp-config",
             str(stage.mcp_config),
             "--settings",
-            '{"disableClaudeAiConnectors":true}',
+            json.dumps(policy["settings"], separators=(",", ":"), sort_keys=True),
             "--no-chrome",
             "--add-dir",
             str(stage.plugin_root),
@@ -634,6 +678,7 @@ def parse_events(host: str, stdout: str) -> dict[str, Any]:
             "resolved_model_evidence": "system/init.model" if isinstance(model, str) else "not emitted",
             "plugins": init[0].get("plugins"),
             "available_tools": init[0].get("tools"),
+            "available_skills": init[0].get("skills"),
             "tool_trace": tool_trace,
             "completed_tool_use_ids": sorted(completed_tool_use_ids),
             "event_count": len(events),
@@ -641,9 +686,22 @@ def parse_events(host: str, stdout: str) -> dict[str, Any]:
     raise EvidenceError(f"unsupported host event stream: {host}")
 
 
-def require_provider_evidence(case: Mapping[str, Any], parsed: Mapping[str, Any]) -> None:
+def require_provider_evidence(
+    case: Mapping[str, Any],
+    parsed: Mapping[str, Any],
+    claude_policy: Mapping[str, Any] | None = None,
+) -> None:
     required = {str(item) for item in case.get("required_tools", [])}
     if case["host"] == "claude":
+        if claude_policy is None:
+            raise EvidenceError("Claude evidence requires the bound staged Skill policy")
+        skills = parsed.get("available_skills")
+        if (
+            not isinstance(skills, list)
+            or not all(isinstance(item, str) for item in skills)
+            or sorted(skills) != claude_policy["expected_skills"]
+        ):
+            raise EvidenceError("Claude system/init skill catalog differs from the bound staged catalog")
         available_raw = parsed.get("available_tools")
         available = {str(item) for item in available_raw} if isinstance(available_raw, list) else set()
         allowed = {str(item) for item in case.get("allowed_tools", [])}
@@ -666,6 +724,13 @@ def require_provider_evidence(case: Mapping[str, Any], parsed: Mapping[str, Any]
         if parsed.get("resolved_model") is None:
             raise EvidenceError("Claude system/init did not report a resolved model")
         expected_skill = str(case["invocation"]).removeprefix("/")
+        if expected_skill != claude_policy["target_skill"]:
+            raise EvidenceError("Claude requested target differs from the bound staged Skill policy")
+        for item in parsed.get("tool_trace", []):
+            if isinstance(item, dict) and item.get("name") == "Skill":
+                supplied = item.get("input")
+                if not isinstance(supplied, dict) or supplied.get("skill") != expected_skill:
+                    raise EvidenceError("Claude trace contains a non-target Skill attempt")
         completed = {str(item) for item in parsed.get("completed_tool_use_ids", [])}
         matching_skill_uses = [
             item
@@ -764,6 +829,9 @@ def main(argv: list[str]) -> int:
         )
         stage_root = Path(tempfile.mkdtemp(prefix=f"speckit-l3-{opaque_id}-"))
         stage = stage_case(root, case, stage_root)
+        claude_policy = claude_skill_policy(case, stage) if args.host == "claude" else None
+        if claude_policy is not None:
+            manifest["claude_skill_policy"] = claude_policy
         disabled_skills = (
             enumerate_non_target_skills(stage)
             if args.host == "codex"
@@ -813,6 +881,11 @@ def main(argv: list[str]) -> int:
                 else:
                     if args.host == "codex" and enumerate_non_target_skills(stage) != disabled_skills:
                         raise EvidenceError("Codex skill roots changed after command assembly")
+                    if args.host == "claude" and (
+                        tree_digest(stage.plugin_root) != stage.plugin_digest
+                        or claude_skill_policy(case, stage) != claude_policy
+                    ):
+                        raise EvidenceError("Claude staged plugin or Skill policy changed after command assembly")
                     env = build_process_env(os.environ, stage.runtime_root)
                     process_result = capture_process(
                         args.host,
@@ -838,7 +911,7 @@ def main(argv: list[str]) -> int:
                             manifest["event_error"] = str(error)
                         else:
                             try:
-                                require_provider_evidence(case, parsed)
+                                require_provider_evidence(case, parsed, claude_policy)
                             except EvidenceError as error:
                                 status = "provider_evidence_error"
                                 manifest["event_error"] = str(error)
