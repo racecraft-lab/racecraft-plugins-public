@@ -390,6 +390,19 @@ for the tool, then STOP naming the tool and the three options;
 a resume after the operator edits the table proceeds from the
 recorded answer.
 
+### Workflow guards
+
+Two plugin hooks enforce rules the orchestrator must also honor by hand:
+
+- **Lockfile package manager** (`PreToolUse` on the shell tool): when exactly one
+  JavaScript lockfile kind exists, a command that invokes another
+  package manager is denied. Use the manager the lockfile names.
+- **No unpushed commits at turn end** (`Stop`): while
+  `autopilot-state.json` reports `in_progress` or `awaiting_review`,
+  a turn cannot end with commits the upstream lacks. Push before
+  ending the turn, or set the upstream and push; the block names the
+  commit count.
+
 ## Step 0.12: Preset and Extension Detection
 
 ```text

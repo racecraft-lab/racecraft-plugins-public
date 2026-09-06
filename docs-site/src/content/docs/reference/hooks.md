@@ -36,7 +36,7 @@ Runtime hook configuration surfaces and source boundaries.
 
 #### Source Facts
 
-- Claude Code hook events: SessionStart, PreToolUse, SubagentStop. Source refs: `speckit-pro/hooks/hooks.json`.
+- Claude Code hook events: SessionStart, PreToolUse, SubagentStop, Stop. Source refs: `speckit-pro/hooks/hooks.json`.
 - Four command handlers attest the sweep boundary, authorize Agent and broker dispatch, and validate sweep-subagent stops. Source refs: `speckit-pro/hooks/hooks.json`.
 
 #### Sources
