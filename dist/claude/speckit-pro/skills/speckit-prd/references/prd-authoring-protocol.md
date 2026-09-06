@@ -58,9 +58,12 @@ detail in roadmap scopes. Fill only sections that reduce ambiguity:
 2. Goals and Non-goals.
 3. Features with `AC-N.*` acceptance criteria and a `SPEC-NNN` mapping.
 4. Migration or sequence when applicable.
-5. Constraints.
-6. Open Questions.
-7. A SPEC Catalog Crosswalk that is 1:1 with Features.
+5. Module and Interface Deltas: one row per module or interface each Feature
+   creates, changes, or removes. This section is required; a Feature with no
+   such change gets an explicit "no module or interface changes" row.
+6. Constraints.
+7. Open Questions.
+8. A SPEC Catalog Crosswalk that is 1:1 with Features.
 
 Drop an optional appendix unless a sketch materially resolves ambiguity. Write
 new files to `docs/prd-<slug>.md`; preserve the confirmed path in update mode.
@@ -73,6 +76,8 @@ acceptance-criteria group to exactly one `SPEC-NNN` entry. Each entry includes:
 - scope detailed enough to seed `/speckit-specify`;
 - dependencies and enables, priority, and pending status;
 - the existing Reviewability Budget and Projected reviewable LOC fields;
+- Module and Interface Deltas copied from the PRD rows for that Feature, or
+  the explicit "no module or interface changes" line;
 - key files or surfaces and `Source PRD: docs/prd-<slug>.md`.
 
 Confirm the dependency graph and execution order with the user before finalizing.

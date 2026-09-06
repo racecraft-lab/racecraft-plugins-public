@@ -37,6 +37,18 @@
 **Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
 **Reviewability Budget**: [Primary surface; projected reviewable LOC; production files; total files; budget result]
 
+## Module and Interface Deltas
+
+<!--
+  Required. Carry the design concept's or roadmap entry's Module and Interface
+  Deltas here so the plan names the same module and interface changes the
+  reviewer already saw. One line per module or public interface: name, new /
+  changed / removed, one-line delta for callers. Write "No module or interface
+  changes." when that is true; an empty section is a gap, not an answer.
+-->
+
+- `module/or/interface` — [new / changed / removed: one-line delta]
+
 ## Declared File Operations
 
 The plan-phase reviewability estimator (`estimate-reviewable-loc.sh`) parses this
