@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import errno
 import hashlib
 import json
 import os
@@ -14,6 +15,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import time
 import uuid
 
 
@@ -37,6 +39,24 @@ REQUIRED_FLAGS = (
     "--no-session-persistence",
 )
 ACTIVE_CHILD: subprocess.Popen[bytes] | None = None
+CLEANUP_TIMEOUT = 5
+DESCENDANT_EXIT_GRACE = 0.2
+
+
+class ClaudeQueryError(OSError):
+    """Stop the evaluation without discarding a failed child's raw evidence."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.stdout = b""
+        self.stderr = b""
+        self.exit_code: int | None = None
+        self.timed_out = False
+        self.cleanup_error: str | None = None
+        self.unexpected_descendants = False
+        self.child_pid: int | None = None
+        self.child_pgid: int | None = None
+        self.cleanup_observations: list[dict[str, object]] = []
 
 
 class TerminationRequested(Exception):
@@ -45,6 +65,15 @@ class TerminationRequested(Exception):
     def __init__(self, signum: int) -> None:
         super().__init__(f"termination requested by signal {signum}")
         self.signum = signum
+        self.stdout = b""
+        self.stderr = b""
+        self.exit_code: int | None = None
+        self.timed_out = False
+        self.cleanup_error: str | None = None
+        self.unexpected_descendants = False
+        self.child_pid: int | None = None
+        self.child_pgid: int | None = None
+        self.cleanup_observations: list[dict[str, object]] = []
 
 
 def eprint(message: str = "") -> None:
@@ -344,20 +373,76 @@ def retain_trial_evidence(
     }
 
 
-def terminate_child(child: subprocess.Popen[bytes] | None, signum: int = signal.SIGTERM) -> None:
-    if child is None or child.poll() is not None:
-        return
+def terminate_child(child: subprocess.Popen[bytes] | None, signum: int = signal.SIGTERM) -> bool:
+    if child is None:
+        return False
     try:
         if os.name != "nt":
+            if child.pid <= 0 or child.pid == os.getpgrp():
+                raise OSError("refusing to signal an unowned process group")
             os.killpg(child.pid, signum)
-        else:
+        elif child.poll() is None:
             child.terminate()
-    except (OSError, ProcessLookupError):
-        pass
+        else:
+            return False
+    except ProcessLookupError:
+        return False
+    return True
+
+
+def cleanup_child(
+    child: subprocess.Popen[bytes], *, observations: list[dict[str, object]] | None = None,
+) -> bool:
+    """Drain the original owned group; report whether signaling was required."""
+    started = time.monotonic()
+    kill_sent = False
+    last_probe_error: PermissionError | None = None
+
+    def running() -> bool:
+        nonlocal last_probe_error
+        child.poll()
+        if os.name == "nt":
+            return child.returncode is None
+        if child.pid <= 0 or child.pid == os.getpgrp():
+            raise OSError("refusing to inspect an unowned process group")
+        try:
+            os.killpg(child.pid, 0)
+        except ProcessLookupError:
+            if observations is not None:
+                observations.append({"pgid": child.pid, "errno": errno.ESRCH, "elapsed_seconds": time.monotonic() - started})
+            return False
+        except PermissionError as exc:
+            if observations is not None:
+                observations.append({"pgid": child.pid, "errno": exc.errno, "elapsed_seconds": time.monotonic() - started})
+            if not kill_sent or exc.errno != errno.EPERM:
+                raise
+            # A post-KILL permission error is unresolved, never proof of absence.
+            last_probe_error = exc
+        return True
+
+    if child.poll() is not None:
+        deadline = time.monotonic() + DESCENDANT_EXIT_GRACE
+        while running() and time.monotonic() < deadline:
+            time.sleep(0.01)
+    signaled = False
+    for signum in (signal.SIGTERM, signal.SIGKILL):
+        if not running():
+            return signaled
+        signaled = True
+        sent = terminate_child(child, signum)
+        if signum == signal.SIGKILL and sent:
+            kill_sent = True
+        deadline = time.monotonic() + CLEANUP_TIMEOUT
+        while running() and time.monotonic() < deadline:
+            time.sleep(0.05)
+    if running():
+        detail = f"; last unresolved probe: {last_probe_error}" if last_probe_error else ""
+        raise OSError(f"owned process group {child.pid} remained after bounded cleanup{detail}")
+    return signaled
 
 
 def handle_termination(signum: int, _frame: object) -> None:
-    terminate_child(ACTIVE_CHILD, signum)
+    # The query's finally block owns bounded signaling, draining, and evidence.
     raise TerminationRequested(signum)
 
 
@@ -422,39 +507,87 @@ def run_claude_query(
         "--verbose",
         "--no-session-persistence",
     ]
+    environment = os.environ.copy()
+    environment["DISABLE_AUTOUPDATER"] = "1"
+    environment["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] = "1"
+    environment.pop("FORCE_AUTOUPDATE_PLUGINS", None)
     child = subprocess.Popen(
         command,
         cwd=plugin_root,
         stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        env=os.environ.copy(),
+        env=environment,
         shell=False,
         start_new_session=os.name != "nt",
     )
     ACTIVE_CHILD = child
+    stdout = stderr = b""
+    timed_out = completed = False
+    failure: Exception | None = None
+    cleanup_error: str | None = None
+    unexpected_descendants = False
+    cleanup_observations: list[dict[str, object]] = []
     try:
         try:
             stdout, stderr = child.communicate(timeout=timeout)
-            return int(child.returncode), stdout, stderr, False
+            completed = True
         except subprocess.TimeoutExpired as exc:
-            terminate_child(child, signal.SIGKILL)
-            stdout, stderr = child.communicate()
-            if not stdout and isinstance(exc.output, bytes):
+            timed_out = True
+            if isinstance(exc.output, bytes):
                 stdout = exc.output
-            if not stderr and isinstance(exc.stderr, bytes):
+            if isinstance(exc.stderr, bytes):
                 stderr = exc.stderr
-            return -1, stdout, stderr, True
-        except TerminationRequested:
-            terminate_child(child)
-            try:
-                child.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                terminate_child(child, signal.SIGKILL)
-                child.wait(timeout=5)
-            raise
+        except KeyboardInterrupt:
+            failure = TerminationRequested(signal.SIGINT)
+        except Exception as exc:
+            failure = exc
     finally:
-        ACTIVE_CHILD = None
+        try:
+            try:
+                unexpected_descendants = cleanup_child(child, observations=cleanup_observations) is True and completed
+            except (TerminationRequested, KeyboardInterrupt) as exc:
+                if not isinstance(failure, TerminationRequested):
+                    failure = exc if isinstance(exc, TerminationRequested) else TerminationRequested(signal.SIGINT)
+                cleanup_error = "owned process cleanup interrupted before absence was verified"
+            except (OSError, ValueError) as exc:
+                cleanup_error = f"{type(exc).__name__}: {exc}"
+            if not completed:
+                try:
+                    drained_stdout, drained_stderr = child.communicate(timeout=CLEANUP_TIMEOUT)
+                    stdout = drained_stdout or stdout
+                    stderr = drained_stderr or stderr
+                except (TerminationRequested, KeyboardInterrupt) as exc:
+                    if not isinstance(failure, TerminationRequested):
+                        failure = exc if isinstance(exc, TerminationRequested) else TerminationRequested(signal.SIGINT)
+                    cleanup_error = f"{cleanup_error + '; ' if cleanup_error else ''}owned stream drain interrupted"
+                except subprocess.TimeoutExpired as exc:
+                    if isinstance(exc.output, bytes):
+                        stdout = exc.output
+                    if isinstance(exc.stderr, bytes):
+                        stderr = exc.stderr
+                    cleanup_error = f"{cleanup_error + '; ' if cleanup_error else ''}owned stream drain exceeded cleanup bound"
+                except (OSError, ValueError) as exc:
+                    cleanup_error = f"{cleanup_error + '; ' if cleanup_error else ''}stream drain failed: {exc}"
+        finally:
+            ACTIVE_CHILD = None
+
+    if failure is not None or cleanup_error is not None or unexpected_descendants:
+        error = failure if isinstance(failure, TerminationRequested) else ClaudeQueryError(
+            str(failure) if failure is not None else (
+                f"Claude child cleanup failed: {cleanup_error}" if cleanup_error else
+                "Claude child exited with lingering owned descendants"
+            )
+        )
+        error.stdout, error.stderr = stdout, stderr
+        error.exit_code, error.timed_out = child.returncode, timed_out
+        error.cleanup_error = cleanup_error
+        error.unexpected_descendants = unexpected_descendants
+        error.child_pid = child.pid
+        error.child_pgid = child.pid if os.name != "nt" else None
+        error.cleanup_observations = cleanup_observations
+        raise error
+    return -1 if timed_out else int(child.returncode), stdout, stderr, timed_out
 
 
 def remove_plugin_root(plugin_root: Path) -> str | None:
@@ -587,15 +720,30 @@ def main(argv: list[str]) -> int:
                 selected = invalid = 0
                 trial_evidence: list[dict[str, object]] = []
                 for trial_number in range(1, RUNS_PER_QUERY + 1):
-                    rc, stdout, stderr, timed_out = run_claude_query(
-                        executable,
-                        plugin_root,
-                        mcp_config,
-                        str(entry["query"]),
-                        args.model,
-                        args.timeout,
-                        expected_skill=expected_skill,
-                    )
+                    try:
+                        rc, stdout, stderr, timed_out = run_claude_query(
+                            executable,
+                            plugin_root,
+                            mcp_config,
+                            str(entry["query"]),
+                            args.model,
+                            args.timeout,
+                            expected_skill=expected_skill,
+                        )
+                    except (ClaudeQueryError, TerminationRequested) as exc:
+                        raw = retain_trial_evidence(evidence_dir, case_number, trial_number, exc.stdout, exc.stderr)
+                        failure = {
+                            **raw, "valid": False, "selected": False, "reason": str(exc),
+                            "exit_code": exc.exit_code, "timed_out": exc.timed_out,
+                            "interrupted_by_signal": exc.signum if isinstance(exc, TerminationRequested) else None,
+                            "cleanup_verified": exc.cleanup_error is None, "cleanup_error": exc.cleanup_error,
+                            "unexpected_descendants": exc.unexpected_descendants,
+                            "child_pid": exc.child_pid, "child_pgid": exc.child_pgid,
+                            "cleanup_observations": exc.cleanup_observations,
+                        }
+                        failure_path = evidence_dir / f"case-{case_number:03d}-trial-{trial_number:02d}.failure.json"
+                        failure_path.write_text(json.dumps(failure, indent=2) + "\n", encoding="utf-8")
+                        raise
                     raw = retain_trial_evidence(evidence_dir, case_number, trial_number, stdout, stderr)
                     parsed = inspect_claude_stream(
                         stdout,

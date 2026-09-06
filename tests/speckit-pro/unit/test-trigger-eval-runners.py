@@ -11,6 +11,7 @@ import io
 import json
 import os
 from pathlib import Path
+import signal
 import subprocess
 import sys
 import tempfile
@@ -155,8 +156,271 @@ class FakePopen:
     def terminate(self) -> None:
         self.returncode = -15
 
+    def wait(self, timeout: int | None = None) -> int:
+        return self.returncode
+
 
 class Layer2TriggerRunnerTests(unittest.TestCase):
+    def test_claude_child_environment_controls(self) -> None:
+        claude = import_script(CLAUDE_RUNNER, "layer2_claude_child_environment")
+        with (
+            mock.patch.dict(os.environ, {"FORCE_AUTOUPDATE_PLUGINS": "1", "L2_ENV_SENTINEL": "unchanged"}),
+            mock.patch.object(claude.shutil, "which", return_value="/stub/claude"),
+            mock.patch.object(claude.subprocess, "Popen", return_value=FakePopen(b"raw")) as launch,
+            mock.patch.object(claude, "cleanup_child", create=True),
+        ):
+            original = os.environ.copy()
+            claude.run_claude_query(
+                "/stub/claude", Path("/tmp"), Path("/tmp/empty-mcp.json"), "q", "sonnet", 1,
+                expected_skill="fixture:target",
+            )
+            environment = launch.call_args.kwargs["env"]
+            self.assertEqual(environment.get("DISABLE_AUTOUPDATER"), "1")
+            self.assertEqual(environment.get("CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"), "1")
+            self.assertNotIn("FORCE_AUTOUPDATE_PLUGINS", environment)
+            expected = {**original, "DISABLE_AUTOUPDATER": "1", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1"}
+            expected.pop("FORCE_AUTOUPDATE_PLUGINS")
+            self.assertTrue(environment == expected, "child environment changed outside the three approved controls")
+            self.assertTrue(dict(os.environ) == original, "parent environment changed")
+
+    @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
+    def test_claude_exited_leader_still_signals_owned_group(self) -> None:
+        claude = import_script(CLAUDE_RUNNER, "layer2_claude_exited_leader")
+        child = FakePopen(b"", returncode=0)
+        with mock.patch.object(claude.os, "killpg") as killpg:
+            claude.terminate_child(child, signal.SIGTERM)
+        killpg.assert_called_once_with(child.pid, signal.SIGTERM)
+
+    def test_claude_cleanup_failure_retains_raw_and_stops(self) -> None:
+        claude = import_script(CLAUDE_RUNNER, "layer2_claude_cleanup_failure")
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "speckit-pro" / "skills" / "demo" / "SKILL.md"
+            source.parent.mkdir(parents=True)
+            source.write_text("---\nname: demo\ndescription: Fixture.\n---\nNonce body.\n", encoding="utf-8")
+            corpus = root / "tests" / "speckit-pro" / "layer2-trigger" / "evals" / "demo-trigger.json"
+            corpus.parent.mkdir(parents=True)
+            corpus.write_text('[{"query":"q","should_trigger":true}]\n', encoding="utf-8")
+            claude.PLUGIN_ROOT = root / "speckit-pro"
+            raw, error = b"raw-before-cleanup\r\n", b"stderr-before-cleanup\xff"
+            for outcome in ("cleanup-failure", "signal-failure", "unexpected-descendants"):
+                with self.subTest(outcome=outcome):
+                    interrupted = outcome == "signal-failure"
+                    unexpected = outcome == "unexpected-descendants"
+                    evidence = root / f"evidence-{outcome}"
+                    child = FakePopen(raw, error)
+                    if interrupted:
+                        child.communicate = mock.Mock(side_effect=[claude.TerminationRequested(signal.SIGTERM), (raw, error)])
+                    observed = [{"pgid": child.pid, "errno": 1, "elapsed_seconds": 0.01}]
+                    if unexpected:
+                        observed.append({"pgid": child.pid, "errno": 3, "elapsed_seconds": 0.02})
+
+                    def cleanup(_child: object, *, observations: list[dict[str, object]]) -> bool:
+                        observations.extend(observed)
+                        if not unexpected:
+                            raise PermissionError("owned group probe denied")
+                        return True
+
+                    previous_handler = signal.getsignal(signal.SIGTERM)
+                    with (
+                        mock.patch.object(claude.shutil, "which", return_value="/stub/claude"),
+                        mock.patch.object(claude, "cli_preflight", return_value=({}, "ok")),
+                        mock.patch.object(claude.subprocess, "Popen", return_value=child) as launch,
+                        mock.patch.object(claude, "cleanup_child", side_effect=cleanup),
+                        mock.patch.object(claude, "inspect_claude_stream", return_value={"valid": True, "selected": True}) as inspect,
+                        contextlib.redirect_stdout(io.StringIO()),
+                        contextlib.redirect_stderr(io.StringIO()),
+                    ):
+                        code = claude.main(["demo", "--evidence-dir", str(evidence)])
+                    self.assertEqual(code, 143 if interrupted else 1)
+                    self.assertEqual(launch.call_count, 1, "cleanup failure launched another trial")
+                    inspect.assert_not_called()
+                    self.assertEqual((evidence / "case-001-trial-01.jsonl").read_bytes(), raw)
+                    self.assertEqual((evidence / "case-001-trial-01.stderr.log").read_bytes(), error)
+                    failure = json.loads((evidence / "case-001-trial-01.failure.json").read_text(encoding="utf-8"))
+                    self.assertFalse(failure["valid"])
+                    self.assertEqual(failure["cleanup_verified"], unexpected)
+                    self.assertEqual(failure["exit_code"], 0)
+                    self.assertEqual(failure["child_pid"], child.pid)
+                    self.assertEqual(failure["child_pgid"], child.pid if os.name != "nt" else None)
+                    self.assertEqual(failure["cleanup_observations"], observed)
+                    self.assertEqual(failure["interrupted_by_signal"], signal.SIGTERM if interrupted else None)
+                    if unexpected:
+                        self.assertTrue(failure["unexpected_descendants"])
+                        self.assertIn("lingering owned descendants", failure["reason"])
+                        self.assertIsNone(failure["cleanup_error"])
+                    else:
+                        self.assertIn("owned group probe denied", failure["cleanup_error"])
+                    self.assertIsNone(claude.ACTIVE_CHILD)
+                    self.assertEqual(signal.getsignal(signal.SIGTERM), previous_handler)
+
+    @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
+    def test_claude_cleanup_rejects_probe_failure_and_supervisor_group(self) -> None:
+        claude = import_script(CLAUDE_RUNNER, "layer2_claude_cleanup_guards")
+        child = FakePopen(b"", returncode=0)
+        with (
+            mock.patch.object(claude.os, "getpgrp", return_value=child.pid + 1),
+            mock.patch.object(claude.os, "killpg", side_effect=PermissionError("probe denied")) as killpg,
+        ):
+            with self.assertRaises(PermissionError):
+                claude.cleanup_child(child)
+            killpg.assert_called_once_with(child.pid, 0)
+        with (
+            mock.patch.object(claude.os, "getpgrp", return_value=child.pid),
+            mock.patch.object(claude.os, "killpg") as killpg,
+        ):
+            with self.assertRaisesRegex(OSError, "unowned process group"):
+                claude.cleanup_child(child)
+            with self.assertRaisesRegex(OSError, "unowned process group"):
+                claude.terminate_child(child)
+            killpg.assert_not_called()
+
+    @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
+    def test_claude_completed_group_may_exit_during_grace_without_signals(self) -> None:
+        claude = import_script(CLAUDE_RUNNER, "layer2_claude_natural_group_exit")
+        child = FakePopen(b"", returncode=0)
+        with (
+            mock.patch.object(claude.os, "getpgrp", return_value=child.pid + 1),
+            mock.patch.object(claude.os, "killpg", side_effect=[None, ProcessLookupError(), ProcessLookupError()]) as killpg,
+            mock.patch.object(claude.time, "sleep"),
+        ):
+            self.assertFalse(claude.cleanup_child(child))
+        self.assertTrue(all(call.args == (child.pid, 0) for call in killpg.call_args_list))
+
+    @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
+    def test_claude_post_kill_permission_probe_requires_later_absence(self) -> None:
+        claude = import_script(CLAUDE_RUNNER, "layer2_claude_post_kill_probe")
+        for persistent in (False, True):
+            with self.subTest(persistent=persistent):
+                child = FakePopen(b"", returncode=0)
+                sent = []
+                post_kill_probes = 0
+                observations = []
+
+                def probe(pgid: int, signum: int) -> None:
+                    nonlocal post_kill_probes
+                    self.assertEqual(pgid, child.pid)
+                    if signum:
+                        sent.append(signum)
+                    elif signal.SIGKILL in sent:
+                        post_kill_probes += 1
+                        if persistent or post_kill_probes == 1:
+                            raise PermissionError(1, "post-kill probe unresolved")
+                        raise ProcessLookupError(3, "group absent")
+
+                with (
+                    mock.patch.object(claude.os, "getpgrp", return_value=child.pid + 1),
+                    mock.patch.object(claude.os, "killpg", side_effect=probe),
+                    mock.patch.object(claude, "CLEANUP_TIMEOUT", 0.5),
+                    mock.patch.object(claude, "DESCENDANT_EXIT_GRACE", 0),
+                    mock.patch.object(claude.time, "monotonic", side_effect=[i / 10 for i in range(100)]),
+                    mock.patch.object(claude.time, "sleep"),
+                ):
+                    if persistent:
+                        with self.assertRaisesRegex(OSError, "post-kill probe unresolved"):
+                            claude.cleanup_child(child, observations=observations)
+                    else:
+                        self.assertTrue(claude.cleanup_child(child, observations=observations))
+                self.assertEqual(sent, [signal.SIGTERM, signal.SIGKILL])
+                self.assertGreaterEqual(post_kill_probes, 2)
+                self.assertEqual(observations[0]["errno"], 1)
+                self.assertEqual(observations[0]["pgid"], child.pid)
+                self.assertEqual(observations[-1]["errno"], 1 if persistent else 3)
+
+    @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
+    def test_claude_only_post_successful_kill_eperm_may_settle(self) -> None:
+        claude = import_script(CLAUDE_RUNNER, "layer2_claude_permission_boundaries")
+        for fault in ("initial", "term-send", "term-probe", "kill-send", "kill-absent", "post-kill-eacces"):
+            with self.subTest(fault=fault):
+                child = FakePopen(b"", returncode=0)
+                attempted = []
+                failed_probes = []
+
+                def probe(_pgid: int, signum: int) -> None:
+                    if signum:
+                        attempted.append(signum)
+                        if (fault == "term-send" and signum == signal.SIGTERM) or (fault == "kill-send" and signum == signal.SIGKILL):
+                            raise PermissionError(1, "signal send denied")
+                        if fault == "kill-absent" and signum == signal.SIGKILL:
+                            raise ProcessLookupError(3, "signal target absent")
+                    elif (
+                        (fault == "initial" and not attempted)
+                        or (fault == "term-probe" and attempted == [signal.SIGTERM])
+                        or (fault in {"kill-absent", "post-kill-eacces"} and signal.SIGKILL in attempted)
+                    ):
+                        failed_probes.append(signum)
+                        raise PermissionError(13 if fault == "post-kill-eacces" else 1, "probe denied")
+
+                with (
+                    mock.patch.object(claude.os, "getpgrp", return_value=child.pid + 1),
+                    mock.patch.object(claude.os, "killpg", side_effect=probe),
+                    mock.patch.object(claude, "CLEANUP_TIMEOUT", 0.5),
+                    mock.patch.object(claude, "DESCENDANT_EXIT_GRACE", 0),
+                    mock.patch.object(claude.time, "monotonic", side_effect=[i / 10 for i in range(100)]),
+                    mock.patch.object(claude.time, "sleep"),
+                ):
+                    with self.assertRaises(PermissionError):
+                        claude.cleanup_child(child)
+                self.assertLessEqual(len(failed_probes), 1, "an ineligible permission error entered settling polls")
+
+    def test_claude_finally_cleanup_covers_normal_timeout_and_interruption(self) -> None:
+        claude = import_script(CLAUDE_RUNNER, "layer2_claude_finally_cleanup")
+        for mode in ("normal", "timeout", "interruption"):
+            with self.subTest(mode=mode):
+                child = FakePopen(b"partial\r\n", b"partial-error\xff")
+                if mode == "timeout":
+                    child.timeout = True
+                elif mode == "interruption":
+                    child.communicate = mock.Mock(side_effect=[claude.TerminationRequested(signal.SIGTERM), (b"partial\r\n", b"partial-error\xff")])
+                with (
+                    mock.patch.object(claude.shutil, "which", return_value="/stub/claude"),
+                    mock.patch.object(claude.subprocess, "Popen", return_value=child),
+                    mock.patch.object(claude, "terminate_child"),
+                    mock.patch.object(claude, "cleanup_child", create=True) as cleanup,
+                ):
+                    if mode == "interruption":
+                        with self.assertRaises(claude.TerminationRequested) as raised:
+                            claude.run_claude_query("/stub/claude", Path("/tmp"), Path("/tmp/empty"), "q", "sonnet", 1, expected_skill="fixture:target")
+                        self.assertEqual(raised.exception.stdout, b"partial\r\n")
+                        self.assertEqual(raised.exception.stderr, b"partial-error\xff")
+                    else:
+                        result = claude.run_claude_query("/stub/claude", Path("/tmp"), Path("/tmp/empty"), "q", "sonnet", 1, expected_skill="fixture:target")
+                        self.assertEqual(result, (-1 if mode == "timeout" else 0, b"partial\r\n", b"partial-error\xff", mode == "timeout"))
+                    cleanup.assert_called_once_with(child, observations=[])
+                    self.assertIsNone(claude.ACTIVE_CHILD)
+
+    def test_claude_repeated_drain_timeout_is_bounded_and_retains_partial_output(self) -> None:
+        claude = import_script(CLAUDE_RUNNER, "layer2_claude_bounded_drain")
+        child = FakePopen(b"partial", b"error")
+        child.communicate = mock.Mock(side_effect=subprocess.TimeoutExpired(["stub"], 1, output=b"partial", stderr=b"error"))
+        with (
+            mock.patch.object(claude.shutil, "which", return_value="/stub/claude"),
+            mock.patch.object(claude.subprocess, "Popen", return_value=child),
+            mock.patch.object(claude, "terminate_child"),
+            mock.patch.object(claude, "cleanup_child", create=True),
+        ):
+            with self.assertRaises(OSError) as raised:
+                claude.run_claude_query("/stub/claude", Path("/tmp"), Path("/tmp/empty"), "q", "sonnet", 1, expected_skill="fixture:target")
+        self.assertEqual(raised.exception.stdout, b"partial")
+        self.assertEqual(raised.exception.stderr, b"error")
+        self.assertTrue(raised.exception.timed_out)
+        self.assertTrue(all(call.kwargs.get("timeout") is not None for call in child.communicate.call_args_list))
+        self.assertIsNone(claude.ACTIVE_CHILD)
+
+    def test_claude_signal_during_cleanup_preserves_completed_stream(self) -> None:
+        claude = import_script(CLAUDE_RUNNER, "layer2_claude_cleanup_signal")
+        with (
+            mock.patch.object(claude.shutil, "which", return_value="/stub/claude"),
+            mock.patch.object(claude.subprocess, "Popen", return_value=FakePopen(b"completed", b"raw-error")),
+            mock.patch.object(claude, "cleanup_child", side_effect=claude.TerminationRequested(signal.SIGTERM)),
+        ):
+            with self.assertRaises(claude.TerminationRequested) as raised:
+                claude.run_claude_query("/stub/claude", Path("/tmp"), Path("/tmp/empty"), "q", "sonnet", 1, expected_skill="fixture:target")
+        self.assertEqual(raised.exception.stdout, b"completed")
+        self.assertEqual(raised.exception.stderr, b"raw-error")
+        self.assertIn("interrupted", raised.exception.cleanup_error)
+        self.assertIsNone(claude.ACTIVE_CHILD)
+
     def test_claude_skill_isolation(self) -> None:
         claude = import_script(CLAUDE_RUNNER, "layer2_claude_skill_isolation")
         root = Path("/tmp/measurement-plugin")
@@ -213,7 +477,10 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     "Skill(init)", "Skill(init *)", "Skill(security-review)", "Skill(security-review *)"
                 ]},
             })
-            self.assertEqual(kwargs["env"], os.environ.copy())
+            environment = os.environ.copy()
+            environment.update({"DISABLE_AUTOUPDATER": "1", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1"})
+            environment.pop("FORCE_AUTOUPDATE_PLUGINS", None)
+            self.assertTrue(kwargs["env"] == environment, "launch environment differs from the approved child controls")
             prepared.append((command.copy(), kwargs))
             attempted.append(target)
             return FakePopen(raw)
@@ -221,6 +488,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
         with (
             mock.patch.object(claude.shutil, "which", return_value="/usr/local/bin/claude"),
             mock.patch.object(claude.subprocess, "Popen", side_effect=guarded_launch),
+            mock.patch.object(claude, "cleanup_child"),
         ):
             claude.run_claude_query(
                 "/usr/local/bin/claude", root, root / "empty-mcp.json", "query", "sonnet", 30,
@@ -405,6 +673,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             with (
                 mock.patch.object(claude.shutil, "which", return_value="/usr/local/bin/claude"),
                 mock.patch.object(claude.subprocess, "Popen", side_effect=fake_popen),
+                mock.patch.object(claude, "cleanup_child"),
             ):
                 rc, launched_stdout, launched_stderr, timed_out = claude.run_claude_query(
                     "/usr/local/bin/claude",
@@ -492,7 +761,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             with (
                 mock.patch.object(claude.shutil, "which", return_value="/usr/local/bin/claude"),
                 mock.patch.object(claude.subprocess, "Popen", return_value=timeout_child),
-                mock.patch.object(claude.os, "killpg", create=True) as killpg,
+                mock.patch.object(claude, "cleanup_child") as timeout_cleanup,
             ):
                 timeout_rc, timeout_stdout, timeout_error, timeout_state = claude.run_claude_query(
                     "/usr/local/bin/claude",
@@ -697,7 +966,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 "timeout evidence hashes partial bytes": timeout_evidence["stdout_sha256"]
                 == hashlib.sha256(timeout_bytes).hexdigest()
                 and Path(timeout_evidence["stderr_path"]).read_bytes() == timeout_stderr,
-                "timeout terminates owned process group": os.name == "nt" or killpg.call_count == 1,
+                "timeout invokes owned process cleanup": timeout_cleanup.call_args_list == [mock.call(timeout_child, observations=[])],
                 "negative one-of-three selection passes": claude.case_passes(False, selected=1, invalid=0),
                 "negative two-of-three selection fails": not claude.case_passes(False, selected=2, invalid=0),
                 "invalid evidence fails either polarity": not claude.case_passes(False, selected=0, invalid=1)
