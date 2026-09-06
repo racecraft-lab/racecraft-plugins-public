@@ -80,6 +80,16 @@ Use `references/gate-validation.md` from the installed `speckit-autopilot` skill
 
 **Constitution Check:** ✅ / ❌ (mark before proceeding to G1)
 
+### Quality Gates
+
+Filled from `detect-commands` at Step 0.11. One row per slot; the operator answer column holds the one-time missing-tool decision (`install`, `skip (spec)`, `skip (repo)`, or `unanswered`) and is the record that stops the question from firing again.
+
+| Slot | Status | Tool | Command | Operator answer | G0 baseline | Final |
+|------|--------|------|---------|-----------------|-------------|-------|
+| COMPLEXITY | <!-- populated / unconfigured --> | <!-- e.g., radon + coverage.py --> | <!-- recorded with `{plugin_root}` and `{paths}` literal --> | <!-- blank until asked --> | <!-- vacuous pass --> | <!-- pass / fail --> |
+| MUTATION | | | | | <!-- vacuous pass --> | |
+| DEPENDENCY_RULES | | | | | <!-- real run --> | |
+
 ---
 
 ## Specification Context

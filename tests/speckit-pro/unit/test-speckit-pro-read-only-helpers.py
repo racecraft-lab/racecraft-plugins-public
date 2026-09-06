@@ -2848,6 +2848,28 @@ class ReadOnlyHelperTests(unittest.TestCase):
             self.assertEqual("pytest", payload["commands"]["UNIT_TEST"])
             self.assertEqual("root_marker", payload["detection"]["source"])
 
+    def test_detect_commands_fills_quality_gate_slots_from_discovery_table(self) -> None:
+        """The three quality-gate slots come from the shipped table, keyed on signal files."""
+        if self.helper_filter and self.helper_filter != "detect-commands":
+            self.skipTest("gate slot case uses detect-commands")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            project_path = Path(project)
+            (project_path / "pyproject.toml").write_text("", encoding="utf-8")
+            (project_path / ".importlinter").write_text("", encoding="utf-8")
+            payload = self._detected(project_path)
+            self.assertEqual("lint-imports --config .importlinter", payload["commands"]["DEPENDENCY_RULES"])
+            self.assertIn("{plugin_root}/scripts/crap-score.py", payload["commands"]["COMPLEXITY"])
+            self.assertIn("{paths}", payload["commands"]["COMPLEXITY"])
+            self.assertEqual("N/A", payload["commands"]["MUTATION"])
+            self.assertEqual("populated", payload["gates"]["DEPENDENCY_RULES"]["status"])
+            self.assertEqual("import-linter", payload["gates"]["DEPENDENCY_RULES"]["tool"])
+            self.assertIn(payload["gates"]["DEPENDENCY_RULES"]["tool_present"], (True, False))
+            self.assertEqual("unconfigured", payload["gates"]["MUTATION"]["status"])
+            self.assertTrue(payload["plugin_root"])
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            payload = self._detected(Path(project))
+            self.assertEqual({"N/A"}, {payload["commands"][slot] for slot in ("COMPLEXITY", "MUTATION", "DEPENDENCY_RULES")})
+
     def test_detect_commands_runner_discovery_is_deterministic(self) -> None:
         if self.helper_filter and self.helper_filter != "detect-commands":
             self.skipTest("determinism case uses detect-commands")

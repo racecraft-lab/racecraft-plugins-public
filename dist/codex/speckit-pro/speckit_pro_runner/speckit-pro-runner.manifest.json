@@ -47,7 +47,7 @@
         "value": "speckit_pro_runner/gate_discovery.py",
         "display": "speckit_pro_runner/gate_discovery.py"
       },
-      "sha256": "e3c6ba719b8b6a66189e416567ec138359cf22c8a8c84c955950d73ed2d0fc95"
+      "sha256": "ab03adc6c354dcacac762c6f7d2dd5af9fd47d1cd66368245afc5928b0c0441b"
     },
     {
       "path": {
@@ -151,7 +151,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "f6a4037e1a3e0a3513cdf75b0b496d9d58c900c9ad4984137ace9201aa3ec205"
+      "sha256": "026f08e09788908ed41e21c6c4048eeea780cba44487a47d5d99ac2319a397b2"
     },
     {
       "path": {

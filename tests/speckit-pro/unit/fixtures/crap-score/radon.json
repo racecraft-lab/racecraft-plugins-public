@@ -1,0 +1,8 @@
+{
+  "tests/speckit-pro/unit/fixtures/crap-score/sample.py": [
+    {"type": "function", "name": "simple", "rank": "A", "complexity": 1, "lineno": 1, "col_offset": 0, "endline": 2, "closures": []},
+    {"type": "class", "name": "Box", "rank": "A", "complexity": 3, "lineno": 5, "col_offset": 0, "endline": 11,
+     "methods": [{"type": "method", "name": "method", "classname": "Box", "rank": "A", "complexity": 3, "lineno": 6, "col_offset": 4, "endline": 11, "closures": []}]},
+    {"type": "function", "name": "tangled", "rank": "B", "complexity": 9, "lineno": 14, "col_offset": 0, "endline": 27, "closures": []}
+  ]
+}

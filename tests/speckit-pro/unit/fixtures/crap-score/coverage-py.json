@@ -1,0 +1,10 @@
+{
+  "meta": {"format": 3, "version": "7.6.0"},
+  "files": {
+    "tests/speckit-pro/unit/fixtures/crap-score/sample.py": {
+      "executed_lines": [1, 2, 5, 6, 7, 8, 9, 14, 15],
+      "missing_lines": [10, 11, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27],
+      "summary": {"percent_covered": 39.1}
+    }
+  }
+}
