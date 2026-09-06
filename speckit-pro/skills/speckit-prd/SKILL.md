@@ -58,11 +58,12 @@ verification rules. Report created or updated paths and recommend
 ## Output contract
 
 - `docs/prd-<slug>.md`: lean PRD with Problem, Goals, Non-goals, Features and
-  acceptance criteria, Migration or sequence when applicable, Constraints, Open
-  Questions, and the 1:1 SPEC Catalog Crosswalk.
+  acceptance criteria, Migration or sequence when applicable, Module and
+  Interface Deltas (required; "no module or interface changes" is an explicit
+  valid entry), Constraints, Open Questions, and the 1:1 SPEC Catalog Crosswalk.
 - `docs/ai/specs/<slug>-technical-roadmap.md`: ordered SPEC catalog with Source
-  PRD, scope, dependencies, status, reviewability budget, key surfaces, and a
-  reciprocal roadmap-MOC link.
+  PRD, scope, dependencies, status, reviewability budget, module and interface
+  deltas, key surfaces, and a reciprocal roadmap-MOC link.
 - `docs/ai/specs/<slug>-roadmap-MOC.md`: curated epics plus the generator-owned
   `GENERATED:INDEX` zone and a relative `up:` link to the roadmap.
 
