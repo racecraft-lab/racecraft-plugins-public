@@ -49,6 +49,75 @@
       "fixture_note": "Inspect the frozen project configuration, local extension manifests, and CLI observation data in this fixture.",
       "required_tools": ["command_execution"],
       "launch_policy": "read_only"
+    },
+    {
+      "host": "claude",
+      "skill": "speckit-coach",
+      "invocation": "/speckit-pro:speckit-coach",
+      "eval_file": "evals/speckit-coach-evals.json",
+      "eval_id": 6,
+      "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
+      "fixture_note": "Use this frozen project as local context for the explanatory request.",
+      "allowed_tools": ["Skill", "Read", "Glob", "Grep"],
+      "required_tools": ["Skill", "Read"],
+      "launch_policy": "restricted_read_only"
+    },
+    {
+      "host": "claude",
+      "skill": "speckit-coach",
+      "invocation": "/speckit-pro:speckit-coach",
+      "eval_file": "evals/speckit-coach-evals.json",
+      "eval_id": 101,
+      "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
+      "fixture_note": "Use this frozen project as local context for the explanatory request.",
+      "allowed_tools": ["Skill", "Read", "Glob", "Grep"],
+      "required_tools": ["Skill", "Read"],
+      "launch_policy": "restricted_read_only"
+    },
+    {
+      "host": "claude",
+      "skill": "speckit-coach",
+      "invocation": "/speckit-pro:speckit-coach",
+      "eval_file": "evals/speckit-coach-evals.json",
+      "eval_id": 102,
+      "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
+      "fixture_note": "Use this frozen project as local context for the explanatory request.",
+      "allowed_tools": ["Skill", "Read", "Glob", "Grep"],
+      "required_tools": ["Skill", "Read"],
+      "launch_policy": "restricted_read_only"
+    },
+    {
+      "host": "codex",
+      "skill": "speckit-coach",
+      "invocation": "$speckit-coach",
+      "eval_file": "codex-evals/speckit-coach-evals.json",
+      "eval_id": 6,
+      "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
+      "fixture_note": "Use this frozen project as local context for the explanatory request.",
+      "required_tools": ["command_execution"],
+      "launch_policy": "read_only"
+    },
+    {
+      "host": "codex",
+      "skill": "speckit-coach",
+      "invocation": "$speckit-coach",
+      "eval_file": "codex-evals/speckit-coach-evals.json",
+      "eval_id": 101,
+      "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
+      "fixture_note": "Use this frozen project as local context for the explanatory request.",
+      "required_tools": ["command_execution"],
+      "launch_policy": "read_only"
+    },
+    {
+      "host": "codex",
+      "skill": "speckit-coach",
+      "invocation": "$speckit-coach",
+      "eval_file": "codex-evals/speckit-coach-evals.json",
+      "eval_id": 102,
+      "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
+      "fixture_note": "Use this frozen project as local context for the explanatory request.",
+      "required_tools": ["command_execution"],
+      "launch_policy": "read_only"
     }
   ]
 }

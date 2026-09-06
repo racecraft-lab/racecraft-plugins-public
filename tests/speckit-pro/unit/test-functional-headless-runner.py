@@ -57,6 +57,12 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                 ("codex", "speckit-autopilot", 2),
                 ("claude", "speckit-coach", 8),
                 ("codex", "speckit-coach", 8),
+                ("claude", "speckit-coach", 6),
+                ("claude", "speckit-coach", 101),
+                ("claude", "speckit-coach", 102),
+                ("codex", "speckit-coach", 6),
+                ("codex", "speckit-coach", 101),
+                ("codex", "speckit-coach", 102),
             },
         )
         serialized = json.dumps(self.catalog).lower()
