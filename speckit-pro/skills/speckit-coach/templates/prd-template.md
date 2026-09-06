@@ -12,7 +12,7 @@
     PRD  ──►  Technical Roadmap (SPEC catalog)  ──►  speckit-scaffold-spec  ──►  speckit-autopilot
 
   The single property that makes a PRD "autopilot-ready" is the
-  Feature ⇄ SPEC mapping (§3 + §7): every Feature / Acceptance-Criteria group
+  Feature ⇄ SPEC mapping (§3 + §8): every Feature / Acceptance-Criteria group
   becomes exactly ONE SPEC in the technical roadmap. Preserve that 1:1 mapping
   and the downstream tools can consume this document without re-interpretation.
 
@@ -64,7 +64,7 @@
 
 <!--
   THE KEYSTONE SECTION. Group criteria by Feature. Each Feature maps to exactly
-  ONE SPEC in the technical roadmap (see §7 crosswalk). Number every criterion
+  ONE SPEC in the technical roadmap (see §8 crosswalk). Number every criterion
   AC-<feature>.<n> so the roadmap, specs, and tasks can cite it.
 
   Write each criterion as an observable, testable statement (BDD-friendly:
@@ -102,7 +102,26 @@
 - **Phase 2 (SPEC-002) — {{FEATURE_2_NAME}}**: <!-- depends on Phase 1 because … -->
 - **Phase 3 (SPEC-003) — {{FEATURE_3_NAME}}**: <!-- … -->
 
-## 5. Constraints
+## 5. Module and Interface Deltas
+
+<!--
+  REQUIRED. One row per module, package, or public interface each Feature
+  creates, changes, or removes, so reviewers and downstream specs see the
+  blast radius before any plan exists. Keep it at the WHAT level: a name and a
+  one-line delta, not a design. A Feature with no such change still gets a
+  row that says so explicitly; "no module or interface changes" is a valid,
+  reviewable answer, an empty section is not. The roadmap copies each
+  Feature's rows into its SPEC entry, and speckit-scaffold-spec carries them
+  into plan.md.
+-->
+
+| Feature (§3) | Module or interface | Delta | Note |
+|---|---|---|---|
+| {{FEATURE_1_NAME}} | <!-- e.g., `billing/invoices` --> | <!-- new / changed / removed --> | <!-- one line: what changes for callers --> |
+| {{FEATURE_1_NAME}} | <!-- e.g., `POST /invoices` --> | <!-- changed --> | <!-- e.g., adds optional `due_at` --> |
+| {{FEATURE_2_NAME}} | — | no module or interface changes | <!-- why: e.g., config and copy only --> |
+
+## 6. Constraints
 
 <!--
   Only constraints that genuinely bound the solution. Skip ceremony. Pull in
@@ -115,7 +134,7 @@
 - <!-- Technical constraint (existing architecture, tech stack, integration) -->
 - <!-- NFR at risk (latency budget, data residency, a11y, backward-compat) -->
 
-## 6. Open Questions
+## 7. Open Questions
 
 <!--
   Unresolved decisions, tagged to the SPEC that will resolve them. These do not
@@ -126,7 +145,7 @@
 - **OQ-1 (SPEC-00N):** <!-- question — recommendation, if any -->
 - **OQ-2 (SPEC-00N):** <!-- question -->
 
-## 7. SPEC Catalog Crosswalk
+## 8. SPEC Catalog Crosswalk
 
 <!--
   The handoff to the technical roadmap. Every Feature in §3 appears here as one
@@ -141,7 +160,7 @@
 | {{FEATURE_2_NAME}} | AC-2.* | SPEC-002 | SPEC-001 | P1 |
 | {{FEATURE_3_NAME}} | AC-3.* | SPEC-003 | SPEC-001 | P2 |
 
-## 8. Success Criteria
+## 9. Success Criteria
 
 <!-- How we know the PRD as a whole is delivered. Tie back to §2 Goals and §3 AC. -->
 
@@ -149,7 +168,7 @@
 2. <!-- e.g., Each SPEC merged within its reviewability budget. -->
 3. <!-- e.g., The originating user question (§1) is answerable in-product. -->
 
-## 9. References
+## 10. References
 
 <!-- Links the downstream specs will need. Remove rows that don't apply. -->
 

@@ -123,6 +123,16 @@ class ValidateSkills(unittest.TestCase):
                     output_formats = (skill_dir / 'references' / 'output-formats.md').read_text(encoding='utf-8')
                     for heading in ('## Module and Interface Deltas', '## Terms', '## Verification Gates'):
                         self.assertIn(heading, output_formats, f'expected grill-me output-formats.md to keep the {heading!r} section')
+            if skill == 'speckit-prd':
+                with self.subTest(msg='speckit-prd: PRD and roadmap templates require Module and Interface Deltas'):
+                    prd_template = (PLUGIN_ROOT / 'skills' / 'speckit-coach' / 'templates' / 'prd-template.md').read_text(encoding='utf-8')
+                    roadmap_template = (PLUGIN_ROOT / 'skills' / 'speckit-coach' / 'templates' / 'technical-roadmap-template.md').read_text(encoding='utf-8')
+                    protocol = (skill_dir / 'references' / 'prd-authoring-protocol.md').read_text(encoding='utf-8')
+                    self.assertIn('## 5. Module and Interface Deltas', prd_template, 'expected the PRD template to carry the required Module and Interface Deltas section')
+                    self.assertIn('no module or interface changes', prd_template, 'expected the PRD template to allow an explicit no-change row')
+                    self.assertEqual(4, roadmap_template.count('**Module and Interface Deltas:**'), 'expected every roadmap SPEC entry to carry a Module and Interface Deltas field')
+                    self.assertIn('No module or interface changes.', roadmap_template, 'expected the roadmap template to allow an explicit no-change line')
+                    self.assertIn('Module and Interface Deltas', protocol, 'expected the PRD authoring protocol to require the section')
             if skill == 'speckit-scaffold-spec':
                 with self.subTest(msg='speckit-scaffold-spec: skill heading uses scaffold naming'):
                     self.assertTrue(re.search('^# SpecKit Scaffold Spec$', content, re.MULTILINE) is not None and re.search('^# SpecKit Setup$', content, re.MULTILINE) is None, "expected '# SpecKit Scaffold Spec' heading in skills/speckit-scaffold-spec/SKILL.md")

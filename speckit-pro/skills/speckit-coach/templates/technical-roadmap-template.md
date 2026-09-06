@@ -129,6 +129,14 @@ Budget result: <!-- within budget / warning accepted / split exception -->
 Alternatives considered: [What was rejected and why.]
 -->
 
+**Module and Interface Deltas:**
+<!--
+  Copy this Feature's rows from the PRD §5 table. One line per module or
+  interface: name, new / changed / removed, one-line delta. Required: write
+  "No module or interface changes." when that is true; never leave it empty.
+-->
+- `module/or/interface` — <!-- new / changed / removed: one-line delta -->
+
 **Key Files:**
 <!-- List the main files this spec will create or modify -->
 - `path/to/file1` — Description
@@ -158,6 +166,9 @@ Budget result: <!-- within budget / warning accepted / split exception -->
 **Key Decisions:**
 <!-- Document significant technical decisions. Remove if none yet. -->
 
+**Module and Interface Deltas:**
+- <!-- copied from PRD §5, or "No module or interface changes." -->
+
 **Key Files:**
 - `path/to/file1` — Description
 
@@ -185,6 +196,9 @@ Budget result: <!-- within budget / warning accepted / split exception -->
 **Key Decisions:**
 <!-- Document significant technical decisions. Remove if none yet. -->
 
+**Module and Interface Deltas:**
+- <!-- copied from PRD §5, or "No module or interface changes." -->
+
 **Key Files:**
 - `path/to/file1` — Description
 
@@ -211,6 +225,9 @@ Budget result: <!-- within budget / warning accepted / split exception -->
 
 **Key Decisions:**
 <!-- Document significant technical decisions. Remove if none yet. -->
+
+**Module and Interface Deltas:**
+- <!-- copied from PRD §5, or "No module or interface changes." -->
 
 **Key Files:**
 - `path/to/file1` — Description
