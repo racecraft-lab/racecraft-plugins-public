@@ -43,6 +43,10 @@ TESTS_ROOT = pathlib.Path(__file__).resolve().parents[1]      # <repo>/tests/spe
 PLUGIN_ROOT = TESTS_ROOT.parents[1] / "speckit-pro"           # <repo>/speckit-pro
 DEFAULT_REASONING_EFFORT = "low"
 DEFAULT_MODEL = "gpt-5.6-sol"
+DISABLED_FEATURES = (
+    "plugins", "apps", "browser_use", "computer_use", "hooks",
+    "skill_mcp_dependency_install", "memories",
+)
 MARKER_PATTERN = re.compile(r"CODEX_SKILL_FIRED:[A-Za-z0-9_-]+")
 SKILL_CATALOG_WARNINGS = (
     "Skill descriptions were shortened to fit the skills context budget.",
@@ -232,17 +236,91 @@ def enumerate_non_target_skills(target_skill: pathlib.Path) -> tuple[pathlib.Pat
     return tuple(sorted(discovered, key=str))
 
 
-def skill_isolation_args(disabled_skills: tuple[pathlib.Path, ...]) -> list[str]:
+def codex_environment() -> dict[str, str]:
+    """Keep the existing login location, not unrelated service credentials."""
+    return {
+        key: os.environ[key]
+        for key in ("PATH", "HOME", "TMPDIR", "LANG", "LC_ALL", "LC_CTYPE", "USER", "CODEX_HOME")
+        if key in os.environ
+    }
+
+
+def codex_executable() -> str:
+    """Avoid a PATH symlink the fixture sandbox cannot execute for its own helper."""
+    executable = shutil.which("codex")
+    return str(pathlib.Path(executable).resolve()) if executable else "codex"
+
+
+def fixture_permission_args(workspace: pathlib.Path) -> list[str]:
+    """Use the reviewed native fixture-only policy, without legacy sandbox flags."""
+    return [
+        "-c", 'default_permissions="trigger-fixture"',
+        "-c", 'permissions.trigger-fixture.filesystem={":root"="deny",":minimal"="read",'
+        + json.dumps(str(workspace.resolve())) + '="read"}',
+        "-c", "permissions.trigger-fixture.network.enabled=false",
+        "-c", 'approval_policy="never"',
+        "-c", "allow_login_shell=false",
+    ]
+
+
+def enumerate_mcp_servers(workspace: pathlib.Path, timeout: int) -> tuple[str, ...]:
+    """Read configured names locally; never initialize servers or retain their config."""
+    command = [codex_executable(), "mcp", "list", "--json"]
+    for feature in DISABLED_FEATURES:
+        command.extend(["--disable", feature])
+    command.extend(["-c", 'web_search="disabled"', *fixture_permission_args(workspace)])
+    try:
+        completed = subprocess.run(
+            command, cwd=workspace, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, timeout=timeout, env=codex_environment(),
+            shell=False, check=False,
+        )
+        if completed.returncode != 0:
+            raise ValueError("Codex MCP inventory command failed")
+        inventory = json.loads(completed.stdout)
+        if not isinstance(inventory, list):
+            raise ValueError("Codex MCP inventory is not a list")
+        names = [item.get("name") if isinstance(item, dict) else None for item in inventory]
+        if any(not isinstance(name, str) or not name.strip() for name in names):
+            raise ValueError("Codex MCP inventory omitted a server name")
+        if len(set(names)) != len(names):
+            raise ValueError("Codex MCP inventory contains duplicate server names")
+        return tuple(sorted(names))
+    except (OSError, subprocess.TimeoutExpired, UnicodeError, json.JSONDecodeError) as exc:
+        # Config values, endpoints and credential-bearing diagnostics are not evidence.
+        raise ValueError("Codex MCP inventory could not be read locally") from exc
+
+
+def skill_isolation_args(
+    disabled_skills: tuple[pathlib.Path, ...],
+    disabled_mcp_servers: tuple[str, ...] = (),
+    *,
+    ignore_user_config: bool = True,
+) -> list[str]:
     """Build process-local session overrides without mutating saved configuration."""
     entries = ",".join(
         f"{{path={json.dumps(str(path))},enabled=false}}"
         for path in disabled_skills
     )
-    return [
+    args = [
         "--disable", "plugins",
         "-c", "skills.bundled.enabled=false",
         "-c", f"skills.config=[{entries}]",
     ]
+    for feature in DISABLED_FEATURES[1:]:
+        args.extend(["--disable", feature])
+    # Even disabled entries need a transport when exec ignores user config.
+    # A TOML table preserves exact names; the CLI does not unquote dotted -c keys.
+    # No original endpoints or credentials are copied into these disabled entries.
+    # Diagnostics load user config: do not mix a local transport into an existing
+    # HTTP transport. They prove disabled entries, not exec's effective registry.
+    disabled_entry = (
+        f'{{enabled=false,command={json.dumps(sys.executable)},args=["-c","raise SystemExit(1)"]}}'
+        if ignore_user_config else "{enabled=false}"
+    )
+    servers = ",".join(f"{json.dumps(name)}={disabled_entry}" for name in disabled_mcp_servers)
+    args.extend(["-c", f"mcp_servers={{{servers}}}", "-c", 'web_search="disabled"'])
+    return args
 
 
 def _prompt_strings(value: object) -> list[str]:
@@ -366,7 +444,10 @@ def offline_catalog_preflight(
     timeout: int,
 ) -> tuple[dict[str, object] | None, str]:
     """Render the catalog offline with matching supported session overrides."""
-    command = ["codex", "debug", "prompt-input", *isolation_args]
+    command = [
+        codex_executable(), "debug", "prompt-input",
+        *fixture_permission_args(workspace), *isolation_args,
+    ]
     try:
         completed = subprocess.run(
             command,
@@ -376,7 +457,7 @@ def offline_catalog_preflight(
             stderr=subprocess.PIPE,
             text=False,
             timeout=timeout,
-            env=os.environ.copy(),
+            env=codex_environment(),
             shell=False,
             check=False,
         )
@@ -420,7 +501,28 @@ def inspect_codex_jsonl(
                     raise ValueError("event is not an object")
                 events.append(event)
     except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
-        return {"valid": False, "selected": False, "selected_marker": None, "reason": f"invalid JSONL: {exc}"}
+        return {"valid": False, "selected": False, "selected_marker": None,
+                "isolation_stop": True, "reason": f"invalid JSONL: {exc}"}
+
+    # Inspect every event, including started/failed calls, before lifecycle/marker scoring.
+    # A runtime error with no tool-call event remains an invalid trial, not evidence
+    # that a connected tool ran. A failed MCP call is still connected-tool activity.
+    local_items = {"agent_message", "reasoning", "command_execution", "todo_list", "error"}
+    for event in events:
+        event_type = event.get("type")
+        if isinstance(event_type, str) and event_type in {"item.started", "item.updated", "item.completed"}:
+            item = event.get("item")
+            item_type = item.get("type") if isinstance(item, dict) else None
+            unsafe = not isinstance(item_type, str) or item_type not in local_items
+            reason = "connected or unsupported tool item"
+        else:
+            unsafe = not isinstance(event_type, str) or event_type not in {
+                "thread.started", "turn.started", "turn.completed", "turn.failed", "error",
+            }
+            reason = "unsupported event type"
+        if unsafe:
+            return {"valid": False, "selected": False, "selected_marker": None,
+                    "isolation_stop": True, "reason": reason}
 
     event_types = [event.get("type") for event in events]
     lifecycle = ("thread.started", "turn.started", "turn.completed")
@@ -578,9 +680,9 @@ def run_codex_query(
     isolation_args: list[str],
 ) -> tuple[int, bytes, bytes, bool]:
     cmd = [
-        "codex", "exec",
+        codex_executable(), "exec", "--strict-config",
         "--cd", str(workspace),
-        "--sandbox", "read-only",
+        *fixture_permission_args(workspace),
         "--ephemeral",
         "--ignore-user-config",
         "--json",
@@ -589,7 +691,7 @@ def run_codex_query(
     ]
     cmd.extend(isolation_args)
     cmd.append(query)
-    env = os.environ.copy()
+    env = codex_environment()
     try:
         proc = subprocess.run(
             cmd,
@@ -671,13 +773,15 @@ def main() -> int:
         if source_skill_description(target_skill) != target_description:
             raise ValueError("staged Codex skill description differs from its source")
         disabled_skills = enumerate_non_target_skills(target_skill)
-        isolation_args = skill_isolation_args(disabled_skills)
+        disabled_mcp_servers = enumerate_mcp_servers(workspace, args.timeout)
+        isolation_args = skill_isolation_args(disabled_skills, disabled_mcp_servers)
+        catalog_args = skill_isolation_args(disabled_skills, disabled_mcp_servers, ignore_user_config=False)
         readiness, readiness_reason = offline_catalog_preflight(
             workspace,
             test_skill_name,
             target_description,
             target_skill,
-            isolation_args,
+            catalog_args,
             args.timeout,
         )
         if readiness is None:
@@ -711,6 +815,8 @@ def main() -> int:
             for run in range(1, args.runs + 1):
                 if enumerate_non_target_skills(target_skill) != disabled_skills:
                     raise ValueError("Codex skill roots changed after catalog preflight")
+                if enumerate_mcp_servers(workspace, args.timeout) != disabled_mcp_servers:
+                    raise ValueError("Codex MCP inventory changed after catalog preflight")
                 rc, output, error_output, timed_out = run_codex_query(
                     workspace,
                     query,
@@ -722,6 +828,12 @@ def main() -> int:
                 raw_evidence = retain_run_evidence(evidence_dir, idx, run, output, error_output)
                 evidence = inspect_codex_jsonl(output, marker, requested_model=args.model)
                 evidence = {**evidence, **raw_evidence, "timed_out": timed_out}
+                if evidence.get("isolation_stop"):
+                    (evidence_dir / "isolation-stop.json").write_text(
+                        json.dumps({"case": idx, "trial": run, "evidence": evidence}, indent=2),
+                        encoding="utf-8",
+                    )
+                    raise ValueError("Codex isolation violation; retained invalid trial and stopped future queries")
                 run_valid = not timed_out and rc == 0 and bool(evidence["valid"])
                 if not run_valid:
                     invalid_runs += 1

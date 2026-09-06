@@ -15,6 +15,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import tomllib
 from types import ModuleType, SimpleNamespace
 import unittest
 from unittest import mock
@@ -1098,6 +1099,120 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     self.assertEqual(exit_code, 0)
                     self.assertEqual(report["summary"]["resolved_model"], expected)
 
+    def test_codex_external_tool_isolation(self) -> None:
+        engine = import_script(CODEX_ENGINE, "layer2_codex_external_isolation")
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary).resolve()
+            servers = [{"name": "fixture-server"}, {"name": "server.with.dots"}]
+            with mock.patch.object(
+                engine.subprocess, "run",
+                return_value=subprocess.CompletedProcess([], 0, json.dumps(servers).encode(), b""),
+            ) as probe:
+                names = engine.enumerate_mcp_servers(workspace, 10)
+            self.assertEqual(names, ("fixture-server", "server.with.dots"))
+            self.assertIn("mcp", probe.call_args.args[0])
+            self.assertIn("list", probe.call_args.args[0])
+            args = engine.skill_isolation_args((), names)
+            for feature in ("apps", "browser_use", "computer_use", "hooks", "plugins", "skill_mcp_dependency_install"):
+                self.assertIn(["--disable", feature], [args[i:i + 2] for i in range(len(args) - 1)])
+            server_table = tomllib.loads(next(arg for arg in args if arg.startswith("mcp_servers=")))["mcp_servers"]
+            self.assertEqual(set(server_table), set(names))
+            for name in names:
+                self.assertEqual(server_table[name], {
+                    "enabled": False, "command": sys.executable, "args": ["-c", "raise SystemExit(1)"],
+                })
+            diagnostic_args = engine.skill_isolation_args((), names, ignore_user_config=False)
+            diagnostic_table = tomllib.loads(next(arg for arg in diagnostic_args if arg.startswith("mcp_servers=")))["mcp_servers"]
+            self.assertEqual(diagnostic_table, {name: {"enabled": False} for name in names})
+            self.assertIn('web_search="disabled"', args)
+            policy = engine.fixture_permission_args(workspace)
+            self.assertNotIn("--sandbox", policy)
+            self.assertIn('default_permissions="trigger-fixture"', policy)
+            self.assertIn('permissions.trigger-fixture.network.enabled=false', policy)
+            self.assertIn('approval_policy="never"', policy)
+            self.assertIn(
+                'permissions.trigger-fixture.filesystem={":root"="deny",":minimal"="read",'
+                + json.dumps(str(workspace)) + '="read"}', policy,
+            )
+            for payload in (b"not-json", b"{}", b"[{}]", b'[{"name":""}]', b'[{"name":"duplicate"},{"name":"duplicate"}]'):
+                with self.subTest(payload=payload), mock.patch.object(
+                    engine.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, payload, b""),
+                ), self.assertRaises(ValueError):
+                    engine.enumerate_mcp_servers(workspace, 10)
+            with mock.patch.dict(os.environ, {"UNRELATED_TOKEN": "never-inherit"}, clear=False):
+                self.assertNotIn("UNRELATED_TOKEN", engine.codex_environment())
+
+        marker = "CODEX_SKILL_FIRED:demo-eval"
+        base = [
+            {"type": "thread.started", "thread_id": "thread-1"},
+            {"type": "turn.started"},
+            {"type": "item.completed", "item": {"type": "agent_message", "text": marker}},
+            {"type": "turn.completed"},
+        ]
+        for phase, item_type in (
+            ("item.started", "mcp_tool_call"),
+            ("item.completed", "mcp_tool_call"),
+            ("item.updated", "web_search"),
+            ("item.completed", "dynamic_tool_call"),
+            ("item.started", "future_unknown_tool"),
+        ):
+            with self.subTest(phase=phase, item_type=item_type):
+                event = {"type": phase, "item": {"type": item_type, "status": "failed", "result": None,
+                         "error": {"message": "approval policy never denied this call"}}}
+                parsed = engine.inspect_codex_jsonl("\n".join(map(json.dumps, [*base[:2], event, *base[2:]])), marker)
+                self.assertFalse(parsed["valid"])
+                self.assertTrue(parsed["isolation_stop"])
+        unavailable = {"type": "item.completed", "item": {"type": "error", "message": "tool unavailable"}}
+        denied = engine.inspect_codex_jsonl("\n".join(map(json.dumps, [*base[:2], unavailable, *base[2:]])), marker)
+        self.assertFalse(denied["valid"])
+        self.assertFalse(denied.get("isolation_stop", False))
+        local = {"type": "item.completed", "item": {"type": "command_execution", "status": "completed", "exit_code": 0}}
+        self.assertTrue(engine.inspect_codex_jsonl("\n".join(map(json.dumps, [*base[:2], local, *base[2:]])), marker)["valid"])
+        for malformed in ({"type": []}, {"type": "item.started", "item": {"type": []}}):
+            with self.subTest(malformed=malformed):
+                parsed = engine.inspect_codex_jsonl(json.dumps(malformed), marker)
+                self.assertFalse(parsed["valid"])
+                self.assertTrue(parsed["isolation_stop"])
+
+    def test_codex_isolation_violation_retains_evidence_and_stops(self) -> None:
+        engine = import_script(CODEX_ENGINE, "layer2_codex_isolation_stop")
+        for item_type, expected_calls in (("mcp_tool_call", 1), ("error", 2)):
+            with self.subTest(item_type=item_type), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                source = root / "SKILL.md"
+                source.write_text("---\nname: demo\ndescription: Demo.\n---\nBody.\n", encoding="utf-8")
+                corpus = root / "corpus.json"
+                corpus.write_text(json.dumps([{"query": "first", "should_trigger": True},
+                                              {"query": "second", "should_trigger": False}]), encoding="utf-8")
+                workspace = root / "workspace"
+                workspace.mkdir()
+                evidence = root / "evidence"
+                raw = "\n".join(map(json.dumps, [
+                    {"type": "thread.started", "thread_id": "thread-1"},
+                    {"type": "turn.started"},
+                    {"type": "item.completed", "item": {"type": item_type, "message": "tool unavailable"}},
+                    {"type": "item.completed", "item": {"type": "agent_message", "text": "Cannot use that tool."}},
+                    {"type": "turn.completed"},
+                ])).encode()
+                with (
+                    mock.patch.object(engine, "find_eval_file", return_value=corpus),
+                    mock.patch.object(engine, "find_skill_source", return_value=source),
+                    mock.patch.object(engine.shutil, "which", return_value="/usr/local/bin/codex"),
+                    mock.patch.object(engine.tempfile, "mkdtemp", return_value=str(workspace)),
+                    mock.patch.object(engine.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, b"", b"")),
+                    mock.patch.object(engine, "enumerate_non_target_skills", return_value=()),
+                    mock.patch.object(engine, "enumerate_mcp_servers", return_value=()),
+                    mock.patch.object(engine, "offline_catalog_preflight", return_value=({}, "ok")),
+                    mock.patch.object(engine, "run_codex_query", return_value=(0, raw, b"", False)) as provider,
+                    mock.patch.object(sys, "argv", [str(CODEX_ENGINE), "demo", "--runs", "1", "--evidence-dir", str(evidence)]),
+                    contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()),
+                ):
+                    self.assertEqual(engine.main(), 1)
+                self.assertEqual(provider.call_count, expected_calls)
+                self.assertEqual((evidence / "case-001-trial-01.jsonl").read_bytes(), raw)
+                self.assertEqual((evidence / "isolation-stop.json").exists(), item_type == "mcp_tool_call")
+                self.assertFalse(workspace.exists())
+
     def test_codex_contracts_remain_unchanged(self) -> None:
         codex = import_script(CODEX_RUNNER, "layer2_codex_wrapper")
         engine = import_script(CODEX_ENGINE, "layer2_codex_engine")
@@ -1573,6 +1688,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                         "enumerate_non_target_skills",
                         side_effect=enumerated,
                     ) as main_enumerate,
+                    mock.patch.object(engine, "enumerate_mcp_servers", return_value=()),
                     mock.patch.object(
                         engine,
                         "offline_catalog_preflight",
@@ -1727,7 +1843,8 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 "Codex offline probe preserves matched isolation overrides without claiming exec equivalence": preflight_captured[
                     "command"
                 ]
-                == ["codex", "debug", "prompt-input", *isolation_args]
+                == [engine.codex_executable(), "debug", "prompt-input",
+                    *engine.fixture_permission_args(workspace), *isolation_args]
                 and "--ignore-user-config" not in preflight_captured["command"]
                 and preflight_captured["kwargs"]["cwd"] == workspace
                 and preflight_captured["kwargs"]["env"].get("CODEX_HOME") == str(auth_home)
@@ -1780,8 +1897,11 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 "Codex retains existing login environment": captured["kwargs"]["env"].get("CODEX_HOME")
                 == str(auth_home)
                 and captured["kwargs"]["env"].get("HOME") == os.environ.get("HOME"),
-                "Codex keeps least privilege flags": "--sandbox" in captured["command"]
-                and captured["command"][captured["command"].index("--sandbox") + 1] == "read-only"
+                "Codex keeps least privilege flags": "--sandbox" not in captured["command"]
+                and 'default_permissions="trigger-fixture"' in captured["command"]
+                and "permissions.trigger-fixture.network.enabled=false" in captured["command"]
+                and 'approval_policy="never"' in captured["command"]
+                and "--strict-config" in captured["command"]
                 and "--ephemeral" in captured["command"]
                 and "--ignore-user-config" in captured["command"]
                 and "--json" in captured["command"]
