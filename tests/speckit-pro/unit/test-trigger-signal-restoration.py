@@ -34,6 +34,8 @@ CURRENT_INVENTORY = [
     "POSIX subprocess SIGTERM maps to exit 143",
     "POSIX subprocess SIGTERM terminates its owned child and removes its plugin",
     "termination path emits an explicit owned-cleanup diagnostic",
+    "POSIX subprocess SIGTERM retains exact partial raw streams",
+    "POSIX subprocess SIGTERM retains separate invalid signal and cleanup evidence",
 ]
 
 
@@ -75,6 +77,8 @@ def write_blocking_claude(binary_dir: Path) -> Path:
         "    print('--restricted --plugin-dir --strict-mcp-config --mcp-config --tools --allowedTools --settings --permission-mode --permission-prompts --output-format --verbose --no-session-persistence')\n"
         "else:\n"
         "    root = sys.argv[sys.argv.index('--plugin-dir') + 1]\n"
+        "    sys.stdout.buffer.write(b'partial stdout\\r\\n'); sys.stdout.buffer.flush()\n"
+        "    sys.stderr.buffer.write(b'partial stderr\\xff'); sys.stderr.buffer.flush()\n"
         "    Path(os.environ['L2_CHILD_STATE']).write_text(json.dumps({'pid': os.getpid(), 'plugin_root': root}), encoding='utf-8')\n"
         "    def stop(_signum, _frame):\n"
         "        Path(os.environ['L2_CHILD_STOPPED']).write_text('stopped\\n', encoding='utf-8')\n"
@@ -93,6 +97,57 @@ def write_blocking_claude(binary_dir: Path) -> Path:
 
 
 class Layer2SignalRestorationTests(unittest.TestCase):
+    @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
+    def test_completed_leaders_lingering_descendant_is_cleaned_but_invalid(self) -> None:
+        runner = import_runner()
+        original_popen = subprocess.Popen
+        owned = []
+        descendant = (
+            "import signal,time; signal.signal(signal.SIGTERM, signal.SIG_IGN); "
+            "print('ready', flush=True); time.sleep(60)"
+        )
+        leader = (
+            "import subprocess,sys,json\n"
+            f"child=subprocess.Popen([sys.executable,'-u','-c',{descendant!r}], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)\n"
+            "assert child.stdout.readline() == b'ready\\n'\n"
+            "child.stdout.close()\n"
+            "print(json.dumps({'descendant_pid':child.pid}), flush=True)\n"
+        )
+
+        def launch(_command: object, **kwargs: object) -> subprocess.Popen:
+            child = original_popen([sys.executable, "-u", "-c", leader], **kwargs)
+            owned.append(child)
+            return child
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            try:
+                with (
+                    mock.patch.object(runner.shutil, "which", return_value="/stub/claude"),
+                    mock.patch.object(runner.subprocess, "Popen", side_effect=launch),
+                    mock.patch.object(runner, "CLEANUP_TIMEOUT", 0.2, create=True),
+                ):
+                    with self.assertRaises(runner.ClaudeQueryError) as raised:
+                        runner.run_claude_query(
+                            "/stub/claude", root, root / "empty-mcp.json", "q", "sonnet", 5,
+                            expected_skill="fixture:target",
+                        )
+                self.assertEqual((raised.exception.exit_code, raised.exception.stderr, raised.exception.timed_out), (0, b"", False))
+                self.assertIn("descendant_pid", json.loads(raised.exception.stdout))
+                self.assertTrue(raised.exception.unexpected_descendants)
+                self.assertIsNone(raised.exception.cleanup_error)
+                self.assertEqual(owned[0].poll(), 0)
+                with self.assertRaises(ProcessLookupError):
+                    os.killpg(owned[0].pid, 0)
+                self.assertIsNone(runner.ACTIVE_CHILD)
+            finally:
+                for child in owned:
+                    try:
+                        os.killpg(child.pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+                    child.wait(timeout=5)
+
     def test_signal_cleanup_contract(self) -> None:
         runner = import_runner()
         with tempfile.TemporaryDirectory() as temporary:
@@ -129,6 +184,8 @@ class Layer2SignalRestorationTests(unittest.TestCase):
             subprocess_exit = 143
             subprocess_clean = True
             subprocess_diagnostic = True
+            partial_streams_retained = True
+            signal_evidence_retained = True
             if os.name != "nt":
                 external_root = root / "external"
                 binary_dir = external_root / "bin"
@@ -178,6 +235,20 @@ class Layer2SignalRestorationTests(unittest.TestCase):
                     and external_sentinel.read_text(encoding="utf-8") == "untouched\n"
                 )
                 subprocess_diagnostic = "terminating owned child and cleaning temporary plugin" in external_stderr
+                partial_streams_retained = (
+                    (evidence / "case-001-trial-01.jsonl").read_bytes() == b"partial stdout\r\n"
+                    and (evidence / "case-001-trial-01.stderr.log").read_bytes() == b"partial stderr\xff"
+                )
+                failure = json.loads((evidence / "case-001-trial-01.failure.json").read_text(encoding="utf-8"))
+                signal_evidence_retained = (
+                    failure["valid"] is False
+                    and failure["interrupted_by_signal"] == signal.SIGTERM
+                    and failure["exit_code"] == 143
+                    and failure["cleanup_verified"] is True
+                    and failure["cleanup_error"] is None
+                    and failure.get("child_pid") == state["pid"]
+                    and failure.get("child_pgid") == state["pid"]
+                )
 
             checks = [
                 lambda: self.assertEqual(in_process_exit, 143),
@@ -189,6 +260,8 @@ class Layer2SignalRestorationTests(unittest.TestCase):
                     any("terminating owned child and cleaning temporary plugin" in line for line in diagnostics)
                     and subprocess_diagnostic
                 ),
+                lambda: self.assertTrue(partial_streams_retained),
+                lambda: self.assertTrue(signal_evidence_retained),
             ]
             for name, check in zip(CURRENT_INVENTORY, checks, strict=True):
                 with self.subTest(msg=name):
