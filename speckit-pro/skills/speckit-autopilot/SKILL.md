@@ -53,6 +53,13 @@ phase in the **resolved stage's** range (`AUTOPILOT_STAGE`, set at Step
 0.6c). A `--stage plan` run finishes its work after the confidence gate.
 A `full` run completes all 7 phases.
 
+**Neither is a status summary a stopping point.** Reporting progress to the
+operator is not a step in the workflow: when a phase still has work, the next
+dispatch goes in the same turn as the report. Ending a turn with no dispatch
+running and tasks still pending leaves nothing to wake the run, which stops the
+stage short of its terminal step. See
+[Phase Execution §Never Yield With Nothing In Flight](./references/phase-execution.md#never-yield-with-nothing-in-flight).
+
 ## Architectural Constraint — Main Agent Is The Orchestrator
 
 This skill loads into the **main session agent** when the user invokes
