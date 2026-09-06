@@ -19,26 +19,7 @@ input.
 **Source PRD:** [../../prd-html-artifacts.md](../../prd-html-artifacts.md)
 **Roadmap MOC:** [html-artifacts-roadmap-MOC.md](html-artifacts-roadmap-MOC.md)
 **Spec ID prefix:** `ART-###`
-**Status:** Active; dependency graph approved 2026-07-28; ART-001, ART-002,
-ART-003, ART-004, ART-005, ART-006, ART-007, ART-011, ART-012 and ART-014 are complete and archived;
-ART-002 shipped in PRs #425, #427 and #430, which unblocked ART-007; ART-012 shipped in PR #426; ART-014 shipped in PR #433 and archived 2026-08-13, which unblocks ART-017;
-ART-011 shipped in PR #434 and archived 2026-08-13, and ART-019 supersedes its
-FR-022; ART-003 shipped as three stacked slices in PRs #435, #436 and #439 and was
-archived 2026-08-14, and its acceptance evidence and harness are preserved under
-`.process/`; ART-007 shipped in PR #445 and was archived 2026-08-18, which
-unblocks both ART-008 and ART-010 and leaves ART-010 with every dependency
-satisfied, and its acceptance evidence is preserved at
-`.process/ART-007-manual-uat.md`; ART-004 shipped in PR #450 and was archived
-2026-08-18 after delivering six design/prototyping ports plus ART-020's gallery
-accessibility repair and guard; ART-020 remains superseded by ART-004;
-ART-005 shipped as seven stacked PRs (#444, #446, #447, #448, #452, #454 and
-#455) and was archived 2026-08-20; ART-008 was scaffolded 2026-08-20 as two
-stacked slices, of which slice 1 shipped in PR #464 on 2026-08-24 and slice 2
-is not yet scaffolded, so the spec stays in progress and unarchived; ART-009 and ART-010 are ready;
-ART-015 was opened from ART-006 findings and is ready with no dependencies;
-ART-016 and ART-018 were opened from ART-014 findings on 2026-08-12 and are
-ready; ART-017, opened from the same findings, shipped in PR #490; ART-019 was
-opened on 2026-08-13 and is ready with no dependencies
+**Status:** Active
 
 ---
 

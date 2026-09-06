@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 export const REPO_ROOT = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
 
-export const DOC010_ROUTES = Object.freeze([
+export const DOCUMENTED_ROUTE_TITLES = Object.freeze([
   {
     logicalPath: '/',
     sourcePath: 'docs-site/src/content/docs/index.mdx',
@@ -38,7 +38,7 @@ export const DOC010_ROUTES = Object.freeze([
   },
 ]);
 
-export const DOC010_SAFETY_BOUNDARIES = Object.freeze({
+export const DOCUMENTED_SAFETY_BOUNDARIES = Object.freeze({
   allowedInputs: Object.freeze([
     'checked-in repository docs-site sources',
     'checked-in generated reference pages',
@@ -374,7 +374,7 @@ function normalizeCommand(value) {
 }
 
 function validateRouteSources(diagnostics) {
-  for (const route of DOC010_ROUTES) {
+  for (const route of DOCUMENTED_ROUTE_TITLES) {
     assertRepoRelative(route.sourcePath, diagnostics);
 
     const routeSource = readRepoText(route.sourcePath, diagnostics);
@@ -549,7 +549,7 @@ function validateSourceUpdateGuidance(diagnostics) {
 }
 
 function validateSafetyBoundaries(diagnostics) {
-  for (const [group, entries] of Object.entries(DOC010_SAFETY_BOUNDARIES)) {
+  for (const [group, entries] of Object.entries(DOCUMENTED_SAFETY_BOUNDARIES)) {
     if (entries.length === 0) {
       diagnostics.push(`docs-site/scripts/validate-docs-quality.mjs: ${group} must not be empty.`);
     }
