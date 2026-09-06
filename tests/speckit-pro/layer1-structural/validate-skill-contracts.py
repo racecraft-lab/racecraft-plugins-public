@@ -62,7 +62,21 @@ class ValidateSkills(unittest.TestCase):
     def test_coach_extension_discovery_discloses_non_exhaustive_scope(self) -> None:
         guide = (PLUGIN_ROOT / 'skills' / 'speckit-coach' / 'references' / 'presets-extensions-guide.md').read_text(encoding='utf-8')
         discovery = ' '.join(guide.split('## Explain or discover', 1)[1].split('## Change state', 1)[0].split())
-        self.assertRegex(discovery, r'user-named or observed extensions.*scope of the list.*explicitly state that it is non-exhaustive')
+        self.assertRegex(discovery, r'Before answering about user-named or observed extensions.*scope of the list.*explicitly state that it is non-exhaustive')
+
+    def test_coach_extension_advice_distinguishes_installed_and_callable_state(self) -> None:
+        guide = (PLUGIN_ROOT / 'skills' / 'speckit-coach' / 'references' / 'presets-extensions-guide.md').read_text(encoding='utf-8')
+        inspection = ' '.join(guide.split('## Inspect before advising', 1)[1].split('## The curated set', 1)[0].split())
+        discovery = ' '.join(guide.split('## Explain or discover', 1)[1].split('## Change state', 1)[0].split())
+        self.assertRegex(inspection, r'Before advising on installed preset or extension behavior, read the active `specify` version/help and host-integration evidence')
+        for obligation in (
+            'Separate installed presence, host command registration, and enabled hook wiring.',
+            'An installed id or description does not prove a callable command or automatic hook.',
+            'Report empty command or hook declarations as empty;',
+            'if the registration or wiring evidence is unavailable, say it is unverified.',
+        ):
+            with self.subTest(obligation=obligation):
+                self.assertIn(obligation, discovery)
 
     def test_skills(self) -> None:
         for skill in validate_skills_SKILLS:

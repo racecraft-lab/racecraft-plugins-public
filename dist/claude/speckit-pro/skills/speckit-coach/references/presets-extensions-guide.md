@@ -7,9 +7,10 @@ resolution behavior, manifests, hooks, and configuration schema.
 ## Inspect before advising
 
 1. Confirm the target project and active host. Preserve unrelated work.
-2. Inspect the installed preset or extension manifest and its current project
-   configuration. Use the active `specify` help and installed command definition
-   for version-specific syntax and behavior.
+2. Before advising on installed preset or extension behavior, read the active
+   `specify` version/help and host-integration evidence, then inspect the
+   installed manifest, command registration, and current project configuration.
+   Follow observed manifest or command paths; do not assume one schema or host.
 3. Distinguish observed state from a catalog description. If a command,
    manifest, or schema cannot be read, disclose the missing evidence instead of
    guessing a path, flag, event, priority rule, or fallback.
@@ -29,17 +30,21 @@ the roster into this guide or infer that an entry outside it should be removed.
 
 - Explain a preset from its installed `preset.yml` and the templates or commands
   that the active resolver reports it owns.
-- Explain an extension from its installed `extension.yml`, registered commands,
-  and active configuration. Derive supported hook events and fields from that
-  evidence, not from a generic example.
-- When discussing user-named or observed extensions, identify the scope of the
-  list and explicitly state that it is non-exhaustive; do not imply it is the
-  complete catalog.
+- Explain an extension from its observed installed manifest, registered
+  commands, and active configuration. Derive supported hook events and fields
+  from that evidence, not from a generic example.
+  Separate installed presence, host command registration, and enabled hook
+  wiring. An installed id or description does not prove a callable command or
+  automatic hook. Report empty command or hook declarations as empty; if the
+  registration or wiring evidence is unavailable, say it is unverified.
 - For catalog discovery, use the catalog stack and search capability exposed by
   the installed CLI. Clearly label information that is available only from an
   external current source.
 - For Autopilot behavior, read the installed `speckit-autopilot` skill as a
   reference only. Do not invoke it or duplicate its extension-routing rules.
+- Before answering about user-named or observed extensions, identify the scope
+  of the list and explicitly state that it is non-exhaustive; do not imply it
+  is the complete catalog.
 
 ## Change state only with approval
 
