@@ -78,6 +78,7 @@
         { "path": "tests/speckit-pro/unit/test-estimate-spec-size.py", "label": "test-estimate-spec-size" },
         { "path": "tests/speckit-pro/unit/test-gate-discovery-table.py", "label": "test-gate-discovery-table" },
         { "path": "tests/speckit-pro/unit/test-crap-score.py", "label": "test-crap-score" },
+        { "path": "tests/speckit-pro/unit/test-quality-gates.py", "label": "test-quality-gates" },
         { "path": "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py", "label": "test-speckit-pro-mutation-helpers" },
         { "path": "tests/speckit-pro/unit/test-generate-spec-index.py", "label": "test-generate-spec-index" },
         { "path": "tests/speckit-pro/unit/test-agent-materialization.py", "label": "test-agent-materialization" },

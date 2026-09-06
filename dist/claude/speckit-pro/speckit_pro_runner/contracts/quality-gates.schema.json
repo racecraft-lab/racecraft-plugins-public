@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "speckit-pro/quality-gates",
+  "title": "Quality gate thresholds",
+  "description": "Repository-owned thresholds for the COMPLEXITY, MUTATION, and DEPENDENCY_RULES gate slots, kept at .specify/quality-gates.json. The operator writes it through the speckit-coach quality-gates flow; agents never edit it. Enforced locally by speckit_pro_runner/quality_gates.py (standard library); this file documents the same rules.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "thresholds"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "thresholds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "complexity",
+        "crap",
+        "mutation_score_floor"
+      ],
+      "properties": {
+        "complexity": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum cyclomatic complexity per changed function."
+        },
+        "crap": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Maximum CRAP score per changed function."
+        },
+        "mutation_score_floor": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Minimum mutation score, percent. The survival ceiling passed to the tool is 100 minus this."
+        }
+      }
+    },
+    "skips": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Permanent repository-wide skips, one per slot. A skipped slot is N/A in every workflow without asking.",
+      "propertyNames": {
+        "enum": [
+          "COMPLEXITY",
+          "MUTATION",
+          "DEPENDENCY_RULES"
+        ]
+      },
+      "patternProperties": {
+        "^(COMPLEXITY|MUTATION|DEPENDENCY_RULES)$": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reason"
+          ],
+          "properties": {
+            "reason": {
+              "type": "string",
+              "minLength": 1
+            },
+            "recorded": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Date the operator recorded the skip."
+            }
+          }
+        }
+      }
+    },
+    "basis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method"
+      ],
+      "properties": {
+        "method": {
+          "enum": [
+            "percentile-90",
+            "bobs-six",
+            "shipped-default",
+            "operator"
+          ]
+        },
+        "measured_functions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "recorded": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

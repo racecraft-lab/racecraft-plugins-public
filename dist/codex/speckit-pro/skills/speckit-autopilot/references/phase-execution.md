@@ -215,8 +215,11 @@ it does NOT invoke a `/speckit-*` command.
    table
 5. Set the "Constitution Check" summary line
 
-**Gate:** G0 — all automated checks and every populated
-quality-gate slot must pass. If any fail, STOP.
+**Gate:** G0 — `quality_gates.status` from Step 0.11 must be
+`present`, and all automated checks and every populated
+quality-gate slot must pass. If any fail, STOP; a missing or
+invalid `.specify/quality-gates.json` stops with the Step 0.11
+message naming the file and the coach flow.
 
 **Doctor Health Check (ALWAYS — plugin skill):**
 After G0 passes, run `/speckit.speckit-utils.doctor` for a full

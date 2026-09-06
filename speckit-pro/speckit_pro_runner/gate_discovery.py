@@ -34,8 +34,8 @@ PLACEHOLDERS = frozenset(
 DEFAULT_TABLE = Path(__file__).resolve().parent / "gate_discovery_table.json"
 REPO_OVERRIDE = ".specify/gate-discovery.json"
 STACK_LANGUAGE = {"python": "python", "nodejs": "typescript"}
-# Hard-coded fallbacks. A repository quality-gates.json, once it exists,
-# replaces these; until then every populated slot runs against them.
+# Used only when .specify/quality-gates.json is missing or invalid, so the
+# operator can still see what would run; G0 fails until the file exists.
 DEFAULT_THRESHOLDS = {
     "ceiling": "30",
     "complexity_ceiling": "8",
@@ -137,13 +137,18 @@ def resolve_slots(
     *,
     file_exists: Any,
     which: Any,
+    thresholds: dict[str, str] | None = None,
+    skips: dict[str, Any] | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Fill the quality-gate slots for ``stack`` from the discovery table.
 
     A repository override at ``.specify/gate-discovery.json`` is consulted
     before the shipped table when it validates; an invalid override is
     reported and ignored. Within one slot the first row whose signal file
-    exists wins. Thresholds and ``{rules_path}`` are substituted here;
+    exists wins. A slot named in ``skips`` (from quality-gates.json) is
+    reported as skipped and never populated. Thresholds (``thresholds``
+    placeholder values from quality-gates.json, else the shipped defaults)
+    and ``{rules_path}`` are substituted here;
     ``{paths}`` and ``{plugin_root}`` stay literal because the orchestrator
     fills them at run time, which also keeps machine-specific paths out of
     the recorded workflow file. ``file_exists(path)`` and ``which(name)`` are
@@ -152,6 +157,9 @@ def resolve_slots(
     slots: dict[str, dict[str, Any]] = {
         slot: {"status": "unconfigured", "command": "N/A"} for slot in SLOTS
     }
+    for slot, entry in (skips or {}).items():
+        if slot in slots:
+            slots[slot] = {"status": "skipped", "command": "N/A", "reason": entry.get("reason", "")}
     language = STACK_LANGUAGE.get(stack)
     if language is None:
         return slots
@@ -174,13 +182,13 @@ def resolve_slots(
         if row["language"] != language:
             continue
         entry = slots[row["slot"]]
-        if entry["status"] == "populated":
+        if entry["status"] in ("populated", "skipped"):
             continue
         signal_path = row["signal"]["path"]
         if not file_exists(repo_root / signal_path):
             continue
         command = row["command"]
-        for name, value in {**DEFAULT_THRESHOLDS, "rules_path": signal_path}.items():
+        for name, value in {**(thresholds or DEFAULT_THRESHOLDS), "rules_path": signal_path}.items():
             command = command.replace("{" + name + "}", value)
         probe = row.get("probe", [])
         entry.update(
