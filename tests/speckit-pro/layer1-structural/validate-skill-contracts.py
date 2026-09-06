@@ -47,6 +47,30 @@ def _description_value(frontmatter: str) -> str:
 
 class ValidateSkills(unittest.TestCase):
 
+    def test_coach_workflow_explanation_reads_host_scaffold_authority(self) -> None:
+        for label, skills_root, template_root in (
+            ('Claude source', PLUGIN_ROOT / 'skills', PLUGIN_ROOT / 'skills'),
+            ('Codex source', PLUGIN_ROOT / 'codex-skills', PLUGIN_ROOT / 'skills'),
+            ('Claude payload', REPO_ROOT / 'dist/claude/speckit-pro/skills', REPO_ROOT / 'dist/claude/speckit-pro/skills'),
+            ('Codex payload', REPO_ROOT / 'dist/codex/speckit-pro/skills', REPO_ROOT / 'dist/codex/speckit-pro/skills'),
+        ):
+            with self.subTest(host=label):
+                coach = skills_root / 'speckit-coach' / 'SKILL.md'
+                template = template_root / 'speckit-coach/templates/workflow-template.md'
+                scaffold = skills_root / 'speckit-scaffold-spec' / 'SKILL.md'
+                routes = [line for line in coach.read_text(encoding='utf-8').splitlines()
+                          if line.startswith('|') and 'workflow-template.md)' in line]
+                self.assertEqual(len(routes), 1, 'workflow explanation must have one authority route')
+                route = routes[0]
+                targets = {(coach.parent / link).resolve()
+                           for link in re.findall(r'\]\(([^)]+)\)', route)}
+                for authority in (template, scaffold):
+                    self.assertIn(authority, targets, 'route must link the template and host scaffold authority')
+                    self.assertTrue(authority.is_file(), f'missing workflow authority: {authority}')
+                for topic in ('creation', 'population', 'inputs', 'output locations'):
+                    self.assertIn(topic, route, f'scaffold explanation route must cover {topic}')
+                self.assertRegex(route, r'read .*speckit-scaffold-spec/SKILL\.md\) as a reference only; do not execute or invoke it')
+
     def test_coach_descriptions_preserve_sdd_scope_and_execution_boundary(self) -> None:
         for host in ('skills', 'codex-skills'):
             with self.subTest(host=host):
