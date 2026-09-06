@@ -326,16 +326,16 @@ async function buildHooksPage() {
   records.push({
     id: 'claude-code-hooks',
     heading: 'Claude Code Hooks',
-    purpose: 'Documents the Claude Code prompt-expansion hook that warns when the SpecKit CLI is unavailable.',
+    purpose: 'Documents Claude Code lifecycle hooks that enforce feedback-sweep isolation.',
     platformMapping: {
-      concept: 'SpecKit CLI availability warning',
-      claudeCode: 'UserPromptExpansion hook in speckit-pro/hooks/hooks.json',
-      codex: 'Parallel Codex hook is documented separately.',
+      concept: 'Feedback-sweep lifecycle enforcement',
+      claudeCode: 'SessionStart, PreToolUse, and SubagentStop hooks in speckit-pro/hooks/hooks.json',
+      codex: 'Codex hook inventory is documented separately.',
       runtimeDifference: 'Claude Code uses the plugin hook configuration under hooks/hooks.json.',
     },
     sourceFacts: [
       sourceFact(`Claude Code hook events: ${Object.keys(claudeHooks.hooks || {}).join(', ')}.`, ['speckit-pro/hooks/hooks.json']),
-      sourceFact('The Claude Code hook matcher targets SpecKit Pro and SpecKit command-style prompts before warning about a missing specify CLI.', ['speckit-pro/hooks/hooks.json']),
+      sourceFact('Four command handlers attest the sweep boundary, authorize Agent and broker dispatch, and validate sweep-subagent stops.', ['speckit-pro/hooks/hooks.json']),
     ],
     sources: [await citation('speckit-pro/hooks/hooks.json')],
     inferredNotes: [
@@ -346,16 +346,16 @@ async function buildHooksPage() {
   records.push({
     id: 'codex-hooks',
     heading: 'Codex Hooks',
-    purpose: 'Documents the Codex prompt-submit hook that warns when SpecKit commands are invoked without the SpecKit CLI.',
+    purpose: 'Documents the current Codex plugin hook inventory.',
     platformMapping: {
-      concept: 'SpecKit CLI availability warning',
-      claudeCode: 'Parallel Claude Code hook is documented separately.',
+      concept: 'Codex plugin hook inventory',
+      claudeCode: 'Claude Code lifecycle hooks are documented separately.',
       codex: 'UserPromptSubmit hook in speckit-pro/codex-hooks.json',
       runtimeDifference: 'Codex uses the root codex-hooks.json plugin configuration.',
     },
     sourceFacts: [
       sourceFact(`Codex hook events: ${Object.keys(codexHooks.hooks || {}).join(', ')}.`, ['speckit-pro/codex-hooks.json']),
-      sourceFact('The Codex hook checks prompt text for SpecKit skill sigils and emits a warning when specify is missing.', ['speckit-pro/codex-hooks.json']),
+      sourceFact('The declared Codex UserPromptSubmit matcher group contains no hook handlers and executes no command.', ['speckit-pro/codex-hooks.json']),
     ],
     sources: [await citation('speckit-pro/codex-hooks.json')],
     inferredNotes: [

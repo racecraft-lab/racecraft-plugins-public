@@ -1,9 +1,5 @@
 # Implementation Plan: SPEC-805 Read-Only Helper Port
 
-**Branch**: `codex/spec-805-read-only-helper-port` | **Date**: 2026-07-02 | **Spec**: [spec.md](./spec.md)
-
-**Input**: Feature specification from `specs/spec-805-read-only-helper-port/spec.md`, Phase 3 prompt from `docs/ai/specs/.process/SPEC-805-workflow.md`, and accepted design decisions from `docs/ai/specs/.process/SPEC-805-design-concept.md`.
-
 ## Summary
 
 Port the read-only and advisory helper surface onto the SPEC-804 Python runner by adding a small helper registry/dispatch layer plus bounded per-helper module targets. SPEC-805 preserves current JSON stdout, stderr diagnostics, and exit-code semantics through deterministic golden fixtures and source-checkout Bash-reference comparisons. Active Claude Code, Codex, install, generated payload, public docs, mutation-helper, and native installed-plugin activation work remains deferred.

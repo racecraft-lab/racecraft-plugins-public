@@ -1,8 +1,6 @@
 # Requirements Checklist: Read-Only Helper Port
 
 **Purpose**: Validate that the Phase 1 specification is complete, bounded, testable, and aligned with the SPEC-805 design concept before planning.
-**Created**: 2026-07-02
-**Feature**: [spec.md](../spec.md)
 
 ## Content Quality
 

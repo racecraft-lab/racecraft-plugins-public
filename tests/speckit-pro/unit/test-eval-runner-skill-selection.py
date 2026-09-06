@@ -50,7 +50,6 @@ SHIPPED_RUNTIME_CONTRACTS = (
     PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "references" / "phase-execution-codex.md",
     PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "post-implementation.md",
     PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "references" / "post-implementation-codex.md",
-    PLUGIN_ROOT / "skills" / "speckit-autopilot" / "templates" / "pr-description-template.md",
 )
 EXPECTED_DEFERRED_HELPERS = frozenset(
     {

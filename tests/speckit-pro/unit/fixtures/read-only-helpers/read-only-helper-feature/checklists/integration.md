@@ -1,8 +1,6 @@
 # Integration Checklist: SPEC-805 Read-Only Helper Port
 
 **Purpose**: Validate integration-quality requirements for reusing the SPEC-804 runner foundation, adding the read-only helper registry and modules, proving parity against Bash references, preserving slice handoff boundaries, and avoiding active Claude/Codex or install-facing cutover.
-**Created**: 2026-07-02
-**Feature**: [spec.md](../spec.md)
 **Domain**: integration
 **Depth**: Standard release-gate requirements quality review
 **Audience**: Reviewer before SPEC-805 task generation and implementation

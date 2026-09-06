@@ -39,8 +39,6 @@ class ValidateHooks(unittest.TestCase):
             data = {}
         with self.subTest(msg='has top-level hooks key'):
             self.assertTrue(_field_exists(data, 'hooks'), "JSON field 'hooks' does not exist")
-        with self.subTest(msg='UserPromptExpansion event exists under hooks'):
-            self.assertTrue(_field_exists(data, 'hooks.UserPromptExpansion'), "JSON field 'hooks.UserPromptExpansion' does not exist")
         hooks_map = data.get('hooks', {}) if isinstance(data.get('hooks'), dict) else {}
         with self.subTest(msg='SessionStart attests the feedback-sweep hook boundary'):
             commands = _declared_hook_commands({'hooks': {'SessionStart': hooks_map.get('SessionStart', [])}})
@@ -48,29 +46,6 @@ class ValidateHooks(unittest.TestCase):
         with self.subTest(msg='NO UserPromptSubmit hook (would fire on every prompt — regression guard)'):
             has_user_prompt_submit = 'UserPromptSubmit' in hooks_map
             self.assertEqual('false', 'true' if has_user_prompt_submit else 'false', 'plugin must not register a global UserPromptSubmit hook')
-        with self.subTest(msg='UserPromptExpansion is a non-empty array'):
-            arr = hooks_map.get('UserPromptExpansion')
-            ok = isinstance(arr, list) and len(arr) > 0
-            self.assertEqual('true', 'true' if ok else 'false', 'UserPromptExpansion must have a non-empty array')
-
-        def _entry() -> object:
-            try:
-                return data['hooks']['UserPromptExpansion'][0]
-            except (KeyError, TypeError, IndexError):
-                return None
-        with self.subTest(msg='Hook entry has matcher field (scopes to plugin command_name)'):
-            entry = _entry()
-            ok = isinstance(entry, dict) and bool(entry.get('matcher'))
-            self.assertEqual('true', 'true' if ok else 'false', 'hook entry must have a non-empty matcher')
-        with self.subTest(msg='Matcher contains plugin-scoping regex (speckit-pro: or speckit. or speckit- or grill-me)'):
-            entry = _entry()
-            matcher_val = entry.get('matcher', '') if isinstance(entry, dict) else ''
-            ok = 'speckit-pro:' in matcher_val or 'speckit' in matcher_val or 'grill-me' in matcher_val
-            self.assertTrue(ok, f"matcher must scope to plugin commands (was: '{matcher_val}')")
-        with self.subTest(msg='Hook entry has hooks array'):
-            entry = _entry()
-            ok = isinstance(entry, dict) and 'hooks' in entry and isinstance(entry['hooks'], list)
-            self.assertEqual('true', 'true' if ok else 'false', 'hook entry must have hooks array')
         with self.subTest(msg='Only the four version-pinned sweep isolation commands are executable'):
             declared = _declared_hook_commands(data)
             self.assertEqual(['command=${CLAUDE_PLUGIN_ROOT}/scripts/sweep-isolation-hook.py attest sweep-isolation-v1', 'command=${CLAUDE_PLUGIN_ROOT}/scripts/sweep-isolation-hook.py pre-dispatch sweep-isolation-v1', 'command=${CLAUDE_PLUGIN_ROOT}/scripts/sweep-isolation-hook.py authorize-broker sweep-isolation-v1', 'command=${CLAUDE_PLUGIN_ROOT}/scripts/sweep-isolation-hook.py validate-stop sweep-isolation-v1'], declared, 'Claude sweep confinement requires exactly its attestation, dispatch, and receipt hooks')

@@ -1,11 +1,5 @@
 # Feature Specification: Read-Only Helper Port
 
-**Feature Branch**: `codex/spec-805-read-only-helper-port`
-
-**Created**: 2026-07-02
-
-**Status**: Draft
-
 **Input**: User description: "Read-only and advisory helper behavior must move from Bash helper scripts onto the XPLAT Python runner foundation with fixture parity, stable tests, and no active Claude Code or Codex cutover."
 
 ## User Scenarios & Testing *(mandatory)*

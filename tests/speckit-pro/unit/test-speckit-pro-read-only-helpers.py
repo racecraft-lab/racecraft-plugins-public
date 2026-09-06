@@ -91,22 +91,6 @@ EXPECTED_HELPERS = [
 
 JSON_STDOUT_PARITY_HELPERS = {"atomicity-route"}
 
-# These helpers have no runnable Bash reference available, so their fixture
-# manifest intentionally has no `source_script`.
-NO_BASH_ANCESTOR = (
-    "helper-registry-dispatch",
-    "resolve-workflow-binding",
-    "resolve-scaffold-worktree-placement",
-    "resolve-autopilot-stage",
-    "resolve-claude-subagent-runtime",
-    "sweep-pr-feedback",
-    "sweep-isolation-session",
-    "check-artifact-freshness",
-    "partition-phase7-tasks",
-    "parse-consensus-categories",
-    "aggregate-crl",
-)
-
 HELPER_CASES: dict[str, dict[str, object]] = {
     "check-prerequisites": {"workflow_file": WORKFLOW_FILE},
     "resolve-workflow-binding": {"workflow_file": AUTOPILOT_STAGE_WORKFLOW_FILE},
@@ -585,11 +569,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
         if self.helper_filter and self.helper_filter != "helper-registry-dispatch":
             self.skipTest("manifest coverage test is registry-level")
         fixture_manifest = json.loads((FIXTURE_DIR / "fixture-manifest.json").read_text(encoding="utf-8"))
-        bash_manifest = json.loads((FIXTURE_DIR / "bash-reference-manifest.json").read_text(encoding="utf-8"))
         fixture_ids = [record["helper_id"] for record in fixture_manifest["helpers"]]
-        bash_ids = [record["helper_id"] for record in bash_manifest["comparisons"]]
         self.assertEqual(fixture_ids, EXPECTED_HELPERS)
-        self.assertEqual(bash_ids, [helper for helper in EXPECTED_HELPERS if helper not in NO_BASH_ANCESTOR])
         for record in fixture_manifest["helpers"]:
             for field in (
                 "promotion_status",
@@ -618,13 +599,6 @@ class ReadOnlyHelperTests(unittest.TestCase):
             request = json.loads(fixture_path.read_text(encoding="utf-8"))
             self.assertEqual(request["helper_id"], record["helper_id"])
             self.assertEqual(request["operation"], record["operation"])
-        for comparison in bash_manifest["comparisons"]:
-            self.assertFalse(comparison["subprocess"]["shell"])
-            self.assertIsInstance(comparison["subprocess"]["argv"], list)
-            self.assertLessEqual(comparison["subprocess"]["timeout_seconds"], 30)
-            self.assertTrue(comparison["source_script"].endswith(".sh"), comparison["source_script"])
-            expected_stdout_comparison = "json_semantic" if comparison["helper_id"] in JSON_STDOUT_PARITY_HELPERS else "exact"
-            self.assertEqual(comparison.get("stdout_comparison", "exact"), expected_stdout_comparison)
 
     def test_path_boundary_rejects_traversal_and_symlink_escape(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":

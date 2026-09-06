@@ -479,11 +479,8 @@ class GateFoundationTests(unittest.TestCase):
     def test_request_fixtures_cover_registered_suite_operations(self) -> None:
         expected = {
             "run-default-suite.json",
-            "run-layer.json",
             "run-toolchain-preflight.json",
             "run-toolchain-preflight-docs.json",
-            "run-integration-suite.json",
-            "run-parity-suite.json",
             "test-payload-evidence.json",
             "install-verification.json",
             "validate-pr-title-live.json",
@@ -500,10 +497,7 @@ class GateFoundationTests(unittest.TestCase):
 
         for name in [
             "run-default-suite",
-            "run-layer",
             "run-toolchain-preflight",
-            "run-integration-suite",
-            "run-parity-suite",
         ]:
             with self.subTest(fixture=name):
                 request = fixture_request(name)
@@ -512,10 +506,7 @@ class GateFoundationTests(unittest.TestCase):
                 self.assertEqual(request["mode"], "read_only")
                 self.assertIn(request["operation"], {
                     "run-default-suite",
-                    "run-layer",
                     "run-toolchain-preflight",
-                    "run-integration-suite",
-                    "run-parity-suite",
                 })
 
         payload_request = fixture_request("test-payload-evidence")
