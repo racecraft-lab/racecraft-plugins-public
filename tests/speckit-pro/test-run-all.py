@@ -3,10 +3,10 @@
 
 Exercises the manifest-driven flag/scope/headline/exit-code contract that
 reproduces the runner interface: argument parsing (including unknown
-flags -> exit 2), per-layer scope selection from suite-manifest.json, the
-summary-line parser, the ``speckit-pro test suite: X/Y passed`` headline
-formatting, and the child-outcome disposition taxonomy (crash, failed exit,
-missing child, and no-summary pass).
+flags -> exit 2), per-layer scope selection from suite-manifest.json,
+exact child-owned summary parsing, the ``speckit-pro test suite: X/Y passed``
+headline formatting, and fail-closed child outcomes: crashes, missing or
+duplicate summaries, zero or impossible counts, and nonzero all-pass exits.
 
 The hyphenated ``run-all.py`` is loaded via importlib. Prints the house
 ``test-run-all: {passed}/{total} passed`` summary.

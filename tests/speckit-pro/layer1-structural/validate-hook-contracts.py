@@ -19,7 +19,6 @@ from structural_helpers import declared_hook_commands as _declared_hook_commands
 from structural_helpers import field_exists as _field_exists
 from test_result import run_counted
 
-# Contracts transferred from validate-hooks.py.
 validate_hooks_HOOKS_FILE = PLUGIN_ROOT / 'hooks' / 'hooks.json'
 
 class ValidateHooks(unittest.TestCase):
@@ -49,7 +48,6 @@ class ValidateHooks(unittest.TestCase):
         with self.subTest(msg='Only the four version-pinned sweep isolation commands are executable'):
             declared = _declared_hook_commands(data)
             self.assertEqual(['command=${CLAUDE_PLUGIN_ROOT}/scripts/sweep-isolation-hook.py attest sweep-isolation-v1', 'command=${CLAUDE_PLUGIN_ROOT}/scripts/sweep-isolation-hook.py pre-dispatch sweep-isolation-v1', 'command=${CLAUDE_PLUGIN_ROOT}/scripts/sweep-isolation-hook.py authorize-broker sweep-isolation-v1', 'command=${CLAUDE_PLUGIN_ROOT}/scripts/sweep-isolation-hook.py validate-stop sweep-isolation-v1'], declared, 'Claude sweep confinement requires exactly its attestation, dispatch, and receipt hooks')
-# Contracts transferred from validate-codex-hooks.py.
 validate_codex_hooks_HOOKS_FILE = PLUGIN_ROOT / 'codex-hooks.json'
 MANIFEST_FILE = PLUGIN_ROOT / '.codex-plugin' / 'plugin.json'
 

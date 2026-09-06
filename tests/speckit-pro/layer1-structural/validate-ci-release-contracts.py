@@ -24,7 +24,6 @@ for _import_root in (LIB_DIR, PLUGIN_ROOT):
 from speckit_pro_runner.helpers import read_only
 from test_result import run_counted
 
-# Contracts transferred from workflow_yaml_sanity.py.
 CollectionKind = Literal['mapping', 'sequence']
 BLOCK_SCALARS = {'|', '>', '|-', '>-', '|+', '>+'}
 
@@ -184,7 +183,6 @@ def yaml_syntax_sane(text: str) -> bool:
         elif is_sequence:
             nested_value = _NestedValue(indent, 'mapping')
     return True
-# Contracts transferred from validate-pr-checks-sentinel.py.
 validate_pr_checks_sentinel_WORKFLOW_FILE = REPO_ROOT / '.github' / 'workflows' / 'pr-checks.yml'
 ACTIONLINT_HELPER_FILE = REPO_ROOT / 'scripts' / 'install-actionlint.py'
 DOCS_CLASSIFIER_FILE = REPO_ROOT / 'scripts' / 'classify-docs-validation.py'
@@ -542,7 +540,6 @@ class ValidatePrChecksSentinel(unittest.TestCase):
             self.assertEqual(len(CONTAINER_JOBS), content.count(CONTAINER_DISPATCH))
             self.assertIn('shell=False', dispatch_content)
             self.assertNotIn('shell=True', dispatch_content)
-# Contracts transferred from validate-release-workflow.py.
 validate_release_workflow_WORKFLOW_FILE = REPO_ROOT / '.github' / 'workflows' / 'release.yml'
 PR_CHECKS_WORKFLOW_FILE = REPO_ROOT / '.github' / 'workflows' / 'pr-checks.yml'
 COMPOSER_FILE = REPO_ROOT / 'scripts' / 'compose-release-notes.py'
@@ -852,7 +849,6 @@ class ValidateReleaseWorkflow(unittest.TestCase):
                         if normalized == 'dist' or normalized.startswith('dist/'):
                             forbidden.append(raw)
             self.assertEqual([], forbidden, 'release-please extra-files must not target dist/** payloads; scripts/refresh-release-artifacts.py owns that tree')
-# Contracts transferred from validate-workflow-status-evidence.py.
 SPEC_DIR = REPO_ROOT / 'docs' / 'ai' / 'specs'
 WORKFLOW_DIRS = (SPEC_DIR / '.process', SPEC_DIR)
 COVERAGE_VALIDATOR = REPO_ROOT / 'speckit-pro' / 'skills' / 'speckit-autopilot' / 'scripts' / 'validate-autopilot-phase-coverage.py'
@@ -951,7 +947,7 @@ def recorded_gates(lines: list[str], excluded: set[int]) -> dict[str, int]:
 def stage_value_errors(display: str, lines: list[str]) -> list[str]:
     """A recorded `Stage` row must read one of the three stage literals.
 
-    Absence is legal and is not an error (FR-008a): it means "no run yet" and
+    Absence is legal and is not an error: it means "no run yet" and
     resolves through ordinary auto-detection. The row is read through the shared
     resolver, so this gate and the runner operation cannot disagree about what a
     given workflow file records.

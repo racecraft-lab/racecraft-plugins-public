@@ -22,7 +22,6 @@ from structural_helpers import body as _body
 from structural_helpers import frontmatter as _frontmatter
 from test_result import run_counted
 
-# Contracts transferred from validate-skills.py.
 validate_skills_SKILLS_DIR = PLUGIN_ROOT / 'skills'
 validate_skills_SKILLS = ('grill-me', 'speckit-archive-cleanup', 'speckit-autopilot', 'speckit-coach', 'speckit-install', 'speckit-upgrade', 'speckit-scaffold-spec', 'speckit-status', 'speckit-resolve-pr', 'speckit-prd')
 SKILLS_REQUIRING_REFERENCES = frozenset({'speckit-autopilot', 'speckit-coach'})
@@ -99,7 +98,6 @@ class ValidateSkills(unittest.TestCase):
                     self.assertTrue((skill_dir / 'references').is_dir(), f"references directory not found at {skill_dir / 'references'}")
                 else:
                     self.assertTrue(True)
-# Contracts transferred from validate-codex-skills.py.
 validate_codex_skills_CODEX_SKILLS_DIR = PLUGIN_ROOT / 'codex-skills'
 validate_codex_skills_SKILLS = ('speckit-archive-cleanup', 'speckit-autopilot', 'speckit-coach', 'speckit-scaffold-spec', 'speckit-status', 'speckit-resolve-pr', 'install', 'speckit-install', 'speckit-upgrade', 'grill-me', 'speckit-prd')
 COLLISION_GUARD_SKILLS = ('speckit-archive-cleanup', 'speckit-autopilot', 'speckit-coach', 'grill-me', 'speckit-prd')
@@ -311,10 +309,9 @@ class ValidateCodexSkills(unittest.TestCase):
             elif skill in ('speckit-coach', 'speckit-status'):
                 self.assertEqual('true', policy_value, 'read-only skill must have allow_implicit_invocation: true')
             else:
-                self.fail(f"no implicit-invocation policy expectation defined for '{skill}'; update validate-codex-skills.sh")
+                self.fail(f"no implicit-invocation policy expectation defined for '{skill}'; update this contract")
             if skill == 'speckit-autopilot':
                 self.assertNotIn('dependencies:', sidecar.read_text(encoding='utf-8'), 'autopilot optional research capabilities must not be declared as required tool dependencies')
-# Contracts transferred from validate-capability-pointer.py.
 validate_capability_pointer_AGENTS_DIR = PLUGIN_ROOT / 'agents'
 validate_capability_pointer_CODEX_AGENTS_DIR = PLUGIN_ROOT / 'codex-agents'
 validate_capability_pointer_DIRECTIVE_MARKER = 'capability-discovery.md'
@@ -361,7 +358,6 @@ class ValidateCapabilityPointer(unittest.TestCase):
     def test_pointer_coverage(self) -> None:
         self._check_runtime('claude', validate_capability_pointer_AGENTS_DIR, 'md')
         self._check_runtime('codex', validate_capability_pointer_CODEX_AGENTS_DIR, 'toml')
-# Contracts transferred from validate-capability-resolution.py.
 validate_capability_resolution_AGENTS_DIR = PLUGIN_ROOT / 'agents'
 validate_capability_resolution_CODEX_AGENTS_DIR = PLUGIN_ROOT / 'codex-agents'
 validate_capability_resolution_DIST_CLAUDE = REPO_ROOT / 'dist' / 'claude'
@@ -430,7 +426,6 @@ class ValidateCapabilityResolution(unittest.TestCase):
                 self.assertTrue((validate_capability_resolution_DIST_CLAUDE / token).is_file(), f'absent in built Claude tree: dist/claude/{token}')
             with self.subTest(msg=f'resolves under dist/codex: {token}'):
                 self.assertTrue((validate_capability_resolution_DIST_CODEX / token).is_file(), f'absent in built Codex tree: dist/codex/{token}')
-# Contracts transferred from validate-skill-capability-pointers.py.
 CLAUDE_SKILLS_DIR = PLUGIN_ROOT / 'skills'
 validate_skill_capability_pointers_CODEX_SKILLS_DIR = PLUGIN_ROOT / 'codex-skills'
 validate_skill_capability_pointers_DIST_CLAUDE = REPO_ROOT / 'dist' / 'claude'
@@ -579,7 +574,6 @@ class ValidateSkillCapabilityPointers(unittest.TestCase):
                 self.assertTrue((validate_skill_capability_pointers_DIST_CLAUDE / token).is_file(), f'skill reference correct in source but absent in built Claude tree (dist/claude/{token})')
             with self.subTest(msg=f'resolves under dist/codex: {token}'):
                 self.assertTrue((validate_skill_capability_pointers_DIST_CODEX / token).is_file(), f'skill reference correct in source but absent in built Codex tree (dist/codex/{token})')
-# Contracts transferred from validate-codex-parity.py.
 CC_PLUGIN = PLUGIN_ROOT / '.claude-plugin' / 'plugin.json'
 CODEX_PLUGIN = PLUGIN_ROOT / '.codex-plugin' / 'plugin.json'
 CC_MARKETPLACE = REPO_ROOT / '.claude-plugin' / 'marketplace.json'

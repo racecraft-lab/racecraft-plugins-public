@@ -21,7 +21,6 @@ from structural_helpers import field_exists as _field_exists
 from structural_helpers import nested as _nested
 from test_result import run_counted
 
-# Contracts transferred from validate-plugin.py.
 PLUGIN_JSON = PLUGIN_ROOT / '.claude-plugin' / 'plugin.json'
 KEBAB_RE = re.compile('^[a-z][a-z0-9]*(-[a-z0-9]+)*$')
 validate_plugin_SEMVER_RE = re.compile('^[0-9]+\\.[0-9]+\\.[0-9]+$')
@@ -63,7 +62,6 @@ class ValidatePlugin(unittest.TestCase):
             self.assertTrue(bool(desc_val), 'description is empty')
         with self.subTest(msg='author field exists'):
             self.assertTrue(isinstance(data, dict) and 'author' in data, "JSON field 'author' does not exist")
-# Contracts transferred from validate-codex-plugin.py.
 CODEX_JSON = PLUGIN_ROOT / '.codex-plugin' / 'plugin.json'
 CLAUDE_JSON = PLUGIN_ROOT / '.claude-plugin' / 'plugin.json'
 REQUIRED_SKILLS = ('speckit-archive-cleanup', 'speckit-autopilot', 'speckit-coach', 'speckit-scaffold-spec', 'speckit-status', 'speckit-resolve-pr', 'install', 'grill-me', 'speckit-prd')
@@ -130,7 +128,6 @@ class ValidateCodexPlugin(unittest.TestCase):
                 self.assertEqual(claude_version, codex_version, f"version mismatch: .claude-plugin/plugin.json='{claude_version}', .codex-plugin/plugin.json='{codex_version}'")
             else:
                 self.fail('.claude-plugin/plugin.json not found — cannot compare versions')
-# Contracts transferred from validate-codex-marketplace.py.
 MARKETPLACE_JSON = REPO_ROOT / '.agents' / 'plugins' / 'marketplace.json'
 
 class ValidateCodexMarketplace(unittest.TestCase):
@@ -183,7 +180,6 @@ class ValidateCodexMarketplace(unittest.TestCase):
         with self.subTest(msg='category field exists'):
             val = _nested(data, 'plugins', 0, 'category')
             self.assertTrue(val, 'category field is missing or empty')
-# Contracts transferred from validate-curated-set.py.
 MANIFEST = PLUGIN_ROOT / 'scripts' / 'curated-set.json'
 EXPECTED_ENTRIES = {'review': 'extension', 'verify': 'extension', 'verify-tasks': 'extension', 'cleanup': 'extension', 'retrospective': 'extension', 'claude-ask-questions': 'preset'}
 

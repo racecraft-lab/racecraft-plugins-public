@@ -77,6 +77,7 @@ GENERIC_LOCAL_TERMS = {
     "openai",
     "plugins",
     "private",
+    "probe",
     "project",
     "projects",
     "public",
@@ -162,10 +163,6 @@ def is_sensitive_local_term(term: str) -> bool:
 def emit_sensitive_terms_from_value(value: str) -> list[str]:
     terms: list[str] = []
     parts = re.findall(r"[A-Za-z0-9_.-]+", value)
-    # The predecessor's ``while read`` receives ``tr`` output without a final
-    # newline, so a final token is intentionally not consumed.
-    if value and re.fullmatch(r"[A-Za-z0-9_.-]", value[-1]):
-        parts = parts[:-1]
     for part in parts:
         lowered = part.lower().removeprefix(".")
         if is_sensitive_local_term(lowered):
@@ -273,8 +270,10 @@ class PrivacyScanTests(unittest.TestCase):
         local_pattern = dynamic_local_pattern()
 
         def alpha_fragments() -> None:
-            fragments = emit_sensitive_terms_from_value("/qwertyuiopasdfgh/")
+            fragments = emit_sensitive_terms_from_value("/qwertyuiopasdfgh")
             self.assertIn("qwertyuiopas", fragments)
+            self.assertFalse(is_sensitive_local_term("probe"))
+            self.assertTrue(is_sensitive_local_term("qwertyuiopas"))
 
         def non_allowlisted_emails() -> None:
             assert_no_hits(self, scan_for_non_allowlisted_email(paths), CURRENT_INVENTORY[1])

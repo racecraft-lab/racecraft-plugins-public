@@ -171,9 +171,6 @@ class RunnerFoundationTests(unittest.TestCase):
     def test_runtime_info_reports_source_checkout_identity(self) -> None:
         contextual_inputs = {
             "source": "installed-plugin-runtime",
-            "product": "codex",
-            "platform": "macos",
-            "surface_path": "speckit-pro/codex-skills/speckit-status/SKILL.md",
         }
         completed, response, stderr_records = run_runner(base_request("runtime-info", contextual_inputs))
         self.assertEqual(completed.returncode, 0)

@@ -1,6 +1,6 @@
 ---
 name: grill-me
-description: "Run an interactive, one-question-at-a-time design interview before SpecKit specification work and produce a Design Concept record. Use only when the user explicitly invokes $grill-me on an idea, brief, transcript, or spec scope, or when interactive $speckit-scaffold-spec delegates its required interview. Recommend one grounded answer first for every consequential choice. Not for autonomous, background, CI, autopilot, or subagent execution."
+description: "Run an interactive, one-question-at-a-time design interview before SpecKit specification work and produce a Design Concept record. Use when an active user requests Grill Me—for example “grill me,” “interview me about,” “walk the design tree,” or “produce a Design Concept”—or invokes $grill-me, or when interactive $speckit-scaffold-spec delegates its required interview. Recommend one grounded answer first for every consequential choice. Not for autonomous, background, CI, autopilot, or subagent execution."
 ---
 
 # Grill Me
@@ -19,9 +19,10 @@ authoritative sources; disclose uncertainty instead of guessing.
 
 ## Interactive boundary
 
-Allowed entry points are an active user invoking `$grill-me` and an interactive
-`$speckit-scaffold-spec` call. Before any question or write, confirm this is an
-active user chat that can receive a direct reply.
+Allowed entry points are an active user requesting Grill Me by natural language
+or invoking `$grill-me`, and an interactive `$speckit-scaffold-spec` call. Before
+any question or write, confirm this is an active user chat that can receive a
+direct reply.
 
 Abort in background or non-interactive execution, `codex exec`, CI, autopilot,
 any phase or consensus agent, and every subagent context. Say that Grill Me

@@ -22,7 +22,6 @@ for _import_root in (LIB_DIR, PLUGIN_ROOT):
 
 from test_result import run_counted
 
-# Contracts transferred from validate-plugin-payload.py.
 SOURCE_ROOT = REPO_ROOT / 'speckit-pro'
 BUILDER = REPO_ROOT / 'scripts' / 'build-plugin-payloads.py'
 CLAUDE_PAYLOAD = REPO_ROOT / 'dist' / 'claude' / 'speckit-pro'
@@ -148,13 +147,11 @@ class ValidatePluginPayload(unittest.TestCase):
                         bad.append(f'{package}: {path}')
             self.assertEqual([], bad, 'release-please illegal pathing characters')
         with self.subTest(msg='CI committed payload files are current'):
-            import os
             if os.environ.get('GITHUB_ACTIONS') == 'true':
                 diff = subprocess.run(['git', '-C', str(REPO_ROOT), 'diff', '--exit-code', '--', 'dist', '.claude-plugin/marketplace.json', '.agents/plugins/marketplace.json', 'release-please-config.json'], text=True, capture_output=True, shell=False, check=False)
                 self.assertEqual(0, diff.returncode, diff.stdout + diff.stderr)
             else:
                 self.assertTrue(True)
-# Contracts transferred from validate-payload-completeness.py.
 SRC_SKILLS_DIR = REPO_ROOT / 'speckit-pro' / 'skills'
 DIST_CLAUDE_SKILLS_DIR = REPO_ROOT / 'dist' / 'claude' / 'speckit-pro' / 'skills'
 GUARD_HEADING = '## Codex Skill-Selection Guard'
@@ -230,7 +227,6 @@ class ValidatePayloadCompleteness(unittest.TestCase):
             diff = abs(dist_lines - expected)
             with self.subTest(msg=f'[{skill_name}] built body length within tolerance of source-minus-guard (dist={dist_lines}, expected≈{expected}, guard={guard_lines})'):
                 self.assertLessEqual(diff, LINE_SLACK, f"built '{skill_name}' SKILL.md has {dist_lines} lines; expected ≈{expected} (source {src_lines} − guard {guard_lines}), off by {diff} (> {LINE_SLACK}) — likely truncated")
-# Contracts transferred from validate-payload-conformance.py.
 CLAUDE_ROOT = REPO_ROOT / 'dist' / 'claude' / 'speckit-pro'
 CODEX_ROOT = REPO_ROOT / 'dist' / 'codex' / 'speckit-pro'
 NAME_RE = re.compile('^[a-z0-9][a-z0-9-]*$')

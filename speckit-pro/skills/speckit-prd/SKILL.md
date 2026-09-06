@@ -1,6 +1,6 @@
 ---
 name: speckit-prd
-description: "Collaboratively create or update a lean PRD, its 1:1 technical-roadmap SPEC catalog, and a roadmap-MOC home note. Use when the user invokes /speckit-pro:speckit-prd with a product or technical idea, brief, transcript, or existing PRD. Ask one grounded decision at a time, then hand off the resulting roadmap to /speckit-pro:speckit-scaffold-spec. Not for per-spec scoping, worktree preparation, or general SDD coaching."
+description: "Collaboratively create or update a lean PRD, its 1:1 technical-roadmap SPEC catalog, and a roadmap-MOC home note. Use when an active user asks to write a PRD, create a product requirements document, turn an idea or brief into a PRD and roadmap, plan a product, or invokes /speckit-pro:speckit-prd. Ask one grounded decision at a time, then hand off the resulting roadmap to /speckit-pro:speckit-scaffold-spec. Not for per-spec scoping, worktree preparation, or general SDD coaching."
 argument-hint: "an idea, brief or transcript path, or existing PRD"
 user-invocable: true
 license: MIT

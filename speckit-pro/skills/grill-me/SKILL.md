@@ -1,6 +1,6 @@
 ---
 name: grill-me
-description: "Run an interactive, one-question-at-a-time design interview before SpecKit specification work and produce a Design Concept record. Use when the user explicitly invokes /speckit-pro:grill-me on an idea, brief, transcript, or spec scope, or when interactive /speckit-pro:speckit-scaffold-spec delegates its required interview. Recommend one grounded answer first for every consequential choice. Not for autonomous, background, CI, autopilot, or subagent execution."
+description: "Run an interactive, one-question-at-a-time design interview before SpecKit specification work and produce a Design Concept record. Use when an active user requests Grill Me—for example “grill me,” “interview me about,” “walk the design tree,” or “produce a Design Concept”—or invokes /speckit-pro:grill-me, or when interactive /speckit-pro:speckit-scaffold-spec delegates its required interview. Recommend one grounded answer first for every consequential choice. Not for autonomous, background, CI, autopilot, or subagent execution."
 argument-hint: "an idea, brief or transcript path, or spec scope"
 user-invocable: true
 license: MIT
@@ -29,9 +29,10 @@ as the active skill. The payload builder removes this guard from Claude installs
 
 ## Interactive boundary
 
-Allowed entry points are an active user invoking `/speckit-pro:grill-me` and an
-interactive `/speckit-pro:speckit-scaffold-spec` call. Before any question or
-write, confirm `AskUserQuestion` is available and a live user can answer it.
+Allowed entry points are an active user requesting Grill Me by natural language
+or invoking `/speckit-pro:grill-me`, and an interactive
+`/speckit-pro:speckit-scaffold-spec` call. Before any question or write, confirm
+`AskUserQuestion` is available and a live user can answer it.
 
 Abort in background or non-interactive execution, CI, autopilot, any phase or
 consensus agent, and every subagent context. Say that Grill Me requires an active

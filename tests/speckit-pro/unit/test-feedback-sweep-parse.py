@@ -168,6 +168,40 @@ def analyst(
     )
 
 
+def runner_env() -> dict[str, str]:
+    env = os.environ.copy()
+    existing = env.get("PYTHONPATH")
+    env["PYTHONPATH"] = (
+        str(PLUGIN_ROOT) if not existing else f"{PLUGIN_ROOT}{os.pathsep}{existing}"
+    )
+    return env
+
+
+def run_runner(request: dict[str, Any]) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:
+    completed = subprocess.run(
+        [sys.executable, "-m", "speckit_pro_runner"],
+        input=json.dumps(request),
+        text=True,
+        capture_output=True,
+        cwd=REPO_ROOT,
+        env=runner_env(),
+        shell=False,
+        check=False,
+    )
+    return completed, json.loads(completed.stdout)
+
+
+def runner_request(name: str, inputs: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schema_version": "1.0",
+        "request_id": f"feedback-sweep-{name}",
+        "helper_id": "sweep-pr-feedback",
+        "operation": "sweep-pr-feedback",
+        "mode": "read_only",
+        "inputs": inputs,
+    }
+
+
 class FeedbackSweepBehaviorTest(unittest.TestCase):
     def test_domain_inventory_and_obsolete_snapshot_are_explicit(self) -> None:
         self.assertEqual(len(DOMAIN_MATRIX), 23)
@@ -270,13 +304,75 @@ class FeedbackSweepBehaviorTest(unittest.TestCase):
             self.assertEqual(result["exit_code"], 2)
             self.assertIn("row 1", result["stderr"])
 
+    def test_runner_adapter_preserves_valid_and_invalid_sweep_envelopes(self) -> None:
+        valid = runner_request(
+            "valid",
+            {
+                "self_login": "sweep-bot",
+                "workflow_file": "README.md",
+                "pr_observation": {"ok": True, "comments": []},
+            },
+        )
+        invalid_parse = runner_request(
+            "invalid-parse",
+            {
+                "self_login": "",
+                "workflow_file": "README.md",
+                "pr_observation": {"ok": True, "comments": []},
+            },
+        )
+        invalid_redact = runner_request(
+            "invalid-redact",
+            {
+                "named_surface": "redact",
+                "leg": "publication",
+                "comment_id": "comment-1",
+                "lines": [],
+            },
+        )
+        for request, status, exit_code, diagnostic in (
+            (valid, "ok", 0, None),
+            (invalid_parse, "input_error", 2, "invalid_input"),
+            (invalid_redact, "input_error", 2, "invalid_input"),
+        ):
+            with self.subTest(request=request["request_id"]):
+                completed, envelope = run_runner(request)
+                self.assertEqual(completed.returncode, exit_code)
+                self.assertEqual(envelope["request_id"], request["request_id"])
+                self.assertEqual(envelope["status"], status)
+                self.assertEqual(envelope["exit_code"], exit_code)
+                self.assertEqual(
+                    [entry["code"] for entry in envelope["diagnostics"]],
+                    [] if diagnostic is None else [diagnostic],
+                )
+                if diagnostic is None:
+                    self.assertEqual(
+                        envelope["data"]["stdout_json"],
+                        {
+                            "tool": "sweep-pr-feedback",
+                            "surfaces_read": ["review_thread", "pr_conversation"],
+                            "counts": {"observed": 0, "candidates": 0, "excluded": 0},
+                            "candidates": [],
+                            "excluded": [],
+                        },
+                    )
+                else:
+                    self.assertEqual(envelope["data"]["stdout_json"] if "stdout_json" in envelope["data"] else None, None)
+                    self.assertTrue(envelope["data"]["stderr"]["text"].startswith("error: "))
+
     def test_parse_trust_set_is_exact(self) -> None:
         observed = [
             comment("owner", EXPORT_LEAD, association="OWNER"),
             comment("member", EXPORT_LEAD, association="MEMBER"),
             comment("collaborator", EXPORT_LEAD, association="COLLABORATOR"),
             comment("first-timer", EXPORT_LEAD, association="FIRST_TIMER"),
+            comment(
+                "first-time-contributor",
+                EXPORT_LEAD,
+                association="FIRST_TIME_CONTRIBUTOR",
+            ),
             comment("contributor", EXPORT_LEAD, association="CONTRIBUTOR"),
+            comment("mannequin", EXPORT_LEAD, association="MANNEQUIN"),
             comment("none", EXPORT_LEAD, association="NONE"),
         ]
         with tempfile.TemporaryDirectory() as raw:
@@ -290,9 +386,48 @@ class FeedbackSweepBehaviorTest(unittest.TestCase):
             envelope["excluded"],
             [
                 {"id": "first-timer", "surface": "pr_conversation", "reason": "untrusted_author"},
+                {"id": "first-time-contributor", "surface": "pr_conversation", "reason": "untrusted_author"},
                 {"id": "contributor", "surface": "pr_conversation", "reason": "untrusted_author"},
+                {"id": "mannequin", "surface": "pr_conversation", "reason": "untrusted_author"},
                 {"id": "none", "surface": "pr_conversation", "reason": "untrusted_author"},
             ],
+        )
+
+    def test_parse_accepts_exact_budget_cr_and_distinguishes_self_markers(self) -> None:
+        at_budget = EXPORT_LEAD + "\n" + "x" * (
+            8192 - len(EXPORT_LEAD.encode("utf-8")) - 1
+        )
+        observed = [
+            comment("at-budget", at_budget, truncated=True),
+            comment("carriage-return", EXPORT_LEAD + "\rchange this (#phase-cr)"),
+            comment(
+                "self-different-id",
+                f"{SELF_REPLY_PREFIX} another-comment -->\nRecorded",
+                author="sweep-bot",
+            ),
+            comment(
+                "different-author",
+                f"{SELF_REPLY_PREFIX} another-comment -->\nRecorded",
+                author="reviewer",
+            ),
+            comment(
+                "quoted-marker",
+                f"> {SELF_REPLY_PREFIX} another-comment -->\nQuoted",
+                author="sweep-bot",
+            ),
+        ]
+        with tempfile.TemporaryDirectory() as raw:
+            result, envelope = parse(Path(raw), observed)
+        self.assertEqual(result["exit_code"], 0)
+        candidates = {entry["id"]: entry for entry in envelope["candidates"]}
+        self.assertEqual(candidates["at-budget"]["truncated"], True)
+        self.assertEqual(candidates["at-budget"]["export"]["matched_lines"], [1])
+        self.assertEqual(candidates["carriage-return"]["export"]["anchors"], ["phase-cr"])
+        self.assertIn("different-author", candidates)
+        self.assertIn("quoted-marker", candidates)
+        self.assertEqual(
+            envelope["excluded"],
+            [{"id": "self-different-id", "surface": "pr_conversation", "reason": "self_reply"}],
         )
 
     def test_registry_population_and_parser_mechanics_use_independent_truth(self) -> None:
@@ -339,6 +474,16 @@ class FeedbackSweepBehaviorTest(unittest.TestCase):
         self.assertIsNone(
             read_only.sweep_export_record("Export kind: markdown\nArtifact: triage-board")
         )
+        for line, _template_id, kind in EXPECTED_REGISTRY:
+            if line.startswith("Artifact: "):
+                continue
+            with self.subTest(line=line[:32], kind=kind):
+                trimmed = read_only.sweep_export_record(line + " \t")
+                self.assertIsNotNone(trimmed)
+                self.assertEqual(trimmed["matched_lines"], [1])
+        for header in ("Artifact: triage-board", "Artifact: feature-flags", "Artifact: prompt-tuner"):
+            with self.subTest(header=header):
+                self.assertIsNone(read_only.sweep_export_record(header + " \t"))
         first = read_only.sweep_export_record(
             EXPORT_LEAD
             + "\nAct on each objection recorded below. The value in parentheses is the anchor of the phase it attaches to."
@@ -426,6 +571,94 @@ class FeedbackSweepBehaviorTest(unittest.TestCase):
                 result, payload = analyst("one\ntwo", matched=matched)
                 self.assertEqual(result["exit_code"], 2)
                 self.assertIsNone(payload)
+
+    def test_analyst_payload_covers_retired_branch_discriminators(self) -> None:
+        fence_cases = (
+            ("````lang\nsecret\n```\n````", False),
+            ("```\nsecret\n``` trailing", True),
+            ("~~~~\nsecret\n~~~~~", False),
+        )
+        for text, unclosed in fence_cases:
+            with self.subTest(fence=text[:12]):
+                _, payload = analyst(text)
+                span = payload["report"]["spans"][0]
+                self.assertEqual(span["kind"], "fenced_block")
+                self.assertEqual(span["unclosed"], unclosed)
+                self.assertNotIn("secret", payload["text"])
+
+        nesting = "<!-- comment owns this\n```\nsecret\n```\n-->"
+        _, payload = analyst(nesting)
+        self.assertEqual(payload["report"]["spans"], [{
+            "kind": "html_comment", "first_line": 1, "line_count": 5, "unclosed": False,
+        }])
+        self.assertNotIn("secret", payload["text"])
+
+        _, payload = analyst("before <!----> after\n<!-- secret -->```not-a-fence")
+        self.assertEqual(payload["report"]["spans_withheld"], 2)
+        self.assertIn("```not-a-fence", payload["text"])
+
+        forty_fences = "\n".join("```\nsecret\n```" for _ in range(40))
+        _, payload = analyst(forty_fences)
+        self.assertEqual(payload["report"]["spans_withheld"], 40)
+        self.assertEqual(len(payload["report"]["spans"]), 40)
+
+        _, payload = analyst("```" + "é" * 40 + "\nsecret\n```")
+        placeholder = re.search(r'info "([^"]*)"', payload["text"])
+        self.assertIsNotNone(placeholder)
+        self.assertLessEqual(len(placeholder.group(1).encode("utf-8")), 32)
+
+        _, payload = analyst(
+            "first\r" + EXPORT_LEAD + "\rplain indented:  keep  \r    code stays  ",
+            matched=[2],
+        )
+        self.assertEqual(payload["report"]["leads_removed"], 1)
+        self.assertIn("[registered export lead removed]", payload["text"])
+        self.assertIn("plain indented:  keep  ", payload["text"])
+        self.assertIn("    code stays  ", payload["text"])
+
+    def test_outbound_redaction_covers_retired_edge_discriminators(self) -> None:
+        token = "AbCdEfGhIjKlMnOp3QrS"
+        unchanged = (
+            token,
+            "DEPLOY_TOKEN=$DEPLOY_TOKEN",
+            "DEPLOY_TOKEN=${{ secrets.DEPLOY_TOKEN }}",
+            "https://<user>:<password>@host/db",
+            "bearer " + "a" * 20,
+            "bearer credentials/authorization-header",
+        )
+        for line in unchanged:
+            with self.subTest(line=line[:20]):
+                _, payload = redact("amendment", [line])
+                self.assertEqual(payload["lines"], [line])
+                self.assertEqual(payload["redactions"], [])
+
+        _, missing_end = redact(
+            "reply",
+            ["-----BEGIN RSA PRIVATE KEY-----", "private body", "ordinary tail"],
+        )
+        self.assertEqual(
+            missing_end["redactions"], [{"rule": "private_key_header", "line": 1}]
+        )
+        self.assertEqual(missing_end["lines"], ["[redacted: private_key_header]"] * 3)
+
+        marker = f"{SELF_REPLY_PREFIX} comment-1 -->"
+        _, marker_only = redact("reply", [marker])
+        self.assertEqual(marker_only["lines"], [marker])
+        self.assertEqual(marker_only["redactions"], [])
+        _, marker_then_secret = redact("reply", [marker, "bearer " + token])
+        self.assertEqual(marker_then_secret["lines"][0], marker)
+        self.assertEqual(
+            marker_then_secret["redactions"], [{"rule": "bearer_token", "line": 2}]
+        )
+
+        for leg in ("amendment", "log_row", "reply"):
+            for size in (8193, 9 * 1024):
+                with self.subTest(leg=leg, size=size):
+                    _, payload = redact(leg, ["x" * size])
+                    self.assertEqual(payload["lines"], ["[redacted: over_bound_line]"])
+                    self.assertEqual(
+                        payload["redactions"], [{"rule": "over_bound_line", "line": 1}]
+                    )
 
     def test_outbound_redaction_covers_rules_order_fixpoint_and_three_legs(self) -> None:
         token = "AbCdEfGhIjKlMnOp3QrS"

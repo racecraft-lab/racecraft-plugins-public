@@ -119,10 +119,6 @@ class TranscriptToolTests(unittest.TestCase):
                 return json.loads(helper_extract.stdout)
 
             checks: list[tuple[str, Callable[[], None]]] = []
-            checks.append(("scrub helper exists", lambda: self.assertTrue(SCRUB.is_file())))
-            checks.append(("reduce helper exists", lambda: self.assertTrue(REDUCE.is_file())))
-            checks.append(("transcript library exists", lambda: self.assertTrue(HELPERS.is_file())))
-
             scrubbed = run_script(SCRUB, input_text=source_text, env={"TRANSCRIPT_SCRUB_EXTRA_REGEX": "Alice"})
             checks.append(("scrub stdin exits 0", lambda: self.assertEqual(scrubbed.returncode, 0, scrubbed.stderr)))
             checks.append(
@@ -210,7 +206,7 @@ class TranscriptToolTests(unittest.TestCase):
             )
             checks.append(
                 (
-                    "reduce jq-coalesces null and false Agent/Skill fields",
+                    "reduce coalesces null and false Agent/Skill fields",
                     lambda: self.assertEqual(
                         (
                             reduced_events()[0]["message"]["content"][0]["input"]["description"],

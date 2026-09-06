@@ -20,7 +20,6 @@ from structural_helpers import body as _body
 from structural_helpers import frontmatter as _frontmatter
 from test_result import run_counted
 
-# Contracts transferred from validate-agent-instructions.py.
 EXPECTED_AGENT_DIRS = (Path('.'), Path('speckit-pro'), Path('tests/speckit-pro'), Path('docs-site'))
 CLAUDE_WRAPPER = '@./AGENTS.md\n'
 GEMINI_WRAPPER = '@./AGENTS.md\n'
@@ -108,7 +107,6 @@ class ValidateAgentInstructions(unittest.TestCase):
         errors = collect_errors(REPO_ROOT)
         with self.subTest(msg='agent instruction files have canonical wrapper shape'):
             self.assertFalse(errors, '\n'.join(errors))
-# Contracts transferred from validate-agents.py.
 AGENTS_DIR = PLUGIN_ROOT / 'agents'
 validate_agents_AGENTS = ('phase-executor', 'clarify-executor', 'checklist-executor', 'analyze-executor', 'implement-executor', 'codebase-analyst', 'spec-context-analyst', 'domain-researcher', 'consensus-synthesizer', 'artifact-author', 'uat-runbook-author', 'sweep-classifier', 'sweep-analyst')
 PLUGIN_AGENT_FIELDS = {'name', 'description', 'model', 'effort', 'maxTurns', 'tools', 'disallowedTools', 'skills', 'memory', 'background', 'isolation', 'color'}
@@ -189,7 +187,6 @@ class ValidateAgents(unittest.TestCase):
                     self.assertRegex(body, 'verified\\s+durable project knowledge')
                 with self.subTest(msg=f'{agent}: forbids sensitive and ephemeral memory content'):
                     self.assertIn('Never store secrets', body)
-# Contracts transferred from validate-codex-agents.py.
 CODEX_AGENTS_DIR = PLUGIN_ROOT / 'codex-agents'
 CC_AGENTS_DIR = PLUGIN_ROOT / 'agents'
 validate_codex_agents_AGENTS = ('autopilot-fast-helper', 'clarify-executor', 'checklist-executor', 'analyze-executor', 'implement-executor', 'phase-executor', 'codebase-analyst', 'spec-context-analyst', 'domain-researcher')
