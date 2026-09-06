@@ -84,6 +84,7 @@ def claude_stream(
         "mcp_servers": [],
         "mcp_server_errors": [],
         "tools": ["Skill"],
+        "skills": [expected_skill],
     }
     if model is not None:
         init["model"] = model
@@ -156,6 +157,82 @@ class FakePopen:
 
 
 class Layer2TriggerRunnerTests(unittest.TestCase):
+    def test_claude_skill_isolation(self) -> None:
+        claude = import_script(CLAUDE_RUNNER, "layer2_claude_skill_isolation")
+        root = Path("/tmp/measurement-plugin")
+        plugin = "speckit-pro-eval-fixed"
+        target = f"{plugin}:demo-eval-fixed"
+        nonce = "CLAUDE_SKILL_SELECTED_fixed"
+        raw = claude_stream(root, plugin, target, nonce)
+        argument_events = [json.loads(line) for line in raw.splitlines()]
+        argument_events[1]["message"]["content"][0]["input"]["args"] = "additional context"
+        argument_result = claude.inspect_claude_stream(
+            "\n".join(json.dumps(event) for event in argument_events), plugin, root, target, nonce, "sonnet"
+        )
+        self.assertTrue(argument_result["valid"] and argument_result["selected"])
+        for label, mutate in {
+            "missing skill catalog": lambda events: events[0].pop("skills"),
+            "empty skill catalog": lambda events: events[0].update(skills=[]),
+            "duplicate target catalog": lambda events: events[0].update(skills=[target, target]),
+            "bundled skill catalog": lambda events: events[0].update(skills=[target, "code-review"]),
+            "nested target selection": lambda events: events[1].update(parent_tool_use_id="outer-review"),
+        }.items():
+            with self.subTest(label=label):
+                events = [json.loads(line) for line in raw.splitlines()]
+                mutate(events)
+                parsed = claude.inspect_claude_stream(
+                    "\n".join(json.dumps(event) for event in events), plugin, root, target, nonce, "sonnet"
+                )
+                self.assertFalse(parsed["valid"])
+
+        # Sanitized shape of the observed unrelated bundled-skill expansion.
+        events = [json.loads(line) for line in raw.splitlines()]
+        events[0]["skills"].append("code-review")
+        events[1]["message"]["content"][0]["input"]["skill"] = "code-review"
+        nested = json.loads(json.dumps(events[1]))
+        nested["parent_tool_use_id"] = "toolu-skill"
+        nested["message"]["model"] = "claude-sonnet-4-6"
+        events.insert(2, nested)
+        parsed = claude.inspect_claude_stream(
+            "\n".join(json.dumps(event) for event in events), plugin, root, target, nonce, "sonnet"
+        )
+        self.assertFalse(parsed["valid"])
+
+        attempted = []
+        prepared = []
+
+        def guarded_launch(command: list[str], **kwargs: object) -> FakePopen:
+            # This is an argv canary, not proof of the installed CLI's permission semantics.
+            allow_index = command.index("--allowedTools") + 1
+            self.assertEqual(command[allow_index:allow_index + 2], [f"Skill({target})", f"Skill({target} *)"])
+            self.assertEqual(command[command.index("--permission-mode") + 1], "dontAsk")
+            self.assertEqual(command[command.index("--permission-prompts") + 1], "none")
+            self.assertEqual(json.loads(command[command.index("--settings") + 1]), {
+                "disableBundledSkills": True, "skillOverrides": {"doctor": "off"},
+                "permissions": {"deny": [
+                    "Skill(init)", "Skill(init *)", "Skill(security-review)", "Skill(security-review *)"
+                ]},
+            })
+            self.assertEqual(kwargs["env"], os.environ.copy())
+            prepared.append((command.copy(), kwargs))
+            attempted.append(target)
+            return FakePopen(raw)
+
+        with (
+            mock.patch.object(claude.shutil, "which", return_value="/usr/local/bin/claude"),
+            mock.patch.object(claude.subprocess, "Popen", side_effect=guarded_launch),
+        ):
+            claude.run_claude_query(
+                "/usr/local/bin/claude", root, root / "empty-mcp.json", "query", "sonnet", 30,
+                expected_skill=target,
+            )
+        self.assertEqual(attempted, [target])
+        unsafe_command, launch_kwargs = prepared[0]
+        unsafe_command[unsafe_command.index("--allowedTools") + 1] = "Skill"
+        with self.assertRaises(AssertionError):
+            guarded_launch(unsafe_command, **launch_kwargs)
+        self.assertEqual(attempted, [target], "unsafe argv reached the mock executor")
+
     def test_claude_direct_runner_contracts(self) -> None:
         claude = import_script(CLAUDE_RUNNER, "layer2_claude_direct")
         with tempfile.TemporaryDirectory() as temporary:
@@ -336,10 +413,11 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     "query",
                     "claude-sonnet-test",
                     30,
+                    expected_skill=expected_skill,
                 )
 
             missing_tool_preflights = []
-            for omitted_flag in ("--tools", "--allowedTools"):
+            for omitted_flag in ("--tools", "--allowedTools", "--settings", "--permission-mode", "--permission-prompts"):
                 supported_help = " ".join(
                     flag for flag in claude.REQUIRED_FLAGS if flag != omitted_flag
                 ).encode("utf-8")
@@ -391,6 +469,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                             "query",
                             "claude-sonnet-test",
                             30,
+                            expected_skill=expected_skill,
                         )
                     except (OSError, ValueError) as exc:
                         result = (type(exc), str(exc))
@@ -422,6 +501,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     "query",
                     "claude-sonnet-test",
                     1,
+                    expected_skill=expected_skill,
                 )
             timeout_evidence_dir = root / "timeout-evidence"
             timeout_evidence_dir.mkdir()
@@ -581,7 +661,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 and captured["command"].count("--tools") == 1
                 and captured["command"][captured["command"].index("--tools") + 1] == "Skill"
                 and captured["command"].count("--allowedTools") == 1
-                and captured["command"][captured["command"].index("--allowedTools") + 1] == "Skill"
+                and captured["command"][captured["command"].index("--allowedTools") + 1] == f"Skill({expected_skill})"
                 and all(result is None for result, _reason in missing_tool_preflights),
                 "direct argv uses no persistence": "--no-session-persistence" in captured["command"],
                 "direct launch inherits environment": captured["kwargs"]["env"].get("PATH") == os.environ.get("PATH"),

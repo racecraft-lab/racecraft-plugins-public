@@ -29,6 +29,9 @@ REQUIRED_FLAGS = (
     "--mcp-config",
     "--tools",
     "--allowedTools",
+    "--settings",
+    "--permission-mode",
+    "--permission-prompts",
     "--output-format",
     "--verbose",
     "--no-session-persistence",
@@ -213,6 +216,8 @@ def inspect_claude_stream(
     if len(init_events) != 1:
         return {"valid": False, "selected": False, "reason": "missing or ambiguous system init"}
     init_index, init = init_events[0]
+    if init.get("skills") != [expected_skill]:
+        return {"valid": False, "selected": False, "reason": "target-only skill inventory was not honored"}
     tools = init.get("tools")
     if (
         not isinstance(tools, list)
@@ -257,6 +262,8 @@ def inspect_claude_stream(
     for event_index, event in assistant_events:
         for block_index, block in enumerate(stream_content(event)):
             if block.get("type") == "tool_use" and block.get("name") == "Skill":
+                if event.get("parent_tool_use_id") is not None:
+                    return {"valid": False, "selected": False, "reason": "nested Skill execution was observed"}
                 skill_uses.append((event_index, block))
             if block.get("type") == "text" and isinstance(block.get("text"), str) and nonce in str(block["text"]):
                 nonce_locations.append({"event": event_index, "block": block_index})
@@ -383,6 +390,8 @@ def run_claude_query(
     query: str,
     model: str,
     timeout: int,
+    *,
+    expected_skill: str,
 ) -> tuple[int, bytes, bytes, bool]:
     global ACTIVE_CHILD
     candidate = shutil.which("claude")
@@ -397,7 +406,16 @@ def run_claude_query(
         "--strict-mcp-config",
         "--mcp-config", str(mcp_config),
         "--tools", "Skill",
-        "--allowedTools", "Skill",
+        "--allowedTools", f"Skill({expected_skill})", f"Skill({expected_skill} *)",
+        "--permission-mode", "dontAsk",
+        "--permission-prompts", "none",
+        "--settings", json.dumps({
+            "disableBundledSkills": True,
+            "skillOverrides": {"doctor": "off"},
+            "permissions": {"deny": [
+                "Skill(init)", "Skill(init *)", "Skill(security-review)", "Skill(security-review *)"
+            ]},
+        }),
         "-p", query,
         "--model", model,
         "--output-format", "stream-json",
@@ -576,6 +594,7 @@ def main(argv: list[str]) -> int:
                         str(entry["query"]),
                         args.model,
                         args.timeout,
+                        expected_skill=expected_skill,
                     )
                     raw = retain_trial_evidence(evidence_dir, case_number, trial_number, stdout, stderr)
                     parsed = inspect_claude_stream(

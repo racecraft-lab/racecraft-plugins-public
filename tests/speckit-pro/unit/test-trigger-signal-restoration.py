@@ -72,7 +72,7 @@ def write_blocking_claude(binary_dir: Path) -> Path:
         "if '--version' in sys.argv:\n"
         "    print('2.1.261')\n"
         "elif '--help' in sys.argv:\n"
-        "    print('--restricted --plugin-dir --strict-mcp-config --mcp-config --tools --allowedTools --output-format --verbose --no-session-persistence')\n"
+        "    print('--restricted --plugin-dir --strict-mcp-config --mcp-config --tools --allowedTools --settings --permission-mode --permission-prompts --output-format --verbose --no-session-persistence')\n"
         "else:\n"
         "    root = sys.argv[sys.argv.index('--plugin-dir') + 1]\n"
         "    Path(os.environ['L2_CHILD_STATE']).write_text(json.dumps({'pid': os.getpid(), 'plugin_root': root}), encoding='utf-8')\n"
