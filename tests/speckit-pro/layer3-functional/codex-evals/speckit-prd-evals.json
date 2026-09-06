@@ -17,7 +17,7 @@
     },
     {
       "id": 2,
-      "prompt": "Turn notes/discovery-call.md into a PRD and a technical roadmap. <file: an unstructured discovery call covering a customer-feedback widget, an admin moderation queue, and a weekly digest email>. Interview me only on the gaps the notes leave open.",
+      "prompt": "Turn notes/discovery-call.md into a PRD and a technical roadmap. The run setup materializes notes/discovery-call.md from fixtures/prd/discovery-call.md. Interview me only on the gaps the notes leave open.",
       "expected_output": "Reads the file, treats it as discovery input, identifies the three candidate features, and interviews only where the notes are ambiguous. Produces the PRD and roadmap with three features mapped to three SPECs.",
       "expectations": [
         "References specific content from notes/discovery-call.md when forming questions, demonstrating it read the input",
