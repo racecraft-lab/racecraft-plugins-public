@@ -4,11 +4,12 @@
 Two modes, both reading the hook payload on stdin and answering with the
 JSON shape Claude Code and Codex both document:
 
-``lockfile`` (PreToolUse, registered without a matcher): when exactly one
-JavaScript lockfile kind is present, a shell command that invokes a different
-package manager is denied with ``hookSpecificOutput.permissionDecision =
-"deny"``. The hook keys on the ``tool_input.command`` string, which only the
-shell tool sends, so no tool name is spelled anywhere in the plugin payload.
+``lockfile`` (PreToolUse, matched to the shell tool by the hook manifest):
+when exactly one JavaScript lockfile kind is present, a shell command that
+invokes a different package manager is denied with
+``hookSpecificOutput.permissionDecision = "deny"``. The hook keys on the
+``tool_input.command`` string; the manifest's matcher is the only place the
+tool is named, which is the one field the installed-runtime guard exempts.
 
 ``unpushed`` (Stop): while an autopilot run is active
 (``docs/ai/specs/.process/autopilot-state.json`` with an in-flight status),

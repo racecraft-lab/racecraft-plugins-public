@@ -3128,6 +3128,8 @@ def zero_bash_source_findings(sources: list[SourceFile], allowlist: list[dict[st
             stripped = line.strip()
             if not stripped or (stripped.startswith("#") and not stripped.startswith("#!") and not path.endswith(".md")):
                 continue
+            if is_hook_matcher_line(path, line):
+                continue
             for category, pattern, reason in FORBIDDEN_PATTERNS:
                 if not zero_bash_scans_category(path, category):
                     continue
@@ -4197,6 +4199,23 @@ def classified_counts(findings: list[RawFinding]) -> dict[str, int]:
     return {key: value for key, value in counts.items() if value > 0}
 
 
+HOOK_MANIFEST_NAMES = frozenset({"hooks.json", "codex-hooks.json"})
+_HOOK_MATCHER_LINE_RE = re.compile(r'^\s*"matcher"\s*:\s*"[^"]*"\s*,?\s*$')
+
+
+def is_hook_matcher_line(path: str, line: str) -> bool:
+    """A hook manifest's ``matcher`` field names the tool a hook filters on.
+
+    Naming the shell tool there is not a shell dependency: the value is a
+    regex the host matches against tool names, never a command. Without this
+    exemption a PreToolUse hook that filters on the shell tool would have to
+    register without a matcher and run on every tool call. The exemption is
+    exactly one field of the two hook manifests; scripts, prose, commands, and
+    every other field stay under the full scan.
+    """
+    return Path(path).name in HOOK_MANIFEST_NAMES and _HOOK_MATCHER_LINE_RE.match(line) is not None
+
+
 def scan_sources(sources: list[SourceFile], repo_root: Path) -> list[RawFinding]:
     findings: list[RawFinding] = []
     seen: set[tuple[str, int | None, str, str]] = set()
@@ -4227,6 +4246,8 @@ def scan_sources(sources: list[SourceFile], repo_root: Path) -> list[RawFinding]
         for number, line in enumerate(lines, start=1):
             stripped = line.strip()
             if not stripped or (stripped.startswith("#") and not path.endswith(".md")):
+                continue
+            if is_hook_matcher_line(path, line):
                 continue
             for category, pattern, reason in FORBIDDEN_PATTERNS:
                 match = pattern.search(line)
@@ -4293,6 +4314,8 @@ def scan_installed_runtime_sources(sources: list[SourceFile], repo_root: Path) -
         for number, line in enumerate(lines, start=1):
             stripped = line.strip()
             if not stripped or (stripped.startswith("#") and not path.endswith(".md")):
+                continue
+            if is_hook_matcher_line(path, line):
                 continue
             for category, pattern, reason in FORBIDDEN_PATTERNS:
                 match = pattern.search(line)
