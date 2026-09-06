@@ -95,9 +95,16 @@ class ValidateCodexHooks(unittest.TestCase):
             except (KeyError, TypeError, IndexError):
                 ok = False
             self.assertEqual('true', 'true' if ok else 'false', 'hook entry must have hooks array')
-        with self.subTest(msg='No hook event declares an executable command'):
+        with self.subTest(msg='Only the version-pinned workflow guard commands are executable'):
             declared = _declared_hook_commands(data)
-            self.assertEqual('true', 'true' if not declared else 'false', f'Plugin hook manifests declare event scope only: no hook event may carry an executable command, because a static manifest cannot resolve the Python 3.11+ interpreter the Installed Runtime Contract requires. Skills own interpreter resolution. Found: {declared}')
+            self.assertEqual(['command=${PLUGIN_ROOT}/scripts/workflow-guard-hook.py lockfile workflow-guard-v1', 'command=${PLUGIN_ROOT}/scripts/workflow-guard-hook.py unpushed workflow-guard-v1'], declared, f'Codex hooks may carry a command only when the script self-checks the interpreter version and fails open below the Installed Runtime Contract floor (Python 3.11); a static manifest cannot resolve the interpreter, so the script must degrade to the prose rules on an old one. Found: {declared}')
+        with self.subTest(msg='Every Codex hook script self-checks the interpreter and fails open below 3.11'):
+            for command in _declared_hook_commands(data):
+                script = command.removeprefix('command=${PLUGIN_ROOT}/').split(' ', 1)[0]
+                source = (PLUGIN_ROOT / script).read_text(encoding='utf-8')
+                self.assertTrue(source.startswith('#!/usr/bin/env python3'), f'{script} must resolve its interpreter through the env shebang')
+                self.assertIn('sys.version_info < (3, 11)', source, f'{script} must check the interpreter floor')
+                self.assertIn('fail-open', source, f'{script} must declare the fail-open path')
 
 def main() -> int:
     suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])
