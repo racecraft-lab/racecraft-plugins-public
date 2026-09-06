@@ -45,9 +45,9 @@ class ValidateHooks(unittest.TestCase):
         with self.subTest(msg='NO UserPromptSubmit hook (would fire on every prompt — regression guard)'):
             has_user_prompt_submit = 'UserPromptSubmit' in hooks_map
             self.assertEqual('false', 'true' if has_user_prompt_submit else 'false', 'plugin must not register a global UserPromptSubmit hook')
-        with self.subTest(msg='Only the four version-pinned sweep isolation commands are executable'):
+        with self.subTest(msg='Only the version-pinned sweep isolation and workflow guard commands are executable'):
             declared = _declared_hook_commands(data)
-            self.assertEqual(['command=${CLAUDE_PLUGIN_ROOT}/scripts/sweep-isolation-hook.py attest sweep-isolation-v1', 'command=${CLAUDE_PLUGIN_ROOT}/scripts/sweep-isolation-hook.py pre-dispatch sweep-isolation-v1', 'command=${CLAUDE_PLUGIN_ROOT}/scripts/sweep-isolation-hook.py authorize-broker sweep-isolation-v1', 'command=${CLAUDE_PLUGIN_ROOT}/scripts/sweep-isolation-hook.py validate-stop sweep-isolation-v1'], declared, 'Claude sweep confinement requires exactly its attestation, dispatch, and receipt hooks')
+            self.assertEqual(['command=${CLAUDE_PLUGIN_ROOT}/scripts/sweep-isolation-hook.py attest sweep-isolation-v1', 'command=${CLAUDE_PLUGIN_ROOT}/scripts/sweep-isolation-hook.py pre-dispatch sweep-isolation-v1', 'command=${CLAUDE_PLUGIN_ROOT}/scripts/sweep-isolation-hook.py authorize-broker sweep-isolation-v1', 'command=${CLAUDE_PLUGIN_ROOT}/scripts/workflow-guard-hook.py lockfile workflow-guard-v1', 'command=${CLAUDE_PLUGIN_ROOT}/scripts/sweep-isolation-hook.py validate-stop sweep-isolation-v1', 'command=${CLAUDE_PLUGIN_ROOT}/scripts/workflow-guard-hook.py unpushed workflow-guard-v1'], declared, 'Claude hooks are exactly the four version-pinned sweep isolation commands plus the two version-pinned workflow guards')
 validate_codex_hooks_HOOKS_FILE = PLUGIN_ROOT / 'codex-hooks.json'
 MANIFEST_FILE = PLUGIN_ROOT / '.codex-plugin' / 'plugin.json'
 

@@ -32,6 +32,15 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/workflow-guard-hook.py lockfile workflow-guard-v1",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "SubagentStop": [
@@ -42,6 +51,17 @@
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/scripts/sweep-isolation-hook.py validate-stop sweep-isolation-v1",
             "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/workflow-guard-hook.py unpushed workflow-guard-v1",
+            "timeout": 15
           }
         ]
       }
