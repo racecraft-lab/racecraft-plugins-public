@@ -371,10 +371,5 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def fail(message: str) -> None:
-    print(f"refresh-release-artifacts: {message}", file=sys.stderr)
-    raise SystemExit(1)
-
-
 if __name__ == "__main__":
     raise SystemExit(main())

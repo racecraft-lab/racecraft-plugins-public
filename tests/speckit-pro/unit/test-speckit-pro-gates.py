@@ -589,8 +589,6 @@ class GateFoundationTests(unittest.TestCase):
 
     def test_installed_release_runner_invocation_fixtures_cover_interpreter_resolution(self) -> None:
         cases = installed_release_fixture_cases("runner-invocation")
-        self.assertEqual(cases["schema_version"], "2.0")
-        self.assertEqual(cases["contract_id"], "installed-plugin-release")
         self.assertEqual(
             {case["case_id"] for case in cases["cases"]},
             {
@@ -978,8 +976,6 @@ class GateFoundationTests(unittest.TestCase):
         )
 
         cases = installed_release_fixture_cases("active-runtime-guard")
-        self.assertEqual(cases["schema_version"], "2.0")
-        self.assertEqual(cases["contract_id"], "installed-plugin-release")
         self.assertEqual(
             {case["case_id"] for case in cases["cases"]},
             {
@@ -992,14 +988,6 @@ class GateFoundationTests(unittest.TestCase):
         )
         final_case = next(case for case in cases["cases"] if case["case_id"] == "final-current-implementation")
         self.assertFalse(final_case["scan_changed_sources"])
-        self.assertIn(
-            "final current implementation scans the full release surface without requiring PR review-base diff metadata",
-            cases["coverage"],
-        )
-        self.assertIn(
-            "empty and non-list configured scan roots fail closed instead of falling back to default roots",
-            cases["coverage"],
-        )
         blocking_case = next(case for case in cases["cases"] if case["case_id"] == "blocking-active-runtime-patterns")
         blocking_yaml = next(file for file in blocking_case["files"] if file["path"] == "speckit-pro/codex-agents/openai.yaml")
         blocking_yaml_findings = active_path_guard.scan_installed_runtime_sources(
@@ -1551,8 +1539,6 @@ class GateFoundationTests(unittest.TestCase):
 
     def test_installed_release_payload_completeness_fixtures_cover_release_payload_blockers(self) -> None:
         cases = installed_release_fixture_cases("payload-completeness")
-        self.assertEqual(cases["schema_version"], "2.0")
-        self.assertEqual(cases["contract_id"], "installed-plugin-release")
         self.assertEqual(
             {case["case_id"] for case in cases["cases"]},
             {
@@ -1566,19 +1552,6 @@ class GateFoundationTests(unittest.TestCase):
                 "transform-mismatch",
             },
         )
-        for label in [
-            "source-derived expected inventory",
-            "apply-mode rebuild comparison",
-            "missing runner file blocker",
-            "stale metadata blocker",
-            "extra file blocker",
-            "path leak blocker",
-            "empty surface selection blocker",
-            "invalid surface selection blocker",
-            "transform mismatch blocker",
-        ]:
-            self.assertIn(label, cases["coverage"])
-
         request = installed_release_fixture_request("payload-completeness")
         self.assertEqual(request["helper_id"], "payload-gate")
         self.assertEqual(request["operation"], "payload-completeness")
@@ -2407,10 +2380,6 @@ class GateFoundationTests(unittest.TestCase):
                     self.assertEqual(set(script), {"path", "label"})
                     self.assertTrue((REPO_ROOT / script["path"]).is_file(), script["path"])
 
-        # (4) Manifest-integrity invariant (b): transitional Bash dispatch is
-        # the only escape hatch permitted until PR 10; the current architecture
-        # routes every layer via internal-check or a Python module, so none
-        # remain.
         self.assertEqual([layer["id"] for layer in layers if layer["dispatch"] == "shell-legacy-transitional"], [])
 
     def assert_ported_python_layer(

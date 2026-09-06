@@ -325,11 +325,11 @@ validateRenderingSources(routeSource, componentSource, dataSource);
 validateLifecycleFlow(lifecycleSource);
 
 if (failures.length > 0) {
-  console.error('DOC-006 focused validation failed:');
+  console.error('Safe-install aids validation failed:');
   for (const failure of failures) {
     console.error(`- ${failure}`);
   }
   process.exit(1);
 }
 
-console.log('DOC-006 focused validation passed.');
+console.log('Safe-install aids validation passed.');

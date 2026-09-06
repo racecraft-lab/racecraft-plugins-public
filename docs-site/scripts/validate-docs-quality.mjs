@@ -442,11 +442,6 @@ function validateDocsCommandChain(diagnostics) {
 }
 
 function validateStagingIndexingGuard(diagnostics) {
-  // DOC-014 (C1) — assert the crawler-access policy in the robots.txt.ts endpoint
-  // source: every citation + training agent ALLOWED, a default `User-agent: *`
-  // ALLOWED, a Sitemap advertised, and NO `Disallow: /` anywhere (the inverse of
-  // the sibling's training block). The static `public/robots.txt` is intentionally
-  // gone, so reading it here would be a false failure.
   assertRepoRelative(DOC014_ROBOTS_ENDPOINT_PATH, diagnostics);
   const robotsEndpointSource = readRepoText(DOC014_ROBOTS_ENDPOINT_PATH, diagnostics);
   if (robotsEndpointSource) {
@@ -487,8 +482,6 @@ function validateStagingIndexingGuard(diagnostics) {
     }
   }
 
-  // DOC-011 (C10) — noindex-meta guard, KEPT INTACT (only the robots assertion
-  // above was retargeted by DOC-014). Do NOT weaken this.
   assertRepoRelative(DOC011_ASTRO_CONFIG_PATH, diagnostics);
   const astroConfigSource = readRepoText(DOC011_ASTRO_CONFIG_PATH, diagnostics);
   if (!DOC011_STAGING_ROBOTS_META_PATTERN.test(astroConfigSource)) {

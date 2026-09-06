@@ -19,7 +19,7 @@ import starlightLlmsTxt from 'starlight-llms-txt';
 // simplification that can hide the real content commit in GitHub Actions.
 //
 // `child_process` here is within the docs-site safe-aids guard's allowed surface:
-// neither validate-doc006-safe-aids.mjs nor validate-docs-quality.mjs scans
+// neither validate-safe-install-aids.mjs nor validate-docs-quality.mjs scans
 // astro.config.mjs (they scan the interactive component sources and the DOC-010
 // foundation files), so this build-time git read does not trip those gates.
 
