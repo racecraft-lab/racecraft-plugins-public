@@ -427,11 +427,15 @@ def build_command(
     raise EvidenceError(f"unsupported host: {case['host']}")
 
 
-def build_process_env(incoming: Mapping[str, str], plugin_root: Path) -> dict[str, str]:
+def build_process_env(incoming: Mapping[str, str], plugin_root: Path, *, host: str) -> dict[str, str]:
     present = sorted(name for name in PROVIDER_API_ENV_NAMES if name in incoming)
     if present:
         raise EvidenceError("provider API environment override present by name: " + ", ".join(present))
     result = dict(incoming)
+    if host == "claude":
+        result["DISABLE_AUTOUPDATER"] = "1"
+        result["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] = "1"
+        result.pop("FORCE_AUTOUPDATE_PLUGINS", None)
     existing = result.get("PYTHONPATH")
     result["PYTHONPATH"] = str(plugin_root) if not existing else str(plugin_root) + os.pathsep + existing
     return result
@@ -478,6 +482,69 @@ def require_execution_platform(platform_name: str) -> None:
         )
 
 
+def cleanup_process_group(process: subprocess.Popen, *, natural_exit_grace: bool = True) -> dict[str, Any]:
+    """Drain only this capture's original POSIX group, including an exited leader."""
+    started = time.monotonic()
+    record: dict[str, Any] = {
+        "pgid": process.pid,
+        "initially_present": None,
+        "natural_exit_grace_seconds": 0.2 if natural_exit_grace else 0,
+        "signals_sent": [],
+        "post_kill_probe_errors": [],
+        "verified_absent": False,
+        "error": None,
+    }
+
+    def present() -> bool:
+        process.poll()  # Reap the leader, but never use its exit as group absence.
+        try:
+            os.killpg(process.pid, 0)
+        except ProcessLookupError:
+            return False
+        except PermissionError as error:
+            if record["signals_sent"][-1:] != ["SIGKILL"]:
+                raise
+            record["post_kill_probe_errors"].append({
+                "elapsed_seconds": time.monotonic() - started,
+                "errno": error.errno,
+                "error": f"{type(error).__name__}: {error}",
+            })
+        return True
+
+    try:
+        if type(process.pid) is not int or process.pid <= 1 or process.pid in {os.getpid(), os.getpgrp()}:
+            record["error"] = "refusing invalid or self-owned process group identity"
+            return record
+        record["initially_present"] = present()
+        if not record["initially_present"]:
+            record["verified_absent"] = True
+            return record
+        if natural_exit_grace:
+            for _ in range(4):
+                time.sleep(0.05)
+                if not present():
+                    record["verified_absent"] = True
+                    return record
+        for sent in (signal.SIGTERM, signal.SIGKILL):
+            try:
+                os.killpg(process.pid, sent)
+            except ProcessLookupError:
+                record["verified_absent"] = True
+                return record
+            record["signals_sent"].append(sent.name)
+            for _ in range(20):
+                if not present():
+                    record["verified_absent"] = True
+                    return record
+                time.sleep(0.05)
+        record["error"] = "owned process group absence not verified after bounded TERM/KILL cleanup"
+    except (OSError, KeyboardInterrupt) as error:
+        record["error"] = f"owned process-group cleanup could not be verified: {type(error).__name__}: {error}"
+    finally:
+        record["duration_seconds"] = time.monotonic() - started
+    return record
+
+
 def capture_process(
     host: str,
     command: list[str],
@@ -486,6 +553,42 @@ def capture_process(
     cwd: Path,
     env: Mapping[str, str],
     timeout_seconds: int,
+) -> dict[str, Any]:
+    interruption: dict[str, Any] = {"signal": None, "cleanup_started": False}
+    previous_handlers: dict[int, Any] = {}
+
+    def interrupt_capture(signum: int, _frame: Any) -> None:
+        interruption["signal"] = signal.Signals(signum).name
+        if not interruption["cleanup_started"]:
+            raise KeyboardInterrupt
+
+    try:
+        try:
+            for signum in (signal.SIGTERM, signal.SIGHUP):
+                previous = signal.getsignal(signum)
+                signal.signal(signum, interrupt_capture)
+                previous_handlers[signum] = previous
+        except (OSError, ValueError) as error:
+            return {"status": "launch_error", "error": f"unable to install scoped capture signal handlers: {error}"}
+        result = _capture_process(host, command, stdin_bytes, evidence_dir, cwd, env, timeout_seconds, interruption)
+        result["interruption_signal"] = interruption["signal"]
+        if interruption["signal"] is not None and result["status"] == "completed_ungraded":
+            result["status"] = "interrupted"
+        return result
+    finally:
+        for signum, handler in previous_handlers.items():
+            signal.signal(signum, handler)
+
+
+def _capture_process(
+    host: str,
+    command: list[str],
+    stdin_bytes: bytes,
+    evidence_dir: Path,
+    cwd: Path,
+    env: Mapping[str, str],
+    timeout_seconds: int,
+    interruption: dict[str, Any],
 ) -> dict[str, Any]:
     evidence_dir.mkdir(parents=True, exist_ok=True)
     started_at = utc_now()
@@ -542,27 +645,47 @@ def capture_process(
         }
     status = "completed_ungraded"
     termination_error: str | None = None
+    stdout_bytes = stderr_bytes = b""
+    needs_drain = False
     try:
         stdout_bytes, stderr_bytes = process.communicate(stdin_bytes, timeout=timeout_seconds)
     except subprocess.TimeoutExpired as timeout_error:
         status = "timeout"
-        try:
-            os.killpg(process.pid, signal.SIGKILL)
-        except OSError as error:
-            termination_error = f"unable to kill process group: {error}"
-            status = "termination_error"
-            try:
-                process.kill()
-            except OSError as parent_error:
-                termination_error += f"; unable to kill parent: {parent_error}"
+        needs_drain = True
+        stdout_bytes = timeout_error.output or b""
+        stderr_bytes = timeout_error.stderr or b""
+    except KeyboardInterrupt:
+        status = "interrupted"
+        needs_drain = True
+    except OSError as error:
+        status = "capture_error"
+        termination_error = str(error)
+        needs_drain = True
+    finally:
+        interruption["cleanup_started"] = True
+        capture_status = status
+        exit_code_before_cleanup = process.returncode
+        cleanup = cleanup_process_group(process, natural_exit_grace=status == "completed_ungraded")
+        if not cleanup["verified_absent"]:
+            status = "process_cleanup_error"
+            termination_error = str(cleanup["error"])
+        elif status == "completed_ungraded" and cleanup["signals_sent"]:
+            status = "unexpected_descendants"
+    if needs_drain:
         try:
             stdout_bytes, stderr_bytes = process.communicate(timeout=5)
         except subprocess.TimeoutExpired as drain_error:
-            status = "termination_error"
+            if status != "process_cleanup_error":
+                status = "termination_error"
             suffix = "timed out draining pipes after termination"
             termination_error = f"{termination_error}; {suffix}" if termination_error else suffix
-            stdout_bytes = drain_error.output or timeout_error.output or b""
-            stderr_bytes = drain_error.stderr or timeout_error.stderr or b""
+            stdout_bytes = drain_error.output or stdout_bytes
+            stderr_bytes = drain_error.stderr or stderr_bytes
+        except (OSError, KeyboardInterrupt) as error:
+            if status != "process_cleanup_error":
+                status = "termination_error"
+            suffix = f"unable to drain captured pipes: {type(error).__name__}: {error}"
+            termination_error = f"{termination_error}; {suffix}" if termination_error else suffix
     (evidence_dir / "stdout.bin").write_bytes(stdout_bytes)
     (evidence_dir / "stderr.bin").write_bytes(stderr_bytes)
     stdout_sha256 = sha256_bytes(stdout_bytes)
@@ -575,6 +698,9 @@ def capture_process(
             "status": "output_decode_error" if status == "completed_ungraded" else status,
             "decode_error": str(error),
             "termination_error": termination_error,
+            "capture_status": capture_status,
+            "exit_code_before_cleanup": exit_code_before_cleanup,
+            "process_group_cleanup": cleanup,
             "exit_code": process.returncode,
             "stdout_sha256": stdout_sha256,
             "stderr_sha256": stderr_sha256,
@@ -594,6 +720,9 @@ def capture_process(
         "stdout_sha256": stdout_sha256,
         "stderr_sha256": stderr_sha256,
         "termination_error": termination_error,
+        "capture_status": capture_status,
+        "exit_code_before_cleanup": exit_code_before_cleanup,
+        "process_group_cleanup": cleanup,
         "started_at": started_at,
         "finished_at": utc_now(),
         "duration_seconds": time.monotonic() - started,
@@ -868,6 +997,17 @@ def main(argv: list[str]) -> int:
             exit_code = 4
         else:
             manifest["command"] = command
+            env = None
+            if args.host == "claude":
+                env = build_process_env(os.environ, stage.runtime_root, host=args.host)
+                manifest["claude_startup_environment"] = {
+                    name: env.get(name)
+                    for name in (
+                        "DISABLE_AUTOUPDATER",
+                        "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
+                        "FORCE_AUTOUPDATE_PLUGINS",
+                    )
+                }
             if not args.execute:
                 manifest["status"] = "preflight_only"
                 exit_code = 0
@@ -886,7 +1026,8 @@ def main(argv: list[str]) -> int:
                         or claude_skill_policy(case, stage) != claude_policy
                     ):
                         raise EvidenceError("Claude staged plugin or Skill policy changed after command assembly")
-                    env = build_process_env(os.environ, stage.runtime_root)
+                    if env is None:
+                        env = build_process_env(os.environ, stage.runtime_root, host=args.host)
                     process_result = capture_process(
                         args.host,
                         command,
