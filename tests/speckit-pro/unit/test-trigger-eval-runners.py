@@ -1100,6 +1100,31 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     self.assertEqual(exit_code, 0)
                     self.assertEqual(report["summary"]["resolved_model"], expected)
 
+    def test_codex_symlink_path_uses_canonical_executable_without_environment_mutation(self) -> None:
+        engine = import_script(CODEX_ENGINE, "layer2_codex_symlink_executable")
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            native = root / "native" / "codex"
+            native.parent.mkdir()
+            native.write_text("synthetic executable fixture\n")
+            native.chmod(0o700)
+            alias = root / "aliases" / "codex"
+            alias.parent.mkdir()
+            alias.symlink_to(native)
+            with mock.patch.dict(os.environ, {"PATH": str(alias.parent)}), mock.patch.object(
+                engine.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, b"[]", b""),
+            ) as execute, mock.patch.object(engine, "inspect_catalog_prompt", return_value=({}, "fixture")):
+                self.assertEqual(shutil.which("codex"), str(alias))
+                engine.enumerate_mcp_servers(root, 10)
+                engine.offline_catalog_preflight(root, "demo", "Demo.", root / "SKILL.md", [], 10)
+                engine.run_codex_query(root, "synthetic query", "low", "gpt-5.6-sol", 10, [])
+                self.assertEqual(execute.call_count, 3)
+                for call in execute.call_args_list:
+                    self.assertEqual(call.args[0][0], str(native))
+                    self.assertEqual(call.kwargs["executable"], str(native))
+                    self.assertEqual(call.kwargs["env"]["PATH"], str(alias.parent))
+                self.assertEqual(os.environ["PATH"], str(alias.parent))
+
     def test_codex_external_tool_isolation(self) -> None:
         engine = import_script(CODEX_ENGINE, "layer2_codex_external_isolation")
         with tempfile.TemporaryDirectory() as temporary:
@@ -1113,7 +1138,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             self.assertEqual(names, ("fixture-server", "server.with.dots"))
             self.assertIn("mcp", probe.call_args.args[0])
             self.assertIn("list", probe.call_args.args[0])
-            self.assertEqual(probe.call_args.kwargs["executable"], shutil.which("codex"))
+            self.assertEqual(probe.call_args.kwargs["executable"], shutil.which("codex", path=str(Path(probe.call_args.args[0][0]).parent)))
             args = engine.skill_isolation_args((), names)
             for feature in ("apps", "browser_use", "computer_use", "hooks", "plugins", "skill_mcp_dependency_install"):
                 self.assertIn(["--disable", feature], [args[i:i + 2] for i in range(len(args) - 1)])
@@ -1851,7 +1876,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 and preflight_captured["kwargs"]["cwd"] == workspace
                 and preflight_captured["kwargs"]["env"].get("CODEX_HOME") == str(auth_home)
                 and preflight_captured["kwargs"]["shell"] is False
-                and preflight_captured["kwargs"]["executable"] == shutil.which("codex")
+                and preflight_captured["kwargs"]["executable"] == shutil.which("codex", path=str(Path(preflight_captured["command"][0]).parent))
                 and offline_readiness == catalog_readiness
                 and offline_reason == "Codex catalog preflight passed",
                 "Codex offline probe errors all fail closed without rendered-prompt evidence": all(
@@ -1901,7 +1926,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 == str(auth_home)
                 and captured["kwargs"]["env"].get("HOME") == os.environ.get("HOME"),
                 "Codex executable override retains statically verified provenance": captured["kwargs"]["executable"]
-                == shutil.which("codex"),
+                == shutil.which("codex", path=str(Path(captured["command"][0]).parent)),
                 "Codex keeps least privilege flags": "--sandbox" not in captured["command"]
                 and 'default_permissions="trigger-fixture"' in captured["command"]
                 and "permissions.trigger-fixture.network.enabled=false" in captured["command"]
