@@ -3,7 +3,7 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "Invoke the Python runner with one JSON request on stdin using helper_id=check-prerequisites, operation=check-prerequisites, mode=read_only, and inputs.workflow_file=docs/ai/specs/.process/SPEC-805-workflow.md. Report whether the SpecKit CLI, project initialization, workflow, and branch checks pass.",
+      "prompt": "The run setup materializes fixtures/autopilot/SPEC-805/ into the disposable project and creates the declared registered worktree before execution. Invoke the Python runner with one JSON request on stdin using helper_id=check-prerequisites, operation=check-prerequisites, mode=read_only, and inputs.workflow_file=docs/ai/specs/.process/SPEC-805-workflow.md. Report whether the SpecKit CLI, project initialization, workflow, and branch checks pass.",
       "expected_output": "Invokes [resolved_python, -m, speckit_pro_runner] with the structured check-prerequisites request and reads the response envelope's data.stdout_json. The all_pass field summarizes the per-check results.",
       "expectations": [
         "Invokes [resolved_python, -m, speckit_pro_runner] with one JSON request on stdin and no shell fallback",
@@ -129,7 +129,7 @@
     },
     {
       "id": 11,
-      "prompt": "Run autopilot on docs/ai/specs/SPEC-009-workflow.md. The Clarify phase has hit ambiguity that the consensus protocol can't resolve — both consensus rounds returned [HUMAN REVIEW NEEDED]. Should you escalate by invoking the grill-me skill to interview me one question at a time?",
+      "prompt": "The run setup materializes fixtures/autopilot/SPEC-009/ into the disposable project and creates its declared registered worktree before execution. Run autopilot on docs/ai/specs/SPEC-009-workflow.md. The Clarify phase has hit ambiguity that the consensus protocol can't resolve — both consensus rounds returned [HUMAN REVIEW NEEDED]. Should you escalate by invoking the grill-me skill to interview me one question at a time?",
       "expected_output": "Refuses to invoke grill-me. Explains that grill-me is human-in-the-loop only and is forbidden inside autopilot. The correct response to unresolvable ambiguity is to use the Clarify Question Set plus consensus flow, then fail the gate or surface the issue to the user if consensus cannot resolve it. It does not call Skill('grill-me') under any circumstance.",
       "expectations": [
         "Explicitly states that grill-me is human-in-the-loop only and forbidden inside autopilot",
@@ -142,7 +142,7 @@
     },
     {
       "id": 12,
-      "prompt": "I'm running the autopilot end-to-end on docs/ai/specs/SPEC-009-workflow.md. Walk through every phase and report each agent invocation you make. I want to see proof that no phase invokes grill-me — verify the boundary explicitly.",
+      "prompt": "The run setup materializes fixtures/autopilot/SPEC-009/ into the disposable project and creates its declared registered worktree before execution. I'm running the autopilot end-to-end on docs/ai/specs/SPEC-009-workflow.md. Walk through every phase and report each agent invocation you make. I want to see proof that no phase invokes grill-me — verify the boundary explicitly.",
       "expected_output": "Walks through all 7 phases, listing each subagent invocation. Confirms zero grill-me invocations across the entire run. References the negative constraint in each phase agent's hard_constraints block.",
       "expectations": [
         "Lists agent invocations for each of the 7 phases (specify, clarify, plan, checklist, tasks, analyze, implement)",
