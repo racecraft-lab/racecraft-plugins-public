@@ -1,0 +1,77 @@
+{
+  "schema_version": "1.0",
+  "rows": [
+    {
+      "language": "python",
+      "slot": "COMPLEXITY",
+      "signal": { "kind": "file", "path": "pyproject.toml" },
+      "tool": "radon + coverage.py (CRAP join)",
+      "install": "pip install radon coverage",
+      "command": "python3 scripts/crap-score.py --language python --ceiling {ceiling} --complexity-ceiling {complexity_ceiling} -- {paths}"
+    },
+    {
+      "language": "python",
+      "slot": "MUTATION",
+      "signal": { "kind": "file", "path": "cosmic-ray.toml" },
+      "tool": "cosmic-ray",
+      "install": "pip install cosmic-ray",
+      "command": "cosmic-ray init cosmic-ray.toml .cosmic-ray.sqlite --force && cr-filter-git .cosmic-ray.sqlite && cosmic-ray baseline cosmic-ray.toml && cosmic-ray exec cosmic-ray.toml .cosmic-ray.sqlite && cr-rate .cosmic-ray.sqlite --fail-over {survival_ceiling}"
+    },
+    {
+      "language": "python",
+      "slot": "DEPENDENCY_RULES",
+      "signal": { "kind": "file", "path": ".importlinter" },
+      "tool": "import-linter",
+      "install": "pip install import-linter",
+      "command": "lint-imports --config {rules_path}"
+    },
+    {
+      "language": "python",
+      "slot": "DEPENDENCY_RULES",
+      "signal": { "kind": "file", "path": "pyproject.toml" },
+      "tool": "import-linter",
+      "install": "pip install import-linter",
+      "command": "lint-imports --config {rules_path}"
+    },
+    {
+      "language": "typescript",
+      "slot": "COMPLEXITY",
+      "signal": { "kind": "file", "path": "vitest.config.ts" },
+      "tool": "ESLint complexity + Vitest coverage (CRAP join)",
+      "install": "pnpm add -D eslint typescript-eslint @vitest/coverage-v8",
+      "command": "python3 scripts/crap-score.py --language typescript --ceiling {ceiling} --complexity-ceiling {complexity_ceiling} --coverage-command \"pnpm exec vitest run --coverage --coverage.reporter=json\" -- {paths}"
+    },
+    {
+      "language": "typescript",
+      "slot": "COMPLEXITY",
+      "signal": { "kind": "file", "path": "jest.config.js" },
+      "tool": "ESLint complexity + Jest coverage (CRAP join)",
+      "install": "pnpm add -D eslint typescript-eslint jest",
+      "command": "python3 scripts/crap-score.py --language typescript --ceiling {ceiling} --complexity-ceiling {complexity_ceiling} --coverage-command \"pnpm exec jest --coverage --coverageReporters=json\" -- {paths}"
+    },
+    {
+      "language": "typescript",
+      "slot": "COMPLEXITY",
+      "signal": { "kind": "file", "path": "package.json" },
+      "tool": "ESLint complexity + c8 coverage (CRAP join)",
+      "install": "pnpm add -D eslint typescript-eslint c8",
+      "command": "python3 scripts/crap-score.py --language typescript --ceiling {ceiling} --complexity-ceiling {complexity_ceiling} --coverage-command \"pnpm exec c8 --reporter=json pnpm test\" -- {paths}"
+    },
+    {
+      "language": "typescript",
+      "slot": "MUTATION",
+      "signal": { "kind": "file", "path": "stryker.config.json" },
+      "tool": "StrykerJS",
+      "install": "pnpm add -D @stryker-mutator/core",
+      "command": "pnpm exec stryker run --reporters json,progress --incremental --mutate {paths}"
+    },
+    {
+      "language": "typescript",
+      "slot": "DEPENDENCY_RULES",
+      "signal": { "kind": "file", "path": ".dependency-cruiser.cjs" },
+      "tool": "dependency-cruiser",
+      "install": "pnpm add -D dependency-cruiser",
+      "command": "pnpm exec depcruise --config {rules_path} --output-type err {paths}"
+    }
+  ]
+}

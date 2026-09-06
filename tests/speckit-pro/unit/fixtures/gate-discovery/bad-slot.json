@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "rows": [
+    {
+      "language": "python",
+      "slot": "FORMAL_CHECK",
+      "signal": { "kind": "file", "path": "pyproject.toml" },
+      "tool": "tlc",
+      "install": "n/a",
+      "command": "tlc {paths}"
+    }
+  ]
+}
