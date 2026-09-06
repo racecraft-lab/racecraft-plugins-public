@@ -393,15 +393,16 @@ recorded answer.
 
 ### Workflow guards
 
-The Claude distribution enforces these two rules with plugin hooks; the
-Codex manifest declares no executable hook (Layer 1 forbids it, since a
-static manifest cannot resolve the required interpreter), so the Codex
-orchestrator honors them by hand:
+Both distributions ship these two rules as plugin hooks (Codex:
+`codex-hooks.json`, trusted once by the operator through `/hooks`). The
+Codex hook fails open when the interpreter is below Python 3.11 or while
+the hook is still untrusted, so the orchestrator honors the rules by hand
+as well:
 
-- **Lockfile package manager** (Claude: `PreToolUse` on the shell tool): when exactly one
+- **Lockfile package manager** (`PreToolUse` on the shell tool): when exactly one
   JavaScript lockfile kind exists, a command that invokes another
   package manager is denied. Use the manager the lockfile names.
-- **No unpushed commits at turn end** (Claude: `Stop`): while
+- **No unpushed commits at turn end** (`Stop`): while
   `autopilot-state.json` reports `in_progress` or `awaiting_review`,
   a turn cannot end with commits the upstream lacks. Push before
   ending the turn, or set the upstream and push; the block names the

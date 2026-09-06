@@ -19,6 +19,9 @@ the hook answers ``{"decision": "block", "reason": ...}``. It yields when
 
 Anything unexpected fails open: the hook exits 0 with a note on stderr,
 because a broken guard must not lock an operator out of their own session.
+That includes the interpreter itself: below Python 3.11, the Installed
+Runtime Contract floor, the hook prints one warning and exits 0, so an old
+interpreter degrades to the prose rules instead of blocking the operator.
 """
 
 from __future__ import annotations
@@ -136,6 +139,9 @@ def unpushed_decision(data: dict[str, Any]) -> str | None:
 
 
 def main(argv: list[str]) -> int:
+    if sys.version_info < (3, 11):
+        print("workflow guard hook: interpreter below Python 3.11, guard inactive (fail-open)", file=sys.stderr)
+        return 0
     if len(argv) != 2 or argv[1] != HOOK_VERSION or argv[0] not in {"lockfile", "unpushed"}:
         print("workflow guard hook: usage <lockfile|unpushed> " + HOOK_VERSION, file=sys.stderr)
         return 2

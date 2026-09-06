@@ -87,6 +87,19 @@ class WorkflowGuardHookTests(unittest.TestCase):
             self.assertIn("no decision", result.stderr)
         with self.subTest(msg="version mismatch exits 2"):
             self.assertEqual(2, run_hook("lockfile", {}, version="workflow-guard-v0")[0])
+        with self.subTest(msg="an interpreter below 3.11 fails open with one warning, even on a deny-worthy payload"):
+            with tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp).resolve()
+                (root / "pnpm-lock.yaml").write_text("", encoding="utf-8")
+                shim = (
+                    "import sys, runpy; sys.version_info = (3, 10, 0, 'final', 0); "
+                    f"sys.argv = [{str(HOOK)!r}, 'lockfile', {VERSION!r}]; runpy.run_path({str(HOOK)!r}, run_name='__main__')"
+                )
+                result = subprocess.run([sys.executable, "-c", shim], input=json.dumps(shell(root, "npm install")),
+                                        capture_output=True, text=True, env=ENV, check=False)
+                self.assertEqual((0, ""), (result.returncode, result.stdout))
+                self.assertIn("fail-open", result.stderr)
+                self.assertEqual(1, result.stderr.count("\n"))
 
     def test_unpushed_guard(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
