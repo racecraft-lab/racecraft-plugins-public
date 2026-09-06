@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import errno
 import importlib.util
 import json
 import os
@@ -576,7 +577,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                 killpg.assert_not_called()
 
     def test_only_post_kill_permission_probe_can_settle_with_later_explicit_absence(self) -> None:
-        for failure_point in ("initial", "term_send", "term_probe", "kill_send", "persistent", "transient"):
+        for failure_point in ("initial", "term_send", "term_probe", "kill_send", "post_kill_eacces", "persistent", "transient"):
             phase = "initial"
             post_kill_probes = 0
 
@@ -584,19 +585,21 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                 nonlocal phase, post_kill_probes
                 if sent == signal.SIGTERM:
                     if failure_point == "term_send":
-                        raise PermissionError("TERM denied")
+                        raise PermissionError(errno.EPERM, "TERM denied")
                     phase = "term_probe"
                 elif sent == signal.SIGKILL:
                     if failure_point == "kill_send":
-                        raise PermissionError("KILL denied")
+                        raise PermissionError(errno.EPERM, "KILL denied")
                     phase = "kill_probe"
                 elif phase == "kill_probe":
                     post_kill_probes += 1
+                    if failure_point == "post_kill_eacces":
+                        raise PermissionError(errno.EACCES, "post-KILL access denied")
                     if failure_point == "persistent" or post_kill_probes == 1:
-                        raise PermissionError("post-KILL probe unresolved")
+                        raise PermissionError(errno.EPERM, "post-KILL probe unresolved")
                     raise ProcessLookupError()
                 elif failure_point == phase:
-                    raise PermissionError("probe denied")
+                    raise PermissionError(errno.EPERM, "probe denied")
 
             with self.subTest(failure_point=failure_point), mock.patch.object(self.runner.os, "killpg", side_effect=signal_group), mock.patch.object(self.runner.time, "sleep"):
                 cleanup = self.runner.cleanup_process_group(mock.Mock(pid=31415, returncode=0), natural_exit_grace=False)
@@ -610,6 +613,8 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                 self.assertEqual(len(cleanup["post_kill_probe_errors"]), 20)
                 self.assertTrue(cleanup["error"])
             else:
+                if failure_point == "post_kill_eacces":
+                    self.assertEqual(post_kill_probes, 1)
                 self.assertEqual(cleanup["post_kill_probe_errors"], [])
                 self.assertTrue(cleanup["error"])
 

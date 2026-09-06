@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import errno
 import hashlib
 import json
 import os
@@ -502,7 +503,7 @@ def cleanup_process_group(process: subprocess.Popen, *, natural_exit_grace: bool
         except ProcessLookupError:
             return False
         except PermissionError as error:
-            if record["signals_sent"][-1:] != ["SIGKILL"]:
+            if error.errno != errno.EPERM or record["signals_sent"][-1:] != ["SIGKILL"]:
                 raise
             record["post_kill_probe_errors"].append({
                 "elapsed_seconds": time.monotonic() - started,
