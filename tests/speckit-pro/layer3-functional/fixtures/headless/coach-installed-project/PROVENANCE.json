@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "fixture_kind": "deterministic-synthetic-installed-project",
+  "captured_for_source_commit": "7fb712cba2146c0efe3877cca7cd608c96e88024",
+  "curated_id_source": "speckit-pro/scripts/curated-set.json",
+  "curated_id_source_blob": "319e5ce46a1c4dc5a8b38135f3225d6f0e3b5974",
+  "purpose_authority": "fixture-local installed extension manifests; descriptions are synthetic deterministic inputs, not upstream catalog claims",
+  "limitations": [
+    "This fixture is not evidence of the current community catalog.",
+    "Only review and verify are observed as installed.",
+    "cleanup and retrospective are intentionally absent and must not be assigned invented behavior.",
+    "The CLI observation is frozen test data, not a live command result."
+  ]
+}

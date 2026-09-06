@@ -1,0 +1,8 @@
+{
+  "fixture": true,
+  "specify_version": "0.9.4",
+  "active_integrations": ["claude", "codex"],
+  "project_extension_configuration": ".specify/extensions.yml",
+  "version_specific_command_help": null,
+  "network_state": "disabled"
+}

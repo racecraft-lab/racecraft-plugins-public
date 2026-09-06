@@ -1,0 +1,6 @@
+version: 1
+extensions:
+  - id: review
+    manifest: .specify/extensions/review/manifest.json
+  - id: verify
+    manifest: .specify/extensions/verify/manifest.json

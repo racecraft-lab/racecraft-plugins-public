@@ -1,0 +1,758 @@
+#!/usr/bin/env python3
+"""Capture ungraded evidence for the bounded Layer 3 headless canary roster."""
+
+from __future__ import annotations
+
+import argparse
+from dataclasses import dataclass
+from datetime import datetime, timezone
+import hashlib
+import json
+import os
+from pathlib import Path
+import signal
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+from typing import Any, Mapping
+import uuid
+
+LAYER_ROOT = Path(__file__).resolve().parent
+if str(LAYER_ROOT) not in sys.path:
+    sys.path.insert(0, str(LAYER_ROOT))
+
+from preview_helpers import read_eval_data
+
+
+CATALOG_PATH = LAYER_ROOT / "headless_cases.json"
+PROVIDER_API_ENV_NAMES = {
+    "ANTHROPIC_API_KEY",
+    "ANTHROPIC_AUTH_TOKEN",
+    "CLAUDE_CODE_OAUTH_TOKEN",
+    "CODEX_API_KEY",
+    "OPENAI_API_KEY",
+}
+
+
+class EvidenceError(RuntimeError):
+    """The run cannot produce trustworthy evidence."""
+
+
+class HeldLaunch(EvidenceError):
+    """A host/case launch is intentionally held pending a safe contract."""
+
+
+@dataclass(frozen=True)
+class Stage:
+    root: Path
+    plugin_root: Path
+    runtime_root: Path
+    workspace: Path
+    plugin_digest: str
+    fixture_digest: str
+    skill_digest: str
+
+
+def repo_root() -> Path:
+    return Path(__file__).resolve().parents[3]
+
+
+def utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def new_opaque_id() -> str:
+    return uuid.uuid4().hex
+
+
+def sha256_bytes(value: bytes) -> str:
+    return hashlib.sha256(value).hexdigest()
+
+
+def sha256_file(path: Path) -> str:
+    return sha256_bytes(path.read_bytes())
+
+
+def snapshot_tree(root: Path) -> dict[str, str]:
+    snapshot: dict[str, str] = {}
+    for path in sorted(root.rglob("*")):
+        relative = path.relative_to(root).as_posix()
+        if path.is_symlink():
+            snapshot[relative] = "symlink:" + os.readlink(path)
+        elif path.is_file():
+            snapshot[relative] = sha256_file(path)
+    return snapshot
+
+
+def tree_digest(root: Path) -> str:
+    digest = hashlib.sha256()
+    for relative, value in snapshot_tree(root).items():
+        digest.update(relative.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(value.encode("ascii"))
+        digest.update(b"\n")
+    return digest.hexdigest()
+
+
+def load_case_catalog(root: Path) -> dict[str, Any]:
+    path = root / CATALOG_PATH.relative_to(repo_root())
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if data.get("schema_version") != 1 or not isinstance(data.get("cases"), list):
+        raise EvidenceError(f"invalid headless case catalog: {path}")
+    for item in data["cases"]:
+        if not isinstance(item, dict) or set(item).intersection({"expectations", "expected_output"}):
+            raise EvidenceError("headless case catalog must not contain grading rubrics")
+    return data
+
+
+def find_case(catalog: Mapping[str, Any], host: str, skill: str, eval_id: int) -> dict[str, Any]:
+    matches = [
+        item
+        for item in catalog["cases"]
+        if item.get("host") == host and item.get("skill") == skill and item.get("eval_id") == eval_id
+    ]
+    if len(matches) != 1:
+        raise EvidenceError(f"expected one H0 case for {host}:{skill}:{eval_id}, found {len(matches)}")
+    return dict(matches[0])
+
+
+def eval_path(root: Path, case: Mapping[str, Any]) -> Path:
+    path = root / "tests" / "speckit-pro" / "layer3-functional" / str(case["eval_file"])
+    if not path.is_file():
+        raise EvidenceError(f"missing eval corpus: {path}")
+    return path
+
+
+def fixture_path(root: Path, case: Mapping[str, Any]) -> Path:
+    path = root / str(case["fixture_root"])
+    if not path.is_dir():
+        raise EvidenceError(f"missing fixture root: {path}")
+    return path
+
+
+def retain_fixture_provenance(root: Path, case: Mapping[str, Any], evidence_dir: Path) -> str | None:
+    source = fixture_path(root, case) / "PROVENANCE.json"
+    if not source.is_file():
+        return None
+    target = evidence_dir / "fixture-provenance.json"
+    shutil.copy2(source, target)
+    return sha256_file(target)
+
+
+def eval_prompt(root: Path, case: Mapping[str, Any]) -> str:
+    data = read_eval_data(eval_path(root, case))
+    if not isinstance(data, dict) or not isinstance(data.get("evals"), list):
+        raise EvidenceError("eval corpus has invalid shape")
+    matches = [item for item in data["evals"] if isinstance(item, dict) and item.get("id") == case["eval_id"]]
+    if len(matches) != 1 or not isinstance(matches[0].get("prompt"), str):
+        raise EvidenceError("eval case is missing or has an invalid prompt")
+    return str(matches[0]["prompt"])
+
+
+def build_actor_input(root: Path, case: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "prompt": eval_prompt(root, case),
+        "fixture": {
+            "root": ".",
+            "note": str(case["fixture_note"]),
+        },
+        "skill": str(case["invocation"]),
+    }
+
+
+def render_actor_prompt(actor_input: Mapping[str, Any]) -> bytes:
+    fixture = actor_input["fixture"]
+    text = (
+        f"Use {actor_input['skill']} for the following request.\n"
+        f"Fixture root: {fixture['root']}\n"
+        f"Fixture note: {fixture['note']}\n"
+        f"User request: {actor_input['prompt']}\n"
+    )
+    return text.encode("utf-8")
+
+
+def git_identity(root: Path) -> tuple[str, str]:
+    completed = subprocess.run(
+        ["git", "rev-parse", "HEAD^{commit}", "HEAD^{tree}"],
+        cwd=root,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if completed.returncode != 0:
+        raise EvidenceError("unable to resolve source commit/tree")
+    values = completed.stdout.decode("utf-8", errors="strict").splitlines()
+    if len(values) != 2:
+        raise EvidenceError("unexpected git identity response")
+    return values[0], values[1]
+
+
+def require_source_identity(
+    root: Path,
+    expected_commit: str,
+    expected_tree: str,
+    *,
+    require_clean: bool = False,
+) -> None:
+    actual_commit, actual_tree = git_identity(root)
+    if (actual_commit, actual_tree) != (expected_commit, expected_tree):
+        raise EvidenceError(
+            f"source identity mismatch: expected {expected_commit}/{expected_tree}, "
+            f"got {actual_commit}/{actual_tree}"
+        )
+    if require_clean:
+        status = subprocess.run(
+            ["git", "status", "--porcelain"],
+            cwd=root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        if status.returncode != 0 or status.stdout:
+            raise EvidenceError("source worktree is not clean")
+
+
+def stage_case(root: Path, case: Mapping[str, Any], stage_root: Path) -> Stage:
+    host = str(case["host"])
+    skill = str(case["skill"])
+    plugin_source = root / "dist" / host / "speckit-pro"
+    if not plugin_source.is_dir():
+        raise EvidenceError(f"missing rendered {host} distribution: {plugin_source}")
+    plugin_root = stage_root / "plugin"
+    workspace = stage_root / "workspace"
+    shutil.copytree(plugin_source, plugin_root)
+    shutil.copytree(
+        fixture_path(root, case),
+        workspace,
+        ignore=shutil.ignore_patterns("PROVENANCE.json"),
+    )
+    runtime_root = plugin_root
+
+    if host == "codex":
+        runtime_root = workspace / "speckit-pro"
+        shutil.copytree(plugin_root, runtime_root)
+        source_skills = plugin_root / "skills"
+        target_skills = workspace / ".agents" / "skills"
+        if not source_skills.is_dir():
+            raise EvidenceError(f"rendered Codex skills are missing: {source_skills}")
+        target_skills.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(source_skills, target_skills)
+        initialized = subprocess.run(
+            ["git", "init", "--quiet", str(workspace)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        if initialized.returncode != 0:
+            raise EvidenceError("unable to initialize disposable Codex fixture repository")
+
+    staged_skill = plugin_root / "skills" / skill / "SKILL.md"
+    if not staged_skill.is_file():
+        raise EvidenceError(f"rendered skill is missing: {staged_skill}")
+    return Stage(
+        root=stage_root,
+        plugin_root=plugin_root,
+        runtime_root=runtime_root,
+        workspace=workspace,
+        plugin_digest=tree_digest(plugin_root),
+        fixture_digest=tree_digest(fixture_path(root, case)),
+        skill_digest=sha256_file(staged_skill),
+    )
+
+
+def build_command(
+    case: Mapping[str, Any],
+    stage: Stage,
+    cli: Path,
+    model: str,
+    reasoning: str | None,
+) -> list[str]:
+    if not cli.is_absolute() or not model.strip():
+        raise EvidenceError("an absolute CLI path and explicit model are required")
+    if case.get("launch_policy") == "hold":
+        raise HeldLaunch(str(case.get("hold_reason", "launch held")))
+    if case["host"] == "claude":
+        tools = ",".join(str(item) for item in case["allowed_tools"])
+        return [
+            str(cli),
+            "-p",
+            "--output-format",
+            "stream-json",
+            "--verbose",
+            "--no-session-persistence",
+            "--model",
+            model,
+            "--restricted",
+            "--permission-mode",
+            "dontAsk",
+            "--permission-prompts",
+            "none",
+            "--tools",
+            tools,
+            "--add-dir",
+            str(stage.plugin_root),
+            "--plugin-dir",
+            str(stage.plugin_root),
+        ]
+    if case["host"] == "codex":
+        if not reasoning:
+            raise EvidenceError("Codex requires an explicit reasoning effort")
+        return [
+            str(cli),
+            "exec",
+            "--json",
+            "--ephemeral",
+            "--sandbox",
+            "read-only",
+            "--model",
+            model,
+            "--config",
+            f'model_reasoning_effort="{reasoning}"',
+            "--config",
+            'shell_environment_policy.inherit="none"',
+            "--config",
+            "shell_environment_policy.set={"
+            f"PATH={json.dumps(os.environ.get('PATH', ''))},"
+            f"PYTHONPATH={json.dumps(str(stage.runtime_root))}"
+            "}",
+            "--cd",
+            str(stage.workspace),
+            "-",
+        ]
+    raise EvidenceError(f"unsupported host: {case['host']}")
+
+
+def build_process_env(incoming: Mapping[str, str], plugin_root: Path) -> dict[str, str]:
+    present = sorted(name for name in PROVIDER_API_ENV_NAMES if name in incoming)
+    if present:
+        raise EvidenceError("provider API environment override present by name: " + ", ".join(present))
+    result = dict(incoming)
+    existing = result.get("PYTHONPATH")
+    result["PYTHONPATH"] = str(plugin_root) if not existing else str(plugin_root) + os.pathsep + existing
+    return result
+
+
+def probe_cli_version(cli: Path) -> str:
+    completed = subprocess.run(
+        [str(cli), "--version"],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if completed.returncode != 0:
+        raise EvidenceError(f"CLI version probe exited {completed.returncode}")
+    try:
+        version = completed.stdout.decode("utf-8", errors="strict").strip()
+        completed.stderr.decode("utf-8", errors="strict")
+    except UnicodeDecodeError as error:
+        raise EvidenceError("CLI version probe emitted non-UTF-8 output") from error
+    if not version:
+        raise EvidenceError("CLI version probe returned no version")
+    return version
+
+
+def require_execution_platform(platform_name: str) -> None:
+    if platform_name != "posix":
+        raise HeldLaunch(
+            "live headless collection requires POSIX process-group termination; "
+            f"unsupported platform: {platform_name}"
+        )
+
+
+def capture_process(
+    command: list[str],
+    stdin_bytes: bytes,
+    evidence_dir: Path,
+    cwd: Path,
+    env: Mapping[str, str],
+    timeout_seconds: int,
+) -> dict[str, Any]:
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    started_at = utc_now()
+    started = time.monotonic()
+    try:
+        process = subprocess.Popen(
+            command,
+            cwd=cwd,
+            env=dict(env),
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=False,
+            start_new_session=True,
+        )
+    except OSError as error:
+        return {
+            "status": "launch_error",
+            "error": str(error),
+            "started_at": started_at,
+            "finished_at": utc_now(),
+            "duration_seconds": time.monotonic() - started,
+        }
+    status = "completed_ungraded"
+    termination_error: str | None = None
+    try:
+        stdout_bytes, stderr_bytes = process.communicate(stdin_bytes, timeout=timeout_seconds)
+    except subprocess.TimeoutExpired as timeout_error:
+        status = "timeout"
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except OSError as error:
+            termination_error = f"unable to kill process group: {error}"
+            status = "termination_error"
+            try:
+                process.kill()
+            except OSError as parent_error:
+                termination_error += f"; unable to kill parent: {parent_error}"
+        try:
+            stdout_bytes, stderr_bytes = process.communicate(timeout=5)
+        except subprocess.TimeoutExpired as drain_error:
+            status = "termination_error"
+            suffix = "timed out draining pipes after termination"
+            termination_error = f"{termination_error}; {suffix}" if termination_error else suffix
+            stdout_bytes = drain_error.output or timeout_error.output or b""
+            stderr_bytes = drain_error.stderr or timeout_error.stderr or b""
+    (evidence_dir / "stdout.bin").write_bytes(stdout_bytes)
+    (evidence_dir / "stderr.bin").write_bytes(stderr_bytes)
+    stdout_sha256 = sha256_bytes(stdout_bytes)
+    stderr_sha256 = sha256_bytes(stderr_bytes)
+    try:
+        stdout = stdout_bytes.decode("utf-8", errors="strict")
+        stderr = stderr_bytes.decode("utf-8", errors="strict")
+    except UnicodeDecodeError as error:
+        return {
+            "status": "output_decode_error" if status == "completed_ungraded" else status,
+            "decode_error": str(error),
+            "termination_error": termination_error,
+            "exit_code": process.returncode,
+            "stdout_sha256": stdout_sha256,
+            "stderr_sha256": stderr_sha256,
+            "started_at": started_at,
+            "finished_at": utc_now(),
+            "duration_seconds": time.monotonic() - started,
+        }
+    (evidence_dir / "stdout.txt").write_text(stdout, encoding="utf-8")
+    (evidence_dir / "stderr.txt").write_text(stderr, encoding="utf-8")
+    if status == "completed_ungraded" and process.returncode != 0:
+        status = "process_error"
+    return {
+        "status": status,
+        "exit_code": process.returncode,
+        "stdout": stdout,
+        "stderr": stderr,
+        "stdout_sha256": stdout_sha256,
+        "stderr_sha256": stderr_sha256,
+        "termination_error": termination_error,
+        "started_at": started_at,
+        "finished_at": utc_now(),
+        "duration_seconds": time.monotonic() - started,
+    }
+
+
+def parse_jsonl(stdout: str) -> list[dict[str, Any]]:
+    events: list[dict[str, Any]] = []
+    for line_number, line in enumerate(stdout.splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            item = json.loads(line)
+        except json.JSONDecodeError as error:
+            raise EvidenceError(f"invalid JSONL at line {line_number}: {error}") from error
+        if not isinstance(item, dict) or not isinstance(item.get("type"), str):
+            raise EvidenceError(f"invalid event at line {line_number}")
+        events.append(item)
+    if not events:
+        raise EvidenceError("provider emitted no JSONL events")
+    return events
+
+
+def parse_events(host: str, stdout: str) -> dict[str, Any]:
+    events = parse_jsonl(stdout)
+    tool_trace: list[dict[str, Any]] = []
+    if host == "codex":
+        types = [str(item["type"]) for item in events]
+        if any(name.endswith(".failed") for name in types):
+            raise EvidenceError("Codex JSONL contains a failed lifecycle event")
+        for required in ("thread.started", "turn.started", "turn.completed"):
+            if types.count(required) != 1:
+                raise EvidenceError(f"expected exactly one {required} event")
+        positions = [types.index(name) for name in ("thread.started", "turn.started", "turn.completed")]
+        if positions != sorted(positions) or positions[-1] != len(types) - 1:
+            raise EvidenceError("Codex lifecycle events are out of order or terminal is not last")
+        for event in events:
+            if event["type"] != "item.completed" or not isinstance(event.get("item"), dict):
+                continue
+            item = event["item"]
+            if item.get("type") in {"error", "failed"}:
+                raise EvidenceError("Codex JSONL contains a failed completed item")
+            if item.get("type") in {"command_execution", "mcp_tool_call", "tool_call"}:
+                tool_trace.append(item)
+        return {
+            "terminal_type": "turn.completed",
+            "resolved_model": None,
+            "resolved_model_evidence": "not emitted by parsed Codex JSONL",
+            "tool_trace": tool_trace,
+            "event_count": len(events),
+        }
+    if host == "claude":
+        init = [item for item in events if item["type"] == "system" and item.get("subtype") == "init"]
+        results = [item for item in events if item["type"] == "result"]
+        if len(init) != 1 or len(results) != 1:
+            raise EvidenceError("expected exactly one Claude system/init and result event")
+        if events.index(init[0]) > events.index(results[0]) or events[-1] is not results[0]:
+            raise EvidenceError("Claude lifecycle events are out of order or terminal is not last")
+        if results[0].get("is_error") is True:
+            raise EvidenceError("Claude result event reports an error")
+        completed_tool_use_ids: set[str] = set()
+        for event in events:
+            message = event.get("message")
+            if not isinstance(message, dict):
+                continue
+            content = message.get("content", [])
+            if event["type"] == "assistant" and isinstance(content, list):
+                tool_trace.extend(item for item in content if isinstance(item, dict) and item.get("type") == "tool_use")
+            if event["type"] == "user" and isinstance(content, list):
+                completed_tool_use_ids.update(
+                    str(item["tool_use_id"])
+                    for item in content
+                    if isinstance(item, dict)
+                    and item.get("type") == "tool_result"
+                    and isinstance(item.get("tool_use_id"), str)
+                    and item.get("is_error") is not True
+                )
+        model = init[0].get("model")
+        return {
+            "terminal_type": "result",
+            "resolved_model": model if isinstance(model, str) else None,
+            "resolved_model_evidence": "system/init.model" if isinstance(model, str) else "not emitted",
+            "plugins": init[0].get("plugins"),
+            "available_tools": init[0].get("tools"),
+            "tool_trace": tool_trace,
+            "completed_tool_use_ids": sorted(completed_tool_use_ids),
+            "event_count": len(events),
+        }
+    raise EvidenceError(f"unsupported host event stream: {host}")
+
+
+def require_provider_evidence(case: Mapping[str, Any], parsed: Mapping[str, Any]) -> None:
+    required = {str(item) for item in case.get("required_tools", [])}
+    if case["host"] == "claude":
+        available_raw = parsed.get("available_tools")
+        available = {str(item) for item in available_raw} if isinstance(available_raw, list) else set()
+        missing = sorted(required - available)
+        plugins = parsed.get("plugins")
+        plugin_names = {
+            str(item.get("name")) if isinstance(item, dict) else str(item)
+            for item in plugins
+        } if isinstance(plugins, list) else set()
+        if "speckit-pro" not in plugin_names:
+            raise EvidenceError("Claude system/init did not prove the speckit-pro plugin loaded")
+        if missing:
+            raise EvidenceError("Claude system/init is missing required tools: " + ", ".join(missing))
+        if parsed.get("resolved_model") is None:
+            raise EvidenceError("Claude system/init did not report a resolved model")
+        expected_skill = str(case["invocation"]).removeprefix("/")
+        completed = {str(item) for item in parsed.get("completed_tool_use_ids", [])}
+        matching_skill_uses = [
+            item
+            for item in parsed.get("tool_trace", [])
+            if isinstance(item, dict)
+            and item.get("name") == "Skill"
+            and isinstance(item.get("input"), dict)
+            and item["input"].get("skill") == expected_skill
+        ]
+        if not any(str(item.get("id")) in completed for item in matching_skill_uses):
+            raise EvidenceError(
+                f"Claude trace did not prove a successful exact Skill invocation: {expected_skill}"
+            )
+        return
+    observed = {
+        str(item.get("type"))
+        for item in parsed.get("tool_trace", [])
+        if isinstance(item, dict)
+    }
+    missing = sorted(required - observed)
+    if missing:
+        raise EvidenceError("Codex completed trace is missing required tools: " + ", ".join(missing))
+
+
+def final_status(process_status: str, cleanup_error: str | None) -> str:
+    return "cleanup_error" if cleanup_error else process_status
+
+
+def write_checksum_index(root: Path) -> None:
+    lines = []
+    for path in sorted(root.rglob("*")):
+        if path.is_file() and path.name != "sha256.txt":
+            lines.append(f"{sha256_file(path)}  {path.relative_to(root).as_posix()}")
+    (root / "sha256.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def parser() -> argparse.ArgumentParser:
+    result = argparse.ArgumentParser(description=__doc__)
+    result.add_argument("--host", choices=("claude", "codex"), required=True)
+    result.add_argument("--skill", choices=("speckit-autopilot", "speckit-coach"), required=True)
+    result.add_argument("--eval-id", type=int, required=True)
+    result.add_argument("--source-commit", required=True)
+    result.add_argument("--source-tree", required=True)
+    result.add_argument("--model", required=True)
+    result.add_argument("--reasoning", choices=("low", "medium", "high", "xhigh"))
+    result.add_argument("--cli", type=Path, required=True)
+    result.add_argument("--evidence-dir", type=Path, required=True)
+    result.add_argument("--timeout", type=int, default=600)
+    result.add_argument("--execute", action="store_true")
+    return result
+
+
+def main(argv: list[str]) -> int:
+    args = parser().parse_args(argv)
+    root = repo_root()
+    evidence_root = args.evidence_dir.resolve()
+    if evidence_root.is_relative_to(root.resolve()):
+        print("ERROR: evidence directory must be outside the source worktree", file=sys.stderr)
+        return 2
+    if evidence_root.exists():
+        print(f"ERROR: evidence directory already exists: {evidence_root}", file=sys.stderr)
+        return 2
+    evidence_root.mkdir(parents=True)
+    manifest: dict[str, Any] = {
+        "schema_version": 1,
+        "status": "setup_error",
+        "source_commit": args.source_commit,
+        "source_tree": args.source_tree,
+        "host": args.host,
+        "requested_model": args.model,
+        "resolved_model": None,
+        "reasoning": args.reasoning,
+        "cli": str(args.cli),
+        "created_at": utc_now(),
+        "semantic_grade": "not_performed",
+    }
+    stage_root: Path | None = None
+    cleanup_error: str | None = None
+    exit_code = 1
+    try:
+        require_source_identity(root, args.source_commit, args.source_tree, require_clean=True)
+        if not args.cli.is_absolute() or not args.cli.is_file() or not os.access(args.cli, os.X_OK):
+            raise EvidenceError("CLI must be an existing executable absolute path")
+        manifest["cli_version"] = probe_cli_version(args.cli)
+        catalog = load_case_catalog(root)
+        case = find_case(catalog, args.host, args.skill, args.eval_id)
+        actor_input = build_actor_input(root, case)
+        opaque_id = new_opaque_id()
+        case_evidence = evidence_root / "cases" / opaque_id
+        case_evidence.parent.mkdir()
+        case_evidence.mkdir()
+        fixture_provenance_sha256 = retain_fixture_provenance(root, case, case_evidence)
+        (case_evidence / "actor-input.json").write_text(
+            json.dumps(actor_input, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        stage_root = Path(tempfile.mkdtemp(prefix=f"speckit-l3-{opaque_id}-"))
+        stage = stage_case(root, case, stage_root)
+        before = snapshot_tree(stage.workspace)
+        before_path = case_evidence / "workspace-before.json"
+        before_path.write_text(json.dumps(before, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        manifest.update(
+            {
+                "opaque_case_id": opaque_id,
+                "case_identity": {"skill": args.skill, "eval_id": args.eval_id},
+                "eval_file": str(case["eval_file"]),
+                "eval_file_sha256": sha256_file(eval_path(root, case)),
+                "case_catalog_sha256": sha256_file(root / CATALOG_PATH.relative_to(repo_root())),
+                "plugin_tree_sha256": stage.plugin_digest,
+                "fixture_tree_sha256": stage.fixture_digest,
+                "fixture_provenance_sha256": fixture_provenance_sha256,
+                "skill_sha256": stage.skill_digest,
+                "workspace_before_sha256": sha256_file(before_path),
+            }
+        )
+        try:
+            command = build_command(case, stage, args.cli, args.model, args.reasoning)
+        except HeldLaunch as error:
+            manifest.update({"status": "held", "hold_reason": str(error)})
+            exit_code = 4
+        else:
+            manifest["command"] = command
+            if not args.execute:
+                manifest["status"] = "preflight_only"
+                exit_code = 0
+            else:
+                try:
+                    require_execution_platform(os.name)
+                except HeldLaunch as error:
+                    manifest.update({"status": "held", "hold_reason": str(error)})
+                    exit_code = 4
+                    process_result = None
+                else:
+                    env = build_process_env(os.environ, stage.runtime_root)
+                    process_result = capture_process(
+                        command,
+                        render_actor_prompt(actor_input),
+                        case_evidence,
+                        stage.workspace,
+                        env,
+                        args.timeout,
+                    )
+                if process_result is not None:
+                    manifest["process"] = {
+                        key: value
+                        for key, value in process_result.items()
+                        if key not in {"stdout", "stderr"}
+                    }
+                    status = str(process_result["status"])
+                    if status == "completed_ungraded":
+                        try:
+                            parsed = parse_events(args.host, str(process_result["stdout"]))
+                        except EvidenceError as error:
+                            status = "event_parse_error"
+                            manifest["event_error"] = str(error)
+                        else:
+                            try:
+                                require_provider_evidence(case, parsed)
+                            except EvidenceError as error:
+                                status = "provider_evidence_error"
+                                manifest["event_error"] = str(error)
+                            manifest["provider_evidence"] = parsed
+                            manifest["resolved_model"] = parsed["resolved_model"]
+                            (case_evidence / "tool-trace.json").write_text(
+                                json.dumps(parsed["tool_trace"], indent=2, sort_keys=True) + "\n",
+                                encoding="utf-8",
+                            )
+                    after = snapshot_tree(stage.workspace)
+                    after_path = case_evidence / "workspace-after.json"
+                    after_path.write_text(
+                        json.dumps(after, indent=2, sort_keys=True) + "\n",
+                        encoding="utf-8",
+                    )
+                    manifest["workspace_after_sha256"] = sha256_file(after_path)
+                    if before != after and status == "completed_ungraded":
+                        status = "workspace_changed"
+                    manifest["status"] = status
+                    exit_code = 0 if status == "completed_ungraded" else 1
+    except (EvidenceError, OSError, ValueError, json.JSONDecodeError) as error:
+        manifest.update({"status": "setup_error", "error": str(error)})
+        exit_code = 1
+    finally:
+        if stage_root is not None:
+            try:
+                shutil.rmtree(stage_root)
+            except OSError as error:
+                cleanup_error = str(error)
+        manifest["cleanup_error"] = cleanup_error
+        manifest["status"] = final_status(str(manifest["status"]), cleanup_error)
+        manifest["finished_at"] = utc_now()
+        (evidence_root / "manifest.json").write_text(
+            json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        write_checksum_index(evidence_root)
+    print(json.dumps({"status": manifest["status"], "evidence_dir": str(evidence_root)}))
+    return 1 if cleanup_error else exit_code
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))
