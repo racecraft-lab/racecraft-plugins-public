@@ -1,8 +1,9 @@
 {
   "fixture": true,
-  "specify_version": "0.9.4",
+  "specify_version": "1.0.1",
+  "observation_scope": "Synthetic project settings and extension manifests with immutable help captured from installed Specify CLI 1.0.1; no compatibility claim for other CLI versions.",
   "active_integrations": ["claude", "codex"],
   "project_extension_configuration": ".specify/extensions.yml",
-  "version_specific_command_help": null,
+  "version_specific_command_help": "specify-1.0.1-help.json",
   "network_state": "disabled"
 }

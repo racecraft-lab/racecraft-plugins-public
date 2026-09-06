@@ -65,6 +65,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
     def test_actor_input_excludes_rubric_and_comparison_labels(self) -> None:
         actor = self.runner.build_actor_input(REPO_ROOT, self.case("codex", "speckit-coach", 8))
         self.assertEqual(set(actor), {"prompt", "fixture", "skill"})
+        self.assertEqual(actor["fixture"]["root"], ".")
         serialized = json.dumps(actor).lower()
         self.assertNotIn("expectation", serialized)
         self.assertNotIn("expected_output", serialized)
@@ -94,8 +95,62 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                 self.runner.sha256_file(stage.plugin_root / "skills" / "speckit-autopilot" / "SKILL.md"),
             )
             self.assertEqual(json.loads(stage.mcp_config.read_text(encoding="utf-8")), {"mcpServers": {}})
-            self.assertTrue((stage.workspace / "tasks.md").is_file())
+            self.assertTrue((stage.workspace / self.case("codex", "speckit-autopilot", 2)["fixture_root"] / "tasks.md").is_file())
             self.assertFalse((stage.workspace / "PROVENANCE.json").exists())
+
+    def test_autopilot_fixture_resolves_at_the_unchanged_prompt_path(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host), tempfile.TemporaryDirectory() as temporary:
+                case = self.case(host, "speckit-autopilot", 2)
+                actor = self.runner.build_actor_input(REPO_ROOT, case)
+                self.assertIn(case["fixture_root"], actor["prompt"])
+                self.assertEqual(actor["fixture"]["root"], case["fixture_destination"])
+                stage = self.runner.stage_case(REPO_ROOT, case, Path(temporary))
+                staged_tasks = stage.workspace / case["fixture_root"] / "tasks.md"
+                self.assertTrue(staged_tasks.is_file())
+                self.assertEqual(
+                    staged_tasks.read_bytes(),
+                    (self.runner.fixture_path(REPO_ROOT, case) / "tasks.md").read_bytes(),
+                )
+                self.assertFalse((stage.workspace / "tasks.md").exists())
+
+    def test_codex_staged_g7_helper_reads_the_prompt_fixture(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            case = self.case("codex", "speckit-autopilot", 2)
+            stage = self.runner.stage_case(REPO_ROOT, case, Path(temporary))
+            request = {
+                "schema_version": "1.0",
+                "request_id": "staged-g7",
+                "helper_id": "validate-gate",
+                "operation": "validate-gate",
+                "mode": "read_only",
+                "inputs": {"gate": "G7", "feature_dir": case["fixture_root"]},
+            }
+            result = subprocess.run(
+                [str(Path(sys.executable).resolve()), "-m", "speckit_pro_runner"],
+                input=json.dumps(request),
+                text=True,
+                capture_output=True,
+                cwd=stage.workspace,
+                env={**os.environ, "PYTHONPATH": str(stage.runtime_root)},
+                check=False,
+            )
+            envelope = json.loads(result.stdout)
+            data = envelope["data"]["stdout_json"]
+            self.assertEqual(data["gate"], "G7")
+            self.assertIs(data["pass"], False)
+            self.assertEqual(data["total"], 85)
+            self.assertEqual(data["done"], 84)
+            self.assertEqual(data["markers"], 1)
+            self.assertEqual(data["reason"], "1 of 85 tasks incomplete")
+
+    def test_fixture_destination_rejects_workspace_escape(self) -> None:
+        for destination in ("../outside", "/outside"):
+            with self.subTest(destination=destination), tempfile.TemporaryDirectory() as temporary:
+                case = {**self.case("codex", "speckit-autopilot", 2), "fixture_destination": destination}
+                with self.assertRaises(self.runner.EvidenceError):
+                    self.runner.stage_case(REPO_ROOT, case, Path(temporary))
+                self.assertEqual(list(Path(temporary).iterdir()), [])
 
     def test_coach_fixture_has_two_grounded_purposes_without_command_invention(self) -> None:
         fixture = (
@@ -114,7 +169,20 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
         self.assertTrue(all(item["description"] and item["commands"] == [] for item in manifests))
         self.assertIn("not evidence of the current community catalog", " ".join(provenance["limitations"]))
         observation = json.loads((fixture / "installed-cli-observation.json").read_text(encoding="utf-8"))
-        self.assertIsNone(observation["version_specific_command_help"])
+        self.assertEqual(observation["specify_version"], "1.0.1")
+        help_path = fixture / observation["version_specific_command_help"]
+        help_capture = json.loads(help_path.read_text(encoding="utf-8"))
+        self.assertEqual(help_capture["specify_version"], observation["specify_version"])
+        self.assertEqual(help_capture["executable_sha256"], provenance["cli_help_capture"]["executable_sha256"])
+        self.assertEqual(self.runner.sha256_file(help_path), provenance["cli_help_capture"]["file_sha256"])
+        self.assertEqual(
+            [item["arguments"] for item in help_capture["commands"]],
+            [["--version"], ["--help"], ["extension", "--help"], ["extension", "add", "--help"]],
+        )
+        for item in help_capture["commands"]:
+            self.assertEqual(item["exit_code"], 0)
+            self.assertEqual(self.runner.sha256_bytes(item["stdout"].encode()), item["stdout_sha256"])
+            self.assertEqual(self.runner.sha256_bytes(item["stderr"].encode()), item["stderr_sha256"])
         coach_case = self.case("claude", "speckit-coach", 8)
         note = coach_case["fixture_note"].lower()
         for leaked_cue in ("two requested", "unavailable", "unverified", "do not invent"):
@@ -127,6 +195,10 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
             stage = self.runner.stage_case(REPO_ROOT, coach_case, Path(temporary))
             self.assertFalse((stage.workspace / "PROVENANCE.json").exists())
             self.assertTrue((stage.workspace / ".specify" / "extensions.yml").is_file())
+            self.assertEqual(
+                (stage.workspace / observation["version_specific_command_help"]).read_bytes(),
+                help_path.read_bytes(),
+            )
 
     def test_codex_command_is_ephemeral_read_only_and_isolates_the_staged_target(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

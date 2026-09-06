@@ -8,6 +8,7 @@
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 2,
       "fixture_root": "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature",
+      "fixture_destination": "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature",
       "fixture_note": "Use this frozen feature root as the complete project input. Invoke the installed read-only runner contract exactly as the user requests.",
       "allowed_tools": ["Skill", "Read", "Glob", "Grep", "Bash"],
       "required_tools": ["Skill", "Bash"],
@@ -21,6 +22,7 @@
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 2,
       "fixture_root": "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature",
+      "fixture_destination": "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature",
       "fixture_note": "Use this frozen feature root as the complete project input. Invoke the installed read-only runner contract exactly as the user requests.",
       "required_tools": ["command_execution"],
       "launch_policy": "read_only"

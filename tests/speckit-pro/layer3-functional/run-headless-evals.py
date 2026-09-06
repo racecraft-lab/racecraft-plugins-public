@@ -161,7 +161,7 @@ def build_actor_input(root: Path, case: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "prompt": eval_prompt(root, case),
         "fixture": {
-            "root": ".",
+            "root": str(case.get("fixture_destination", ".")),
             "note": str(case["fixture_note"]),
         },
         "skill": str(case["invocation"]),
@@ -228,10 +228,15 @@ def stage_case(root: Path, case: Mapping[str, Any], stage_root: Path) -> Stage:
         raise EvidenceError(f"missing rendered {host} distribution: {plugin_source}")
     plugin_root = stage_root / "plugin"
     workspace = stage_root / "workspace"
+    fixture_destination = Path(str(case.get("fixture_destination", ".")))
+    if fixture_destination.is_absolute() or ".." in fixture_destination.parts:
+        raise EvidenceError("fixture destination must stay inside the staged workspace")
+    fixture_target = workspace / fixture_destination
+    fixture_target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(plugin_source, plugin_root)
     shutil.copytree(
         fixture_path(root, case),
-        workspace,
+        fixture_target,
         ignore=shutil.ignore_patterns("PROVENANCE.json"),
     )
     runtime_root = plugin_root
