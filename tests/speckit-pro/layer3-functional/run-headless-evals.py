@@ -40,6 +40,10 @@ PROVIDER_API_ENV_NAMES = {
     "CODEX_API_KEY",
     "OPENAI_API_KEY",
 }
+CODEX_DISABLED_FEATURES = (
+    "plugins", "apps", "browser_use", "computer_use", "hooks",
+    "skill_mcp_dependency_install", "memories",
+)
 
 
 class EvidenceError(RuntimeError):
@@ -295,20 +299,67 @@ def enumerate_non_target_skills(stage: Stage) -> tuple[Path, ...]:
     return tuple(sorted(discovered, key=str))
 
 
-def skill_isolation_args(disabled_skills: tuple[Path, ...]) -> list[str]:
+def skill_isolation_args(
+    disabled_skills: tuple[Path, ...], disabled_mcp_servers: tuple[str, ...] = (),
+) -> list[str]:
     """Build process-local Codex isolation overrides without saved-config mutation."""
     entries = ",".join(
         f"{{path={json.dumps(str(path))},enabled=false}}"
         for path in disabled_skills
     )
-    return [
-        "--disable", "plugins",
-        "--disable", "hooks",
-        "--disable", "apps",
+    args = [
+        value for feature in CODEX_DISABLED_FEATURES for value in ("--disable", feature)
+    ]
+    args.extend([
         "--config", "skills.bundled.enabled=false",
         "--config", f"skills.config=[{entries}]",
-        "--config", "mcp_servers={}",
+    ])
+    # Preserve exact names in a TOML map without copying endpoints or credentials.
+    # Exec ignores user config, so even disabled entries need an inert transport.
+    disabled = f'{{enabled=false,command={json.dumps(sys.executable)},args=["-c","raise SystemExit(1)"]}}'
+    servers = ",".join(f"{json.dumps(name)}={disabled}" for name in disabled_mcp_servers)
+    args.extend(["--config", f"mcp_servers={{{servers}}}", "--config", 'web_search="disabled"'])
+    return args
+
+
+def codex_permission_args(workspace: Path) -> list[str]:
+    return [
+        "--config", 'default_permissions="functional-fixture"',
+        "--config", 'permissions.functional-fixture.filesystem={":root"="deny",":minimal"="read",'
+        + json.dumps(str(workspace.resolve())) + '="read"}',
+        "--config", "permissions.functional-fixture.network.enabled=false",
+        "--config", 'approval_policy="never"',
+        "--config", "allow_login_shell=false",
     ]
+
+
+def enumerate_codex_mcp_servers(cli: Path, workspace: Path, env: Mapping[str, str]) -> tuple[str, ...]:
+    """Read local configured names only; this inventory does not initialize servers."""
+    command = [str(cli.resolve()), "mcp", "list", "--json", *codex_permission_args(workspace)]
+    for feature in CODEX_DISABLED_FEATURES:
+        command.extend(["--disable", feature])
+    command.extend(["--config", 'web_search="disabled"'])
+    try:
+        completed = subprocess.run(
+            command, cwd=workspace, env=dict(env), stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30,
+            executable=shutil.which("codex", path=str(Path(command[0]).parent)),
+            shell=False, check=False,
+        )
+        if completed.returncode != 0:
+            raise EvidenceError("Codex MCP inventory command failed")
+        inventory = json.loads(completed.stdout)
+        if not isinstance(inventory, list):
+            raise EvidenceError("Codex MCP inventory is not a list")
+        names = [item.get("name") if isinstance(item, dict) else None for item in inventory]
+        if any(not isinstance(name, str) or not name.strip() for name in names):
+            raise EvidenceError("Codex MCP inventory omitted a server name")
+        if len(set(names)) != len(names):
+            raise EvidenceError("Codex MCP inventory contains duplicate server names")
+        return tuple(sorted(names))
+    except (OSError, subprocess.TimeoutExpired, UnicodeError, json.JSONDecodeError) as error:
+        # Do not persist endpoints, config values or credential-bearing diagnostics.
+        raise EvidenceError("Codex MCP inventory could not be read locally") from error
 
 
 def claude_skill_policy(case: Mapping[str, Any], stage: Stage) -> dict[str, Any]:
@@ -360,6 +411,7 @@ def build_command(
     model: str,
     reasoning: str | None,
     disabled_skills: tuple[Path, ...] | None = None,
+    disabled_mcp_servers: tuple[str, ...] = (),
 ) -> list[str]:
     if not cli.is_absolute() or not model.strip():
         raise EvidenceError("an absolute CLI path and explicit model are required")
@@ -401,12 +453,11 @@ def build_command(
         if disabled_skills is None:
             disabled_skills = enumerate_non_target_skills(stage)
         command = [
-            str(cli),
+            str(cli.resolve()),
             "exec",
             "--json",
             "--ephemeral",
-            "--sandbox",
-            "read-only",
+            "--strict",
             "--ignore-user-config",
             "--model",
             model,
@@ -422,7 +473,8 @@ def build_command(
             "--cd",
             str(stage.workspace),
         ]
-        command.extend(skill_isolation_args(disabled_skills))
+        command.extend(codex_permission_args(stage.workspace))
+        command.extend(skill_isolation_args(disabled_skills, disabled_mcp_servers))
         command.append("-")
         return command
     raise EvidenceError(f"unsupported host: {case['host']}")
@@ -432,6 +484,12 @@ def build_process_env(incoming: Mapping[str, str], plugin_root: Path, *, host: s
     present = sorted(name for name in PROVIDER_API_ENV_NAMES if name in incoming)
     if present:
         raise EvidenceError("provider API environment override present by name: " + ", ".join(present))
+    if host == "codex":
+        result = {key: incoming[key] for key in (
+            "PATH", "HOME", "TMPDIR", "LANG", "LC_ALL", "LC_CTYPE", "USER", "CODEX_HOME",
+        ) if key in incoming}
+        result["PYTHONPATH"] = str(plugin_root)
+        return result
     result = dict(incoming)
     if host == "claude":
         result["DISABLE_AUTOUPDATER"] = "1"
@@ -594,6 +652,14 @@ def _capture_process(
     evidence_dir.mkdir(parents=True, exist_ok=True)
     started_at = utc_now()
     started = time.monotonic()
+    if not command:
+        return {
+            "status": "launch_error",
+            "error": "empty provider command",
+            "started_at": started_at,
+            "finished_at": utc_now(),
+            "duration_seconds": time.monotonic() - started,
+        }
     if host == "claude":
         executable = shutil.which("claude")
     elif host == "codex":
@@ -617,6 +683,10 @@ def _capture_process(
     try:
         if not command or Path(executable).resolve(strict=True) != Path(command[0]).resolve(strict=True):
             raise OSError(f"{host} CLI changed before execution")
+        if host == "codex":
+            executable = shutil.which("codex", path=str(Path(command[0]).parent))
+            if executable is None:
+                raise OSError("canonical Codex CLI disappeared before execution")
     except OSError as error:
         return {
             "status": "launch_error",
@@ -747,12 +817,25 @@ def parse_jsonl(stdout: str) -> list[dict[str, Any]]:
     return events
 
 
+def require_codex_event_isolation(events: list[dict[str, Any]]) -> None:
+    """Check every phase, including failed/denied attempts, before lifecycle checks."""
+    allowed_items = {"agent_message", "reasoning", "command_execution", "todo_list", "error"}
+    for event in events:
+        if event["type"] in {"item.started", "item.updated", "item.completed"}:
+            item = event.get("item")
+            if not isinstance(item, dict) or item.get("type") not in allowed_items:
+                raise EvidenceError("Codex isolation violation: connected or unsupported tool item")
+        elif event["type"] not in {"thread.started", "turn.started", "turn.completed", "turn.failed", "error"}:
+            raise EvidenceError("Codex isolation violation: unsupported event type")
+
+
 def parse_events(host: str, stdout: str) -> dict[str, Any]:
     events = parse_jsonl(stdout)
     tool_trace: list[dict[str, Any]] = []
     if host == "codex":
+        require_codex_event_isolation(events)
         types = [str(item["type"]) for item in events]
-        if any(name.endswith(".failed") for name in types):
+        if any(name == "error" or name.endswith(".failed") for name in types):
             raise EvidenceError("Codex JSONL contains a failed lifecycle event")
         for required in ("thread.started", "turn.started", "turn.completed"):
             if types.count(required) != 1:
@@ -971,6 +1054,19 @@ def main(argv: list[str]) -> int:
             if args.host == "codex"
             else None
         )
+        env = build_process_env(os.environ, stage.runtime_root, host=args.host)
+        disabled_mcp_servers = (
+            enumerate_codex_mcp_servers(args.cli, stage.workspace, env)
+            if args.host == "codex" else ()
+        )
+        if args.host == "codex":
+            manifest["codex_isolation"] = {
+                "disabled_mcp_servers": list(disabled_mcp_servers),
+                "inventory_evidence": "local configured names only; not the executing process tool registry",
+                "disabled_features": list(CODEX_DISABLED_FEATURES),
+                "environment_names": sorted(env),
+                "permission_profile": "functional-fixture",
+            }
         before = snapshot_tree(stage.workspace)
         before_path = case_evidence / "workspace-before.json"
         before_path.write_text(json.dumps(before, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -996,15 +1092,14 @@ def main(argv: list[str]) -> int:
                 args.model,
                 args.reasoning,
                 disabled_skills,
+                disabled_mcp_servers,
             )
         except HeldLaunch as error:
             manifest.update({"status": "held", "hold_reason": str(error)})
             exit_code = 4
         else:
             manifest["command"] = command
-            env = None
             if args.host == "claude":
-                env = build_process_env(os.environ, stage.runtime_root, host=args.host)
                 manifest["claude_startup_environment"] = {
                     name: env.get(name)
                     for name in (
@@ -1026,13 +1121,13 @@ def main(argv: list[str]) -> int:
                 else:
                     if args.host == "codex" and enumerate_non_target_skills(stage) != disabled_skills:
                         raise EvidenceError("Codex skill roots changed after command assembly")
+                    if args.host == "codex" and enumerate_codex_mcp_servers(args.cli, stage.workspace, env) != disabled_mcp_servers:
+                        raise EvidenceError("Codex MCP inventory changed after command assembly")
                     if args.host == "claude" and (
                         tree_digest(stage.plugin_root) != stage.plugin_digest
                         or claude_skill_policy(case, stage) != claude_policy
                     ):
                         raise EvidenceError("Claude staged plugin or Skill policy changed after command assembly")
-                    if env is None:
-                        env = build_process_env(os.environ, stage.runtime_root, host=args.host)
                     process_result = capture_process(
                         args.host,
                         command,
@@ -1049,6 +1144,12 @@ def main(argv: list[str]) -> int:
                         if key not in {"stdout", "stderr"}
                     }
                     status = str(process_result["status"])
+                    if args.host == "codex" and status != "completed_ungraded":
+                        try:
+                            require_codex_event_isolation(parse_jsonl(str(process_result.get("stdout", ""))))
+                        except EvidenceError as error:
+                            status = "event_parse_error"
+                            manifest["event_error"] = str(error)
                     if status == "completed_ungraded":
                         try:
                             parsed = parse_events(args.host, str(process_result["stdout"]))

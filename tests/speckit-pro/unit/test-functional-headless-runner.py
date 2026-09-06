@@ -14,6 +14,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import tomllib
 import unittest
 from unittest import mock
 
@@ -337,23 +338,127 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
         joined = " ".join(command)
         self.assertIn("--json", command)
         self.assertIn("--ephemeral", command)
-        self.assertIn("read-only", command)
+        self.assertNotIn("--sandbox", command)
+        self.assertIn("--strict", command)
+        self.assertIn('default_permissions="functional-fixture"', command)
+        permissions = next(item for item in command if item.startswith("permissions.functional-fixture.filesystem="))
+        policy = tomllib.loads(permissions)["permissions"]["functional-fixture"]["filesystem"]
+        self.assertEqual(policy, {":root": "deny", ":minimal": "read", str(stage.workspace.resolve()): "read"})
+        self.assertIn("permissions.functional-fixture.network.enabled=false", command)
+        self.assertIn('approval_policy="never"', command)
+        self.assertIn("allow_login_shell=false", command)
         self.assertIn("model-id", command)
         self.assertIn('shell_environment_policy.inherit="none"', command)
         self.assertTrue(any(item.startswith("shell_environment_policy.set=") for item in command))
         self.assertIn("--ignore-user-config", command)
         self.assertNotIn("--ignore-rules", command)
-        self.assertEqual(command.count("--disable"), 3)
+        self.assertEqual(command.count("--disable"), 7)
         self.assertEqual(
             [command[index + 1] for index, item in enumerate(command) if item == "--disable"],
-            ["plugins", "hooks", "apps"],
+            ["plugins", "apps", "browser_use", "computer_use", "hooks", "skill_mcp_dependency_install", "memories"],
         )
         self.assertIn("skills.bundled.enabled=false", command)
         self.assertIn("mcp_servers={}", command)
+        self.assertIn('web_search="disabled"', command)
         skill_config = next(item for item in command if item.startswith("skills.config=["))
         self.assertNotIn(str(stage.target_skill), skill_config)
         self.assertIn(str(stage.workspace / ".agents" / "skills" / "speckit-coach" / "SKILL.md"), skill_config)
         self.assertNotIn("dangerously", joined)
+
+    def test_codex_mcp_overrides_preserve_exact_names_with_inert_disabled_transports(self) -> None:
+        names = ('server.with.dots', 'server-with-dashes', 'quoted"name')
+        args = self.runner.skill_isolation_args((), names)
+        setting = next(item for item in args if item.startswith("mcp_servers="))
+        servers = tomllib.loads(setting)["mcp_servers"]
+        self.assertEqual(set(servers), set(names))
+        for server in servers.values():
+            self.assertEqual(server, {"enabled": False, "command": sys.executable, "args": ["-c", "raise SystemExit(1)"]})
+
+    def test_codex_mcp_inventory_retains_names_only_and_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            completed = subprocess.CompletedProcess([], 0, b'[{"name":"z", "url":"private"},{"name":"a", "env":{"SECRET":"private"}}]', b'')
+            with mock.patch.object(self.runner.subprocess, "run", return_value=completed) as run:
+                names = self.runner.enumerate_codex_mcp_servers(Path(sys.executable), workspace, {})
+            self.assertEqual(names, ("a", "z"))
+            command = run.call_args.args[0]
+            self.assertEqual(command[1:4], ["mcp", "list", "--json"])
+            self.assertNotIn("--ignore-user-config", command)
+            self.assertEqual(run.call_args.kwargs["env"], {})
+            for output in (b'{}', b'[{"name":"a"},{"name":"a"}]', b'[{"url":"private"}]', b'invalid'):
+                with self.subTest(output=output), mock.patch.object(self.runner.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, output, b'')):
+                    with self.assertRaises(self.runner.EvidenceError):
+                        self.runner.enumerate_codex_mcp_servers(Path(sys.executable), workspace, {})
+
+    def test_codex_rejects_connected_unknown_and_write_items_in_every_event_phase(self) -> None:
+        for phase in ("started", "updated", "completed"):
+            for kind in ("mcp_tool_call", "dynamic_tool_call", "tool_call", "web_search", "file_change", "future_tool"):
+                with self.subTest(phase=phase, kind=kind):
+                    events = [{"type": "thread.started"}, {"type": "turn.started"},
+                              {"type": f"item.{phase}", "item": {"type": kind, "status": "failed"}},
+                              {"type": "turn.completed"}]
+                    with self.assertRaisesRegex(self.runner.EvidenceError, "isolation"):
+                        self.runner.parse_events("codex", "\n".join(json.dumps(event) for event in events))
+
+    def test_codex_rejects_unknown_top_level_events(self) -> None:
+        events = [{"type": "thread.started"}, {"type": "turn.started"},
+                  {"type": "future.event"}, {"type": "turn.completed"}]
+        with self.assertRaisesRegex(self.runner.EvidenceError, "isolation"):
+            self.runner.parse_events("codex", "\n".join(json.dumps(event) for event in events))
+
+    def test_codex_mcp_inventory_changes_stop_before_provider_execution(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            evidence = Path(temporary) / "evidence"
+            with (
+                mock.patch.object(self.runner, "require_source_identity"),
+                mock.patch.object(self.runner, "probe_cli_version", return_value="test-cli"),
+                mock.patch.object(self.runner, "build_process_env", return_value={}),
+                mock.patch.object(self.runner, "enumerate_non_target_skills", return_value=()),
+                mock.patch.object(self.runner, "enumerate_codex_mcp_servers", side_effect=[("first",), ("first", "new")]) as inventory,
+                mock.patch.object(self.runner, "capture_process") as capture,
+            ):
+                result = self.runner.main([
+                    "--host", "codex", "--skill", "speckit-coach", "--eval-id", "8",
+                    "--source-commit", "test-commit", "--source-tree", "test-tree", "--model", "model-id",
+                    "--reasoning", "low", "--cli", sys.executable, "--evidence-dir", str(evidence), "--execute",
+                ])
+            capture.assert_not_called()
+            self.assertEqual(inventory.call_count, 2)
+            self.assertEqual(result, 1)
+            manifest = json.loads((evidence / "manifest.json").read_text())
+            self.assertEqual(manifest["codex_isolation"]["disabled_mcp_servers"], ["first"])
+            self.assertIn("MCP inventory changed", manifest["error"])
+
+    def test_codex_failed_process_still_rejects_connected_tool_attempts(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            evidence = Path(temporary) / "evidence"
+            stdout = '\n'.join(json.dumps(event) for event in [
+                {"type": "thread.started"}, {"type": "turn.started"},
+                {"type": "item.started", "item": {"type": "mcp_tool_call", "status": "failed"}},
+                {"type": "turn.failed"},
+            ])
+            def capture(host, command, stdin, case_evidence, cwd, env, timeout):
+                (case_evidence / "stdout.txt").write_text(stdout)
+                return {"status": "process_error", "exit_code": 1, "stdout": stdout, "stderr": ""}
+            with (
+                mock.patch.object(self.runner, "require_source_identity"),
+                mock.patch.object(self.runner, "probe_cli_version", return_value="test-cli"),
+                mock.patch.object(self.runner, "build_process_env", return_value={}),
+                mock.patch.object(self.runner, "enumerate_non_target_skills", return_value=()),
+                mock.patch.object(self.runner, "enumerate_codex_mcp_servers", return_value=()),
+                mock.patch.object(self.runner, "capture_process", side_effect=capture),
+            ):
+                result = self.runner.main([
+                    "--host", "codex", "--skill", "speckit-coach", "--eval-id", "8",
+                    "--source-commit", "test-commit", "--source-tree", "test-tree", "--model", "model-id",
+                    "--reasoning", "low", "--cli", sys.executable, "--evidence-dir", str(evidence), "--execute",
+                ])
+            self.assertEqual(result, 1)
+            manifest = json.loads((evidence / "manifest.json").read_text())
+            self.assertEqual(manifest["process"]["status"], "process_error")
+            self.assertEqual(manifest["status"], "event_parse_error")
+            self.assertIn("isolation violation", manifest["event_error"])
+            self.assertEqual((evidence / "cases" / manifest["opaque_case_id"] / "stdout.txt").read_text(), stdout)
 
     def test_codex_deny_list_keeps_only_the_runtime_target_enabled(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -559,6 +664,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                     mock.patch.object(self.runner, "probe_cli_version", return_value="test-cli"),
                     mock.patch.object(self.runner, "build_process_env", return_value={}),
                     mock.patch.object(self.runner, "enumerate_non_target_skills", return_value=()),
+                    mock.patch.object(self.runner, "enumerate_codex_mcp_servers", return_value=()),
                     mock.patch.object(self.runner, "capture_process") as capture,
                 ):
                     result = self.runner.main([
@@ -1041,8 +1147,40 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
         self.assertNotIn("FORCE_AUTOUPDATE_PLUGINS", claude)
         self.assertFalse(any("AUTOINSTALL" in key for key in claude))
         codex = self.runner.build_process_env(incoming, Path("/plugin"), host="codex")
-        self.assertEqual({key: codex[key] for key in incoming}, incoming)
+        self.assertEqual(codex, {"HOME": "/saved/home", "PYTHONPATH": "/plugin"})
         self.assertEqual(incoming, original)
+
+    def test_codex_environment_allows_login_location_but_no_service_credentials(self) -> None:
+        incoming = {"HOME": "/saved/home", "CODEX_HOME": "/saved/codex", "PATH": "/bin",
+                    "TMPDIR": "/tmp", "LANG": "C", "LC_ALL": "C", "LC_CTYPE": "C", "USER": "test",
+                    "GH_TOKEN": "private", "AWS_SECRET_ACCESS_KEY": "private", "PYTHONPATH": "/unrelated",
+                    "CODEX_ENV_MCP_SERVERS": "private", "CODEX_THREAD_ID": "unrelated"}
+        built = self.runner.build_process_env(incoming, Path("/runtime"), host="codex")
+        self.assertEqual(built, {**{key: incoming[key] for key in ("HOME", "CODEX_HOME", "PATH", "TMPDIR", "LANG", "LC_ALL", "LC_CTYPE", "USER")}, "PYTHONPATH": "/runtime"})
+
+    def test_codex_symlink_path_executes_canonical_binary_without_changing_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            native = root / "native" / "codex"
+            native.parent.mkdir()
+            native.write_text(f"#!{sys.executable}\nimport os, sys\nprint(sys.argv[0])\nprint(os.environ['PATH'])\n")
+            native.chmod(0o700)
+            alias = root / "aliases" / "codex"
+            alias.parent.mkdir()
+            alias.symlink_to(native)
+            with mock.patch.dict(os.environ, {"PATH": str(alias.parent)}):
+                result = self.runner.capture_process(
+                    "codex", [str(native)], b"", root / "evidence", root,
+                    {"PATH": str(alias.parent)}, 5,
+                )
+                self.assertEqual(os.environ["PATH"], str(alias.parent))
+            self.assertEqual(result["status"], "completed_ungraded")
+            self.assertEqual(result["stdout"].splitlines(), [str(native), str(alias.parent)])
+            with mock.patch.object(self.runner.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, b'[]', b'')) as run:
+                self.runner.enumerate_codex_mcp_servers(alias, root, {"PATH": str(alias.parent)})
+            self.assertEqual(run.call_args.args[0][0], str(native))
+            self.assertEqual(run.call_args.kwargs["executable"], str(native))
+            self.assertEqual(run.call_args.kwargs["env"]["PATH"], str(alias.parent))
 
     def test_cli_version_probe_fails_loud_on_missing_version(self) -> None:
         with mock.patch.object(self.runner.shutil, "which", return_value=sys.executable):
