@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "fixture_kind": "deterministic-synthetic-testdata",
+  "description": "Static setup scenarios for the read-only speckit-status evaluation; not a live project snapshot.",
+  "materialization": {
+    "copy_roots_into_disposable_project": true,
+    "create_attached_git_worktrees_when_declared": true,
+    "do_not_claim_unobserved_status": true,
+    "do_not_write_from_status_skill": true
+  },
+  "scenarios": [
+    {
+      "id": "overall-dashboard",
+      "root": "scenario-roots/overall-dashboard",
+      "roadmap": "docs/ai/current-technical-roadmap.md",
+      "workflow": "docs/ai/specs/SPEC-021-workflow.md",
+      "worktree_registration": "attached worktree required"
+    },
+    {
+      "id": "spec-specific",
+      "root": "scenario-roots/spec-specific",
+      "roadmap": "docs/ai/current-technical-roadmap.md",
+      "workflow": "docs/ai/specs/SPEC-013-workflow.md",
+      "worktree_registration": "none"
+    },
+    {
+      "id": "workflow-without-roadmap",
+      "root": "scenario-roots/workflow-without-roadmap",
+      "roadmap": null,
+      "workflow": "docs/ai/specs/SPEC-013-workflow.md",
+      "worktree_registration": "none"
+    },
+    {
+      "id": "external-worktree",
+      "root": "scenario-roots/external-worktree",
+      "roadmap": "docs/ai/current-technical-roadmap.md",
+      "workflow": "attached-worktree/docs/ai/specs/SPEC-021-workflow.md",
+      "worktree_registration": "attached worktree required"
+    },
+    {
+      "id": "multiple-roadmaps",
+      "root": "scenario-roots/multiple-roadmaps",
+      "roadmap": "docs/ai/current-quarter-technical-roadmap.md",
+      "alternate_roadmap": "docs/ai/last-quarter-technical-roadmap.md",
+      "workflow": null,
+      "worktree_registration": "none"
+    },
+    {
+      "id": "all-blocked",
+      "root": "scenario-roots/all-blocked",
+      "roadmap": "docs/ai/current-technical-roadmap.md",
+      "workflow": null,
+      "worktree_registration": "none"
+    },
+    {
+      "id": "empty-project",
+      "root": "scenario-roots/empty-project",
+      "roadmap": null,
+      "workflow": null,
+      "worktree_registration": "none"
+    }
+  ]
+}

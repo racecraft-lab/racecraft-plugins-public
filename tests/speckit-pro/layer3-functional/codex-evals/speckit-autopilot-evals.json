@@ -3,7 +3,7 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "Invoke the Python runner with one JSON request on stdin using helper_id=check-prerequisites, operation=check-prerequisites, mode=read_only, and inputs.workflow_file=docs/ai/specs/.process/SPEC-805-workflow.md. Report whether the SpecKit CLI, project initialization, workflow, and branch checks pass.",
+      "prompt": "The run setup materializes fixtures/autopilot/SPEC-805/ into the disposable project and creates the declared registered worktree before execution. Invoke the Python runner with one JSON request on stdin using helper_id=check-prerequisites, operation=check-prerequisites, mode=read_only, and inputs.workflow_file=docs/ai/specs/.process/SPEC-805-workflow.md. Report whether the SpecKit CLI, project initialization, workflow, and branch checks pass.",
       "expected_output": "Invokes [resolved_python, -m, speckit_pro_runner] with the structured check-prerequisites request and reads the response envelope's data.stdout_json. The all_pass field summarizes the per-check results.",
       "expectations": [
         "Invokes [resolved_python, -m, speckit_pro_runner] with one JSON request on stdin and no shell fallback",
@@ -202,7 +202,7 @@
     },
     {
       "id": 16,
-      "prompt": "Run autopilot end-to-end on docs/ai/specs/SPEC-009-workflow.md and report each phase's actions. I want to verify autopilot never accidentally invokes grill-me during any phase.",
+      "prompt": "The run setup materializes fixtures/autopilot/SPEC-009/ into the disposable project and creates its declared registered worktree before execution. Run autopilot end-to-end on docs/ai/specs/SPEC-009-workflow.md and report each phase's actions. I want to verify autopilot never accidentally invokes grill-me during any phase.",
       "expected_output": "Runs all 7 phases (specify, clarify, plan, checklist, tasks, analyze, implement) without invoking $grill-me at any point. The clarify phase uses the read-only clarify-executor handoff plus parent-applied answers and consensus; gate failures are reported, not escalated to grill-me.",
       "expectations": [
         "Executes all 7 phases without invoking $grill-me",
