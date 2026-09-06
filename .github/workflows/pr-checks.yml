@@ -234,8 +234,7 @@ jobs:
   #         marketplace registries are regenerated
   #         by scripts/refresh-release-artifacts.py.
   #         The refresh is idempotent, so any diff after running it means the
-  #         PR ships drifted artifacts (the failure mode Copilot flagged on
-  #         release PR #302) and must not merge.
+  #         PR ships drifted artifacts and must not merge.
   # ───────────────────────────────────────────────────────────────────
   artifact-consistency:
     name: artifact-consistency

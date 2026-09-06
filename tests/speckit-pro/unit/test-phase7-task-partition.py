@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 """Unit tests for the Phase 7 task-partition runner helper.
 
-The autopilot orchestrator used to execute the partition rules in context:
-read tasks.md, group consecutive same-agent [P] tasks into parallel runs,
-degrade a one-task run to a singleton, split each parallel run into waves, and
-route every task to an agent by keyword. That is a deterministic procedure, so
-it belongs in the runner where it can be tested. These tests cover each routing
-branch, grouping across an agent change, wave splitting, the degrade rule, and
-untagged tasks.
+The helper reads tasks.md, groups consecutive same-agent [P] tasks into parallel
+runs, degrades a one-task run to a singleton, splits each parallel run into
+waves, and routes every task to an agent by keyword. These tests cover each
+routing branch, grouping across an agent change, wave splitting, the degrade
+rule, and untagged tasks.
 
 The helper is exercised in process against a temporary root so the fixtures can
 state exactly one behavior each; the request-envelope path is covered by
@@ -197,8 +195,8 @@ class RoutingTests(unittest.TestCase):
     def test_a_backticked_path_does_not_outrank_a_plain_keyword(self) -> None:
         """The plain words decide, even when a code span holds a keyword.
 
-        ``test`` inside the backticked file name used to win branch (b) and
-        beat the ``run`` in the description itself.
+        ``test`` inside the backticked file name must not outrank the ``run`` in
+        the description.
         """
         agent = route_of(
             "- [ ] T001 Run the deterministic suite in "

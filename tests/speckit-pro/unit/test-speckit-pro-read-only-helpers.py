@@ -917,7 +917,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
             self.assertEqual((payload["placement_status"], exit_code), ("conflict", 1))
             self.assertTrue(any("prunable" in problem for problem in payload["problems"]))
 
-    def test_registered_worktree_roots_ignores_only_explicitly_prunable_entries(self) -> None:
+    def test_registered_worktree_entries_ignores_only_explicitly_prunable_entries(self) -> None:
         if self.helper_filter and self.helper_filter != "resolve-workflow-binding":
             self.skipTest("workflow-binding cases use resolve-workflow-binding")
         from speckit_pro_runner.helpers import read_only
@@ -939,12 +939,12 @@ class ReadOnlyHelperTests(unittest.TestCase):
         with patch.object(read_only.subprocess, "run", return_value=completed), patch.object(
             Path, "resolve", guarded_resolve
         ):
-            roots, error = read_only.registered_worktree_roots(canonical_root)
+            entries, error = read_only.registered_worktree_entries(canonical_root)
 
-        self.assertEqual(roots, [canonical_root])
+        self.assertEqual(entries, [(canonical_root, canonical_root)])
         self.assertIsNone(error)
 
-    def test_registered_worktree_roots_fails_closed_on_unreadable_registered_entry(self) -> None:
+    def test_registered_worktree_entries_fails_closed_on_unreadable_registered_entry(self) -> None:
         if self.helper_filter and self.helper_filter != "resolve-workflow-binding":
             self.skipTest("workflow-binding cases use resolve-workflow-binding")
         from speckit_pro_runner.helpers import read_only
@@ -966,9 +966,9 @@ class ReadOnlyHelperTests(unittest.TestCase):
         with patch.object(read_only.subprocess, "run", return_value=completed), patch.object(
             Path, "resolve", guarded_resolve
         ):
-            roots, error = read_only.registered_worktree_roots(canonical_root)
+            entries, error = read_only.registered_worktree_entries(canonical_root)
 
-        self.assertEqual(roots, [])
+        self.assertEqual(entries, [])
         self.assertIn("registered worktree cannot be canonicalized", error or "")
         self.assertIn(denied_root.as_posix(), error or "")
         self.assertIn("sandbox denied", error or "")

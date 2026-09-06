@@ -735,12 +735,6 @@ def registered_worktree_entries(repo_root: Path) -> tuple[list[tuple[Path, Path]
     return entries, None
 
 
-def registered_worktree_roots(repo_root: Path) -> tuple[list[Path], str | None]:
-    """Return canonical worktree roots registered to ``repo_root``'s repository."""
-    entries, error = registered_worktree_entries(repo_root)
-    return [canonical for _, canonical in entries], error
-
-
 def workflow_binding_payload(
     binding_status: str,
     task_root: Path,
@@ -1792,19 +1786,17 @@ def estimate_reviewable_loc(inputs: dict[str, Any], repo_root: Path) -> dict[str
 
 
 def normalize_size_signal(value: Any) -> int:
-    # Coerce a pre-implementation size signal to a non-negative integer, mirroring
-    # the deleted estimate-spec-size.sh normalize_count: a bare non-negative
-    # integer (or its string form) passes through; anything missing, negative,
-    # decimal, or non-numeric normalizes to 0. Single shared path, no error branch.
+    # Coerce a pre-implementation size signal to a non-negative integer: a bare
+    # non-negative integer (or its string form) passes through; anything missing,
+    # negative, decimal, or non-numeric normalizes to 0. Single shared path, no
+    # error branch.
     text = "" if value is None else str(value)
     return int(text) if re.fullmatch(r"[0-9]+", text) else 0
 
 
 def estimate_spec_size(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
-    # Advisory vertical-slice size estimator:
-    # a byte-for-byte port of the deleted
-    # speckit-pro/skills/speckit-coach/scripts/estimate-spec-size.sh, pinned by the
-    # golden fixtures under tests/speckit-pro/unit/fixtures/estimate-spec-size/.
+    # Advisory vertical-slice size estimator, pinned by the golden fixtures under
+    # tests/speckit-pro/unit/fixtures/estimate-spec-size/.
     # Callers (grill-me, speckit-prd) send the structured size signals; the output
     # is the compact {estimated_loc, suggested_slices, status} triple. Advisory-only:
     # this never blocks (exit 0 even when status is "warn").
@@ -5813,10 +5805,6 @@ def packet_body_structure_failures(data: dict[str, Any], body_text: str) -> list
     return failures
 
 
-def pr_packet_body_failures(data: dict[str, Any], repo_root: Path) -> list[dict[str, Any]]:
-    return pr_packet_body_validation(data, repo_root)["failures"]
-
-
 def pr_packet_body_validation(data: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     body_file = data.get("body_file")
     if not isinstance(body_file, str) or not body_file:
@@ -6779,10 +6767,6 @@ def normalize_reference_info(raw: str, repo_root: Path) -> tuple[str, bool]:
         return path.resolve(strict=False).relative_to(repo_root.resolve(strict=False)).as_posix(), True
     except ValueError:
         return raw, False
-
-
-def normalize_reference(raw: str, repo_root: Path) -> str:
-    return normalize_reference_info(raw, repo_root)[0]
 
 
 def output_capture(raw: bytes | str, limit_bytes: int = CAPTURE_LIMIT_BYTES) -> dict[str, Any]:

@@ -1652,12 +1652,6 @@ def write_bytes_atomic(
     }
 
 
-def ensure_safe_write_parent(target: Path, trust_root: Path, *, create: bool = True) -> None:
-    opened = open_safe_parent_fd(target, trust_root, create=create)
-    if opened is not None:
-        os.close(opened[0])
-
-
 def open_safe_parent_fd(target: Path, trust_root: Path, *, create: bool) -> tuple[int, str, list[str]] | None:
     trust_root = trust_root.resolve(strict=False)
     target = target if target.is_absolute() else trust_root / target

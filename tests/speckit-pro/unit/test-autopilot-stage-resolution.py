@@ -199,7 +199,7 @@ PLANNING_PREDICATE_CASES = (
         None,
     ),
     (
-        # Legacy files predate the gate row entirely; absence must not block.
+        # A workflow without the gate row must not block.
         "confidence gate row absent",
         PLANNING_ROWS_TERMINAL + (IMPLEMENT_PENDING,),
         True,
@@ -1438,12 +1438,11 @@ class DraftPrCorroborationTests(unittest.TestCase):
                 self.assertEqual(envelope.get("corroboration"), CORROBORATION_MATCH)
 
     def test_the_registered_operation_carries_the_observation_through_the_runner(self) -> None:
-        # The new input is one optional key on the same stdin request; argv
-        # stays reserved for `--help` and `--version` (…:52-55). The real runner
-        # has to hand it through untouched and carry the ninth key back. The
-        # The workflow fixture omits the `Draft PR` row, so `no_record` is
-        # the honest verdict for it — and that premise is asserted, not assumed,
-        # so a row added there later fails loudly instead of mysteriously.
+        # The optional input is one key on the same stdin request; argv stays
+        # reserved for `--help` and `--version` (…:52-55). The runner has to hand
+        # it through untouched and carry the ninth key back. The workflow fixture
+        # omits the `Draft PR` row, so `no_record` is its asserted verdict; a row
+        # added there later fails loudly instead of mysteriously.
         observation = {"ok": True, "pull_requests": [OPEN_438]}
         self.assertIsNone(
             read_draft_pr_row((REPO_ROOT / WORKFLOW_FILE).read_text(encoding="utf-8"))
