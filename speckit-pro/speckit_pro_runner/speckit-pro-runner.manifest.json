@@ -44,6 +44,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/gate_discovery.py",
+        "display": "speckit_pro_runner/gate_discovery.py"
+      },
+      "sha256": "e3c6ba719b8b6a66189e416567ec138359cf22c8a8c84c955950d73ed2d0fc95"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/gates/__init__.py",
         "display": "speckit_pro_runner/gates/__init__.py"
       },
