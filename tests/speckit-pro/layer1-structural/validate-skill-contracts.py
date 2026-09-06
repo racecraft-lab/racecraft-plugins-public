@@ -119,6 +119,10 @@ class ValidateSkills(unittest.TestCase):
             if skill == 'grill-me':
                 with self.subTest(msg='grill-me: Claude variant requires AskUserQuestion'):
                     self.assertTrue('AskUserQuestion' in body and 'Call `AskUserQuestion` for exactly one question at a time.' in body, 'expected Claude grill-me to retain its AskUserQuestion-only adapter')
+                with self.subTest(msg='grill-me: Design Concept contract carries the always-resolved branch sections'):
+                    output_formats = (skill_dir / 'references' / 'output-formats.md').read_text(encoding='utf-8')
+                    for heading in ('## Module and Interface Deltas', '## Terms', '## Verification Gates'):
+                        self.assertIn(heading, output_formats, f'expected grill-me output-formats.md to keep the {heading!r} section')
             if skill == 'speckit-scaffold-spec':
                 with self.subTest(msg='speckit-scaffold-spec: skill heading uses scaffold naming'):
                     self.assertTrue(re.search('^# SpecKit Scaffold Spec$', content, re.MULTILINE) is not None and re.search('^# SpecKit Setup$', content, re.MULTILINE) is None, "expected '# SpecKit Scaffold Spec' heading in skills/speckit-scaffold-spec/SKILL.md")
