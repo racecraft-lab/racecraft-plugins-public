@@ -78,6 +78,7 @@
         { "path": "tests/speckit-pro/unit/test-estimate-spec-size.py", "label": "test-estimate-spec-size" },
         { "path": "tests/speckit-pro/unit/test-gate-discovery-table.py", "label": "test-gate-discovery-table" },
         { "path": "tests/speckit-pro/unit/test-crap-score.py", "label": "test-crap-score" },
+        { "path": "tests/speckit-pro/unit/test-executor-mode-scorer.py", "label": "test-executor-mode-scorer" },
         { "path": "tests/speckit-pro/unit/test-quality-gates.py", "label": "test-quality-gates" },
         { "path": "tests/speckit-pro/unit/test-workflow-guard-hook.py", "label": "test-workflow-guard-hook" },
         { "path": "tests/speckit-pro/unit/test-ubiquitous-language-lint.py", "label": "test-ubiquitous-language-lint" },

@@ -1,0 +1,9 @@
+{
+  "case_id": "queue-public-api",
+  "mode": "function_first",
+  "seed": 2,
+  "mutation_score": 70,
+  "wall_seconds": 420,
+  "review_findings": 3,
+  "gate_iterations": 1
+}
