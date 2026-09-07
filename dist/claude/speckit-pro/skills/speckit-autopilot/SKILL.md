@@ -639,6 +639,7 @@ in [`references/error-recovery.md`](./references/error-recovery.md).
 - [Gate Validation](./references/gate-validation.md) — Programmatic gate checks (G0–G7), auto-fix loops, escalation
 - [Post-Implementation](./references/post-implementation.md) — 12-task post-impl sequence (incl. self-review, UAT runbook), integration suite, PR creation, review loop
 - [Task List Canonical](./references/task-list-canonical.md) — Task naming pattern + canonical post-implementation entries
+- [Hardener Delegation](./references/hardener-delegation.md) — Once-per-spec tests-only mutation hardening loop: Qwen delegation with candidate inspection, primary-model fallback, stop rule, record
 - [Workflow File Protocol](./references/workflow-file-protocol.md) — Per-phase update table + `workflow_file` state authority (branch order, verdicts) + Consensus Resolution Log column schema
 - [Error Recovery](./references/error-recovery.md) — Resume, common issues, context-window management
 - [TDD Protocol](./references/tdd-protocol.md) — Red-green-refactor rules injected into implementation agent prompts
