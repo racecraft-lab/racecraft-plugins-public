@@ -77,6 +77,7 @@ class ArchitectureGraphTests(unittest.TestCase):
             "bad delta kind": mutated(lambda g: g["nodes"][0]["delta"].update(kind="renamed")),
             "touched flag on an untouched node": mutated(lambda g: g["nodes"][1].update(touched=True)),
             "edge to unknown node": mutated(lambda g: g["edges"].append({"from": "src/queue/api.py", "to": "ghost.py"})),
+            "edges with no nodes at all": mutated(lambda g: (g["nodes"].clear(), g["scope"]["touched"].clear())),
             "rule on a valid edge": mutated(lambda g: g["edges"][0].update(rule="x")),
             "invalid edge without a rule": mutated(lambda g: g["edges"][0].update(valid=False)),
             "invalid edge with a blank rule": mutated(lambda g: g["edges"][0].update(valid=False, rule=" ")),

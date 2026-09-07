@@ -134,7 +134,7 @@ def validate_graph(data: Any) -> list[str]:
                 value = edge.get(field)
                 if not _non_empty(value):
                     problems.append(f"{prefix}.{field}: must be a non-empty string")
-                elif ids and value not in ids:
+                elif value not in ids:
                     problems.append(f"{prefix}.{field}: {value!r} is not a node id")
             if "valid" in edge and not isinstance(edge["valid"], bool):
                 problems.append(f"{prefix}.valid: must be a boolean")
