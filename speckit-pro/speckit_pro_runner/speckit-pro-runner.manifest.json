@@ -3,7 +3,7 @@
   "runner_contract_id": "speckit-pro-runner",
   "selected_runtime_name": "python-stdlib-runner",
   "contract_version": "1.0",
-  "plugin_version": "2.30.0",
+  "plugin_version": "2.30.1",
   "runner_version": "0.1.0",
   "python_minimum_version": "3.11",
   "specify_required": true,
@@ -191,7 +191,7 @@
         "value": "speckit_pro_runner/sweep_launcher.py",
         "display": "speckit_pro_runner/sweep_launcher.py"
       },
-      "sha256": "bebdf13b1b959ebb6a67230ba7c48088f5615a60429e167a0043892b0a92d6b1"
+      "sha256": "c69ba1d29d02ced7bf07661f63ef9162f54929e49327db89525b3940c181fbed"
     }
   ]
 }
