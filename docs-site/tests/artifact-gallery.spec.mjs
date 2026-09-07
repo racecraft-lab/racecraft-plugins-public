@@ -161,9 +161,9 @@ async function exerciseExport(page, row, kind, ordinal) {
 }
 
 test('frozen catalog keeps the manifest and 17 export pairs independently complete', () => {
-  expect(oracle).toHaveLength(21);
+  expect(oracle).toHaveLength(22);
   expect(shipped).toHaveLength(20);
-  expect(oracle.filter(([, status]) => status === 'planned').map(([id]) => id)).toEqual(['uat-walkthrough']);
+  expect(oracle.filter(([, status]) => status === 'planned').map(([id]) => id)).toEqual(['architecture-viewer', 'uat-walkthrough']);
   expect(exportPairs).toHaveLength(17);
   expect(manifest.templates.map((entry) => [entry.id, entry.status, entry.exports])).toEqual(catalogFacts());
 });
