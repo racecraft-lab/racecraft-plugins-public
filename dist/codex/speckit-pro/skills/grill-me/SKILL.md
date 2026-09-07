@@ -51,7 +51,9 @@ Never use this fallback in background, CI, autopilot, or subagent execution.
      `$speckit-scaffold-spec`; never redirect the write to the primary checkout.
 2. Read the [shared interview protocol](references/interview-protocol.md).
    Ground the initial model in applicable project instructions, constitution,
-   roadmap, prior design decisions, and targeted code.
+   roadmap, prior design decisions, and targeted code. If
+   `docs/ai/specs/ubiquitous-language.md` exists, read it before the Terms
+   branch and reuse its rows.
 3. Walk the highest-impact, highest-uncertainty design branch first. Ask one
    neutral decision question, record the recommendation and evidence, record the
    user's answer, and update the remaining branches.

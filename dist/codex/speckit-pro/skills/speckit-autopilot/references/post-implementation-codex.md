@@ -382,6 +382,15 @@ Questions (Codex orchestrator answers each in order):
    orphaned files — and flag each with a `[tidiness]` note before the PR
    opens.
 
+5. **Terms lint (advisory).** If `docs/ai/specs/ubiquitous-language.md`
+   exists, run
+   `resolved_python <plugin-root>/scripts/ubiquitous-language-lint.py --base origin/main`
+   and record its one-line note plus each unmapped identifier (file:line);
+   mirror the same lines into `## Self-Review Findings` when the packet
+   declares it. The lint exits 0 by design; an unmapped identifier is a
+   suggestion, never a gate. Without the document, record
+   `Terms lint: no terms document`.
+
 Block format in the workflow log mirrors
 [post-implementation.md §Self-Review Before Finalizing](post-implementation.md#self-review-before-finalizing)
 so a single review template serves both runtimes.

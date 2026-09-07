@@ -1,0 +1,50 @@
+[
+  {
+    "query": "define the domain terms for this repo in a glossary the agents can read before designing",
+    "should_trigger": true
+  },
+  {
+    "query": "create a ubiquitous language document: what does 'invoice' mean here and which classes carry it",
+    "should_trigger": true
+  },
+  {
+    "query": "our spec says 'account' but the code says 'tenant'; pin the terms and reconcile the names",
+    "should_trigger": true
+  },
+  {
+    "query": "update docs/ai/specs/ubiquitous-language.md with the new billing terms",
+    "should_trigger": true
+  },
+  {
+    "query": "run the ubiquitous-language lint on my branch and tell me which new identifiers map to no term",
+    "should_trigger": true
+  },
+  {
+    "query": "build a terms table (term, meaning here, identifiers) from the codebase so grill-me stops re-deriving them",
+    "should_trigger": true
+  },
+  {
+    "query": "grill me on SPEC-012 before /speckit-specify and produce a design concept doc",
+    "should_trigger": false
+  },
+  {
+    "query": "write a PRD for adding saved searches with email alerts and the technical roadmap to build it",
+    "should_trigger": false
+  },
+  {
+    "query": "walk me through spec-driven development and explain the gates",
+    "should_trigger": false
+  },
+  {
+    "query": "scaffold SPEC-004 from the technical roadmap into a worktree",
+    "should_trigger": false
+  },
+  {
+    "query": "translate this README into Spanish",
+    "should_trigger": false
+  },
+  {
+    "query": "rename the variable foo to bar across the codebase",
+    "should_trigger": false
+  }
+]

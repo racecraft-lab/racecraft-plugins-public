@@ -64,7 +64,7 @@ class ValidatePlugin(unittest.TestCase):
             self.assertTrue(isinstance(data, dict) and 'author' in data, "JSON field 'author' does not exist")
 CODEX_JSON = PLUGIN_ROOT / '.codex-plugin' / 'plugin.json'
 CLAUDE_JSON = PLUGIN_ROOT / '.claude-plugin' / 'plugin.json'
-REQUIRED_SKILLS = ('speckit-archive-cleanup', 'speckit-autopilot', 'speckit-coach', 'speckit-scaffold-spec', 'speckit-status', 'speckit-resolve-pr', 'install', 'grill-me', 'speckit-prd')
+REQUIRED_SKILLS = ('speckit-archive-cleanup', 'speckit-autopilot', 'speckit-coach', 'speckit-scaffold-spec', 'speckit-status', 'speckit-resolve-pr', 'install', 'grill-me', 'speckit-prd', 'ubiquitous-language')
 validate_codex_plugin_SEMVER_RE = re.compile('^[0-9]+\\.[0-9]+\\.[0-9]+$')
 
 class ValidateCodexPlugin(unittest.TestCase):
