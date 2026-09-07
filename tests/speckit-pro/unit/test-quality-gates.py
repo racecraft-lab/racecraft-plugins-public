@@ -83,6 +83,8 @@ class QualityGatesTests(unittest.TestCase):
             "skip unknown field": mutated("skips", {"MUTATION": {"reason": "x", "until": "2027"}}),
             "basis unknown method": mutated("basis.method", "guess"),
             "basis negative count": mutated("basis.measured_functions", -1),
+            "basis recorded not a string": mutated("basis.recorded", 20260906),
+            "basis recorded blank": mutated("basis.recorded", " "),
         }
         for label, data in negatives.items():
             with self.subTest(msg=f"rejects: {label}"):
