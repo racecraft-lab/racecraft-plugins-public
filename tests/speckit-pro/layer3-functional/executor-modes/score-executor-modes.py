@@ -12,9 +12,9 @@ One result document per run, JSON, any file name under ``--results``::
       "mode": "strict",
       "seed": 1,
       "mutation_score": 74.0,      # 0-100, or null when the slot is unconfigured
-      "wall_seconds": 412.5,
-      "review_findings": 2,
-      "gate_iterations": 1
+      "wall_seconds": 412.5,       # non-negative
+      "review_findings": 2,        # non-negative integer
+      "gate_iterations": 1         # non-negative integer; seed is one too
     }
 
 Exit 0 with a report on any decision, including ``inconclusive``. Exit 1 on
@@ -74,8 +74,9 @@ def load_catalog(path: Path) -> dict[str, Any]:
     data = json.loads(path.read_text(encoding="utf-8"))
     if data.get("schema_version") != "1.0" or not isinstance(data.get("cases"), list) or not data["cases"]:
         raise InputError("catalog must have schema_version 1.0 and a non-empty cases array")
-    if set(data.get("modes", {})) != set(MODES):
-        raise InputError(f"catalog modes must be exactly {', '.join(MODES)}")
+    modes = data.get("modes")
+    if not isinstance(modes, dict) or set(modes) != set(MODES):
+        raise InputError(f"catalog modes must be an object keyed by exactly {', '.join(MODES)}")
     ids = [case.get("id") for case in data["cases"]]
     if len(set(ids)) != len(ids) or not all(isinstance(i, str) and i for i in ids):
         raise InputError("case ids must be unique non-empty strings")
@@ -98,14 +99,26 @@ def load_results(directory: Path, case_ids: set[str]) -> list[dict[str, Any]]:
             raise InputError(f"{path.name}: unknown mode {doc['mode']!r}")
         if doc["case_id"] not in case_ids:
             raise InputError(f"{path.name}: unknown case {doc['case_id']!r}")
+        if not _is_count(doc["seed"]):
+            raise InputError(f"{path.name}: seed must be a non-negative integer")
         for metric in METRICS:
             value = doc[metric]
             if metric == "mutation_score" and value is None:
                 continue
             if isinstance(value, bool) or not isinstance(value, (int, float)):
                 raise InputError(f"{path.name}: {metric} must be a number")
+            if metric == "mutation_score" and not 0 <= value <= 100:
+                raise InputError(f"{path.name}: mutation_score must be between 0 and 100")
+            if metric == "wall_seconds" and value < 0:
+                raise InputError(f"{path.name}: wall_seconds must be non-negative")
+            if metric in ("review_findings", "gate_iterations") and not _is_count(value):
+                raise InputError(f"{path.name}: {metric} must be a non-negative integer")
         results.append(doc)
     return results
+
+
+def _is_count(value: Any) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
 
 
 def medians(results: list[dict[str, Any]]) -> dict[tuple[str, str], dict[str, float | None]]:
