@@ -234,7 +234,12 @@ Step 0.11 (`detect-commands`) discovery reads a JSON table shipped in the plugin
 at `speckit-pro/speckit_pro_runner/gate_discovery_table.json`. A repository
 may override rows with a table of the same shape at
 `.specify/gate-discovery.json`; a valid override's rows are consulted before
-the shipped rows, and an invalid override is reported and ignored. The schema is documented at
+the shipped rows, and an invalid override is reported and ignored. An override
+row may only re-point a shipped tool's signal file or probe: its `command` and
+`install` must equal the shipped row's for the same language, slot, and tool,
+and an unknown tool is rejected. The file is repository-controlled and a
+populated slot's command runs in the operator's session, so it must never be
+able to introduce a command. The schema is documented at
 `speckit-pro/speckit_pro_runner/contracts/gate-discovery-table.schema.json`
 and enforced by `speckit-pro/speckit_pro_runner/gate_discovery.py`, standard
 library only. Neither is registered as a runner helper or gate operation.

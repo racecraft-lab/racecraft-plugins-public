@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import ast
 import json
 import sys
 import unittest
@@ -105,6 +106,11 @@ class ValidateCodexHooks(unittest.TestCase):
                 self.assertTrue(source.startswith('#!/usr/bin/env python3'), f'{script} must resolve its interpreter through the env shebang')
                 self.assertIn('sys.version_info < (3, 11)', source, f'{script} must check the interpreter floor')
                 self.assertIn('fail-open', source, f'{script} must declare the fail-open path')
+                self.assertIn('from __future__ import annotations', source, f'{script} must defer annotation evaluation so union annotations parse on an interpreter older than 3.10')
+                try:
+                    ast.parse(source, filename=script, feature_version=(3, 8))
+                except SyntaxError as exc:
+                    self.fail(f'{script} must parse on Python 3.8 so the version check can run and fail open: {exc}')
 
 def main() -> int:
     suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])
