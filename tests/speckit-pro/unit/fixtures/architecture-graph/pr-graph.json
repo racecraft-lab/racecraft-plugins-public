@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "scope": { "kind": "pr", "base": "origin/main", "touched": ["src/queue/api.py"] },
+  "language": "python",
+  "tool": "pydeps",
+  "nodes": [
+    { "id": "src/queue/api.py", "path": "src/queue/api.py", "touched": true,
+      "delta": { "kind": "changed", "summary": "Queue.drain(limit) added to the public API" } },
+    { "id": "src/queue/store.py", "path": "src/queue/store.py" },
+    { "id": "src/cli/main.py", "path": "src/cli/main.py", "label": "cli" }
+  ],
+  "edges": [
+    { "from": "src/queue/api.py", "to": "src/queue/store.py" },
+    { "from": "src/cli/main.py", "to": "src/queue/api.py", "valid": false, "rule": "cli-must-not-import-queue" }
+  ]
+}

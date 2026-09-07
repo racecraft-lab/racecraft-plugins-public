@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "speckit-pro/architecture-graph",
+  "title": "Architecture graph",
+  "description": "The module graph the architecture viewer page renders. Produced from the DEPENDENCY_RULES tool's own output (dependency-cruiser JSON for TypeScript, pydeps --show-deps or an ast walk for Python) joined with the plan's Module and Interface Deltas. Enforced locally by speckit_pro_runner/architecture_graph.py (standard library); this file documents the same rules. Fail-open: a producer that cannot build a valid graph writes nothing and the viewer page is skipped.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "scope", "language", "nodes", "edges"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": { "enum": ["pr", "repository"] },
+        "base": { "type": "string", "minLength": 1, "description": "For kind=pr: the git revision the touched set was diffed against." },
+        "touched": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "For kind=pr: node ids of modules the PR changed. Every node in the graph is one of these or within one hop of one."
+        }
+      }
+    },
+    "language": { "enum": ["python", "typescript"] },
+    "tool": { "type": "string", "minLength": 1, "description": "The producer that emitted the raw graph, for example dependency-cruiser or pydeps." },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "path"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1, "description": "Repository-relative path of the module file or package, the join key for edges, touched, and deltas." },
+          "path": { "type": "string", "minLength": 1 },
+          "label": { "type": "string", "minLength": 1 },
+          "touched": { "type": "boolean", "description": "True when the id is in scope.touched." },
+          "delta": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "summary"],
+            "properties": {
+              "kind": { "enum": ["new", "changed", "removed"] },
+              "summary": { "type": "string", "minLength": 1, "description": "The one-line delta for callers from the plan's Module and Interface Deltas line." }
+            }
+          }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["from", "to"],
+        "properties": {
+          "from": { "type": "string", "minLength": 1 },
+          "to": { "type": "string", "minLength": 1 },
+          "valid": { "type": "boolean", "description": "False when the DEPENDENCY_RULES tool flagged the edge; the viewer draws it red." },
+          "rule": { "type": "string", "minLength": 1, "description": "The violated rule or contract name when valid is false." }
+        }
+      }
+    }
+  }
+}
