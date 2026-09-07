@@ -23,7 +23,7 @@ did not settle is listed under **Unverified**.
 | --- | --- |
 | Model checker | TLC from `tla2tools.jar` (tlaplus/tlaplus release v1.7.4 or the 1.8.0 nightly), explicit-state, bounded by the `.cfg`. Apalache is opt-in per model, not a default. |
 | Runtime | Java 11+ for TLC. Apalache needs Java 21+. One JDK 21 satisfies both. |
-| Where it runs | GitHub-hosted `ubuntu-latest` with `actions/setup-java`, in this repository and in any public consumer. A self-hosted HAL runner is reserved for private consumer repositories, never for a public one. |
+| Where it runs | GitHub-hosted `ubuntu-latest` with `actions/setup-java` by default. The organization's self-hosted pool of ephemeral, single-job virtual machines is the option for a longer run, for repositories its runner group admits; its sizing lives in the private infrastructure repository. |
 | Not decorative | Every model ships with a trace-validation harness: the implementation emits a JSON trace of the modelled actions and TLC checks that trace against the spec. A model with no trace harness is `advisory`, never `populated`. |
 | grill-me | A hybrid branch: the skill scans the spec and surrounding code for concurrency signals, presents the evidence, and the operator confirms, corrects, or extends. A confirmed signal set adds a Formal Model section to the plan and populates `FORMAL_CHECK`. |
 | Slot | `FORMAL_CHECK` joins the closed `slot` enum in the discovery table when the wiring layer lands. Its signal file is `specs/<feature>/model/<Name>.cfg`. It runs at final verification only. |
@@ -103,18 +103,26 @@ did not settle is listed under **Unverified**.
   repository already targets hosted runners. `actions/setup-java` with
   `distribution: temurin` and `java-version: 21` covers both tools. The jar
   is cached with `actions/cache` keyed on its sha256.
-- **HAL.** GitHub's security hardening guide states: "Self-hosted runners
-  should almost never be used for public repositories on GitHub, because any
-  user can open pull requests against the repository and compromise the
-  environment." This repository is public, so HAL never runs a job here.
-  A private consumer repository may register HAL with
-  `runs-on: [self-hosted, linux, X64]` (or `ARM64`) for models whose state
-  space needs more cores or memory than a hosted runner has, and should
-  prefer a just-in-time runner on a clean environment per the same guide.
-  The memo's phrase "HAL runners" resolves to that private-only role.
-- **Unverified:** HAL was unreachable over SSH on 2026-09-06 (connection
-  timeout), so its CPU count, memory, and installed JDK are unconfirmed.
-  The first-install checklist covers it.
+- **The organization's self-hosted pool.** The memo's "HAL runners" are
+  an orchestrated pool of ephemeral virtual machines: each job gets a
+  fresh VM that is destroyed when the job ends, with no state kept between
+  jobs. Per-job CPU and memory are a small fixed slice of the host, not
+  the host itself; the exact figures, labels, and image are recorded in
+  the private infrastructure repository, not here.
+- **Public repository rule.** GitHub's hardening guide states: "Self-hosted
+  runners should almost never be used for public repositories on GitHub,
+  because any user can open pull requests against the repository and
+  compromise the environment", and asks that a reused host give a JIT
+  runner "a clean environment". The pool's destroy-after-job VMs are that
+  clean environment, and the runner group's repository access list decides
+  which repositories may target it. This repository keeps `FORMAL_CHECK`
+  on hosted runners unless the operator admits it to the group; the record
+  does not make that call.
+- **Sizing.** Because a job sees the VM's slice rather than the host, TLC
+  gets a handful of worker threads there, and Apalache's "at least 4GB"
+  recommendation needs a larger VM class than the default one. A model
+  that needs more is a request against the private infrastructure
+  repository, not a change here.
 
 ## 2. Mapping a model to implementation tests
 
@@ -214,7 +222,10 @@ section as a `FORMAL_CHECK` line. Downstream:
 ## Unverified
 
 - Apalache exit codes on violation versus error.
-- HAL's core count, memory, and JDK (SSH timed out on 2026-09-06).
+- Whether the self-hosted pool's runner image carries a JDK; the job must
+  run `actions/setup-java` unless the image does.
+- Whether the pool's runner group admits this public repository. Read it
+  from the organization's runner-group settings before routing any job.
 - Whether the `-dumpTrace json` shape and the trace-validation paper's
   `trace.json` shape are the same document; the wiring layer fixes one
   schema and documents it under `speckit_pro_runner/contracts/`.
@@ -237,5 +248,8 @@ section as a `FORMAL_CHECK` line. Downstream:
 6. Add the grill-me scan and question to `interview-protocol.md` on both
    platforms, with a Layer 3 eval that feeds a spec containing a retry
    protocol and expects the signal presented.
-7. Only for a private consumer: register HAL as a just-in-time runner and
-   label the model's job to it.
+7. To use the self-hosted pool: confirm the runner group admits the
+   repository, confirm the runner image has a JDK or add
+   `actions/setup-java` to the job, and target the pool's labels from the
+   private infrastructure repository. For Apalache, request a larger VM
+   class first.
