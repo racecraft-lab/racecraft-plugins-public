@@ -52,6 +52,14 @@ own failure patterns.
 - Historical specs and generated planning artifacts are context on demand, not
   always-on agent instructions.
 
+## Codebase Mapping
+
+- When `ripwire` is on PATH, reach for it before blind grep or whole-file
+  reads: `ripwire . --for="<task>"` for a ranked, quality-annotated map;
+  `--callers=SYM` / `--impact=SYM` before changing a symbol; `--quality-delta`
+  before calling work done.
+- See the `ripwire-router` skill, when installed, to pick the right one.
+
 ## Worktree Preflight
 
 A fresh worktree holds only tracked files. Three facts cover every surface:
