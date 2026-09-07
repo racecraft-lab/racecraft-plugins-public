@@ -43,7 +43,12 @@ LOCKFILES = {
     "package-lock.json": "npm",
 }
 MANAGER_ALIASES = {"npm": "npm", "npx": "npm", "pnpm": "pnpm", "pnpx": "pnpm", "yarn": "yarn", "bun": "bun", "bunx": "bun"}
-MANAGER_RE = re.compile(r"(?<![\w./-])(npm|npx|pnpm|pnpx|yarn|bun|bunx)(?![\w.-])")
+# A segment starts at the command start or after a control operator or a
+# subshell opener; only its first word can be the package manager, after any
+# VAR=value prefix and common wrappers.
+SEGMENT_SPLIT_RE = re.compile(r"(?:&&|\|\||[;|\n]|\$\(|\(|`)")
+WRAPPERS = {"sudo", "env", "time", "command", "exec", "nice", "nohup"}
+ASSIGNMENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 STATE_PATH = Path("docs/ai/specs/.process/autopilot-state.json")
 ACTIVE_STATUSES = {"in_progress", "awaiting_review"}
 MAX_PAYLOAD = 64 * 1024
@@ -75,12 +80,31 @@ def lockfile_manager(root: Path) -> str | None:
     return None
 
 
+def invoked_managers(command: str) -> set[str]:
+    """Manager names in the executable position of each shell segment.
+
+    A manager name that appears only as an argument (``grep npm README.md``)
+    is not an invocation.
+    """
+    found: set[str] = set()
+    for segment in SEGMENT_SPLIT_RE.split(command):
+        words = segment.split()
+        while words and (ASSIGNMENT_RE.match(words[0]) or words[0] in WRAPPERS or words[0].startswith("-")):
+            words.pop(0)
+        if not words:
+            continue
+        executable = words[0].rsplit("/", 1)[-1]
+        if executable in MANAGER_ALIASES:
+            found.add(executable)
+    return found
+
+
 def lockfile_decision(data: dict[str, Any]) -> str | None:
     tool_input = data.get("tool_input")
     command = tool_input.get("command") if isinstance(tool_input, dict) else None
     if not isinstance(command, str):
         return None
-    used = {MANAGER_ALIASES[m] for m in MANAGER_RE.findall(command)}
+    used = {MANAGER_ALIASES[m] for m in invoked_managers(command)}
     if not used:
         return None
     expected = lockfile_manager(work_root(data))

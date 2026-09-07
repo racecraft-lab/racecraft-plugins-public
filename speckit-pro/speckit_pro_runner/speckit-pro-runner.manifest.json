@@ -3,7 +3,7 @@
   "runner_contract_id": "speckit-pro-runner",
   "selected_runtime_name": "python-stdlib-runner",
   "contract_version": "1.0",
-  "plugin_version": "2.30.0",
+  "plugin_version": "2.30.1",
   "runner_version": "0.1.0",
   "python_minimum_version": "3.11",
   "specify_required": true,
@@ -47,7 +47,7 @@
         "value": "speckit_pro_runner/gate_discovery.py",
         "display": "speckit_pro_runner/gate_discovery.py"
       },
-      "sha256": "08d88c3a8ac2f43379fca9894895c57917f243b70206c433c02a6750822747f0"
+      "sha256": "7797ca1afff00fbdd461f609fc08a6891487f4fbadfa26e5e24d1c1c473c98e1"
     },
     {
       "path": {
@@ -175,7 +175,7 @@
         "value": "speckit_pro_runner/quality_gates.py",
         "display": "speckit_pro_runner/quality_gates.py"
       },
-      "sha256": "bed5bf6918cd457e118ea4fceb174a069bd67c7ebf81d306d07b7a045e46860f"
+      "sha256": "55e7507577d7c55fec295da781eb44f44ce649150030fb1d5393e1dedd440813"
     },
     {
       "path": {
@@ -207,7 +207,7 @@
         "value": "speckit_pro_runner/sweep_launcher.py",
         "display": "speckit_pro_runner/sweep_launcher.py"
       },
-      "sha256": "bebdf13b1b959ebb6a67230ba7c48088f5615a60429e167a0043892b0a92d6b1"
+      "sha256": "c69ba1d29d02ced7bf07661f63ef9162f54929e49327db89525b3940c181fbed"
     }
   ]
 }

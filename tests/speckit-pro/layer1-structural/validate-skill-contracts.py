@@ -47,6 +47,30 @@ def _description_value(frontmatter: str) -> str:
 
 class ValidateSkills(unittest.TestCase):
 
+    def test_coach_workflow_explanation_reads_host_scaffold_authority(self) -> None:
+        for label, skills_root, template_root in (
+            ('Claude source', PLUGIN_ROOT / 'skills', PLUGIN_ROOT / 'skills'),
+            ('Codex source', PLUGIN_ROOT / 'codex-skills', PLUGIN_ROOT / 'skills'),
+            ('Claude payload', REPO_ROOT / 'dist/claude/speckit-pro/skills', REPO_ROOT / 'dist/claude/speckit-pro/skills'),
+            ('Codex payload', REPO_ROOT / 'dist/codex/speckit-pro/skills', REPO_ROOT / 'dist/codex/speckit-pro/skills'),
+        ):
+            with self.subTest(host=label):
+                coach = skills_root / 'speckit-coach' / 'SKILL.md'
+                template = template_root / 'speckit-coach/templates/workflow-template.md'
+                scaffold = skills_root / 'speckit-scaffold-spec' / 'SKILL.md'
+                routes = [line for line in coach.read_text(encoding='utf-8').splitlines()
+                          if line.startswith('|') and 'workflow-template.md)' in line]
+                self.assertEqual(len(routes), 1, 'workflow explanation must have one authority route')
+                route = routes[0]
+                targets = {(coach.parent / link).resolve()
+                           for link in re.findall(r'\]\(([^)]+)\)', route)}
+                for authority in (template, scaffold):
+                    self.assertIn(authority, targets, 'route must link the template and host scaffold authority')
+                    self.assertTrue(authority.is_file(), f'missing workflow authority: {authority}')
+                for topic in ('creation', 'population', 'inputs', 'output locations'):
+                    self.assertIn(topic, route, f'scaffold explanation route must cover {topic}')
+                self.assertRegex(route, r'read .*speckit-scaffold-spec/SKILL\.md\) as a reference only; do not execute or invoke it')
+
     def test_coach_descriptions_preserve_sdd_scope_and_execution_boundary(self) -> None:
         for host in ('skills', 'codex-skills'):
             with self.subTest(host=host):
@@ -134,10 +158,15 @@ class ValidateSkills(unittest.TestCase):
                     roadmap_template = (PLUGIN_ROOT / 'skills' / 'speckit-coach' / 'templates' / 'technical-roadmap-template.md').read_text(encoding='utf-8')
                     protocol = (skill_dir / 'references' / 'prd-authoring-protocol.md').read_text(encoding='utf-8')
                     self.assertIn('## 5. Module and Interface Deltas', prd_template, 'expected the PRD template to carry the required Module and Interface Deltas section')
-                    self.assertIn('no module or interface changes', prd_template, 'expected the PRD template to allow an explicit no-change row')
+                    self.assertIn('No module or interface changes.', prd_template, 'expected the PRD template to allow the canonical explicit no-change row')
                     self.assertEqual(4, roadmap_template.count('**Module and Interface Deltas:**'), 'expected every roadmap SPEC entry to carry a Module and Interface Deltas field')
                     self.assertIn('No module or interface changes.', roadmap_template, 'expected the roadmap template to allow an explicit no-change line')
                     self.assertIn('Module and Interface Deltas', protocol, 'expected the PRD authoring protocol to require the section')
+                with self.subTest(msg='speckit-prd: reviewability preset plan template carries Module and Interface Deltas'):
+                    plan_template = (REPO_ROOT / '.specify' / 'presets' / 'speckit-pro-reviewability' / 'templates' / 'plan-template.md').read_text(encoding='utf-8')
+                    self.assertIn('## Module and Interface Deltas', plan_template, 'expected the preset plan template to carry the required Module and Interface Deltas section')
+                    self.assertIsNotNone(re.search(r'No module or interface\s+changes\.', plan_template), 'expected the preset plan template to allow the explicit no-change line')
+                    self.assertLess(plan_template.index('## Module and Interface Deltas'), plan_template.index('## Declared File Operations'), 'expected the deltas section before Declared File Operations')
             if skill == 'speckit-scaffold-spec':
                 with self.subTest(msg='speckit-scaffold-spec: skill heading uses scaffold naming'):
                     self.assertTrue(re.search('^# SpecKit Scaffold Spec$', content, re.MULTILINE) is not None and re.search('^# SpecKit Setup$', content, re.MULTILINE) is None, "expected '# SpecKit Scaffold Spec' heading in skills/speckit-scaffold-spec/SKILL.md")
