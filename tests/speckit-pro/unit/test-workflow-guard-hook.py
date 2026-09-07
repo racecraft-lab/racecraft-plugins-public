@@ -73,6 +73,12 @@ class WorkflowGuardHookTests(unittest.TestCase):
                 self.assertEqual({}, run_hook("lockfile", shell(root, "git status && ls node_modules/.bin/npm-run-all"))[1])
             with self.subTest(msg="a path segment containing a manager name is not an invocation"):
                 self.assertEqual({}, run_hook("lockfile", shell(root, "cat docs/npm-notes.md"))[1])
+            for command in ('echo "npm"', "grep npm README.md", "rg 'npm:' pnpm-lock.yaml", "git log --grep yarn"):
+                with self.subTest(msg=f"a manager name as an argument is not an invocation: {command}"):
+                    self.assertEqual({}, run_hook("lockfile", shell(root, command))[1])
+            for command in ("CI=1 npm test", "sudo npm install -g x", "ls && npm ci", "echo $(npm bin)", "./node_modules/.bin/npm run x"):
+                with self.subTest(msg=f"a manager in executable position is an invocation: {command}"):
+                    self.assertEqual("deny", run_hook("lockfile", shell(root, command))[1]["hookSpecificOutput"]["permissionDecision"])
             with self.subTest(msg="tools without a command string are ignored"):
                 self.assertEqual({}, run_hook("lockfile", {"hook_event_name": "PreToolUse", "tool_name": "Edit", "tool_input": {"file_path": "npm.md"}, "cwd": str(root)})[1])
             (root / "yarn.lock").write_text("", encoding="utf-8")
