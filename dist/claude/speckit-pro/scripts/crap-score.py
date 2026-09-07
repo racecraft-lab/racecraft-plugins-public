@@ -216,7 +216,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
     cwd = Path.cwd()
-    paths = [Path(p) for p in args.paths if p.strip()]
+    paths = [Path(p.strip()) for p in args.paths if p.strip()]
     if not paths:
         print("crap-score: no paths given; an empty list is not a pass", file=sys.stderr)
         return 2

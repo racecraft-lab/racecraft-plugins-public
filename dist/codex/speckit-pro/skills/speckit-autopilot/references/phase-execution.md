@@ -2571,8 +2571,9 @@ For each phase group in the helper's runs (grouped by run.group):
     Command(UNIT_TEST) &&
     Command(COMPLEXITY) && Command(DEPENDENCY_RULES)
       with {paths} = source files this group changed (populated slots only);
-      when that list is empty, skip both and record
-      `n/a: no source files changed`
+      when that list is empty, skip COMPLEXITY and record
+      `n/a: no source files changed` for it; DEPENDENCY_RULES
+      takes no {paths} and still runs
     If any fail → dispatch fix agent, re-run. A populated
     quality-gate slot failing blocks like a red test.
 
