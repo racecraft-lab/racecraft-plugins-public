@@ -674,6 +674,29 @@ def verify_claude_attestation(repo_root: Path, plugin_root: Path, *, max_age_sec
         raise LauncherViolation("Claude sweep hook attestation is stale or does not match this plugin build")
 
 
+_HELP_FLAG_PATTERN = re.compile(r"--[A-Za-z0-9][A-Za-z0-9-]*")
+
+
+def _help_flags(help_text: str) -> set[str]:
+    """Return every long flag a `--help` page names, ignoring its punctuation.
+
+    Splitting the help page on whitespace is not sufficient. Claude Code prints
+    an aliased option as one comma-separated run, `--allowedTools,
+    --allowed-tools <tools...>`, which the official CLI reference documents in
+    that same form. A whitespace split therefore yields the token
+    `--allowedTools,` with a trailing comma, and an exact-token membership test
+    misses the flag even though the CLI supports it. That reads as a missing
+    control and refuses the whole isolation boundary on a healthy install.
+
+    Matching the flag shape instead of the surrounding punctuation keeps the
+    check honest for every documented spelling: aliases separated by commas,
+    flags followed immediately by a value placeholder, and flags at the end of
+    a line.
+    """
+
+    return set(_HELP_FLAG_PATTERN.findall(help_text))
+
+
 def verify_claude_boundary(repo_root: Path, plugin_root: Path) -> tuple[int, int, int]:
     """Attest Claude CLI controls and the privileged parent's loaded hooks."""
     version = _claude_version()
@@ -709,7 +732,7 @@ def verify_claude_boundary(repo_root: Path, plugin_root: Path) -> tuple[int, int
     )
     if (
         completed.returncode != 0
-        or not required_flags.issubset(set((completed.stdout + completed.stderr).split()))
+        or not required_flags.issubset(_help_flags(completed.stdout + completed.stderr))
         or not all(path.is_file() for path in resources)
     ):
         raise LauncherViolation("Claude lacks the required isolated-process controls; upgrade Claude Code")

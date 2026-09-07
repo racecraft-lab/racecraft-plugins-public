@@ -34,7 +34,7 @@ Use the smallest relevant reference; do not load the whole library.
 | Design a constitution | [Constitution guide](./references/constitution-guide.md). |
 | Design a multi-spec roadmap or split a feature | [Technical-roadmap template](./templates/technical-roadmap-template.md) and [slicing heuristics](./references/slicing-heuristics.md). Derive independently executable vertical slices with observable outcomes and explicit real dependencies; review the graph before writing. |
 | Create a PRD and roadmap from an unformed idea | Route to `/speckit-pro:speckit-prd`; use its PRD and roadmap templates. |
-| Track one spec through phases | [Workflow template](./templates/workflow-template.md). Keep artifacts, gates, and decisions current. |
+| Track one spec through phases or understand scaffold-created workflow files | [Workflow template](./templates/workflow-template.md). For scaffold creation, population, inputs, or output locations, also read the [live scaffold skill](../speckit-scaffold-spec/SKILL.md) as a reference only; do not execute or invoke it. Keep artifacts, gates, and decisions current. |
 | Explain the roadmap home note | [Roadmap-MOC guide](./references/roadmap-moc-guide.md). The curated zone is author-owned; the generated index is regenerated, not hand-edited. |
 | Explain or configure presets, extensions, hooks, catalogs, or upgrade recovery | [Presets and extensions guide](./references/presets-extensions-guide.md). Discover and inspect first; confirm before any mutation. |
 | Explain autonomous execution, consensus, remediation, review loops, or configuration | Read [the live autopilot skill](../speckit-autopilot/SKILL.md) as a reference only; explain its current contract without executing or invoking it. |
