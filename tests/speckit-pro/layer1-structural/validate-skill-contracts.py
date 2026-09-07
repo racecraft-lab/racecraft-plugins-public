@@ -153,7 +153,7 @@ class ValidateSkills(unittest.TestCase):
                     roadmap_template = (PLUGIN_ROOT / 'skills' / 'speckit-coach' / 'templates' / 'technical-roadmap-template.md').read_text(encoding='utf-8')
                     protocol = (skill_dir / 'references' / 'prd-authoring-protocol.md').read_text(encoding='utf-8')
                     self.assertIn('## 5. Module and Interface Deltas', prd_template, 'expected the PRD template to carry the required Module and Interface Deltas section')
-                    self.assertIn('no module or interface changes', prd_template, 'expected the PRD template to allow an explicit no-change row')
+                    self.assertIn('No module or interface changes.', prd_template, 'expected the PRD template to allow the canonical explicit no-change row')
                     self.assertEqual(4, roadmap_template.count('**Module and Interface Deltas:**'), 'expected every roadmap SPEC entry to carry a Module and Interface Deltas field')
                     self.assertIn('No module or interface changes.', roadmap_template, 'expected the roadmap template to allow an explicit no-change line')
                     self.assertIn('Module and Interface Deltas', protocol, 'expected the PRD authoring protocol to require the section')
