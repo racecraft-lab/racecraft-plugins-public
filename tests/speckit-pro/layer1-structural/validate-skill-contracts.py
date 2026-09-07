@@ -123,6 +123,17 @@ class ValidateSkills(unittest.TestCase):
                     output_formats = (skill_dir / 'references' / 'output-formats.md').read_text(encoding='utf-8')
                     for heading in ('## Module and Interface Deltas', '## Terms', '## Verification Gates'):
                         self.assertIn(heading, output_formats, f'expected grill-me output-formats.md to keep the {heading!r} section')
+            if skill == 'speckit-autopilot':
+                with self.subTest(msg='speckit-autopilot: hardener delegation reference is shipped and wired on both platforms'):
+                    hardener = skill_dir / 'references' / 'hardener-delegation.md'
+                    self.assertTrue(hardener.is_file(), f'file not found: {hardener}')
+                    hardener_text = hardener.read_text(encoding='utf-8')
+                    for needle in ('once per spec', 'qwen_health', 'qwen_candidate', 'qwen_apply', 'webPolicy: "disabled"', 'Allowed writes: tests only', 'Fallback path (primary model)'):
+                        self.assertIn(needle, hardener_text, f'expected hardener-delegation.md to state {needle!r}')
+                    phase_exec = (skill_dir / 'references' / 'phase-execution.md').read_text(encoding='utf-8')
+                    codex_post = (PLUGIN_ROOT / 'codex-skills' / 'speckit-autopilot' / 'references' / 'post-implementation-codex.md').read_text(encoding='utf-8')
+                    self.assertIn('hardener-delegation.md', phase_exec, 'expected Phase 7 Step 4 to point at the hardener reference')
+                    self.assertIn('hardener-delegation.md', codex_post, 'expected the Codex integration-suite row to point at the hardener reference')
             if skill in ('grill-me', 'speckit-prd'):
                 with self.subTest(msg=f'{skill}: reads the ubiquitous-language terms document when present'):
                     codex_content = (PLUGIN_ROOT / 'codex-skills' / skill / 'SKILL.md').read_text(encoding='utf-8')

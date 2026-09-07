@@ -86,6 +86,8 @@ Filled from `detect-commands` at Step 0.11. One row per slot; the operator answe
 
 **Thresholds file:** `.specify/quality-gates.json` <!-- present / missing / invalid --> <!-- complexity N, CRAP N, mutation floor N; basis --> (G0 blocks unless present)
 
+**Hardener:** not run <!-- not needed (score N ≥ floor F) | qwen: iteration k of cap: N → M ... floor reached / cap reached | fallback (reason): ... | rejected candidate: reason --> (fires once per spec when MUTATION is populated)
+
 | Slot | Status | Tool | Command | Operator answer | G0 baseline | Final |
 |------|--------|------|---------|-----------------|-------------|-------|
 | COMPLEXITY | <!-- populated / unconfigured --> | <!-- e.g., radon + coverage.py --> | <!-- recorded with `{plugin_root}` and `{paths}` literal --> | <!-- blank until asked --> | <!-- vacuous pass --> | <!-- pass / fail --> |

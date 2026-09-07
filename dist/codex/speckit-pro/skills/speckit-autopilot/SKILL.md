@@ -650,6 +650,9 @@ PR URL.
 - [Plugin Limitations](references/plugin-limitations.md) —
   permissionMode, hooks, mcpServers restrictions for plugin agents;
   research/context capability coverage and fallback behavior
+- [Hardener Delegation](references/hardener-delegation.md) —
+  once-per-spec tests-only mutation hardening loop with Qwen delegation,
+  candidate inspection, primary-model fallback, stop rule, and record
 - [Token Discipline](references/token-discipline.md) —
   Opt-in compressed vocabulary for inter-agent transcripts
   (off by default; never applied to PR bodies, logs, or artifacts)

@@ -2642,6 +2642,14 @@ Then every populated quality-gate slot on the whole diff:
   Any failure blocks. Record each result in the Quality Gates table.
 ```
 
+When MUTATION is populated, run the hardener once per spec between the
+MUTATION run and its block decision, per
+[Hardener Delegation](./hardener-delegation.md): delegate a tests-only
+loop to local Qwen when `qwen_health` is good, else run it on the primary
+model; stop at the floor or the iteration cap; record the outcome on the
+Quality Gates table's `Hardener` line. Only after the hardener records its
+ending does a still-failing MUTATION block.
+
 #### Agent Routing Table
 
 | Task Type | Agent | TDD Protocol? |
