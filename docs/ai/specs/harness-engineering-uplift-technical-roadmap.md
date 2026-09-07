@@ -22,7 +22,7 @@ lifecycle and indexing-interoperability lane.
 
 ## Roadmap Overview
 
-The feature is decomposed into **15 specifications** across **9 spec dependency
+The feature is decomposed into **16 specifications** across **9 spec dependency
 tiers**. A separate follow-on scaffold lane turns accepted roadmap items into
 reviewable implementation branches.
 
@@ -30,6 +30,7 @@ reviewable implementation branches.
 |---|---|---|---|
 | 1 | HRNS-015 | Repair eight observed autopilot and PR-emission defects | Fully independent — no HRNS dependency in either direction, so it can run at any point, including first |
 | 1 | HRNS-001 | Inventory harness surfaces and classify SpecKit Pro gaps | Sequential foundation |
+| Independent | HRNS-016 | Per-story autopilot execution: Setup+Foundational once, then implement, gates, hardener, architecture check, checkpoint, and one PR per story | No HRNS dependency; needs only the merged quality-gate slots, thresholds file, and hardener |
 | 2 | HRNS-002, HRNS-003 | Durable context/state and helper/tool contract foundations | Parallel after HRNS-001 |
 | 3 | HRNS-004, HRNS-005 | Permission/sandbox controls and eval readiness | Parallel after HRNS-003 where needed |
 | 4 | HRNS-006 | Trace/debug packet contract spanning helpers, evals, and permissions | Sequential after HRNS-003 through HRNS-005 |
@@ -235,6 +236,7 @@ HRNS-005 + HRNS-006 + HRNS-009 + HRNS-010 -> HRNS-012 Knowledge Conformance and 
 HRNS-003 + HRNS-005 + HRNS-006 + HRNS-009 + HRNS-010 -> HRNS-013 Code-Intelligence Interoperability
 HRNS-004 + HRNS-006 + HRNS-007 + HRNS-009 + HRNS-010 + HRNS-012 -> HRNS-014 External Exchange and Reconciliation
 HRNS-002 + HRNS-005 + HRNS-006 + HRNS-009 + HRNS-010 + HRNS-011 + HRNS-012 + HRNS-013 + HRNS-014 -> HRNS-008 Harness Drift and Garbage Collection
+(quality-gate slots + quality-gates.json + hardener, merged) -> HRNS-016 Per-story Autopilot Execution
 ```
 
 ---
@@ -258,6 +260,7 @@ HRNS-002 + HRNS-005 + HRNS-006 + HRNS-009 + HRNS-010 + HRNS-011 + HRNS-012 + HRN
 | HRNS-013 | Code-Intelligence and Vector-Index Interoperability | Pending | - | Blocked by HRNS-003, HRNS-005, HRNS-006, HRNS-009, and HRNS-010 |
 | HRNS-014 | External OKF Exchange and Reviewable Reconciliation | Pending | - | Blocked by HRNS-004, HRNS-006, HRNS-007, HRNS-009, HRNS-010, and HRNS-012 |
 | HRNS-015 | Autopilot and PR-Emission Defect Repair | Ready | - | Independent; eight observed defects with reproductions, no dependency on other HRNS specs |
+| HRNS-016 | Per-story Autopilot Execution | Pending | - | Independent of other HRNS specs; ready once the "Quality Gauntlet" gate slots, thresholds file, and hardener have merged; scoped with the user through grill-me before scaffolding |
 
 **Status Legend:** Pending | Ready | In Progress | In Review | Complete | Complete / Archived | Blocked
 
@@ -1461,6 +1464,98 @@ UAT, with the reproduction recorded in
 
 ---
 
+### HRNS-016: Per-story Autopilot Execution
+
+**Priority:** P2 | **Depends On:** none among HRNS specs; the merged quality-gate slots, `.specify/quality-gates.json`, and hardener from the "Quality Gauntlet" stack | **Enables:** none
+
+**Goal:** Make the user story the unit of autopilot execution, verification, and
+review: Setup and Foundational once, then per story in priority order
+implement, gates, hardener, architecture check, checkpoint, and pull request,
+continuing while green and stopping on the first failing check.
+
+**Reviewability Budget:** Primary surface: harness/adapter |
+Projected reviewable LOC: to be estimated at scaffold |
+Production files: to be estimated at scaffold |
+Total files: to be estimated at scaffold |
+Budget result: pending
+
+This entry records the accepted direction only. The refactor is not
+implemented in the "Quality Gauntlet" stack; it goes through
+`speckit-scaffold-spec` and a grill-me interview with the user, where the
+design tree below is walked branch by branch.
+
+**Scope:**
+
+- Phase 7 restructured around the story phases `tasks.md` already carries:
+  the Setup and Foundational phases run once (the tasks template marks the
+  Foundational checkpoint "Foundation ready - user story implementation can
+  now begin"), then each user story in the recorded priority order, one at a
+  time, never the next before the previous checkpoint is recorded.
+- Per-story sequence: implement the story's tasks with the existing TDD
+  executors; run the automated checks and every populated quality-gate slot
+  with `{paths}` = the story's diff; run the hardener when MUTATION is
+  populated; run an architecture check that compares the story's diff against
+  the plan's Module and Interface Deltas and the `DEPENDENCY_RULES` slot; record
+  the checkpoint in the workflow file with the story's `**Independent Test**`
+  from `spec.md` and the evidence paths.
+- One pull request per story. When `gh-stack` and its skill are installed, the
+  spec is one stack rooted on trunk with one layer per story in priority order;
+  otherwise each story is an independent branch off trunk. The selected mode
+  and the reason are recorded in the workflow file before the first story PR.
+- Stop rule: continue while every check is green; stop on the first failing
+  check, naming the story, the check, and the evidence path. Resume from the
+  last recorded checkpoint.
+- Review overhead is accepted: one PR per story is stated in each PR body as
+  the chosen trade-off. Reducing it (batching small stories, auto-merging green
+  stack layers) is a future batch, recorded here as a follow-on, not scoped.
+- Both distributions: the same loop, checkpoint record, PR-per-story rule, and
+  stop rule on Claude Code and Codex.
+
+**Out of Scope:**
+
+- Changing how `spec.md` defines stories or how `tasks.md` groups them; the
+  SpecKit templates already require independently testable stories and
+  per-story checkpoints, and this spec consumes that structure.
+- Reducing review overhead by batching or auto-merge (follow-on).
+- Changing the gate slots, thresholds file, or hardener; this spec calls them
+  per story instead of once per spec.
+
+**Module and Interface Deltas:**
+- `speckit-pro/skills/speckit-autopilot/references/phase-execution.md` Phase 7
+  and the Codex mirror — changed: task-group loop becomes story loop with
+  per-story verification and checkpoint.
+- `speckit-pro/skills/speckit-autopilot/references/post-implementation.md` PR
+  creation and the Codex mirror — changed: per-story PR emission, stack or
+  independent-branch mode.
+- Workflow template — changed: per-story checkpoint table.
+- No new runner helper is expected; confirm at grill-me.
+
+**Key Files:**
+
+- `.specify/templates/spec-template.md` — the independently-testable story
+  contract and `**Independent Test**` line this spec consumes.
+- `.specify/templates/tasks-template.md` — Setup, Foundational, per-story
+  phases and their `**Checkpoint**` lines.
+- `speckit-pro/skills/speckit-autopilot/references/phase-execution.md` — Phase
+  7 step 3 (task-group dispatch) and step 4 (final verification).
+- `speckit-pro/skills/speckit-autopilot/references/post-implementation.md` —
+  §3.2 PR creation and the multi-PR emission path.
+- `speckit-pro/skills/speckit-coach/templates/workflow-template.md` — the
+  Quality Gates block and the checkpoint record this spec extends.
+
+**Done When:**
+
+- A spec with three stories runs Setup and Foundational once and then three
+  story iterations, each with its own gate run, checkpoint record, and PR,
+  proven on a fixture workflow on both distributions.
+- With `gh-stack` installed the three PRs form one stack rooted on trunk in
+  priority order; without it they are three independent branches; the workflow
+  file names the selected mode.
+- A failing check in story 2 stops the run with the story, check, and evidence
+  named, and a resume continues from story 2 without re-running story 1.
+
+---
+
 ## Environment & Deployment Context
 
 | Resource | Detail |
@@ -1492,5 +1587,8 @@ UAT, with the reproduction recorded in
   spec/reference drift, and both plugin distributions.
 - Avoid editing active XPLAT runtime files from HRNS specs unless the selected
   HRNS spec explicitly owns a helper/runner contract change.
+- Scaffold `HRNS-016` only after the "Quality Gauntlet" gate slots, thresholds
+  file, and hardener have merged, and take it through grill-me with the user
+  first; the roadmap entry is a direction, not a design.
 - Preserve the current `specs/` archive hygiene pattern: active spec folders are
   temporary implementation artifacts and should be archived after merge.
