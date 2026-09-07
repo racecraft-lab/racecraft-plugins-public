@@ -86,7 +86,10 @@ def validate_table(data: Any) -> list[str]:
         if "probe" in row and (
             not isinstance(probe, list)
             or not probe
-            or any(not isinstance(name, str) or not name.strip() or "/" in name for name in probe)
+            or any(
+                not isinstance(name, str) or not name.strip() or "/" in name or "\\" in name
+                for name in probe
+            )
         ):
             problems.append(f"{prefix}.probe: must be a non-empty array of bare executable names")
         language = row.get("language")

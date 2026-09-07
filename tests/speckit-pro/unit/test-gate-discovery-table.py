@@ -106,6 +106,7 @@ class GateDiscoveryTableTests(unittest.TestCase):
             "probe not a list": mutated(probe="lint-imports"),
             "probe empty": mutated(probe=[]),
             "probe with path": mutated(probe=["bin/lint-imports"]),
+            "probe with windows path": mutated(probe=["bin\\lint-imports"]),
         }
         for label, table in negatives.items():
             with self.subTest(msg=f"rejects: {label}"):
