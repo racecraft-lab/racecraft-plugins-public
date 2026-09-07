@@ -1,0 +1,7 @@
+{
+  "schema_version": "1.0",
+  "scope": { "kind": "pr", "base": "origin/main", "touched": ["a.py"] },
+  "language": "python",
+  "nodes": [ { "id": "a.py", "path": "a.py" }, { "id": "b.py", "path": "b.py" }, { "id": "c.py", "path": "c.py" } ],
+  "edges": [ { "from": "a.py", "to": "b.py" }, { "from": "b.py", "to": "c.py" } ]
+}

@@ -89,6 +89,7 @@
         { "path": "tests/speckit-pro/unit/test-parity-judge.py", "label": "test-parity-judge" },
         { "path": "tests/speckit-pro/unit/test-moc-lint-exit-codes.py", "label": "test-moc-lint-exit-codes" },
         { "path": "tests/speckit-pro/unit/test-artifact-gallery.py", "label": "test-artifact-gallery" },
+        { "path": "tests/speckit-pro/unit/test-architecture-graph.py", "label": "test-architecture-graph" },
         { "path": "tests/speckit-pro/unit/test-artifact-fill-regions.py", "label": "test-artifact-fill-regions" },
         { "path": "tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py", "label": "test-autopilot-bookkeeping-guard" },
         { "path": "tests/speckit-pro/unit/test-autopilot-stage-resolution.py", "label": "test-autopilot-stage-resolution" },
