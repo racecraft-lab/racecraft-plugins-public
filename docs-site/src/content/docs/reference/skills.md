@@ -11,7 +11,7 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 - **Public path:** `/racecraft-plugins-public/reference/skills/`
 - **Generated output:** `docs-site/src/content/docs/reference/skills.md`
-- **Records:** 11
+- **Records:** 12
 
 ## Navigation Summary
 
@@ -26,6 +26,7 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 - Speckit Scaffold Spec
 - Speckit Status
 - Speckit Upgrade
+- Ubiquitous Language
 
 ## Page Sources
 
@@ -416,3 +417,38 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 - Both runtime variants exist, so use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
   - Based on: `speckit-pro/skills/speckit-upgrade/SKILL.md`, `speckit-pro/codex-skills/speckit-upgrade/SKILL.md`
+
+### Ubiquitous Language
+
+- **Purpose:** Build or refresh the repository's ubiquitous-language terms document, a committed Markdown table of domain terms (term, meaning here, identifiers) that humans and agents read before designing.
+- **Classification:** `source`
+- **Platform concept:** SpecKit Pro ubiquitous-language skill
+- **Claude Code:** /speckit-pro:ubiquitous-language
+- **Codex:** $ubiquitous-language
+- **Runtime difference:** Both runtimes ship source skill instructions; invocation syntax and runtime guardrails differ.
+
+#### Command Or Skill Reference
+
+- **Claude Code invocation:** `/speckit-pro:ubiquitous-language`
+- **Codex invocation:** `$ubiquitous-language`
+- **Purpose:** Build or refresh the repository's ubiquitous-language terms document, a committed Markdown table of domain terms (term, meaning here, identifiers) that humans and agents read before designing.
+- **Expected output artifact:** A committed terms table (term, meaning here, identifiers) and an advisory identifier-lint report.
+
+**Prerequisites**
+
+- SpecKit Pro is installed for the selected runtime.
+- The linked SKILL.md file defines the active scope and guardrails.
+
+#### Source Facts
+
+- ubiquitous-language has a Claude Code skill source and a Codex skill source in the checked-in plugin tree. Source refs: `speckit-pro/skills/ubiquitous-language/SKILL.md`, `speckit-pro/codex-skills/ubiquitous-language/SKILL.md`.
+
+#### Sources
+
+- [speckit-pro/skills/ubiquitous-language/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/ubiquitous-language/SKILL.md)
+- [speckit-pro/codex-skills/ubiquitous-language/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/codex-skills/ubiquitous-language/SKILL.md)
+
+#### Inferred Notes
+
+- Both runtime variants exist, so use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
+  - Based on: `speckit-pro/skills/ubiquitous-language/SKILL.md`, `speckit-pro/codex-skills/ubiquitous-language/SKILL.md`

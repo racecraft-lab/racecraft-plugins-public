@@ -51,8 +51,9 @@ stable feature and SPEC identifiers for unchanged work. Use the shared
 [technical-roadmap template](../speckit-coach/templates/technical-roadmap-template.md),
 [slicing heuristics](../speckit-coach/references/slicing-heuristics.md), and, for
 a new roadmap, [roadmap-MOC template](../speckit-coach/templates/roadmap-moc-template.md).
-Apply the protocol's interview, update, slicing/estimation, MOC, index, and
-verification rules. Report created or updated paths and recommend
+If `docs/ai/specs/ubiquitous-language.md` exists, read it first and use its
+terms verbatim in the PRD. Apply the protocol's interview, update,
+slicing/estimation, MOC, index, and verification rules. Report created or updated paths and recommend
 `/speckit-pro:speckit-scaffold-spec <SPEC-ID>` for the first ready entry.
 
 ## Output contract

@@ -1,0 +1,7 @@
+interface:
+  display_name: "Ubiquitous Language"
+  short_description: "Pin the repository's domain terms in one committed table"
+  default_prompt: "Build or refresh the ubiquitous-language terms document for this repository and lint the current diff"
+
+policy:
+  allow_implicit_invocation: false

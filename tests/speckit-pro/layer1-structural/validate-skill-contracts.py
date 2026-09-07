@@ -23,7 +23,7 @@ from structural_helpers import frontmatter as _frontmatter
 from test_result import run_counted
 
 validate_skills_SKILLS_DIR = PLUGIN_ROOT / 'skills'
-validate_skills_SKILLS = ('grill-me', 'speckit-archive-cleanup', 'speckit-autopilot', 'speckit-coach', 'speckit-install', 'speckit-upgrade', 'speckit-scaffold-spec', 'speckit-status', 'speckit-resolve-pr', 'speckit-prd')
+validate_skills_SKILLS = ('grill-me', 'speckit-archive-cleanup', 'speckit-autopilot', 'speckit-coach', 'speckit-install', 'speckit-upgrade', 'speckit-scaffold-spec', 'speckit-status', 'speckit-resolve-pr', 'speckit-prd', 'ubiquitous-language')
 SKILLS_REQUIRING_REFERENCES = frozenset({'speckit-autopilot', 'speckit-coach'})
 ALLOWED_KEYS = frozenset({'name', 'description', 'license', 'allowed-tools', 'metadata', 'compatibility', 'user-invocable', 'disable-model-invocation', 'argument-hint'})
 NAME_RE = re.compile('^[a-z][a-z0-9]*(-[a-z0-9]+)*$')
@@ -123,6 +123,11 @@ class ValidateSkills(unittest.TestCase):
                     output_formats = (skill_dir / 'references' / 'output-formats.md').read_text(encoding='utf-8')
                     for heading in ('## Module and Interface Deltas', '## Terms', '## Verification Gates'):
                         self.assertIn(heading, output_formats, f'expected grill-me output-formats.md to keep the {heading!r} section')
+            if skill in ('grill-me', 'speckit-prd'):
+                with self.subTest(msg=f'{skill}: reads the ubiquitous-language terms document when present'):
+                    codex_content = (PLUGIN_ROOT / 'codex-skills' / skill / 'SKILL.md').read_text(encoding='utf-8')
+                    for label, text in (('Claude', content), ('Codex', codex_content)):
+                        self.assertIn('docs/ai/specs/ubiquitous-language.md', text, f'expected the {label} {skill} skill to read the terms document when present')
             if skill == 'speckit-prd':
                 with self.subTest(msg='speckit-prd: PRD and roadmap templates require Module and Interface Deltas'):
                     prd_template = (PLUGIN_ROOT / 'skills' / 'speckit-coach' / 'templates' / 'prd-template.md').read_text(encoding='utf-8')
@@ -144,8 +149,8 @@ class ValidateSkills(unittest.TestCase):
                 else:
                     self.assertTrue(True)
 validate_codex_skills_CODEX_SKILLS_DIR = PLUGIN_ROOT / 'codex-skills'
-validate_codex_skills_SKILLS = ('speckit-archive-cleanup', 'speckit-autopilot', 'speckit-coach', 'speckit-scaffold-spec', 'speckit-status', 'speckit-resolve-pr', 'install', 'speckit-install', 'speckit-upgrade', 'grill-me', 'speckit-prd')
-COLLISION_GUARD_SKILLS = ('speckit-archive-cleanup', 'speckit-autopilot', 'speckit-coach', 'grill-me', 'speckit-prd')
+validate_codex_skills_SKILLS = ('speckit-archive-cleanup', 'speckit-autopilot', 'speckit-coach', 'speckit-scaffold-spec', 'speckit-status', 'speckit-resolve-pr', 'install', 'speckit-install', 'speckit-upgrade', 'grill-me', 'speckit-prd', 'ubiquitous-language')
+COLLISION_GUARD_SKILLS = ('speckit-archive-cleanup', 'speckit-autopilot', 'speckit-coach', 'grill-me', 'speckit-prd', 'ubiquitous-language')
 CC_ONLY_KEYS = ('user-invocable', 'disable-model-invocation', 'license', 'argument-hint')
 CLAUDE_ONLY_RUNTIME_RE = re.compile('TaskCreate|TaskUpdate|Agent\\(|Bash\\(|Opus-class|Opus 4\\.6|/model opus|/effort max|/speckit[.:]|run /<command>|general-purpose agent')
 ALLOW_IMPLICIT_RE = re.compile('^[ \\t]*allow_implicit_invocation:[ \\t]*(true|false)[ \\t]*$')
@@ -349,7 +354,7 @@ class ValidateCodexSkills(unittest.TestCase):
             policy_value = values[0]
             if skill == 'speckit-scaffold-spec':
                 self.assertEqual('true', policy_value, 'scaffold skill must have allow_implicit_invocation: true for Codex discovery')
-            elif skill in ('speckit-archive-cleanup', 'speckit-autopilot', 'speckit-resolve-pr', 'install', 'speckit-install', 'speckit-upgrade', 'grill-me', 'speckit-prd'):
+            elif skill in ('speckit-archive-cleanup', 'speckit-autopilot', 'speckit-resolve-pr', 'install', 'speckit-install', 'speckit-upgrade', 'grill-me', 'speckit-prd', 'ubiquitous-language'):
                 self.assertEqual('false', policy_value, 'mutation-heavy skill must have allow_implicit_invocation: false')
             elif skill in ('speckit-coach', 'speckit-status'):
                 self.assertEqual('true', policy_value, 'read-only skill must have allow_implicit_invocation: true')
