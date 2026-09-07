@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -115,6 +116,12 @@ class GateDiscoveryTableTests(unittest.TestCase):
             with self.subTest(msg=f"rejects: {label}"):
                 self.assertTrue(gate_discovery.validate_table(table), label)
 
+        with self.subTest(msg="schema signal.path pattern rejects what the validator rejects and accepts a plain path"):
+            pattern = re.compile(schema["properties"]["rows"]["items"]["properties"]["signal"]["properties"]["path"]["pattern"])
+            for bad in ("/etc/passwd", "../x", "a/../b", "a/..", "C:\\repo\\x", "..\\x", "a\\b"):
+                self.assertIsNone(pattern.match(bad), bad)
+            for good in ("pyproject.toml", "a/b.c", "a..b/c", ".importlinter"):
+                self.assertIsNotNone(pattern.match(good), good)
         with self.subTest(msg="rejects duplicate (language, slot, signal.path)"):
             table = valid_table()
             table["rows"].append(copy.deepcopy(table["rows"][0]))
