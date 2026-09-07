@@ -70,6 +70,13 @@ class UbiquitousLanguageLintTests(unittest.TestCase):
                 code, report = run("--terms", str(bad), "--diff", str(FIXTURES / "sample.diff"))
                 self.assertEqual(0, code)
                 self.assertIn("unreadable", report["note"])
+        with self.subTest(msg="an undecodable diff file is reported, not raised"):
+            with tempfile.TemporaryDirectory() as tmp:
+                bad = Path(tmp) / "bad.diff"
+                bad.write_bytes(b"\xff\xfe+++ b/x.py")
+                code, report = run("--terms", str(FIXTURES / "terms.md"), "--diff", str(bad))
+                self.assertEqual(0, code)
+                self.assertIn("diff unavailable", report["note"])
         with self.subTest(msg="missing terms document lints nothing and still exits 0"):
             code, report = run("--terms", str(FIXTURES / "absent.md"), "--diff", str(FIXTURES / "sample.diff"))
             self.assertEqual((0, "no terms document; nothing linted", 0), (code, report["note"], report["declared"]))

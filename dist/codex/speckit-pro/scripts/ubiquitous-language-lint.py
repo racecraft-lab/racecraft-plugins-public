@@ -134,7 +134,7 @@ def main(argv: list[str] | None = None) -> int:
         report["terms"] = len(terms)
         try:
             diff = Path(args.diff).read_text(encoding="utf-8") if args.diff else git_diff(args.base, args.paths)
-        except (OSError, RuntimeError) as exc:
+        except (OSError, RuntimeError, ValueError) as exc:
             report["note"] = f"diff unavailable: {exc}"
             diff = ""
         declared = declared_identifiers(diff)
