@@ -208,6 +208,7 @@ function commandExpectedArtifact(name) {
     'speckit-scaffold-spec': 'A feature worktree, workflow file, design concept, and spec folder.', 'speckit-autopilot': 'SpecKit phase artifacts, validation evidence, commits, and PR packet material.',
     'speckit-status': 'A read-only roadmap and workflow status dashboard.', 'speckit-coach': 'SDD coaching guidance or next-step explanation.',
     'speckit-resolve-pr': 'PR review remediation summary and changed files when fixes are needed.', 'speckit-upgrade': 'Upgrade guidance and local plugin refresh evidence.',
+    'ubiquitous-language': 'A committed terms table (term, meaning here, identifiers) and an advisory identifier-lint report.',
   };
   return map[name] || 'A source-backed skill response or workflow artifact.';
 }

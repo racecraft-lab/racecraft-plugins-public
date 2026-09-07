@@ -609,7 +609,7 @@ doesn't reach: tests that didn't actually run, edge cases the
 spec called out but the implementation skipped, requirements
 silently dropped, and TODOs the autopilot meant to leave behind.
 
-The four questions, in order:
+The four questions, in order, plus one advisory report:
 
 1. **Tests executed?** Did each of `BUILD`, `TYPECHECK`, `LINT`,
    `UNIT_TEST`, and `INTEGRATION_TEST`, plus every populated
@@ -640,6 +640,16 @@ The four questions, in order:
    with a `[tidiness]` note so it is cleaned up or explicitly
    called out before the PR opens.
 
+5. **Terms lint (advisory).** If `docs/ai/specs/ubiquitous-language.md`
+   exists, run
+   `${CLAUDE_PLUGIN_ROOT}/scripts/ubiquitous-language-lint.py --base origin/main`
+   and record its one-line note plus each unmapped identifier
+   (file:line). Mirror the same lines into the PR body's
+   `## Self-Review Findings` region when the packet declares it.
+   The lint exits 0 by design; an unmapped identifier is a
+   suggestion for a term or a rename, never a gate. Without the
+   document, record `Terms lint: no terms document`.
+
 **Block format in the workflow log:**
 
 ```markdown
@@ -656,6 +666,10 @@ tests. No `[edge-case-gap]` markers.
 
 **Requirements matched:** FR-001 → T015, T022. FR-002 → T030.
 ... [enumerate all]. No orphans.
+
+**Terms lint:** 2 of 9 declared identifiers map to no term:
+src/billing.py:41 `rebuild_cache`, src/api.ts:12 `scheduleReminder`.
+Advisory only.
 
 **Follow-up & tidiness:** 1 deferred item — `[DEFERRED] Postgres
 connection pooling under load testing`. Landed in PR body §Out of

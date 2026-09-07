@@ -29,6 +29,7 @@ automation, and review helpers on top of the official Spec Kit workflow.
 | Capability | What it means |
 |---|---|
 | Scoping interviews | `grill-me` asks one decision at a time before a spec is written. |
+| Domain terms | `ubiquitous-language` pins the repository's terms in one committed table that interviews and PRDs read. |
 | SDD coaching | `speckit-coach` explains methodology, roadmaps, gates, and extension choices. |
 | PRD and roadmap authoring | `speckit-prd` turns a broad idea into a PRD and SPEC catalog. |
 | Spec scaffolding | `speckit-scaffold-spec` creates the worktree and workflow file for one SPEC. |
@@ -161,6 +162,7 @@ invocations on the left or the Codex skill invocations on the right.
 | Step | Claude Code | Codex |
 |---|---|---|
 | Get coached | `/speckit-pro:speckit-coach walk me through SDD` | `$speckit-coach walk me through SDD` |
+| Pin domain terms | `/speckit-pro:ubiquitous-language` | `$ubiquitous-language` |
 | Scope a rough idea | `/speckit-pro:grill-me docs/raw-idea.md` | `$grill-me docs/raw-idea.md` |
 | Create PRD and roadmap | `/speckit-pro:speckit-prd "saved searches"` | `$speckit-prd "saved searches"` |
 | Check project status | `/speckit-pro:speckit-status` | `$speckit-status` |
@@ -198,6 +200,7 @@ The core idea is simple:
 | `speckit-prd` | You have a broad product or technical idea and need a PRD plus SPEC catalog. |
 | `speckit-coach` | You need SDD guidance, roadmap help, checklist domain advice, or gate troubleshooting. |
 | `grill-me` | You need a one-question-at-a-time scoping interview before writing a spec. |
+| `ubiquitous-language` | Domain terms need pinning, a glossary needs a refresh, or a diff's new identifiers should be checked against the terms. |
 | `speckit-scaffold-spec` | A SPEC exists in the roadmap and needs a worktree plus populated workflow. |
 | `speckit-autopilot` | A workflow file is ready to execute through the SDD phases. |
 | `speckit-status` | You need project status, archive-sweep state, or the next recommended SPEC. |
@@ -212,6 +215,7 @@ The core idea is simple:
 | PRD + roadmap authoring | `/speckit-pro:speckit-prd` | `$speckit-prd` |
 | SDD coaching | `/speckit-pro:speckit-coach` | `$speckit-coach` |
 | Iterative scoping interview | `/speckit-pro:grill-me` | `$grill-me` |
+| Domain terms table | `/speckit-pro:ubiquitous-language` | `$ubiquitous-language` |
 | Spec scaffolding | `/speckit-pro:speckit-scaffold-spec` | `$speckit-scaffold-spec` |
 | Autopilot execution | `/speckit-pro:speckit-autopilot` | `$speckit-autopilot` |
 | Project status | `/speckit-pro:speckit-status` | `$speckit-status` |
