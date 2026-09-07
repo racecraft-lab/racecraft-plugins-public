@@ -29,6 +29,7 @@ POLICY = (
 )
 HEAD_MARKERS = ("<!-- GALLERY-HEAD:START -->", "<!-- GALLERY-HEAD:END -->")
 BRAND_MARKERS = ("/* BRAND-KIT:START */", "/* BRAND-KIT:END */")
+PLANNED = {"uat-walkthrough", "architecture-viewer"}
 def read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
@@ -55,7 +56,7 @@ def catalog_errors(entries: list[dict[str, object]], template_ids: set[str]) -> 
         for message, actual, wanted in (
             ("manifest rows", pairs, [row[:2] for row in expected]),
             ("template ids", template_ids, shipped),
-            ("planned row", {entry["id"] for entry in entries if entry["status"] == "planned"}, {"uat-walkthrough"}),
+            ("planned row", {entry["id"] for entry in entries if entry["status"] == "planned"}, PLANNED),
         )
         if actual != wanted
     ]
@@ -93,11 +94,11 @@ class ArtifactGalleryTests(unittest.TestCase):
         entries = json.loads(read(GALLERY / "manifest.json"))["templates"]
         shipped = [row for row in expected if row[1] == "shipped"]
         planned = [row for row in expected if row[1] == "planned"]
-        self.assertEqual(21, len(expected))
+        self.assertEqual(22, len(expected))
         self.assertEqual(20, len(shipped))
-        self.assertEqual(1, len(planned))
-        self.assertEqual({"uat-walkthrough"}, {row[0] for row in planned})
-        self.assertEqual(len({row[0] for row in expected}), 21)
+        self.assertEqual(2, len(planned))
+        self.assertEqual(PLANNED, {row[0] for row in planned})
+        self.assertEqual(len({row[0] for row in expected}), 22)
         self.assertEqual([], catalog_errors(entries, {path.stem for path in TEMPLATES.glob("*.html")}))
 
     def test_shipped_documents_preserve_the_compact_standalone_contract(self) -> None:

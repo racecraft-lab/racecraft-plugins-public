@@ -3,6 +3,7 @@
   ["spec-explainer", "shipped", [], "main", null, null, null],
   ["code-approaches", "shipped", ["prompt", "markdown"], "#approach-list", "#copy-prompt", "#export-status", "#reason-field"],
   ["module-map", "shipped", ["prompt", "markdown"], "#module-list", "#copy-prompt", "#export-status", ".objection-field"],
+  ["architecture-viewer", "planned", ["markdown"], null, null, null, null],
   ["pr-writeup", "shipped", ["prompt", "markdown"], "#sec-file-by-file", "#copy-prompt", "#export-status", ".question-field"],
   ["annotated-diff", "shipped", ["prompt", "markdown"], "#hunk-list", "#copy-prompt", "#export-status", ".objection-field"],
   ["flowchart", "shipped", [], "#node-list", null, null, null],

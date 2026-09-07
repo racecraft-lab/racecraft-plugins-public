@@ -36,6 +36,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/architecture_graph.py",
+        "display": "speckit_pro_runner/architecture_graph.py"
+      },
+      "sha256": "46126774323e55728ce43bbe16ec4775c6ef47fb6f9fa4eec8270ce4d8c4275c"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/envelope.py",
         "display": "speckit_pro_runner/envelope.py"
       },

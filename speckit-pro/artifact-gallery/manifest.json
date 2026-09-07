@@ -57,6 +57,25 @@
       "exports": ["prompt", "markdown"]
     },
     {
+      "id": "architecture-viewer",
+      "category": "code-review",
+      "title": "Architecture Viewer",
+      "when_to_use": "Show the modules a change touches and their immediate callers and callees as a graph, with rule violations drawn red and each touched module's interface delta beside it. Reach for it when a reviewer needs to see where a change sits in the codebase before reading the diff; a whole-repository view is available on demand.",
+      "stage": "draft-pr",
+      "trigger": {
+        "any_of": [
+          "brownfield_change"
+        ]
+      },
+      "source": {
+        "origin": "repository"
+      },
+      "status": "planned",
+      "exports": [
+        "markdown"
+      ]
+    },
+    {
       "id": "pr-writeup",
       "category": "code-review",
       "title": "Pull Request Write-up",
