@@ -15,8 +15,9 @@ table's slot command runs it first, so no operator-supplied executable is
 ever spawned from plugin Python.
 
 Exit 0 when every checked function is within both ceilings, 1 on any
-violation, 2 when a tool is missing or its output cannot be parsed. An empty
-path list checks nothing and exits 0.
+violation, 2 when a tool is missing or its output cannot be parsed. At least
+one path is required: an empty list is a usage error (exit 2), never a pass.
+The caller decides what an empty change set means and records it.
 """
 
 from __future__ import annotations
@@ -208,7 +209,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--eslint-json", help="pre-generated `eslint --format json` output")
     parser.add_argument("--coverage-json", help="coverage report to read (coverage.py JSON; Istanbul coverage-final.json, default coverage/coverage-final.json)")
     parser.add_argument("--report", help="write the full JSON report to this file")
-    parser.add_argument("paths", nargs="*", help="changed source files; empty checks nothing and passes")
+    parser.add_argument("paths", nargs="+", help="source files to check; at least one is required")
     return parser.parse_args(argv)
 
 
@@ -216,6 +217,9 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
     cwd = Path.cwd()
     paths = [Path(p) for p in args.paths if p.strip()]
+    if not paths:
+        print("crap-score: no paths given; an empty list is not a pass", file=sys.stderr)
+        return 2
     report: dict[str, Any] = {
         "language": args.language,
         "ceiling": args.ceiling,
@@ -224,26 +228,23 @@ def main(argv: list[str] | None = None) -> int:
         "violations": [],
         "functions": [],
     }
-    if paths:
-        try:
-            functions = python_functions(args, paths, cwd) if args.language == "python" else typescript_functions(args, paths, cwd)
-        except ToolError as exc:
-            print(f"crap-score: {exc}", file=sys.stderr)
-            return 2
-        for fn in functions:
-            fn["crap"] = round(crap(fn["complexity"], fn["coverage"]), 2)
-            fn["coverage"] = round(fn["coverage"], 4)
-            reasons = []
-            if fn["complexity"] > args.complexity_ceiling:
-                reasons.append(f"complexity {fn['complexity']} > {args.complexity_ceiling}")
-            if fn["crap"] > args.ceiling:
-                reasons.append(f"CRAP {fn['crap']} > {args.ceiling:g}")
-            if reasons:
-                report["violations"].append({**fn, "reasons": reasons})
-        report["functions"] = functions
-        report["checked"] = len(functions)
-    else:
-        report["note"] = "no paths given; nothing checked"
+    try:
+        functions = python_functions(args, paths, cwd) if args.language == "python" else typescript_functions(args, paths, cwd)
+    except ToolError as exc:
+        print(f"crap-score: {exc}", file=sys.stderr)
+        return 2
+    for fn in functions:
+        fn["crap"] = round(crap(fn["complexity"], fn["coverage"]), 2)
+        fn["coverage"] = round(fn["coverage"], 4)
+        reasons = []
+        if fn["complexity"] > args.complexity_ceiling:
+            reasons.append(f"complexity {fn['complexity']} > {args.complexity_ceiling}")
+        if fn["crap"] > args.ceiling:
+            reasons.append(f"CRAP {fn['crap']} > {args.ceiling:g}")
+        if reasons:
+            report["violations"].append({**fn, "reasons": reasons})
+    report["functions"] = functions
+    report["checked"] = len(functions)
     text = json.dumps(report, indent=2, sort_keys=True)
     if args.report:
         Path(args.report).write_text(text + "\n", encoding="utf-8")

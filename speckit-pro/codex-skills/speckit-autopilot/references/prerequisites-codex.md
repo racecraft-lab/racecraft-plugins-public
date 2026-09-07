@@ -237,9 +237,10 @@ Read the workflow file's Prerequisites table. If already
    check (typecheck, test suite, build, lint). For code review
    items (KISS, YAGNI, SOLID), mark `Verified` — these are
    validated during implementation.
-3. Run every populated quality-gate slot from Step 0.11 with an
-   empty `{paths}` (only `DEPENDENCY_RULES` does real work here)
-   and record the baseline in the Quality Gates table
+3. Record the G0 baseline for every populated quality-gate slot
+   per the Step 0.11 rule: `COMPLEXITY` on the whole tracked
+   source tree (a measurement; only exit 2 blocks), `MUTATION`
+   as `deferred`, `DEPENDENCY_RULES` as a real blocking run
 4. Update the workflow file's table with results and baselines
 5. If any check or populated gate fails, STOP — do not proceed
    to Phase 1
@@ -350,13 +351,37 @@ filled at every run:
   file.
 - `{paths}`: the changed source files of the detected language,
   tests excluded, from `git diff --name-only --diff-filter=AM
-  <base>...HEAD`. An empty list checks nothing and passes. At G0
-  there is no diff, so `COMPLEXITY` and `MUTATION` pass vacuously
-  and only `DEPENDENCY_RULES` runs, against the whole graph.
+  <base>...HEAD`. When that list is empty (a tests-only phase
+  group, a docs-only spec), do not run `COMPLEXITY` or `MUTATION`;
+  record `n/a: no source files changed` for that run. Never
+  run a slot with an empty `{paths}`: `crap-score.py` refuses an
+  empty list, and the shipped mutation commands would mutate the
+  whole tree or fail on a dangling flag.
 
-**A populated slot that fails blocks**, at G0, at every
-phase-group verification, and at final verification. It is a
-red gate, not a warning to note and move past.
+**G0 is a measurement, never a vacuous pass.** There is no diff
+yet, so each slot records one of these in the `G0 baseline`
+column:
+
+- `COMPLEXITY`: run the slot command with `{paths}` = every
+  tracked source file of the detected language, tests excluded
+  (`git ls-files` filtered by the language's extensions, minus
+  the same test paths the diff rule excludes). Record
+  `baseline: <checked> checked, <over> over ceiling`. Exit 1
+  means pre-existing debt and is recorded, not a block; exit 2
+  (tool missing, output unparseable) blocks G0 because the slot
+  cannot run.
+- `MUTATION`: record `deferred: runs on the spec diff at final
+  verification`. Whole-tree mutation is unbounded and is never
+  run at G0.
+- `DEPENDENCY_RULES`: a real run against the whole graph. Any
+  failure blocks G0.
+
+**A populated slot that fails blocks** at every phase-group
+verification and at final verification, and at G0 for
+`DEPENDENCY_RULES` and for any exit 2. It is a red gate, not a
+warning to note and move past. The final table shows the
+`COMPLEXITY` baseline next to the diff result so the delta is
+visible.
 
 **Missing tool, one question per tool per repository.** For each
 populated slot with `tool_present: false`, look for a recorded

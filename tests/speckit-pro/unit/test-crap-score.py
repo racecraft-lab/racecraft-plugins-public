@@ -43,9 +43,14 @@ class CrapScoreTests(unittest.TestCase):
               "--coverage-json", f"{FIXTURES}/coverage-istanbul.json")
         tight = ("--ceiling", "30", "--complexity-ceiling", "8")
 
-        with self.subTest(msg="empty path list checks nothing and passes"):
-            code, report, _ = run("--language", "python", *tight, "--")
-            self.assertEqual((0, 0, []), (code, report["checked"], report["violations"]))
+        with self.subTest(msg="empty path list is a usage error, never a pass"):
+            code, _, stderr = run("--language", "python", *tight, "--")
+            self.assertEqual(2, code)
+            self.assertIn("required", stderr)
+        with self.subTest(msg="blank-only paths are refused, never a pass"):
+            code, _, stderr = run("--language", "python", *tight, "--", " ")
+            self.assertEqual(2, code)
+            self.assertIn("not a pass", stderr)
 
         with self.subTest(msg="python: methods are flattened out of classes and CRAP uses line coverage"):
             code, report, stderr = run(*py, *tight, "--", f"{FIXTURES}/sample.py")
