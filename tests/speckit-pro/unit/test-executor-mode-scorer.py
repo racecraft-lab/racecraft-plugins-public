@@ -84,6 +84,27 @@ class ExecutorModeScorerTests(unittest.TestCase):
                 self.assertEqual(0, proc.returncode, proc.stderr)
                 self.assertIn("function_first vs strict: loses", proc.stdout)
                 self.assertEqual("1.0", json.loads(out.read_text())["schema_version"])
+        with self.subTest(msg="catalog modes must be an object, not a list of names"):
+            with tempfile.TemporaryDirectory() as tmp:
+                bad = Path(tmp) / "catalog.json"
+                bad.write_text(json.dumps({**catalog, "modes": list(scorer.MODES)}))
+                with self.assertRaises(scorer.InputError):
+                    scorer.load_catalog(bad)
+        good = {"case_id": "queue-public-api", "mode": "strict", "seed": 1, "mutation_score": 74.0,
+                "wall_seconds": 10.0, "review_findings": 2, "gate_iterations": 1}
+        for label, patch in {
+            "mutation_score above 100": {"mutation_score": 101},
+            "negative wall_seconds": {"wall_seconds": -1},
+            "fractional review_findings": {"review_findings": 1.5},
+            "boolean gate_iterations": {"gate_iterations": True},
+            "negative seed": {"seed": -1},
+            "fractional seed": {"seed": 1.0},
+        }.items():
+            with self.subTest(msg=f"result domain rejected: {label}"):
+                with tempfile.TemporaryDirectory() as tmp:
+                    (Path(tmp) / "r.json").write_text(json.dumps({**good, **patch}))
+                    with self.assertRaises(scorer.InputError):
+                        scorer.load_results(Path(tmp), {"queue-public-api"})
         with self.subTest(msg="CLI exits 1 and names a malformed result document"):
             with tempfile.TemporaryDirectory() as tmp:
                 (Path(tmp) / "bad.json").write_text(json.dumps({"case_id": "queue-public-api", "mode": "strict"}))
