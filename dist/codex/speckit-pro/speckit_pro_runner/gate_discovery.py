@@ -26,6 +26,7 @@ SCHEMA_VERSION = "1.0"
 LANGUAGES = ("python", "typescript")
 SLOTS = ("COMPLEXITY", "MUTATION", "DEPENDENCY_RULES")
 SIGNAL_KINDS = ("file",)
+_DRIVE_PREFIX_RE = re.compile(r"^[A-Za-z]:")
 ROW_FIELDS = ("language", "slot", "signal", "tool", "install", "command")
 PLACEHOLDERS = frozenset(
     {"ceiling", "complexity_ceiling", "floor", "survival_ceiling", "rules_path", "paths"}
@@ -107,8 +108,15 @@ def _validate_signal(prefix: str, signal: Any, problems: list[str]) -> str | Non
     if not isinstance(path, str) or not path.strip():
         problems.append(f"{prefix}.signal.path: must be a non-empty string")
         return None
-    if path.startswith("/") or ".." in path.split("/"):
-        problems.append(f"{prefix}.signal.path: must be repository-relative without '..'")
+    if (
+        path.startswith("/")
+        or "\\" in path
+        or _DRIVE_PREFIX_RE.match(path)
+        or ".." in path.split("/")
+    ):
+        problems.append(
+            f"{prefix}.signal.path: must be repository-relative with '/' separators, no drive prefix, and no '..'"
+        )
         return None
     return path
 

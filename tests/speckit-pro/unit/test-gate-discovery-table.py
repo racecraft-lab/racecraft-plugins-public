@@ -96,6 +96,9 @@ class GateDiscoveryTableTests(unittest.TestCase):
             "signal unknown field": mutated(signal={"kind": "file", "path": "a", "glob": "*"}),
             "signal absolute path": mutated(signal={"kind": "file", "path": "/etc/passwd"}),
             "signal parent segment": mutated(signal={"kind": "file", "path": "../x"}),
+            "signal windows drive path": mutated(signal={"kind": "file", "path": "C:\\repo\\pyproject.toml"}),
+            "signal backslash traversal": mutated(signal={"kind": "file", "path": "..\\x"}),
+            "signal backslash separator": mutated(signal={"kind": "file", "path": "a\\b"}),
             "unknown placeholder": mutated(command="tool {bogus}"),
         }
         for label, table in negatives.items():
