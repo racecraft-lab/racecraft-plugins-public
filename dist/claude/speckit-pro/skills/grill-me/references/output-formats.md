@@ -68,8 +68,8 @@ stop_reason: "natural" | "user-ended" | "soft-cap" | "hard-cap"
 
 ## Open Questions
 - **What:** <deferred decision>
-  **Why deferred:** <reason, or deferred-with-default plus the user's stated constraint>
-  **Default adopted:** <choice; deferred-with-default items only>
+  **Why deferred:** <reason; for a "you decide" answer, the literal marker `deferred-with-default:` followed by the user's stated constraint>
+  **Default adopted:** <choice; present only when the Why deferred line carries the marker, omitted otherwise>
   **Suggested next step:** <resolution path>
 
 ## Recommended Next Step
@@ -82,7 +82,9 @@ Verification Gates sections are always present; each entry cites the question
 number that resolved it or the evidence that made a question unnecessary. Write
 `none` in Terms when no term diverges. Record an accepted slice split in Goals,
 a deferred split in Open Questions, and recommendation evidence in the Q&A
-entry. Keep the document factual and Markdown-only.
+entry. A deferred-with-default item is marked only by the literal
+`deferred-with-default:` prefix on its Why deferred line and is the only kind of
+Open Question that carries a Default adopted line. Keep the document factual and Markdown-only.
 
 The closing message reports the path. Standalone mode recommends the applicable
 roadmap or `speckit-scaffold-spec <SPEC-ID>` step; setup mode returns Goals,
