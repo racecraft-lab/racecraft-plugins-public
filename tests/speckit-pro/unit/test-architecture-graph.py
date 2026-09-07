@@ -78,6 +78,8 @@ class ArchitectureGraphTests(unittest.TestCase):
             "touched flag on an untouched node": mutated(lambda g: g["nodes"][1].update(touched=True)),
             "edge to unknown node": mutated(lambda g: g["edges"].append({"from": "src/queue/api.py", "to": "ghost.py"})),
             "rule on a valid edge": mutated(lambda g: g["edges"][0].update(rule="x")),
+            "invalid edge without a rule": mutated(lambda g: g["edges"][0].update(valid=False)),
+            "invalid edge with a blank rule": mutated(lambda g: g["edges"][0].update(valid=False, rule=" ")),
             "touched id that is not a node": mutated(lambda g: g["scope"]["touched"].append("missing.py")),
         }
         for label, data in negatives.items():
