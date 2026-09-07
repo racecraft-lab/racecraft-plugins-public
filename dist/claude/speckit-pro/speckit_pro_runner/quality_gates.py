@@ -103,6 +103,8 @@ def validate(data: Any) -> list[str]:
             measured = basis.get("measured_functions")
             if "measured_functions" in basis and (not _is_int(measured) or measured < 0):
                 problems.append("basis.measured_functions: must be an integer >= 0")
+            if "recorded" in basis and (not isinstance(basis["recorded"], str) or not basis["recorded"].strip()):
+                problems.append("basis.recorded: must be a non-empty string")
     return problems
 
 
