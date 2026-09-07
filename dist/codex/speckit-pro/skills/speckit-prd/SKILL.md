@@ -1,6 +1,6 @@
 ---
 name: speckit-prd
-description: "Collaboratively create or update a lean PRD, its 1:1 technical-roadmap SPEC catalog, and a roadmap-MOC home note. Use when an active user asks to write a PRD, create a product requirements document, turn an idea or brief into a PRD and roadmap, plan a product, or invokes $speckit-prd. Read-only workflow status and next-spec recommendations belong to $speckit-status. Ask one grounded decision at a time, then hand off the resulting roadmap to $speckit-scaffold-spec. Not for per-spec scoping, worktree preparation, or general SDD coaching."
+description: "Collaboratively create or update a lean PRD, its 1:1 technical-roadmap SPEC catalog, and a roadmap-MOC home note. Use when an active user asks to write a PRD, create a product requirements document, turn an idea or brief into a PRD and roadmap, plan a product, or invokes $speckit-prd. Read-only workflow status and next-spec recommendations belong to $speckit-status. Roadmap-only decomposition or dependency planning from an existing PRD, without creating or updating the PRD, belongs to $speckit-coach. Ask one grounded decision at a time, then hand off the resulting roadmap to $speckit-scaffold-spec. Not for per-spec scoping, worktree preparation, or general SDD coaching."
 ---
 
 # SpecKit PRD

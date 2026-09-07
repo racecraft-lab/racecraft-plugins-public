@@ -1,6 +1,6 @@
 ---
 name: grill-me
-description: "Run an interactive, one-question-at-a-time design interview before SpecKit specification work and produce a Design Concept record. Use when an active user requests Grill Me—for example “grill me,” “interview me about,” “walk the design tree,” or “produce a Design Concept”—or invokes $grill-me, or when interactive $speckit-scaffold-spec delegates its required interview. SDD methodology, checklist selection, and gate guidance without a requested design interview belong to $speckit-coach. Recommend one grounded answer first for every consequential choice. Not for autonomous, background, CI, autopilot, or subagent execution."
+description: "Run an interactive, one-question-at-a-time design interview before SpecKit specification work and produce a Design Concept record. Use when an active user requests Grill Me—for example “grill me,” “interview me about,” “walk the design tree,” or “produce a Design Concept”—or invokes $grill-me, or when interactive $speckit-scaffold-spec delegates its required interview. SPEC setup, worktree creation, and workflow population belong to $speckit-scaffold-spec; a setup request alone is not an interview delegation. SDD methodology, checklist selection, and gate guidance without a requested design interview belong to $speckit-coach. Recommend one grounded answer first for every consequential choice. Not for autonomous, background, CI, autopilot, or subagent execution."
 ---
 
 # Grill Me
