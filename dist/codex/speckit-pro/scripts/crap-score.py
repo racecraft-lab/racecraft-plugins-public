@@ -49,6 +49,16 @@ def require_tool(name: str) -> None:
         raise ToolError(f"tool not found on PATH: {name}")
 
 
+def local_eslint(cwd: Path) -> bool:
+    """True when the project installed ESLint under ``node_modules/.bin``.
+
+    Node projects rarely put ESLint on PATH, so the local binary is preferred
+    and PATH is the fallback. The two spellings stay literal so the argv is
+    static for the plugin confinement guard.
+    """
+    return (cwd / "node_modules" / ".bin" / "eslint").is_file()
+
+
 def load_json(source: Path | str) -> Any:
     try:
         text = Path(source).read_text(encoding="utf-8") if isinstance(source, Path) else source
@@ -144,9 +154,14 @@ def typescript_functions(args: argparse.Namespace, paths: list[Path], cwd: Path)
     if args.eslint_json:
         eslint = load_json(Path(args.eslint_json))
     else:
-        require_tool("eslint")
+        local = local_eslint(cwd)
+        if not local:
+            require_tool("eslint")
         result = subprocess.run(
-            ["eslint", "--format", "json", "--rule", "complexity: [warn, {max: 0}]", "--", *map(str, paths)],
+            [
+                "node_modules/.bin/eslint" if local else "eslint",
+                "--format", "json", "--rule", "complexity: [warn, {max: 0}]", "--", *map(str, paths),
+            ],
             cwd=cwd, capture_output=True, text=True, shell=False, check=False,
         )
         if result.returncode > 1:
@@ -216,7 +231,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
     cwd = Path.cwd()
-    paths = [Path(p) for p in args.paths if p.strip()]
+    paths = [Path(p.strip()) for p in args.paths if p.strip()]
     if not paths:
         print("crap-score: no paths given; an empty list is not a pass", file=sys.stderr)
         return 2

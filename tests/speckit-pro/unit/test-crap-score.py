@@ -51,6 +51,10 @@ class CrapScoreTests(unittest.TestCase):
             code, _, stderr = run("--language", "python", *tight, "--", " ")
             self.assertEqual(2, code)
             self.assertIn("not a pass", stderr)
+        with self.subTest(msg="surrounding whitespace on a path is ignored"):
+            code, report, _ = run(*py, *tight, "--", f"  {FIXTURES}/sample.py ")
+            self.assertEqual(1, code)
+            self.assertEqual({"simple", "method", "tangled"}, {f["name"] for f in report["functions"]})
 
         with self.subTest(msg="python: methods are flattened out of classes and CRAP uses line coverage"):
             code, report, stderr = run(*py, *tight, "--", f"{FIXTURES}/sample.py")

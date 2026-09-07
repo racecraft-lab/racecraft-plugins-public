@@ -22,7 +22,7 @@ did not settle is listed under **Unverified**.
 | Question | Decision |
 | --- | --- |
 | Model checker | TLC from `tla2tools.jar` (tlaplus/tlaplus release v1.7.4 or the 1.8.0 nightly), explicit-state, bounded by the `.cfg`. Apalache is opt-in per model, not a default. |
-| Runtime | Java 11+ for TLC. Apalache needs Java 21+. One JDK 21 satisfies both. |
+| Runtime | Java 11+ for TLC. Apalache targets Java 25 and runs on Java 21 or newer, per its installation docs. One JDK 21 satisfies both. |
 | Where it runs | GitHub-hosted `ubuntu-latest` with `actions/setup-java`, in this repository and in any public consumer. A self-hosted HAL runner is reserved for private consumer repositories, never for a public one. |
 | Not decorative | Every model ships with a trace-validation harness: the implementation emits a JSON trace of the modelled actions and TLC checks that trace against the spec. A model with no trace harness is `advisory`, never `populated`. |
 | grill-me | A hybrid branch: the skill scans the spec and surrounding code for concurrency signals, presents the evidence, and the operator confirms, corrects, or extends. A confirmed signal set adds a Formal Model section to the plan and populates `FORMAL_CHECK`. |
