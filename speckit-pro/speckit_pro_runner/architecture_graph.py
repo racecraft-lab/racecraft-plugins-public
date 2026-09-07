@@ -140,6 +140,8 @@ def validate_graph(data: Any) -> list[str]:
                 problems.append(f"{prefix}.valid: must be a boolean")
             if "rule" in edge and (edge.get("valid") is not False or not _non_empty(edge["rule"])):
                 problems.append(f"{prefix}.rule: only allowed, as non-empty text, when valid is false")
+            if edge.get("valid") is False and "rule" not in edge:
+                problems.append(f"{prefix}.rule: required when valid is false so the page can name the violation")
             src, dst = edge.get("from"), edge.get("to")
             if src in touched:
                 neighbours.add(dst)

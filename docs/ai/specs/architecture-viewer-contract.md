@@ -21,7 +21,9 @@ Validator: `speckit_pro_runner/architecture_graph.py` (standard library,
 `python3 -m speckit_pro_runner.architecture_graph graph.json`, exit 0 or 1
 with one violation per line). The validator also enforces the two rules a
 schema cannot state: every edge endpoint is a node id, and a `pr`-scoped
-graph holds only touched nodes and their one-hop neighbours.
+graph holds only touched nodes and their one-hop neighbours. An edge with
+`valid: false` must carry a `rule`, and no other edge may, so the page can
+always name the violation.
 
 ```json
 {

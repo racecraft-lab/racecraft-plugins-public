@@ -57,8 +57,11 @@
           "from": { "type": "string", "minLength": 1 },
           "to": { "type": "string", "minLength": 1 },
           "valid": { "type": "boolean", "description": "False when the DEPENDENCY_RULES tool flagged the edge; the viewer draws it red." },
-          "rule": { "type": "string", "minLength": 1, "description": "The violated rule or contract name when valid is false." }
-        }
+          "rule": { "type": "string", "minLength": 1, "description": "The violated rule or contract name; required when valid is false, absent otherwise." }
+        },
+        "if": { "properties": { "valid": { "const": false } }, "required": ["valid"] },
+        "then": { "required": ["rule"] },
+        "else": { "not": { "required": ["rule"] } }
       }
     }
   }
