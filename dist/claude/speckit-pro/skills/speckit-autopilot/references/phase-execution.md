@@ -207,8 +207,11 @@ it does NOT invoke a `/speckit-*` command.
    numbered principles
 2. Run automated checks using PROJECT_COMMANDS from Step
    0.11 (BUILD, TYPECHECK, LINT, UNIT_TEST, INTEGRATION_TEST),
-   then every populated quality-gate slot with an empty
-   `{paths}`; only `DEPENDENCY_RULES` does real work at G0
+   then record the G0 baseline for every populated quality-gate
+   slot per the Step 0.11 rule: `COMPLEXITY` on the whole
+   tracked source tree (a measurement; only exit 2 blocks),
+   `MUTATION` as `deferred`, `DEPENDENCY_RULES` as a real
+   blocking run
 3. Verify structural patterns documented in CLAUDE.md
    (e.g., source code organization, module boundaries)
 4. Record baselines in the workflow file's Prerequisites
@@ -216,8 +219,9 @@ it does NOT invoke a `/speckit-*` command.
 5. Set the "Constitution Check" summary line
 
 **Gate:** G0 — `quality_gates.status` from Step 0.11 must be
-`present`, and all automated checks and every populated
-quality-gate slot must pass. If any fail, STOP; a missing or
+`present`, all automated checks must pass, `DEPENDENCY_RULES`
+must pass, and no slot may exit 2. A `COMPLEXITY` baseline over
+the ceiling is recorded, not a block. If any fail, STOP; a missing or
 invalid `.specify/quality-gates.json` stops with the Step 0.11
 message naming the file and the coach flow.
 
@@ -2566,7 +2570,9 @@ For each phase group in the helper's runs (grouped by run.group):
     Command(BUILD) && Command(TYPECHECK) && Command(LINT) &&
     Command(UNIT_TEST) &&
     Command(COMPLEXITY) && Command(DEPENDENCY_RULES)
-      with {paths} = files this group changed (populated slots only)
+      with {paths} = source files this group changed (populated slots only);
+      when that list is empty, skip both and record
+      `n/a: no source files changed`
     If any fail → dispatch fix agent, re-run. A populated
     quality-gate slot failing blocks like a red test.
 
@@ -2638,8 +2644,11 @@ Run FULL_VERIFY:
   Command(UNIT_TEST) && Command(INTEGRATION_TEST)
 Then every populated quality-gate slot on the whole diff:
   Command(COMPLEXITY) && Command(MUTATION) && Command(DEPENDENCY_RULES)
-    with {paths} = changed source files, origin/main...HEAD
-  Any failure blocks. Record each result in the Quality Gates table.
+    with {paths} = changed source files, origin/main...HEAD;
+    when that list is empty, skip COMPLEXITY and MUTATION and
+    record `n/a: no source files changed`
+  Any failure blocks. Record each result in the Quality Gates table
+  next to its G0 baseline.
 ```
 
 When MUTATION is populated, run the hardener once per spec between the
