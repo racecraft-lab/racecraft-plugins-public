@@ -7,6 +7,7 @@ one case drives the real git path against a scratch repository.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import subprocess
 import sys
@@ -23,6 +24,9 @@ from test_result import run_counted  # noqa: E402
 
 SCRIPT = REPO_ROOT / "speckit-pro" / "scripts" / "ubiquitous-language-lint.py"
 FIXTURES = REPO_ROOT / "tests" / "speckit-pro" / "unit" / "fixtures" / "ubiquitous-language"
+_spec = importlib.util.spec_from_file_location("ubiquitous_language_lint", SCRIPT)
+lint = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(lint)
 ENV = {"PYTHONDONTWRITEBYTECODE": "1", "PATH": "/usr/bin:/bin", "HOME": "/nonexistent",
        "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "support@openai.com",
        "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "support@openai.com",
@@ -55,6 +59,24 @@ class UbiquitousLanguageLintTests(unittest.TestCase):
             self.assertEqual({"file": "src/api.ts", "line": 6, "identifier": "scheduleReminder"}, report["unmapped"][1])
         with self.subTest(msg="note summarises the count"):
             self.assertEqual("2 of 6 declared identifiers map to no term", report["note"])
+        with self.subTest(msg="a term's Identifiers words do not map other identifiers"):
+            terms = lint.parse_terms("| Term | Meaning here | Identifiers |\n|---|---|---|\n| Invoice | x | `invoice_ledger` |\n")
+            self.assertIsNone(lint.mapped_term("LedgerWriter", terms))
+            self.assertEqual("Invoice", lint.mapped_term("invoice_ledger", terms))
+        with self.subTest(msg="an unreadable terms document is reported, not raised"):
+            with tempfile.TemporaryDirectory() as tmp:
+                bad = Path(tmp) / "terms.md"
+                bad.write_bytes(b"\xff\xfe| Term |")
+                code, report = run("--terms", str(bad), "--diff", str(FIXTURES / "sample.diff"))
+                self.assertEqual(0, code)
+                self.assertIn("unreadable", report["note"])
+        with self.subTest(msg="an undecodable diff file is reported, not raised"):
+            with tempfile.TemporaryDirectory() as tmp:
+                bad = Path(tmp) / "bad.diff"
+                bad.write_bytes(b"\xff\xfe+++ b/x.py")
+                code, report = run("--terms", str(FIXTURES / "terms.md"), "--diff", str(bad))
+                self.assertEqual(0, code)
+                self.assertIn("diff unavailable", report["note"])
         with self.subTest(msg="missing terms document lints nothing and still exits 0"):
             code, report = run("--terms", str(FIXTURES / "absent.md"), "--diff", str(FIXTURES / "sample.diff"))
             self.assertEqual((0, "no terms document; nothing linted", 0), (code, report["note"], report["declared"]))

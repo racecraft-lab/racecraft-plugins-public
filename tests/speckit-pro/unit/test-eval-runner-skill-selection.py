@@ -351,6 +351,12 @@ def runtime_contract_parity_violations() -> list[str]:
     violations: list[str] = []
     pairs = (
         (
+            "upgrade",
+            PLUGIN_ROOT / "skills" / "speckit-upgrade" / "SKILL.md",
+            PLUGIN_ROOT / "codex-skills" / "speckit-upgrade" / "SKILL.md",
+            ("migrate-structure", "relocate-process-artifacts", "promotion_status=deferred", "no authoritative request"),
+        ),
+        (
             "scaffold",
             PLUGIN_ROOT / "skills" / "speckit-scaffold-spec" / "SKILL.md",
             PLUGIN_ROOT / "codex-skills" / "speckit-scaffold-spec" / "SKILL.md",

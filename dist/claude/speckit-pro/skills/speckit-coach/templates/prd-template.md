@@ -109,8 +109,9 @@
   creates, changes, or removes, so reviewers and downstream specs see the
   blast radius before any plan exists. Keep it at the WHAT level: a name and a
   one-line delta, not a design. A Feature with no such change still gets a
-  row that says so explicitly; "no module or interface changes" is a valid,
-  reviewable answer, an empty section is not. The roadmap copies each
+  row that says so explicitly; "No module or interface changes." is a valid,
+  reviewable answer, an empty section is not. Use that exact phrase: the
+  roadmap and plan copy it verbatim. The roadmap copies each
   Feature's rows into its SPEC entry, and speckit-scaffold-spec carries them
   into plan.md.
 -->
@@ -119,7 +120,7 @@
 |---|---|---|---|
 | {{FEATURE_1_NAME}} | <!-- e.g., `billing/invoices` --> | <!-- new / changed / removed --> | <!-- one line: what changes for callers --> |
 | {{FEATURE_1_NAME}} | <!-- e.g., `POST /invoices` --> | <!-- changed --> | <!-- e.g., adds optional `due_at` --> |
-| {{FEATURE_2_NAME}} | — | no module or interface changes | <!-- why: e.g., config and copy only --> |
+| {{FEATURE_2_NAME}} | — | No module or interface changes. | <!-- why: e.g., config and copy only --> |
 
 ## 6. Constraints
 

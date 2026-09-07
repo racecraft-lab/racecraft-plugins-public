@@ -2571,13 +2571,43 @@ For each phase group in the helper's runs (grouped by run.group):
     Command(UNIT_TEST) &&
     Command(COMPLEXITY) && Command(DEPENDENCY_RULES)
       with {paths} = source files this group changed (populated slots only);
-      when that list is empty, skip both and record
-      `n/a: no source files changed`
+      when that list is empty, skip COMPLEXITY and record
+      `n/a: no source files changed` for it; DEPENDENCY_RULES
+      takes no {paths} and still runs
     If any fail → dispatch fix agent, re-run. A populated
     quality-gate slot failing blocks like a red test.
 
   TaskUpdate: "<Phase 7: group name>" → completed
 ```
+
+#### Never Yield With Nothing In Flight
+
+**The loop advances only while work is outstanding.** A background subagent's
+result reaches the orchestrator as a completion notification on a later turn,
+which is what wakes the run and lets Step 3 continue. That wake-up exists only
+while at least one dispatch is still running: a turn that ends with nothing
+outstanding and no new dispatch has nothing left to notify it, and the phase
+stops there with tasks still pending.
+
+**So, before ending any turn in Step 3, check two things**: whether a dispatch is
+still running, and whether the run list still holds work. If both are false and
+tasks remain, **dispatch the next run in that same turn.** Do not end the turn on
+a status summary. The most dangerous moment is the one that looks most like
+progress: the last outstanding worker of a run has just reported, its entry is
+appended, its verification passed, and its commit landed. That is a natural place
+to write a paragraph about what happens next, and it is exactly the place where
+writing that paragraph instead of dispatching ends the phase.
+
+**A summary is not a step.** Report to the operator when a slice or a phase
+group closes, and put the dispatch for the next run in the same turn as the
+report. The operator is not a scheduler: a stage resolved for autonomous
+execution runs to its terminal step, and handing control back mid-phase is a
+stop, whatever the accompanying prose says.
+
+**The two legitimate reasons to yield mid-phase** are a dispatch still running,
+which will wake the run, and a genuine stop condition this reference names, which
+is reported through the run report. Nothing else qualifies. Waiting on a worker
+is not a stop; neither is a compaction (SKILL.md §Scope).
 
 #### Append Contract: One Entry Per Dispatched Attempt
 
