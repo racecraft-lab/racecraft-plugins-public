@@ -251,7 +251,7 @@ Row fields:
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `language` | `python` or `typescript` | Closed enum. New languages are new enum values plus rows. |
-| `slot` | `COMPLEXITY`, `MUTATION`, or `DEPENDENCY_RULES` | Closed enum. `FORMAL_CHECK` joins when the item 9 spike lands. |
+| `slot` | `COMPLEXITY`, `MUTATION`, or `DEPENDENCY_RULES` | Closed enum. `FORMAL_CHECK` joins in the wiring layer that follows the [formal check decision record](./formal-check-decision.md). |
 | `signal` | object `{ "kind": "file", "path": "<repo-relative path>" }` | Detection evidence. A row matches when the file exists. One kind for now; new kinds are schema changes. |
 | `tool` | string | Human name used in the missing-tool prompt and the Prerequisites table. |
 | `install` | string | Exact install command. Needed by the "install" answer in the missing-tool prompt. |
