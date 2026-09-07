@@ -109,11 +109,11 @@ did not settle is listed under **Unverified**.
   jobs. Per-job CPU and memory are a small fixed slice of the host, not
   the host itself; the exact figures, labels, and image are recorded in
   the private infrastructure repository, not here.
-- **Public repository rule.** GitHub's hardening guide states: "Self-hosted
-  runners should almost never be used for public repositories on GitHub,
-  because any user can open pull requests against the repository and
-  compromise the environment", and asks that a reused host give a JIT
-  runner "a clean environment". The pool's destroy-after-job VMs are that
+- **Public repository rule.** GitHub's hardening guide advises against
+  self-hosted runners for public repositories in almost every case, because
+  any user can open a pull request against the repository and compromise
+  the environment, and it asks that a reused host give a just-in-time runner
+  a clean environment. The pool's destroy-after-job VMs are that
   clean environment, and the runner group's repository access list decides
   which repositories may target it. This repository keeps `FORMAL_CHECK`
   on hosted runners unless the operator admits it to the group; the record
