@@ -27,7 +27,8 @@
               "path": {
                 "type": "string",
                 "minLength": 1,
-                "description": "Repository-relative path whose existence selects the row. No leading slash, no '..' segment."
+                "pattern": "^(?![A-Za-z]:)[^/\\\\][^\\\\]*$",
+                "description": "Repository-relative path whose existence selects the row. '/' separators only: no leading slash, no backslash, no drive prefix, no '..' segment."
               }
             }
           },
