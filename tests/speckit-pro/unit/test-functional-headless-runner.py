@@ -339,7 +339,8 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
         self.assertIn("--json", command)
         self.assertIn("--ephemeral", command)
         self.assertNotIn("--sandbox", command)
-        self.assertIn("--strict", command)
+        self.assertIn("--strict-config", command)
+        self.assertNotIn("--strict", command)
         self.assertIn('default_permissions="functional-fixture"', command)
         permissions = next(item for item in command if item.startswith("permissions.functional-fixture.filesystem="))
         policy = tomllib.loads(permissions)["permissions"]["functional-fixture"]["filesystem"]

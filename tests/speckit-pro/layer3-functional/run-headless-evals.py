@@ -457,7 +457,7 @@ def build_command(
             "exec",
             "--json",
             "--ephemeral",
-            "--strict",
+            "--strict-config",
             "--ignore-user-config",
             "--model",
             model,
