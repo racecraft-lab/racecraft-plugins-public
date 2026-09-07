@@ -59,7 +59,7 @@ verification rules. Report created or updated paths and recommend
 
 - `docs/prd-<slug>.md`: lean PRD with Problem, Goals, Non-goals, Features and
   acceptance criteria, Migration or sequence when applicable, Module and
-  Interface Deltas (required; "no module or interface changes" is an explicit
+  Interface Deltas (required; "No module or interface changes." is an explicit
   valid entry), Constraints, Open Questions, and the 1:1 SPEC Catalog Crosswalk.
 - `docs/ai/specs/<slug>-technical-roadmap.md`: ordered SPEC catalog with Source
   PRD, scope, dependencies, status, reviewability budget, module and interface
