@@ -23,7 +23,7 @@ did not settle is listed under **Unverified**.
 | --- | --- |
 | Model checker | TLC from `tla2tools.jar` (tlaplus/tlaplus release v1.7.4 or the 1.8.0 nightly), explicit-state, bounded by the `.cfg`. Apalache is opt-in per model, not a default. |
 | Runtime | Java 11+ for TLC. Apalache needs Java 21+. One JDK 21 satisfies both. |
-| Where it runs | GitHub-hosted `ubuntu-latest` with `actions/setup-java` by default. The organization's self-hosted pool of ephemeral, single-job virtual machines is the option for a longer run, for repositories its runner group admits; its sizing lives in the private infrastructure repository. |
+| Where it runs | GitHub-hosted `ubuntu-latest` with `actions/setup-java` by default. The organization's self-hosted pool of ephemeral, single-job virtual machines is the option when a model check needs more wall time than the hosted job allows, available only to repositories its runner group admits; its sizing lives in the private infrastructure repository. |
 | Not decorative | Every model ships with a trace-validation harness: the implementation emits a JSON trace of the modelled actions and TLC checks that trace against the spec. A model with no trace harness is `advisory`, never `populated`. |
 | grill-me | A hybrid branch: the skill scans the spec and surrounding code for concurrency signals, presents the evidence, and the operator confirms, corrects, or extends. A confirmed signal set adds a Formal Model section to the plan and populates `FORMAL_CHECK`. |
 | Slot | `FORMAL_CHECK` joins the closed `slot` enum in the discovery table when the wiring layer lands. Its signal file is `specs/<feature>/model/<Name>.cfg`. It runs at final verification only. |
