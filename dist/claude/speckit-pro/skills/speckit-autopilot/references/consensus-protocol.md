@@ -255,18 +255,7 @@ If ROUND_2_QUEUE non-empty:
 
 Stage 3 / Stage 6 (Artifact Edit application) MUST be serial. The
 `Edit` tool modifies spec.md / plan.md / tasks.md; concurrent edits
-to the same file via concurrent Edit calls race. Each Edit is
-~50-200ms, so serial application across N items costs only a few
-seconds — negligible compared to the LLM-bound Stages 1/2/4/5.
-
-### Concurrency observations
-
-- 5 items × 2-3 routed analysts = 10-15 background subagents in
-  ONE turn.
-- If a future use site approaches the platform limit, partition the
-  batch into waves of ≤10 per turn and chain them via additional
-  Stage 1' / Stage 2' rounds. The shipped implementation does not
-  partition by default — single-batch dispatch is the default.
+to the same file via concurrent Edit calls race.
 
 ### Logging requirement
 

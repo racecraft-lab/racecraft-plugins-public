@@ -1,109 +1,117 @@
-# PRD Authoring Protocol
+# PRD authoring protocol
 
-Operational detail for `speckit-prd`. Read this before starting an interview.
-The goal of the session is two consistent artifacts — a lean PRD and a technical
-roadmap whose SPEC catalog is 1:1 with the PRD's Features.
+This platform-neutral protocol turns validated user decisions into a lean PRD,
+a technical roadmap, and a roadmap-MOC. The active SKILL.md owns the Claude or
+Codex interaction mechanism.
 
-## Principles
+## Input and update modes
 
-1. **WHAT before HOW.** The PRD describes the problem, the goals, and the
-   observable behavior. Implementation detail belongs in the roadmap's per-SPEC
-   scope, not the PRD.
-2. **Lean by default.** Capture validated decisions; do not re-run discovery in
-   the document. Delete any template section that does not reduce ambiguity.
-3. **One decision per question.** Each `AskUserQuestion` resolves exactly one
-   branch. Recommendation first, with a one-line rationale, then 1–2 plausible
-   alternatives. Header ≤ 12 chars.
-4. **Features are the unit of decomposition.** Every Feature becomes one SPEC.
-   Keep features small enough to fit a single reviewable SPEC.
+- **Create:** accept an idea, brief, transcript, or interactive description;
+  derive a kebab-case slug and create the three output paths.
+- **Update:** when the user supplies an existing PRD, revise that file in place
+  after confirming its scope. Preserve stable feature, acceptance-criteria, and
+  SPEC identifiers for unchanged work. Issued Feature, acceptance-criteria, and
+  SPEC identifiers are permanently reserved. Never renumber or reuse a retired
+  identifier; allocate every new identifier above all historical use. If its
+  roadmap or roadmap-MOC exists, update it to keep the crosswalk and navigation
+  consistent. Never backfill a missing roadmap-MOC onto a legacy roadmap unless
+  the user asks.
 
-## Interview Branch Taxonomy
+Read applicable project instructions, `.specify/memory/constitution.md`, existing
+roadmaps, prior decisions, and targeted code. Ground each recommendation in real
+evidence; skip questions the input already answers.
 
-Walk branches in priority order — highest `uncertainty × impact` first. Skip a
-branch when the input already answers it; confirm rather than re-ask.
+## Interview
 
-| # | Branch | Question seed | Feeds |
-| --- | --- | --- | --- |
-| 1 | **Problem** | What user-felt pain does this solve, and why now? | §1 |
-| 2 | **Users** | Who experiences it? Which segment matters most for v1? | §1 |
-| 3 | **Goals** | What observable outcome means success? | §2.1 |
-| 4 | **Non-goals** | What are we deliberately NOT doing in this effort? | §2.2 |
-| 5 | **Feature breakdown** | What are the distinct capabilities? Where are the seams? | §3, §4, §7 |
-| 6 | **Sequencing** | What must ship first? What can start in parallel (mock data)? | §4, §7 |
-| 7 | **Acceptance criteria** | For feature X, what observable result proves it works? | §3 AC-N.* |
-| 8 | **Constraints** | Which governance gates / tech limits / NFRs bind this? | §5 |
-| 9 | **Open questions** | What is genuinely unresolved and can wait for clarify? | §6 |
+Ask one question at a time, resolving one decision axis per turn. Put the
+grounded choice first, mark it `(Recommended)`, and offer 1-2 mutually exclusive
+alternatives with concise tradeoffs. Walk the highest impact times uncertainty
+branch first:
 
-### The feature-breakdown branch (most important)
-
-This is where the SPEC catalog is born. Look for natural seams — the same
-signals `speckit-coach` uses for roadmap decomposition:
-
-| Boundary signal | How to split |
+| Branch | PRD result |
 | --- | --- |
-| Different system layers (API vs UI) | One feature/SPEC per layer |
-| Different integrations (search, LLM, payments) | One per integration |
-| Independently shippable user stories | One per story |
-| A component others depend on (shared types, core service) | Foundation feature first |
-| A "wire it all together" step | Integration feature last |
+| Problem, users, and why now | Problem and audience |
+| Outcomes and success | Goals |
+| Explicit scope cuts | Non-goals |
+| Feature boundaries | Features and SPEC crosswalk |
+| Observable proof | Acceptance criteria |
+| Dependencies and release order | Migration and roadmap graph |
+| Governance, technology, and at-risk qualities | Constraints |
+| Deferred decisions | Open Questions |
 
-For each candidate feature, confirm with the user: does it have its own
-acceptance criteria? Could it be reviewed as a single PR? If a feature is too
-large for one reviewable SPEC, split it into two features **now** — the PRD is
-the cheapest place to split.
+Feature boundaries are the key decomposition decision. Each feature must be one
+independently valuable, reviewable, end-to-end vertical slice with its own
+acceptance criteria. Use SPIDR seams (Spike, Path, Interface, Data, Rule) and the
+INVEST bar to split oversized work. A layer-only unit such as all models or all
+UI is not independently valuable; re-slice it through the layers it needs.
 
-## Question Heuristic
+Prefer natural convergence. Also stop when the user ends the interview. Around
+25-30 questions, recommend wrapping up and place remaining unknowns in Open
+Questions. Do not invent a decision.
 
-Ask the question that, if answered, eliminates the most uncertainty about the
-WHAT. Cosmetic questions (naming, wording) are not worth a turn. If you cannot
-form a grounded recommendation, say so in the option description (low
-confidence) and lean on the alternatives.
+## Author or update the PRD
 
-## Stop Conditions
+Use the shared PRD template. Keep WHAT and WHY in the PRD; put implementation
+detail in roadmap scopes. Fill only sections that reduce ambiguity:
 
-- **Preferred:** no critical open questions remain across all branches.
-- **User-driven:** the user selects an "End interview / wrap up" option.
-- **Soft cap:** ~25–30 questions. At the cap, checkpoint with the user and offer
-  to wrap up with current answers; remaining unknowns become Open Questions.
+1. Problem and audience.
+2. Goals and Non-goals.
+3. Features with `AC-N.*` acceptance criteria and a `SPEC-NNN` mapping.
+4. Migration or sequence when applicable.
+5. Constraints.
+6. Open Questions.
+7. A SPEC Catalog Crosswalk that is 1:1 with Features.
 
-## Decomposition Algorithm (PRD → Roadmap SPEC catalog)
+Drop an optional appendix unless a sketch materially resolves ambiguity. Write
+new files to `docs/prd-<slug>.md`; preserve the confirmed path in update mode.
 
-After the PRD draft, expand each Feature into one SPEC. This mirrors
-`speckit-coach`'s technical-roadmap algorithm — defer to it for depth.
+## Author or update the technical roadmap
 
-1. **One SPEC per Feature.** SPEC-00N ⇄ Feature N ⇄ AC-N.*. Keep IDs stable.
-2. **Resolve dependencies.** For each SPEC: can it be built and tested with no
-   other SPEC complete? If not, which must finish first, and why? Can it start
-   on mock data in parallel?
-3. **Order the catalog.** Foundations (shared types, core services) first;
-   integration SPEC last; prefer sequential over deeply nested dependencies.
-4. **Write rich scope.** Each SPEC's scope must be detailed enough to drive
-   `/speckit-specify` directly — name technologies, endpoints, data shapes.
-   "Backend API" is too vague; "POST /alerts endpoint with schema X, persisted
-   to table Y" is right.
-5. **Set the reviewability budget.** Each SPEC must fit a human review budget
-   (see `speckit-coach`'s reviewability contract). If projected scope exceeds it,
-   go back and split the Feature.
-6. **Status + graph.** Mark every SPEC `⏳ Pending`, draw the dependency graph,
-   and confirm the execution order with the user before finalizing.
+Use the shared technical-roadmap template. Map every PRD Feature and its
+acceptance-criteria group to exactly one `SPEC-NNN` entry. Each entry includes:
 
-## Consistency Check (run before handoff)
+- scope detailed enough to seed `/speckit-specify`;
+- dependencies and enables, priority, and pending status;
+- the existing Reviewability Budget and Projected reviewable LOC fields;
+- key files or surfaces and `Source PRD: docs/prd-<slug>.md`.
 
-The PRD §3 Features, the PRD §7 crosswalk, and the roadmap SPEC catalog must
-agree on:
+Confirm the dependency graph and execution order with the user before finalizing.
+Preserve unchanged IDs during updates and confirm any feature addition, removal,
+or reorder that would change the mapping.
 
-- **Count** — same number of features and SPECs.
-- **Names** — same feature names.
-- **IDs** — `AC-N.*` ⇄ `SPEC-00N` with no gaps or collisions.
+For each entry, derive user-story or acceptance-criteria groups, touched surfaces,
+functional requirements, and new-versus-modify status. Run runner operation
+`estimate-spec-size` and populate the existing Projected reviewable LOC field.
+A research-only Spike is timeboxed. Treat `warn` as an advisory opportunity to
+split; it never blocks the roadmap. If the operation is unavailable, non-zero,
+empty, or unparseable, leave the estimate absent, note it, and continue.
 
-Any drift means the chain will mis-route at `speckit-scaffold-spec`. Fix it
-before reporting done.
+## Author or update the roadmap-MOC
 
-## File Locations
+For a newly authored PRD and roadmap, create
+`docs/ai/specs/<slug>-roadmap-MOC.md` from the shared roadmap-MOC template. For
+an update, revise an existing home note but honor the legacy no-backfill rule.
 
-- PRD: `docs/prd-<slug>.md`
-- Roadmap: `docs/ai/specs/<slug>-technical-roadmap.md`
+- Derive the editable curated epics zone from roadmap phase or tier groupings
+  without asking new questions. If the catalog is flat, use one `Specs` epic and
+  add an advisory to consider grouping.
+- Set `up:` to a relative Markdown link to `<slug>-technical-roadmap.md`.
+- Preserve exactly the template's empty `GENERATED:INDEX` sentinel pair; do not
+  add PRS or BACKLINKS sentinels or author index rows.
+- Run runner operation `generate-spec-index-write` in apply mode with the
+  consumer project root supplied explicitly. The generator, not this skill,
+  writes normalized SPEC-MOC links and statuses inside the INDEX zone.
+- Add a reciprocal relative link from the technical roadmap to the home note.
+- More than about ten epics produces a one-line advisory, never a block.
 
-These match what `speckit-scaffold-spec` globs for (`**/*technical*roadmap*`,
-`docs/ai/specs/*roadmap*.md`) and the house example layout, so the handoff works
-with no extra configuration.
+Do not change per-spec MOC `up:` fields or the spec-MOC template.
+
+## Verify and hand off
+
+Before reporting success, prove that PRD Features, acceptance-criteria groups,
+the PRD crosswalk, and roadmap entries agree on count, names, and IDs. Confirm
+every roadmap scope can seed `/speckit-specify`, the home note contains its
+curated zone plus generated INDEX, and reciprocal links resolve.
+
+Report every created or updated path. Recommend status inspection followed by
+`speckit-scaffold-spec <SPEC-ID>` for the first ready roadmap entry.

@@ -25,7 +25,7 @@ convention for that path.
 
 Accept any of these:
 
-- a SPEC-ID such as `DOC-007` or `PRSG-014`
+- a SPEC-ID such as `SPEC-007` or `SPEC-014`
 - an active spec directory under `specs/`
 - a workflow file under `docs/ai/specs/.process/`
 - a merged PR URL or number
@@ -57,26 +57,11 @@ Preserve process evidence unless the repository explicitly removes it. In this
 repository, `docs/ai/specs/.process/*` workflow and design files are historical
 evidence and should remain.
 
-## Cleanup Plan
-
-Use `update_plan` for this workflow when the tool is available. A normal plan
-is:
-
-1. Confirm merge provenance and branch safety.
-2. Archive project memory and roadmap state.
-3. Remove completed active spec residue.
-4. Regenerate indexes, reference docs, and generated payloads when affected.
-5. Verify, commit, push, and open the cleanup PR.
-
-Keep exactly one plan item in progress at a time. If the user sends a newer
-instruction while cleanup is underway, let the newer instruction steer the
-remaining work.
-
 ## Archive Edits
 
 Add an archive report under `.specify/memory/archive-reports/` named with the
 date and SPEC-ID, for example
-`2026-06-17-doc-007-post-merge-hygiene.md`. Include:
+`2026-06-17-spec-007-post-merge-hygiene.md`. Include:
 
 - merged PR URL and title
 - merged-at timestamp and merge commit
@@ -120,20 +105,6 @@ scripts, either decouple those references first or stop and report the blocker.
 After removal, run the repository's SpecKit index generator in write mode, then
 run its check mode. The generated MOC or index should no longer point at the
 archived spec directory.
-
-## Plugin And Docs Side Effects
-
-If this cleanup adds or edits plugin skills, agents, hooks, manifests, or
-generated docs references, update the matching validation surfaces in the same
-branch. For this repository that usually means:
-
-- update structural test allowlists when a skill is added
-- add the Codex `agents/openai.yaml` sidecar for Codex skills
-- regenerate docs reference pages when source skill inventories changed
-- rebuild generated plugin payloads when source plugin files changed
-
-Do not leave source and generated payloads out of sync when tests enforce
-payload parity.
 
 ## Safe Parallelism
 
@@ -179,14 +150,10 @@ skipped check and the practical impact.
 
 Commit intentionally after verification. For archive-only cleanup commits and
 PRs, use a lower-case Conventional Commit scope derived from the completed spec
-ID. For example, archive cleanup for `CAR-001` should use
-`docs(car-001): archive post-merge state`, not
-`docs(CAR-001): archive post-merge state`. The repository PR title gate checks
+ID. For example, archive cleanup for `SPEC-001` should use
+`docs(spec-001): archive post-merge state`, not
+`docs(SPEC-001): archive post-merge state`. The repository PR title gate checks
 the final PR title, so apply the same lower-case scope to `gh pr create` or
-`gh pr edit --title`. Use a separate `feat(skills): add archive cleanup
-workflow` commit only when this workflow becomes a plugin skill.
-
-If you stage, commit, push, or create a PR in Codex Desktop, emit the matching
-Codex git directives only after the action succeeds. In the final response,
+`gh pr edit --title`. In the final response,
 include the merged PR provenance, active spec folder removed, archive report
 path, generated files refreshed, verification commands, and remaining risks.

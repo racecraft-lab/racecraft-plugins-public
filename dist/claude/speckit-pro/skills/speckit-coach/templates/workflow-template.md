@@ -6,28 +6,6 @@
 
 ---
 
-## How to Use This Template
-
-1. **Copy this template** to create a new workflow guide:
-
-   ```text
-   cp .github/skills/speckit/templates/workflow-template.md docs/ai/specs/{{SPEC_ID}}-workflow.md
-   ```
-
-2. **Replace placeholders** throughout the document:
-   - `{{SPEC_ID}}` → Your spec identifier (e.g., `SPEC-001`)
-   - `{{SPEC_NAME}}` → Human-readable name (e.g., `User Authentication`)
-   - `{{SPEC_DESCRIPTION}}` → One-line description
-   - `{{BRANCH_NAME}}` → Feature branch name (e.g., `feature/user-auth`)
-
-3. **Populate the prompts** in each phase section with your project-specific details (tech stack, constraints, project structure, checklist domains)
-
-4. **Copy-paste prompts** into your AI coding agent as you execute each phase
-
-5. **Track progress** using the status table below
-
----
-
 ## Design Concept
 
 This workflow file was enriched from a Grill Me interview run during
@@ -71,20 +49,20 @@ it Pending is legitimate and does not make the rows below it read as out of
 order; record the verdict in [Phase 6.5](#phase-65-confidence-gate) when the
 gate runs.
 
-### Phase Gates (SpecKit Best Practice)
+### Phase Gates
 
-Each phase requires **human review and approval** before proceeding:
+Use `references/gate-validation.md` from the installed `speckit-autopilot` skill as the authority for active criteria and escalation behavior.
 
-| Gate | Checkpoint | Approval Criteria |
-|------|------------|-------------------|
-| G1 | After Specify | All user stories clear, no `[NEEDS CLARIFICATION]` markers remain |
-| G2 | After Clarify | Ambiguities resolved, decisions documented |
-| G3 | After Plan | Architecture approved, constitution gates pass, dependencies identified |
-| G4 | After Checklist | All `[Gap]` markers addressed |
-| G5 | After Tasks | Task coverage verified, dependencies ordered |
-| G6 | After Analyze | No `CRITICAL` issues, `WARNING` items reviewed |
-| G6.5 | Before Implement | Composite confidence meets the autonomous implementation threshold |
-| G7 | After Each Implementation Phase | Tests pass, manual verification complete |
+| Gate | Checkpoint |
+|------|------------|
+| G1 | After Specify |
+| G2 | After Clarify |
+| G3 | After Plan |
+| G4 | After Checklist |
+| G5 | After Tasks |
+| G6 | After Analyze |
+| G6.5 | Before Implement |
+| G7 | After Each Implementation Phase |
 
 ---
 
@@ -576,5 +554,3 @@ project/
 ```
 
 ---
-
-Template based on SpecKit best practices. Populate the prompts above with your project-specific tech stack, domains, and constraints.

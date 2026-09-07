@@ -67,12 +67,6 @@ stale.
    - `brownfield_change` — the change edits existing code a reviewer has to
      understand before they can read the edit.
 
-As the manifest stands today that routing selects the implementation-plan and
-spec-explainer pages on every run, the code-approaches page when the feature has
-competing approaches, and the module-map page when it is a brownfield change.
-Confirm it against the manifest you actually read: the manifest wins over this
-paragraph.
-
 ## Fill — write only between the markers
 
 Each template carries paired HTML-comment markers around every region you fill,
@@ -102,9 +96,16 @@ the filename stem.
 
 ### Publish last, one page at a time
 
-Process selected entries in manifest order and finish one page before reading
-or writing the next template. Never pre-copy raw templates to their final
-artifact paths and never create all destination files up front.
+Process selected entries in manifest order. Read only the current entry's
+template; never batch-read, prefetch, or read templates in parallel. Reading a
+later template is not preparation for the current page.
+
+Do not read the next template until the current page is completely rendered,
+validated as a closed sibling temporary file, atomically published, re-read and
+validated at the final path, and recorded as `generated`. On a recoverable
+failure, complete the cleanup below and record that page's `gap` before reading
+the next template. Never pre-copy raw templates to their final artifact paths
+and never create all destination files up front.
 
 For the current page, build a replacement map whose keys equal the template's
 declared slot inventory exactly: no missing slot, extra slot, or duplicate

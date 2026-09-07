@@ -174,7 +174,7 @@ def _reason_checked(reason: HookReason, fn, *args: Any) -> Any:
     """
     try:
         return fn(*args)
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
+    except (OSError, ValueError) as exc:
         raise HookRefusal(reason) from exc
 
 

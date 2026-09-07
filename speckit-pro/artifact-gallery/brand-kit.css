@@ -9,7 +9,7 @@
  * token's point of definition rather than left here.
  *
  *
- * PROVENANCE (FR-012)
+ * PROVENANCE
  * --------------------------------------------------------------------------
  * Upstream brand source
  *   repository   racecraft-lab/racecraft
@@ -36,7 +36,7 @@
  * introduces none.
  *
  *
- * AUDITED CONTRAST (FR-005, SC-007)
+ * AUDITED CONTRAST
  * --------------------------------------------------------------------------
  * Computed with the WCAG 2.x relative-luminance and contrast-ratio formulas
  * from the token values defined inside the block below, each theme audited
@@ -94,7 +94,7 @@
  * Focus ring. The indicator is --rc-link in both themes and clears the 3:1
  * non-text floor on every surface it can appear on — 5.37 / 5.80 / 5.09 /
  * 4.87 light and 7.75 / 6.91 / 8.20 / 7.42 dark, reading surface / raised /
- * sunken / muted (FR-023).
+ * sunken / muted.
  *
  *
  * PROHIBITIONS AND CORRECTIONS
@@ -138,8 +138,8 @@
  * Rules 2 and 3 are corrections to SURFACES, not to foregrounds, and that is
  * the more general lesson: when a pairing misses its floor, the background is
  * a candidate for correction and is often the cheaper fix, because every
- * foreground measured against it improves at once. FR-025's two foreground
- * remedies — re-value a functional token, route around a brand primitive —
+ * foreground measured against it improves at once. The two foreground
+ * remedies — re-value a functional token or route around a brand primitive —
  * both still govern, but neither currently has a live instance, because both
  * causes were removed at the surface instead. Their absence is not the rule's
  * repeal: the rule is restated inside the block, at each token's point of
@@ -157,7 +157,7 @@
    * operating-system preference. This is NOT sufficient on its own: it
    * resolves against the OS, not against this document's data-theme. The two
    * data-theme blocks below therefore set color-scheme explicitly in each
-   * direction (FR-004). */
+   * direction. */
   color-scheme: light dark;
 
   /* ---- Surfaces — the 70% warm neutral, dominant by area ---------------- */
@@ -179,7 +179,7 @@
   --rc-text-muted: #4B5563;
   --rc-link: #2A6A99;
 
-  /* ---- TOKEN CLASSES (FR-025) ------------------------------------------
+  /* ---- TOKEN CLASSES ---------------------------------------------------
    * A FUNCTIONAL token exists to serve a stated purpose, and must clear its
    * contrast floor against every surface it may pair with. When it does not,
    * its value is corrected.
@@ -224,7 +224,7 @@
    * that is what makes it functional rather than a primitive. */
   --rc-danger-text: #C4102F;
 
-  /* ---- USE OF COLOUR (FR-021) ------------------------------------------
+  /* ---- USE OF COLOUR ---------------------------------------------------
    * A separate obligation from contrast and from the punctuation-level
    * reservation above, and neither of those discharges it.
    *
@@ -241,7 +241,7 @@
    * one says nothing about the other.
    * -------------------------------------------------------------------- */
 
-  /* ---- Typefaces (FR-024) ----------------------------------------------
+  /* ---- Typefaces -------------------------------------------------------
    * The brand face leads every stack. font-family is a preference list and
    * the first AVAILABLE face wins, so a system face placed first would shadow
    * the brand face permanently.
@@ -286,7 +286,7 @@
 }
 
 /* An explicit reader choice wins over the operating-system preference, and
- * sets the browser's own scheme with it so native controls follow (FR-004). */
+ * sets the browser's own scheme with it so native controls follow. */
 :root[data-theme="dark"] {
   color-scheme: dark;
 
@@ -332,7 +332,7 @@
 }
 
 /* Hierarchy is carried by level, size, and weight so it survives the brand
- * faces being unavailable (FR-024). */
+ * faces being unavailable. */
 body {
   background-color: var(--rc-surface);
   color: var(--rc-text);
@@ -400,7 +400,7 @@ a {
 
 /* Every interactive element carries a visible keyboard focus indicator, and
  * the indicator is never suppressed without an equivalent replacement
- * (FR-023, WCAG 2.4.7). --rc-link clears the 3:1 non-text floor on every
+ * (WCAG 2.4.7). --rc-link clears the 3:1 non-text floor on every
  * surface it can appear on in both themes. */
 a:focus-visible,
 button:focus-visible,
@@ -415,7 +415,7 @@ details:focus-visible,
 }
 
 /* A reader who asks for reduced motion gets none, including the cross-theme
- * colour transition above (FR-023). */
+ * colour transition above. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

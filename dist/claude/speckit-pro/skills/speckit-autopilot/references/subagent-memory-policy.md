@@ -47,9 +47,6 @@ directory.
 
 `resolve-claude-subagent-runtime` records whether automatic memory is enabled.
 If disabled, the agent proceeds without memory and logs the state; memory is an
-optimization, not a prerequisite. Claude Code 2.1.251 live UAT on 2026-08-30
-proved both analyst scopes stayed inside the ignored local-memory directory,
-left the repository clean, excluded current-task markers, and supplied useful
-durable context in fresh no-tools sessions.
+optimization, not a prerequisite.
 
 Source: <https://code.claude.com/docs/en/sub-agents#enable-persistent-memory>

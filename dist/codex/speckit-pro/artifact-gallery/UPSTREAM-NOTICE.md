@@ -1,16 +1,8 @@
 # Upstream Permission Notice
 
-The artifact gallery ports HTML templates from an upstream open-source
-project. This file reproduces that project's permission notice in full. Each
-ported artifact carries an attribution header near the top of the file naming
-its upstream source, and that header points here for the complete license
-text.
-
-**No ported artifact exists yet.** This foundation ships the shared brand kit,
-the single-file contract, and the validation that future ports must satisfy —
-it contains no upstream-derived work. The notice is in place ahead of the
-first port so the attribution headers have a target that already exists; its
-presence is not evidence that the gallery currently carries upstream code.
+The gallery contains modified HTML derivatives from the upstream project
+identified below. Each derivative names its source file in a leading
+attribution comment and points here for the complete permission notice.
 
 - Upstream repository: anthropics/html-effectiveness
 - License: MIT (SPDX identifier `MIT`)

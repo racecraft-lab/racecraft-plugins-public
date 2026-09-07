@@ -1,9 +1,9 @@
-# SPEC-PARITY-03 Workflow - PRSG-010 Backstop, O5, And Routing
+# SPEC-PARITY-03 Workflow - SPEC-910 Backstop, O5, And Routing
 
 ## Overview
 
 Synthetic workflow used by Layer 8 parity fixture 03. The fixture records the
-operator-facing PRSG-010 behavior that must stay equivalent across Claude Code
+operator-facing SPEC-910 behavior that must stay equivalent across Claude Code
 and Codex surfaces.
 
 | Field | Value |
@@ -28,8 +28,8 @@ and Codex surfaces.
 
 | Surface | Stop Boundary | State | Packet |
 |---------|---------------|-------|--------|
-| Claude autopilot | on missing current evidence or correctness block, before `generate-pr-body`, `gh pr create`, or `multi-pr-emission` | `final_reviewability_gate.status=block` and `pr_created=false` | JSON re-slicing packet for internal PRSG-007/008/009 continuation |
-| Codex autopilot | on missing current evidence or correctness block, before `generate-pr-body`, `gh pr create`, or `multi-pr-emission` | `final_reviewability_gate.status=block` and `pr_created=false` | JSON re-slicing packet for internal PRSG-007/008/009 continuation |
+| Claude autopilot | on missing current evidence or correctness block, before `generate-pr-body`, `gh pr create`, or `multi-pr-emission` | `final_reviewability_gate.status=block` and `pr_created=false` | JSON re-slicing packet for internal split-planning continuation |
+| Codex autopilot | on missing current evidence or correctness block, before `generate-pr-body`, `gh pr create`, or `multi-pr-emission` | `final_reviewability_gate.status=block` and `pr_created=false` | JSON re-slicing packet for internal split-planning continuation |
 
 ## Exception Education Contract
 
@@ -42,8 +42,8 @@ and Codex surfaces.
 
 | Surface | Default Path | O5 Shape | Rollup |
 |---------|--------------|----------|--------|
-| Claude scaffold/status | PRSG-007/008/009 split planning first | parent manifest plus flat sibling child specs | topology-first runner helper `o5-topology` in read_only mode |
-| Codex scaffold/status | PRSG-007/008/009 split planning first | parent manifest plus flat sibling child specs | topology-first runner helper `o5-topology` in read_only mode |
+| Claude scaffold/status | split planning first | parent manifest plus flat sibling child specs | topology-first runner helper `o5-topology` in read_only mode |
+| Codex scaffold/status | split planning first | parent manifest plus flat sibling child specs | topology-first runner helper `o5-topology` in read_only mode |
 
 ## Contextual Routing Contract
 

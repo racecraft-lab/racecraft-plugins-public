@@ -1,6 +1,0 @@
-missing tests/speckit-pro/unit/fixtures/pr-packet/missing-packet.json
-unreadable tests/speckit-pro/unit/fixtures/pr-packet/unreadable-packet.json
-directory tests/speckit-pro/unit/fixtures/pr-packet
-invalid-json tests/speckit-pro/unit/fixtures/pr-packet/invalid-malformed-json.json
-schema-invalid tests/speckit-pro/unit/fixtures/pr-packet/invalid-schema-with-feature-dir.json
-no-feature-dir tests/speckit-pro/unit/fixtures/pr-packet/invalid-no-feature-dir.json

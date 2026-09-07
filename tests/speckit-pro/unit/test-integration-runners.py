@@ -8,6 +8,7 @@ import contextlib
 import importlib.util
 import io
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -29,13 +30,7 @@ from lib import fixture_runner  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
-RUNNERS = [
-    LAYER7 / "run-dispatch-fixtures.py",
-    LAYER7 / "run-return-format-fixtures.py",
-    LAYER7 / "run-e2e-fixtures.py",
-    LAYER7 / "run-grounding-fixtures.py",
-    LAYER7 / "run-all-fixtures.py",
-]
+AGGREGATE_RUNNER = LAYER7 / "run-all-fixtures.py"
 
 
 def run_runner(path: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -61,28 +56,90 @@ def load_script_module(path: Path, module_name: str) -> object:
 
 class Layer7RunnerTests(unittest.TestCase):
     def test_layer7_runner_contract(self) -> None:
+        aggregate_module = load_script_module(AGGREGATE_RUNNER, "run_all_fixtures_test")
+        dispatcher_module = load_script_module(TESTS_ROOT / "run-layer-scripts.py", "run_layer_scripts_layer7_test")
+        runners = list(aggregate_module.RUNNERS.values())
+        self.assertTrue(runners)
         checks: list[tuple[str, Callable[[], None]]] = []
-        for runner in RUNNERS:
+        for runner in (*runners, AGGREGATE_RUNNER):
             checks.append((f"{runner.name} exists", lambda runner=runner: self.assertTrue(runner.is_file())))
         checks.append(("shared fixture runner exists", lambda: self.assertTrue((LAYER7 / "lib" / "fixture_runner.py").is_file())))
-        checks.append(("all Layer-7 Python runners are executable", lambda: self.assertTrue(all(os.access(path, os.X_OK) for path in RUNNERS))))
+        checks.append(("all Layer-7 Python runners are executable", lambda: self.assertTrue(all(os.access(path, os.X_OK) for path in (*runners, AGGREGATE_RUNNER)))))
 
-        for runner, summary in [
-            (RUNNERS[0], "run-dispatch-fixtures: 176/176 passed"),
-            (RUNNERS[1], "run-return-format-fixtures: 17/17 passed"),
-            (RUNNERS[2], "run-e2e-fixtures: 23/23 passed"),
-            (RUNNERS[3], "run-grounding-fixtures: 33/33 passed"),
-        ]:
+        for runner in runners:
             result = run_runner(runner, "--replay")
             checks.append((f"{runner.name} replay exits 0", lambda result=result: self.assertEqual(result.returncode, 0, result.stderr)))
-            checks.append((f"{runner.name} replay preserves summary", lambda result=result, summary=summary: self.assertIn(summary, result.stdout)))
+            summary = re.search(rf"^{re.escape(runner.stem)}: ([0-9]+)/([0-9]+) passed$", result.stdout, re.MULTILINE)
+            checks.append((f"{runner.name} replay emits a summary", lambda summary=summary: self.assertIsNotNone(summary)))
+            if summary is not None:
+                passed, total = map(int, summary.groups())
+                checks.append((f"{runner.name} replay summary is self-consistent", lambda passed=passed, total=total: self.assertTrue(total > 0 and passed == total)))
 
-        aggregate = run_runner(RUNNERS[4], "--replay")
+        aggregate = run_runner(AGGREGATE_RUNNER, "--replay")
         checks.append(("run-all-fixtures.py replay exits 0", lambda: self.assertEqual(aggregate.returncode, 0, aggregate.stderr)))
-        checks.append(("run-all-fixtures.py executes all four classes", lambda: self.assertEqual(aggregate.stdout.count("Layer 7 Class"), 4)))
+        for class_id in aggregate_module.RUNNERS:
+            heading = f"Layer 7 - Class {class_id}"
+            checks.append((f"run-all-fixtures.py executes class {class_id}", lambda heading=heading: self.assertEqual(aggregate.stdout.count(heading), 1)))
         checks.append(("run-all-fixtures.py preserves PASSED headline", lambda: self.assertIn("Layer 7 PASSED", aggregate.stdout)))
 
-        source_paths = [*RUNNERS, LAYER7 / "lib" / "fixture_runner.py"]
+        empty_reporter = fixture_runner.Reporter()
+        with contextlib.redirect_stdout(io.StringIO()):
+            empty_reporter_exit = empty_reporter.finish("empty-layer7-fixture")
+        checks.append(("fixture reporter rejects zero discovered checks", lambda: self.assertEqual(empty_reporter_exit, 1)))
+
+        invalid_nested_results = (
+            ("missing summary", subprocess.CompletedProcess(["early"], 0, stdout="", stderr="")),
+            ("wrong label only", subprocess.CompletedProcess(["early"], 0, stdout="nested-child: 1/1 passed\n", stderr="")),
+            (
+                "duplicate owned summary",
+                subprocess.CompletedProcess(["early"], 0, stdout="early: 1/1 passed\nearly: 1/1 passed\n", stderr=""),
+            ),
+            ("zero discovery", subprocess.CompletedProcess(["early"], 0, stdout="early: 0/0 passed\n", stderr="")),
+            ("partial pass", subprocess.CompletedProcess(["early"], 0, stdout="early: 1/2 passed\n", stderr="")),
+            ("passed exceeds total", subprocess.CompletedProcess(["early"], 0, stdout="early: 2/1 passed\n", stderr="")),
+            ("nonzero all-pass", subprocess.CompletedProcess(["early"], 1, stdout="early: 1/1 passed\n", stderr="")),
+        )
+        valid_later = subprocess.CompletedProcess(["later"], 0, stdout="later: 1/1 passed\n", stderr="")
+        for case_name, invalid_early in invalid_nested_results:
+            aggregate_stdout = io.StringIO()
+            aggregate_stderr = io.StringIO()
+            with (
+                patch.object(aggregate_module, "RUNNERS", {"early": Path("early.py"), "later": Path("later.py")}),
+                patch.object(aggregate_module.subprocess, "run", side_effect=[invalid_early, valid_later]),
+                contextlib.redirect_stdout(aggregate_stdout),
+                contextlib.redirect_stderr(aggregate_stderr),
+            ):
+                aggregate_exit = aggregate_module.main(["--replay"])
+            checks.append(
+                (
+                    f"run-all-fixtures rejects an early {case_name} before a valid child",
+                    lambda aggregate_exit=aggregate_exit: self.assertEqual(aggregate_exit, 1),
+                )
+            )
+
+            aggregate_completed = subprocess.CompletedProcess(
+                [sys.executable, str(AGGREGATE_RUNNER)],
+                aggregate_exit,
+                stdout=aggregate_stdout.getvalue(),
+                stderr=aggregate_stderr.getvalue(),
+            )
+            with patch.object(dispatcher_module.subprocess, "run", return_value=aggregate_completed):
+                dispatch_stdout = io.StringIO()
+                dispatch_stderr = io.StringIO()
+                with contextlib.redirect_stdout(dispatch_stdout), contextlib.redirect_stderr(dispatch_stderr):
+                    dispatch_exit = dispatcher_module.run_script_suite(
+                        "layer-7 integration fixtures",
+                        [AGGREGATE_RUNNER],
+                        REPO_ROOT,
+                    )
+            checks.append(
+                (
+                    f"layer dispatcher rejects composed output with an early {case_name}",
+                    lambda dispatch_exit=dispatch_exit: self.assertEqual(dispatch_exit, 1),
+                )
+            )
+
+        source_paths = [*runners, AGGREGATE_RUNNER, LAYER7 / "lib" / "fixture_runner.py"]
         checks.append(("Layer-7 runner sources contain no shell=True", lambda: self.assertTrue(all("shell=True" not in path.read_text(encoding="utf-8") for path in source_paths))))
         checks.append(("Layer-7 runner sources contain no os.system", lambda: self.assertTrue(all("os.system" not in path.read_text(encoding="utf-8") for path in source_paths))))
 

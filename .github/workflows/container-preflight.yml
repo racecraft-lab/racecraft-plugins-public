@@ -1,5 +1,3 @@
-# Container and runner preflight for XPLAT-010.
-#
 # Pull requests always start this workflow so the two branch-protection
 # sentinels always report. The changes job decides whether the heavyweight
 # platform jobs are relevant; unrelated changes receive explicit successful

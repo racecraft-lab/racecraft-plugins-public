@@ -21,7 +21,7 @@
 <head>
 <meta charset="utf-8">
 <!-- GALLERY-HEAD:START -->
-<meta http-equiv="Content-Security-Policy" content="base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'none'; connect-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'none'; connect-src 'none'; worker-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src data: https://fonts.gstatic.com; img-src data:">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Geist:wght@400;500;600&amp;family=Fira+Code:wght@400;500&amp;display=swap">
 <script>
 (function () {
@@ -172,7 +172,7 @@
    * operating-system preference. This is NOT sufficient on its own: it
    * resolves against the OS, not against this document's data-theme. The two
    * data-theme blocks below therefore set color-scheme explicitly in each
-   * direction (FR-004). */
+   * direction. */
   color-scheme: light dark;
 
   /* ---- Surfaces — the 70% warm neutral, dominant by area ---------------- */
@@ -194,7 +194,7 @@
   --rc-text-muted: #4B5563;
   --rc-link: #2A6A99;
 
-  /* ---- TOKEN CLASSES (FR-025) ------------------------------------------
+  /* ---- TOKEN CLASSES ---------------------------------------------------
    * A FUNCTIONAL token exists to serve a stated purpose, and must clear its
    * contrast floor against every surface it may pair with. When it does not,
    * its value is corrected.
@@ -239,7 +239,7 @@
    * that is what makes it functional rather than a primitive. */
   --rc-danger-text: #C4102F;
 
-  /* ---- USE OF COLOUR (FR-021) ------------------------------------------
+  /* ---- USE OF COLOUR ---------------------------------------------------
    * A separate obligation from contrast and from the punctuation-level
    * reservation above, and neither of those discharges it.
    *
@@ -256,7 +256,7 @@
    * one says nothing about the other.
    * -------------------------------------------------------------------- */
 
-  /* ---- Typefaces (FR-024) ----------------------------------------------
+  /* ---- Typefaces -------------------------------------------------------
    * The brand face leads every stack. font-family is a preference list and
    * the first AVAILABLE face wins, so a system face placed first would shadow
    * the brand face permanently.
@@ -301,7 +301,7 @@
 }
 
 /* An explicit reader choice wins over the operating-system preference, and
- * sets the browser's own scheme with it so native controls follow (FR-004). */
+ * sets the browser's own scheme with it so native controls follow. */
 :root[data-theme="dark"] {
   color-scheme: dark;
 
@@ -347,7 +347,7 @@
 }
 
 /* Hierarchy is carried by level, size, and weight so it survives the brand
- * faces being unavailable (FR-024). */
+ * faces being unavailable. */
 body {
   background-color: var(--rc-surface);
   color: var(--rc-text);
@@ -415,7 +415,7 @@ a {
 
 /* Every interactive element carries a visible keyboard focus indicator, and
  * the indicator is never suppressed without an equivalent replacement
- * (FR-023, WCAG 2.4.7). --rc-link clears the 3:1 non-text floor on every
+ * (WCAG 2.4.7). --rc-link clears the 3:1 non-text floor on every
  * surface it can appear on in both themes. */
 a:focus-visible,
 button:focus-visible,
@@ -430,7 +430,7 @@ details:focus-visible,
 }
 
 /* A reader who asks for reduced motion gets none, including the cross-theme
- * colour transition above (FR-023). */
+ * colour transition above. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -1412,30 +1412,15 @@ h1 {
   var PHASE_LIST_ID = 'plan-phase-list';
   var ARTIFACT_TITLE_ID = 'artifact-title';
 
-  /* These two are the opposite case and the comment above does NOT cover them:
-     both live INSIDE the feature-header region, so a fill replaces them.
-
-     That is not a misplacement to correct by moving them out. It is forced. The
-     export must name the feature (export-payload-contract.md), it may carry
-     nothing the reader cannot see in the rendered document (FR-023), and a
-     template may not carry feature-specific content outside a slot (FR-015).
-     Those three together mean the only place the feature's identity can be read
-     from is inside the region that renders it.
-
-     So the authoring agent must preserve both identifiers when it fills
-     feature-header. That obligation is recorded where the agent will actually
-     read it: this file's own slot inventory, and spec.md *Dependencies* beside
-     the anchor-integrity and document-title obligations. featureLine() below
-     degrades honestly rather than silently if a fill drops them anyway. */
+  /* These identifiers live inside feature-header because the export may use
+     only visible feature data. The slot inventory tells fillers to preserve
+     them; featureLine() falls back to the document heading if they are absent. */
   var FEATURE_ID_ID = 'feature-id';
   var FEATURE_NAME_ID = 'feature-name';
 
   var STATE_NOTE = 'note recorded';
   var STATE_NO_NOTE = 'no note recorded';
 
-  /* Pinned in contracts/export-payload-contract.md. Three templates emit these
-     from three separate copies of this routine, so the wording is fixed there
-     rather than left to each of them. */
   var EMPTY_PROMPT = 'No objection was recorded. There is nothing here to act on. Do not treat this as approval.';
   var EMPTY_MARKDOWN = 'No objection was recorded. This record is not an approval.';
   var COPY_FAILED = 'Copy failed. The text is in the field below. Select it and copy it by hand.';
@@ -1459,25 +1444,14 @@ h1 {
   }
 
   function labelOf(anchor) {
-    /* Any heading rank, not h3 alone. The slot inventory promises each phase an
-       anchor and a heading; it does not promise a rank, and FR-035b lets a
-       filled region choose the ranks it keeps. Reading only h3 would silently
-       degrade an export's item line to the anchor slug for a fill that titled
-       its items with an h4 — restating the anchor where FR-023 requires the
-       item's own visible label. */
+    /* Filled items may use any heading rank; export their visible label. */
     var heading = anchor.querySelector('h1, h2, h3, h4, h5, h6');
     var source = heading ? heading.textContent : anchor.textContent || anchor.id;
     return source.replace(/\s+/g, ' ').trim();
   }
 
   function featureLine() {
-    /* The one line whose inputs a fill can delete — see FEATURE_ID_ID above.
-       If the identifiers survive, this is exactly the pinned form. If they do
-       not, fall back to the document's single top-level heading, which FR-035b
-       requires a filled region to keep, rather than emitting a hollow
-       "Feature:" that names nothing and reads as though it did. In the shipped
-       document the two are the same element, so the fallback and the primary
-       path agree by construction. */
+    /* Fall back to the document heading if a fill drops the feature ids. */
     var identifier = textOf(FEATURE_ID_ID);
     var name = textOf(FEATURE_NAME_ID);
     if (!name) {

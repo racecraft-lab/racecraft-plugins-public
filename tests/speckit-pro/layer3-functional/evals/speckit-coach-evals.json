@@ -4,10 +4,10 @@
     {
       "id": 1,
       "prompt": "I'm starting a brand new TypeScript project and want to use Spec-Driven Development from the beginning. I have nothing set up yet — no speckit, no specs directory, nothing. Walk me through getting started from zero.",
-      "expected_output": "Step-by-step onboarding: install SpecKit CLI via uv, run specify init with the --ai flag for the user's AI tool, create a constitution file, and explain the 7 SDD phases.",
+      "expected_output": "Routes first-time setup to `/speckit-pro:speckit-install`, then explains constitution creation and the post-install SDD flow.",
       "expectations": [
-        "Mentions installing SpecKit CLI with 'uv tool install specify-cli' from the git repo",
-        "Includes 'specify init' command with --ai flag",
+        "Routes installation to `/speckit-pro:speckit-install`",
+        "Does not prescribe a Git, PyPI, or package-source installation command",
         "Explains constitution creation and its purpose",
         "Lists or references the 7 SDD phases in order: specify, clarify, plan, checklist, tasks, analyze, implement"
       ]
@@ -27,34 +27,34 @@
     {
       "id": 3,
       "prompt": "I keep hearing about 'gates' G1 through G7 in the SpecKit autopilot. What does each gate specifically validate? I want to understand what artifacts need to exist and what markers need to be absent before each phase transition succeeds.",
-      "expected_output": "Lists all 7 gates with their specific validation criteria — what files they check, what markers they scan for, and what conditions cause pass/fail.",
+      "expected_output": "Explains that Coach reads the live autopilot skill as a reference and describes the current gate contract without executing or invoking autopilot.",
       "expectations": [
-        "Lists all 7 gates G1 through G7 by name or number",
-        "Explains that G1 validates the specify phase output (spec.md exists, no [TBD] markers)",
-        "Explains that G4 validates checklist completion (no [Gap] markers in spec.md or plan.md)",
-        "Explains that G7 validates task completion (all tasks marked [x] in tasks.md)",
-        "Mentions how gate validation is performed through the validate-gate runner helper and programmatic marker checks"
+        "Uses the live autopilot skill or its authoritative references instead of a copied gate catalog",
+        "Does not claim `[TBD]` is the universal G1 marker contract",
+        "Does not execute or invoke autopilot while answering",
+        "States that the current phase artifacts and validation evidence determine whether a gate advances"
       ]
     },
     {
       "id": 4,
-      "prompt": "How does the consensus protocol work in the autopilot workflow? I heard there are 3 agents that vote on something but I don't understand when it kicks in or what happens when they disagree.",
-      "expected_output": "Explains the multi-agent consensus mechanism: 3 named agent roles, 2/3 majority voting, when consensus is triggered, and what happens on disagreement.",
+      "prompt": "How does the consensus protocol work in the autopilot workflow? I heard there are always 3 agents that vote, but I want the current contract.",
+      "expected_output": "Explains the current category-routed protocol from the live autopilot references: unresolved consensus items use one to three relevant analysts, and the Round 2 majority rule applies only when its current escalation conditions are met.",
       "expectations": [
-        "Names the 3 agent roles involved in consensus voting",
-        "States the 2/3 majority requirement for a gate to pass via consensus",
-        "Explains that consensus triggers when the primary gate validation fails or produces ambiguous results",
-        "Describes what happens on disagreement: the failing agent's reasoning is logged and the majority decision stands"
+        "Uses the current live autopilot skill or its consensus-protocol reference as the authority",
+        "States that routing selects one to three analysts by unresolved-item category rather than always dispatching three",
+        "Explains that Round 2 and a 2-of-3 majority are conditional escalation behavior, not the default",
+        "Explains that unresolved Round 2 disagreement is surfaced for human review and stops advancement"
       ]
     },
     {
       "id": 5,
       "prompt": "I'm building a large e-commerce platform feature that covers product catalog, inventory management, order processing, and payment integration. This is way too big for a single spec. Help me decompose it into a technical roadmap with proper dependency ordering.",
-      "expected_output": "Breaks the feature into 3+ focused specs with clear boundaries, identifies dependencies between them, and suggests an implementation order.",
+      "expected_output": "Breaks the feature into independently valuable vertical slices with observable outcomes, real dependencies, and an implementation order; it does not reserve a catch-all integration-only final spec.",
       "expectations": [
-        "Decomposes into at least 3 separate specs with clear single-responsibility boundaries",
+        "Decomposes into at least 3 independently valuable vertical slices with observable outcomes",
         "Identifies dependency relationships between specs (e.g., catalog before inventory, inventory before orders)",
-        "Suggests a sequential or partially-parallel implementation order based on dependencies",
+        "Suggests a sequential or partially-parallel implementation order based on real dependencies",
+        "Does not propose a catch-all integration-only final spec",
         "Recommends using the technical roadmap template to track cross-spec progress"
       ]
     },
@@ -71,45 +71,45 @@
     },
     {
       "id": 7,
-      "prompt": "Can you just run the full autopilot for me right now on SPEC-025? I have the workflow file ready at docs/ai/specs/SPEC-025-workflow.md.",
-      "expected_output": "Redirects to /speckit-pro:autopilot as the correct command. The coach does not execute the autopilot itself.",
+      "prompt": "Can you just run the full autopilot for me right now on SPEC-025? I have the workflow file ready at docs/ai/specs/.process/SPEC-025-workflow.md.",
+      "expected_output": "Redirects to /speckit-pro:speckit-autopilot as the correct command. The coach does not execute the autopilot itself.",
       "expectations": [
         "Does NOT attempt to execute the autopilot workflow itself",
-        "Redirects the user to /speckit-pro:autopilot as the correct command",
-        "Mentions /speckit-pro:scaffold-spec OR correctly assumes the workflow file exists since the user stated they have it",
+        "Redirects the user to /speckit-pro:speckit-autopilot as the correct command",
+        "Mentions /speckit-pro:speckit-scaffold-spec OR correctly assumes the workflow file exists since the user stated they have it",
         "Provides brief guidance on what to expect when running the autopilot"
       ]
     },
     {
       "id": 8,
       "prompt": "What are SpecKit extensions? I see references to 'verify', 'review', 'cleanup', and 'retrospective' extensions in the autopilot workflow. How do I install them and what do they do?",
-      "expected_output": "Explains the extension system: extensions are optional post-implementation workflow steps. Lists available extensions and what each does.",
+      "expected_output": "Explains extensions as optional workflow additions, then inspects the active project, host, installed CLI help, manifests, and configuration before describing which user-named examples are actually available or configured and the evidence-backed purpose of each observed entry.",
       "expectations": [
-        "Explains that extensions are optional post-implementation workflow steps",
-        "Lists at least 4 extensions: verify, review, cleanup, retrospective",
-        "Explains that extensions are configured in .specify/extensions.yml",
-        "Describes what at least 2 extensions do (e.g., verify checks implementation against spec, review runs code review)"
+        "Explains that extensions are optional workflow additions rather than mandatory built-in phases",
+        "Inspects the active project, host, installed CLI help, manifests, and configuration before claiming availability or behavior",
+        "Treats verify, review, cleanup, and retrospective as user-named investigation targets; reports each as observed, unavailable, or unverified, explains the evidence-backed purpose or behavior of every observed requested entry (at least 2 descriptions when the fixture supplies at least 2), and explicitly limits the answer when fewer are observed rather than inventing behavior; states that the list is non-exhaustive",
+        "Names .specify/extensions.yml or another configuration path only when the active installed evidence confirms that path"
       ]
     },
     {
       "id": 9,
-      "prompt": "I want to understand the workflow file that /speckit-pro:scaffold-spec creates. What sections does it have? What gets populated automatically vs what do I need to fill in?",
-      "expected_output": "Describes the workflow file structure: overview table with 7 phases, status tracking, SPEC-ID, feature branch, and configuration.",
+      "prompt": "I want to understand the workflow file that /speckit-pro:speckit-scaffold-spec creates. What sections does it have? What gets populated automatically vs what do I need to fill in?",
+      "expected_output": "Describes the workflow overview rows: Specify, Clarify, Plan, Checklist, Tasks, Analyze, Confidence Gate, Implement, and Post; plus status tracking, SPEC-ID, feature branch, and configuration.",
       "expectations": [
-        "Describes the workflow overview table showing all 7 phases with status columns",
+        "Describes the workflow overview rows: Specify, Clarify, Plan, Checklist, Tasks, Analyze, Confidence Gate, Implement, and Post",
         "Mentions the SPEC-ID and feature branch fields",
-        "Explains that /speckit-pro:scaffold-spec auto-populates the file from the technical roadmap and the Grill Me design concept doc",
-        "References the workflow file location pattern (docs/ai/specs/SPEC-NNN-workflow.md)",
-        "Mentions that /scaffold-spec also produces a Design Concept doc at docs/ai/specs/SPEC-NNN-design-concept.md from a Grill Me interview"
+        "Explains that /speckit-pro:speckit-scaffold-spec auto-populates the file from the technical roadmap and the Grill Me design concept doc",
+        "References the workflow file location pattern (docs/ai/specs/.process/SPEC-NNN-workflow.md)",
+        "Mentions that /speckit-pro:speckit-scaffold-spec also produces a Design Concept doc at docs/ai/specs/.process/SPEC-NNN-design-concept.md from a Grill Me interview"
       ]
     },
     {
       "id": 10,
-      "prompt": "Where does the Grill Me skill fit into the SDD workflow? Does it replace /speckit-clarify? Can I use it inside the autopilot, or only before? What's the relationship between Grill Me, /speckit-pro:scaffold-spec, and the autopilot's Clarify phase?",
-      "expected_output": "Explains that Grill Me is a pre-workflow human-in-the-loop scoping tool, distinct from autopilot's Clarify phase. /scaffold-spec always runs Grill Me before writing the workflow file. Inside autopilot, Grill Me is forbidden — clarification happens via /speckit-clarify and the consensus protocol.",
+      "prompt": "Where does the Grill Me skill fit into the SDD workflow? Does it replace /speckit-clarify? Can I use it inside the autopilot, or only before? What's the relationship between Grill Me, /speckit-pro:speckit-scaffold-spec, and the autopilot's Clarify phase?",
+      "expected_output": "Explains that Grill Me is a pre-workflow human-in-the-loop scoping tool, distinct from autopilot's Clarify phase. /speckit-pro:speckit-scaffold-spec always runs Grill Me before writing the workflow file. Inside autopilot, Grill Me is forbidden — clarification happens via /speckit-clarify and the consensus protocol.",
       "expectations": [
         "States that Grill Me is human-in-the-loop only and runs BEFORE the workflow file is created",
-        "Explains that /speckit-pro:scaffold-spec always runs Grill Me as part of its flow (no skip flag)",
+        "Explains that /speckit-pro:speckit-scaffold-spec always runs Grill Me as part of its flow (no skip flag)",
         "Explains that the autopilot's Clarify phase is a SEPARATE mechanism using /speckit-clarify and the multi-agent consensus protocol",
         "States explicitly that Grill Me is FORBIDDEN inside autopilot (cannot be invoked from any phase agent)",
         "Mentions that Grill Me can also be invoked standalone via /speckit-pro:grill-me on any input (raw idea, transcript, brief)"
@@ -118,24 +118,24 @@
     {
       "id": 11,
       "prompt": "What community extensions are available that help with code review? I want to see what the actual SpecKit community catalog has — not a stale list from documentation, the real current state. Find me 2-3 candidates and tell me which one looks most active.",
-      "expected_output": "Coach runs `specify extension search` (or a documented fallback against the upstream catalog.community.json), surfaces real catalog entries by their bare ids, and recommends candidates based on the live data — not a snapshotted table.",
+      "expected_output": "Coach uses the best observed installed catalog/search capability or a disclosed current official source, then reports evidence-bearing candidates and an explicit activity metric; if freshness cannot be established, it reports the request as blocked instead of fabricating a current result.",
       "expectations": [
-        "References running `specify extension search` (or `gh api` / WebFetch against `catalog.community.json`) as the lookup mechanism — does NOT recite a hardcoded snapshot",
-        "Lists at least 2 candidate extensions by their bare id (e.g., `review`, `multi-model-review`, `staff-review`, `security-review`) — not by GitHub repo name",
-        "Avoids citing a stale catalog count (no '26 extensions', no fixed-row table from the reference doc)",
-        "Surfaces a category or tag for each candidate so the user understands the difference between them"
+        "Uses the best observed installed catalog/search capability first, or a current official source with the source and observation time disclosed; does not require a particular transport or tool",
+        "When freshness is established, lists 2-3 observed candidates by bare id with their observed categories or tags; otherwise explicitly reports that current candidates are unavailable and does not fabricate them",
+        "Defines 'most active' using an available observed field and its timestamp, or states that the comparison is blocked when no defensible activity metric is available",
+        "Does not recite a fixed catalog count or stale snapshot as current evidence, and does not mark the request complete when freshness could not be established"
       ]
     },
     {
       "id": 12,
       "prompt": "I want to install the archive extension into this project and have it fire automatically after each implement phase so merged specs get archived without me thinking about it. Walk me through the install + the hook wiring step by step.",
-      "expected_output": "Coach proposes the install command using `specify extension add archive --from <zip-url>`, confirms with the user before running anything, then describes the `.specify/extensions.yml` hook block that wires the archive command to fire after_implement.",
+      "expected_output": "Coach inspects the active project, installed CLI and integration, catalog source, and archive manifest; it then proposes the exact evidence-backed operation and targets and asks for confirmation without mutating anything on this first turn.",
       "expectations": [
-        "Proposes a concrete `specify extension add archive --from ...` command (community extensions are discovery-only, --from is required)",
-        "Asks for user confirmation before running any mutation — does not silently execute install/remove",
-        "Describes the `.specify/extensions.yml` hook block with `after_implement`, the extension id, the command (`speckit.archive.run`), and the `optional`/`prompt` keys",
-        "Mentions that the autopilot picks up `.specify/extensions.yml` hooks dynamically — no plugin update or restart needed",
-        "Points the user at `.specify/extensions/archive/archive-config.yml` (shared) and `archive-config.local.yml` (personal) for further configuration"
+        "Inspects the active project, installed CLI version/help and integration, catalog source, archive URL or manifest, and pre-state before proposing an operation",
+        "Shows the exact evidence-backed operation and target paths, asks for confirmation, and performs no install, configuration, or hook mutation on this first turn",
+        "Does not attribute a hook, command, or configuration filename to archive unless the observed archive manifest declares it; explicitly discloses zero hooks when that is what the manifest shows",
+        "Keeps any generic after_implement explanation separate from archive claims and explains that optional: false is automatic while optional: true is prompted or skippable",
+        "States reload, restart, and path behavior only when supported by the active Claude host and installed-runtime evidence"
       ]
     },
     {

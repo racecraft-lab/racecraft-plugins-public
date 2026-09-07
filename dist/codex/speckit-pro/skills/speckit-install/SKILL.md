@@ -5,14 +5,6 @@ description: "Install the SpecKit CLI and initialize the current repository for 
 
 # SpecKit Install
 
-## Installed Runtime Contract
-
-Installed Claude and Codex surfaces resolve Python 3.11 or newer, invoke
-`[resolved_python, "-m", "speckit_pro_runner"]`, send one JSON request on
-stdin, read one JSON response from stdout, and surface stderr diagnostics.
-Do not add a shell fallback, `jq` parsing path, Git Bash, WSL, or
-PowerShell-specific command-language requirement for installed workflows.
-
 ## Scope
 
 Install the official SpecKit CLI (https://github.com/github/spec-kit)
@@ -37,8 +29,6 @@ other skills.
   (`autopilot-fast-helper.toml`, `phase-executor.toml`, etc.) into
   `~/.codex/agents/`. That is `$install`.
 - Methodology coaching. That is `$speckit-coach`.
-
-> **Codex implicit-trigger note (eval harness vs production):** Layer 2 trigger evals score this skill at 75% (15/20) on the Codex selector — but POS is a perfect 10/10 (every "install speckit" / "set up speckit" / "$speckit-install" query fires correctly). All 5 NEG misses are false-positives in single-skill staging where the harness loads only this skill, so the Codex selector has no alternative to route adjacent SDD queries to ("status of SPEC-014" → should go to `$speckit-status`, "scaffold spec SPEC-009" → `$speckit-scaffold-spec`, "upgrade my existing speckit installation" → `$speckit-upgrade`, "install the bundled SpecKit Pro Codex subagents" → `$install`). In production all six speckit-pro skills are loaded together and Codex routes those queries to their proper destinations. The eval results under-report real-world accuracy; positive-trigger reliability is the operationally-relevant number.
 
 ## Input
 
@@ -187,20 +177,13 @@ Compare `.specify/extensions/` and `.specify/presets/` against the
 entries in `<plugin-root>/scripts/curated-set.json`.
 
 - If every entry is present: report "Curated extensions and presets
-  already current." Continue to Step 6.
+  already installed." Continue to Step 6.
 
 - Otherwise, list the missing entries and ask which to install.
   Recommended default is **all**. For each accepted entry, give the
   operator the `specify extension add <id>` or preset command from the
   curated set and run it only after they confirm. Skipped entries can be
   installed later with `$speckit-upgrade`.
-
-Record the outcome in `.specify/curated-install.json` — commit this to
-git so the project's extension state is reproducible.
-
-If the script reports that an entry has neither a GitHub Release nor
-a git tag, surface the message but do not block the install. The
-operator can re-run after the upstream extension publishes a tag.
 
 ### 6. Verify
 
@@ -260,20 +243,3 @@ STOP and report — do not improvise — when:
 If a partial install happened (e.g., `claude` succeeded but `codex`
 failed), report exactly what landed and what did not. Recommend
 running `specify integration list` to see current state.
-
-## Why This Skill Exists
-
-The official SpecKit CLI already provides `specify init`,
-`specify integration install`, and `specify integration list`. This
-skill is a thin orchestrator that:
-
-- Bootstraps the CLI itself via `uv tool install` when missing.
-- Detects existing installs and refuses to overwrite them
-  (handing off to `$speckit-upgrade` instead).
-- Asks explicitly about dual-integration vs single-integration
-  before mutating files.
-- Returns a consistent post-install summary so the operator knows
-  what restart and which next-step skill to invoke.
-
-The plugin does not duplicate any CLI behavior. It wraps the CLI
-with the consistency a plugin user expects.

@@ -19,6 +19,12 @@ import sys
 import traceback
 from pathlib import Path
 
+TEST_LIB = Path(__file__).resolve().parent / "lib"
+if str(TEST_LIB) not in sys.path:
+    sys.path.insert(0, str(TEST_LIB))
+
+from test_result import child_check_status  # noqa: E402
+
 SUITE_MANIFEST = "tests/speckit-pro/suite-manifest.json"
 LAYER_LABELS = {
     "1": "layer-1 structural validation",
@@ -40,8 +46,7 @@ def canonical_test_scripts(repo_root: Path, layer: str) -> list[Path]:
     """Return the layer's dispatch roster from suite-manifest.json (not run-all.sh).
 
     The manifest's per-layer ``scripts[]`` is the single source of truth for the
-    manifest-backed dispatch set (XPLAT-010 FR-007, research §D4), replacing the
-    former ``re.findall`` text-parse of ``run-all.sh``.
+    dispatch set.
     """
     manifest_path = repo_root / SUITE_MANIFEST
     if not manifest_path.is_file():
@@ -62,13 +67,6 @@ def python_child_env(repo_root: Path) -> dict[str, str]:
     env["GIT_CONFIG_KEY_0"] = "commit.gpgsign"
     env["GIT_CONFIG_VALUE_0"] = "false"
     return env
-
-
-def last_summary_line(stdout: str) -> str:
-    for line in reversed(stdout.splitlines()):
-        if " passed" in line and "/" in line:
-            return line
-    return ""
 
 
 def rel(path: Path, repo_root: Path) -> str:
@@ -107,9 +105,8 @@ def run_script_suite(label: str, tests: list[Path], repo_root: Path) -> int:
             shell=False,
             check=False,
         )
-        detail = last_summary_line(completed.stdout) or completed.stderr.strip().splitlines()[-1:] or ["no summary"]
-        detail_text = detail[0] if isinstance(detail, list) else detail
-        checks.append((rel(test_path, repo_root), completed.returncode == 0, detail_text))
+        ok, detail = child_check_status(completed.returncode, completed.stdout, test_path.stem)
+        checks.append((rel(test_path, repo_root), ok, detail))
     return emit_checks(label, checks)
 
 

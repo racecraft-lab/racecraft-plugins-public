@@ -9,14 +9,6 @@ license: MIT
 
 # SpecKit Install
 
-## Installed Runtime Contract
-
-Installed Claude and Codex surfaces resolve Python 3.11 or newer, invoke
-`[resolved_python, "-m", "speckit_pro_runner"]`, send one JSON request on
-stdin, read one JSON response from stdout, and surface stderr diagnostics.
-Do not add a shell fallback, `jq` parsing path, Git Bash, WSL, or
-PowerShell-specific command-language requirement for installed workflows.
-
 ## Invocation
 
 ```text
@@ -108,16 +100,13 @@ Compare `.specify/extensions/` and `.specify/presets/` against the entries
 in `${CLAUDE_PLUGIN_ROOT}/scripts/curated-set.json`.
 
 - If every entry is present: report "Curated extensions and presets already
-  current — nothing to install." Continue to Step 6.
+  installed — nothing to install." Continue to Step 6.
 
 - Otherwise, list the missing entries and ask which to install. Recommended
   default is **all**. For each accepted entry, give the operator the
   `specify extension add <id>` or preset command from the curated set and
   run it only after they confirm. Skipped entries can be installed later
   with `/speckit-pro:speckit-upgrade`.
-
-Record the outcome in `.specify/curated-install.json` — commit this to git
-so the project's extension state is reproducible.
 
 ### 6. Verify and report
 
@@ -159,31 +148,3 @@ Stop and report — do not improvise — when:
 - The repo has detached HEAD or uncommitted changes that would
   conflict with the new files. Recommend committing or stashing
   first.
-- `install-curated-set` reports that an extension has neither a
-  GitHub Release nor a git tag — surface the message but do not
-  block the install over it. The operator can re-run after the
-  upstream extension publishes a tagged release.
-
-## Why This Skill
-
-The SpecKit CLI's `specify init` and `specify integration install`
-commands are the canonical install path. This skill wraps them so
-the user gets:
-
-- A consistent up-front check for `uv` and the CLI.
-- A clean state-detection step that hands off to `/speckit-pro:speckit-upgrade`
-  for already-installed repos (no accidental overwrites).
-- An explicit prompt for dual-integration setup, which the CLI
-  supports natively (both `claude` and `codex` are marked
-  "Multi-install Safe").
-- An interactive offer to install the curated set of community
-  extensions and presets that power the autopilot's
-  post-implementation parallel group and the AskUserQuestion
-  picker preset, with a provenance trail recorded in
-  `.specify/curated-install.json`.
-- A consistent post-install summary so the operator knows what to
-  do next.
-
-For upgrading an existing install (including the v0.8.13 migration
-from slash commands to skills, or moving from single- to
-dual-integration), use `/speckit-pro:speckit-upgrade` instead.

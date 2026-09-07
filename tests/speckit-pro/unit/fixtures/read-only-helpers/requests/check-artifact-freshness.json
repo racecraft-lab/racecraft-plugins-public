@@ -5,7 +5,7 @@
   "operation": "check-artifact-freshness",
   "mode": "read_only",
   "inputs": {
-    "workflow_file": "docs/ai/specs/.process/ART-008-workflow.md",
+    "workflow_file": "docs/ai/specs/.process/SPEC-708-workflow.md",
     "artifacts_observation": {
       "ok": true,
       "artifacts_dir_state": "present",

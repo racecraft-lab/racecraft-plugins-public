@@ -5,7 +5,7 @@
   "operation": "confidence-gate",
   "mode": "read_only",
   "inputs": {
-    "workflow_file": "docs/ai/specs/.process/XPLAT-005-workflow.md",
+    "workflow_file": "docs/ai/specs/.process/SPEC-805-workflow.md",
     "mode_name": "advisory"
   }
 }

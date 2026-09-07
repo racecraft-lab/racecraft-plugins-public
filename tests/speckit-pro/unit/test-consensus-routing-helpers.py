@@ -6,11 +6,9 @@ into the analyst set the orchestrator must dispatch. `aggregate-crl` turns a
 workflow file's Consensus Resolution Log into the Round-2 escape-rate metric
 behind the documented 10% re-evaluation trigger.
 
-Both rule sets used to live only in `references/consensus-protocol.md` prose,
-which named two Bash scripts that no longer existed, so a routing mistake was
-invisible to every test. Each row of that reference's category table is pinned
-here, and the aggregation cases use the reference's own five-row worked example
-as an inline fixture rather than reading a workflow file off disk.
+Each row of `references/consensus-protocol.md`'s category table is pinned here,
+and the aggregation cases use the reference's own five-row worked example as an
+inline fixture rather than reading a workflow file off disk.
 
 The helpers run in process against a temporary root so each case states exactly
 one behavior; the request-envelope path is covered by
@@ -422,7 +420,7 @@ class DispatchFixtureAgreementTests(unittest.TestCase):
 
 
 class ReferenceProseTests(unittest.TestCase):
-    """The shipped reference must send the orchestrator to the helper, once.
+    """The shipped reference must send the orchestrator to the helper.
 
     The reference is the Claude orchestrator's routing instruction. While any
     passage still describes hand-parsing the prefix, an orchestrator that obeys

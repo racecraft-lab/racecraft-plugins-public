@@ -105,8 +105,7 @@ have Agent Teams primitives — Codex always uses the parallel
 Dispatch the 3 tracks via `spawn_agent`, then loop bounded `wait_agent` calls
 until each track's actual result is consumed. A terminal status corroborates
 completion but cannot replace the result. Record each result and call
-`close_agent` only when the current surface exposes it. Three tracks fits the
-hosted Responses default of three active subagents; if derived
+`close_agent` only when the current surface exposes it. If derived
 `subagent_slots` is lower, dispatch in cap-bounded waves rather than all at
 once. The Lead synthesizes findings
 into the workflow file's Post-Implementation Checklist, then continues serial
@@ -249,7 +248,7 @@ gh pr create \
 ## Multi-PR Emission Workflow
 
 For specs whose atomicity route is `split-PR`, Post item 18 is multi-PR
-emission. The PRSG-008 `plan-layers` output is the authoritative source of
+emission. The `plan-layers` output is the authoritative source of
 review order and slice membership. Codex MUST NOT infer, reroute, or re-slice
 work from changed files, reviewability warnings, or fallback heuristics.
 
@@ -265,7 +264,7 @@ Codex parent-session responsibilities:
    `autopilot-state.json` until it is completed or explicitly skipped.
 2. Run full verification once for the completed implementation and capture the
    evidence path under `specs/<feature>/.process/emission/`.
-3. Read the persisted PRSG-008 layer plan from `autopilot-state.json` or the
+3. Read the persisted layer plan from `autopilot-state.json` or the
    workflow evidence. It must be the exact `plan-layers` envelope with
    `status=ok`.
 4. After the final backstop proceeds, treat `multi-pr-emission` only as
@@ -331,7 +330,7 @@ On resume, reconcile expected local/remote branches and GitHub PRs by expected
 head/base before creating anything. Existing matching PRs are authoritative for
 PR existence; malformed JSON or duplicate slice keys block instead of guessing.
 
-**Scoped CI boundary:** PRSG-009 scoped CI is recorded reviewer evidence in slice
+**Scoped CI boundary:** Scoped CI is recorded reviewer evidence in slice
 packets, PR bodies, `.process/prs.json`, workflow evidence, and
 `autopilot-state.json`. It MUST NOT modify `.github/workflows/pr-checks.yml`;
 the existing PR Checks workflow remains unchanged.

@@ -1,16 +1,8 @@
 # Fixture 18 — Post-Impl parallel-subagents fallback dispatch
 
-Verifies that when Agent Teams is NOT available (the
-`AGENT_TEAMS_AVAILABLE` capability probe at Step 0.6 returns false),
-the post-implementation parallel group dispatches the 3 tracks as
-background subagents in **ONE assistant message** (not sequentially).
-
-This is the fallback path of the capability-driven post-impl design —
-when Anthropic's Agent Teams is enabled per their docs, the autopilot
-uses a team; otherwise it uses this parallel-subagents pattern. Both
-deliver the same 3-track structure (Doctor / Code Review / Verify-chain)
-and the same wall-clock parallelism — Agent Teams adds inter-teammate
-messaging and shared task lists; subagents just summarize-back-to-lead.
+Verifies that the recorded `AGENT_TEAMS_AVAILABLE=false` fixture condition
+dispatches the post-implementation 3-track group as background subagents in
+**ONE assistant message** (not sequentially).
 
 The fixture asserts:
 
@@ -25,8 +17,7 @@ The fixture asserts:
   `validate-pr-packet.sh` before every `gh pr create --base --head --title
   --body-file`, and no post-create repair fallback for invalid packets
 
-Live validation of the Agent Teams path is deferred to Layer 8
-parity fixtures (see `tests/layer8-parity/README.md`).
+This replay fixture does not qualify live host behavior.
 
 See `skills/speckit-autopilot/references/post-implementation.md`
 §Post-Implementation Parallel Group for the full design.

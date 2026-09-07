@@ -21,19 +21,17 @@ from typing import Any
 
 from ..agent_materialization import materialize_agent_policy
 from ..envelope import diagnostic, is_diagnostic, response
-from ..merge_utils import deep_merge
 from ..path_utils import resolves_to_current_python, sha256_text
 from .mutation import empty_mutation, operation_record, run_mutation_helper, validate_target_path
 from .read_only import find_repo_root, is_relative_to, repo_relative, resolve_input_path
 
 INVENTORY_NAME = "install_inventory.json"
 FAKE_HOME_FIXTURE_ROOT = Path("tests") / "speckit-pro" / "unit" / "fixtures"
-XPLAT_008_FIXTURE_ROOT = FAKE_HOME_FIXTURE_ROOT / "installed-plugin-release"
-DEFAULT_RUNNER_INVOCATION_CASES = XPLAT_008_FIXTURE_ROOT / "runner-invocation-cases.json"
-XPLAT_008_PROMOTION_RECORDS = XPLAT_008_FIXTURE_ROOT / "promotion-records.json"
-DEFAULT_INSTALL_HEALTH_CASES = XPLAT_008_FIXTURE_ROOT / "install-health-repair-cases.json"
+INSTALLED_PLUGIN_RELEASE_FIXTURE_ROOT = FAKE_HOME_FIXTURE_ROOT / "installed-plugin-release"
+DEFAULT_RUNNER_INVOCATION_CASES = INSTALLED_PLUGIN_RELEASE_FIXTURE_ROOT / "runner-invocation-cases.json"
 MINIMUM_PYTHON = (3, 11, 0)
 CODEX_OPTIONAL_HELPER_NAME = "autopilot-fast-helper"
+CODEX_LOW_EFFORT_AGENT_NAMES = frozenset({"codebase-analyst", "spec-context-analyst"})
 CODEX_REQUIRED_AGENT_NAMES = (
     "analyze-executor",
     "artifact-author",
@@ -1944,9 +1942,6 @@ def run_install_helper(entry: Any, request: Any) -> dict[str, Any]:
             diagnostics=[diagnostic("missing_prerequisite", "could not locate repository root for install helper request")],
         )
 
-    if request.helper_id == "install-health-repair":
-        return run_install_health_repair(entry, request, repo_root)
-
     install_root_result = install_root_from_inputs(request.inputs, repo_root)
     if isinstance(install_root_result, dict):
         return response("input_error", request_id=request.request_id, diagnostics=[install_root_result])
@@ -2692,7 +2687,7 @@ def invalid_capability_snapshot(reason: str) -> dict[str, Any]:
         "Codex capability snapshot is invalid",
         details={"reason": reason},
         remediation_summary="Use one deterministic runner-owned capability snapshot for the route-aware invocation.",
-        remediation_actions=["Inject a valid fake snapshot in tests; do not run live discovery for G56R-006."],
+        remediation_actions=["Inject a valid fake snapshot in tests; do not run live discovery for static-agent-install."],
     )
 
 
@@ -4080,6 +4075,11 @@ def load_codex_agent_bundle(source_dir: Path, inputs: dict[str, Any]) -> tuple[d
             expected_source_model = "gpt-5.6-luna" if path.name == "autopilot-fast-helper.toml" else "gpt-5.6-sol"
             if source_policy.get("model") != expected_source_model:
                 raise ValueError(f"{path.name}: unexpected source model")
+            if (
+                path.stem in CODEX_LOW_EFFORT_AGENT_NAMES
+                and source_policy.get("model_reasoning_effort") != "low"
+            ):
+                raise ValueError(f"{path.name}: unexpected source reasoning effort")
 
             if raw_model != expected_source_model and expected_source_model == "gpt-5.6-sol":
                 rendered_text, replacement_count = re.subn(
@@ -4933,195 +4933,6 @@ def codex_agent_install_data(
     }
 
 
-def run_install_health_repair(entry: Any, request: Any, repo_root: Path) -> dict[str, Any]:
-    case_result = install_health_case(repo_root, request.inputs)
-    if is_diagnostic(case_result):
-        return response("input_error", request_id=request.request_id, diagnostics=[case_result])
-    case = case_result
-
-    installed_cache_path = str(case.get("installed_cache_path") or "tests/speckit-pro/unit/fixtures/installed-plugin-release/fake-home/speckit-pro")
-    findings = normalize_install_health_findings(case.get("findings"))
-    repair_actions = normalize_install_health_actions(case.get("repair_actions"), findings)
-    failures = install_health_action_failures(repair_actions)
-    has_manual = any(action.get("action_type") == "manual_remediation" for action in repair_actions)
-    health_status = "fail" if failures else "manual_remediation_required" if has_manual else "pass"
-    install_health = {
-        "schema_version": "1.0",
-        "feature_id": "XPLAT-008",
-        "installed_cache_path": installed_cache_path,
-        "findings": findings,
-        "repair_actions": repair_actions,
-        "status": health_status,
-    }
-
-    data = {
-        "helper_id": entry.helper_id,
-        "operation": entry.operation,
-        "mode": request.mode,
-        "promotion_status": entry.promotion_status,
-        "comparison_mode": entry.comparison_mode,
-        "writes_state": False,
-        "install_health_repair": install_health,
-    }
-    if failures:
-        diag = diagnostic(
-            "install_health_repair_blocked",
-            "install-health repair evidence includes unsafe autoheal or broad reinstall behavior",
-            details={"case_id": case.get("case_id"), "failures": failures},
-            remediation_summary="Limit autoheal to trusted checksum-backed artifacts and emit manual remediation for unsafe drift.",
-            remediation_actions=["Inspect data.install_health_repair.repair_actions.", "Replace broad reinstall or unverified autoheal actions with manual remediation."],
-        )
-        return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diag])
-    return response("ok", request_id=request.request_id, data=data)
-
-
-def install_health_case(repo_root: Path, inputs: dict[str, Any]) -> dict[str, Any]:
-    raw = inputs.get("case_file", DEFAULT_INSTALL_HEALTH_CASES.as_posix())
-    if not isinstance(raw, str) or not raw:
-        return diagnostic("invalid_case_file", "case_file must be a non-empty string")
-    path = resolve_case_path(raw, repo_root)
-    if not is_relative_to(path.resolve(strict=False), repo_root.resolve(strict=False)):
-        return diagnostic("invalid_case_file", "case_file must stay inside the repository")
-    try:
-        document = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        return diagnostic(
-            "invalid_case_file",
-            "install-health repair case fixture could not be loaded",
-            details={"case_file": raw, "error": type(exc).__name__},
-        )
-    cases = document.get("cases")
-    if not isinstance(cases, list):
-        return diagnostic("invalid_case_file", "install-health repair fixture must contain cases")
-    case_id = inputs.get("case_id")
-    if not isinstance(case_id, str) or not case_id:
-        case_id = "ready"
-    selected = next((item for item in cases if isinstance(item, dict) and item.get("case_id") == case_id), None)
-    if selected is None:
-        return diagnostic("unknown_fixture_case", "install-health repair fixture case was not found", details={"case_id": case_id})
-    base = copy.deepcopy(document.get("base_case", {}))
-    if not isinstance(base, dict):
-        base = {}
-    overrides = selected.get("overrides")
-    if isinstance(overrides, dict):
-        deep_merge(base, overrides)
-    base["case_id"] = case_id
-    base["expected_status"] = selected.get("expected_status")
-    return base
-
-
-def normalize_install_health_findings(raw: Any) -> list[dict[str, Any]]:
-    if not isinstance(raw, list):
-        return []
-    findings: list[dict[str, Any]] = []
-    for index, item in enumerate(raw):
-        if not isinstance(item, dict):
-            continue
-        classification = str(item.get("classification") or "unsafe_unknown")
-        artifact_path = normalize_artifact_path(item.get("artifact_path"), fallback=f"unknown-{index}.txt")
-        trusted = classification in {"trusted_missing", "trusted_stale"}
-        findings.append(
-            {
-                "finding_id": str(item.get("finding_id") or f"finding-{index}"),
-                "artifact_path": artifact_path,
-                "artifact_kind": str(item.get("artifact_kind") or ("runner_file" if trusted else "unknown")),
-                "source_identity": item.get("source_identity") if isinstance(item.get("source_identity"), str) else None,
-                "release_channel_or_tag": item.get("release_channel_or_tag") if isinstance(item.get("release_channel_or_tag"), str) else None,
-                "expected_digest": normalize_digest(item.get("expected_digest"), fallback=None),
-                "actual_digest": normalize_digest(item.get("actual_digest"), fallback=None),
-                "classification": classification,
-                "repair_allowed": bool(item.get("repair_allowed")) if "repair_allowed" in item else trusted,
-            }
-        )
-    return findings
-
-
-def normalize_install_health_actions(raw: Any, findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    if isinstance(raw, list):
-        return [item for item in raw if isinstance(item, dict)]
-    actions: list[dict[str, Any]] = []
-    for finding in findings:
-        finding_id = str(finding.get("finding_id"))
-        target_path = str(finding.get("artifact_path"))
-        if (
-            finding.get("classification") in {"trusted_missing", "trusted_stale"}
-            and finding.get("repair_allowed") is True
-            and has_trusted_repair_evidence(finding)
-        ):
-            actions.append(
-                {
-                    "action_id": f"autoheal:{finding_id}",
-                    "finding_id": finding_id,
-                    "action_type": "autoheal_refresh",
-                    "target_path": target_path,
-                    "source_path": str(finding.get("source_identity") or "speckit-pro"),
-                    "digest_verified": True,
-                    "status": "completed",
-                    "message": "Trusted checksum-backed artifact refreshed from the source payload inventory.",
-                    "manual_steps": [],
-                }
-            )
-            continue
-        actions.append(
-            {
-                "action_id": f"manual:{finding_id}",
-                "finding_id": finding_id,
-                "action_type": "manual_remediation",
-                "target_path": target_path,
-                "source_path": None,
-                "digest_verified": False,
-                "status": "blocked",
-                "message": "Unsafe installed-cache drift requires exact manual remediation; autoheal is not allowed.",
-                "manual_steps": [
-                    f"Inspect installed artifact {target_path}.",
-                    "Restore the plugin from a trusted marketplace release or remove the unsafe drift manually.",
-                ],
-            }
-        )
-    return actions
-
-
-def has_trusted_repair_evidence(finding: dict[str, Any]) -> bool:
-    for key in ("source_identity", "release_channel_or_tag", "expected_digest"):
-        value = finding.get(key)
-        if not isinstance(value, str) or not value:
-            return False
-    return True
-
-
-def install_health_action_failures(actions: list[dict[str, Any]]) -> list[str]:
-    failures: list[str] = []
-    for action in actions:
-        action_id = str(action.get("action_id") or "unknown-action")
-        action_type = action.get("action_type")
-        target_path = str(action.get("target_path") or "")
-        target_parts = PurePosixPath(target_path.replace("\\", "/")).parts
-        broad = action.get("operation_scope") == "broad_reinstall" or target_path in {"", ".", "/"} or "reinstall" in str(action.get("message", "")).lower()
-        unsafe_path = target_path.startswith("/") or any(part in {"", ".", ".."} for part in target_parts)
-        if action_type == "autoheal_refresh":
-            if action.get("status") != "completed" or action.get("digest_verified") is not True or not action.get("source_path") or broad or unsafe_path:
-                failures.append(action_id)
-        elif action_type == "manual_remediation":
-            steps = action.get("manual_steps")
-            if action.get("status") != "blocked" or action.get("digest_verified") is not False or not isinstance(steps, list) or not steps:
-                failures.append(action_id)
-        else:
-            failures.append(action_id)
-    return failures
-
-
-def normalize_artifact_path(value: Any, *, fallback: str) -> str:
-    text = value if isinstance(value, str) and value else fallback
-    return text.replace("\\", "/").lstrip("/")
-
-
-def normalize_digest(value: Any, *, fallback: str | None) -> str | None:
-    text = value if isinstance(value, str) else fallback
-    if text is None:
-        return None
-    return text if len(text) == 64 and all(char in "0123456789abcdef" for char in text) else fallback
-
-
 def runner_invocation_case(repo_root: Path, inputs: dict[str, Any]) -> dict[str, Any]:
     raw = inputs.get("case_file", DEFAULT_RUNNER_INVOCATION_CASES.as_posix())
     if not isinstance(raw, str) or not raw:
@@ -5159,7 +4970,7 @@ def runner_invocation_record(case: dict[str, Any], request_id: str | None, repo_
     )
     surface_path = str(case.get("surface_path") or "speckit-pro/skills/speckit-status/SKILL.md")
     cache_root = str(case.get("cache_root") or ".")
-    request_id_value = request_id or f"xplat-008-{product}-{platform_name}-{operation}"
+    request_id_value = request_id or f"installed-runtime-{product}-{platform_name}-{operation}"
     resolution, diagnostics = resolve_python_interpreter(platform_name, case, cache_root)
     fixture_backed = isinstance(case.get("candidate_results"), list)
 
@@ -5170,7 +4981,7 @@ def runner_invocation_record(case: dict[str, Any], request_id: str | None, repo_
         "operation": "runtime-info",
         "mode": "read_only",
         "inputs": {
-            "source": "xplat-008-installed-runtime",
+            "source": "installed-plugin-runtime",
             "product": product,
             "platform": platform_name,
             "surface_path": surface_path,
@@ -5210,7 +5021,7 @@ def runner_invocation_record(case: dict[str, Any], request_id: str | None, repo_
             diagnostics = [execution_diag]
     passed = accepted and not diagnostics
     record = {
-        "schema_version": "1.0",
+        "schema_version": "2.0",
         "request_id": request_id_value,
         "product": product,
         "platform": platform_name,
@@ -5683,7 +5494,6 @@ def runner_invocation_base_data(entry: Any, operation: str, status: str) -> dict
         gate_status = "skipped"
     elif status == "input_error":
         gate_status = "input_error"
-    promotion_record = XPLAT_008_PROMOTION_RECORDS.as_posix()
     case_file = DEFAULT_RUNNER_INVOCATION_CASES.as_posix()
     return {
         "gate": {
@@ -5692,11 +5502,9 @@ def runner_invocation_base_data(entry: Any, operation: str, status: str) -> dict
             "gate_status": gate_status,
             "promoted": status != "input_error",
             "blocking": status != "ok",
-            "comparison_ids": [f"xplat-008-{operation}"],
-            "promotion_record": promotion_record,
+            "comparison_ids": [f"installed-plugin-release-{operation}"],
         },
         "artifacts": [
-            {"path": promotion_record, "kind": "promotion_record"},
             {"path": case_file, "kind": "fixture"},
         ],
     }

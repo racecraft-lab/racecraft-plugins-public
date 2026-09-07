@@ -1,17 +1,15 @@
 import { expect, test } from '@playwright/test';
 
-// DOC-014 C5 + C4 / FR-006, FR-007, FR-008 · SC-005, US3 (coding-agent retrieval).
-//
 // Two agent-readable retrieval surfaces are asserted here, both served at
 // distinct build-time URLs under the configured base path (no Accept-header
-// content negotiation — FR-028). Fetches are relative to `baseURL` (which
+// content negotiation). Fetches are relative to `baseURL` (which
 // already ends in `/racecraft-plugins-public/`), matching the smoke spec and
 // `seo-robots-txt.spec.mjs` route convention.
 //
-//   1. Whole-site digests (C5, FR-006) — `llms.txt`, `llms-full.txt`,
+//   1. Whole-site digests — `llms.txt`, `llms-full.txt`,
 //      `llms-small.txt` from `starlight-llms-txt`. Each MUST return 200 with a
 //      non-empty plain-text body.
-//   2. Per-page Markdown variants (C4, FR-007/FR-008) — `<page-path>.md` from
+//   2. Per-page Markdown variants — `<page-path>.md` from
 //      the custom `src/pages/[...slug].md.ts` endpoint. Each content page MUST
 //      expose its raw `body` as text/markdown at HTTP 200, with the variant
 //      content corresponding to the rendered page (no orphaned/missing pages).

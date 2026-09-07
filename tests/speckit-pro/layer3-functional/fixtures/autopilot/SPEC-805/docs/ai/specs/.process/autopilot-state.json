@@ -1,0 +1,29 @@
+{
+  "schema_version": 2,
+  "fixture_kind": "deterministic-synthetic-testdata",
+  "spec_id": "SPEC-805",
+  "workflow_file": "docs/ai/specs/.process/SPEC-805-workflow.md",
+  "status": "planned",
+  "stage": "preflight",
+  "execution": {
+    "status": "not_started",
+    "evidence": []
+  },
+  "plan": [
+    {"step": "Phase 0: Prerequisites", "status": "pending"},
+    {"step": "Phase 1: Specify", "status": "pending"},
+    {"step": "Phase 2: Clarify", "status": "pending"},
+    {"step": "Phase 3: Plan", "status": "pending"},
+    {"step": "Phase 4: Checklist", "status": "pending"},
+    {"step": "Phase 5: Tasks", "status": "pending"},
+    {"step": "Phase 6: Analyze", "status": "pending"},
+    {"step": "Phase 7: Implement", "status": "pending"},
+    {"step": "Post: Verification and Status Sync", "status": "pending"}
+  ],
+  "materialization": {
+    "requires_disposable_git": true,
+    "requires_registered_worktree": true,
+    "branch": "805-autopilot-fixture",
+    "must_be_observed_by_run": true
+  }
+}

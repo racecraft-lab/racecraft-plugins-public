@@ -103,8 +103,6 @@ Do not invoke the deferred operation, advertise either runner mode, or invent a
 replacement command. Leave the PROCESS artifacts unchanged. This advisory gap
 does not block the remaining scaffold workflow, but it must be recorded.
 
-> **Codex implicit-trigger note (eval harness vs production):** Layer 2 trigger evals score this skill at 69% (11/16) on the Codex selector — but POS is a perfect 8/8 (every "scaffold SPEC-009" / "create a new spec branch" / "prep SPEC-022 for autopilot" query fires correctly). All 5 NEG misses are false-positives in single-skill staging where the harness loads only this skill, so the Codex selector has no alternative to route adjacent SDD queries to ("roadmap status" / "what's the progress on SPEC-009" → should go to `$speckit-status`, "run the fully populated workflow" → `$speckit-autopilot`, "resolve PR review comments" → `$speckit-resolve-pr`). In production all six speckit-pro skills are loaded together and Codex routes those queries to their proper destinations. The eval results under-report real-world accuracy; positive-trigger reliability is the operationally-relevant number. (This skill was renamed from `speckit-setup` in v1.12; the rename did not regress trigger behavior — same POS pass rate as before.)
-
 ## Input
 
 Accept:
@@ -528,17 +526,12 @@ degraded two. Do not add a new interview argument, do not change what the
 interview produces, and never edit any file under the grill-me skill on either
 platform. The scope input already exists; this appends to it.
 
-Codex grill-me uses a picker-first HITL guard: it must call
-`request_user_input` for each Grill Me question. In Codex Default mode this
-requires the `default_mode_request_user_input` feature to be enabled before the
-thread starts or resumes. Do not ask the Grill Me question as a normal assistant
-message, progress update, or final response. If `request_user_input` is absent
-or unavailable, stop setup and tell the user to run
-`codex features enable default_mode_request_user_input`, restart Codex or open a
-new thread, then rerun `$speckit-scaffold-spec <SPEC-ID>`. A nonzero shell
-`tty -s` result is not enough to stop a live Codex conversation, but a missing
-native picker is a config prerequisite failure. Do not try to drive grill-me from
-`codex exec` or any non-interactive runner — it will refuse and write nothing.
+Codex grill-me uses a picker-first HITL guard: call `request_user_input` for
+each Grill Me question when it is available. If it is unavailable in an active
+foreground user chat, ask the same single Grill Me question in free text and
+wait for the direct reply. In an autonomous, background, CI, or subagent run,
+stop before writing and require direct user interaction; never start a free-text
+interview there.
 
 If grill-me aborts (no interactive runtime), stop setup and report the
 condition. Do not synthesize design-concept content yourself.
@@ -566,10 +559,8 @@ only one.
 ### 5. Copy the workflow template into the worktree
 
 Before copying the workflow template, require the generic
-`speckit-pro-reviewability` preset to already exist inside the worktree.
-`ensure-reviewability-preset` is deferred and unavailable; do not invoke it or
-claim setup generated preset files. If the preset is absent, STOP and report the
-deferred capability gap.
+`speckit-pro-reviewability` preset to already exist inside the worktree. If the
+preset is absent, STOP and report the missing prerequisite.
 
 After confirming the preset is present, verify template resolution from the
 worktree:
@@ -612,7 +603,7 @@ template:
   name + " roadmap")
 - `{{ROADMAP_FILENAME}}` — the existing `*-technical-roadmap.md` filename without
   the `.md` extension
-- `{{SPEC_ID}}` — the roadmap identity, e.g., `PRSG-002` (must namespace-match
+- `{{SPEC_ID}}` — the roadmap identity, e.g., `SPEC-002` (must namespace-match
   `<branch-name>`)
 
 The written marker MUST carry a non-empty, quoted relative `up:` markdown link
@@ -930,7 +921,7 @@ candidates: no planning stage runs before this report, so none of them exists ye
 
 **The `SPEC-<ID>` token above is the roadmap identity in full, including whatever
 namespace prefix it carries — it is not a literal `SPEC-` joined to an
-identifier.** An `ART-011` run tests `ART-011-design-concept.md`. The candidates
+identifier.** A `SPEC-011` run tests `SPEC-011-design-concept.md`. The candidates
 above must be the filenames Steps 4 and 5 actually wrote. Never test a literally
 `SPEC-`-prefixed name for a spec whose identity does not begin with `SPEC-`: that
 path was never written, the read fails, and the report silently omits its own

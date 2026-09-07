@@ -103,6 +103,7 @@ def classify_changed_files(changed_files: Iterable[str]) -> DocsClassification:
 
         if (
             path_is_under(file_path, "docs-site/scripts")
+            or path_is_under(file_path, "speckit-pro/artifact-gallery")
             or file_path
             in {
                 "docs-site/src/data/safe-install-aids.ts",
@@ -171,7 +172,7 @@ def _print_summary(classification: DocsClassification) -> None:
     print(f"Docs-validation contract changed: {fields['docs_contract']}")
     print(f"Docs validation mode: {fields['validation_mode']}")
     if not classification.should_validate_docs:
-        print("No DOC-010 docs validation surfaces changed; validate-docs skipped successfully.")
+        print("No docs validation surfaces changed; validate-docs skipped successfully.")
 
 
 def main(argv: Sequence[str] | None = None) -> int:

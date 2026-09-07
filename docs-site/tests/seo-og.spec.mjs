@@ -1,11 +1,11 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * DOC-014 per-page Open Graph cards (C6 / FR-019, FR-020 · US5).
+ * Per-page Open Graph cards.
  *
  * Asserts every content page references its OWN per-page card (not a single
  * site-wide image), that the card is served as a real PNG, and that adding the
- * OG tags did not clobber the WP4 JSON-LD structured data on the same page.
+ * OG tags did not clobber the JSON-LD structured data on the same page.
  */
 
 const SITE_BASE = 'https://racecraft-lab.github.io/racecraft-plugins-public';
@@ -15,8 +15,8 @@ const SITE_BASE = 'https://racecraft-lab.github.io/racecraft-plugins-public';
 test('a content page references its own per-page og:image and twitter:image', async ({ page }) => {
   await page.goto('glossary/');
 
-  // DOC-014 adds the per-page image tags Starlight lacks (it has no default
-  // image). Starlight already owns `twitter:card`, so DOC-014 must NOT duplicate it.
+  // Starlight lacks default per-page image tags but already owns `twitter:card`,
+  // so this route must not duplicate it.
   const ogImage = await page.locator('head meta[property="og:image"]').getAttribute('content');
   const twImage = await page.locator('head meta[name="twitter:image"]').getAttribute('content');
 

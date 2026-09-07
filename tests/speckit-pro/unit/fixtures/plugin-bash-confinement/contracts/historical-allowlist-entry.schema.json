@@ -1,13 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://racecraft.dev/speckit-pro/xplat-009/historical-allowlist-entry.schema.json",
-  "title": "XPLAT-009 Historical Allowlist",
+  "title": "Historical Bash allowlist",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "feature_id", "entries"],
+  "required": ["schema_version", "contract_id", "entries"],
   "properties": {
-    "schema_version": { "const": "1.0" },
-    "feature_id": { "const": "XPLAT-009" },
+    "schema_version": { "const": "2.0" },
+    "contract_id": { "const": "plugin-bash-confinement" },
     "entries": {
       "type": "array",
       "items": { "$ref": "#/$defs/entry" }

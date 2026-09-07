@@ -21,6 +21,22 @@ import release_note_policy as POLICY  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
+def top_level_imports(path: Path) -> set[str]:
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    imports = {
+        alias.name.split(".", 1)[0]
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Import)
+        for alias in node.names
+    }
+    imports.update(
+        node.module.split(".", 1)[0]
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom) and node.module
+    )
+    return imports
+
+
 def inventory_check(test):  # type: ignore[no-untyped-def]
     """Give a non-loop unittest method one stable parity-inventory name."""
     @functools.wraps(test)
@@ -284,39 +300,16 @@ Valid consumer note.
 
     @inventory_check
     def test_policy_dependencies_stay_stdlib_only(self) -> None:
-        tree = ast.parse(POLICY_FILE.read_text(encoding="utf-8"))
-        imports = {
-            alias.name.split(".", 1)[0]
-            for node in ast.walk(tree)
-            if isinstance(node, ast.Import)
-            for alias in node.names
-        }
-        imports.update(
-            node.module.split(".", 1)[0]
-            for node in ast.walk(tree)
-            if isinstance(node, ast.ImportFrom) and node.module
-        )
-        self.assertEqual(
-            imports,
-            {"__future__", "dataclasses", "html", "json", "os", "re", "typing", "urllib"},
-        )
+        self.assertLessEqual(top_level_imports(POLICY_FILE), sys.stdlib_module_names)
 
     @inventory_check
     def test_suite_imports_only_the_policy_production_module(self) -> None:
-        tree = ast.parse(Path(__file__).read_text(encoding="utf-8"))
-        imports = {
-            alias.name.split(".", 1)[0]
-            for node in ast.walk(tree)
-            if isinstance(node, ast.Import)
-            for alias in node.names
-        }
-        imports.update(
-            node.module.split(".", 1)[0]
-            for node in ast.walk(tree)
-            if isinstance(node, ast.ImportFrom) and node.module
+        self.assertEqual(
+            top_level_imports(Path(__file__))
+            - sys.stdlib_module_names
+            - {"test_result"},
+            {"release_note_policy"},
         )
-        support_imports = {"__future__", "ast", "functools", "pathlib", "sys", "test_result", "unittest"}
-        self.assertEqual(imports - support_imports, {"release_note_policy"})
 
 
 def build_suite() -> unittest.TestSuite:

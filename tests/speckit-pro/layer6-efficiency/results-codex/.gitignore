@@ -1,3 +1,0 @@
-# Per-run benchmark results are noisy LLM artifacts and not committed.
-# Only the consolidated-*.json baselines are tracked.
-2*-*-*T*:*:*.json

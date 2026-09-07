@@ -69,44 +69,28 @@ class RefreshLocalPluginTests(unittest.TestCase):
         with self.subTest(msg="help mentions Codex refresh"):
             result = run_helper("--help")
             self.assertEqual(result.returncode, 0, merged(result))
-
-        with self.subTest(msg="help mentions Codex refresh"):
             self.assertIn("--codex", merged(result))
 
         with self.subTest(msg="dry-run default rebuilds, validates, and prints Claude dev command"):
             result = run_helper("--dry-run")
             self.assertEqual(result.returncode, 0, merged(result))
-
-        with self.subTest(msg="dry-run default rebuilds, validates, and prints Claude dev command"):
             self.assertIn("build-plugin-payloads.py", merged(result))
-
-        with self.subTest(msg="dry-run default rebuilds, validates, and prints Claude dev command"):
             self.assertIn("claude plugin validate", merged(result))
-
-        with self.subTest(msg="dry-run default rebuilds, validates, and prints Claude dev command"):
             self.assertIn("claude --plugin-dir", merged(result))
 
         with self.subTest(msg="dry-run default refreshes both installed plugin caches"):
             self.assertIn("plugin uninstall", merged(result))
-
-        with self.subTest(msg="dry-run default refreshes both installed plugin caches"):
             self.assertIn("codex plugin remove", merged(result))
 
         with self.subTest(msg="dry-run opt-outs skip installed plugin cache refresh"):
             result = run_helper("--dry-run", "--no-codex", "--no-claude-install")
             self.assertEqual(result.returncode, 0, merged(result))
-
-        with self.subTest(msg="dry-run opt-outs skip installed plugin cache refresh"):
             self.assertNotIn("plugin uninstall", merged(result))
-
-        with self.subTest(msg="dry-run opt-outs skip installed plugin cache refresh"):
             self.assertNotIn("codex plugin remove", merged(result))
 
         with self.subTest(msg="dry-run does not require generated payloads to exist"):
             result = run_helper("--dry-run", env={"SPECKIT_PLUGIN_NAME": "plugin-without-payloads"})
             self.assertEqual(result.returncode, 0, merged(result))
-
-        with self.subTest(msg="dry-run does not require generated payloads to exist"):
             self.assertNotIn("payload not found", merged(result))
 
         fail_bin = self.work / "fail-bin"
@@ -116,17 +100,9 @@ class RefreshLocalPluginTests(unittest.TestCase):
         with self.subTest(msg="dry-run all prints refresh commands without requiring real CLI state"):
             result = run_helper("--dry-run", "--all", env={"PATH": f"{fail_bin}{os.pathsep}{os.environ['PATH']}"})
             self.assertEqual(result.returncode, 0, merged(result))
-
-        with self.subTest(msg="dry-run all prints refresh commands without requiring real CLI state"):
             self.assertIn("claude plugin marketplace list # verify", merged(result))
-
-        with self.subTest(msg="dry-run all prints refresh commands without requiring real CLI state"):
             self.assertIn("codex plugin marketplace list # verify", merged(result))
-
-        with self.subTest(msg="dry-run all prints refresh commands without requiring real CLI state"):
             self.assertIn("claude plugin install", merged(result))
-
-        with self.subTest(msg="dry-run all prints refresh commands without requiring real CLI state"):
             self.assertIn("codex plugin add", merged(result))
 
         stub_bin = self.make_success_stubs()
@@ -136,44 +112,26 @@ class RefreshLocalPluginTests(unittest.TestCase):
             self.call_log.write_text("", encoding="utf-8")
             result = run_helper("--no-build", "--no-validate", "--codex", env=env)
             self.assertEqual(result.returncode, 0, merged(result))
-
-        calls = self.call_log.read_text(encoding="utf-8")
-        with self.subTest(msg="Codex refresh removes and adds installed plugin"):
+            calls = self.call_log.read_text(encoding="utf-8")
             self.assertIn("codex plugin marketplace list", calls)
-
-        with self.subTest(msg="Codex refresh removes and adds installed plugin"):
             self.assertIn("codex plugin remove speckit-pro@racecraft-plugins-public", calls)
-
-        with self.subTest(msg="Codex refresh removes and adds installed plugin"):
             self.assertIn("codex plugin add speckit-pro@racecraft-plugins-public", calls)
-
-        with self.subTest(msg="Codex refresh removes and adds installed plugin"):
             self.assertIn("Start a new Codex thread", merged(result))
 
         with self.subTest(msg="Claude install refresh honors requested scope"):
             self.call_log.write_text("", encoding="utf-8")
             result = run_helper("--no-build", "--no-validate", "--claude-install", "--scope", "local", env=env)
             self.assertEqual(result.returncode, 0, merged(result))
-
-        calls = self.call_log.read_text(encoding="utf-8")
-        with self.subTest(msg="Claude install refresh honors requested scope"):
+            calls = self.call_log.read_text(encoding="utf-8")
             self.assertIn("claude plugin marketplace list", calls)
-
-        with self.subTest(msg="Claude install refresh honors requested scope"):
             self.assertIn("claude plugin uninstall speckit-pro@racecraft-plugins-public --scope local -y", calls)
-
-        with self.subTest(msg="Claude install refresh honors requested scope"):
             self.assertIn("claude plugin install speckit-pro@racecraft-plugins-public --scope local", calls)
-
-        with self.subTest(msg="Claude install refresh honors requested scope"):
             self.assertIn("/reload-plugins", merged(result))
 
         with self.subTest(msg="Claude launch uses generated Claude payload"):
             self.call_log.write_text("", encoding="utf-8")
             result = run_helper("--no-build", "--no-validate", "--launch-claude", env=env)
             self.assertEqual(result.returncode, 0, merged(result))
-
-        with self.subTest(msg="Claude launch uses generated Claude payload"):
             calls = self.call_log.read_text(encoding="utf-8")
             self.assertIn(f"claude --plugin-dir {REPO_ROOT}/dist/claude/speckit-pro", calls)
 
@@ -195,11 +153,7 @@ class RefreshLocalPluginTests(unittest.TestCase):
                 | {"UNINSTALL_RC": "1", "UNINSTALL_MSG": 'Plugin "speckit-pro@racecraft-plugins-public" not found in installed plugins'},
             )
             self.assertEqual(result.returncode, 0, merged(result))
-
-        with self.subTest(msg="benign 'not found' uninstall still proceeds to install"):
             self.assertIn("/reload-plugins", merged(result))
-
-        with self.subTest(msg="benign 'not found' uninstall still proceeds to install"):
             self.assertIn("claude plugin install speckit-pro@racecraft-plugins-public", self.call_log.read_text(encoding="utf-8"))
 
         with self.subTest(msg="non-benign uninstall failure aborts with its output"):
@@ -211,40 +165,28 @@ class RefreshLocalPluginTests(unittest.TestCase):
                 env=failure_env | {"UNINSTALL_RC": "1", "UNINSTALL_MSG": "Error: permission denied writing plugin cache"},
             )
             self.assertEqual(result.returncode, 1, merged(result))
-
-        with self.subTest(msg="non-benign uninstall failure aborts with its output"):
             self.assertIn("permission denied writing plugin cache", merged(result))
-
-        with self.subTest(msg="non-benign uninstall failure aborts with its output"):
             self.assertIn("failed to uninstall", merged(result))
 
         with self.subTest(msg="marketplace present as a non-local source aborts clearly"):
             result = run_helper("--no-build", "--no-validate", "--no-codex", "--claude-install", env=failure_env | {"MKT_MODE": "github"})
             self.assertEqual(result.returncode, 1, merged(result))
-
-        with self.subTest(msg="marketplace present as a non-local source aborts clearly"):
             self.assertIn("not a local Directory source", merged(result))
 
         with self.subTest(msg="marketplace pointing at another checkout aborts"):
             result = run_helper("--no-build", "--no-validate", "--no-codex", "--claude-install", env=failure_env | {"MKT_MODE": "elsewhere"})
             self.assertEqual(result.returncode, 1, merged(result))
-
-        with self.subTest(msg="marketplace pointing at another checkout aborts"):
             self.assertIn("points at '/some/other/checkout'", merged(result))
 
         with self.subTest(msg="absent marketplace is added"):
             self.call_log.write_text("", encoding="utf-8")
             result = run_helper("--no-build", "--no-validate", "--no-codex", "--claude-install", env=failure_env | {"MKT_MODE": "absent"})
             self.assertEqual(result.returncode, 0, merged(result))
-
-        with self.subTest(msg="absent marketplace is added"):
             self.assertIn("claude plugin marketplace add", self.call_log.read_text(encoding="utf-8"))
 
         with self.subTest(msg="marketplace inspection failure aborts"):
             result = run_helper("--no-build", "--no-validate", "--no-codex", "--claude-install", env=failure_env | {"MKT_MODE": "listfail"})
             self.assertEqual(result.returncode, 1, merged(result))
-
-        with self.subTest(msg="marketplace inspection failure aborts"):
             self.assertIn("failed to inspect", merged(result))
 
         with self.subTest(msg="non-benign Codex remove failure aborts"):
@@ -256,8 +198,6 @@ class RefreshLocalPluginTests(unittest.TestCase):
                 env=failure_env | {"REMOVE_RC": "1", "REMOVE_MSG": "Error: disk failure"},
             )
             self.assertEqual(result.returncode, 1, merged(result))
-
-        with self.subTest(msg="non-benign Codex remove failure aborts"):
             self.assertIn("failed to remove", merged(result))
 
         with self.subTest(msg="marketplace name with regex metacharacters matches its row literally"):
@@ -270,11 +210,7 @@ class RefreshLocalPluginTests(unittest.TestCase):
                 env=failure_env | {"SPECKIT_MARKETPLACE": "my+plug-mkt", "MKT_NAME": "my+plug-mkt"},
             )
             self.assertEqual(result.returncode, 0, merged(result))
-
-        with self.subTest(msg="marketplace name with regex metacharacters matches its row literally"):
             self.assertNotIn("Adding Claude marketplace", merged(result))
-
-        with self.subTest(msg="marketplace name with regex metacharacters matches its row literally"):
             self.assertIn("speckit-pro@my+plug-mkt", self.call_log.read_text(encoding="utf-8"))
 
         with self.subTest(msg="missing claude skips validation instead of aborting a Codex-only run"):
@@ -288,25 +224,17 @@ class RefreshLocalPluginTests(unittest.TestCase):
                 env={"PATH": f"{codex_only}{os.pathsep}/usr/bin:/bin", "CALL_LOG": str(self.call_log), "STUB_REPO_ROOT": str(REPO_ROOT)},
             )
             self.assertEqual(result.returncode, 0, merged(result))
-
-        with self.subTest(msg="missing claude skips validation instead of aborting a Codex-only run"):
             self.assertIn("skipping Claude payload validation", merged(result))
-
-        with self.subTest(msg="missing claude skips validation instead of aborting a Codex-only run"):
             self.assertIn("codex plugin add speckit-pro@racecraft-plugins-public", self.call_log.read_text(encoding="utf-8"))
 
         with self.subTest(msg="invalid scope exits with usage error"):
             result = run_helper("--scope", "managed")
             self.assertEqual(result.returncode, 2, merged(result))
-
-        with self.subTest(msg="invalid scope exits with usage error"):
             self.assertIn("--scope must be one of", merged(result))
 
         with self.subTest(msg="unknown option exits with usage error"):
             result = run_helper("--wat")
             self.assertEqual(result.returncode, 2, merged(result))
-
-        with self.subTest(msg="unknown option exits with usage error"):
             self.assertIn("unknown option", merged(result))
 
     def make_success_stubs(self) -> Path:

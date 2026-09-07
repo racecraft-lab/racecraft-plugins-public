@@ -17,21 +17,9 @@ Specifically, this fixture exercises:
 
 If the orchestrator stayed inside the clarify-executor's context (no
 return), if clarify-executor tried to edit artifacts itself, or if
-clarify-executor itself spawned analysts (forbidden by Anthropic's
-no-subagent-spawning-subagents rule), the chain is broken. This fixture
-detects those failure modes.
+clarify-executor itself spawned analysts against the parent-owned
+no-nested-Agent policy, the chain is broken. This fixture detects those
+failure modes.
 
-## Assertions
-
-- `clarify-executor` is dispatched
-- `consensus-synthesizer` is dispatched
-- At least one consensus analyst is dispatched
-- Order: `clarify-executor` precedes `consensus-synthesizer`
-- No subagent spawns another `Agent()`
-- `grill-me` is never dispatched
-
-## Caveats
-
-This fixture requires a SpecKit fixture spec at
-`.specify/fixtures/spec-fixture-003/spec.md`. Capture-time setup is
-handled by the runner.
+For a live capture, `prompt.txt` names the committed `sample-spec.md` next to
+this README; it is the required fixture input.

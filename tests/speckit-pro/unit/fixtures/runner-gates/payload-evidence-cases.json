@@ -1,17 +1,15 @@
 {
-  "schema_version": "1.0",
-  "feature_id": "XPLAT-007",
+  "schema_version": "2.0",
+  "contract_id": "runner-gates",
   "coverage": [
     "fingerprints",
     "fixture-or-temp-output-roots",
-    "stale-generated-files",
-    "release_payload_cutover=false"
+    "stale-generated-files"
   ],
   "cases": [
     {
       "case_id": "claude-codex-test-payloads",
       "expected_status": "ok",
-      "release_payload_cutover": false,
       "payloads": [
         {
           "evidence_id": "us2-claude-test-payload",
@@ -23,7 +21,7 @@
             },
             {
               "path": "claude/skills/speckit-autopilot/SKILL.md",
-              "content": "# SpecKit Autopilot Claude fixture\n\nXPLAT-007 test payload evidence only.\n"
+              "content": "# SpecKit Autopilot Claude fixture\n\nTest payload evidence only.\n"
             }
           ]
         },
@@ -37,7 +35,7 @@
             },
             {
               "path": "codex/skills/speckit-autopilot/SKILL.md",
-              "content": "# SpecKit Autopilot Codex fixture\n\nXPLAT-007 test payload evidence only.\n"
+              "content": "# SpecKit Autopilot Codex fixture\n\nTest payload evidence only.\n"
             }
           ]
         }
@@ -47,7 +45,6 @@
     {
       "case_id": "stale-generated-files",
       "expected_status": "expected_failure",
-      "release_payload_cutover": false,
       "payloads": [
         {
           "evidence_id": "us2-stale-claude-test-payload",

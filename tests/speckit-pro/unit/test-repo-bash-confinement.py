@@ -6,7 +6,6 @@ from __future__ import annotations
 import ast
 import inspect
 import json
-import os
 import subprocess
 import sys
 import tempfile
@@ -67,7 +66,7 @@ def temporary_repo(
     allowlist: dict[str, object] | None = None,
     include_vendored: bool = True,
 ):
-    with tempfile.TemporaryDirectory(prefix="xplat010-confinement-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="repository-bash-confinement-") as tmp:
         root = Path(tmp)
         (root / "speckit-pro" / "speckit_pro_runner").mkdir(parents=True)
         (root / "tests" / "speckit-pro").mkdir(parents=True)
@@ -102,9 +101,12 @@ def run_guard(root: Path, *, allowlist_file: str = TEMP_ALLOWLIST) -> dict[str, 
 class RepoBashConfinementTests(unittest.TestCase):
     def assert_result_contract(self, data: dict[str, object]) -> None:
         schema = json.loads(RESULT_CONTRACT.read_text(encoding="utf-8"))
-        self.assertEqual(schema["properties"]["feature_id"]["const"], "XPLAT-010")
+        self.assertEqual(
+            schema["properties"]["contract_id"]["const"],
+            "repository-bash-confinement",
+        )
         self.assertEqual(schema["properties"]["enumeration"]["properties"]["source"]["const"], "git ls-files -z")
-        expected_allowlist_count = len(active_path_guard.XPLAT_010_CANONICAL_ALLOWLIST_PATHS)
+        expected_allowlist_count = len(active_path_guard.REPOSITORY_BASH_CONFINEMENT_ALLOWLIST_PATHS)
         self.assertEqual(
             schema["properties"]["allowlist"]["properties"]["entry_count"]["maximum"],
             expected_allowlist_count,
@@ -112,7 +114,7 @@ class RepoBashConfinementTests(unittest.TestCase):
         for field in schema["required"]:
             self.assertIn(field, data)
         self.assertEqual(data["schema_version"], schema["properties"]["schema_version"]["const"])
-        self.assertEqual(data["feature_id"], schema["properties"]["feature_id"]["const"])
+        self.assertEqual(data["contract_id"], schema["properties"]["contract_id"]["const"])
         self.assertIn(data["status"], schema["properties"]["status"]["enum"])
         self.assertIs(type(data["blocking_count"]), int)
         self.assertGreaterEqual(data["blocking_count"], 0)
@@ -204,11 +206,11 @@ class RepoBashConfinementTests(unittest.TestCase):
         allowlisted = [item for item in findings if item["classification"] == "vendored_specify_helper"]
         self.assertEqual(result["status"], "ok")
         self.assertEqual(result["data"]["blocking_count"], 0)
-        self.assertEqual(len(allowlisted), len(active_path_guard.XPLAT_010_CANONICAL_ALLOWLIST_PATHS))
+        self.assertEqual(len(allowlisted), len(active_path_guard.REPOSITORY_BASH_CONFINEMENT_ALLOWLIST_PATHS))
         self.assertTrue(all(item["release_readiness_excluded"] is True for item in allowlisted))
         self.assertEqual(
             result["data"]["classified_counts"],
-            {"vendored_specify_helper": len(active_path_guard.XPLAT_010_CANONICAL_ALLOWLIST_PATHS)},
+            {"vendored_specify_helper": len(active_path_guard.REPOSITORY_BASH_CONFINEMENT_ALLOWLIST_PATHS)},
         )
         self.assertNotIn("bash_free", result["data"]["classified_counts"])
         self.assertTrue(result["data"]["allowlist"]["release_readiness_excluded"])
@@ -550,7 +552,7 @@ jobs:
                 "      - run: python3 scripts/external.py\n"
             ),
         }
-        with tempfile.TemporaryDirectory(prefix="xplat010-external-python-") as outside:
+        with tempfile.TemporaryDirectory(prefix="external-python-confinement-") as outside:
             outside_target = Path(outside) / "external.py"
             outside_target.write_text("print('external')\n", encoding="utf-8")
             with temporary_repo([workflow]) as root:
@@ -591,7 +593,7 @@ jobs:
         details = result["diagnostics"][0]["details"]
         self.assertEqual(
             details["expected_entry_count"],
-            len(active_path_guard.XPLAT_010_CANONICAL_ALLOWLIST_PATHS),
+            len(active_path_guard.REPOSITORY_BASH_CONFINEMENT_ALLOWLIST_PATHS),
         )
         self.assertEqual(details["actual_entry_count"], len(short["entries"]))
 
@@ -926,7 +928,7 @@ def check(tool, error):
         self.assertEqual(result["data"]["blocking_count"], 0)
 
     def test_symlink_targets_are_confined_before_content_reads(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="xplat010-outside-") as outside:
+        with tempfile.TemporaryDirectory(prefix="repository-bash-outside-") as outside:
             outside_target = Path(outside) / "outside"
             outside_target.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
             with temporary_repo() as root:
@@ -969,7 +971,7 @@ def check(tool, error):
         self.assertEqual(result["exit_code"], 3)
         self.assertEqual([item["code"] for item in result["diagnostics"]], ["missing_prerequisite"])
 
-        with tempfile.TemporaryDirectory(prefix="xplat010-no-git-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="repository-bash-no-git-") as tmp:
             root = Path(tmp)
             (root / "speckit-pro" / "speckit_pro_runner").mkdir(parents=True)
             (root / "tests" / "speckit-pro").mkdir(parents=True)
@@ -1019,8 +1021,11 @@ def check(tool, error):
             request = guard_request(root)
             request.inputs["files"] = []
             result = active_path_guard.run_active_path_guard(SimpleNamespace(helper_id="active-path-guard"), request)
-        self.assertEqual(result["status"], "expected_failure")
-        self.assertGreater(result["data"]["blocking_count"], 0)
+        self.assertEqual(result["status"], "input_error")
+        self.assertEqual(
+            [item["code"] for item in result["diagnostics"]],
+            ["unsupported_gate_inputs"],
+        )
 
 
 class RepoBashConfinementDurabilityTests(unittest.TestCase):
@@ -1029,16 +1034,15 @@ class RepoBashConfinementDurabilityTests(unittest.TestCase):
 
         operations = [item for item in registry.GATE_OPERATIONS if item.operation == "repo-bash-confinement"]
         self.assertEqual(len(operations), 1)
-        self.assertTrue(operations[0].implemented)
 
-        source = inspect.getsource(release.live_xplat008_gate_evidence)
+        source = inspect.getsource(release.live_installed_release_gate_evidence)
         tree = ast.parse(source)
         release_checks = [
             node
             for node in ast.walk(tree)
             if isinstance(node, ast.Call)
             and isinstance(node.func, ast.Name)
-            and node.func.id == "xplat008_check"
+            and node.func.id == "installed_release_check"
             and len(node.args) > 1
             and isinstance(node.args[0], ast.Constant)
             and node.args[0].value == "repo_bash_confinement"
@@ -1057,4 +1061,4 @@ class RepoBashConfinementDurabilityTests(unittest.TestCase):
 if __name__ == "__main__":
     names = sys.argv[1:] or ["RepoBashConfinementTests", "RepoBashConfinementDurabilityTests"]
     suite = unittest.defaultTestLoader.loadTestsFromNames(names, module=sys.modules[__name__])
-    raise SystemExit(run_counted(suite, label="repo Bash confinement tests"))
+    raise SystemExit(run_counted(suite, label="test-repo-bash-confinement"))

@@ -46,15 +46,13 @@ select capabilities by their exact runtime identifier rather than a guessed name
 A component that cannot enumerate (its runtime exposes only a fixed set) selects
 directly from what it has.
 
-Subagent definitions that omit `tools:` inherit the operator's full session
-surface and enumerate it directly. Every agent acting on trusted input omits
-it, and for those the plugin pins no availability allowlist. The stated
-exception is the two Claude agents that read reviewer-derived text,
-`sweep-classifier` and `sweep-analyst`: each pins exactly the six snapshot
-broker tools and so cannot enumerate anything else. Codex does not install
-those roles and uses its separate permission-scoped launcher. Capability inheritance is right for an agent
-acting on trusted input and wrong for an agent reading text an attacker can
-write. User-invocable skills may still declare
+Agents acting on trusted input do not pin a plugin-owned availability allowlist.
+The two Claude agents that read reviewer-derived text, `sweep-classifier` and
+`sweep-analyst`, instead pin exactly the six snapshot broker tools. Codex does
+not install those roles and uses its separate permission-scoped launcher. This
+keeps attacker-writable reviewer text behind the closed broker surface while
+trusted-input agents enumerate only the capabilities their runtime actually
+exposes. User-invocable skills may still declare
 platform-specific authorization metadata, such as Claude Code `allowed-tools`,
 so the invocation can call the core primitives it needs. That metadata is not
 an installed-tool inventory or a vendor/MCP availability allowlist; it is

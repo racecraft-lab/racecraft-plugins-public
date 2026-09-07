@@ -1,1 +1,1 @@
-specs/xplat-005-read-only-helper-port/spec.md
+specs/spec-805-read-only-helper-port/spec.md

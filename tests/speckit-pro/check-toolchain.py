@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Report and validate local tools used by speckit-pro checks.
 
-Python port of ``check-toolchain.sh`` for XPLAT-010 T047. This repo-local
-preflight is standard-library only and preserves the predecessor's modes,
-summary shape, and exit-code behavior.
+This repo-local preflight is standard-library only and preserves its public
+modes, summary shape, and exit-code behavior.
 """
 
 from __future__ import annotations
@@ -156,7 +155,7 @@ def check_repo_tools(reporter: Reporter, label: str) -> None:
     optional_cmd(reporter, "gh", "gh", "PR creation, review-comment workflows, and live GitHub-backed checks")
     optional_cmd(reporter, "specify", "specify", "installed-plugin Spec Kit workflows")
     optional_cmd(reporter, "claude", "claude", "Claude live eval and integration fixture modes")
-    optional_cmd(reporter, "codex", "codex", "Codex trigger, functional, and efficiency eval modes")
+    optional_cmd(reporter, "codex", "codex", "Codex trigger and functional eval modes")
 
 
 def check_test_tools(reporter: Reporter) -> None:

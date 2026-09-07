@@ -1,4 +1,4 @@
-# SPEC-PARITY-02 Workflow - PRSG-011 Migration Guidance
+# SPEC-PARITY-02 Workflow - SPEC-911 Migration Guidance
 
 ## Overview
 

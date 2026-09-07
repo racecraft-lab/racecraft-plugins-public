@@ -1,6 +1,0 @@
-{
-  "schemaVersion": 1,
-  "records": [
-    { "slice": "PRSG-917", "pr": 117.5, "merged_sha": "abc1234" }
-  ]
-}

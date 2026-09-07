@@ -8,13 +8,13 @@
     },
     {
       "case_id": "redundant-segments",
-      "input": "specs/./xplat-005-read-only-helper-port/spec.md",
-      "normalized": "specs/xplat-005-read-only-helper-port/spec.md"
+      "input": "specs/./spec-805-read-only-helper-port/spec.md",
+      "normalized": "specs/spec-805-read-only-helper-port/spec.md"
     },
     {
       "case_id": "backslash-normalization",
-      "input": "docs\\ai\\specs\\.process\\XPLAT-005-workflow.md",
-      "normalized": "docs/ai/specs/.process/XPLAT-005-workflow.md"
+      "input": "docs\\ai\\specs\\.process\\SPEC-805-workflow.md",
+      "normalized": "docs/ai/specs/.process/SPEC-805-workflow.md"
     },
     {
       "case_id": "repo-relative-fixture",

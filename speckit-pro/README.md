@@ -89,7 +89,7 @@ Claude Code plugin skills are namespaced, so SpecKit Pro skills use the
 
 ### Codex
 
-Claude Code install commands are the separate DOC-003-owned path. For Codex,
+Claude Code install commands are a separate path. For Codex,
 open this marketplace repo in Codex, then open the plugin directory:
 
 ```text
@@ -118,18 +118,9 @@ $install
 ```
 
 The default destination is `~/.codex/agents/`; `.codex/agents/` is the explicit
-project-scoped destination override. Verify every installer-copied TOML file:
-
-- `autopilot-fast-helper.toml`
-- `phase-executor.toml`
-- `clarify-executor.toml`
-- `checklist-executor.toml`
-- `analyze-executor.toml`
-- `implement-executor.toml`
-- `codebase-analyst.toml`
-- `spec-context-analyst.toml`
-- `domain-researcher.toml`
-- `uat-runbook-author.toml`
+project-scoped destination override. The runner-owned catalog determines which
+bundled agents are required or optional; the install response's
+`data.agent_files` field supplies the concrete filenames to verify.
 
 Then restart Codex. Codex skills and custom agents are separate runtime
 surfaces: the plugin ships skills directly, while the install skill copies the
@@ -155,7 +146,7 @@ hook trust, and configured policy controls.
 
 For the detailed Codex install page, use
 [`docs-site/src/content/docs/install/codex.md`](../docs-site/src/content/docs/install/codex.md).
-DOC-007 owns deeper reference detail, and DOC-008 owns troubleshooting, update,
+The install reference owns deeper detail, troubleshooting, update,
 rollback, permission repair, stale-cache forensics, and full security or trust
 depth.
 
@@ -331,15 +322,14 @@ $install
 
 Then restart Codex. The plugin ships Codex skills directly, but custom agents
 must be copied into `.codex/agents/` or `~/.codex/agents/` before Codex can
-spawn them by name. The expected installed output is the TOML files listed
-in the Codex install section above.
+spawn them by name. Verify the files reported in `data.agent_files`.
 
 If a plugin update changed bundled custom-agent TOML files, rerun
 `@SpecKit Pro -> install` or `$install`, verify the selected destination, and
 restart Codex again. If behavior still looks stale, check the marketplace source
 or copied personal payload, the generated payload, the installed plugin cache,
 the selected custom-agent destination, and restart state. Do not edit the
-installed plugin cache; DOC-008 owns deeper stale-cache troubleshooting,
+installed plugin cache; the troubleshooting guide owns deeper stale-cache handling,
 permission repair, update, and rollback procedures.
 
 </details>
@@ -428,8 +418,8 @@ loads the installed runtime copy from
 `~/.codex/plugins/cache/$MARKETPLACE_NAME/$PLUGIN_NAME/$VERSION/`.
 
 The generated Codex payload can also include lifecycle hook configuration such
-as `codex-hooks.json`. DOC-004 keeps that as install-safety awareness only;
-DOC-007 owns deeper reference detail, and DOC-008 owns hook trust,
+as `codex-hooks.json`. This overview keeps that as install-safety awareness only;
+the install reference owns deeper detail and hook trust,
 troubleshooting, update, rollback, permission, stale-cache, and security depth.
 
 </details>

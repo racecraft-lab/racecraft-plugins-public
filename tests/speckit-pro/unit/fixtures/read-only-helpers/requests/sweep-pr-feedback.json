@@ -5,9 +5,9 @@
   "operation": "sweep-pr-feedback",
   "mode": "read_only",
   "inputs": {
-    "workflow_file": "docs/ai/specs/.process/ART-008-workflow.md",
+    "workflow_file": "docs/ai/specs/.process/SPEC-708-workflow.md",
     "self_login": "speckit-pro-bot",
-    "feature_dir": "specs/art-008-feedback-sweep",
+    "feature_dir": "specs/spec-708-feedback-sweep",
     "pr_observation": {
       "ok": true,
       "comments": [
@@ -16,7 +16,7 @@
           "surface": "pr_conversation",
           "author": "octocat",
           "author_association": "OWNER",
-          "body": "Artifact: Implementation Plan\nFeature: ART-008\n\nObjections recorded while reviewing this plan.\n\nPhase / Registry  (#phase-2)\nThe registry should cover every exporting template.",
+          "body": "Artifact: Implementation Plan\nFeature: SPEC-708\n\nObjections recorded while reviewing this plan.\n\nPhase / Registry  (#phase-2)\nThe registry should cover every exporting template.",
           "truncated": false
         },
         {

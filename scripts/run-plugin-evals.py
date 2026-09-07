@@ -10,9 +10,7 @@ Why this wrapper exists
   arm, doubling that again.
 
 So the default invocation is **six agent sessions per eval case**, and each one
-pays its own full context boot. A single ad-hoc pass over the speckit-pro
-suites on 2026-08-31 spawned 556 sessions and consumed roughly 144M tokens in
-two hours, which was 81-94% of that window's total account usage.
+pays its own full context boot.
 
 The second failure mode is the working directory. Claude Code resolves plugin
 and MCP configuration from the launch directory, so an eval started from
@@ -42,7 +40,7 @@ import sys
 from pathlib import Path
 
 # Iterating locally: one run, no baseline arm. 1/6th the sessions of the
-# default, which is the difference between a coffee break and a rate limit.
+# default.
 ITERATE_ARGS = ["--runs", "1", "--ablation", "none"]
 
 DEFAULT_ITERATE_BUDGET_USD = "5"

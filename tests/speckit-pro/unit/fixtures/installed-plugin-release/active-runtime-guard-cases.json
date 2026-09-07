@@ -1,15 +1,4 @@
 {
-  "schema_version": "1.0",
-  "feature_id": "XPLAT-008",
-  "coverage": [
-    "active installed-runtime skills block prohibited shell behavior",
-    "active hooks block jq and shell parsing",
-    "generated payload runtime files block prohibited shell behavior",
-    "release gates allow only direct Python runner dispatch glue",
-    "archive/provenance, tests/fixtures, CI docs glue, and upstream .specify/scripts/bash helpers are allowed",
-    "final current implementation scans the full release surface without requiring PR review-base diff metadata",
-    "empty and non-list configured scan roots fail closed instead of falling back to default roots"
-  ],
   "cases": [
     {
       "case_id": "blocking-active-runtime-patterns",
@@ -40,7 +29,7 @@
       "case_id": "allowed-runtime-exceptions",
       "files": [
         {
-          "path": ".specify/memory/archive-reports/2026-07-04-xplat-006.md",
+          "path": ".specify/memory/archive-reports/2026-06-29-completed-active-specs-post-merge-hygiene.md",
           "content": "Historical command: bash tests/speckit-pro/run-all.sh"
         },
         {

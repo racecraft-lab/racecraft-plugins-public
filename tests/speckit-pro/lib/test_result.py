@@ -1,20 +1,9 @@
 #!/usr/bin/env python3
-"""Shared per-assertion counting ``TestResult`` for XPLAT-010 count-parity ports.
+"""Shared per-assertion counting ``TestResult`` for the test suite.
 
-Every ported ``.sh`` structural/unit test lands as a stdlib ``unittest`` module
-whose ``__main__`` prints the house-convention ``<label>: {passed}/{total}
-passed`` line the suite orchestrator (``run-all.py`` / ``run-layer-scripts.py``)
-and the shipped suite gate parse. The bash predecessor counted **every executed
-assertion** (``_pass``/``_fail``), including loop-generated repetitions. Bare
-``unittest`` ``result.testsRun`` counts test *methods* and never increments for
-``subTest`` units, so it silently under-counts any looped or grouped assertions
-(count-parity contract §3, FR-010, research §D6).
-
-``CountingTestResult`` fixes this: ``{total}`` equals ``(test methods NOT in a
-subTest loop/group) + (subTest units actually executed)`` and each former
-assertion execution maps to exactly one counted unit. Ports reconcile each bash
-check name 1:1 via ``subTest(msg=<name>)``; the executed names are captured in
-``subtest_names`` for the dual-run inventory diff.
+``CountingTestResult`` reports each executed ``subTest`` as one unit and each
+plain test method as one unit. This keeps the suite summary aligned with the
+behavior that actually ran instead of counting only container methods.
 
 This module is imported by ports (as a shared utility) — it never self-runs a
 suite. Its own unit tests live in ``tests/speckit-pro/lib/test_lib.py``.
@@ -23,6 +12,7 @@ suite. Its own unit tests live in ``tests/speckit-pro/lib/test_lib.py``.
 from __future__ import annotations
 
 import os
+import re
 import unittest
 import unittest.case
 from pathlib import Path
@@ -31,6 +21,47 @@ from typing import TextIO
 # Repo root, from this file's own location: tests/speckit-pro/lib/ -> repo root.
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _SPECS_GUARD_INSTALLED = False
+_COUNTED_SUMMARY_RE = re.compile(
+    r"^(?P<label>[^:]+):\s*(?P<passed>\d+)/(?P<total>\d+) passed\s*$"
+)
+
+
+def classify_counted_child(
+    exit_code: int,
+    stdout: str,
+    expected_label: str,
+) -> tuple[str, int, int, str]:
+    """Classify exactly one summary owned by the directly executed child."""
+    owned = []
+    for line in stdout.splitlines():
+        match = _COUNTED_SUMMARY_RE.fullmatch(line)
+        if match is not None and match.group("label") == expected_label:
+            owned.append((line, int(match.group("passed")), int(match.group("total"))))
+    if not owned:
+        disposition = "missing-summary" if exit_code == 0 else "crash"
+        return disposition, 0, 1, f"no valid {expected_label} summary"
+    if len(owned) != 1:
+        return "duplicate-summary", 0, 1, f"multiple {expected_label} summaries"
+    line, passed, total = owned[0]
+    if total == 0:
+        return "invalid-summary", 0, 1, "zero checks discovered"
+    if passed > total:
+        return "invalid-summary", 0, 1, "passed count exceeds total"
+    failed = total - passed
+    if exit_code != 0 and failed == 0:
+        return "failed-exit", passed, 1, f"all checks passed but child exited {exit_code}"
+    detail = line if failed == 0 else "not all checks passed"
+    return "counted", passed, failed, detail
+
+
+def child_check_status(exit_code: int, stdout: str, expected_label: str) -> tuple[bool, str]:
+    """Return whether a directly executed counted child passed."""
+    disposition, _passed, failed, detail = classify_counted_child(
+        exit_code,
+        stdout,
+        expected_label,
+    )
+    return disposition == "counted" and failed == 0, detail
 
 
 def install_specs_read_guard(repo_root: Path | None = None) -> None:
@@ -39,9 +70,8 @@ def install_specs_read_guard(repo_root: Path | None = None) -> None:
     Archive cleanup deletes a feature's ``specs/`` folder once its pull request
     merges, so a test that opens one is a time bomb: green today, red at archive
     time, months later, in a cleanup branch that has nothing to do with it. That
-    is not hypothetical — it is what ART-008's archive hit, and 21 assertions in
-    ``test-feedback-sweep-parse.py`` went red at once because the file read eight
-    documents out of the folder being removed.
+    is not hypothetical: archived feature folders disappear while tests remain,
+    so a test that reads one eventually fails for reasons unrelated to behavior.
 
     **Why an audit hook rather than a source scan.** The distinction that matters
     is data versus access, and no static pass draws it reliably. A ``specs/...``
@@ -59,10 +89,10 @@ def install_specs_read_guard(repo_root: Path | None = None) -> None:
     Content reads and directory listings are what break, and those are what this
     catches.
 
-    **Opt out where sweeping the live tree is the job.** Six suites do:
+    **Opt out where sweeping the live tree is the job.** These suites do:
     ``validate-moc-orphan``, ``validate-moc-stale-index``,
-    ``validate-agent-instructions``, ``test-analysis-decision-ladder``,
-    ``test-privacy-scan`` and ``test-artifact-gallery``. Each walks whatever
+    ``validate-agent-instructions``, ``test-privacy-scan`` and
+    ``test-artifact-gallery``. Each walks whatever
     specs happen to exist rather than depending on one by name, which makes it
     archive-safe by construction: an absent feature folder contributes nothing.
     They pass ``allow_live_specs=True`` to ``run_counted``.
@@ -71,14 +101,15 @@ def install_specs_read_guard(repo_root: Path | None = None) -> None:
     than "this suite touches ``specs/``". Sweeping what is there is safe;
     depending on a named spec is the time bomb, and no amount of opting out
     makes it safe — that case wants its documents frozen under the suite's own
-    ``fixtures/`` tree instead. Four of the six above were found by this guard
+    ``fixtures/`` tree instead. Several were found by this guard
     failing on its first run rather than predicted, so expect to discover rather
     than enumerate.
 
-    Known gap, accepted: the hook is per-process, so a read inside a subprocess
-    the test spawns is not seen. Reaching one takes deliberately handing a
-    ``specs/...`` path to a helper; every in-process read — the kind that broke —
-    is covered.
+    **Subprocess boundary.** Tests must not hand named live ``specs/`` paths to
+    subprocesses. A subprocess test that needs a spec-shaped tree must instead
+    create a test-owned temporary repository and use frozen fixture documents.
+    The hook remains deliberately process-local; tests enforce the boundary by
+    construction rather than adding subprocess interception.
     """
     global _SPECS_GUARD_INSTALLED
     if _SPECS_GUARD_INSTALLED:
@@ -114,9 +145,6 @@ def install_specs_read_guard(repo_root: Path | None = None) -> None:
     sys.addaudithook(_hook)
     _SPECS_GUARD_INSTALLED = True
 
-_SUBTEST_MSG_SENTINEL = getattr(unittest.case, "_subtest_msg_sentinel", None)
-
-
 class CountingTestResult(unittest.TextTestResult):
     """A ``TextTestResult`` that counts per-assertion units, not just methods.
 
@@ -140,7 +168,6 @@ class CountingTestResult(unittest.TextTestResult):
         super().__init__(stream, descriptions, verbosity)
         self.units_total = 0
         self.units_passed = 0
-        self.subtest_names: list[str] = []
         self._current_has_subtests = False
         self._current_method_failed = False
 
@@ -162,7 +189,6 @@ class CountingTestResult(unittest.TextTestResult):
         # on failure/error.
         if outcome is None:
             self.units_passed += 1
-        self.subtest_names.append(_subtest_label(subtest))
 
     def addFailure(self, test: unittest.case.TestCase, err: object) -> None:
         super().addFailure(test, err)
@@ -170,6 +196,10 @@ class CountingTestResult(unittest.TextTestResult):
 
     def addError(self, test: unittest.case.TestCase, err: object) -> None:
         super().addError(test, err)
+        self._current_method_failed = True
+
+    def addSkip(self, test: unittest.case.TestCase, reason: str) -> None:
+        super().addSkip(test, reason)
         self._current_method_failed = True
 
     def stopTest(self, test: unittest.case.TestCase) -> None:
@@ -204,19 +234,6 @@ class _StreamWrapper:
             flush()
 
 
-def _subtest_label(subtest: unittest.case._SubTest) -> str:
-    """Recover the 1:1 bash-check name a port pinned via ``subTest(msg=...)``."""
-    message = getattr(subtest, "_message", None)
-    if _SUBTEST_MSG_SENTINEL is not None and message is _SUBTEST_MSG_SENTINEL:
-        message = None
-    if message:
-        return str(message)
-    params = getattr(subtest, "params", None)
-    if params:
-        return ", ".join(f"{key}={value}" for key, value in params.items())
-    return "<subtest>"
-
-
 def run_counted(
     suite: unittest.TestSuite,
     *,
@@ -228,7 +245,8 @@ def run_counted(
     """Run ``suite`` with per-assertion counting; print the house summary.
 
     Prints ``<label>: {passed}/{total} passed`` to ``stream`` (default stdout)
-    and returns ``0`` when every counted unit passed, ``1`` otherwise.
+    and returns ``0`` only when at least one counted unit ran and every unit
+    passed, ``1`` otherwise.
 
     Installs the live-``specs/`` read guard first, because every test in this
     repository funnels through here and one install covers all of them. Pass
@@ -243,8 +261,13 @@ def run_counted(
     result = CountingTestResult(stream=None, descriptions=False, verbosity=verbosity)
     suite.run(result)
     out.write(f"{label}: {result.units_passed}/{result.units_total} passed\n")
-    ok = (result.units_passed == result.units_total) and not result.failures and not result.errors
+    ok = result.units_total > 0 and (result.units_passed == result.units_total) and not result.failures and not result.errors
     return 0 if ok else 1
 
 
-__all__ = ("CountingTestResult", "install_specs_read_guard", "run_counted")
+__all__ = (
+    "CountingTestResult",
+    "child_check_status",
+    "install_specs_read_guard",
+    "run_counted",
+)

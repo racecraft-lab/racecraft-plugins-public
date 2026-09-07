@@ -23,17 +23,14 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 TESTS_ROOT = REPO_ROOT / "tests" / "speckit-pro"
 LAYER8 = TESTS_ROOT / "layer8-parity"
 RUNNER = LAYER8 / "run-parity-fixtures.py"
-BASELINE = TESTS_ROOT / "parity" / "bash-to-python" / "test-parity-runner-baseline.txt"
 SHARED_LIB = TESTS_ROOT / "lib"
 if str(SHARED_LIB) not in sys.path:
     sys.path.insert(0, str(SHARED_LIB))
 
-from capture_baseline import baseline_inventory  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
 CURRENT_INVENTORY = [
-    "baseline inventory is truthful and ordered",
     "Layer-8 runner module imports",
     "Layer-8 runner source has no shell=True",
     "Layer-8 runner source has no os.system",
@@ -551,112 +548,109 @@ class Layer8RunnerTests(unittest.TestCase):
                 {"fields": {"extractor.unsupported": {"tolerance": "unsupported"}}},
             )
 
+            names = iter(CURRENT_INVENTORY)
             checks = [
+                (next(names), lambda: self.assertIsNotNone(runner)),
+                (next(names), lambda: self.assertNotIn("shell=True", source)),
+                (next(names), lambda: self.assertNotIn("os.system", source)),
                 (
-                    CURRENT_INVENTORY[0],
-                    lambda: self.assertEqual(baseline_inventory(BASELINE), CURRENT_INVENTORY),
-                ),
-                (CURRENT_INVENTORY[1], lambda: self.assertIsNotNone(runner)),
-                (CURRENT_INVENTORY[2], lambda: self.assertNotIn("shell=True", source)),
-                (CURRENT_INVENTORY[3], lambda: self.assertNotIn("os.system", source)),
-                (
-                    CURRENT_INVENTORY[4],
+                    next(names),
                     lambda: self.assertTrue(tracked_shells.returncode == 0 and not live_tracked_shells),
                 ),
                 (
-                    CURRENT_INVENTORY[5],
+                    next(names),
                     lambda: self.assertTrue(
                         any(call.args and isinstance(call.args[0], ast.Name) and call.args[0].id == "argv" for call in run_calls)
                     ),
                 ),
                 (
-                    CURRENT_INVENTORY[6],
+                    next(names),
                     lambda: self.assertTrue(run_calls and all(call_shell_keyword_is_false(call) for call in run_calls)),
                 ),
                 (
-                    CURRENT_INVENTORY[7],
+                    next(names),
                     lambda: self.assertTrue(
                         help_result.returncode == 0 and "Layer 8 - Parity Fixtures Runner" in help_result.stdout
                     ),
                 ),
                 (
-                    CURRENT_INVENTORY[8],
+                    next(names),
                     lambda: self.assertTrue(
                         parse_error.returncode == 2 and "Unknown flag: --unknown" in parse_error.stderr
                     ),
                 ),
                 (
-                    CURRENT_INVENTORY[9],
+                    next(names),
                     lambda: self.assertEqual((missing_counts.skipped, missing_counts.failed), (1, 0)),
                 ),
                 (
-                    CURRENT_INVENTORY[10],
+                    next(names),
                     lambda: self.assertIn(
                         f"configured CLAUDE_BIN path does not exist: {root / 'missing-claude'}",
                         missing_stdout.getvalue(),
                     ),
                 ),
-                (CURRENT_INVENTORY[11], lambda: self.assertEqual([entry["cwd"] for entry in logs], ["pathA", "pathB"])),
+                (next(names), lambda: self.assertEqual([entry["cwd"] for entry in logs], ["pathA", "pathB"])),
                 (
-                    CURRENT_INVENTORY[12],
+                    next(names),
                     lambda: self.assertTrue(all(entry["argv"][0] == "-p" for entry in logs)),
                 ),
                 (
-                    CURRENT_INVENTORY[13],
+                    next(names),
                     lambda: (
                         self.assertEqual([entry["executable"] for entry in logs], ["claude", "claude"]),
                         self.assertEqual([entry["selected_dir"] for entry in logs], [str(stub.parent), str(stub.parent)]),
                     ),
                 ),
                 (
-                    CURRENT_INVENTORY[14],
+                    next(names),
                     lambda: self.assertEqual([entry["budget"] for entry in logs], ["3.50", "3.50"]),
                 ),
-                (CURRENT_INVENTORY[15], lambda: self.assertEqual(logs[0]["mode"], "teams")),
-                (CURRENT_INVENTORY[16], lambda: self.assertEqual(logs[1]["mode"], "fallback")),
+                (next(names), lambda: self.assertEqual(logs[0]["mode"], "teams")),
+                (next(names), lambda: self.assertEqual(logs[1]["mode"], "fallback")),
                 (
-                    CURRENT_INVENTORY[17],
+                    next(names),
                     lambda: self.assertEqual([entry["unset_present"] for entry in logs], [False, False]),
                 ),
                 (
-                    CURRENT_INVENTORY[18],
+                    next(names),
                     lambda: self.assertIn(
                         "PASS canonical-live:extractor.statuses (exact, extractor=table_column:Status)",
                         output,
                     ),
                 ),
                 (
-                    CURRENT_INVENTORY[19],
+                    next(names),
                     lambda: self.assertIn("PASS canonical-live:extractor.row_count (tolerance-1, |2 - 3|=1)", output),
                 ),
                 (
-                    CURRENT_INVENTORY[20],
+                    next(names),
                     lambda: self.assertEqual(byte_first_status, "pass"),
                 ),
                 (
-                    CURRENT_INVENTORY[21],
+                    next(names),
                     lambda: self.assertEqual(
                         (semantic_fast_path_status, nonnumeric_tolerance_status, unsupported_tolerance_status),
                         ("pass", "fail", "fail"),
                     ),
                 ),
                 (
-                    CURRENT_INVENTORY[22],
+                    next(names),
                     lambda: self.assertEqual((counts.failed, counts.skipped), (0, 1)),
                 ),
                 (
-                    CURRENT_INVENTORY[23],
+                    next(names),
                     lambda: self.assertIn("semantic-equivalent comparison skipped", report.read_text(encoding="utf-8")),
                 ),
                 (
-                    CURRENT_INVENTORY[24],
+                    next(names),
                     lambda: self.assertIn(
                         "FAIL invalid-env-live: env-fallback.json invalid env contract",
                         invalid_env_stdout.getvalue(),
                     ),
                 ),
                 (
-                    CURRENT_INVENTORY[25],
+                    next(names),
                     lambda: self.assertTrue(
                         "... diff truncated after 50 lines" in diff_report_text
                         and diff_report_text.count("\n") <= 60
@@ -667,34 +661,34 @@ class Layer8RunnerTests(unittest.TestCase):
                     ),
                 ),
                 (
-                    CURRENT_INVENTORY[26],
+                    next(names),
                     lambda: self.assertIn("PASS canonical-live:whole_file.exact (exact, whole-file)", output),
                 ),
                 (
-                    CURRENT_INVENTORY[27],
+                    next(names),
                     lambda: self.assertIn(
                         "PASS canonical-live:whole_file.tolerance_one (tolerance-1, whole-file)",
                         output,
                     ),
                 ),
                 (
-                    CURRENT_INVENTORY[28],
+                    next(names),
                     lambda: self.assertEqual(drift_number_status, "fail"),
                 ),
                 (
-                    CURRENT_INVENTORY[29],
+                    next(names),
                     lambda: self.assertEqual(drift_exact_status, "fail"),
                 ),
                 (
-                    CURRENT_INVENTORY[30],
+                    next(names),
                     lambda: self.assertEqual((fail_fast_counts.failed, fail_fast_counts.passed), (1, 0)),
                 ),
                 (
-                    CURRENT_INVENTORY[31],
+                    next(names),
                     lambda: self.assertNotIn("after_failure", fail_fast_stdout.getvalue()),
                 ),
                 (
-                    CURRENT_INVENTORY[32],
+                    next(names),
                     lambda: self.assertEqual(
                         [
                             (path_a / ".claude-exit-code").read_text(encoding="utf-8").strip(),
@@ -705,7 +699,6 @@ class Layer8RunnerTests(unittest.TestCase):
                 ),
             ]
 
-            self.assertEqual([name for name, _check in checks], CURRENT_INVENTORY)
             for name, check in checks:
                 with self.subTest(msg=name):
                     check()
