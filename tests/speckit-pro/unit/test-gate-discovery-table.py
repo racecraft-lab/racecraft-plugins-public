@@ -178,11 +178,26 @@ class GateSlotResolutionTests(unittest.TestCase):
                 self.assertEqual("lint-imports --config .importlinter", self._resolve(root, "python")["DEPENDENCY_RULES"]["command"])
             override = root / ".specify" / "gate-discovery.json"
             override.parent.mkdir()
+            shipped_row = next(
+                row for row in gate_discovery.load_table()["rows"]
+                if (row["language"], row["slot"], row["tool"]) == ("python", "DEPENDENCY_RULES", "import-linter")
+            )
+            (root / "pyproject.toml").write_text("", encoding="utf-8")
             override.write_text(json.dumps({"schema_version": "1.0", "rows": [{
-                "language": "python", "slot": "DEPENDENCY_RULES", "signal": {"kind": "file", "path": "pyproject.toml"},
-                "tool": "custom", "install": "none", "command": "custom-lint {rules_path}"}]}), encoding="utf-8")
-            with self.subTest(msg="valid repository override outranks the shipped table"):
-                self.assertEqual("custom-lint pyproject.toml", self._resolve(root, "python")["DEPENDENCY_RULES"]["command"])
+                **shipped_row, "signal": {"kind": "file", "path": "pyproject.toml"}}]}), encoding="utf-8")
+            with self.subTest(msg="an override that re-points a shipped tool's signal outranks the shipped table"):
+                self.assertEqual("lint-imports --config pyproject.toml", self._resolve(root, "python")["DEPENDENCY_RULES"]["command"])
+            for label, patch in {
+                "its own command": {"command": "custom-lint {rules_path}"},
+                "its own install": {"install": "pip install something-else"},
+                "an unknown tool": {"tool": "custom"},
+            }.items():
+                override.write_text(json.dumps({"schema_version": "1.0", "rows": [{
+                    **shipped_row, "signal": {"kind": "file", "path": "pyproject.toml"}, **patch}]}), encoding="utf-8")
+                with self.subTest(msg=f"an override carrying {label} is rejected and ignored"):
+                    slots = self._resolve(root, "python")
+                    self.assertEqual("lint-imports --config .importlinter", slots["DEPENDENCY_RULES"]["command"])
+                    self.assertTrue(any("rows[0]" in p for p in slots["DEPENDENCY_RULES"]["override_ignored"]), slots["DEPENDENCY_RULES"])
             override.write_text(json.dumps({"schema_version": "1.0", "rows": [{"slot": "BOGUS"}]}), encoding="utf-8")
             with self.subTest(msg="invalid override is reported and ignored"):
                 slots = self._resolve(root, "python")

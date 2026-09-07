@@ -323,7 +323,12 @@ The same result carries three more slots, `COMPLEXITY`,
 describes each one. The runner fills them from the shipped
 discovery table (`speckit_pro_runner/gate_discovery_table.json`),
 consulting `.specify/gate-discovery.json` first when that
-override validates. A slot is `populated` when one of its signal
+override validates. An override row may only re-point a shipped
+tool's signal file or probe; a row that carries its own command
+or install, or names a tool the shipped table lacks, is rejected
+and the whole override ignored, because that file is
+repository-controlled and a populated slot runs in the operator's
+session. A slot is `populated` when one of its signal
 files exists in the repository, otherwise `unconfigured` and
 `"N/A"`. Thresholds are the shipped fallbacks (complexity 8,
 CRAP 30, mutation-score floor 60) until a `quality-gates.json`

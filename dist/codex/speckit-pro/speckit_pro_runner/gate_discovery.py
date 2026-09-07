@@ -134,6 +134,36 @@ def _validate_signal(prefix: str, signal: Any, problems: list[str]) -> str | Non
     return path
 
 
+def override_problems(override: Any, shipped: Any) -> list[str]:
+    """Violations that make a repository override unsafe to consult.
+
+    The override file lives in the checkout, so anyone who can push to the
+    repository can edit it, and a populated slot's command runs in the
+    operator's session. An override row may therefore only re-point a
+    shipped tool's signal file or probe; its ``command`` and ``install`` must
+    equal the shipped row's for the same language, slot, and tool, and a
+    tool the shipped table does not know is rejected.
+    """
+    problems = validate_table(override)
+    if problems:
+        return problems
+    shipped_by_tool = {(row["language"], row["slot"], row["tool"]): row for row in shipped["rows"]}
+    for index, row in enumerate(override["rows"]):
+        prefix = f"rows[{index}]"
+        shipped_row = shipped_by_tool.get((row["language"], row["slot"], row["tool"]))
+        if shipped_row is None:
+            problems.append(
+                f"{prefix}: tool {row['tool']!r} is not in the shipped table; an override may only re-point a shipped tool"
+            )
+            continue
+        for field in ("command", "install"):
+            if row[field] != shipped_row[field]:
+                problems.append(
+                    f"{prefix}.{field}: must equal the shipped {field} for {row['tool']!r}; an override may not supply its own"
+                )
+    return problems
+
+
 def resolve_slots(
     repo_root: Path,
     stack: str,
@@ -144,8 +174,8 @@ def resolve_slots(
     """Fill the quality-gate slots for ``stack`` from the discovery table.
 
     A repository override at ``.specify/gate-discovery.json`` is consulted
-    before the shipped table when it validates; an invalid override is
-    reported and ignored. Within one slot the first row whose signal file
+    before the shipped table when it validates and only re-points shipped
+    tools (see ``override_problems``); otherwise it is reported and ignored. Within one slot the first row whose signal file
     exists wins. Thresholds and ``{rules_path}`` are substituted here;
     ``{paths}`` and ``{plugin_root}`` stay literal because the orchestrator
     fills them at run time, which also keeps machine-specific paths out of
@@ -159,20 +189,21 @@ def resolve_slots(
     if language is None:
         return slots
     rows: list[dict[str, Any]] = []
+    shipped = load_table()
     override_path = repo_root / REPO_OVERRIDE
     if file_exists(override_path):
         try:
             override = load_table(override_path)
         except (OSError, ValueError) as exc:
-            override_problems = [f"cannot read table: {exc}"]
+            problems = [f"cannot read table: {exc}"]
         else:
-            override_problems = validate_table(override)
-        if override_problems:
+            problems = override_problems(override, shipped)
+        if problems:
             for slot_entry in slots.values():
-                slot_entry["override_ignored"] = override_problems
+                slot_entry["override_ignored"] = problems
         else:
             rows.extend(override["rows"])
-    rows.extend(load_table()["rows"])
+    rows.extend(shipped["rows"])
     for row in rows:
         if row["language"] != language:
             continue
