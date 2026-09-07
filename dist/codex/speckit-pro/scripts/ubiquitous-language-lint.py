@@ -61,7 +61,9 @@ def parse_terms(text: str) -> list[dict[str, Any]]:
         if not term:
             continue
         identifiers = {i.strip("` ") for i in re.split(r"[,\s]+", row.get("identifiers", "")) if i.strip("` ")}
-        terms.append({"term": term, "meaning": row.get("meaning here", row.get("meaning", "")), "identifiers": identifiers, "words": words(term) | {w for i in identifiers for w in words(i)}})
+        # Word mapping uses the term text only; the Identifiers column is an
+        # exact alias list, so its words never leak into other terms' matches.
+        terms.append({"term": term, "meaning": row.get("meaning here", row.get("meaning", "")), "identifiers": identifiers, "words": words(term)})
     return terms
 
 
@@ -120,14 +122,19 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     report: dict[str, Any] = {"advisory": True, "terms_document": args.terms, "terms": 0, "declared": 0, "unmapped": [], "note": ""}
     terms_path = Path(args.terms)
-    if not terms_path.is_file():
-        report["note"] = "no terms document; nothing linted"
+    try:
+        terms_text = terms_path.read_text(encoding="utf-8") if terms_path.is_file() else None
+    except (OSError, ValueError) as exc:
+        terms_text = None
+        report["note"] = f"terms document unreadable: {exc}"
+    if terms_text is None:
+        report["note"] = report["note"] or "no terms document; nothing linted"
     else:
-        terms = parse_terms(terms_path.read_text(encoding="utf-8"))
+        terms = parse_terms(terms_text)
         report["terms"] = len(terms)
         try:
             diff = Path(args.diff).read_text(encoding="utf-8") if args.diff else git_diff(args.base, args.paths)
-        except (OSError, RuntimeError) as exc:
+        except (OSError, RuntimeError, ValueError) as exc:
             report["note"] = f"diff unavailable: {exc}"
             diff = ""
         declared = declared_identifiers(diff)

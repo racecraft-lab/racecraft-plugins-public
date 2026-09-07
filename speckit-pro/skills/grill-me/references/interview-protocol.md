@@ -55,8 +55,9 @@ After the user answers:
 - If the user defers to the recommendation ("you decide", "I don't know"), ask
   exactly one follow-up on the same branch: what constraint or fact would
   change the recommendation. Then adopt the recommendation and record the
-  branch as an Open Question marked **deferred-with-default**, with the adopted
-  default and the user's stated constraint. Never invent an answer.
+  branch as an Open Question whose Why deferred line starts with the literal
+  marker `deferred-with-default:` and the user's stated constraint, followed by
+  a Default adopted line naming the recommendation. Never invent an answer.
 
 ## Stop
 

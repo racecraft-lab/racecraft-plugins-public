@@ -25,6 +25,19 @@ integrations.
 
 If `.specify/` is missing, hands off to `/speckit-pro:speckit-install`.
 
+## Repository Structure Migration Guidance
+
+For existing projects, after integration upgrade and verification, report that
+repository structure migration is not available through the current runner.
+The `migrate-structure` operation has `promotion_status=deferred` and no
+authoritative request. Neither `dry_run` nor `apply` is an operator contract;
+do not invoke the operation or claim that it will report or mutate repository
+state.
+
+Record the deferred capability gap and leave repository structure unchanged.
+Tier-2 PROCESS relocation is separate, but `relocate-process-artifacts` is also
+deferred and unavailable. Do not recommend or auto-run either operation.
+
 ## Invocation
 
 ```text
