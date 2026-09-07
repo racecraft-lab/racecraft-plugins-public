@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.30.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.30.0...speckit-pro-v2.30.1) (2026-09-06)
+
+
+### Bug Fixes
+
+* **speckit-pro:** attest aliased CLI flags and keep Phase 7 dispatching ([#531](https://github.com/racecraft-lab/racecraft-plugins-public/issues/531)) ([026f97c](https://github.com/racecraft-lab/racecraft-plugins-public/commit/026f97c0a28036e35c22ab7f60b90f7aeb5d2649))
+
 ## [2.30.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.29.0...speckit-pro-v2.30.0) (2026-09-03)
 
 

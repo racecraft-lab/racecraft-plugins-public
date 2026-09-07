@@ -695,6 +695,74 @@ class SessionAndReceiptTests(unittest.TestCase):
 
 
 class SurfaceConfinementTests(unittest.TestCase):
+    def test_aliased_help_flags_are_attested_despite_their_punctuation(self) -> None:
+        """A comma-separated alias run must still attest the flag it names.
+
+        Claude Code prints an aliased option as one run, `--allowedTools,
+        --allowed-tools <tools...>`, which the official CLI reference documents
+        in that form. Splitting the help page on whitespace yields the token
+        `--allowedTools,` and an exact-token test then misses a flag the CLI
+        plainly supports, refusing the isolation boundary on a healthy install.
+        """
+
+        help_text = (
+            "  --plugin-dir <path>                   Load a plugin\n"
+            "  --setting-sources <sources>           Comma-separated sources\n"
+            "  --no-session-persistence              Disable persistence\n"
+            "  --tools <tools...>                    Available tools\n"
+            "  --allowedTools, --allowed-tools <tools...>\n"
+            "                                        Tools without prompting\n"
+            "  --json-schema <schema>                JSON Schema output\n"
+            "  --output-format <format>              Output format\n"
+        )
+
+        flags = sweep_launcher._help_flags(help_text)
+
+        for flag in (
+            "--plugin-dir",
+            "--setting-sources",
+            "--no-session-persistence",
+            "--tools",
+            "--allowedTools",
+            "--allowed-tools",
+            "--json-schema",
+            "--output-format",
+        ):
+            self.assertIn(flag, flags)
+        self.assertNotIn("--allowedTools,", flags)
+        # The whitespace split this replaced is what regressed; keep the
+        # contrast in the suite so a future revert fails here first.
+        self.assertNotIn("--allowedTools", set(help_text.split()))
+
+    def test_boundary_attests_against_the_real_aliased_help_page(self) -> None:
+        """End to end: the verifier accepts a help page using alias runs."""
+
+        help_text = (
+            "  --plugin-dir <path>\n"
+            "  --setting-sources <sources>\n"
+            "  --no-session-persistence\n"
+            "  --tools <tools...>\n"
+            "  --allowedTools, --allowed-tools <tools...>\n"
+            "  --json-schema <schema>\n"
+            "  --output-format <format>\n"
+        )
+        completed = SimpleNamespace(returncode=0, stdout=help_text, stderr="")
+
+        with (
+            patch.object(sweep_launcher, "_claude_version", return_value=(2, 1, 263)),
+            patch.object(sweep_launcher.shutil, "which", return_value="/trusted/claude"),
+            patch.object(
+                sweep_launcher,
+                "_trusted_executable",
+                return_value=Path("/trusted/claude"),
+            ),
+            patch.object(sweep_launcher.subprocess, "run", return_value=completed),
+            patch.object(sweep_launcher, "verify_claude_attestation"),
+        ):
+            version = sweep_launcher.verify_claude_boundary(REPO_ROOT, PLUGIN_ROOT)
+
+        self.assertEqual((2, 1, 263), version)
+
     def test_codex_version_executes_the_attested_binary_not_a_path_alias(self) -> None:
         alias = "/mutable-path/codex"
         resolved = Path("/trusted-runtime/codex")
