@@ -145,6 +145,31 @@ def source_description_lines(source: Path) -> list[str]:
     raise ValueError(f"source skill has no non-empty description: {source}")
 
 
+SKILL_ROOT_NAMES = frozenset({"skills", "codex-skills"})
+
+
+def sibling_skill_dirs(source: Path) -> list[Path]:
+    """List sibling skill directories beside ``source``'s skill directory.
+
+    Only a plugin skills root (``skills`` or ``codex-skills``) is walked; a
+    source staged elsewhere has no siblings. Entries that cannot be inspected
+    are skipped, because shared temp roots hold directories owned by others.
+    """
+    root = source.parent.parent
+    if root.name not in SKILL_ROOT_NAMES:
+        return []
+    siblings: list[Path] = []
+    for sibling in sorted(root.iterdir(), key=lambda path: path.name):
+        if sibling == source.parent:
+            continue
+        try:
+            if sibling.is_dir() and (sibling / "SKILL.md").is_file():
+                siblings.append(sibling)
+        except OSError:
+            continue
+    return siblings
+
+
 def stage_measurement_plugin(
     source: Path,
     plugin_root: Path,
@@ -722,11 +747,7 @@ def main(argv: list[str]) -> int:
     skill_name = f"{args.skill}-eval-{test_id}"
     nonce = f"CLAUDE_SKILL_SELECTED_{test_id}"
     plugin_root = Path(tempfile.mkdtemp(prefix=f"claude-trigger-{args.skill}-"))
-    sibling_sources = {
-        sibling.name: sibling / "SKILL.md"
-        for sibling in sorted(skill_source.parent.parent.iterdir(), key=lambda path: path.name)
-        if sibling != skill_source.parent and (sibling / "SKILL.md").is_file()
-    }
+    sibling_sources = {sibling.name: sibling / "SKILL.md" for sibling in sibling_skill_dirs(skill_source)}
     exit_code = 1
     previous_handlers = install_termination_handlers()
     try:

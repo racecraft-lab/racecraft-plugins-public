@@ -2065,6 +2065,35 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             )
             self.assertEqual(command[command.index("--tools") + 1], "Skill")
 
+    def test_sibling_discovery_walks_only_a_skills_root_and_skips_unreadable_entries(self) -> None:
+        engine = import_script(CODEX_ENGINE, "layer2_codex_sibling_roots")
+        claude = import_script(CLAUDE_RUNNER, "layer2_claude_sibling_roots")
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            loose = root / "SKILL.md"
+            loose.write_text("---\nname: demo\ndescription: Demo.\n---\nBody.\n", encoding="utf-8")
+            (root / "stranger").mkdir()
+            (root / "stranger" / "SKILL.md").write_text("---\nname: stranger\ndescription: S.\n---\n", encoding="utf-8")
+            for module in (engine, claude):
+                self.assertEqual(module.sibling_skill_dirs(loose), [], "a source outside a skills root has no siblings")
+            skills = root / "codex-skills"
+            for name in ("demo", "other"):
+                (skills / name).mkdir(parents=True)
+                (skills / name / "SKILL.md").write_text(f"---\nname: {name}\ndescription: {name}.\n---\n", encoding="utf-8")
+            (skills / "notes.md").write_text("not a skill\n", encoding="utf-8")
+            locked = skills / "locked"
+            locked.mkdir()
+            (locked / "SKILL.md").write_text("---\nname: locked\ndescription: L.\n---\n", encoding="utf-8")
+            locked.chmod(0)
+            try:
+                found = engine.sibling_skill_dirs(skills / "demo" / "SKILL.md")
+                found_claude = claude.sibling_skill_dirs(skills / "demo" / "SKILL.md")
+            finally:
+                locked.chmod(0o700)
+            readable = [skills / "other"] + ([locked] if os.getuid() == 0 else [])
+            self.assertEqual(found, readable, "unreadable siblings are skipped, files are not skills")
+            self.assertEqual(found_claude, readable)
+
     def test_codex_sibling_catalog_requires_every_sibling_exactly_once(self) -> None:
         engine = import_script(CODEX_ENGINE, "layer2_codex_siblings")
         with tempfile.TemporaryDirectory() as temporary:

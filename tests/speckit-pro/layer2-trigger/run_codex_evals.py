@@ -136,6 +136,32 @@ def stage_repository_skill(
     return destination
 
 
+SKILL_ROOT_NAMES = frozenset({"codex-skills", "skills"})
+
+
+def sibling_skill_dirs(src: pathlib.Path) -> list[pathlib.Path]:
+    """List sibling skill directories beside ``src``'s skill directory.
+
+    Only a plugin skills root (``codex-skills`` or ``skills``) is walked; a
+    source staged elsewhere, such as a temporary file in a test, has no
+    siblings. Entries that cannot be inspected are skipped rather than raised,
+    because shared temp roots hold directories owned by other users.
+    """
+    root = src.parent.parent
+    if root.name not in SKILL_ROOT_NAMES:
+        return []
+    siblings: list[pathlib.Path] = []
+    for sibling in sorted(root.iterdir(), key=lambda path: path.name):
+        if sibling == src.parent:
+            continue
+        try:
+            if sibling.is_dir() and (sibling / "SKILL.md").is_file():
+                siblings.append(sibling)
+        except OSError:
+            continue
+    return siblings
+
+
 def stage_sibling_skills(src: pathlib.Path, workspace: pathlib.Path) -> dict[str, str]:
     """Stage every sibling skill unmarked so a should-not-trigger query has its real destination.
 
@@ -145,10 +171,8 @@ def stage_sibling_skills(src: pathlib.Path, workspace: pathlib.Path) -> dict[str
     non-selection, and the trial ends without executing the sibling.
     """
     siblings: dict[str, str] = {}
-    for sibling in sorted(src.parent.parent.iterdir(), key=lambda path: path.name):
+    for sibling in sibling_skill_dirs(src):
         skill_file = sibling / "SKILL.md"
-        if sibling == src.parent or not skill_file.is_file():
-            continue
         m = re.match(r"^---\n(.*?)\n---\n", skill_file.read_text(), re.S)
         if not m:
             raise ValueError(f"no YAML frontmatter found in sibling skill {skill_file}")
