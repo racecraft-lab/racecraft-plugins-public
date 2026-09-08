@@ -201,6 +201,11 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
             [self.case("codex", "speckit-autopilot", item)["required_tools"] for item in (2, 15)],
             [["command_execution"], []],
         )
+        self.assertEqual(
+            [self.case("codex", "speckit-scaffold-spec", item)["required_tools"] for item in (4, 5)],
+            [["command_execution"], []],
+        )
+        self.assertEqual(self.case("codex", "speckit-scaffold-spec", 5)["expected_selection"], "none")
         self.assertIs(
             self.case("claude", "speckit-autopilot", 2)["hold_terminal"],
             True,

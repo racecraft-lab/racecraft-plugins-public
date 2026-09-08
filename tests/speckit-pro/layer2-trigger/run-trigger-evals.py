@@ -767,7 +767,7 @@ def main(argv: list[str]) -> int:
         return 1
 
     test_id = uuid.uuid4().hex[:12]
-    plugin_name = f"speckit-pro-eval-{test_id}"
+    plugin_name = f"skill-catalog-eval-{test_id}"
     skill_name = f"{args.skill}-eval-{test_id}"
     nonce = f"CLAUDE_SKILL_SELECTED_{test_id}"
     plugin_root = Path(tempfile.mkdtemp(prefix=f"claude-trigger-{args.skill}-"))

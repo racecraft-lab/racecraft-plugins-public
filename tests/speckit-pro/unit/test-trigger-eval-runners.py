@@ -426,7 +426,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
     def test_claude_skill_isolation(self) -> None:
         claude = import_script(CLAUDE_RUNNER, "layer2_claude_skill_isolation")
         root = Path("/tmp/measurement-plugin")
-        plugin = "speckit-pro-eval-fixed"
+        plugin = "skill-catalog-eval-fixed"
         target = f"{plugin}:demo-eval-fixed"
         nonce = "CLAUDE_SKILL_SELECTED_fixed"
         raw = claude_stream(root, plugin, target, nonce)
@@ -520,7 +520,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 encoding="utf-8",
             )
             plugin_root = root / "staged-plugin"
-            plugin_name = "speckit-pro-eval-fixed"
+            plugin_name = "skill-catalog-eval-fixed"
             skill_name = "demo-eval-fixed"
             nonce = "CLAUDE_SKILL_SELECTED_fixed"
             staged_skill, expected_skill = claude.stage_measurement_plugin(
@@ -821,7 +821,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             main_evidence = root / "main-evidence"
             main_evidence.mkdir()
             fixed_id = "123456789abc"
-            main_plugin_name = f"speckit-pro-eval-{fixed_id}"
+            main_plugin_name = f"skill-catalog-eval-{fixed_id}"
             main_skill = f"{main_plugin_name}:demo-eval-{fixed_id}"
             main_nonce = f"CLAUDE_SKILL_SELECTED_{fixed_id}"
             main_stream = claude_stream(main_staged, main_plugin_name, main_skill, main_nonce)
@@ -1062,7 +1062,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     staged = root / f"{label}-staged"
                     evidence = root / f"{label}-evidence"
                     evidence.mkdir()
-                    plugin_name = f"speckit-pro-eval-{fixed_id}"
+                    plugin_name = f"skill-catalog-eval-{fixed_id}"
                     expected_skill = f"{plugin_name}:demo-eval-{fixed_id}"
                     nonce = f"CLAUDE_SKILL_SELECTED_{fixed_id}"
                     trial_results = [
@@ -2001,7 +2001,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     encoding="utf-8",
                 )
             plugin_root = root / "staged-plugin"
-            plugin = "speckit-pro-eval-fixed"
+            plugin = "skill-catalog-eval-fixed"
             nonce = "CLAUDE_SKILL_SELECTED_fixed"
             siblings = {"other": skills / "other" / "SKILL.md", "third": skills / "third" / "SKILL.md"}
             _staged, target = claude.stage_measurement_plugin(

@@ -1799,11 +1799,10 @@
       "invocation": "$speckit-scaffold-spec",
       "eval_file": "codex-evals/speckit-scaffold-spec-evals.json",
       "eval_id": 5,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
