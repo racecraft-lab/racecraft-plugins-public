@@ -106,6 +106,10 @@ def run_script_suite(label: str, tests: list[Path], repo_root: Path) -> int:
             check=False,
         )
         ok, detail = child_check_status(completed.returncode, completed.stdout, test_path.stem)
+        if not ok and completed.stderr.strip():
+            # Surface the child's own failure report; the summary line alone hides which unit failed.
+            tail = "\n".join(completed.stderr.rstrip().splitlines()[-40:])
+            detail = f"{detail}\n{tail}"
         checks.append((rel(test_path, repo_root), ok, detail))
     return emit_checks(label, checks)
 
