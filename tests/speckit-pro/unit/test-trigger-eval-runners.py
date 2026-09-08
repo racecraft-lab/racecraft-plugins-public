@@ -1975,6 +1975,165 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 with self.subTest(msg=name):
                     self.assertTrue(condition)
 
+    def test_claude_sibling_catalog_scores_sibling_selection_as_non_selection(self) -> None:
+        claude = import_script(CLAUDE_RUNNER, "layer2_claude_siblings")
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            skills = root / "skills"
+            for name, description in (("demo", "Demo target."), ("other", "Other sibling."), ("third", "Third sibling.")):
+                (skills / name).mkdir(parents=True)
+                (skills / name / "SKILL.md").write_text(
+                    f"---\nname: {name}\ndescription: {description}\n---\n\nBody of {name} must not copy.\n",
+                    encoding="utf-8",
+                )
+            plugin_root = root / "staged-plugin"
+            plugin = "speckit-pro-eval-fixed"
+            nonce = "CLAUDE_SKILL_SELECTED_fixed"
+            siblings = {"other": skills / "other" / "SKILL.md", "third": skills / "third" / "SKILL.md"}
+            _staged, target = claude.stage_measurement_plugin(
+                skills / "demo" / "SKILL.md", plugin_root, plugin, "demo-eval-fixed", nonce, siblings
+            )
+            other_text = (plugin_root / "skills" / "other" / "SKILL.md").read_text(encoding="utf-8")
+            self.assertIn("description: Other sibling.", other_text)
+            self.assertNotIn(nonce, other_text)
+            self.assertNotIn("must not copy", other_text)
+            with self.assertRaisesRegex(ValueError, "collides"):
+                claude.stage_measurement_plugin(
+                    skills / "demo" / "SKILL.md", root / "collision", plugin, "demo-eval-fixed", nonce,
+                    {"demo-eval-fixed": skills / "other" / "SKILL.md"},
+                )
+
+            sibling_ids = frozenset({f"{plugin}:other", f"{plugin}:third"})
+            raw = claude_stream(plugin_root, plugin, target, nonce)
+            events = [json.loads(line) for line in raw.splitlines()]
+            events[0]["skills"] = [target, *sorted(sibling_ids)]
+
+            def parse(mutated: list[dict[str, object]], known: frozenset[str] = sibling_ids) -> dict[str, object]:
+                return claude.inspect_claude_stream(
+                    "\n".join(json.dumps(event) for event in mutated), plugin, plugin_root, target, nonce,
+                    "sonnet", known,
+                )
+
+            target_selected = parse(events)
+            self.assertTrue(target_selected["valid"] and target_selected["selected"])
+            self.assertEqual(target_selected["sibling_selections"], [])
+
+            sibling = json.loads(json.dumps(events))
+            sibling[1]["message"]["content"][0]["input"]["skill"] = f"{plugin}:other"
+            sibling_selected = parse(sibling)
+            self.assertTrue(sibling_selected["valid"])
+            self.assertFalse(sibling_selected["selected"])
+            self.assertEqual(sibling_selected["sibling_selections"], [f"{plugin}:other"])
+            self.assertEqual(sibling_selected["reason"], "sibling Skill selection")
+
+            self.assertFalse(parse(sibling, frozenset())["valid"], "an undeclared sibling stays a competing selection")
+            both = json.loads(json.dumps(events))
+            both.insert(3, json.loads(json.dumps(sibling[1])))
+            both.insert(4, json.loads(json.dumps(sibling[2])))
+            self.assertFalse(parse(both)["valid"], "target plus sibling is ambiguous")
+            missing = json.loads(json.dumps(events))
+            missing[0]["skills"] = [target, f"{plugin}:other"]
+            self.assertFalse(parse(missing)["valid"], "inventory must hold every staged sibling")
+            stranger = json.loads(json.dumps(events))
+            stranger[1]["message"]["content"][0]["input"]["skill"] = "code-review"
+            self.assertFalse(parse(stranger)["valid"], "a non-staged skill stays invalid")
+
+            prepared: list[list[str]] = []
+
+            def capture_launch(command: list[str], **kwargs: object) -> FakePopen:
+                prepared.append(command.copy())
+                return FakePopen(raw)
+
+            with (
+                mock.patch.object(claude.shutil, "which", return_value="/usr/local/bin/claude"),
+                mock.patch.object(claude.subprocess, "Popen", side_effect=capture_launch),
+                mock.patch.object(claude, "cleanup_child"),
+            ):
+                claude.run_claude_query(
+                    "/usr/local/bin/claude", plugin_root, plugin_root / "empty-mcp.json", "query", "sonnet", 30,
+                    expected_skill=target, sibling_skills=tuple(sorted(sibling_ids)),
+                )
+            command = prepared[0]
+            allow_index = command.index("--allowedTools") + 1
+            self.assertEqual(
+                command[allow_index:allow_index + 6],
+                [
+                    f"Skill({target})", f"Skill({target} *)",
+                    f"Skill({plugin}:other)", f"Skill({plugin}:other *)",
+                    f"Skill({plugin}:third)", f"Skill({plugin}:third *)",
+                ],
+            )
+            self.assertEqual(command[command.index("--tools") + 1], "Skill")
+
+    def test_codex_sibling_catalog_requires_every_sibling_exactly_once(self) -> None:
+        engine = import_script(CODEX_ENGINE, "layer2_codex_siblings")
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            skills = root / "codex-skills"
+            for name, description in (("demo", "Demo target."), ("other", "Other sibling."), ("third", "Third sibling.")):
+                (skills / name).mkdir(parents=True)
+                (skills / name / "SKILL.md").write_text(
+                    f"---\nname: {name}\ndescription: {description}\n---\n\nBody of {name}.\n",
+                    encoding="utf-8",
+                )
+            (skills / "notes.md").write_text("not a skill\n", encoding="utf-8")
+            workspace = root / "workspace"
+            workspace.mkdir()
+            marker = "CODEX_SKILL_FIRED:demo-eval"
+            staged = engine.stage_repository_skill(skills / "demo" / "SKILL.md", workspace, "demo-eval", marker)
+            siblings = engine.stage_sibling_skills(skills / "demo" / "SKILL.md", workspace)
+            self.assertEqual(siblings, {"other": "Other sibling.", "third": "Third sibling."})
+            for name in siblings:
+                sibling_text = (workspace / ".agents" / "skills" / name / "SKILL.md").read_text(encoding="utf-8")
+                self.assertTrue(sibling_text.startswith(f"---\nname: {name}\ndescription: "), "exact frontmatter kept")
+                self.assertNotIn("CODEX_SKILL_FIRED", sibling_text, "siblings carry no marker")
+                self.assertNotIn(f"Body of {name}.", sibling_text, "sibling workflow body is not staged")
+                self.assertIn("do not run any command", sibling_text, "sibling body stops the trial")
+            self.assertFalse((workspace / ".agents" / "skills" / "demo").exists(), "the unmarked target is never staged")
+            staged_text = (staged / "SKILL.md").read_text(encoding="utf-8")
+            self.assertIn("reply with a chat message whose first line is exactly", staged_text)
+            self.assertIn("do not run any command", staged_text)
+
+            def catalog(entries: list[str]) -> bytes:
+                text = "\n".join(["## Skills", "### Available skills", *entries, "### How to use skills", "- Follow it."])
+                return json.dumps([{"text": text}]).encode("utf-8")
+
+            target_entry = f"- demo-eval: Demo target. (file: {(staged / 'SKILL.md').resolve()})"
+            sibling_entries = [
+                f"- {name}: {description} (file: {(workspace / '.agents' / 'skills' / name / 'SKILL.md').resolve()})"
+                for name, description in siblings.items()
+            ]
+            full = catalog([target_entry, *sibling_entries])
+            readiness, reason = engine.inspect_catalog_prompt(
+                full, "demo-eval", "Demo target.", staged / "SKILL.md", workspace, siblings
+            )
+            self.assertIsNotNone(readiness, reason)
+            self.assertEqual((readiness["catalog_skill_entries"], readiness["sibling_entries"]), (3, 2))
+            self.assertTrue(readiness["sibling_entries_exact"])
+            without_declaration, _ = engine.inspect_catalog_prompt(
+                full, "demo-eval", "Demo target.", staged / "SKILL.md", workspace
+            )
+            self.assertIsNone(without_declaration, "undeclared entries still fail the target-only contract")
+            missing_sibling, _ = engine.inspect_catalog_prompt(
+                catalog([target_entry, sibling_entries[0]]), "demo-eval", "Demo target.", staged / "SKILL.md", workspace, siblings
+            )
+            self.assertIsNone(missing_sibling)
+            shortened = catalog([target_entry, sibling_entries[0], sibling_entries[1].replace("Third sibling.", "Third.")])
+            shortened_readiness, _ = engine.inspect_catalog_prompt(
+                shortened, "demo-eval", "Demo target.", staged / "SKILL.md", workspace, siblings
+            )
+            self.assertIsNone(shortened_readiness, "a shortened sibling description fails")
+            extra = catalog([target_entry, *sibling_entries, "- stranger: Stranger. (file: /tmp/stranger/SKILL.md)"])
+            extra_readiness, _ = engine.inspect_catalog_prompt(
+                extra, "demo-eval", "Demo target.", staged / "SKILL.md", workspace, siblings
+            )
+            self.assertIsNone(extra_readiness, "an entry outside the staged set fails")
+            duplicate = catalog([target_entry, *sibling_entries, sibling_entries[0]])
+            duplicate_readiness, _ = engine.inspect_catalog_prompt(
+                duplicate, "demo-eval", "Demo target.", staged / "SKILL.md", workspace, siblings
+            )
+            self.assertIsNone(duplicate_readiness, "a duplicated sibling entry fails")
+
 
 def main() -> int:
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(Layer2TriggerRunnerTests)
