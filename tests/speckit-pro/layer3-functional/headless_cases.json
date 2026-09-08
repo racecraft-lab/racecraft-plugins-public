@@ -97,7 +97,7 @@
       "eval_id": 6,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": ["command_execution"],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -108,7 +108,7 @@
       "eval_id": 101,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": ["command_execution"],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -119,7 +119,7 @@
       "eval_id": 102,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": ["command_execution"],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -285,7 +285,7 @@
       "eval_id": 3,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": ["command_execution"],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -296,7 +296,7 @@
       "eval_id": 4,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": ["command_execution"],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -307,7 +307,7 @@
       "eval_id": 5,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": ["command_execution"],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -330,7 +330,7 @@
       "eval_id": 9,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": ["command_execution"],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -341,7 +341,7 @@
       "eval_id": 10,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": ["command_execution"],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -352,7 +352,7 @@
       "eval_id": 11,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": ["command_execution"],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -363,7 +363,7 @@
       "eval_id": 12,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": ["command_execution"],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -374,7 +374,7 @@
       "eval_id": 103,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": ["command_execution"],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -385,7 +385,7 @@
       "eval_id": 104,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": ["command_execution"],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -396,7 +396,7 @@
       "eval_id": 105,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": ["command_execution"],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1038,9 +1038,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1052,9 +1050,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1066,9 +1062,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1080,9 +1074,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1094,9 +1086,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1108,9 +1098,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1122,9 +1110,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1136,9 +1122,7 @@
       "expected_selection": "redirect:speckit-coach",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1150,9 +1134,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1164,9 +1146,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1178,9 +1158,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1192,9 +1170,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1218,9 +1194,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1232,9 +1206,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1246,9 +1218,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1260,9 +1230,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1274,9 +1242,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1288,9 +1254,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1302,9 +1266,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1316,9 +1278,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1330,9 +1290,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1344,9 +1302,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1358,9 +1314,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1372,9 +1326,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1386,9 +1338,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1400,9 +1350,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1414,9 +1362,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1428,9 +1374,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1442,9 +1386,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1456,9 +1398,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1470,9 +1410,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1484,9 +1422,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1498,9 +1434,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1512,9 +1446,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1526,9 +1458,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1540,9 +1470,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1554,9 +1482,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1568,9 +1494,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1582,9 +1506,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1596,9 +1518,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1610,9 +1530,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1624,9 +1542,7 @@
       "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1697,9 +1613,7 @@
       "eval_id": 2,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1710,9 +1624,7 @@
       "eval_id": 3,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1723,9 +1635,7 @@
       "eval_id": 4,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1736,9 +1646,7 @@
       "eval_id": 5,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1749,9 +1657,7 @@
       "eval_id": 6,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1762,9 +1668,7 @@
       "eval_id": 2,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1775,9 +1679,7 @@
       "eval_id": 3,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1788,9 +1690,7 @@
       "eval_id": 4,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1813,9 +1713,7 @@
       "eval_id": 6,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1826,9 +1724,7 @@
       "eval_id": 8,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1839,9 +1735,7 @@
       "eval_id": 9,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1852,9 +1746,7 @@
       "eval_id": 10,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1943,9 +1835,7 @@
       "eval_id": 5,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     }
   ]
