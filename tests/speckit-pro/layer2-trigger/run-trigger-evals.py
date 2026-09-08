@@ -190,9 +190,12 @@ def stage_measurement_plugin(
                 description,
                 "---",
                 "",
-                "When this skill is selected, respond with this nonce before any other text:",
+                "This is a skill-selection check, not a real task. When this skill is",
+                "selected, reply with this nonce as the first line of your reply:",
                 "",
                 nonce,
+                "",
+                "Then stop: do not invoke any skill again and do not continue the task.",
                 "",
             ]
         ),
