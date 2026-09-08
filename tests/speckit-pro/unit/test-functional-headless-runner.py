@@ -202,6 +202,16 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
         # On Claude the Skill tool is the only way to load the skill body, so an
         # explanatory prompt selects the target; "none" would deny the body itself.
         self.assertNotIn("expected_selection", self.case("claude", "speckit-autopilot", 15))
+        explanatory = "Use this frozen project as local context for the explanatory request."
+        for case in self.catalog["cases"]:
+            if case["host"] == "claude" and case["skill"] == "speckit-autopilot" and "expected_selection" not in case:
+                with self.subTest(eval_id=case["eval_id"]):
+                    self.assertEqual(case.get("fixture_note"), explanatory)
+                    self.assertEqual(case["also_allowed"], ["speckit-coach"])
+        self.assertEqual(
+            [case for case in self.catalog["cases"] if case.get("also_allowed") and (case["host"] != "claude" or case.get("expected_selection"))],
+            [],
+        )
         self.assertEqual(
             [case for case in self.catalog["cases"] if case["host"] == "claude" and case.get("expected_selection") == "none"],
             [],
@@ -641,6 +651,41 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
         self.assertEqual(self.runner.require_provider_evidence(none_case, {**parsed, "completed_tool_use_ids": []}, none_policy), "redirect:speckit-coach")
         self.assertEqual(self.runner.require_provider_evidence(none_case, {**parsed, "tool_trace": []}, none_policy), "none")
         self.assertEqual(self.runner.require_provider_evidence(self.case("codex", "speckit-autopilot", 15), {"tool_trace": [], "agent_message_count": 1}), "none")
+
+    def test_claude_also_allowed_permits_the_documented_coach_redirect_after_the_target(self) -> None:
+        case = self.case("claude", "speckit-autopilot", 15)
+        self.assertEqual(case["also_allowed"], ["speckit-coach"])
+        with tempfile.TemporaryDirectory() as temporary:
+            stage = self.runner.stage_case(REPO_ROOT, case, Path(temporary))
+            policy = self.runner.claude_skill_policy(case, stage)
+        self.assertEqual(
+            policy["settings"]["permissions"]["allow"],
+            ["Skill(speckit-pro:speckit-autopilot)", "Skill(speckit-pro:speckit-autopilot *)", "Skill(speckit-pro:speckit-coach)", "Skill(speckit-pro:speckit-coach *)"],
+        )
+        self.assertNotIn("Skill(speckit-pro:speckit-coach)", policy["settings"]["permissions"]["deny"])
+        target = {"type": "tool_use", "id": "t1", "name": "Skill", "input": {"skill": "speckit-pro:speckit-autopilot"}}
+        coach = {"type": "tool_use", "id": "c1", "name": "Skill", "input": {"skill": "speckit-pro:speckit-coach"}}
+        other = {"type": "tool_use", "id": "o1", "name": "Skill", "input": {"skill": "speckit-pro:speckit-status"}}
+        base = {
+            "available_tools": case["allowed_tools"], "plugins": [{"name": "speckit-pro"}],
+            "resolved_model": "model-id", "available_skills": policy["expected_skills"], "agent_message_count": 1,
+        }
+        self.assertEqual(self.runner.require_provider_evidence(case, {**base, "tool_trace": [target], "completed_tool_use_ids": ["t1"]}, policy), "target")
+        self.assertEqual(
+            self.runner.require_provider_evidence(case, {**base, "tool_trace": [target, coach], "completed_tool_use_ids": ["t1", "c1"]}, policy),
+            "target,redirect:speckit-coach",
+        )
+        self.assertEqual(self.runner.require_provider_evidence(case, {**base, "tool_trace": [target, coach], "completed_tool_use_ids": ["t1"]}, policy), "target")
+        with self.assertRaisesRegex(self.runner.EvidenceError, "exact Skill invocation"):
+            self.runner.require_provider_evidence(case, {**base, "tool_trace": [coach], "completed_tool_use_ids": ["c1"]}, policy)
+        with self.assertRaisesRegex(self.runner.EvidenceError, "non-target"):
+            self.runner.require_provider_evidence(case, {**base, "tool_trace": [target, other], "completed_tool_use_ids": ["t1"]}, policy)
+        plain = self.case("claude", "speckit-coach", 1)
+        self.assertNotIn("also_allowed", plain)
+        with self.assertRaisesRegex(self.runner.EvidenceError, "also_allowed requires"):
+            self.runner.also_allowed_skills({**plain, "expected_selection": "none", "also_allowed": ["speckit-status"]})
+        with self.assertRaisesRegex(self.runner.EvidenceError, "invalid also_allowed"):
+            self.runner.also_allowed_skills({**plain, "also_allowed": ["Bad Name"]})
 
     def test_claude_rejects_every_non_target_skill_attempt_even_if_denied(self) -> None:
         case, policy, parsed = self.claude_evidence()

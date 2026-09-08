@@ -127,11 +127,26 @@ def selected_claude_skill(selection: str, target: str, namespace: str = "speckit
     return f"{namespace}:{selection.removeprefix('redirect:')}"
 
 
-def claude_skill_permissions(selection: str, target: str, namespace: str, names: list[str]) -> dict[str, list[str]]:
+def also_allowed_skills(case: Mapping[str, Any], namespace: str = "speckit-pro") -> list[str]:
+    """Skills the case lets the model invoke after the target, such as the coach redirect the autopilot skill documents for methodology questions."""
+    value = case.get("also_allowed", [])
+    if not isinstance(value, list) or not all(isinstance(item, str) and re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", item) for item in value):
+        raise EvidenceError(f"invalid also_allowed: {value!r}")
+    if value and expected_selection(case) != "target":
+        raise EvidenceError("also_allowed requires expected_selection target")
+    return [f"{namespace}:{item}" for item in value]
+
+
+def claude_skill_permissions(
+    selection: str, target: str, namespace: str, names: list[str], extra: list[str] | None = None
+) -> dict[str, list[str]]:
     selected = selected_claude_skill(selection, target, namespace)
     if selected is not None and selected not in names:
         raise EvidenceError("Claude expected selection is not in the staged skill catalog")
-    allowed = [] if selected is None else [selected]
+    for name in extra or []:
+        if name not in names or name == selected:
+            raise EvidenceError("Claude also_allowed skill is not a distinct staged skill")
+    allowed = ([] if selected is None else [selected]) + list(extra or [])
     denied = [name for name in names if name not in allowed] + ["init", "security-review"]
     return {
         "allow": [rule for name in allowed for rule in (f"Skill({name})", f"Skill({name} *)")],
@@ -427,7 +442,9 @@ def claude_skill_policy(case: Mapping[str, Any], stage: Stage) -> dict[str, Any]
             "disableClaudeAiConnectors": True,
             "disableBundledSkills": True,
             "skillOverrides": {"doctor": "off"},
-            "permissions": claude_skill_permissions(expected_selection(case), target, str(namespace), names),
+            "permissions": claude_skill_permissions(
+                expected_selection(case), target, str(namespace), names, also_allowed_skills(case, str(namespace))
+            ),
         },
     }
 
@@ -994,11 +1011,15 @@ def require_claude_selection_evidence(case: Mapping[str, Any], parsed: Mapping[s
     attempts = claude_skill_attempts(parsed)
     if selection == "none":
         return optional_claude_selection(case, parsed, attempts)
-    if any(skill != selected for skill, _identifier in attempts):
+    extra = also_allowed_skills(case)
+    if any(skill != selected and skill not in extra for skill, _identifier in attempts):
         raise EvidenceError("Claude trace contains a non-target Skill attempt")
     completed = {str(item) for item in parsed.get("completed_tool_use_ids", [])}
     if not any(skill == selected and identifier in completed for skill, identifier in attempts):
         raise EvidenceError(f"Claude trace did not prove a successful exact Skill invocation: {selected}")
+    followed = sorted({skill for skill, identifier in attempts if skill in extra and identifier in completed})
+    if followed:
+        return selection + "," + ",".join("redirect:" + name.partition(":")[2] for name in followed)
     return selection
 
 
