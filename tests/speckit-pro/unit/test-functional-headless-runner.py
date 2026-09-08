@@ -191,12 +191,21 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
         serialized = json.dumps(self.catalog).lower()
         self.assertNotIn("expectation", serialized)
         self.assertNotIn("expected_output", serialized)
-        for host in ("claude", "codex"):
-            with self.subTest(host=host):
-                self.assertEqual(
-                    [self.case(host, "speckit-autopilot", item)["expected_selection"] for item in (2, 10, 15)],
-                    ["target", "redirect:speckit-coach", "none"],
-                )
+        self.assertEqual(
+            [self.case("codex", "speckit-autopilot", item)["expected_selection"] for item in (2, 10, 15)],
+            ["target", "redirect:speckit-coach", "none"],
+        )
+        self.assertEqual(
+            [self.case("claude", "speckit-autopilot", item)["expected_selection"] for item in (2, 10)],
+            ["target", "redirect:speckit-coach"],
+        )
+        # On Claude the Skill tool is the only way to load the skill body, so an
+        # explanatory prompt selects the target; "none" would deny the body itself.
+        self.assertNotIn("expected_selection", self.case("claude", "speckit-autopilot", 15))
+        self.assertEqual(
+            [case for case in self.catalog["cases"] if case["host"] == "claude" and case.get("expected_selection") == "none"],
+            [],
+        )
         self.assertEqual(
             [self.case("codex", "speckit-autopilot", item)["required_tools"] for item in (2, 15)],
             [["command_execution"], []],
@@ -627,7 +636,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
         }
         self.assertEqual(redirect_policy["settings"]["permissions"]["allow"], ["Skill(speckit-pro:speckit-coach)", "Skill(speckit-pro:speckit-coach *)"])
         self.assertEqual(self.runner.require_provider_evidence(redirect_case, parsed, redirect_policy), "redirect:speckit-coach")
-        none_case = self.case("claude", "speckit-autopilot", 15)
+        none_case = {**self.case("claude", "speckit-autopilot", 15), "expected_selection": "none"}  # no shipped Claude case is "none"; the runner semantics still need coverage
         none_policy = {**redirect_policy, "target_skill": none_case["invocation"].removeprefix("/")}
         self.assertEqual(self.runner.require_provider_evidence(none_case, {**parsed, "completed_tool_use_ids": []}, none_policy), "redirect:speckit-coach")
         self.assertEqual(self.runner.require_provider_evidence(none_case, {**parsed, "tool_trace": []}, none_policy), "none")

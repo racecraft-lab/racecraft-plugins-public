@@ -2057,6 +2057,16 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             self.assertEqual(no_speckit_selected["sibling_selections"], [f"{plugin}:no-speckit-skill"])
 
             self.assertFalse(parse(sibling, frozenset())["valid"], "an undeclared sibling stays a competing selection")
+            bare_target = json.loads(json.dumps(events))
+            bare_target[1]["message"]["content"][0]["input"]["skill"] = "demo-eval-fixed"
+            bare_selected = parse(bare_target)
+            self.assertTrue(bare_selected["valid"] and bare_selected["selected"], "the host resolves the bare name to the staged skill")
+            bare_sibling = json.loads(json.dumps(events))
+            bare_sibling[1]["message"]["content"][0]["input"]["skill"] = "other"
+            self.assertEqual(parse(bare_sibling)["sibling_selections"], [f"{plugin}:other"])
+            foreign = json.loads(json.dumps(events))
+            foreign[1]["message"]["content"][0]["input"]["skill"] = "demo"
+            self.assertFalse(parse(foreign)["valid"], "a name outside the staged catalog stays competing")
             both = json.loads(json.dumps(events))
             both.insert(3, json.loads(json.dumps(no_speckit[1])))
             both.insert(4, json.loads(json.dumps(no_speckit[2])))

@@ -382,13 +382,18 @@ def inspect_claude_stream(
     competing: list[object] = []
     sibling_selections: list[str] = []
     malformed = False
+    # The host resolves an unqualified skill name to the one staged plugin, so
+    # `demo-eval-<id>` selects the same skill as `<plugin>:demo-eval-<id>`.
+    qualified = {name.partition(":")[2]: name for name in staged_inventory if ":" in name}
     for event_index, block in skill_uses:
         tool_id = block.get("id")
         tool_input = block.get("input")
         skill_value = tool_input.get("skill") if isinstance(tool_input, dict) else None
         if not isinstance(tool_id, str) or not tool_id or not isinstance(skill_value, str) or not skill_value:
             malformed = True
-        elif skill_value == expected_skill:
+            continue
+        skill_value = qualified.get(skill_value, skill_value)
+        if skill_value == expected_skill:
             intended.append((event_index, block))
         elif skill_value in sibling_skills:
             sibling_selections.append(skill_value)
