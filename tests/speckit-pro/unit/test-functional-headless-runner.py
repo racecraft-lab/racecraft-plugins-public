@@ -676,8 +676,13 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
             "target,redirect:speckit-coach",
         )
         self.assertEqual(self.runner.require_provider_evidence(case, {**base, "tool_trace": [target, coach], "completed_tool_use_ids": ["t1"]}, policy), "target")
+        self.assertEqual(
+            self.runner.require_provider_evidence(case, {**base, "tool_trace": [coach], "completed_tool_use_ids": ["c1"]}, policy),
+            "redirect:speckit-coach",
+            "the documented redirect may answer an explanatory prompt on its own",
+        )
         with self.assertRaisesRegex(self.runner.EvidenceError, "exact Skill invocation"):
-            self.runner.require_provider_evidence(case, {**base, "tool_trace": [coach], "completed_tool_use_ids": ["c1"]}, policy)
+            self.runner.require_provider_evidence(case, {**base, "tool_trace": [target, coach], "completed_tool_use_ids": []}, policy)
         with self.assertRaisesRegex(self.runner.EvidenceError, "non-target"):
             self.runner.require_provider_evidence(case, {**base, "tool_trace": [target, other], "completed_tool_use_ids": ["t1"]}, policy)
         plain = self.case("claude", "speckit-coach", 1)

@@ -1015,12 +1015,14 @@ def require_claude_selection_evidence(case: Mapping[str, Any], parsed: Mapping[s
     if any(skill != selected and skill not in extra for skill, _identifier in attempts):
         raise EvidenceError("Claude trace contains a non-target Skill attempt")
     completed = {str(item) for item in parsed.get("completed_tool_use_ids", [])}
-    if not any(skill == selected and identifier in completed for skill, identifier in attempts):
-        raise EvidenceError(f"Claude trace did not prove a successful exact Skill invocation: {selected}")
+    target_done = any(skill == selected and identifier in completed for skill, identifier in attempts)
     followed = sorted({skill for skill, identifier in attempts if skill in extra and identifier in completed})
-    if followed:
-        return selection + "," + ",".join("redirect:" + name.partition(":")[2] for name in followed)
-    return selection
+    if not target_done and not followed:
+        raise EvidenceError(f"Claude trace did not prove a successful exact Skill invocation: {selected}")
+    redirects = ",".join("redirect:" + name.partition(":")[2] for name in followed)
+    if not target_done:
+        return redirects  # the documented redirect answered on its own, as an expected_selection redirect case records it
+    return selection + ("," + redirects if redirects else "")
 
 
 def require_provider_evidence(
