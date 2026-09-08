@@ -2121,7 +2121,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 found_claude = claude.sibling_skill_dirs(skills / "demo" / "SKILL.md")
             finally:
                 locked.chmod(0o700)
-            readable = [skills / "other"] + ([locked] if os.getuid() == 0 else [])
+            readable = sorted([skills / "other"] + ([locked] if os.getuid() == 0 else []))  # root reads a mode-000 dir; discovery returns sorted paths
             self.assertEqual(found, readable, "unreadable siblings are skipped, files are not skills")
             self.assertEqual(found_claude, readable)
 
