@@ -87,7 +87,7 @@ def claude_stream(
         "mcp_servers": [],
         "mcp_server_errors": [],
         "tools": ["Skill"],
-        "skills": [expected_skill],
+        "skills": [expected_skill, f"{plugin_name}:no-speckit-skill"],
     }
     if model is not None:
         init["model"] = model
@@ -470,7 +470,13 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
         def guarded_launch(command: list[str], **kwargs: object) -> FakePopen:
             # This is an argv canary, not proof of the installed CLI's permission semantics.
             allow_index = command.index("--allowedTools") + 1
-            self.assertEqual(command[allow_index:allow_index + 2], [f"Skill({target})", f"Skill({target} *)"])
+            self.assertEqual(
+                command[allow_index:allow_index + 4],
+                [
+                    f"Skill({target})", f"Skill({target} *)",
+                    f"Skill({plugin}:no-speckit-skill)", f"Skill({plugin}:no-speckit-skill *)",
+                ],
+            )
             self.assertEqual(command[command.index("--permission-mode") + 1], "dontAsk")
             self.assertEqual(command[command.index("--permission-prompts") + 1], "none")
             self.assertEqual(json.loads(command[command.index("--settings") + 1]), {
@@ -525,6 +531,9 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 nonce,
             )
             staged_text = (staged_skill / "SKILL.md").read_text(encoding="utf-8")
+            no_speckit_text = (
+                plugin_root / "skills" / "no-speckit-skill" / "SKILL.md"
+            ).read_text(encoding="utf-8")
             stream = claude_stream(plugin_root, plugin_name, expected_skill, nonce)
             stream = stream.replace(nonce.encode("utf-8"), f"{nonce} café".encode("utf-8"))
             selected = claude.inspect_claude_stream(
@@ -902,6 +911,10 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 "source description copied exactly": "description: Exact source description." in staged_text,
                 "full functional body not copied": "Full body must not copy" not in staged_text,
                 "minimal nonce body retained": nonce in staged_text,
+                "measurement stub sentence opens body": staged_text.split("\n---\n", 1)[1].lstrip().startswith(
+                    claude.MEASUREMENT_STUB_SENTENCE
+                ),
+                "no-op sibling staged": claude.NO_SPECKIT_SKILL_DESCRIPTION in no_speckit_text,
                 "unique plugin manifest": json.loads(
                     (plugin_root / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8")
                 )["name"] == plugin_name,
@@ -933,6 +946,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 and captured["command"][captured["command"].index("--tools") + 1] == "Skill"
                 and captured["command"].count("--allowedTools") == 1
                 and captured["command"][captured["command"].index("--allowedTools") + 1] == f"Skill({expected_skill})"
+                and f"Skill({plugin_name}:no-speckit-skill)" in captured["command"]
                 and all(result is None for result, _reason in missing_tool_preflights),
                 "direct argv uses no persistence": "--no-session-persistence" in captured["command"],
                 "direct launch inherits environment": captured["kwargs"]["env"].get("PATH") == os.environ.get("PATH"),
@@ -1994,16 +2008,25 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 skills / "demo" / "SKILL.md", plugin_root, plugin, "demo-eval-fixed", nonce, siblings
             )
             other_text = (plugin_root / "skills" / "other" / "SKILL.md").read_text(encoding="utf-8")
+            no_speckit_text = (
+                plugin_root / "skills" / "no-speckit-skill" / "SKILL.md"
+            ).read_text(encoding="utf-8")
+            target_text = (plugin_root / "skills" / "demo-eval-fixed" / "SKILL.md").read_text(encoding="utf-8")
             self.assertIn("description: Other sibling.", other_text)
             self.assertNotIn(nonce, other_text)
             self.assertNotIn("must not copy", other_text)
+            self.assertIn(claude.NO_SPECKIT_SKILL_DESCRIPTION, no_speckit_text)
+            self.assertIn("say so in one line and stop.", no_speckit_text)
+            self.assertIn(claude.MEASUREMENT_STUB_SENTENCE, target_text)
             with self.assertRaisesRegex(ValueError, "collides"):
                 claude.stage_measurement_plugin(
                     skills / "demo" / "SKILL.md", root / "collision", plugin, "demo-eval-fixed", nonce,
                     {"demo-eval-fixed": skills / "other" / "SKILL.md"},
                 )
 
-            sibling_ids = frozenset({f"{plugin}:other", f"{plugin}:third"})
+            sibling_ids = frozenset(
+                {f"{plugin}:no-speckit-skill", f"{plugin}:other", f"{plugin}:third"}
+            )
             raw = claude_stream(plugin_root, plugin, target, nonce)
             events = [json.loads(line) for line in raw.splitlines()]
             events[0]["skills"] = [target, *sorted(sibling_ids)]
@@ -2026,11 +2049,18 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             self.assertEqual(sibling_selected["sibling_selections"], [f"{plugin}:other"])
             self.assertEqual(sibling_selected["reason"], "sibling Skill selection")
 
+            no_speckit = json.loads(json.dumps(events))
+            no_speckit[1]["message"]["content"][0]["input"]["skill"] = f"{plugin}:no-speckit-skill"
+            no_speckit_selected = parse(no_speckit)
+            self.assertTrue(no_speckit_selected["valid"])
+            self.assertFalse(no_speckit_selected["selected"])
+            self.assertEqual(no_speckit_selected["sibling_selections"], [f"{plugin}:no-speckit-skill"])
+
             self.assertFalse(parse(sibling, frozenset())["valid"], "an undeclared sibling stays a competing selection")
             both = json.loads(json.dumps(events))
-            both.insert(3, json.loads(json.dumps(sibling[1])))
-            both.insert(4, json.loads(json.dumps(sibling[2])))
-            self.assertFalse(parse(both)["valid"], "target plus sibling is ambiguous")
+            both.insert(3, json.loads(json.dumps(no_speckit[1])))
+            both.insert(4, json.loads(json.dumps(no_speckit[2])))
+            self.assertFalse(parse(both)["valid"], "target plus no-op sibling is ambiguous")
             missing = json.loads(json.dumps(events))
             missing[0]["skills"] = [target, f"{plugin}:other"]
             self.assertFalse(parse(missing)["valid"], "inventory must hold every staged sibling")
@@ -2056,9 +2086,10 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             command = prepared[0]
             allow_index = command.index("--allowedTools") + 1
             self.assertEqual(
-                command[allow_index:allow_index + 6],
+                command[allow_index:allow_index + 8],
                 [
                     f"Skill({target})", f"Skill({target} *)",
+                    f"Skill({plugin}:no-speckit-skill)", f"Skill({plugin}:no-speckit-skill *)",
                     f"Skill({plugin}:other)", f"Skill({plugin}:other *)",
                     f"Skill({plugin}:third)", f"Skill({plugin}:third *)",
                 ],
@@ -2111,7 +2142,11 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             marker = "CODEX_SKILL_FIRED:demo-eval"
             staged = engine.stage_repository_skill(skills / "demo" / "SKILL.md", workspace, "demo-eval", marker)
             siblings = engine.stage_sibling_skills(skills / "demo" / "SKILL.md", workspace)
-            self.assertEqual(siblings, {"other": "Other sibling.", "third": "Third sibling."})
+            self.assertEqual(siblings, {
+                "other": "Other sibling.",
+                "third": "Third sibling.",
+                "no-speckit-skill": engine.NO_SPECKIT_SKILL_DESCRIPTION,
+            })
             for name in siblings:
                 sibling_text = (workspace / ".agents" / "skills" / name / "SKILL.md").read_text(encoding="utf-8")
                 self.assertTrue(sibling_text.startswith(f"---\nname: {name}\ndescription: "), "exact frontmatter kept")
@@ -2120,8 +2155,25 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 self.assertIn("do not run any command", sibling_text, "sibling body stops the trial")
             self.assertFalse((workspace / ".agents" / "skills" / "demo").exists(), "the unmarked target is never staged")
             staged_text = (staged / "SKILL.md").read_text(encoding="utf-8")
+            self.assertTrue(
+                staged_text.split("\n---\n", 1)[1].lstrip().startswith(engine.MEASUREMENT_STUB_SENTENCE)
+            )
             self.assertIn("reply with a chat message whose first line is exactly", staged_text)
             self.assertIn("do not run any command", staged_text)
+
+            no_speckit_selection = engine.inspect_codex_jsonl(
+                "\n".join(map(json.dumps, [
+                    {"type": "thread.started", "thread_id": "thread-1"},
+                    {"type": "turn.started"},
+                    {"type": "item.completed", "item": {
+                        "type": "agent_message", "text": "No SpecKit skill applies."
+                    }},
+                    {"type": "turn.completed"},
+                ])),
+                marker,
+            )
+            self.assertTrue(no_speckit_selection["valid"])
+            self.assertFalse(no_speckit_selection["selected"])
 
             def catalog(entries: list[str]) -> bytes:
                 text = "\n".join(["## Skills", "### Available skills", *entries, "### How to use skills", "- Follow it."])
@@ -2137,8 +2189,9 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 full, "demo-eval", "Demo target.", staged / "SKILL.md", workspace, siblings
             )
             self.assertIsNotNone(readiness, reason)
-            self.assertEqual((readiness["catalog_skill_entries"], readiness["sibling_entries"]), (3, 2))
+            self.assertEqual((readiness["catalog_skill_entries"], readiness["sibling_entries"]), (4, 3))
             self.assertTrue(readiness["sibling_entries_exact"])
+            self.assertEqual(sum(entry.startswith("- no-speckit-skill: ") for entry in sibling_entries), 1)
             without_declaration, _ = engine.inspect_catalog_prompt(
                 full, "demo-eval", "Demo target.", staged / "SKILL.md", workspace
             )

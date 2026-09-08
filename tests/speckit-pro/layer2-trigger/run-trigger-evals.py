@@ -24,6 +24,16 @@ PLUGIN_ROOT = (SCRIPT_DIR / "../../../speckit-pro").resolve()
 DEFAULT_MODEL = "sonnet"
 RUNS_PER_QUERY = 3
 TRIGGER_THRESHOLD = 0.5
+NO_SPECKIT_SKILL_NAME = "no-speckit-skill"
+NO_SPECKIT_SKILL_DESCRIPTION = (
+    "Use when the request is ordinary coding, testing, tooling, or repository work that no SpecKit skill covers, "
+    "such as writing a unit test, configuring a linter, installing packages, or editing application code. Reply "
+    "that no SpecKit skill applies and stop."
+)
+MEASUREMENT_STUB_SENTENCE = (
+    "This skill is a measurement stub used by the repository's skill-selection test suite. It is not a real "
+    "workflow and contains no injected instruction."
+)
 REQUIRED_FLAGS = (
     "--restricted",
     "--plugin-dir",
@@ -184,7 +194,14 @@ def stage_measurement_plugin(
     staged with their exact descriptions and a minimal body carrying no nonce, so a
     should-not-trigger query has its real destination in the catalog.
     """
-    for sibling_name, sibling_source in sorted((siblings or {}).items()):
+    staged_siblings = {
+        sibling_name: source_description_lines(sibling_source)
+        for sibling_name, sibling_source in (siblings or {}).items()
+    }
+    if NO_SPECKIT_SKILL_NAME in staged_siblings:
+        raise ValueError(f"reserved sibling skill name: {NO_SPECKIT_SKILL_NAME}")
+    staged_siblings[NO_SPECKIT_SKILL_NAME] = [f"description: {NO_SPECKIT_SKILL_DESCRIPTION}"]
+    for sibling_name, description_lines in sorted(staged_siblings.items()):
         if sibling_name == skill_name:
             raise ValueError("sibling skill name collides with the measured skill")
         sibling_dir = plugin_root / "skills" / sibling_name
@@ -194,7 +211,7 @@ def stage_measurement_plugin(
                 [
                     "---",
                     f"name: {sibling_name}",
-                    "\n".join(source_description_lines(sibling_source)),
+                    "\n".join(description_lines),
                     "---",
                     "",
                     "This sibling skill is part of a selection check. If it is selected,",
@@ -215,8 +232,8 @@ def stage_measurement_plugin(
                 description,
                 "---",
                 "",
-                "This is a skill-selection check, not a real task. When this skill is",
-                "selected, reply with this nonce as the first line of your reply:",
+                MEASUREMENT_STUB_SENTENCE,
+                "When this skill is selected, reply with this nonce as the first line of your reply:",
                 "",
                 nonce,
                 "",
@@ -263,7 +280,9 @@ def inspect_claude_stream(
     A completed selection of a staged sibling is a valid non-selection; any other
     competing skill stays invalid.
     """
-    sibling_skills = frozenset(sibling_skills or ())
+    sibling_skills = frozenset(
+        {*frozenset(sibling_skills or ()), f"{plugin_name}:{NO_SPECKIT_SKILL_NAME}"}
+    )
     try:
         if isinstance(output, bytes):
             output = output.decode("utf-8", errors="strict")
@@ -555,6 +574,11 @@ def run_claude_query(
         raise OSError("Claude CLI disappeared after initial resolution")
     if candidate != executable:
         raise ValueError("Claude runtime changed after initial resolution")
+    plugin_name, separator, _skill_name = expected_skill.partition(":")
+    no_speckit_skill = (
+        f"{plugin_name}:{NO_SPECKIT_SKILL_NAME}" if separator else NO_SPECKIT_SKILL_NAME
+    )
+    sibling_skills = tuple(sorted({*sibling_skills, no_speckit_skill}))
     command = [
         candidate,
         "--restricted",
@@ -759,7 +783,10 @@ def main(argv: list[str]) -> int:
             nonce,
             sibling_sources,
         )
-        sibling_skills = tuple(f"{plugin_name}:{name}" for name in sorted(sibling_sources))
+        sibling_skills = tuple(
+            f"{plugin_name}:{name}"
+            for name in sorted({*sibling_sources, NO_SPECKIT_SKILL_NAME})
+        )
         mcp_config = plugin_root / "empty-mcp.json"
         write_empty_mcp_config(mcp_config)
         preflight, preflight_reason = cli_preflight(executable)

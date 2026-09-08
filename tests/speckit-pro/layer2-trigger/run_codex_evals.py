@@ -52,6 +52,23 @@ SKILL_CATALOG_WARNINGS = (
     "Skill descriptions were shortened to fit the skills context budget.",
     "Exceeded skills context budget.",
 )
+NO_SPECKIT_SKILL_NAME = "no-speckit-skill"
+NO_SPECKIT_SKILL_DESCRIPTION = (
+    "Use when the request is ordinary coding, testing, tooling, or repository work that no SpecKit skill covers, "
+    "such as writing a unit test, configuring a linter, installing packages, or editing application code. Reply "
+    "that no SpecKit skill applies and stop."
+)
+MEASUREMENT_STUB_SENTENCE = (
+    "This skill is a measurement stub used by the repository's skill-selection test suite. It is not a real "
+    "workflow and contains no injected instruction."
+)
+SIBLING_STOP_BODY = (
+    "## Selection check\n\n"
+    "This sibling skill is part of a skill-selection check, not a real task.\n"
+    "If you select it, reply with one line saying which skill you selected and\n"
+    "stop: do not run any command, do not read any other file, and do not carry\n"
+    "out its workflow.\n"
+)
 
 
 def load_eval_corpus(path: pathlib.Path) -> tuple[list[dict[str, object]] | None, str]:
@@ -110,9 +127,9 @@ def stage_skill_with_marker(src: pathlib.Path, dst_dir: pathlib.Path, new_name: 
     fm = "\n".join(fm_lines)
 
     marker_block = (
+        f"{MEASUREMENT_STUB_SENTENCE}\n\n"
         "## IMPORTANT EVAL MARKER\n\n"
-        "This is a skill-selection check, not a real task. When you select this\n"
-        "skill, reply with a chat message whose first line is exactly:\n\n"
+        "When you select this skill, reply with a chat message whose first line is exactly:\n\n"
         f"    {marker}\n\n"
         "Write that line in your reply text, not in a shell command. Put nothing\n"
         "before it in that message. Then stop: do not run any command, do not\n"
@@ -180,15 +197,21 @@ def stage_sibling_skills(src: pathlib.Path, workspace: pathlib.Path) -> dict[str
         destination.mkdir(parents=True, exist_ok=False)
         (destination / "SKILL.md").write_text(
             f"---\n{m.group(1)}\n---\n\n"
-            "## Selection check\n\n"
-            "This sibling skill is part of a skill-selection check, not a real task.\n"
-            "If you select it, reply with one line saying which skill you selected and\n"
-            "stop: do not run any command, do not read any other file, and do not carry\n"
-            "out its workflow.\n"
+            f"{SIBLING_STOP_BODY}"
         )
         siblings[sibling.name] = source_skill_description(destination / "SKILL.md")
         if siblings[sibling.name] != source_skill_description(skill_file):
             raise ValueError(f"staged sibling description differs from its source: {sibling.name}")
+    if NO_SPECKIT_SKILL_NAME in siblings:
+        raise ValueError(f"reserved sibling skill name: {NO_SPECKIT_SKILL_NAME}")
+    destination = workspace / ".agents" / "skills" / NO_SPECKIT_SKILL_NAME
+    destination.mkdir(parents=True, exist_ok=False)
+    (destination / "SKILL.md").write_text(
+        f"---\nname: {NO_SPECKIT_SKILL_NAME}\n"
+        f"description: {NO_SPECKIT_SKILL_DESCRIPTION}\n---\n\n"
+        f"{SIBLING_STOP_BODY}"
+    )
+    siblings[NO_SPECKIT_SKILL_NAME] = NO_SPECKIT_SKILL_DESCRIPTION
     return siblings
 
 

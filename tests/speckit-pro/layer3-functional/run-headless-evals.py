@@ -108,6 +108,37 @@ def tree_digest(root: Path) -> str:
     return digest.hexdigest()
 
 
+def expected_selection(case: Mapping[str, Any]) -> str:
+    value = case.get("expected_selection", "target")
+    if value in {"target", "none"}:
+        return str(value)
+    if isinstance(value, str) and value.startswith("redirect:"):
+        skill = value.removeprefix("redirect:")
+        if re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", skill):
+            return value
+    raise EvidenceError(f"invalid expected_selection: {value!r}")
+
+
+def selected_claude_skill(selection: str, target: str, namespace: str = "speckit-pro") -> str | None:
+    if selection == "none":
+        return None
+    if selection == "target":
+        return target
+    return f"{namespace}:{selection.removeprefix('redirect:')}"
+
+
+def claude_skill_permissions(selection: str, target: str, namespace: str, names: list[str]) -> dict[str, list[str]]:
+    selected = selected_claude_skill(selection, target, namespace)
+    if selected is not None and selected not in names:
+        raise EvidenceError("Claude expected selection is not in the staged skill catalog")
+    allowed = [] if selected is None else [selected]
+    denied = [name for name in names if name not in allowed] + ["init", "security-review"]
+    return {
+        "allow": [rule for name in allowed for rule in (f"Skill({name})", f"Skill({name} *)")],
+        "deny": [rule for name in denied for rule in (f"Skill({name})", f"Skill({name} *)")],
+    }
+
+
 def load_case_catalog(root: Path) -> dict[str, Any]:
     path = root / CATALOG_PATH.relative_to(repo_root())
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -116,6 +147,7 @@ def load_case_catalog(root: Path) -> dict[str, Any]:
     for item in data["cases"]:
         if not isinstance(item, dict) or set(item).intersection({"expectations", "expected_output"}):
             raise EvidenceError("headless case catalog must not contain grading rubrics")
+        expected_selection(item)
     return data
 
 
@@ -363,7 +395,7 @@ def enumerate_codex_mcp_servers(cli: Path, workspace: Path, env: Mapping[str, st
 
 
 def claude_skill_policy(case: Mapping[str, Any], stage: Stage) -> dict[str, Any]:
-    """Bind the full staged catalog while permitting only the requested Skill."""
+    """Bind the full staged catalog while permitting only the expected selection."""
     manifest = json.loads((stage.plugin_root / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
     if not isinstance(manifest, dict):
         raise EvidenceError("Claude staged plugin manifest must be an object")
@@ -388,7 +420,6 @@ def claude_skill_policy(case: Mapping[str, Any], stage: Stage) -> dict[str, Any]
     target = str(case["invocation"]).removeprefix("/")
     if target not in names or target != f"{namespace}:{stage.target_skill.parent.name}":
         raise EvidenceError("Claude requested target is not the staged target skill")
-    denied = [name for name in names if name != target] + ["init", "security-review"]
     return {
         "target_skill": target,
         "expected_skills": names,
@@ -396,10 +427,7 @@ def claude_skill_policy(case: Mapping[str, Any], stage: Stage) -> dict[str, Any]
             "disableClaudeAiConnectors": True,
             "disableBundledSkills": True,
             "skillOverrides": {"doctor": "off"},
-            "permissions": {
-                "allow": [f"Skill({target})", f"Skill({target} *)"],
-                "deny": [rule for name in denied for rule in (f"Skill({name})", f"Skill({name} *)")],
-            },
+            "permissions": claude_skill_permissions(expected_selection(case), target, str(namespace), names),
         },
     }
 
@@ -856,6 +884,7 @@ def parse_events(host: str, stdout: str) -> dict[str, Any]:
             "resolved_model": None,
             "resolved_model_evidence": "not emitted by parsed Codex JSONL",
             "tool_trace": tool_trace,
+            "agent_message_count": codex_agent_message_count(events),
             "event_count": len(events),
         }
     if host == "claude":
@@ -894,16 +923,91 @@ def parse_events(host: str, stdout: str) -> dict[str, Any]:
             "available_skills": init[0].get("skills"),
             "tool_trace": tool_trace,
             "completed_tool_use_ids": sorted(completed_tool_use_ids),
+            "agent_message_count": claude_agent_message_count(events),
             "event_count": len(events),
         }
     raise EvidenceError(f"unsupported host event stream: {host}")
+
+
+def codex_agent_message_count(events: list[dict[str, Any]]) -> int:
+    return sum(
+        1
+        for event in events
+        if event.get("type") == "item.completed"
+        and isinstance(event.get("item"), dict)
+        and event["item"].get("type") == "agent_message"
+        and isinstance(event["item"].get("text"), str)
+        and event["item"]["text"].strip()
+    )
+
+
+def claude_agent_message_count(events: list[dict[str, Any]]) -> int:
+    return sum(
+        1
+        for event in events
+        if event.get("type") == "assistant"
+        and isinstance(event.get("message"), dict)
+        and isinstance(event["message"].get("content"), list)
+        and any(
+            isinstance(item, dict)
+            and item.get("type") == "text"
+            and isinstance(item.get("text"), str)
+            and item["text"].strip()
+            for item in event["message"]["content"]
+        )
+    )
+
+
+def claude_skill_attempts(parsed: Mapping[str, Any]) -> list[tuple[str | None, str]]:
+    attempts = []
+    for item in parsed.get("tool_trace", []):
+        if not isinstance(item, dict) or item.get("name") != "Skill":
+            continue
+        supplied = item.get("input")
+        skill = supplied.get("skill") if isinstance(supplied, dict) else None
+        attempts.append((skill if isinstance(skill, str) else None, str(item.get("id"))))
+    return attempts
+
+
+def optional_claude_selection(
+    case: Mapping[str, Any],
+    parsed: Mapping[str, Any],
+    attempts: list[tuple[str | None, str]],
+) -> str:
+    agent_message_count = parsed.get("agent_message_count")
+    if not isinstance(agent_message_count, int) or agent_message_count < 1:
+        raise EvidenceError("Claude completed trace has no agent message")
+    names = {skill for skill, _identifier in attempts}
+    if None in names or len(names) > 1:
+        raise EvidenceError("Claude trace contains multiple or malformed Skill selections")
+    if not names:
+        return "none"
+    observed = names.pop()
+    target = str(case["invocation"]).removeprefix("/")
+    return "target" if observed == target else "redirect:" + observed.removeprefix("speckit-pro:")
+
+
+def require_claude_selection_evidence(case: Mapping[str, Any], parsed: Mapping[str, Any]) -> str:
+    selection = expected_selection(case)
+    target = str(case["invocation"]).removeprefix("/")
+    selected = selected_claude_skill(selection, target)
+    attempts = claude_skill_attempts(parsed)
+    if selection == "none":
+        return optional_claude_selection(case, parsed, attempts)
+    if any(skill != selected for skill, _identifier in attempts):
+        raise EvidenceError("Claude trace contains a non-target Skill attempt")
+    completed = {str(item) for item in parsed.get("completed_tool_use_ids", [])}
+    if not any(skill == selected and identifier in completed for skill, identifier in attempts):
+        raise EvidenceError(f"Claude trace did not prove a successful exact Skill invocation: {selected}")
+    return selection
 
 
 def require_provider_evidence(
     case: Mapping[str, Any],
     parsed: Mapping[str, Any],
     claude_policy: Mapping[str, Any] | None = None,
-) -> None:
+) -> str:
+    selection = expected_selection(case)
     required = {str(item) for item in case.get("required_tools", [])}
     if case["host"] == "claude":
         if claude_policy is None:
@@ -939,25 +1043,7 @@ def require_provider_evidence(
         expected_skill = str(case["invocation"]).removeprefix("/")
         if expected_skill != claude_policy["target_skill"]:
             raise EvidenceError("Claude requested target differs from the bound staged Skill policy")
-        for item in parsed.get("tool_trace", []):
-            if isinstance(item, dict) and item.get("name") == "Skill":
-                supplied = item.get("input")
-                if not isinstance(supplied, dict) or supplied.get("skill") != expected_skill:
-                    raise EvidenceError("Claude trace contains a non-target Skill attempt")
-        completed = {str(item) for item in parsed.get("completed_tool_use_ids", [])}
-        matching_skill_uses = [
-            item
-            for item in parsed.get("tool_trace", [])
-            if isinstance(item, dict)
-            and item.get("name") == "Skill"
-            and isinstance(item.get("input"), dict)
-            and item["input"].get("skill") == expected_skill
-        ]
-        if not any(str(item.get("id")) in completed for item in matching_skill_uses):
-            raise EvidenceError(
-                f"Claude trace did not prove a successful exact Skill invocation: {expected_skill}"
-            )
-        return
+        return require_claude_selection_evidence(case, parsed)
     observed = {
         str(item.get("type"))
         for item in parsed.get("tool_trace", [])
@@ -966,6 +1052,11 @@ def require_provider_evidence(
     missing = sorted(required - observed)
     if missing:
         raise EvidenceError("Codex completed trace is missing required tools: " + ", ".join(missing))
+    if selection == "none" or selection.startswith("redirect:"):
+        agent_message_count = parsed.get("agent_message_count")
+        if not isinstance(agent_message_count, int) or agent_message_count < 1:
+            raise EvidenceError("Codex completed trace has no agent message")
+    return selection
 
 
 def final_status(process_status: str, cleanup_error: str | None) -> str:
@@ -1084,6 +1175,8 @@ def main(argv: list[str]) -> int:
                 "workspace_before_sha256": sha256_file(before_path),
             }
         )
+        if case.get("hold_terminal") is True:
+            manifest["hold_terminal"] = True
         try:
             command = build_command(
                 case,
@@ -1158,10 +1251,12 @@ def main(argv: list[str]) -> int:
                             manifest["event_error"] = str(error)
                         else:
                             try:
-                                require_provider_evidence(case, parsed, claude_policy)
+                                selection_observed = require_provider_evidence(case, parsed, claude_policy)
                             except EvidenceError as error:
                                 status = "provider_evidence_error"
                                 manifest["event_error"] = str(error)
+                            else:
+                                manifest["selection_observed"] = selection_observed
                             manifest["provider_evidence"] = parsed
                             manifest["resolved_model"] = parsed["resolved_model"]
                             (case_evidence / "tool-trace.json").write_text(

@@ -93,17 +93,17 @@ checklist and fix the gaps — all in one agent.
 
 </hard_constraints>
 
-## Summary Format
+## Summary Format — start the response with this exact block
 
-Your response MUST use the following section headers verbatim — including
-the literal H2 markers `## Domain:` and `## Gaps:`. The orchestrator parses
-these headers to decide whether to advance the next gate; missing or renamed
-headers cause the L7 dispatch contract check to fail.
+Use the literal H2 markers `## Domain:` and `## Gaps:` verbatim. Missing or
+renamed fields cause the L7 dispatch contract check to fail.
 
 ```text
 ## Checklist Domain Result
 
 ## Domain: <domain name>
+
+**Checklist file:** <actual repo-relative path produced by the command; never substitute a guessed path> (re-read it; it must contain N `- [ ] CHKNNN ...` item lines)
 
 **Checklist items:** N total
 
@@ -114,16 +114,12 @@ headers cause the L7 dispatch contract check to fail.
   Fix: <what was changed and where>
   Source: <research citation — URL, file path, or principle>
 
-- Gap 2: <gap description>
-  Fix: <what was changed and where>
-  Source: <research citation>
-
-(list all gaps and their fixes)
+(list every gap and its fix the same way)
 
 **Files modified:**
 - specs/<feature>/spec.md (if edited)
 - specs/<feature>/plan.md (if edited)
-- specs/<feature>/checklists/<domain>.md (checklist output)
+- <actual repo-relative checklist path> (checklist output)
 
 **Verification:** Gaps closed after N loop(s)
 (or "N gaps remain after 2 loops — escalate to consensus")
