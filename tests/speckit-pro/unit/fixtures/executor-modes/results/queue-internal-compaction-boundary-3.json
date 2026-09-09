@@ -1,0 +1,9 @@
+{
+  "case_id": "queue-internal-compaction",
+  "mode": "boundary",
+  "seed": 3,
+  "mutation_score": 77,
+  "wall_seconds": 410,
+  "review_findings": 1,
+  "gate_iterations": 1
+}

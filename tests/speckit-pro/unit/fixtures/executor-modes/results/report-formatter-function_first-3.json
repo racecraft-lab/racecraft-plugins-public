@@ -1,0 +1,9 @@
+{
+  "case_id": "report-formatter",
+  "mode": "function_first",
+  "seed": 3,
+  "mutation_score": null,
+  "wall_seconds": 220,
+  "review_findings": 1,
+  "gate_iterations": 1
+}

@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "modes": {
+    "strict": "Strict red-green-refactor for every task (the shipped protocol).",
+    "function_first": "Write the function, then its tests; the task passes only if the diff's mutation score clears the repository floor.",
+    "boundary": "Strict for tasks that touch a new or changed public interface in the plan's Module and Interface Deltas; function_first for every other task."
+  },
+  "repeats": 3,
+  "cases": [
+    {
+      "id": "queue-public-api",
+      "language": "python",
+      "task": "Add `Queue.drain(limit)` returning at most `limit` items in FIFO order and removing them.",
+      "files": ["src/queue/api.py", "tests/test_queue_api.py"],
+      "deltas": [
+        "- `src/queue/api.py` — [changed: `Queue.drain(limit)` added to the public API]",
+        "- `src/queue/store.py` — [removed: `Queue._legacy_pop` no longer exists]"
+      ]
+    },
+    {
+      "id": "queue-internal-compaction",
+      "language": "python",
+      "task": "Compact the ring buffer in place when free slots exceed half the capacity.",
+      "files": ["src/queue/store.py"],
+      "deltas": [
+        "- `src/queue/api.py` — [changed: `Queue.drain(limit)` added to the public API]"
+      ]
+    },
+    {
+      "id": "report-formatter",
+      "language": "typescript",
+      "task": "Format the usage report as aligned columns with a trailing total row.",
+      "files": ["src/report/format.ts", "src/report/format.test.ts"],
+      "deltas": ["No module or interface changes."]
+    }
+  ]
+}
