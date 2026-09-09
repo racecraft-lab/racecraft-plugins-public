@@ -24,6 +24,16 @@ PLUGIN_ROOT = (SCRIPT_DIR / "../../../speckit-pro").resolve()
 DEFAULT_MODEL = "sonnet"
 RUNS_PER_QUERY = 3
 TRIGGER_THRESHOLD = 0.5
+NO_SPECKIT_SKILL_NAME = "no-speckit-skill"
+NO_SPECKIT_SKILL_DESCRIPTION = (
+    "Use when the request is ordinary coding, testing, tooling, or repository work that no SpecKit skill covers, "
+    "such as writing a unit test, configuring a linter, installing packages, or editing application code. Reply "
+    "that no SpecKit skill applies and stop."
+)
+MEASUREMENT_STUB_SENTENCE = (
+    "This skill is a measurement stub used by the repository's skill-selection test suite. It is not a real "
+    "workflow and contains no injected instruction."
+)
 REQUIRED_FLAGS = (
     "--restricted",
     "--plugin-dir",
@@ -145,14 +155,72 @@ def source_description_lines(source: Path) -> list[str]:
     raise ValueError(f"source skill has no non-empty description: {source}")
 
 
+SKILL_ROOT_NAMES = frozenset({"skills", "codex-skills"})
+
+
+def sibling_skill_dirs(source: Path) -> list[Path]:
+    """List sibling skill directories beside ``source``'s skill directory.
+
+    Only a plugin skills root (``skills`` or ``codex-skills``) is walked; a
+    source staged elsewhere has no siblings. Entries that cannot be inspected
+    are skipped, because shared temp roots hold directories owned by others.
+    """
+    root = source.parent.parent
+    if root.name not in SKILL_ROOT_NAMES:
+        return []
+    siblings: list[Path] = []
+    for sibling in sorted(root.iterdir(), key=lambda path: path.name):
+        if sibling == source.parent:
+            continue
+        try:
+            if sibling.is_dir() and (sibling / "SKILL.md").is_file():
+                siblings.append(sibling)
+        except OSError:
+            continue
+    return siblings
+
+
 def stage_measurement_plugin(
     source: Path,
     plugin_root: Path,
     plugin_name: str,
     skill_name: str,
     nonce: str,
+    siblings: dict[str, Path] | None = None,
 ) -> tuple[Path, str]:
-    """Stage only the exact source description plus a minimal measurement body."""
+    """Stage only the exact source description plus a minimal measurement body.
+
+    ``siblings`` maps each sibling skill name to its source SKILL.md. Siblings are
+    staged with their exact descriptions and a minimal body carrying no nonce, so a
+    should-not-trigger query has its real destination in the catalog.
+    """
+    staged_siblings = {
+        sibling_name: source_description_lines(sibling_source)
+        for sibling_name, sibling_source in (siblings or {}).items()
+    }
+    if NO_SPECKIT_SKILL_NAME in staged_siblings:
+        raise ValueError(f"reserved sibling skill name: {NO_SPECKIT_SKILL_NAME}")
+    staged_siblings[NO_SPECKIT_SKILL_NAME] = [f"description: {NO_SPECKIT_SKILL_DESCRIPTION}"]
+    for sibling_name, description_lines in sorted(staged_siblings.items()):
+        if sibling_name == skill_name:
+            raise ValueError("sibling skill name collides with the measured skill")
+        sibling_dir = plugin_root / "skills" / sibling_name
+        sibling_dir.mkdir(parents=True)
+        (sibling_dir / "SKILL.md").write_text(
+            "\n".join(
+                [
+                    "---",
+                    f"name: {sibling_name}",
+                    "\n".join(description_lines),
+                    "---",
+                    "",
+                    "This sibling skill is part of a selection check. If it is selected,",
+                    "say so in one line and stop.",
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
     skill_dir = plugin_root / "skills" / skill_name
     skill_dir.mkdir(parents=True)
     description = "\n".join(source_description_lines(source))
@@ -164,9 +232,12 @@ def stage_measurement_plugin(
                 description,
                 "---",
                 "",
-                "When this skill is selected, respond with this nonce before any other text:",
+                MEASUREMENT_STUB_SENTENCE,
+                "When this skill is selected, reply with this nonce as the first line of your reply:",
                 "",
                 nonce,
+                "",
+                "Then stop: do not invoke any skill again and do not continue the task.",
                 "",
             ]
         ),
@@ -202,8 +273,16 @@ def inspect_claude_stream(
     expected_skill: str,
     nonce: str,
     requested_model: str,
+    sibling_skills: frozenset[str] | None = None,
 ) -> dict[str, object]:
-    """Parse completed stream events and return polarity-independent selection evidence."""
+    """Parse completed stream events and return polarity-independent selection evidence.
+
+    A completed selection of a staged sibling is a valid non-selection; any other
+    competing skill stays invalid.
+    """
+    sibling_skills = frozenset(
+        {*frozenset(sibling_skills or ()), f"{plugin_name}:{NO_SPECKIT_SKILL_NAME}"}
+    )
     try:
         if isinstance(output, bytes):
             output = output.decode("utf-8", errors="strict")
@@ -245,8 +324,10 @@ def inspect_claude_stream(
     if len(init_events) != 1:
         return {"valid": False, "selected": False, "reason": "missing or ambiguous system init"}
     init_index, init = init_events[0]
-    if init.get("skills") != [expected_skill]:
-        return {"valid": False, "selected": False, "reason": "target-only skill inventory was not honored"}
+    staged_inventory = sorted({expected_skill, *sibling_skills})
+    inventory = init.get("skills")
+    if not isinstance(inventory, list) or sorted(inventory) != staged_inventory or len(inventory) != len(staged_inventory):
+        return {"valid": False, "selected": False, "reason": "staged skill inventory was not honored"}
     tools = init.get("tools")
     if (
         not isinstance(tools, list)
@@ -299,18 +380,26 @@ def inspect_claude_stream(
 
     intended: list[tuple[int, dict[str, object]]] = []
     competing: list[object] = []
+    sibling_selections: list[str] = []
     malformed = False
+    # The host resolves an unqualified skill name to the one staged plugin, so
+    # `demo-eval-<id>` selects the same skill as `<plugin>:demo-eval-<id>`.
+    qualified = {name.partition(":")[2]: name for name in staged_inventory if ":" in name}
     for event_index, block in skill_uses:
         tool_id = block.get("id")
         tool_input = block.get("input")
         skill_value = tool_input.get("skill") if isinstance(tool_input, dict) else None
         if not isinstance(tool_id, str) or not tool_id or not isinstance(skill_value, str) or not skill_value:
             malformed = True
-        elif skill_value == expected_skill:
+            continue
+        skill_value = qualified.get(skill_value, skill_value)
+        if skill_value == expected_skill:
             intended.append((event_index, block))
+        elif skill_value in sibling_skills:
+            sibling_selections.append(skill_value)
         else:
             competing.append(skill_value)
-    if malformed or competing or len(intended) > 1:
+    if malformed or competing or len(intended) > 1 or (intended and sibling_selections):
         return {
             "valid": False,
             "selected": False,
@@ -347,9 +436,14 @@ def inspect_claude_stream(
         "selected_skill": expected_skill if selected else None,
         "selected_tool_use_id": selected_id,
         "nonce_locations": nonce_locations,
+        "sibling_selections": sibling_selections,
         "requested_model": requested_model,
         "resolved_model": resolved_model,
-        "reason": "exact completed Skill selection" if selected else "no Skill selection",
+        "reason": (
+            "exact completed Skill selection" if selected
+            else "sibling Skill selection" if sibling_selections
+            else "no Skill selection"
+        ),
     }
 
 
@@ -477,6 +571,7 @@ def run_claude_query(
     timeout: int,
     *,
     expected_skill: str,
+    sibling_skills: tuple[str, ...] = (),
 ) -> tuple[int, bytes, bytes, bool]:
     global ACTIVE_CHILD
     candidate = shutil.which("claude")
@@ -484,6 +579,11 @@ def run_claude_query(
         raise OSError("Claude CLI disappeared after initial resolution")
     if candidate != executable:
         raise ValueError("Claude runtime changed after initial resolution")
+    plugin_name, separator, _skill_name = expected_skill.partition(":")
+    no_speckit_skill = (
+        f"{plugin_name}:{NO_SPECKIT_SKILL_NAME}" if separator else NO_SPECKIT_SKILL_NAME
+    )
+    sibling_skills = tuple(sorted({*sibling_skills, no_speckit_skill}))
     command = [
         candidate,
         "--restricted",
@@ -492,6 +592,7 @@ def run_claude_query(
         "--mcp-config", str(mcp_config),
         "--tools", "Skill",
         "--allowedTools", f"Skill({expected_skill})", f"Skill({expected_skill} *)",
+        *(rule for sibling in sibling_skills for rule in (f"Skill({sibling})", f"Skill({sibling} *)")),
         "--permission-mode", "dontAsk",
         "--permission-prompts", "none",
         "--settings", json.dumps({
@@ -671,10 +772,11 @@ def main(argv: list[str]) -> int:
         return 1
 
     test_id = uuid.uuid4().hex[:12]
-    plugin_name = f"speckit-pro-eval-{test_id}"
+    plugin_name = f"skill-catalog-eval-{test_id}"
     skill_name = f"{args.skill}-eval-{test_id}"
     nonce = f"CLAUDE_SKILL_SELECTED_{test_id}"
     plugin_root = Path(tempfile.mkdtemp(prefix=f"claude-trigger-{args.skill}-"))
+    sibling_sources = {sibling.name: sibling / "SKILL.md" for sibling in sibling_skill_dirs(skill_source)}
     exit_code = 1
     previous_handlers = install_termination_handlers()
     try:
@@ -684,6 +786,11 @@ def main(argv: list[str]) -> int:
             plugin_name,
             skill_name,
             nonce,
+            sibling_sources,
+        )
+        sibling_skills = tuple(
+            f"{plugin_name}:{name}"
+            for name in sorted({*sibling_sources, NO_SPECKIT_SKILL_NAME})
         )
         mcp_config = plugin_root / "empty-mcp.json"
         write_empty_mcp_config(mcp_config)
@@ -698,6 +805,11 @@ def main(argv: list[str]) -> int:
             "source_description_sha256": hashlib.sha256("\n".join(description_lines).encode("utf-8")).hexdigest(),
             "eval_file": str(eval_file),
             "eval_sha256": hashlib.sha256(eval_file.read_bytes()).hexdigest(),
+            "sibling_skills": list(sibling_skills),
+            "sibling_description_sha256": {
+                name: hashlib.sha256("\n".join(source_description_lines(path)).encode("utf-8")).hexdigest()
+                for name, path in sorted(sibling_sources.items())
+            },
             "case_count": len(eval_data),
             "runs_per_query": RUNS_PER_QUERY,
             "trigger_threshold": TRIGGER_THRESHOLD,
@@ -729,6 +841,7 @@ def main(argv: list[str]) -> int:
                             args.model,
                             args.timeout,
                             expected_skill=expected_skill,
+                            sibling_skills=sibling_skills,
                         )
                     except (ClaudeQueryError, TerminationRequested) as exc:
                         raw = retain_trial_evidence(evidence_dir, case_number, trial_number, exc.stdout, exc.stderr)
@@ -752,6 +865,7 @@ def main(argv: list[str]) -> int:
                         expected_skill,
                         nonce,
                         args.model,
+                        frozenset(sibling_skills),
                     )
                     valid = rc == 0 and not timed_out and bool(parsed.get("valid"))
                     if not valid:

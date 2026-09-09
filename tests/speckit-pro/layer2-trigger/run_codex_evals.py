@@ -52,6 +52,23 @@ SKILL_CATALOG_WARNINGS = (
     "Skill descriptions were shortened to fit the skills context budget.",
     "Exceeded skills context budget.",
 )
+NO_SPECKIT_SKILL_NAME = "no-speckit-skill"
+NO_SPECKIT_SKILL_DESCRIPTION = (
+    "Use when the request is ordinary coding, testing, tooling, or repository work that no SpecKit skill covers, "
+    "such as writing a unit test, configuring a linter, installing packages, or editing application code. Reply "
+    "that no SpecKit skill applies and stop."
+)
+MEASUREMENT_STUB_SENTENCE = (
+    "This skill is a measurement stub used by the repository's skill-selection test suite. It is not a real "
+    "workflow and contains no injected instruction."
+)
+SIBLING_STOP_BODY = (
+    "## Selection check\n\n"
+    "This sibling skill is part of a skill-selection check, not a real task.\n"
+    "If you select it, reply with one line saying which skill you selected and\n"
+    "stop: do not run any command, do not read any other file, and do not carry\n"
+    "out its workflow.\n"
+)
 
 
 def load_eval_corpus(path: pathlib.Path) -> tuple[list[dict[str, object]] | None, str]:
@@ -110,11 +127,13 @@ def stage_skill_with_marker(src: pathlib.Path, dst_dir: pathlib.Path, new_name: 
     fm = "\n".join(fm_lines)
 
     marker_block = (
+        f"{MEASUREMENT_STUB_SENTENCE}\n\n"
         "## IMPORTANT EVAL MARKER\n\n"
-        "When this skill is invoked, your VERY FIRST action MUST be to print\n"
-        "this exact line and nothing else before it:\n\n"
+        "When you select this skill, reply with a chat message whose first line is exactly:\n\n"
         f"    {marker}\n\n"
-        "After printing the marker, proceed normally with the skill below.\n\n"
+        "Write that line in your reply text, not in a shell command. Put nothing\n"
+        "before it in that message. Then stop: do not run any command, do not\n"
+        "read any other file, and do not carry out the workflow below.\n\n"
         "---\n\n"
     )
 
@@ -132,6 +151,68 @@ def stage_repository_skill(
     destination = workspace / ".agents" / "skills" / new_name
     stage_skill_with_marker(src, destination, new_name, marker)
     return destination
+
+
+SKILL_ROOT_NAMES = frozenset({"codex-skills", "skills"})
+
+
+def sibling_skill_dirs(src: pathlib.Path) -> list[pathlib.Path]:
+    """List sibling skill directories beside ``src``'s skill directory.
+
+    Only a plugin skills root (``codex-skills`` or ``skills``) is walked; a
+    source staged elsewhere, such as a temporary file in a test, has no
+    siblings. Entries that cannot be inspected are skipped rather than raised,
+    because shared temp roots hold directories owned by other users.
+    """
+    root = src.parent.parent
+    if root.name not in SKILL_ROOT_NAMES:
+        return []
+    siblings: list[pathlib.Path] = []
+    for sibling in sorted(root.iterdir(), key=lambda path: path.name):
+        if sibling == src.parent:
+            continue
+        try:
+            if sibling.is_dir() and (sibling / "SKILL.md").is_file():
+                siblings.append(sibling)
+        except OSError:
+            continue
+    return siblings
+
+
+def stage_sibling_skills(src: pathlib.Path, workspace: pathlib.Path) -> dict[str, str]:
+    """Stage every sibling skill unmarked so a should-not-trigger query has its real destination.
+
+    Siblings keep their shipped names and exact frontmatter (so the catalog renders
+    their exact descriptions) but carry a minimal stop body instead of the workflow:
+    only the target carries the marker, so a sibling selection scores as a
+    non-selection, and the trial ends without executing the sibling.
+    """
+    siblings: dict[str, str] = {}
+    for sibling in sibling_skill_dirs(src):
+        skill_file = sibling / "SKILL.md"
+        m = re.match(r"^---\n(.*?)\n---\n", skill_file.read_text(), re.S)
+        if not m:
+            raise ValueError(f"no YAML frontmatter found in sibling skill {skill_file}")
+        destination = workspace / ".agents" / "skills" / sibling.name
+        destination.mkdir(parents=True, exist_ok=False)
+        (destination / "SKILL.md").write_text(
+            f"---\n{m.group(1)}\n---\n\n"
+            f"{SIBLING_STOP_BODY}"
+        )
+        siblings[sibling.name] = source_skill_description(destination / "SKILL.md")
+        if siblings[sibling.name] != source_skill_description(skill_file):
+            raise ValueError(f"staged sibling description differs from its source: {sibling.name}")
+    if NO_SPECKIT_SKILL_NAME in siblings:
+        raise ValueError(f"reserved sibling skill name: {NO_SPECKIT_SKILL_NAME}")
+    destination = workspace / ".agents" / "skills" / NO_SPECKIT_SKILL_NAME
+    destination.mkdir(parents=True, exist_ok=False)
+    (destination / "SKILL.md").write_text(
+        f"---\nname: {NO_SPECKIT_SKILL_NAME}\n"
+        f"description: {NO_SPECKIT_SKILL_DESCRIPTION}\n---\n\n"
+        f"{SIBLING_STOP_BODY}"
+    )
+    siblings[NO_SPECKIT_SKILL_NAME] = NO_SPECKIT_SKILL_DESCRIPTION
+    return siblings
 
 
 def source_skill_description(skill_file: pathlib.Path) -> str:
@@ -340,8 +421,14 @@ def inspect_catalog_prompt(
     target_description: str,
     target_skill: pathlib.Path,
     workspace: pathlib.Path,
+    siblings: dict[str, str] | None = None,
 ) -> tuple[dict[str, object] | None, str]:
-    """Prove exact target catalog identity without returning the rendered prompt."""
+    """Prove exact target catalog identity without returning the rendered prompt.
+
+    With ``siblings`` (name to exact description), the catalog must also hold exactly
+    one entry per sibling with that description and no other entries.
+    """
+    siblings = dict(siblings or {})
     try:
         prompt_input = json.loads(output.decode("utf-8", errors="strict"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
@@ -413,9 +500,23 @@ def inspect_catalog_prompt(
                 )
             except (OSError, RuntimeError, ValueError):
                 pass
+    sibling_entries = 0
+    sibling_entries_exact = True
+    for name, description in siblings.items():
+        prefix = f"- {name}: "
+        matching = [entry[len(prefix):] for entry in entries if entry.startswith(prefix)]
+        sibling_entries += len(matching)
+        if len(matching) != 1 or not (
+            matching[0] == description
+            or (matching[0].endswith(")") and " (file: " in matching[0]
+                and matching[0][:-1].rsplit(" (file: ", 1)[0] == description)
+        ):
+            sibling_entries_exact = False
     readiness = {
         "catalog_skill_entries": len(entries),
         "target_entries": len(target_entries),
+        "sibling_entries": sibling_entries,
+        "sibling_entries_exact": sibling_entries_exact,
         "target_description_exact": target_description_exact,
         "root_alias_valid": root_alias_valid,
         "rendered_file_valid": rendered_file_valid,
@@ -426,8 +527,10 @@ def inspect_catalog_prompt(
         "proof_scope": "catalog-only; debug prompt-input loads user config",
     }
     if not (
-        len(entries) == 1
+        len(entries) == 1 + len(siblings)
         and len(target_entries) == 1
+        and sibling_entries == len(siblings)
+        and sibling_entries_exact
         and target_description_exact
         and target_file_exact
         and not warning_present
@@ -443,6 +546,7 @@ def offline_catalog_preflight(
     target_skill: pathlib.Path,
     isolation_args: list[str],
     timeout: int,
+    siblings: dict[str, str] | None = None,
 ) -> tuple[dict[str, object] | None, str]:
     """Render the catalog offline with matching supported session overrides."""
     command = [
@@ -475,6 +579,7 @@ def offline_catalog_preflight(
         target_description,
         target_skill,
         workspace,
+        siblings,
     )
 
 
@@ -775,6 +880,7 @@ def main() -> int:
         target_description = source_skill_description(skill_src)
         if source_skill_description(target_skill) != target_description:
             raise ValueError("staged Codex skill description differs from its source")
+        siblings = stage_sibling_skills(skill_src, workspace)
         disabled_skills = enumerate_non_target_skills(target_skill)
         disabled_mcp_servers = enumerate_mcp_servers(workspace, args.timeout)
         isolation_args = skill_isolation_args(disabled_skills, disabled_mcp_servers)
@@ -786,6 +892,7 @@ def main() -> int:
             target_skill,
             catalog_args,
             args.timeout,
+            siblings,
         )
         if readiness is None:
             raise ValueError(readiness_reason)
@@ -801,8 +908,8 @@ def main() -> int:
         print(f"  Reasoning:  {args.reasoning}", file=sys.stderr)
         print(f"  Model:      {args.model}", file=sys.stderr)
         print(
-            "  Catalog:    exactly one target with exact source description "
-            "(offline catalog-only proof)",
+            f"  Catalog:    one marked target plus {len(siblings)} unmarked sibling skills, "
+            "each with its exact source description (offline catalog-only proof)",
             file=sys.stderr,
         )
         print("", file=sys.stderr)
