@@ -634,7 +634,9 @@ Design Concept doc produced in step 4 (`SPEC-<ID>-design-concept.md`) to fill:
 - Plan prompt — combine CLAUDE.md tech stack, constitution, roadmap scope,
   AND architecture/data-model/constraint decisions extracted from the design
   concept Q&A log. Quote the chosen answer for any decision driving a
-  planning choice. Reference the design concept doc path as well.
+  planning choice. Reference the design concept doc path as well. Carry the
+  Module and Interface Deltas section verbatim so plan.md names the same
+  module and interface changes.
 - Checklist domain suggestions — based on roadmap scope plus the design tree
   branches the grill-me interview walked
 - Tasks prompt — reference spec.md, plan.md, AND the design concept doc.
@@ -642,11 +644,14 @@ Design Concept doc produced in step 4 (`SPEC-<ID>-design-concept.md`) to fill:
   task ordering and TDD test specifications.
 - Analyze prompt — cross-artifact consistency check across spec.md, plan.md,
   tasks.md, AND the design concept doc. Flag drift between Goals / Non-goals /
-  decisions and downstream artifacts. The design concept is the source of
-  truth for scoping decisions captured during grill-me.
+  decisions, Module and Interface Deltas, Verification Gates, and downstream
+  artifacts. The design concept is the source of truth for scoping decisions
+  captured during grill-me.
 - Implement prompt — reference tasks.md, plan.md, AND the design concept
   doc. Consult the Q&A log for the "why" behind decisions; this informs
-  test specifications, edge-case handling, and refactor choices.
+  test specifications, edge-case handling, and refactor choices. Carry the
+  Verification Gates section verbatim so PROJECT_COMMANDS discovery and the
+  TDD executors target the checks the interview agreed on.
 
 The prompts should be strong enough that `$speckit-autopilot` can execute
 without the user hand-editing obvious missing context. The design concept is

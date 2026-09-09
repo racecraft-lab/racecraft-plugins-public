@@ -46,6 +46,17 @@ stop_reason: "natural" | "user-ended" | "soft-cap" | "hard-cap"
 ## Non-goals
 - <agreed scope cut, with the relevant question number>
 
+## Module and Interface Deltas
+- <module or interface>: <new | changed | unchanged grey box>, <one-line delta> (Q<n> or evidence: <file, roadmap entry, or constitution principle>)
+
+## Terms
+| Term | Meaning in this spec | Differs from codebase usage? | Source (Q<n> or evidence) |
+| ---- | -------------------- | ---------------------------- | ------------------------- |
+| <term or "none"> | <meaning> | <yes and how, or no> | <Q<n> or evidence> |
+
+## Verification Gates
+- <check>: <threshold or pass condition>, <how it is run if known> (Q<n> or evidence: <file, roadmap entry, or constitution principle>)
+
 ## Design Tree (Q&A log)
 ### Q<n>. <question>
 **Branch:** <branch>
@@ -57,7 +68,8 @@ stop_reason: "natural" | "user-ended" | "soft-cap" | "hard-cap"
 
 ## Open Questions
 - **What:** <deferred decision>
-  **Why deferred:** <reason>
+  **Why deferred:** <reason; for a "you decide" answer, the literal marker `deferred-with-default:` followed by the user's stated constraint>
+  **Default adopted:** <choice; present only when the Why deferred line carries the marker, omitted otherwise>
   **Suggested next step:** <resolution path>
 
 ## Recommended Next Step
@@ -65,9 +77,14 @@ stop_reason: "natural" | "user-ended" | "soft-cap" | "hard-cap"
 ```
 
 Keep every interview decision in order. Preserve the user's words where changing
-them could change intent. Record an accepted slice split in Goals, a deferred
-split in Open Questions, and recommendation evidence in the Q&A entry. Keep the
-document factual and Markdown-only.
+them could change intent. The Module and Interface Deltas, Terms, and
+Verification Gates sections are always present; each entry cites the question
+number that resolved it or the evidence that made a question unnecessary. Write
+`none` in Terms when no term diverges. Record an accepted slice split in Goals,
+a deferred split in Open Questions, and recommendation evidence in the Q&A
+entry. A deferred-with-default item is marked only by the literal
+`deferred-with-default:` prefix on its Why deferred line and is the only kind of
+Open Question that carries a Default adopted line. Keep the document factual and Markdown-only.
 
 The closing message reports the path. Standalone mode recommends the applicable
 roadmap or `speckit-scaffold-spec <SPEC-ID>` step; setup mode returns Goals,

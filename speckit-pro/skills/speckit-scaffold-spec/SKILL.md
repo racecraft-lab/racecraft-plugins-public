@@ -536,7 +536,8 @@ invocation — do not attempt to skip grilling.
 
 4. Verify the design concept doc exists:
    Read(".worktrees/<number>-<short-name>/docs/ai/specs/.process/SPEC-<ID>-design-concept.md")
-   Must contain Goals, Non-goals, Design Tree (Q&A log), and Open Questions.
+   Must contain Goals, Non-goals, Module and Interface Deltas, Terms,
+   Verification Gates, Design Tree (Q&A log), and Open Questions.
    Must also carry the `**Blind-spot pass:**` key in its header blockquote.
 
 5. Repair that key when it is absent:
@@ -666,6 +667,8 @@ the decisions the roadmap left ambiguous.
   for any decision that drives a planning choice. Also reference
   the design concept doc path so the autopilot can re-read it
   during planning if it needs context the prompt didn't capture.
+  Carry the design concept's Module and Interface Deltas section
+  verbatim so plan.md names the same module and interface changes.
 
 - **Checklist Prompts:** Recommend checklist domains based on the
   spec's scope and the design tree branches the grill-me session
@@ -679,7 +682,8 @@ the decisions the roadmap left ambiguous.
 
 - **Analyze Prompt:** Cross-artifact consistency check across
   spec.md, plan.md, tasks.md, AND the design concept doc. Flag any
-  drift between the design concept's Goals / Non-goals / decisions
+  drift between the design concept's Goals / Non-goals / decisions,
+  its Module and Interface Deltas, and its Verification Gates
   and what the downstream artifacts say. The design concept is the
   source of truth for scoping decisions captured during grill-me;
   if a downstream artifact contradicts it, the downstream artifact
@@ -690,7 +694,9 @@ the decisions the roadmap left ambiguous.
   the "why" behind decisions — this informs test specifications,
   edge-case handling, and refactor choices. Decisions captured in
   the design concept that aren't reflected in tasks.md should be
-  surfaced as gaps before coding, not silently dropped.
+  surfaced as gaps before coding, not silently dropped. Carry the
+  Verification Gates section verbatim so PROJECT_COMMANDS discovery
+  and the TDD executors target the checks the interview agreed on.
 
 ### 7. Commit and Verify (IN the Worktree)
 
