@@ -1,0 +1,22 @@
+diff --git a/src/billing.py b/src/billing.py
+--- a/src/billing.py
++++ b/src/billing.py
+@@ -0,0 +1,6 @@
++class InvoiceLedger:
++    pass
++
++def post_invoice(x):
++    return x
++def rebuild_cache():
+diff --git a/src/api.ts b/src/api.ts
+--- a/src/api.ts
++++ b/src/api.ts
+@@ -3,0 +4,3 @@
++export interface GracePeriodPolicy { days: number }
++export const GRACE_DAYS = 14;
++export function scheduleReminder() {}
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -1,0 +2 @@
++def not_code():

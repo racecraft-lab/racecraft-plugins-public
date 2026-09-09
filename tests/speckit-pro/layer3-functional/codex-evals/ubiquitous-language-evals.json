@@ -1,0 +1,36 @@
+{
+  "skill_name": "ubiquitous-language",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Define the domain terms for this billing service in a glossary the agents can read. Propose the table first.",
+      "expected_output": "Reads any existing docs/ai/specs/ubiquitous-language.md, the constitution, roadmaps, and PRDs, scans module, class, table, and route names, proposes a Term | Meaning here | Identifiers table, asks with request_user_input or one free-text question in an active chat, and writes the file only after confirmation.",
+      "expectations": [
+        "Reads the existing terms document first when present and keeps its rows",
+        "Proposes rows with term, one-sentence meaning here, and the identifiers that carry it",
+        "asks with request_user_input or one free-text question in an active chat for a genuinely ambiguous term only, one at a time, recommendation first",
+        "Writes docs/ai/specs/ubiquitous-language.md only after the user confirms"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "The spec says 'account' but the code says 'tenant' in half the modules. Pin the term and reconcile the names.",
+      "expected_output": "Proposes one term with the other spelling listed under Identifiers so the lint maps both, asks the user which term wins, and updates the document without deleting existing rows silently.",
+      "expectations": [
+        "Lists both spellings under Identifiers of one term",
+        "Asks the user which term wins rather than deciding alone",
+        "Never deletes a row without naming the identifiers that lose their mapping"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Run the ubiquitous-language lint on my branch against origin/main and tell me what does not map.",
+      "expected_output": "Runs resolved_python <plugin-root>/scripts/ubiquitous-language-lint.py with --base origin/main, reports the JSON summary and each unmapped identifier with a suggested term or rename, and states that the lint is advisory and exits 0.",
+      "expectations": [
+        "Runs resolved_python <plugin-root>/scripts/ubiquitous-language-lint.py",
+        "Reports each unmapped identifier with file, line, and a suggestion",
+        "States that the lint never blocks a gate"
+      ]
+    }
+  ]
+}
