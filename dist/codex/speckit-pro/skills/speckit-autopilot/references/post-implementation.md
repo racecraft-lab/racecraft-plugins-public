@@ -294,7 +294,9 @@ opens one slice PR.
 1. Run final verification once for the completed implementation:
    <BUILD> && <TYPECHECK> && <LINT> && <UNIT_TEST> && <INTEGRATION_TEST>
    then <COMPLEXITY> && <MUTATION> && <DEPENDENCY_RULES> for every
-   populated slot, with {paths} = changed source files
+   populated slot, with {paths} = changed source files; when
+   that list is empty, skip COMPLEXITY and MUTATION and record
+   `n/a: no source files changed`
    (use PROJECT_COMMANDS discovered in Step 0; a populated slot
    that fails blocks). The hardener already ran once in Phase 7
    Step 4; read its recorded line, do not run it again.

@@ -1490,7 +1490,8 @@ def detect_commands(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
         commands["FULL_VERIFY"] = " && ".join(chain)
     # Quality-gate slots come from the discovery table, not from package
     # scripts. {paths} and {plugin_root} stay literal: the orchestrator fills
-    # them at run time, and an empty {paths} passes vacuously.
+    # them at run time; an empty {paths} is never run (crap-score refuses it),
+    # the orchestrator records `n/a: no source files changed` instead.
     # .specify/quality-gates.json is the threshold authority. Without it the
     # slots still show what would run, and quality_gates.status tells the
     # orchestrator to fail G0 until the coach flow creates the file.

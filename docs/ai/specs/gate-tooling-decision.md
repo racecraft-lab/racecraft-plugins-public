@@ -118,7 +118,14 @@ therefore kept separate:
 `speckit_pro_runner/contracts/quality-gates.schema.json`, validator and
 `recommend` command in `speckit_pro_runner/quality_gates.py`). The values
 above are substituted only while that file is missing or invalid, so the
-operator can see what would run; G0 blocks until the file is present. The
+operator can see what would run; G0 blocks until the file is present. G0 is
+a measurement, never a vacuous pass: `COMPLEXITY` runs on the whole tracked
+source tree and records its baseline (pre-existing debt is recorded, exit 2
+blocks), `MUTATION` records `deferred` because whole-tree mutation is
+unbounded, and `DEPENDENCY_RULES` runs for real and blocks. An empty
+`{paths}` at any later run is never executed; the orchestrator records
+`n/a: no source files changed`, and `crap-score.py` refuses an empty list.
+The
 coach flow in `skills/speckit-coach/references/quality-gates-guide.md`
 recommends the ceiling that lets about 90 percent of existing functions pass
 and falls back to Bob's 6 when nothing can be measured.

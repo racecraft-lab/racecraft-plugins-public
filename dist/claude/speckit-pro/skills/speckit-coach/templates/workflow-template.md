@@ -90,9 +90,9 @@ Filled from `detect-commands` at Step 0.11. One row per slot; the operator answe
 
 | Slot | Status | Tool | Command | Operator answer | G0 baseline | Final |
 |------|--------|------|---------|-----------------|-------------|-------|
-| COMPLEXITY | <!-- populated / unconfigured --> | <!-- e.g., radon + coverage.py --> | <!-- recorded with `{plugin_root}` and `{paths}` literal --> | <!-- blank until asked --> | <!-- vacuous pass --> | <!-- pass / fail --> |
-| MUTATION | | | | | <!-- vacuous pass --> | |
-| DEPENDENCY_RULES | | | | | <!-- real run --> | |
+| COMPLEXITY | <!-- populated / unconfigured --> | <!-- e.g., radon + coverage.py --> | <!-- recorded with `{plugin_root}` and `{paths}` literal --> | <!-- blank until asked --> | <!-- baseline: N checked, V over ceiling (whole tree; exit 2 blocks) --> | <!-- pass / fail / n/a: no source files changed --> |
+| MUTATION | | | | | <!-- deferred: runs on the spec diff at final verification --> | |
+| DEPENDENCY_RULES | | | | | <!-- real run: pass / fail --> | |
 
 ---
 
