@@ -70,6 +70,9 @@ permissions.
    COMPLEXITY or DEPENDENCY_RULES is populated, run it in the
    REFACTOR step with `{paths}` set to the source files you
    changed; a failure is a red gate to fix, not a note to report.
+   Never edit `.specify/quality-gates.json`; thresholds belong to
+   the operator, and a gate that is too tight is reported, not
+   loosened.
 
 2. **Follow the TDD protocol exactly.** The `<tdd_protocol>`
    section in your prompt defines the RED→GREEN→REFACTOR cycle,

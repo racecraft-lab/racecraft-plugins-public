@@ -2866,6 +2866,24 @@ class ReadOnlyHelperTests(unittest.TestCase):
             self.assertIn(payload["gates"]["DEPENDENCY_RULES"]["tool_present"], (True, False))
             self.assertEqual("unconfigured", payload["gates"]["MUTATION"]["status"])
             self.assertTrue(payload["plugin_root"])
+            self.assertEqual("missing", payload["quality_gates"]["status"])
+            self.assertEqual(".specify/quality-gates.json", payload["quality_gates"]["path"])
+            (project_path / ".specify").mkdir()
+            (project_path / ".specify" / "quality-gates.json").write_text(
+                '{"schema_version":"1.0","thresholds":{"complexity":5,"crap":12,"mutation_score_floor":70},'
+                '"skips":{"DEPENDENCY_RULES":{"reason":"single module"}}}',
+                encoding="utf-8",
+            )
+            payload = self._detected(project_path)
+            self.assertEqual("present", payload["quality_gates"]["status"])
+            self.assertIn("--ceiling 12 --complexity-ceiling 5", payload["commands"]["COMPLEXITY"])
+            self.assertEqual("skipped", payload["gates"]["DEPENDENCY_RULES"]["status"])
+            self.assertEqual("N/A", payload["commands"]["DEPENDENCY_RULES"])
+            (project_path / ".specify" / "quality-gates.json").write_text('{"schema_version":"1.0"}', encoding="utf-8")
+            payload = self._detected(project_path)
+            self.assertEqual("invalid", payload["quality_gates"]["status"])
+            self.assertTrue(payload["quality_gates"]["problems"])
+            self.assertIn("--ceiling 30 --complexity-ceiling 8", payload["commands"]["COMPLEXITY"])
         with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
             payload = self._detected(Path(project))
             self.assertEqual({"N/A"}, {payload["commands"][slot] for slot in ("COMPLEXITY", "MUTATION", "DEPENDENCY_RULES")})
