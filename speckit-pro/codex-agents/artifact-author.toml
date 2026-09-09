@@ -95,6 +95,14 @@ failure, complete the cleanup below and record that page's `gap` before reading
 the next template. Never pre-copy raw templates to their final artifact paths
 and never create all destination files up front.
 
+The per-page sequence is: Read the current template, render and Write the
+sibling temporary file from that Read, validate the temporary file, publish by
+renaming the closed temporary file, Read and validate the final page at its
+final path, record the outcome. Never use `cp` or `mv` with a shipped template
+as the source; the only permitted move is the atomic rename of the rendered
+sibling temporary file to its final path. Reading or validating the temporary
+file does not satisfy the final-path re-read.
+
 For the current page, build a replacement map whose keys equal the template's
 declared slot inventory exactly: no missing slot, extra slot, or duplicate
 replacement. Render the complete page in memory. Before exposing it at the
