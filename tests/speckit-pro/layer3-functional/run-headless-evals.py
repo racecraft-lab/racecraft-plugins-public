@@ -1018,6 +1018,10 @@ def require_claude_selection_evidence(case: Mapping[str, Any], parsed: Mapping[s
     target_done = any(skill == selected and identifier in completed for skill, identifier in attempts)
     followed = sorted({skill for skill, identifier in attempts if skill in extra and identifier in completed})
     if not target_done and not followed:
+        if not attempts and isinstance(parsed.get("agent_message_count"), int) and parsed["agent_message_count"] >= 1:
+            # The model answered without any Skill call. That is a measured outcome for the
+            # grader to judge, not missing evidence; an attempted call that never completed is.
+            return "none"
         raise EvidenceError(f"Claude trace did not prove a successful exact Skill invocation: {selected}")
     redirects = ",".join("redirect:" + name.partition(":")[2] for name in followed)
     if not target_done:

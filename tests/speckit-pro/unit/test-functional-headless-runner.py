@@ -692,6 +692,17 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
         with self.assertRaisesRegex(self.runner.EvidenceError, "invalid also_allowed"):
             self.runner.also_allowed_skills({**plain, "also_allowed": ["Bad Name"]})
 
+    def test_claude_answer_without_any_skill_call_records_none_for_a_target_case(self) -> None:
+        case, policy, parsed = self.claude_evidence()
+        answered = {**parsed, "tool_trace": [], "completed_tool_use_ids": [], "agent_message_count": 1}
+        self.assertEqual(self.runner.require_provider_evidence(case, answered, policy), "none")
+        silent = {**parsed, "tool_trace": [], "completed_tool_use_ids": [], "agent_message_count": 0}
+        with self.assertRaisesRegex(self.runner.EvidenceError, "exact Skill invocation"):
+            self.runner.require_provider_evidence(case, silent, policy)
+        attempted = {**parsed, "completed_tool_use_ids": [], "agent_message_count": 1}
+        with self.assertRaisesRegex(self.runner.EvidenceError, "exact Skill invocation"):
+            self.runner.require_provider_evidence(case, attempted, policy)
+
     def test_claude_rejects_every_non_target_skill_attempt_even_if_denied(self) -> None:
         case, policy, parsed = self.claude_evidence()
         for name in ("code-review", "speckit-pro:speckit-autopilot", "init", "security-review", "speckit-coach", None):
