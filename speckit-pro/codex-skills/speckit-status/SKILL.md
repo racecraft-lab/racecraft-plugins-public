@@ -4,7 +4,11 @@ description: >
   Show the current SpecKit roadmap and workflow status in Codex.
   Aggregates workflow files and technical roadmaps, highlights
   active specs, identifies blocked work, and recommends the next
-  unblocked spec to start.
+  unblocked spec to start. Read-only: never creates files, branches,
+  or worktrees. Do not use to set up or scaffold a spec
+  (speckit-scaffold-spec), run a workflow (speckit-autopilot), fix PR
+  review comments (speckit-resolve-pr), or explain SDD methodology,
+  the consensus protocol, or voting rules (speckit-coach).
 ---
 
 # SpecKit Status
