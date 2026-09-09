@@ -1,5 +1,48 @@
 # Changelog
 
+## [2.31.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.30.1...speckit-pro-v2.31.0) (2026-09-09)
+
+
+### Features
+
+* **speckit-pro:** add lockfile and unpushed-commit workflow guard hooks and fold review rules into resolve-pr ([31b9e87](https://github.com/racecraft-lab/racecraft-plugins-public/commit/31b9e87766e020cf5f73a429f08b05c01c5bb96d))
+* **speckit-pro:** add lockfile and unpushed-commit workflow guard hooks and fold review rules into resolve-pr ([8f2dc32](https://github.com/racecraft-lab/racecraft-plugins-public/commit/8f2dc3254684fc1e1fbafda73f9a28fd5194d488))
+* **speckit-pro:** add the ubiquitous-language skill and advisory identifier lint ([#541](https://github.com/racecraft-lab/racecraft-plugins-public/issues/541)) ([7025f37](https://github.com/racecraft-lab/racecraft-plugins-public/commit/7025f37d1f7aa33c723abd2f7cd1e95d99b3f5b6))
+* **speckit-pro:** delegate a once-per-spec mutation hardener to local Qwen with a primary-model fallback ([#542](https://github.com/racecraft-lab/racecraft-plugins-public/issues/542)) ([0d7ad76](https://github.com/racecraft-lab/racecraft-plugins-public/commit/0d7ad767356a381281c57828d7cf2bbf550b2620))
+* **speckit-pro:** fill the complexity, mutation, and dependency gate slots from the discovery table ([a21f267](https://github.com/racecraft-lab/racecraft-plugins-public/commit/a21f2673a6ecd102d45fab759245a5c0583a8a82))
+* **speckit-pro:** fill the complexity, mutation, and dependency gate slots from the discovery table ([17742e7](https://github.com/racecraft-lab/racecraft-plugins-public/commit/17742e79314cff29e9c49bf18e0115be53875008))
+* **speckit-pro:** harden grill-me design tree and stop rules ([#532](https://github.com/racecraft-lab/racecraft-plugins-public/issues/532)) ([052f84d](https://github.com/racecraft-lab/racecraft-plugins-public/commit/052f84dc4bdf3802ec1314b75c17f8de35258ed9))
+* **speckit-pro:** make quality-gates.json the authority for gate thresholds and skips ([1ffc26c](https://github.com/racecraft-lab/racecraft-plugins-public/commit/1ffc26c61b32e1caf41a11b288dc85068f1775a5))
+* **speckit-pro:** make quality-gates.json the authority for gate thresholds and skips ([3d628cb](https://github.com/racecraft-lab/racecraft-plugins-public/commit/3d628cbe460e7ee8db5e4db0b1c76c25834354f6))
+* **speckit-pro:** require a module and interface deltas section from PRD to plan ([cdaad83](https://github.com/racecraft-lab/racecraft-plugins-public/commit/cdaad8378e984772950aa42d62d3d64359c6d995))
+* **speckit-pro:** require a module and interface deltas section from PRD to plan ([4e59598](https://github.com/racecraft-lab/racecraft-plugins-public/commit/4e595989e712da92fa571107a0e31dcf40c420c1))
+* **speckit-pro:** ship live Codex hooks with interpreter fail-open ([5e7a171](https://github.com/racecraft-lab/racecraft-plugins-public/commit/5e7a171545ee645222fe618a41c7759f766683a7))
+* **speckit-pro:** ship live Codex hooks with interpreter fail-open ([ca9b48f](https://github.com/racecraft-lab/racecraft-plugins-public/commit/ca9b48f364db77bc3c67d0d61e0a724df38cf6e4))
+
+
+### Bug Fixes
+
+* **coach:** read scaffold authority for workflow guidance ([25eb4da](https://github.com/racecraft-lab/racecraft-plugins-public/commit/25eb4daa8f5baf842323d1519f107ecd0c413c47))
+* **grill:** clarify coaching discovery boundary ([21c0716](https://github.com/racecraft-lab/racecraft-plugins-public/commit/21c07164c927b25e26ab5382ee7dee3e27b3a896))
+* **prd:** clarify read-only status discovery boundary ([418b6ea](https://github.com/racecraft-lab/racecraft-plugins-public/commit/418b6eab3d31b6665278fe695be1c5983a54d792))
+* **speckit-pro:** check edge endpoints even when the graph has no nodes and update the gallery oracle spec ([862c3f3](https://github.com/racecraft-lab/racecraft-plugins-public/commit/862c3f3fceca2fb5c8fa6bda0dacc5b3b0861353))
+* **speckit-pro:** classify Layer 2 and 3 selections and tighten role contracts ([c2445b7](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c2445b793baa5a986a5cf428b3d195bd6293d4dd))
+* **speckit-pro:** define where the deferred-with-default marker lives in grill-me output ([b3b971d](https://github.com/racecraft-lab/racecraft-plugins-public/commit/b3b971d3c1ec429290f3fc563948d4d06d658153))
+* **speckit-pro:** detect a package manager only in a command's executable position ([33b5447](https://github.com/racecraft-lab/racecraft-plugins-public/commit/33b54471e024cb2c3d9b5cdda5b1bc1557e802eb))
+* **speckit-pro:** give the status and archive-cleanup skill descriptions explicit negative scope ([81a7fd9](https://github.com/racecraft-lab/racecraft-plugins-public/commit/81a7fd9f4644a5fad03b17f9494041e6c95c007b))
+* **speckit-pro:** let a hook manifest name the shell tool in its matcher ([1b32972](https://github.com/racecraft-lab/racecraft-plugins-public/commit/1b329726f3c899a5ec713595feee799c37bb7f69))
+* **speckit-pro:** make the schema signal.path pattern reject parent segments ([c702147](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c702147cdec6c202ef31025552a6600873651303))
+* **speckit-pro:** name coverage-matrix rows by behavior and classify Claude explanatory Layer 3 cases as target ([fc32d1c](https://github.com/racecraft-lab/racecraft-plugins-public/commit/fc32d1c8c26ea40381fbf635f89afda9698c4bdf))
+* **speckit-pro:** prefer the project's local ESLint and reject backslash probe names ([aa7974f](https://github.com/racecraft-lab/racecraft-plugins-public/commit/aa7974f7464a6ee2210a2234ed6d6a3a9d0e8b5e))
+* **speckit-pro:** record a real G0 quality-gate baseline instead of a vacuous pass ([#544](https://github.com/racecraft-lab/racecraft-plugins-public/issues/544)) ([ff6b80d](https://github.com/racecraft-lab/racecraft-plugins-public/commit/ff6b80da883966432a02b539a6a82ccba4e63dad))
+* **speckit-pro:** refuse repository gate overrides that supply their own command ([487653a](https://github.com/racecraft-lab/racecraft-plugins-public/commit/487653a197e69361fe298dcc1e66282abce52941))
+* **speckit-pro:** reject Windows drive and backslash paths in the discovery signal path ([5642350](https://github.com/racecraft-lab/racecraft-plugins-public/commit/56423504798bacd908929f5bf01cac00b7bdcc02))
+* **speckit-pro:** require a rule name on every invalid architecture-graph edge ([92a7833](https://github.com/racecraft-lab/racecraft-plugins-public/commit/92a78332e0ac7cef299b368f18ad9d8d35e3b673))
+* **speckit-pro:** tighten workflow routing boundaries ([b5e8a1d](https://github.com/racecraft-lab/racecraft-plugins-public/commit/b5e8a1ddeacd6cff6d181d7feb42a6c1cb7b03d7))
+* **speckit-pro:** use one canonical no-change phrase across PRD, roadmap, and plan ([f0c3246](https://github.com/racecraft-lab/racecraft-plugins-public/commit/f0c324669c7769da35a4dd1f77b7883a66f86836))
+* **speckit-pro:** validate basis.recorded in the quality-gates validator ([ec35274](https://github.com/racecraft-lab/racecraft-plugins-public/commit/ec352748eb47d98590703062a142dc759890cbab))
+* **upgrade:** restore deferred repository operation guidance ([e62101c](https://github.com/racecraft-lab/racecraft-plugins-public/commit/e62101cfc641d601d31f302d7b3620bca68b3d23))
+
 ## [2.30.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.30.0...speckit-pro-v2.30.1) (2026-09-06)
 
 
