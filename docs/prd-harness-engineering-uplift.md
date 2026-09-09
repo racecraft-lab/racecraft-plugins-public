@@ -740,6 +740,46 @@ authority.
 - **AC-14.16**: Failure or cancellation preserves a bounded diagnostic or
   resumable decision packet and leaves committed repository content unchanged.
 
+### 3.15 Per-story Autopilot Execution *(-> HRNS-016)*
+
+Heavy upfront planning followed by one large implementation pass is the
+failure mode the "Quality Gauntlet" memo names: do one story, check the
+architecture, repeat. SpecKit's own templates already shape the work this way.
+The spec template requires every user story to be independently testable
+(`.specify/templates/spec-template.md`: "Each user story/journey must be
+INDEPENDENTLY TESTABLE", with a per-story `**Independent Test**` line), and the
+tasks template groups tasks by story behind a Setup and a Foundational phase
+with a checkpoint after each story (`.specify/templates/tasks-template.md`:
+"Tasks MUST be organized by user story so each story can be: Implemented
+independently, Tested independently", `**Checkpoint**: At this point, User
+Story 1 should be fully functional and testable independently`). Phase 7 of
+autopilot flattens that structure into task groups and verifies once at the
+end. This feature makes the story the unit of execution, verification, and
+review.
+
+- **AC-15.1**: Phase 7 runs the Setup and Foundational task phases once, then
+  iterates the user stories in the priority order `tasks.md` records, one story
+  at a time; a story does not start until the previous story's checkpoint is
+  recorded.
+- **AC-15.2**: Each story runs the same sequence: implement its tasks, run the
+  automated checks and every populated quality-gate slot on the story's diff,
+  run the hardener when MUTATION is populated, run an architecture check
+  against the plan's Module and Interface Deltas and the dependency rules, then
+  record the story checkpoint in the workflow file.
+- **AC-15.3**: Each story opens its own pull request with the story's
+  Independent Test as its verification section. When `gh-stack` and its skill
+  are installed, the spec is one stack rooted on trunk with one PR per story in
+  priority order; otherwise each story is an independent branch off trunk, and
+  the workflow file records which mode was selected and why.
+- **AC-15.4**: The loop continues while every check is green and stops on the
+  first failing check, naming the story, the check, and the evidence path; a
+  resume starts from the last recorded checkpoint, never from the beginning.
+- **AC-15.5**: The added review overhead of one PR per story is accepted and
+  stated in the PR body; reducing it (batching small stories, auto-merging
+  green stack layers) is out of scope and recorded as a follow-on.
+- **AC-15.6**: Claude Code and Codex run the same per-story loop with the same
+  checkpoint record, PR-per-story rule, and stop rule.
+
 ## 4. Migration Path
 
 - **Tier 1 (HRNS-001) - Harness taxonomy**: Freeze the surface inventory, gap
@@ -769,6 +809,11 @@ authority.
 - **Tier 9 (HRNS-008) - Harness maintenance**: Add bounded drift detection and
   self-healing remediation for human-authored, synthesized, indexed, imported,
   and externally reconciled harness artifacts.
+- **Independent (HRNS-016) - Per-story execution**: Restructure Phase 7 around
+  independently testable stories with per-story gates, hardener, architecture
+  check, checkpoint, and pull request. Depends only on the gate slots,
+  thresholds file, and hardener the "Quality Gauntlet" stack shipped; it can run
+  at any tier once those have merged.
 
 ## 5. Constraints
 
@@ -892,10 +937,11 @@ authority.
 | Knowledge Conformance, Health, and Drift Maintenance | AC-12.* | HRNS-012 | HRNS-005, HRNS-006, HRNS-009, HRNS-010 | P2 |
 | Code-Intelligence and Vector-Index Interoperability | AC-13.* | HRNS-013 | HRNS-003, HRNS-005, HRNS-006, HRNS-009, HRNS-010 | P2 |
 | External OKF Exchange and Reviewable Reconciliation | AC-14.* | HRNS-014 | HRNS-004, HRNS-006, HRNS-007, HRNS-009, HRNS-010, HRNS-012 | P2 |
+| Per-story Autopilot Execution | AC-15.* | HRNS-016 | - (quality-gate slots, thresholds file, and hardener merged) | P2 |
 
 ## 8. Success Criteria
 
-1. Every acceptance criterion in AC-1.* through AC-14.* is either implemented,
+1. Every acceptance criterion in AC-1.* through AC-15.* is either implemented,
    verified, or intentionally deferred with a documented reason.
 2. Each HRNS spec stays within the roadmap reviewability budget or records a
    typed exception before implementation begins.
