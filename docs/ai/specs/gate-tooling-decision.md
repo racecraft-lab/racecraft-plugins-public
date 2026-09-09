@@ -225,7 +225,8 @@ Per-repository coaching in the thresholds file layer may raise it.
 - **Baseline:** `depcruise-baseline` writes known violations; `--ignore-known`
   downgrades them so only new violations fail.
 - **Graph for the architecture viewer:** the JSON output's
-  `modules[].dependencies[]` and `summary.violations[]`.
+  `modules[].dependencies[]` and `summary.violations[]`. The viewer's own
+  graph shape is the [architecture viewer contract](./architecture-viewer-contract.md).
 - **Alternatives noted:** eslint-plugin-boundaries and eslint-plugin-import's
   `no-restricted-paths` ride ESLint's exit code and per-file scoping but emit
   no graph and have no baseline.
