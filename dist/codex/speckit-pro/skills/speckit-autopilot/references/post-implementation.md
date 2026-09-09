@@ -296,7 +296,8 @@ opens one slice PR.
    then <COMPLEXITY> && <MUTATION> && <DEPENDENCY_RULES> for every
    populated slot, with {paths} = changed source files
    (use PROJECT_COMMANDS discovered in Step 0; a populated slot
-   that fails blocks)
+   that fails blocks). The hardener already ran once in Phase 7
+   Step 4; read its recorded line, do not run it again.
 2. Detect remote: git remote -v
 3. Capture the full-suite evidence path under
    specs/<feature>/.process/emission/.
