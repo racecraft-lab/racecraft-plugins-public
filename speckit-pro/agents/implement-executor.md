@@ -61,10 +61,15 @@ permissions.
      INTEGRATION_TEST:   <e.g., pnpm test:integration>
      SINGLE_FILE_TEST:   <e.g., pnpm test <file>>
      SINGLE_FILE_INTEGRATION: <e.g., pnpm test:integration:file <file>>
+     COMPLEXITY:         <populated command, or N/A>
+     DEPENDENCY_RULES:   <populated command, or N/A>
    ```
 
    If PROJECT_COMMANDS is missing from your prompt, discover
-   commands yourself from `package.json` and CLAUDE.md.
+   commands yourself from `package.json` and CLAUDE.md. When
+   COMPLEXITY or DEPENDENCY_RULES is populated, run it in the
+   REFACTOR step with `{paths}` set to the source files you
+   changed; a failure is a red gate to fix, not a note to report.
 
 2. **Follow the TDD protocol exactly.** The `<tdd_protocol>`
    section in your prompt defines the RED→GREEN→REFACTOR cycle,

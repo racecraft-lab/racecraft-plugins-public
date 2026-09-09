@@ -421,7 +421,7 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
   expected local write, and restart Codex. Do not apply the repair inside
   autopilot: the current process cannot reload changed custom agents safely.
 - **Step 0.10b: Implementation Agent Detection** — discover `PROJECT_IMPLEMENTATION_AGENT` from `.codex/agents/`
-- **Step 0.11: Project Command Discovery** — runner helper `detect-commands` → `PROJECT_COMMANDS`
+- **Step 0.11: Project Command Discovery** — runner helper `detect-commands` → `PROJECT_COMMANDS`, including the `COMPLEXITY`, `MUTATION`, and `DEPENDENCY_RULES` slots and the one-time missing-tool question
 - **Step 0.12: Preset and Extension Detection** — runner helper `detect-presets` → `PRESET_CONVENTIONS`
 
 If any check fails, STOP with the error message from the script's JSON output.

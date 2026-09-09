@@ -17,6 +17,8 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Callable
 
 from ..envelope import diagnostic, response
+from ..gate_discovery import SLOTS as GATE_SLOTS, resolve_slots as resolve_gate_slots
+from ..runtime import detect_plugin_root
 
 CAPTURE_LIMIT_BYTES = 16 * 1024
 PLAN_LAYERS_CAPTURE_LIMIT_BYTES = 256 * 1024
@@ -1485,6 +1487,18 @@ def detect_commands(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     chain = [commands[key] for key in ("BUILD", "TYPECHECK", "LINT", "UNIT_TEST", "INTEGRATION_TEST") if commands[key] != "N/A"]
     if chain:
         commands["FULL_VERIFY"] = " && ".join(chain)
+    # Quality-gate slots come from the discovery table, not from package
+    # scripts. {paths} and {plugin_root} stay literal: the orchestrator fills
+    # them at run time, and an empty {paths} passes vacuously.
+    gates = resolve_gate_slots(
+        root,
+        stack,
+        file_exists=lambda path: trusted_file_exists(path, repo_root),
+        which=lambda name: bool(shutil.which(name)) or trusted_file_exists(root / "node_modules" / ".bin" / name, repo_root),
+    )
+    for slot in GATE_SLOTS:
+        commands[slot] = gates[slot]["command"]
+    plugin_root = detect_plugin_root()
     detection: dict[str, Any] = {"source": source, "evidence": evidence}
     if source == "none":
         # A silent wall of N/A reads as "this project has no tests". Say what was
@@ -1494,7 +1508,7 @@ def detect_commands(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
             "No packaging marker or tests/ runner script found. Supply commands from the "
             "project's own documentation instead of treating N/A as 'no checks exist'."
         )
-    return make_result(json_text({"stack": stack, "package_manager": package_manager, "commands": commands, "detection": detection}))
+    return make_result(json_text({"stack": stack, "package_manager": package_manager, "commands": commands, "gates": gates, "plugin_root": plugin_root.as_posix() if plugin_root else "", "detection": detection}))
 
 
 def detect_presets(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
