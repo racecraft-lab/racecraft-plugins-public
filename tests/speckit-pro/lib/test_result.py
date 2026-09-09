@@ -260,6 +260,9 @@ def run_counted(
     out = sys.stdout if stream is None else stream
     result = CountingTestResult(stream=None, descriptions=False, verbosity=verbosity)
     suite.run(result)
+    for failed_test, traceback_text in result.failures + result.errors:
+        # The layer runner keeps only the summary line, so name the failing unit on stderr.
+        sys.stderr.write(f"{label} FAILED {failed_test.id()}\n{traceback_text.rstrip()}\n")
     out.write(f"{label}: {result.units_passed}/{result.units_total} passed\n")
     ok = result.units_total > 0 and (result.units_passed == result.units_total) and not result.failures and not result.errors
     return 0 if ok else 1
