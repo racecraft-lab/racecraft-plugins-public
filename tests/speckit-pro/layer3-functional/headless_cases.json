@@ -7,13 +7,15 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 2,
+      "expected_selection": "target",
       "fixture_root": "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature",
       "fixture_destination": "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature",
       "fixture_note": "Use this frozen feature root as the complete project input. Invoke the installed read-only runner contract exactly as the user requests.",
       "allowed_tools": ["Skill", "Read", "Glob", "Grep", "Bash"],
       "required_tools": ["Skill", "Bash"],
       "launch_policy": "hold",
-      "hold_reason": "The installed Claude CLI has no reviewed flag-only confinement for the Bash tool required by this case. Do not launch until command execution is externally confined without bypassing permissions."
+      "hold_reason": "The installed Claude CLI has no reviewed flag-only confinement for the Bash tool required by this case. Do not launch until command execution is externally confined without bypassing permissions.",
+      "hold_terminal": true
     },
     {
       "host": "codex",
@@ -21,6 +23,7 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 2,
+      "expected_selection": "target",
       "fixture_root": "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature",
       "fixture_destination": "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature",
       "fixture_note": "Use this frozen feature root as the complete project input. Invoke the installed read-only runner contract exactly as the user requests.",
@@ -94,7 +97,7 @@
       "eval_id": 6,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": ["command_execution"],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -105,7 +108,7 @@
       "eval_id": 101,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": ["command_execution"],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -116,7 +119,7 @@
       "eval_id": 102,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": ["command_execution"],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -282,7 +285,7 @@
       "eval_id": 3,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": ["command_execution"],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -293,7 +296,7 @@
       "eval_id": 4,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": ["command_execution"],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -304,7 +307,7 @@
       "eval_id": 5,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": ["command_execution"],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -327,7 +330,7 @@
       "eval_id": 9,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": ["command_execution"],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -338,7 +341,7 @@
       "eval_id": 10,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": ["command_execution"],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -349,7 +352,7 @@
       "eval_id": 11,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": ["command_execution"],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -360,7 +363,7 @@
       "eval_id": 12,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": ["command_execution"],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -371,7 +374,7 @@
       "eval_id": 103,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": ["command_execution"],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -382,7 +385,7 @@
       "eval_id": 104,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": ["command_execution"],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -393,7 +396,7 @@
       "eval_id": 105,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": ["command_execution"],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -402,6 +405,9 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 3,
+      "also_allowed": [
+        "speckit-coach"
+      ],
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
       "allowed_tools": [
@@ -422,6 +428,9 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 4,
+      "also_allowed": [
+        "speckit-coach"
+      ],
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
       "allowed_tools": [
@@ -442,6 +451,9 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 5,
+      "also_allowed": [
+        "speckit-coach"
+      ],
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
       "allowed_tools": [
@@ -462,6 +474,9 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 6,
+      "also_allowed": [
+        "speckit-coach"
+      ],
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
       "allowed_tools": [
@@ -482,6 +497,9 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 7,
+      "also_allowed": [
+        "speckit-coach"
+      ],
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
       "allowed_tools": [
@@ -502,6 +520,9 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 8,
+      "also_allowed": [
+        "speckit-coach"
+      ],
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
       "allowed_tools": [
@@ -522,6 +543,9 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 9,
+      "also_allowed": [
+        "speckit-coach"
+      ],
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
       "allowed_tools": [
@@ -542,6 +566,7 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 10,
+      "expected_selection": "redirect:speckit-coach",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
       "allowed_tools": [
@@ -562,6 +587,9 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 13,
+      "also_allowed": [
+        "speckit-coach"
+      ],
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
       "allowed_tools": [
@@ -582,6 +610,9 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 14,
+      "also_allowed": [
+        "speckit-coach"
+      ],
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
       "allowed_tools": [
@@ -602,6 +633,9 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 15,
+      "also_allowed": [
+        "speckit-coach"
+      ],
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
       "allowed_tools": [
@@ -622,6 +656,9 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 16,
+      "also_allowed": [
+        "speckit-coach"
+      ],
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
       "allowed_tools": [
@@ -642,6 +679,9 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 17,
+      "also_allowed": [
+        "speckit-coach"
+      ],
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
       "allowed_tools": [
@@ -662,6 +702,9 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 18,
+      "also_allowed": [
+        "speckit-coach"
+      ],
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
       "allowed_tools": [
@@ -682,6 +725,9 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 19,
+      "also_allowed": [
+        "speckit-coach"
+      ],
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
       "allowed_tools": [
@@ -702,6 +748,9 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 20,
+      "also_allowed": [
+        "speckit-coach"
+      ],
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
       "allowed_tools": [
@@ -722,6 +771,9 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 21,
+      "also_allowed": [
+        "speckit-coach"
+      ],
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
       "allowed_tools": [
@@ -742,6 +794,9 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 22,
+      "also_allowed": [
+        "speckit-coach"
+      ],
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
       "allowed_tools": [
@@ -762,6 +817,9 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 23,
+      "also_allowed": [
+        "speckit-coach"
+      ],
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
       "allowed_tools": [
@@ -782,6 +840,9 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 24,
+      "also_allowed": [
+        "speckit-coach"
+      ],
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
       "allowed_tools": [
@@ -802,6 +863,9 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 25,
+      "also_allowed": [
+        "speckit-coach"
+      ],
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
       "allowed_tools": [
@@ -822,6 +886,9 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 26,
+      "also_allowed": [
+        "speckit-coach"
+      ],
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
       "allowed_tools": [
@@ -842,6 +909,9 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 101,
+      "also_allowed": [
+        "speckit-coach"
+      ],
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
       "allowed_tools": [
@@ -862,6 +932,9 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 102,
+      "also_allowed": [
+        "speckit-coach"
+      ],
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
       "allowed_tools": [
@@ -882,6 +955,9 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 103,
+      "also_allowed": [
+        "speckit-coach"
+      ],
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
       "allowed_tools": [
@@ -902,6 +978,9 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 104,
+      "also_allowed": [
+        "speckit-coach"
+      ],
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
       "allowed_tools": [
@@ -922,6 +1001,9 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 105,
+      "also_allowed": [
+        "speckit-coach"
+      ],
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
       "allowed_tools": [
@@ -942,6 +1024,9 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 106,
+      "also_allowed": [
+        "speckit-coach"
+      ],
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
       "allowed_tools": [
@@ -962,6 +1047,9 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 109,
+      "also_allowed": [
+        "speckit-coach"
+      ],
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
       "allowed_tools": [
@@ -982,6 +1070,9 @@
       "invocation": "/speckit-pro:speckit-autopilot",
       "eval_file": "evals/speckit-autopilot-evals.json",
       "eval_id": 110,
+      "also_allowed": [
+        "speckit-coach"
+      ],
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
       "allowed_tools": [
@@ -1002,11 +1093,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 3,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1015,11 +1105,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 4,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1028,11 +1117,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 5,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1041,11 +1129,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 6,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1054,11 +1141,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 7,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1067,11 +1153,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 8,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1080,11 +1165,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 9,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1093,11 +1177,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 10,
+      "expected_selection": "redirect:speckit-coach",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1106,11 +1189,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 11,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1119,11 +1201,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 12,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1132,11 +1213,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 13,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1145,11 +1225,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 14,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1158,11 +1237,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 15,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1171,11 +1249,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 17,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1184,11 +1261,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 18,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1197,11 +1273,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 19,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1210,11 +1285,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 20,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1223,11 +1297,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 21,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1236,11 +1309,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 22,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1249,11 +1321,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 23,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1262,11 +1333,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 24,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1275,11 +1345,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 25,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1288,11 +1357,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 26,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1301,11 +1369,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 27,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1314,11 +1381,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 28,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1327,11 +1393,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 29,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1340,11 +1405,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 30,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1353,11 +1417,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 31,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1366,11 +1429,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 32,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1379,11 +1441,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 33,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1392,11 +1453,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 34,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1405,11 +1465,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 35,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1418,11 +1477,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 36,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1431,11 +1489,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 101,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1444,11 +1501,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 102,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1457,11 +1513,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 103,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1470,11 +1525,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 104,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1483,11 +1537,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 105,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1496,11 +1549,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 106,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1509,11 +1561,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 107,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1522,11 +1573,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 108,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1535,11 +1585,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 109,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1548,11 +1597,10 @@
       "invocation": "$speckit-autopilot",
       "eval_file": "codex-evals/speckit-autopilot-evals.json",
       "eval_id": 110,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1623,9 +1671,7 @@
       "eval_id": 2,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1636,9 +1682,7 @@
       "eval_id": 3,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1649,9 +1693,7 @@
       "eval_id": 4,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1662,9 +1704,7 @@
       "eval_id": 5,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1675,9 +1715,7 @@
       "eval_id": 6,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1688,9 +1726,7 @@
       "eval_id": 2,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1701,9 +1737,7 @@
       "eval_id": 3,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1714,9 +1748,7 @@
       "eval_id": 4,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1725,11 +1757,10 @@
       "invocation": "$speckit-scaffold-spec",
       "eval_file": "codex-evals/speckit-scaffold-spec-evals.json",
       "eval_id": 5,
+      "expected_selection": "none",
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1740,9 +1771,7 @@
       "eval_id": 6,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1753,9 +1782,7 @@
       "eval_id": 8,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1766,9 +1793,7 @@
       "eval_id": 9,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1779,9 +1804,7 @@
       "eval_id": 10,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     },
     {
@@ -1870,9 +1893,7 @@
       "eval_id": 5,
       "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
       "fixture_note": "Use this frozen project as local context for the explanatory request.",
-      "required_tools": [
-        "command_execution"
-      ],
+      "required_tools": [],
       "launch_policy": "read_only"
     }
   ]
