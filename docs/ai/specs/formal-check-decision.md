@@ -103,7 +103,7 @@ did not settle is listed under **Unverified**.
   repository already targets hosted runners. `actions/setup-java` with
   `distribution: temurin` and `java-version: 21` covers both tools. The jar
   is cached with `actions/cache` keyed on its sha256.
-- **The organization's self-hosted pool.** The memo's "HAL runners" are
+- **The organization's self-hosted pool.** The memo's self-hosted runners are
   an orchestrated pool of ephemeral virtual machines: each job gets a
   fresh VM that is destroyed when the job ends, with no state kept between
   jobs. Per-job CPU and memory are a small fixed slice of the host, not
