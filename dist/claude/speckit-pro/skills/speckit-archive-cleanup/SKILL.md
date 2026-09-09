@@ -1,6 +1,6 @@
 ---
 name: speckit-archive-cleanup
-description: "Archive a merged SpecKit spec and clean active workflow residue after the implementation PR has merged. Use after confirming merge provenance, when the user asks for post-merge SpecKit archive hygiene, cleanup hygiene, or removal of completed specs from active specs."
+description: "Archive a merged SpecKit spec and clean active workflow residue after the implementation PR has merged. Use after confirming merge provenance, when the user asks for post-merge SpecKit archive hygiene, cleanup hygiene, or removal of completed specs from active specs. Only for SpecKit spec archives: do NOT use for generic git housekeeping such as pruning merged branches, deleting stale worktrees, git gc, or clearing build output, and not to scaffold a spec (use speckit-scaffold-spec), run a workflow (use speckit-autopilot), read status (use speckit-status), or fix PR review comments (use speckit-resolve-pr)."
 argument-hint: "SPEC-ID and optional merged PR URL or number"
 user-invocable: true
 allowed-tools: Read Edit Write Grep Agent

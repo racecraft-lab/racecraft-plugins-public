@@ -3,6 +3,10 @@ name: speckit-archive-cleanup
 description: >
   Archive a merged SpecKit spec, remove completed active specs, refresh
   roadmap and project-memory state, and prepare the cleanup PR after merge.
+  Only for SpecKit spec archives after the implementation PR has merged.
+  Do not use for generic git housekeeping such as pruning merged branches,
+  deleting stale worktrees, git gc, or clearing build output, and not for
+  scaffolding, autopilot, status, or PR review work.
 ---
 
 # SpecKit Archive Cleanup
