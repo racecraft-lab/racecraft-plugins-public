@@ -60,7 +60,9 @@ the story steps but leaves the other two untouched still fails:
    Replace it with a short table that actually maps each requirement /
    success criterion to the specific check above that proves it, OR remove
    the section if every requirement is already obviously covered by the
-   story checks. Do not ship the circular placeholder.
+   story checks. Do not ship the circular placeholder. Name each
+   requirement in that table by the behavior it guarantees, never by its
+   ID: write "the guide shows a nonempty example", not `FR-001`.
 
 Also tighten the **Negative-Path Tests**: turn dense spec prose and edge
 cases into plain "try this bad/empty/unexpected input → expect this safe
