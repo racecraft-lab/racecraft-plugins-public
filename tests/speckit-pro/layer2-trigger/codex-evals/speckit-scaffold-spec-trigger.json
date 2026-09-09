@@ -76,7 +76,7 @@
     "should_trigger": false
   },
   {
-    "query": "start planning for SPEC-016",
+    "query": "draft the implementation plan for SPEC-016; the spec already exists",
     "should_trigger": false
   }
 ]
