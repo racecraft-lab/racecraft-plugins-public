@@ -492,10 +492,10 @@ or ambiguous stack topology must fall back to the deterministic explicit-`gh` pa
   (1) **determinism** — testable by a Layer-4 fixture (same inputs → byte-identical
   output) instead of a flaky AI eval; (2) **token savings** — no agent round-trip at
   runtime; (3) **smaller eval surface** — every bit of logic moved into a script
-  *removes* a unit of L2/L3/L6 AI-eval burden and replaces it with a cheap L4 test.
+  *removes* a unit of L2/L3 AI-eval burden and replaces it with a cheap L4 test.
   Concretely, the router (PRSG-007), layer-planner (PRSG-008), and migration runner +
   codemod (PRSG-011) are **scripts**, not agents — so they need L4 determinism
-  fixtures, not L5/L6/L7 agent evals. Each script: same inputs → byte-identical output.
+  fixtures, not L5/L7 agent evals. Each script: same inputs → byte-identical output.
 
 - **Tests AND evals are mandatory for every skill addition/change — non-negotiable.**
   A SPEC is not done until its verification proves the change works as planned:
@@ -504,20 +504,19 @@ or ambiguous stack topology must fall back to the deterministic explicit-`gh` pa
   - **Skill description / trigger surface changed or a skill added** → **Layer-2
     trigger eval** (triggers on the intended phrases; no over/under-trigger regression).
   - **New deterministic logic** → **Layer-4** script unit test with a determinism fixture.
-  - **New agent** → **Layer-5** tool-scoping + **Layer-7** dispatch-graph (+ **Layer-6**
-    efficiency if it makes a model/effort choice). (Scripts-first minimizes this set.)
+  - **New agent** → **Layer-5** tool-scoping + **Layer-7** dispatch-graph.
   - **Mirrored skill** → **Layer-1** `validate-codex-skills.sh` + **Layer-8** parity.
   - Structural/file changes → **Layer-1**. Multi-PR/dispatch changes → **Layer-7**.
-  The L2/L3/L6 harnesses live under `tests/layer2-trigger/`, `tests/layer3-functional/`,
-  `tests/layer6-efficiency/` and require `claude -p` + the `skill-creator` plugin
+  The L2/L3 harnesses live under `tests/layer2-trigger/` and `tests/layer3-functional/`
+  and require `claude -p` + the `skill-creator` plugin
   (developer-local); CI runs the default `bash tests/run-all.sh` suite (Layers 1, 4, 5). Layer 7 replay (`--integration`) and Layer 8 parity are opt-in runs. The
   authoritative per-SPEC coverage is the table below.
 
 ## Per-SPEC test & script coverage (authoritative)
 
 Layers: **L1** structural · **L2** trigger eval (AI) · **L3** functional eval (AI) ·
-**L4** script unit/determinism · **L5** tool scoping · **L6** efficiency (AI) ·
-**L7** integration/dispatch · **L8** Codex parity.
+**L4** script unit/determinism · **L5** tool scoping · **L7** integration/dispatch ·
+**L8** Codex parity.
 
 | SPEC | Skill change | Deterministic scripts (own L4 fixture) | Required layers |
 |------|--------------|----------------------------------------|-----------------|
@@ -571,7 +570,7 @@ there.
   with remediation evidence.
 - **Every phase (gate):** all layers from the coverage table pass for each SPEC —
   CI-fast layers (L1/L4/L5) green in CI by default; Layer 7 replay (`--integration`) and
-  Layer 8 parity are opt-in runs; and the AI evals (L2/L3, plus L6 where applicable) run
+  Layer 8 parity are opt-in runs; and the AI evals (L2/L3) run
   developer-local (`claude -p`) and are recorded as passing **before** the SPEC merges.
   A skill change without its L2/L3 eval is **not done**, regardless of code completeness.
 

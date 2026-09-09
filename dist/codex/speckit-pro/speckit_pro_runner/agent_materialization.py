@@ -24,7 +24,6 @@ __all__ = (
     "canonical_bytes",
     "digest",
     "materialize_agent_policy",
-    "verify_destination_bytes",
 )
 
 
@@ -148,27 +147,6 @@ def materialize_agent_policy(
     )
 
 
-def verify_destination_bytes(
-    materialization: AgentMaterialization | Mapping[str, Any],
-    observed_bytes: bytes,
-) -> bool:
-    if not isinstance(observed_bytes, bytes):
-        return False
-    expected_digest = _field(materialization, "destination_bytes_digest")
-    if not isinstance(expected_digest, str) or digest(observed_bytes) != expected_digest:
-        return False
-    expected_bytes = _field(materialization, "destination_bytes")
-    if isinstance(expected_bytes, bytes) and observed_bytes != expected_bytes:
-        return False
-    return True
-
-
-def _field(materialization: AgentMaterialization | Mapping[str, Any], key: str) -> Any:
-    if isinstance(materialization, Mapping):
-        return materialization.get(key)
-    return getattr(materialization, key, None)
-
-
 def _safe_source_relative_path(value: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise AgentMaterializationError(
@@ -207,13 +185,22 @@ def _need_string(policy: Mapping[str, Any], key: str) -> str:
 
 
 def _route_from_policy(policy: Mapping[str, Any]) -> dict[str, Any]:
+    has_model = "model" in policy
+    has_effort = "model_reasoning_effort" in policy
+    if not has_model and not has_effort:
+        return {
+            "agent_name": _need_string(policy, "name"),
+            "model": "",
+            "model_reasoning_effort": "",
+        }
+    model = _need_string(policy, "model")
     if "model_reasoning_effort" in policy:
         model_reasoning_effort = _need_string(policy, "model_reasoning_effort")
     else:
         model_reasoning_effort = ""
     return {
         "agent_name": _need_string(policy, "name"),
-        "model": _need_string(policy, "model"),
+        "model": model,
         "model_reasoning_effort": model_reasoning_effort,
     }
 
@@ -270,10 +257,28 @@ def _render_selected_route(
     source_policy: Mapping[str, Any],
     route: Mapping[str, Any],
 ) -> str:
-    _need_string(source_policy, "model")
-    rendered = _replace_top_level_string_field(source_text, "model", route["model"])
     route_effort = route["model_reasoning_effort"]
-    if "model_reasoning_effort" in source_policy:
+    has_model = "model" in source_policy
+    has_effort = "model_reasoning_effort" in source_policy
+    if not has_model and not has_effort:
+        rendered, insertion_count = re.subn(
+            r"(?m)^(sandbox_mode\s*=.*)$",
+            (
+                f'model = {json.dumps(route["model"], ensure_ascii=False)}\n'
+                f'model_reasoning_effort = {json.dumps(route_effort, ensure_ascii=False)}\n'
+                r"\1"
+            ),
+            source_text,
+            count=1,
+        )
+        if insertion_count != 1:
+            raise AgentMaterializationError(
+                "source policy requires one sandbox_mode field for route insertion"
+            )
+    else:
+        _need_string(source_policy, "model")
+        rendered = _replace_top_level_string_field(source_text, "model", route["model"])
+    if has_effort:
         _need_string(source_policy, "model_reasoning_effort")
         if not route_effort:
             raise AgentMaterializationError(
@@ -284,7 +289,7 @@ def _render_selected_route(
             "model_reasoning_effort",
             route_effort,
         )
-    elif route_effort:
+    elif has_model and route_effort:
         rendered, insertion_count = re.subn(
             r"(?m)^(model\s*=.*)$",
             rf'\1\nmodel_reasoning_effort = {json.dumps(route_effort, ensure_ascii=False)}',

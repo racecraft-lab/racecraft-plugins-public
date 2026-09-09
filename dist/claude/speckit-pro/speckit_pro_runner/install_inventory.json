@@ -1,6 +1,5 @@
 {
   "schema_version": "1.0",
-  "feature_id": "XPLAT-006",
   "inventory_scope": "fixture-safe-source-checkout",
   "files": [
     {
@@ -23,9 +22,5 @@
     "runner_contract_id": "speckit-pro-runner",
     "source_context": "source_checkout",
     "active_cutover": false
-  },
-  "notes": [
-    "This inventory is consumed by fixture-safe doctor/preflight tests only.",
-    "Installed-cache and marketplace release cutover remain XPLAT-007/XPLAT-008 scope."
-  ]
+  }
 }

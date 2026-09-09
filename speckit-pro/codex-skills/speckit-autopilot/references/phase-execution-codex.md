@@ -244,14 +244,6 @@ entry that survives. `{"always": true}` selects unconditionally.
 `{"any_of": [...]}` selects only when the feature carries one or more of the
 signals that entry lists.
 
-Against today's manifest that yields the implementation-plan and spec-explainer
-pages on every run, the code-approaches page under the `competing_approaches`
-signal, and the module-map page under the `brownfield_change` signal. **That
-sentence describes the manifest; it does not stand in for it. The manifest is
-read at run time and its content governs.** The gallery grows, so a
-draft-stage entry shipped later must begin routing at once, with nothing
-changed here.
-
 **Nothing is ever written into `speckit-pro/artifact-gallery/`.** The manifest
 and the templates are shipped inputs, and a write into that directory is a
 defect. The filled pages go to `specs/<feature>/artifacts/`, one file per
@@ -936,19 +928,11 @@ surface a remediation hint, or stop.
 
 2. Resolve threshold (`confidence_threshold: 0.90`). Default: 0.90.
 
-3. On entry, print the /goal tip:
-   - Codex interactive mode: "Tip: run `/goal achieve confidence ≥<T> on
-     the pre-Implement gate` to get the goal-mode iteration."
-     (Requires `features.goals = true` in `~/.codex/config.toml`.)
-   - Codex `codex exec` headless: "/goal is not first-class in headless
-     mode per openai/codex#21764 — the 3-iteration cap is your safety
-     bound."
-
-4. Run the gate:
+3. Run the gate:
      'runner helper confidence-gate' \
        <workflow-file> --threshold <T> --mode <M>
 
-5. Parse exit code + JSON:
+4. Parse exit code + JSON:
    - exit 0 (PASS): update_plan G6.5 → completed. Advance to Phase 7.
    - exit 1 (NO_DATA): log a warning, treat as plugin regression to
      report. update_plan G6.5 → completed with `no_data: true`.
@@ -976,11 +960,6 @@ surface a remediation hint, or stop.
             - mode=strict: STOP. Operator may resume with
               --from-phase implement if they accept the lower score.
 ```
-
-The iteration cap of 3 is the only safety bound in Codex `codex exec`
-headless mode. In Codex interactive TUI with `features.goals = true`,
-an operator-set `/goal` provides an additional turn-based check
-layered on top of the cap.
 
 **Why this gate is opt-in for blocking:** Clarify (G2) and Analyze
 (G6) already filter most pre-Implement shakiness. Advisory mode
@@ -2131,7 +2110,7 @@ do not generate a PR body, invoke any `gh pr create` variant, or run
 `multi-pr-emission` yet. This blocks only PR side effects. It is not a final
 response condition: read `autopilot_continuation`, the packet's
 `operator_steps`, and `resume.resume_from`; continue inside the same autopilot
-run through the named PRSG-007/008/009 phase until a valid slice PR stack is
+run through reviewability routing, layer planning, and split-PR emission until a valid slice PR stack is
 emitted or a typed exception is committed. Never report completion while
 `autopilot_continuation.required=true`. Recorded exit 2 is a gate error: state is
 written, no packet is valid, and the run stops for operator repair.

@@ -1,7 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://racecraft.dev/speckit-pro/xplat-008/runner-invocation.schema.json",
-  "title": "XPLAT-008 Runner Invocation Contract",
+  "title": "Installed runtime invocation contract",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -20,7 +19,7 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "1.0"
+      "const": "2.0"
     },
     "request_id": {
       "type": "string",

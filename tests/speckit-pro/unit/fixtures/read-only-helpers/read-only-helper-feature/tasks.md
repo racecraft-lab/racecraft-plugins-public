@@ -1,12 +1,12 @@
-# Tasks: XPLAT-005 Read-Only Helper Port
+# Tasks: SPEC-805 Read-Only Helper Port
 
-**Input**: Design documents from `specs/xplat-005-read-only-helper-port/`
+**Input**: Design documents from `specs/spec-805-read-only-helper-port/`
 
-**Prerequisites**: `plan.md`, `spec.md`, `research.md`, `data-model.md`, `contracts/`, `quickstart.md`, and `docs/ai/specs/.process/XPLAT-005-design-concept.md`
+**Prerequisites**: `plan.md`, `spec.md`, `research.md`, `data-model.md`, `contracts/`, `quickstart.md`, and `docs/ai/specs/.process/SPEC-805-design-concept.md`
 
 **Tests**: Required. Write failing Python tests, golden fixtures, rejected-input fixtures, and Bash-reference comparison cases before each helper port.
 
-**Reviewability**: XPLAT-005 remains one workflow with two internal slices. Re-check the accepted reviewability warning before implementation starts; if helper registry plus read-only parity work expands beyond the accepted planned scope, record the split point before source edits continue.
+**Reviewability**: SPEC-805 remains one workflow with two internal slices. Re-check the accepted reviewability warning before implementation starts; if helper registry plus read-only parity work expands beyond the accepted planned scope, record the split point before source edits continue.
 
 **Guardrails**:
 
@@ -248,7 +248,7 @@ For each helper:
 
 1. Add each helper's failing fixtures and Bash-reference cases before porting that helper.
 2. Keep the Python authoritative gate helper-by-helper; do not batch-promote helpers without accepted parity.
-3. Preserve Bash helpers as temporary references through XPLAT-005.
+3. Preserve Bash helpers as temporary references through SPEC-805.
 4. Use Phase 5 evidence to hand off review without active Claude/Codex activation or PR-emission behavior.
 
 ## Out Of Scope

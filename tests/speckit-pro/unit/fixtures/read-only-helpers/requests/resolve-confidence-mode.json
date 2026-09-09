@@ -7,7 +7,7 @@
   "inputs": {
     "autopilot_args": [
       "--advisory",
-      "docs/ai/specs/.process/XPLAT-005-workflow.md"
+      "docs/ai/specs/.process/SPEC-805-workflow.md"
     ]
   }
 }

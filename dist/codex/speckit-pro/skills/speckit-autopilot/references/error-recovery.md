@@ -48,5 +48,4 @@ Mitigations:
 - Keep sub-agent results concise (summaries, not full artifacts)
 - The workflow file is the persistent record — read it rather than
   relying on conversation memory
-- Auto-compaction preserves CLAUDE.md and system instructions
 - If compacted, re-read the workflow file to restore state

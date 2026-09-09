@@ -72,15 +72,11 @@ jobs:
           PYTHONDONTWRITEBYTECODE: "1"
           RELEASE_PRS: ${{ steps.release_prs.outputs.prs }}
         # release-please bumps only the source plugin versions and marketplace
-        # registries. The helper refreshes payloads, installed-cache proofs,
-        # and gate evidence, and reconciles unchanged release branches with main.
+        # registries. The helper refreshes payloads and runner trust metadata,
+        # and reconciles unchanged release branches with main.
         run: python3 scripts/sync_release_pr.py
 
-      - name: Validate release PR readiness
-        if: steps.release_prs.outputs.found == 'true'
-        run: python3 scripts/run-runner-requests.py tests/speckit-pro/unit/fixtures/runner-gates/requests/release-readiness.json
-
-      - name: Validate XPLAT-008 release gates
+      - name: Validate installed-plugin release gates
         if: steps.release_prs.outputs.found == 'true'
         run: python3 scripts/run-runner-requests.py tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/runner-invocation.json tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/active-runtime-guard.json tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/payload-completeness.json tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/release-readiness.json
 
@@ -106,11 +102,7 @@ jobs:
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
         run: python3 scripts/run-runner-requests.py tests/speckit-pro/unit/fixtures/runner-gates/requests/test-payload-evidence.json
 
-      - name: Validate post-release readiness
-        if: steps.release.outputs['speckit-pro--release_created'] == 'true'
-        run: python3 scripts/run-runner-requests.py tests/speckit-pro/unit/fixtures/runner-gates/requests/release-readiness.json
-
-      - name: Validate post-release XPLAT-008 gates
+      - name: Validate post-release installed-plugin gates
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
         run: python3 scripts/run-runner-requests.py tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/runner-invocation.json tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/active-runtime-guard.json tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/payload-completeness.json tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/release-readiness.json
 
@@ -138,7 +130,7 @@ jobs:
         env:
           PYTHONDONTWRITEBYTECODE: "1"
         # The release PR should already carry the generated payload,
-        # marketplace, proof, evidence, and docs-reference sync.
+        # marketplace and docs-reference sync.
         run: python3 scripts/refresh-release-artifacts.py --check
 
   capture-release-note-inputs:

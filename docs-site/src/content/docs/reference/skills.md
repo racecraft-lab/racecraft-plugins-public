@@ -36,7 +36,7 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 ### Grill Me
 
-- **Purpose:** Pre-spec design tree interview — walks one question at a time before /speckit-specify with the recommended answer first.
+- **Purpose:** Run an interactive, one-question-at-a-time design interview before SpecKit specification work and produce a Design Concept record.
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro grill-me skill
 - **Claude Code:** /speckit-pro:grill-me
@@ -47,7 +47,7 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 - **Claude Code invocation:** `/speckit-pro:grill-me`
 - **Codex invocation:** `$grill-me`
-- **Purpose:** Pre-spec design tree interview — walks one question at a time before /speckit-specify with the recommended answer first.
+- **Purpose:** Run an interactive, one-question-at-a-time design interview before SpecKit specification work and produce a Design Concept record.
 - **Expected output artifact:** Scoping answers or a decision log that can feed PRD or SPEC work.
 
 **Prerequisites**
@@ -175,7 +175,7 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 ### Speckit Coach
 
-- **Purpose:** SpecKit SDD coach. Invoke to explain, guide, walk through, or help troubleshoot Spec-Driven Development: getting started with SDD, which checklist domains to pick (api, security, observability, data-integrity, resilie...
+- **Purpose:** Coach developers through Spec-Driven Development and SpecKit Pro.
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro speckit-coach skill
 - **Claude Code:** /speckit-pro:speckit-coach
@@ -186,7 +186,7 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 - **Claude Code invocation:** `/speckit-pro:speckit-coach`
 - **Codex invocation:** `$speckit-coach`
-- **Purpose:** SpecKit SDD coach. Invoke to explain, guide, walk through, or help troubleshoot Spec-Driven Development: getting started with SDD, which checklist domains to pick (api, security, observability, data-integrity, resilie...
+- **Purpose:** Coach developers through Spec-Driven Development and SpecKit Pro.
 - **Expected output artifact:** SDD coaching guidance or next-step explanation.
 
 **Prerequisites**
@@ -245,7 +245,7 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 ### Speckit Prd
 
-- **Purpose:** Collaboratively turn a raw product or technical idea into three artifacts — a lean PRD, a technical roadmap with a SPEC catalog, and a roadmap-MOC home note — ready for $speckit-scaffold-spec and $speckit-autopilot.
+- **Purpose:** Collaboratively create or update a lean PRD, its 1:1 technical-roadmap SPEC catalog, and a roadmap-MOC home note.
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro speckit-prd skill
 - **Claude Code:** /speckit-pro:speckit-prd
@@ -256,7 +256,7 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 - **Claude Code invocation:** `/speckit-pro:speckit-prd`
 - **Codex invocation:** `$speckit-prd`
-- **Purpose:** Collaboratively turn a raw product or technical idea into three artifacts — a lean PRD, a technical roadmap with a SPEC catalog, and a roadmap-MOC home note — ready for $speckit-scaffold-spec and $speckit-autopilot.
+- **Purpose:** Collaboratively create or update a lean PRD, its 1:1 technical-roadmap SPEC catalog, and a roadmap-MOC home note.
 - **Expected output artifact:** A PRD and roadmap entry for later SPEC scaffolding.
 
 **Prerequisites**

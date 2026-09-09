@@ -1,9 +1,9 @@
 {
-  "schema_version": "1.0",
-  "feature_id": "XPLAT-009",
+  "schema_version": "2.0",
+  "contract_id": "plugin-bash-confinement",
   "entries": [
     {
-      "path": "docs/ai/specs/.process/XPLAT-009-source-inventory.md",
+      "path": ".specify/memory/archive-reports/2026-06-29-completed-active-specs-post-merge-hygiene.md",
       "categories": ["bash"],
       "release_readiness_excluded": true
     }

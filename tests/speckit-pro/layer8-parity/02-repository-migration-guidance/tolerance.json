@@ -1,7 +1,7 @@
 {
   "schema": "speckit.layer8.tolerance.v1",
   "fixture_id": "02-repository-migration-guidance",
-  "description": "Exact tolerances for PRSG-011 mirrored migration guidance.",
+  "description": "Exact tolerances for SPEC-911 mirrored migration guidance.",
   "fields": {
     "migration_guidance.row_count": {
       "tolerance": "exact",

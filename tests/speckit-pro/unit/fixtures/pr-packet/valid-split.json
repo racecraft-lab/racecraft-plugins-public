@@ -4,17 +4,17 @@
   "mode": "split",
   "target": {
     "base_branch": "main",
-    "head_branch": "prsg-012-reviewer-ready-pr-packet-contract/01-packet-validation"
+    "head_branch": "fixture-pr-packet/01-packet-validation"
   },
-  "source_feature_dir": "specs/prsg-012-reviewer-ready-pr-packet-contract",
+  "source_feature_dir": "specs/fixture-pr-packet",
   "generated_title": {
-    "value": "feat(PRSG-012): Validate reviewer packet slices",
+    "value": "feat(FEATURE-001): Validate reviewer packet slices",
     "type": "feat",
-    "scope": "PRSG-012",
+    "scope": "FEATURE-001",
     "description": "Validate reviewer packet slices",
     "source_evidence": {
       "kind": "split_source_boundary",
-      "source": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/packet-validation/slice-packet.json",
+      "source": "specs/fixture-pr-packet/.process/emission/packet-validation/slice-packet.json",
       "summary": "Split source boundary section normalized into a public action phrase."
     },
     "rejected_candidates": [
@@ -23,7 +23,7 @@
         "reason": "Uses the slice id instead of reviewer-facing prose."
       },
       {
-        "value": "prsg-012-reviewer-ready-pr-packet-contract/01-packet-validation",
+        "value": "fixture-pr-packet/01-packet-validation",
         "reason": "Uses the branch name instead of reviewer-facing prose."
       }
     ]
@@ -77,17 +77,17 @@
     {
       "marker_id": "feature-spec",
       "rendered_text": "Source: feature specification defines split packet validation before each PR create attempt.",
-      "source": "specs/prsg-012-reviewer-ready-pr-packet-contract/spec.md"
+      "source": "specs/fixture-pr-packet/spec.md"
     },
     {
       "marker_id": "split-source-boundary",
       "rendered_text": "Source: split source boundary section defines the public title description for this packet.",
-      "source": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/packet-validation/slice-packet.json"
+      "source": "specs/fixture-pr-packet/.process/emission/packet-validation/slice-packet.json"
     },
     {
       "marker_id": "quickstart-verification",
       "rendered_text": "Source: quickstart defines split-packet validation evidence.",
-      "source": "specs/prsg-012-reviewer-ready-pr-packet-contract/quickstart.md"
+      "source": "specs/fixture-pr-packet/quickstart.md"
     }
   ],
   "editable_fields": [
@@ -112,7 +112,7 @@
   ],
   "protected_body_fingerprint": {
     "algorithm": "sha256",
-    "value": "049f567af8721c1f0e8ea8e1d8ef33598b6b7998d76d172a79371bc74b18dbee",
+    "value": "690b24a0443052348ebe4dff4f0dc620f8f9ae5e483f887eec0c069cb7025c12",
     "normalization": "LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
     "elided_fields": [
       "summary",
@@ -125,7 +125,7 @@
     "source_boundary": {
       "section": "Validate reviewer packet slices"
     },
-    "source_packet": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/packet-validation/slice-packet.json"
+    "source_packet": "specs/fixture-pr-packet/.process/emission/packet-validation/slice-packet.json"
   },
-  "validation_result_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/pr-packets/valid-split/validation.json"
+  "validation_result_path": "specs/fixture-pr-packet/.process/pr-packets/valid-split/validation.json"
 }

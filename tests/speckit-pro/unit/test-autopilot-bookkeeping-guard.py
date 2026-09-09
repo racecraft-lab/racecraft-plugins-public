@@ -446,10 +446,10 @@ class TrackedPathEnumerationTests(unittest.TestCase):
 
     def test_tracked_workflow_state_paths_use_git_index_contract(self) -> None:
         stdout = (
-            "specs/zeta/ART-999-workflow.md\0"
+            "specs/zeta/FEATURE-999-workflow.md\0"
             "docs/unrelated.md\0"
             "specs/alpha/autopilot-state.json\0"
-            "specs/alpha/ART-001-workflow.md\0"
+            "specs/alpha/FEATURE-001-workflow.md\0"
         ).encode("utf-8")
         completed = subprocess.CompletedProcess(
             args=["git", "ls-files", "-z"],
@@ -472,9 +472,9 @@ class TrackedPathEnumerationTests(unittest.TestCase):
         self.assertEqual(
             paths,
             (
-                "specs/alpha/ART-001-workflow.md",
+                "specs/alpha/FEATURE-001-workflow.md",
                 "specs/alpha/autopilot-state.json",
-                "specs/zeta/ART-999-workflow.md",
+                "specs/zeta/FEATURE-999-workflow.md",
             ),
         )
 
@@ -508,12 +508,12 @@ class AuthorityMatchedPairClassificationTests(unittest.TestCase):
             self._write_state(
                 root,
                 "specs/alpha/autopilot-state.json",
-                "specs/alpha/ART-001-workflow.md",
+                "specs/alpha/FEATURE-001-workflow.md",
             )
             result = classify_authority_matched_pairs(
                 root,
                 (
-                    "specs/alpha/ART-001-workflow.md",
+                    "specs/alpha/FEATURE-001-workflow.md",
                     "specs/alpha/autopilot-state.json",
                 ),
             )
@@ -522,7 +522,7 @@ class AuthorityMatchedPairClassificationTests(unittest.TestCase):
             result,
             {
                 "eligible": ((
-                    "specs/alpha/ART-001-workflow.md",
+                    "specs/alpha/FEATURE-001-workflow.md",
                     "specs/alpha/autopilot-state.json",
                 ),),
                 "excluded": (),
@@ -533,14 +533,14 @@ class AuthorityMatchedPairClassificationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as raw:
             result = classify_authority_matched_pairs(
                 Path(raw),
-                ("specs/missing/ART-002-workflow.md",),
+                ("specs/missing/FEATURE-002-workflow.md",),
             )
 
         self.assertEqual(result["eligible"], ())
         self.assertEqual(
             result["excluded"],
             ({
-                "workflow": "specs/missing/ART-002-workflow.md",
+                "workflow": "specs/missing/FEATURE-002-workflow.md",
                 "state": "specs/missing/autopilot-state.json",
                 "reason": "missing-adjacent-state",
             },),
@@ -552,12 +552,12 @@ class AuthorityMatchedPairClassificationTests(unittest.TestCase):
             self._write_state(
                 root,
                 "specs/mismatch/autopilot-state.json",
-                "specs/other/ART-003-workflow.md",
+                "specs/other/FEATURE-003-workflow.md",
             )
             result = classify_authority_matched_pairs(
                 root,
                 (
-                    "specs/mismatch/ART-003-workflow.md",
+                    "specs/mismatch/FEATURE-003-workflow.md",
                     "specs/mismatch/autopilot-state.json",
                 ),
             )
@@ -566,10 +566,10 @@ class AuthorityMatchedPairClassificationTests(unittest.TestCase):
         self.assertEqual(
             result["excluded"],
             ({
-                "workflow": "specs/mismatch/ART-003-workflow.md",
+                "workflow": "specs/mismatch/FEATURE-003-workflow.md",
                 "state": "specs/mismatch/autopilot-state.json",
                 "reason": "workflow-file-mismatch",
-                "workflow_file": "specs/other/ART-003-workflow.md",
+                "workflow_file": "specs/other/FEATURE-003-workflow.md",
             },),
         )
 
@@ -579,18 +579,18 @@ class AuthorityMatchedPairClassificationTests(unittest.TestCase):
             self._write_state(
                 root,
                 "specs/untracked/autopilot-state.json",
-                "specs/untracked/ART-004-workflow.md",
+                "specs/untracked/FEATURE-004-workflow.md",
             )
             result = classify_authority_matched_pairs(
                 root,
-                ("specs/untracked/ART-004-workflow.md",),
+                ("specs/untracked/FEATURE-004-workflow.md",),
             )
 
         self.assertEqual(result["eligible"], ())
         self.assertEqual(
             result["excluded"],
             ({
-                "workflow": "specs/untracked/ART-004-workflow.md",
+                "workflow": "specs/untracked/FEATURE-004-workflow.md",
                 "state": "specs/untracked/autopilot-state.json",
                 "reason": "untracked-adjacent-state",
             },),
@@ -602,13 +602,13 @@ class AuthorityMatchedPairClassificationTests(unittest.TestCase):
             self._write_state(
                 root,
                 "specs/elsewhere/autopilot-state.json",
-                "specs/synthetic/ART-005-workflow.md",
+                "specs/synthetic/FEATURE-005-workflow.md",
             )
             result = classify_authority_matched_pairs(
                 root,
                 (
                     "specs/elsewhere/autopilot-state.json",
-                    "specs/synthetic/ART-005-workflow.md",
+                    "specs/synthetic/FEATURE-005-workflow.md",
                 ),
             )
 
@@ -616,7 +616,7 @@ class AuthorityMatchedPairClassificationTests(unittest.TestCase):
         self.assertEqual(
             result["excluded"],
             ({
-                "workflow": "specs/synthetic/ART-005-workflow.md",
+                "workflow": "specs/synthetic/FEATURE-005-workflow.md",
                 "state": "specs/synthetic/autopilot-state.json",
                 "reason": "missing-adjacent-state",
             },),
@@ -633,7 +633,7 @@ class AuthorityMatchedPairClassificationTests(unittest.TestCase):
                 classify_authority_matched_pairs(
                     root,
                     (
-                        "specs/read/ART-006-workflow.md",
+                        "specs/read/FEATURE-006-workflow.md",
                         "specs/read/autopilot-state.json",
                     ),
                 )
@@ -649,7 +649,7 @@ class AuthorityMatchedPairClassificationTests(unittest.TestCase):
                 classify_authority_matched_pairs(
                     root,
                     (
-                        "specs/bad-json/ART-007-workflow.md",
+                        "specs/bad-json/FEATURE-007-workflow.md",
                         "specs/bad-json/autopilot-state.json",
                     ),
                 )
@@ -693,8 +693,8 @@ class TrackedPairCorpusTests(StatusEvidenceReportAssertions, unittest.TestCase):
                 self.assertTrue(entry["reason"])
 
 
-class ART017StatusEvidenceNegativeTests(StatusEvidenceReportAssertions, unittest.TestCase):
-    """ART-017 isolated state-invariant controls for the status-evidence gate."""
+class StatusEvidenceNegativeTests(StatusEvidenceReportAssertions, unittest.TestCase):
+    """FEATURE-017 isolated state-invariant controls for the status-evidence gate."""
 
     def test_in_progress_errors_isolated_mutation_blocks_status_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -1121,7 +1121,7 @@ def build_suite() -> unittest.TestSuite:
         TrackedPathEnumerationTests,
         AuthorityMatchedPairClassificationTests,
         TrackedPairCorpusTests,
-        ART017StatusEvidenceNegativeTests,
+        StatusEvidenceNegativeTests,
         WorkflowAuthorityTests,
         RepositoryRootResolutionTests,
         ProblemKeyClassificationTests,

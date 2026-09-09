@@ -170,8 +170,3 @@ tokens. For operators running headless overnight with budget
 caps, that trade is often worth it; for interactive sessions
 where readable transcripts aid debugging, it usually is not.
 Keeping it opt-in respects both preferences.
-
-The Layer 6 efficiency benchmarks
-(`tests/layer6-efficiency/`) do not currently measure
-token-discipline impact. The default is `off` and operators
-choose.

@@ -1,6 +1,6 @@
 ---
 name: speckit-upgrade
-description: "Upgrade an existing SpecKit installation safely. Use when the operator says: 'upgrade speckit', 'update speckit', 'specify integration upgrade', 'migrate from slash commands to skills', 'safely upgrade spec-kit', 'bump speckit version', '$speckit-upgrade', or has an existing .specify/ directory and wants to move to the current spec-kit release. Preserves customizations (constitution.md, template overrides) via backup-and-restore. Handles the v0.8.13 slash-command → skills migration. Supports upgrading one or both integrations (Claude Code, Codex CLI). Hands off to $speckit-install when .specify/ is missing. Not for installing speckit for the first time (use $speckit-install), not for scaffolding a new spec ($speckit-scaffold-spec), and not for installing this plugin's bundled Codex subagents ($install)."
+description: "Upgrade an existing SpecKit installation safely. Use when the operator says: 'upgrade speckit', 'update speckit', 'specify integration upgrade', 'speckit migration to skills', 'safely upgrade spec-kit', 'bump speckit version', '$speckit-upgrade', or has an existing .specify/ directory and wants to move to the current spec-kit release. Preserves customizations (constitution.md, template overrides) via backup-and-restore. Supports upgrading one or both integrations (Claude Code, Codex CLI). Hands off to $speckit-install when .specify/ is missing. Not for installing speckit for the first time (use $speckit-install), not for scaffolding a new spec ($speckit-scaffold-spec), and not for installing this plugin's bundled Codex subagents ($install)."
 ---
 
 # SpecKit Upgrade
@@ -9,8 +9,7 @@ description: "Upgrade an existing SpecKit installation safely. Use when the oper
 
 Upgrade an existing SpecKit installation in the current repository
 safely. Preserves `.specify/memory/constitution.md` and any other
-locally-modified files via backup-then-force-then-restore. Handles
-the v0.8.13 slash-command → skills migration. Supports upgrading
+locally-modified files via backup-then-force-then-restore. Supports upgrading
 one or both integrations (`claude`, `codex`).
 
 If `.specify/` is missing, hands off to `$speckit-install` —
@@ -187,7 +186,7 @@ Ask whether to restore (file-by-file or all-at-once):
 - Templates / scripts / gate validators — case-by-case. The CLI's
   new versions usually carry fixes/features the operator wants.
 
-### 6. Slash-command → skills migration (v0.8.13)
+### 6. Deduplicate legacy commands when both forms are present
 
 After upgrading, the new skills directories may now exist alongside
 the legacy slash-command files. Detect:
@@ -198,8 +197,7 @@ and current skills entries for Claude and Codex.
 If BOTH legacy and skills paths exist for an integration:
 
 > Both legacy slash-commands and skills are installed for `<integration>`.
-> The v0.8.13 default is skills-mode. The legacy slash-commands still
-> work but create duplicate triggers. Options:
+> The legacy slash-commands still work but create duplicate triggers. Options:
 >
 > 1. `dedupe` — delete the legacy `<path>/speckit.*.md` files.
 >    Recommended unless downstream tooling references the
@@ -222,35 +220,25 @@ Confirm each upgraded integration shows `installed` and reports the
 new manifest. Report any verification mismatch — do not silently
 continue.
 
-### 8. Offer to upgrade the curated set of extensions and presets
+### 8. Offer missing curated extensions and presets
 
-speckit-pro maintains a small curated set of community extensions and
-presets that power the autopilot's post-implementation parallel group
-and the AskUserQuestion picker preset. The upgrade can pull the
-latest released versions in the same pass as the SpecKit integration
-upgrade. The full list is in
+speckit-pro maintains a manual recommendation catalog of community extensions
+and presets. The full list is in
 `speckit-pro/skills/speckit-coach/references/presets-extensions-guide.md`
 (section: "The curated set").
 
 Compare `.specify/extensions/` and `.specify/presets/` against the
 entries in `<plugin-root>/scripts/curated-set.json`.
 
-- If every entry is present and current: report "Curated extensions and
-  presets already current." Continue to Step 9.
+- If every entry is present: report "Curated extensions and presets already
+  installed." Continue to Step 9.
 
-- Otherwise, list the missing or outdated entries and ask which to
-  install or upgrade. Recommended default is **all**. For each accepted
-  entry, give the operator the `specify extension add <id>` or preset
-  command from the curated set and run it only after they confirm.
+- Otherwise, list the missing entries and ask which to install. Recommended
+  default is **all**. For each accepted entry, give the operator the
+  `specify extension add <id>` or `specify preset add <id>` command and run it
+  only after they confirm.
   Skipped entries leave the autopilot's post-implementation parallel
   group running with reduced coverage; it does not fail.
-
-Append the outcome to `.specify/curated-install.json` — commit this file
-so the upgrade history is reproducible.
-
-If the script reports that an entry has neither a GitHub Release nor
-a git tag, surface the message but do not block the upgrade. The
-operator can re-run after the upstream extension publishes a tag.
 
 ### 9. Report
 
@@ -298,23 +286,3 @@ STOP and report — do not improvise — when:
 
 The backup at `/tmp/specify-upgrade-backup-<STAMP>/` is the
 operator's safety net. Surface it explicitly in the final report.
-
-## Why This Skill Exists
-
-The SpecKit CLI's `specify integration upgrade` is diff-aware and
-blocks on locally-modified files, but its `--force` flag overwrites
-them without any backup. This skill wraps the CLI to provide:
-
-- Automatic timestamped snapshots before any mutation.
-- A structured "what's modified, what do you want to do" prompt
-  when the diff-aware path blocks.
-- File-by-file restore decisions after `--force`.
-- Explicit handling of the v0.8.13 slash-command → skills migration
-  (with hard guarantees about preserving extension commands and
-  non-SpecKit files).
-- Symmetric Claude/Codex handling when both integrations are
-  installed (operator doesn't have to remember the per-integration
-  invocations).
-
-For an initial install, use `$speckit-install`. The two skills
-hand off to each other based on `.specify/` presence.

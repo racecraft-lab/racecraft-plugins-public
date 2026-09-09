@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Dispatch the XPLAT-010 container preflight roles with durable evidence."""
+"""Dispatch container preflight roles with durable evidence."""
 
 from __future__ import annotations
 
@@ -73,11 +73,6 @@ LINUX_REQUESTS = (
     (
         "repository-bash-confinement",
         "tests/speckit-pro/unit/fixtures/repository-bash-confinement/requests/repo-bash-confinement.json",
-        False,
-    ),
-    (
-        "source-runner-release-readiness",
-        "tests/speckit-pro/unit/fixtures/runner-gates/requests/release-readiness.json",
         False,
     ),
     (

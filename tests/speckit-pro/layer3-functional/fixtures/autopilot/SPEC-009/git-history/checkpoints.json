@@ -1,0 +1,29 @@
+{
+  "fixture_kind": "deterministic-synthetic-testdata",
+  "status": "setup_only",
+  "history": [
+    {
+      "checkpoint": "preflight",
+      "commit_id": null,
+      "status": "not_started",
+      "must_record_from_actual_disposable_git": true
+    },
+    {
+      "checkpoint": "phase-boundary",
+      "commit_id": null,
+      "status": "not_started",
+      "must_record_from_actual_disposable_git": true
+    },
+    {
+      "checkpoint": "stop-or-completion",
+      "commit_id": null,
+      "status": "not_started",
+      "must_record_from_actual_disposable_git": true
+    }
+  ],
+  "trace": {
+    "agent_tool_events": [],
+    "provider_events": [],
+    "foreground_replies": []
+  }
+}

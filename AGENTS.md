@@ -99,20 +99,13 @@ pnpm --dir docs-site reference:generate
 Then run the suite. CI's `artifact-consistency` job fails the pull request if
 the regeneration was skipped, so a stale artifact cannot land.
 
-Two generated surfaces are **not** covered by `refresh-release-artifacts.py`
-and need their own step when their inputs changed:
+One generated surface is **not** covered by `refresh-release-artifacts.py`
+and needs its own step when its inputs changed:
 
 - The spec index (`generate-spec-index`) after adding or retitling a spec.
   Regenerate with untracked files moved aside: the generator scans the
   filesystem rather than the git index, so an untracked path becomes a
   committed backlink that passes locally and fails on a clean checkout.
-- The Layer 6 Codex qualification corpus in
-  `tests/speckit-pro/layer6-efficiency/fixtures-codex/`, which binds a sha256
-  chain over agent source bytes. Editing any agent definition restales it; the
-  failure reads `source digest does not match role source bytes`. Regenerate
-  with `python3 tests/speckit-pro/layer6-efficiency/rebaseline-corpus.py`
-  (`--check` to verify without writing).
-
 ## Source Of Truth
 
 - For plugin behavior, read the nearest `README.md`, manifests, skill files, and
@@ -127,8 +120,8 @@ and need their own step when their inputs changed:
 
 ## Editing Boundaries
 
-- Do not hand-edit generated payloads, installed-cache proofs, generated
-  reference pages, or vendored upstream content.
+- Do not hand-edit generated payloads, generated reference pages, or vendored
+  upstream content.
 - Name repository-authored scripts and tests for durable behavior or capability;
   never couple their filenames to a temporary spec ID, and never have test code
   read a `specs/<feature>/` path from disk at run time. Archive cleanup deletes
@@ -158,8 +151,8 @@ the two in step when either changes.
   test filename coupled to a temporary spec ID, or test code that reads a
   `specs/<feature>/` path from disk at run time.
 - Treat style, naming, prose, and refactoring suggestions as minor at most.
-- Do not review generated reference pages, installed-cache proofs, generated
-  payloads, vendored upstream content, lockfiles, or archived specs.
+- Do not review generated reference pages, generated payloads, vendored upstream
+  content, lockfiles, or archived specs.
 - Do not report anything CI already enforces.
 - Require a `file:line` citation for any claim about behavior.
 

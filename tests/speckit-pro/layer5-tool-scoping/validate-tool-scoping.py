@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Layer-5 agent tool scoping validation (port of validate-tool-scoping.sh).
-
-XPLAT-010 count-parity port (T046, US2). Python 3.11+ standard library only.
-Every former ``_pass``/``_fail`` execution maps to one counted ``subTest`` unit;
-names are reproduced via ``subTest(msg=...)`` for a 1:1 baseline match.
+"""Agent tool-scoping validation.
 
 ``UNTRUSTED_INPUT_CONSUMERS`` is the one carve-out from the no-``tools:`` rule
 this file otherwise pins repository-wide: capability inheritance is right for an
@@ -11,10 +7,7 @@ agent acting on trusted input and wrong for an agent reading
 attacker-controllable text, so the two agents that read reviewer text declare an
 allowlist instead of inheriting the operator's surface. The exemption is by
 membership rather than by pattern, and pinning that membership by equality is
-what keeps it the only exemption (art-008-feedback-sweep FR-008c).
-
-Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-tool-scoping-baseline.txt``
-(TOTAL: 216).
+what keeps it the only exemption.
 """
 
 from __future__ import annotations
@@ -273,21 +266,6 @@ class ValidateToolScoping(unittest.TestCase):
             with self.subTest(msg=f"codex {agent}: sandbox_mode is read-only"):
                 self.assertEqual("read-only", _toml_field(agent_file, "sandbox_mode"), f"{agent} must be read-only")
 
-            with self.subTest(msg=f"codex {agent}: model is gpt-5.6-sol"):
-                self.assertEqual("gpt-5.6-sol", _toml_field(agent_file, "model"), f"{agent} must use gpt-5.6-sol")
-
-            effort = _toml_field(agent_file, "model_reasoning_effort")
-            if agent in {"codebase-analyst", "spec-context-analyst"}:
-                with self.subTest(msg=f"codex {agent}: reasoning is L6-validated (low or xhigh)"):
-                    self.assertIn(
-                        effort,
-                        {"low", "xhigh"},
-                        f"{agent} reasoning must be low (L6-validated 100%) or xhigh (policy default), got '{effort}'",
-                    )
-            else:
-                with self.subTest(msg=f"codex {agent}: reasoning is xhigh (max-thinking policy, no L6 carve-out)"):
-                    self.assertEqual("xhigh", effort, f"{agent} must use xhigh reasoning per plugin policy")
-
         agent = "clarify-executor"
         agent_file = CODEX_AGENTS_DIR / f"{agent}.toml"
         if agent_file.is_file():
@@ -310,16 +288,6 @@ class ValidateToolScoping(unittest.TestCase):
 
             with self.subTest(msg=f"codex {agent}: sandbox_mode is workspace-write"):
                 self.assertEqual("workspace-write", _toml_field(agent_file, "sandbox_mode"), f"{agent} must be workspace-write")
-
-            with self.subTest(msg=f"codex {agent}: model is gpt-5.6-sol"):
-                self.assertEqual("gpt-5.6-sol", _toml_field(agent_file, "model"), f"{agent} must use gpt-5.6-sol")
-
-            with self.subTest(msg=f"codex {agent}: reasoning is xhigh (max-thinking policy)"):
-                self.assertEqual(
-                    "xhigh",
-                    _toml_field(agent_file, "model_reasoning_effort"),
-                    f"{agent} must use xhigh reasoning per plugin policy",
-                )
 
     def test_named_tool_regression_guard(self) -> None:
         named_guard_files = [*_claude_agent_files(), *_codex_agent_files()]

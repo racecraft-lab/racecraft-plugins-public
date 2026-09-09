@@ -1,6 +1,5 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://racecraft.local/speckit-pro/pr-marker-plan.schema.json",
   "title": "PR Marker Plan",
   "type": "object",
   "additionalProperties": false,
@@ -18,8 +17,7 @@
       "enum": [
         "pr-marker-plan.v1",
         "pr-marker-plan.v2"
-      ],
-      "description": "v1 remains readable for legacy plans. v2 opts into strict lifecycle, immutable checkpoint evidence, manifest binding, normalized paths, and UTC timestamp validation."
+      ]
     },
     "kind": {
       "const": "pr_marker_plan"

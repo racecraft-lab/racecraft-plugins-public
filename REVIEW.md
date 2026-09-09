@@ -42,7 +42,7 @@ config files can be polished indefinitely.
 
 - Anything CI already enforces: lint, formatting, type errors, spellcheck.
 - Generated reference pages under `docs-site/src/content/docs/reference/`,
-  installed-cache proofs, generated payloads, and vendored upstream content.
+  generated payloads, and vendored upstream content.
   Flag the source or generator instead.
 - Lockfiles.
 - `CHANGELOG.md` and version fields owned by release automation.

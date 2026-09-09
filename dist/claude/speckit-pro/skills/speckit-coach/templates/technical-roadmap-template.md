@@ -25,17 +25,18 @@ The feature is decomposed into **{{N}} specifications** across **{{M}} dependenc
 
 | Tier | Specs | Purpose | Parallelization |
 |------|-------|---------|-----------------|
-| **1** | SPEC-001 | <!-- e.g., Backend foundation --> | Sequential |
-| **2** | SPEC-002, SPEC-003 | <!-- e.g., Tool integration, UI components --> | Parallel possible |
-| **3** | SPEC-004 | <!-- e.g., Full-stack integration --> | Sequential (depends on all above) |
+| **1** | SPEC-001 | <!-- e.g., First observable user journey --> | Sequential |
+| **2** | SPEC-002, SPEC-003 | <!-- e.g., Next independent user journeys --> | Parallel possible |
+| **3** | SPEC-004 | <!-- e.g., A separately valuable release or cross-slice outcome --> | Sequential (depends on all above) |
 
-**Execution Order:** SPEC-001 → SPEC-002 → SPEC-003 → SPEC-004
+**Execution Order:** <!-- Order only by actual dependencies; independent, valuable
+specs may proceed in parallel. -->
 
 **Dependency Constraints:**
 <!-- List which specs depend on which -->
 - SPEC-002 requires SPEC-001 (reason)
-- SPEC-003 can start in parallel with SPEC-002 (uses mock data)
-- SPEC-004 requires ALL previous specs (integration spec)
+- SPEC-003 is independent of SPEC-002 (reason)
+- SPEC-004 requires only the named predecessor whose outcome it extends (reason)
 
 ## Reviewability Contract
 
@@ -67,18 +68,11 @@ tests, and config do not contribute to the reviewable-LOC count.
 ## Dependency Graph
 
 ```text
-SPEC-001 ({{SPEC_001_NAME}})
-    │
-    └──► SPEC-002 ({{SPEC_002_NAME}})
-              │
-              └──────────────────────────┐
-                                         │
-SPEC-003 ({{SPEC_003_NAME}}) ───────────►│
-                                         │
-                                         ▼
-                              SPEC-004 ({{SPEC_004_NAME}})
-                                         │
-                              ─── FEATURE COMPLETE ───
+SPEC-001 ({{SPEC_001_NAME}}) ───► SPEC-002 ({{SPEC_002_NAME}})
+
+SPEC-003 ({{SPEC_003_NAME}}) ───► SPEC-004 ({{SPEC_004_NAME}})
+
+Each accepted spec delivers its own observable outcome.
 ```
 
 <!-- Adjust the graph to match your actual dependency structure -->
@@ -90,9 +84,9 @@ SPEC-003 ({{SPEC_003_NAME}}) ───────────►│
 | Spec | Name | Status | Workflow File | Next Phase |
 |------|------|--------|---------------|------------|
 | SPEC-001 | {{SPEC_001_NAME}} | ⏳ Pending | [SPEC-001-workflow.md](SPEC-001-workflow.md) | Specify |
-| SPEC-002 | {{SPEC_002_NAME}} | ⏳ Pending | [SPEC-002-workflow.md](SPEC-002-workflow.md) | Blocked by SPEC-001 |
-| SPEC-003 | {{SPEC_003_NAME}} | ⏳ Pending | [SPEC-003-workflow.md](SPEC-003-workflow.md) | Specify (can start with mock data) |
-| SPEC-004 | {{SPEC_004_NAME}} | ⏳ Pending | [SPEC-004-workflow.md](SPEC-004-workflow.md) | Blocked by all |
+| SPEC-002 | {{SPEC_002_NAME}} | ⏳ Pending | [SPEC-002-workflow.md](SPEC-002-workflow.md) | <!-- Actual dependency or Specify --> |
+| SPEC-003 | {{SPEC_003_NAME}} | ⏳ Pending | [SPEC-003-workflow.md](SPEC-003-workflow.md) | <!-- Actual dependency or Specify --> |
+| SPEC-004 | {{SPEC_004_NAME}} | ⏳ Pending | [SPEC-004-workflow.md](SPEC-004-workflow.md) | <!-- Actual dependency or Specify --> |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -102,7 +96,7 @@ SPEC-003 ({{SPEC_003_NAME}}) ───────────►│
 
 ### SPEC-001: {{SPEC_001_NAME}}
 
-**Priority:** P1 | **Depends On:** None | **Enables:** SPEC-002, SPEC-004
+**Priority:** P1 | **Depends On:** <!-- None or named predecessor --> | **Enables:** <!-- Named follow-on outcome, if any -->
 
 **Goal:** <!-- One sentence describing what this spec achieves -->
 
@@ -115,9 +109,9 @@ Budget result: <!-- within budget / warning accepted / split exception -->
 **Scope:**
 <!--
   Write scope descriptions detailed enough to drive /speckit-specify.
-  BAD:  "Backend API endpoint"
-  GOOD: "FastAPI POST /chat endpoint with SSE streaming, Pydantic v2
-         request/response models, conversation state management (in-memory for MVP)"
+  BAD:  "Add a backend API endpoint"
+  GOOD: "API clients can submit a chat request and receive streamed responses,
+         validated request/response models, and documented error behavior"
 -->
 - <!-- Specific deliverable with technology and approach -->
 - <!-- Another specific deliverable -->
@@ -144,7 +138,7 @@ Alternatives considered: [What was rejected and why.]
 
 ### SPEC-002: {{SPEC_002_NAME}}
 
-**Priority:** P1 | **Depends On:** SPEC-001 | **Enables:** SPEC-004
+**Priority:** P1 | **Depends On:** <!-- None or named predecessor --> | **Enables:** <!-- Named follow-on outcome, if any -->
 
 **Goal:** <!-- One sentence -->
 
@@ -159,7 +153,7 @@ Budget result: <!-- within budget / warning accepted / split exception -->
 - <!-- Another specific deliverable -->
 
 **Out of Scope:**
-- <!-- Item (handled by SPEC-004) -->
+- <!-- Item (handled by a named, separately valuable spec) -->
 
 **Key Decisions:**
 <!-- Document significant technical decisions. Remove if none yet. -->
@@ -171,7 +165,7 @@ Budget result: <!-- within budget / warning accepted / split exception -->
 
 ### SPEC-003: {{SPEC_003_NAME}}
 
-**Priority:** P1 | **Depends On:** None (mock data) | **Enables:** SPEC-004
+**Priority:** P1 | **Depends On:** <!-- None or named predecessor --> | **Enables:** <!-- Named follow-on outcome, if any -->
 
 **Goal:** <!-- One sentence -->
 
@@ -186,7 +180,7 @@ Budget result: <!-- within budget / warning accepted / split exception -->
 - <!-- Another specific deliverable -->
 
 **Out of Scope:**
-- <!-- Item (handled by SPEC-004) -->
+- <!-- Item (handled by a named, separately valuable spec) -->
 
 **Key Decisions:**
 <!-- Document significant technical decisions. Remove if none yet. -->
@@ -198,7 +192,7 @@ Budget result: <!-- within budget / warning accepted / split exception -->
 
 ### SPEC-004: {{SPEC_004_NAME}}
 
-**Priority:** P1 | **Depends On:** SPEC-001, SPEC-002, SPEC-003 | **Enables:** Complete feature
+**Priority:** P1 | **Depends On:** <!-- Only actual named predecessors --> | **Enables:** <!-- Named follow-on outcome, if any -->
 
 **Goal:** <!-- One sentence -->
 
@@ -229,9 +223,14 @@ When breaking a feature into specs:
 
 1. **Each spec is independently executable** through the full SpecKit workflow (specify → implement)
 2. **Minimize cross-spec dependencies** — prefer sequential over deeply nested
-3. **Backend foundations first** — establish APIs before frontend integration
-4. **Mock data for blocked specs** — UI specs can use static data while backend specs complete
-5. **Integration spec last** — wire everything together as the final spec
+3. **Vertical slices first** — each spec delivers an observable outcome through
+   every layer it needs; do not split backend, UI, or integration into separate
+   specs merely by technical layer.
+4. **Shared enablers only when justified** — an enabling spec must have its own
+   independently observable contract; otherwise include the enabling work in the
+   first slice that needs it.
+5. **Cross-slice work earns its own spec** — do not reserve a final
+   integration-only spec unless it delivers a separately valuable outcome.
 6. **Each spec gets its own directory**: `specs/<number>-<name>/`
 
 ## Environment & Deployment Context
@@ -276,7 +275,6 @@ When breaking a feature into specs:
 
 - **Source PRD:** {{PRD_LINK}} — the SPEC catalog above is derived from its Features / Acceptance Criteria
 - **PRD Template:** `prd-template.md` (same `templates/` directory) — author with `/speckit-pro:speckit-prd`
-- **SpecKit Workflow Template:** `docs/ai/speckit-workflow-template.md`
 - **Constitution:** `.specify/memory/constitution.md`
 - **Project Standards:** <!-- Link to AGENTS.md, CLAUDE.md, or equivalent -->
 <!-- Add references to key documentation, SDKs, design tools, related branches, etc. -->

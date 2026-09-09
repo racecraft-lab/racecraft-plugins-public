@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for the Layer 8 section/table extractors.
-
-Port of ``test-parity-extractors.sh`` (XPLAT-010 T073). The count-parity
-baseline is pinned at
-``tests/speckit-pro/parity/bash-to-python/test-parity-extractors-baseline.txt``.
-"""
+"""Validate Layer-8 comparison extractors."""
 
 from __future__ import annotations
 

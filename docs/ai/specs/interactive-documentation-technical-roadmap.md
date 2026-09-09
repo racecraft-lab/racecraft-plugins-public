@@ -239,7 +239,7 @@ Budget result: within budget
 
 **Priority:** P1 | **Depends On:** DOC-002, DOC-003, DOC-004 | **Enables:** DOC-010
 
-**Status:** Completed and archived after PR #203. Canonical safe install aids live in `docs-site/src/content/docs/choose-your-path.mdx`, `docs-site/src/components/SafeInstallAids.astro`, `docs-site/src/data/safe-install-aids.ts`, and `docs-site/scripts/validate-doc006-safe-aids.mjs`; archive provenance is recorded in `.specify/memory/archive-reports/2026-06-17-doc-006-post-merge-hygiene.md`.
+**Status:** Completed and archived after PR #203. Canonical safe install aids live in `docs-site/src/content/docs/choose-your-path.mdx`, `docs-site/src/components/SafeInstallAids.astro`, `docs-site/src/data/safe-install-aids.ts`, and `docs-site/scripts/validate-safe-install-aids.mjs`; archive provenance is recorded in `.specify/memory/archive-reports/2026-06-17-doc-006-post-merge-hygiene.md`.
 
 **Goal:** Add safe interactive docs aids without executing local plugin workflows.
 
@@ -591,7 +591,7 @@ Total files: 4-5 |
 Budget result: within budget
 
 **Scope:**
-- Add `@axe-core/playwright` checks across the route list in `docs-smoke.spec.mjs`; wire into `validate:smoke`.
+- Add `@axe-core/playwright` checks across the route list in `docs-smoke.spec.mjs`; wire into `validate:smoke:preview`.
 - Fix `SafeInstallAids.astro`: proper `role="radiogroup"` / `<fieldset>` semantics, reconcile or remove the custom `keydown` handler, and add `aria-controls` / `aria-expanded` (or a non-`hidden` pattern) for panel toggles.
 - Verify brand-token contrast (post-DOC-013) meets AA; fix muted-gray secondary text flagged on the lifecycle and selector components.
 - Add an accessibility-statement page.

@@ -53,7 +53,7 @@
     },
     "workflow.multi_pr_emission.row_count": {
       "tolerance": "exact",
-      "rationale": "Both paths emit exactly one reviewer evidence row per planned PRSG-008 slice."
+      "rationale": "Both paths emit exactly one reviewer evidence row per planned SPEC-908 slice."
     },
     "workflow.multi_pr_emission.statuses": {
       "tolerance": "exact",
@@ -61,7 +61,7 @@
     },
     "workflow.multi_pr_emission.review_order": {
       "tolerance": "exact",
-      "rationale": "Both paths must preserve the PRSG-008 layer-plan order without adding slicing heuristics."
+      "rationale": "Both paths must preserve the SPEC-908 layer-plan order without adding slicing heuristics."
     },
     "workflow.multi_pr_emission.branch_bases": {
       "tolerance": "exact",

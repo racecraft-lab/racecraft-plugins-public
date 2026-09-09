@@ -1,6 +1,5 @@
 {
   "schema_version": "1.0",
-  "feature_id": "XPLAT-006",
   "mode": "mutation",
   "helpers": [
     {

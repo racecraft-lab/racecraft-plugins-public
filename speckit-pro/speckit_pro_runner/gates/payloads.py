@@ -1,4 +1,4 @@
-"""Payload and install-verification gate operations for XPLAT-007 US2."""
+"""Payload and install-verification gate operations."""
 
 from __future__ import annotations
 
@@ -16,15 +16,19 @@ from ..envelope import diagnostic, is_diagnostic, response
 from ..path_utils import find_repo_root, is_relative_to, sha256_file, sha256_text
 from .gate_response import gate_base_data
 
-PROMOTION_RECORD = "tests/speckit-pro/unit/fixtures/runner-gates/promotion-records.json"
 FIXTURE_BOUNDARY = Path("tests") / "speckit-pro" / "unit" / "fixtures" / "runner-gates"
 DEFAULT_PAYLOAD_CASES = FIXTURE_BOUNDARY / "payload-evidence-cases.json"
 DEFAULT_INSTALL_CASES = FIXTURE_BOUNDARY / "install-verification-cases.json"
 INSTALL_INVENTORY = Path("speckit-pro") / "speckit_pro_runner" / "install_inventory.json"
-XPLAT_008_FIXTURE_BOUNDARY = Path("tests") / "speckit-pro" / "unit" / "fixtures" / "installed-plugin-release"
-DEFAULT_XPLAT_008_PAYLOAD_CASES = XPLAT_008_FIXTURE_BOUNDARY / "payload-completeness-cases.json"
-XPLAT_008_PROMOTION_RECORD = XPLAT_008_FIXTURE_BOUNDARY / "promotion-records.json"
+INSTALLED_PLUGIN_FIXTURE_BOUNDARY = Path("tests") / "speckit-pro" / "unit" / "fixtures" / "installed-plugin-release"
+DEFAULT_INSTALLED_PLUGIN_PAYLOAD_CASES = INSTALLED_PLUGIN_FIXTURE_BOUNDARY / "payload-completeness-cases.json"
 PROHIBITED_SCRIPT_SUFFIXES = (".sh", ".bash", ".zsh", ".ps1", ".bat", ".cmd")
+PAYLOAD_INPUT_FIELDS = {
+    "build-test-payload-evidence": frozenset({"case_file", "case_id", "output_root"}),
+    "payload-completeness": frozenset({"apply_dist", "case_file", "case_id", "output_root"}),
+    "refresh-local-plugin-fixture": frozenset({"case_file", "case_id", "fake_home", "stubbed_cli"}),
+    "verify-install": frozenset({"case_file", "case_id", "fake_home", "stubbed_cli"}),
+}
 
 __all__ = ("run_payload_gate",)
 
@@ -40,10 +44,26 @@ def run_payload_gate(entry: Any, request: Any) -> dict[str, Any]:
         )
         return response("missing_prerequisite", request_id=request.request_id, data=base_data(entry, request.operation, "missing_prerequisite"), diagnostics=[diag])
 
+    allowed_fields = PAYLOAD_INPUT_FIELDS.get(request.operation)
+    if allowed_fields is not None:
+        unknown_fields = sorted(set(request.inputs) - allowed_fields)
+        if unknown_fields:
+            diag = diagnostic(
+                "unsupported_gate_inputs",
+                "payload gate received unsupported input fields",
+                details={"fields": unknown_fields},
+            )
+            return response(
+                "input_error",
+                request_id=request.request_id,
+                data=base_data(entry, request.operation, "input_error"),
+                diagnostics=[diag],
+            )
+
     if request.operation == "build-test-payload-evidence":
         return build_test_payload_evidence(entry, request, repo_root)
     if request.operation == "payload-completeness":
-        return payload_completeness_xplat008(entry, request, repo_root)
+        return installed_plugin_payload_completeness(entry, request, repo_root)
     if request.operation == "refresh-local-plugin-fixture":
         return install_verification(entry, request, repo_root, refresh=True)
     if request.operation == "verify-install":
@@ -57,37 +77,37 @@ def run_payload_gate(entry: Any, request: Any) -> dict[str, Any]:
     return response("input_error", request_id=request.request_id, data=base_data(entry, request.operation, "input_error"), diagnostics=[diag])
 
 
-def payload_completeness_xplat008(entry: Any, request: Any, repo_root: Path) -> dict[str, Any]:
-    case_result = load_case(repo_root, request.inputs, default_case_file=DEFAULT_XPLAT_008_PAYLOAD_CASES)
+def installed_plugin_payload_completeness(entry: Any, request: Any, repo_root: Path) -> dict[str, Any]:
+    case_result = load_case(repo_root, request.inputs, default_case_file=DEFAULT_INSTALLED_PLUGIN_PAYLOAD_CASES)
     if is_diagnostic(case_result):
         return response("input_error", request_id=request.request_id, data=base_data(entry, request.operation, "input_error"), diagnostics=[case_result])
     case = case_result
 
-    surfaces_result = xplat008_payload_surfaces(case)
+    surfaces_result = installed_plugin_payload_surfaces(case)
     if is_diagnostic(surfaces_result):
         return response("input_error", request_id=request.request_id, data=base_data(entry, request.operation, "input_error"), diagnostics=[surfaces_result])
     surfaces = surfaces_result
 
-    target_result = xplat008_build_target(request, repo_root)
+    target_result = installed_plugin_build_target(request, repo_root)
     if is_diagnostic(target_result):
         return response("input_error", request_id=request.request_id, data=base_data(entry, request.operation, "input_error"), diagnostics=[target_result])
 
     temp_context: tempfile.TemporaryDirectory[str] | None = None
     try:
         if target_result is None:
-            temp_context = tempfile.TemporaryDirectory(prefix="xplat-008-payload-")
+            temp_context = tempfile.TemporaryDirectory(prefix="installed-plugin-payload-")
             build_dist_root = Path(temp_context.name) / "dist"
         else:
             build_dist_root = target_result
 
         try:
-            build_xplat008_payloads(repo_root, build_dist_root)
+            build_installed_plugin_payloads(repo_root, build_dist_root)
             compare_dist_root = build_dist_root if request.mode == "apply" else repo_root / "dist"
-            results = xplat008_payload_results(repo_root, build_dist_root, compare_dist_root, case, surfaces)
+            results = installed_plugin_payload_results(repo_root, build_dist_root, compare_dist_root, case, surfaces)
         except (OSError, ValueError, json.JSONDecodeError, KeyError) as exc:
             diag = diagnostic(
                 "payload_completeness_evidence_invalid",
-                "XPLAT-008 payload completeness could not build or read generated payload evidence",
+                "installed-plugin payload completeness could not build or read generated payload evidence",
                 details={"case_id": case.get("case_id"), "error": type(exc).__name__},
                 remediation_summary="Refresh source manifests and generated payload metadata before retrying.",
                 remediation_actions=["Run the payload build from a complete source checkout.", "Retry the read-only payload completeness gate."],
@@ -100,11 +120,9 @@ def payload_completeness_xplat008(entry: Any, request: Any, repo_root: Path) -> 
     blocking = [result for result in results if result["status"] != "pass"]
     status = "expected_failure" if blocking else "ok"
     data = base_data(entry, request.operation, status)
-    data["gate"]["comparison_ids"] = ["xplat-008-payload-completeness"]
-    data["gate"]["promotion_record"] = XPLAT_008_PROMOTION_RECORD.as_posix()
+    data["gate"]["comparison_ids"] = ["installed-plugin-release-payload-completeness"]
     data["artifacts"] = [
-        {"path": XPLAT_008_PROMOTION_RECORD.as_posix(), "kind": "promotion_record"},
-        {"path": DEFAULT_XPLAT_008_PAYLOAD_CASES.as_posix(), "kind": "fixture"},
+        {"path": DEFAULT_INSTALLED_PLUGIN_PAYLOAD_CASES.as_posix(), "kind": "fixture"},
     ]
     data["payload_completeness"] = results
     data["artifacts"].extend(
@@ -119,7 +137,7 @@ def payload_completeness_xplat008(entry: Any, request: Any, repo_root: Path) -> 
     data["gate"]["blocking"] = True
     diag = diagnostic(
         "payload_completeness_blocked",
-        "XPLAT-008 payload completeness found blocking generated payload drift",
+        "installed-plugin payload completeness found blocking generated payload drift",
         details={
             "case_id": case.get("case_id"),
             "blocking_surfaces": [item["payload_surface"] for item in blocking],
@@ -131,17 +149,6 @@ def payload_completeness_xplat008(entry: Any, request: Any, repo_root: Path) -> 
 
 
 def build_test_payload_evidence(entry: Any, request: Any, repo_root: Path) -> dict[str, Any]:
-    if request.inputs.get("release_payload_cutover") is not False:
-        diag = diagnostic(
-            "release_payload_cutover_refused",
-            "XPLAT-007 payload evidence must not select or cut over release payloads",
-            details={"release_payload_cutover": request.inputs.get("release_payload_cutover")},
-            remediation_summary="Keep test payload evidence isolated from release payload selection.",
-            remediation_actions=["Set release_payload_cutover to false.", "Defer generated release payload cutover to XPLAT-008."],
-            deferred_to="XPLAT-008",
-        )
-        return response("input_error", request_id=request.request_id, data=base_data(entry, request.operation, "input_error"), diagnostics=[diag])
-
     case_result = load_case(repo_root, request.inputs, default_case_file=DEFAULT_PAYLOAD_CASES)
     if is_diagnostic(case_result):
         return response("input_error", request_id=request.request_id, data=base_data(entry, request.operation, "input_error"), diagnostics=[case_result])
@@ -170,7 +177,7 @@ def build_test_payload_evidence(entry: Any, request: Any, repo_root: Path) -> di
 
     data = base_data(entry, request.operation, "ok")
     data["payload_evidence"] = evidence
-    data["artifacts"].extend(payload_artifacts(evidence, output_root, repo_root, include_written=request.mode == "apply"))
+    data["artifacts"] = payload_artifacts(evidence, output_root, repo_root, include_written=request.mode == "apply")
 
     stale = [item for item in case.get("stale_generated_files", []) if isinstance(item, str)]
     if stale:
@@ -203,11 +210,10 @@ def install_verification(entry: Any, request: Any, repo_root: Path, *, refresh: 
     if not fake_home:
         diag = diagnostic(
             "real_home_refused",
-            "US2 install verification accepts fake-home fixture roots only",
+            "install verification accepts fake-home fixture roots only",
             details={"case_id": case.get("case_id")},
             remediation_summary="Use fake_home true with a fixture install root.",
-            remediation_actions=["Set fake_home to true.", "Defer real installed-cache verification to XPLAT-008."],
-            deferred_to="XPLAT-008",
+            remediation_actions=["Set fake_home to true.", "Use a fixture install root."],
         )
         return response("input_error", request_id=request.request_id, data=base_data(entry, request.operation, "input_error"), diagnostics=[diag])
 
@@ -255,7 +261,7 @@ def install_verification(entry: Any, request: Any, repo_root: Path, *, refresh: 
     return response("ok", request_id=request.request_id, data=data)
 
 
-def xplat008_build_target(request: Any, repo_root: Path) -> Path | None | dict[str, Any]:
+def installed_plugin_build_target(request: Any, repo_root: Path) -> Path | None | dict[str, Any]:
     if request.mode in {"read_only", "dry_run"}:
         return None
 
@@ -263,13 +269,13 @@ def xplat008_build_target(request: Any, repo_root: Path) -> Path | None | dict[s
     if isinstance(raw_output, str) and raw_output:
         output_root = resolve_path(raw_output, repo_root)
         resolved = output_root.resolve(strict=False)
-        fixture_root = (repo_root / XPLAT_008_FIXTURE_BOUNDARY).resolve(strict=False)
+        fixture_root = (repo_root / INSTALLED_PLUGIN_FIXTURE_BOUNDARY).resolve(strict=False)
         temp_root = Path(tempfile.gettempdir()).resolve(strict=False)
         if is_relative_to(resolved, fixture_root) or is_relative_to(resolved, temp_root):
             return output_root
         return diagnostic(
             "payload_output_root_refused",
-            "XPLAT-008 payload output_root must stay inside fixture or temporary roots",
+            "installed-plugin payload output_root must stay inside fixture or temporary roots",
             details={"output_root": raw_output, "fixture_root": repo_relative(fixture_root, repo_root)},
             remediation_summary="Use a fixture or OS temp output root for dry-run/apply tests.",
             remediation_actions=["Set output_root under tests/speckit-pro/unit/fixtures/installed-plugin-release.", "Or use an OS temp directory."],
@@ -280,13 +286,13 @@ def xplat008_build_target(request: Any, repo_root: Path) -> Path | None | dict[s
 
     return diagnostic(
         "payload_output_root_refused",
-        "XPLAT-008 payload dry_run/apply requires output_root unless apply_dist is true",
+        "installed-plugin payload dry_run/apply requires output_root unless apply_dist is true",
         remediation_summary="Use a fixture/temp output root or explicitly target committed dist in apply mode.",
         remediation_actions=["Set output_root for test writes.", "Set apply_dist to true only when rebuilding committed dist output."],
     )
 
 
-def build_xplat008_payloads(repo_root: Path, dist_root: Path) -> None:
+def build_installed_plugin_payloads(repo_root: Path, dist_root: Path) -> None:
     source = repo_root / "speckit-pro"
     claude = dist_root / "claude" / "speckit-pro"
     codex = dist_root / "codex" / "speckit-pro"
@@ -307,11 +313,11 @@ def build_xplat008_payloads(repo_root: Path, dist_root: Path) -> None:
         "README.md",
         "CHANGELOG.md",
     ]:
-        copy_optional_xplat008(source / name, claude / name)
-    copy_optional_xplat008(repo_root / "LICENSE", claude / "LICENSE")
+        copy_optional_installed_plugin(source / name, claude / name)
+    copy_optional_installed_plugin(repo_root / "LICENSE", claude / "LICENSE")
     for skill_file in claude.glob("skills/*/SKILL.md"):
         strip_codex_guard(skill_file)
-    remove_payload_shell_scripts_xplat008(claude)
+    remove_payload_shell_scripts_installed_plugin(claude)
 
     reset_payload_dir(codex, dist_root)
     for name in [
@@ -324,15 +330,15 @@ def build_xplat008_payloads(repo_root: Path, dist_root: Path) -> None:
         "README.md",
         "CHANGELOG.md",
     ]:
-        copy_optional_xplat008(source / name, codex / name)
-    copy_optional_xplat008(repo_root / "LICENSE", codex / "LICENSE")
-    copy_required_xplat008(source / "skills", codex / "skills")
-    copy_required_xplat008(source / "codex-skills", codex / "skills")
-    rewrite_codex_manifest_xplat008(codex)
+        copy_optional_installed_plugin(source / name, codex / name)
+    copy_optional_installed_plugin(repo_root / "LICENSE", codex / "LICENSE")
+    copy_required_installed_plugin(source / "skills", codex / "skills")
+    copy_required_installed_plugin(source / "codex-skills", codex / "skills")
+    rewrite_codex_manifest_installed_plugin(codex)
     for text_file in codex.rglob("*"):
         if text_file.is_file():
-            rewrite_payload_skill_paths_xplat008(codex, text_file)
-    remove_payload_shell_scripts_xplat008(codex)
+            rewrite_payload_skill_paths_installed_plugin(codex, text_file)
+    remove_payload_shell_scripts_installed_plugin(codex)
 
 
 def reset_payload_dir(path: Path, allowed_root: Path) -> None:
@@ -345,13 +351,13 @@ def reset_payload_dir(path: Path, allowed_root: Path) -> None:
     path.mkdir(parents=True, exist_ok=True)
 
 
-def copy_required_xplat008(src: Path, dst: Path) -> None:
+def copy_required_installed_plugin(src: Path, dst: Path) -> None:
     if not src.exists():
         raise FileNotFoundError(f"required source path missing: {src}")
-    copy_optional_xplat008(src, dst)
+    copy_optional_installed_plugin(src, dst)
 
 
-def copy_optional_xplat008(src: Path, dst: Path) -> None:
+def copy_optional_installed_plugin(src: Path, dst: Path) -> None:
     if src.is_dir():
         shutil.copytree(
             src,
@@ -364,7 +370,7 @@ def copy_optional_xplat008(src: Path, dst: Path) -> None:
         shutil.copy2(src, dst)
 
 
-def remove_payload_shell_scripts_xplat008(root: Path) -> None:
+def remove_payload_shell_scripts_installed_plugin(root: Path) -> None:
     for path in root.rglob("*"):
         if path.is_file() and (path.suffix.lower() in PROHIBITED_SCRIPT_SUFFIXES or payload_has_shell_shebang(path)):
             path.unlink()
@@ -393,17 +399,17 @@ def strip_codex_guard(skill_file: Path) -> None:
     skill_file.write_text("".join(output), encoding="utf-8")
 
 
-def rewrite_codex_manifest_xplat008(codex_root: Path) -> None:
+def rewrite_codex_manifest_installed_plugin(codex_root: Path) -> None:
     manifest = codex_root / ".codex-plugin" / "plugin.json"
     data = json.loads(manifest.read_text(encoding="utf-8"))
     data["skills"] = "./skills/"
     manifest.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
 
-REL_SKILL_PATH_XPLAT008 = re.compile(r"(?P<prefix>(?:\.\./)+(?:skills|codex-skills)/)(?P<rest>[^\s`)\"']+)")
+RELATIVE_SKILL_PATH_PATTERN = re.compile(r"(?P<prefix>(?:\.\./)+(?:skills|codex-skills)/)(?P<rest>[^\s`)\"']+)")
 
 
-def rewrite_payload_skill_paths_xplat008(codex_root: Path, path: Path) -> None:
+def rewrite_payload_skill_paths_installed_plugin(codex_root: Path, path: Path) -> None:
     try:
         text = path.read_text(encoding="utf-8")
     except UnicodeDecodeError:
@@ -428,17 +434,17 @@ def rewrite_payload_skill_paths_xplat008(codex_root: Path, path: Path) -> None:
             rel += "/"
         return rel + anchor + suffix
 
-    rewritten = REL_SKILL_PATH_XPLAT008.sub(replace, text)
+    rewritten = RELATIVE_SKILL_PATH_PATTERN.sub(replace, text)
     if rewritten != text:
         path.write_text(rewritten, encoding="utf-8")
 
 
-def xplat008_payload_surfaces(case: dict[str, Any]) -> list[str] | dict[str, Any]:
+def installed_plugin_payload_surfaces(case: dict[str, Any]) -> list[str] | dict[str, Any]:
     raw_surfaces = case.get("surfaces", ["claude", "codex"])
     if not isinstance(raw_surfaces, list):
         return diagnostic(
             "invalid_payload_surface_selection",
-            "XPLAT-008 payload completeness requires explicit Claude and Codex surfaces",
+            "installed-plugin payload completeness requires explicit Claude and Codex surfaces",
             details={"case_id": case.get("case_id"), "surfaces_type": type(raw_surfaces).__name__},
             remediation_summary="Select exactly the Claude and Codex generated payload surfaces.",
             remediation_actions=["Set surfaces to [\"claude\", \"codex\"].", "Retry the payload completeness request."],
@@ -448,7 +454,7 @@ def xplat008_payload_surfaces(case: dict[str, Any]) -> list[str] | dict[str, Any
     if set(surfaces) != {"claude", "codex"} or len(surfaces) != 2 or invalid:
         return diagnostic(
             "invalid_payload_surface_selection",
-            "XPLAT-008 payload completeness must compare exactly the Claude and Codex generated payloads",
+            "installed-plugin payload completeness must compare exactly the Claude and Codex generated payloads",
             details={"case_id": case.get("case_id"), "surfaces": raw_surfaces, "invalid_surfaces": invalid},
             remediation_summary="Do not allow a payload completeness gate to pass without both generated payload surfaces.",
             remediation_actions=["Set surfaces to [\"claude\", \"codex\"].", "Retry the payload completeness request."],
@@ -456,7 +462,7 @@ def xplat008_payload_surfaces(case: dict[str, Any]) -> list[str] | dict[str, Any
     return surfaces
 
 
-def xplat008_payload_results(
+def installed_plugin_payload_results(
     repo_root: Path,
     expected_dist_root: Path,
     actual_dist_root: Path,
@@ -465,7 +471,7 @@ def xplat008_payload_results(
 ) -> list[dict[str, Any]]:
     mutations = case.get("mutations") if isinstance(case.get("mutations"), dict) else {}
     return [
-        xplat008_payload_result(
+        installed_plugin_payload_result(
             repo_root,
             surface,
             expected_dist_root / surface / "speckit-pro",
@@ -476,7 +482,7 @@ def xplat008_payload_results(
     ]
 
 
-def xplat008_payload_result(
+def installed_plugin_payload_result(
     repo_root: Path,
     surface: str,
     expected_root: Path,
@@ -751,7 +757,6 @@ def payload_evidence_record(payload: dict[str, Any], mode: str, case: dict[str, 
         "output_root": output_root,
         "file_tree_hash": sha256_text(tree_payload),
         "files": files,
-        "release_payload_cutover": False,
         "status": "ok",
     }
 
@@ -854,7 +859,7 @@ def output_root_from_inputs(inputs: dict[str, Any], repo_root: Path) -> Path | d
             "fixture_output_root_refused",
             "output_root is required for test payload evidence",
             remediation_summary="Use a fixture or temporary output root.",
-            remediation_actions=["Set output_root under the XPLAT-007 fixture tree or a temp directory."],
+            remediation_actions=["Set output_root under the runner-gates fixture tree or a temp directory."],
         )
     output_root = resolve_path(raw, repo_root)
     resolved = output_root.resolve(strict=False)
@@ -882,11 +887,10 @@ def install_root_from_case(case: dict[str, Any], repo_root: Path) -> Path | dict
         return install_root
     return diagnostic(
         "fixture_install_root_refused",
-        "install verification refuses roots outside the XPLAT-007 fixture boundary",
+        "install verification refuses roots outside the runner-gates fixture boundary",
         details={"install_root": normalize_path_text(raw), "fixture_root": repo_relative(boundary, repo_root)},
-        remediation_summary="Use a fake-home install root under the XPLAT-007 fixture tree.",
+        remediation_summary="Use a fake-home install root under the runner-gates fixture tree.",
         remediation_actions=["Move install_root under tests/speckit-pro/unit/fixtures/runner-gates.", "Retry verify-install."],
-        deferred_to="XPLAT-008",
     )
 
 
@@ -926,7 +930,7 @@ def bundled_agent_count(inventory: list[dict[str, str]]) -> int:
 
 
 def base_data(entry: Any, operation: str, status: str) -> dict[str, Any]:
-    return gate_base_data(entry, operation, status, PROMOTION_RECORD)
+    return gate_base_data(entry, operation, status)
 
 
 def resolve_path(raw: str, repo_root: Path) -> Path:

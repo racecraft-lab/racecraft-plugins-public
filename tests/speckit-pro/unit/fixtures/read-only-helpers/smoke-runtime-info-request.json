@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "request_id": "xplat-005-runtime-info-smoke",
+  "request_id": "spec-805-runtime-info-smoke",
   "helper_id": "runner",
   "operation": "runtime-info",
   "mode": "read_only",

@@ -1,6 +1,5 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://racecraft.dev/speckit-pro/pr-packet.schema.json",
   "title": "SpecKit Pro PR Packet",
   "type": "object",
   "additionalProperties": false,

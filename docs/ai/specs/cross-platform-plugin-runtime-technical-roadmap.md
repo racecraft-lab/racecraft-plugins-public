@@ -772,7 +772,6 @@ if XPLAT-001 inventory shows the combined scope is too large.
 - `detect-stack-manager` if it remains mutation-adjacent
 - `migrate-structure`
 - `relocate-process-artifacts`
-- `install-curated-set`
 - `install-codex-agents`
 - `doctor` / install-completeness repair helpers if introduced by XPLAT-004
 - coach fixup/preset helpers that write files

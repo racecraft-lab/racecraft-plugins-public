@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "request_id": "xplat-007-us2-install-verification",
+  "request_id": "install-verification",
   "helper_id": "install-verification",
   "operation": "verify-install",
   "mode": "read_only",
@@ -8,7 +8,6 @@
     "case_file": "tests/speckit-pro/unit/fixtures/runner-gates/install-verification-cases.json",
     "case_id": "complete-fake-home",
     "fake_home": true,
-    "stubbed_cli": true,
-    "xplat_008_cutover_allowed": false
+    "stubbed_cli": true
   }
 }

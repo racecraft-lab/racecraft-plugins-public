@@ -13,17 +13,10 @@ These contracts hold the three in step. Trimming the guidance from one file
 while the other two still carry it leaves the skill contradicting the reference
 it points at, which is the drift these tests exist to catch.
 
-The skill also explains why its own ``allowed-tools`` declaration leaves a
-command-execution tool out. That explanation makes two checkable claims: which
-release guard blocks the token, and what a Claude Code skill's ``allowed-tools``
-field actually decides. Prose asserting a guard verdict drifts silently, because
-nothing else in the repository reads it, so the remaining contracts pin both
-claims to the code and to the reference the skill points operators at.
 """
 
 from __future__ import annotations
 
-import re
 import sys
 import unittest
 from pathlib import Path
@@ -45,19 +38,6 @@ PERMISSIVE_MODE_TOKENS = ("acceptEdits", "bypassPermissions")
 # Frontmatter fields Claude Code silently ignores on plugin-shipped agents.
 IGNORED_PLUGIN_AGENT_FIELDS = ("permissionMode", "hooks", "mcpServers")
 
-# Opening sentence of the paragraph that explains the omitted command-execution
-# tool. Used to locate that paragraph without pinning the rest of its wording.
-OMISSION_RATIONALE_ANCHOR = (
-    "That declaration also deliberately omits a command-execution tool."
-)
-
-# Only the XPLAT-009 guard classifies a command-execution token in a shipped
-# tool declaration as blocking. XPLAT-008 sees the same token and classifies it
-# source_checkout_helper, which does not block.
-BLOCKING_RELEASE_GUARD_IDS = frozenset({"XPLAT-009"})
-
-FEATURE_ID_RE = re.compile(r"XPLAT-\d+")
-
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
@@ -75,13 +55,6 @@ def body(path: Path) -> str:
 
 def carries_permissive_mode_guidance(text: str) -> bool:
     return any(token in text for token in PERMISSIVE_MODE_TOKENS)
-
-
-def paragraph_containing(text: str, anchor: str) -> str:
-    for block in text.split("\n\n"):
-        if anchor in block:
-            return block
-    raise AssertionError(f"no paragraph in the skill contains {anchor!r}")
 
 
 class AutopilotPermissionModeGuidanceTests(unittest.TestCase):
@@ -116,16 +89,6 @@ class AutopilotPermissionModeGuidanceTests(unittest.TestCase):
             "skill mandates a runner subprocess but never tells the operator how to authorize it",
         )
 
-    def test_only_the_guard_that_blocks_is_credited_with_blocking(self) -> None:
-        paragraph = paragraph_containing(body(SKILL), OMISSION_RATIONALE_ANCHOR)
-        credited = set(FEATURE_ID_RE.findall(paragraph))
-        self.assertEqual(
-            credited,
-            set(BLOCKING_RELEASE_GUARD_IDS),
-            "the omission rationale credits guards that do not block the token; "
-            f"named {sorted(credited)}, only {sorted(BLOCKING_RELEASE_GUARD_IDS)} blocks",
-        )
-
     def test_reference_explains_that_allowed_tools_is_pre_approval(self) -> None:
         reference = body(PLUGIN_LIMITATIONS)
         for phrase in ("allowed-tools", "pre-approval"):
@@ -155,7 +118,7 @@ class AutopilotPermissionModeGuidanceTests(unittest.TestCase):
             "blocking_zero_bash",
         )
         self.assertEqual(
-            active_path_guard.classify_xplat008_path(
+            active_path_guard.classify_installed_runtime_path(
                 skill_path,
                 "bash",
                 "Bash",

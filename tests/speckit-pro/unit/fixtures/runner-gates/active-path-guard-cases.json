@@ -1,6 +1,6 @@
 {
-  "schema_version": "1.0",
-  "feature_id": "XPLAT-007",
+  "schema_version": "2.0",
+  "contract_id": "runner-gates",
   "coverage": [
     "active Bash",
     ".sh",
@@ -19,7 +19,7 @@
     "generated payload mirror",
     "docs out of scope",
     "CI dispatch glue",
-    "XPLAT-008 cutover surface"
+    "installed-plugin cutover surface"
   ],
   "cases": [
     {
@@ -37,7 +37,7 @@
       "expected_status": "ok",
       "files": [
         {
-          "path": ".specify/memory/archive-reports/2026-07-04-xplat-007.md",
+          "path": ".specify/memory/archive-reports/2026-06-29-completed-active-specs-post-merge-hygiene.md",
           "content": "Historical evidence: bash tests/speckit-pro/run-all.sh | jq -r '.status'\n"
         },
         {
@@ -58,11 +58,11 @@
         },
         {
           "path": ".github/workflows/pr-checks.yml",
-          "content": "jobs:\n  validate:\n    steps:\n      - run: python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/release-readiness.json\n"
+          "content": "jobs:\n  validate:\n    steps:\n      - run: python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/validate-pr-title-live.json\n"
         },
         {
           "path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
-          "content": "XPLAT-008 will cut over active Claude/Codex invocation surfaces that still reference bash helpers.\n"
+          "content": "Installed-plugin release will cut over active Claude/Codex invocation surfaces that still reference bash helpers.\n"
         }
       ]
     },

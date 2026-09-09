@@ -1,7 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://racecraft.dev/speckit-pro/xplat-006/mutation-helper-result.schema.json",
-  "title": "Mutation Helper Result",
+  "title": "Mutation helper result",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema_version", "status", "exit_code", "legacy_exit_code", "diagnostics", "data"],

@@ -8,7 +8,8 @@ description: "Repository Bash confinement planner fixture with 18 reviewable inc
 
 **Prerequisites**: plan.md, spec.md (27 FRs / 7 US / 8 SCs / 16 Clarifications), research.md (13 decisions), data-model.md (8 entities), contracts/ (6), quickstart.md (7 scenarios)
 
-**Tests**: This feature is test-centric by nature (it ports a test harness). Every ported module lands with its `unittest` module + committed count-parity baseline in the SAME PR (FR-004/FR-011/FR-012). Test tasks are therefore first-class here, not optional.
+**Tests**: This feature is test-centric by nature. Every ported module lands
+with its behavioral `unittest` owner in the same PR.
 
 **Reviewability**: The canonical no-gap delivery is a dependency-ordered
 **18-PR stack** represented by 18 emitted planner increments and all 136 tasks:
@@ -41,28 +42,23 @@ the fixture's scope-budget and split-decision record
 
 ---
 
-## Per-Port Protocol (applies to every `.sh`→`.py` port task in PRs 3a–9)
+## Per-Port Protocol
 
-Every port task is the **same-PR atomic swap** to Python 3.11+ standard library only, no new runtime dependency (FR-009/FR-011/FR-012, Clarifications Session 1):
-
-1. **Capture VERBOSE baseline** — run the bash script under `VERBOSE=true` via `tests/speckit-pro/lib/capture_baseline.py`, in the pinned **non-root, CI-matching** environment, writing `tests/speckit-pro/parity/bash-to-python/<script>-baseline.txt` (one `NNN <canonical-name>` line per executed `_pass`/`_fail`, then `TOTAL: <N>`). One baseline per `(script, invocation-mode)` pair. Fail loud on an empty/stale name (no positional fallback).
-2. **Port** — author `<module>.py` (`unittest`, house `__main__` printing `<label>: {passed}/{total} passed`), computing `{passed}/{total}` via the shared `addSubTest` `TestResult` subclass; every former assertion execution = one counted unit; loop-generated assertions are `subTest`s reconciling each bash check name 1:1 via `subTest(msg=...)`.
-3. **Dual-run diff** — record the 6-item block in the PR body (bash capture cmd + port-run cmd; committed baseline path; unified name-inventory diff or `no differences — 1:1 preserved`; `bash: N == python: N`; intentional-change = `none`; count-ledger delta line).
-4. **Manifest flip** — repoint the script's `suite-manifest.json` entry to the `.py` module + baseline pointer (batched per phase in that phase's manifest-registration task, same PR).
-5. **`.sh` delete** — remove the bash predecessor in the same PR so no layer runs with zero coverage.
-
-Baseline capture AND the port-side parity comparison MUST run in the SAME pinned environment; a root-vs-non-root drift (e.g. 31-vs-36 assertions) surfaces as a loud parity failure, never a silent divergence.
+Every port task is the **same-PR atomic swap** to Python 3.11+ standard library
+only, with no new runtime dependency: add the behavioral `unittest` owner,
+register the Python module, remove the predecessor, and require a non-empty,
+self-consistent executed summary.
 
 ---
 
 ## Phase 1: Foundation - Process, archive hygiene, setup, and confidence evidence
 
-- [x] T001 Verify the repo baseline is green before any change: run the toolchain preflight and default-suite gates from the repo root — `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-toolchain-preflight.json` and `.../run-default-suite.json` — and `pnpm --dir docs-site validate`. Record the pre-change `X/Y passed` headline as the parity reference.
+- [x] T001 Verify the repo is green before any change: run the toolchain preflight and default-suite gates from the repo root — `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-toolchain-preflight.json` and `.../run-default-suite.json` — and `pnpm --dir docs-site validate`.
 - [x] T002 Confirm the working branch is `repository-bash-confinement-plan` (or the active slice branch), never `main`; confirm the feature pointer selects this self-contained fixture; export `PYTHONDONTWRITEBYTECODE=1` for all runner invocations.
 - [x] T003 **Reviewability checkpoint (mandatory — transition exception)**: record in the PR review packet that this fixture is delivered as the canonical no-gap 18-PR stack, using the fixture's scope-budget and split-decision record; confirm each planned implementation slice stays within the 400–800 reviewable-LOC / 15–25 total-file budget and does not silently exceed the 800/8/25 block thresholds. The former combined PR 12 is an exact 1,267-production-LOC block and has no waiver; STOP and re-split it into PR 12a/12b. Foundation and Polish are aggregate-history review units, not implementation scope expansion.
-- [x] T004 Confirm the 6 contracts under `contracts/` are the frozen schemas the ports/guard/composer/estimator validate against (`suite-manifest.schema.json`, `confinement-allowlist.schema.json`, `repo-bash-confinement-result.schema.json`, `estimate-spec-size.schema.json`, `release-note-block.contract.md`, `count-parity-baseline.contract.md`).
+- [x] T004 Confirm the declared contracts under `contracts/` are the schemas the guard, composer, and estimator validate against.
 
-**Checkpoint**: Baseline green, branch verified, split exception recorded — implementation can begin.
+**Checkpoint**: Suite green, branch verified, split exception recorded — implementation can begin.
 
 ---
 
@@ -84,24 +80,24 @@ Baseline capture AND the port-side parity comparison MUST run in the SAME pinned
 
 **Independent Test**: On a machine with only Python 3.11+ (no Bash, no `jq`), `python3 tests/speckit-pro/run-all.py --all`, `--layer N`, and the toolchain preflight match the recorded bash-runner `X/Y passed` headline, scope, and exit codes.
 
-- [x] T008 [US1] Author `tests/speckit-pro/suite-manifest.json` per `contracts/suite-manifest.schema.json`: top-level `{schema_version, layers[]}`; per layer `{id, label, default, execution, live_only, integration, counted_in_total, dispatch, scripts[]}`; per script `{path, label, baseline}` (baseline = repo-relative pointer or `null`). Assign per-layer `dispatch` per research §D3 (toolchain=`internal-check`,`counted_in_total:false`; layers 1/4=`python-module`; 5=`internal-check` transitional; 7/8=`python-module`; 2/3/6=`python-module`+`live_only:true`); list still-unported layers as `shell-legacy-transitional` until their port-PR boundary (FR-006/FR-007).
+- [x] T008 [US1] Author `tests/speckit-pro/suite-manifest.json` with the layer execution policy and each script's semantic path and label.
 - [x] T009 [P] [US1] Author `tests/speckit-pro/lib/test_result.py` — the shared `unittest.TestResult` subclass overriding `addSubTest` so `{passed}/{total}` counts every executed assertion (loop-generated AND non-loop grouped), reconciling bash check names 1:1 — the house-convention per-assertion counting contract (FR-010, research §D6, Clarifications Session 1). Land its own unit test.
-- [x] T010 [P] [US2] Author `tests/speckit-pro/lib/capture_baseline.py` — runs a bash script under `VERBOSE=true`, parses only lines matching `^\s*(.+?)\s\.\.\.\s(PASS|FAIL)$`, writes the frozen baseline format (`NNN <name>` + `TOTAL: <N>`) to `tests/speckit-pro/parity/bash-to-python/`, records the pinned capture environment, and fails loud on an empty/stale name (research §D6; `contracts/count-parity-baseline.contract.md`). Create the `tests/speckit-pro/parity/bash-to-python/` directory. Land its own unit test.
-- [x] T011 [US2] Create the fixture's running count ledger (header + empty delta table) that each subsequent port PR appends one line to (FR-013).
-- [x] T012 [US1] Author `tests/speckit-pro/run-all.py` preserving the `run-all.sh` flag surface (research §D5): `--live`, `--layer N`, `--integration`, `--all`, `--verbose`; default run = Layers 1, 4, 5 + toolchain; deterministic `--all` selects every execution/command-plan block, while explicit `--all --live` or `--integration --live` selects live Layer 7 and no unsupported live flag reaches Layer 4; headline `speckit-pro test suite: X/Y passed` (and `… (Z failed)` on failure); exit 0 iff no failures, 1 on failure, 2 on unknown flag; parse each child module's `X/Y passed` line. Child-outcome disposition mirrors the prior runner (FR-006): a crash (nonzero, no headline) forces exit 1 distinct from a transitional-skip; a zero-exit-no-headline module is a no-summary pass; a `shell-legacy-transitional` layer on a Bash-absent platform is skipped with an explicit diagnostic (never a silent green).
+- [x] T010 [P] [US2] Make the suite fail closed on a missing, malformed, empty, or impossible child summary.
+- [x] T011 [US2] Derive aggregate results from executed child summaries rather than a frozen snapshot.
+- [x] T012 [US1] Author `tests/speckit-pro/run-all.py` preserving the runner flag surface and aggregate headline. Exit zero only when every selected executable layer reports a non-empty, self-consistent passing summary; reject missing summaries even when a child exits zero.
 - [x] T013 [US1] Modify `tests/speckit-pro/run-layer-scripts.py` to read the manifest's per-layer `scripts[]` instead of text-parsing `run-all.sh` via `re.findall(...)` (research §D4 — this is the real "regex-parses the bash runner" surface).
 - [x] T014 [US1] Modify `speckit-pro/speckit_pro_runner/gates/suite.py` so `DEFAULT_SUITE`/`EXTENDED_SUITE`/`ALLOWED_LAYERS` derive solely from the manifest, failing closed when it is absent/unreadable, while preserving the existing envelope contract unchanged (FR-007/FR-008).
 - [x] T015 [US1] Add the deterministic drift-guard test asserting the shipped gate's advertised roster AND dispatch kinds equal the manifest exactly (FR-007), plus the two manifest-integrity invariants: (a) every `scripts[].path` resolves to an existing repo file; (b) no layer carries `dispatch: shell-legacy-transitional` after PR 10 (terminal-absence assertion). Delete the now-replaced `tests/speckit-pro/run-all.sh` in this PR (replaced by `run-all.py`).
 - [x] T016 [US1] **Shipped-runner regeneration ritual (PR 2)**: recompute `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` sha256 rows → `python3 scripts/build-plugin-payloads.py` (rebuild `dist/**`) → checksum-based fixture sync (`--checksum`, avoids the mtime trap) → per-row proof-hash recompute → regenerate evidence in gate order with **release-readiness LAST** and home-directory sanitization (`<home>`). If another shipped-runner slice has merged first, rebase onto it and re-run this full ritual (hand-merging conflicting proof rows / payload bytes is forbidden — plan §Constraints).
 - [x] T017 [US1] Verify US1 end-to-end (quickstart US1): deterministic `run-all.py --all` ends green with Layer 7 replay and live-AI command plans, while `--all --live` remains the explicit live path; the shipped suite gate resolves its roster from the manifest with the envelope unchanged; default-suite gate + `pnpm --dir docs-site validate` green.
 
-**Checkpoint**: Manifest is the single source of truth; `run-all.py` reaches UX parity; parity tooling + ledger ready for the ports. **PR 2 must merge before PRs 3–10.**
+**Checkpoint**: Manifest is the single source of truth; `run-all.py` reaches UX parity and fails closed on invalid child results. **PR 2 must merge before PRs 3–10.**
 
 ---
 
 ## Phase 4: User Story 3 - PR 3a - Layer-1 validators port, batch 1 of 2 (after PR 2)
 
-**Slice goal (US2 — Runtime Count-Parity Proof Per Port)**: Port 10 mechanical Layer-1 structural validators with committed baselines + dual-run diffs. Each port follows the Per-Port Protocol above.
+**Slice goal (US2)**: Port the mechanical Layer-1 structural validators while preserving their executed behavior and result summaries.
 
 - [x] T018 [P] [US2] Port `tests/speckit-pro/layer1-structural/validate-agents.sh` → `.py` (Per-Port Protocol).
 - [x] T019 [P] [US2] Port `tests/speckit-pro/layer1-structural/validate-capability-pointer.sh` → `.py` (Per-Port Protocol).
@@ -111,11 +107,11 @@ Baseline capture AND the port-side parity comparison MUST run in the SAME pinned
 - [x] T023 [P] [US2] Port `tests/speckit-pro/layer1-structural/validate-codex-marketplace.sh` → `.py` (Per-Port Protocol).
 - [x] T024 [P] [US2] Port `tests/speckit-pro/layer1-structural/validate-codex-parity.sh` → `.py` (Per-Port Protocol).
 - [x] T025 [P] [US2] Port `tests/speckit-pro/layer1-structural/validate-codex-plugin.sh` → `.py` (Per-Port Protocol).
-- [x] T026 [P] [US2] Port `tests/speckit-pro/layer1-structural/validate-curated-set.sh` → `.py` (Per-Port Protocol). Note: check names are driven by live `scripts/curated-set.json` content — that data file is a baseline regeneration trigger.
+- [x] T026 [P] [US2] Port `tests/speckit-pro/layer1-structural/validate-curated-set.sh` → `.py` (Per-Port Protocol). Check names are driven by live `scripts/curated-set.json` content.
 - [x] T027 [P] [US2] Port `tests/speckit-pro/layer1-structural/validate-hooks.sh` → `.py` (Per-Port Protocol).
-- [x] T028 [US2] Register the 10 ported modules + baseline pointers in `suite-manifest.json` (batched manifest flip), append the 10 count-ledger delta lines (FR-013), and confirm the default-suite gate + drift-guard test are green.
+- [x] T028 [US2] Register the ported modules in `suite-manifest.json` and confirm the default-suite gate and drift guard are green.
 
-**Checkpoint**: 10 Layer-1 validators ported with 1:1 parity; 10 `.sh` deleted.
+**Checkpoint**: The Layer-1 validators preserve their behavior and their predecessors are deleted.
 
 ---
 
@@ -133,7 +129,7 @@ Baseline capture AND the port-side parity comparison MUST run in the SAME pinned
 - [x] T036 [P] [US2] Port `tests/speckit-pro/layer1-structural/validate-skill-capability-pointers.sh` → `.py` (Per-Port Protocol).
 - [x] T037 [P] [US2] Port `tests/speckit-pro/layer1-structural/validate-skills.sh` → `.py` (Per-Port Protocol).
 - [x] T038 [P] [US2] Port `tests/speckit-pro/layer1-structural/validate-spec-index-determinism.sh` → `.py` (Per-Port Protocol).
-- [x] T039 [US2] Register the 10 ported modules + baseline pointers in `suite-manifest.json`, append the 10 count-ledger delta lines, and confirm the default-suite gate + drift-guard test are green.
+- [x] T039 [US2] Register the ported modules in `suite-manifest.json` and confirm the default-suite gate and drift guard are green.
 
 **Checkpoint**: All 20 mechanical Layer-1 validators ported; 20 `.sh` deleted.
 
@@ -143,11 +139,11 @@ Baseline capture AND the port-side parity comparison MUST run in the SAME pinned
 
 **Slice goal (US2)**: Port the 4 remaining Layer-1 validators (MOC + codex/payload). Per-Port Protocol each; these carry heavier logic than the mechanical 20.
 
-- [x] T040 [P] [US2] Port `tests/speckit-pro/layer1-structural/validate-moc-orphan.sh` → `.py` (Per-Port Protocol). Note: the optional scan-root argument is a second invocation mode (29 vs 0 assertions) → one baseline per `(script, mode)` pair.
+- [x] T040 [P] [US2] Port `tests/speckit-pro/layer1-structural/validate-moc-orphan.sh` → `.py` (Per-Port Protocol), including the optional scan-root invocation mode.
 - [x] T041 [P] [US2] Port `tests/speckit-pro/layer1-structural/validate-moc-stale-index.sh` → `.py` (Per-Port Protocol).
 - [x] T042 [P] [US2] Port `tests/speckit-pro/layer1-structural/validate-codex-skills.sh` → `.py` (Per-Port Protocol).
 - [x] T043 [P] [US2] Port `tests/speckit-pro/layer1-structural/validate-payload-conformance.sh` → `.py` (Per-Port Protocol).
-- [x] T044 [US2] Register the 4 ported modules + baseline pointers in `suite-manifest.json`, append the 4 count-ledger delta lines, and confirm the default-suite gate + drift-guard test are green.
+- [x] T044 [US2] Register the ported modules in `suite-manifest.json` and confirm the default-suite gate and drift guard are green.
 - [x] T045 [US2] Port the active Layer-4 MOC test scripts co-located with these validators if flagged `active-port-later` in T005 (e.g. `test-moc-id-normalize.sh`, `test-moc-lint-exit-codes.sh`, `test-generate-spec-index.sh`) → `.py` under `tests/speckit-pro/unit/` (Per-Port Protocol); otherwise confirm they were deleted as orphans in PR 1. Note the root-vs-non-root divergence recorded for `test-moc-lint-exit-codes.sh` (31 vs 36) — capture in the pinned non-root env.
 
 **Checkpoint**: All 24 Layer-1 validators ported.
@@ -162,7 +158,7 @@ Baseline capture AND the port-side parity comparison MUST run in the SAME pinned
 - [x] T047 [US2] Port `tests/speckit-pro/check-toolchain.sh` (top-level) → Python and its active Layer-4 test `test-check-toolchain.sh` → `.py` (Per-Port Protocol); delete both `.sh`.
 - [x] T048 [US2] Swap the `bash tests/speckit-pro/check-toolchain.sh` dispatch step in `.github/workflows/pr-checks.yml` (~line 289) for a direct Python-runner toolchain-preflight invocation (FR-026). This replaces a `run:` step inside the existing `test`/`validate-plugins` surface — it renames no required status check.
 - [x] T049 [US2] Update the ported `validate-pr-checks-sentinel` self-referential workflow validator in the SAME PR so its assertions match the swapped `pr-checks.yml` (FR-026).
-- [x] T050 [US2] Register the Layer-5 module flip (`internal-check`→`python-module` if the ported validator lives repo-side, per §D3) + baseline pointers in `suite-manifest.json`; append count-ledger delta lines.
+- [x] T050 [US2] Register the Layer-5 module flip in `suite-manifest.json`.
 - [x] T051 [US2] Add a PR-body branch-protection callout stating this PR is **required-check-neutral** (no branch-protection change — contrast PRs 11/12) per FR-026/FR-018.
 - [x] T052 [US2] Confirm default-suite gate + drift-guard test green; confirm `pr-checks.yml` still dispatches the Python runner for the toolchain leg. Because T046 changes shipped `gates/suite.py`, run the full shipped-runner payload/proof regeneration ritual with release-readiness LAST and `<home>` sanitization.
 - [x] T053 [US2] Record the CLAUDE.md CI/CD note: confirm whether the `pr-checks.yml` edit requires a CLAUDE.md CI/CD-section update (per repo policy on workflow edits).
@@ -180,7 +176,7 @@ Baseline capture AND the port-side parity comparison MUST run in the SAME pinned
 - [x] T056 [P] [US2] Port `.claude/hooks/guard-version-triplet.sh` (PreToolUse) → `.claude/hooks/guard-version-triplet.py`, preserving the stdin-JSON intake and exit-0 (allow) / exit-2 (block) contract; parse stdin via stdlib `json`, never shell-interpolating untrusted input into a subprocess (FR-014). Preserve the contract even for malformed input.
 - [x] T057 [P] [US2] Port `.claude/hooks/validate-structural.sh` (PostToolUse) → `.claude/hooks/validate-structural.py`, preserving the exit-0/2 contract and replacing its `bash tests/run-all.sh --layer 1` shell-out with a Python Layer-1 dispatch (research §D12).
 - [x] T058 [US2] Port the active Layer-4 tests for the ported helpers/hooks (per T005 classification) → `.py` following the Per-Port Protocol; delete their `.sh`.
-- [x] T059 [US2] Register the ported modules + baseline pointers in `suite-manifest.json`; append count-ledger delta lines; confirm default-suite gate green.
+- [x] T059 [US2] Register the ported modules in `suite-manifest.json` and confirm the default-suite gate is green.
 - [x] T060 [US2] Confirm the hooks stay off the shell-injection surface: assert no `subprocess`/`os.system` call in the ported hooks passes untrusted stdin into a shell (aligns with the FR-002 guard's own rule and FR-023 discipline).
 - [x] T061 [US2] Verify `pnpm --dir docs-site validate` still green (the `docs-site/package.json` `scripts` values are within the FR-002 structural-scan surface — confirm no `bash`/`jq` invocation was introduced).
 
@@ -196,7 +192,7 @@ Baseline capture AND the port-side parity comparison MUST run in the SAME pinned
 - [x] T063 [P] [US2] Port `tests/speckit-pro/layer7-integration/scrub-transcript.sh` → `.py` (Per-Port Protocol).
 - [x] T064 [P] [US2] Port `tests/speckit-pro/layer7-integration/reduce-transcript-fixture.sh` → `.py` (Per-Port Protocol).
 - [x] T065 [US2] Port the active Layer-4 test `test-transcript-helpers.sh` → `.py`; delete its `.sh`.
-- [x] T066 [US2] Register the ported transcript-lib modules + baseline pointers in `suite-manifest.json`; append count-ledger delta lines; confirm default-suite gate green.
+- [x] T066 [US2] Register the ported transcript-library modules in `suite-manifest.json` and confirm the default-suite gate is green.
 
 **Checkpoint**: Layer-7 transcript library is Python; PR 7b can build the runners on it.
 
@@ -210,7 +206,7 @@ Baseline capture AND the port-side parity comparison MUST run in the SAME pinned
 - [x] T068 [P] [US2] Port `tests/speckit-pro/layer7-integration/run-return-format-fixtures.sh` → `.py` (Per-Port Protocol; replay mode).
 - [x] T069 [P] [US2] Port `tests/speckit-pro/layer7-integration/run-grounding-fixtures.sh` → `.py` (Per-Port Protocol; replay mode).
 - [x] T070 [P] [US2] Port `tests/speckit-pro/layer7-integration/run-e2e-fixtures.sh` and `run-all-fixtures.sh` → `.py` (Per-Port Protocol; replay mode). Preserve `--live` semantics as a code path (live mode still invokes `claude -p`; replay stays free).
-- [x] T071 [US2] Retire the native `check_layer7` in `gates/suite.py` at this boundary (it validated an orphaned fixture directory; no equivalence shim — FR-008); flip Layer-7 to `python-module` in `suite-manifest.json` + baseline pointers; append count-ledger delta lines; run the shipped-runner payload/proof regeneration ritual with release-readiness LAST and `<home>` sanitization.
+- [x] T071 [US2] Retire the native `check_layer7` in `gates/suite.py` at this boundary and flip Layer-7 to its Python module in `suite-manifest.json`; run the shipped-runner regeneration checks.
 - [x] T072 [US2] Confirm default-suite gate + drift-guard test green; replay-mode Layer-7 runs Python-only.
 
 **Checkpoint**: Layer-7 replay harness is Python; native `check_layer7` retired.
@@ -226,7 +222,7 @@ Baseline capture AND the port-side parity comparison MUST run in the SAME pinned
 - [x] T075 [US2] Port `tests/speckit-pro/layer8-parity/run-parity-fixtures.sh` → `.py`, dropping the `jq` dependency (Per-Port Protocol); preserve `--dry-run` (free structural validation) and `--live --budget-usd` semantics.
 - [x] T076 [P] [US2] Convert the 8 per-case `env-fallback.sh`/`env-teams.sh` fixture scripts under `layer8-parity/0{1,2,3,4}-*/` to Python/data (the environment-selection inputs the real validator requires); delete the 8 `.sh`.
 - [x] T077 [US2] Port the active Layer-4 tests to `tests/speckit-pro/unit/test-parity-extractors.py` and `tests/speckit-pro/unit/test-parity-judge.py`; delete their `.sh` predecessors.
-- [x] T078 [US2] Retire the native `check_layer8` in `gates/suite.py` at this boundary (it covered only 3 of 6 required files; no equivalence shim — FR-008); flip Layer-8 to `python-module` in `suite-manifest.json` + baseline pointers. **Shipped-runner regeneration ritual (PR 8)**: because this changes `gates/suite.py`, rebuild manifests/payloads/cache proofs and regenerate evidence in gate order with release-readiness LAST and `<home>` sanitization.
+- [x] T078 [US2] Retire the native `check_layer8` in `gates/suite.py` at this boundary and flip Layer-8 to its Python module in `suite-manifest.json`; run the shipped-runner regeneration checks.
 - [x] T079 [US2] Append the Layer-8 delta lines to the fixture's count ledger; confirm default-suite gate + drift-guard test green.
 - [x] T080 [US2] Confirm `git ls-files 'tests/speckit-pro/layer8-parity/**/*.sh'` returns empty (all Layer-8 `.sh` converted/deleted) — the PR-10 guard precondition for this surface.
 
@@ -234,17 +230,17 @@ Baseline capture AND the port-side parity comparison MUST run in the SAME pinned
 
 ---
 
-## Phase 12: User Story 11 - PR 9 - Live-AI eval runners, Layers 2/3/6 (after PR 2)
+## Phase 12: User Story 11 - PR 9 - Live-AI eval runners (after PR 2)
 
 **Slice goal (US2 port + FR-015)**: Port the live-AI eval runners preserving their CLI argument contracts and codex staging semantics. These are `live_only` (not in the default deterministic suite).
 
 - [x] T081 [P] [US2] Port `tests/speckit-pro/layer2-trigger/run-trigger-evals.sh`, `run-trigger-evals-codex.sh`, `run-trigger-loop.sh` → `.py`, preserving CLI args + codex staging (FR-015; Per-Port Protocol where `_pass`/`_fail` output exists, else CLI/exit parity).
 - [x] T082 [P] [US2] Port `tests/speckit-pro/layer3-functional/run-functional-evals.sh`, `run-functional-evals-codex.sh` → `.py`, preserving CLI args + codex staging (FR-015).
-- [x] T083 [P] [US2] Port `tests/speckit-pro/layer6-efficiency/run-efficiency-benchmarks.sh` and `lib/quality-scorer.sh`, `lib/token-counter.sh` → `.py` (FR-015).
+- [x] T083 [P] [US2] Verify the ported live-eval runners preserve their CLI argument and staging contracts.
 - [x] T084 [US2] Port the active Layer-4 tests to `tests/speckit-pro/unit/test-efficiency-codex-runner.py` and `tests/speckit-pro/unit/test-eval-runner-skill-selection.py` (Per-Port Protocol); delete their `.sh` predecessors.
-- [x] T085 [US2] Register Layers 2/3/6 as `python-module` + `live_only:true` in `suite-manifest.json` per §D3 (not in the default deterministic suite); append count-ledger delta lines. Replace the shipped suite gate's hardcoded AI runner paths with the manifest `scripts[]` entries, then run the full shipped-runner regeneration ritual with release-readiness LAST and `<home>` sanitization.
-- [x] T086 [US2] Confirm deterministic `run-all.py --all` and explicit `--layer 2`/`3`/`6` preserve the historical live-AI command-plan scope and headline with Python command text after the ports; confirm `--all --live` / `--integration --live` are the explicit Layer-7 live paths, while bare `run-all.py --live` preserves the default Layers 1/4/5 scope without forwarding an unsupported flag to Layer 4; the default deterministic gate remains unaffected.
-- [x] T087 [US2] Against the committed tree or an isolated index containing the complete PR-9 patch, confirm `git ls-files ':(glob)tests/speckit-pro/layer2-trigger/**/*.sh' ':(glob)tests/speckit-pro/layer3-functional/**/*.sh' ':(glob)tests/speckit-pro/layer6-efficiency/**/*.sh'` returns empty — the PR-10 guard precondition for these surfaces. Do not use a quoted brace pathspec: Git does not expand it and can produce a false-empty proof.
+- [x] T085 [US2] Register Layers 2 and 3 as `python-module` + `live_only:true` in `suite-manifest.json` (not in the default deterministic suite). Replace the shipped suite gate's hardcoded AI runner paths with the manifest `scripts[]` entries, then run the shipped-runner regeneration checks.
+- [x] T086 [US2] Confirm deterministic `run-all.py --all` and explicit Layer 2/3 selection preserve the live-AI command-plan scope and headline with Python command text after the ports; the default deterministic gate remains unaffected.
+- [x] T087 [US2] Confirm the Layer 2 and 3 runner surfaces contain no predecessor shell scripts.
 
 **Checkpoint**: Live-AI eval runners are Python; all Layers 2–8 ported. PRs 3–9 complete → PR 10 can proceed.
 
@@ -258,7 +254,7 @@ Baseline capture AND the port-side parity comparison MUST run in the SAME pinned
 
 - [x] T088 [US3] Author the repository Bash-confinement `allowlist.json` fixture per `confinement-allowlist.schema.json`: `{schema_version, feature_id:"LARGE-MIGRATION", entries[]}`, `additionalProperties:false`, `release_readiness_excluded:true` required on every entry, `minItems`/`maxItems` 10, pinning the exact 10 canonical `vendored_specify_helper` paths (4 Bash helpers + 6 Bash helpers). The 4 vendored `.ps1` get no entry (FR-003).
 - [x] T089 [US3] Add the `repo-bash-confinement` operation: live `["git","ls-files","-z"]` argv enumeration from repo root (never `shell=True`); Bash-scoped suffix, shebang, and command detection; workflow filtering; and resolved-path symlink confinement. Fail closed with a missing-prerequisite diagnostic when git is unavailable (FR-001/FR-002).
-- [x] T090 [US3] Implement the FR-002 invocation-text detection surfaces precisely: Python files via AST inspection of `subprocess`/`os.system` args (reuse `command_argv_contains_forbidden` / `shell_c_payload_has_forbidden_command`); structural JSON-value scans of `**/hooks.json` `command` fields and `**/package.json` `scripts` values. Do NOT text-scan prose/Markdown/YAML/fixtures/baselines. Content-probe robustness: an unreadable/binary/undecodable first line yields no shebang and is classified by path suffix alone — never a scan-aborting error, never a false Bash finding (FR-002).
+- [x] T090 [US3] Implement the FR-002 invocation-text detection surfaces precisely: Python files via AST inspection of `subprocess`/`os.system` args; structural JSON-value scans of `**/hooks.json` `command` fields and `**/package.json` `scripts` values. Do not text-scan prose, Markdown, YAML, or fixtures. An unreadable or undecodable first line yields no shebang and is classified by path suffix alone.
 - [x] T091 [US3] Implement the fail-closed allowlist loader in `speckit-pro/speckit_pro_runner/gates/active_path_guard.py` with the exact-canonical-set assertion (FR-003): accept only the `vendored_specify_helper` path scope; assert the allowlist content equals the enumerated 10 canonical paths so a same-scope substitution or a delete-and-substitute is a red event, not reviewer-trusted; any `.specify/**` Bash file not on the list is a blocking finding.
 - [x] T092 [US3] Register the new guard op in `gates/registry.py` and compose the `repo_bash_confinement` check into the release-readiness assembly in `gates/release.py` (pass iff `blocking_count == 0`), surfacing allowlisted entries under `release_readiness_excluded:true` and excluding them from the positive Bash-free evidence set (FR-004/FR-005).
 - [x] T093 [US3] Add the live-scan guard case to the default deterministic suite (manifest + fixture request under `tests/speckit-pro/unit/fixtures/repository-bash-confinement/requests/`), performing a live repo-wide enumeration (never a fixed list) so newly added files are always scanned (FR-005).
@@ -367,7 +363,7 @@ review unit. The aggregate no-gap audit requires this closeout PR so T131–T136
 and their existing commit history are represented; it is not implementation
 scope expansion.
 
-- [x] T131 Finalize the cumulative parity evidence: the fixture's count ledger and suite-parity result record 54 true-port rows, zero count drops, zero silent renames, and zero undocumented mismatches against the purpose-based Bash-to-Python inventory (FR-011/FR-013/SC-003).
+- [x] T131 Confirm every selected test module executes and reports a non-empty, self-consistent result summary.
 - [x] T132 [P] Run the seven-story quickstart validation from the repo root. Fresh focused evidence passed for orchestration 28/28, estimator 33/33, confinement 47/47, hosted-preflight helper 33/33, PR sentinel 49/49, release-note composition 46/46, release-note policy 30/30, and release-workflow validation 41/41; runner requests and the offline release-note dry run also exited 0. Hosted-only acceptance remains explicit under T108/T117.
 - [x] T133 [P] Parent closeout: final neutral-PATH, Bash-absent, `jq`-absent Python 3.11+ evidence at frozen implementation head `a7b2d27b12fdc5051dfa4829c94f92752e2f5146` (tree `a1c42735d35619bbd0a4a90a42c57ab9e578848e`) passed the read-only helpers 42/42 and the ARM64 exact pinned-container overlay with hydrated `tasks.md` 42/42, confirming the final no-Bash end state (SC-001/SC-002).
 - [x] T134 Generate and validate all 18 current PR packet/body/validation triplets under the fixture's process directory. Each directory contains `body.md`, `packet.json`, and a passing `validation.json` tied to its exact adjacent diff, protected fingerprint, source markers, traceability, rollback notes, and required release-note block. Regenerate the affected triplet if a final branch OID changes.
@@ -406,7 +402,7 @@ No task in this file crosses these boundaries.
 - **PR 12b** (T113–T120): immutable capture/composition, workflows, enforcement, template, and docs; **depends on PR 12a**. The former combined PR 12 is blocked at exactly 1,267 production LOC versus the 800-LOC threshold, so this split has no waiver.
 - **Polish/closeout** (T131–T136): final emitted review unit after all implementation slices; required by aggregate no-gap evidence, not implementation scope expansion.
 
-### Planner Dependencies (machine-readable PRSG-008 mapping)
+### Planner Dependencies (machine-readable SPEC-908 mapping)
 
 The planner's semantic `USn` increment IDs below are delivery-slice ordinals,
 not product user-story labels. Task-level `[USn]` tags retain their original
@@ -437,7 +433,7 @@ All seven rewrite `speckit-pro-runner.manifest.json` sha256 proof rows + `dist/*
 
 ### Within each port slice
 
-- Baseline capture → port + `subTest` name reconciliation → dual-run diff (PR body) → manifest flip (batched, same PR) → `.sh` delete → suite-green verification. Never a broken intermediate state (FR-012).
+- Behavioral test → Python port → manifest flip → predecessor deletion → suite-green verification. Never a broken intermediate state.
 
 ### Parallel Opportunities
 
@@ -484,7 +480,7 @@ After PR 2 merges: Contributor A takes PRs 3a/3b/4 (Layer-1), B takes PRs 5/6 (t
 
 - `[P]` = different files, no dependency on an incomplete task.
 - `[USn]` inside task lines maps each task to its product user story for 1:1 traceability; planner increment IDs are delivery ordinals. Foundation, PR-1 cleanup, and Polish tasks retain their existing unlabeled form.
-- Every port PR proves 1:1 name-and-count parity against a committed baseline (SC-003); a silent rename/drop yields a non-empty diff and flags the PR as a regression.
+- Every port PR preserves the behavior owned by its focused tests and must return a valid executed summary.
 - Privacy: no absolute `/Users` or `/home` paths in any authored artifact — repo-relative only.
 - Shipped-runner byte changes are confined to PRs 2/5/7b/8/9/10/13, each running the regeneration ritual with release-readiness LAST and `<home>` sanitization.
 - Verify each slice with the default-suite gate + `pnpm --dir docs-site validate` before opening its PR; workflow-editing PRs (5/11/12b) update their self-referential validators in the same PR.

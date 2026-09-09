@@ -18,7 +18,6 @@ from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 CHECKER = REPO_ROOT / "tests" / "speckit-pro" / "check-toolchain.py"
-BASELINE = REPO_ROOT / "tests" / "speckit-pro" / "parity" / "bash-to-python" / "test-check-toolchain-baseline.txt"
 
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
@@ -26,7 +25,6 @@ for path in (PLUGIN_ROOT, LIB_DIR):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 from speckit_pro_runner.gates.active_path_guard import repo_bash_python_findings  # noqa: E402
-from capture_baseline import baseline_inventory  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
@@ -153,7 +151,6 @@ class CheckToolchainTests(unittest.TestCase):
             shell_output = merged_output(shell_result)
             missing_git_output = merged_output(missing_git)
 
-            self.assertEqual(baseline_inventory(BASELINE), CURRENT_INVENTORY)
             checks = [
                 (CURRENT_INVENTORY[0], lambda: self.assertTrue(CHECKER.is_file())),
                 (CURRENT_INVENTORY[1], lambda: self.assertTrue(os.access(CHECKER, os.X_OK))),

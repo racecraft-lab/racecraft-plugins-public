@@ -1,15 +1,9 @@
-# Fixture 19 — Phase 7 `[P]` parallel task dispatch (WS-D2)
+# Fixture 19 — Phase 7 `[P]` parallel task dispatch
 
 Verifies that when tasks.md contains consecutive `[P]`-tagged tasks of
 the same agent type, the orchestrator dispatches them as a parallel
 run in ONE assistant message via background subagents with
 `isolation: worktree`.
-
-This is the regression safety net for **Use site 3** in the
-[Agent Teams integration map](../../../../skills/speckit-autopilot/references/agent-teams-integration.md)
-and closes the audit B1 "documented-vs-shipped" gap (the prior
-implementation described `[P]` parallelism in phase-execution.md
-but never authorized the orchestrator to execute it).
 
 ## Scenario
 
@@ -27,8 +21,8 @@ in ONE assistant message, each with `isolation: "worktree"` and
 
 ## What this fixture catches
 
-- Regression to per-task serial dispatch (the pre-WS-D2 state) — only
-  0-1 dispatches in the parser-fixture's first assistant message
+- Regression to per-task serial dispatch — only 0-1 dispatches in the
+  parser-fixture's first assistant message
 - Missing `isolation: "worktree"` — flagged by description content
   in the parser fixture
 - Wrong agent routing (e.g., orchestrator-direct instead of

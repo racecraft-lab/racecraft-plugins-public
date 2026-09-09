@@ -1,8 +1,0 @@
-001 baseline inventory is truthful and ordered
-002 in-process SIGTERM maps to exit 143
-003 in-process SIGTERM restores the moved production skill
-004 in-process SIGTERM leaves no eval-disabled backup
-005 POSIX subprocess SIGTERM maps to exit 143
-006 POSIX subprocess SIGTERM restores the moved production skill
-007 termination path emits an explicit restoration diagnostic
-TOTAL: 7

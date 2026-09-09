@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Layer-4 contracts for the Python Layer-8 parity judge.
-
-Port target for ``test-parity-judge.sh`` (XPLAT-010 T074). The retired LLM-shim
-inventory and truthful deterministic replacement inventory are both pinned at
-``TOTAL: 16``. Their intentional name divergence records T074's boundary guard.
-"""
+"""Layer-4 contracts for the Python Layer-8 parity judge."""
 
 from __future__ import annotations
 
@@ -21,17 +16,13 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TESTS_ROOT = REPO_ROOT / "tests" / "speckit-pro"
 JUDGE = TESTS_ROOT / "layer8-parity" / "lib" / "judge.py"
-BASELINE = TESTS_ROOT / "parity" / "bash-to-python" / "test-parity-judge-baseline.txt"
-BASH_BASELINE = TESTS_ROOT / "parity" / "bash-to-python" / "test-parity-judge-bash-baseline.txt"
 LIB_DIR = TESTS_ROOT / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
-from capture_baseline import baseline_inventory  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
 CURRENT_INVENTORY = [
-    "current and retired judge inventories are explicit",
     "deterministic judge module imports",
     "local comparison arms are byte-identical exact tolerance-1",
     "byte-identical files pass",
@@ -93,78 +84,70 @@ class Layer8JudgeTests(unittest.TestCase):
             word.write_text("two\n", encoding="utf-8")
             judge = import_judge()
 
+            names = iter(CURRENT_INVENTORY)
             checks = [
-                (CURRENT_INVENTORY[0], lambda: self._assert_inventory_contract()),
-                (CURRENT_INVENTORY[1], lambda: self.assertIsNotNone(judge)),
+                (next(names), lambda: self.assertIsNotNone(judge)),
                 (
-                    CURRENT_INVENTORY[2],
+                    next(names),
                     lambda: self.assertEqual(
                         judge.COMPARISON_ARMS,
                         ("byte-identical", "exact", "tolerance-1"),
                     ),
                 ),
                 (
-                    CURRENT_INVENTORY[3],
+                    next(names),
                     lambda: self.assertEqual(judge.judge_files(same_a, same_b, "byte-identical").status, "pass"),
                 ),
                 (
-                    CURRENT_INVENTORY[4],
+                    next(names),
                     lambda: self.assertTrue(judge.judge_files(same_a, same_b, "byte-identical").matched),
                 ),
                 (
-                    CURRENT_INVENTORY[5],
+                    next(names),
                     lambda: self.assertEqual(judge.judge_files(same_a, drift_b, "byte-identical").status, "fail"),
                 ),
                 (
-                    CURRENT_INVENTORY[6],
+                    next(names),
                     lambda: self.assertEqual(judge.judge_values("PASS\nPASS", "PASS\nPASS", "exact").status, "pass"),
                 ),
                 (
-                    CURRENT_INVENTORY[7],
+                    next(names),
                     lambda: self.assertEqual(judge.judge_values("PASS\nPASS", "FAIL\nPASS", "exact").status, "fail"),
                 ),
                 (
-                    CURRENT_INVENTORY[8],
+                    next(names),
                     lambda: self.assertEqual(judge.judge_files(one, two, "tolerance-1").status, "pass"),
                 ),
                 (
-                    CURRENT_INVENTORY[9],
+                    next(names),
                     lambda: self.assertEqual(judge.judge_files(one, three, "tolerance-1").status, "fail"),
                 ),
                 (
-                    CURRENT_INVENTORY[10],
+                    next(names),
                     lambda: self.assertEqual(judge.judge_files(one, word, "tolerance-1").status, "fail"),
                 ),
                 (
-                    CURRENT_INVENTORY[11],
+                    next(names),
                     lambda: self.assertEqual(judge.judge_values("doctor clean", "doctor passes", "semantic-equivalent").status, "skip"),
                 ),
                 (
-                    CURRENT_INVENTORY[12],
+                    next(names),
                     lambda: self.assertTrue(judge.judge_values("doctor clean", "doctor passes", "semantic-equivalent").skipped),
                 ),
                 (
-                    CURRENT_INVENTORY[13],
+                    next(names),
                     lambda: self.assertEqual(judge.SUPPORTED_TOLERANCES, ("byte-identical", "exact", "tolerance-1", "semantic-equivalent")),
                 ),
                 (
-                    CURRENT_INVENTORY[14],
+                    next(names),
                     lambda: self.assertEqual(run_cli("semantic-equivalent", str(same_a), str(three)).returncode, 0),
                 ),
-                (CURRENT_INVENTORY[15], lambda: self._assert_cli_contract(same_a, same_b, three)),
+                (next(names), lambda: self._assert_cli_contract(same_a, same_b, three)),
             ]
 
-            self.assertEqual([name for name, _check in checks], CURRENT_INVENTORY)
             for name, check in checks:
                 with self.subTest(msg=name):
                     check()
-
-    def _assert_inventory_contract(self) -> None:
-        current = baseline_inventory(BASELINE)
-        retired = baseline_inventory(BASH_BASELINE)
-        self.assertEqual(current, CURRENT_INVENTORY)
-        self.assertEqual(len(retired), len(current))
-        self.assertNotEqual(retired, current)
 
     def _assert_cli_contract(self, same_a: Path, same_b: Path, three: Path) -> None:
         passing = run_cli("exact", str(same_a), str(same_b))

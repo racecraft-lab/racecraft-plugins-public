@@ -5,9 +5,8 @@
 three definitions on purpose: ``effort`` and ``memory`` are per-definition
 frontmatter, the Codex mirrors carry per-role reasoning effort, and the
 consensus protocol, the synthesizer input contract, and the Layer 7 dispatch
-fixtures are all keyed by agent name. Keeping three files means paying a sync
-tax, and this file is that payment. It fails when a shared block is edited in
-one body and not the other two.
+fixtures are all keyed by agent name. This file fails when a shared block is
+edited in one body and not the other two.
 
 Three blocks are shared word for word across the three Claude bodies:
 
@@ -28,15 +27,13 @@ shared block in one body is a real divergence and this file reports it.
 
 1. The Codex TOMLs write ``$speckit-analyze`` where the Claude bodies write
    ``/speckit-analyze``. The Codex checks map the one to the other.
-2. The ``### Terminal Deliverable`` paragraph reached the three Claude bodies
-   in PR #301 and none of the three Codex TOMLs. That omission is accepted, so
-   the Codex checks cover the Input bullets only.
+2. The Codex parity checks cover the Input bullets only; the ``### Terminal
+   Deliverable`` paragraph is outside those checks.
 
 The fourth ``Research Task`` input is domain-researcher's alone. Phase 7 routes
 implementation tasks whose descriptions match ``research``, ``investigate``, or
 ``explore API`` to that agent, outside the consensus protocol. That second
-dispatch path went undeclared in the agent's own contract, so its declaration
-gets its own assertion group here.
+dispatch path gets its own assertion group here.
 """
 
 from __future__ import annotations

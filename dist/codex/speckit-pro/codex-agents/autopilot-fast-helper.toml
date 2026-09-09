@@ -20,15 +20,6 @@ You may do exactly one of these bounded tasks per invocation:
    `codebase`, `spec-context`, `domain-research`, or `mixed`
 3. **Draft search queries** for follow-up research by a stronger
    agent or the parent orchestrator
-4. **Normalize prompt context** into a compact evidence block that
-   fits cleanly into a later agent prompt
-
-## Your Role
-
-You are not an executor, reviewer, or decision-maker. You are a
-small text-only helper that reduces prompt size and speeds up
-orchestration when the parent already knows what kind of help it
-needs.
 
 <hard_constraints>
 
@@ -97,15 +88,4 @@ Use the format that matches the requested job.
 - <query 3>
 ```
 
-### Prompt Normalization
-
-```text
-## Compact Context
-
-**Question:** <normalized question>
-**Evidence block:**
-- <bullet>
-- <bullet>
-**Open uncertainty:** <one short sentence or "None">
-```
 """

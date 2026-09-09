@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0",
+  "request_id": "validate-pr-title-live",
+  "helper_id": "release-readiness",
+  "operation": "validate-pr-title",
+  "mode": "read_only",
+  "inputs": {
+    "title_env": "TITLE"
+  }
+}

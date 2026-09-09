@@ -3,7 +3,7 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "Invoke the Python runner with one JSON request on stdin using helper_id=check-prerequisites, operation=check-prerequisites, mode=read_only, and inputs.workflow_file=docs/ai/specs/.process/XPLAT-005-workflow.md. Report whether the SpecKit CLI, project initialization, workflow, and branch checks pass.",
+      "prompt": "The run setup materializes fixtures/autopilot/SPEC-805/ into the disposable project and creates the declared registered worktree before execution. Invoke the Python runner with one JSON request on stdin using helper_id=check-prerequisites, operation=check-prerequisites, mode=read_only, and inputs.workflow_file=docs/ai/specs/.process/SPEC-805-workflow.md. Report whether the SpecKit CLI, project initialization, workflow, and branch checks pass.",
       "expected_output": "Invokes [resolved_python, -m, speckit_pro_runner] with the structured check-prerequisites request and reads the response envelope's data.stdout_json. The all_pass field summarizes the per-check results.",
       "expectations": [
         "Invokes [resolved_python, -m, speckit_pro_runner] with one JSON request on stdin and no shell fallback",
@@ -202,7 +202,7 @@
     },
     {
       "id": 16,
-      "prompt": "Run autopilot end-to-end on docs/ai/specs/SPEC-009-workflow.md and report each phase's actions. I want to verify autopilot never accidentally invokes grill-me during any phase.",
+      "prompt": "The run setup materializes fixtures/autopilot/SPEC-009/ into the disposable project and creates its declared registered worktree before execution. Run autopilot end-to-end on docs/ai/specs/SPEC-009-workflow.md and report each phase's actions. I want to verify autopilot never accidentally invokes grill-me during any phase.",
       "expected_output": "Runs all 7 phases (specify, clarify, plan, checklist, tasks, analyze, implement) without invoking $grill-me at any point. The clarify phase uses the read-only clarify-executor handoff plus parent-applied answers and consensus; gate failures are reported, not escalated to grill-me.",
       "expectations": [
         "Executes all 7 phases without invoking $grill-me",
@@ -303,7 +303,7 @@
     },
     {
       "id": 24,
-      "prompt": "Pretend you just finished Phase 6 (Analyze) for a feature and the consensus-synthesizer wrote this block to the workflow log:\n\n```\n📊 Confidence: 0.85\n\n- Task understanding: 0.95\n- Approach clarity: 0.80\n- Requirements alignment: 0.90\n- Risk assessment: 0.75\n- Completeness: 0.85\n```\n\nThe project's `.codex/speckit-pro.local.md` has no `confidence_gate_mode` key. The operator is about to start Phase 7 (Implement) via `$speckit-autopilot`. Walk through the resolve-confidence-mode and confidence-gate runner requests, the helper exit code, remediation behavior, and the alternate behavior for `--strict`. Explain why `/goal` cannot be the safety bound in headless `codex exec`.",
+      "prompt": "Pretend you just finished Phase 6 (Analyze) for a feature and the consensus-synthesizer wrote this block to the workflow log:\n\n```\n📊 Confidence: 0.85\n\n- Task understanding: 0.95\n- Approach clarity: 0.80\n- Requirements alignment: 0.90\n- Risk assessment: 0.75\n- Completeness: 0.85\n```\n\nThe project's `.codex/speckit-pro.local.md` has no `confidence_gate_mode` key. The operator is about to start Phase 7 (Implement) via `$speckit-autopilot`. Walk through the resolve-confidence-mode and confidence-gate runner requests, the helper exit code, remediation behavior, and the alternate behavior for `--strict`. Explain how the maximum 3-iteration remediation loop is enforced in both advisory and strict modes, independent of optional goal UX.",
       "expected_output": "Explains the G6.5 behavior end-to-end in Codex: resolve-confidence-mode runs once during pre-flight and returns advisory, then confidence-gate reads the workflow emit with mode_name=advisory and threshold 0.90. Its data.exit_code is 2 with stdout_json.pass=false because 0.85 is below 0.90. The orchestrator identifies Risk Assessment at 0.75, dispatches focused remediation through spawn_agent, re-emits, and re-runs up to 3 times. Strict mode stops before Phase 7 after remediation remains below threshold.",
       "expectations": [
         "Names the confidence-gate read-only runner helper and its workflow_file, mode_name, and threshold inputs",
@@ -312,7 +312,7 @@
         "Explains advisory mode behavior: log + remediate the lowest criterion + re-emit via spawn_agent consensus-synthesizer + re-run (max 3 iterations), then continue to Phase 7",
         "Explains strict mode behavior: STOP before Phase 7",
         "States that mode resolution happens once at Step 0.6b via runner helper resolve-confidence-mode and is cached as CONFIDENCE_GATE_MODE for G6.5 to read",
-        "Explains explicitly that /goal is not first-class in codex exec (cites openai/codex#21764 maintainer reply or equivalent) and that the 3-iteration cap is therefore the only safety bound in headless mode",
+        "States that strict and advisory remediation are both bounded to a maximum of 3 iterations, independent of optional goal UX",
         "Notes that resolve-confidence-mode checks both .claude/speckit-pro.local.md and .codex/speckit-pro.local.md as default config paths"
       ]
     },
@@ -388,23 +388,23 @@
     },
     {
       "id": 29,
-      "prompt": "During $speckit-autopilot startup, the workflow target has adjacent legacy candidates: specs/prsg-011-legacy has root analysis.md and uat-report.md with no structureVersion and is not named by .specify/feature.json; specs/prsg-012-active is the active in-flight feature; specs/prsg-013-current already carries SPEC-MOC.md structureVersion: 1 and its process files are already under .process/; specs/prsg-014-empty has only CONTRACT artifacts; specs/team-123-legacy and specs/2026-06-legacy are outside the SpecKit namespace. What should the autopilot report before continuing, and may it run the Tier-2 codemod itself?",
+      "prompt": "During $speckit-autopilot startup, the workflow target has adjacent legacy candidates: specs/spec-911-legacy has root analysis.md and uat-report.md with no structureVersion and is not named by .specify/feature.json; specs/spec-912-active is the active in-flight feature; specs/spec-913-current already carries SPEC-MOC.md structureVersion: 1 and its process files are already under .process/; specs/spec-914-empty has only CONTRACT artifacts; specs/team-123-legacy and specs/2026-06-legacy are outside the SpecKit namespace. What should the autopilot report before continuing, and may it run the Tier-2 codemod itself?",
       "expected_output": "Reports only the thawed eligible PRSG legacy spec as a Tier-2 relocation candidate, then states relocate-process-artifacts is promotion_status=deferred, has no authoritative runner request, and is unavailable. Leaves PROCESS artifacts unchanged, suppresses all ineligible candidates, and explicitly rejects invoking the retired relocate-process-artifacts.sh path or advertising runner modes.",
       "expectations": [
-        "Suggests Tier-2 relocation only for specs/prsg-011-legacy",
+        "Suggests Tier-2 relocation only for specs/spec-911-legacy",
         "Names relocate-process-artifacts as promotion_status=deferred with no authoritative runner request",
         "States no dry_run, apply, or replacement runner command is available",
         "Leaves the eligible candidate's PROCESS artifacts unchanged and records the deferred gap",
-        "Reports specs/prsg-012-active as frozen/in-flight and suppresses the Tier-2 suggestion",
-        "Reports specs/prsg-013-current as already current or already normalized and suppresses the Tier-2 suggestion",
-        "Reports specs/prsg-014-empty as no Tier-2 candidate because no relocatable PROCESS artifacts exist",
+        "Reports specs/spec-912-active as frozen/in-flight and suppresses the Tier-2 suggestion",
+        "Reports specs/spec-913-current as already current or already normalized and suppresses the Tier-2 suggestion",
+        "Reports specs/spec-914-empty as no Tier-2 candidate because no relocatable PROCESS artifacts exist",
         "Suppresses suggestions for specs/team-123-legacy with reason non_speckit_namespace and specs/2026-06-legacy with reason date_named_legacy_namespace",
         "States that $speckit-autopilot must not invoke the retired relocate-process-artifacts.sh path, the deferred operation, or an invented replacement"
       ]
     },
     {
       "id": 30,
-      "prompt": "Tasks just passed G5 and runner helper atomicity-route returned route=split-PR for specs/prsg-008-layer-planner. Walk through the Codex layer-plan gate before Analyze or Implement starts. Which runner request runs, what happens on helper exit 0 with warnings, what exact stop line appears on exit 1, what happens on exit 2, and what if the route is one-navigable-PR instead?",
+      "prompt": "Tasks just passed G5 and runner helper atomicity-route returned route=split-PR for specs/spec-908-layer-planner. Walk through the Codex layer-plan gate before Analyze or Implement starts. Which runner request runs, what happens on helper exit 0 with warnings, what exact stop line appears on exit 1, what happens on exit 2, and what if the route is one-navigable-PR instead?",
       "expected_output": "Explains that Codex invokes the plan-layers-feature-dir read-only runner helper only when the recorded atomicity route is exactly split-PR, before Analyze or Implement. Exit 0 persists the full versioned envelope under layer_plan in autopilot-state.json, writes a workflow ## Layer Plan summary, carries warnings forward, and continues. Exit 1 prints the fixed invalid_plan stop line; exit 2 is a distinct input_error. Non-split routes skip planning and record layer_plan.status=skipped.",
       "expectations": [
         "States that runner helper plan-layers-feature-dir runs only when the recorded atomicity route is exactly split-PR",
@@ -422,12 +422,12 @@
     },
     {
       "id": 31,
-      "prompt": "A Codex autopilot run has finished Phase 7 and full verification for a feature whose PRSG-008 layer-plan fixture has three ordered increments: foundation, us1, and us2. Describe the post-implementation PR creation behavior required by PRSG-009 multi-PR emission. Include update_plan/autopilot-state.json handling, branch/base topology, scoped verification evidence, durable PRS rows, resume, failed-slice blocking, restack, and what must not change.",
+      "prompt": "A Codex autopilot run has finished Phase 7 and full verification for a feature whose SPEC-908 layer-plan fixture has three ordered increments: foundation, us1, and us2. Describe the post-implementation PR creation behavior required by SPEC-909 multi-PR emission. Include update_plan/autopilot-state.json handling, branch/base topology, scoped verification evidence, durable PRS rows, resume, failed-slice blocking, restack, and what must not change.",
       "expected_output": "Explains that Codex keeps all 14 Post items active, consumes the plan-layers-feature-dir envelope as the only slice source, and may use multi-pr-emission only for golden_only command-plan capture after full verification. The helper does not emit packets or execute PRs, so every slice emits or refreshes a feature-local packet with pr-packet-output, passes validate-pr-packet-read-only via data.stdout_json, checkpoints packet/body artifacts so validate-pr-packet-write can rerun current validation from a clean worktree and persist it, and then uses an explicit packet-owned gh pr create command. It keeps source evidence separate from emitted branch prefixes, persists PRS/resume state, blocks failed slices, and treats restack as deferred with direct gh pr edit --base fallback.",
       "expectations": [
         "States that all canonical Post items remain in update_plan and autopilot-state.json until completed or explicitly skipped",
-        "States that PRSG-008 runner helper plan-layers-feature-dir output is the authoritative ordering and membership source",
-        "States that PRSG-009 does not infer, reroute, or re-slice work and does not add PRSG-010 routing/backstop heuristics",
+        "States that SPEC-908 runner helper plan-layers-feature-dir output is the authoritative ordering and membership source",
+        "States that SPEC-909 does not infer, reroute, or re-slice work and does not add SPEC-910 routing/backstop heuristics",
         "Uses multi-pr-emission only for golden_only command-plan capture after implementation and full default verification; it does not emit packets or execute live PR creation",
         "Uses --source-feature-dir specs/<feature> to keep the source evidence directory separate when the emitted branch prefix must differ to avoid Git ref namespace conflicts",
         "Emits N ordered PRs from the fixture increments rather than one flattened all-changes PR",
@@ -443,12 +443,12 @@
         "Stops before gh pr create when scoped verification or packet validation fails for a slice and keeps next_slice_id on the blocked slice",
         "States that a later failed slice does not rewind or invalidate earlier opened slice PRs",
         "States restack is deferred with no authoritative request and uses direct packet-owned gh pr edit <number> --base <branch> fallback preserving declared slice scope",
-        "States that PRSG-009 scoped CI is recorded evidence and must not modify .github/workflows/pr-checks.yml"
+        "States that SPEC-909 scoped CI is recorded evidence and must not modify .github/workflows/pr-checks.yml"
       ]
     },
     {
       "id": 32,
-      "prompt": "During $speckit-autopilot in Codex, G5 has passed and committed task-mode reviewability evidence records mode=tasks, status=block, with size as the only reason. The installed reviewability-gate runner helper supports setup mode only, so tasks mode is deferred. The evidence path is specs/prsg-013-reviewability-markers/.process/reviewability/tasks-gate.json and the current marker-plan fingerprint matches all inputs. Later, current committed final reviewability evidence says the full diff is still too large; final-reviewability-backstop is also deferred. Should Codex stop for manual re-slicing, rewrite tasks.md, or continue?",
+      "prompt": "During $speckit-autopilot in Codex, G5 has passed and committed task-mode reviewability evidence records mode=tasks, status=block, with size as the only reason. The installed reviewability-gate runner helper supports setup mode only, so tasks mode is deferred. The evidence path is specs/spec-913-reviewability-markers/.process/reviewability/tasks-gate.json and the current marker-plan fingerprint matches all inputs. Later, current committed final reviewability evidence says the full diff is still too large; final-reviewability-backstop is also deferred. Should Codex stop for manual re-slicing, rewrite tasks.md, or continue?",
       "expected_output": "Continues through the valid current size-only block with marker evidence and no manual re-slicing stop. Treats the G5 status=block as marker-planning input, persists top-level pr_marker_plan in autopilot-state.json, mirrors workflow evidence rather than authoring marker state in tasks.md, executes and checkpoints implementation in ordered marker IDs, and at the final backstop proceeds with final marker_split and marker-based PR emission. Records gate status/mode/exit/evidence path, fingerprint status, ordered marker IDs, checkpoints, warnings, final marker_split, packet validation, spec-scoped plain-English marker-derived PR titles/bodies, and PR mappings using repo-relative paths. Still stops on malformed/stale marker state, failed verification, invalid packet, unsafe output, unusable gate evidence, invalid JSON, unreadable artifacts, missing status/mode, stale fingerprints, generic marker titles, packet-mechanics PR bodies, raw evidence dumps in PR bodies, or non-size safety findings.",
       "expectations": [
         "States that a valid current size-only block continues and is not a manual re-slicing stop",
@@ -471,16 +471,16 @@
     },
     {
       "id": 33,
-      "prompt": "A Codex parent session has reached post-implementation PR creation for documentation specs. DOC-004 has a single generated PR packet for specs/doc-004-codex-marketplace-installation-path. DOC-003 has final marker_split evidence plus .process/emission/candidate/commands.candidate.json with five gh_pr_create operations. What must Codex do before opening PRs, and which title/splitting mistakes are forbidden?",
-      "expected_output": "Explains that the DOC-004 feature-local packet must be emitted or refreshed with a docs(DOC-004): title and pass validate-pr-packet-read-only through current data.stdout_json plus validate-pr-workflow-contract before gh pr create. generate-pr-body cannot create packet metadata. For DOC-003, final marker_split evidence and multiple candidate PR commands forbid an aggregate PR; Codex may use multi-pr-emission only for golden_only command-plan capture and must emit or refresh a valid packet per slice before PR creation.",
+      "prompt": "A Codex parent session has reached post-implementation PR creation for documentation specs. SPEC-704 has a single generated PR packet for specs/spec-704-codex-marketplace-installation-path. SPEC-703 has final marker_split evidence plus .process/emission/candidate/commands.candidate.json with five gh_pr_create operations. What must Codex do before opening PRs, and which title/splitting mistakes are forbidden?",
+      "expected_output": "Explains that the SPEC-704 feature-local packet must be emitted or refreshed with a docs(SPEC-704): title and pass validate-pr-packet-read-only through current data.stdout_json plus validate-pr-workflow-contract before gh pr create. generate-pr-body cannot create packet metadata. For SPEC-703, final marker_split evidence and multiple candidate PR commands forbid an aggregate PR; Codex may use multi-pr-emission only for golden_only command-plan capture and must emit or refresh a valid packet per slice before PR creation.",
       "expectations": [
-        "States that DOC-004 packet title scope must be DOC-004 and title type must be docs, e.g. docs(DOC-004): ...",
+        "States that SPEC-704 packet title scope must be SPEC-704 and title type must be docs, e.g. docs(SPEC-704): ...",
         "States that feat(speckit-pro): is forbidden for spec-backed DOC implementation PRs",
-        "Requires emitting or refreshing the feature-local DOC-004 packet and runs validate-pr-packet-read-only before a single PR",
+        "Requires emitting or refreshing the feature-local SPEC-704 packet and runs validate-pr-packet-read-only before a single PR",
         "States generate-pr-body writes only one Markdown body from output_path, title, and sections and does not create DOC packet metadata",
         "Runs runner helper validate-pr-workflow-contract with the generated packet title and changed-file list before any single gh pr create",
         "States that final marker_split evidence plus multiple gh_pr_create candidate operations forbids a single aggregate PR",
-        "Allows multi-pr-emission only for golden_only command-plan capture on the DOC-003 split route and otherwise stops with validator or packet-emission failure evidence",
+        "Allows multi-pr-emission only for golden_only command-plan capture on the SPEC-703 split route and otherwise stops with validator or packet-emission failure evidence",
         "States Codex must not manually issue one gh pr create for all changed files when split candidate artifacts exist",
         "Requires each split PR creation to use packet-owned --base, --head, --title, and --body-file arguments",
         "States invalid packet, invalid workflow contract, stale validation, or aggregate split-contract failures block before PR creation",
@@ -489,11 +489,11 @@
     },
     {
       "id": 34,
-      "prompt": "I invoked $speckit-autopilot /repo/.worktrees/g56r-001/docs/ai/specs/.process/G56R-001-workflow.md --stage plan from a Codex task rooted at /repo. The helper returns binding_status=resolved, task_root=/repo, workflow_root=/repo/.worktrees/g56r-001, relation=descendant. May planning continue in this same task?",
-      "expected_output": "Yes. Binds the canonical workflow and every operation to /repo/.worktrees/g56r-001, verifies the feature branch, then permits Archive Sweep and planning in the same Codex task. Every shell workdir, helper, filesystem/state/Git operation, phase/consensus prompt, and write-capable agent targets WORKFLOW_ROOT; returned paths are validated before use.",
+      "prompt": "I invoked $speckit-autopilot /repo/.worktrees/spec-701/docs/ai/specs/.process/SPEC-701-workflow.md --stage plan from a Codex task rooted at /repo. The helper returns binding_status=resolved, task_root=/repo, workflow_root=/repo/.worktrees/spec-701, relation=descendant. May planning continue in this same task?",
+      "expected_output": "Yes. Binds the canonical workflow and every operation to /repo/.worktrees/spec-701, verifies the feature branch, then permits Archive Sweep and planning in the same Codex task. Every shell workdir, helper, filesystem/state/Git operation, phase/consensus prompt, and write-capable agent targets WORKFLOW_ROOT; returned paths are validated before use.",
       "expectations": [
         "Accepts resolved relation=descendant as eligible for same-task execution",
-        "Binds WORKFLOW_ROOT to /repo/.worktrees/g56r-001 and WORKFLOW_FILE to the canonical absolute file",
+        "Binds WORKFLOW_ROOT to /repo/.worktrees/spec-701 and WORKFLOW_FILE to the canonical absolute file",
         "Verifies the live workflow branch is not main, detached, release, or protected before Archive Sweep",
         "Sets every shell workdir and helper invocation to WORKFLOW_ROOT",
         "Passes the exact WORKFLOW_ROOT to phase, consensus, implementation, Post, and write-capable agent prompts",

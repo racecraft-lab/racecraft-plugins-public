@@ -15,6 +15,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_ROOT = ROOT / "speckit-pro"
+LIB_DIR = ROOT / "tests" / "speckit-pro" / "lib"
+if str(LIB_DIR) not in sys.path:
+    sys.path.insert(0, str(LIB_DIR))
+from test_result import run_counted  # noqa: E402
+
 MODULE_PATH = PLUGIN_ROOT / "speckit_pro_runner/agent_materialization.py"
 MODULE_IMPORT = "speckit_pro_runner.agent_materialization"
 SOURCE_PATH = "speckit-pro/codex-agents/fixture-agent.toml"
@@ -200,10 +205,10 @@ class AgentMaterializationTests(unittest.TestCase):
         self.assertNotEqual(result.source_binding["digest"], result.destination_bytes_digest)
         self.assertEqual(result.candidate_route, SELECTED_ROUTE)
 
-    def test_inserts_explicit_effort_when_source_omits_optional_route_field(self) -> None:
+    def test_inserts_explicit_route_when_source_inherits_both_route_fields(self) -> None:
         module = self.materializer()
         source_bytes = ROUTE_SOURCE_BYTES.replace(
-            b'model_reasoning_effort = "xhigh"\n',
+            b'model = "gpt-5.5"\nmodel_reasoning_effort = "xhigh"\n',
             b'',
         )
 
@@ -218,12 +223,23 @@ class AgentMaterializationTests(unittest.TestCase):
             b'model = "gpt-5.4"\nmodel_reasoning_effort = "high"\n',
             result.destination_bytes,
         )
+        source_policy = tomllib.loads(source_bytes.decode("utf-8"))
+        destination_policy = tomllib.loads(result.destination_bytes.decode("utf-8"))
+        self.assertEqual(destination_policy["model"], SELECTED_ROUTE["model"])
+        self.assertEqual(
+            destination_policy["model_reasoning_effort"],
+            SELECTED_ROUTE["model_reasoning_effort"],
+        )
+        self.assertEqual(
+            {field: destination_policy[field] for field in NON_ROUTE_FIELDS},
+            {field: source_policy[field] for field in NON_ROUTE_FIELDS},
+        )
         self.assertTrue(result.non_route_fields_unchanged)
 
-    def test_legacy_default_route_preserves_source_that_omits_optional_effort(self) -> None:
+    def test_default_route_preserves_source_that_inherits_both_route_fields(self) -> None:
         module = self.materializer()
         source_bytes = ROUTE_SOURCE_BYTES.replace(
-            b'model_reasoning_effort = "xhigh"\n',
+            b'model = "gpt-5.5"\nmodel_reasoning_effort = "xhigh"\n',
             b'',
         )
 
@@ -235,29 +251,57 @@ class AgentMaterializationTests(unittest.TestCase):
         )
 
         self.assertEqual(result.destination_bytes, source_bytes)
-        self.assertTrue(module.verify_destination_bytes(result, source_bytes))
+        self.assertEqual(result.destination_bytes_digest, sha256_digest(source_bytes))
         self.assertEqual(
             result.candidate_route,
             {
                 "agent_name": EXPECTED_ROUTE["agent_name"],
-                "model": EXPECTED_ROUTE["model"],
+                "model": "",
                 "model_reasoning_effort": "",
             },
         )
+        self.assertEqual(result.selected_model, "")
         self.assertEqual(result.selected_model_reasoning_effort, "")
 
-        explicit_without_effort = copy.deepcopy(SELECTED_ROUTE)
-        explicit_without_effort["model_reasoning_effort"] = ""
-        with self.assertRaisesRegex(
-            ValueError,
-            "candidate route requires non-empty model_reasoning_effort",
-        ):
-            module.materialize_agent_policy(
-                source_relative_path=SOURCE_PATH,
-                source_bytes=source_bytes,
-                candidate_route=explicit_without_effort,
-                parent_controls=copy.deepcopy(EXPECTED_PARENT_CONTROLS),
-            )
+        for field in ("model", "model_reasoning_effort"):
+            with self.subTest(field=field):
+                incomplete_route = copy.deepcopy(SELECTED_ROUTE)
+                incomplete_route[field] = ""
+                with self.assertRaisesRegex(
+                    ValueError,
+                    rf"candidate route requires non-empty {field}",
+                ):
+                    module.materialize_agent_policy(
+                        source_relative_path=SOURCE_PATH,
+                        source_bytes=source_bytes,
+                        candidate_route=incomplete_route,
+                        parent_controls=copy.deepcopy(EXPECTED_PARENT_CONTROLS),
+                    )
+
+    def test_read_only_analyst_sources_materialize_their_live_route_settings(self) -> None:
+        module = self.materializer()
+        for agent_name in ("codebase-analyst", "spec-context-analyst"):
+            with self.subTest(agent=agent_name):
+                source_path = PLUGIN_ROOT / "codex-agents" / f"{agent_name}.toml"
+                source_bytes = source_path.read_bytes()
+                source_policy = tomllib.loads(source_bytes.decode("utf-8"))
+                result = module.materialize_agent_policy(
+                    source_relative_path=f"speckit-pro/codex-agents/{agent_name}.toml",
+                    source_bytes=source_bytes,
+                    candidate_route=None,
+                    parent_controls={"sandbox_mode": "read-only"},
+                )
+                installed_policy = tomllib.loads(result.destination_bytes.decode("utf-8"))
+                self.assertEqual(
+                    (
+                        source_policy.get("model"),
+                        source_policy.get("model_reasoning_effort"),
+                        installed_policy.get("model"),
+                        installed_policy.get("model_reasoning_effort"),
+                    ),
+                    ("gpt-5.6-sol", "low", "gpt-5.6-sol", "low"),
+                )
+                self.assertEqual(result.destination_bytes, source_bytes)
 
     def test_legacy_default_route_preserves_original_model_formatting(self) -> None:
         module = self.materializer()
@@ -274,7 +318,7 @@ class AgentMaterializationTests(unittest.TestCase):
         )
 
         self.assertEqual(result.destination_bytes, source_bytes)
-        self.assertTrue(module.verify_destination_bytes(result, source_bytes))
+        self.assertEqual(result.destination_bytes_digest, sha256_digest(source_bytes))
 
     def test_route_materialization_preserves_non_route_fields(self) -> None:
         result = self.materialize_selected_route()
@@ -330,7 +374,6 @@ class AgentMaterializationTests(unittest.TestCase):
         self.assertEqual(first.materialization_id, second.materialization_id)
 
     def test_rejects_parsed_equivalent_toml_as_byte_proof(self) -> None:
-        module = self.materializer()
         original = self.materialize()
         equivalent = self.materialize(source_bytes=PARSED_EQUIVALENT_BYTES)
 
@@ -344,8 +387,8 @@ class AgentMaterializationTests(unittest.TestCase):
             original.destination_bytes_digest,
             equivalent.destination_bytes_digest,
         )
-        self.assertTrue(module.verify_destination_bytes(original, EXPECTED_DESTINATION_BYTES))
-        self.assertFalse(module.verify_destination_bytes(original, PARSED_EQUIVALENT_BYTES))
+        self.assertEqual(original.destination_bytes, EXPECTED_DESTINATION_BYTES)
+        self.assertNotEqual(original.destination_bytes, PARSED_EQUIVALENT_BYTES)
 
     def test_rejects_route_or_parent_control_mismatch(self) -> None:
         module = self.materializer()
@@ -368,46 +411,6 @@ class AgentMaterializationTests(unittest.TestCase):
                 parent_controls=wrong_controls,
             )
 
-    def test_layer6_and_g56r006_import_same_shipped_contract(self) -> None:
-        module = self.materializer()
-        layer6_contract = importlib.import_module(MODULE_IMPORT)
-        g56r006_contract = importlib.import_module(MODULE_IMPORT)
-
-        self.assertIs(layer6_contract, g56r006_contract)
-        self.assertIs(
-            layer6_contract.materialize_agent_policy,
-            g56r006_contract.materialize_agent_policy,
-        )
-        self.assertIs(
-            layer6_contract.AgentMaterialization,
-            g56r006_contract.AgentMaterialization,
-        )
-        self.assertEqual(
-            module.__file__ and Path(module.__file__).resolve(),
-            MODULE_PATH.resolve(),
-        )
-        self.assertIn("materialize_agent_policy", module.__all__)
-        self.assertIn("AgentMaterialization", module.__all__)
-        self.assertIn("verify_destination_bytes", module.__all__)
-
-    def test_materializer_has_no_writer_executor_or_evaluation_renderer_surface(self) -> None:
-        module = self.materializer()
-        forbidden_public_names = {
-            "write_agent_policy",
-            "install_agent_policy",
-            "execute_agent_policy",
-            "run_agent_policy",
-            "render_evaluation_policy",
-        }
-        duplicate_renderer_paths = [
-            ROOT / "tests/speckit-pro/layer6-efficiency/lib/agent_materialization.py",
-            ROOT / "tests/speckit-pro/layer6-efficiency/lib/agent_materializer.py",
-            ROOT / "tests/speckit-pro/layer6-efficiency/lib/codex_agent_materializer.py",
-        ]
-
-        self.assertTrue(set(module.__all__).isdisjoint(forbidden_public_names))
-        self.assertFalse(any(path.exists() for path in duplicate_renderer_paths))
-
-
 if __name__ == "__main__":
-    unittest.main()
+    suite = unittest.defaultTestLoader.loadTestsFromTestCase(AgentMaterializationTests)
+    raise SystemExit(run_counted(suite, label="test-agent-materialization"))

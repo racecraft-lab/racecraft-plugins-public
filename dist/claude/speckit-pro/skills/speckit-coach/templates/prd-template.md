@@ -16,8 +16,8 @@
   becomes exactly ONE SPEC in the technical roadmap. Preserve that 1:1 mapping
   and the downstream tools can consume this document without re-interpretation.
 
-  Authoring tip: generate this with `/speckit-pro:speckit-prd` (a collaborative,
-  one-question-at-a-time interview), or fill it in by hand.
+  Authoring tip: create this with the installed `speckit-prd` skill (a
+  collaborative, one-question-at-a-time interview), or fill it in by hand.
 -->
 
 **Status**: <!-- Draft | Active — not yet implemented | In progress | Shipped -->

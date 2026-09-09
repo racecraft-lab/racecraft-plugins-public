@@ -1,7 +1,0 @@
-001 repo-root .gitattributes exists
-002 at least one linguist-generated rule is present
-003 every linguist-generated rule is scoped to .process/
-004 scoped rule passes (SC-005 positive case)
-005 broadened rule fails (SC-005 negative case)
-006 rule for a dir ending in .process (foo.process/) fails — not the .process/ dir
-TOTAL: 6

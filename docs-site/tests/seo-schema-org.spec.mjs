@@ -1,8 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * DOC-014 (C2 / FR-013, FR-014, FR-015, FR-016, FR-028 · SC-006) — JSON-LD
- * structured-data graph.
+ * JSON-LD structured-data graph.
  *
  * The route-data middleware (`src/routeData.ts`) injects exactly one
  * `<script type="application/ld+json">` per page whose JSON is
@@ -13,12 +12,10 @@ import { expect, test } from '@playwright/test';
  *  - a Person entity with `name === "Fredrick Gabelmann"` is present site-wide;
  *  - the landing page carries a SoftwareApplication with `offers.price === "0"`,
  *    and a non-plugin page (e.g. `/glossary/`) does NOT;
- *  - NO `FAQPage` / `HowTo` `@type` anywhere (FR-028 sunset).
+ *  - NO `FAQPage` / `HowTo` `@type` anywhere.
  *
  * Chromium-only (the `desktop-chromium` Playwright project), matching the
  * existing docs-smoke spec.
- *
- * @see specs/doc-014-seo-and-ai-discoverability/contracts/build-output-contracts.md C2
  */
 
 function routeUrl(logicalPath) {

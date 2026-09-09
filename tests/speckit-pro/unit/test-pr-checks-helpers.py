@@ -7,6 +7,7 @@ import contextlib
 import hashlib
 import importlib.util
 import io
+import json
 import os
 import stat
 import subprocess
@@ -189,6 +190,11 @@ class ActionlintHelperTests(unittest.TestCase):
 
 
 class DocsClassificationHelperTests(unittest.TestCase):
+    def test_docs_validation_runs_the_dedicated_gallery_project(self) -> None:
+        scripts = json.loads((REPO_ROOT / "docs-site" / "package.json").read_text(encoding="utf-8"))["scripts"]
+        self.assertEqual("playwright test --config playwright.gallery.config.mjs", scripts["validate:gallery"])
+        self.assertIn("&& pnpm validate:gallery", scripts["validate"])
+
     def test_full_mode_for_rendered_docs(self) -> None:
         classification = DOCS.classify_changed_files(
             ["docs-site/src/content/docs/reference/index.md"]
@@ -210,6 +216,13 @@ class DocsClassificationHelperTests(unittest.TestCase):
                 self.assertFalse(classification.rendered_docs)
                 self.assertEqual(file_path.startswith("scripts/"), classification.generated_reference)
                 self.assertTrue(classification.docs_contract)
+
+    def test_full_mode_for_gallery_contract(self) -> None:
+        classification = DOCS.classify_changed_files(
+            ["speckit-pro/artifact-gallery/templates/implementation-plan.html"]
+        )
+        self.assertEqual("full", classification.validation_mode)
+        self.assertTrue(classification.docs_contract)
 
     def test_reference_mode_for_generated_reference_source(self) -> None:
         classification = DOCS.classify_changed_files(

@@ -1,7 +1,7 @@
 interface:
   display_name: "SpecKit Archive Cleanup"
   short_description: "Archive merged specs and clean active SpecKit state"
-  default_prompt: "Archive a merged SpecKit spec, clean active specs, and update roadmap memory"
+  default_prompt: "Use $speckit-archive-cleanup to archive a merged SpecKit spec, clean active specs, and update roadmap memory"
 
 policy:
   allow_implicit_invocation: false

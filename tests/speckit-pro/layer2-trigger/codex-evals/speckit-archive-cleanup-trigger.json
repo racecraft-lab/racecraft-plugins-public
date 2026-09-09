@@ -12,11 +12,11 @@
     "should_trigger": true
   },
   {
-    "query": "archive DOC-007 now that its implementation PR landed, and record the merge provenance",
+    "query": "archive SPEC-707 now that its implementation PR landed, and record the merge provenance",
     "should_trigger": true
   },
   {
-    "query": "write the archive report for PRSG-014 with the merge commit, merged-at timestamp, and recovery commands",
+    "query": "write the archive report for SPEC-914 with the merge commit, merged-at timestamp, and recovery commands",
     "should_trigger": true
   },
   {

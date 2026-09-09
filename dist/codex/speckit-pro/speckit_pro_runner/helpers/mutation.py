@@ -1396,7 +1396,6 @@ def command_plan_apply_diagnostic(operations: list[dict[str, Any]], helper_id: s
         details={"helper_id": helper_id},
         remediation_summary="Use dry_run for command planning; execute live command plans outside the runner until cutover.",
         remediation_actions=["Switch to dry_run.", "Use the existing approved path for live command work."],
-        deferred_to="XPLAT-007/XPLAT-008",
     )
 
 
@@ -1651,12 +1650,6 @@ def write_bytes_atomic(
         "mode": applied_mode,
         "created_parent_dirs": created_dirs,
     }
-
-
-def ensure_safe_write_parent(target: Path, trust_root: Path, *, create: bool = True) -> None:
-    opened = open_safe_parent_fd(target, trust_root, create=create)
-    if opened is not None:
-        os.close(opened[0])
 
 
 def open_safe_parent_fd(target: Path, trust_root: Path, *, create: bool) -> tuple[int, str, list[str]] | None:

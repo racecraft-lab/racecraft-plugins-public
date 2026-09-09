@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "request_id": "xplat-010-repo-bash-confinement",
+  "request_id": "spec-810-repo-bash-confinement",
   "helper_id": "active-path-guard",
   "operation": "repo-bash-confinement",
   "mode": "read_only",

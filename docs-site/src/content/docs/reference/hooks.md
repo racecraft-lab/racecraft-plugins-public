@@ -27,17 +27,17 @@ Runtime hook configuration surfaces and source boundaries.
 
 ### Claude Code Hooks
 
-- **Purpose:** Documents the Claude Code prompt-expansion hook that warns when the SpecKit CLI is unavailable.
+- **Purpose:** Documents Claude Code lifecycle hooks that enforce feedback-sweep isolation.
 - **Classification:** `source`
-- **Platform concept:** SpecKit CLI availability warning
-- **Claude Code:** UserPromptExpansion hook in speckit-pro/hooks/hooks.json
-- **Codex:** Parallel Codex hook is documented separately.
+- **Platform concept:** Feedback-sweep lifecycle enforcement
+- **Claude Code:** SessionStart, PreToolUse, and SubagentStop hooks in speckit-pro/hooks/hooks.json
+- **Codex:** Codex hook inventory is documented separately.
 - **Runtime difference:** Claude Code uses the plugin hook configuration under hooks/hooks.json.
 
 #### Source Facts
 
-- Claude Code hook events: SessionStart, PreToolUse, SubagentStop, UserPromptExpansion. Source refs: `speckit-pro/hooks/hooks.json`.
-- The Claude Code hook matcher targets SpecKit Pro and SpecKit command-style prompts before warning about a missing specify CLI. Source refs: `speckit-pro/hooks/hooks.json`.
+- Claude Code hook events: SessionStart, PreToolUse, SubagentStop. Source refs: `speckit-pro/hooks/hooks.json`.
+- Four command handlers attest the sweep boundary, authorize Agent and broker dispatch, and validate sweep-subagent stops. Source refs: `speckit-pro/hooks/hooks.json`.
 
 #### Sources
 
@@ -50,17 +50,17 @@ Runtime hook configuration surfaces and source boundaries.
 
 ### Codex Hooks
 
-- **Purpose:** Documents the Codex prompt-submit hook that warns when SpecKit commands are invoked without the SpecKit CLI.
+- **Purpose:** Documents the current Codex plugin hook inventory.
 - **Classification:** `source`
-- **Platform concept:** SpecKit CLI availability warning
-- **Claude Code:** Parallel Claude Code hook is documented separately.
+- **Platform concept:** Codex plugin hook inventory
+- **Claude Code:** Claude Code lifecycle hooks are documented separately.
 - **Codex:** UserPromptSubmit hook in speckit-pro/codex-hooks.json
 - **Runtime difference:** Codex uses the root codex-hooks.json plugin configuration.
 
 #### Source Facts
 
 - Codex hook events: UserPromptSubmit. Source refs: `speckit-pro/codex-hooks.json`.
-- The Codex hook checks prompt text for SpecKit skill sigils and emits a warning when specify is missing. Source refs: `speckit-pro/codex-hooks.json`.
+- The declared Codex UserPromptSubmit matcher group contains no hook handlers and executes no command. Source refs: `speckit-pro/codex-hooks.json`.
 
 #### Sources
 

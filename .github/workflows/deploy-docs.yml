@@ -30,7 +30,6 @@ on:
       - "speckit-pro/scripts/**"
       - "tests/speckit-pro/**"
       - "!tests/speckit-pro/**/fixtures/**"
-      - "!tests/speckit-pro/**/fixtures-codex/**"
       - "!tests/speckit-pro/layer7-integration/dispatch-fixtures/**"
       - "!tests/speckit-pro/layer7-integration/return-format-fixtures/**"
       - "!tests/speckit-pro/layer7-integration/e2e-fixtures/**"
@@ -57,10 +56,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # DOC-014: fetch full git history so Starlight `lastUpdated` and the
+          # Fetch full git history so Starlight `lastUpdated` and the
           # sitemap `<lastmod>` serialize resolve each page's real commit date. A
           # shallow depth-1 clone would collapse every page's date to the single
-          # deploy commit, breaking the git-accurate freshness signal (SC-007).
+          # deploy commit, breaking the git-accurate freshness signal.
           fetch-depth: 0
 
       - name: Set up Node

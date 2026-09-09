@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 export const REPO_ROOT = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
 
-export const DOC010_ROUTES = Object.freeze([
+export const DOCUMENTED_ROUTE_TITLES = Object.freeze([
   {
     logicalPath: '/',
     sourcePath: 'docs-site/src/content/docs/index.mdx',
@@ -38,7 +38,7 @@ export const DOC010_ROUTES = Object.freeze([
   },
 ]);
 
-export const DOC010_SAFETY_BOUNDARIES = Object.freeze({
+export const DOCUMENTED_SAFETY_BOUNDARIES = Object.freeze({
   allowedInputs: Object.freeze([
     'checked-in repository docs-site sources',
     'checked-in generated reference pages',
@@ -103,6 +103,7 @@ const REQUIRED_DOC010_VALIDATE_CHAIN = Object.freeze([
   'pnpm validate:safe-aids',
   'pnpm validate:quality',
   'pnpm validate:smoke:preview',
+  'pnpm validate:gallery',
 ]);
 
 const SUPPORT_ANCHOR_INVENTORY = Object.freeze([
@@ -373,7 +374,7 @@ function normalizeCommand(value) {
 }
 
 function validateRouteSources(diagnostics) {
-  for (const route of DOC010_ROUTES) {
+  for (const route of DOCUMENTED_ROUTE_TITLES) {
     assertRepoRelative(route.sourcePath, diagnostics);
 
     const routeSource = readRepoText(route.sourcePath, diagnostics);
@@ -441,11 +442,6 @@ function validateDocsCommandChain(diagnostics) {
 }
 
 function validateStagingIndexingGuard(diagnostics) {
-  // DOC-014 (C1) — assert the crawler-access policy in the robots.txt.ts endpoint
-  // source: every citation + training agent ALLOWED, a default `User-agent: *`
-  // ALLOWED, a Sitemap advertised, and NO `Disallow: /` anywhere (the inverse of
-  // the sibling's training block). The static `public/robots.txt` is intentionally
-  // gone, so reading it here would be a false failure.
   assertRepoRelative(DOC014_ROBOTS_ENDPOINT_PATH, diagnostics);
   const robotsEndpointSource = readRepoText(DOC014_ROBOTS_ENDPOINT_PATH, diagnostics);
   if (robotsEndpointSource) {
@@ -486,8 +482,6 @@ function validateStagingIndexingGuard(diagnostics) {
     }
   }
 
-  // DOC-011 (C10) — noindex-meta guard, KEPT INTACT (only the robots assertion
-  // above was retargeted by DOC-014). Do NOT weaken this.
   assertRepoRelative(DOC011_ASTRO_CONFIG_PATH, diagnostics);
   const astroConfigSource = readRepoText(DOC011_ASTRO_CONFIG_PATH, diagnostics);
   if (!DOC011_STAGING_ROBOTS_META_PATTERN.test(astroConfigSource)) {
@@ -555,7 +549,7 @@ function validateSourceUpdateGuidance(diagnostics) {
 }
 
 function validateSafetyBoundaries(diagnostics) {
-  for (const [group, entries] of Object.entries(DOC010_SAFETY_BOUNDARIES)) {
+  for (const [group, entries] of Object.entries(DOCUMENTED_SAFETY_BOUNDARIES)) {
     if (entries.length === 0) {
       diagnostics.push(`docs-site/scripts/validate-docs-quality.mjs: ${group} must not be empty.`);
     }

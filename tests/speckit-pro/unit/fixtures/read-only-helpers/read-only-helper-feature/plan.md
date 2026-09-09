@@ -1,24 +1,20 @@
-# Implementation Plan: XPLAT-005 Read-Only Helper Port
-
-**Branch**: `codex/xplat-005-read-only-helper-port` | **Date**: 2026-07-02 | **Spec**: [spec.md](./spec.md)
-
-**Input**: Feature specification from `specs/xplat-005-read-only-helper-port/spec.md`, Phase 3 prompt from `docs/ai/specs/.process/XPLAT-005-workflow.md`, and accepted design decisions from `docs/ai/specs/.process/XPLAT-005-design-concept.md`.
+# Implementation Plan: SPEC-805 Read-Only Helper Port
 
 ## Summary
 
-Port the read-only and advisory helper surface onto the XPLAT-004 Python runner by adding a small helper registry/dispatch layer plus bounded per-helper module targets. XPLAT-005 preserves current JSON stdout, stderr diagnostics, and exit-code semantics through deterministic golden fixtures and source-checkout Bash-reference comparisons. Active Claude Code, Codex, install, generated payload, public docs, mutation-helper, and native installed-plugin activation work remains deferred.
+Port the read-only and advisory helper surface onto the SPEC-804 Python runner by adding a small helper registry/dispatch layer plus bounded per-helper module targets. SPEC-805 preserves current JSON stdout, stderr diagnostics, and exit-code semantics through deterministic golden fixtures and source-checkout Bash-reference comparisons. Active Claude Code, Codex, install, generated payload, public docs, mutation-helper, and native installed-plugin activation work remains deferred.
 
 ## Technical Context
 
 **Language/Version**: Python 3.11+ standard library through `speckit-pro/speckit_pro_runner/`
 
-**Primary Dependencies**: Existing XPLAT-004 runner envelope, diagnostics, typed path, runtime-info, and preflight primitives; current Bash helper scripts remain temporary source-checkout references only
+**Primary Dependencies**: Existing SPEC-804 runner envelope, diagnostics, typed path, runtime-info, and preflight primitives; current Bash helper scripts remain temporary source-checkout references only
 
 **Storage**: Checked-in fixture, contract, and evidence files only; ported helpers must not write repository or user-local state
 
 **Testing**: Python standard-library Layer 4 helper tests, golden fixture comparisons, source-checkout Bash-reference comparisons, local runtime-info smoke, and existing shell-layer gates during migration
 
-**Target Platform**: Source-checkout Python runner on Python 3.11+; local macOS smoke only; Windows/no-Bash/path behavior covered by deterministic fixtures; installed-cache and full native matrix proof deferred to XPLAT-007
+**Target Platform**: Source-checkout Python runner on Python 3.11+; local macOS smoke only; Windows/no-Bash/path behavior covered by deterministic fixtures; installed-cache and full native matrix proof deferred to SPEC-807
 
 **Project Type**: CLI helper runner package with parity fixtures and internal contract artifacts
 
@@ -63,7 +59,7 @@ Port the read-only and advisory helper surface onto the XPLAT-004 Python runner 
 ### Documentation (this feature)
 
 ```text
-specs/xplat-005-read-only-helper-port/
+specs/spec-805-read-only-helper-port/
 +-- plan.md
 +-- research.md
 +-- data-model.md
@@ -113,7 +109,7 @@ tests/speckit-pro/unit/
     +-- smoke-runtime-info-request.json
 ```
 
-**Structure Decision**: Extend the existing runner package with a narrow helper registry. Keep helper behavior grouped by read-only/advisory domain in `helpers/read_only.py`, with per-helper registry entries pointing at explicit callable targets. This satisfies the reusable XPLAT-006 extension point without creating one file per helper or a broad plugin framework during XPLAT-005.
+**Structure Decision**: Extend the existing runner package with a narrow helper registry. Keep helper behavior grouped by read-only/advisory domain in `helpers/read_only.py`, with per-helper registry entries pointing at explicit callable targets. This satisfies the reusable SPEC-806 extension point without creating one file per helper or a broad plugin framework during SPEC-805.
 
 ## Implementation Slices
 
@@ -125,7 +121,7 @@ Build the registry/dispatch path and promote prerequisite, detection, marker, va
 
 Add read-only/advisory ports for `generate-spec-index --check`, `o5-topology`, `atomicity-route`, `plan-layers <feature-dir>`, `validate-pr-workflow-contract`, and `validate-pr-packet` validation-only behavior. This slice excludes write/regenerate modes, marker-plan output, validation-result persistence, workflow-event upserts, PR body generation, PR emission, split state, restack, relocation, install repair, autoheal, and active Claude/Codex activation.
 
-**Reviewability split decision**: Remain one XPLAT-005 workflow with two internal slices. Planning does not prove a child-spec split is required because the accepted implementation surface is four production files, twelve total planned files after runner source metadata updates, and the only reviewability warning is the already accepted surface warning.
+**Reviewability split decision**: Remain one SPEC-805 workflow with two internal slices. Planning does not prove a child-spec split is required because the accepted implementation surface is four production files, twelve total planned files after runner source metadata updates, and the only reviewability warning is the already accepted surface warning.
 
 ## Helper Promotion Matrix Plan
 
@@ -141,9 +137,9 @@ Status values are target promotion states. `python_authoritative` applies only a
 
 | Helper id | Slice | Bash script path | Runner operation/module | Fixture ids | Bash comparison ids | Normalized fields | Status | Authoritative test command | Deferred follow-up |
 |---|---:|---|---|---|---|---|---|---|---|
-| helper-registry-dispatch | 1 | N/A | `helper.dispatch` / `speckit_pro_runner.helpers.registry` | `golden.registry.valid`, `golden.registry.unknown-helper`, `golden.registry.malformed-request` | N/A | none | `python_authoritative` | `python3 tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py --helper helper-registry-dispatch` | XPLAT-006 may reuse registry for mutation helpers |
-| check-prerequisites | 1 | `speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh` | `helper.check-prerequisites` / `speckit_pro_runner.helpers.read_only:check_prerequisites` | `golden.check-prerequisites.valid`, `golden.check-prerequisites.missing-spec`, `golden.check-prerequisites.no-bash` | `bash.check-prerequisites.valid`, `bash.check-prerequisites.missing-spec` | repo absolute paths, command executable paths, branch metadata | `python_authoritative` | `python3 tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py --helper check-prerequisites` | Installed-cache proof in XPLAT-007 |
-| detect-commands | 1 | `speckit-pro/skills/speckit-autopilot/scripts/detect-commands.sh` | `helper.detect-commands` / `speckit_pro_runner.helpers.read_only:detect_commands` | `golden.detect-commands.available`, `golden.detect-commands.missing`, `golden.detect-commands.windows-paths` | `bash.detect-commands.available`, `bash.detect-commands.missing` | executable paths, repo root, platform identity | `python_authoritative` | `python3 tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py --helper detect-commands` | Active command invocation switch in XPLAT-007 |
+| helper-registry-dispatch | 1 | N/A | `helper.dispatch` / `speckit_pro_runner.helpers.registry` | `golden.registry.valid`, `golden.registry.unknown-helper`, `golden.registry.malformed-request` | N/A | none | `python_authoritative` | `python3 tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py --helper helper-registry-dispatch` | SPEC-806 may reuse registry for mutation helpers |
+| check-prerequisites | 1 | `speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh` | `helper.check-prerequisites` / `speckit_pro_runner.helpers.read_only:check_prerequisites` | `golden.check-prerequisites.valid`, `golden.check-prerequisites.missing-spec`, `golden.check-prerequisites.no-bash` | `bash.check-prerequisites.valid`, `bash.check-prerequisites.missing-spec` | repo absolute paths, command executable paths, branch metadata | `python_authoritative` | `python3 tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py --helper check-prerequisites` | Installed-cache proof in SPEC-807 |
+| detect-commands | 1 | `speckit-pro/skills/speckit-autopilot/scripts/detect-commands.sh` | `helper.detect-commands` / `speckit_pro_runner.helpers.read_only:detect_commands` | `golden.detect-commands.available`, `golden.detect-commands.missing`, `golden.detect-commands.windows-paths` | `bash.detect-commands.available`, `bash.detect-commands.missing` | executable paths, repo root, platform identity | `python_authoritative` | `python3 tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py --helper detect-commands` | Active command invocation switch in SPEC-807 |
 | detect-presets | 1 | `speckit-pro/skills/speckit-autopilot/scripts/detect-presets.sh` | `helper.detect-presets` / `speckit_pro_runner.helpers.read_only:detect_presets` | `golden.detect-presets.reviewability`, `golden.detect-presets.none`, `golden.detect-presets.path-spaces` | `bash.detect-presets.reviewability`, `bash.detect-presets.none` | repo absolute paths, preset path separators | `python_authoritative` | `python3 tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py --helper detect-presets` | Preset install repair remains out of scope |
 | count-markers | 1 | `speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh` | `helper.count-markers` / `speckit_pro_runner.helpers.read_only:count_markers` | `golden.count-markers.clean`, `golden.count-markers.needs-clarification`, `golden.count-markers.gaps` | `bash.count-markers.clean`, `bash.count-markers.needs-clarification` | repo absolute paths only if emitted | `python_authoritative` | `python3 tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py --helper count-markers` | None |
 | validate-gate | 1 | `speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh` | `helper.validate-gate` / `speckit_pro_runner.helpers.read_only:validate_gate` | `golden.validate-gate.g3-pass`, `golden.validate-gate.g3-fail`, `golden.validate-gate.usage` | `bash.validate-gate.g3-pass`, `bash.validate-gate.g3-fail` | repo absolute paths only if emitted | `python_authoritative` | `python3 tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py --helper validate-gate` | None |
@@ -157,10 +153,10 @@ Status values are target promotion states. `python_authoritative` applies only a
 | plan-layers-feature-dir | 2 | `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh` | `helper.plan-layers-feature-dir` / `speckit_pro_runner.helpers.read_only:plan_layers_feature_dir` | `golden.plan-layers.valid-real`, `golden.plan-layers.dependency-cycle`, `golden.plan-layers.malformed-task` | `bash.plan-layers.valid-real`, `bash.plan-layers.dependency-cycle` | repo absolute paths, feature-dir absolute path | `python_authoritative` | `python3 tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py --helper plan-layers-feature-dir` | `marker-plan` output mode deferred |
 | validate-pr-workflow-contract | 2 | `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-workflow-contract.sh` | `helper.validate-pr-workflow-contract` / `speckit_pro_runner.helpers.read_only:validate_pr_workflow_contract` | `golden.validate-pr-workflow-contract.valid`, `golden.validate-pr-workflow-contract.missing`, `golden.validate-pr-workflow-contract.invalid` | `bash.validate-pr-workflow-contract.valid`, `bash.validate-pr-workflow-contract.invalid` | repo absolute paths, workflow path | `python_authoritative` | `python3 tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py --helper validate-pr-workflow-contract` | Workflow-event mutation remains out of scope |
 | validate-pr-packet-read-only | 2 | `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh` | `helper.validate-pr-packet-read-only` / `speckit_pro_runner.helpers.read_only:validate_pr_packet_read_only` | `golden.validate-pr-packet.valid-single`, `golden.validate-pr-packet.invalid-missing-evidence`, `golden.validate-pr-packet.invalid-protected-edit` | `bash.validate-pr-packet.valid-single`, `bash.validate-pr-packet.invalid-missing-evidence` | repo absolute paths, packet path, feature-dir path | `python_authoritative` | `python3 tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py --helper validate-pr-packet-read-only` | PR body, PR emission, persistence, and restack deferred |
-| detect-stack-manager | N/A | `speckit-pro/skills/speckit-autopilot/scripts/detect-stack-manager.sh` | N/A | N/A | N/A | N/A | `out_of_scope` | N/A | XPLAT-006 |
-| generate-spec-index-write | N/A | `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh` | N/A | N/A | N/A | N/A | `out_of_scope` | N/A | XPLAT-006 or later mutation-helper work |
-| plan-layers-marker-plan | N/A | `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh` | N/A | N/A | N/A | N/A | `out_of_scope` | N/A | XPLAT-006 |
-| validate-pr-packet-persistence | N/A | `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh` | N/A | N/A | N/A | N/A | `out_of_scope` | N/A | XPLAT-006 |
+| detect-stack-manager | N/A | `speckit-pro/skills/speckit-autopilot/scripts/detect-stack-manager.sh` | N/A | N/A | N/A | N/A | `out_of_scope` | N/A | SPEC-806 |
+| generate-spec-index-write | N/A | `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh` | N/A | N/A | N/A | N/A | `out_of_scope` | N/A | SPEC-806 or later mutation-helper work |
+| plan-layers-marker-plan | N/A | `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh` | N/A | N/A | N/A | N/A | `out_of_scope` | N/A | SPEC-806 |
+| validate-pr-packet-persistence | N/A | `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh` | N/A | N/A | N/A | N/A | `out_of_scope` | N/A | SPEC-806 |
 
 ## Contracts And Data Artifacts
 
@@ -173,7 +169,7 @@ Status values are target promotion states. `python_authoritative` applies only a
 1. Run the local source-checkout runtime smoke:
 
    ```bash
-   printf '%s\n' '{"schema_version":"1.0","request_id":"xplat-005-smoke","helper_id":"runner","operation":"runtime-info","mode":"read_only","inputs":{}}' | PYTHONPATH=speckit-pro python3 -m speckit_pro_runner
+   printf '%s\n' '{"schema_version":"1.0","request_id":"spec-805-smoke","helper_id":"runner","operation":"runtime-info","mode":"read_only","inputs":{}}' | PYTHONPATH=speckit-pro python3 -m speckit_pro_runner
    ```
 
 2. Run per-helper parity tests:
@@ -194,7 +190,7 @@ Status values are target promotion states. `python_authoritative` applies only a
    bash tests/speckit-pro/run-all.sh
    ```
 
-5. Validate runner source manifest and checksum metadata after adding or modifying helper runner files, keeping generated payload propagation deferred to XPLAT-007.
+5. Validate runner source manifest and checksum metadata after adding or modifying helper runner files, keeping generated payload propagation deferred to SPEC-807.
 6. Confirm scope audit has zero active Claude Code or Codex skill, hook, generated payload, install, marketplace/public docs, mutation-helper, PR-emission, split-state, restack, relocation, install repair, or autoheal activation edits.
 7. Confirm error/security parity coverage:
 

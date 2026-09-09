@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """run-all.py — Python stdlib orchestrator for the speckit-pro test suite.
 
-Reproduces the ``run-all.sh`` developer UX 1:1 (XPLAT-010 US1, FR-006, research
-§D5) with no Bash or ``jq`` dependency of its own:
+Reproduces the ``run-all.sh`` developer UX with no Bash or ``jq`` dependency of
+its own:
 
   run-all.py               # Layers 1, 4, 5 + toolchain preflight (default)
   run-all.py --live        # default deterministic layers; no live Layer 7 selected
@@ -21,22 +21,25 @@ failure), where X/Y sums each child's ``<label>: X/Y passed`` line. Exit 0 iff
 no failures, 1 on any failure, 2 on an unknown flag.
 
 Every executable manifest entry is Python-authoritative. A non-``.py`` entry
-fails closed instead of falling back to a platform shell (XPLAT-010 T097).
+fails closed instead of falling back to a platform shell.
 """
 
 from __future__ import annotations
 
 import json
 import os
-import re
 import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+TEST_LIB = Path(__file__).resolve().parent / "lib"
+if str(TEST_LIB) not in sys.path:
+    sys.path.insert(0, str(TEST_LIB))
+
+from test_result import classify_counted_child  # noqa: E402
+
 SUITE_MANIFEST = "tests/speckit-pro/suite-manifest.json"
-SUMMARY_RE = re.compile(r"[0-9]+/[0-9]+ passed")
-COUNT_RE = re.compile(r"([0-9]+)/([0-9]+)")
 RULE = "────────────────────────────────────────"
 HEADER_RULE = "════════════════════════════════════════"
 # Layer 7 owns the executable live mode. Layer 4 is deterministic unit coverage;
@@ -122,44 +125,6 @@ def toolchain_should_run(manifest: dict, config: Config) -> bool:
     )
 
 
-def parse_summary(output: str) -> tuple[int, int] | None:
-    last = None
-    for line in output.splitlines():
-        if SUMMARY_RE.search(line):
-            last = line
-    if last is None:
-        return None
-    match = COUNT_RE.search(last)
-    return (int(match.group(1)), int(match.group(2)))
-
-
-def sum_all_summaries(output: str) -> tuple[int, int] | None:
-    lines = [line for line in output.splitlines() if SUMMARY_RE.search(line)]
-    if not lines:
-        return None
-    passed = total = 0
-    for line in lines:
-        match = COUNT_RE.search(line)
-        passed += int(match.group(1))
-        total += int(match.group(2))
-    return (passed, total)
-
-
-def classify_child(exit_code: int, summary: tuple[int, int] | None) -> tuple[str, int, int]:
-    """Return (disposition, passed_delta, failed_delta) per the FR-006 taxonomy."""
-    if summary is not None:
-        passed, total = summary
-        failed = total - passed
-        if exit_code != 0 and failed == 0:
-            return ("failed-exit", passed, 1)
-        return ("counted", passed, failed)
-    if exit_code == 0:
-        # A zero-exit module with no summary line is a no-summary pass.
-        return ("no-summary-pass", 0, 0)
-    # A nonzero exit with no summary is a crash -> exactly one failed unit.
-    return ("crash", 0, 1)
-
-
 def format_headline(passed: int, failed: int) -> str:
     total = passed + failed
     if failed == 0 and total > 0:
@@ -191,7 +156,7 @@ def dispatch_script(
     pass_live = config.live and layer["id"] in LIVE_AWARE_LAYERS
     if path.suffix != ".py":
         return (
-            "manifest entry validation: 0/1 passed\n"
+            f"{path.stem}: 0/1 passed\n"
             f"unsupported non-Python manifest entry: {path}\n",
             1,
         )
@@ -214,6 +179,9 @@ def run_execute_layer(layer: dict, config: Config, root: Path) -> tuple[int, int
     print(f"\nLayer {layer['id']}: {layer['label']}")
     print(RULE)
     layer_pass = layer_fail = 0
+    if not layer["scripts"]:
+        print("  FAIL: no test scripts discovered")
+        return 0, 1
     for script in layer["scripts"]:
         path = root / script["path"]
         label = Path(script["path"]).stem
@@ -222,16 +190,23 @@ def run_execute_layer(layer: dict, config: Config, root: Path) -> tuple[int, int
             layer_fail += 1
             continue
         output, exit_code = dispatch_script(path, layer, config, root)
-        summary = sum_all_summaries(output) if layer["integration"] else parse_summary(output)
-        disposition, passed, failed = classify_child(exit_code, summary)
+        disposition, passed, failed, _detail = classify_counted_child(
+            exit_code,
+            output,
+            label,
+        )
         layer_pass += passed
         layer_fail += failed
         if disposition == "crash":
             print(f"  FAIL {label} (exit {exit_code}, no summary — child may have crashed)")
+        elif disposition == "missing-summary":
+            print(f"  FAIL {label} (exit 0, no summary)")
+        elif disposition == "invalid-summary":
+            print(f"  FAIL {label} (invalid or empty summary)")
+        elif disposition == "duplicate-summary":
+            print(f"  FAIL {label} (multiple owned summaries)")
         elif disposition == "failed-exit":
             print(f"  FAIL {label} ({passed}/{passed} reported, exit {exit_code})")
-        elif disposition == "no-summary-pass":
-            print(f"  PASS {label} (no summary)")
         elif failed == 0:
             print(f"  PASS {label} ({passed}/{passed + failed})")
         else:
@@ -246,9 +221,6 @@ def print_layer_commands(layer: dict, root: Path) -> None:
     for script in layer["scripts"]:
         argument_hint = " <skill>" if layer["id"] in {"2", "3"} else ""
         print(f"    python3 {script['path']}{argument_hint}")
-        if layer["id"] == "6":
-            print(f"    python3 {script['path']} --agent consensus-synthesizer")
-            print(f"    python3 {script['path']} --agent consensus-synthesizer --sweep")
 
 
 def run_toolchain_preflight(root: Path, config: Config, manifest: dict) -> bool:
@@ -304,6 +276,7 @@ def main(argv: list[str]) -> int:
     manifest = load_manifest(root)
     total_pass = total_fail = 0
     layer_results: list[str] = []
+    selected_layers = 0
 
     if os.environ.get("SPECKIT_SKIP_TOOLCHAIN_CHECK") != "1" and toolchain_should_run(manifest, config):
         print("\nToolchain Preflight")
@@ -319,6 +292,7 @@ def main(argv: list[str]) -> int:
     for layer in execution_layers(manifest):
         if not layer_should_run(layer, config):
             continue
+        selected_layers += 1
         if layer["execution"] == "print-commands":
             print_layer_commands(layer, root)
             continue
@@ -326,6 +300,10 @@ def main(argv: list[str]) -> int:
         total_pass += layer_pass
         total_fail += layer_fail
         layer_results.append(f"L{layer['id']}: {layer_pass}/{layer_pass + layer_fail}")
+
+    if selected_layers == 0:
+        print("\n  FAIL: no executable layer selected")
+        total_fail += 1
 
     print_summary(total_pass, total_fail, layer_results)
     return exit_code_for(total_fail)

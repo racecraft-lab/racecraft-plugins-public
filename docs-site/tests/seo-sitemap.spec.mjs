@@ -5,24 +5,21 @@ import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 
 /**
- * DOC-014 (C7 / FR-017, FR-012 · SC-007, SC-010) — sitemap freshness signal.
+ * Sitemap freshness signal.
  *
  * Fetches `/sitemap-index.xml` and the child `/sitemap-0.xml` from the built
  * site and asserts:
- *  - every `<loc>` resolves under `SITE_BASE` (derived from `site` + `base`),
- *    so the URLs track the DOC-012 launch flip and hardcode no production domain
- *    (FR-012, SC-010);
- *  - every `<lastmod>` is a valid ISO-8601 instant (FR-017, SC-007);
+ *  - every `<loc>` resolves under `SITE_BASE` (derived from `site` + `base`) and
+ *    hardcodes no production domain;
+ *  - every `<lastmod>` is a valid ISO-8601 instant;
  *  - the `<lastmod>` is sourced from stable page history, not the build time or
- *    checkout HEAD. We prove this by picking content pages that this
- *    work-package does NOT modify (`glossary.md`, `first-run.md`) and asserting
+ *    checkout HEAD. We prove this by picking content pages that this test does
+ *    not modify (`glossary.md`, `first-run.md`) and asserting
  *    each sitemap `<lastmod>` is strictly BEFORE the test's run time and BEFORE
  *    the checkout HEAD date. A build-time `<lastmod>` or shallow/HEAD fallback
  *    would be at or after those anchors and fail this check.
  *
  * Chromium-only (the `desktop-chromium` Playwright project).
- *
- * @see specs/doc-014-seo-and-ai-discoverability/contracts/build-output-contracts.md C7
  */
 
 const DOCS_SITE_DIR = path.resolve(fileURLToPath(new URL('..', import.meta.url)));

@@ -1,0 +1,44 @@
+{
+  "schema_version": 2,
+  "fixture_kind": "deterministic-synthetic-testdata",
+  "spec_id": "SPEC-009",
+  "workflow_file": "docs/ai/specs/SPEC-009-workflow.md",
+  "status": "in_progress",
+  "stage": "full",
+  "execution": {
+    "status": "not_started",
+    "evidence": [],
+    "grill_me_invocations": "must_be_observed_as_zero"
+  },
+  "plan": [
+    {"step": "Archive Sweep: Preflight", "status": "pending"},
+    {"step": "Phase 0: Prerequisites", "status": "pending"},
+    {"step": "Phase 1: Specify", "status": "pending"},
+    {"step": "Phase 2: Clarify", "status": "pending"},
+    {"step": "Phase 3: Plan", "status": "pending"},
+    {"step": "Phase 4: Checklist", "status": "pending"},
+    {"step": "Phase 5: Tasks", "status": "pending"},
+    {"step": "Phase 6: Analyze", "status": "pending"},
+    {"step": "Phase 6.5: Confidence Gate", "status": "pending"},
+    {"step": "Phase 7: Implement", "status": "pending"},
+    {"step": "Post: Doctor Extension Check", "status": "pending"},
+    {"step": "Post: Verify Implementation", "status": "pending"},
+    {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
+    {"step": "Post: Code Review", "status": "pending"},
+    {"step": "Post: Integration Suite", "status": "pending"},
+    {"step": "Post: Reviewability Diff Gate", "status": "pending"},
+    {"step": "Post: Self-Review", "status": "pending"},
+    {"step": "Post: UAT Runbook Generation", "status": "pending"},
+    {"step": "Post: PR Body Generation", "status": "pending"},
+    {"step": "Post: PR Creation", "status": "pending"},
+    {"step": "Post: Review Remediation", "status": "pending"},
+    {"step": "Post: Retrospective", "status": "pending"}
+  ],
+  "materialization": {
+    "requires_disposable_git": true,
+    "requires_registered_worktree": true,
+    "branch": "009-search-database",
+    "requires_local_checkpoints": true,
+    "must_be_observed_by_run": true
+  }
+}

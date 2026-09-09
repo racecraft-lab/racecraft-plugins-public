@@ -1,8 +1,6 @@
 # Reliability Checklist: Read-Only Helper Port
 
-**Purpose**: Validate that XPLAT-005 reliability requirements are complete, deterministic, repeatable, and isolated from network, installed-cache, and mutable user-local state before Tasks.
-**Created**: 2026-07-02
-**Feature**: [spec.md](../spec.md)
+**Purpose**: Validate that SPEC-805 reliability requirements are complete, deterministic, repeatable, and isolated from network, installed-cache, and mutable user-local state before Tasks.
 
 ## Deterministic Parity Evidence
 

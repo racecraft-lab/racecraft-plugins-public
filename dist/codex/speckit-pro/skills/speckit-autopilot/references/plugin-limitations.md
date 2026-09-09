@@ -83,15 +83,9 @@ settings, so leaving a tool out is not the same as denying it. The field that
 removes a tool from the pool is `disallowed-tools`. See "Pre-approve tools for a
 skill" in the Claude Code skills documentation.
 
-Two consequences for the autopilot:
+One consequence for the autopilot:
 
-1. **The orchestrator's omitted command-execution tool is release policy, not a
-   capability limit.** The XPLAT-009 guard classifies such a token in a shipped
-   tool declaration as blocking, so the skill cannot list one. The
-   `Command(...)` runner invocations still reach the operator's permission
-   settings and still run.
-
-2. **Those settings decide whether an unattended run stops.** `acceptEdits`
+1. **Those settings decide whether an unattended run stops.** `acceptEdits`
    covers file edits and common filesystem commands. It does not cover
    arbitrary command execution, so a run that must never prompt needs
    `bypassPermissions` or a session allow rule that covers the runner.

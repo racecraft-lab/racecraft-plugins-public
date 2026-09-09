@@ -1,4 +1,4 @@
-# Tasks: PRSG-008 Valid Layer Planner Fixture
+# Tasks: SPEC-908 Valid Layer Planner Fixture
 
 ## Phase 1: Foundation
 

@@ -338,27 +338,6 @@ disagreement is named in `reason`.
    - After 3 iterations OR exit 0: stop iterating
 ```
 
-**The iteration cap (3) is the only safety bound in Codex
-headless mode.** Codex `codex exec` does not natively support
-the `/goal` slash command per
-[openai/codex#21764](https://github.com/openai/codex/discussions/21764)
-(maintainer's words: "not a first-class command for this"). The
-3-iteration cap protects against unbounded loops without
-depending on `/goal`.
-
-**`/goal` as optional UX (Claude Code only):** In an interactive
-Claude Code session, the operator may run
-`/goal achieve confidence ≥0.90 on the pre-Implement gate`
-before invoking the autopilot. The parent-session `/goal`
-evaluator (small fast model, runs after each turn) provides a
-live `◎ /goal active` indicator and an additional stopping
-condition layered on top of the iteration cap. The autopilot
-itself does not issue `/goal` programmatically — slash commands
-are recognized only at the start of a user message, so an LLM
-emitting `/goal X` mid-turn is just text. See
-[Claude Code /goal docs](https://code.claude.com/docs/en/goal)
-for the full behavior.
-
 **Why advisory by default:** the autopilot already runs Clarify
 (G2) and Analyze (G6) gates before this point, so most shakiness
 is already filtered. Advisory mode surfaces the score and a

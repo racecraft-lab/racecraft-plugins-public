@@ -32,7 +32,7 @@ The parity diff compares this section across Path A and Path B runs.)
 
 ## Layer Plan
 
-The fixture represents a PRSG-008 split-PR route with three ordered
+The fixture represents a SPEC-908 split-PR route with three ordered
 reviewable slices. Live parity runs must consume that layer plan as the
 only ordering and membership source before multi-PR emission.
 

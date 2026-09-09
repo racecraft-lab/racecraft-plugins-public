@@ -1,42 +1,41 @@
 #!/usr/bin/env python3
-"""Termination/restoration contracts for the Layer-2 Claude eval runner."""
+"""Termination and owned-resource cleanup contracts for Claude Layer 2 evals."""
 
 from __future__ import annotations
 
 import importlib.util
 import json
 import os
+from pathlib import Path
 import signal
 import subprocess
 import sys
 import tempfile
 import time
-import unittest
-from pathlib import Path
 from types import ModuleType
+import unittest
 from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TESTS_ROOT = REPO_ROOT / "tests" / "speckit-pro"
 RUNNER_PATH = TESTS_ROOT / "layer2-trigger" / "run-trigger-evals.py"
-BASELINE = TESTS_ROOT / "parity" / "bash-to-python" / "test-trigger-signal-restoration-baseline.txt"
 SHARED_LIB = TESTS_ROOT / "lib"
 if str(SHARED_LIB) not in sys.path:
     sys.path.insert(0, str(SHARED_LIB))
 
-from capture_baseline import baseline_inventory  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
 CURRENT_INVENTORY = [
-    "baseline inventory is truthful and ordered",
     "in-process SIGTERM maps to exit 143",
-    "in-process SIGTERM restores the moved production skill",
-    "in-process SIGTERM leaves no eval-disabled backup",
+    "in-process SIGTERM removes the disposable plugin",
+    "in-process SIGTERM leaves global state untouched",
     "POSIX subprocess SIGTERM maps to exit 143",
-    "POSIX subprocess SIGTERM restores the moved production skill",
-    "termination path emits an explicit restoration diagnostic",
+    "POSIX subprocess SIGTERM terminates its owned child and removes its plugin",
+    "termination path emits an explicit owned-cleanup diagnostic",
+    "POSIX subprocess SIGTERM retains exact partial raw streams",
+    "POSIX subprocess SIGTERM retains separate invalid signal and cleanup evidence",
 ]
 
 
@@ -49,124 +48,222 @@ def import_runner() -> ModuleType:
     return module
 
 
-def setup_home(root: Path, skill: str) -> tuple[Path, Path]:
-    home = root / "home"
-    settings = home / ".claude" / "settings.json"
-    settings.parent.mkdir(parents=True)
-    settings.write_text(
-        json.dumps({"enabledPlugins": {"speckit-pro@test-marketplace": True}}) + "\n",
+def fixture_plugin(root: Path, skill: str) -> Path:
+    plugin_root = root / "speckit-pro"
+    source = plugin_root / "skills" / skill / "SKILL.md"
+    source.parent.mkdir(parents=True)
+    source.write_text(
+        f"---\nname: {skill}\ndescription: Signal fixture.\n---\n\nBody.\n",
         encoding="utf-8",
     )
-    production = home / ".claude" / "plugins" / "marketplaces" / "test-marketplace" / "speckit-pro" / "skills" / skill
-    production.mkdir(parents=True)
-    (production / "marker.txt").write_text("production\n", encoding="utf-8")
-    return home, production
+    corpus = root / "tests" / "speckit-pro" / "layer2-trigger" / "evals" / f"{skill}-trigger.json"
+    corpus.parent.mkdir(parents=True)
+    corpus.write_text(
+        json.dumps([{"query": "Run the fixture.", "should_trigger": True}]) + "\n",
+        encoding="utf-8",
+    )
+    return plugin_root
+
+
+def write_blocking_claude(binary_dir: Path) -> Path:
+    binary_dir.mkdir(parents=True)
+    script = binary_dir / "claude-stub.py"
+    script.write_text(
+        "import json, os, signal, sys, time\n"
+        "from pathlib import Path\n"
+        "if '--version' in sys.argv:\n"
+        "    print('2.1.261')\n"
+        "elif '--help' in sys.argv:\n"
+        "    print('--restricted --plugin-dir --strict-mcp-config --mcp-config --tools --allowedTools --settings --permission-mode --permission-prompts --output-format --verbose --no-session-persistence')\n"
+        "else:\n"
+        "    root = sys.argv[sys.argv.index('--plugin-dir') + 1]\n"
+        "    sys.stdout.buffer.write(b'partial stdout\\r\\n'); sys.stdout.buffer.flush()\n"
+        "    sys.stderr.buffer.write(b'partial stderr\\xff'); sys.stderr.buffer.flush()\n"
+        "    Path(os.environ['L2_CHILD_STATE']).write_text(json.dumps({'pid': os.getpid(), 'plugin_root': root}), encoding='utf-8')\n"
+        "    def stop(_signum, _frame):\n"
+        "        Path(os.environ['L2_CHILD_STOPPED']).write_text('stopped\\n', encoding='utf-8')\n"
+        "        raise SystemExit(143)\n"
+        "    signal.signal(signal.SIGTERM, stop)\n"
+        "    time.sleep(60)\n",
+        encoding="utf-8",
+    )
+    launcher = binary_dir / "claude"
+    launcher.write_text(
+        f"#!{sys.executable}\nimport runpy\nrunpy.run_path({str(script)!r}, run_name='__main__')\n",
+        encoding="utf-8",
+    )
+    launcher.chmod(0o755)
+    return launcher
 
 
 class Layer2SignalRestorationTests(unittest.TestCase):
-    def test_signal_restoration_contract(self) -> None:
+    @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
+    def test_completed_leaders_lingering_descendant_is_cleaned_but_invalid(self) -> None:
+        runner = import_runner()
+        original_popen = subprocess.Popen
+        owned = []
+        descendant = (
+            "import signal,time; signal.signal(signal.SIGTERM, signal.SIG_IGN); "
+            "print('ready', flush=True); time.sleep(60)"
+        )
+        leader = (
+            "import subprocess,sys,json\n"
+            f"child=subprocess.Popen([sys.executable,'-u','-c',{descendant!r}], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)\n"
+            "assert child.stdout.readline() == b'ready\\n'\n"
+            "child.stdout.close()\n"
+            "print(json.dumps({'descendant_pid':child.pid}), flush=True)\n"
+        )
+
+        def launch(_command: object, **kwargs: object) -> subprocess.Popen:
+            child = original_popen([sys.executable, "-u", "-c", leader], **kwargs)
+            owned.append(child)
+            return child
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            try:
+                with (
+                    mock.patch.object(runner.shutil, "which", return_value="/stub/claude"),
+                    mock.patch.object(runner.subprocess, "Popen", side_effect=launch),
+                    mock.patch.object(runner, "CLEANUP_TIMEOUT", 0.2, create=True),
+                ):
+                    with self.assertRaises(runner.ClaudeQueryError) as raised:
+                        runner.run_claude_query(
+                            "/stub/claude", root, root / "empty-mcp.json", "q", "sonnet", 5,
+                            expected_skill="fixture:target",
+                        )
+                self.assertEqual((raised.exception.exit_code, raised.exception.stderr, raised.exception.timed_out), (0, b"", False))
+                self.assertIn("descendant_pid", json.loads(raised.exception.stdout))
+                self.assertTrue(raised.exception.unexpected_descendants)
+                self.assertIsNone(raised.exception.cleanup_error)
+                self.assertEqual(owned[0].poll(), 0)
+                with self.assertRaises(ProcessLookupError):
+                    os.killpg(owned[0].pid, 0)
+                self.assertIsNone(runner.ACTIVE_CHILD)
+            finally:
+                for child in owned:
+                    try:
+                        os.killpg(child.pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+                    child.wait(timeout=5)
+
+    def test_signal_cleanup_contract(self) -> None:
         runner = import_runner()
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            home, production = setup_home(root / "in-process", "demo")
-            plugin_root = root / "plugin"
-            (plugin_root / "skills" / "demo").mkdir(parents=True)
-            eval_file = plugin_root.parent / "tests" / "speckit-pro" / "layer2-trigger" / "evals" / "demo-trigger.json"
-            eval_file.parent.mkdir(parents=True)
-            eval_file.write_text("{}\n", encoding="utf-8")
-            skill_creator = root / "skill-creator"
-            skill_creator.mkdir()
-            runner.PLUGIN_ROOT = plugin_root
-            stderr = []
+            fixture_root = root / "in-process-fixture"
+            runner.PLUGIN_ROOT = fixture_plugin(fixture_root, "demo")
+            staged_root = root / "in-process-staged"
+            staged_root.mkdir()
+            evidence_root = root / "in-process-evidence"
+            evidence_root.mkdir()
+            global_sentinel = root / "home" / ".claude" / "sentinel"
+            global_sentinel.parent.mkdir(parents=True)
+            global_sentinel.write_text("untouched\n", encoding="utf-8")
+            diagnostics: list[str] = []
 
-            def terminate_from_subprocess(*_args: object, **_kwargs: object) -> object:
+            def terminate(*_args: object, **_kwargs: object) -> object:
                 runner.handle_termination(int(signal.SIGTERM), None)
                 raise AssertionError("termination handler must raise")
 
             with (
-                mock.patch.dict(
-                    os.environ,
-                    {"HOME": str(home), "SKILL_CREATOR_ROOT": str(skill_creator)},
-                    clear=False,
+                mock.patch.dict(os.environ, {"HOME": str(global_sentinel.parents[1])}, clear=False),
+                mock.patch.object(runner.shutil, "which", return_value="/usr/local/bin/claude"),
+                mock.patch.object(
+                    runner,
+                    "cli_preflight",
+                    return_value=({"version": "2.1.261", "supported_flags": []}, "ok"),
                 ),
-                mock.patch.object(runner, "eprint", side_effect=lambda message="": stderr.append(message)),
-                mock.patch.object(runner.subprocess, "run", side_effect=terminate_from_subprocess),
+                mock.patch.object(runner.tempfile, "mkdtemp", side_effect=[str(staged_root), str(evidence_root)]),
+                mock.patch.object(runner, "run_claude_query", side_effect=terminate),
+                mock.patch.object(runner, "eprint", side_effect=lambda message="": diagnostics.append(message)),
             ):
                 in_process_exit = runner.main(["demo"])
 
-            in_process_restored = (production / "marker.txt").read_text(encoding="utf-8") == "production\n"
-            in_process_backups = list(production.parent.glob("demo.eval-disabled-*"))
-
             subprocess_exit = 143
-            subprocess_restored = True
+            subprocess_clean = True
             subprocess_diagnostic = True
+            partial_streams_retained = True
+            signal_evidence_retained = True
             if os.name != "nt":
-                external_root = root / "subprocess"
-                external_home, external_production = setup_home(external_root, "speckit-coach")
-                external_creator = external_root / "skill-creator"
-                scripts = external_creator / "scripts"
-                scripts.mkdir(parents=True)
-                (scripts / "__init__.py").write_text("", encoding="utf-8")
-                marker = external_root / "child-started"
-                (scripts / "run_eval.py").write_text(
-                    "import os, time\n"
-                    "from pathlib import Path\n"
-                    "Path(os.environ['L2_SIGNAL_MARKER']).write_text('started\\n', encoding='utf-8')\n"
-                    "time.sleep(60)\n",
-                    encoding="utf-8",
-                )
+                external_root = root / "external"
+                binary_dir = external_root / "bin"
+                write_blocking_claude(binary_dir)
+                child_state = external_root / "child-state.json"
+                child_stopped = external_root / "child-stopped"
+                external_home = external_root / "home"
+                external_sentinel = external_home / ".claude" / "sentinel"
+                external_sentinel.parent.mkdir(parents=True)
+                external_sentinel.write_text("untouched\n", encoding="utf-8")
+                evidence = external_root / "evidence"
                 env = os.environ.copy()
                 env.update(
                     {
                         "HOME": str(external_home),
-                        "SKILL_CREATOR_ROOT": str(external_creator),
-                        "L2_SIGNAL_MARKER": str(marker),
+                        "PATH": f"{binary_dir}{os.pathsep}{env.get('PATH', '')}",
+                        "L2_CHILD_STATE": str(child_state),
+                        "L2_CHILD_STOPPED": str(child_stopped),
                         "PYTHONDONTWRITEBYTECODE": "1",
                     }
                 )
                 process = subprocess.Popen(
-                    [sys.executable, str(RUNNER_PATH), "speckit-coach"],
+                    [sys.executable, str(RUNNER_PATH), "speckit-coach", "--evidence-dir", str(evidence)],
                     cwd=REPO_ROOT,
-                    text=True,
-                    encoding="utf-8",
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
+                    text=True,
                     env=env,
                     start_new_session=True,
                 )
                 try:
                     deadline = time.monotonic() + 10
-                    while not marker.is_file() and process.poll() is None and time.monotonic() < deadline:
+                    while not child_state.is_file() and process.poll() is None and time.monotonic() < deadline:
                         time.sleep(0.05)
-                    self.assertTrue(marker.is_file(), "blocking eval subprocess did not start")
-                    os.killpg(process.pid, signal.SIGTERM)
+                    self.assertTrue(child_state.is_file(), "blocking owned child did not start")
+                    state = json.loads(child_state.read_text(encoding="utf-8"))
+                    os.kill(process.pid, signal.SIGTERM)
                     _stdout, external_stderr = process.communicate(timeout=10)
                 finally:
                     if process.poll() is None:
                         os.killpg(process.pid, signal.SIGKILL)
                         process.wait(timeout=5)
                 subprocess_exit = int(process.returncode)
-                subprocess_restored = (external_production / "marker.txt").is_file()
-                subprocess_diagnostic = "restoring moved paths before exit" in external_stderr
+                subprocess_clean = (
+                    child_stopped.is_file()
+                    and not Path(state["plugin_root"]).exists()
+                    and external_sentinel.read_text(encoding="utf-8") == "untouched\n"
+                )
+                subprocess_diagnostic = "terminating owned child and cleaning temporary plugin" in external_stderr
+                partial_streams_retained = (
+                    (evidence / "case-001-trial-01.jsonl").read_bytes() == b"partial stdout\r\n"
+                    and (evidence / "case-001-trial-01.stderr.log").read_bytes() == b"partial stderr\xff"
+                )
+                failure = json.loads((evidence / "case-001-trial-01.failure.json").read_text(encoding="utf-8"))
+                signal_evidence_retained = (
+                    failure["valid"] is False
+                    and failure["interrupted_by_signal"] == signal.SIGTERM
+                    and failure["exit_code"] == 143
+                    and failure["cleanup_verified"] is True
+                    and failure["cleanup_error"] is None
+                    and failure.get("child_pid") == state["pid"]
+                    and failure.get("child_pgid") == state["pid"]
+                )
 
             checks = [
-                (CURRENT_INVENTORY[0], lambda: self.assertEqual(baseline_inventory(BASELINE), CURRENT_INVENTORY)),
-                (CURRENT_INVENTORY[1], lambda: self.assertEqual(in_process_exit, 143)),
-                (CURRENT_INVENTORY[2], lambda: self.assertTrue(in_process_restored)),
-                (CURRENT_INVENTORY[3], lambda: self.assertEqual(in_process_backups, [])),
-                (CURRENT_INVENTORY[4], lambda: self.assertEqual(subprocess_exit, 143)),
-                (CURRENT_INVENTORY[5], lambda: self.assertTrue(subprocess_restored)),
-                (
-                    CURRENT_INVENTORY[6],
-                    lambda: self.assertTrue(
-                        any("restoring moved paths before exit" in line for line in stderr)
-                        and subprocess_diagnostic
-                    ),
+                lambda: self.assertEqual(in_process_exit, 143),
+                lambda: self.assertFalse(staged_root.exists()),
+                lambda: self.assertEqual(global_sentinel.read_text(encoding="utf-8"), "untouched\n"),
+                lambda: self.assertEqual(subprocess_exit, 143),
+                lambda: self.assertTrue(subprocess_clean),
+                lambda: self.assertTrue(
+                    any("terminating owned child and cleaning temporary plugin" in line for line in diagnostics)
+                    and subprocess_diagnostic
                 ),
+                lambda: self.assertTrue(partial_streams_retained),
+                lambda: self.assertTrue(signal_evidence_retained),
             ]
-
-            self.assertEqual([name for name, _check in checks], CURRENT_INVENTORY)
-            for name, check in checks:
+            for name, check in zip(CURRENT_INVENTORY, checks, strict=True):
                 with self.subTest(msg=name):
                     check()
 

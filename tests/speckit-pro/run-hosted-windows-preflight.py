@@ -408,7 +408,7 @@ def _run(args: argparse.Namespace) -> int:
         child_env,
         input_payload={
             "schema_version": "1.0",
-            "request_id": f"xplat-010-{args.role}-runtime-info",
+            "request_id": f"hosted-windows-{args.role}-runtime-info",
             "helper_id": "runner",
             "operation": "runtime-info",
             "mode": "read_only",
@@ -423,7 +423,7 @@ def _run(args: argparse.Namespace) -> int:
         child_env,
         input_payload={
             "schema_version": "1.0",
-            "request_id": f"xplat-010-{args.role}-preflight",
+            "request_id": f"hosted-windows-{args.role}-preflight",
             "helper_id": "runner",
             "operation": "preflight",
             "mode": "read_only",

@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
-"""Layer-4 regression tests for Claude/Codex eval runner skill selection.
-
-Port of ``test-eval-runner-skill-selection.sh`` (XPLAT-010 PR9 T084). The
-predecessor executes 13 assertions; the count-parity baseline is pinned at
-``tests/speckit-pro/parity/bash-to-python/test-eval-runner-skill-selection-baseline.txt``
-(TOTAL: 13).
-"""
+"""Layer-4 regression tests for Claude/Codex eval runner skill selection."""
 
 from __future__ import annotations
 
@@ -18,7 +12,6 @@ import re
 import subprocess
 import sys
 import tempfile
-import textwrap
 import unittest
 from pathlib import Path
 
@@ -31,7 +24,6 @@ FUNCTIONAL_SCRIPT = TESTS_ROOT / "layer3-functional" / "run-functional-evals.py"
 TRIGGER_SCRIPT = TESTS_ROOT / "layer2-trigger" / "run-trigger-evals.py"
 CODEX_FUNCTIONAL_SCRIPT = TESTS_ROOT / "layer3-functional" / "run-functional-evals-codex.py"
 CODEX_TRIGGER_SCRIPT = TESTS_ROOT / "layer2-trigger" / "run-trigger-evals-codex.py"
-BASELINE = TESTS_ROOT / "parity" / "bash-to-python" / "test-eval-runner-skill-selection-baseline.txt"
 CODEX_SKILLS = ("speckit-scaffold-spec", "speckit-status", "speckit-resolve-pr", "install")
 LAYER3_CONTRACT_ROOTS = (
     TESTS_ROOT / "layer3-functional" / "evals",
@@ -58,11 +50,9 @@ SHIPPED_RUNTIME_CONTRACTS = (
     PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "references" / "phase-execution-codex.md",
     PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "post-implementation.md",
     PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "references" / "post-implementation-codex.md",
-    PLUGIN_ROOT / "skills" / "speckit-autopilot" / "templates" / "pr-description-template.md",
 )
 EXPECTED_DEFERRED_HELPERS = frozenset(
     {
-        "ensure-reviewability-preset",
         "migrate-structure",
         "relocate-process-artifacts",
         "restack",
@@ -103,13 +93,11 @@ RETIRED_REPOSITORY_HELPERS = frozenset(
         "generate-pr-body.sh",
         "generate-spec-index.sh",
         "generate-uat-skeleton.sh",
-        "install-curated-set.sh",
         "migrate-structure.sh",
         "multi-pr-emission.sh",
         "o5-topology.sh",
         "parse-consensus-categories.sh",
         "plan-layers.sh",
-        "project-fixup.sh",
         "relocate-process-artifacts.sh",
         "resolve-confidence-mode.sh",
         "restack.sh",
@@ -182,22 +170,6 @@ LIB_DIR = TESTS_ROOT / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
 from test_result import run_counted  # noqa: E402
-
-
-def baseline_inventory(path: Path) -> list[str]:
-    if not path.is_file():
-        return []
-    names: list[str] = []
-    total: int | None = None
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if line.startswith("TOTAL: "):
-            total = int(line.removeprefix("TOTAL: "))
-            continue
-        _ordinal, name = line.split(" ", 1)
-        names.append(name)
-    if total != len(names):
-        raise AssertionError(f"baseline TOTAL {total} does not match {len(names)} names")
-    return names
 
 
 def merged_output(result: subprocess.CompletedProcess[str]) -> str:
@@ -388,13 +360,13 @@ def runtime_contract_parity_violations() -> list[str]:
             "scaffold",
             PLUGIN_ROOT / "skills" / "speckit-scaffold-spec" / "SKILL.md",
             PLUGIN_ROOT / "codex-skills" / "speckit-scaffold-spec" / "SKILL.md",
-            ("relocate-process-artifacts", "ensure-reviewability-preset", "deferred", "unavailable"),
+            ("relocate-process-artifacts", "deferred", "unavailable"),
         ),
         (
             "autopilot",
             PLUGIN_ROOT / "skills" / "speckit-autopilot" / "SKILL.md",
             PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "SKILL.md",
-            (PACKET_PATH_CONTRACT, "pr-packet-output", "data.stdout_json", "writes_state=false", "output_path", "sections"),
+            (),
         ),
         (
             "phase execution",
@@ -406,7 +378,18 @@ def runtime_contract_parity_violations() -> list[str]:
             "post implementation",
             PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "post-implementation.md",
             PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "references" / "post-implementation-codex.md",
-            (),
+            (
+                PACKET_PATH_CONTRACT,
+                "pr-packet-output",
+                "data.stdout_json",
+                "writes_state=false",
+                "validation_result_path",
+                "packet-owned",
+                "--base",
+                "--head",
+                "--title",
+                "--body-file",
+            ),
         ),
     )
     for label, claude_path, codex_path, required in pairs:
@@ -418,6 +401,19 @@ def runtime_contract_parity_violations() -> list[str]:
             for token in required:
                 if token.casefold() not in body:
                     violations.append(f"{label}: {surface} missing parity token {token}")
+    entrypoint_paths = next(
+        (claude_path, codex_path)
+        for label, claude_path, codex_path, _required in pairs
+        if label == "autopilot"
+    )
+    violations.extend(
+        autopilot_entrypoint_post_contract_violations(
+            {
+                "Claude": entrypoint_paths[0].read_text(encoding="utf-8"),
+                "Codex": entrypoint_paths[1].read_text(encoding="utf-8"),
+            }
+        )
+    )
     post_paths = pairs[-1][1:3]
     violations.extend(
         post_implementation_outcome_violations(
@@ -427,6 +423,31 @@ def runtime_contract_parity_violations() -> list[str]:
             }
         )
     )
+    return violations
+
+
+def autopilot_entrypoint_post_contract_violations(bodies: dict[str, str]) -> list[str]:
+    reference_names = {
+        "Claude": "post-implementation.md",
+        "Codex": "post-implementation-codex.md",
+    }
+    reference_labels = {
+        "Claude": "references/post-implementation.md",
+        "Codex": "post-implementation-codex.md",
+    }
+    violations: list[str] = []
+    for surface, raw_body in bodies.items():
+        body = re.sub(r"\s+", " ", raw_body.casefold())
+        reference = reference_names[surface]
+        label = reference_labels[surface]
+        mandatory_read = re.escape(
+            f"after phase 7 passes g7, read and execute [`{label}`](./references/{reference}) in canonical order."
+        )
+        packet_spine = rf"{mandatory_read}.{{0,700}}do not start pr side effects.{{0,300}}never report completion while"
+        if re.search(packet_spine, body) is None:
+            violations.append(
+                f"autopilot: {surface} missing mandatory canonical Post read with no-side-effect/no-completion spine"
+            )
     return violations
 
 
@@ -573,23 +594,28 @@ def run_script(script: Path, *args: str, env_overrides: dict[str, str] | None = 
     )
 
 
-def write_fake_skill_creator(root: Path) -> Path:
-    skill_creator = root / "skill-creator"
-    scripts = skill_creator / "scripts"
-    scripts.mkdir(parents=True)
-    (scripts / "__init__.py").write_text("", encoding="utf-8")
-    (scripts / "run_eval.py").write_text(
-        textwrap.dedent(
-            """\
-            import sys
-
-            print("fake run_eval invoked")
-            print("args:", " ".join(sys.argv[1:]))
-            """
-        ),
+def write_fake_claude(root: Path) -> Path:
+    binary_dir = root / "bin"
+    binary_dir.mkdir()
+    script = binary_dir / "claude-stub.py"
+    script.write_text(
+        "import sys\n"
+        "if '--version' in sys.argv:\n"
+        "    print('2.1.261')\n"
+        "elif '--help' in sys.argv:\n"
+        "    print('--restricted --plugin-dir --strict-mcp-config --mcp-config --tools --allowedTools --settings --permission-mode --permission-prompts --output-format --verbose --no-session-persistence')\n"
+        "else:\n"
+        "    raise SystemExit(97)\n",
         encoding="utf-8",
     )
-    return skill_creator
+    if os.name == "nt":
+        launcher = binary_dir / "claude.cmd"
+        launcher.write_text(f'@"{sys.executable}" "{script}" %*\r\n', encoding="utf-8")
+    else:
+        launcher = binary_dir / "claude"
+        launcher.write_text(f"#!{sys.executable}\nimport runpy\nrunpy.run_path({str(script)!r}, run_name='__main__')\n", encoding="utf-8")
+        launcher.chmod(0o755)
+    return binary_dir
 
 
 class EvalRunnerSkillSelectionTests(unittest.TestCase):
@@ -730,7 +756,6 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
                 self.assertTrue(post_implementation_outcome_violations({"Claude": mutated, "Codex": codex}))
 
     def test_eval_runner_skill_selection_contract(self) -> None:
-        self.assertEqual(baseline_inventory(BASELINE), CURRENT_INVENTORY)
         self.assertEqual(retired_contract_violations(), [])
         self.assertEqual(runtime_registry_violations(), [])
         self.assertEqual(runtime_contract_violations(), [])
@@ -738,9 +763,7 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            fake_skill_creator = write_fake_skill_creator(root)
-            fake_home = root / "home"
-            fake_home.mkdir()
+            fake_claude_dir = write_fake_claude(root)
 
             name = CURRENT_INVENTORY[0]
             result = run_script(FUNCTIONAL_SCRIPT, "speckit-coach")
@@ -756,14 +779,19 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
             result = run_script(
                 TRIGGER_SCRIPT,
                 "speckit-coach",
-                env_overrides={"SKILL_CREATOR_ROOT": str(fake_skill_creator), "HOME": str(fake_home)},
+                "--preflight",
+                env_overrides={"PATH": f"{fake_claude_dir}{os.pathsep}{os.environ.get('PATH', '')}"},
             )
             with self.subTest(msg=name):
                 self.assertEqual(result.returncode, 0, merged_output(result))
 
             name = CURRENT_INVENTORY[2]
             with self.subTest(msg=name):
-                self.assertIn(f"Skill path: {PLUGIN_ROOT / 'skills' / 'speckit-coach'}", merged_output(result))
+                report = json.loads(result.stdout)
+                self.assertEqual(
+                    report["preflight"]["skill_source"],
+                    str(PLUGIN_ROOT / "skills" / "speckit-coach" / "SKILL.md"),
+                )
 
             name = CURRENT_INVENTORY[3]
             result = run_script(CODEX_FUNCTIONAL_SCRIPT, "speckit-coach")

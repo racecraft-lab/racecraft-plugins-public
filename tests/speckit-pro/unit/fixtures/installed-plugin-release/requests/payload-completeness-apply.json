@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "request_id": "xplat-008-payload-completeness-apply",
+  "request_id": "payload-completeness-apply",
   "helper_id": "payload-gate",
   "operation": "payload-completeness",
   "mode": "apply",

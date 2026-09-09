@@ -676,7 +676,6 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
                 "toolchain",
                 "default-suite",
                 "repository-bash-confinement",
-                "source-runner-release-readiness",
                 "installed-plugin-runner-invocation",
                 "installed-plugin-active-runtime-guard",
                 "installed-plugin-payload-completeness",

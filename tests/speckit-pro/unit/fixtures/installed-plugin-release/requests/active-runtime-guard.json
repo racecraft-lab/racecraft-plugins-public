@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "request_id": "xplat-008-active-runtime-guard-current",
+  "request_id": "active-runtime-guard-current",
   "helper_id": "active-path-guard",
   "operation": "active-runtime-guard",
   "mode": "read_only",

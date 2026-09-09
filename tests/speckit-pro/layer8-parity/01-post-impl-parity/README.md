@@ -27,7 +27,7 @@ The test:
    `tolerance.json`. PASS if all required fields match within
    tolerance; FAIL with field-level diff otherwise.
 
-The PRSG-012 packet boundary is part of the parity surface. This fixture starts
+The SPEC-912 packet boundary is part of the parity surface. This fixture starts
 without a current packet at
 `specs/parity-01-post-impl/.process/pr-packets/<packet-id>.json`. Both paths must
 use the active `pr-packet-output` helper to emit or refresh the packet before
@@ -48,14 +48,6 @@ verifies the fixture structure, versioned JSON contracts, compare/tolerance
 cross-references, and every row in `## Required Invariants` without invoking
 claude -p. Live mode enforces those rows against both captured workflow
 outputs before comparing the two paths.
-
-## Cost
-
-Per-fixture-pair budget: \$20 (configurable via
-`L8_FIXTURE_BUDGET_USD`). A typical 7-phase + post-impl autopilot run
-on this synthetic workflow.md costs \$3-5 in subagents mode and \$5-10
-in teams mode (additional teammate context windows). Two runs per
-fixture invocation.
 
 ## Status
 

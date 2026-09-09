@@ -1,18 +1,4 @@
 {
-  "schema_version": "1.0",
-  "feature_id": "XPLAT-008",
-  "coverage": [
-    "source-derived expected inventory",
-    "read-only committed dist comparison",
-    "apply-mode rebuild comparison",
-    "missing runner file blocker",
-    "stale metadata blocker",
-    "extra file blocker",
-    "path leak blocker",
-    "empty surface selection blocker",
-    "invalid surface selection blocker",
-    "transform mismatch blocker"
-  ],
   "cases": [
     {
       "case_id": "current-committed-dist",

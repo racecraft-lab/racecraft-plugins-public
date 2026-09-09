@@ -3,7 +3,5 @@ interface:
   short_description: "Show roadmap, archive, and next recommended spec"
   default_prompt: "Show SpecKit roadmap status, archive extension state, and the next spec to start"
 
-# Read-only dashboard skill — safe for implicit invocation (like speckit-coach).
-# Mutation-heavy skills (setup, autopilot, resolve-pr) use false.
 policy:
   allow_implicit_invocation: true

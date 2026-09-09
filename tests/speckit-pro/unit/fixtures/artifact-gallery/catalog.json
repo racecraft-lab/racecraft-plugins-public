@@ -1,0 +1,23 @@
+[
+  ["implementation-plan", "shipped", ["prompt", "markdown"], "#plan-phase-list", "#copy-prompt", "#export-status", ".objection-field"],
+  ["spec-explainer", "shipped", [], "main", null, null, null],
+  ["code-approaches", "shipped", ["prompt", "markdown"], "#approach-list", "#copy-prompt", "#export-status", "#reason-field"],
+  ["module-map", "shipped", ["prompt", "markdown"], "#module-list", "#copy-prompt", "#export-status", ".objection-field"],
+  ["pr-writeup", "shipped", ["prompt", "markdown"], "#sec-file-by-file", "#copy-prompt", "#export-status", ".question-field"],
+  ["annotated-diff", "shipped", ["prompt", "markdown"], "#hunk-list", "#copy-prompt", "#export-status", ".objection-field"],
+  ["flowchart", "shipped", [], "#node-list", null, null, null],
+  ["uat-walkthrough", "planned", ["prompt", "markdown"], null, null, null, null],
+  ["visual-designs", "shipped", ["prompt", "markdown"], "#directions-minimal", "#copy-prompt", "#export-status", "#rationale-field"],
+  ["design-system", "shipped", [], "#components", null, null, null],
+  ["component-variants", "shipped", ["prompt", "markdown"], "#ctl-pad", "#copy-prompt", "#export-status", "#rationale-field"],
+  ["animation-prototype", "shipped", [], "#task", "[data-ease=\"linear\"]", "#easing-status", null],
+  ["interaction-prototype", "shipped", [], "#list", "[aria-label=\"Move Inbox down\"]", "#order-status", null],
+  ["svg-illustrations", "shipped", [], "#ill-queue", null, null, null],
+  ["slide-deck", "shipped", [], "#deck-stage", "#next-slide", "#slide-count", null],
+  ["concept-explainer", "shipped", [], "#hash-ring", "#add-node", "#simulation-status", null],
+  ["status-report", "shipped", [], "#summary-heading", null, null, null],
+  ["incident-report", "shipped", [], "#timeline-heading", null, null, null],
+  ["triage-board", "shipped", ["markdown"], "#board", "#copy-markdown", "#copy-status", "[data-field=\"title\"]"],
+  ["feature-flags", "shipped", ["markdown"], "#flag-groups", "#copy-markdown", "#copy-status", "[data-flag-field=\"description\"]"],
+  ["prompt-tuner", "shipped", ["markdown"], "#prompt-template", "#copy-markdown", "#copy-status", "#prompt-template"]
+]

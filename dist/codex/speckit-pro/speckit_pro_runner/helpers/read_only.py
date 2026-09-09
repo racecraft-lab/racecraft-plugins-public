@@ -291,7 +291,7 @@ def canonicalize_inputs(helper_id: str, inputs: dict[str, Any], repo_root: Path)
         "sweep-pr-feedback": {"workflow_file", "feature_dir"},
         "sweep-isolation-session": {"workflow_file"},
         # The freshness helper reads one path and only one: every git fact it
-        # needs arrives as request data (FR-004, FR-004a).
+        # needs arrives as request data.
         "check-artifact-freshness": {"workflow_file"},
         "confidence-gate": {"workflow_file"},
         "aggregate-crl": {"workflow_file"},
@@ -409,7 +409,7 @@ def explicit_or_derived_args(helper_id: str, inputs: dict[str, Any], repo_root: 
         return []
     if helper_id == "sweep-pr-feedback":
         # The observation arrives as request data on stdin, so there are no
-        # derived CLI args and no field is interpolated into a command (FR-004b).
+        # derived CLI args and no field is interpolated into a command.
         return []
     if helper_id == "sweep-isolation-session":
         # All values cross the runner on stdin. No untrusted value is ever
@@ -417,7 +417,7 @@ def explicit_or_derived_args(helper_id: str, inputs: dict[str, Any], repo_root: 
         return []
     if helper_id == "check-artifact-freshness":
         # Same reason: the whole request arrives on stdin and no field is
-        # interpolated into a command (FR-004).
+        # interpolated into a command.
         return []
     if helper_id == "confidence-gate":
         workflow_file = inputs.get("workflow_file")
@@ -733,12 +733,6 @@ def registered_worktree_entries(repo_root: Path) -> tuple[list[tuple[Path, Path]
     if not entries:
         return [], "git worktree list returned no readable registered worktrees"
     return entries, None
-
-
-def registered_worktree_roots(repo_root: Path) -> tuple[list[Path], str | None]:
-    """Return canonical worktree roots registered to ``repo_root``'s repository."""
-    entries, error = registered_worktree_entries(repo_root)
-    return [canonical for _, canonical in entries], error
 
 
 def workflow_binding_payload(
@@ -1792,19 +1786,17 @@ def estimate_reviewable_loc(inputs: dict[str, Any], repo_root: Path) -> dict[str
 
 
 def normalize_size_signal(value: Any) -> int:
-    # Coerce a pre-implementation size signal to a non-negative integer, mirroring
-    # the deleted estimate-spec-size.sh normalize_count: a bare non-negative
-    # integer (or its string form) passes through; anything missing, negative,
-    # decimal, or non-numeric normalizes to 0. Single shared path, no error branch.
+    # Coerce a pre-implementation size signal to a non-negative integer: a bare
+    # non-negative integer (or its string form) passes through; anything missing,
+    # negative, decimal, or non-numeric normalizes to 0. Single shared path, no
+    # error branch.
     text = "" if value is None else str(value)
     return int(text) if re.fullmatch(r"[0-9]+", text) else 0
 
 
 def estimate_spec_size(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
-    # Restored advisory vertical-slice size estimator (XPLAT-010 US7 / FR-025):
-    # a byte-for-byte port of the deleted
-    # speckit-pro/skills/speckit-coach/scripts/estimate-spec-size.sh, pinned by the
-    # golden fixtures under tests/speckit-pro/unit/fixtures/estimate-spec-size/.
+    # Advisory vertical-slice size estimator, pinned by the golden fixtures under
+    # tests/speckit-pro/unit/fixtures/estimate-spec-size/.
     # Callers (grill-me, speckit-prd) send the structured size signals; the output
     # is the compact {estimated_loc, suggested_slices, status} triple. Advisory-only:
     # this never blocks (exit 0 even when status is "warn").
@@ -2340,7 +2332,7 @@ def resolve_claude_subagent_runtime(inputs: dict[str, Any], repo_root: Path) -> 
 def auto_detect_basis(first_open: tuple[str, str | None] | None) -> str:
     """The plain-English reason the orchestrator prints before phase work begins.
 
-    FR-006 requires the *basis*, not just the choice: an operator who sees
+    The operator needs the *basis*, not just the choice: someone who sees
     `plan` after a strict-mode gate stop needs to know the `Confidence Gate` row
     is what decided it, because that is the row they must act on.
     """
@@ -2412,8 +2404,8 @@ def resolve_autopilot_stage(inputs: dict[str, Any], repo_root: Path) -> dict[str
 SWEEP_PARSE_SURFACE = "parse"
 SWEEP_NAMED_SURFACES = (SWEEP_PARSE_SURFACE, "check_target", "redact")
 
-# The redaction surface's closed leg set. Three outbound legs carry FR-012f's
-# bound and deny-set; `analyst_payload` is FR-007g's inbound shaping. A fifth leg
+# The redaction surface's closed leg set. Three outbound legs carry the
+# bound and deny-set; `analyst_payload` is the inbound shaping. A fifth leg
 # is a change to the contract rather than a configuration.
 SWEEP_REDACT_LEGS = ("amendment", "log_row", "reply", "analyst_payload")
 
@@ -2430,10 +2422,10 @@ SWEEP_AUTHOR_ASSOCIATIONS = (
     "MANNEQUIN",
     "NONE",
 )
-# A proxy for write access (FR-005), never a permissions check.
+# A proxy for write access, never a permissions check.
 SWEEP_TRUSTED_ASSOCIATIONS = ("OWNER", "MEMBER", "COLLABORATOR")
 SWEEP_BODY_BUDGET_BYTES = 8192
-# FR-015b fixes the prefix only: the answered comment's id and the closing `-->`
+# Only the prefix is fixed: the answered comment's id and the closing `-->`
 # follow it, so the match is anchored at position 0 over the prefix alone.
 SWEEP_SELF_REPLY_PREFIX = "<!-- speckit-pro:feedback-sweep"
 SWEEP_LOG_HEADING = "Feedback Sweep Log"
@@ -2442,7 +2434,7 @@ SWEEP_RECOGNITION_WINDOW_LINES = 10
 SWEEP_ANCHOR_LIMIT = 64
 # The grammar validates the parenthesised value as pasted, `#phase-2`; the record
 # stores the run after the `#`. Validating the stored form would drop every
-# conforming anchor, so the two forms are kept apart on purpose (FR-007e).
+# conforming anchor, so the two forms are kept apart on purpose.
 SWEEP_ANCHOR_RE = re.compile(r"^#[a-z0-9-]{1,64}$")
 SWEEP_TRAILING_ANCHOR_RE = re.compile(r"\(([^()]*)\)$")
 # The serialization family emits its identity as a header pair rather than a lead
@@ -2461,7 +2453,7 @@ class SweepExportLead:
 
 
 # Static data, guarded by a test that derives the expected set from the gallery
-# manifest and the templates themselves (FR-008a). No shipped template or payload
+# manifest and the templates themselves. No shipped template or payload
 # copy is edited: recognition is by registry, not by template change.
 #
 # 14 lead sentences (7 note-payload templates times 2 kinds), 6 distinct
@@ -2561,7 +2553,7 @@ SWEEP_SERIALIZATION_HEADERS = frozenset(
     entry.line for entry in SWEEP_EXPORT_REGISTRY if entry.line == f"Artifact: {entry.template_id}"
 )
 
-# FR-007g's frame. The literal strings are the contract's and are pinned by the
+# The inbound frame. The literal strings are the contract's and are pinned by the
 # golden envelope, so they are written once here and substituted nowhere else.
 SWEEP_BEGIN_DELIMITER = "===== BEGIN REVIEWER COMMENT {comment_id} ====="
 SWEEP_END_DELIMITER = "===== END REVIEWER COMMENT {comment_id} ====="
@@ -2657,13 +2649,13 @@ def sweep_is_table_rule(cells: list[str]) -> bool:
 
 
 def sweep_logged_comment_ids(text: str) -> tuple[set[str], int | None]:
-    """The FR-009 skip set, read from the Feedback Sweep Log and nothing else.
+    """The handled-comment skip set, read only from the Feedback Sweep Log.
 
     Returns the ids and, when a row's comment-id cell cannot be read, that row's
     1-based position. An unreadable key is indistinguishable from an absent one
     and the two guesses fail in opposite directions, so neither is taken: reading
     it as absent re-processes a handled comment, reading it as present skips an
-    unhandled one (FR-009a).
+    unhandled one.
     """
     logged: set[str] = set()
     inside = False
@@ -2700,7 +2692,7 @@ def sweep_export_anchors(lines: list[str]) -> tuple[list[str], int]:
     An anchor is the parenthesised value that ends a line. It conforms when the
     whole of it matches the grammar; the record carries the run after the `#`. At
     most sixty-four are kept, the first sixty-four in body order, and every other
-    one is dropped and counted (FR-007e).
+    one is dropped and counted.
     """
     anchors: list[str] = []
     dropped = 0
@@ -2747,7 +2739,7 @@ def sweep_export_record(body: str) -> dict[str, Any] | None:
         "template_ambiguous": leading.template_id is None,
         "kind": leading.kind,
         # Every matched line, never the first alone: removing only the first
-        # would leave the second sitting inside the delimited block (FR-007f).
+        # would leave the second sitting inside the delimited block.
         "matched_lines": [number for number, _entry in matched],
         "anchors": anchors,
         "anchors_dropped": dropped,
@@ -2882,7 +2874,7 @@ def sweep_parse(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
         # Presence is as far as a deterministic parse can go: the contract forbids
         # it from reaching the network, so it has no second value to compare
         # against, and confirming the account stays the orchestrator's job through
-        # provenance (FR-006b).
+        # provenance.
         return sweep_error("self_login is required and must not be blank")
     workflow_file = inputs.get("workflow_file")
     if not isinstance(workflow_file, str) or not workflow_file:
@@ -2950,7 +2942,7 @@ def sweep_parse(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
         })
     return sweep_result(({
         "tool": "sweep-pr-feedback",
-        # Both surfaces are read as one all-or-nothing observation (FR-004c), so
+        # Both surfaces are read as one all-or-nothing observation, so
         # this reports what the observation covered rather than which of the two
         # happened to carry a comment.
         "surfaces_read": ["review_thread", "pr_conversation"],
@@ -2968,18 +2960,18 @@ def sweep_parse(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     }))
 
 
-# The three artifacts an amendment may write (FR-012b). The set is closed here
+# The three artifacts an amendment may write. The set is closed here
 # because it is the whole of the check: a fourth name is a contract change.
 SWEEP_EDIT_ALLOWLIST = ("spec.md", "plan.md", "tasks.md")
 
 
 def sweep_check_target(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
-    """FR-012b rule 2: the resolved write target, checked in code before any write.
+    """Check the resolved write target in code before any write.
 
     The test is the surface's and the stop is the orchestrator's, the same division
     the parse keeps when it reports candidates and assigns no class. `allowed: false`
     is a successful read with an answer in it rather than a diagnostic, so a refusal
-    returns a verdict and the halt stays with the caller under FR-012d.
+    returns a verdict and the halt stays with the caller.
     """
     feature_dir = inputs.get("feature_dir")
     if not isinstance(feature_dir, str) or not feature_dir:
@@ -3023,7 +3015,7 @@ def sweep_check_target(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any
     allowed_names = {feature_path / name for name in SWEEP_EDIT_ALLOWLIST}
     reason: str | None = None
     if candidate not in allowed_names or candidate.resolve(strict=False) not in allowed_paths:
-        # Exact membership over resolved paths, never containment (FR-012c). A
+        # Exact membership over resolved paths, never containment. A
         # containment or prefix test would admit everything beneath the feature
         # directory, its checklists and its contracts included, and comparing
         # prefixes against an unresolved path is a traversal defect of its own.
@@ -3101,7 +3093,7 @@ def sweep_redact(inputs: dict[str, Any]) -> dict[str, Any]:
     return sweep_redact_outbound(leg, comment_id, lines)
 
 
-# FR-012f's six hit classes. The placeholder carries the rule name and nothing
+# The six hit classes. The placeholder carries the rule name and nothing
 # else, so it holds zero reviewer bytes, contains neither a pipe nor a newline,
 # and matches no rule.
 SWEEP_REDACT_PLACEHOLDER = "[redacted: {rule}]"
@@ -3126,7 +3118,7 @@ SWEEP_KEY_HEADER_RE = re.compile(
 # token" out, the digit keeps a word and a row of placeholder characters out, and
 # the class keeps every `${{ ... }}` and `<...>` placeholder out.
 SWEEP_TOKEN_RUN = r"(?=[A-Za-z0-9._~+/=-]*[0-9])[A-Za-z0-9._~+/=-]{20,}"
-# The value rules, in FR-012f's order. Group 1 is the run, because the span
+# The value rules, in contract order. Group 1 is the run, because the span
 # each rule replaces is the run alone and never the trigger beside it. No rule
 # fires on a name, a phrase, or a quoted header alone.
 SWEEP_REDACT_VALUE_RULES = (
@@ -3243,7 +3235,7 @@ def sweep_redact_value_rules(line: str) -> tuple[str, list[str]]:
 
 
 def sweep_redact_outbound(leg: str, comment_id: str, lines: list[str]) -> dict[str, Any]:
-    """FR-012f's three outbound legs: the bound, the deny-set, and the bound again.
+    """The three outbound legs: the bound, the deny-set, and the bound again.
 
     One line in is one line out on every path, so a caller writes the result back
     where the input came from without re-aligning anything. The surface prevents no
@@ -3343,7 +3335,7 @@ def sweep_span_tail(line_count: int, unclosed: bool) -> str:
 
 
 def sweep_withhold_spans(body: str) -> tuple[str, list[dict[str, Any]]]:
-    """FR-007g step 4: one left-to-right span scan, earliest opener by byte offset.
+    """One left-to-right span scan, earliest opener by byte offset.
 
     Spans do not nest, an unclosed opener runs to the end of the body, a fence
     placeholder replaces the opener line through the closer line, and a comment
@@ -3415,7 +3407,7 @@ def sweep_withhold_spans(body: str) -> tuple[str, list[dict[str, Any]]]:
 
 
 def sweep_analyst_payload(inputs: dict[str, Any], comment_id: str) -> dict[str, Any]:
-    """FR-007g's inbound leg: five steps, in one order, then the frame.
+    """The inbound leg: five steps, in one order, then the frame.
 
     The surface makes the payload's shape provable. It proves nothing about what
     is done with it.
@@ -3518,7 +3510,7 @@ FRESHNESS_COMMIT_COLUMN = "Commit"
 FRESHNESS_NUMBER_COLUMN = "#"
 FRESHNESS_AMENDED_CLASS = "amended"
 # The closed three of `artifacts_dir_state`. `absent` and `empty` both read as
-# nothing to judge (FR-007).
+# nothing to judge.
 FRESHNESS_DIR_STATES = ("absent", "empty", "present")
 FRESHNESS_NO_PAGES_STATES = ("absent", "empty")
 FRESHNESS_NO_PAGES = "no_pages"
@@ -3564,15 +3556,15 @@ def freshness_observation_error(observation: dict[str, Any]) -> str | None:
     """Name what is malformed in an observation that reported success, or None.
 
     Scoped to a gather that already claimed `ok` as the literal `true`. A failed
-    gather never reaches here, so nothing this function refuses is the failed
-    gather FR-023 protects: these are shape defects in data the caller said it
+    gather never reaches here, so nothing this function refuses is a failed
+    gather: these are shape defects in data the caller said it
     had, which the contract calls the caller's own defect and answers with exit
     2. Without this, `pages` as a bare string splats into one page per
     character, and a non-list `amended_commits` raises a `TypeError` the runner
     reports as `internal_failure` — neither of which is a verdict.
 
     Semantically negative values are data and are not refused here. `resolved`
-    as false carries meaning the join acts on, and FR-006 owns the row-level
+    as false carries meaning the join acts on, and the row-level
     reason it produces.
 
     Absence is refused with the wrong type, following `freshness_page_list`
@@ -3608,10 +3600,10 @@ def freshness_observation_error(observation: dict[str, Any]) -> str | None:
             )
         ancestor = record.get("is_ancestor_of_artifacts_commit")
         if resolved and not isinstance(ancestor, bool):
-            # FR-007b's caller obligation, enforced rather than merely written
+            # The caller obligation, enforced rather than merely written
             # down. The stale test is for the literal `false`, so a resolved
             # record leaving this field null or omitted reads as *not stale* and
-            # hands a re-reviewer the pre-amendment plan. That is the FR-007a
+            # hands a re-reviewer the pre-amendment plan. That is the
             # interrupted-run case, and it is the one shape where a silent
             # default is worse than a refusal.
             return (
@@ -3624,12 +3616,12 @@ def freshness_observation_error(observation: dict[str, Any]) -> str | None:
                 f"is_ancestor_of_artifacts_commit: {record.get('cell')}"
             )
         if resolved and last_artifacts_commit is None and ancestor is True:
-            # The other direction of the same FR-007b rule, and the one a
+            # The other direction of the same rule, and the one a
             # boolean check alone lets through. With no commit for anything to
             # be an ancestor of, `true` is not a weaker claim than `false` — it
             # is a false one, and it reaches the ordinary test as *not stale*,
-            # returning `current` on exactly the interrupted-run case FR-007a
-            # exists for. FR-007b pins the value, so the helper pins it too.
+            # returning `current` on exactly the interrupted-run case this guard
+            # exists for. The contract pins the value, so the helper pins it too.
             return (
                 "an amended_commits record claims ancestry of a null "
                 f"last_artifacts_commit: {record.get('cell')}"
@@ -3741,8 +3733,7 @@ def check_artifact_freshness(inputs: dict[str, Any], repo_root: Path) -> dict[st
     Reports; never decides and never selects. Page selection stays with the
     emission machinery and the stop-or-proceed decision stays with the
     orchestrator, so this helper writes no file, runs no `git`, runs no `gh`, and
-    reaches no network: every git fact arrives as request data (FR-004,
-    FR-004a).
+    reaches no network: every git fact arrives as request data.
 
     An explicit JSON null reads as absence and routes to the verdict surface,
     because a caller assembling the object programmatically writes the key with a
@@ -3766,8 +3757,8 @@ def freshness_verdict(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]
     """Report the freshness verdict of one supplied artifacts observation.
 
     A malformed *request* is the caller's defect and returns exit 2. A failed or
-    unusable *observation* is a fact about the world, and FR-023 forbids it from
-    blocking the run, so it returns a verdict that acts on nothing.
+    unusable *observation* is a fact about the world and must not block the run,
+    so it returns a verdict that acts on nothing.
     """
     workflow_file = inputs.get("workflow_file")
     if not isinstance(workflow_file, str) or not workflow_file:
@@ -3817,8 +3808,8 @@ def freshness_verdict(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]
         cell = reading["cell"]
         # Verbatim, and matched against the supplied records alone: the cell may
         # be abbreviated where `last_artifacts_commit` is full, so a string
-        # comparison would report a matching commit as stale (FR-008), and a
-        # timestamp comparison would be wrong across a rebase (FR-004a).
+        # comparison would report a matching commit as stale, and a timestamp
+        # comparison would be wrong across a rebase.
         record = next(
             (entry for entry in records if isinstance(entry, dict) and entry.get("cell") == cell),
             None,
@@ -3833,14 +3824,14 @@ def freshness_verdict(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]
                 {"row": reading["row"], "cell": cell, "reason": "unresolvable_commit"}
             )
         elif record.get("is_ancestor_of_artifacts_commit") is False:
-            # One such row decides staleness alone. FR-007a needs no branch of
-            # its own: a null `last_artifacts_commit` pins this field false for
-            # every resolved row (FR-007b), so it reaches `stale` here.
+            # One such row decides staleness alone. The interrupted-run case needs
+            # no branch of its own: a null `last_artifacts_commit` pins this field false for
+            # every resolved row, so it reaches `stale` here.
             deciding_rows.append({"row": reading["row"], "cell": cell})
 
     if dir_state in FRESHNESS_NO_PAGES_STATES:
         # Nothing to judge, so no row decides anything and `deciding_rows` stays
-        # empty. The rows that could not be read are still reported: FR-006
+        # empty. The rows that could not be read are still reported: the contract
         # requires surfacing such a row on any verdict, and reporting the count
         # while hiding the rows behind it would tell an operator that the log
         # was read without telling them what it could not read.
@@ -3862,7 +3853,7 @@ def freshness_verdict(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]
         last_artifacts_commit=last_artifacts_commit,
         amended_rows_read=amended_rows_read,
         deciding_rows=deciding_rows,
-        # Surfaced on any verdict, because FR-006 requires reporting such a row
+        # Surfaced on any verdict, because the contract requires reporting such a row
         # even when a deciding row already settled the verdict.
         undeterminable_rows=undeterminable_rows,
         pages=pages,
@@ -3894,11 +3885,10 @@ def freshness_removal_diff(inputs: dict[str, Any]) -> dict[str, Any]:
     from `reselected_pages`. Never the reverse, because a stem the re-selection
     returned and the directory does not hold is a new page the author dispatch
     writes. `reselected_pages` carries both `generated` and `gap` outcomes, so a
-    gapped page is still selected and is not a removal (FR-012a).
+    gapped page is still selected and is not a removal.
 
-    Reads no file and deletes nothing: the system performs the deletion, stages
-    it in the FR-018 commit, and reports each removal as its own outcome
-    (FR-012).
+    Reads no file and deletes nothing: the system performs and stages the
+    deletion, then reports each removal as its own outcome.
     """
     observed = freshness_page_list(inputs, "observed_pages")
     if observed is None:
@@ -3924,12 +3914,12 @@ def freshness_corroborate_refresh(inputs: dict[str, Any], repo_root: Path) -> di
 
     The two shipped pure functions are called verbatim, the same pair
     `resolve_autopilot_stage` calls, and this surface adds no branch of its own.
-    The literal reuse is the requirement: FR-034 assigns each of the six
-    statuses the behavior the ART-007 contract already gives it, and that
+    The literal reuse is the requirement: each of the six
+    statuses the artifact contract already gives it, and that
     guarantee holds only while the same code decides the status in both places.
     A second implementation would drift, and the drift would be silent.
 
-    Stays on this registration's single read path, the workflow file (FR-004).
+    Stays on this registration's single read path, the workflow file.
     """
     workflow_file = inputs.get("workflow_file")
     if not isinstance(workflow_file, str) or not workflow_file:
@@ -5588,6 +5578,10 @@ def json_schema_failures(
     if isinstance(minimum, (int, float)) and isinstance(value, (int, float)) and not isinstance(value, bool):
         if value < minimum:
             failures.append(schema_failure("minimum", field, f"Number must be at least {minimum}."))
+    maximum = schema.get("maximum")
+    if isinstance(maximum, (int, float)) and isinstance(value, (int, float)) and not isinstance(value, bool):
+        if value > maximum:
+            failures.append(schema_failure("maximum", field, f"Number must be at most {maximum}."))
     return failures
 
 
@@ -5809,10 +5803,6 @@ def packet_body_structure_failures(data: dict[str, Any], body_text: str) -> list
                     }
                 )
     return failures
-
-
-def pr_packet_body_failures(data: dict[str, Any], repo_root: Path) -> list[dict[str, Any]]:
-    return pr_packet_body_validation(data, repo_root)["failures"]
 
 
 def pr_packet_body_validation(data: dict[str, Any], repo_root: Path) -> dict[str, Any]:
@@ -6777,10 +6767,6 @@ def normalize_reference_info(raw: str, repo_root: Path) -> tuple[str, bool]:
         return path.resolve(strict=False).relative_to(repo_root.resolve(strict=False)).as_posix(), True
     except ValueError:
         return raw, False
-
-
-def normalize_reference(raw: str, repo_root: Path) -> str:
-    return normalize_reference_info(raw, repo_root)[0]
 
 
 def output_capture(raw: bytes | str, limit_bytes: int = CAPTURE_LIMIT_BYTES) -> dict[str, Any]:

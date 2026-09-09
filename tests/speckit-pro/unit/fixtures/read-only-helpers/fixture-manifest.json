@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "feature_id": "XPLAT-005",
+  "feature_id": "SPEC-805",
   "mode": "read_only",
   "helpers": [
     {

@@ -326,16 +326,16 @@ async function buildHooksPage() {
   records.push({
     id: 'claude-code-hooks',
     heading: 'Claude Code Hooks',
-    purpose: 'Documents the Claude Code prompt-expansion hook that warns when the SpecKit CLI is unavailable.',
+    purpose: 'Documents Claude Code lifecycle hooks that enforce feedback-sweep isolation.',
     platformMapping: {
-      concept: 'SpecKit CLI availability warning',
-      claudeCode: 'UserPromptExpansion hook in speckit-pro/hooks/hooks.json',
-      codex: 'Parallel Codex hook is documented separately.',
+      concept: 'Feedback-sweep lifecycle enforcement',
+      claudeCode: 'SessionStart, PreToolUse, and SubagentStop hooks in speckit-pro/hooks/hooks.json',
+      codex: 'Codex hook inventory is documented separately.',
       runtimeDifference: 'Claude Code uses the plugin hook configuration under hooks/hooks.json.',
     },
     sourceFacts: [
       sourceFact(`Claude Code hook events: ${Object.keys(claudeHooks.hooks || {}).join(', ')}.`, ['speckit-pro/hooks/hooks.json']),
-      sourceFact('The Claude Code hook matcher targets SpecKit Pro and SpecKit command-style prompts before warning about a missing specify CLI.', ['speckit-pro/hooks/hooks.json']),
+      sourceFact('Four command handlers attest the sweep boundary, authorize Agent and broker dispatch, and validate sweep-subagent stops.', ['speckit-pro/hooks/hooks.json']),
     ],
     sources: [await citation('speckit-pro/hooks/hooks.json')],
     inferredNotes: [
@@ -346,16 +346,16 @@ async function buildHooksPage() {
   records.push({
     id: 'codex-hooks',
     heading: 'Codex Hooks',
-    purpose: 'Documents the Codex prompt-submit hook that warns when SpecKit commands are invoked without the SpecKit CLI.',
+    purpose: 'Documents the current Codex plugin hook inventory.',
     platformMapping: {
-      concept: 'SpecKit CLI availability warning',
-      claudeCode: 'Parallel Claude Code hook is documented separately.',
+      concept: 'Codex plugin hook inventory',
+      claudeCode: 'Claude Code lifecycle hooks are documented separately.',
       codex: 'UserPromptSubmit hook in speckit-pro/codex-hooks.json',
       runtimeDifference: 'Codex uses the root codex-hooks.json plugin configuration.',
     },
     sourceFacts: [
       sourceFact(`Codex hook events: ${Object.keys(codexHooks.hooks || {}).join(', ')}.`, ['speckit-pro/codex-hooks.json']),
-      sourceFact('The Codex hook checks prompt text for SpecKit skill sigils and emits a warning when specify is missing.', ['speckit-pro/codex-hooks.json']),
+      sourceFact('The declared Codex UserPromptSubmit matcher group contains no hook handlers and executes no command.', ['speckit-pro/codex-hooks.json']),
     ],
     sources: [await citation('speckit-pro/codex-hooks.json')],
     inferredNotes: [
@@ -536,7 +536,7 @@ async function buildTestsPage() {
   }
   return page('tests', 'Tests Reference', 'SpecKit Pro validation layers and test-only files.', records, [
     await citation('tests/speckit-pro/run-all.py'),
-    await citation('tests/speckit-pro/layer1-structural/validate-codex-plugin.py'),
+    await citation('tests/speckit-pro/layer1-structural/validate-plugin-metadata.py'),
   ]);
 }
 async function buildSourceVsDistPage() {
@@ -546,7 +546,7 @@ async function buildSourceVsDistPage() {
     ['codex-generated-payload', 'Codex Generated Payload', 'Generated Codex install payload inventory under dist/codex.', ['dist/codex/speckit-pro/README.md', 'dist/codex/speckit-pro/.codex-plugin/plugin.json'], 'generated-payload'],
     ['marketplace-registries', 'Marketplace Registries', 'Repository marketplace catalogs that point to generated payloads.', ['.claude-plugin/marketplace.json', '.agents/plugins/marketplace.json'], 'source'],
     ['release-scripts', 'Release And Payload Scripts', 'Root scripts used for generated payload and marketplace maintenance.', ['scripts/build-plugin-payloads.py', 'scripts/sync-marketplace-versions.py'], 'release-infrastructure'],
-    ['test-suite', 'Validation Test Suite', 'Layered validation files for plugin structure, scripts, parity, and integration fixtures.', ['tests/speckit-pro/run-all.py', 'tests/speckit-pro/layer1-structural/validate-plugin.py'], 'test-only'],
+    ['test-suite', 'Validation Test Suite', 'Layered validation files for plugin structure, scripts, parity, and integration fixtures.', ['tests/speckit-pro/run-all.py', 'tests/speckit-pro/layer1-structural/validate-plugin-metadata.py'], 'test-only'],
     ['docs-site', 'Documentation Site', 'Astro/Starlight documentation source and local validation scripts.', ['docs-site/package.json', 'docs-site/astro.config.mjs', 'docs-site/src/content/docs/reference.md'], 'documentation-infrastructure'],
     ['speckit-integration-manifests', 'SpecKit Integration Manifests', 'SpecKit project integration manifest evidence recorded under .specify.', ['.specify/integrations/claude.manifest.json', '.specify/integrations/speckit.manifest.json'], 'source'],
   ].map(([id, heading, purpose, paths, classification]) => ({ id, heading, purpose, paths, classification }));

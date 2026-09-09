@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
-"""PRSG-013 reviewability marker guidance parity checks."""
+"""Reviewability marker guidance parity checks."""
 
 from __future__ import annotations
 
-import hashlib
 import json
 import re
 import runpy
-import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -18,7 +16,6 @@ REPO_ROOT = TEST_DIR.parents[2]
 LIB_DIR = TEST_DIR.parent / "lib"
 sys.path.insert(0, str(LIB_DIR))
 
-from capture_baseline import baseline_inventory  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
@@ -39,15 +36,10 @@ SOURCE_PATHS = {
     "codex_evals": REPO_ROOT
     / "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
 }
-BASELINE = REPO_ROOT / "tests/speckit-pro/parity/bash-to-python/test-reviewability-marker-guidance-baseline.txt"
 MARKER_PLAN_SCHEMA_PATHS = (
     REPO_ROOT / "speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
     REPO_ROOT / "dist/claude/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
     REPO_ROOT / "dist/codex/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
-    REPO_ROOT
-    / "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
-    REPO_ROOT
-    / "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
 )
 CHANGED_FILE_MANIFEST_SCHEMA_PATHS = tuple(
     path.with_name("changed-file-manifest.schema.json") for path in MARKER_PLAN_SCHEMA_PATHS
@@ -55,99 +47,119 @@ CHANGED_FILE_MANIFEST_SCHEMA_PATHS = tuple(
 VERIFICATION_REPORT_SCHEMA_PATHS = tuple(
     path.with_name("verification-report.schema.json") for path in MARKER_PLAN_SCHEMA_PATHS
 )
-MARKER_CHECKPOINT_SCHEMA_PATH = (
-    REPO_ROOT
-    / "tests/speckit-pro/layer6-efficiency/contracts/marker-checkpoint.schema.json"
-)
-MARKER_CHECKPOINT_PATHS = tuple(
-    REPO_ROOT
-    / f"tests/speckit-pro/unit/fixtures/final-reviewability-backstop/checkpoints/us{index}.json"
-    for index in range(1, 4)
-)
-COMPLETED_MARKER_EVIDENCE_PATH = (
-    REPO_ROOT
-    / "tests/speckit-pro/unit/fixtures/final-reviewability-backstop/completed-marker-evidence.json"
+
+
+PAIRED_GUIDANCE_GROUPS = (
+    (
+        (
+            "Claude guidance says valid current size-only block continues to marker planning",
+            "Codex guidance mirrors valid size-only continuation",
+            "valid current size-only",
+        ),
+        (
+            "Claude guidance says size-only block is not a manual re-slicing stop",
+            "Codex guidance mirrors no manual re-slicing stop",
+            "not a manual re-slicing stop",
+        ),
+        (
+            "Claude guidance sends size-only block into marker planning",
+            "Codex guidance mirrors marker planning",
+            "marker planning",
+        ),
+        (
+            "Claude guidance sends size-only block into marker emission",
+            "Codex guidance mirrors marker emission",
+            "marker emission",
+        ),
+    ),
+    (
+        (
+            "Guidance preserves malformed/stale marker correctness stops",
+            "Codex guidance preserves malformed/stale marker correctness stops",
+            "malformed/stale marker state",
+        ),
+        (
+            "Guidance preserves failed verification stop",
+            "Codex guidance preserves failed verification stop",
+            "failed verification",
+        ),
+        (
+            "Guidance preserves invalid packet stop",
+            "Codex guidance preserves invalid packet stop",
+            "invalid packet",
+        ),
+        (
+            "Guidance preserves unsafe output stop",
+            "Codex guidance preserves unsafe output stop",
+            "unsafe output",
+        ),
+        (
+            "Guidance preserves unusable gate evidence stop",
+            "Codex guidance preserves unusable gate evidence stop",
+            "unusable gate evidence",
+        ),
+    ),
+    (
+        (
+            "Claude evidence prompts include gate status/mode/exit/evidence path",
+            "Codex evidence prompts include gate status/mode/exit/evidence path",
+            "gate status/mode/exit/evidence path",
+        ),
+        (
+            "Claude evidence prompts include fingerprint status",
+            "Codex evidence prompts include fingerprint status",
+            "fingerprint status",
+        ),
+        (
+            "Claude evidence prompts include ordered marker IDs",
+            "Codex evidence prompts include ordered marker IDs",
+            "ordered marker IDs",
+        ),
+        (
+            "Claude evidence prompts include checkpoints",
+            "Codex evidence prompts include checkpoints",
+            "checkpoints",
+        ),
+        (
+            "Claude evidence prompts include warnings",
+            "Codex evidence prompts include warnings",
+            "warnings",
+        ),
+        (
+            "Claude evidence prompts include final marker_split",
+            "Codex evidence prompts include final marker_split",
+            "final marker_split",
+        ),
+        (
+            "Claude evidence prompts include packet validation",
+            "Codex evidence prompts include packet validation",
+            "packet validation",
+        ),
+        (
+            "Claude evidence prompts include PR mappings",
+            "Codex evidence prompts include PR mappings",
+            "PR mappings",
+        ),
+        (
+            "Claude marker emission guidance separates source feature dir from branch prefix",
+            "Codex marker emission guidance separates source feature dir from branch prefix",
+            "--source-feature-dir specs/<feature>",
+        ),
+        (
+            "Claude marker emission guidance preserves source evidence paths",
+            "Codex marker emission guidance preserves source evidence paths",
+            "Full verification evidence, scoped evidence, PRS, and MOC files stay under",
+        ),
+    ),
 )
 
 
 CHECKS = (
-    (
-        "Claude guidance says valid current size-only block continues to marker planning",
-        "claude_combined",
-        "valid current size-only",
-    ),
-    (
-        "Claude guidance says size-only block is not a manual re-slicing stop",
-        "claude_combined",
-        "not a manual re-slicing stop",
-    ),
-    ("Claude guidance sends size-only block into marker planning", "claude_combined", "marker planning"),
-    ("Claude guidance sends size-only block into marker emission", "claude_combined", "marker emission"),
-    ("Codex guidance mirrors valid size-only continuation", "codex_combined", "valid current size-only"),
-    ("Codex guidance mirrors no manual re-slicing stop", "codex_combined", "not a manual re-slicing stop"),
-    ("Codex guidance mirrors marker planning", "codex_combined", "marker planning"),
-    ("Codex guidance mirrors marker emission", "codex_combined", "marker emission"),
-    (
-        "Guidance preserves malformed/stale marker correctness stops",
-        "claude_combined",
-        "malformed/stale marker state",
-    ),
-    ("Guidance preserves failed verification stop", "claude_combined", "failed verification"),
-    ("Guidance preserves invalid packet stop", "claude_combined", "invalid packet"),
-    ("Guidance preserves unsafe output stop", "claude_combined", "unsafe output"),
-    ("Guidance preserves unusable gate evidence stop", "claude_combined", "unusable gate evidence"),
-    (
-        "Codex guidance preserves malformed/stale marker correctness stops",
-        "codex_combined",
-        "malformed/stale marker state",
-    ),
-    ("Codex guidance preserves failed verification stop", "codex_combined", "failed verification"),
-    ("Codex guidance preserves invalid packet stop", "codex_combined", "invalid packet"),
-    ("Codex guidance preserves unsafe output stop", "codex_combined", "unsafe output"),
-    ("Codex guidance preserves unusable gate evidence stop", "codex_combined", "unusable gate evidence"),
-    (
-        "Claude evidence prompts include gate status/mode/exit/evidence path",
-        "claude_combined",
-        "gate status/mode/exit/evidence path",
-    ),
-    ("Claude evidence prompts include fingerprint status", "claude_combined", "fingerprint status"),
-    ("Claude evidence prompts include ordered marker IDs", "claude_combined", "ordered marker IDs"),
-    ("Claude evidence prompts include checkpoints", "claude_combined", "checkpoints"),
-    ("Claude evidence prompts include warnings", "claude_combined", "warnings"),
-    ("Claude evidence prompts include final marker_split", "claude_combined", "final marker_split"),
-    ("Claude evidence prompts include packet validation", "claude_combined", "packet validation"),
-    ("Claude evidence prompts include PR mappings", "claude_combined", "PR mappings"),
-    (
-        "Claude marker emission guidance separates source feature dir from branch prefix",
-        "claude_combined",
-        "--source-feature-dir specs/<feature>",
-    ),
-    (
-        "Claude marker emission guidance preserves source evidence paths",
-        "claude_combined",
-        "Full verification evidence, scoped evidence, PRS, and MOC files stay under",
-    ),
-    (
-        "Codex evidence prompts include gate status/mode/exit/evidence path",
-        "codex_combined",
-        "gate status/mode/exit/evidence path",
-    ),
-    ("Codex evidence prompts include fingerprint status", "codex_combined", "fingerprint status"),
-    ("Codex evidence prompts include ordered marker IDs", "codex_combined", "ordered marker IDs"),
-    ("Codex evidence prompts include checkpoints", "codex_combined", "checkpoints"),
-    ("Codex evidence prompts include warnings", "codex_combined", "warnings"),
-    ("Codex evidence prompts include final marker_split", "codex_combined", "final marker_split"),
-    ("Codex evidence prompts include packet validation", "codex_combined", "packet validation"),
-    ("Codex evidence prompts include PR mappings", "codex_combined", "PR mappings"),
-    (
-        "Codex marker emission guidance separates source feature dir from branch prefix",
-        "codex_combined",
-        "--source-feature-dir specs/<feature>",
-    ),
-    (
-        "Codex marker emission guidance preserves source evidence paths",
-        "codex_combined",
-        "Full verification evidence, scoped evidence, PRS, and MOC files stay under",
+    *(
+        (pair[host_index], body_key, pair[2])
+        for group in PAIRED_GUIDANCE_GROUPS
+        for host_index, body_key in ((0, "claude_combined"), (1, "codex_combined"))
+        for pair in group
     ),
     (
         "Workflow guidance persists pr_marker_plan outside tasks.md",
@@ -210,7 +222,6 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
         cls.bodies = bodies
 
     def test_reviewability_marker_guidance_contract(self) -> None:
-        self.assertEqual(baseline_inventory(BASELINE), [name for name, _body_key, _expected in CHECKS])
         for name, body_key, expected in CHECKS:
             with self.subTest(msg=name):
                 self.assertIn(expected, self.bodies[body_key])
@@ -236,24 +247,24 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
         with self.subTest(invalid_marker_kind="maintenance"):
             self.assertNotIn("maintenance", marker_kinds)
 
-    def test_every_marker_plan_schema_accepts_legacy_v1_pending_checkpoint(self) -> None:
+    def test_every_marker_plan_schema_accepts_shipped_v1_pending_checkpoint(self) -> None:
         schema_errors = runpy.run_path(
             str(
                 REPO_ROOT
                 / "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py"
             )
         )["_json_schema_errors"]
-        legacy_plan = {
+        shipped_plan = {
             "schema_version": "pr-marker-plan.v1",
             "kind": "pr_marker_plan",
-            "feature_id": "LEGACY-001",
+            "feature_id": "fixture",
             "status": "planned",
             "source_fingerprint": {
-                "feature_spec_sha": "legacy-spec",
-                "plan_declared_scope_sha": "legacy-plan",
-                "tasks_sha": "legacy-tasks",
-                "reviewability_sha": "legacy-reviewability",
-                "hazard_route_sha": "legacy-hazards",
+                "feature_spec_sha": "fixture-spec",
+                "plan_declared_scope_sha": "fixture-plan",
+                "tasks_sha": "fixture-tasks",
+                "reviewability_sha": "fixture-reviewability",
+                "hazard_route_sha": "fixture-hazards",
             },
             "markers": [
                 {
@@ -290,7 +301,7 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
             with self.subTest(schema_path=schema_path.relative_to(REPO_ROOT)):
                 schema = json.loads(schema_path.read_text(encoding="utf-8"))
                 self.assertEqual(
-                    schema_errors(legacy_plan, schema, schema, "pr_marker_plan"),
+                    schema_errors(shipped_plan, schema, schema, "pr_marker_plan"),
                     [],
                 )
 
@@ -436,119 +447,6 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
             verification_schema["$defs"]["passing_result"]["properties"]["status"]["const"],
             "pass",
         )
-
-    def test_completed_marker_evidence_is_immutable_and_freshness_is_separate(self) -> None:
-        schema = json.loads(MARKER_CHECKPOINT_SCHEMA_PATH.read_text(encoding="utf-8"))
-        required = set(schema["required"])
-        self.assertTrue(
-            {
-                "implementation_checkpoint_sha",
-                "tasks_sha",
-            }.issubset(required)
-        )
-        self.assertIn("last_reviewed_head_sha", schema["properties"])
-        self.assertNotIn("current_tasks_sha", required)
-        self.assertIn("immutable", schema["description"].lower())
-        mutable_fields = {
-            "source_fingerprint_contract",
-            "tasks_sha_scope",
-            "current_tasks_sha",
-            "checkpoint_marker_tasks_sha",
-            "current_marker_tasks_sha",
-            "updated_at",
-        }
-        for path in MARKER_CHECKPOINT_PATHS[:2]:
-            checkpoint = json.loads(path.read_text(encoding="utf-8"))
-            self.assertTrue(required.issubset(checkpoint))
-            self.assertEqual(checkpoint["status"], "complete")
-            self.assertEqual(checkpoint["source_fingerprint_status"], "current")
-            self.assertFalse(mutable_fields & set(checkpoint))
-
-        completed_evidence = json.loads(
-            COMPLETED_MARKER_EVIDENCE_PATH.read_text(encoding="utf-8")
-        )
-        for marker in completed_evidence["markers"]:
-            implementation_checkpoint = marker["implementation_checkpoint"]
-            self.assertRegex(implementation_checkpoint["checkpoint_evidence_commit_sha"], r"^[0-9a-f]{40}$")
-            freshness = implementation_checkpoint["freshness"]
-            self.assertEqual(freshness["source_fingerprint_contract"], "marker-task-lines.v2")
-            self.assertEqual(
-                freshness["checkpoint_marker_tasks_sha"],
-                freshness["current_marker_tasks_sha"],
-            )
-
-    def test_completed_marker_corrections_are_append_only_and_chained(self) -> None:
-        completed_evidence = json.loads(
-            COMPLETED_MARKER_EVIDENCE_PATH.read_text(encoding="utf-8")
-        )
-        for marker in completed_evidence["markers"]:
-            checkpoint = marker["implementation_checkpoint"]
-            self.assertNotIn("corrections", checkpoint)
-            superseded_evidence = checkpoint["superseded_evidence"]
-            corrections = superseded_evidence["corrections"]
-            self.assertEqual(len(corrections), 1)
-            correction = corrections[0]
-            self.assertEqual(correction["sequence"], 1)
-            self.assertEqual(
-                (
-                    correction["supersedes_evidence_path"],
-                    correction["supersedes_evidence_commit_sha"],
-                    correction["supersedes_evidence_sha"],
-                ),
-                (
-                    superseded_evidence["evidence_path"],
-                    superseded_evidence["checkpoint_evidence_commit_sha"],
-                    superseded_evidence["checkpoint_evidence_sha"],
-                ),
-            )
-            correction_bytes = subprocess.run(
-                [
-                    "git",
-                    "-C",
-                    str(REPO_ROOT),
-                    "show",
-                    (
-                        f"{correction['checkpoint_evidence_commit_sha']}:"
-                        f"{correction['evidence_path']}"
-                    ),
-                ],
-                capture_output=True,
-                check=True,
-            ).stdout
-            self.assertEqual(
-                correction["checkpoint_evidence_sha"],
-                "sha256:" + hashlib.sha256(correction_bytes).hexdigest(),
-            )
-            correction_record = json.loads(correction_bytes)
-            self.assertEqual(correction_record["sequence"], correction["sequence"])
-            self.assertEqual(correction_record["marker_id"], marker["id"])
-            self.assertEqual(
-                (
-                    correction_record["supersedes_evidence_path"],
-                    correction_record["supersedes_evidence_commit_sha"],
-                    correction_record["supersedes_evidence_sha"],
-                ),
-                (
-                    correction["supersedes_evidence_path"],
-                    correction["supersedes_evidence_commit_sha"],
-                    correction["supersedes_evidence_sha"],
-                ),
-            )
-            introduction_commits = subprocess.run(
-                [
-                    "git", "-C", str(REPO_ROOT), "log", "--diff-filter=A",
-                    "--format=%H", "--reverse", "HEAD", "--",
-                    correction["evidence_path"],
-                ],
-                text=True,
-                capture_output=True,
-                check=True,
-            ).stdout.splitlines()
-            self.assertTrue(introduction_commits)
-            self.assertEqual(
-                introduction_commits[0], correction["checkpoint_evidence_commit_sha"]
-            )
-
 
 def build_suite() -> unittest.TestSuite:
     return unittest.defaultTestLoader.loadTestsFromTestCase(ReviewabilityMarkerGuidanceTests)

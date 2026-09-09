@@ -1,7 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://racecraft.dev/speckit-pro/xplat-006/autopilot-phase-coverage-report.schema.json",
-  "title": "Autopilot Phase Coverage Report",
+  "title": "Autopilot phase coverage report",
   "type": "object",
   "additionalProperties": false,
   "required": ["status"],

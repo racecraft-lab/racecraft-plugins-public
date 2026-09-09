@@ -19,26 +19,7 @@ input.
 **Source PRD:** [../../prd-html-artifacts.md](../../prd-html-artifacts.md)
 **Roadmap MOC:** [html-artifacts-roadmap-MOC.md](html-artifacts-roadmap-MOC.md)
 **Spec ID prefix:** `ART-###`
-**Status:** Active; dependency graph approved 2026-07-28; ART-001, ART-002,
-ART-003, ART-004, ART-005, ART-006, ART-007, ART-011, ART-012 and ART-014 are complete and archived;
-ART-002 shipped in PRs #425, #427 and #430, which unblocked ART-007; ART-012 shipped in PR #426; ART-014 shipped in PR #433 and archived 2026-08-13, which unblocks ART-017;
-ART-011 shipped in PR #434 and archived 2026-08-13, and ART-019 supersedes its
-FR-022; ART-003 shipped as three stacked slices in PRs #435, #436 and #439 and was
-archived 2026-08-14, and its acceptance evidence and harness are preserved under
-`.process/`; ART-007 shipped in PR #445 and was archived 2026-08-18, which
-unblocks both ART-008 and ART-010 and leaves ART-010 with every dependency
-satisfied, and its acceptance evidence is preserved at
-`.process/ART-007-manual-uat.md`; ART-004 shipped in PR #450 and was archived
-2026-08-18 after delivering six design/prototyping ports plus ART-020's gallery
-accessibility repair and guard; ART-020 remains superseded by ART-004;
-ART-005 shipped as seven stacked PRs (#444, #446, #447, #448, #452, #454 and
-#455) and was archived 2026-08-20; ART-008 was scaffolded 2026-08-20 as two
-stacked slices, of which slice 1 shipped in PR #464 on 2026-08-24 and slice 2
-is not yet scaffolded, so the spec stays in progress and unarchived; ART-009 and ART-010 are ready;
-ART-015 was opened from ART-006 findings and is ready with no dependencies;
-ART-016 and ART-018 were opened from ART-014 findings on 2026-08-12 and are
-ready; ART-017, opened from the same findings, shipped in PR #490; ART-019 was
-opened on 2026-08-13 and is ready with no dependencies
+**Status:** Active
 
 ---
 
@@ -148,7 +129,7 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-005 | Gallery Completion: Knowledge, Reports & Editors | ✅ Complete / Archived | [.process/ART-005-workflow.md](.process/ART-005-workflow.md) | Shipped as seven stacked slices in PRs #444, #446, #447, #448, #452, #454 and #455; archived 2026-08-20. All seven templates and manifest rows live outside `specs/**`; 252 browser UAT rows closed at 177 pass, 75 evidence-backed N/A, and 0 fail. Evidence is preserved at [.process/ART-005-uat-results.md](.process/ART-005-uat-results.md) and [.process/ART-005-uat-results.json](.process/ART-005-uat-results.json) |
 | ART-006 | Autopilot Staging | ✅ Complete / Archived | [.process/ART-006-workflow.md](.process/ART-006-workflow.md) | PR #422; archived 2026-08-09; re-audited and re-grilled 2026-08-03. Declared budget 382 reviewable LOC, one slice. `gh` corroboration deferred to ART-007 (see Scope). **Prerequisite discharged** — PRs #416/#417 shipped in speckit-pro 2.22.0, so durable stage state now has a reliable store; ready for autopilot from Phase 1 |
 | ART-007 | Draft-PR Emission | ✅ Complete / Archived | [.process/ART-007-workflow.md](.process/ART-007-workflow.md) | PR #445; archived 2026-08-18. Scoping absorbed the ART-006 `gh` corroboration limb, resolved OQ-1 (the draft becomes the first slice PR), and recorded the corpus deferral to ART-009 (see both Scope amendments). Acceptance evidence preserved at `.process/ART-007-manual-uat.md` |
-| ART-008 | Feedback Sweep | ✅ Complete / Archived | [.process/ART-008-workflow.md](.process/ART-008-workflow.md) | Shipped as two stacked slices; archived 2026-08-25. **Slice 1 (the checkpoint) in PR #464**, merged 2026-08-24 at `8db22a420`, 111/111 tasks and a 7983/7983 suite. **Slice 2 (artifact freshness) in PR #502**, merged 2026-08-25 at `32043c45a`, 81/81 tasks and a 14208/14208 suite. Both slices' shipped surfaces live outside `specs/**`. Acceptance evidence is preserved: slice 1's quickstart at `tests/speckit-pro/unit/fixtures/feedback-sweep/corpus/quickstart.md`, where it also serves as the deny-set corpus, and slice 2's at [.process/ART-008-slice-2-quickstart.md](.process/ART-008-slice-2-quickstart.md). **Slice 2's quickstart scenarios 3, 4 and 5 are undischarged** — they need an autopilot run reaching Phase 7 on a draft pull request and cannot execute against a working tree — and are carried to ART-009 |
+| ART-008 | Feedback Sweep | ✅ Complete / Archived | [.process/ART-008-workflow.md](.process/ART-008-workflow.md) | Shipped as two stacked slices; archived 2026-08-25. **Slice 1 (the checkpoint) in PR #464**, merged 2026-08-24 at `8db22a420`, 111/111 tasks and a 7983/7983 suite. **Slice 2 (artifact freshness) in PR #502**, merged 2026-08-25 at `32043c45a`, 81/81 tasks and a 14208/14208 suite. Both slices' shipped surfaces live outside `specs/**`. Slice 2's acceptance evidence is preserved at [.process/ART-008-slice-2-quickstart.md](.process/ART-008-slice-2-quickstart.md). **Slice 2's quickstart scenarios 3, 4 and 5 are undischarged** — they need an autopilot run reaching Phase 7 on a draft pull request and cannot execute against a working tree — and are carried to ART-009 |
 | ART-009 | UAT Walkthrough Replacement | ⏳ Ready | - | ART-006 dependency satisfied by PR #422. Also carries ART-008 slice 2's undischarged live UAT (quickstart scenarios 3, 4, 5), which needs a Phase 7 run on a draft PR and cannot execute against a working tree |
 | ART-010 | Final-PR Writeup, Companions & Ready Flip | ⏳ Ready | - | All three dependencies satisfied: ART-003 by PRs #435/#436/#439, ART-007 by PR #445, ART-012 by PR #426 |
 | ART-011 | Scaffold Integration | ✅ Complete / Archived | [.process/ART-011-workflow.md](.process/ART-011-workflow.md) | PR #434; archived 2026-08-13. The blind-spot pass and the planning hand-off live on both platforms outside `specs/**`. Shipped inverted from its design: scaffold cannot invoke the autopilot, which carries `disable-model-invocation: true`, so it prints the command instead — nine requirements amended, five superseded. Declared 162 reviewable LOC and estimated 322 at the final 31 FRs; shipped 1160 production changed lines across the two scaffold `SKILL.md` variants, a second data point for ART-015. Layer 2 trigger evaluation is still owed, and the 984-line result is what ART-019 slice D exists to repair |
@@ -600,14 +581,10 @@ Budget result: within budget (see the scaffold amendment below for what moved)
   draft-PR row, corroborates via `gh`, logs discrepancies, and the workflow
   file wins (the inherited OQ-4 contract). The projected budget moves to ~287
   reviewable LOC / ~10 production files / ~14 total files
-  (`estimate-spec-size`: 327 LOC, ok, one slice). (3) `artifact-author` ships
-  outside the Layer 6 governed corpus; membership is a tracked deferral to
-  ART-009 (see that entry's amendment).
+  (`estimate-spec-size`: 327 LOC, ok, one slice).
 
 **Out of Scope:**
 - Reading feedback (ART-008); flipping to ready (ART-010).
-- Layer 6 corpus membership for `artifact-author` (tracked deferral to
-  ART-009).
 
 **Verification:** Layer 4 golden fixtures for the draft-mode packet path
 (including the fail-open artifact-generation branch); Layer 5 agent
@@ -669,9 +646,6 @@ than re-sliced, and no exception pragma is claimed, because the accepted
 exception classes are refactor, infra, and upgrade and this slice is net-new
 feature work. Slice 2 measured **~730 midpoint against an 800 block** at its own Plan and
 realized **1250**, the overrun in reference prose rather than executable surface.
-The rejected levers are recorded in slice 1's `spec.md` §Reviewability Budget,
-which was archived on 2026-08-25 and now lives at
-`tests/speckit-pro/unit/fixtures/feedback-sweep/corpus/spec.md`.
 
 **Scope:**
 - Two vertical slices (amended 2026-08-20 at scaffold; originally one) —
@@ -725,15 +699,11 @@ two stacked slices (Q12).
 
 **Archival closeout (2026-08-25).** Both slices merged and both active spec
 directories were removed. Every shipped surface — the two read-only helpers, the
-registry entries, both platforms' `phase-execution` references, and the Layer 4
-fixture corpora — lives outside `specs/**` and is unaffected. Acceptance evidence
-was relocated rather than deleted: `.process/ART-008-slice-2-quickstart.md`,
+registry entries, and both platforms' `phase-execution` references — lives outside
+`specs/**` and is unaffected. Slice 2 acceptance evidence was relocated to
+`.process/ART-008-slice-2-quickstart.md`,
 `.process/ART-008-retrospective.md`, and
-`.process/ART-008-slice-2-retrospective.md`. Slice 1's eight planning documents
-moved to `tests/speckit-pro/unit/fixtures/feedback-sweep/corpus/` instead,
-because `tests/speckit-pro/unit/test-feedback-sweep-parse.py` reads them as its
-deny-set corpus — a shipped test may not depend on a folder this procedure
-removes, and that coupling is what made the removal fail first time. **The acceptance record is
+`.process/ART-008-slice-2-retrospective.md`. **The acceptance record is
 deliberately incomplete**: slice 2's quickstart scenarios 3, 4 and 5 were never
 executed, because each needs an autopilot run reaching Phase 7 on a draft pull
 request and the autopilot runs from the installed plugin cache. They are carried
@@ -787,14 +757,6 @@ Budget result: within budget
   task list and task-list-canonical reference updated.
 - Markdown runbook path retired from post-implementation; fail-open preserved
   (artifact failure logs and never blocks the PR).
-- **Amended 2026-08-17 during ART-007 scaffold:** ART-009 also owns Layer 6
-  corpus membership for `artifact-author`. ART-007 ships it ungoverned by
-  decision — an honest new-role entry needs an acceptance oracle, an authored
-  fixture, and an independent review that only a spec opening the corpus can
-  produce — and ART-009 already performs corpus surgery for the
-  `uat-runbook-author` → `uat-artifact-author` rename, so both roles' entries
-  land in one governed-corpus change. Re-derive this entry's reviewability
-  budget at its own scaffold time to price the corpus work in.
 - **Amended 2026-08-24 during ART-008 slice 2:** ART-009 also carries ART-008's
   undischarged live UAT. Slice 2's quickstart scenarios 3, 4, and 5 need an
   autopilot run that reaches Phase 7 on a draft pull request carrying reviewer
@@ -1456,8 +1418,7 @@ green.
   ART-011 leaves at 984 and 928 lines. Supersedes ART-011's FR-022, which forbade a
   `references/` directory for that spec's own size reasons.
 - **E. Frontmatter and agent hygiene.** Widen the frontmatter key allowlist to the
-  documented set, and land the agent-definition corrections atomically with the
-  Layer 6 Codex digest regeneration, which has no regeneration script.
+  documented set.
 - **F. Manifest validation wiring.** Add the marketplace `description` that makes
   `claude plugin validate . --strict` pass, and gate it. Highest conformance per line
   in the inventory.

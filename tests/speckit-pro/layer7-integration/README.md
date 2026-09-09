@@ -9,8 +9,7 @@ class of bugs that only surface when agents are composed:
 
 - The orchestrator routes a `[codebase]` consensus tag to the wrong
   analyst.
-- A subagent (forbidden by Anthropic's no-subagent-spawning-subagents
-  rule) spawns another `Agent()`.
+- A subagent spawns another `Agent()`.
 - The orchestrator fails to regain control between subagent calls
   (no redelegation chain).
 - One agent's response format drifts in a way that breaks another
@@ -76,10 +75,6 @@ exercise:
 
 ### End-to-end (Class 3, fixtures 01–02)
 
-Both Class 3 fixtures share the same `E2E_FIXTURE_BUDGET_USD` default
-of $10.00. Fixture 01 typically uses ~$1; fixture 02 typically uses
-~$1.30; the cap exists for runs that take longer paths.
-
 | Fixture | Phases covered |
 |---|---|
 | 01 | G1–G3 (Specify → Clarify → Plan) |
@@ -113,7 +108,7 @@ Every named subagent appears in at least one fixture:
      `/speckit-pro:grill-me` in chat. The parser scans every
      `Skill` `tool_use` block in the transcript (orchestrator and
      sidechain scope) and asserts none match the `grill-me` regex.
-- No subagent spawns another `Agent()` (Anthropic constraint).
+- No subagent spawns another `Agent()`.
 
 ## Two execution modes
 
@@ -306,7 +301,6 @@ Defaults:
 | L3 | Functional evals (does each skill produce the right output?) | Slow (AI) |
 | L4 | Python unit and contract tests (incl. `transcript_helpers.py`) | Fast |
 | L5 | Agent tool-scoping | Fast |
-| L6 | Agent efficiency benchmarks | Slow (AI) |
 | **L7** | **Multi-agent dispatch graph** | **Fast (replay) / Slow (live)** |
 
 L7 replay is deterministic and runs through the integration suite. L7 live is

@@ -1,6 +1,5 @@
 {
   "schema_version": "1.0",
-  "feature_id": "G56R-006",
   "required_agents": [
     "analyze-executor",
     "artifact-author",
@@ -17,7 +16,7 @@
   "base_case": {
     "manifest": {
       "schema_version": "1.0.0",
-      "provenance_id": "fixture:g56r-006",
+      "provenance_id": "fixture:agent-routing",
       "required_route": {
         "route_id": "required-primary",
         "model": "gpt-5.5",
@@ -54,7 +53,7 @@
       "bounded_probes": {}
     },
     "capability_snapshot": {
-      "snapshot_id": "snapshot:g56r-006:001",
+      "snapshot_id": "snapshot:agent-routing:001",
       "adapter_id": "fixture-adapter.v1",
       "native_discovery": true,
       "available_routes": [
@@ -222,7 +221,7 @@
       "case_id": "invalid-manifest-path-outside-repository",
       "category": "invalid_manifest_path",
       "overrides": {
-        "request.route_policy_manifest": "/tmp/g56r-006-route-policy.json"
+        "request.route_policy_manifest": "/tmp/agent-routing-policy.json"
       },
       "expected": {
         "status": "input_error",

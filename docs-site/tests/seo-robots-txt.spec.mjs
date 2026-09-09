@@ -1,7 +1,5 @@
 import { expect, test } from '@playwright/test';
 
-// DOC-014 C1 / FR-001, FR-002, FR-003, FR-004, FR-004a, FR-024.
-//
 // The crawler-access policy is a single authoritative `/robots.txt` produced by
 // the `src/pages/robots.txt.ts` endpoint (the static `public/robots.txt` is
 // removed so it cannot shadow this route). It is served at the configured base
@@ -31,8 +29,8 @@ const TRAINING_TIER = Object.freeze([
 ]);
 
 // `https://racecraft-lab.github.io/racecraft-plugins-public` on staging; this is
-// `site` + `base` from astro.config.mjs and flips automatically at the DOC-012
-// launch. The Sitemap directive must point under this absolute prefix.
+// `site` + `base` from astro.config.mjs. The Sitemap directive must point under
+// this absolute prefix.
 const SITE_BASE = 'https://racecraft-lab.github.io/racecraft-plugins-public';
 
 /**

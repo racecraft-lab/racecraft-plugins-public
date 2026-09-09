@@ -18,10 +18,10 @@
     },
     {
       "id": 2,
-      "prompt": "I'm pasting in a meeting transcript from a stakeholder call about our new billing rewrite. <transcript: lots of unstructured discussion about subscription tiers, proration, dunning, refunds, and tax handling>. Pull a design concept out of it by interviewing me on every ambiguity you find. Save the result to docs/ai/specs/billing-rewrite-design-concept.md.",
-      "expected_output": "Reads the transcript, extracts the design tree branches (subscription tiers, proration, dunning, refunds, tax), and asks one question per branch where the transcript leaves ambiguity. Writes a design concept doc capturing the interview.",
+      "prompt": "Read the stakeholder-call transcript in fixtures/grill/billing-rewrite-transcript.md. Pull a design concept out of it by interviewing me on every ambiguity you find. Save the result to docs/ai/specs/billing-rewrite-design-concept.md.",
+      "expected_output": "Reads fixtures/grill/billing-rewrite-transcript.md, extracts the design tree branches (subscription tiers, proration, dunning, refunds, tax), and asks one question per branch where the transcript leaves ambiguity. Writes a design concept doc capturing the interview.",
       "expectations": [
-        "Quotes or references specific passages from the transcript when formulating each question, demonstrating it actually read the input",
+        "Quotes or references specific passages from fixtures/grill/billing-rewrite-transcript.md by stable section anchor when formulating each question, demonstrating it actually read the input",
         "Identifies at least 4 distinct design-tree branches drawn from the transcript content (subscription, proration/dunning, refunds, tax, etc.)",
         "Each question's recommended answer cites either a constitution principle, a codebase pattern, or an industry norm as justification",
         "Final design concept doc's Goals section preserves the user's wording from the interview verbatim where possible",
@@ -54,7 +54,7 @@
     },
     {
       "id": 5,
-      "prompt": "You are being invoked by $speckit-scaffold-spec for SPEC-009 'Search & Database'. Setup has already created the worktree at .worktrees/009-search-database/ and is calling you with mode=setup, spec_id=SPEC-009, scope=<scope description>, output_path=.worktrees/009-search-database/docs/ai/specs/SPEC-009-design-concept.md. Run the interview and write the design concept to the supplied path.",
+      "prompt": "You are being invoked by $speckit-scaffold-spec for SPEC-009 'Search & Database'. Setup has already created the registered worktree at .worktrees/009-search-database/ and is calling you with mode=setup, spec_id=SPEC-009, scope loaded from fixtures/grill/SPEC-009-scope.md, output_path=.worktrees/009-search-database/docs/ai/specs/SPEC-009-design-concept.md. Run the interview and write the design concept to the supplied path.",
       "expected_output": "Detects setup-mode invocation, runs the interview against the supplied scope, writes the design concept to the worktree path provided (NOT the standalone default path), and returns the path plus a summary of key decisions to the calling $speckit-scaffold-spec so it can enrich the workflow file.",
       "expectations": [
         "Frontmatter of the produced doc has mode: 'setup' and spec_id: 'SPEC-009'",

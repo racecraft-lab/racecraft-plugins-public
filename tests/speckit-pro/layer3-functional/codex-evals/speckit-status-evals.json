@@ -3,7 +3,7 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "Show me the current SpecKit project status. I want the roadmap totals, any active workflow phases, blockers, and which spec is the best next candidate.",
+      "prompt": "The run setup materializes the deterministic `overall-dashboard` scenario from fixtures/status/scenarios.json, including its minimal roadmap, workflow, and worktree-registration roots. Show me the current SpecKit project status. I want the roadmap totals, any active workflow phases, blockers, and which spec is the best next candidate.",
       "expected_output": "Builds a unified dashboard from roadmap and workflow files, then recommends the highest-priority unblocked next spec.",
       "expectations": [
         "Mentions both technical roadmaps and workflow files as data sources",
@@ -14,7 +14,7 @@
     },
     {
       "id": 2,
-      "prompt": "Status of SPEC-013 please. I need the current phase, blockers, and the next action if the workflow file already exists.",
+      "prompt": "The run setup materializes the deterministic `spec-specific` scenario from fixtures/status/scenarios.json, including its minimal roadmap and SPEC-013 workflow root. Status of SPEC-013 please. I need the current phase, blockers, and the next action if the workflow file already exists.",
       "expected_output": "Provides a spec-specific status view with roadmap context, workflow phase detail if present, and the next concrete action.",
       "expectations": [
         "Mentions the spec-specific view for the requested SPEC-ID",
@@ -25,7 +25,7 @@
     },
     {
       "id": 3,
-      "prompt": "What should the status skill do if there is no technical roadmap but there are a few workflow files in the repo?",
+      "prompt": "The run setup materializes the deterministic `workflow-without-roadmap` scenario from fixtures/status/scenarios.json, with workflow files but no technical roadmap. What should the status skill do if there is no technical roadmap but there are a few workflow files in the repo?",
       "expected_output": "Reports workflow-based phase detail while noting that backlog visibility is incomplete without a roadmap.",
       "expectations": [
         "States that the roadmap is missing",
@@ -35,7 +35,7 @@
     },
     {
       "id": 4,
-      "prompt": "Setup created SPEC-021 in a git worktree outside the repo root. How should the status skill find that workflow before telling me there is nothing in progress?",
+      "prompt": "The run setup materializes the deterministic `external-worktree` scenario from fixtures/status/scenarios.json and registers SPEC-021 in an attached git worktree outside the repo root. How should the status skill find that workflow before telling me there is nothing in progress?",
       "expected_output": "Searches attached git worktrees, not just the current checkout, so active workflow files in external worktree roots still appear in the dashboard.",
       "expectations": [
         "Mentions inspecting git worktrees in addition to the current repository",
@@ -45,7 +45,7 @@
     },
     {
       "id": 5,
-      "prompt": "I have two technical roadmap files in the repo: one under docs/ai/ for the current quarter and an older one from last quarter. Which one should the status skill use?",
+      "prompt": "The run setup materializes the deterministic `multiple-roadmaps` scenario from fixtures/status/scenarios.json with a current-quarter roadmap and an older roadmap. I have two technical roadmap files in the repo: one under docs/ai/ for the current quarter and an older one from last quarter. Which one should the status skill use?",
       "expected_output": "Picks the most relevant current roadmap and states which file it used, rather than merging unrelated roadmaps.",
       "expectations": [
         "Acknowledges that multiple roadmap files were found",
@@ -56,7 +56,7 @@
     },
     {
       "id": 6,
-      "prompt": "Every remaining spec in the roadmap is blocked by an incomplete dependency. What should the status dashboard show for the next recommendation?",
+      "prompt": "The run setup materializes the deterministic `all-blocked` scenario from fixtures/status/scenarios.json, whose remaining roadmap specs all have incomplete dependencies. Every remaining spec in the roadmap is blocked by an incomplete dependency. What should the status dashboard show for the next recommendation?",
       "expected_output": "States plainly that all remaining specs are blocked and does not recommend a spec that cannot be started.",
       "expectations": [
         "Reports that no unblocked specs are available",
@@ -66,7 +66,7 @@
     },
     {
       "id": 7,
-      "prompt": "There is no roadmap and no workflow files anywhere in the repo. What should the status skill output?",
+      "prompt": "The run setup materializes the deterministic `empty-project` scenario from fixtures/status/scenarios.json with no roadmap or workflow files. There is no roadmap and no workflow files anywhere in the repo. What should the status skill output?",
       "expected_output": "Reports that no SpecKit tracking artifacts were found and directs the user to $speckit-coach for setup guidance.",
       "expectations": [
         "States that no roadmap or workflow files were found",

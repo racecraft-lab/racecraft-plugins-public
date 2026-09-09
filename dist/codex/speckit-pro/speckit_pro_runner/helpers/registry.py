@@ -81,14 +81,6 @@ SCRIPT_BASE = "speckit-pro/skills/speckit-autopilot/scripts"
 REQUEST_FIXTURE_BASE = "tests/speckit-pro/unit/fixtures/read-only-helpers/requests"
 MUTATION_REQUEST_FIXTURE_BASE = "tests/speckit-pro/unit/fixtures/mutation-helpers/requests"
 DISPATCHABLE_MUTATION_PROMOTION_STATUSES = frozenset({"golden_only", "bash_compared"})
-CODEX_MANAGED_HELPER_PROVENANCE_KEYS = (
-    "helper_name",
-    "destination",
-    "installer_id",
-    "source_roster_id",
-    "manifest_id",
-    "destination_digest",
-)
 
 
 def authoritative_request(helper_id: str) -> str:
@@ -388,17 +380,6 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         mutation_authoritative_request("doctor-repair"),
         ("safe-repair", "real-home-refusal"),
     ),
-    "install-health-repair": MutationEntry(
-        "install-health-repair",
-        "install-health-repair",
-        ("read_only",),
-        None,
-        "golden_only",
-        "fixture_semantic",
-        "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/install-health-repair.json",
-        ("trusted-missing", "trusted-stale", "unsafe-manual-remediation", "broad-reinstall-rejected"),
-        rollback="Keep autoheal limited to checksum-backed fixture evidence until native install evidence is complete.",
-    ),
     "install-codex-agents": MutationEntry(
         "install-codex-agents",
         "install-codex-agents",
@@ -410,35 +391,6 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         ("dry-run-refresh", "stale-overwrite", "no-op", "rollback", "invalid-source", "unsafe-destination"),
         bash_reference_ids=("install-codex-agents",),
         rollback="Retry in dry_run mode and preserve the previous same-named Codex agent files before applying again.",
-    ),
-    "install-curated-set": MutationEntry(
-        "install-curated-set",
-        "install-curated-set",
-        ("dry_run", "apply"),
-        "speckit-pro/scripts/install-curated-set.sh",
-        "deferred",
-        "bash_reference",
-        deferred_authoritative_request(),
-        bash_reference_ids=("install-curated-set",),
-        rollback="Keep install-curated-set deferred until a Python runner implementation is promoted.",
-    ),
-    "project-fixup-apply": MutationEntry(
-        "project-fixup-apply",
-        "project-fixup-apply",
-        ("dry_run", "apply"),
-        "speckit-pro/skills/speckit-coach/scripts/project-fixup.sh",
-        "deferred",
-        "golden_fixture",
-        deferred_authoritative_request(),
-    ),
-    "ensure-reviewability-preset": MutationEntry(
-        "ensure-reviewability-preset",
-        "ensure-reviewability-preset",
-        ("dry_run", "apply"),
-        "speckit-pro/skills/speckit-coach/scripts/ensure-reviewability-preset.sh",
-        "deferred",
-        "golden_fixture",
-        deferred_authoritative_request(),
     ),
     "generate-pr-body": MutationEntry(
         "generate-pr-body",
@@ -693,7 +645,7 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
     if entry.helper_id == "sweep-apply-result":
         return run_sweep_apply_result(entry, request)
 
-    if entry.helper_id in {"doctor-preflight", "doctor-repair", "install-health-repair", "install-codex-agents"}:
+    if entry.helper_id in {"doctor-preflight", "doctor-repair", "install-codex-agents"}:
         return run_install_helper(entry, request)
 
     if entry.helper_id in {

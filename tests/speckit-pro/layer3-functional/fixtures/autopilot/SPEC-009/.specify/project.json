@@ -1,0 +1,7 @@
+{
+  "fixture_kind": "deterministic-synthetic-testdata",
+  "status": "setup_only",
+  "initialized": "must_be_observed_after_materialization",
+  "spec_id": "SPEC-009",
+  "workflow_file": "docs/ai/specs/SPEC-009-workflow.md"
+}

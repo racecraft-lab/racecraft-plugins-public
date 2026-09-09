@@ -1,0 +1,1 @@
+# New TypeScript Project

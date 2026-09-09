@@ -9,15 +9,6 @@ listed category, dispatch is broken — this fixture catches that.
 This also verifies the partial fan-out boundary: `spec-context-analyst`
 must NOT be dispatched because `[spec]` is absent from the tag.
 
-## Assertions
-
-- `codebase-analyst` is dispatched at least once
-- `domain-researcher` is dispatched at least once
-- `spec-context-analyst` is **never** dispatched
-- `grill-me` is **never** dispatched (HITL guard)
-- No subagent spawns another `Agent()` (Anthropic constraint)
-- Dispatch count in [2, 3]
-
 ## Keeping the item text keyword-free
 
 The item above must stay clear of the security keywords listed in
