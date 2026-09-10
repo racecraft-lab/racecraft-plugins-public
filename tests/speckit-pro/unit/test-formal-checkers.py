@@ -299,6 +299,19 @@ class FormalCheckerTests(unittest.TestCase):
             self.request("apply")
             self.assertEqual("plan", helper.current_checkpoint(self.root, "workflow.md")["checkpoint"])
 
+    def test_implementation_scope_may_be_omitted_but_not_declared_empty(self) -> None:
+        with patch.object(helper, "inspect_tool", return_value={"version": "fixture"}):
+            self.assertEqual("preview", self.request()["data"]["verdict"])
+            self.model["implementation_inputs"] = []
+            self.save_catalog()
+            result = self.request("apply")
+            self.assertEqual("input_error", result["status"])
+            self.assertFalse(result["data"]["writes_state"])
+            self.assertIn("at least one durable path", str(result["diagnostics"]))
+            self.model["implementation_inputs"] = ["planned.py"]
+            self.save_catalog()
+            self.assertEqual("preview", self.request()["data"]["verdict"])
+
     def test_final_and_post_bind_implementation_files_and_checkpoint_identity(self) -> None:
         with patch.object(helper, "inspect_tool", return_value={"version": "fixture"}), patch.object(helper, "execute_model", side_effect=self.passed_model):
             self.assertEqual("missing_implementation_scope", self.request("apply", checkpoint="final")["data"]["verdict"])

@@ -125,6 +125,8 @@ def validate_model(model: Any, root: Path, selected: dict[str, Any]) -> dict[str
         require_text(assumption, "assumption")
     validate_model_paths(model, root, selected)
     implementation = model.get("implementation_inputs", [])
+    if "implementation_inputs" in model and not implementation:
+        raise SelectionError("implementation_inputs must contain at least one durable path when declared")
     if not isinstance(implementation, list) or any(not isinstance(p, str) for p in implementation) or len(set(implementation)) != len(implementation):
         raise SelectionError("implementation_inputs must be a list of unique durable paths")
     for path in implementation:
