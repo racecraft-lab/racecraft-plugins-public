@@ -29,6 +29,9 @@ def discover(root: Path, workflow: str) -> dict[str, Any]:
     for model_id, item in models.items():
         try:
             identities[model_id] = inspect_tool(root, item["tool"], item["model"]["checker"])
+            if "compiler" in item:
+                from .quint import inspect as inspect_quint
+                identities[model_id]["quint"] = inspect_quint(root, item["compiler"])
         except FormalError as exc:
             gaps.append({"model": model_id, "verdict": exc.verdict, "reason": str(exc)})
     blocking = [gap for gap in gaps if gap["verdict"] != "pending_authoring"]
@@ -50,7 +53,7 @@ def current_checkpoint(root: Path, workflow: str, checkpoint: str = "plan") -> d
     if context["gaps"] or not isinstance(record, dict) or record.get("verdict") != "pass":
         return {"required": True, "complete": False, "verdict": context["verdict"] if context["gaps"] else "pending", "resume": "plan"}
     expected = fingerprint(root, context["selection"], context["models"], context["identities"], record["spec_file"], record["plan_file"], checkpoint)
-    complete = record.get("fingerprint") == expected and record.get("workflow_file") == workflow and record.get("checkpoint") == checkpoint and complete_results(record, context["models"])
+    complete = record.get("fingerprint") == expected and record.get("selection") == context["selection"] and record.get("workflow_file") == workflow and record.get("checkpoint") == checkpoint and complete_results(record, context["models"])
     return {"required": True, "complete": complete, "verdict": "pass" if complete else "stale", "checkpoint": checkpoint, "fingerprint": expected,
             "resume": None if complete else "plan", "evidence": record_path(root, workflow, checkpoint).relative_to(root).as_posix()}
 
@@ -88,6 +91,20 @@ def gate_checkpoint(root: Path, inputs: dict[str, Any]) -> dict[str, Any] | None
     return {"gate": gate, "pass": False, "reason": "selected formal checkpoint is incomplete or stale", "formal_checkpoint": formal, "markers": 0, "details": []}
 
 
+def complete_model_result(result: dict[str, Any], model: dict[str, Any]) -> bool:
+    if model.get("language") == "quint":
+        compilation = result.get("compilation")
+        if not isinstance(compilation, dict) or compilation.get("verdict") != "compiled" or compilation.get("exit_code") != 0:
+            return False
+    expected = [o["id"] for o in obligations(model)]
+    checks = result.get("obligations", [])
+    if not isinstance(checks, list) or any(not isinstance(c, dict) for c in checks):
+        return False
+    if result.get("verdict") != "pass" or [c.get("id") for c in checks] != expected:
+        return False
+    return all(c.get("verdict") == "pass" and c.get("exit_code") == 0 for c in checks)
+
+
 def complete_results(record: dict[str, Any], models: dict[str, Any]) -> bool:
     results = record.get("results")
     if not isinstance(results, list) or len(results) != len(models):
@@ -96,15 +113,14 @@ def complete_results(record: dict[str, Any], models: dict[str, Any]) -> bool:
         return False
     if [r.get("model") for r in results] != list(models):
         return False
+    traced = {m["id"] for m in record["selection"]["models"] if m["evidence"] == "model_and_trace"} if record["checkpoint"] in ("final", "post") else set()
     for result in results:
-        expected = [o["id"] for o in obligations(models[result["model"]]["model"])]
-        checks = result.get("obligations", [])
-        if not isinstance(checks, list) or any(not isinstance(c, dict) for c in checks):
+        if not complete_model_result(result, models[result["model"]]["model"]):
             return False
-        if result.get("verdict") != "pass" or [c.get("id") for c in checks] != expected:
-            return False
-        if any(c.get("verdict") != "pass" or c.get("exit_code") != 0 for c in checks):
-            return False
+        if result["model"] in traced:
+            from .traces import complete_receipts
+            if not complete_receipts(result.get("traces"), models[result["model"]]["model"]["trace"]["paths"]):
+                return False
     return True
 
 
@@ -118,8 +134,14 @@ def check(root: Path, workflow: str, inputs: dict[str, Any], mode: str, context:
     plan = relative_input(root, inputs["plan_file"])
     before = fingerprint(root, context["selection"], context["models"], context["identities"], spec, plan, checkpoint)
     plans = {key: preview_model(root, item) for key, item in context["models"].items()}
+    trace_checks = {}
+    if checkpoint in ("final", "post"):
+        from .traces import preview
+        trace_checks = preview(root, context["selection"], context["models"])
     record = {"schema_version": "1.0", "workflow_file": workflow, "spec_file": spec, "plan_file": plan, "checkpoint": checkpoint, "fingerprint": before, "selection": context["selection"], "checkers": context["identities"], "verdict": "preview", "commands": plans, "results": [], "recorded_at": recorded_now(),
               "evidence": record_path(root, workflow, checkpoint).relative_to(root).as_posix()}
+    if trace_checks:
+        record["trace_checks"] = trace_checks
     if mode == "dry_run":
         return record
     record["verdict"] = "running"
@@ -127,7 +149,8 @@ def check(root: Path, workflow: str, inputs: dict[str, Any], mode: str, context:
     record["results"] = []
     for key, item in context["models"].items():
         try:
-            record["results"].append(execute_model(root, key, item))
+            trace_required = checkpoint in ("final", "post") and any(m["id"] == key and m["evidence"] == "model_and_trace" for m in context["selection"]["models"])
+            record["results"].append(execute_model(root, key, {**item, "trace_required": trace_required}))
         except (FormalError, OSError, subprocess.SubprocessError) as exc:
             record["results"].append({"model": key, "verdict": getattr(exc, "verdict", "inconclusive"), "reason": str(exc)})
     failures = [r["verdict"] for r in record["results"] if r["verdict"] != "pass"]
@@ -139,8 +162,6 @@ def check(root: Path, workflow: str, inputs: dict[str, Any], mode: str, context:
         changed = True
     if changed:
         record["verdict"] = "stale"
-    if record["verdict"] == "pass" and checkpoint in ("final", "post") and any(m["evidence"] == "model_and_trace" for m in context["selection"]["models"]):
-        record["verdict"] = "missing_trace"
     write_checkpoint(root, workflow, checkpoint, record, writes)
     record["commit_paths"] = sorted({workflow, CATALOG_PATH, record_path(root, workflow, checkpoint).relative_to(root).as_posix(), *[p for item in context["models"].values() for p in item["model"]["inputs"]]})
     return record

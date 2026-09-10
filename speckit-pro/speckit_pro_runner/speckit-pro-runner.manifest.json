@@ -71,7 +71,7 @@
         "value": "speckit_pro_runner/formal/catalog.py",
         "display": "speckit_pro_runner/formal/catalog.py"
       },
-      "sha256": "3c3e3328f1ed6fc6030c79899c7c2d2f2f5c30debf0f01281874cd3adc5bc9fb"
+      "sha256": "f0df74eaeb85f34734c8c564b36400b290e26c610e0fbd4468863c5f1b5a639b"
     },
     {
       "path": {
@@ -79,7 +79,7 @@
         "value": "speckit_pro_runner/formal/engine.py",
         "display": "speckit_pro_runner/formal/engine.py"
       },
-      "sha256": "8e0deef22b986aa74b8776f74be3298cd7317843b4329bf9d5188cdad00db23d"
+      "sha256": "7af54fb3fc306b8893535f1c505849703ddd93ac154058bf57a898dfad0c43d9"
     },
     {
       "path": {
@@ -87,7 +87,7 @@
         "value": "speckit_pro_runner/formal/evidence.py",
         "display": "speckit_pro_runner/formal/evidence.py"
       },
-      "sha256": "de330cf92e317d11f7441b3bbc33e5f232dc00c9440213b51d2766e44df2172d"
+      "sha256": "4adc4d8c32b7ed81449344e3c03143242e6f079e637123d40c4f93ed6b9d4f75"
     },
     {
       "path": {
@@ -95,7 +95,15 @@
         "value": "speckit_pro_runner/formal/helper.py",
         "display": "speckit_pro_runner/formal/helper.py"
       },
-      "sha256": "8991b426066551c8be8741c0cfd8f569cd9c4a44177fb2f452979ffd1718f887"
+      "sha256": "91810a086607c32f284413a44032024fe101c185a953beb4166e81a74357a7c4"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/formal/itf.py",
+        "display": "speckit_pro_runner/formal/itf.py"
+      },
+      "sha256": "2daeff8496bce4eafa5aa5d698b463d7af86a320b3a0c0195399fcb6c2b183e1"
     },
     {
       "path": {
@@ -103,7 +111,7 @@
         "value": "speckit_pro_runner/formal/lifecycle.py",
         "display": "speckit_pro_runner/formal/lifecycle.py"
       },
-      "sha256": "0b040f57a115b0e7d0ae1ced14886eae8d7aaa855edf9029c3764aa404147339"
+      "sha256": "fe653db2c97aa3a5f90b7fe9ea597f7a5539b4683f6d28f58ece6f89f46e00c5"
     },
     {
       "path": {
@@ -111,7 +119,7 @@
         "value": "speckit_pro_runner/formal/native_config.py",
         "display": "speckit_pro_runner/formal/native_config.py"
       },
-      "sha256": "85e697f7752dcf669d3de217f46ec5061b5959d7475c7a79c12c95da0eda67c8"
+      "sha256": "e4b21113720245146342c19875d6eb945d6052311b75d5a33d5ee2626f3d0eef"
     },
     {
       "path": {
@@ -119,7 +127,15 @@
         "value": "speckit_pro_runner/formal/process.py",
         "display": "speckit_pro_runner/formal/process.py"
       },
-      "sha256": "d0885c963287642aa0c1a37c626b091cf8773eb7e6a8b5e72ba0c221f0c835e7"
+      "sha256": "8edb8f02f942925a88028aee2d4868631d6d59c5131a5ee5c9d185c9ba43fab7"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/formal/quint.py",
+        "display": "speckit_pro_runner/formal/quint.py"
+      },
+      "sha256": "e02ab5cfca06261bfbac2f365d874beeb560c7fae80e898b61eda694994f6998"
     },
     {
       "path": {
@@ -136,6 +152,14 @@
         "display": "speckit_pro_runner/formal/tlc.py"
       },
       "sha256": "e1e07bd10198c856509f29489bf2b4b014f767b0f6a7515eb71a4abc6503392a"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/formal/traces.py",
+        "display": "speckit_pro_runner/formal/traces.py"
+      },
+      "sha256": "3fcf14c0445dc962748ff881f5eb6379ecd5effb62339b9addef70af5c7bd586"
     },
     {
       "path": {
