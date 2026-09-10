@@ -33,3 +33,14 @@ See [tasks](tasks.md) for the six branch layers. Each layer includes its relevan
 tests, documentation and regenerated payloads. Generated artifacts are rebuilt
 from source. The final layer records full-suite, checker qualification, installed
 parity and manual-UAT status against the exact pushed revision.
+
+## Required full-harness review
+
+- [ ] Before final qualification and PR delivery, review the complete SpecKit Pro
+  harness against `tests/speckit-pro/suite-manifest.json`: structural and unit
+  tests, trigger and functional evals, integration runners, installed Claude and
+  Codex payloads, scaffold/autopilot lifecycle, disabled-feature compatibility,
+  and hosted/optional-runner CI contracts. Identify missing coverage, unreachable
+  or misleading checks, and regressions across the full plugin. Remediate findings,
+  run the relevant tests/evals plus the full required gates, and record actual
+  evidence and any unavailable/manual checks separately in acceptance.md.

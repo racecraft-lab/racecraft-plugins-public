@@ -114,6 +114,14 @@ unsupported in the qualified profile; use TLC for those models. Encode only
 approved assumptions using supported formulas, and explain their limits.
 No mode substitutes type checking for a completed model check.
 
+TLC `finite` and `temporal` use `bounds.max_set_size` and explore the complete
+configured finite state space within the time/memory budgets. Catalog
+`specification` replaces `init`/`next` when native SPECIFICATION is selected;
+fairness remains in the original TLA+ definition. Native property lists must
+exactly match the catalog. Temporal symmetry reduction is outside the qualified
+profile. Simulation and zero-initial-state runs cannot pass. Follow the coach's
+`references/tlc-guide.md` for a first progress check and its interpretation.
+
 The catalog's tool entry pins the jar SHA256 and exact version, names Java, and
 sets its heap budget. Official distributions are preferred. Inputs are copied
 into an isolated run directory before checking; undeclared local modules are

@@ -14,7 +14,7 @@ CATALOG_PATH = ".specify/formal-methods.json"
 RUNS_PATH = ".specify/formal-runs"
 EVIDENCE_PATH = ".specify/formal-evidence"
 NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")
-VERSIONS = {"apalache": "0.62.2"}
+VERSIONS = {"apalache": "0.62.2", "tlc": "1.7.4"}
 
 
 class FormalError(ValueError):
@@ -86,12 +86,16 @@ def validate_properties(properties: Any) -> dict[str, Any]:
 
 def validate_mode(model: dict[str, Any]) -> None:
     mode = model["mode"]
-    if mode not in ("bounded", "temporal", "inductive"):
+    modes = ("finite", "temporal") if model["checker"] == "tlc" else ("bounded", "temporal", "inductive")
+    if mode not in modes:
         raise FormalError("unsupported", f"unsupported {model['checker']} mode: {mode}")
     temporal = any(p["kind"] == "temporal" for p in model["properties"].values())
     if (mode == "temporal") != temporal:
         raise SelectionError("temporal properties require temporal mode; other modes require invariants")
-    if mode == "inductive":
+    if model["checker"] == "tlc":
+        require_fields(model["bounds"], {"max_set_size"}, "TLC enumeration bound")
+        bounded_integer(model["bounds"]["max_set_size"], 1, 10_000_000, "bounds.max_set_size")
+    elif mode == "inductive":
         require_fields(model["bounds"], {"inductive_invariant"}, "inductive bounds")
         operator(model["bounds"]["inductive_invariant"])
     else:
@@ -100,12 +104,15 @@ def validate_mode(model: dict[str, Any]) -> None:
 
 
 def validate_model(model: Any, root: Path, selected: dict[str, Any]) -> dict[str, Any]:
-    require_fields(model, {"checker", "module", "config", "inputs", "properties", "assumptions", "mode", "init", "next", "bounds", "budget"}, "model")
+    behavior = {"specification"} if isinstance(model, dict) and "specification" in model else {"init", "next"}
+    require_fields(model, {"checker", "module", "config", "inputs", "properties", "assumptions", "mode", "bounds", "budget"} | behavior, "model")
     require_text(model["checker"], "model.checker")
     if model["checker"] not in VERSIONS:
         raise FormalError("unsupported", f"unsupported checker: {model['checker']}")
-    operator(model["init"])
-    operator(model["next"])
+    for field in behavior:
+        operator(model[field])
+    if "specification" in model and model["checker"] != "tlc":
+        raise FormalError("unsupported", "SPECIFICATION configuration is supported only by the TLC integration")
     validate_properties(model["properties"])
     validate_mode(model)
     require_fields(model["budget"], {"timeout_seconds", "output_bytes"}, "model budget")
@@ -116,9 +123,9 @@ def validate_model(model: Any, root: Path, selected: dict[str, Any]) -> dict[str
     for assumption in model["assumptions"]:
         require_text(assumption, "assumption")
     validate_model_paths(model, root, selected)
-    if model["checker"] == "apalache":
-        from .native_config import validate_apalache
-        validate_apalache(model, confined(root, model["config"]).read_text(encoding="utf-8"))
+    from .native_config import validate_apalache, validate_tlc
+    validator = validate_tlc if model["checker"] == "tlc" else validate_apalache
+    validator(model, confined(root, model["config"]).read_text(encoding="utf-8"))
     return model
 
 

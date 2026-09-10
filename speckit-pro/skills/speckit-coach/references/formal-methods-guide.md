@@ -66,6 +66,11 @@ model's requirements and the exact installed version, not the application's
 programming language. Apalache 0.62.2 and TLC 1.7.4 are qualification targets;
 only an execution-tested profile may be advertised as compatible.
 
+For finite-state models and native fairness, use [the TLC guide](tlc-guide.md)
+and its passing/intentional-liveness-violation example. For Apalache, explicit
+INIT/NEXT and supported operators are required; native WF_/SF_ fairness routes
+to TLC. Keep stuttering and assumptions explicit in either model.
+
 - A bounded pass means no violation was found within the recorded search bounds.
 - Completed finite-state exploration establishes the checked properties of that
   finite model, under its assumptions and fairness settings.
