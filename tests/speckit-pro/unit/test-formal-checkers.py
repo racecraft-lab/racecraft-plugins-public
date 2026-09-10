@@ -338,6 +338,44 @@ class FormalCheckerTests(unittest.TestCase):
         self.workflow()
         with patch.object(helper, "inspect_tool", side_effect=AssertionError("disabled must not probe")):
             self.assertEqual([], lifecycle.coverage_errors(self.root, "workflow.md", {}, [("Post: Integration Suite", "completed")]))
+
+
+class FormalLifecycleTimestampTests(unittest.TestCase):
+    def assert_stale_then_renewed(self, fixture: FormalCheckerTests, checkpoint: str, verdict: str, request_inputs: dict) -> None:
+        path = record_path(fixture.root, "workflow.md", checkpoint)
+        for label, recorded_at in (("missing", None), ("invalid", "not-a-timestamp"),
+                                   ("naive", "2026-09-10T12:00:00"), ("wrong type", 123)):
+            with self.subTest(label=label):
+                record = json.loads(path.read_text())
+                if recorded_at is None:
+                    record.pop("recorded_at")
+                else:
+                    record["recorded_at"] = recorded_at
+                path.write_text(json.dumps(record))
+                current = helper.checkpoint_guard(fixture.root, "workflow.md")
+                self.assertEqual("stale", current["verdict"])
+                self.assertFalse(current["complete"])
+                self.assertEqual(verdict, fixture.request("apply", **request_inputs)["data"]["verdict"])
+                self.assertTrue(helper.current_checkpoint(fixture.root, "workflow.md")["complete"])
+
+    def test_malformed_checkpoint_timestamps_are_stale_and_renewable(self) -> None:
+        fixture = FormalCheckerTests()
+        fixture.setUp()
+        self.addCleanup(fixture.doCleanups)
+        with patch.object(helper, "inspect_tool", return_value={"version": "fixture"}), patch.object(helper, "execute_model", side_effect=fixture.passed_model):
+            self.assertEqual("pass", fixture.request("apply")["data"]["verdict"])
+            self.assert_stale_then_renewed(fixture, "plan", "pass", {})
+
+    def test_malformed_waiver_timestamps_cannot_authorize_resume(self) -> None:
+        fixture = FormalCheckerTests()
+        fixture.setUp()
+        self.addCleanup(fixture.doCleanups)
+        waiver = {"operator_confirmed": True, "approved_by": "Operator", "reason": "Accept current limitation",
+                  "approval_reference": "operator message malformed-time"}
+        self.assertEqual("waived", fixture.request("apply", waiver=waiver)["data"]["verdict"])
+        self.assert_stale_then_renewed(fixture, "plan-waiver", "waived", {"waiver": waiver})
+
+
 class NativeApalacheTests(FormalCheckerTests):
     def setUp(self) -> None:
         super().setUp()

@@ -15,21 +15,34 @@ def recorded_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="microseconds")
 
 
-def record_time(record: dict[str, Any]) -> datetime:
-    value = datetime.fromisoformat(record["recorded_at"])
-    if value.tzinfo is None:
-        raise SelectionError("formal checkpoint timestamps must include a timezone")
+def record_time(record: dict[str, Any]) -> datetime | None:
+    recorded_at = record.get("recorded_at")
+    if not isinstance(recorded_at, str):
+        return None
+    try:
+        value = datetime.fromisoformat(recorded_at)
+    except ValueError:
+        return None
+    if value.tzinfo is None or value.utcoffset() is None:
+        return None
     return value
 
 
 def latest_planning_checkpoint(root: Path, workflow: str) -> str:
     candidates = []
+    stale_candidates = []
     for checkpoint in ("plan", "planning"):
         for suffix in ("", "-waiver"):
             record = read_checkpoint(root, workflow, checkpoint + suffix)
             if isinstance(record, dict):
-                candidates.append((record_time(record), checkpoint))
-    return max(candidates)[1] if candidates else "plan"
+                timestamp = record_time(record)
+                if timestamp is None:
+                    stale_candidates.append(checkpoint)
+                else:
+                    candidates.append((timestamp, checkpoint))
+    if candidates:
+        return max(candidates)[1]
+    return stale_candidates[-1] if stale_candidates else "plan"
 
 
 def validate_waiver(value: Any) -> None:
@@ -70,15 +83,9 @@ def waive_checkpoint(root: Path, workflow: str, inputs: dict[str, Any], mode: st
     return record
 
 
-def waiver_status(root: Path, workflow: str, checkpoint: str) -> dict[str, Any] | None:
-    record = read_checkpoint(root, workflow, checkpoint + "-waiver")
-    if record is None:
-        return None
-    if not isinstance(record, dict) or record.get("schema_version") != "1.0" or record.get("verdict") != "waived":
-        raise SelectionError("Malformed formal operator waiver")
-    validate_waiver(record.get("waiver"))
-    newer = read_checkpoint(root, workflow, checkpoint)
-    if isinstance(newer, dict) and record_time(newer) >= record_time(record):
+def current_waiver(root: Path, workflow: str, checkpoint: str, record: dict[str, Any], newer_time: datetime | None) -> dict[str, Any] | None:
+    waiver_time = record_time(record)
+    if waiver_time is None or (newer_time is not None and newer_time >= waiver_time):
         return None
     selection, digest, _ = waiver_material(root, workflow, record["spec_file"], record["plan_file"], checkpoint)
     if record.get("workflow_file") != workflow or record.get("checkpoint") != checkpoint:
@@ -88,6 +95,28 @@ def waiver_status(root: Path, workflow: str, checkpoint: str) -> dict[str, Any] 
     return {"required": True, "complete": True, "verdict": "waived", "checkpoint": checkpoint,
             "fingerprint": digest, "waiver": record["waiver"],
             "evidence": record_path(root, workflow, checkpoint + "-waiver").relative_to(root).as_posix()}
+
+
+def waiver_status(root: Path, workflow: str, checkpoint: str) -> dict[str, Any] | None:
+    record = read_checkpoint(root, workflow, checkpoint + "-waiver")
+    newer = read_checkpoint(root, workflow, checkpoint)
+    newer_time = record_time(newer) if isinstance(newer, dict) else None
+    if record is not None:
+        if not isinstance(record, dict) or record.get("schema_version") != "1.0" or record.get("verdict") != "waived":
+            raise SelectionError("Malformed formal operator waiver")
+        validate_waiver(record.get("waiver"))
+        waived = current_waiver(root, workflow, checkpoint, record, newer_time)
+        if waived is not None:
+            return waived
+    stale_checkpoint = None
+    if isinstance(newer, dict) and newer_time is None:
+        stale_checkpoint = checkpoint
+    elif record is not None and record_time(record) is None and not isinstance(newer, dict):
+        stale_checkpoint = checkpoint + "-waiver"
+    if stale_checkpoint is None:
+        return None
+    return {"required": True, "complete": False, "verdict": "stale", "checkpoint": checkpoint,
+            "resume": "plan", "evidence": record_path(root, workflow, stale_checkpoint).relative_to(root).as_posix()}
 
 
 def state_path(root: Path, workflow: str, value: str) -> Path:
