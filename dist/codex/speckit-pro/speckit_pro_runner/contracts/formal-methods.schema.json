@@ -49,6 +49,18 @@
         {"required": ["init", "next"], "not": {"required": ["specification"]}},
         {"required": ["specification"], "properties": {"checker": {"const": "tlc"}}, "not": {"anyOf": [{"required": ["init"]}, {"required": ["next"]}]}}
       ],
+      "allOf": [
+        {
+          "if": {"required": ["language"], "properties": {"language": {"const": "quint"}}},
+          "then": {"required": ["main"], "properties": {"checker": {"const": "apalache"}, "mode": {"enum": ["bounded", "temporal"]}, "module": {"pattern": "\\.qnt$"}}},
+          "else": {"not": {"required": ["main"]}, "properties": {"module": {"pattern": "\\.tla$"}}}
+        },
+        {
+          "if": {"properties": {"checker": {"const": "tlc"}}},
+          "then": {"properties": {"mode": {"enum": ["finite", "temporal"]}}},
+          "else": {"properties": {"mode": {"enum": ["bounded", "temporal", "inductive"]}}}
+        }
+      ],
       "properties": {
         "checker": {"enum": ["apalache", "tlc"]},
         "module": {"type": "string", "pattern": "\\.(tla|qnt)$"},
