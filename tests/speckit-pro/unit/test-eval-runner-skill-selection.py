@@ -473,9 +473,11 @@ def post_implementation_outcome_violations(bodies: dict[str, str]) -> list[str]:
             "if no actual registered uat-validation path exists",
             "if and only if that just-run validator reports the existing runbook invalid",
         ),
-        "stack-manager invocation prohibition and fallback": (
-            "`detect-stack-manager-plan` is out of scope and must not be invoked",
-            "use explicit packet-owned `gh pr create --base --head --title --body-file` commands",
+        "qualified optional stack-manager selection": (
+            "run `detect-stack-manager-plan` in `dry_run` mode",
+            "cli **and** skill",
+            "packet-owned pr creation and refresh",
+            "verified existing pr urls only after packet checks",
         ),
         "source-directory and branch-prefix split": (
             "`--feature-branch` is the emitted branch prefix",

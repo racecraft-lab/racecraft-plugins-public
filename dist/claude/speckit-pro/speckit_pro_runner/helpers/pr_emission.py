@@ -54,6 +54,9 @@ UAT_COMMAND_KEYS = (
 
 
 def run_pr_emission_helper(entry: Any, request: Any) -> dict[str, Any]:
+    if request.helper_id == "detect-stack-manager-plan":
+        from .stack_manager import run_stack_manager_helper
+        return run_stack_manager_helper(entry, request)
     if request.helper_id == "generate-pr-body":
         return generate_pr_body(entry, request)
     if request.helper_id == "generate-uat-skeleton":
@@ -62,7 +65,7 @@ def run_pr_emission_helper(entry: Any, request: Any) -> dict[str, Any]:
         return generate_pr_packet(entry, request)
     if request.helper_id == "validate-pr-packet-write":
         return validate_pr_packet_write(entry, request)
-    if request.helper_id in {"multi-pr-emission", "restack", "detect-stack-manager-plan"}:
+    if request.helper_id in {"multi-pr-emission", "restack"}:
         return plan_commands(entry, request)
     return input_error(
         request,

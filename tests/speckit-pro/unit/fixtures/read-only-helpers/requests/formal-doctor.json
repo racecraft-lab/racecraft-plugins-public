@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0",
+  "helper_id": "formal-doctor",
+  "operation": "formal-doctor",
+  "mode": "read_only",
+  "inputs": {
+    "repo_root": ".",
+    "workflow_file": "tests/speckit-pro/unit/fixtures/formal-methods/disabled-workflow.md"
+  }
+}

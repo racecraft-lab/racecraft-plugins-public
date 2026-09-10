@@ -56,6 +56,7 @@ stop_reason: "natural" | "user-ended" | "soft-cap" | "hard-cap"
 
 ## Verification Gates
 - <check>: <threshold or pass condition>, <how it is run if known> (Q<n> or evidence: <file, roadmap entry, or constitution principle>)
+- Formal methods: <none | deferred | enabled>, <rationale>; <selected behavior/model IDs, new/existing, model/model_and_trace when applicable> (Q<n> or evidence)
 
 ## Design Tree (Q&A log)
 ### Q<n>. <question>
