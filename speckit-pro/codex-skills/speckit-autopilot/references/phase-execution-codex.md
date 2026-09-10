@@ -761,9 +761,12 @@ for phase in PHASES starting from first_pending:
        resolved scripts path for this skill.
        Parse the script output for PASS/FAIL status.
     8. If gate fails:
-       a. Attempt auto-fix (max 2 attempts)
-       b. If still failing and gate-failure == "stop": STOP
-       c. If gate-failure == "skip-and-log": log, continue
+       a. If G3 reports unresolved requirement wording, run the Plan ambiguity
+          provenance repair below (max 2 attempts, with G3 after each)
+       b. Otherwise attempt the gate's ordinary auto-fix (max 2 attempts)
+       c. If still failing and gate-failure == "stop": STOP
+       d. If gate-failure == "skip-and-log": log the failed verdict unchanged,
+          continue without rewriting requirement provenance
     9. Update workflow file with results and print the current checklist summary
    10. If auto-commit == "per-phase":
        For phases 1–6: run: git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json && git commit
@@ -779,6 +782,19 @@ for phase in PHASES starting from first_pending:
 
 After all 7 phases complete, proceed to the post-implementation parallel
 group (see [post-implementation-codex.md](./post-implementation-codex.md)).
+
+### G3 Plan ambiguity branch
+
+The parent orchestrator, not the Plan executor or consensus agents, classifies
+the disputed wording before retrying. Follow
+[`gate-validation.md`](../../skills/speckit-autopilot/references/gate-validation.md)
+§Plan ambiguity provenance repair exactly. Give the same `phase-executor` the
+original Plan prompt for at most 2 repairs, plus a `Plan Repair Context`
+containing the exact G3 JSON, disputed wording, direct source evidence,
+provenance class, prior repair result, and attempt number. Append every attempt
+and revalidation result to the workflow's Plan Ambiguity Repair Log. If
+provenance is unresolved, record why repair cannot safely proceed; never turn
+downstream agent agreement into human ratification.
 
 ## Static Tier-2 Relocation Suggestion
 

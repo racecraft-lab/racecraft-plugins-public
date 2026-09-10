@@ -395,6 +395,15 @@ runner response and branch on it rather than aborting.
 **Gate:** G3 — verify plan.md, research.md, data-model.md
 exist
 
+If G3 fails because Plan contains unresolved requirement wording, the parent
+orchestrator follows
+[`gate-validation.md`](./gate-validation.md)
+§Plan ambiguity provenance repair. It classifies the disputed wording from
+direct source evidence, appends the Plan Ambiguity Repair Log, and re-dispatches
+the same Plan executor with the original prompt plus the complete
+`Plan Repair Context`. Re-run G3 after each of at most 2 repairs. Missing
+artifacts and constitutional failures retain the ordinary G3 auto-fix path.
+
 **Commit:**
 `git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json && git commit -m "feat(SPEC-XXX): complete plan phase"`
 

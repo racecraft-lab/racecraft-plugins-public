@@ -17,6 +17,12 @@ across context compactions and `--from-phase` resumes.
 | **Analyze** | Analysis Results table (ID, severity, issue, resolution) |
 | **Implement** | Implementation Progress, Post-Implementation Checklist, Success Criteria |
 
+Clarify Results must preserve each accepted human answer separately from the
+executor's recommendation or later consensus. Record the answer directly when
+available, or a lossless paraphrase, and label its source `human answer` so a
+later Plan repair can trace provenance without treating generated spec prose as
+the original decision.
+
 ## Additional Updates
 
 - **Constitution Validation table** — update after Specify (initial)
@@ -27,6 +33,25 @@ across context compactions and `--from-phase` resumes.
   [`consensus-protocol.md`](./consensus-protocol.md) §Logging for the
   canonical column set and the 10% Round-2 escape-rate re-evaluation
   trigger computed from these rows.
+
+### Conditional Plan Ambiguity Repair Log
+
+Create this subsection under Plan Results only when G3 reports unresolved
+requirement wording. Append one row for the initial provenance decision and
+each completed or skipped repair; never replace earlier rows on resume.
+
+```text
+#### Plan Ambiguity Repair Log
+
+| Attempt | Disputed wording | Source evidence | Provenance class | Repair action | G3 result | Remaining escalation reason |
+| --- | --- | --- | --- | --- | --- | --- |
+```
+
+The source-evidence cell must identify the original human answer or authored
+artifact, or the cited facts that establish a necessary implication. If that
+evidence is unavailable or conflicting, record `unresolved-provenance` and the
+reason; do not infer human ratification from generated artifacts or agent
+agreement.
 
 ## The `Stage` Entry
 

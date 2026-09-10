@@ -305,6 +305,17 @@ Round 2, stop, re-evaluation, and Phase 6 confidence-emit contracts in
 §Category-Routed Dispatch, §Batched Dispatch, §Phase-Specific Consensus Flows,
 and §Logging.
 
+### 6a. Plan ambiguity uses provenance, not consensus
+
+If G3 fails because Plan contains unresolved requirement wording, the parent
+orchestrator MUST follow
+[`gate-validation.md`](references/gate-validation.md)
+§Plan ambiguity provenance repair before escalation. Trace the wording to its
+original source, assign the required provenance class, write the conditional
+Plan Ambiguity Repair Log, and give the same Plan executor at most 2 repairs,
+re-running G3 after each. This is separate from Rule 6 consensus: repeated
+agent agreement cannot make an inferred premise user-ratified.
+
 ### 7. Optional Luna helper is advisory only
 
 The main autopilot may optionally spawn `autopilot-fast-helper`
