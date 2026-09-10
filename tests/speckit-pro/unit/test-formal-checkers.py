@@ -243,7 +243,7 @@ class FormalCheckerTests(unittest.TestCase):
         self.model.update(checker="tlc", mode="finite", bounds={"max_set_size": 1000000})
         self.tool["version"] = "1.7.4"
         self.save_catalog()
-        with patch.object(helper, "inspect_tool", return_value={"version": "fixture"}), patch.object(helper, "execute_model", side_effect=self.passed_model):
+        with patch.object(engine.shutil, "which", return_value=sys.executable), patch.object(helper, "inspect_tool", return_value={"version": "fixture"}), patch.object(helper, "execute_model", side_effect=self.passed_model):
             self.assertEqual("pass", self.request("apply")["data"]["verdict"])
             self.assertTrue(helper.current_checkpoint(self.root, "workflow.md")["complete"])
             (self.root / self.model["config"]).write_text("INIT Init\nNEXT Next\n")
