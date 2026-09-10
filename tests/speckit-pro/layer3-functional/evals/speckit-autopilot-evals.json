@@ -462,6 +462,34 @@
         "Maps an unresolved escape to escape_unresolved and no agreeing pair to all_disagree human review",
         "Keeps reviewer and model prose private while the parent receives only closed projections or a receipt"
       ]
+    },
+    {
+      "id": 111,
+      "prompt": "During Plan, G3 fails because plan.md contains one unresolved marker requiring the exact instant an author sees the first outline rendered in the client. The original human Clarify answer required timing the first generated outline and final approval, and distinguished initial generation from revision and approval time; it did not require observing a client render event. Generated spec wording later said the outline is presented, and several agents repeated that stronger premise as user-ratified. What must the autopilot do before it can escalate or continue?",
+      "expected_output": "The parent traces the disputed render wording to the original human answer, classifies the exact UI-render observation as assistant-inference, and records the source and classification in the Plan Ambiguity Repair Log. It gives the same Plan executor the original prompt plus Plan Repair Context containing the exact G3 result and evidence, removes only the unsupported strengthening while preserving first-generation and final-approval timing, and reruns G3 after each of at most two repairs. Agent repetition cannot create human ratification, acknowledgement is not an automatic substitute, and the marker is never deleted merely to pass. If the actual requirement remains unresolved, it escalates that real choice with the recorded evidence.",
+      "expectations": [
+        "Classifies the exact client-render requirement as assistant-inference by tracing it to the original human answer",
+        "States that generated wording, repeated agent agreement, or consensus cannot upgrade the premise to explicit-human or user-ratified",
+        "Records the disputed wording, source evidence, provenance class, repair action, G3 result, and remaining reason in the Plan Ambiguity Repair Log",
+        "Re-dispatches the same Plan executor with the original Plan prompt and Plan Repair Context including the exact G3 output",
+        "Preserves timing of first generation and final approval while removing only the unsupported exact-render strengthening",
+        "Reruns G3 after each of at most two repairs and never deletes or disguises the unresolved marker merely to pass",
+        "Does not substitute acknowledgement timing unless evidence establishes it satisfies the requirement, and escalates only the actual remaining choice"
+      ]
+    },
+    {
+      "id": 112,
+      "prompt": "During Plan, G3 fails on a marker for timing the actual UI-delivery event visible to the author. Here the original human answer explicitly requires that exact visible delivery event, while the current CLI-output architecture has no verified delivery callback or equivalent observation. How must the autopilot repair, record, and escalate this case?",
+      "expected_output": "The parent classifies the requirement as explicit-human from the direct answer and preserves both the wording and unresolved marker. It records the evidence in the Plan Ambiguity Repair Log, gives the same Plan executor up to two evidence-bearing repair attempts to find an implementable architecture, and reruns G3 after each. It cannot weaken the requirement or substitute acknowledgement timing without evidence of equivalence. If no implementation is found, G3 remains failed and the default stop path escalates the exact architectural choice with the attempts and remaining reason; skip-and-log, if explicitly configured, leaves the failed verdict, marker, and provenance unchanged.",
+      "expectations": [
+        "Classifies the exact visible UI-delivery requirement as explicit-human using the direct human answer",
+        "Preserves the requirement and unresolved marker rather than weakening either to make G3 pass",
+        "Records the source, provenance class, each repair action, G3 result, and remaining escalation reason in the Plan Ambiguity Repair Log",
+        "Gives the same Plan executor the original prompt and evidence-bearing Plan Repair Context for at most two repairs",
+        "Reruns G3 after every repair attempt",
+        "Rejects acknowledgement timing or another proxy unless evidence establishes equivalence to actual UI delivery",
+        "After unsuccessful repair, escalates with G3 still failed; any explicit skip-and-log override keeps the verdict, marker, and provenance unchanged"
+      ]
     }
   ]
 }
