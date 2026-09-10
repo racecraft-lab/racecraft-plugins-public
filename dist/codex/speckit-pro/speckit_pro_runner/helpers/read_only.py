@@ -4779,9 +4779,9 @@ def _spec_index_render_home_index(
         if not has_id or not spec_id:
             continue
         _, status_value = _spec_index_scalar(moc_text, "status")
-        row = f"- [{spec_id}](../../../specs/{spec_dir.name}/SPEC-MOC.md) {SPEC_INDEX_SEPARATOR}"
+        row = f"- [{spec_id}](../../../specs/{spec_dir.name}/SPEC-MOC.md)"
         if status_value:
-            row = f"{row} {status_value}"
+            row = f"{row} {SPEC_INDEX_SEPARATOR} {status_value}"
         sortable.append(
             (
                 _spec_index_normalize(spec_id).encode("utf-8"),
@@ -4819,7 +4819,7 @@ def _spec_index_render_home_index(
             if not _spec_index_home_owns(home_path, home_text, spec_text):
                 continue
             label = branch.upper()
-            row = f"- [{label}](../../../specs/{branch}/spec.md) {SPEC_INDEX_SEPARATOR}"
+            row = f"- [{label}](../../../specs/{branch}/spec.md)"
             sortable.append(
                 (
                     _spec_index_normalize(branch).encode("utf-8"),

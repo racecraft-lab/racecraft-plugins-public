@@ -432,13 +432,13 @@ class GenerateSpecIndexTests(unittest.TestCase):
         home_text = home.read_text(encoding="utf-8")
         expected_rows = [
             "- [PRSG-001](../../../specs/prsg-001-foo/SPEC-MOC.md) \u00b7 complete",
-            "- [PRSG-002](../../../specs/prsg-002-bar/SPEC-MOC.md) \u00b7",
+            "- [PRSG-002](../../../specs/prsg-002-bar/SPEC-MOC.md)",
             "- [PRSG-010](../../../specs/prsg-010-baz/SPEC-MOC.md) \u00b7 in-progress",
-            "- [PRSG-011-FLAT-OWNED](../../../specs/prsg-011-flat-owned/spec.md) \u00b7",
+            "- [PRSG-011-FLAT-OWNED](../../../specs/prsg-011-flat-owned/spec.md)",
         ]
-        for row in expected_rows:
-            self.assertIn(row, home_text)
-        self.assertEqual([home_text.index(row) for row in expected_rows], sorted(home_text.index(row) for row in expected_rows))
+        home_lines = home_text.splitlines()
+        self.assertEqual([line for line in home_lines if line.startswith("- [PRSG-")], expected_rows)
+        self.assertFalse(any(line.endswith(" \u00b7") for line in home_lines))
         self.assertNotIn("prsg-004-other", home_text)
         self.assertIn("prsg-004-other", other_home.read_text(encoding="utf-8"))
         self.assertEqual(
