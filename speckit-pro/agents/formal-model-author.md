@@ -42,7 +42,17 @@ selected behavior; never enroll another story or model. Never invoke Grill Me.
    explicit stuttering relation when intended. Its bounded temporal checks do not
    support native WF_/SF_ fairness or ENABLED; route those models to TLC. Reconcile
    native property lists with the catalog; never silently discard configuration.
-5. Return the permitted paths changed, property-to-requirement mapping, assumptions,
+5. If the approved model uses Quint, follow the parent's scoped upstream language
+   and modeling references and the coach's `references/quint-guide.md`. Preserve
+   SpecKit's approved requirement authority. Author the selected `.qnt` inputs,
+   matching native configuration, and pinned compiler catalog entry; never run
+   Quint's backend-managing verify/TLA+ compilation or install its plugin. The
+   parent's runner owns JSON compilation and actual Apalache checking.
+   For selected implementation traces, declare the reviewed ITF action/state
+   projection, atomic capture points, adapter tests, and implementation input
+   scope using `references/implementation-traces.md`. Include these obligations
+   for Tasks; simulated model traces alone cannot satisfy conformance.
+6. Return the permitted paths changed, property-to-requirement mapping, assumptions,
    expected checks, and unresolved questions. The parent runs `formal-doctor` and
    `formal-check`, owns gate decisions, records evidence, and commits the result.
 

@@ -11,7 +11,7 @@ TOKEN = re.compile(r'\(\*|\*\)|\\\*[^\n]*|"(?:\\.|[^"\\])*"|[A-Za-z_][A-Za-z0-9_
 DIRECTIVES = frozenset("INIT NEXT SPECIFICATION CONSTANT CONSTANTS INVARIANT INVARIANTS PROPERTY PROPERTIES CONSTRAINT CONSTRAINTS ACTION_CONSTRAINT ACTION_CONSTRAINTS SYMMETRY VIEW ALIAS POSTCONDITION CHECK_DEADLOCK".split())
 
 
-def identifiers(text: str) -> list[str]:
+def identifier_tokens(text: str) -> list[tuple[str, int]]:
     depth = 0
     words = []
     for match in TOKEN.finditer(text):
@@ -21,12 +21,29 @@ def identifiers(text: str) -> list[str]:
         elif token == "*)":
             depth -= 1
         elif depth == 0 and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", token):
-            words.append(token)
+            words.append((token, match.start()))
         if depth < 0:
             raise FormalError("invalid_model", "unmatched native configuration comment")
     if depth:
         raise FormalError("invalid_model", "unterminated native configuration comment")
     return words
+
+
+def identifiers(text: str) -> list[str]:
+    return [word for word, _ in identifier_tokens(text)]
+
+
+def trace_configuration(text: str, init: str, next_name: str, invariant: str) -> str:
+    """Preserve native constants/constraints verbatim while asking one reachability query."""
+    preserved = {"CONSTANT", "CONSTANTS", "CONSTRAINT", "CONSTRAINTS", "ACTION_CONSTRAINT", "ACTION_CONSTRAINTS"}
+    replaced = {"INIT", "NEXT", "SPECIFICATION", "INVARIANT", "INVARIANTS", "PROPERTY", "PROPERTIES", "CHECK_DEADLOCK"}
+    found = sections(text)
+    if set(found) - preserved - replaced:
+        raise FormalError("unsupported", "Observed trace checking does not support native symmetry, view, alias or postcondition settings")
+    positions = [(word, offset) for word, offset in identifier_tokens(text) if word in DIRECTIVES]
+    positions.append(("", len(text)))
+    kept = [text[offset:positions[index + 1][1]] for index, (word, offset) in enumerate(positions[:-1]) if word in preserved]
+    return "\n".join([*kept, f"INIT {init}", f"NEXT {next_name}", f"INVARIANT {invariant}", "CHECK_DEADLOCK FALSE", ""])
 
 
 def sections(text: str) -> dict[str, list[str]]:

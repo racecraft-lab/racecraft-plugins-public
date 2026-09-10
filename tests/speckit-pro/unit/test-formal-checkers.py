@@ -18,7 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 sys.path[:0] = [str(PLUGIN_ROOT), str(REPO_ROOT / "tests/speckit-pro/lib")]
 
-from speckit_pro_runner.formal import apalache, catalog, engine, helper, lifecycle, tlc
+from speckit_pro_runner.formal import apalache, catalog, engine, helper, lifecycle, quint, tlc
 from speckit_pro_runner.formal.evidence import read_checkpoint, record_path
 from speckit_pro_runner.formal.process import run_process, start_process
 from speckit_pro_runner.helpers.registry import dispatch_helper
@@ -27,6 +27,7 @@ from test_result import run_counted
 
 JAR: str | None = None
 TLC_JAR: str | None = None
+QUINT_ROOT: str | None = None
 
 
 class FormalCheckerTests(unittest.TestCase):
@@ -503,13 +504,63 @@ class NativeTlcTests(FormalCheckerTests):
         self.assertEqual("timeout", self.request("apply")["data"]["verdict"])
 
 
+class NativeQuintTests(FormalCheckerTests):
+    def setUp(self) -> None:
+        super().setUp()
+        source = PLUGIN_ROOT / "skills/speckit-coach/examples/formal/counter-quint"
+        shutil.copytree(source, self.root / "formal/counter-quint")
+        self.selection["models"][0]["origin"] = "existing"
+        self.workflow()
+        self.model.update(language="quint", main="Counter", init="init", next="step",
+                          module="formal/counter-quint/Counter.qnt", config="formal/counter-quint/Counter.cfg",
+                          inputs=["formal/counter-quint/Counter.qnt", "formal/counter-quint/Counter.cfg"])
+        self.tool.update(jar=JAR, sha256=catalog.digest(Path(JAR)))
+        self.compiler = {"version": "0.32.0", "root": QUINT_ROOT, "tree_sha256": quint.tree_digest(Path(QUINT_ROOT)), "node": "node"}
+        self.save_compiler()
+
+    def save_compiler(self) -> None:
+        self.save_catalog()
+        path = self.root / catalog.CATALOG_PATH
+        data = json.loads(path.read_text())
+        data["tools"]["quint"] = self.compiler
+        path.write_text(json.dumps(data))
+
+    def test_native_quint_check_and_intentional_violation(self) -> None:
+        result = self.request("apply")
+        self.assertEqual("pass", result["data"]["verdict"], result)
+        self.assertEqual("compiled", result["data"]["results"][0]["compilation"]["verdict"])
+        self.assertTrue(helper.current_checkpoint(self.root, "workflow.md")["complete"])
+        source = self.root / self.model["module"]
+        source.write_text(source.read_text().replace("count <= 2", "count < 2"))
+        self.assertEqual("violation", self.request("apply")["data"]["verdict"])
+
+    def test_native_quint_temporal(self) -> None:
+        self.model["mode"] = "temporal"
+        self.model["properties"]["EventuallyFull"] = {"kind": "temporal", "requirement": "FR2"}
+        self.save_compiler()
+        result = self.request("apply")
+        self.assertEqual("pass", result["data"]["verdict"], result)
+
+    def test_native_quint_syntax_and_installation_drift(self) -> None:
+        source = self.root / self.model["module"]
+        source.write_text(source.read_text() + "bad syntax\n")
+        self.assertEqual("invalid_model", self.request("apply")["data"]["verdict"])
+        self.compiler["tree_sha256"] = "0" * 64
+        self.save_compiler()
+        self.assertEqual("version_mismatch", self.request("read_only", "formal-doctor")["data"]["verdict"])
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--apalache-jar")
     parser.add_argument("--tlc-jar")
+    parser.add_argument("--quint-root")
     args = parser.parse_args()
     JAR = str(Path(args.apalache_jar).resolve()) if args.apalache_jar else None
     TLC_JAR = str(Path(args.tlc_jar).resolve()) if args.tlc_jar else None
+    QUINT_ROOT = str(Path(args.quint_root).resolve()) if args.quint_root else None
+    if QUINT_ROOT and not JAR:
+        parser.error("--quint-root requires --apalache-jar")
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(FormalCheckerTests)
     if JAR:
         for name in unittest.defaultTestLoader.getTestCaseNames(NativeApalacheTests):
@@ -519,4 +570,8 @@ if __name__ == "__main__":
         for name in unittest.defaultTestLoader.getTestCaseNames(NativeTlcTests):
             if name.startswith("test_native_"):
                 suite.addTest(NativeTlcTests(name))
+    if QUINT_ROOT:
+        for name in unittest.defaultTestLoader.getTestCaseNames(NativeQuintTests):
+            if name.startswith("test_native_"):
+                suite.addTest(NativeQuintTests(name))
     raise SystemExit(run_counted(suite, label="test-formal-checkers"))
