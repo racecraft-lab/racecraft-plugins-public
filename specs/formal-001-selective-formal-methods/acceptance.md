@@ -1,18 +1,20 @@
 # FORMAL-001 acceptance record
 
 Status: implementation, six draft PRs, stack linking, and local/hosted native
-qualification complete. [Manual onboarding](onboarding-uat.md) is not performed.
-Live coaching canaries require operator approval and have not run.
+qualification complete. [Agent-operated UAT and review remediation](stack-uat.md)
+cover all six PRs. Human [beginner onboarding](onboarding-uat.md) remains pending.
+Eight live coaching cases completed with operator approval; two failed answers
+prompted guidance fixes and successful corrective reruns.
 
 | Acceptance | Evidence required | Status |
 |---|---|---|
-| A1 / US1 | Beginner passing and intentional failing check; justified no-model case; expert shortcut | Automated example pass and intentional violation verified; manual UAT not performed |
+| A1 / US1 | Beginner passing and intentional failing check; justified no-model case; expert shortcut | Hands-on pass/violation/recovery and both providers' coaching verified; human beginner and expert trials remain separate |
 | A2 / US2 | Real passing/failing, invalid/type error, unsupported, deadlock, temporal, incomplete induction, timeout, version/config mismatch | Native combined checkers/compiler 42/42 passed; detailed cases recorded below |
 | A3 / US3 | New/reused models, missing config, parent root, clean checkout, interruptions, every resume form, waiver, planning/review invalidation | Deterministic lifecycle and installed-consumer checks passed; all existing resume/coverage/bookkeeping suites pass |
 | A4 / US4 | Valid trace, real seeded defect, illegal transition with valid states, stale/missing/malformed/mismatched trace | Native Apalache/Quint 31/31 and TLC 27/27 trace checks passed in hosted macOS CI, including all three implementation languages |
 | A5 / US5 | Manager capability matrix, fallback, partial mutation/recovery, preserved metadata and no duplicates | Nine deterministic cases passed; live CLI/skill/repository qualification, six existing-PR links, exact metadata preservation, and read-only resume boundary verified |
 | A6 / all | Disabled compatibility, durable archival, every advertised install profile, targeted/full suites, artifact/ripwire gates, installed parity | 5,276/5,276 committed-checkout assertions; Ubuntu and macOS each passed native checkers 42/42 and setup/installed-consumer checks 13/13 |
-| A7 / full harness | Complete suite-manifest review, test/eval coverage, full-plugin scaffold/autopilot and installed Claude/Codex integration, gap remediation and regression evidence | [Review and remediation complete](harness-review.md); full default suite, integration 4/4, parity contracts 12/12 and headless contracts 232/232 pass; live canaries pending approval |
+| A7 / full harness | Complete suite-manifest review, test/eval coverage, full-plugin scaffold/autopilot and installed Claude/Codex integration, gap remediation and regression evidence | [Review and remediation complete](harness-review.md); full default suite, integration 4/4, parity contracts 12/12 and headless contracts 232/232 pass; eight live cases reviewed, with two corrective reruns |
 | A8 / languages | Python, TypeScript, and Swift: real valid/defective implementations, ordered strict traces, numeric boundaries, source freshness, test/compile integration and documented runtime profiles | Executed all three producers, type/compile checks and seeded defects locally and on hosted macOS; qualification is limited to the recorded profiles |
 | A9 / Quint | Pinned optional Quint/Apalache compatibility, ITF interoperability, useful model-based tests and separately checked observed implementation traces; no implicit downloads | Quint 0.32.0 / Apalache 0.62.2 native model and observed trace checks pass; no managed backend command is used |
 

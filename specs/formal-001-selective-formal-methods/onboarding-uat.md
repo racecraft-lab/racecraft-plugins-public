@@ -1,6 +1,8 @@
 # Manual onboarding acceptance
 
-Status: not performed. Record the tester, host/plugin version, date, and actual
+Status: human beginner trial not performed. Agent-operated command scenarios and
+live coaching checks are recorded separately in [stack UAT](stack-uat.md).
+Record the human tester, host/plugin version, date, and actual
 results below. Automated model tests and live agent answers do not complete this
 runbook. Use a disposable project and a released or explicitly selected test
 plugin installation; keep the repository under review unchanged.

@@ -28,4 +28,4 @@ by a later layer. No manager is selected solely from the existence of its schema
 - [x] T6b qualify language tooling and CI profiles; record unexecuted profiles explicitly
 - [x] T5b research and qualify Quint's optional Apalache modeling path and ITF trace integration; preserve explicit installation and selection
 - [ ] Manual beginner onboarding UAT in onboarding-uat.md
-- [ ] Eight bounded live coaching canaries, pending operator approval
+- [x] Eight bounded live coaching canaries with operator approval; two corrective reruns reviewed in stack-uat.md
