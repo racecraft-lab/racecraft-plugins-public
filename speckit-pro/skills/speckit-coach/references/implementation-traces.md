@@ -2,6 +2,9 @@
 
 Select `evidence: model_and_trace` only when the modeled behavior needs this
 additional evidence. Keep ordinary unit, integration, type, and concurrency tests.
+Put that selection on the model entry in the workflow's `## Formal Methods`
+section, not in `.specify/formal-methods.json`. The catalog defines the reusable
+trace contract below; it does not enroll the feature.
 A passing finite trace proves that those observed actions and states form a
 possible execution of the selected model. It does not prove every implementation
 run, unobserved behavior, or implementation liveness.
