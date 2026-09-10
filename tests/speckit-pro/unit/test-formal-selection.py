@@ -21,13 +21,18 @@ def selected() -> dict:
     ]}
 
 
-def workflow(record: dict) -> str:
-    return "# Workflow\n\n## Formal Methods\n\n```json\n" + json.dumps(record) + "\n```\n\n## Phase 1\n"
+def workflow(record: dict, opening_indent: int = 0, closing_indent: int = 0) -> str:
+    return ("# Workflow\n\n## Formal Methods\n\n" + " " * opening_indent + "```json\n"
+            + json.dumps(record) + "\n" + " " * closing_indent + "```\n\n## Phase 1\n")
 
 
 class FormalSelectionTests(unittest.TestCase):
     def test_explicit_selection_and_legacy_absence(self) -> None:
         self.assertEqual(selected(), selection_from_workflow(workflow(selected())))
+        for opening in range(4):
+            for closing in range(4):
+                with self.subTest(opening=opening, closing=closing):
+                    self.assertEqual(selected(), selection_from_workflow(workflow(selected(), opening, closing)))
         self.assertEqual("none", selection_from_workflow("# Retry concurrency .tla apalache") ["status"])
         for status in ("none", "deferred"):
             with self.subTest(status=status):
@@ -43,6 +48,9 @@ class FormalSelectionTests(unittest.TestCase):
                        {"status": "none"}, {"models": selected()["models"] * 2}):
             with self.subTest(change=change), self.assertRaises(SelectionError):
                 selection_from_workflow(workflow({**selected(), **change}))
+        for opening, closing in ((4, 0), (0, 4)):
+            with self.subTest(opening=opening, closing=closing), self.assertRaises(SelectionError):
+                selection_from_workflow(workflow(selected(), opening, closing))
         for field, value in (("id", "../escape"), ("id", "Upper"), ("origin", "auto"),
                              ("behavior", ""), ("evidence", "typecheck"), ("evidence", True)):
             record = selected()
