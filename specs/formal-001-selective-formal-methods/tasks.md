@@ -23,7 +23,7 @@ by a later layer. No manager is selected solely from the existence of its schema
 - [x] T4 implemented and verified
 - [x] T5 implemented and verified
 - [ ] T6 implemented and verified
-- [ ] T6a complete harness review finished; gaps remediated and regression evidence recorded
+- [x] T6a complete harness review finished; gaps remediated and regression evidence recorded
 - [x] T5a qualify Python, TypeScript, and Swift trace emitters against the same model, including legal-state/illegal-transition defects
 - [ ] T6b qualify language tooling and CI profiles; record unexecuted profiles explicitly
 - [x] T5b research and qualify Quint's optional Apalache modeling path and ITF trace integration; preserve explicit installation and selection

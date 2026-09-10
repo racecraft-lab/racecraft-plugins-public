@@ -1,16 +1,18 @@
 # FORMAL-001 acceptance record
 
-Status: incomplete. Automated results do not establish manual onboarding success.
+Status: implementation and local automated qualification complete; PR/hosted-CI
+delivery and [manual onboarding](onboarding-uat.md) remain tracked separately.
+Live coaching canaries require operator approval and have not run.
 
 | Acceptance | Evidence required | Status |
 |---|---|---|
 | A1 / US1 | Beginner passing and intentional failing check; justified no-model case; expert shortcut | Automated example pass and intentional violation verified; manual UAT not performed |
-| A2 / US2 | Real passing/failing, invalid/type error, unsupported, deadlock, temporal, incomplete induction, timeout, version/config mismatch | Pending |
-| A3 / US3 | New/reused models, missing config, parent root, clean checkout, interruptions, every resume form, waiver, planning/review invalidation | Pending |
+| A2 / US2 | Real passing/failing, invalid/type error, unsupported, deadlock, temporal, incomplete induction, timeout, version/config mismatch | Native combined checkers/compiler 42/42 passed; detailed cases recorded below |
+| A3 / US3 | New/reused models, missing config, parent root, clean checkout, interruptions, every resume form, waiver, planning/review invalidation | Deterministic lifecycle and installed-consumer checks passed; all existing resume/coverage/bookkeeping suites pass |
 | A4 / US4 | Valid trace, real seeded defect, illegal transition with valid states, stale/missing/malformed/mismatched trace | Native Apalache/TLC and deterministic trace checks pass; final release qualification follows |
 | A5 / US5 | Manager capability matrix, fallback, partial mutation/recovery, preserved metadata and no duplicates | Pending |
-| A6 / all | Disabled compatibility, durable archival, every advertised install profile, targeted/full suites, artifact/ripwire gates, installed parity | Pending |
-| A7 / full harness | Complete suite-manifest review, test/eval coverage, full-plugin scaffold/autopilot and installed Claude/Codex integration, gap remediation and regression evidence | [Review and remediation recorded](harness-review.md); final clean-checkout and live canary evidence pending |
+| A6 / all | Disabled compatibility, durable archival, every advertised install profile, targeted/full suites, artifact/ripwire gates, installed parity | 5,276/5,276 final committed-checkout assertions; installed source/Claude/Codex execution and agent materialization passed; hosted CI pending |
+| A7 / full harness | Complete suite-manifest review, test/eval coverage, full-plugin scaffold/autopilot and installed Claude/Codex integration, gap remediation and regression evidence | [Review and remediation complete](harness-review.md); full default suite, integration 4/4, parity contracts 12/12 and headless contracts 232/232 pass; live canaries pending approval |
 | A8 / languages | Python, TypeScript, and Swift: real valid/defective implementations, ordered strict traces, numeric boundaries, source freshness, test/compile integration and documented runtime profiles | Executed all three producers, type/compile checks and seeded defects; qualification is limited to the recorded local runtimes |
 | A9 / Quint | Pinned optional Quint/Apalache compatibility, ITF interoperability, useful model-based tests and separately checked observed implementation traces; no implicit downloads | Quint 0.32.0 / Apalache 0.62.2 native model and observed trace checks pass; no managed backend command is used |
 
@@ -22,14 +24,16 @@ Status: incomplete. Automated results do not establish manual onboarding success
 | 2 | `codex/formal-methods/apalache` | Pending | 5,214/5,214 committed-checkout suite; native Apalache 30/30; installer 192/192; read-only helpers 107/107 |
 | 3 | `codex/formal-methods/tlc` | Pending | 34/34 deterministic and native Apalache/TLC checks; full delivery qualification remains required |
 | 4 | `codex/formal-methods/lifecycle` | Pending | 5,240/5,240 committed-checkout suite; 39/39 combined native/formal checks; manager 9/9; phase coverage 39/39; bookkeeping 289/289; stage resolution 257/257; mutation helpers 192/192; routing eval contracts 21/21 |
-| 5 | `codex/formal-methods/traces` | Pending | Native model, trace and language checks recorded below; final committed-checkout qualification follows |
-| 6 | `codex/formal-methods/qualification` | Pending | Pending |
+| 5 | `codex/formal-methods/traces` | Pending | 5,262/5,262 committed-checkout suite; native model, trace and language checks recorded below |
+| 6 | `codex/formal-methods/qualification` | Pending | 5,276/5,276 committed-checkout suite; native checkers/compiler 42/42; installed consumer scenario 12/12 before the added relative-path regression; setup contracts now 10/10; docs/browser validation passed |
 
 ## Qualification boundaries
 
 Apalache 0.62.2's official JAR profile has executed on macOS arm64 with Java
-26.0.1. TLC 1.7.4's official JAR has also executed on that runtime. Other runtimes
-and containers remain unqualified.
+26.0.1. TLC 1.7.4's official JAR has also executed on that runtime. The pinned
+official Apalache Linux amd64 image passed both positive and negative checks
+under Docker emulation on macOS arm64, using Temurin 25.0.4+7. Hosted Ubuntu/macOS
+Java 25 results are pending; other runtimes and custom containers are unqualified.
 Installation requires operator authorization. Hosted CI remains the default.
 Organization runner admission and VM sizing are not inferred from this repository.
 
