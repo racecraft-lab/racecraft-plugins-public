@@ -31,7 +31,7 @@ def main() -> int:
     env = runtime_environment()
     env["PYTHONPATH"] = str(PLUGIN_ROOT)
     result = subprocess.run([sys.executable, "-m", "speckit_pro_runner"], input=json.dumps(request), capture_output=True,
-                            text=True, cwd=args.repo_root, env=env, check=False)
+                            text=True, cwd=PLUGIN_ROOT, env=env, check=False)
     print(result.stdout, end="")
     if result.stderr:
         print(result.stderr, file=sys.stderr, end="")
