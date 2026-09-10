@@ -18,7 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 sys.path[:0] = [str(PLUGIN_ROOT), str(REPO_ROOT / "tests/speckit-pro/lib")]
 
-from speckit_pro_runner.formal import apalache, catalog, engine, helper, tlc
+from speckit_pro_runner.formal import apalache, catalog, engine, helper, lifecycle, tlc
 from speckit_pro_runner.formal.evidence import read_checkpoint, record_path
 from speckit_pro_runner.formal.process import run_process, start_process
 from speckit_pro_runner.helpers.registry import dispatch_helper
@@ -253,7 +253,91 @@ class FormalCheckerTests(unittest.TestCase):
         result["output"] = "@!@!@STARTMSG 2193:0 @!@!@\n@!@!@STARTMSG 2186:0 @!@!@\n0 distinct states found"
         self.assertEqual("inconclusive", tlc.verdict(result))
 
+    def test_operator_waiver_is_separate_scoped_and_stale_after_edits(self) -> None:
+        waiver = {"operator_confirmed": True, "approved_by": "Operator", "reason": "Accept this bounded planning risk",
+                  "approval_reference": "operator message formal-waiver-1"}
+        state = self.root / "autopilot-state.json"
+        state.write_text('{"status": "in_progress"}')
+        preview = self.request(waiver=waiver, state_file=state.name)
+        self.assertEqual("preview", preview["data"]["verdict"])
+        self.assertFalse(record_path(self.root, "workflow.md", "plan-waiver").exists())
+        result = self.request("apply", waiver=waiver, state_file=state.name)
+        self.assertEqual("waived", result["data"]["verdict"])
+        self.assertFalse(record_path(self.root, "workflow.md", "plan").exists())
+        current = helper.current_checkpoint(self.root, "workflow.md")
+        self.assertEqual("waived", current["verdict"])
+        self.assertTrue(current["complete"])
+        self.assertIn("| waived |", (self.root / "workflow.md").read_text())
+        self.assertEqual([], lifecycle.coverage_errors(self.root, "workflow.md", json.loads(state.read_text()), [("Phase 3: Plan", "completed")]))
+        self.assertFalse(helper.checkpoint_guard(self.root, "workflow.md", "final")["complete"])
+        (self.root / "plan.md").write_text("Changed after the operator's decision")
+        self.assertFalse(helper.checkpoint_guard(self.root, "workflow.md")["complete"])
+        waiver["operator_confirmed"] = False
+        self.assertEqual("input_error", self.request("apply", waiver=waiver)["status"])
 
+    def test_new_failed_check_supersedes_old_operator_waiver(self) -> None:
+        waiver = {"operator_confirmed": True, "approved_by": "Operator", "reason": "Accept current limitation",
+                  "approval_reference": "operator message 2"}
+        self.assertEqual("waived", self.request("apply", waiver=waiver)["data"]["verdict"])
+        with patch.object(helper, "inspect_tool", return_value={"version": "0.62.2", "sha256": "fixture"}), patch.object(helper, "execute_model", return_value={"model": "counter", "verdict": "violation"}):
+            self.assertEqual("violation", self.request("apply")["data"]["verdict"])
+            self.assertFalse(helper.checkpoint_guard(self.root, "workflow.md")["complete"])
+
+    def test_planning_reconciliation_replaces_stale_and_interrupted_evidence(self) -> None:
+        with patch.object(helper, "inspect_tool", return_value={"version": "fixture"}), patch.object(helper, "execute_model", side_effect=self.passed_model):
+            self.request("apply")
+            (self.root / "plan.md").write_text("Checklist reconciled this design")
+            self.assertFalse(helper.current_checkpoint(self.root, "workflow.md")["complete"])
+            result = self.request("apply", checkpoint="planning")
+            self.assertEqual("pass", result["data"]["verdict"])
+            self.assertEqual("planning", helper.current_checkpoint(self.root, "workflow.md")["checkpoint"])
+            path = record_path(self.root, "workflow.md", "planning")
+            record = json.loads(path.read_text())
+            record["verdict"] = "running"
+            path.write_text(json.dumps(record))
+            self.assertFalse(helper.current_checkpoint(self.root, "workflow.md")["complete"])
+            self.request("apply")
+            self.assertEqual("plan", helper.current_checkpoint(self.root, "workflow.md")["checkpoint"])
+
+    def test_final_and_post_bind_implementation_files_and_checkpoint_identity(self) -> None:
+        with patch.object(helper, "inspect_tool", return_value={"version": "fixture"}), patch.object(helper, "execute_model", side_effect=self.passed_model):
+            self.assertEqual("missing_implementation_scope", self.request("apply", checkpoint="final")["data"]["verdict"])
+            self.model["implementation_inputs"] = ["counter.py"]
+            (self.root / "counter.py").write_text("count = 0\n")
+            self.save_catalog()
+            self.request("apply")
+            for checkpoint in ("final", "post"):
+                self.assertEqual("pass", self.request("apply", checkpoint=checkpoint)["data"]["verdict"])
+                self.assertTrue(helper.current_checkpoint(self.root, "workflow.md", checkpoint)["complete"])
+            post = record_path(self.root, "workflow.md", "post")
+            record = json.loads(post.read_text())
+            record["checkpoint"] = "plan"
+            post.write_text(json.dumps(record))
+            self.assertFalse(helper.current_checkpoint(self.root, "workflow.md", "post")["complete"])
+            (self.root / "counter.py").write_text("count = 100\n")
+            self.assertFalse(helper.current_checkpoint(self.root, "workflow.md", "final")["complete"])
+            self.assertTrue(helper.current_checkpoint(self.root, "workflow.md")["complete"])
+
+    def test_phase_coverage_requires_current_evidence_and_matching_state_mirror(self) -> None:
+        state = self.root / "autopilot-state.json"
+        state.write_text('{"status": "in_progress"}')
+        steps = [("Phase 3: Plan", "completed"), ("Phase 4: Checklist - quality", "in_progress")]
+        with patch.object(helper, "inspect_tool", return_value={"version": "fixture"}), patch.object(helper, "execute_model", side_effect=self.passed_model):
+            self.request("apply")
+            self.assertTrue(lifecycle.coverage_errors(self.root, "workflow.md", {}, steps))
+            result = self.request("apply", state_file=state.name)
+            self.assertIn(state.name, result["data"]["commit_paths"])
+            mirrored = json.loads(state.read_text())
+            self.assertEqual([], lifecycle.coverage_errors(self.root, "workflow.md", mirrored, steps))
+            mirrored["formal_checkpoints"]["checkpoints"]["plan"]["verdict"] = "waived"
+            self.assertTrue(lifecycle.coverage_errors(self.root, "workflow.md", mirrored, steps))
+            self.assertTrue(lifecycle.coverage_errors(self.root, "workflow.md", json.loads(state.read_text()), [("Post: PR Creation", "in_progress")]))
+            (self.root / "spec.md").write_text("Review changed the requirements")
+            self.assertTrue(lifecycle.coverage_errors(self.root, "workflow.md", json.loads(state.read_text()), steps))
+        self.selection.update(status="none", models=[])
+        self.workflow()
+        with patch.object(helper, "inspect_tool", side_effect=AssertionError("disabled must not probe")):
+            self.assertEqual([], lifecycle.coverage_errors(self.root, "workflow.md", {}, [("Post: Integration Suite", "completed")]))
 class NativeApalacheTests(FormalCheckerTests):
     def setUp(self) -> None:
         super().setUp()

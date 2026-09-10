@@ -11,6 +11,7 @@ from ..envelope import diagnostic, response
 from .catalog import CATALOG_PATH, FormalError, confined, selected_catalog
 from .engine import execute_model, inspect_tool, obligations, preview_model
 from .evidence import CHECKPOINT_ROWS, fingerprint, read_checkpoint, record_path, write_checkpoint
+from .lifecycle import latest_planning_checkpoint, mirror_checkpoint, recorded_now, state_path, waive_checkpoint, waiver_status
 from .selection import SelectionError, selection_from_workflow
 
 
@@ -36,15 +37,22 @@ def discover(root: Path, workflow: str) -> dict[str, Any]:
 
 
 def current_checkpoint(root: Path, workflow: str, checkpoint: str = "plan") -> dict[str, Any]:
-    context = discover(root, workflow)
-    if context["verdict"] == "disabled":
+    selection = selection_from_workflow(confined(root, workflow).read_text(encoding="utf-8"))
+    if selection["status"] != "enabled":
         return {"required": False, "complete": True, "verdict": "disabled"}
+    if checkpoint == "plan":
+        checkpoint = latest_planning_checkpoint(root, workflow)
+    waived = waiver_status(root, workflow, checkpoint)
+    if waived is not None:
+        return waived
+    context = discover(root, workflow)
     record = read_checkpoint(root, workflow, checkpoint)
     if context["gaps"] or not isinstance(record, dict) or record.get("verdict") != "pass":
         return {"required": True, "complete": False, "verdict": context["verdict"] if context["gaps"] else "pending", "resume": "plan"}
-    expected = fingerprint(root, context["selection"], context["models"], context["identities"], record["spec_file"], record["plan_file"])
-    complete = record.get("fingerprint") == expected and record.get("workflow_file") == workflow and complete_results(record, context["models"])
-    return {"required": True, "complete": complete, "verdict": "pass" if complete else "stale", "resume": None if complete else "plan", "evidence": record_path(root, workflow, checkpoint).relative_to(root).as_posix()}
+    expected = fingerprint(root, context["selection"], context["models"], context["identities"], record["spec_file"], record["plan_file"], checkpoint)
+    complete = record.get("fingerprint") == expected and record.get("workflow_file") == workflow and record.get("checkpoint") == checkpoint and complete_results(record, context["models"])
+    return {"required": True, "complete": complete, "verdict": "pass" if complete else "stale", "checkpoint": checkpoint, "fingerprint": expected,
+            "resume": None if complete else "plan", "evidence": record_path(root, workflow, checkpoint).relative_to(root).as_posix()}
 
 
 def checkpoint_guard(root: Path, workflow: str, checkpoint: str = "plan") -> dict[str, Any]:
@@ -108,9 +116,10 @@ def check(root: Path, workflow: str, inputs: dict[str, Any], mode: str, context:
         return context
     spec = relative_input(root, inputs["spec_file"])
     plan = relative_input(root, inputs["plan_file"])
-    before = fingerprint(root, context["selection"], context["models"], context["identities"], spec, plan)
+    before = fingerprint(root, context["selection"], context["models"], context["identities"], spec, plan, checkpoint)
     plans = {key: preview_model(root, item) for key, item in context["models"].items()}
-    record = {"schema_version": "1.0", "workflow_file": workflow, "spec_file": spec, "plan_file": plan, "checkpoint": checkpoint, "fingerprint": before, "selection": context["selection"], "checkers": context["identities"], "verdict": "preview", "commands": plans, "results": []}
+    record = {"schema_version": "1.0", "workflow_file": workflow, "spec_file": spec, "plan_file": plan, "checkpoint": checkpoint, "fingerprint": before, "selection": context["selection"], "checkers": context["identities"], "verdict": "preview", "commands": plans, "results": [], "recorded_at": recorded_now(),
+              "evidence": record_path(root, workflow, checkpoint).relative_to(root).as_posix()}
     if mode == "dry_run":
         return record
     record["verdict"] = "running"
@@ -125,7 +134,7 @@ def check(root: Path, workflow: str, inputs: dict[str, Any], mode: str, context:
     record["verdict"] = failures[0] if failures else "pass"
     try:
         after = discover(root, workflow)
-        changed = bool(after["gaps"]) or fingerprint(root, after["selection"], after["models"], after["identities"], spec, plan) != before
+        changed = bool(after["gaps"]) or fingerprint(root, after["selection"], after["models"], after["identities"], spec, plan, checkpoint) != before
     except (ValueError, OSError, subprocess.SubprocessError):
         changed = True
     if changed:
@@ -137,19 +146,36 @@ def check(root: Path, workflow: str, inputs: dict[str, Any], mode: str, context:
     return record
 
 
+def dispatch_formal(entry: Any, request: Any, root: Path, workflow: str, writes: dict[str, bool]) -> dict[str, Any]:
+    if "waiver" in request.inputs:
+        if entry.helper_id != "formal-check":
+            raise SelectionError("Only formal-check records operator waivers")
+        inputs = {**request.inputs, "spec_file": relative_input(root, request.inputs["spec_file"]),
+                  "plan_file": relative_input(root, request.inputs["plan_file"])}
+        return waive_checkpoint(root, workflow, inputs, request.mode, writes)
+    context = discover(root, workflow)
+    return context if entry.helper_id == "formal-doctor" else check(root, workflow, request.inputs, request.mode, context, writes)
+
+
 def run_formal_helper(entry: Any, request: Any) -> dict[str, Any]:
     writes = {"writes_state": False}
     try:
-        unknown = set(request.inputs) - {"repo_root", "workflow_file", "spec_file", "plan_file", "checkpoint"}
+        unknown = set(request.inputs) - {"repo_root", "workflow_file", "spec_file", "plan_file", "checkpoint", "state_file", "waiver"}
         if unknown:
             raise SelectionError(f"unknown formal inputs: {sorted(unknown)}")
         root = Path(request.inputs["repo_root"]).resolve(strict=True)
         workflow = relative_input(root, request.inputs["workflow_file"])
-        context = discover(root, workflow)
-        data = context if entry.helper_id == "formal-doctor" else check(root, workflow, request.inputs, request.mode, context, writes)
+        state = request.inputs.get("state_file")
+        if state is not None:
+            state = relative_input(root, state)
+            state_path(root, workflow, state)
+        data = dispatch_formal(entry, request, root, workflow, writes)
+        if request.mode == "apply" and state is not None and "commit_paths" in data:
+            mirror_checkpoint(root, workflow, state, data)
+            data["commit_paths"] = sorted({*data["commit_paths"], state})
         data["helper_id"] = entry.helper_id
         data.update(writes)
-        status = "ok" if data["verdict"] in ("disabled", "ready", "preview", "pass", "pending_authoring") else "expected_failure"
+        status = "ok" if data["verdict"] in ("disabled", "ready", "preview", "pass", "waived", "pending_authoring") else "expected_failure"
         if entry.helper_id == "formal-check" and data["verdict"] == "pending_authoring":
             status = "missing_prerequisite"
         return response(status, request_id=request.request_id, data=data)

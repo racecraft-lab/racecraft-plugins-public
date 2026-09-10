@@ -310,6 +310,9 @@
         "invocation"
       ],
       "properties": {
+        "skill_available": { "type": "boolean" },
+        "skill_path": { "type": ["string", "null"] },
+        "skill_sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
         "available": {
           "type": "boolean"
         },

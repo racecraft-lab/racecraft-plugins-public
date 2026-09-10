@@ -144,6 +144,10 @@ time) to prevent conflicting spec edits.
 
 ### G5 — After Tasks
 
+For enabled formal selection, require the current `planning` checkpoint and
+pass `workflow_file` to `validate-gate`. Tasks must include the selected model's
+implementation obligations and any requested trace work; follow [the shared contract](formal-methods.md).
+
 **Check:** Every functional requirement has at least one task.
 
 ```
@@ -209,6 +213,10 @@ marker_split, packet validation, and PR mappings. All paths in examples and
 workflow evidence must be repo-relative, not absolute runtime paths.
 
 ### G6 — After Analyze
+
+After remediation, reconcile selected formal models and renew `planning`
+evidence before proceeding. Pass `workflow_file` to `validate-gate`; current
+evidence and the state mirror are required at the planning boundary.
 
 **Check:** All findings remediated at every severity level.
 
@@ -349,6 +357,10 @@ remediation hint without blocking — operators who want a
 fail-closed posture opt into strict mode via local config.
 
 ### G7 — After Implement
+
+After implementation tests, execute selected `final` formal checks and pass
+`workflow_file` to `validate-gate`. Only current success or an explicit scoped
+operator waiver can complete this prerequisite; generic skip-and-log cannot.
 
 **Check:** Full verification suite passes, TDD was followed,
 and no placeholder tests exist.
