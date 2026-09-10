@@ -42,11 +42,14 @@ pass and explain an intentional counterexample before adapting the model.
 | TLC | 1.7.4 (`tla2tools.jar`; reports internal TLC 2.19) | Official release JAR, checksum verified |
 | Quint | 0.32.0 | Shipped package lock, `npm ci --ignore-scripts`, full installed-tree checksum, Node.js 24 |
 
-The native profile was executed on macOS arm64 with Java 26.0.1, Node.js
-24.11.1, and Python 3.11.0. The repository's hosted qualification workflow runs
-Java 25 on Ubuntu and macOS; inspect its completed run before advertising that
-host's compatibility. Do not infer Windows or native Linux arm64 qualification
-from these results.
+The native profile was executed locally on macOS arm64 with Java 26.0.1,
+Node.js 24.11.1, and Python 3.11.0. [Hosted qualification](https://github.com/racecraft-lab/racecraft-plugins-public/actions/runs/34441556263)
+also passed native checker and installed-consumer cases on Ubuntu x64 with
+Temurin 25.0.4+1/Python 3.11.16 and macOS arm64 with Temurin
+25.0.4+101.0.LTS/Python 3.11.9, both using Node.js 24.11.1. The macOS job passed
+Python, TypeScript and Swift implementation traces with Apalache and TLC, plus
+the optional Quint path. These are executed profiles; Windows, native Linux
+arm64 and other runtime versions still require their own qualification.
 
 Apalache's [official instructions](https://apalache-mc.org/docs/apalache/installation/index.html)
 recommend Java 25 and at least 4 GB of RAM; its JAR targets Java 21 bytecode.

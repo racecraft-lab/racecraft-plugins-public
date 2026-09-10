@@ -35,9 +35,9 @@ checkouts; final counts and live outcomes are recorded in `acceptance.md`.
 | Quint | Pinned compiler plus full dependency identity; actual compile/check and observed-trace cases; syntax/version drift and unsupported profile rejection |
 | Implementation traces | Real Python, TypeScript and Swift producers and seeded defects; full sequence/action reachability, hidden-state consistency, strict ITF values, numeric boundaries, malformed/missing/stale/mismatched evidence |
 | Installation and upgrades | Preview has no writes, checksum rejection, bounded regular-member extraction, path confinement, unchanged existing releases, interrupted Quint receipts and actual repeat installation |
-| PR management | Capability/topology/ownership matrix, explicit fallback and partial-mutation recovery; packet-owned metadata remains authoritative; live linking is qualified during delivery |
+| PR management | Capability/topology/ownership matrix, explicit fallback and partial-mutation recovery; live stack 564 contains the six verified PRs, with exact packet metadata preserved; read-only resume boundary verified |
 | Distribution | Generated-artifact contract, actual checkpoint execution from isolated source/Claude/Codex installations, and actual Codex formal-author materialization |
-| CI and resource scope | Hosted path-scoped native job, pinned actions/tools, read-only repository token, application-test-before-trace ordering, ordinary CI and optional organization-runner admission unchanged |
+| CI and resource scope | Hosted Ubuntu/macOS native jobs passed, including installed consumers and macOS language traces; pinned actions/tools, read-only repository token, application-test-before-trace ordering, ordinary CI and optional organization-runner admission unchanged |
 
 ## Findings and remediation
 

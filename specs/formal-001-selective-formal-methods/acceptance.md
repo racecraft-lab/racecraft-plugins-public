@@ -1,7 +1,7 @@
 # FORMAL-001 acceptance record
 
-Status: implementation and local automated qualification complete; PR/hosted-CI
-delivery and [manual onboarding](onboarding-uat.md) remain tracked separately.
+Status: implementation, six draft PRs, stack linking, and local/hosted native
+qualification complete. [Manual onboarding](onboarding-uat.md) is not performed.
 Live coaching canaries require operator approval and have not run.
 
 | Acceptance | Evidence required | Status |
@@ -9,31 +9,49 @@ Live coaching canaries require operator approval and have not run.
 | A1 / US1 | Beginner passing and intentional failing check; justified no-model case; expert shortcut | Automated example pass and intentional violation verified; manual UAT not performed |
 | A2 / US2 | Real passing/failing, invalid/type error, unsupported, deadlock, temporal, incomplete induction, timeout, version/config mismatch | Native combined checkers/compiler 42/42 passed; detailed cases recorded below |
 | A3 / US3 | New/reused models, missing config, parent root, clean checkout, interruptions, every resume form, waiver, planning/review invalidation | Deterministic lifecycle and installed-consumer checks passed; all existing resume/coverage/bookkeeping suites pass |
-| A4 / US4 | Valid trace, real seeded defect, illegal transition with valid states, stale/missing/malformed/mismatched trace | Native Apalache/TLC and deterministic trace checks pass; final release qualification follows |
-| A5 / US5 | Manager capability matrix, fallback, partial mutation/recovery, preserved metadata and no duplicates | Pending |
-| A6 / all | Disabled compatibility, durable archival, every advertised install profile, targeted/full suites, artifact/ripwire gates, installed parity | 5,276/5,276 final committed-checkout assertions; installed source/Claude/Codex execution and agent materialization passed; hosted CI pending |
+| A4 / US4 | Valid trace, real seeded defect, illegal transition with valid states, stale/missing/malformed/mismatched trace | Native Apalache/Quint 31/31 and TLC 27/27 trace checks passed in hosted macOS CI, including all three implementation languages |
+| A5 / US5 | Manager capability matrix, fallback, partial mutation/recovery, preserved metadata and no duplicates | Nine deterministic cases passed; live CLI/skill/repository qualification, six existing-PR links, exact metadata preservation, and read-only resume boundary verified |
+| A6 / all | Disabled compatibility, durable archival, every advertised install profile, targeted/full suites, artifact/ripwire gates, installed parity | 5,276/5,276 committed-checkout assertions; Ubuntu and macOS each passed native checkers 42/42 and setup/installed-consumer checks 13/13 |
 | A7 / full harness | Complete suite-manifest review, test/eval coverage, full-plugin scaffold/autopilot and installed Claude/Codex integration, gap remediation and regression evidence | [Review and remediation complete](harness-review.md); full default suite, integration 4/4, parity contracts 12/12 and headless contracts 232/232 pass; live canaries pending approval |
-| A8 / languages | Python, TypeScript, and Swift: real valid/defective implementations, ordered strict traces, numeric boundaries, source freshness, test/compile integration and documented runtime profiles | Executed all three producers, type/compile checks and seeded defects; qualification is limited to the recorded local runtimes |
+| A8 / languages | Python, TypeScript, and Swift: real valid/defective implementations, ordered strict traces, numeric boundaries, source freshness, test/compile integration and documented runtime profiles | Executed all three producers, type/compile checks and seeded defects locally and on hosted macOS; qualification is limited to the recorded profiles |
 | A9 / Quint | Pinned optional Quint/Apalache compatibility, ITF interoperability, useful model-based tests and separately checked observed implementation traces; no implicit downloads | Quint 0.32.0 / Apalache 0.62.2 native model and observed trace checks pass; no managed backend command is used |
 
 ## Delivery
 
 | Order | Branch | PR | Verification |
 |---|---|---|---|
-| 1 | `codex/formal-methods/coaching` | Pending | 5,132/5,132 committed-checkout suite; docs validation including four browser checks |
-| 2 | `codex/formal-methods/apalache` | Pending | 5,214/5,214 committed-checkout suite; native Apalache 30/30; installer 192/192; read-only helpers 107/107 |
-| 3 | `codex/formal-methods/tlc` | Pending | 34/34 deterministic and native Apalache/TLC checks; full delivery qualification remains required |
-| 4 | `codex/formal-methods/lifecycle` | Pending | 5,240/5,240 committed-checkout suite; 39/39 combined native/formal checks; manager 9/9; phase coverage 39/39; bookkeeping 289/289; stage resolution 257/257; mutation helpers 192/192; routing eval contracts 21/21 |
-| 5 | `codex/formal-methods/traces` | Pending | 5,262/5,262 committed-checkout suite; native model, trace and language checks recorded below |
-| 6 | `codex/formal-methods/qualification` | Pending | 5,276/5,276 committed-checkout suite; native checkers/compiler 42/42; installed consumer scenario 12/12 before the added relative-path regression; setup contracts now 10/10; docs/browser validation passed |
+| 1 | `codex/formal-methods/coaching` | [#558](https://github.com/racecraft-lab/racecraft-plugins-public/pull/558) | 5,132/5,132 committed-checkout suite; docs validation including four browser checks |
+| 2 | `codex/formal-methods/apalache` | [#559](https://github.com/racecraft-lab/racecraft-plugins-public/pull/559) | 5,214/5,214 committed-checkout suite; native Apalache 30/30; installer 192/192; read-only helpers 107/107 |
+| 3 | `codex/formal-methods/tlc` | [#560](https://github.com/racecraft-lab/racecraft-plugins-public/pull/560) | 34/34 deterministic and native Apalache/TLC checks; final combined qualification in layer 6 |
+| 4 | `codex/formal-methods/lifecycle` | [#561](https://github.com/racecraft-lab/racecraft-plugins-public/pull/561) | 5,240/5,240 committed-checkout suite; 39/39 combined native/formal checks; manager 9/9; phase coverage 39/39; bookkeeping 289/289; stage resolution 257/257; mutation helpers 192/192; routing eval contracts 21/21 |
+| 5 | `codex/formal-methods/traces` | [#562](https://github.com/racecraft-lab/racecraft-plugins-public/pull/562) | 5,262/5,262 committed-checkout suite; native model, trace and language checks recorded below |
+| 6 | `codex/formal-methods/qualification` | [#563](https://github.com/racecraft-lab/racecraft-plugins-public/pull/563) | 5,276/5,276 committed-checkout suite; hosted native checkers 42/42 and installed setup 13/13 on both platforms; hosted trace checks 31/31 and 27/27; docs/browser validation passed |
+
+All six PRs remain drafts and are linked in this order in GitHub stack 564.
+Each exact title, body, release note, base branch and head identity was validated
+through the existing PR packet path before creation and verified after linking.
+Packets record explicit size exceptions for the approved six functional
+boundaries; their numerical review budgets are not claimed as passing.
+
+Hosted native evidence is [run 34441556263](https://github.com/racecraft-lab/racecraft-plugins-public/actions/runs/34441556263),
+for PR head `c8c05d73a85dcd15ee83f8b02052c66d84ee4c28` (checkout merge
+`cdb68c0e00ddf364e6d3120574837e2831e48df6`). The separate default PR Checks
+workflow skips substantive jobs on drafts; its successful wrapper is not a
+hosted full-suite result. The full-suite count above is from the committed local
+checkout at `621dddbdd`; subsequent changes record delivery evidence.
 
 ## Qualification boundaries
 
 Apalache 0.62.2's official JAR profile has executed on macOS arm64 with Java
 26.0.1. TLC 1.7.4's official JAR has also executed on that runtime. The pinned
 official Apalache Linux amd64 image passed both positive and negative checks
-under Docker emulation on macOS arm64, using Temurin 25.0.4+7. Hosted Ubuntu/macOS
-Java 25 results are pending; other runtimes and custom containers are unqualified.
+under Docker emulation on macOS arm64, using Temurin 25.0.4+7. Hosted Ubuntu x64
+passed with Temurin 25.0.4+1 and Python 3.11.16; hosted macOS arm64 passed with
+Temurin 25.0.4+101.0.LTS and Python 3.11.9. Both used Node.js 24.11.1. The macOS
+trace jobs also used the locked TypeScript 6.0.3/Node types 24.13.2 toolchain and
+that runner image's Swift compiler. Its precise Swift version is not separately
+logged, so only the linked runner profile is qualified. Other runtimes and
+custom containers are unqualified.
 Installation requires operator authorization. Hosted CI remains the default.
 Organization runner admission and VM sizing are not inferred from this repository.
 
@@ -98,8 +116,13 @@ Organization runner admission and VM sizing are not inferred from this repositor
 - Manager selection passed nine deterministic cases covering both capabilities,
   missing CLI/skill, unsupported version/repository, incompatible topology,
   explicit fallback, existing PR identity/metadata boundaries, and partial
-  mutation recovery. Live repository Stacks API access succeeded; PR linking
-  and post-link recovery qualification remain part of final delivery.
+  mutation recovery. The live delivery qualified gh-stack 0.1.1, the available
+  skill, repository access and ordered branch/PR topology before mutation.
+  Linking existing URLs created stack 564; the Stacks API confirmed exactly
+  PRs 558–563 in order, and all packet-owned bodies, titles, bases, heads and
+  draft states were unchanged. The read-only resume helper refused a manager
+  switch after the recorded attempted boundary; the actual remote state was
+  reconciled and persisted without creating duplicate PRs or a second stack.
 - The shared phase, gate and Post references now enforce the selected checks.
   The complete existing mutation helper, stage resolution, coverage, bookkeeping
   and eval-routing contract tests passed. Full committed-checkout and installed
