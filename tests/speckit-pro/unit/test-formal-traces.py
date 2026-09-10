@@ -72,6 +72,28 @@ class TraceFixture(unittest.TestCase):
 
 
 class TraceContractTests(TraceFixture):
+    def test_quint_main_is_required_with_an_actionable_diagnostic(self) -> None:
+        self.model["language"] = "quint"
+        with self.assertRaisesRegex(ValueError, "Quint model.main"):
+            catalog.validate_language(self.model)
+
+    def test_schema_enforces_language_checker_mode_and_module_profiles(self) -> None:
+        from speckit_pro_runner.helpers.read_only import json_schema_failures
+        schema = json.loads((PLUGIN_ROOT / "speckit_pro_runner/contracts/formal-methods.schema.json").read_text())
+        quint_model = {**self.model, "language": "quint", "main": "Counter", "module": "formal/counter/Counter.qnt"}
+        for model in (self.model, {**self.model, "language": "tla"}, quint_model,
+                      {**self.model, "checker": "tlc", "mode": "finite", "bounds": {"max_set_size": 1000}}):
+            with self.subTest(valid=model):
+                self.assertEqual([], json_schema_failures(model, schema["$defs"]["model"], schema, "model"))
+        invalid = [{k: v for k, v in quint_model.items() if k != "main"},
+                   {**quint_model, "checker": "tlc"}, {**quint_model, "mode": "inductive"},
+                   {**quint_model, "module": "formal/counter/Counter.tla"},
+                   {**self.model, "module": "formal/counter/Counter.qnt"}, {**self.model, "main": "Counter"},
+                   {**self.model, "mode": "finite"}, {**self.model, "checker": "tlc", "mode": "bounded"}]
+        for model in invalid:
+            with self.subTest(invalid=model):
+                self.assertTrue(json_schema_failures(model, schema["$defs"]["model"], schema, "model"))
+
     def test_assignment_hints_preserve_data_and_constraints(self) -> None:
         value = {"kind": "NameEx", "name": "x", "type": "Untyped"}
         unchanged = {"kind": "OperEx", "oper": "UNCHANGED", "args": [value]}

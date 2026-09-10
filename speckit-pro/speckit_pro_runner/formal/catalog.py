@@ -112,6 +112,7 @@ def validate_language(model: dict[str, Any]) -> None:
     if language not in ("tla", "quint"):
         raise FormalError("unsupported", "model.language must be tla or quint")
     if language == "quint":
+        require_text(model.get("main"), "Quint model.main")
         operator(model.get("main"))
         if model["checker"] != "apalache" or model["mode"] not in ("bounded", "temporal"):
             raise FormalError("unsupported", "The qualified Quint profile uses Apalache bounded or temporal checking")
