@@ -47,6 +47,65 @@ def _description_value(frontmatter: str) -> str:
 
 class ValidateSkills(unittest.TestCase):
 
+    def test_plan_ambiguity_repair_preserves_requirement_provenance(self) -> None:
+        surfaces = (
+            (
+                'Claude source',
+                PLUGIN_ROOT / 'skills/speckit-autopilot/SKILL.md',
+                PLUGIN_ROOT / 'skills/speckit-autopilot/references/gate-validation.md',
+                PLUGIN_ROOT / 'skills/speckit-autopilot/references/phase-execution.md',
+                PLUGIN_ROOT / 'skills/speckit-autopilot/references/workflow-file-protocol.md',
+            ),
+            (
+                'Codex source',
+                PLUGIN_ROOT / 'codex-skills/speckit-autopilot/SKILL.md',
+                PLUGIN_ROOT / 'skills/speckit-autopilot/references/gate-validation.md',
+                PLUGIN_ROOT / 'codex-skills/speckit-autopilot/references/phase-execution-codex.md',
+                PLUGIN_ROOT / 'codex-skills/speckit-autopilot/references/workflow-file-protocol-codex.md',
+            ),
+            (
+                'Claude payload',
+                REPO_ROOT / 'dist/claude/speckit-pro/skills/speckit-autopilot/SKILL.md',
+                REPO_ROOT / 'dist/claude/speckit-pro/skills/speckit-autopilot/references/gate-validation.md',
+                REPO_ROOT / 'dist/claude/speckit-pro/skills/speckit-autopilot/references/phase-execution.md',
+                REPO_ROOT / 'dist/claude/speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md',
+            ),
+            (
+                'Codex payload',
+                REPO_ROOT / 'dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md',
+                REPO_ROOT / 'dist/codex/speckit-pro/skills/speckit-autopilot/references/gate-validation.md',
+                REPO_ROOT / 'dist/codex/speckit-pro/skills/speckit-autopilot/references/phase-execution-codex.md',
+                REPO_ROOT / 'dist/codex/speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol-codex.md',
+            ),
+        )
+        log_header = '| Attempt | Disputed wording | Source evidence | Provenance class | Repair action | G3 result | Remaining escalation reason |'
+
+        for label, skill_path, gate_path, phase_path, workflow_path in surfaces:
+            with self.subTest(host=label):
+                skill = _read(skill_path)
+                gate = _read(gate_path)
+                phase = _read(phase_path)
+                workflow = _read(workflow_path)
+
+                self.assertIn('Plan ambiguity uses provenance, not consensus', skill)
+                for provenance_class in (
+                    'explicit-human',
+                    'necessary-implication',
+                    'assistant-inference',
+                    'unresolved-provenance',
+                ):
+                    self.assertIn(f'`{provenance_class}`', gate)
+                self.assertIn('None can upgrade a constraint', gate)
+                self.assertIn('at most 2 repairs', phase)
+                self.assertIn('Plan Repair Context', phase)
+                self.assertIn('run `validate-gate` for G3 again', gate)
+                self.assertIn('acknowledgement time is not interchangeable with actual UI-delivery timing', gate)
+                self.assertIn('Never delete or disguise an unresolved marker merely to make G3 pass', gate)
+                self.assertIn('leaves the failed G3 verdict and unresolved marker', gate)
+                self.assertIn('label its source `human answer`', workflow)
+                self.assertIn('#### Plan Ambiguity Repair Log', workflow)
+                self.assertIn(log_header, workflow)
+
     def test_coach_workflow_explanation_reads_host_scaffold_authority(self) -> None:
         for label, skills_root, template_root in (
             ('Claude source', PLUGIN_ROOT / 'skills', PLUGIN_ROOT / 'skills'),

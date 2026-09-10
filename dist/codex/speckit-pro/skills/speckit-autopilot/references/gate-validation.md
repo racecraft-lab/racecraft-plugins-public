@@ -69,16 +69,84 @@ This is a routing decision, not a pass/fail gate. The presence of markers is exp
 2. Verify research.md exists (may be brief for simple specs)
 3. Verify data-model.md exists (if spec has data entities)
 4. Search plan.md for "FAIL" in constitutional gate sections
-5. Verify no unresolved "[TODO]" markers in plan.md
+5. Verify no unresolved `[NEEDS CLARIFICATION]`, `TODO`, `TKTK`, or `???`
+   markers in plan.md
 6. When formal selection is enabled, require its current model-check receipt
    after the separate post-Plan author checkpoint; pass workflow_file to the
    validate-gate request. Type checking, stale evidence, and partial induction
    are insufficient. Follow formal-methods.md for bounded repair and resume.
 ```
 
-**Auto-Fix:** Re-run plan with gate failure as additional context. If a specific constitutional gate failed, include the principle text and ask the planner to address it.
+**Auto-Fix:** Re-run Plan with the gate failure as additional context, then
+re-run G3. If a required artifact is missing or a specific constitutional gate
+failed, include the missing artifact or principle text and ask the planner to
+address it. Use at most 2 repair attempts.
 
-**Failure Escalation:** If constitutional gates continue to fail after 2 attempts, STOP. Present the gate failure with the specific principle and proposed architecture for human review.
+#### Plan ambiguity provenance repair
+
+When G3 fails on unresolved requirement wording, the parent orchestrator owns
+this repair. Do not ask consensus agents to vote on provenance and do not treat
+the planner's interpretation as the original requirement.
+
+Before the first repair attempt:
+
+1. Read the exact disputed wording and trace it to the earliest available
+   authoritative source: the original human answer in the current conversation
+   or its durable Clarify Results record; an operator-authored brief, PRD, or
+   roadmap statement; or cited code/documentation evidence for a necessary
+   implication.
+2. Assign exactly one provenance class:
+   - `explicit-human` — direct human wording, or a durable record that
+     preserves that answer without strengthening it;
+   - `necessary-implication` — a constraint required by cited source facts,
+     with the implication chain recorded;
+   - `assistant-inference` — wording introduced or strengthened by an agent
+     beyond the source evidence; or
+   - `unresolved-provenance` — the original source is unavailable, conflicting,
+     or too ambiguous to classify safely.
+3. Treat generated spec/plan text, repetition by later agents, and consensus
+   agreement only as downstream interpretations. None can upgrade a constraint
+   to `explicit-human` or justify calling it user-ratified.
+4. Under Plan Results, create or append this conditional durable record:
+
+```text
+#### Plan Ambiguity Repair Log
+
+| Attempt | Disputed wording | Source evidence | Provenance class | Repair action | G3 result | Remaining escalation reason |
+| --- | --- | --- | --- | --- | --- | --- |
+```
+
+For each attempt, dispatch the same Plan phase executor with the original Plan
+prompt plus a `Plan Repair Context` containing the exact G3 JSON, disputed
+wording, source evidence, provenance class, prior repair result, and attempt
+number. The repair rules are:
+
+- `assistant-inference`: remove or narrow only the unsupported strengthening;
+  retain the source-supported requirement and any marker whose actual choice
+  remains unresolved.
+- `explicit-human` or `necessary-implication`: preserve the constraint and seek
+  an implementable architecture. Do not weaken it merely to make G3 pass.
+- `unresolved-provenance`: do not guess, do not call the wording user-ratified,
+  and record why a repair cannot safely proceed before escalation.
+
+Never substitute a proxy for a disputed event unless the recorded evidence
+establishes that the proxy satisfies the requirement. In particular,
+acknowledgement time is not interchangeable with actual UI-delivery timing.
+Never delete or disguise an unresolved marker merely to make G3 pass.
+
+After every completed Plan repair, run `validate-gate` for G3 again and append
+the returned result to the log. Stop retrying when G3 passes, after 2 failed
+repair attempts, or when `unresolved-provenance` makes a safe repair
+impossible. A skipped repair records the applicable reason rather than
+fabricating an attempt.
+
+**Failure Escalation:** If any G3 condition still fails after 2 repair attempts,
+or provenance cannot be established well enough to repair safely, apply the
+configured `gate-failure` behavior. The default `stop` path presents the exact
+gate output, disputed wording, source evidence, provenance class, repairs made,
+and the remaining choice that requires human input. `skip-and-log` is a
+deliberate override only: it leaves the failed G3 verdict and unresolved marker
+recorded and must not rewrite their provenance.
 
 ### G4 — After Checklist
 
