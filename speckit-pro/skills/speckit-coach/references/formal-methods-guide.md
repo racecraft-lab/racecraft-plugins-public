@@ -39,6 +39,13 @@ the check is supposed to establish.
 3. Preview the selected command and confirm its scope, then run the model check.
    Record the actual verdict and bounds; do not equate a successful type check
    with a successful model check.
+   In the beginner explanation, name the selected checker and checking mode
+   before describing its guarantee. The shipped Apalache counter uses bounded
+   checking with `length: 5`: say "no violation within the checked bound."
+   Do not describe it as exhaustive exploration or a guarantee for any number
+   of steps, even though this example has only three reachable counter values.
+   Completed TLC finite-state exploration has a different guarantee; explain
+   that separately rather than grouping "TLC or Apalache" under one claim.
 4. In a separate example copy, change the rule to `count < Limit`. The legal
    sequence `0 → 1 → 2` now violates it. Walk through that counterexample: the
    model allows reaching two, while the intentionally changed rule forbids it.
