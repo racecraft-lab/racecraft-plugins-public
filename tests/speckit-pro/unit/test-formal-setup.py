@@ -44,6 +44,23 @@ class SetupTests(unittest.TestCase):
         self.assertFalse(result["writes_state"])
         self.assertEqual([], list(self.root.iterdir()))
 
+    def test_ci_wrapper_uses_installed_runner_from_a_consumer_with_a_namesake_package(self) -> None:
+        package = self.root / "speckit_pro_runner"
+        package.mkdir()
+        marker = self.root / "shadow-imported"
+        (package / "__init__.py").write_text(f"from pathlib import Path\nPath({str(marker)!r}).touch()\n")
+        (package / "__main__.py").write_text('print(\'{"data": {"verdict": "disabled"}}\')\n')
+        workflow = self.root / "workflow.md"
+        workflow.write_text("## Formal Methods\n\n```json\ninvalid\n```\n")
+        for payload in (PLUGIN, ROOT / "dist/claude/speckit-pro", ROOT / "dist/codex/speckit-pro"):
+            with self.subTest(payload=payload):
+                command = [sys.executable, str(payload / SCRIPTS / "run-formal-ci.py"), "--repo-root", str(self.root),
+                           "--workflow", "workflow.md", "--spec", "spec.md", "--plan", "plan.md", "--checkpoint", "plan"]
+                result = subprocess.run(command, cwd=self.root, capture_output=True, text=True, check=False, timeout=30)
+                self.assertNotEqual(0, result.returncode, result.stdout)
+                self.assertEqual("input_error", json.loads(result.stdout)["status"])
+                self.assertFalse(marker.exists())
+
     def test_missing_cache_does_not_fall_back_to_network(self) -> None:
         with patch.object(setup, "download", side_effect=AssertionError("no download")), self.assertRaises(OSError):
             setup.setup(self.root, ["tlc"], True, self.root)
