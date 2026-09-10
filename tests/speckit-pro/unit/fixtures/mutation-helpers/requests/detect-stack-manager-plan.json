@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "helper_id": "detect-stack-manager-plan",
+  "operation": "detect-stack-manager-plan",
+  "mode": "dry_run",
+  "inputs": {
+    "repo_root": ".",
+    "repository": "example/project",
+    "preference": "explicit-gh",
+    "topology": [
+      {"review_order": 1, "slice_id": "first", "branch": "codex/first", "base_branch": "main"},
+      {"review_order": 2, "slice_id": "second", "branch": "codex/second", "base_branch": "codex/first"}
+    ]
+  }
+}

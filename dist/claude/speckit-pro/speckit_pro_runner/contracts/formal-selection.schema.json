@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Workflow formal-methods selection",
+  "description": "Authoritative JSON block in the workflow Formal Methods section. Catalog entries alone do not activate checks.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "status", "rationale", "models"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "status": {"enum": ["none", "deferred", "enabled"]},
+    "rationale": {"type": "string", "pattern": "\\S"},
+    "models": {
+      "type": "array",
+      "description": "IDs must be unique; the runtime validator enforces uniqueness by ID.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "behavior", "origin", "evidence"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"},
+          "behavior": {"type": "string", "pattern": "\\S"},
+          "origin": {"enum": ["new", "existing"]},
+          "evidence": {"enum": ["model", "model_and_trace"]}
+        }
+      }
+    }
+  },
+  "allOf": [
+    {"if": {"properties": {"status": {"const": "enabled"}}}, "then": {"properties": {"models": {"minItems": 1}}}},
+    {"if": {"properties": {"status": {"const": "none"}}}, "then": {"properties": {"models": {"maxItems": 0}}}}
+  ]
+}

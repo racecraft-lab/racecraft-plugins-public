@@ -11,7 +11,7 @@ Claude Code plugin agents and Codex custom-agent templates with runtime-specific
 
 - **Public path:** `/racecraft-plugins-public/reference/agents/`
 - **Generated output:** `docs-site/src/content/docs/reference/agents.md`
-- **Records:** 14
+- **Records:** 15
 
 ## Navigation Summary
 
@@ -23,6 +23,7 @@ Claude Code plugin agents and Codex custom-agent templates with runtime-specific
 - Codebase Analyst
 - Consensus Synthesizer
 - Domain Researcher
+- Formal Model Author
 - Implement Executor
 - Phase Executor
 - Spec Context Analyst
@@ -218,6 +219,29 @@ Claude Code plugin agents and Codex custom-agent templates with runtime-specific
 
 - Runtime-specific agent source formats are parallel surfaces, not generated copies of one another.
   - Based on: `speckit-pro/agents/domain-researcher.md`, `speckit-pro/codex-agents/domain-researcher.toml`
+
+### Formal Model Author
+
+- **Purpose:** Authors or reconciles one explicitly selected formal model after Plan, within supplied output paths.
+- **Classification:** `source`
+- **Platform concept:** SpecKit Pro formal-model-author agent
+- **Claude Code:** formal-model-author.md plugin agent source
+- **Codex:** formal-model-author.toml custom-agent template
+- **Runtime difference:** Claude Code agent sources are Markdown plugin agent definitions; Codex custom-agent templates are TOML files installed into a Codex agent directory.
+
+#### Source Facts
+
+- formal-model-author has Claude Code agent source and Codex custom-agent source. Codex model metadata declares `gpt-5.6-sol` with `xhigh` effort. Source refs: `speckit-pro/agents/formal-model-author.md`, `speckit-pro/codex-agents/formal-model-author.toml`.
+
+#### Sources
+
+- [speckit-pro/agents/formal-model-author.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/agents/formal-model-author.md)
+- [speckit-pro/codex-agents/formal-model-author.toml](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/codex-agents/formal-model-author.toml)
+
+#### Inferred Notes
+
+- Runtime-specific agent source formats are parallel surfaces, not generated copies of one another.
+  - Based on: `speckit-pro/agents/formal-model-author.md`, `speckit-pro/codex-agents/formal-model-author.toml`
 
 ### Implement Executor
 

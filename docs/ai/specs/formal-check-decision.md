@@ -1,255 +1,105 @@
 # Formal check decision record
 
-Date: 2026-09-06. Status: decided; decision record only. No autopilot
-reference, agent, runner helper, discovery-table, or workflow change lands
-with this record. The `FORMAL_CHECK` slot, the Formal Model plan section, and
-the grill-me branch are specified here so the wiring layer has a contract to
-implement.
+Date: 2026-09-10. Status: approved design; implementation and qualification in
+progress under [FORMAL-001](../../../specs/formal-001-selective-formal-methods/spec.md).
+The [acceptance record](../../../specs/formal-001-selective-formal-methods/acceptance.md)
+distinguishes delivered behavior, automated evidence, and manual onboarding UAT.
+This supersedes the 2026-09-06 spike, including its automatic discovery,
+mandatory trace, archive-prone paths, final-only timing, and mixed-version flags.
 
-This record answers the three questions the "Quality Gauntlet" memo's item 9
-spike asks:
+## Selection and coaching
 
-1. Which toolchain runs the check, and where.
-2. How a model maps to implementation tests so the check is not decorative.
-3. How grill-me decides that a spec needs a model at all.
+Select formal verification explicitly for behaviors or subsystems when the
+design question, failure consequences, and modeling cost warrant it beyond
+ordinary tests, contracts, and database constraints. Recommend no model, a
+focused model, or deeper verification. Tools, catalog entries, and concurrency
+keywords do not enroll features or stories. Reuse maintained models.
 
-Every command, flag, exit code, and version requirement below was read from
-the tool's official documentation or source on 2026-09-06. Anything the docs
-did not settle is listed under **Unverified**.
+Beginners start with plain-English rules and a small passing example, then an
+intentional violation and an explained counterexample. Intermediate users adapt
+models and diagnose failures. Experts can configure properties, assumptions,
+types, bounds, fairness, and all induction obligations directly.
 
-## Summary of decisions
+## Toolchain and evidence
 
-| Question | Decision |
-| --- | --- |
-| Model checker | TLC from `tla2tools.jar` (tlaplus/tlaplus release v1.7.4 or the 1.8.0 nightly), explicit-state, bounded by the `.cfg`. Apalache is opt-in per model, not a default. |
-| Runtime | Java 11+ for TLC. Apalache targets Java 25 and runs on Java 21 or newer, per its installation docs. One JDK 21 satisfies both. |
-| Where it runs | GitHub-hosted `ubuntu-latest` with `actions/setup-java` by default. The organization's self-hosted pool of ephemeral, single-job virtual machines is the option when a model check needs more wall time than the hosted job allows, available only to repositories its runner group admits; its sizing lives in the private infrastructure repository. |
-| Not decorative | Every model ships with a trace-validation harness: the implementation emits a JSON trace of the modelled actions and TLC checks that trace against the spec. A model with no trace harness is `advisory`, never `populated`. |
-| grill-me | A hybrid branch: the skill scans the spec and surrounding code for concurrency signals, presents the evidence, and the operator confirms, corrects, or extends. A confirmed signal set adds a Formal Model section to the plan and populates `FORMAL_CHECK`. |
-| Slot | `FORMAL_CHECK` joins the closed `slot` enum in the discovery table when the wiring layer lands. Its signal file is `specs/<feature>/model/<Name>.cfg`. It runs at final verification only. |
+Qualification targets are Apalache 0.62.2 and TLC 1.7.4. Choose from model needs:
+Apalache's documented bounded, inductive, and temporal capabilities within
+compatibility limits, or TLC's suitable finite-state and temporal checking.
+Actual execution is required before advertising a profile. Never combine TLC
+release flags with nightly flags.
 
-## 1. Toolchain
+`formal-doctor` inspects readiness without mutation; `formal-check` previews or
+executes selected checks through the existing runner envelope, independently of
+application-language discovery. Distinguish violations, invalid/type-invalid
+models, unsupported features, absent tools, timeouts, inconclusive results, and
+version/configuration mismatches. Type checking alone cannot satisfy a gate.
 
-### TLC (default)
+Prefer Apalache's official distribution with checksum-pinned downloads; offer
+digest-pinned containers after qualifying them. Current Apalache installation
+guidance recommends Java 25, retains Java 21 bytecode compatibility, and
+recommends at least 4 GB of memory. Installation needs operator authorization;
+ordinary workflows acquire no Java or Docker requirement.
 
-- **Artifact:** `tla2tools.jar` from the tlaplus/tlaplus releases page.
-  v1.7.4 is the current versioned release; every commit to master is also
-  built into the `v1.8.0` pre-release. Pin the versioned release and record
-  its sha256 in the consumer repository's `.specify/quality-gates.json`
-  `formal_check.tla2tools_sha256` field once the wiring layer adds it.
-- **Runtime:** "The TLA⁺ tools require Java 11+ to run." (repository
-  `USE.md`). `java -jar tla2tools.jar` is aliased to `tlc2.TLC`; with the
-  jar on the classpath, `java tlc2.TLC` and `java tla2sany.SANY` run the
-  checker and the parser.
-- **Command (gate form):**
+## Lifecycle
 
-  ```text
-  java -XX:+UseParallelGC -jar {plugin_root}/vendor/tla2tools.jar \
-    -config {rules_path} -workers auto -cleanup -noTE -tool \
-    -metadir {metadir} {spec}
-  ```
+The workflow owns selection (`none`, `deferred`, `enabled`), rationale, selected
+IDs and behaviors, new/existing origin, evidence level, and checkpoint results.
+The versioned `.specify/formal-methods.json` catalog does not activate checking.
+Missing legacy selection is disabled; malformed explicit selection fails closed.
 
-  `-config` names the `.cfg` ("defaults to SPEC.cfg"). `-workers auto`
-  uses one thread per core. `-cleanup` removes the states directory.
-  `-noTE` skips generating a trace-exploration spec on a violation, which
-  keeps the run write-free apart from `-metadir`. `-tool` surrounds output
-  with message codes so the runner can parse it. Deadlock checking stays on;
-  `-deadlock` would turn it off and a model whose author wants that sets it
-  in the plan section's `tlc_flags`.
-- **Exit codes** (`tlc2.output.EC.ExitStatus`): `0` success; `10`
-  assumption violation; `11` deadlock; `12` safety violation; `13` liveness
-  violation; `14` assertion; `75`, `76`, `77` evaluation failures; `150`
-  spec parse error; `151` config parse error; `152` state space too large;
-  `153` system error; `255` generic error. The gate treats `0` as pass,
-  `10` through `14` as a red gate with the trace attached, `150` and `151`
-  as a blocking authoring error, and `152`, `153`, `255` as a tool failure
-  (exit 2 semantics in the Quality Gates table, which blocks like a missing
-  tool).
-- **Trace dump:** `-dumpTrace json <file>` writes a counterexample as JSON;
-  `-loadTrace json <file>` reads one back. Both exist in the current tools
-  and are the format the trace-validation harness uses.
-- **Liveness with workers:** v1.7.4's release note fixes "Running liveness
-  checking with multiple workers can cause unsoundness". Pin v1.7.4 or
-  newer; never an older jar.
+Resolve from `WORKFLOW_ROOT`. A new model may await authoring; a missing selected
+existing model blocks setup. After normal Plan execution, the parent dispatches
+bounded `formal-model-author`, shipped for Claude and Codex. G3 requires selected
+checks. Preserve upstream commands and the phase executor's single-command rule.
 
-### Apalache (opt-in)
+Fingerprint spec, plan, selection, model/configuration/import inputs, and checker
+identity. Keep results outside authoring inputs. Checklist, Analyze, and review
+edits require reconciliation and renewed checks. Every resume form enforces this;
+confidence flags and generic skips cannot bypass it. An explicit operator waiver
+is separate evidence and never a passing check.
 
-- **Why not default:** Apalache is a symbolic bounded checker over an SMT
-  solver. It handles unbounded integers and large constants TLC cannot
-  enumerate, but it checks up to `--length` steps only and needs "at least
-  4GB of memory". A team that does not already know why they need it
-  should not be offered it by default.
-- **Runtime:** "Java 25, using the Eclipse Temurin or Zulu builds of
-  OpenJDK. Released artifacts maintain bytecode compatibility with Java 21
-  and should run on Java 21 or newer" (installation docs). Hence JDK 21 as
-  the single runner JDK.
-- **Command:**
+New models live in `formal/<model>/`, beyond feature archival. Planning commits
+explicitly stage declared model/configuration changes and compact evidence. Raw
+output stays ignored. Final verification and Post integration recheck models;
+a clean checkout of pushed planning work must reproduce the checks.
 
-  ```text
-  apalache-mc check --config={cfg} --inv={Inv1,...} --length={n} \
-    --out-dir={metadir} {spec}
-  ```
+Model evidence can block before implementation. Optional `model_and_trace`
+evidence follows real producing tests with an explicit, tested action/state
+projection. Reject illegal transitions even when individual states satisfy
+invariants. Missing, stale, malformed, or mismatched traces cannot pass.
+Counterexample replay alone does not establish implementation conformance.
 
-  Output lands under `--out-dir` (default `./_apalache-out`, one
-  subdirectory per run keyed by the spec file name).
-- **Unverified:** Apalache's documented CLI does not state exit codes for
-  violation versus error. The wiring layer must read them from the source
-  before Apalache can populate the slot; until then Apalache runs are
-  `advisory`.
+## Delivery and PR management
 
-### Where it runs
+One spec and acceptance record own six PR layers: coaching/selection; Apalache and
+the complete planning checkpoint; TLC; full lifecycle and optional manager;
+implementation traces; reproducible CI, recovery, and onboarding qualification.
 
-- **Default: GitHub-hosted `ubuntu-latest`.** Every workflow in this
-  repository already targets hosted runners. `actions/setup-java` with
-  `distribution: temurin` and `java-version: 21` covers both tools. The jar
-  is cached with `actions/cache` keyed on its sha256.
-- **The organization's self-hosted pool.** The memo's self-hosted runners are
-  an orchestrated pool of ephemeral virtual machines: each job gets a
-  fresh VM that is destroyed when the job ends, with no state kept between
-  jobs. Per-job CPU and memory are a small fixed slice of the host, not
-  the host itself; the exact figures, labels, and image are recorded in
-  the private infrastructure repository, not here.
-- **Public repository rule.** GitHub's hardening guide advises against
-  self-hosted runners for public repositories in almost every case, because
-  any user can open a pull request against the repository and compromise
-  the environment, and it asks that a reused host give a just-in-time runner
-  a clean environment. The pool's destroy-after-job VMs are that
-  clean environment, and the runner group's repository access list decides
-  which repositories may target it. This repository keeps `FORMAL_CHECK`
-  on hosted runners unless the operator admits it to the group; the record
-  does not make that call.
-- **Sizing.** Because a job sees the VM's slice rather than the host, TLC
-  gets a handful of worker threads there, and Apalache's "at least 4GB"
-  recommendation needs a larger VM class than the default one. A model
-  that needs more is a request against the private infrastructure
-  repository, not a change here.
+Prefer gh-stack only when both its CLI and skill are available and compatible
+with the repository and topology, unless the operator chooses current management.
+Record capability evidence and ownership before mutation. PR packets retain
+validated titles, bodies, identities, and release checks; link verified existing
+PR URLs through gh-stack in declared order. Recover partial mutations through the
+selected manager before switching. Implement and qualify the formerly disabled
+selection helper before invoking it.
 
-## 2. Mapping a model to implementation tests
+Hosted CI remains default. Organization runners require explicit repository
+admission and adequate VM resources; neither is inferred here. The operator
+subsequently included an optional Quint front end: pinned Quint JSON compilation
+feeds the selected Apalache checks, and ITF supports observed Python, TypeScript,
+and Swift traces. Upstream Quint language/modeling skills are reused on demand;
+SpecKit retains phase and requirement authority. No managed backend downloads or
+automatic formal enrollment are permitted. TLAPS execution remains out of scope.
 
-A TLC run that only checks a hand-written `.tla` proves the model, not the
-code. The check is decorative unless something ties the two together. The
-decision is **trace validation**, the approach described in "Validating
-Traces of Distributed Programs Against TLA+ Specifications" (Cirstea, Kuppe,
-Loillier, Merz, 2024, arXiv 2404.16075): the implementation is instrumented
-to record the events that correspond to the spec's actions, and the trace is
-checked as a constrained model-checking problem with TLC.
+## Official grounding
 
-Concretely, a Formal Model is four files under `specs/<feature>/model/`:
+- [Apalache capabilities](https://apalache-mc.org/docs/apalache/features.html),
+  [configuration](https://apalache-mc.org/docs/apalache/config.html), and
+  [installation](https://apalache-mc.org/docs/apalache/installation/index.html)
+- [Apalache JVM requirements](https://apalache-mc.org/docs/apalache/installation/jvm.html)
+- [TLC 1.7.4 release](https://github.com/tlaplus/tlaplus/releases/tag/v1.7.4)
+- [Trace-validation research](https://arxiv.org/abs/2404.16075)
+- [gh-stack existing-PR linking](https://github.com/github/gh-stack#gh-stack-link)
 
-| File | Owner | Purpose |
-| --- | --- | --- |
-| `<Name>.tla` | plan author | The model: variables, `Init`, `Next`, the invariants and temporal properties the spec's rules require. |
-| `<Name>.cfg` | plan author | `SPECIFICATION`, `INVARIANTS`, `PROPERTIES`, and `CONSTANTS` bounds small enough to finish on a hosted runner. This file is the `FORMAL_CHECK` signal. |
-| `<Name>Trace.tla` | plan author | A refinement module that reads `trace.json`, constrains `Next` to the recorded steps, and asserts the same invariants. TLC checks it with the same jar. |
-| `trace.json` | a test | Written by one implementation test per modelled action set: the test drives the real code through a scenario and appends one JSON entry per action with the variable updates the spec names. |
-
-Rules that make the tie real:
-
-- **Action map.** The plan's Formal Model section lists each spec action
-  next to the implementation function that emits its trace entry. A
-  reviewer can see that `Enqueue` is `queue.push` in one line. An action
-  with no emitter is a plan gap, not a passing gate.
-- **Two runs, both required.** `FORMAL_CHECK` runs the model (`<Name>.cfg`)
-  and then the trace refinement (`<Name>Trace.cfg`) against the
-  `trace.json` the test suite just produced. Either exiting nonzero fails
-  the slot. A model that passes while its trace refinement fails is the
-  interesting result: the code diverged from the model.
-- **The trace test is a normal test.** It lives in the project's test tree,
-  runs under `UNIT_TEST` or `INTEGRATION_TEST`, and is subject to the same
-  mutation floor as any other test. That is what stops the harness from
-  being a fixture that always writes the same file.
-- **Advisory without a trace.** A model with a `.cfg` but no `Trace` module
-  or no test that writes `trace.json` is recorded as `advisory` in the
-  Quality Gates table and never blocks. The workflow file says why, so the
-  gap is visible at review.
-- **Bounded on purpose.** The `.cfg` constants stay small enough for the
-  run to finish in a few minutes on a hosted runner. A model that needs
-  more is the private-runner case above, and the plan section records the
-  expected run time.
-
-## 3. The grill-me branch
-
-The memo asks for a hybrid: the tool finds the evidence, the operator
-decides. The branch joins the three branches the interview protocol already
-resolves before synthesis (module and interface deltas, terms, verification
-gates) as a fourth, conditional one.
-
-### Scan
-
-Before asking, grill-me scans the spec text and the code the module deltas
-name for concurrency signals. A signal is a durable pattern, not a keyword
-hit:
-
-| Signal | Evidence looked for |
-| --- | --- |
-| Shared mutable state across actors | Two or more writers to one store, queue, file, or row named in the spec or the touched modules. |
-| Ordering or retry protocol | Words of protocol in the spec (`retry`, `ack`, `lease`, `lock`, `idempotent`, `exactly once`, `at least once`) or a state machine in the deltas. |
-| Distributed participants | More than one process, service, worker, or hook that must agree on an outcome. |
-| Invariant stated as a rule | A spec rule of the form "never", "always", "at most one", or "eventually" over system state. |
-| Existing model | A `specs/*/model/*.cfg` in the repository, or a `.tla` anywhere in the tree. |
-
-### Present
-
-The branch presents the findings as evidence, one line per signal with its
-file and line or spec section, plus the recommendation:
-
-- No signal: recommend "no model"; record the branch as resolved from
-  evidence with the scan summary, so a skipped branch is never mistaken for
-  an unscanned one.
-- One or more signals: recommend a model, name the candidate invariants in
-  the spec's own words, and ask one decision question: confirm, correct
-  (drop or reword a signal), or extend (add one the scan missed).
-
-### Record
-
-The operator's answer lands in the Design Concept's Verification Gates
-section as a `FORMAL_CHECK` line. Downstream:
-
-- `/speckit-plan` adds a **Formal Model** section to the plan when the line
-  is present: the action map, the invariants, the bounded constants, the
-  expected run time, and the checker (`tlc` or `apalache`). The plan
-  template gains the section in the wiring layer, in the same way the
-  Module and Interface Deltas section landed.
-- `detect-commands` populates `FORMAL_CHECK` when `specs/<feature>/model/
-  <Name>.cfg` exists. The table row's `probe` is `java`; the jar ships
-  under the plugin's `vendor/` directory or is fetched by the workflow, a
-  choice the wiring layer makes.
-- The slot runs at final verification only, after `MUTATION`, because its
-  trace input comes from the test suite. It is never run at G0 or at a
-  phase group; the Quality Gates table records `deferred` there, matching
-  the mutation rule.
-
-## Unverified
-
-- Apalache exit codes on violation versus error.
-- Whether the self-hosted pool's runner image carries a JDK; the job must
-  run `actions/setup-java` unless the image does.
-- Whether the pool's runner group admits this public repository. Read it
-  from the organization's runner-group settings before routing any job.
-- Whether the `-dumpTrace json` shape and the trace-validation paper's
-  `trace.json` shape are the same document; the wiring layer fixes one
-  schema and documents it under `speckit_pro_runner/contracts/`.
-- Wall time of a hosted-runner TLC run at the bounded constants a typical
-  plan will choose. Measure on the first real model before setting a
-  timeout default.
-
-## First-install checklist
-
-1. Download `tla2tools.jar` v1.7.4, record its sha256, and vendor or cache
-   it.
-2. `actions/setup-java` with Temurin 21 in the consumer workflow; confirm
-   `java -jar tla2tools.jar -h` prints the TLC usage.
-3. Write one model with a trace refinement against an existing feature and
-   run both `.cfg` files locally; record the wall time.
-4. Add `FORMAL_CHECK` to the discovery table enum, schema, and validator
-   test, with the `.cfg` signal and `java` probe.
-5. Add the Formal Model section to the reviewability preset's plan template
-   and its Layer 1 lock.
-6. Add the grill-me scan and question to `interview-protocol.md` on both
-   platforms, with a Layer 3 eval that feeds a spec containing a retry
-   protocol and expects the signal presented.
-7. To use the self-hosted pool: confirm the runner group admits the
-   repository, confirm the runner image has a JDK or add
-   `actions/setup-java` to the job, and target the pool's labels from the
-   private infrastructure repository. For Apalache, request a larger VM
-   class first.
+Project-owned choices above are workflow contracts, not claims made by those
+sources. Qualification gaps remain explicit in the acceptance record.

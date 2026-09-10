@@ -343,6 +343,12 @@ before the next session runs.
 Read the workflow file's `### Plan Prompt` section.
 Spawn a subagent.
 
+After its normal Plan command returns, run the conditional author/check sequence
+in [formal checkpoints](./formal-methods.md#plan-authoring-checkpoint). Keep Plan
+and G3 incomplete until the selected checks pass; refresh discovery after authoring.
+The phase executor itself still runs only its supplied command. Formal failure
+stops independently of generic skip-and-log or confidence settings.
+
 **Plan-phase reviewability budget:**
 After `plan.md` exists, run the standalone plan-phase estimator to project
 each slice's production-LOC footprint from `plan.md`'s declared file structure.
@@ -404,6 +410,10 @@ the same Plan executor with the original prompt plus the complete
 `Plan Repair Context`. Re-run G3 after each of at most 2 repairs. Missing
 artifacts and constitutional failures retain the ordinary G3 auto-fix path.
 
+Pass WORKFLOW_FILE as `workflow_file` to validate-gate. Stage the formal helper's
+declared `commit_paths` alongside the normal paths below; durable models and
+compact evidence live outside specs/. Exclude raw checker output.
+
 **Commit:**
 `git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json && git commit -m "feat(SPEC-XXX): complete plan phase"`
 
@@ -454,6 +464,10 @@ domain runs.
 `git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json && git commit -m "feat(SPEC-XXX): complete checklist phase"`
 
 ### Phase 5: Tasks
+
+Before dispatching Tasks for an enabled formal selection, reconcile and renew
+the `planning` checkpoint per [Selected formal checkpoints](formal-methods.md#later-planning-implementation-and-closeout).
+Include the selected properties' implementation obligations and declared scope.
 
 Read the workflow file's `### Tasks Prompt` section.
 Spawn a subagent.
@@ -2674,6 +2688,10 @@ happens. A reporting-content problem is not a write failure. A missing or
 unreadable field produces a `None` entry, not a gap.
 
 #### Step 4: Final Verification
+
+After the producing implementation tests, run the selected `final` formal
+checkpoint with the state mirror per [Selected formal checkpoints](formal-methods.md#later-planning-implementation-and-closeout).
+G7 requires current evidence; model-and-trace selections also require trace checks.
 
 After all phase groups complete:
 

@@ -69,7 +69,12 @@ This is a routing decision, not a pass/fail gate. The presence of markers is exp
 2. Verify research.md exists (may be brief for simple specs)
 3. Verify data-model.md exists (if spec has data entities)
 4. Search plan.md for "FAIL" in constitutional gate sections
-5. Verify no unresolved "[TODO]" markers in plan.md
+5. Verify no unresolved `[NEEDS CLARIFICATION]`, `TODO`, `TKTK`, or `???`
+   markers in plan.md
+6. When formal selection is enabled, require its current model-check receipt
+   after the separate post-Plan author checkpoint; pass workflow_file to the
+   validate-gate request. Type checking, stale evidence, and partial induction
+   are insufficient. Follow formal-methods.md for bounded repair and resume.
 ```
 
 **Auto-Fix:** Re-run Plan with the gate failure as additional context, then
@@ -207,6 +212,10 @@ time) to prevent conflicting spec edits.
 
 ### G5 — After Tasks
 
+For enabled formal selection, require the current `planning` checkpoint and
+pass `workflow_file` to `validate-gate`. Tasks must include the selected model's
+implementation obligations and any requested trace work; follow [the shared contract](formal-methods.md).
+
 **Check:** Every functional requirement has at least one task.
 
 ```
@@ -272,6 +281,10 @@ marker_split, packet validation, and PR mappings. All paths in examples and
 workflow evidence must be repo-relative, not absolute runtime paths.
 
 ### G6 — After Analyze
+
+After remediation, reconcile selected formal models and renew `planning`
+evidence before proceeding. Pass `workflow_file` to `validate-gate`; current
+evidence and the state mirror are required at the planning boundary.
 
 **Check:** All findings remediated at every severity level.
 
@@ -412,6 +425,10 @@ remediation hint without blocking — operators who want a
 fail-closed posture opt into strict mode via local config.
 
 ### G7 — After Implement
+
+After implementation tests, execute selected `final` formal checks and pass
+`workflow_file` to `validate-gate`. Only current success or an explicit scoped
+operator waiver can complete this prerequisite; generic skip-and-log cannot.
 
 **Check:** Full verification suite passes, TDD was followed,
 and no placeholder tests exist.

@@ -39,6 +39,7 @@ CODEX_REQUIRED_AGENT_NAMES = (
     "clarify-executor",
     "codebase-analyst",
     "domain-researcher",
+    "formal-model-author",
     "implement-executor",
     "phase-executor",
     "spec-context-analyst",

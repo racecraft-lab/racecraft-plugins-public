@@ -1654,6 +1654,10 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     feature = resolve_input_path(inputs.get("feature_dir") or "", repo_root)
     if gate not in {f"G{i}" for i in range(1, 8)}:
         return make_result(json_text({"error": f"Unknown gate: {gate}"}), exit_code=2)
+    from ..formal.helper import gate_checkpoint
+    formal_gate = gate_checkpoint(repo_root, {**inputs, "gate": gate})
+    if formal_gate is not None:
+        return make_result(json_text(formal_gate), exit_code=1)
     spec = feature / "spec.md"
     plan = feature / "plan.md"
     tasks = feature / "tasks.md"
@@ -2022,12 +2026,17 @@ def workflow_stage_signals(text: str) -> dict[str, Any]:
         if status not in AUTOPILOT_TERMINAL_STATUSES:
             first_open = (phase, status)
             break
+    from ..formal.evidence import checkpoint_signal
+    formal = checkpoint_signal(text)
+    if first_open is None and not formal["complete"]:
+        first_open = ("Formal Check", formal["verdict"])
     return {
         "parsed": True,
         "recorded_stage": workflow_recorded_stage(lines),
         "planning_complete": first_open is None,
         "confidence_gate_status": statuses.get(AUTOPILOT_GATE_PHASE),
         "first_open": first_open,
+        **({"formal_checkpoint": formal} if formal["required"] else {}),
     }
 
 
@@ -2413,6 +2422,11 @@ def resolve_autopilot_stage(inputs: dict[str, Any], repo_root: Path) -> dict[str
             f" table: {workflow_raw}\n",
             2,
         )
+    from ..formal.helper import apply_resume_guard
+    try:
+        formal = apply_resume_guard(repo_root, workflow_raw, parsed, signals)
+    except ValueError as exc:
+        return make_result("", f"error: {exc}\n", 2)
     stage = parsed["stage"]
     if stage is not None:
         source = "argv"
@@ -2438,6 +2452,7 @@ def resolve_autopilot_stage(inputs: dict[str, Any], repo_root: Path) -> dict[str
         "confidence_gate_status": signals["confidence_gate_status"],
         "from_phase": parsed["from_phase"],
         "corroboration": corroboration,
+        **({"formal_checkpoint": formal} if formal["required"] else {}),
     }))
 
 
@@ -4657,6 +4672,49 @@ def _spec_index_render_prs(spec_dir: Path, repo_root: Path) -> list[str]:
     return [row for _, _, _, _, row in sortable]
 
 
+def _spec_index_filter_gitignored_files(files: list[Path], repo_root: Path) -> list[Path]:
+    if not files:
+        return files
+
+    by_relative: dict[bytes, Path] = {}
+    for path in files:
+        try:
+            relative = path.relative_to(repo_root).as_posix()
+        except ValueError as exc:
+            raise SpecIndexRenderError(f"spec artifact escapes the repository: {path}") from exc
+        by_relative[os.fsencode(relative)] = path
+
+    argv = ["git", "check-ignore", "--stdin", "-z"]
+    try:
+        completed = subprocess.run(
+            argv,
+            input=b"\0".join(by_relative) + b"\0",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=repo_root,
+            shell=False,
+            check=False,
+            timeout=SUBPROCESS_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise SpecIndexRenderError(
+            f"could not evaluate Git ignore rules: {type(exc).__name__}"
+        ) from exc
+    if completed.returncode not in {0, 1}:
+        detail = completed.stderr.decode("utf-8", errors="replace").strip()
+        suffix = f" ({detail[:240]})" if detail else ""
+        raise SpecIndexRenderError(
+            f"could not evaluate Git ignore rules: git check-ignore exited "
+            f"{completed.returncode}{suffix}"
+        )
+
+    ignored = {item for item in completed.stdout.split(b"\0") if item}
+    unexpected = ignored.difference(by_relative)
+    if unexpected or (completed.returncode == 0) != bool(ignored):
+        raise SpecIndexRenderError("could not evaluate Git ignore rules: unexpected git output")
+    return [path for relative, path in by_relative.items() if relative not in ignored]
+
+
 def _spec_index_walk_regular_files(root: Path, repo_root: Path) -> list[Path]:
     files: list[Path] = []
 
@@ -4697,7 +4755,7 @@ def _spec_index_walk_regular_files(root: Path, repo_root: Path) -> list[Path]:
                     )
 
     visit(root)
-    return files
+    return _spec_index_filter_gitignored_files(files, repo_root)
 
 
 def _spec_index_render_backlinks(spec_dir: Path, repo_root: Path) -> list[str]:
@@ -4779,9 +4837,9 @@ def _spec_index_render_home_index(
         if not has_id or not spec_id:
             continue
         _, status_value = _spec_index_scalar(moc_text, "status")
-        row = f"- [{spec_id}](../../../specs/{spec_dir.name}/SPEC-MOC.md) {SPEC_INDEX_SEPARATOR}"
+        row = f"- [{spec_id}](../../../specs/{spec_dir.name}/SPEC-MOC.md)"
         if status_value:
-            row = f"{row} {status_value}"
+            row = f"{row} {SPEC_INDEX_SEPARATOR} {status_value}"
         sortable.append(
             (
                 _spec_index_normalize(spec_id).encode("utf-8"),
@@ -4819,7 +4877,7 @@ def _spec_index_render_home_index(
             if not _spec_index_home_owns(home_path, home_text, spec_text):
                 continue
             label = branch.upper()
-            row = f"- [{label}](../../../specs/{branch}/spec.md) {SPEC_INDEX_SEPARATOR}"
+            row = f"- [{label}](../../../specs/{branch}/spec.md)"
             sortable.append(
                 (
                     _spec_index_normalize(branch).encode("utf-8"),

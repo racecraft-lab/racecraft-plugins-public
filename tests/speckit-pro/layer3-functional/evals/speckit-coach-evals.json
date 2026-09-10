@@ -192,6 +192,52 @@
         "Ties the confidence difference to evidence quality / source directness rather than to which named tool was used",
         "Requires the fallback finding to carry the fallback disclosure naming the missing capability, the fallback used, and the reason"
       ]
+    },
+    {
+      "id": 201,
+      "prompt": "I am changing a settings page label and its help text. We already test rendering and accessibility. Quint and Apalache are installed. Should this feature use formal methods? Explain the recommendation only; do not change the project.",
+      "expected_output": "Recommends no model for this bounded text change and records or describes a justified none selection; installed tools do not activate checks.",
+      "expectations": [
+        "Recommends ordinary rendering/accessibility checks and no formal model for the stated change",
+        "Explains that installed Quint/Apalache tools do not select a feature",
+        "Does not install, execute checks, or change workflow state"
+      ]
+    },
+    {
+      "id": 202,
+      "prompt": "I have never used TLA+ or Quint. A counter starts at zero, increments to two, then stays there. Explain one useful formal check and an intentional failure I can understand. Use the shipped examples and setup guidance; explain only, with no installation or edits.",
+      "expected_output": "Reads the formal coaching references, explains states and moves in plain language, walks through a passing bound and an intentional counterexample, and keeps installation explicit.",
+      "expectations": [
+        "Uses the shipped formal guide or counter example as evidence",
+        "Explains zero to one to two and holding at two in plain language",
+        "Shows why changing the property to count less than two fails at two",
+        "Distinguishes bounded model evidence from proof of application correctness",
+        "Does not execute installation or modify project files"
+      ]
+    },
+    {
+      "id": 203,
+      "prompt": "We explicitly selected a Quint model for a Python, TypeScript and Swift implementation. All generated states satisfy the state invariant, but an observed trace jumps from zero to two although only increments of one are allowed. Does the model pass prove our code is correct? Explain what must be checked and the supported workflow boundary, without running anything.",
+      "expected_output": "Explains explicit action/state projection, tested producers/adapters and full observed-transition checks; illegal transitions fail despite valid states, and model verification does not verify arbitrary source code.",
+      "expectations": [
+        "Says the zero-to-two transition violates the allowed move even though both states satisfy the bound",
+        "Requires actual observed implementation traces with an explicit projection and tested adapter",
+        "Distinguishes Quint/Apalache model checks from implementation conformance",
+        "Keeps trace-producing tests before final/Post formal checks and invalidates stale evidence",
+        "Uses pinned Quint compilation rather than its auto-downloading managed backend"
+      ]
+    },
+    {
+      "id": 204,
+      "prompt": "Our explicitly selected formal model passed at Plan, but Analyze changed the design. Can --from-phase implement, skip-and-log, or an advisory confidence flag let us proceed? Explain the current scaffold/autopilot lifecycle and any operator-waiver boundary; do not execute the workflow.",
+      "expected_output": "Explains that model evidence must match the reconciled requirements/design, every resume form enforces it, and a separate explicit waiver is never a passing check.",
+      "expectations": [
+        "Requires reconciliation and fresh selected model checks after the planning change",
+        "Says explicit implementation entry cannot bypass stale planning evidence",
+        "Rejects generic skip-and-log and confidence flags as formal waivers",
+        "Distinguishes a separately recorded operator waiver from a passing model check",
+        "Preserves normal Plan executor followed by conditional bounded formal-model-author dispatch and the seven-phase order"
+      ]
     }
   ]
 }

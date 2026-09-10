@@ -87,7 +87,145 @@ def snapshot(root: Path) -> dict[str, bytes]:
     }
 
 
-class GenerateSpecIndexTests(unittest.TestCase):
+def _make_git_ignore_fixture(work: Path) -> tuple[Path, Path, tuple[Path, ...]]:
+    root = work / "git-ignore-behavior"
+    shutil.copytree(FIXTURES / "stale-fill", root)
+    subprocess.run(["git", "init", "--quiet"], cwd=root, check=True)
+    subprocess.run(["git", "add", "--all"], cwd=root, check=True)
+
+    spec_dir = root / "specs" / "prsg-901-stale"
+    tracked_ignored = spec_dir / "contracts" / "tracked.tmp"
+    tracked_ignored.write_text("tracked\n", encoding="utf-8")
+    subprocess.run(
+        ["git", "add", tracked_ignored.relative_to(root).as_posix()],
+        cwd=root,
+        check=True,
+    )
+    (root / ".gitignore").write_text(
+        ".DS_Store\n__pycache__/\n*.tmp\n",
+        encoding="utf-8",
+    )
+    (spec_dir / "artifacts").mkdir(parents=True, exist_ok=True)
+    (spec_dir / "artifacts" / ".gitignore").write_text(
+        "ignored-*.bin\n",
+        encoding="utf-8",
+    )
+
+    ignored_paths = (
+        spec_dir / ".DS_Store",
+        spec_dir / "artifacts" / ".DS_Store",
+        spec_dir / "__pycache__" / "cache.pyc",
+        spec_dir / "artifacts" / "ignored-host.bin",
+        spec_dir / "scratch.tmp",
+    )
+    for path in ignored_paths:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("host artifact\n", encoding="utf-8")
+    (spec_dir / "artifacts" / ".intentional").write_text("keep\n", encoding="utf-8")
+    return root, spec_dir, ignored_paths
+
+
+def _assert_git_ignore_behavior(test_case: unittest.TestCase, work: Path) -> None:
+    root, spec_dir, ignored_paths = _make_git_ignore_fixture(work)
+    applied, applied_body = write_request(root)
+    test_case.assertEqual(applied.returncode, 0, applied.stderr)
+    test_case.assertEqual(applied_body["data"]["mutation"]["mutation_status"], "applied")
+    rendered = (spec_dir / "SPEC-MOC.md").read_text(encoding="utf-8")
+    for path in ignored_paths:
+        relative = path.relative_to(spec_dir).as_posix()
+        test_case.assertNotIn(f"- [{relative}]({relative})", rendered)
+        test_case.assertTrue(path.is_file())
+    for relative in (
+        ".process/prs.json",
+        "artifacts/.gitignore",
+        "artifacts/.intentional",
+        "contracts/tracked.tmp",
+        "spec.md",
+    ):
+        test_case.assertIn(f"- [{relative}]({relative})", rendered)
+
+    current, _ = check_request(root)
+    test_case.assertEqual(current.returncode, 0, current.stderr)
+    second, second_body = write_request(root)
+    test_case.assertEqual(second.returncode, 0, second.stderr)
+    test_case.assertEqual(second_body["data"]["mutation"]["mutation_status"], "no_op")
+
+
+def _assert_git_ignore_failure(
+    test_case: unittest.TestCase,
+    work: Path,
+    label: str,
+    failure: subprocess.CompletedProcess[bytes] | OSError | subprocess.TimeoutExpired,
+) -> None:
+    from speckit_pro_runner.envelope import RunnerRequest
+    from speckit_pro_runner.helpers import mutation, read_only, registry
+
+    root = work / f"git-ignore-{label}"
+    shutil.copytree(FIXTURES / "stale-fill", root)
+    before = snapshot(root)
+    patch_kwargs = (
+        {"return_value": failure}
+        if isinstance(failure, subprocess.CompletedProcess)
+        else {"side_effect": failure}
+    )
+
+    with patch.object(read_only.subprocess, "run", **patch_kwargs):
+        check_result = read_only.generate_spec_index_check(
+            {"repo_root": root.relative_to(REPO_ROOT).as_posix()},
+            REPO_ROOT,
+        )
+    test_case.assertEqual(check_result["exit_code"], 2)
+    test_case.assertIn("could not evaluate Git ignore rules", check_result["stderr"])
+    test_case.assertEqual(snapshot(root), before)
+
+    request = RunnerRequest(
+        f"test-spec-index-git-ignore-{label}",
+        "generate-spec-index-write",
+        "generate-spec-index-write",
+        "apply",
+        {"repo_root": root.relative_to(REPO_ROOT).as_posix()},
+    )
+    with patch.object(read_only.subprocess, "run", **patch_kwargs):
+        write_result = mutation.run_spec_index_write(
+            registry.MUTATION_HELPERS["generate-spec-index-write"],
+            request,
+        )
+    test_case.assertEqual(write_result["status"], "input_error")
+    test_case.assertEqual(write_result["exit_code"], 2)
+    test_case.assertIn(
+        "could not evaluate Git ignore rules",
+        write_result["diagnostics"][0]["message"],
+    )
+    test_case.assertEqual(snapshot(root), before)
+
+
+class _SpecIndexGitIgnoreTests:
+    def test_backlinks_honor_git_ignores_without_hiding_tracked_or_intentional_files(self) -> None:
+        with tempfile.TemporaryDirectory(prefix=".spec-index-test-", dir=REPO_ROOT) as temp_dir:
+            _assert_git_ignore_behavior(self, Path(temp_dir))
+
+    def test_git_ignore_failures_abort_check_and_write_without_writes(self) -> None:
+        failures = (
+            (
+                "fatal",
+                subprocess.CompletedProcess(
+                    ["git", "check-ignore"],
+                    128,
+                    stdout=b"",
+                    stderr=b"fatal: ignore evaluation failed\n",
+                ),
+            ),
+            ("missing", OSError("git is unavailable")),
+            ("timeout", subprocess.TimeoutExpired(["git", "check-ignore"], 30)),
+        )
+        with tempfile.TemporaryDirectory(prefix=".spec-index-test-", dir=REPO_ROOT) as temp_dir:
+            work = Path(temp_dir)
+            for label, failure in failures:
+                with self.subTest(label=label):
+                    _assert_git_ignore_failure(self, work, label, failure)
+
+
+class GenerateSpecIndexTests(_SpecIndexGitIgnoreTests, unittest.TestCase):
     def setUp(self) -> None:
         self.temp_dir = tempfile.TemporaryDirectory(prefix=".spec-index-test-", dir=REPO_ROOT)
         self.work = Path(self.temp_dir.name)
@@ -432,13 +570,18 @@ class GenerateSpecIndexTests(unittest.TestCase):
         home_text = home.read_text(encoding="utf-8")
         expected_rows = [
             "- [PRSG-001](../../../specs/prsg-001-foo/SPEC-MOC.md) \u00b7 complete",
-            "- [PRSG-002](../../../specs/prsg-002-bar/SPEC-MOC.md) \u00b7",
+            "- [PRSG-002](../../../specs/prsg-002-bar/SPEC-MOC.md)",
             "- [PRSG-010](../../../specs/prsg-010-baz/SPEC-MOC.md) \u00b7 in-progress",
-            "- [PRSG-011-FLAT-OWNED](../../../specs/prsg-011-flat-owned/spec.md) \u00b7",
+            "- [PRSG-011-FLAT-OWNED](../../../specs/prsg-011-flat-owned/spec.md)",
         ]
-        for row in expected_rows:
-            self.assertIn(row, home_text)
-        self.assertEqual([home_text.index(row) for row in expected_rows], sorted(home_text.index(row) for row in expected_rows))
+        home_lines = home_text.splitlines()
+        index_start = next(
+            index for index, line in enumerate(home_lines) if line.startswith("<!-- GENERATED:INDEX:START")
+        )
+        index_end = home_lines.index("<!-- GENERATED:INDEX:END -->", index_start + 1)
+        index_lines = home_lines[index_start + 1 : index_end]
+        self.assertEqual([line for line in index_lines if line.startswith("- [PRSG-")], expected_rows)
+        self.assertFalse(any(line.endswith(" \u00b7") for line in index_lines))
         self.assertNotIn("prsg-004-other", home_text)
         self.assertIn("prsg-004-other", other_home.read_text(encoding="utf-8"))
         self.assertEqual(
