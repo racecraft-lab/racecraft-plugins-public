@@ -25,6 +25,14 @@ following this protocol.
      prove the slice done, such as typecheck, tests, a complexity ceiling, a
      mutation floor, or dependency rules, as the target for downstream
      project-command discovery.
+     Within this branch, consider formal verification only when the design
+     question and consequences justify modeling cost beyond ordinary checks.
+     Use [selective formal-methods coaching](../../speckit-coach/references/formal-methods-guide.md)
+     when relevant. Record `none`, `deferred`, or operator-approved `enabled`,
+     with rationale, named behavior/model IDs, new/existing origin, and requested
+     evidence (`model` or `model_and_trace`). Signals, tools, and catalog entries
+     do not activate checks. Resolve an already justified no-model decision from
+     evidence; do not force every interview through a modeling question.
    When one of these is resolved from evidence instead of a question, the
    section cites that evidence (file, roadmap entry, or constitution
    principle) so a resolved branch is never indistinguishable from a skipped
