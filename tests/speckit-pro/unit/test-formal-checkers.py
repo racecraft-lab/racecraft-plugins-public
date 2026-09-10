@@ -81,7 +81,7 @@ class FormalCheckerTests(unittest.TestCase):
         self.assertEqual("expected_failure", self.request("read_only", "formal-doctor")["status"])
 
     def test_preview_is_read_only_and_gate_evidence_is_content_bound(self) -> None:
-        with patch.object(helper, "inspect_tool", return_value={"version": "0.62.2", "sha256": "fixture"}), patch.object(helper, "execute_model", side_effect=self.passed_model):
+        with patch.object(engine.shutil, "which", return_value=sys.executable), patch.object(helper, "inspect_tool", return_value={"version": "0.62.2", "sha256": "fixture"}), patch.object(helper, "execute_model", side_effect=self.passed_model):
             before = sorted(p.relative_to(self.root) for p in self.root.rglob("*"))
             preview = self.request()
             self.assertEqual("preview", preview["data"]["verdict"])
@@ -103,7 +103,7 @@ class FormalCheckerTests(unittest.TestCase):
     def test_typecheck_only_and_incomplete_induction_cannot_pass(self) -> None:
         self.model.update(mode="inductive", bounds={"inductive_invariant": "Bounded"})
         self.save_catalog()
-        with patch.object(helper, "inspect_tool", return_value={"version": "fixture"}), patch.object(helper, "execute_model", side_effect=self.passed_model):
+        with patch.object(engine.shutil, "which", return_value=sys.executable), patch.object(helper, "inspect_tool", return_value={"version": "fixture"}), patch.object(helper, "execute_model", side_effect=self.passed_model):
             self.assertEqual("pass", self.request("apply")["data"]["verdict"])
             record = read_checkpoint(self.root, "workflow.md")
             self.assertEqual(["base", "step", "consequence"], [c["id"] for c in record["results"][0]["obligations"]])
@@ -118,7 +118,7 @@ class FormalCheckerTests(unittest.TestCase):
         overview += "\n".join(f"| {phase} | 1 | Complete |" for phase in ("Specify", "Clarify", "Plan", "Checklist", "Tasks", "Analyze", "Confidence Gate")) + "\n"
         with (self.root / "workflow.md").open("a") as stream:
             stream.write(overview)
-        with patch.object(helper, "inspect_tool", return_value={"version": "fixture"}), patch.object(helper, "execute_model", side_effect=self.passed_model):
+        with patch.object(engine.shutil, "which", return_value=sys.executable), patch.object(helper, "inspect_tool", return_value={"version": "fixture"}), patch.object(helper, "execute_model", side_effect=self.passed_model):
             for args in (["--stage", "implement"], ["--from-phase", "implement"], ["--from-phase", "tasks"],
                          ["--stage", "full", "--from-phase", "implement"], ["--stage", "implement", "--advisory"]):
                 with self.subTest(args=args):
@@ -178,7 +178,7 @@ class FormalCheckerTests(unittest.TestCase):
     def test_interrupted_workflow_write_reports_the_saved_record(self) -> None:
         with (self.root / "workflow.md").open("a") as stream:
             stream.write("\n## Formal Checkpoints\n\n## Formal Checkpoints\n")
-        with patch.object(helper, "inspect_tool", return_value={"version": "fixture"}):
+        with patch.object(engine.shutil, "which", return_value=sys.executable), patch.object(helper, "inspect_tool", return_value={"version": "fixture"}):
             result = self.request("apply")
         self.assertEqual("input_error", result["status"])
         self.assertTrue(result["data"]["writes_state"])
