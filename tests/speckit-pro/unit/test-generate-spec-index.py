@@ -437,8 +437,13 @@ class GenerateSpecIndexTests(unittest.TestCase):
             "- [PRSG-011-FLAT-OWNED](../../../specs/prsg-011-flat-owned/spec.md)",
         ]
         home_lines = home_text.splitlines()
-        self.assertEqual([line for line in home_lines if line.startswith("- [PRSG-")], expected_rows)
-        self.assertFalse(any(line.endswith(" \u00b7") for line in home_lines))
+        index_start = next(
+            index for index, line in enumerate(home_lines) if line.startswith("<!-- GENERATED:INDEX:START")
+        )
+        index_end = home_lines.index("<!-- GENERATED:INDEX:END -->", index_start + 1)
+        index_lines = home_lines[index_start + 1 : index_end]
+        self.assertEqual([line for line in index_lines if line.startswith("- [PRSG-")], expected_rows)
+        self.assertFalse(any(line.endswith(" \u00b7") for line in index_lines))
         self.assertNotIn("prsg-004-other", home_text)
         self.assertIn("prsg-004-other", other_home.read_text(encoding="utf-8"))
         self.assertEqual(
