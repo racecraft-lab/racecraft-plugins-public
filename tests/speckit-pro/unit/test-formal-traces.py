@@ -19,7 +19,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 sys.path[:0] = [str(PLUGIN_ROOT), str(REPO_ROOT / "tests/speckit-pro/lib")]
 
-from speckit_pro_runner.formal import catalog, helper, itf, quint, traces
+from speckit_pro_runner.formal import catalog, engine, helper, itf, quint, traces
 from speckit_pro_runner.formal.evidence import read_checkpoint, record_path
 from speckit_pro_runner.helpers.registry import dispatch_helper
 from test_result import run_counted
@@ -155,7 +155,7 @@ class TraceContractTests(TraceFixture):
             traces.load_trace(self.root, "counter", self.model, self.trace_path)
 
     def test_preview_requires_fresh_traces_and_reports_the_full_query(self) -> None:
-        with patch.object(helper, "inspect_tool", return_value={"version": "fixture"}):
+        with patch.object(helper, "inspect_tool", return_value={"version": "fixture"}), patch.object(engine.shutil, "which", return_value=sys.executable):
             self.assertEqual("missing_trace", self.request()["data"]["verdict"])
             self.stamp()
             before = {p: p.read_bytes() for p in self.root.rglob("*") if p.is_file()}
@@ -171,7 +171,7 @@ class TraceContractTests(TraceFixture):
         receipt = {"path": self.trace_path, "sha256": catalog.digest(self.root / self.trace_path), "verdict": "pass", "states": 4,
                    "transitions": 3, "exit_code": 12, "query": "complete_observed_trace_reachable"}
         result = {"model": "counter", "verdict": "pass", "obligations": [{"id": "bounded", "verdict": "pass", "exit_code": 0}], "traces": [receipt]}
-        with patch.object(helper, "inspect_tool", return_value={"version": "fixture"}), patch.object(helper, "execute_model", return_value=result):
+        with patch.object(helper, "inspect_tool", return_value={"version": "fixture"}), patch.object(engine.shutil, "which", return_value=sys.executable), patch.object(helper, "execute_model", return_value=result):
             self.assertEqual("pass", self.request("apply")["data"]["verdict"])
             self.assertTrue(helper.current_checkpoint(self.root, "workflow.md", "final")["complete"])
             record = read_checkpoint(self.root, "workflow.md", "final")
