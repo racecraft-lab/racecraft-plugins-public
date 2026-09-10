@@ -79,7 +79,7 @@ def selection_from_workflow(text: str) -> dict[str, Any]:
         return {"schema_version": SCHEMA_VERSION, "status": "none", "rationale": "Legacy workflow has no formal selection.", "models": []}
     if len(sections) != 1:
         raise SelectionError("workflow must have only one Formal Methods section")
-    blocks = re.findall(r"(?ms)^```json\s*\n(.*?)^```\s*$", "\n".join(sections[0]))
+    blocks = re.findall(r"(?ms)^ {0,3}```json\s*\n(.*?)^ {0,3}```\s*$", "\n".join(sections[0]))
     if len(blocks) != 1:
         raise SelectionError("Formal Methods must contain exactly one fenced JSON selection")
     try:
