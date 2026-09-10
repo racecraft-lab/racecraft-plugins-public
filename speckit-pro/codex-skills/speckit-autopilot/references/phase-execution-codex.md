@@ -125,13 +125,23 @@ Once the final gate resolves **pass or warn**, the plan stage's terminal step
 does not end at the boundary commit above. It runs this sequence, in this order:
 
 ```text
-1. Generate the artifacts into specs/<feature>/artifacts/.
+1. Generate and validate the artifacts; initialize their pending review record.
 2. Take the stage-boundary commit above.
 3. Push the branch.
 4. Create or refresh the draft pull request.
 5. Write the `Draft PR` record to the workflow file.
 6. Take a separate bookkeeping commit carrying that record, and push it.
+7. The parent opens and observes each generated artifact preview.
+8. Validate and commit/push the workflow-only preview evidence.
 ```
+
+**Read the [Artifact Review Handoff contract](../../../skills/speckit-autopilot/references/artifact-review.md) before this sequence.**
+It defines the durable record, preview evidence, current-task binding, and
+preview-only resume. Publication through step 6 remains fail-open for generation
+gaps. Steps 7–8 cannot treat publication or `queued` as verified delivery.
+A preview-only resume bypasses generation and current-run artifact cleanup when
+the shared resolver reports reusable artifacts, and skips completed publication
+steps after corroboration.
 
 **Generation runs first** because the pages land under
 `specs/<feature>/artifacts/`, which the boundary commit's existing `specs/` path
@@ -495,8 +505,11 @@ failure shape names the step that failed, the state it left behind, and the
 resume path — one line of substance each, in the style Step 0.6c already uses, so
 the report alone is enough to hand off.
 
-- **Emission ran.** Carry the pull request URL, the artifact index, and the
-  resume instructions.
+- **Emission ran.** Carry the pull request URL, the artifact index, generation
+  gaps, per-page preview dispositions and blockers, direct local file links, and
+  resume instructions. Do not report the review handoff complete while previews
+  remain unverified; publication stays successful. Report any failure to commit
+  or push preview evidence separately, preserving the valid PR and artifacts.
 - **The gate blocked.** Name the blocked gate in place of a URL, and say that no
   pull request was opened.
 - **The pull request could not be opened.** Say so and name the step that

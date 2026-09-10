@@ -388,7 +388,10 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
   `resolve-autopilot-stage` with the invocation argv and the workflow
   file path. Record `stage` as `AUTOPILOT_STAGE` and keep `source`,
   `basis`, `recorded_stage`, `planning_complete`, and
-  `confidence_gate_status` for the phase loop. An explicit `--stage`
+  `confidence_gate_status` for the phase loop. Keep optional `artifact_review` for
+   terminal-step routing and print its unresolved preview dispositions. A pending
+   handoff can auto-resolve `plan` even when `planning_complete` is true; explicit
+   stages still win and started implementation is never routed backward. An explicit `--stage`
   always wins; with none given the stage is resolved from the workflow
   file's `## Workflow Overview` table. If the operation exits 2, STOP
   before Phase 0 with that one-line message — the same fail-fast shape
