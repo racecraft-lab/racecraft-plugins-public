@@ -54,9 +54,10 @@ SKILL_CATALOG_WARNINGS = (
 )
 NO_SPECKIT_SKILL_NAME = "no-speckit-skill"
 NO_SPECKIT_SKILL_DESCRIPTION = (
-    "Use when the request is ordinary coding, testing, tooling, or repository work that no SpecKit skill covers, "
-    "such as writing a unit test, configuring a linter, installing packages, or editing application code. Reply "
-    "that no SpecKit skill applies and stop."
+    "Use when no available SpecKit skill covers the request, including ordinary coding, testing, tooling, or "
+    "repository work and host-specific SpecKit operations whose matching skill is absent from the current catalog, "
+    "such as installing Codex subagents when no agent-install skill is available. Reply that no available SpecKit "
+    "skill applies and stop."
 )
 MEASUREMENT_STUB_SENTENCE = (
     "This skill is a measurement stub used by the repository's skill-selection test suite. It is not a real "
