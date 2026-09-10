@@ -16,6 +16,8 @@ from . import apalache
 from .catalog import RUNS_PATH, FormalError, confined, digest
 from .process import run_process
 
+CHECKER_SHA256 = {"apalache": "079b6c2320252469dcf79afec6886b8255d3dd1b34a9484433c88986752efaa8"}
+
 
 def inspect_tool(root: Path, tool: dict[str, Any], checker: str) -> dict[str, Any]:
     jar = Path(tool["jar"])
@@ -27,8 +29,8 @@ def inspect_tool(root: Path, tool: dict[str, Any], checker: str) -> dict[str, An
     if java is None or not jar.is_file():
         raise FormalError("missing_tool", f"Install the pinned {checker} distribution and Java explicitly; expected jar: {tool['jar']}")
     actual = digest(jar)
-    if actual != tool["sha256"]:
-        raise FormalError("version_mismatch", f"{checker} jar checksum differs from the approved catalog")
+    if actual != tool["sha256"] or actual != CHECKER_SHA256.get(checker):
+        raise FormalError("version_mismatch", f"{checker} jar checksum differs from the plugin-pinned distribution or catalog")
     with zipfile.ZipFile(jar) as archive:
         manifest = archive.read("META-INF/MANIFEST.MF").decode("utf-8")
     if f"Implementation-Version: {tool['version']}\r" not in manifest and f"Implementation-Version: {tool['version']}\n" not in manifest:
@@ -44,7 +46,10 @@ def inspect_tool(root: Path, tool: dict[str, Any], checker: str) -> dict[str, An
 def checker_command(root: Path, tool: dict[str, Any]) -> list[str]:
     jar = Path(tool["jar"])
     jar = jar.resolve() if jar.is_absolute() else confined(root, tool["jar"])
-    return [str(shutil.which(tool["java"])), f"-Xmx{tool['heap_mb']}m", "-jar", str(jar)]
+    java = shutil.which(tool["java"])
+    if java is None:
+        raise FormalError("missing_tool", "Select the configured Java runtime on PATH before running the checker")
+    return [java, f"-Xmx{tool['heap_mb']}m", "-jar", str(jar)]
 
 
 def preview_model(root: Path, item: dict[str, Any]) -> list[dict[str, Any]]:
@@ -53,6 +58,7 @@ def preview_model(root: Path, item: dict[str, Any]) -> list[dict[str, Any]]:
 
 def execute_model(root: Path, model_id: str, item: dict[str, Any]) -> dict[str, Any]:
     model = item["model"]
+    inspect_tool(root, item["tool"], model["checker"])
     run = confined(root, f"{RUNS_PATH}/{model_id}/{uuid.uuid4().hex}")
     snapshot = run / "inputs"
     snapshot.mkdir(parents=True)

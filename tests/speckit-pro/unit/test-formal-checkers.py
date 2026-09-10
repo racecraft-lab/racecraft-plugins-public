@@ -9,6 +9,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -17,7 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 sys.path[:0] = [str(PLUGIN_ROOT), str(REPO_ROOT / "tests/speckit-pro/lib")]
 
-from speckit_pro_runner.formal import apalache, catalog, helper
+from speckit_pro_runner.formal import apalache, catalog, engine, helper
 from speckit_pro_runner.formal.evidence import read_checkpoint, record_path
 from speckit_pro_runner.formal.process import run_process, start_process
 from speckit_pro_runner.helpers.registry import dispatch_helper
@@ -157,6 +158,45 @@ class FormalCheckerTests(unittest.TestCase):
         self.tool["version"] = "0.1.0"
         self.save_catalog()
         self.assertEqual("version_mismatch", self.request()["data"]["verdict"])
+
+    def test_missing_java_during_preview_is_an_expected_failure_without_writes(self) -> None:
+        with patch.object(helper, "inspect_tool", return_value={"version": "fixture"}), patch.object(engine.shutil, "which", return_value=None):
+            result = self.request("apply")
+        self.assertEqual("expected_failure", result["status"])
+        self.assertEqual("missing_tool", result["data"]["verdict"])
+        self.assertFalse(result["data"]["writes_state"])
+        self.assertFalse((self.root / catalog.EVIDENCE_PATH).exists())
+
+    def test_apply_validation_errors_report_no_writes(self) -> None:
+        for inputs in ({"unknown": True}, {"checkpoint": "invalid"}, {"spec_file": "missing.md"}):
+            with self.subTest(inputs=inputs), patch.object(helper, "inspect_tool", return_value={"version": "fixture"}):
+                result = self.request("apply", **inputs)
+                self.assertEqual("input_error", result["status"])
+                self.assertFalse(result["data"]["writes_state"])
+                self.assertFalse((self.root / catalog.EVIDENCE_PATH).exists())
+
+    def test_interrupted_workflow_write_reports_the_saved_record(self) -> None:
+        with (self.root / "workflow.md").open("a") as stream:
+            stream.write("\n## Formal Checkpoints\n\n## Formal Checkpoints\n")
+        with patch.object(helper, "inspect_tool", return_value={"version": "fixture"}):
+            result = self.request("apply")
+        self.assertEqual("input_error", result["status"])
+        self.assertTrue(result["data"]["writes_state"])
+        self.assertEqual("running", read_checkpoint(self.root, "workflow.md")["verdict"])
+
+    def test_catalog_cannot_approve_a_replacement_distribution(self) -> None:
+        jar = self.root / "replacement.jar"
+        with zipfile.ZipFile(jar, "w") as archive:
+            archive.writestr("META-INF/MANIFEST.MF", "Implementation-Version: 0.62.2\n\n")
+        tool = {**self.tool, "jar": str(jar), "sha256": catalog.digest(jar)}
+        with patch.object(engine.shutil, "which", return_value=sys.executable), patch.object(engine.subprocess, "run") as launch:
+            with self.assertRaises(catalog.FormalError) as caught:
+                engine.inspect_tool(self.root, tool, "apalache")
+            self.assertEqual("version_mismatch", caught.exception.verdict)
+            launch.assert_not_called()
+            with self.assertRaises(catalog.FormalError):
+                engine.execute_model(self.root, "counter", {"model": self.model, "tool": tool})
+        self.assertFalse((self.root / catalog.RUNS_PATH).exists())
 
     def test_native_config_cannot_silently_override_or_drop_obligations(self) -> None:
         path = self.root / self.model["config"]
