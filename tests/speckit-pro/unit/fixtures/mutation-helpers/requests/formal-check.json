@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0",
+  "helper_id": "formal-check",
+  "operation": "formal-check",
+  "mode": "dry_run",
+  "inputs": {
+    "repo_root": ".",
+    "workflow_file": "tests/speckit-pro/unit/fixtures/formal-methods/disabled-workflow.md"
+  }
+}

@@ -6,6 +6,12 @@ This is the Codex-specific mirror of `../../skills/speckit-autopilot/references/
 
 ## Contents
 
+After workflow binding, run the selected-model preflight in the
+[shared formal contract](../../../skills/speckit-autopilot/references/formal-methods.md#selection-and-preflight).
+Use WORKFLOW_ROOT, preserve disabled legacy workflows, and permit new-model
+authoring to remain pending until Plan. Existing-file/tool setup gaps block;
+checking never installs a runtime implicitly.
+
 - [Workflow Worktree Binding](#workflow-worktree-binding) — bind one safe execution worktree before any phase work
 - [Step -1: Archive Sweep Startup](#step--1-archive-sweep-startup) — archive previously merged specs before workflow execution
 - [Step 0.0: Resolve Script Paths](#step-00-resolve-script-paths) — locate the plugin's `SKILL_SCRIPTS` directory

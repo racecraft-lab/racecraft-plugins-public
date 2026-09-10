@@ -70,6 +70,10 @@ This is a routing decision, not a pass/fail gate. The presence of markers is exp
 3. Verify data-model.md exists (if spec has data entities)
 4. Search plan.md for "FAIL" in constitutional gate sections
 5. Verify no unresolved "[TODO]" markers in plan.md
+6. When formal selection is enabled, require its current model-check receipt
+   after the separate post-Plan author checkpoint; pass workflow_file to the
+   validate-gate request. Type checking, stale evidence, and partial induction
+   are insufficient. Follow formal-methods.md for bounded repair and resume.
 ```
 
 **Auto-Fix:** Re-run plan with gate failure as additional context. If a specific constitutional gate failed, include the principle text and ask the planner to address it.

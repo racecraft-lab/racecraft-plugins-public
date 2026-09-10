@@ -15,8 +15,8 @@ the first is based on verified main. PR URLs and validation live in acceptance.m
 All branch names begin `codex/formal-methods/`. No layer may claim evidence owned
 by a later layer. No manager is selected solely from the existence of its schema.
 
-- [ ] T1 implemented and verified
-- [ ] T2 implemented and verified
+- [x] T1 implemented and verified
+- [x] T2 implemented and verified
 - [ ] T3 implemented and verified
 - [ ] T4 implemented and verified
 - [ ] T5 implemented and verified
