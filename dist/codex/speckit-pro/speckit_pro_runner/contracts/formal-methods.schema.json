@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Selective formal-methods model catalog",
+  "description": ".specify/formal-methods.json describes reusable models; only the workflow selection activates checks.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "tools", "models"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "tools": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "apalache": {"allOf": [{"$ref": "#/$defs/tool"}, {"properties": {"version": {"const": "0.62.2"}}}]},
+        "tlc": {"allOf": [{"$ref": "#/$defs/tool"}, {"properties": {"version": {"const": "1.7.4"}}}]},
+        "quint": {"$ref": "#/$defs/quint"}
+      }
+    },
+    "models": {"type": "object", "additionalProperties": {"$ref": "#/$defs/model"}}
+  },
+  "$defs": {
+    "name": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},
+    "text": {"type": "string", "pattern": "\\S"},
+    "quint": {
+      "type": "object", "additionalProperties": false,
+      "required": ["version", "root", "tree_sha256", "node"],
+      "properties": {
+        "version": {"const": "0.32.0"},
+        "root": {"$ref": "#/$defs/text"},
+        "tree_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "node": {"$ref": "#/$defs/text"}
+      }
+    },
+    "tool": {
+      "type": "object", "additionalProperties": false,
+      "required": ["version", "jar", "sha256", "java", "heap_mb"],
+      "properties": {
+        "version": {"enum": ["0.62.2", "1.7.4"]},
+        "jar": {"$ref": "#/$defs/text"},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "java": {"$ref": "#/$defs/text"},
+        "heap_mb": {"type": "integer", "minimum": 256, "maximum": 65536}
+      }
+    },
+    "model": {
+      "type": "object", "additionalProperties": false,
+      "required": ["checker", "module", "config", "inputs", "properties", "assumptions", "mode", "bounds", "budget"],
+      "oneOf": [
+        {"required": ["init", "next"], "not": {"required": ["specification"]}},
+        {"required": ["specification"], "properties": {"checker": {"const": "tlc"}}, "not": {"anyOf": [{"required": ["init"]}, {"required": ["next"]}]}}
+      ],
+      "allOf": [
+        {
+          "if": {"required": ["language"], "properties": {"language": {"const": "quint"}}},
+          "then": {"required": ["main"], "properties": {"checker": {"const": "apalache"}, "mode": {"enum": ["bounded", "temporal"]}, "module": {"pattern": "\\.qnt$"}}},
+          "else": {"not": {"required": ["main"]}, "properties": {"module": {"pattern": "\\.tla$"}}}
+        },
+        {
+          "if": {"properties": {"checker": {"const": "tlc"}}},
+          "then": {"properties": {"mode": {"enum": ["finite", "temporal"]}}},
+          "else": {"properties": {"mode": {"enum": ["bounded", "temporal", "inductive"]}}}
+        }
+      ],
+      "properties": {
+        "checker": {"enum": ["apalache", "tlc"]},
+        "module": {"type": "string", "pattern": "\\.(tla|qnt)$"},
+        "language": {"enum": ["tla", "quint"], "default": "tla"},
+        "main": {"$ref": "#/$defs/name"},
+        "trace": {"$ref": "#/$defs/trace"},
+        "config": {"type": "string", "pattern": "\\.cfg$"},
+        "inputs": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"$ref": "#/$defs/text"}, "description": "WORKFLOW_ROOT-relative durable files; include module, configuration, imports and data. Exclude specs/ and run/evidence directories. The runtime enforces confinement and membership."},
+        "implementation_inputs": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/text"}, "description": "Durable implementation and test files for the selected behavior. Required before final/Post checks; may name planned files during Plan."},
+        "properties": {"type": "object", "minProperties": 1, "propertyNames": {"$ref": "#/$defs/name"}, "additionalProperties": {"$ref": "#/$defs/property"}},
+        "assumptions": {"type": "array", "items": {"$ref": "#/$defs/text"}},
+        "mode": {"enum": ["bounded", "temporal", "inductive", "finite"]},
+        "init": {"$ref": "#/$defs/name"},
+        "next": {"$ref": "#/$defs/name"},
+        "specification": {"$ref": "#/$defs/name"},
+        "bounds": {"oneOf": [
+          {"type": "object", "additionalProperties": false, "required": ["length"], "properties": {"length": {"type": "integer", "minimum": 0, "maximum": 10000}}},
+          {"type": "object", "additionalProperties": false, "required": ["inductive_invariant"], "properties": {"inductive_invariant": {"$ref": "#/$defs/name"}}},
+          {"type": "object", "additionalProperties": false, "required": ["max_set_size"], "properties": {"max_set_size": {"type": "integer", "minimum": 1, "maximum": 10000000}}}
+        ]},
+        "budget": {
+          "type": "object", "additionalProperties": false, "required": ["timeout_seconds", "output_bytes"],
+          "properties": {
+            "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 3600},
+            "output_bytes": {"type": "integer", "minimum": 4096, "maximum": 8388608}
+          }
+        }
+      },
+      "description": "Inductive mode requires inductive_invariant and safety properties; temporal properties require temporal mode. Runtime validation enforces these relationships."
+    },
+    "trace": {
+      "type": "object", "additionalProperties": false,
+      "required": ["format", "paths", "projection", "actions", "init", "next", "adapter_test", "max_states"],
+      "properties": {
+        "format": {"const": "itf"},
+        "paths": {"type": "array", "minItems": 1, "maxItems": 50, "uniqueItems": true, "items": {"type": "string", "pattern": "^\\.specify/formal-traces/[^/]+/.+\\.itf\\.json$"}},
+        "projection": {"type": "object", "minProperties": 1, "propertyNames": {"$ref": "#/$defs/name"}, "additionalProperties": {"$ref": "#/$defs/name"}},
+        "actions": {"type": "object", "minProperties": 1, "propertyNames": {"$ref": "#/$defs/name"}, "additionalProperties": {"$ref": "#/$defs/name"}},
+        "init": {"$ref": "#/$defs/name"}, "next": {"$ref": "#/$defs/name"},
+        "adapter_test": {"$ref": "#/$defs/text"},
+        "max_states": {"type": "integer", "minimum": 2, "maximum": 1000}
+      }
+    },
+    "property": {
+      "type": "object", "additionalProperties": false, "required": ["kind", "requirement"],
+      "properties": {"kind": {"enum": ["invariant", "temporal"]}, "requirement": {"$ref": "#/$defs/text"}}
+    }
+  }
+}

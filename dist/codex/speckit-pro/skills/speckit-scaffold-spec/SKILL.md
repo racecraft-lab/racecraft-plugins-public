@@ -653,6 +653,19 @@ Design Concept doc produced in step 4 (`SPEC-<ID>-design-concept.md`) to fill:
   Verification Gates section verbatim so PROJECT_COMMANDS discovery and the
   TDD executors target the checks the interview agreed on.
 
+Populate the workflow's `## Formal Methods` block from the Design Concept's
+approved none/deferred/enabled decision using the [shared formal contract](../speckit-autopilot/references/formal-methods.md).
+When Quint is explicitly chosen, carry that model-language decision into Plan
+and its catalog entry using the coach's `references/quint-guide.md`; available
+Quint skills do not enroll additional behavior. Keep requested trace obligations
+with the selected model through Tasks and final/Post verification.
+Include rationale, named behavior/model IDs, new/existing origin, and requested
+model/model_and_trace evidence. Carry it into Plan, Tasks, Analyze, and Implement
+prompts. Tools and catalog entries do not activate checks. Keep unresolved scope
+in Clarify's existing flow. New models may wait for the separate post-Plan author;
+missing selected existing files are setup gaps. Preserve upstream phase templates.
+Validate the populated workflow with read-only formal-doctor at WORKFLOW_ROOT.
+
 The prompts should be strong enough that `$speckit-autopilot` can execute
 without the user hand-editing obvious missing context. The design concept is
 the primary enrichment layer; the roadmap scope is the seed. If a critical

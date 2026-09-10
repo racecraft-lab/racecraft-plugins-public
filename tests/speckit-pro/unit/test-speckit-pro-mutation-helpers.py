@@ -1267,7 +1267,7 @@ class MutationHelperTests(unittest.TestCase):
         self.assertNotIn("code", roster)
         source_names = [record["name"] for record in roster["files"]]
         self.assertEqual(source_names, list(install.CODEX_SOURCE_AGENT_TOML_NAMES))
-        self.assertEqual(len(source_names), 11)
+        self.assertEqual(len(source_names), 12)
         self.assertNotIn("sweep-classifier.toml", source_names)
         self.assertNotIn("sweep-analyst.toml", source_names)
         self.assertIn(f"{install.CODEX_OPTIONAL_HELPER_NAME}.toml", source_names)
@@ -1762,7 +1762,7 @@ class MutationHelperTests(unittest.TestCase):
         self.assertEqual(stderr_records, [])
         self.assert_response(response, "ok", 0)
         self.assertEqual(response["data"]["mutation"]["mutation_status"], "planned")
-        self.assertEqual(len(response["data"]["mutation"]["planned_operations"]), 11)
+        self.assertEqual(len(response["data"]["mutation"]["planned_operations"]), 12)
         self.assert_route_aware_snapshot_response(
             response,
             manifest_path=manifest_path,
@@ -6839,7 +6839,7 @@ class MutationHelperTests(unittest.TestCase):
         self.assertEqual(response["data"]["agent_files"], list(install.CODEX_SOURCE_AGENT_TOML_NAMES))
         self.assertEqual(response["data"]["model"], "gpt-5.6-sol")
         self.assertEqual(response["data"]["mutation"]["mutation_status"], "planned")
-        self.assertEqual(len(response["data"]["mutation"]["planned_operations"]), 11)
+        self.assertEqual(len(response["data"]["mutation"]["planned_operations"]), 12)
         self.assertEqual(response["data"]["verification"], {"status": "planned", "matched_files": []})
         self.assertFalse(response["data"]["writes_state"])
         self.assertFalse(response["data"]["restart_required"])
@@ -7101,11 +7101,9 @@ This line must not be copied.
             ("restack", "deferred"),
             ("relocate-process-artifacts", "deferred"),
             ("plan-layers-marker-plan", "deferred"),
-            ("detect-stack-manager-plan", "out_of_scope"),
         ]
         commands_by_helper = {
             "restack": [["gh", "pr", "edit"]],
-            "detect-stack-manager-plan": [["gh", "pr", "create"]],
         }
 
         for helper_id, promotion_status in cases:
@@ -7187,7 +7185,7 @@ This line must not be copied.
             self.assertEqual(stderr_records, [])
             self.assert_response(response, "ok", 0)
             self.assertEqual(response["data"]["mutation"]["mutation_status"], "planned")
-            self.assertEqual(len(response["data"]["mutation"]["planned_operations"]), 11)
+            self.assertEqual(len(response["data"]["mutation"]["planned_operations"]), 12)
             self.assertEqual(stale.read_text(encoding="utf-8"), "stale\n")
 
             completed, response, stderr_records = run_runner(
@@ -7216,7 +7214,7 @@ This line must not be copied.
             mutation = response["data"]["mutation"]
             self.assertEqual(mutation["mutation_status"], "no_op")
             self.assertEqual(mutation["planned_operations"], [])
-            self.assertEqual(len(mutation["no_op_operations"]), 11)
+            self.assertEqual(len(mutation["no_op_operations"]), 12)
             self.assertFalse(response["data"]["restart_required"])
 
     def test_install_codex_agents_defaults_to_fake_user_home_without_touching_real_home(self) -> None:

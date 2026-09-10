@@ -10,7 +10,9 @@
 #     the ../../docs/ai/specs/ prefix is hardcoded and only the filename is tokenized.
 up: "[{{ROADMAP_TITLE}}](../../docs/ai/specs/{{ROADMAP_FILENAME}}.md)"
 related: []                  # list of relative []() links; carried, unenforced in v1
-status: ""                   # carried, unenforced in v1
+# Empty status is valid for a fresh scaffold. When set, use pending, in_progress,
+# blocked, failed, complete, or archived; spaces in status values are unsupported.
+status: ""                   # optional; rendered as generated-index metadata when set
 rank:                        # carried, unenforced in v1
 spec_id: "{{SPEC_ID}}"       # e.g., SPEC-002 — namespace-matches the containing directory
 structureVersion: 1          # keep in sync with the lint scripts' hardcoded literal

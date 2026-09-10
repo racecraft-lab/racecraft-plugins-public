@@ -2,6 +2,13 @@
 
 Detailed procedures for Steps 3.0-3.3 of the autopilot workflow.
 
+For enabled formal selection, run the `post` checkpoint after the Integration
+Suite's producing tests and before that item completes, with `state_file` and
+the declared implementation scope. Follow [Selected formal checkpoints](formal-methods.md#later-planning-implementation-and-closeout).
+This selected prerequisite is blocking, including when a parallel Post track
+fails or other extension findings are advisory. Coverage validation requires
+current final/Post evidence and the matching durable state mirror.
+
 ## Contents
 
 - [Post-Implementation Parallel Group](#post-implementation-parallel-group) — capability-driven dispatch for tasks 10/11/12/13/14
@@ -419,12 +426,13 @@ opens one slice PR.
    `implementation_checkpoint.head_sha` or
    `implementation_checkpoint.commit_sha`; without those commit SHAs, stop
    before branch or PR mutation and repair the marker checkpoints.
-7b. `detect-stack-manager-plan` is out of scope and must not be invoked as an
-   installed runner helper. Use explicit packet-owned
-   `gh pr create --base --head --title --body-file` commands for creation and
-   explicit `gh pr edit <number> --base <branch>` commands for retargeting.
-   If a prior `gh-stack` mutation already occurred, block with recovery evidence
-   rather than mixing managers.
+7b. Run `detect-stack-manager-plan` in `dry_run` mode per
+   [Optional stack manager](stack-manager.md). It qualifies CLI **and** skill,
+   repository and owned topology, respects operator fallback, and blocks manager
+   switching after mutation. Preserve packet-owned PR creation and refresh;
+   selected gh-stack links verified existing PR URLs only after packet checks.
+   After a partial `gh-stack` mutation, block with recovery evidence instead of
+   mixing managers.
 7c. Persist stack-manager evidence in the emission state, command log, and PRS
    records: `selected_manager`, `fallback_reason`, `mutation_boundary`,
    `gh_stack.available`, `gh_stack.supported`, `gh_stack.reason`,
@@ -484,6 +492,11 @@ prior `gh-stack` mutation crossed its mutation boundary, resume with
 same-manager recovery evidence or block; do not mix managers.
 
 ## 3.3 Copilot Review Remediation Loop
+
+After review edits, renew affected selected formal checkpoints per
+[Selected formal checkpoints](formal-methods.md#later-planning-implementation-and-closeout).
+Model/catalog/spec/plan changes first require planning reconciliation. Run final
+and Post checks after their producing tests before reporting review fixes complete.
 
 **This step is MANDATORY after PR creation.** Use the `/loop`
 command to schedule recurring review comment monitoring.

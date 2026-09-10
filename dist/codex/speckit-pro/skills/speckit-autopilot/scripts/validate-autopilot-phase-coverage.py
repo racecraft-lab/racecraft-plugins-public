@@ -264,6 +264,7 @@ RULE_PROBLEM_KEYS = {
         "state_status_errors",
         "stage_mirror_errors",
         "workflow_authority_errors",
+        "formal_checkpoint_errors",
         "in_progress_errors",
         "duplicate_state_steps",
         "state_order_errors",
@@ -294,6 +295,14 @@ RULE_PROBLEM_KEYS = {
 # emitted key set from a real report and fails when a key is missing here, so a
 # key cannot be added to the report without a verdict.
 PROBLEM_KEY_INTENT: dict[str, dict[str, str]] = {
+    "formal_checkpoint_errors": {
+        "verdict": "gated",
+        "reason": (
+            "Explicitly selected formal checks must have current content-bound "
+            "evidence and an agreeing state mirror before phase advancement. "
+            "Disabled workflows do not probe formal tools or add prerequisites."
+        ),
+    },
     # --- gated: armed by ``--rule status-evidence``, the invocation the
     # autopilot issues at every phase transition. ---
     "workflow_status_evidence_errors": {
@@ -4349,6 +4358,31 @@ def stage_mirror_errors(workflow_text: str, state: dict[str, Any]) -> dict[str, 
     return {"stage_mirror_errors": errors}
 
 
+def formal_checkpoint_errors(workflow: Path, workflow_text: str, state: dict[str, Any], steps: list[PlanStep]) -> dict[str, list[str]]:
+    plugin_root = str(Path(__file__).resolve().parents[3])
+    if plugin_root not in sys.path:
+        sys.path.insert(0, plugin_root)
+    try:
+        from speckit_pro_runner.formal.lifecycle import coverage_errors
+        from speckit_pro_runner.formal.selection import selection_from_workflow
+
+        selection = selection_from_workflow(workflow_text)
+        if selection["status"] != "enabled":
+            return {"formal_checkpoint_errors": []}
+        root = _repository_root(workflow.parent)
+        if root is None:
+            return {"formal_checkpoint_errors": ["Cannot resolve WORKFLOW_ROOT for selected formal evidence"]}
+        relative = workflow.resolve().relative_to(root).as_posix()
+        if selection_from_workflow(read_text(workflow)) != selection:
+            return {"formal_checkpoint_errors": ["Selected formal authority differs from the local workflow"]}
+        errors = coverage_errors(root, relative, state, [(step.step, step.status) for step in steps])
+    except ImportError:
+        errors = ["Selected formal checkpoint support is unavailable"] if "## Formal Methods" in workflow_text else []
+    except (ValueError, KeyError, TypeError, OSError) as exc:
+        errors = [f"Invalid selected formal checkpoint: {exc}"]
+    return {"formal_checkpoint_errors": errors}
+
+
 def build_report(
     workflow: Path,
     state: Path,
@@ -4372,6 +4406,7 @@ def build_report(
     state_result = validate_state(plan_steps)
     status_result = validate_state_status(state_data)
     stage_result = stage_mirror_errors(workflow_text, state_data)
+    formal_result = formal_checkpoint_errors(workflow, workflow_text, state_data, plan_steps)
     workflow_status_result = validate_workflow_status_evidence(workflow_text)
     projection_result = validate_projection_integrity(
         state_data,
@@ -4390,6 +4425,7 @@ def build_report(
         **workflow_status_result,
         **status_result,
         **stage_result,
+        **formal_result,
         **workflow_checkpoint_result,
         # Its own key, never folded into the gated path's. Folding would report it
         # under a frozen key, and would newly arm every gated-path error

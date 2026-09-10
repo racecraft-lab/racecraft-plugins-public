@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "tools": {
+    "tlc": {
+      "version": "1.7.4",
+      "jar": ".specify/tools/tla2tools-1.7.4.jar",
+      "sha256": "936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88",
+      "java": "java",
+      "heap_mb": 1024
+    }
+  },
+  "models": {
+    "counter-tlc": {
+      "checker": "tlc",
+      "module": "formal/counter-tlc/CounterTLC.tla",
+      "config": "formal/counter-tlc/CounterTLC.cfg",
+      "inputs": ["formal/counter-tlc/CounterTLC.tla", "formal/counter-tlc/CounterTLC.cfg"],
+      "properties": {
+        "Bounded": {"kind": "invariant", "requirement": "Never exceed the limit"},
+        "Progress": {"kind": "temporal", "requirement": "Eventually reach the limit"}
+      },
+      "assumptions": ["Limit = 2", "Weak fairness of Next: a continuously enabled increment eventually runs"],
+      "mode": "temporal",
+      "specification": "Spec",
+      "bounds": {"max_set_size": 1000000},
+      "budget": {"timeout_seconds": 30, "output_bytes": 1048576}
+    }
+  }
+}

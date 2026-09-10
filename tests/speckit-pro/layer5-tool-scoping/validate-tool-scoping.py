@@ -57,7 +57,7 @@ UNTRUSTED_INPUT_ALLOWLISTS = {
         "mcp__plugin_speckit-pro_sweep-broker__submit_result",
     },
 }
-TERMINAL_WORKERS = ("implement-executor", "uat-runbook-author")
+TERMINAL_WORKERS = ("implement-executor", "uat-runbook-author", "formal-model-author")
 SKILL_DRIVEN_EXECUTORS = ("phase-executor", "analyze-executor", "checklist-executor")
 CODEX_READ_ONLY_ROLES = ("codebase-analyst", "spec-context-analyst", "domain-researcher", "clarify-executor")
 CODEX_WRITE_ROLES = (
@@ -66,6 +66,7 @@ CODEX_WRITE_ROLES = (
     "implement-executor",
     "phase-executor",
     "uat-runbook-author",
+    "formal-model-author",
 )
 TEST_METHOD_ORDER = (
     "test_operator_tool_surface_no_tools_allowlist_pinning",
