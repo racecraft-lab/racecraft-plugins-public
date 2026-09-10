@@ -756,6 +756,10 @@ for phase in PHASES starting from first_pending:
     6. Check .specify/extensions.yml for after_<phase> hooks
        → run accepted hooks (non-destructive), skip duplicates
     7. Validate gate directly in the main session:
+       Before Tasks, after Analyze/review remediation, and after the final
+       producing tests, run the applicable planning/final formal checkpoint
+       from the shared formal-methods.md lifecycle contract. Include state_file;
+       keep selected prerequisites incomplete until current evidence exists.
        After Plan's ordinary executor returns, first run the conditional
        formal-model-author dispatch and formal-check preview/execute sequence
        from the shared formal-methods.md contract. Keep Plan/G3 incomplete until

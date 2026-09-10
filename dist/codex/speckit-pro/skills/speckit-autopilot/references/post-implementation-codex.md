@@ -4,6 +4,13 @@ Run these items only after all seven SDD phases complete and G7 passes. They
 remain part of the same durable plan and must be mirrored in
 `autopilot-state.json`.
 
+For enabled formal selection, run `checkpoint: post` after the Integration
+Suite's producing tests, including `state_file`, before marking it complete.
+Repeat affected planning/final/Post checks after review edits per
+[Selected formal checkpoints](formal-methods.md#later-planning-implementation-and-closeout).
+Formal failures block even when other Post extension failures are advisory.
+Coverage validation requires current evidence and the matching state mirror.
+
 On resume, all seven SDD phases being complete is not sufficient to stop.
 If any Post item is missing, pending, or in progress, rebuild the durable plan
 and continue with the first incomplete Post item.
@@ -285,12 +292,14 @@ Codex parent-session responsibilities:
    `implementation_checkpoint.head_sha` or
    `implementation_checkpoint.commit_sha`; without those commit SHAs, stop
    before branch or PR mutation and repair the marker checkpoints.
-5. `detect-stack-manager-plan` is out of scope and must not be invoked as an
-   installed runner helper. Use explicit packet-owned
-   `gh pr create --base --head --title --body-file` commands for creation and
-   explicit `gh pr edit <number> --base <branch>` commands for retargeting.
-   After any partial `gh-stack` mutation, block with recovery evidence instead
-   of mixing managers.
+5. Run `detect-stack-manager-plan` in `dry_run` mode per
+   [Optional stack manager](stack-manager.md).
+   Qualify CLI **and** skill, repository and owned topology before selecting
+   gh-stack. Preserve packet-owned PR creation and refresh; link verified existing
+   PR URLs only after packet checks. Resume partial mutation through its recorded
+   manager; never mix managers or recreate PRs.
+   After a partial `gh-stack` mutation, block with recovery evidence instead of
+   mixing managers.
 6. Record each slice outcome in `update_plan`, `autopilot-state.json`, and the
    workflow evidence before advancing the next Post item.
 

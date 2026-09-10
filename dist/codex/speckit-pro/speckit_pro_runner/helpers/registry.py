@@ -530,10 +530,10 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         "detect-stack-manager-plan",
         "detect-stack-manager-plan",
         ("dry_run",),
-        f"{SCRIPT_BASE}/detect-stack-manager.sh",
-        "out_of_scope",
+        None,
+        "golden_only",
         "command_plan",
-        deferred_authoritative_request(),
+        mutation_authoritative_request("detect-stack-manager-plan"),
     ),
 }
 

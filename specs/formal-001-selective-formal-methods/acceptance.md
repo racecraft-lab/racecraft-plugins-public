@@ -11,15 +11,17 @@ Status: incomplete. Automated results do not establish manual onboarding success
 | A5 / US5 | Manager capability matrix, fallback, partial mutation/recovery, preserved metadata and no duplicates | Pending |
 | A6 / all | Disabled compatibility, durable archival, every advertised install profile, targeted/full suites, artifact/ripwire gates, installed parity | Pending |
 | A7 / full harness | Complete suite-manifest review, test/eval coverage, full-plugin scaffold/autopilot and installed Claude/Codex integration, gap remediation and regression evidence | Pending; required before final qualification and PR delivery |
+| A8 / languages | Python, TypeScript, and Swift: real valid/defective implementations, ordered strict traces, numeric boundaries, source freshness, test/compile integration and documented runtime profiles | Research in progress; execution pending |
+| A9 / Quint | Pinned optional Quint/Apalache compatibility, ITF interoperability, useful model-based tests and separately checked observed implementation traces; no implicit downloads | Research confirms modeling/MBT role; execution qualification pending |
 
 ## Delivery
 
 | Order | Branch | PR | Verification |
 |---|---|---|---|
 | 1 | `codex/formal-methods/coaching` | Pending | 5,132/5,132 committed-checkout suite; docs validation including four browser checks |
-| 2 | `codex/formal-methods/apalache` | Pending | Native Apalache 30/30; deterministic formal 18/18; installer 192/192; read-only helpers 107/107 |
+| 2 | `codex/formal-methods/apalache` | Pending | 5,214/5,214 committed-checkout suite; native Apalache 30/30; installer 192/192; read-only helpers 107/107 |
 | 3 | `codex/formal-methods/tlc` | Pending | 34/34 deterministic and native Apalache/TLC checks; full delivery qualification remains required |
-| 4 | `codex/formal-methods/lifecycle` | Pending | Pending |
+| 4 | `codex/formal-methods/lifecycle` | Pending | 39/39 combined native/formal checks; manager 9/9; phase coverage 39/39; bookkeeping 289/289; stage resolution 257/257; mutation helpers 192/192; routing eval contracts 21/21 |
 | 5 | `codex/formal-methods/traces` | Pending | Pending |
 | 6 | `codex/formal-methods/qualification` | Pending | Pending |
 
@@ -82,3 +84,24 @@ Organization runner admission and VM sizing are not inferred from this repositor
   required the sandbox to permit its local runtime socket.
 - A 34/34 combined run is automated evidence, not manual onboarding acceptance
   or qualification of other Java, OS, or container profiles.
+
+## Lifecycle-layer evidence
+
+- Current planning evidence, separate operator waivers, superseded/interrupted
+  records, all resume forms, final/Post implementation scope, and durable-state
+  coverage passed deterministic tests. Native checkers also passed the combined
+  39/39 run; execution remained on the previously qualified macOS Java profile.
+- Manager selection passed nine deterministic cases covering both capabilities,
+  missing CLI/skill, unsupported version/repository, incompatible topology,
+  explicit fallback, existing PR identity/metadata boundaries, and partial
+  mutation recovery. Live repository Stacks API access succeeded; PR linking
+  and post-link recovery qualification remain part of final delivery.
+- The shared phase, gate and Post references now enforce the selected checks.
+  The complete existing mutation helper, stage resolution, coverage, bookkeeping
+  and eval-routing contract tests passed. Full committed-checkout and installed
+  integration qualification are still required for delivery.
+- Ripwire's quality review identified layering churn and input-validation
+  complexity. PR identity validation was separated from local ancestry checks,
+  and checkpoint writing retains its original four-argument interface. Test-gate
+  references are covered by the manifest suites/native checks; dynamic dispatch
+  and preexisting unrelated scripts remain limitations of its static reach map.

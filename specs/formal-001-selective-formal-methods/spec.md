@@ -58,12 +58,23 @@ is per behavior or subsystem, reusable across stories, and always explicit.
   PR metadata, identities, ownership, recovery state, and partial-mutation rules.
 - FR12: Preserve disabled-workflow behavior and Claude/Codex parity. Hosted CI is
   default; optional organization runners retain admission and resource checks.
+- FR13: Support Python, TypeScript, and Swift implementations through a shared
+  trace contract and explicit language-specific emitters/test integration. Verify
+  serialization, numeric and concurrency semantics from official documentation;
+  execute valid and deliberately defective implementations in each language.
+  Language detection never activates formal methods or replaces model selection.
+- FR14: Evaluate and qualify Quint as an optional modeling front end for Apalache,
+  with version-pinned tooling and ITF trace interoperability. Keep model-based
+  test generation and validation of observed implementation traces distinct.
+  No Quint command may silently acquire a checker during an ordinary workflow.
 
 ## Non-goals
 
 Automatic enrollment, proof of all implementation behavior from model success,
 unbounded guarantees from bounded checks, new upstream SpecKit command forks,
-automatic runtime installation, Quint execution, or TLAPS execution.
+automatic runtime installation, automatic verification/translation of arbitrary
+application source, or TLAPS execution. Quint's optional front end is now in the
+research and qualification scope following the operator's update.
 
 ## Acceptance
 

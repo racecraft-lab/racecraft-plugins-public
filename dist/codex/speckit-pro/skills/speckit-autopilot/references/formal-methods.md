@@ -47,7 +47,8 @@ is enabled. The phase executor retains its single-command contract. The parent:
        "workflow_file": "<WORKFLOW_FILE>",
        "spec_file": "specs/<feature>/spec.md",
        "plan_file": "specs/<feature>/plan.md",
-       "checkpoint": "plan"
+       "checkpoint": "plan",
+       "state_file": "<workflow-directory>/autopilot-state.json"
      }
    }
    ```
@@ -62,8 +63,10 @@ is enabled. The phase executor retains its single-command contract. The parent:
    repair attempts, stop with the counterexample and the unresolved decision.
 5. Pass `workflow_file` to `validate-gate` G3 so its read-only check verifies the
    current record. Only then mark Plan/G3 complete in the workflow and state.
-   Mirror the formal verdict, fingerprint, selection, and evidence path in
-   `autopilot-state.json` under `formal_checkpoint`; the workflow is authoritative.
+   Supply the existing `state_file` beside the workflow. The helper mirrors the
+   selection and checkpoint verdict, fingerprint, and evidence path under
+   `formal_checkpoints`; the workflow is authoritative. A failed or interrupted
+   state write remains incomplete until the check and coverage validation rerun.
 
 ## Commit and resume
 
@@ -86,6 +89,58 @@ An operator waiver must be explicit and recorded separately; it is not a pass.
 After Checklist, Analyze, or review changes to spec/plan/model inputs, reconcile
 and renew evidence before Tasks or the planning boundary. See the lifecycle
 checks in this release's acceptance record for the qualified resume cases.
+
+## Later planning, implementation, and closeout
+
+Before Tasks and again after Analyze or planning review remediation, use the
+same author/review/check sequence with `checkpoint: planning`. Do this even if
+the original Plan row passed. The newest Plan or planning record controls resume;
+an interrupted newer record cannot fall back to an older success. Retain the
+seven-phase order and the ordinary executors' command contracts.
+
+Tasks must map selected properties to implementation obligations. During Plan,
+declare the exact relevant source, tests, configuration, and adapter paths in
+each model's `implementation_inputs`, including planned files. Review that scope
+against the implementation before closeout. A planned file may be absent during
+planning; every declared file must exist for final and Post verification.
+Planning fingerprints exclude implementation file contents. Final/Post
+fingerprints include them, so relevant implementation edits invalidate results.
+
+For G5 and G6, supply `workflow_file` to `validate-gate`. Before implementation
+entry and the planning-stage commit, run the existing coverage validator; it
+checks current formal evidence and its durable state mirror. No confidence or
+generic failure override can bypass this requirement.
+
+After final implementation tests, run `formal-check` with `checkpoint: final`,
+then `validate-gate` G7 with `workflow_file`. After the Post Integration Suite's
+tests finish, run `checkpoint: post` before that item can complete. Both calls
+include `state_file`. A selected formal failure is blocking even when other
+Post extension failures are advisory. Repeat affected checks after review fixes;
+reconcile planning evidence first if a requirement, plan, model, or catalog
+changed. Preserve every returned `commit_paths` alongside normal bookkeeping.
+
+## Explicit operator waiver
+
+An operator may explicitly waive one current checkpoint. Record their actual
+decision and its chat/issue reference; never invent approval. Add this object
+to the same preview/apply `formal-check` request:
+
+```json
+"waiver": {
+  "operator_confirmed": true,
+  "approved_by": "<operator>",
+  "reason": "<accepted limitation and why>",
+  "approval_reference": "<actual decision reference>"
+}
+```
+
+The helper stores `<checkpoint>-waiver.json` separately from checker results,
+reports `waived`, and binds it to the current selection, engine, catalog and
+inputs. It can waive a missing runtime after the catalog and selected files are
+complete. Changed inputs invalidate it. A new check supersedes an older waiver;
+use a fresh explicit decision if the operator intends to waive that new result.
+Include waivers as limitations in handoff and PR evidence; never count them as
+successful model checks. Other checkpoints remain independently required.
 
 ## Model catalog
 

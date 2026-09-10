@@ -7101,11 +7101,9 @@ This line must not be copied.
             ("restack", "deferred"),
             ("relocate-process-artifacts", "deferred"),
             ("plan-layers-marker-plan", "deferred"),
-            ("detect-stack-manager-plan", "out_of_scope"),
         ]
         commands_by_helper = {
             "restack": [["gh", "pr", "edit"]],
-            "detect-stack-manager-plan": [["gh", "pr", "create"]],
         }
 
         for helper_id, promotion_status in cases:

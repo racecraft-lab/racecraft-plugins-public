@@ -105,7 +105,8 @@ def validate_mode(model: dict[str, Any]) -> None:
 
 def validate_model(model: Any, root: Path, selected: dict[str, Any]) -> dict[str, Any]:
     behavior = {"specification"} if isinstance(model, dict) and "specification" in model else {"init", "next"}
-    require_fields(model, {"checker", "module", "config", "inputs", "properties", "assumptions", "mode", "bounds", "budget"} | behavior, "model")
+    optional = {"implementation_inputs"} & model.keys() if isinstance(model, dict) else set()
+    require_fields(model, {"checker", "module", "config", "inputs", "properties", "assumptions", "mode", "bounds", "budget"} | behavior | optional, "model")
     require_text(model["checker"], "model.checker")
     if model["checker"] not in VERSIONS:
         raise FormalError("unsupported", f"unsupported checker: {model['checker']}")
@@ -123,6 +124,13 @@ def validate_model(model: Any, root: Path, selected: dict[str, Any]) -> dict[str
     for assumption in model["assumptions"]:
         require_text(assumption, "assumption")
     validate_model_paths(model, root, selected)
+    implementation = model.get("implementation_inputs", [])
+    if "implementation_inputs" in model and not implementation:
+        raise SelectionError("implementation_inputs must contain at least one durable path when declared")
+    if not isinstance(implementation, list) or any(not isinstance(p, str) for p in implementation) or len(set(implementation)) != len(implementation):
+        raise SelectionError("implementation_inputs must be a list of unique durable paths")
+    for path in implementation:
+        confined(root, path, durable=True)
     from .native_config import validate_apalache, validate_tlc
     validator = validate_tlc if model["checker"] == "tlc" else validate_apalache
     validator(model, confined(root, model["config"]).read_text(encoding="utf-8"))

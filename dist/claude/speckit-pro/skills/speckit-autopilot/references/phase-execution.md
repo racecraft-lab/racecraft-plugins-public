@@ -456,6 +456,10 @@ domain runs.
 
 ### Phase 5: Tasks
 
+Before dispatching Tasks for an enabled formal selection, reconcile and renew
+the `planning` checkpoint per [Selected formal checkpoints](formal-methods.md#later-planning-implementation-and-closeout).
+Include the selected properties' implementation obligations and declared scope.
+
 Read the workflow file's `### Tasks Prompt` section.
 Spawn a subagent.
 
@@ -2675,6 +2679,10 @@ happens. A reporting-content problem is not a write failure. A missing or
 unreadable field produces a `None` entry, not a gap.
 
 #### Step 4: Final Verification
+
+After the producing implementation tests, run the selected `final` formal
+checkpoint with the state mirror per [Selected formal checkpoints](formal-methods.md#later-planning-implementation-and-closeout).
+G7 requires current evidence; model-and-trace selections also require trace checks.
 
 After all phase groups complete:
 

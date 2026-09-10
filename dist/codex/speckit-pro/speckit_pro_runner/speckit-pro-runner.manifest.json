@@ -71,7 +71,7 @@
         "value": "speckit_pro_runner/formal/catalog.py",
         "display": "speckit_pro_runner/formal/catalog.py"
       },
-      "sha256": "90fb97c20fc67cfeedcaac392258d7a7fc2118bff4cd51edb74afa356129f4ff"
+      "sha256": "3c3e3328f1ed6fc6030c79899c7c2d2f2f5c30debf0f01281874cd3adc5bc9fb"
     },
     {
       "path": {
@@ -87,7 +87,7 @@
         "value": "speckit_pro_runner/formal/evidence.py",
         "display": "speckit_pro_runner/formal/evidence.py"
       },
-      "sha256": "06293b772e769d5ac385d2ed9e1baeb41653b44a409a99751d65323738cfa97b"
+      "sha256": "de330cf92e317d11f7441b3bbc33e5f232dc00c9440213b51d2766e44df2172d"
     },
     {
       "path": {
@@ -95,7 +95,15 @@
         "value": "speckit_pro_runner/formal/helper.py",
         "display": "speckit_pro_runner/formal/helper.py"
       },
-      "sha256": "9039ccc1fce7e0f77bdd39c3b66f4c0998f865414491b3d054625d312de2302f"
+      "sha256": "8991b426066551c8be8741c0cfd8f569cd9c4a44177fb2f452979ffd1718f887"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/formal/lifecycle.py",
+        "display": "speckit_pro_runner/formal/lifecycle.py"
+      },
+      "sha256": "0b040f57a115b0e7d0ae1ced14886eae8d7aaa855edf9029c3764aa404147339"
     },
     {
       "path": {
@@ -223,7 +231,7 @@
         "value": "speckit_pro_runner/helpers/pr_emission.py",
         "display": "speckit_pro_runner/helpers/pr_emission.py"
       },
-      "sha256": "09c59d4c1152b0032444599ac4270147b0481205db39273555d177ef03bf09a9"
+      "sha256": "d9f67d2b8adf85ffd740f770653987e83a29069d53de6ce13ff9c904f238360c"
     },
     {
       "path": {
@@ -247,7 +255,15 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "f2868baca4ed1e572477ae146f48c08ac90ab19362370ef0d8d72b260088514f"
+      "sha256": "49e6e3fece706df1f08da556b2ae8145d2cdf1a9be805c4aa89d42a5aae78a9f"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/stack_manager.py",
+        "display": "speckit_pro_runner/helpers/stack_manager.py"
+      },
+      "sha256": "11df4533e645e3fffca7bf2bbbcecfc4d61529e809e13823cd3e096b10776d1c"
     },
     {
       "path": {
