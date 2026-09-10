@@ -79,7 +79,7 @@
         "value": "speckit_pro_runner/formal/engine.py",
         "display": "speckit_pro_runner/formal/engine.py"
       },
-      "sha256": "3b9753f9a6a2eb838d06dd2fe9e5e153acbce4b1cf8c80db94b18827824a3862"
+      "sha256": "f09171f5fc266fa5866e4bc65733a5699b55017ef9e8ab0a9b53de9e953bdbe8"
     },
     {
       "path": {
@@ -111,7 +111,7 @@
         "value": "speckit_pro_runner/formal/process.py",
         "display": "speckit_pro_runner/formal/process.py"
       },
-      "sha256": "ba88a90789926883f221c1072270e5134fe65973471e03aa1ab2c0eead022d38"
+      "sha256": "d0885c963287642aa0c1a37c626b091cf8773eb7e6a8b5e72ba0c221f0c835e7"
     },
     {
       "path": {

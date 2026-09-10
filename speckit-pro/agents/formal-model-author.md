@@ -14,6 +14,12 @@ disallowedTools: Agent, SendMessage, Skill
 
 # Formal Model Author
 
+Use capability-first discovery in `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`.
+Ground each claim using `speckit-pro/skills/speckit-autopilot/references/grounding.md`.
+For externally sourced facts, return `Capability path: <need> -> <source>;
+Evidence: <citations or local file refs>; Confidence: <high|medium|low>`.
+State when documentation is silent and identify the execution evidence needed.
+
 You receive WORKFLOW_ROOT, approved formal selection, spec and plan paths,
 existing model inputs, and an explicit permitted-output list from the parent.
 You are not alone in the worktree: preserve other agents' edits. Work only on the

@@ -20,7 +20,7 @@ sys.path[:0] = [str(PLUGIN_ROOT), str(REPO_ROOT / "tests/speckit-pro/lib")]
 
 from speckit_pro_runner.formal import apalache, catalog, helper
 from speckit_pro_runner.formal.evidence import read_checkpoint, record_path
-from speckit_pro_runner.formal.process import run_process
+from speckit_pro_runner.formal.process import run_process, start_process
 from speckit_pro_runner.helpers.registry import dispatch_helper
 from speckit_pro_runner.helpers.read_only import resolve_autopilot_stage, validate_gate
 from test_result import run_counted
@@ -144,6 +144,8 @@ class FormalCheckerTests(unittest.TestCase):
             self.assertEqual(2, stale["exit_code"])
 
     def test_process_timeout_and_output_budget(self) -> None:
+        with self.assertRaises(ValueError):
+            start_process(["/bin/sh", "-c", "exit 0"], self.root, {})
         timed = run_process([sys.executable, "-c", "import time; time.sleep(3)"], self.root, self.root / "timeout.log", 1, 4096)
         self.assertEqual("timeout", apalache.verdict(timed))
         noisy = run_process([sys.executable, "-c", "print('X' * 20000)"], self.root, self.root / "output.log", 5, 4096)

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import shutil
+import sys
 import subprocess
 import threading
 import time
@@ -17,7 +19,7 @@ def run_process(argv: list[str], cwd: Path, log: Path, timeout: int, output_byte
     started = time.monotonic()
     result: dict[str, Any] = {"argv": argv, "exit_code": None, "timed_out": False, "output_limited": False}
     with log.open("wb") as output:
-        process = subprocess.Popen(argv, cwd=cwd, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=False)
+        process = start_process(argv, cwd, env)
         reader = threading.Thread(target=capture, args=(process, output, output_bytes, result), daemon=True)
         reader.start()
         try:
@@ -34,6 +36,18 @@ def run_process(argv: list[str], cwd: Path, log: Path, timeout: int, output_byte
     result["output"] = log.read_bytes().decode("utf-8", errors="replace")
     return result
 
+
+
+def start_process(argv: list[str], cwd: Path, env: dict[str, str]) -> subprocess.Popen:
+    """Use statically named runtimes, validating the earlier executable discovery."""
+    if argv[0] == sys.executable:
+        return subprocess.Popen([sys.executable, *argv[1:]], cwd=cwd, env=env, stdin=subprocess.DEVNULL,
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=False)
+    candidate = shutil.which("java")
+    if candidate is None or Path(candidate).resolve() != Path(argv[0]).resolve():
+        raise ValueError("formal subprocess must use the verified Java on PATH or the active Python")
+    return subprocess.Popen([candidate, *argv[1:]], cwd=cwd, env=env, stdin=subprocess.DEVNULL,
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=False)
 
 def capture(process: subprocess.Popen, output: Any, limit: int, result: dict[str, Any]) -> None:
     total = 0

@@ -20,7 +20,10 @@ from .process import run_process
 def inspect_tool(root: Path, tool: dict[str, Any], checker: str) -> dict[str, Any]:
     jar = Path(tool["jar"])
     jar = jar.resolve() if jar.is_absolute() else confined(root, tool["jar"])
-    java = shutil.which(tool["java"])
+    java = shutil.which("java")
+    requested_java = shutil.which(tool["java"])
+    if java is None or requested_java is None or Path(java).resolve() != Path(requested_java).resolve():
+        raise FormalError("missing_tool", "Select the configured Java runtime on PATH before running formal-doctor")
     if java is None or not jar.is_file():
         raise FormalError("missing_tool", f"Install the pinned {checker} distribution and Java explicitly; expected jar: {tool['jar']}")
     actual = digest(jar)
