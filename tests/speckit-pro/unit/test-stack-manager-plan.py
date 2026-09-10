@@ -126,4 +126,4 @@ class StackManagerTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    sys.exit(run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(StackManagerTests), label="stack-manager-plan"))
+    sys.exit(run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(StackManagerTests), label="test-stack-manager-plan"))
