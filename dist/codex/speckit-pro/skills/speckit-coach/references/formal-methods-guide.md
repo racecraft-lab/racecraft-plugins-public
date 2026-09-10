@@ -75,7 +75,8 @@ to TLC. Keep stuttering and assumptions explicit in either model.
 - Completed finite-state exploration establishes the checked properties of that
   finite model, under its assumptions and fairness settings.
 - Inductive evidence requires every declared base and step obligation. One
-  completed obligation or type-check-only output is insufficient.
+  completed obligation or type-check-only output is insufficient. The declared
+  strengthening must also imply each required property (the consequence check).
 - Implementation-trace conformance concerns the observed runs projected through
   a tested adapter. It needs legal transitions as well as valid states. A passing
   model or replayed model counterexample alone says nothing about all code runs.
@@ -114,6 +115,9 @@ For an optional approachable modeling language, use [quint-guide.md](quint-guide
 and the pinned upstream language/modeling references. For requested observed
 implementation evidence, use [implementation-traces.md](implementation-traces.md).
 Both choices retain explicit feature selection.
+
+For pinned setup, the optional official container, consumer CI and interrupted
+upgrade recovery, use [formal-setup.md](formal-setup.md).
 
 ## Official references
 

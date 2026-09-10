@@ -26,6 +26,7 @@ def installation(root: Path, tool: dict[str, Any]) -> Path:
 
 def tree_digest(directory: Path) -> str:
     """Pin the compiler and all installed dependencies without following symlinks."""
+    directory = directory.resolve(strict=True)
     result = hashlib.sha256()
     for path in sorted(directory.rglob("*")):
         name = path.relative_to(directory).as_posix()

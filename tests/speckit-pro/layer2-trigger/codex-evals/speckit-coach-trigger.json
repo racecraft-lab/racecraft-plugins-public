@@ -106,5 +106,17 @@
   {
     "query": "how is the roadmap home note / Map of Content structured? I want to understand the curated epics zone vs the generated INDEX zone and whether I can edit the INDEX by hand",
     "should_trigger": true
+  },
+  {
+    "query": "Should we use a focused formal model for lease ownership, or do ordinary tests cover it? Explain Apalache, TLC and optional Quint in SpecKit.",
+    "should_trigger": true
+  },
+  {
+    "query": "I have never used formal methods. Walk me through a useful counter example and a counterexample before I install anything.",
+    "should_trigger": true
+  },
+  {
+    "query": "Run the selected formal checks and resume the autopilot workflow from its planning checkpoint now.",
+    "should_trigger": false
   }
 ]
