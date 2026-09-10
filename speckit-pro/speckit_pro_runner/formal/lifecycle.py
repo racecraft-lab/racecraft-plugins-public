@@ -65,7 +65,7 @@ def waiver_material(root: Path, workflow: str, spec: str, plan: str, checkpoint:
     return selection, digest, paths
 
 
-def waive_checkpoint(root: Path, workflow: str, inputs: dict[str, Any], mode: str) -> dict[str, Any]:
+def waive_checkpoint(root: Path, workflow: str, inputs: dict[str, Any], mode: str, writes: dict[str, bool] | None = None) -> dict[str, Any]:
     checkpoint = inputs.get("checkpoint", "plan")
     if checkpoint not in CHECKPOINT_ROWS:
         raise SelectionError("Unknown formal waiver checkpoint")
@@ -78,7 +78,7 @@ def waive_checkpoint(root: Path, workflow: str, inputs: dict[str, Any], mode: st
               "verdict": "preview" if mode == "dry_run" else "waived", "waiver": inputs["waiver"],
               "recorded_at": recorded_now(), "evidence": evidence.relative_to(root).as_posix()}
     if mode == "apply":
-        write_checkpoint(root, workflow, checkpoint, record)
+        write_checkpoint(root, workflow, checkpoint, record, writes)
         record["commit_paths"] = sorted({workflow, CATALOG_PATH, record["evidence"], *paths})
     return record
 

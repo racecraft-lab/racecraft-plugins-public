@@ -10,7 +10,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from .catalog import EVIDENCE_PATH, confined, digest, read_json
+from .catalog import EVIDENCE_PATH, FormalError, confined, digest, read_json
 from .selection import SelectionError, next_fence, selection_from_workflow
 
 CHECKPOINT_ROWS = {"plan": "Plan model authoring and G3", "planning": "Planning reconciliation", "final": "Final model and optional trace checks", "post": "Post integration"}
@@ -21,10 +21,15 @@ def record_path(root: Path, workflow: str, checkpoint: str) -> Path:
     return confined(root, f"{EVIDENCE_PATH}/{key}/{checkpoint}.json")
 
 
-def fingerprint(root: Path, selection: dict[str, Any], models: dict[str, Any], identities: dict[str, Any], spec: str, plan: str) -> str:
+def fingerprint(root: Path, selection: dict[str, Any], models: dict[str, Any], identities: dict[str, Any], spec: str, plan: str, checkpoint: str = "plan") -> str:
     paths = {spec, plan}
     for item in models.values():
         paths.update(item["model"]["inputs"])
+        if checkpoint in ("final", "post"):
+            implementation = item["model"].get("implementation_inputs", [])
+            if not implementation:
+                raise FormalError("missing_implementation_scope", "Declare implementation_inputs before final or Post verification")
+            paths.update(implementation)
     files = {name: digest(confined(root, name)) for name in sorted(paths)}
     engine = {path.name: digest(path) for path in sorted(Path(__file__).parent.glob("*.py"))}
     material = {"selection": selection, "models": models, "files": files, "checkers": identities, "engine": engine}
@@ -66,7 +71,8 @@ def checkpoint_section(text: str) -> tuple[list[str], list[int], int]:
 
 
 def write_checkpoint(root: Path, workflow: str, checkpoint: str, record: dict[str, Any], writes: dict[str, bool] | None = None) -> None:
-    path = record_path(root, workflow, checkpoint)
+    suffix = "-waiver" if record["verdict"] == "waived" else ""
+    path = record_path(root, workflow, checkpoint + suffix)
     atomic_record(path, record)
     if writes is not None:
         writes["writes_state"] = True
@@ -97,7 +103,7 @@ def checkpoint_signal(text: str) -> dict[str, Any]:
         return {"required": True, "complete": False, "verdict": "invalid_configuration"}
     if selection["status"] != "enabled":
         return {"required": False, "complete": True, "verdict": "disabled"}
-    passed = any(lines[index].startswith("| Plan model authoring and G3 | pass |") for index in active)
+    passed = any(re.match(r"^\| (Plan model authoring and G3|Planning reconciliation) \| (pass|waived) \|", lines[index]) for index in active)
     return {"required": True, "complete": passed, "verdict": "recorded_pass" if passed else "pending"}
 
 
