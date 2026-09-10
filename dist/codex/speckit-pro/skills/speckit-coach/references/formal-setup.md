@@ -10,11 +10,13 @@ It does not install Java, Node.js, Docker, skills, or global packages.
 ## Prepare a first check
 
 Use the absolute installed plugin path as `PLUGIN_ROOT`, and the established
-workflow worktree as `WORKFLOW_ROOT`. Examples below use POSIX shell syntax;
-the scripts themselves use Python 3.11+ standard library. Start with:
+workflow worktree as `WORKFLOW_ROOT`. Set `resolved_python` to the verified
+absolute interpreter path returned by the installed runtime contract, rather
+than assuming a shell alias. Examples below use POSIX shell syntax; the scripts
+themselves use Python 3.11+ standard library. Start with:
 
 ```sh
-python3 "$PLUGIN_ROOT/skills/speckit-coach/scripts/setup-formal-tools.py" \
+"$resolved_python" "$PLUGIN_ROOT/skills/speckit-coach/scripts/setup-formal-tools.py" \
   --repo-root "$WORKFLOW_ROOT" --tool apalache
 ```
 
@@ -95,7 +97,7 @@ slots before the final or Post formal check. Do not replace application tests
 with model checks or accept stale trace files from another checkout.
 
 ```sh
-python3 "$PLUGIN_ROOT/skills/speckit-coach/scripts/run-formal-ci.py" \
+"$resolved_python" "$PLUGIN_ROOT/skills/speckit-coach/scripts/run-formal-ci.py" \
   --repo-root "$WORKFLOW_ROOT" --workflow docs/ai/specs/.process/FEATURE-workflow.md \
   --spec specs/feature/spec.md --plan specs/feature/plan.md --checkpoint final
 ```

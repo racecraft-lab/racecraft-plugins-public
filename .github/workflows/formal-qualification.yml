@@ -43,7 +43,7 @@ jobs:
         run: python3 tests/speckit-pro/unit/test-formal-checkers.py --apalache-jar .specify/tools/formal/apalache-0.62.2/apalache.jar --tlc-jar .specify/tools/formal/tlc-1.7.4/tla2tools.jar --quint-root .specify/tools/formal/quint-0.32.0
       - name: Qualify setup recovery and isolated installed consumers
         run: python3 tests/speckit-pro/unit/test-formal-setup.py --native-setup
-      - name: Enable the repository's pinned docs toolchain
+      - name: Enable the pinned docs toolchain
         if: runner.os == 'macOS'
         run: corepack enable
       - name: Prepare pnpm
