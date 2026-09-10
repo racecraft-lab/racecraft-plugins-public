@@ -80,6 +80,7 @@
         { "path": "tests/speckit-pro/unit/test-crap-score.py", "label": "test-crap-score" },
         { "path": "tests/speckit-pro/unit/test-executor-mode-scorer.py", "label": "test-executor-mode-scorer" },
         { "path": "tests/speckit-pro/unit/test-quality-gates.py", "label": "test-quality-gates" },
+        { "path": "tests/speckit-pro/unit/test-formal-selection.py", "label": "test-formal-selection" },
         { "path": "tests/speckit-pro/unit/test-workflow-guard-hook.py", "label": "test-workflow-guard-hook" },
         { "path": "tests/speckit-pro/unit/test-ubiquitous-language-lint.py", "label": "test-ubiquitous-language-lint" },
         { "path": "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py", "label": "test-speckit-pro-mutation-helpers" },
