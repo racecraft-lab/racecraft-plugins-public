@@ -279,12 +279,12 @@ class FormalCheckerTests(unittest.TestCase):
         waiver = {"operator_confirmed": True, "approved_by": "Operator", "reason": "Accept current limitation",
                   "approval_reference": "operator message 2"}
         self.assertEqual("waived", self.request("apply", waiver=waiver)["data"]["verdict"])
-        with patch.object(helper, "inspect_tool", return_value={"version": "0.62.2", "sha256": "fixture"}), patch.object(helper, "execute_model", return_value={"model": "counter", "verdict": "violation"}):
+        with patch.object(engine.shutil, "which", return_value=sys.executable), patch.object(helper, "inspect_tool", return_value={"version": "0.62.2", "sha256": "fixture"}), patch.object(helper, "execute_model", return_value={"model": "counter", "verdict": "violation"}):
             self.assertEqual("violation", self.request("apply")["data"]["verdict"])
             self.assertFalse(helper.checkpoint_guard(self.root, "workflow.md")["complete"])
 
     def test_planning_reconciliation_replaces_stale_and_interrupted_evidence(self) -> None:
-        with patch.object(helper, "inspect_tool", return_value={"version": "fixture"}), patch.object(helper, "execute_model", side_effect=self.passed_model):
+        with patch.object(engine.shutil, "which", return_value=sys.executable), patch.object(helper, "inspect_tool", return_value={"version": "fixture"}), patch.object(helper, "execute_model", side_effect=self.passed_model):
             self.request("apply")
             (self.root / "plan.md").write_text("Checklist reconciled this design")
             self.assertFalse(helper.current_checkpoint(self.root, "workflow.md")["complete"])
@@ -300,7 +300,7 @@ class FormalCheckerTests(unittest.TestCase):
             self.assertEqual("plan", helper.current_checkpoint(self.root, "workflow.md")["checkpoint"])
 
     def test_implementation_scope_may_be_omitted_but_not_declared_empty(self) -> None:
-        with patch.object(helper, "inspect_tool", return_value={"version": "fixture"}):
+        with patch.object(engine.shutil, "which", return_value=sys.executable), patch.object(helper, "inspect_tool", return_value={"version": "fixture"}):
             self.assertEqual("preview", self.request()["data"]["verdict"])
             self.model["implementation_inputs"] = []
             self.save_catalog()
@@ -313,7 +313,7 @@ class FormalCheckerTests(unittest.TestCase):
             self.assertEqual("preview", self.request()["data"]["verdict"])
 
     def test_final_and_post_bind_implementation_files_and_checkpoint_identity(self) -> None:
-        with patch.object(helper, "inspect_tool", return_value={"version": "fixture"}), patch.object(helper, "execute_model", side_effect=self.passed_model):
+        with patch.object(engine.shutil, "which", return_value=sys.executable), patch.object(helper, "inspect_tool", return_value={"version": "fixture"}), patch.object(helper, "execute_model", side_effect=self.passed_model):
             self.assertEqual("missing_implementation_scope", self.request("apply", checkpoint="final")["data"]["verdict"])
             self.model["implementation_inputs"] = ["counter.py"]
             (self.root / "counter.py").write_text("count = 0\n")
@@ -335,7 +335,7 @@ class FormalCheckerTests(unittest.TestCase):
         state = self.root / "autopilot-state.json"
         state.write_text('{"status": "in_progress"}')
         steps = [("Phase 3: Plan", "completed"), ("Phase 4: Checklist - quality", "in_progress")]
-        with patch.object(helper, "inspect_tool", return_value={"version": "fixture"}), patch.object(helper, "execute_model", side_effect=self.passed_model):
+        with patch.object(engine.shutil, "which", return_value=sys.executable), patch.object(helper, "inspect_tool", return_value={"version": "fixture"}), patch.object(helper, "execute_model", side_effect=self.passed_model):
             self.request("apply")
             self.assertTrue(lifecycle.coverage_errors(self.root, "workflow.md", {}, steps))
             result = self.request("apply", state_file=state.name)
