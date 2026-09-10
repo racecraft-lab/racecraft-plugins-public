@@ -101,7 +101,7 @@ def complete_results(record: dict[str, Any], models: dict[str, Any]) -> bool:
     return True
 
 
-def check(root: Path, workflow: str, inputs: dict[str, Any], mode: str, context: dict[str, Any]) -> dict[str, Any]:
+def check(root: Path, workflow: str, inputs: dict[str, Any], mode: str, context: dict[str, Any], writes: dict[str, bool]) -> dict[str, Any]:
     checkpoint = inputs.get("checkpoint", "plan")
     if checkpoint not in CHECKPOINT_ROWS:
         raise SelectionError("checkpoint must be plan, planning, final, or post")
@@ -115,7 +115,7 @@ def check(root: Path, workflow: str, inputs: dict[str, Any], mode: str, context:
     if mode == "dry_run":
         return record
     record["verdict"] = "running"
-    write_checkpoint(root, workflow, checkpoint, record)
+    write_checkpoint(root, workflow, checkpoint, record, writes)
     record["results"] = []
     for key, item in context["models"].items():
         try:
@@ -133,12 +133,13 @@ def check(root: Path, workflow: str, inputs: dict[str, Any], mode: str, context:
         record["verdict"] = "stale"
     if record["verdict"] == "pass" and checkpoint in ("final", "post") and any(m["evidence"] == "model_and_trace" for m in context["selection"]["models"]):
         record["verdict"] = "missing_trace"
-    write_checkpoint(root, workflow, checkpoint, record)
+    write_checkpoint(root, workflow, checkpoint, record, writes)
     record["commit_paths"] = sorted({workflow, CATALOG_PATH, record_path(root, workflow, checkpoint).relative_to(root).as_posix(), *[p for item in context["models"].values() for p in item["model"]["inputs"]]})
     return record
 
 
 def run_formal_helper(entry: Any, request: Any) -> dict[str, Any]:
+    writes = {"writes_state": False}
     try:
         unknown = set(request.inputs) - {"repo_root", "workflow_file", "spec_file", "plan_file", "checkpoint"}
         if unknown:
@@ -146,14 +147,14 @@ def run_formal_helper(entry: Any, request: Any) -> dict[str, Any]:
         root = Path(request.inputs["repo_root"]).resolve(strict=True)
         workflow = relative_input(root, request.inputs["workflow_file"])
         context = discover(root, workflow)
-        data = context if entry.helper_id == "formal-doctor" else check(root, workflow, request.inputs, request.mode, context)
+        data = context if entry.helper_id == "formal-doctor" else check(root, workflow, request.inputs, request.mode, context, writes)
         data["helper_id"] = entry.helper_id
-        data["writes_state"] = request.mode == "apply" and data["verdict"] not in ("disabled", "missing_tool", "pending_authoring", "missing_input")
+        data.update(writes)
         status = "ok" if data["verdict"] in ("disabled", "ready", "preview", "pass", "pending_authoring") else "expected_failure"
         if entry.helper_id == "formal-check" and data["verdict"] == "pending_authoring":
             status = "missing_prerequisite"
         return response(status, request_id=request.request_id, data=data)
     except FormalError as exc:
-        return response("expected_failure", request_id=request.request_id, data={"verdict": exc.verdict, "writes_state": False}, diagnostics=[diagnostic(exc.verdict, str(exc))])
+        return response("expected_failure", request_id=request.request_id, data={"verdict": exc.verdict, **writes}, diagnostics=[diagnostic(exc.verdict, str(exc))])
     except (SelectionError, ValueError, KeyError, TypeError, OSError, subprocess.TimeoutExpired, zipfile.BadZipFile) as exc:
-        return response("input_error", request_id=request.request_id, data={"verdict": "invalid_configuration", "writes_state": request.mode == "apply"}, diagnostics=[diagnostic("formal_configuration", str(exc), remediation_summary="Repair the selected formal configuration; inspect any interrupted record before resuming Plan.")])
+        return response("input_error", request_id=request.request_id, data={"verdict": "invalid_configuration", **writes}, diagnostics=[diagnostic("formal_configuration", str(exc), remediation_summary="Repair the selected formal configuration; inspect any interrupted record before resuming Plan.")])

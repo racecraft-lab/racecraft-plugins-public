@@ -65,9 +65,11 @@ def checkpoint_section(text: str) -> tuple[list[str], list[int], int]:
     return lines, active, end
 
 
-def write_checkpoint(root: Path, workflow: str, checkpoint: str, record: dict[str, Any]) -> None:
+def write_checkpoint(root: Path, workflow: str, checkpoint: str, record: dict[str, Any], writes: dict[str, bool] | None = None) -> None:
     path = record_path(root, workflow, checkpoint)
     atomic_record(path, record)
+    if writes is not None:
+        writes["writes_state"] = True
     workflow_path = confined(root, workflow)
     text = workflow_path.read_text(encoding="utf-8")
     row = f"| {CHECKPOINT_ROWS[checkpoint]} | {record['verdict']} | {path.relative_to(root).as_posix()} |"
