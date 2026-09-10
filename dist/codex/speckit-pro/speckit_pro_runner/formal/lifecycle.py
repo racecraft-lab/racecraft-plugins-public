@@ -60,7 +60,7 @@ def waiver_material(root: Path, workflow: str, spec: str, plan: str, checkpoint:
     models, gaps = selected_catalog(root, selection)
     if gaps:
         raise FormalError(gaps[0]["verdict"], "Complete the selected model catalog and inputs before binding an operator waiver")
-    digest = fingerprint(root, selection, models, {}, spec, plan, checkpoint)
+    digest = fingerprint(root, selection, models, {}, spec, plan, checkpoint, include_traces=False)
     paths = sorted({p for item in models.values() for p in item["model"]["inputs"]})
     return selection, digest, paths
 

@@ -32,15 +32,19 @@ def confined(root: Path, value: str, *, durable: bool = False) -> Path:
     if not result.is_relative_to(root.resolve()) or any(p.casefold() == ".git" for p in path.parts):
         raise SelectionError(f"path leaves the workflow's permitted files: {value}")
     canonical = result.relative_to(root.resolve()).as_posix()
-    if durable and (canonical.split("/")[0] == "specs" or canonical.startswith((RUNS_PATH, EVIDENCE_PATH))):
+    if durable and (canonical.split("/")[0] == "specs" or canonical.startswith((RUNS_PATH, EVIDENCE_PATH, ".specify/formal-traces"))):
         raise SelectionError(f"model inputs must survive archival and exclude run results: {value}")
     return result
+
+
+def reject_nonfinite(value: str) -> Any:
+    raise SelectionError(f"non-finite JSON number is invalid: {value}")
 
 
 def read_json(path: Path) -> Any:
     if path.stat().st_size > 1_048_576:
         raise SelectionError(f"JSON input exceeds 1 MiB: {path.name}")
-    return json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=unique_object)
+    return json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=unique_object, parse_constant=reject_nonfinite)
 
 
 def digest(path: Path) -> str:
@@ -103,9 +107,22 @@ def validate_mode(model: dict[str, Any]) -> None:
         bounded_integer(model["bounds"]["length"], 0, 10000, "bounds.length")
 
 
+def validate_language(model: dict[str, Any]) -> None:
+    language = model.get("language", "tla")
+    if language not in ("tla", "quint"):
+        raise FormalError("unsupported", "model.language must be tla or quint")
+    if language == "quint":
+        require_text(model.get("main"), "Quint model.main")
+        operator(model.get("main"))
+        if model["checker"] != "apalache" or model["mode"] not in ("bounded", "temporal"):
+            raise FormalError("unsupported", "The qualified Quint profile uses Apalache bounded or temporal checking")
+    elif "main" in model:
+        raise SelectionError("model.main applies only to Quint modules")
+
+
 def validate_model(model: Any, root: Path, selected: dict[str, Any]) -> dict[str, Any]:
     behavior = {"specification"} if isinstance(model, dict) and "specification" in model else {"init", "next"}
-    optional = {"implementation_inputs"} & model.keys() if isinstance(model, dict) else set()
+    optional = {"implementation_inputs", "language", "main", "trace"} & model.keys() if isinstance(model, dict) else set()
     require_fields(model, {"checker", "module", "config", "inputs", "properties", "assumptions", "mode", "bounds", "budget"} | behavior | optional, "model")
     require_text(model["checker"], "model.checker")
     if model["checker"] not in VERSIONS:
@@ -116,6 +133,7 @@ def validate_model(model: Any, root: Path, selected: dict[str, Any]) -> dict[str
         raise FormalError("unsupported", "SPECIFICATION configuration is supported only by the TLC integration")
     validate_properties(model["properties"])
     validate_mode(model)
+    validate_language(model)
     require_fields(model["budget"], {"timeout_seconds", "output_bytes"}, "model budget")
     bounded_integer(model["budget"]["timeout_seconds"], 1, 3600, "timeout_seconds")
     bounded_integer(model["budget"]["output_bytes"], 4096, 8_388_608, "output_bytes")
@@ -131,6 +149,9 @@ def validate_model(model: Any, root: Path, selected: dict[str, Any]) -> dict[str
         raise SelectionError("implementation_inputs must be a list of unique durable paths")
     for path in implementation:
         confined(root, path, durable=True)
+    if "trace" in model or selected["evidence"] == "model_and_trace":
+        from .traces import validate_contract
+        validate_contract(model, root, selected["id"])
     from .native_config import validate_apalache, validate_tlc
     validator = validate_tlc if model["checker"] == "tlc" else validate_apalache
     validator(model, confined(root, model["config"]).read_text(encoding="utf-8"))
@@ -143,7 +164,8 @@ def validate_model_paths(model: dict[str, Any], root: Path, selected: dict[str, 
         raise SelectionError("model.inputs must explicitly list model, configuration, and imported files")
     if len(set(inputs)) != len(inputs):
         raise SelectionError("model.inputs cannot repeat paths")
-    for field, suffix in (("module", ".tla"), ("config", ".cfg")):
+    suffix = ".qnt" if model.get("language") == "quint" else ".tla"
+    for field, suffix in (("module", suffix), ("config", ".cfg")):
         path = require_text(model[field], field)
         if path not in inputs or not path.endswith(suffix):
             raise SelectionError(f"{field} must be a declared {suffix} input")
@@ -174,6 +196,9 @@ def selected_catalog(root: Path, selection: dict[str, Any]) -> tuple[dict[str, A
                 raise FormalError("missing_tool", f"configure the approved pinned {model['checker']} distribution in catalog.tools")
             tool = validate_tool(catalog["tools"].get(model["checker"]), model["checker"])
             resolved[model_id] = {"model": model, "tool": tool, "input_hashes": {p: digest(confined(root, p)) for p in model["inputs"]}}
+            if model.get("language") == "quint":
+                from .quint import validate_tool as validate_quint
+                resolved[model_id]["compiler"] = validate_quint(catalog["tools"].get("quint"))
         except FormalError as exc:
             gaps.append({"model": model_id, "verdict": exc.verdict, "reason": str(exc)})
     return resolved, gaps

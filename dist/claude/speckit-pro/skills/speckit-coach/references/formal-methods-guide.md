@@ -110,6 +110,11 @@ it does not select them. Keep new models in `formal/<model>/`, outside archived
 feature folders. Model checking can be required with `evidence: model` before any
 implementation exists. Raw output and checkpoint results are not model inputs.
 
+For an optional approachable modeling language, use [quint-guide.md](quint-guide.md)
+and the pinned upstream language/modeling references. For requested observed
+implementation evidence, use [implementation-traces.md](implementation-traces.md).
+Both choices retain explicit feature selection.
+
 ## Official references
 
 - [Apalache capabilities](https://apalache-mc.org/docs/apalache/features.html)

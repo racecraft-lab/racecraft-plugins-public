@@ -84,8 +84,12 @@ selected manager before switching. Implement and qualify the formerly disabled
 selection helper before invoking it.
 
 Hosted CI remains default. Organization runners require explicit repository
-admission and adequate VM resources; neither is inferred here. Quint and TLAPS
-may receive coaching references but no execution integrations.
+admission and adequate VM resources; neither is inferred here. The operator
+subsequently included an optional Quint front end: pinned Quint JSON compilation
+feeds the selected Apalache checks, and ITF supports observed Python, TypeScript,
+and Swift traces. Upstream Quint language/modeling skills are reused on demand;
+SpecKit retains phase and requirement authority. No managed backend downloads or
+automatic formal enrollment are permitted. TLAPS execution remains out of scope.
 
 ## Official grounding
 

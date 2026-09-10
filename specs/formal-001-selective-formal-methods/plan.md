@@ -75,11 +75,11 @@ to a model. Its model-based testing guidance supplies model traces to a test
 driver; our conformance gate must also validate the implementation's observed
 actions and states, including illegal transitions with individually valid states.
 
-- [ ] T5: qualify a pinned Quint version against the selected Apalache version;
+- [x] T5: qualify a pinned Quint version against the selected Apalache version;
   inspect compilation/server behavior and prevent implicit backend downloads.
-  Current research identifies Quint 0.32.0 as a candidate, not a compatibility
-  claim. Prefer an explicit model-authoring path with reproducible artifacts.
-- [ ] T5: use the official ITF value encoding and action metadata where applicable,
+  Quint 0.32.0 JSON compilation and Apalache 0.62.2 checking passed native tests
+  on the recorded macOS profile. No backend-managing Quint command is invoked.
+- [x] T5: use the official ITF value encoding and action metadata where applicable,
   documenting and testing the supported subset. Cover Python, TypeScript and
   Swift with explicit drivers/projections; do not infer a supported Swift library.
 - [ ] T6: preserve disabled behavior, compiler/model/import fingerprints, failure
@@ -108,7 +108,7 @@ parity and manual-UAT status against the exact pushed revision.
 
 ## Required full-harness review
 
-- [ ] Review the official `quint-co/quint/skills` and `quint-co/quint-llm-kit`
+- [x] Review the official `quint-co/quint/skills` and `quint-co/quint-llm-kit`
   lightweight skills for pinned, attributed reuse inside the explicitly selected
   workflow. Preserve SpecKit's phase order, approved requirement authority,
   bounded agent permissions, and both Claude/Codex distributions. Audit upstream

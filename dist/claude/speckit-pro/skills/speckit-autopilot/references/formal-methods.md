@@ -19,6 +19,13 @@ Explain the precise gap using the [coach guide](../../speckit-coach/references/f
 and stop at a resumable checkpoint. Installation requires operator authorization.
 Do not run Grill Me in autopilot; use its existing Clarify/consensus flow.
 
+When an explicitly selected catalog model uses `language: quint`, the same
+preflight, authoring, freshness, resume, and final/Post checkpoints apply. Read
+the [Quint guide](../../speckit-coach/references/quint-guide.md), reuse its pinned
+upstream authoring guidance on demand, and inspect both the compiler and Apalache.
+The parent supplies scoped guidance to the bounded author; do not activate a
+second upstream orchestrator or infer selection from installed skills.
+
 ## Plan authoring checkpoint
 
 After the ordinary Plan executor returns, keep Plan/G3 incomplete while selection
@@ -118,6 +125,14 @@ include `state_file`. A selected formal failure is blocking even when other
 Post extension failures are advisory. Repeat affected checks after review fixes;
 reconcile planning evidence first if a requirement, plan, model, or catalog
 changed. Preserve every returned `commit_paths` alongside normal bookkeeping.
+
+For `model_and_trace`, Tasks must include a tested ITF emitter and action/state
+projection, capture before/after source bindings, and run its producing tests
+before each final/Post check. Follow
+[implementation-traces.md](../../speckit-coach/references/implementation-traces.md).
+Review the preview's `trace_checks` as well as native model commands. Missing,
+stale, malformed, mismatched, and illegal-transition traces block closeout.
+Report observed conformance separately from model and implementation test results.
 
 ## Explicit operator waiver
 

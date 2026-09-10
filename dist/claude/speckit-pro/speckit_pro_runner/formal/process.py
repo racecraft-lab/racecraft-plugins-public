@@ -12,10 +12,16 @@ from pathlib import Path
 from typing import Any
 
 
-def run_process(argv: list[str], cwd: Path, log: Path, timeout: int, output_bytes: int) -> dict[str, Any]:
+def runtime_environment() -> dict[str, str]:
+    """Keep ambient runtime flags from changing inspection or execution semantics."""
     env = dict(os.environ)
-    for key in ("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS", "TLA_LIBRARY", "CONFIG_FILE", "OUT_DIR", "RUN_DIR", "SMT_ENCODING", "SMT_SOLVER"):
+    for key in ("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS", "TLA_LIBRARY", "CONFIG_FILE", "OUT_DIR", "RUN_DIR", "SMT_ENCODING", "SMT_SOLVER", "NODE_OPTIONS", "NODE_PATH"):
         env.pop(key, None)
+    return env
+
+
+def run_process(argv: list[str], cwd: Path, log: Path, timeout: int, output_bytes: int) -> dict[str, Any]:
+    env = runtime_environment()
     started = time.monotonic()
     result: dict[str, Any] = {"argv": argv, "exit_code": None, "timed_out": False, "output_limited": False}
     with log.open("wb") as output:
@@ -42,6 +48,10 @@ def start_process(argv: list[str], cwd: Path, env: dict[str, str]) -> subprocess
     """Use statically named runtimes, validating the earlier executable discovery."""
     if argv[0] == sys.executable:
         return subprocess.Popen([sys.executable, *argv[1:]], cwd=cwd, env=env, stdin=subprocess.DEVNULL,
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=False)
+    node = shutil.which("node")
+    if node is not None and Path(node).resolve() == Path(argv[0]).resolve():
+        return subprocess.Popen([node, *argv[1:]], cwd=cwd, env=env, stdin=subprocess.DEVNULL,
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=False)
     candidate = shutil.which("java")
     if candidate is None or Path(candidate).resolve() != Path(argv[0]).resolve():

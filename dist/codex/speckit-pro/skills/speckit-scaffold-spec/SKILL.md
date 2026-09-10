@@ -655,6 +655,10 @@ Design Concept doc produced in step 4 (`SPEC-<ID>-design-concept.md`) to fill:
 
 Populate the workflow's `## Formal Methods` block from the Design Concept's
 approved none/deferred/enabled decision using the [shared formal contract](../speckit-autopilot/references/formal-methods.md).
+When Quint is explicitly chosen, carry that model-language decision into Plan
+and its catalog entry using the coach's `references/quint-guide.md`; available
+Quint skills do not enroll additional behavior. Keep requested trace obligations
+with the selected model through Tasks and final/Post verification.
 Include rationale, named behavior/model IDs, new/existing origin, and requested
 model/model_and_trace evidence. Carry it into Plan, Tasks, Analyze, and Implement
 prompts. Tools and catalog entries do not activate checks. Keep unresolved scope

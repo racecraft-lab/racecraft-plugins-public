@@ -21,7 +21,7 @@ def record_path(root: Path, workflow: str, checkpoint: str) -> Path:
     return confined(root, f"{EVIDENCE_PATH}/{key}/{checkpoint}.json")
 
 
-def fingerprint(root: Path, selection: dict[str, Any], models: dict[str, Any], identities: dict[str, Any], spec: str, plan: str, checkpoint: str = "plan") -> str:
+def fingerprint(root: Path, selection: dict[str, Any], models: dict[str, Any], identities: dict[str, Any], spec: str, plan: str, checkpoint: str = "plan", *, include_traces: bool = True) -> str:
     paths = {spec, plan}
     for item in models.values():
         paths.update(item["model"]["inputs"])
@@ -30,6 +30,9 @@ def fingerprint(root: Path, selection: dict[str, Any], models: dict[str, Any], i
             if not implementation:
                 raise FormalError("missing_implementation_scope", "Declare implementation_inputs before final or Post verification")
             paths.update(implementation)
+    if checkpoint in ("final", "post") and include_traces:
+        from .traces import selected_paths
+        paths.update(selected_paths(root, selection, models))
     files = {name: digest(confined(root, name)) for name in sorted(paths)}
     engine = {path.name: digest(path) for path in sorted(Path(__file__).parent.glob("*.py"))}
     material = {"selection": selection, "models": models, "files": files, "checkers": identities, "engine": engine}
@@ -41,7 +44,7 @@ def atomic_record(path: Path, record: dict[str, Any]) -> None:
     descriptor, temporary = tempfile.mkstemp(prefix=".formal-", dir=path.parent)
     try:
         with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
-            json.dump(record, stream, sort_keys=True, indent=2)
+            json.dump(record, stream, sort_keys=True, indent=2, allow_nan=False)
             stream.write("\n")
         os.replace(temporary, path)
     finally:
