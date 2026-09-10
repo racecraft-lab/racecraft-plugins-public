@@ -96,6 +96,33 @@ Filled from `detect-commands` at Step 0.11. One row per slot; the operator answe
 
 ---
 
+## Formal Methods
+
+<!-- Scaffold replaces this default with the approved decision, including a
+specific rationale. The catalog does not activate checks. Keep exactly one JSON
+selection here; checkpoint outcomes belong in Formal Checkpoints below. -->
+
+```json
+{
+  "schema_version": "1.0",
+  "status": "none",
+  "rationale": "No formal model has been selected for this feature.",
+  "models": []
+}
+```
+
+## Formal Checkpoints
+
+<!-- Independent of app-language slots, confidence flags, and skip-and-log.
+An explicit operator waiver is recorded separately and is never a passing check. -->
+
+| Checkpoint | Status | Evidence or setup gap |
+|---|---|---|
+| Plan model authoring and G3 | disabled | No selected model |
+| Planning reconciliation | disabled | No selected model |
+| Final model and optional trace checks | disabled | No selected model |
+| Post integration | disabled | No selected model |
+
 ## Specification Context
 
 ### Basic Information

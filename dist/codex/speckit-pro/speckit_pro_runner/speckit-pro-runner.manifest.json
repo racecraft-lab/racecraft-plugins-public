@@ -52,6 +52,22 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/formal/__init__.py",
+        "display": "speckit_pro_runner/formal/__init__.py"
+      },
+      "sha256": "62112b680e0be03428b537e67fed81112a63b5986cc729cc65302f3f003c51ed"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/formal/selection.py",
+        "display": "speckit_pro_runner/formal/selection.py"
+      },
+      "sha256": "8313b0b655ae5195db6b55aabbc0c01e8be1407fab64e0afb8008b18bd0f1548"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/gate_discovery.py",
         "display": "speckit_pro_runner/gate_discovery.py"
       },
