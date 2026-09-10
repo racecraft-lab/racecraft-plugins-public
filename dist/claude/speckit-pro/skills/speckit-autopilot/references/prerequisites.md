@@ -299,6 +299,12 @@ implementation agent (e.g., "my-project-developer" or
 
 ## Step 0.11: Project Command Discovery
 
+Before application command discovery, run the selected-model preflight from
+[formal checkpoints](./formal-methods.md#selection-and-preflight) at WORKFLOW_ROOT.
+It is independent of app language and catalog/tool presence does not activate it.
+New-model authoring may be pending; missing existing files or tool setup blocks
+with a resumable diagnostic. Do not install a checker implicitly.
+
 ```text
 Command("'runner helper detect-commands'")
 ```

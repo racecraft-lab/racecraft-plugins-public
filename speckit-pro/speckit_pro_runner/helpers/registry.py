@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from ..envelope import diagnostic, response
+from ..formal.helper import run_formal_helper
 from .install import CODEX_OPTIONAL_HELPER_NAME, CODEX_REQUIRED_AGENT_NAMES, run_install_helper
 from .mutation import empty_mutation, run_mutation_helper, run_spec_index_write, run_sweep_apply_result
 from .pr_emission import run_pr_emission_helper
@@ -96,6 +97,10 @@ def deferred_authoritative_request() -> str:
 
 
 HELPERS: dict[str, HelperEntry] = {
+    "formal-doctor": HelperEntry(
+        "formal-doctor", "formal-doctor", None, "python_authoritative", "python_contract",
+        authoritative_request("formal-doctor"),
+    ),
     "helper-registry-dispatch": HelperEntry(
         "helper-registry-dispatch",
         "helper-registry-dispatch",
@@ -329,6 +334,11 @@ HELPERS: dict[str, HelperEntry] = {
 
 
 MUTATION_HELPERS: dict[str, MutationEntry] = {
+    "formal-check": MutationEntry(
+        "formal-check", "formal-check", ("dry_run", "apply"), None, "golden_only", "fixture_semantic",
+        mutation_authoritative_request("formal-check"), ("explicit-selection", "preview-no-writes", "checkpoint-resume"),
+        rollback="Preserve model inputs, inspect the checkpoint record, and rerun preview before resuming Plan.",
+    ),
     "mutation-registry-dispatch": MutationEntry(
         "mutation-registry-dispatch",
         "mutation-registry-dispatch",
@@ -599,6 +609,8 @@ def dispatch_helper(request: Any) -> dict[str, Any]:
             data=registry_report(HELPERS),
         )
 
+    if entry.helper_id == "formal-doctor":
+        return run_formal_helper(entry, request)
     return run_registered_helper(entry, request)
 
 
@@ -638,6 +650,9 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
 
     if entry.helper_id == "mutation-registry-dispatch":
         return response("ok", request_id=request.request_id, data=mutation_registry_report())
+
+    if entry.helper_id == "formal-check":
+        return run_formal_helper(entry, request)
 
     if entry.helper_id == "generate-spec-index-write":
         return run_spec_index_write(entry, request)

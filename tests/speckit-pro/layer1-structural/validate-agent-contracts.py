@@ -108,7 +108,7 @@ class ValidateAgentInstructions(unittest.TestCase):
         with self.subTest(msg='agent instruction files have canonical wrapper shape'):
             self.assertFalse(errors, '\n'.join(errors))
 AGENTS_DIR = PLUGIN_ROOT / 'agents'
-validate_agents_AGENTS = ('phase-executor', 'clarify-executor', 'checklist-executor', 'analyze-executor', 'implement-executor', 'codebase-analyst', 'spec-context-analyst', 'domain-researcher', 'consensus-synthesizer', 'artifact-author', 'uat-runbook-author', 'sweep-classifier', 'sweep-analyst')
+validate_agents_AGENTS = ('phase-executor', 'clarify-executor', 'checklist-executor', 'analyze-executor', 'implement-executor', 'formal-model-author', 'codebase-analyst', 'spec-context-analyst', 'domain-researcher', 'consensus-synthesizer', 'artifact-author', 'uat-runbook-author', 'sweep-classifier', 'sweep-analyst')
 PLUGIN_AGENT_FIELDS = {'name', 'description', 'model', 'effort', 'maxTurns', 'tools', 'disallowedTools', 'skills', 'memory', 'background', 'isolation', 'color'}
 UNSUPPORTED_PLUGIN_AGENT_FIELDS = {'hooks', 'mcpServers', 'permissionMode', 'initialPrompt', 'experimental.cacheTtl'}
 MEMORY_POLICY = {'codebase-analyst': 'local', 'implement-executor': 'local', 'spec-context-analyst': 'local'}
@@ -189,7 +189,7 @@ class ValidateAgents(unittest.TestCase):
                     self.assertIn('Never store secrets', body)
 CODEX_AGENTS_DIR = PLUGIN_ROOT / 'codex-agents'
 CC_AGENTS_DIR = PLUGIN_ROOT / 'agents'
-validate_codex_agents_AGENTS = ('autopilot-fast-helper', 'clarify-executor', 'checklist-executor', 'analyze-executor', 'implement-executor', 'phase-executor', 'codebase-analyst', 'spec-context-analyst', 'domain-researcher')
+validate_codex_agents_AGENTS = ('autopilot-fast-helper', 'clarify-executor', 'checklist-executor', 'analyze-executor', 'implement-executor', 'phase-executor', 'formal-model-author', 'codebase-analyst', 'spec-context-analyst', 'domain-researcher')
 LOW_EFFORT_ANALYST_ROLES = frozenset({'codebase-analyst', 'spec-context-analyst'})
 CC_ONLY_FIELDS = ('tools', 'disallowedTools', 'permissionMode', 'color', 'maxTurns', 'background', 'effort')
 validate_codex_agents_MODEL_RE = re.compile('^(gpt-5\\.6-sol|gpt-5\\.6-terra|gpt-5\\.6-luna|gpt-5\\.5|gpt-5\\.4|gpt-5\\.4-mini|gpt-5\\.3-codex|gpt-5\\.3-codex-spark)$')
@@ -298,7 +298,7 @@ class ValidateCodexAgents(unittest.TestCase):
                 self.assertNotIn('YOU ARE THE USER', instructions)
             with self.subTest(msg='clarify-executor: does not invoke interactive clarify skill'):
                 self.assertNotIn('Run `$speckit-clarify`', instructions)
-        elif agent in ('phase-executor', 'checklist-executor', 'analyze-executor'):
+        elif agent in ('phase-executor', 'checklist-executor', 'analyze-executor', 'formal-model-author'):
             with self.subTest(msg=f'{agent}: uses xhigh GPT-5.6 Sol executor profile'):
                 self.assertTrue(model_val == 'gpt-5.6-sol' and effort_val == 'xhigh' and (sandbox_val == 'workspace-write'), f'expected gpt-5.6-sol / xhigh / workspace-write, got {model_val} / {effort_val} / {sandbox_val}')
         elif agent == 'implement-executor':

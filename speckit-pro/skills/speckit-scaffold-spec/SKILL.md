@@ -648,6 +648,17 @@ description AND the design concept doc from Step 4. The roadmap scope
 is the seed; the design concept is the enrichment layer that fills in
 the decisions the roadmap left ambiguous.
 
+**Formal selection:** Populate `## Formal Methods` from the Design Concept's
+approved decision, using the [shared formal contract](../speckit-autopilot/references/formal-methods.md).
+Record none/deferred/enabled, a specific rationale, selected behavior/model IDs,
+new/existing origin, and model/model_and_trace evidence. Carry this decision into
+Plan, Tasks, Analyze, and Implement prompts. Tool availability or an existing
+catalog is never consent. A deferred question stays in Clarify's existing flow.
+New model files may remain pending until the explicit post-Plan author checkpoint;
+missing selected existing models are setup gaps. Preserve the normal phase command
+templates; the parent dispatches the separate author. Validate the copied workflow
+with read-only formal-doctor against WORKFLOW_ROOT after population.
+
 - **Specify Prompt:** Combine the roadmap scope description with the
   Goals, Non-goals, and major design decisions from
   `SPEC-<ID>-design-concept.md`. Quote specific Q&A entries when a

@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "tools": {
+    "apalache": {
+      "version": "0.62.2",
+      "jar": ".specify/tools/apalache-0.62.2/lib/apalache.jar",
+      "sha256": "079b6c2320252469dcf79afec6886b8255d3dd1b34a9484433c88986752efaa8",
+      "java": "java",
+      "heap_mb": 4096
+    }
+  },
+  "models": {
+    "counter": {
+      "checker": "apalache",
+      "module": "formal/counter/Counter.tla",
+      "config": "formal/counter/Counter.cfg",
+      "inputs": ["formal/counter/Counter.tla", "formal/counter/Counter.cfg"],
+      "properties": {"Bounded": {"kind": "invariant", "requirement": "The count stays between zero and two."}},
+      "assumptions": ["Limit = 2"],
+      "mode": "bounded",
+      "init": "Init",
+      "next": "Next",
+      "bounds": {"length": 5},
+      "budget": {"timeout_seconds": 60, "output_bytes": 1048576}
+    }
+  }
+}

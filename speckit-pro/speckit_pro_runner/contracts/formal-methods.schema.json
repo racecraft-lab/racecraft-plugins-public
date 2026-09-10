@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Selective formal-methods model catalog",
+  "description": ".specify/formal-methods.json describes reusable models; only the workflow selection activates checks.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "tools", "models"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "tools": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {"apalache": {"$ref": "#/$defs/tool"}}
+    },
+    "models": {"type": "object", "additionalProperties": {"$ref": "#/$defs/model"}}
+  },
+  "$defs": {
+    "name": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},
+    "text": {"type": "string", "pattern": "\\S"},
+    "tool": {
+      "type": "object", "additionalProperties": false,
+      "required": ["version", "jar", "sha256", "java", "heap_mb"],
+      "properties": {
+        "version": {"const": "0.62.2"},
+        "jar": {"$ref": "#/$defs/text"},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "java": {"$ref": "#/$defs/text"},
+        "heap_mb": {"type": "integer", "minimum": 256, "maximum": 65536}
+      }
+    },
+    "model": {
+      "type": "object", "additionalProperties": false,
+      "required": ["checker", "module", "config", "inputs", "properties", "assumptions", "mode", "init", "next", "bounds", "budget"],
+      "properties": {
+        "checker": {"const": "apalache"},
+        "module": {"type": "string", "pattern": "\\.tla$"},
+        "config": {"type": "string", "pattern": "\\.cfg$"},
+        "inputs": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"$ref": "#/$defs/text"}, "description": "WORKFLOW_ROOT-relative durable files; include module, configuration, imports and data. Exclude specs/ and run/evidence directories. The runtime enforces confinement and membership."},
+        "properties": {"type": "object", "minProperties": 1, "propertyNames": {"$ref": "#/$defs/name"}, "additionalProperties": {"$ref": "#/$defs/property"}},
+        "assumptions": {"type": "array", "items": {"$ref": "#/$defs/text"}},
+        "mode": {"enum": ["bounded", "temporal", "inductive"]},
+        "init": {"$ref": "#/$defs/name"},
+        "next": {"$ref": "#/$defs/name"},
+        "bounds": {"oneOf": [
+          {"type": "object", "additionalProperties": false, "required": ["length"], "properties": {"length": {"type": "integer", "minimum": 0, "maximum": 10000}}},
+          {"type": "object", "additionalProperties": false, "required": ["inductive_invariant"], "properties": {"inductive_invariant": {"$ref": "#/$defs/name"}}}
+        ]},
+        "budget": {
+          "type": "object", "additionalProperties": false, "required": ["timeout_seconds", "output_bytes"],
+          "properties": {
+            "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 3600},
+            "output_bytes": {"type": "integer", "minimum": 4096, "maximum": 8388608}
+          }
+        }
+      },
+      "description": "Inductive mode requires inductive_invariant and safety properties; temporal properties require temporal mode. Runtime validation enforces these relationships."
+    },
+    "property": {
+      "type": "object", "additionalProperties": false, "required": ["kind", "requirement"],
+      "properties": {"kind": {"enum": ["invariant", "temporal"]}, "requirement": {"$ref": "#/$defs/text"}}
+    }
+  }
+}

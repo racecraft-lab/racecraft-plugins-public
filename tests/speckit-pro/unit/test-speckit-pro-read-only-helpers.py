@@ -60,6 +60,7 @@ if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
 
 EXPECTED_HELPERS = [
+    "formal-doctor",
     "helper-registry-dispatch",
     "check-prerequisites",
     "resolve-workflow-binding",
@@ -92,6 +93,7 @@ EXPECTED_HELPERS = [
 JSON_STDOUT_PARITY_HELPERS = {"atomicity-route"}
 
 HELPER_CASES: dict[str, dict[str, object]] = {
+    "formal-doctor": {"repo_root": ".", "workflow_file": "tests/speckit-pro/unit/fixtures/formal-methods/disabled-workflow.md"},
     "check-prerequisites": {"workflow_file": WORKFLOW_FILE},
     "resolve-workflow-binding": {"workflow_file": AUTOPILOT_STAGE_WORKFLOW_FILE},
     "resolve-scaffold-worktree-placement": {"branch_name": "test-scaffold-placement"},
@@ -3252,6 +3254,12 @@ class ReadOnlyHelperTests(unittest.TestCase):
             with self.subTest(helper_id=helper_id):
                 completed, response, stderr_records = run_runner(helper_request(helper_id, HELPER_CASES[helper_id]))
                 data = response["data"]
+                if helper_id == "formal-doctor":
+                    self.assertEqual(completed.returncode, 0)
+                    self.assertEqual(data["verdict"], "disabled")
+                    self.assertFalse(data["writes_state"])
+                    self.assertEqual(stderr_records, [])
+                    continue
                 self.assertEqual(data["shell"], False)
                 self.assertEqual(data["argv"][-2:], ["-m", "speckit_pro_runner"])
                 self.assertEqual(data["python_operation"], helper_id)

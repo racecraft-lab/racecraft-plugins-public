@@ -756,19 +756,29 @@ for phase in PHASES starting from first_pending:
     6. Check .specify/extensions.yml for after_<phase> hooks
        → run accepted hooks (non-destructive), skip duplicates
     7. Validate gate directly in the main session:
+       After Plan's ordinary executor returns, first run the conditional
+       formal-model-author dispatch and formal-check preview/execute sequence
+       from the shared formal-methods.md contract. Keep Plan/G3 incomplete until
+       the selected checks pass; refresh formal-doctor after authoring. Do not
+       append this work to phase-executor's single-command prompt.
        Run 'runner helper validate-gate' for gate G<N>
        against <feature_dir> from the orchestrator using the
        resolved scripts path for this skill.
-       Parse the script output for PASS/FAIL status.
+       Include workflow_file: WORKFLOW_FILE in the request so selected formal
+       evidence is checked. Parse the script output for PASS/FAIL status.
     8. If gate fails:
        a. Attempt auto-fix (max 2 attempts)
        b. If still failing and gate-failure == "stop": STOP
-       c. If gate-failure == "skip-and-log": log, continue
+       c. If gate-failure == "skip-and-log": log, continue for generic gates;
+          a selected formal failure always stops and names the Plan resume point.
     9. Update workflow file with results and print the current checklist summary
    10. If auto-commit == "per-phase":
        For phases 1–6: run: git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json && git commit
        (the workflow file and state file live outside specs/, so a phase that
        does not stage them by path leaves its bookkeeping uncommitted)
+       Also stage formal-check's exact declared commit_paths when selected;
+       durable models/catalog/compact evidence live outside specs/. Verify path
+       ownership and exclude ignored raw formal-runs output.
        For phase 7 (implement): run: git add -A && git commit
        (implementation changes include src/, tests/, etc.)
    11. Advance to next phase (next iteration of loop) and write the new
@@ -803,6 +813,11 @@ cases. Record any surfaced suggestion or suppression note in the workflow log
 before Phase 1 continues.
 
 ## Phase 3: Plan — Reviewability Budget (advisory)
+
+The conditional author/check checkpoint is defined in the
+[shared formal contract](formal-methods.md).
+It runs in the parent after the normal Plan executor, with the installed
+formal-model-author role, and applies equally on resume.
 
 After the Plan phase executor returns and `plan.md` exists (G3 pass), run the
 standalone plan-phase estimator to project each slice's production-LOC footprint
