@@ -51,8 +51,24 @@ def validate_apalache(model: dict[str, Any], text: str) -> None:
     for directive in ("INIT", "NEXT"):
         if directives.get(directive) != [model[directive.lower()]]:
             raise FormalError("invalid_model", f"native {directive} must agree with the model catalog")
+    validate_properties(model, directives, required=False)
+
+
+def validate_properties(model: dict[str, Any], directives: dict[str, list[str]], *, required: bool) -> None:
     for singular, plural, kind in (("INVARIANT", "INVARIANTS", "invariant"), ("PROPERTY", "PROPERTIES", "temporal")):
         configured = directives.get(singular, []) + directives.get(plural, [])
         selected = [name for name, prop in model["properties"].items() if prop["kind"] == kind]
-        if configured and sorted(configured) != sorted(selected):
+        if (required or configured) and sorted(configured) != sorted(selected):
             raise FormalError("invalid_model", f"native {plural} must agree with the complete catalog property mapping")
+
+
+def validate_tlc(model: dict[str, Any], text: str) -> None:
+    directives = sections(text)
+    if "specification" in model:
+        if directives.get("SPECIFICATION") != [model["specification"]] or {"INIT", "NEXT"} & directives.keys():
+            raise FormalError("invalid_model", "native SPECIFICATION must match the catalog without INIT/NEXT overrides")
+    elif "SPECIFICATION" in directives or any(directives.get(key.upper()) != [model[key]] for key in ("init", "next")):
+        raise FormalError("invalid_model", "native INIT/NEXT must match the catalog without a SPECIFICATION override")
+    if model["mode"] == "temporal" and "SYMMETRY" in directives:
+        raise FormalError("unsupported", "TLC temporal checking with symmetry is outside the qualified profile")
+    validate_properties(model, directives, required=True)

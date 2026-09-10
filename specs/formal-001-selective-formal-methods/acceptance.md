@@ -10,6 +10,7 @@ Status: incomplete. Automated results do not establish manual onboarding success
 | A4 / US4 | Valid trace, real seeded defect, illegal transition with valid states, stale/missing/malformed/mismatched trace | Pending |
 | A5 / US5 | Manager capability matrix, fallback, partial mutation/recovery, preserved metadata and no duplicates | Pending |
 | A6 / all | Disabled compatibility, durable archival, every advertised install profile, targeted/full suites, artifact/ripwire gates, installed parity | Pending |
+| A7 / full harness | Complete suite-manifest review, test/eval coverage, full-plugin scaffold/autopilot and installed Claude/Codex integration, gap remediation and regression evidence | Pending; required before final qualification and PR delivery |
 
 ## Delivery
 
@@ -17,7 +18,7 @@ Status: incomplete. Automated results do not establish manual onboarding success
 |---|---|---|---|
 | 1 | `codex/formal-methods/coaching` | Pending | 5,132/5,132 committed-checkout suite; docs validation including four browser checks |
 | 2 | `codex/formal-methods/apalache` | Pending | Native Apalache 30/30; deterministic formal 18/18; installer 192/192; read-only helpers 107/107 |
-| 3 | `codex/formal-methods/tlc` | Pending | Pending |
+| 3 | `codex/formal-methods/tlc` | Pending | 34/34 deterministic and native Apalache/TLC checks; full delivery qualification remains required |
 | 4 | `codex/formal-methods/lifecycle` | Pending | Pending |
 | 5 | `codex/formal-methods/traces` | Pending | Pending |
 | 6 | `codex/formal-methods/qualification` | Pending | Pending |
@@ -25,7 +26,8 @@ Status: incomplete. Automated results do not establish manual onboarding success
 ## Qualification boundaries
 
 Apalache 0.62.2's official JAR profile has executed on macOS arm64 with Java
-26.0.1. Other runtimes and containers remain unqualified. TLC 1.7.4 remains a target.
+26.0.1. TLC 1.7.4's official JAR has also executed on that runtime. Other runtimes
+and containers remain unqualified.
 Installation requires operator authorization. Hosted CI remains the default.
 Organization runner admission and VM sizing are not inferred from this repository.
 
@@ -64,3 +66,19 @@ Organization runner admission and VM sizing are not inferred from this repositor
   isolating formal resume policy. Registry/fixture growth and agent-roster churn
   are expected metadata changes; dynamically invoked checker capture/tests are
   covered by executable tests. These findings were reviewed, not suppressed.
+
+## TLC-layer evidence
+
+- Native qualification ran both pinned checkers with the deterministic contract
+  cases: 34/34 assertions passed. TLC cases include complete finite exploration,
+  an invariant violation, deadlock, syntax error, an unsupported infinite domain,
+  temporal progress with weak fairness, and a liveness counterexample without it.
+- The official TLC 1.7.4 JAR SHA256 is
+  `936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88`;
+  its SHA1 matches the release asset and its manifest identifies `v1.7.4`.
+- The adapter requires the native property's full catalog mapping, preserves
+  SPECIFICATION/fairness, and rejects temporal symmetry in this profile. Each run
+  gets its own metadata and Java temporary directories. Native TLC qualification
+  required the sandbox to permit its local runtime socket.
+- A 34/34 combined run is automated evidence, not manual onboarding acceptance
+  or qualification of other Java, OS, or container profiles.

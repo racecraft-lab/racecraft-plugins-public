@@ -18,7 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 sys.path[:0] = [str(PLUGIN_ROOT), str(REPO_ROOT / "tests/speckit-pro/lib")]
 
-from speckit_pro_runner.formal import apalache, catalog, engine, helper
+from speckit_pro_runner.formal import apalache, catalog, engine, helper, tlc
 from speckit_pro_runner.formal.evidence import read_checkpoint, record_path
 from speckit_pro_runner.formal.process import run_process, start_process
 from speckit_pro_runner.helpers.registry import dispatch_helper
@@ -26,6 +26,7 @@ from speckit_pro_runner.helpers.read_only import resolve_autopilot_stage, valida
 from test_result import run_counted
 
 JAR: str | None = None
+TLC_JAR: str | None = None
 
 
 class FormalCheckerTests(unittest.TestCase):
@@ -54,7 +55,7 @@ class FormalCheckerTests(unittest.TestCase):
     def save_catalog(self) -> None:
         target = self.root / catalog.CATALOG_PATH
         target.parent.mkdir(exist_ok=True)
-        target.write_text(json.dumps({"schema_version": "1.0", "tools": {"apalache": self.tool}, "models": {"counter": self.model}}))
+        target.write_text(json.dumps({"schema_version": "1.0", "tools": {self.model["checker"]: self.tool}, "models": {"counter": self.model}}))
 
     def request(self, mode: str = "dry_run", name: str = "formal-check", **inputs) -> dict:
         args = {"repo_root": str(self.root), "workflow_file": "workflow.md", "spec_file": "spec.md", "plan_file": "plan.md", **inputs}
@@ -62,7 +63,7 @@ class FormalCheckerTests(unittest.TestCase):
 
     def passed_model(self, root, model_id, item) -> dict:
         return {"model": model_id, "verdict": "pass", "obligations": [
-            {"id": obligation["id"], "verdict": "pass", "exit_code": 0} for obligation in apalache.obligations(item["model"])]}
+            {"id": obligation["id"], "verdict": "pass", "exit_code": 0} for obligation in engine.obligations(item["model"])]}
 
     def test_disabled_selection_does_not_inspect_or_install_tools(self) -> None:
         self.selection.update(status="none", models=[])
@@ -198,7 +199,7 @@ class FormalCheckerTests(unittest.TestCase):
                 engine.execute_model(self.root, "counter", {"model": self.model, "tool": tool})
         self.assertFalse((self.root / catalog.RUNS_PATH).exists())
 
-    def test_native_config_cannot_silently_override_or_drop_obligations(self) -> None:
+    def test_apalache_config_cannot_silently_override_or_drop_obligations(self) -> None:
         path = self.root / self.model["config"]
         for config, expected in (("SPECIFICATION Spec", "unsupported"), ("INIT Init\nNEXT Wrong", "invalid_model"),
                                  ("INIT Init\nNEXT Next\nCONSTRAINT Smaller", "unsupported"),
@@ -206,6 +207,51 @@ class FormalCheckerTests(unittest.TestCase):
             with self.subTest(config=config):
                 path.write_text(config)
                 self.assertEqual(expected, self.request()["data"]["verdict"])
+
+    def test_tlc_catalog_cannot_approve_replacement_bytes(self) -> None:
+        jar = self.root / "replacement.jar"
+        with zipfile.ZipFile(jar, "w") as archive:
+            archive.writestr("META-INF/MANIFEST.MF", "X-Git-Tag: v1.7.4\n\n")
+        tool = {**self.tool, "version": "1.7.4", "jar": str(jar), "sha256": catalog.digest(jar)}
+        with patch.object(engine.shutil, "which", return_value=sys.executable), patch.object(engine.subprocess, "run") as launch:
+            with self.assertRaises(catalog.FormalError) as caught:
+                engine.inspect_tool(self.root, tool, "tlc")
+            self.assertEqual("version_mismatch", caught.exception.verdict)
+            launch.assert_not_called()
+
+    def test_manifest_continuations_and_main_section_control_sidecar_checks(self) -> None:
+        jar = self.root / "manifest-fixture.jar"
+        for newline in ("\n", "\r\n", "\r"):
+            with self.subTest(newline=newline):
+                manifest = newline.join(["Manifest-Version: 1.0", "X-Git-Tag: v1.7.", " 4",
+                                         "Class-Path: missing.jar ", " sidecar.jar", "", "Name: entry.class",
+                                         "X-Git-Tag: v0.0.0", "Class-Path: ignored.jar", "", ""])
+                with zipfile.ZipFile(jar, "w") as archive:
+                    archive.writestr("META-INF/MANIFEST.MF", manifest)
+                tool = {**self.tool, "version": "1.7.4", "jar": str(jar), "sha256": catalog.digest(jar)}
+                version = SimpleNamespace(stdout="", stderr='java version "25"', returncode=0)
+                with patch.dict(engine.CHECKER_SHA256, {"tlc": tool["sha256"]}), patch.object(engine.shutil, "which", return_value=sys.executable), patch.object(engine.subprocess, "run", return_value=version):
+                    self.assertEqual("1.7.4", engine.inspect_tool(self.root, tool, "tlc")["version"])
+                    sidecar = self.root / "sidecar.jar"
+                    sidecar.touch()
+                    with self.assertRaises(catalog.FormalError) as caught:
+                        engine.inspect_tool(self.root, tool, "tlc")
+                    self.assertEqual("unsupported", caught.exception.verdict)
+                    sidecar.unlink()
+
+    def test_tlc_requires_complete_native_properties_and_exploration(self) -> None:
+        self.model.update(checker="tlc", mode="finite", bounds={"max_set_size": 1000000})
+        self.tool["version"] = "1.7.4"
+        self.save_catalog()
+        with patch.object(engine.shutil, "which", return_value=sys.executable), patch.object(helper, "inspect_tool", return_value={"version": "fixture"}), patch.object(helper, "execute_model", side_effect=self.passed_model):
+            self.assertEqual("pass", self.request("apply")["data"]["verdict"])
+            self.assertTrue(helper.current_checkpoint(self.root, "workflow.md")["complete"])
+            (self.root / self.model["config"]).write_text("INIT Init\nNEXT Next\n")
+            self.assertEqual("invalid_model", self.request()["data"]["verdict"])
+        result = {"exit_code": 0, "output": "Simulation finished", "timed_out": False, "output_limited": False}
+        self.assertEqual("inconclusive", tlc.verdict(result))
+        result["output"] = "@!@!@STARTMSG 2193:0 @!@!@\n@!@!@STARTMSG 2186:0 @!@!@\n0 distinct states found"
+        self.assertEqual("inconclusive", tlc.verdict(result))
 
 
 class NativeApalacheTests(FormalCheckerTests):
@@ -275,14 +321,67 @@ class NativeApalacheTests(FormalCheckerTests):
         self.assertEqual("version_mismatch", self.request("read_only", "formal-doctor")["data"]["verdict"])
 
 
+class NativeTlcTests(FormalCheckerTests):
+    def setUp(self) -> None:
+        super().setUp()
+        assert TLC_JAR is not None
+        self.tool.update(version="1.7.4", jar=TLC_JAR, sha256=catalog.digest(Path(TLC_JAR)))
+        self.model.update(checker="tlc", mode="finite", bounds={"max_set_size": 1000000})
+        self.save_catalog()
+
+    def test_native_tlc_pass_violation_errors_and_deadlock(self) -> None:
+        passing = self.request("apply")
+        self.assertEqual("pass", passing["data"]["verdict"], passing)
+        path = self.root / self.model["module"]
+        original = path.read_text()
+        cases = (("violation", original.replace("count <= Limit", "count < Limit")),
+                 ("invalid_model", original.replace("Init == count = 0", "Init == )")),
+                 ("invalid_model", original.replace("Init == count = 0", 'Init == count = "zero"')),
+                 ("unsupported", original.replace("Init == count = 0", "Init == count \\in Int")),
+                 ("violation", original.replace("IF count < Limit THEN count' = count + 1 ELSE UNCHANGED count", "count < Limit /\\ count' = count + 1")))
+        for expected, content in cases:
+            with self.subTest(expected=expected, content=content):
+                path.write_text(content)
+                result = self.request("apply")
+                self.assertEqual(expected, result["data"]["verdict"], result)
+
+    def test_native_tlc_fairness_and_liveness_counterexample(self) -> None:
+        path = self.root / self.model["module"]
+        original = path.read_text().replace("Spec ==", "Progress == <>(count = Limit)\nSpec ==")
+        path.write_text(original.replace("[][Next]_count", "[][Next]_count /\\ WF_count(Next)"))
+        self.model.pop("init")
+        self.model.pop("next")
+        self.model.update(specification="Spec", mode="temporal")
+        self.model["properties"]["Progress"] = {"kind": "temporal", "requirement": "FR2"}
+        (self.root / self.model["config"]).write_text("CONSTANT Limit = 2\nSPECIFICATION Spec\nINVARIANT Bounded\nPROPERTY Progress\n")
+        self.save_catalog()
+        passing = self.request("apply")
+        self.assertEqual("pass", passing["data"]["verdict"], passing)
+        path.write_text(original)
+        failing = self.request("apply")
+        self.assertEqual("violation", failing["data"]["verdict"], failing)
+
+    def test_native_tlc_timeout_never_becomes_exhaustive_success(self) -> None:
+        (self.root / self.model["config"]).write_text("CONSTANT Limit = 1000000000\nINIT Init\nNEXT Next\nINVARIANT Bounded\n")
+        self.model["budget"]["timeout_seconds"] = 1
+        self.save_catalog()
+        self.assertEqual("timeout", self.request("apply")["data"]["verdict"])
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--apalache-jar")
+    parser.add_argument("--tlc-jar")
     args = parser.parse_args()
     JAR = str(Path(args.apalache_jar).resolve()) if args.apalache_jar else None
+    TLC_JAR = str(Path(args.tlc_jar).resolve()) if args.tlc_jar else None
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(FormalCheckerTests)
     if JAR:
         for name in unittest.defaultTestLoader.getTestCaseNames(NativeApalacheTests):
             if name.startswith("test_native_"):
                 suite.addTest(NativeApalacheTests(name))
+    if TLC_JAR:
+        for name in unittest.defaultTestLoader.getTestCaseNames(NativeTlcTests):
+            if name.startswith("test_native_"):
+                suite.addTest(NativeTlcTests(name))
     raise SystemExit(run_counted(suite, label="test-formal-checkers"))

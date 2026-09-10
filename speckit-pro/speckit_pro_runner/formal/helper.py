@@ -9,8 +9,7 @@ from typing import Any
 
 from ..envelope import diagnostic, response
 from .catalog import CATALOG_PATH, FormalError, confined, selected_catalog
-from .apalache import obligations
-from .engine import execute_model, inspect_tool, preview_model
+from .engine import execute_model, inspect_tool, obligations, preview_model
 from .evidence import CHECKPOINT_ROWS, fingerprint, read_checkpoint, record_path, write_checkpoint
 from .selection import SelectionError, selection_from_workflow
 

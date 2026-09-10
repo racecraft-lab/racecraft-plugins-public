@@ -10,7 +10,10 @@
     "tools": {
       "type": "object",
       "additionalProperties": false,
-      "properties": {"apalache": {"$ref": "#/$defs/tool"}}
+      "properties": {
+        "apalache": {"allOf": [{"$ref": "#/$defs/tool"}, {"properties": {"version": {"const": "0.62.2"}}}]},
+        "tlc": {"allOf": [{"$ref": "#/$defs/tool"}, {"properties": {"version": {"const": "1.7.4"}}}]}
+      }
     },
     "models": {"type": "object", "additionalProperties": {"$ref": "#/$defs/model"}}
   },
@@ -21,7 +24,7 @@
       "type": "object", "additionalProperties": false,
       "required": ["version", "jar", "sha256", "java", "heap_mb"],
       "properties": {
-        "version": {"const": "0.62.2"},
+        "version": {"enum": ["0.62.2", "1.7.4"]},
         "jar": {"$ref": "#/$defs/text"},
         "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
         "java": {"$ref": "#/$defs/text"},
@@ -30,20 +33,26 @@
     },
     "model": {
       "type": "object", "additionalProperties": false,
-      "required": ["checker", "module", "config", "inputs", "properties", "assumptions", "mode", "init", "next", "bounds", "budget"],
+      "required": ["checker", "module", "config", "inputs", "properties", "assumptions", "mode", "bounds", "budget"],
+      "oneOf": [
+        {"required": ["init", "next"], "not": {"required": ["specification"]}},
+        {"required": ["specification"], "properties": {"checker": {"const": "tlc"}}, "not": {"anyOf": [{"required": ["init"]}, {"required": ["next"]}]}}
+      ],
       "properties": {
-        "checker": {"const": "apalache"},
+        "checker": {"enum": ["apalache", "tlc"]},
         "module": {"type": "string", "pattern": "\\.tla$"},
         "config": {"type": "string", "pattern": "\\.cfg$"},
         "inputs": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"$ref": "#/$defs/text"}, "description": "WORKFLOW_ROOT-relative durable files; include module, configuration, imports and data. Exclude specs/ and run/evidence directories. The runtime enforces confinement and membership."},
         "properties": {"type": "object", "minProperties": 1, "propertyNames": {"$ref": "#/$defs/name"}, "additionalProperties": {"$ref": "#/$defs/property"}},
         "assumptions": {"type": "array", "items": {"$ref": "#/$defs/text"}},
-        "mode": {"enum": ["bounded", "temporal", "inductive"]},
+        "mode": {"enum": ["bounded", "temporal", "inductive", "finite"]},
         "init": {"$ref": "#/$defs/name"},
         "next": {"$ref": "#/$defs/name"},
+        "specification": {"$ref": "#/$defs/name"},
         "bounds": {"oneOf": [
           {"type": "object", "additionalProperties": false, "required": ["length"], "properties": {"length": {"type": "integer", "minimum": 0, "maximum": 10000}}},
-          {"type": "object", "additionalProperties": false, "required": ["inductive_invariant"], "properties": {"inductive_invariant": {"$ref": "#/$defs/name"}}}
+          {"type": "object", "additionalProperties": false, "required": ["inductive_invariant"], "properties": {"inductive_invariant": {"$ref": "#/$defs/name"}}},
+          {"type": "object", "additionalProperties": false, "required": ["max_set_size"], "properties": {"max_set_size": {"type": "integer", "minimum": 1, "maximum": 10000000}}}
         ]},
         "budget": {
           "type": "object", "additionalProperties": false, "required": ["timeout_seconds", "output_bytes"],
