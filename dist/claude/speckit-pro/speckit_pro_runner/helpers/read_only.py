@@ -4672,6 +4672,49 @@ def _spec_index_render_prs(spec_dir: Path, repo_root: Path) -> list[str]:
     return [row for _, _, _, _, row in sortable]
 
 
+def _spec_index_filter_gitignored_files(files: list[Path], repo_root: Path) -> list[Path]:
+    if not files:
+        return files
+
+    by_relative: dict[bytes, Path] = {}
+    for path in files:
+        try:
+            relative = path.relative_to(repo_root).as_posix()
+        except ValueError as exc:
+            raise SpecIndexRenderError(f"spec artifact escapes the repository: {path}") from exc
+        by_relative[os.fsencode(relative)] = path
+
+    argv = ["git", "check-ignore", "--stdin", "-z"]
+    try:
+        completed = subprocess.run(
+            argv,
+            input=b"\0".join(by_relative) + b"\0",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=repo_root,
+            shell=False,
+            check=False,
+            timeout=SUBPROCESS_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise SpecIndexRenderError(
+            f"could not evaluate Git ignore rules: {type(exc).__name__}"
+        ) from exc
+    if completed.returncode not in {0, 1}:
+        detail = completed.stderr.decode("utf-8", errors="replace").strip()
+        suffix = f" ({detail[:240]})" if detail else ""
+        raise SpecIndexRenderError(
+            f"could not evaluate Git ignore rules: git check-ignore exited "
+            f"{completed.returncode}{suffix}"
+        )
+
+    ignored = {item for item in completed.stdout.split(b"\0") if item}
+    unexpected = ignored.difference(by_relative)
+    if unexpected or (completed.returncode == 0) != bool(ignored):
+        raise SpecIndexRenderError("could not evaluate Git ignore rules: unexpected git output")
+    return [path for relative, path in by_relative.items() if relative not in ignored]
+
+
 def _spec_index_walk_regular_files(root: Path, repo_root: Path) -> list[Path]:
     files: list[Path] = []
 
@@ -4712,7 +4755,7 @@ def _spec_index_walk_regular_files(root: Path, repo_root: Path) -> list[Path]:
                     )
 
     visit(root)
-    return files
+    return _spec_index_filter_gitignored_files(files, repo_root)
 
 
 def _spec_index_render_backlinks(spec_dir: Path, repo_root: Path) -> list[str]:
