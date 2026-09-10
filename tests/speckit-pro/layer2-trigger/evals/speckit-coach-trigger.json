@@ -112,7 +112,7 @@
     "should_trigger": true
   },
   {
-    "query": "I have never used formal methods. Walk me through a useful counter example and a counterexample before I install anything.",
+    "query": "I already have SpecKit Pro installed. Walk me through how its workflow supports formal methods, using one useful model example and one counterexample, before I install Apalache, TLC, or Quint.",
     "should_trigger": true
   },
   {
