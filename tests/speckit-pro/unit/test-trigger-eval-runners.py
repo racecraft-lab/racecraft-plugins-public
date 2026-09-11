@@ -1064,7 +1064,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 "claude-sonnet-test",
             )
             no_nonce = claude.inspect_claude_stream(
-                stream.replace(nonce.encode("utf-8"), b"ordinary response"),
+                stream.replace(nonce.encode("utf-8"), b"The selected skill was treated as a test stub."),
                 plugin_name,
                 plugin_root,
                 expected_skill,
@@ -1412,7 +1412,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 "completed response without Skill is valid": nonselected["valid"] and not nonselected["selected"],
                 "empty completed assistant body is invalid": not empty_response["valid"],
                 "nonce without native selection is invalid": not nonce_only["valid"],
-                "native target selection requires nonce attestation": not no_nonce["valid"],
+                "native target selection does not require text attestation": no_nonce["valid"],
                 "every malformed or competing selection fails": all(
                     not result["valid"] for result in mutation_results.values()
                 ),

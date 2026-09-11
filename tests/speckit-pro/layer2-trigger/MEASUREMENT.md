@@ -20,9 +20,11 @@ A passing noncanonical or diagnostic run remains ineligible.
 Claude selection is observed through a completed, linked, model-initiated
 `Skill` tool call. The observer validates the exact staged target or sibling
 identifier, tool-use/result linkage, ordering, successful completion, terminal
-result, reported model identity, and one exact nonce attestation after a target
-selection. Multiple, unknown, malformed, or conflicting selections are invalid.
-A sibling selection is a valid target nonselection.
+result, and reported model identity. A target nonce is optional corroboration;
+when emitted, it must appear in exactly one assistant text block as the first
+nonblank line after the target selection. A nonce without its native target selection, or multiple,
+unknown, malformed, or conflicting selections, is invalid. A sibling selection
+is a valid target nonselection.
 
 The runner pins Claude Code 2.1.268 and `claude-sonnet-5`. It launches with an
 empty `--setting-sources` list, strict empty MCP configuration, a curated
@@ -146,6 +148,7 @@ dispositions, independent pruning review, and issue #573's broader work remain
 separate gates.
 
 Sources: [Claude hooks](https://code.claude.com/docs/en/hooks#userpromptexpansion),
+[Claude tools](https://code.claude.com/docs/en/tools-reference),
 [Claude CLI](https://code.claude.com/docs/en/cli-reference),
 [Claude settings](https://code.claude.com/docs/en/settings),
 [Claude model configuration](https://code.claude.com/docs/en/model-config#model-aliases),

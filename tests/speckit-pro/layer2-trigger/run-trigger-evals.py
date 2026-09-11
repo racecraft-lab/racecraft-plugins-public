@@ -316,8 +316,10 @@ def _claude_nonce_error(
 ) -> str | None:
     if not intended:
         return "target nonce appeared without its native Skill selection" if nonce_locations else None
+    if not nonce_locations:
+        return None
     if len(nonce_locations) != 1:
-        return "selected target omitted its single nonce attestation"
+        return "selected target emitted multiple nonce attestations"
     location = nonce_locations[0]
     nonce_event = next(event for index, event in assistant_events if index == location["event"])
     nonce_block = stream_content(nonce_event)[int(location["block"])]
