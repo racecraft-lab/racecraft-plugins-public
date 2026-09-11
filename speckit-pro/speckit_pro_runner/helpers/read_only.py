@@ -2423,14 +2423,21 @@ def resolve_autopilot_stage(inputs: dict[str, Any], repo_root: Path) -> dict[str
             2,
         )
     from ..formal.helper import apply_resume_guard
+    from ..artifact_review import review_handoff
     try:
         formal = apply_resume_guard(repo_root, workflow_raw, parsed, signals)
+        review = review_handoff(text, repo_root, trusted_bytes)
     except ValueError as exc:
         return make_result("", f"error: {exc}\n", 2)
+    review_pending = artifact_review_resume(text, signals, review)
     stage = parsed["stage"]
     if stage is not None:
         source = "argv"
         basis = f"explicit --stage {stage}"
+    elif signals["planning_complete"] and review_pending:
+        source = "auto-detect"
+        stage = "plan"
+        basis = "artifact review handoff is unverified; resume the plan terminal step"
     else:
         source = "auto-detect"
         stage = "implement" if signals["planning_complete"] else "plan"
@@ -2452,8 +2459,21 @@ def resolve_autopilot_stage(inputs: dict[str, Any], repo_root: Path) -> dict[str
         "confidence_gate_status": signals["confidence_gate_status"],
         "from_phase": parsed["from_phase"],
         "corroboration": corroboration,
+        **({"artifact_review": review} if review["status"] != "absent" else {}),
         **({"formal_checkpoint": formal} if formal["required"] else {}),
     }))
+
+
+def artifact_review_resume(text: str, signals: dict[str, Any], review: dict[str, Any]) -> bool:
+    """An explicit stage still wins; existing implementation is never rolled back."""
+    lines = HTML_COMMENT_RE.sub("", text).splitlines()
+    overview = workflow_table_rows(lines, AUTOPILOT_OVERVIEW_HEADING)
+    started = any(len(row) >= 3 and row[0] == "Implement" and row[2] not in ("Pending", "⏳ Pending") for row in overview)
+    if started:
+        return False
+    if review["status"] == "absent" and signals["recorded_stage"] == "plan" and workflow_draft_pr_row(lines):
+        review.update(status="unrecorded", resume_action="reconcile", reuse_artifacts=False)
+    return review["status"] in ("pending", "unrecorded")
 
 
 # The three named surfaces of this one registered operation, chosen by the
