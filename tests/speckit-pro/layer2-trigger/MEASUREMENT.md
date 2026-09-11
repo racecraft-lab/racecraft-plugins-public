@@ -54,9 +54,13 @@ For the leading compound form, the parser requires the body at byte zero and
 rejects a tail that names another staged skill path or emits any staged body or
 selection marker. The post-start form also rejects a command that contains any
 marker or a second staged path; it is valid only when the marker appears after
-the command start. This accounts for the official `codex exec --json` sample,
-which shows a command start followed by an agent message and completed turn
-without a matching command-completion event. Outer exit, error, isolation, and
+the command start. It applies both when the JSON stream omits command completion
+and when a successful completion's retained output omits the leading body. When
+retained output exists, any displaced staged body or marker still makes that
+form invalid. This accounts for the official `codex exec --json` sample, which
+shows a command start followed by an agent message and completed turn without a
+matching command-completion event, without treating `aggregated_output` as a
+documented complete stdout transcript. Outer exit, error, isolation, and
 cleanup checks still apply at the trial layer.
 
 Each accepted witness records `read_mode` as `exact-output`,

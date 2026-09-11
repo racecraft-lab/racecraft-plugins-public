@@ -913,6 +913,28 @@ def _codex_body_read_match(
     return compound_match, "leading-compound-output"
 
 
+def _completed_codex_body_read_match(
+    events: list[dict[str, object]],
+    command_start: tuple[str, int],
+    turn_complete: int,
+    command_output: str,
+    witnesses: dict[str, dict[str, str]],
+) -> tuple[str, str] | None:
+    command, start_index = command_start
+    match = _codex_body_read_match(command, command_output, witnesses)
+    if match is not None:
+        return match
+    if any(
+        witness["body"] in command_output or witness["marker"] in command_output
+        for witness in witnesses.values()
+    ):
+        return None
+    skill_name = _post_start_marker_codex_body_read(
+        events, start_index, turn_complete, command, witnesses,
+    )
+    return (skill_name, "post-start-marker") if skill_name is not None else None
+
+
 def _codex_body_reads(
     events: list[dict[str, object]],
     turn_start: int,
@@ -946,7 +968,9 @@ def _codex_body_reads(
         command_output = item.get("aggregated_output")
         if not isinstance(command_output, str):
             return [], [], "command execution omitted its output"
-        match = _codex_body_read_match(command, command_output, witnesses)
+        match = _completed_codex_body_read_match(
+            events, command_starts[item_id], turn_complete, command_output, witnesses,
+        )
         if match is None:
             return [], [], "command was not an exact staged skill-body read"
         skill_name, read_mode = match

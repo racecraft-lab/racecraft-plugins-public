@@ -1866,12 +1866,27 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
         self.assertEqual(accepted["read_witnesses"][0]["read_mode"], "post-start-marker")
         self.assertIn("test_uuid = uuid.uuid4().hex\n", CODEX_ENGINE.read_text(encoding="utf-8"))
 
+        completed = {"type": "item.completed", "item": {**started["item"],
+            "status": "completed", "exit_code": 0, "aggregated_output": "later output"}}
+        completed_accepted = inspect_codex_events(
+            engine, [*events[:4], completed, *events[4:]], "demo-eval", witnesses)
+        self.assertEqual(
+            (completed_accepted["valid"], completed_accepted["selected"],
+             completed_accepted["read_witnesses"][0]["read_mode"]),
+            (True, True, "post-start-marker"),
+        )
+
         invalid_cases = {
             "marker precedes read": [*events[:2], selected, started, events[-1]],
             "marker is absent": [*events[:4], {**selected, "item": {**selected["item"], "text": "No skill."}}, events[-1]],
             "command exposes marker": [*events[:3], {**started, "item": {**started["item"], "command": command[:-1] + f" && printf {marker}\\\""}}, *events[4:]],
             "read is not first": [*events[:3], {**started, "item": {**started["item"], "command": command.replace("sed -n", "pwd && sed -n")}}, *events[4:]],
             "two commands remain open": [*events[:4], {**started, "item": {**started["item"], "id": "second"}}, *events[4:]],
+            "completed output contains a staged body": [
+                *events[:4], {**completed, "item": {**completed["item"],
+                    "aggregated_output": "prefix\n" + witnesses["demo-eval"]["body"]}},
+                *events[4:]
+            ],
         }
         for label, malformed in invalid_cases.items():
             with self.subTest(label=label):
