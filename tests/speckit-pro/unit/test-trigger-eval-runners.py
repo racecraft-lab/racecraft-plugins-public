@@ -1745,6 +1745,83 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 self.assertFalse(parsed["valid"])
                 self.assertTrue(parsed["isolation_stop"])
 
+    def test_codex_compound_body_read_requires_an_exact_leading_witness(self) -> None:
+        engine = import_script(CODEX_ENGINE, "layer2_codex_compound_body_read")
+        target_marker = "CODEX_SKILL_SELECTED:demo-eval-fixed"
+        other_marker = "CODEX_SKILL_SELECTED:other-fixed"
+        witnesses = {
+            **codex_witness("demo-eval", target_marker),
+            **codex_witness("other", other_marker),
+        }
+        base = [
+            json.loads(line)
+            for line in codex_stream(witnesses, selected_skill="demo-eval").splitlines()
+        ]
+        exact = engine.inspect_codex_jsonl(
+            "\n".join(json.dumps(event) for event in base),
+            "demo-eval",
+            witnesses,
+        )
+        self.assertEqual(exact["read_witnesses"][0]["read_mode"], "exact-output")
+
+        def parse_case(command: str, output: str) -> dict[str, object]:
+            events = [dict(event) for event in base]
+            for index in (2, 3):
+                events[index] = {
+                    **events[index],
+                    "item": {**events[index]["item"], "command": command},
+                }
+            events[3]["item"]["aggregated_output"] = output
+            return engine.inspect_codex_jsonl(
+                "\n".join(json.dumps(event) for event in events),
+                "demo-eval",
+                witnesses,
+            )
+
+        target = witnesses["demo-eval"]
+        other = witnesses["other"]
+        leading_read = (
+            f'/bin/zsh -c "sed -n \'1,240p\' {target["path"]} '
+            "&& pwd && rg --files -g '!node_modules*' | head -200\""
+        )
+        body_then_metadata = target["body"] + "/tmp/fixture-workspace\n"
+        accepted = parse_case(leading_read, body_then_metadata)
+        self.assertTrue(accepted["valid"], accepted)
+        self.assertTrue(accepted["selected"])
+        self.assertEqual(accepted["consulted_skills"], ["demo-eval"])
+        self.assertEqual(
+            accepted["read_witnesses"][0]["read_mode"],
+            "leading-compound-output",
+        )
+
+        invalid_cases = {
+            "fabricated body with a path mention": (
+                f'printf ignored {target["path"]}',
+                body_then_metadata,
+            ),
+            "body read is not the first shell segment": (
+                f'/bin/zsh -c "pwd && sed -n \'1,240p\' {target["path"]}"',
+                "/tmp/fixture-workspace\n" + target["body"],
+            ),
+            "sed range is not the qualified form": (
+                leading_read.replace("1,240p", "1,239p"),
+                body_then_metadata,
+            ),
+            "output does not begin with the exact body": (
+                leading_read,
+                "prefix\n" + target["body"],
+            ),
+            "compound command reads a second staged body": (
+                leading_read[:-1] + f' && cat {other["path"]}"',
+                body_then_metadata + other["body"],
+            ),
+        }
+        for label, (command, output) in invalid_cases.items():
+            with self.subTest(label=label):
+                parsed = parse_case(command, output)
+                self.assertFalse(parsed["valid"], parsed)
+                self.assertIn("exact staged skill-body read", str(parsed["reason"]))
+
     def test_codex_isolation_violation_retains_evidence_and_stops(self) -> None:
         engine = import_script(CODEX_ENGINE, "layer2_codex_isolation_stop")
         for item_type, expected_calls in (("mcp_tool_call", 1), ("error", 1)):

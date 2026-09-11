@@ -41,16 +41,22 @@ names that limitation rather than claiming native observation.
 Every staged target and sibling retains its exact source description and gets a
 minimal body containing a unique randomized marker. A selection requires both:
 
-1. one started and successfully completed command that names the exact staged
-   `SKILL.md` path and emits its exact complete body; and
+1. one started and successfully completed command that proves a read of the
+   exact staged `SKILL.md` body, either as the command's complete output or as
+   the leading output of a shell command whose first segment is the qualified
+   `sed -n '1,240p' <exact-path>` read; and
 2. that skill's marker as the first nonblank line of one completed agent message.
 
-An exact body read without a marker is a valid consultation/nonselection. A
-marker without its matching read, an unknown or repeated marker, multiple body
-reads, an arbitrary/failed/unfinished command, or connected-tool activity is
-invalid. A sibling's read-plus-marker is a valid target nonselection. This makes
-the behaviorally selected staged-skill set observable within the declared
-scope, while preserving the distinction from a native activation event.
+For the leading compound form, the parser requires the body at byte zero and
+rejects a tail that names another staged skill path or emits any staged body or
+selection marker. Each accepted witness records `read_mode` as `exact-output`
+or `leading-compound-output`. An exact body read without a marker is a valid
+consultation/nonselection. A marker without its matching read, an unknown or
+repeated marker, multiple body reads, a command without one of those proofs, a
+failed/unfinished command, or connected-tool activity is invalid. A sibling's
+read-plus-marker is a valid target nonselection. This makes the behaviorally
+selected staged-skill set observable within the declared scope, while
+preserving the distinction from a native activation event.
 
 The runner pins Codex 0.153.3, `gpt-5.6-sol`, and low reasoning. It uses strict
 configuration isolation, disables unrelated features, and installs a dedicated

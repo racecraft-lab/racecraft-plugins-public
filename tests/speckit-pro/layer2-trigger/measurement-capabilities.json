@@ -61,7 +61,7 @@
       "platforms": ["darwin", "linux"],
       "interface": "codex exec --json with pseudo-terminal-isolated positional input, strict isolated config, and a dedicated no-retry ChatGPT-auth provider",
       "observation_scope": "codex-body-read-attestation",
-      "selection_observation": "Exact staged SKILL.md body read plus that skill's unique first-line marker",
+      "selection_observation": "Proven exact staged SKILL.md body read plus that skill's unique first-line marker",
       "authoritative_fields": [
         "thread.started thread_id",
         "turn.started, turn.completed, turn.failed, error",
@@ -72,7 +72,8 @@
       "selection_contract": [
         "One started and successfully completed command bound by item id",
         "Command names the exact staged target or sibling SKILL.md path",
-        "Command output equals the exact complete staged body",
+        "Command output equals the exact complete staged body, or a qualified shell command begins with sed -n 1,240p of the exact path and its output begins with that complete body",
+        "A leading compound read tail cannot name another staged path or emit any staged body or marker",
         "At most one known marker, first in its completed agent message",
         "A marker is valid only when corroborated by its matching body read"
       ],

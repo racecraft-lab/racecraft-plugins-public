@@ -30,6 +30,7 @@ import json
 import os
 import pathlib
 import re
+import shlex
 import shutil
 import signal
 import stat
@@ -772,6 +773,71 @@ def _codex_isolation_error(events: list[dict[str, object]]) -> str | None:
     return None
 
 
+def _leading_compound_codex_body_read(
+    command: str,
+    command_output: str,
+    witnesses: dict[str, dict[str, str]],
+) -> str | None:
+    """Recognize a full staged-body read at the start of a compound shell command."""
+    try:
+        wrapper = shlex.split(command)
+        if (
+            len(wrapper) != 3
+            or pathlib.Path(wrapper[0]).name not in {"bash", "sh", "zsh"}
+            or wrapper[1] != "-c"
+        ):
+            return None
+        tokens = shlex.split(wrapper[2])
+    except ValueError:
+        return None
+    if len(tokens) < 6 or tokens[:3] != ["sed", "-n", "1,240p"] or tokens[4] != "&&":
+        return None
+    read_path = tokens[3]
+    matches = [
+        name
+        for name, witness in witnesses.items()
+        if read_path in {witness["path"], witness["relative_path"]}
+        and command_output.startswith(witness["body"])
+        and command_output != witness["body"]
+    ]
+    if len(matches) != 1:
+        return None
+    suffix = command_output[len(witnesses[matches[0]]["body"]):]
+    tail_tokens = tokens[5:]
+    if any(
+        location in token
+        for witness in witnesses.values()
+        for location in (witness["path"], witness["relative_path"])
+        for token in tail_tokens
+    ):
+        return None
+    if any(
+        witness["body"] in suffix or witness["marker"] in suffix
+        for witness in witnesses.values()
+    ):
+        return None
+    return matches[0]
+
+
+def _codex_body_read_match(
+    command: str,
+    command_output: str,
+    witnesses: dict[str, dict[str, str]],
+) -> tuple[str, str] | None:
+    matches = [
+        name
+        for name, witness in witnesses.items()
+        if command_output == witness["body"]
+        and (witness["path"] in command or witness["relative_path"] in command)
+    ]
+    if len(matches) == 1:
+        return matches[0], "exact-output"
+    compound_match = _leading_compound_codex_body_read(command, command_output, witnesses)
+    if compound_match is None:
+        return None
+    return compound_match, "leading-compound-output"
+
+
 def _codex_body_reads(
     events: list[dict[str, object]],
     turn_start: int,
@@ -805,15 +871,10 @@ def _codex_body_reads(
         command_output = item.get("aggregated_output")
         if not isinstance(command_output, str):
             return [], [], "command execution omitted its output"
-        matches = [
-            name
-            for name, witness in witnesses.items()
-            if command_output == witness["body"]
-            and (witness["path"] in command or witness["relative_path"] in command)
-        ]
-        if len(matches) != 1:
+        match = _codex_body_read_match(command, command_output, witnesses)
+        if match is None:
             return [], [], "command was not an exact staged skill-body read"
-        skill_name = matches[0]
+        skill_name, read_mode = match
         if skill_name in consulted:
             return [], [], "staged skill body was read more than once"
         consulted.append(skill_name)
@@ -822,6 +883,7 @@ def _codex_body_reads(
             "path": witnesses[skill_name]["path"],
             "sha256": witnesses[skill_name]["sha256"],
             "command_item_id": item_id,
+            "read_mode": read_mode,
         })
     if set(command_starts) != {read["command_item_id"] for read in reads}:
         return [], [], "command execution did not complete exactly once"
