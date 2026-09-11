@@ -29,12 +29,15 @@ import trigger_evidence as evidence_records  # noqa: E402
 
 PLUGIN_ROOT = (SCRIPT_DIR / "../../../speckit-pro").resolve()
 DEFAULT_MODEL = "claude-sonnet-5"
-PINNED_CLAUDE_VERSION = "2.1.268 (Claude Code)"
-PINNED_DOCTOR_RUNNING = "Running: native (2.1.268)"
+PINNED_CLAUDE_VERSION = "2.1.269 (Claude Code)"
+PINNED_DOCTOR_RUNNING = "Running: native (2.1.269)"
 PINNED_MANAGED_SETTINGS = (
-    "Managed settings (remote): not fetched — requires an Enterprise or Team subscription"
+    "Managed settings (remote): not fetched — no usable credentials for the settings fetch"
 )
-PINNED_ORGANIZATION_POLICY = "Organization policy: not applicable to Pro and Max accounts"
+PINNED_ORGANIZATION_POLICY = (
+    "Organization policy: not fetched: no API key or claude.ai sign-in for the policy lookup "
+    "(apiKeyHelper keys are not used for it)"
+)
 MACOS_MANAGED_ROOT = Path("/Library/Application Support/ClaudeCode")
 LINUX_MANAGED_ROOT = Path("/etc/claude-code")
 RUNS_PER_QUERY = 3

@@ -26,7 +26,7 @@ nonblank line after the target selection. A nonce without its native target sele
 unknown, malformed, or conflicting selections, is invalid. A sibling selection
 is a valid target nonselection.
 
-The runner pins Claude Code 2.1.268 and `claude-sonnet-5`. It launches with an
+The runner pins Claude Code 2.1.269 and `claude-sonnet-5`. It launches with an
 empty `--setting-sources` list, strict empty MCP configuration, a curated
 environment, and `CLAUDE_CODE_MAX_RETRIES=0`. Qualification is limited to macOS
 or Linux after the runner verifies the documented managed-settings locations

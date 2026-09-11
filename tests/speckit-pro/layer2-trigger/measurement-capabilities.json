@@ -18,7 +18,7 @@
   "qualification_rule": "Every requested case and trial must complete, remain canonically valid, and carry a qualified observation under the pinned preflight and launch contract",
   "hosts": {
     "claude": {
-      "cli_version": "2.1.268",
+      "cli_version": "2.1.269",
       "platforms": ["darwin", "linux"],
       "interface": "claude --restricted --setting-sources '' -p --output-format stream-json --verbose",
       "observation_scope": "claude-native-skill-tool",
