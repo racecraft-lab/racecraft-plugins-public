@@ -265,6 +265,7 @@ RULE_PROBLEM_KEYS = {
         "stage_mirror_errors",
         "workflow_authority_errors",
         "formal_checkpoint_errors",
+        "artifact_review_errors",
         "in_progress_errors",
         "duplicate_state_steps",
         "state_order_errors",
@@ -295,6 +296,14 @@ RULE_PROBLEM_KEYS = {
 # emitted key set from a real report and fails when a key is missing here, so a
 # key cannot be added to the report without a verdict.
 PROBLEM_KEY_INTENT: dict[str, dict[str, str]] = {
+    "artifact_review_errors": {
+        "verdict": "gated",
+        "reason": (
+            "A review handoff may claim verified delivery only with consistent "
+            "rendered-page evidence. Pending, unavailable, and denied previews "
+            "remain legal dispositions and never invalidate draft publication."
+        ),
+    },
     "formal_checkpoint_errors": {
         "verdict": "gated",
         "reason": (
@@ -4383,6 +4392,27 @@ def formal_checkpoint_errors(workflow: Path, workflow_text: str, state: dict[str
     return {"formal_checkpoint_errors": errors}
 
 
+def artifact_review_errors(workflow: Path, workflow_text: str) -> dict[str, list[str]]:
+    errors: list[str] = []
+    if "## Artifact Review Handoff" not in workflow_text:
+        return {"artifact_review_errors": errors}
+    plugin_root = str(Path(__file__).resolve().parents[3])
+    if plugin_root not in sys.path:
+        sys.path.insert(0, plugin_root)
+    try:
+        from speckit_pro_runner.artifact_review import record_from_workflow, review_handoff
+        from speckit_pro_runner.helpers.read_only import trusted_bytes
+
+        if record_from_workflow(workflow_text) is not None:
+            root = _repository_root(workflow.parent)
+            if root is None:
+                raise ValueError("Cannot resolve WORKFLOW_ROOT for artifact review evidence")
+            review_handoff(workflow_text, root, trusted_bytes)
+    except (ImportError, ValueError, KeyError, TypeError, OSError) as exc:
+        errors.append(f"Invalid artifact review evidence: {exc}")
+    return {"artifact_review_errors": errors}
+
+
 def build_report(
     workflow: Path,
     state: Path,
@@ -4407,6 +4437,7 @@ def build_report(
     status_result = validate_state_status(state_data)
     stage_result = stage_mirror_errors(workflow_text, state_data)
     formal_result = formal_checkpoint_errors(workflow, workflow_text, state_data, plan_steps)
+    artifact_result = artifact_review_errors(workflow, workflow_text)
     workflow_status_result = validate_workflow_status_evidence(workflow_text)
     projection_result = validate_projection_integrity(
         state_data,
@@ -4426,6 +4457,7 @@ def build_report(
         **status_result,
         **stage_result,
         **formal_result,
+        **artifact_result,
         **workflow_checkpoint_result,
         # Its own key, never folded into the gated path's. Folding would report it
         # under a frozen key, and would newly arm every gated-path error

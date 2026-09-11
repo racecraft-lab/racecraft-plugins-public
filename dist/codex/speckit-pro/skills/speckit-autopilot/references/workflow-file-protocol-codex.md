@@ -178,3 +178,13 @@ one repository.
 The comparison itself is **byte-exact**, with no case folding and no `samefile`,
 because byte-exact is the only rule returning the same verdict on a
 case-insensitive filesystem and a case-sensitive one.
+
+## Artifact Review Handoff
+
+The parent initializes and maintains the conditional workflow-owned JSON record
+from the [shared artifact review contract](artifact-review.md).
+Generation outcomes, current file hashes, and per-page rendered evidence remain
+separate from `Draft PR`, phase completion, human approval, and UAT. There is no
+state-file mirror or scaffold placeholder. Pending, unavailable, and denied
+previews are legal dispositions; unsupported verification claims fail the
+existing status-evidence guard through `artifact_review_errors`.

@@ -276,3 +276,13 @@ workflow mirror from `autopilot-state.json`. If `autopilot-state.json` is
 missing, malformed, stale, or fingerprint-mismatched at a boundary that requires
 marker evidence, stop as malformed/stale marker state instead of guessing from
 the workflow prose.
+
+## Artifact Review Handoff
+
+The parent initializes and maintains the conditional workflow-owned JSON record
+from the [shared artifact review contract](./artifact-review.md).
+Generation outcomes, current file hashes, and per-page rendered evidence remain
+separate from `Draft PR`, phase completion, human approval, and UAT. There is no
+state-file mirror or scaffold placeholder. Pending, unavailable, and denied
+previews are legal dispositions; unsupported verification claims fail the
+existing status-evidence guard through `artifact_review_errors`.

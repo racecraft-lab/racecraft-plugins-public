@@ -44,6 +44,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/artifact_review.py",
+        "display": "speckit_pro_runner/artifact_review.py"
+      },
+      "sha256": "22f81e489ae5687625ab74289e1bfbd8ad1d83d7e643adda27f7c4789adcdbed"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/envelope.py",
         "display": "speckit_pro_runner/envelope.py"
       },
@@ -271,7 +279,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "77644a1659c74854f3924c6ec60ac9b63aee1567e30eee82c0f5fdf8c54aa4eb"
+      "sha256": "c9fa0e19d37b63d5f56ddda28b9b8b89956b2460bc0922b807c52f3c739fbea7"
     },
     {
       "path": {
