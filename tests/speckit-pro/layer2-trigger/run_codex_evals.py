@@ -1004,6 +1004,45 @@ def case_passes(
     return ((triggers / runs) >= threshold) == should_trigger
 
 
+def _codex_launch_contract(cmd: list[str], model: str, reasoning: str) -> dict[str, object]:
+    config_values = {
+        cmd[index + 1]
+        for index, argument in enumerate(cmd[:-1])
+        if argument == "-c"
+    }
+    disabled_features = {
+        cmd[index + 1]
+        for index, argument in enumerate(cmd[:-1])
+        if argument == "--disable"
+    }
+    return {
+        "config_isolated": "--strict-config" in cmd and "--ignore-user-config" in cmd,
+        "retries_disabled": {
+            f"model_providers.{MODEL_PROVIDER_ID}.request_max_retries=0",
+            f"model_providers.{MODEL_PROVIDER_ID}.stream_max_retries=0",
+            f"model_providers.{MODEL_PROVIDER_ID}.supports_websockets=false",
+        }.issubset(config_values)
+        and "unbounded_connection_retries" in disabled_features,
+        "requested_model": model,
+        "reasoning_effort": reasoning,
+        "model_provider": MODEL_PROVIDER_ID,
+        "model_identity_evidence": "request-only",
+        "stdin_prompt_isolated": True,
+        "stdin_mode": "pseudo-terminal" if os.name != "nt" else "null-device",
+    }
+
+
+def _codex_stdin_source() -> tuple[int, int | None, int | None]:
+    if os.name == "nt":
+        return subprocess.DEVNULL, None, None
+    terminal_master, terminal_slave = os.openpty()
+    if os.isatty(terminal_slave):
+        return terminal_slave, terminal_master, terminal_slave
+    os.close(terminal_master)
+    os.close(terminal_slave)
+    raise RuntimeError("Codex stdin pseudo-terminal setup failed")
+
+
 def run_codex_query(
     workspace: pathlib.Path,
     query: str,
@@ -1028,41 +1067,30 @@ def run_codex_query(
     cmd.append(query)
     env = codex_environment()
     if process_evidence is not None:
-        config_values = {
-            cmd[index + 1]
-            for index, argument in enumerate(cmd[:-1])
-            if argument == "-c"
-        }
-        disabled_features = {
-            cmd[index + 1]
-            for index, argument in enumerate(cmd[:-1])
-            if argument == "--disable"
-        }
-        process_evidence["launch_contract"] = {
-            "config_isolated": "--strict-config" in cmd and "--ignore-user-config" in cmd,
-            "retries_disabled": {
-                f"model_providers.{MODEL_PROVIDER_ID}.request_max_retries=0",
-                f"model_providers.{MODEL_PROVIDER_ID}.stream_max_retries=0",
-                f"model_providers.{MODEL_PROVIDER_ID}.supports_websockets=false",
-            }.issubset(config_values)
-            and "unbounded_connection_retries" in disabled_features,
-            "requested_model": model,
-            "reasoning_effort": reasoning,
-            "model_provider": MODEL_PROVIDER_ID,
-            "model_identity_evidence": "request-only",
-        }
-    child = subprocess.Popen(
-        cmd,
-        executable=shutil.which("codex", path=str(pathlib.Path(cmd[0]).parent)),
-        cwd=workspace,
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        env=env,
-        shell=False,
-        start_new_session=os.name != "nt",
-    )
-    return processes.supervise_child(child, timeout, cleanup=processes.cleanup_child, evidence=process_evidence)
+        process_evidence["launch_contract"] = _codex_launch_contract(cmd, model, reasoning)
+    stdin_source, terminal_master, terminal_slave = _codex_stdin_source()
+    try:
+        child = subprocess.Popen(
+            cmd,
+            executable=shutil.which("codex", path=str(pathlib.Path(cmd[0]).parent)),
+            cwd=workspace,
+            stdin=stdin_source,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env,
+            shell=False,
+            start_new_session=os.name != "nt",
+        )
+        if terminal_slave is not None:
+            os.close(terminal_slave)
+            terminal_slave = None
+        return processes.supervise_child(
+            child, timeout, cleanup=processes.cleanup_child, evidence=process_evidence,
+        )
+    finally:
+        for descriptor in (terminal_slave, terminal_master):
+            if descriptor is not None:
+                os.close(descriptor)
 
 
 def print_case_result(case_number: int, case_count: int, result: dict[str, object]) -> None:

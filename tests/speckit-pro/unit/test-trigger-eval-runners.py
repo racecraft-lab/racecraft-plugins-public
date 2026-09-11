@@ -244,7 +244,9 @@ class FakePopen:
         return self.returncode
 
 
-def successful_process_evidence(requested_model: str) -> dict[str, object]:
+def successful_process_evidence(
+    requested_model: str, *, host: str = "claude",
+) -> dict[str, object]:
     """Explicit synthetic supervisor receipt; never used for provider execution."""
     return {
         "provider_exit_code": 0, "timed_out": False, "interrupted_by_signal": None,
@@ -256,6 +258,7 @@ def successful_process_evidence(requested_model: str) -> dict[str, object]:
             "config_isolated": True,
             "retries_disabled": True,
             "requested_model": requested_model,
+            **({"stdin_prompt_isolated": True} if host == "codex" else {}),
         },
     }
 
@@ -338,7 +341,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                             self.assertEqual(len(list(evidence.glob("*.trial.json"))), len(calls))
                         calls.append(True)
                         requested_model = "claude-sonnet-test" if host == "claude" else "gpt-5.6-sol"
-                        receipt = successful_process_evidence(requested_model)
+                        receipt = successful_process_evidence(requested_model, host=host)
                         receipt.update(provider_exit_code=7 if scenario == "nonzero" else -15 if scenario == "timeout" else 0,
                                        timed_out=scenario == "timeout")
                         if scenario == "cleanup-failed":
@@ -1598,6 +1601,36 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     self.assertEqual(exit_code, 0 if label == "all-known-same" else 1)
                     self.assertEqual(report["summary"]["resolved_model"], expected)
 
+    def test_codex_process_stdin_isolated_from_positional_prompt(self) -> None:
+        engine = import_script(CODEX_ENGINE, "layer2_codex_stdin_isolation")
+        captured: dict[str, object] = {}
+
+        def launch(_command: list[str], **kwargs: object) -> FakePopen:
+            stdin = kwargs["stdin"]
+            captured["stdin"] = stdin
+            captured["stdin_is_terminal_at_launch"] = (
+                isinstance(stdin, int) and stdin >= 0 and os.isatty(stdin)
+            )
+            return FakePopen(b"")
+
+        launch_evidence: dict[str, object] = {}
+        with tempfile.TemporaryDirectory() as temporary, mock.patch.object(
+            engine.subprocess, "Popen", side_effect=launch,
+        ), mock.patch.object(engine.processes, "cleanup_child"):
+            result = engine.run_codex_query(
+                Path(temporary), "query", "low", "gpt-5.6-sol", 30, [],
+                process_evidence=launch_evidence,
+            )
+
+        self.assertEqual(result, (0, b"", b"", False))
+        self.assertTrue(launch_evidence["launch_contract"]["stdin_prompt_isolated"])
+        if os.name == "nt":
+            self.assertEqual(captured["stdin"], subprocess.DEVNULL)
+        else:
+            self.assertTrue(captured["stdin_is_terminal_at_launch"])
+            with self.assertRaises(OSError):
+                os.fstat(captured["stdin"])
+
     def test_codex_symlink_path_uses_canonical_executable_without_environment_mutation(self) -> None:
         engine = import_script(CODEX_ENGINE, "layer2_codex_symlink_executable")
         with tempfile.TemporaryDirectory() as temporary:
@@ -2453,6 +2486,8 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     "reasoning_effort": "low",
                     "model_provider": engine.MODEL_PROVIDER_ID,
                     "model_identity_evidence": "request-only",
+                    "stdin_prompt_isolated": True,
+                    "stdin_mode": "pseudo-terminal" if os.name != "nt" else "null-device",
                 },
                 "Codex timeout retains partial raw streams and hashes": timeout_rc == -1
                 and timeout_timed_out

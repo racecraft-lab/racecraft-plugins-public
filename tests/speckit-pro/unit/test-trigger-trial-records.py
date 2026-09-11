@@ -52,6 +52,28 @@ class TrialRecordTests(unittest.TestCase):
                 self.assertEqual(record["provider_exit_code"], changes.get("provider_exit_code", 0))
                 self.assertEqual(record["selected"], False)
 
+        codex_without_stdin_isolation = evidence.make_trial_record(
+            "codex", "demo", entry, 1, 1, parsed, raw, execution,
+        )
+        codex_with_stdin_isolation = evidence.make_trial_record(
+            "codex",
+            "demo",
+            entry,
+            1,
+            1,
+            parsed,
+            raw,
+            {
+                **execution,
+                "launch_contract": {
+                    **execution["launch_contract"],
+                    "stdin_prompt_isolated": True,
+                },
+            },
+        )
+        self.assertFalse(codex_without_stdin_isolation["trial_valid"])
+        self.assertTrue(codex_with_stdin_isolation["trial_valid"])
+
     def test_case_identity_is_independent_of_position_and_runtime_name(self) -> None:
         entry = {"query": "Use this boundary", "should_trigger": True}
         key = evidence.case_id("claude", "demo", entry)

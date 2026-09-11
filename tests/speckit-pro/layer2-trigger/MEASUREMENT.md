@@ -55,10 +55,13 @@ scope, while preserving the distinction from a native activation event.
 The runner pins Codex 0.153.3, `gpt-5.6-sol`, and low reasoning. It uses strict
 configuration isolation, disables unrelated features, and installs a dedicated
 ChatGPT-auth provider with request and stream retries set to zero, WebSockets
-disabled, and unbounded connection retries disabled. The public JSON stream
-does not attest backend model identity, so Codex records the requested model and
-labels model evidence `requested-only`; it never upgrades that to a resolved
-backend identity.
+disabled, and unbounded connection retries disabled. On qualified POSIX hosts,
+fd 0 is a fresh pseudo-terminal so the positional query is the only prompt
+input. This bypasses Codex's documented non-terminal stdin append path, whose
+status output would otherwise invalidate the JSONL stream. The public JSON
+stream does not attest backend model identity, so Codex records the requested
+model and labels model evidence `requested-only`; it never upgrades that to a
+resolved backend identity.
 
 ## Evidence and validity
 

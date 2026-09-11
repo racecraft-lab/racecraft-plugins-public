@@ -46,7 +46,11 @@ def trial_checks(record: dict[str, object]) -> dict[str, bool]:
         "launch": isinstance(launch, dict)
         and launch.get("config_isolated") is True
         and launch.get("retries_disabled") is True
-        and launch.get("requested_model") == record.get("requested_model"),
+        and launch.get("requested_model") == record.get("requested_model")
+        and (
+            record.get("host") != "codex"
+            or launch.get("stdin_prompt_isolated") is True
+        ),
         "model": isinstance(model_check, str) and model_check in {"exact", "alias", "requested-only"},
         "selection": type(record.get("selected")) is bool,
     }

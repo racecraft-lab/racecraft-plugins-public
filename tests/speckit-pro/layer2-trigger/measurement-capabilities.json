@@ -59,7 +59,7 @@
     "codex": {
       "cli_version": "0.153.3",
       "platforms": ["darwin", "linux"],
-      "interface": "codex exec --json with strict isolated config and a dedicated no-retry ChatGPT-auth provider",
+      "interface": "codex exec --json with pseudo-terminal-isolated positional input, strict isolated config, and a dedicated no-retry ChatGPT-auth provider",
       "observation_scope": "codex-body-read-attestation",
       "selection_observation": "Exact staged SKILL.md body read plus that skill's unique first-line marker",
       "authoritative_fields": [
@@ -81,7 +81,8 @@
         "Strict config and ignored user config",
         "Unrelated skills, MCP servers, and features disabled",
         "Catalog readiness and exact target/sibling descriptions",
-        "Dedicated provider using ChatGPT authentication"
+        "Dedicated provider using ChatGPT authentication",
+        "Fresh pseudo-terminal on fd 0 prevents non-terminal stdin prompt appends"
       ],
       "retry_contract": "request_max_retries=0, stream_max_retries=0, supports_websockets=false, and unbounded_connection_retries disabled",
       "unavailable_public_fields": [
@@ -93,6 +94,7 @@
       "model_contract": "Exact gpt-5.6-sol/low request; public exec JSON provides request-only rather than resolved backend identity evidence",
       "direct_invocation": "Forced direct invocation is outside the implicit-selection measurement scope and is not qualified by this record",
       "sources": [
+        "https://raw.githubusercontent.com/openai/codex/rust-v0.153.3/codex-rs/exec/src/lib.rs",
         "https://raw.githubusercontent.com/openai/codex/rust-v0.153.3/codex-rs/exec/src/exec_events.rs",
         "https://learn.chatgpt.com/docs/non-interactive-mode#make-output-machine-readable",
         "https://learn.chatgpt.com/docs/build-skills#how-chatgpt-and-codex-use-skills",
