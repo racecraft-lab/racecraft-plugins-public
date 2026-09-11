@@ -83,9 +83,17 @@ scope, while preserving the distinction from a native activation event.
 The runner pins Codex 0.153.3, `gpt-5.6-sol`, and low reasoning. It uses strict
 configuration isolation, disables unrelated features, and installs a dedicated
 ChatGPT-auth provider with request and stream retries set to zero, WebSockets
-disabled, and unbounded connection retries disabled. On qualified POSIX hosts,
-fd 0 is a fresh pseudo-terminal so the positional query is the only prompt
-input. This bypasses Codex's documented non-terminal stdin append path, whose
+disabled, and unbounded connection retries disabled. The existing Codex login
+root remains available to the CLI through the public
+`CODEX_HOME` variable, while command execution receives a disposable `HOME`
+and `TMPDIR` inside the fixture. The named permission profile keeps the staged
+repository read-only and grants write access only to that scratch directory, so
+routine inspection has a writable cache location without exposing the real home
+or granting shared temporary-directory writes. Network access remains disabled.
+The per-trial launch contract attests each of these environment boundaries. On
+qualified POSIX hosts, fd 0 is a fresh pseudo-terminal so the positional query
+is the only prompt input. This bypasses Codex's documented non-terminal stdin
+append path, whose
 status output would otherwise invalidate the JSONL stream. The public JSON
 stream does not attest backend model identity, so Codex records the requested
 model and labels model evidence `requested-only`; it never upgrades that to a

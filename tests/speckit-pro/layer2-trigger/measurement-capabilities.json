@@ -87,6 +87,9 @@
         "Unrelated skills, MCP servers, and features disabled",
         "Catalog readiness and exact target/sibling descriptions",
         "Dedicated provider using ChatGPT authentication",
+        "Existing Codex login state retained through CODEX_HOME while shell HOME and TMPDIR use one disposable fixture directory",
+        "Staged repository read-only, with write access limited to the disposable shell scratch directory",
+        "Per-trial launch receipt requires the Codex login, shell home, and scratch isolation attestations",
         "Fresh pseudo-terminal on fd 0 prevents non-terminal stdin prompt appends"
       ],
       "retry_contract": "request_max_retries=0, stream_max_retries=0, supports_websockets=false, and unbounded_connection_retries disabled",
@@ -102,6 +105,8 @@
         "https://raw.githubusercontent.com/openai/codex/rust-v0.153.3/codex-rs/exec/src/lib.rs",
         "https://raw.githubusercontent.com/openai/codex/rust-v0.153.3/codex-rs/exec/src/exec_events.rs",
         "https://learn.chatgpt.com/docs/non-interactive-mode#make-output-machine-readable",
+        "https://learn.chatgpt.com/docs/config-file/config-reference",
+        "https://learn.chatgpt.com/docs/config-file/environment-variables",
         "https://learn.chatgpt.com/docs/build-skills#how-chatgpt-and-codex-use-skills",
         "https://learn.chatgpt.com/docs/hooks#tool-coverage"
       ]

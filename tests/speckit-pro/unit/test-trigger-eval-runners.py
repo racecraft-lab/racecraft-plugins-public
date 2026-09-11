@@ -270,7 +270,16 @@ def successful_process_evidence(
             "config_isolated": True,
             "retries_disabled": True,
             "requested_model": requested_model,
-            **({"stdin_prompt_isolated": True} if host == "codex" else {}),
+            **(
+                {
+                    "stdin_prompt_isolated": True,
+                    "login_state_source": "CODEX_HOME",
+                    "shell_home_isolated": True,
+                    "scratch_directory_isolated": True,
+                }
+                if host == "codex"
+                else {}
+            ),
         },
     }
 
@@ -1705,15 +1714,28 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             self.assertIn('approval_policy="never"', policy)
             self.assertIn(
                 'permissions.trigger-fixture.filesystem={":root"="deny",":minimal"="read",'
-                + json.dumps(str(workspace)) + '="read"}', policy,
+                + json.dumps(str(workspace)) + '="read",'
+                + json.dumps(str(workspace / ".codex-trigger-runtime")) + '="write"}', policy,
             )
             for payload in (b"not-json", b"{}", b"[{}]", b'[{"name":""}]', b'[{"name":"duplicate"},{"name":"duplicate"}]'):
                 with self.subTest(payload=payload), mock.patch.object(
                     engine.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, payload, b""),
                 ), self.assertRaises(ValueError):
                     engine.enumerate_mcp_servers(workspace, 10)
-            with mock.patch.dict(os.environ, {"UNRELATED_TOKEN": "never-inherit"}, clear=False):
-                self.assertNotIn("UNRELATED_TOKEN", engine.codex_environment())
+            auth_home = workspace / "codex-home"
+            auth_home.mkdir()
+            with mock.patch.dict(
+                os.environ,
+                {"CODEX_HOME": str(auth_home), "UNRELATED_TOKEN": "never-inherit"},
+                clear=False,
+            ):
+                environment = engine.codex_environment(workspace)
+            runtime_home = workspace / ".codex-trigger-runtime"
+            self.assertNotIn("UNRELATED_TOKEN", environment)
+            self.assertEqual(environment["CODEX_HOME"], str(auth_home))
+            self.assertEqual(environment["HOME"], str(runtime_home))
+            self.assertEqual(environment["TMPDIR"], str(runtime_home / "tmp"))
+            self.assertTrue((runtime_home / "tmp").is_dir())
 
         marker = "CODEX_SKILL_SELECTED:demo-eval-fixed"
         witnesses = codex_witness("demo-eval", marker)
@@ -2680,6 +2702,9 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     "model_identity_evidence": "request-only",
                     "stdin_prompt_isolated": True,
                     "stdin_mode": "pseudo-terminal" if os.name != "nt" else "null-device",
+                    "login_state_source": "CODEX_HOME",
+                    "shell_home_isolated": True,
+                    "scratch_directory_isolated": True,
                 },
                 "Codex timeout retains partial raw streams and hashes": timeout_rc == -1
                 and timeout_timed_out
@@ -2700,9 +2725,15 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 and not signal_timed_out
                 and signal_stdout == b"signal-output"
                 and signal_stderr == b"signal-stderr",
-                "Codex retains existing login environment": captured["kwargs"]["env"].get("CODEX_HOME")
+                "Codex retains login state while isolating shell home and scratch": captured["kwargs"]["env"].get(
+                    "CODEX_HOME"
+                )
                 == str(auth_home)
-                and captured["kwargs"]["env"].get("HOME") == os.environ.get("HOME"),
+                and captured["kwargs"]["env"].get("HOME")
+                == str(workspace.resolve() / ".codex-trigger-runtime")
+                and captured["kwargs"]["env"].get("TMPDIR")
+                == str(workspace.resolve() / ".codex-trigger-runtime" / "tmp")
+                and (workspace.resolve() / ".codex-trigger-runtime" / "tmp").is_dir(),
                 "Codex executable override retains statically verified provenance": captured["kwargs"]["executable"]
                 == shutil.which("codex", path=str(Path(captured["command"][0]).parent)),
                 "Codex keeps least privilege flags": "--sandbox" not in captured["command"]

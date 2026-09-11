@@ -50,6 +50,9 @@ def trial_checks(record: dict[str, object]) -> dict[str, bool]:
         and (
             record.get("host") != "codex"
             or launch.get("stdin_prompt_isolated") is True
+            and launch.get("login_state_source") == "CODEX_HOME"
+            and launch.get("shell_home_isolated") is True
+            and launch.get("scratch_directory_isolated") is True
         ),
         "model": isinstance(model_check, str) and model_check in {"exact", "alias", "requested-only"},
         "selection": type(record.get("selected")) is bool,

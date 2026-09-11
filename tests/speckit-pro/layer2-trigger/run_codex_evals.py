@@ -348,13 +348,30 @@ def enumerate_non_target_skills(target_skill: pathlib.Path) -> tuple[pathlib.Pat
     return tuple(sorted(discovered, key=str))
 
 
-def codex_environment() -> dict[str, str]:
+def codex_environment(workspace: pathlib.Path | None = None) -> dict[str, str]:
     """Keep the existing login location, not unrelated service credentials."""
-    return {
+    environment = {
         key: os.environ[key]
         for key in ("PATH", "HOME", "TMPDIR", "LANG", "LC_ALL", "LC_CTYPE", "USER", "CODEX_HOME")
         if key in os.environ
     }
+    if workspace is None:
+        return environment
+    codex_home = environment.get("CODEX_HOME")
+    if codex_home is None:
+        home = environment.get("HOME")
+        if home is None:
+            raise ValueError("Codex login home is unavailable")
+        codex_home = str(pathlib.Path(home) / ".codex")
+    runtime_home = workspace.resolve() / ".codex-trigger-runtime"
+    runtime_tmp = runtime_home / "tmp"
+    runtime_tmp.mkdir(parents=True, exist_ok=True)
+    environment.update(
+        CODEX_HOME=codex_home,
+        HOME=str(runtime_home),
+        TMPDIR=str(runtime_tmp),
+    )
+    return environment
 
 
 def codex_executable() -> str:
@@ -430,10 +447,12 @@ def skill_witnesses(
 
 def fixture_permission_args(workspace: pathlib.Path) -> list[str]:
     """Use the reviewed native fixture-only policy, without legacy sandbox flags."""
+    resolved_workspace = workspace.resolve()
     return [
         "-c", 'default_permissions="trigger-fixture"',
         "-c", 'permissions.trigger-fixture.filesystem={":root"="deny",":minimal"="read",'
-        + json.dumps(str(workspace.resolve())) + '="read"}',
+        + json.dumps(str(resolved_workspace)) + '="read",'
+        + json.dumps(str(resolved_workspace / ".codex-trigger-runtime")) + '="write"}',
         "-c", "permissions.trigger-fixture.network.enabled=false",
         "-c", 'approval_policy="never"',
         "-c", "allow_login_shell=false",
@@ -1192,7 +1211,13 @@ def case_passes(
     return ((triggers / runs) >= threshold) == should_trigger
 
 
-def _codex_launch_contract(cmd: list[str], model: str, reasoning: str) -> dict[str, object]:
+def _codex_launch_contract(
+    cmd: list[str],
+    model: str,
+    reasoning: str,
+    environment: dict[str, str],
+    workspace: pathlib.Path,
+) -> dict[str, object]:
     config_values = {
         cmd[index + 1]
         for index, argument in enumerate(cmd[:-1])
@@ -1203,6 +1228,7 @@ def _codex_launch_contract(cmd: list[str], model: str, reasoning: str) -> dict[s
         for index, argument in enumerate(cmd[:-1])
         if argument == "--disable"
     }
+    runtime_home = workspace.resolve() / ".codex-trigger-runtime"
     return {
         "config_isolated": "--strict-config" in cmd and "--ignore-user-config" in cmd,
         "retries_disabled": {
@@ -1217,6 +1243,10 @@ def _codex_launch_contract(cmd: list[str], model: str, reasoning: str) -> dict[s
         "model_identity_evidence": "request-only",
         "stdin_prompt_isolated": True,
         "stdin_mode": "pseudo-terminal" if os.name != "nt" else "null-device",
+        "login_state_source": "CODEX_HOME" if environment.get("CODEX_HOME") else None,
+        "shell_home_isolated": environment.get("HOME") == str(runtime_home),
+        "scratch_directory_isolated": environment.get("TMPDIR") == str(runtime_home / "tmp")
+        and (runtime_home / "tmp").is_dir(),
     }
 
 
@@ -1253,9 +1283,11 @@ def run_codex_query(
     ]
     cmd.extend(isolation_args)
     cmd.append(query)
-    env = codex_environment()
+    env = codex_environment(workspace)
     if process_evidence is not None:
-        process_evidence["launch_contract"] = _codex_launch_contract(cmd, model, reasoning)
+        process_evidence["launch_contract"] = _codex_launch_contract(
+            cmd, model, reasoning, env, workspace,
+        )
     stdin_source, terminal_master, terminal_slave = _codex_stdin_source()
     try:
         child = subprocess.Popen(
