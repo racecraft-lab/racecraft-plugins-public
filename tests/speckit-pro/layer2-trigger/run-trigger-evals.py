@@ -260,6 +260,8 @@ def skill_results_error(
                         return "malformed Skill tool result"
                     results.setdefault(identifier, []).append((index, block))
     identifiers = [use.get("id") for _, use in uses]
+    if any(not isinstance(identifier, str) or not identifier for identifier in identifiers):
+        return "malformed Skill tool use identity"
     if len(set(identifiers)) != len(identifiers) or set(results) != set(identifiers):
         return "missing, orphaned, or duplicate Skill result identity"
     for use_index, use in uses:

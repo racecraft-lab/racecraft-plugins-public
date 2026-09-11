@@ -732,6 +732,21 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             "\n".join(json.dumps(event) for event in argument_events), plugin, root, target, nonce, "sonnet"
         )
         self.assertTrue(argument_result["valid"] and argument_result["selected"])
+        for identifier in ({"bad": "id"}, ["bad"], 1, 1.5, True, None, ""):
+            with self.subTest(tool_use_id=identifier):
+                events = [json.loads(line) for line in raw.splitlines()]
+                use = events[1]["message"]["content"][0]
+                use["id"] = identifier
+                self.assertEqual(
+                    claude.skill_results_error(events, [(1, use)], 0, len(events) - 1),
+                    "malformed Skill tool use identity",
+                )
+                parsed = claude.inspect_claude_stream(
+                    "\n".join(json.dumps(event) for event in events), plugin, root, target, nonce, "sonnet"
+                )
+                self.assertFalse(parsed["valid"])
+                self.assertFalse(parsed["selected"])
+                self.assertIn("malformed", parsed["reason"])
         for label, mutate in {
             "missing skill catalog": lambda events: events[0].pop("skills"),
             "empty skill catalog": lambda events: events[0].update(skills=[]),
