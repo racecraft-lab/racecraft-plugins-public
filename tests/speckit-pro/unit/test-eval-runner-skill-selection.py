@@ -603,9 +603,13 @@ def write_fake_claude(root: Path) -> Path:
     script.write_text(
         "import sys\n"
         "if '--version' in sys.argv:\n"
-        "    print('2.1.261')\n"
+        "    print('2.1.268 (Claude Code)')\n"
         "elif '--help' in sys.argv:\n"
-        "    print('--restricted --plugin-dir --strict-mcp-config --mcp-config --tools --allowedTools --settings --permission-mode --permission-prompts --output-format --verbose --no-session-persistence')\n"
+        "    print('--restricted --setting-sources --plugin-dir --strict-mcp-config --mcp-config --tools --allowedTools --settings --permission-mode --permission-prompts --output-format --verbose --no-session-persistence')\n"
+        "elif 'doctor' in sys.argv:\n"
+        "    print('Running: native (2.1.268)')\n"
+        "    print('Managed settings (remote): not fetched — requires an Enterprise or Team subscription')\n"
+        "    print('Organization policy: not applicable to Pro and Max accounts')\n"
         "else:\n"
         "    raise SystemExit(97)\n",
         encoding="utf-8",

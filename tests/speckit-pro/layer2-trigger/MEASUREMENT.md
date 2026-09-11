@@ -1,106 +1,137 @@
 # Trigger measurement prerequisite
 
-The measurement prerequisite for [issue #573](https://github.com/racecraft-lab/racecraft-plugins-public/issues/573)
-is **not qualified**. The current patch repairs reproduced parser and process
-defects and makes diagnostic trial outcomes replayable. It does not authorize
-corpus pruning or a qualifying baseline/candidate matrix.
+The Layer 2 trigger measurement prerequisite is **qualified** for the pinned
+host interfaces and observation scopes in
+[`measurement-capabilities.json`](measurement-capabilities.json). Qualification
+allows a frozen baseline/candidate matrix to run. It does not itself authorize
+corpus pruning or satisfy the broader taxonomy and comparator work in
+[issue #573](https://github.com/racecraft-lab/racecraft-plugins-public/issues/573).
 
-The pinned-interface assessment is in
-[`measurement-capabilities.json`](measurement-capabilities.json). Its status is
-blocked. Recheck versions and complete the missing observations before freezing
-a measurement implementation. A passing diagnostic case does not clear that
-gate.
+Qualification is fail-closed. A run is eligible only when it uses the canonical
+model, reasoning, trial-count, and threshold parameters; passes the pinned CLI
+and isolation preflights; records the no-retry launch contract; completes every
+requested trial; and produces only valid observations in the declared scope.
+A passing noncanonical or diagnostic run remains ineligible.
 
-## What the repair establishes
+## Qualified observation scopes
 
-- Claude validates the result identity, order, and successful completion of
-  every observed Skill invocation, including siblings and the no-op skill. It
-  rejects undeclared tool activity and conflicting reported model identities.
-- Codex rejects failed, declined, unfinished, or unsuccessfully exited completed
-  command items, and events outside the single completed turn.
-- Both hosts use bounded process supervision, preserve exact partial streams,
-  and check the original owned process group before starting another trial.
-  An exited leader with lingering descendants is invalid even if cleanup later
-  succeeds. Processes outside that group are outside the proof.
-- Both hosts persist one typed trial record before continuing. Invalid evidence
-  stops the loop immediately. Valid behavioral failures still allow the runner
-  to finish its cases; a later matrix driver must apply the comparison stopping
-  rule at a completed host/skill arm pair.
+### Claude: `claude-native-skill-tool`
 
-## Diagnostic evidence format
+Claude selection is observed through a completed, linked, model-initiated
+`Skill` tool call. The observer validates the exact staged target or sibling
+identifier, tool-use/result linkage, ordering, successful completion, terminal
+result, reported model identity, and one exact nonce attestation after a target
+selection. Multiple, unknown, malformed, or conflicting selections are invalid.
+A sibling selection is a valid target nonselection.
 
-Each new evidence directory contains exact `case-NNN-trial-NN.jsonl` and
-`.stderr.log` files, plus a versioned `.trial.json` record with their paths and
-SHA-256 hashes. Files are created exclusively. Existing evidence directories and
-report files are never reused.
+The runner pins Claude Code 2.1.268 and `claude-sonnet-5`. It launches with an
+empty `--setting-sources` list, strict empty MCP configuration, a curated
+environment, and `CLAUDE_CODE_MAX_RETRIES=0`. Qualification is limited to macOS
+or Linux after the runner verifies the documented managed-settings locations
+and the pinned `claude doctor` account-policy state. Any managed settings,
+managed MCP, managed instructions, managed preference payload, version drift,
+or reported retry invalidates preflight or the stream.
 
-The `trigger-trial/v1` record contains stable logical case identity, case/trial
-ordinals, the exact submitted query and its hash, expected label, parser
-observations, and typed supervision observations. `provider_exit_code` is the
-observed child return code, or null if unobserved. The legacy `exit_code` alias
-contains the same value; the query helper's timeout sentinel is not an observed
-provider exit. Timeouts and interruptions have separate fields.
+### Codex: `codex-body-read-attestation`
 
-`stream_valid` records the parser outcome. `trial_valid` is the conjunction of
-the recorded process, stream, model, selection-output, and cleanup checks for
-the declared diagnostic observation scope. The legacy `valid` field is exactly
-the same canonical value. This patch has **not** established the missing native,
-exclusive-selection, configuration, or retry requirements listed in the
-capability record. `qualification_eligible` therefore remains false for all
-records and reports; the current schema must not be treated as qualified matrix
-evidence.
+Codex 0.153.3 does not expose a native skill-selection event in its public exec
+JSON. The qualified Codex scope therefore uses a behavioral attestation and
+names that limitation rather than claiming native observation.
 
-The runner report includes each retained record and its own path/hash. Counts
-come from canonically valid trials. `status: not_run` has null counts and no
-trial observations. An incomplete or invalid case has a null trigger rate,
-explicit executed and unexecuted trial counts, and cannot pass. `summary.complete`
-requires every case to have all requested valid trials; it says nothing about
-the separate measurement qualification gate.
+Every staged target and sibling retains its exact source description and gets a
+minimal body containing a unique randomized marker. A selection requires both:
+
+1. one started and successfully completed command that names the exact staged
+   `SKILL.md` path and emits its exact complete body; and
+2. that skill's marker as the first nonblank line of one completed agent message.
+
+An exact body read without a marker is a valid consultation/nonselection. A
+marker without its matching read, an unknown or repeated marker, multiple body
+reads, an arbitrary/failed/unfinished command, or connected-tool activity is
+invalid. A sibling's read-plus-marker is a valid target nonselection. This makes
+the behaviorally selected staged-skill set observable within the declared
+scope, while preserving the distinction from a native activation event.
+
+The runner pins Codex 0.153.3, `gpt-5.6-sol`, and low reasoning. It uses strict
+configuration isolation, disables unrelated features, and installs a dedicated
+ChatGPT-auth provider with request and stream retries set to zero, WebSockets
+disabled, and unbounded connection retries disabled. The public JSON stream
+does not attest backend model identity, so Codex records the requested model and
+labels model evidence `requested-only`; it never upgrades that to a resolved
+backend identity.
+
+## Evidence and validity
+
+Each evidence directory contains exact `case-NNN-trial-NN.jsonl` and
+`.stderr.log` files, plus a `trigger-trial/v2` `.trial.json` record with their
+paths and SHA-256 hashes. Files are created exclusively. Existing evidence
+directories and report files are never reused.
+
+The trial record contains stable logical case identity, case/trial ordinals,
+the exact query and its hash, expected label, parser observations, the declared
+observation scope, the launch contract, and typed supervision observations.
+`provider_exit_code` is the observed child return code, or null if unobserved.
+The legacy `exit_code` alias contains the same value; a timeout sentinel is not
+an observed provider exit. Timeouts and interruptions have separate fields.
+
+`stream_valid` records parser validity. `trial_valid` (and its legacy `valid`
+alias) is the conjunction of execution-record completeness, process outcome,
+stream structure, model evidence, selection evidence, no-retry/configuration
+launch checks, bounded cleanup, process-group absence, and descendant checks.
+`qualification_eligible` is true only when the trial is valid, its parser
+completed a qualified observation, and the batch used canonical parameters.
+
+Counts come only from canonically valid trials. `status: not_run` has null
+counts and no observations. An incomplete or invalid case has a null trigger
+rate, explicit executed and unexecuted counts, and cannot pass. Report-level
+qualification additionally requires every case and trial to complete and remain
+eligible.
 
 `trial-stop.json` identifies the first invalid trial. Supervision exceptions
-also retain a `.failure.json` diagnostic. `isolation-stop.json` preserves the
+also retain a `.failure.json` diagnostic. `isolation-stop.json` preserves a
 Codex isolation diagnostic when applicable. No report is synthesized for a
-failure before provider launch; missing reports block comparison.
+failure before provider launch; a missing report blocks comparison.
 
 `arm-cleanup.json` is written after workspace removal and records the actual
-runner exit, cleanup error, and whether the workspace is absent. The earlier
-report is preliminary until this receipt is checked. Runner exits are:
+runner exit, cleanup error, and whether the workspace is absent. A report is
+preliminary until that receipt is checked. Runner exits are:
 
 | Exit | Meaning |
 | --- | --- |
-| 0 | Diagnostic cases passed; workspace cleanup still requires its receipt |
-| 1 | Behavioral failure, invalid evidence, or preflight/runtime error; inspect the complete report and receipt to distinguish them |
+| 0 | Cases passed; workspace cleanup still requires its receipt |
+| 1 | Behavioral failure, invalid evidence, or preflight/runtime error; inspect the report and receipt |
 | 2 | Workspace cleanup or cleanup-receipt retention failed |
 | 128 + signal | Interrupted runner, unless workspace cleanup failure superseded it |
 
-The future comparator must independently validate raw hashes, containment,
-record identities, parser replay, typed execution checks, summary agreement,
-runner exit, and the cleanup receipt. It must reject missing evidence and a
-blocked capability record. Replaying historical JSONL cannot reconstruct an
-unrecorded process exit or repair an old report.
+A comparator must independently validate raw hashes, containment, record
+identities, parser replay, typed execution checks, summary agreement, runner
+exit, qualification status, canonical parameters, and the cleanup receipt. It
+must reject missing or ineligible evidence. Replaying historical JSONL cannot
+reconstruct an unrecorded process exit or launch contract.
 
-## Remaining qualification blockers
+## Scope boundaries and remaining work
 
-Claude's documented `UserPromptExpansion` event observes direct slash-command
-expansion, separately from model-initiated Skill calls. Its observer and prompt
-binding have not been demonstrated in this isolated runner. Restricted mode
-still accepts managed and explicit settings; the effective configuration must
-be frozen and validated. Reported retries are rejected, but the absence of a
-retry event does not establish zero invisible transport retries.
-([Direct invocation](https://code.claude.com/docs/en/hooks#userpromptexpansion),
-[restricted mode](https://code.claude.com/docs/en/cli-reference))
+Layer 2 measures implicit model selection, not forced slash-command expansion.
+Claude's documented `UserPromptExpansion` hook and Codex direct invocation are
+therefore outside this qualification scope. They must be separately specified
+and qualified before evidence from those paths is accepted.
 
-The pinned Codex 0.153.3 public JSON schema exposes command and message events,
-but no skill-activation event or complete selected-skill set. Its thread/turn
-start records do not report backend model identity. An exact output marker is
-a proxy, and a file read alone does not establish activation. Consequently the
-current observer cannot qualify target-plus-sibling ambiguity or native
-selection. App-server notifications and internal rollout fields cannot be
-silently substituted for this interface.
-([Pinned event schema](https://raw.githubusercontent.com/openai/codex/rust-v0.153.3/codex-rs/exec/src/exec_events.rs))
+The owned POSIX process group and staged workspace are the cleanup proof scope;
+unrelated processes are not observed or claimed. Windows descendant cleanup is
+not qualified. Provider-side behavior invisible to the pinned public interfaces
+cannot be reconstructed; qualification relies on the explicit no-retry controls
+and rejects every reported retry or error event.
 
-The process tests use synthetic streams and local Python children. No provider
-inference was used to validate this patch. Corpus dispositions, independent
-pruning review, the strict comparator, frozen arm provenance, and a full live
-matrix remain subsequent gated work. Original corpora and PR #572 evidence are
-unchanged by this prerequisite.
+One bounded provider canary per host validated each qualified selection path;
+one earlier Codex transport probe validated the dedicated no-retry provider.
+The full frozen baseline/candidate matrices, comparator validation, corpus
+dispositions, independent pruning review, and issue #573's broader work remain
+separate gates.
+
+Sources: [Claude hooks](https://code.claude.com/docs/en/hooks#userpromptexpansion),
+[Claude CLI](https://code.claude.com/docs/en/cli-reference),
+[Claude settings](https://code.claude.com/docs/en/settings),
+[Claude model configuration](https://code.claude.com/docs/en/model-config#model-aliases),
+[Codex pinned event schema](https://raw.githubusercontent.com/openai/codex/rust-v0.153.3/codex-rs/exec/src/exec_events.rs),
+[Codex non-interactive mode](https://learn.chatgpt.com/docs/non-interactive-mode#make-output-machine-readable),
+and [Codex skills](https://learn.chatgpt.com/docs/build-skills#how-chatgpt-and-codex-use-skills).

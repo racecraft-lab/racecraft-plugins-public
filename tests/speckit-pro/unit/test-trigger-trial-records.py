@@ -22,11 +22,18 @@ class TrialRecordTests(unittest.TestCase):
             "unexpected_descendants": False, "child_pid": 1234, "child_pgid": 1234,
             "cleanup_observations": [{"pgid": 1234, "errno": 3, "elapsed_seconds": 0.01}],
             "process_error": None,
+            "launch_contract": {
+                "config_isolated": True, "retries_disabled": True,
+                "requested_model": "claude-test",
+            },
         }
         raw = {"stdout_path": "/evidence/stdout", "stdout_sha256": "a" * 64,
                "stderr_path": "/evidence/stderr", "stderr_sha256": "b" * 64}
-        parsed = {"valid": True, "selected": False, "model_identity_check": "exact",
-                  "requested_model": "claude-test", "resolved_model": "claude-test", "reason": "no Skill selection"}
+        parsed = {
+            "valid": True, "selected": False, "model_identity_check": "exact",
+            "requested_model": "claude-test", "resolved_model": "claude-test",
+            "observation_scope": "claude-native-skill-tool", "reason": "no Skill selection",
+        }
         entry = {"query": "A legitimate negative", "should_trigger": False}
         for label, changes in (
             ("good", {}), ("exit", {"provider_exit_code": 7}), ("missing-exit", {"provider_exit_code": None}),
@@ -56,7 +63,7 @@ class TrialRecordTests(unittest.TestCase):
     def test_record_cannot_overwrite_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            record = {"schema_version": "trigger-trial/v1", "case_number": 1, "trial_number": 2, "trial_valid": False}
+            record = {"schema_version": "trigger-trial/v2", "case_number": 1, "trial_number": 2, "trial_valid": False}
             retained = evidence.retain_trial_record(root, record)
             path = Path(retained["trial_record_path"])
             self.assertEqual(json.loads(path.read_text()), record)

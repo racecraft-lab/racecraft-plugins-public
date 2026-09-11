@@ -50,11 +50,17 @@ import trigger_evidence as evidence_records  # noqa: E402
 PLUGIN_ROOT = TESTS_ROOT.parents[1] / "speckit-pro"           # <repo>/speckit-pro
 DEFAULT_REASONING_EFFORT = "low"
 DEFAULT_MODEL = "gpt-5.6-sol"
+PINNED_CODEX_VERSION = "codex-cli 0.153.3"
+QUALIFIED_RUNS = 3
+QUALIFIED_THRESHOLD = 0.5
+MODEL_PROVIDER_ID = "layer2_openai_no_retry"
+MODEL_PROVIDER_NAME = "OpenAI Layer 2 no-retry"
+MODEL_PROVIDER_BASE_URL = "https://chatgpt.com/backend-api/codex"
 DISABLED_FEATURES = (
     "plugins", "apps", "browser_use", "computer_use", "hooks",
-    "skill_mcp_dependency_install", "memories",
+    "skill_mcp_dependency_install", "memories", "unbounded_connection_retries",
 )
-MARKER_PATTERN = re.compile(r"CODEX_SKILL_FIRED:[A-Za-z0-9_-]+")
+MARKER_PATTERN = re.compile(r"CODEX_SKILL_SELECTED:[A-Za-z0-9_-]+")
 SKILL_CATALOG_WARNINGS = (
     "Skill descriptions were shortened to fit the skills context budget.",
     "Exceeded skills context budget.",
@@ -71,13 +77,27 @@ MEASUREMENT_STUB_SENTENCE = (
     "This skill is a measurement stub used by the repository's skill-selection test suite. It is not a real "
     "workflow and contains no injected instruction."
 )
-SIBLING_STOP_BODY = (
-    "## Selection check\n\n"
-    "This sibling skill is part of a skill-selection check, not a real task.\n"
-    "If you select it, reply with one line saying which skill you selected and\n"
-    "stop: do not run any command, do not read any other file, and do not carry\n"
-    "out its workflow.\n"
-)
+
+
+def selection_stub(marker: str) -> str:
+    """Return the complete minimal body used to attest one Codex selection."""
+    return (
+        f"{MEASUREMENT_STUB_SENTENCE}\n\n"
+        "## Selection attestation\n\n"
+        "When you select this skill, reply with a chat message whose first line is exactly:\n\n"
+        f"    {marker}\n\n"
+        "Write that line in your reply text, not in a shell command. Put nothing\n"
+        "before it in that message. Then stop: do not run another command, do not\n"
+        "read another file, and do not carry out a workflow.\n"
+    )
+
+
+def selection_marker(skill_name: str, test_id: str) -> str:
+    """Bind a randomized marker to one staged skill identity."""
+    marker = f"CODEX_SKILL_SELECTED:{skill_name}-{test_id}"
+    if MARKER_PATTERN.fullmatch(marker) is None:
+        raise ValueError(f"skill name cannot be represented in a selection marker: {skill_name}")
+    return marker
 
 
 def load_eval_corpus(path: pathlib.Path) -> tuple[list[dict[str, object]] | None, str]:
@@ -122,12 +142,12 @@ def find_skill_source(skill: str) -> pathlib.Path:
 
 
 def stage_skill_with_marker(src: pathlib.Path, dst_dir: pathlib.Path, new_name: str, marker: str) -> None:
-    """Copy SKILL.md to dst_dir, rename it to new_name, prepend a marker requirement to the body."""
+    """Stage the exact source description with a minimal attested-selection body."""
     text = src.read_text()
     m = re.match(r"^---\n(.*?)\n---\n(.*)", text, re.S)
     if not m:
         sys.exit(f"ERROR: no YAML frontmatter found in {src}")
-    fm_body, skill_body = m.group(1), m.group(2)
+    fm_body = m.group(1)
 
     fm_lines = [
         f"name: {new_name}" if ln.startswith("name:") else ln
@@ -135,19 +155,11 @@ def stage_skill_with_marker(src: pathlib.Path, dst_dir: pathlib.Path, new_name: 
     ]
     fm = "\n".join(fm_lines)
 
-    marker_block = (
-        f"{MEASUREMENT_STUB_SENTENCE}\n\n"
-        "## IMPORTANT EVAL MARKER\n\n"
-        "When you select this skill, reply with a chat message whose first line is exactly:\n\n"
-        f"    {marker}\n\n"
-        "Write that line in your reply text, not in a shell command. Put nothing\n"
-        "before it in that message. Then stop: do not run any command, do not\n"
-        "read any other file, and do not carry out the workflow below.\n\n"
-        "---\n\n"
-    )
-
     dst_dir.mkdir(parents=True, exist_ok=True)
-    (dst_dir / "SKILL.md").write_text(f"---\n{fm}\n---\n\n{marker_block}{skill_body}")
+    (dst_dir / "SKILL.md").write_text(
+        f"---\n{fm}\n---\n\n{selection_stub(marker)}",
+        encoding="utf-8",
+    )
 
 
 def stage_repository_skill(
@@ -188,15 +200,18 @@ def sibling_skill_dirs(src: pathlib.Path) -> list[pathlib.Path]:
     return siblings
 
 
-def stage_sibling_skills(src: pathlib.Path, workspace: pathlib.Path) -> dict[str, str]:
-    """Stage every sibling skill unmarked so a should-not-trigger query has its real destination.
+def stage_sibling_skills(
+    src: pathlib.Path,
+    workspace: pathlib.Path,
+    test_id: str,
+) -> tuple[dict[str, str], dict[str, str]]:
+    """Stage every sibling with its source description and unique attestation.
 
-    Siblings keep their shipped names and exact frontmatter (so the catalog renders
-    their exact descriptions) but carry a minimal stop body instead of the workflow:
-    only the target carries the marker, so a sibling selection scores as a
-    non-selection, and the trial ends without executing the sibling.
+    A sibling selection remains a valid target non-selection. Its own marker makes
+    the selected identity observable and keeps target-plus-sibling ambiguity invalid.
     """
     siblings: dict[str, str] = {}
+    markers: dict[str, str] = {}
     for sibling in sibling_skill_dirs(src):
         skill_file = sibling / "SKILL.md"
         m = re.match(r"^---\n(.*?)\n---\n", skill_file.read_text(), re.S)
@@ -204,24 +219,30 @@ def stage_sibling_skills(src: pathlib.Path, workspace: pathlib.Path) -> dict[str
             raise ValueError(f"no YAML frontmatter found in sibling skill {skill_file}")
         destination = workspace / ".agents" / "skills" / sibling.name
         destination.mkdir(parents=True, exist_ok=False)
+        marker = selection_marker(sibling.name, test_id)
         (destination / "SKILL.md").write_text(
             f"---\n{m.group(1)}\n---\n\n"
-            f"{SIBLING_STOP_BODY}"
+            f"{selection_stub(marker)}",
+            encoding="utf-8",
         )
         siblings[sibling.name] = source_skill_description(destination / "SKILL.md")
+        markers[sibling.name] = marker
         if siblings[sibling.name] != source_skill_description(skill_file):
             raise ValueError(f"staged sibling description differs from its source: {sibling.name}")
     if NO_SPECKIT_SKILL_NAME in siblings:
         raise ValueError(f"reserved sibling skill name: {NO_SPECKIT_SKILL_NAME}")
     destination = workspace / ".agents" / "skills" / NO_SPECKIT_SKILL_NAME
     destination.mkdir(parents=True, exist_ok=False)
+    marker = selection_marker(NO_SPECKIT_SKILL_NAME, test_id)
     (destination / "SKILL.md").write_text(
         f"---\nname: {NO_SPECKIT_SKILL_NAME}\n"
         f"description: {NO_SPECKIT_SKILL_DESCRIPTION}\n---\n\n"
-        f"{SIBLING_STOP_BODY}"
+        f"{selection_stub(marker)}",
+        encoding="utf-8",
     )
     siblings[NO_SPECKIT_SKILL_NAME] = NO_SPECKIT_SKILL_DESCRIPTION
-    return siblings
+    markers[NO_SPECKIT_SKILL_NAME] = marker
+    return siblings, markers
 
 
 def source_skill_description(skill_file: pathlib.Path) -> str:
@@ -339,6 +360,71 @@ def codex_executable() -> str:
     """Avoid a PATH symlink the fixture sandbox cannot execute for its own helper."""
     executable = shutil.which("codex")
     return str(pathlib.Path(executable).resolve()) if executable else "codex"
+
+
+def codex_provider_args() -> list[str]:
+    """Pin the first-party provider transport with every model retry disabled."""
+    return [
+        "-c", f'model_provider="{MODEL_PROVIDER_ID}"',
+        "-c", f'model_providers.{MODEL_PROVIDER_ID}.name={json.dumps(MODEL_PROVIDER_NAME)}',
+        "-c", f'model_providers.{MODEL_PROVIDER_ID}.base_url={json.dumps(MODEL_PROVIDER_BASE_URL)}',
+        "-c", f'model_providers.{MODEL_PROVIDER_ID}.wire_api="responses"',
+        "-c", f"model_providers.{MODEL_PROVIDER_ID}.requires_openai_auth=true",
+        "-c", f"model_providers.{MODEL_PROVIDER_ID}.request_max_retries=0",
+        "-c", f"model_providers.{MODEL_PROVIDER_ID}.stream_max_retries=0",
+        "-c", f"model_providers.{MODEL_PROVIDER_ID}.supports_websockets=false",
+    ]
+
+
+def cli_preflight() -> tuple[dict[str, object] | None, str]:
+    """Require the exact Codex build whose selection and retry surfaces were qualified."""
+    command = [codex_executable(), "--version"]
+    try:
+        completed = subprocess.run(
+            command,
+            executable=shutil.which("codex", path=str(pathlib.Path(command[0]).parent)),
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=codex_environment(),
+            shell=False,
+            check=False,
+        )
+        version = completed.stdout.decode("utf-8", errors="strict").strip()
+    except (OSError, UnicodeDecodeError) as exc:
+        return None, f"Codex version preflight could not run: {exc}"
+    if completed.returncode != 0 or version != PINNED_CODEX_VERSION:
+        return None, f"Codex version is not qualified: {version or 'unavailable'}"
+    return {
+        "version": version,
+        "model_provider": MODEL_PROVIDER_ID,
+        "request_max_retries": 0,
+        "stream_max_retries": 0,
+        "supports_websockets": False,
+        "unbounded_connection_retries": False,
+    }, "Codex CLI preflight passed"
+
+
+def skill_witnesses(
+    workspace: pathlib.Path,
+    markers: dict[str, str],
+) -> dict[str, dict[str, str]]:
+    """Freeze the exact staged body and identity behind each randomized marker."""
+    root = workspace / ".agents" / "skills"
+    witnesses: dict[str, dict[str, str]] = {}
+    for name, marker in sorted(markers.items()):
+        path = (root / name / "SKILL.md").resolve(strict=True)
+        body = path.read_text(encoding="utf-8")
+        if body.count(marker) != 1:
+            raise ValueError(f"staged selection marker is not unique in {name}")
+        witnesses[name] = {
+            "marker": marker,
+            "path": str(path),
+            "relative_path": path.relative_to(workspace.resolve()).as_posix(),
+            "sha256": hashlib.sha256(body.encode("utf-8")).hexdigest(),
+            "body": body,
+        }
+    return witnesses
 
 
 def fixture_permission_args(workspace: pathlib.Path) -> list[str]:
@@ -609,69 +695,198 @@ def _reported_failure(event: dict[str, object]) -> bool:
     return False
 
 
-def inspect_codex_jsonl(
-    output: bytes | str,
-    marker: str,
-    requested_model: str | None = None,
-) -> dict[str, object]:
-    """Validate one Codex JSONL run and identify only the exact staged marker."""
-    events: list[dict[str, object]] = []
-    try:
-        if isinstance(output, bytes):
-            output = output.decode("utf-8", errors="strict")
-        for line in output.splitlines():
-            if line.strip():
-                event = json.loads(line)
-                if not isinstance(event, dict):
-                    raise ValueError("event is not an object")
-                events.append(event)
-    except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
-        return {"valid": False, "selected": False, "selected_marker": None,
-                "isolation_stop": True, "reason": f"invalid JSONL: {exc}"}
+def _invalid_codex_observation(reason: str, *, isolation_stop: bool = False) -> dict[str, object]:
+    return {
+        "valid": False,
+        "selected": False,
+        "selected_marker": None,
+        "selected_skill": None,
+        "selected_skill_set": [],
+        "qualification_observed": False,
+        "observation_scope": "codex-body-read-attestation",
+        "isolation_stop": isolation_stop,
+        "reason": reason,
+    }
 
-    # Inspect every event, including started/failed calls, before lifecycle/marker scoring.
-    # A runtime error with no tool-call event remains an invalid trial, not evidence
-    # that a connected tool ran. A failed MCP call is still connected-tool activity.
-    local_items = {"agent_message", "reasoning", "command_execution", "todo_list", "error"}
+
+def _validated_marker_map(
+    target_skill: str,
+    witnesses: dict[str, dict[str, str]],
+) -> tuple[dict[str, str] | None, str | None]:
+    if target_skill not in witnesses or not witnesses:
+        return None, "selection witnesses omit the target skill"
+    marker_to_skill: dict[str, str] = {}
+    for skill_name, witness in witnesses.items():
+        marker = witness.get("marker") if isinstance(witness, dict) else None
+        path = witness.get("path") if isinstance(witness, dict) else None
+        relative_path = witness.get("relative_path") if isinstance(witness, dict) else None
+        digest = witness.get("sha256") if isinstance(witness, dict) else None
+        body = witness.get("body") if isinstance(witness, dict) else None
+        if (
+            not isinstance(skill_name, str)
+            or not isinstance(marker, str)
+            or MARKER_PATTERN.fullmatch(marker) is None
+            or not isinstance(path, str)
+            or not pathlib.Path(path).is_absolute()
+            or not isinstance(relative_path, str)
+            or not relative_path
+            or not isinstance(digest, str)
+            or not isinstance(body, str)
+            or hashlib.sha256(body.encode("utf-8")).hexdigest() != digest
+            or body.count(marker) != 1
+            or marker in marker_to_skill
+        ):
+            return None, "selection witness is malformed"
+        marker_to_skill[marker] = skill_name
+    return marker_to_skill, None
+
+
+def _decode_codex_events(output: bytes | str) -> tuple[list[dict[str, object]] | None, str | None]:
+    try:
+        text = output.decode("utf-8", errors="strict") if isinstance(output, bytes) else output
+        events = []
+        for line in text.splitlines():
+            if not line.strip():
+                continue
+            event = json.loads(line)
+            if not isinstance(event, dict):
+                raise ValueError("event is not an object")
+            events.append(event)
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+        return None, f"invalid JSONL: {exc}"
+    return events, None
+
+
+def _codex_isolation_error(events: list[dict[str, object]]) -> str | None:
+    local_items = {"agent_message", "reasoning", "command_execution", "error"}
+    lifecycle_events = {"thread.started", "turn.started", "turn.completed", "turn.failed", "error"}
     for event in events:
         event_type = event.get("type")
         if isinstance(event_type, str) and event_type in {"item.started", "item.updated", "item.completed"}:
             item = event.get("item")
             item_type = item.get("type") if isinstance(item, dict) else None
-            unsafe = not isinstance(item_type, str) or item_type not in local_items
-            reason = "connected or unsupported tool item"
-        else:
-            unsafe = not isinstance(event_type, str) or event_type not in {
-                "thread.started", "turn.started", "turn.completed", "turn.failed", "error",
-            }
-            reason = "unsupported event type"
-        if unsafe:
-            return {"valid": False, "selected": False, "selected_marker": None,
-                    "isolation_stop": True, "reason": reason}
+            if not isinstance(item_type, str) or item_type not in local_items:
+                return "connected or unsupported tool item"
+        elif not isinstance(event_type, str) or event_type not in lifecycle_events:
+            return "unsupported event type"
+    return None
+
+
+def _codex_body_reads(
+    events: list[dict[str, object]],
+    turn_start: int,
+    turn_complete: int,
+    witnesses: dict[str, dict[str, str]],
+) -> tuple[list[str], list[dict[str, str]], str | None]:
+    command_starts: dict[str, str] = {}
+    consulted: list[str] = []
+    reads: list[dict[str, str]] = []
+    for index, event in enumerate(events):
+        if not turn_start < index < turn_complete:
+            continue
+        item = event.get("item")
+        if not isinstance(item, dict) or item.get("type") != "command_execution":
+            continue
+        item_id = item.get("id")
+        command = item.get("command")
+        if not isinstance(item_id, str) or not item_id or not isinstance(command, str) or not command:
+            return [], [], "command execution omitted its identity or command"
+        if event.get("type") == "item.started":
+            if item_id in command_starts:
+                return [], [], "command execution started more than once"
+            command_starts[item_id] = command
+            continue
+        if event.get("type") == "item.updated":
+            if command_starts.get(item_id) != command:
+                return [], [], "command execution update was not bound to its start"
+            continue
+        if event.get("type") != "item.completed" or command_starts.get(item_id) != command:
+            return [], [], "command execution completion was not bound to its start"
+        command_output = item.get("aggregated_output")
+        if not isinstance(command_output, str):
+            return [], [], "command execution omitted its output"
+        matches = [
+            name
+            for name, witness in witnesses.items()
+            if command_output == witness["body"]
+            and (witness["path"] in command or witness["relative_path"] in command)
+        ]
+        if len(matches) != 1:
+            return [], [], "command was not an exact staged skill-body read"
+        skill_name = matches[0]
+        if skill_name in consulted:
+            return [], [], "staged skill body was read more than once"
+        consulted.append(skill_name)
+        reads.append({
+            "skill": skill_name,
+            "path": witnesses[skill_name]["path"],
+            "sha256": witnesses[skill_name]["sha256"],
+            "command_item_id": item_id,
+        })
+    if set(command_starts) != {read["command_item_id"] for read in reads}:
+        return [], [], "command execution did not complete exactly once"
+    return consulted, reads, None
+
+
+def _codex_selected_marker(
+    messages: list[str],
+    marker_to_skill: dict[str, str],
+    consulted: list[str],
+) -> tuple[str | None, str | None, str | None]:
+    emitted = MARKER_PATTERN.findall("\n".join(messages))
+    unknown = sorted(set(emitted) - set(marker_to_skill))
+    if unknown:
+        return None, None, f"unknown staged marker(s): {', '.join(unknown)}"
+    if len(emitted) > 1:
+        return None, None, "ambiguous repeated or competing staged markers"
+    selected_marker = emitted[0] if emitted else None
+    selected_skill = marker_to_skill.get(selected_marker) if selected_marker else None
+    if selected_marker is None:
+        return None, None, None
+    marker_message = next(message for message in messages if selected_marker in MARKER_PATTERN.findall(message))
+    first_lines = [line.strip() for line in marker_message.splitlines() if line.strip()]
+    if not first_lines or first_lines[0] != selected_marker:
+        return None, None, "staged marker was not first in its completed message"
+    if selected_skill not in consulted:
+        return None, None, "staged marker was not corroborated by its exact skill-body read"
+    return selected_marker, selected_skill, None
+
+
+def inspect_codex_jsonl(
+    output: bytes | str,
+    target_skill: str,
+    witnesses: dict[str, dict[str, str]],
+    requested_model: str | None = None,
+) -> dict[str, object]:
+    """Validate one run and bind its selected marker to an exact staged-body read."""
+    scope = "codex-body-read-attestation"
+    marker_to_skill, witness_error = _validated_marker_map(target_skill, witnesses)
+    if marker_to_skill is None:
+        return _invalid_codex_observation(str(witness_error), isolation_stop=True)
+    events, decode_error = _decode_codex_events(output)
+    if events is None:
+        return _invalid_codex_observation(str(decode_error), isolation_stop=True)
+
+    # Inspect every event, including started/failed calls, before lifecycle/marker scoring.
+    # A runtime error with no tool-call event remains an invalid trial, not evidence
+    # that a connected tool ran. A failed MCP call is still connected-tool activity.
+    isolation_error = _codex_isolation_error(events)
+    if isolation_error:
+        return _invalid_codex_observation(isolation_error, isolation_stop=True)
 
     event_types = [event.get("type") for event in events]
     lifecycle = ("thread.started", "turn.started", "turn.completed")
     if any(event_types.count(event_type) != 1 for event_type in lifecycle):
-        return {
-            "valid": False,
-            "selected": False,
-            "selected_marker": None,
-            "reason": "missing or ambiguous thread/turn lifecycle",
-        }
+        return _invalid_codex_observation("missing or ambiguous thread/turn lifecycle")
     lifecycle_positions = tuple(event_types.index(event_type) for event_type in lifecycle)
     if lifecycle_positions != (0, 1, len(events) - 1):
-        return {
-            "valid": False,
-            "selected": False,
-            "selected_marker": None,
-            "reason": "thread/turn lifecycle is out of order",
-        }
+        return _invalid_codex_observation("thread/turn lifecycle is out of order")
     if any(_reported_failure(event) for event in events):
-        return {"valid": False, "selected": False, "selected_marker": None, "reason": "Codex reported a failed run"}
+        return _invalid_codex_observation("Codex reported a failed run")
     thread_event = next(event for event in events if event.get("type") == "thread.started")
     thread_id = thread_event.get("thread_id") or thread_event.get("threadId")
     if not isinstance(thread_id, str) or not thread_id:
-        return {"valid": False, "selected": False, "selected_marker": None, "reason": "thread start omitted its id"}
+        return _invalid_codex_observation("thread start omitted its id")
 
     turn_start = lifecycle_positions[1]
     turn_complete = lifecycle_positions[2]
@@ -686,35 +901,18 @@ def inspect_codex_jsonl(
         and bool(item.get("text").strip())
     ]
     if not completed_agent_messages:
-        return {
-            "valid": False,
-            "selected": False,
-            "selected_marker": None,
-            "reason": "completed turn omitted its agent response",
-        }
-    markers = MARKER_PATTERN.findall("\n".join(completed_agent_messages))
-    competing = sorted(set(markers) - {marker})
-    if competing:
-        return {
-            "valid": False,
-            "selected": False,
-            "selected_marker": None,
-            "reason": f"competing staged marker(s): {', '.join(competing)}",
-        }
-    marker_count = markers.count(marker)
-    selected = marker_count == 1
-    if marker_count > 1:
-        return {"valid": False, "selected": False, "selected_marker": None, "reason": "ambiguous repeated staged marker"}
-    if selected:
-        marker_messages = [message for message in completed_agent_messages if marker in MARKER_PATTERN.findall(message)]
-        first_lines = [line.strip() for line in marker_messages[0].splitlines() if line.strip()]
-        if not first_lines or first_lines[0] != marker:
-            return {
-                "valid": False,
-                "selected": False,
-                "selected_marker": None,
-                "reason": "staged marker was not first in its completed message",
-            }
+        return _invalid_codex_observation("completed turn omitted its agent response")
+
+    consulted, read_witnesses, read_error = _codex_body_reads(
+        events, turn_start, turn_complete, witnesses,
+    )
+    if read_error:
+        return _invalid_codex_observation(read_error, isolation_stop=True)
+    selected_marker, selected_skill, marker_error = _codex_selected_marker(
+        completed_agent_messages, marker_to_skill, consulted,
+    )
+    if marker_error:
+        return _invalid_codex_observation(marker_error)
 
     resolved_models = {
         model
@@ -724,30 +922,38 @@ def inspect_codex_jsonl(
         and model
     }
     if len(resolved_models) > 1:
-        return {
-            "valid": False,
-            "selected": False,
-            "selected_marker": None,
-            "reason": "Codex reported ambiguous resolved models",
-        }
+        return _invalid_codex_observation("Codex reported ambiguous resolved models")
     resolved_model = next(iter(resolved_models), None)
     if requested_model is not None and resolved_model is not None and resolved_model != requested_model:
-        return {
-            "valid": False,
-            "selected": False,
-            "selected_marker": None,
-            "requested_model": requested_model,
-            "resolved_model": resolved_model,
-            "reason": "Codex resolved a different model than requested",
-        }
+        result = _invalid_codex_observation("Codex resolved a different model than requested")
+        result.update(requested_model=requested_model, resolved_model=resolved_model)
+        return result
+    selected = selected_skill == target_skill
+    sibling_selections = [selected_skill] if selected_skill is not None and not selected else []
     return {
         "valid": True,
         "selected": selected,
-        "selected_marker": marker if selected else None,
+        "selected_marker": selected_marker,
+        "selected_skill": selected_skill,
+        "selected_skill_set": [selected_skill] if selected_skill is not None else [],
+        "sibling_selections": sibling_selections,
+        "consulted_skills": consulted,
+        "read_witnesses": read_witnesses,
         "thread_id": thread_id,
         "requested_model": requested_model,
         "resolved_model": resolved_model,
-        "reason": "exact staged marker" if selected else "no staged marker",
+        "model_identity_check": "exact" if resolved_model is not None else "requested-only",
+        "qualification_observed": True,
+        "observation_scope": scope,
+        "reason": (
+            "body-read-attested target selection"
+            if selected
+            else "body-read-attested sibling selection"
+            if selected_skill is not None
+            else "consultation without selection"
+            if consulted
+            else "no skill selection"
+        ),
     }
 
 
@@ -816,10 +1022,35 @@ def run_codex_query(
         "--json",
         "-m", model,
         "-c", f'model_reasoning_effort="{reasoning}"',
+        *codex_provider_args(),
     ]
     cmd.extend(isolation_args)
     cmd.append(query)
     env = codex_environment()
+    if process_evidence is not None:
+        config_values = {
+            cmd[index + 1]
+            for index, argument in enumerate(cmd[:-1])
+            if argument == "-c"
+        }
+        disabled_features = {
+            cmd[index + 1]
+            for index, argument in enumerate(cmd[:-1])
+            if argument == "--disable"
+        }
+        process_evidence["launch_contract"] = {
+            "config_isolated": "--strict-config" in cmd and "--ignore-user-config" in cmd,
+            "retries_disabled": {
+                f"model_providers.{MODEL_PROVIDER_ID}.request_max_retries=0",
+                f"model_providers.{MODEL_PROVIDER_ID}.stream_max_retries=0",
+                f"model_providers.{MODEL_PROVIDER_ID}.supports_websockets=false",
+            }.issubset(config_values)
+            and "unbounded_connection_retries" in disabled_features,
+            "requested_model": model,
+            "reasoning_effort": reasoning,
+            "model_provider": MODEL_PROVIDER_ID,
+            "model_identity_evidence": "request-only",
+        }
     child = subprocess.Popen(
         cmd,
         executable=shutil.which("codex", path=str(pathlib.Path(cmd[0]).parent)),
@@ -884,7 +1115,7 @@ def main() -> int:
 
     test_uuid = uuid.uuid4().hex[:8]
     test_skill_name = f"{args.skill}-eval-{test_uuid}"
-    marker = f"CODEX_SKILL_FIRED:{test_skill_name}"
+    marker = selection_marker(test_skill_name, test_uuid)
 
     if args.evidence_dir:
         evidence_dir = pathlib.Path(args.evidence_dir).resolve()
@@ -912,7 +1143,11 @@ def main() -> int:
         target_description = source_skill_description(skill_src)
         if source_skill_description(target_skill) != target_description:
             raise ValueError("staged Codex skill description differs from its source")
-        siblings = stage_sibling_skills(skill_src, workspace)
+        siblings, sibling_markers = stage_sibling_skills(skill_src, workspace, test_uuid)
+        witnesses = skill_witnesses(
+            workspace,
+            {test_skill_name: marker, **sibling_markers},
+        )
         disabled_skills = enumerate_non_target_skills(target_skill)
         disabled_mcp_servers = enumerate_mcp_servers(workspace, args.timeout)
         isolation_args = skill_isolation_args(disabled_skills, disabled_mcp_servers)
@@ -928,6 +1163,15 @@ def main() -> int:
         )
         if readiness is None:
             raise ValueError(readiness_reason)
+        preflight, preflight_reason = cli_preflight()
+        if preflight is None:
+            raise ValueError(preflight_reason)
+        canonical_parameters = (
+            args.runs == QUALIFIED_RUNS
+            and args.threshold == QUALIFIED_THRESHOLD
+            and args.reasoning == DEFAULT_REASONING_EFFORT
+            and args.model == DEFAULT_MODEL
+        )
 
         print(f"Codex Layer 2 trigger eval: {args.skill}", file=sys.stderr)
         print(f"  Eval file:  {eval_file}", file=sys.stderr)
@@ -940,8 +1184,8 @@ def main() -> int:
         print(f"  Reasoning:  {args.reasoning}", file=sys.stderr)
         print(f"  Model:      {args.model}", file=sys.stderr)
         print(
-            f"  Catalog:    one marked target plus {len(siblings)} unmarked sibling skills, "
-            "each with its exact source description (offline catalog-only proof)",
+            f"  Catalog:    one attested target plus {len(siblings)} attested sibling skills, "
+            "each with its exact source description",
             file=sys.stderr,
         )
         print("", file=sys.stderr)
@@ -956,10 +1200,15 @@ def main() -> int:
                 process_evidence=execution,
             )
 
-        batch = evidence_records.TrialBatch("codex", args.skill, evidence_dir, args.runs, args.threshold)
+        batch = evidence_records.TrialBatch(
+            "codex", args.skill, evidence_dir, args.runs, args.threshold,
+            qualification_eligible=canonical_parameters,
+        )
         results, stop_exit = evidence_records.run_trials(
             batch, eval_data, launch,
-            lambda stdout: inspect_codex_jsonl(stdout, marker, requested_model=args.model),
+            lambda stdout: inspect_codex_jsonl(
+                stdout, test_skill_name, witnesses, requested_model=args.model,
+            ),
             lambda case, trial, stdout, stderr: retain_run_evidence(evidence_dir, case, trial, stdout, stderr),
             progress=lambda case, result: print_case_result(case, len(eval_data), result),
         )
@@ -990,11 +1239,29 @@ def main() -> int:
             "runs_per_query": args.runs,
             "reasoning": args.reasoning,
             "requested_model": args.model,
-            "qualification_eligible": False,
+            "qualification_eligible": canonical_parameters
+            and all(result["status"] == "complete" for result in results)
+            and all(
+                trial["qualification_eligible"] is True
+                for result in results
+                for trial in result["selection_evidence"]
+            ),
             "resolved_model": resolved_model,
         }
 
-        report = {"summary": summary, "results": results}
+        report = {
+            "metadata": {
+                "preflight": preflight,
+                "catalog_preflight": readiness,
+                "selection_observation": "codex-body-read-attestation",
+                "selection_witnesses": {
+                    name: {key: value for key, value in witness.items() if key != "body"}
+                    for name, witness in witnesses.items()
+                },
+            },
+            "summary": summary,
+            "results": results,
+        }
         print("", file=sys.stderr)
         print("===========================", file=sys.stderr)
         print(f"Codex Trigger Eval: {args.skill}", file=sys.stderr)

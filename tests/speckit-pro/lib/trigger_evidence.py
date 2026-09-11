@@ -10,11 +10,11 @@ from typing import Callable
 
 import trigger_process as processes
 
-SCHEMA_VERSION = "trigger-trial/v1"
+SCHEMA_VERSION = "trigger-trial/v2"
 EXECUTION_FIELDS = (
     "provider_exit_code", "timed_out", "interrupted_by_signal", "cleanup_verified",
     "cleanup_error", "cleanup_scope", "unexpected_descendants", "child_pid",
-    "child_pgid", "cleanup_observations", "process_error",
+    "child_pgid", "cleanup_observations", "process_error", "launch_contract",
 )
 
 
@@ -30,6 +30,7 @@ def trial_checks(record: dict[str, object]) -> dict[str, bool]:
     last_probe = observations[-1] if isinstance(observations, list) and observations else None
     group = record.get("child_pgid")
     model_check = record.get("model_identity_check")
+    launch = record.get("launch_contract")
     return {
         "execution_record": record.get("execution_record_complete") is True,
         "process": record.get("process_error") is None,
@@ -42,7 +43,11 @@ def trial_checks(record: dict[str, object]) -> dict[str, bool]:
         "absence_probe": isinstance(last_probe, dict) and last_probe.get("errno") == errno.ESRCH
         and type(group) is int and group > 0 and group == record.get("child_pid") and last_probe.get("pgid") == group,
         "descendants": record.get("unexpected_descendants") is False,
-        "model": isinstance(model_check, str) and model_check in {"exact", "alias", "unavailable-in-exec-json"},
+        "launch": isinstance(launch, dict)
+        and launch.get("config_isolated") is True
+        and launch.get("retries_disabled") is True
+        and launch.get("requested_model") == record.get("requested_model"),
+        "model": isinstance(model_check, str) and model_check in {"exact", "alias", "requested-only"},
         "selection": type(record.get("selected")) is bool,
     }
 
@@ -62,15 +67,17 @@ def make_trial_record(
         "query_sha256": hashlib.sha256(str(entry["query"]).encode()).hexdigest(),
         "stream_valid": parsed.get("valid") is True,
         "selected": parsed.get("selected") if type(parsed.get("selected")) is bool else None,
-        "observation_scope": "claude-skill-tool" if host == "claude" else "codex-marker-proxy",
-        # The capability prerequisite is still open; diagnostic validity cannot qualify a matrix.
-        "qualification_eligible": False,
+        "observation_scope": parsed.get("observation_scope"),
+        "qualification_eligible": parsed.get("qualification_eligible") is True,
     }
-    if host == "codex":
-        record["model_identity_check"] = "exact" if parsed.get("resolved_model") else "unavailable-in-exec-json"
     checks = trial_checks(record)
     valid = all(checks.values())
-    record.update(valid=valid, trial_valid=valid, checks=checks)
+    record.update(
+        valid=valid,
+        trial_valid=valid,
+        qualification_eligible=record["qualification_eligible"] is True and valid,
+        checks=checks,
+    )
     if not valid:
         record["reason"] = f"invalid checks: {', '.join(name for name, passed in checks.items() if not passed)}; {parsed.get('reason', '')}"
     # This alias contains an observed status only, never the helper's timeout sentinel.
@@ -127,6 +134,7 @@ class TrialBatch:
     directory: Path
     runs: int
     threshold: float
+    qualification_eligible: bool = False
 
 
 def execute_trial(
@@ -148,6 +156,9 @@ def execute_trial(
     parsed = inspect(stdout)
     if failure is not None:
         parsed["reason"] = f"{failure}; {parsed.get('reason', '')}"
+    parsed["qualification_eligible"] = (
+        batch.qualification_eligible and parsed.get("qualification_observed") is True
+    )
     trial = retain_trial_record(batch.directory, make_trial_record(
         batch.host, batch.skill, entry, *position, parsed, raw, execution,
     ))

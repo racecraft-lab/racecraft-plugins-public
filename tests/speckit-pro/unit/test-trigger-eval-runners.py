@@ -157,11 +157,61 @@ def claude_stream(
         )
     events.extend(
         [
-            {"type": "assistant", "message": {"content": [{"type": "text", "text": nonce}]}},
+            {
+                "type": "assistant",
+                "message": {"content": [{
+                    "type": "text",
+                    "text": nonce if selected else "No skill selected.",
+                }]},
+            },
             {"type": "result", "subtype": "success", "is_error": False, "model": "untrusted-result-model"},
         ]
     )
     return ("\r\n".join(json.dumps(event) for event in events) + "\r\n").encode("utf-8")
+
+
+def codex_witness(skill_name: str, marker: str) -> dict[str, dict[str, str]]:
+    path = Path("/tmp/layer2-codex-fixture") / skill_name / "SKILL.md"
+    body = f"---\nname: {skill_name}\ndescription: Fixture.\n---\n\n{marker}\n"
+    return {skill_name: {
+        "marker": marker,
+        "path": str(path),
+        "relative_path": f".agents/skills/{skill_name}/SKILL.md",
+        "sha256": hashlib.sha256(body.encode("utf-8")).hexdigest(),
+        "body": body,
+    }}
+
+
+def codex_stream(
+    witnesses: dict[str, dict[str, str]],
+    *,
+    selected_skill: str | None = None,
+    consulted_skill: str | None = None,
+    message: str | None = None,
+) -> bytes:
+    skill_read = selected_skill or consulted_skill
+    events: list[dict[str, object]] = [
+        {"type": "thread.started", "thread_id": "thread-1"},
+        {"type": "turn.started"},
+    ]
+    if skill_read is not None:
+        witness = witnesses[skill_read]
+        command = f"cat {witness['path']}"
+        item = {"id": f"read-{skill_read}", "type": "command_execution", "command": command}
+        events.append({"type": "item.started", "item": item})
+        events.append({"type": "item.completed", "item": {
+            **item,
+            "status": "completed",
+            "exit_code": 0,
+            "aggregated_output": witness["body"],
+        }})
+    if message is None:
+        message = witnesses[selected_skill]["marker"] if selected_skill is not None else "No skill selected."
+    events.extend([
+        {"type": "item.completed", "item": {"id": "message", "type": "agent_message", "text": message}},
+        {"type": "turn.completed"},
+    ])
+    return ("\n".join(json.dumps(event) for event in events) + "\n").encode("utf-8")
 
 
 class FakePopen:
@@ -194,7 +244,7 @@ class FakePopen:
         return self.returncode
 
 
-def successful_process_evidence() -> dict[str, object]:
+def successful_process_evidence(requested_model: str) -> dict[str, object]:
     """Explicit synthetic supervisor receipt; never used for provider execution."""
     return {
         "provider_exit_code": 0, "timed_out": False, "interrupted_by_signal": None,
@@ -202,15 +252,20 @@ def successful_process_evidence() -> dict[str, object]:
         "unexpected_descendants": False, "child_pid": 43210, "child_pgid": 43210,
         "cleanup_observations": [{"pgid": 43210, "errno": 3, "elapsed_seconds": 0.01}],
         "process_error": None,
+        "launch_contract": {
+            "config_isolated": True,
+            "retries_disabled": True,
+            "requested_model": requested_model,
+        },
     }
 
 
-def supervised_results(results: list[tuple[int, bytes, bytes, bool]]):
+def supervised_results(results: list[tuple[int, bytes, bytes, bool]], requested_model: str):
     remaining = iter(results)
 
     def provider(*_args: object, **kwargs: object) -> tuple[int, bytes, bytes, bool]:
         result = next(remaining)
-        kwargs["process_evidence"].update(successful_process_evidence())
+        kwargs["process_evidence"].update(successful_process_evidence(requested_model))
         return result
 
     return provider
@@ -282,7 +337,8 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                         if calls:
                             self.assertEqual(len(list(evidence.glob("*.trial.json"))), len(calls))
                         calls.append(True)
-                        receipt = successful_process_evidence()
+                        requested_model = "claude-sonnet-test" if host == "claude" else "gpt-5.6-sol"
+                        receipt = successful_process_evidence(requested_model)
                         receipt.update(provider_exit_code=7 if scenario == "nonzero" else -15 if scenario == "timeout" else 0,
                                        timed_out=scenario == "timeout")
                         if scenario == "cleanup-failed":
@@ -315,6 +371,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                             stack.enter_context(mock.patch.object(engine, "enumerate_non_target_skills", return_value=()))
                             stack.enter_context(mock.patch.object(engine, "enumerate_mcp_servers", return_value=()))
                             stack.enter_context(mock.patch.object(engine, "offline_catalog_preflight", return_value=({}, "ok")))
+                            stack.enter_context(mock.patch.object(engine, "cli_preflight", return_value=({}, "ok")))
                             stack.enter_context(mock.patch.object(sys, "argv", [str(CODEX_ENGINE), *argv]))
                         stack.enter_context(contextlib.redirect_stdout(output))
                         stack.enter_context(contextlib.redirect_stderr(diagnostics))
@@ -326,6 +383,10 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     self.assertIs(trial["stream_valid"], True)
                     self.assertIs(trial["trial_valid"], scenario == "good")
                     self.assertIs(trial["valid"], trial["trial_valid"])
+                    self.assertIs(
+                        trial["qualification_eligible"],
+                        scenario == "good" and host == "codex",
+                    )
                     self.assertEqual(trial["provider_exit_code"], None if scenario == "missing-receipt" else 7 if scenario == "nonzero" else -15 if scenario == "timeout" else 0)
                     self.assertEqual(trial["exit_code"], trial["provider_exit_code"])
                     self.assertIs(report["summary"]["complete"], scenario == "good")
@@ -463,7 +524,8 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
 
     def test_codex_rejects_failed_commands_and_events_outside_the_turn(self) -> None:
         engine = import_script(CODEX_ENGINE, "layer2_codex_evidence_contract")
-        marker = "CODEX_SKILL_FIRED:demo"
+        marker = "CODEX_SKILL_SELECTED:demo-fixed"
+        witnesses = codex_witness("demo", marker)
         original = [
             {"type": "thread.started", "thread_id": "fixture"},
             {"type": "turn.started"},
@@ -488,7 +550,9 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
         scenarios["before-turn"] = events
         for label, events in scenarios.items():
             with self.subTest(scenario=label):
-                parsed = engine.inspect_codex_jsonl("\n".join(map(json.dumps, events)), marker)
+                parsed = engine.inspect_codex_jsonl(
+                    "\n".join(map(json.dumps, events)), "demo", witnesses,
+                )
                 self.assertFalse(parsed["valid"], parsed)
 
     def test_claude_child_environment_controls(self) -> None:
@@ -507,10 +571,10 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             environment = launch.call_args.kwargs["env"]
             self.assertEqual(environment.get("DISABLE_AUTOUPDATER"), "1")
             self.assertEqual(environment.get("CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"), "1")
+            self.assertEqual(environment.get("CLAUDE_CODE_MAX_RETRIES"), "0")
             self.assertNotIn("FORCE_AUTOUPDATE_PLUGINS", environment)
-            expected = {**original, "DISABLE_AUTOUPDATER": "1", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1"}
-            expected.pop("FORCE_AUTOUPDATE_PLUGINS")
-            self.assertTrue(environment == expected, "child environment changed outside the three approved controls")
+            self.assertNotIn("L2_ENV_SENTINEL", environment)
+            self.assertEqual(environment, claude.claude_environment())
             self.assertTrue(dict(os.environ) == original, "parent environment changed")
 
     @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
@@ -822,15 +886,14 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             )
             self.assertEqual(command[command.index("--permission-mode") + 1], "dontAsk")
             self.assertEqual(command[command.index("--permission-prompts") + 1], "none")
+            self.assertEqual(command[command.index("--setting-sources") + 1], "")
             self.assertEqual(json.loads(command[command.index("--settings") + 1]), {
                 "disableBundledSkills": True, "skillOverrides": {"doctor": "off"},
                 "permissions": {"deny": [
                     "Skill(init)", "Skill(init *)", "Skill(security-review)", "Skill(security-review *)"
                 ]},
             })
-            environment = os.environ.copy()
-            environment.update({"DISABLE_AUTOUPDATER": "1", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1"})
-            environment.pop("FORCE_AUTOUPDATE_PLUGINS", None)
+            environment = claude.claude_environment()
             self.assertTrue(kwargs["env"] == environment, "launch environment differs from the approved child controls")
             prepared.append((command.copy(), kwargs))
             attempted.append(target)
@@ -878,7 +941,6 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 plugin_root / "skills" / "no-speckit-skill" / "SKILL.md"
             ).read_text(encoding="utf-8")
             stream = claude_stream(plugin_root, plugin_name, expected_skill, nonce)
-            stream = stream.replace(nonce.encode("utf-8"), f"{nonce} café".encode("utf-8"))
             selected = claude.inspect_claude_stream(
                 stream,
                 plugin_name,
@@ -979,7 +1041,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             mutation_results = {name: inspect_mutation(transform) for name, transform in mutations.items()}
 
             nonce_only = claude.inspect_claude_stream(
-                nonselected_stream,
+                nonselected_stream.replace(b"No skill selected.", nonce.encode("utf-8")),
                 plugin_name,
                 plugin_root,
                 expected_skill,
@@ -1024,6 +1086,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 captured["kwargs"] = kwargs
                 return fake
 
+            launch_evidence: dict[str, object] = {}
             with (
                 mock.patch.object(claude.shutil, "which", return_value="/usr/local/bin/claude"),
                 mock.patch.object(claude.subprocess, "Popen", side_effect=fake_popen),
@@ -1037,25 +1100,87 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     "claude-sonnet-test",
                     30,
                     expected_skill=expected_skill,
+                    process_evidence=launch_evidence,
                 )
 
             missing_tool_preflights = []
-            for omitted_flag in ("--tools", "--allowedTools", "--settings", "--permission-mode", "--permission-prompts"):
+            doctor_output = (
+                f"{claude.PINNED_DOCTOR_RUNNING}\n"
+                f"{claude.PINNED_MANAGED_SETTINGS}\n"
+                f"{claude.PINNED_ORGANIZATION_POLICY}\n"
+            ).encode("utf-8")
+            managed_preferences_output = claude.plistlib.dumps({})
+            for omitted_flag in (
+                "--tools", "--allowedTools", "--settings", "--setting-sources",
+                "--permission-mode", "--permission-prompts",
+            ):
                 supported_help = " ".join(
                     flag for flag in claude.REQUIRED_FLAGS if flag != omitted_flag
                 ).encode("utf-8")
                 with (
                     mock.patch.object(claude.shutil, "which", return_value="/usr/local/bin/claude"),
+                    mock.patch.object(claude.sys, "platform", "darwin"),
+                    mock.patch.object(claude, "MACOS_MANAGED_ROOT", root / "managed"),
                     mock.patch.object(
                         claude.subprocess,
                         "run",
                         side_effect=[
-                            SimpleNamespace(returncode=0, stdout=b"2.1.261\n", stderr=b""),
+                            SimpleNamespace(
+                                returncode=0,
+                                stdout=f"{claude.PINNED_CLAUDE_VERSION}\n".encode("utf-8"),
+                                stderr=b"",
+                            ),
                             SimpleNamespace(returncode=0, stdout=supported_help, stderr=b""),
+                            SimpleNamespace(returncode=0, stdout=doctor_output, stderr=b""),
+                            SimpleNamespace(returncode=0, stdout=managed_preferences_output, stderr=b""),
                         ],
                     ),
                 ):
                     missing_tool_preflights.append(claude.cli_preflight("/usr/local/bin/claude"))
+
+            supported_help = " ".join(claude.REQUIRED_FLAGS).encode("utf-8")
+            qualified_outputs = [
+                SimpleNamespace(
+                    returncode=0,
+                    stdout=f"{claude.PINNED_CLAUDE_VERSION}\n".encode("utf-8"),
+                    stderr=b"",
+                ),
+                SimpleNamespace(returncode=0, stdout=supported_help, stderr=b""),
+                SimpleNamespace(returncode=0, stdout=doctor_output, stderr=b""),
+                SimpleNamespace(returncode=0, stdout=managed_preferences_output, stderr=b""),
+            ]
+            with (
+                mock.patch.object(claude.shutil, "which", return_value="/usr/local/bin/claude"),
+                mock.patch.object(claude.sys, "platform", "darwin"),
+                mock.patch.object(claude, "MACOS_MANAGED_ROOT", root / "managed"),
+                mock.patch.object(claude.subprocess, "run", side_effect=qualified_outputs) as preflight_calls,
+            ):
+                qualified_preflight = claude.cli_preflight("/usr/local/bin/claude")
+            unqualified_doctor = doctor_output.replace(
+                claude.PINNED_MANAGED_SETTINGS.encode("utf-8"),
+                b"Managed settings (remote): active",
+            )
+            with (
+                mock.patch.object(claude.shutil, "which", return_value="/usr/local/bin/claude"),
+                mock.patch.object(claude.sys, "platform", "darwin"),
+                mock.patch.object(claude, "MACOS_MANAGED_ROOT", root / "managed"),
+                mock.patch.object(claude.subprocess, "run", side_effect=[
+                    *qualified_outputs[:2],
+                    SimpleNamespace(returncode=0, stdout=unqualified_doctor, stderr=b""),
+                    SimpleNamespace(returncode=0, stdout=managed_preferences_output, stderr=b""),
+                ]),
+            ):
+                rejected_managed_preflight = claude.cli_preflight("/usr/local/bin/claude")
+            managed_root = root / "managed-present"
+            managed_root.mkdir()
+            (managed_root / "CLAUDE.md").write_text("managed instruction\n", encoding="utf-8")
+            with (
+                mock.patch.object(claude.shutil, "which", return_value="/usr/local/bin/claude"),
+                mock.patch.object(claude.sys, "platform", "darwin"),
+                mock.patch.object(claude, "MACOS_MANAGED_ROOT", managed_root),
+                mock.patch.object(claude.subprocess, "run", side_effect=qualified_outputs),
+            ):
+                rejected_managed_file_preflight = claude.cli_preflight("/usr/local/bin/claude")
 
             preflight_identity_rejections = []
             for discovered, expected_reason in (
@@ -1186,7 +1311,9 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 mock.patch.object(
                     claude,
                     "run_claude_query",
-                    side_effect=supervised_results([(0, main_stream, b"", False)] * 3),
+                    side_effect=supervised_results(
+                        [(0, main_stream, b"", False)] * 3, "claude-sonnet-test",
+                    ),
                 ) as main_run,
                 contextlib.redirect_stdout(main_stdout),
             ):
@@ -1269,8 +1396,8 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 "result model is not resolution evidence": nonselected["resolved_model"] is None,
                 "completed response without Skill is valid": nonselected["valid"] and not nonselected["selected"],
                 "empty completed assistant body is invalid": not empty_response["valid"],
-                "nonce alone does not select": nonce_only["valid"] and not nonce_only["selected"],
-                "nonce absence does not suppress selection": no_nonce["valid"] and no_nonce["selected"],
+                "nonce without native selection is invalid": not nonce_only["valid"],
+                "native target selection requires nonce attestation": not no_nonce["valid"],
                 "every malformed or competing selection fails": all(
                     not result["valid"] for result in mutation_results.values()
                 ),
@@ -1279,8 +1406,8 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 "raw non-UTF8 stderr retained byte-for-byte": Path(raw_evidence["stderr_path"]).read_bytes()
                 == b"stderr\r\n\xff",
                 "raw hashes cover actual bytes": raw_evidence["stdout_sha256"] == hashlib.sha256(stream).hexdigest(),
-                "direct argv uses restricted session plugin": captured["command"][:3]
-                == ["/usr/local/bin/claude", "--restricted", "--plugin-dir"],
+                "direct argv uses restricted session plugin": captured["command"][:5]
+                == ["/usr/local/bin/claude", "--restricted", "--setting-sources", "", "--plugin-dir"],
                 "direct argv and preflight pin Skill-only tools": all(
                     flag in captured["command"]
                     for flag in ("--strict-mcp-config", "--mcp-config", "--model", "--output-format")
@@ -1291,8 +1418,22 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 and captured["command"][captured["command"].index("--allowedTools") + 1] == f"Skill({expected_skill})"
                 and f"Skill({plugin_name}:no-speckit-skill)" in captured["command"]
                 and all(result is None for result, _reason in missing_tool_preflights),
+                "preflight pins build and proves managed controls absent": qualified_preflight[0] is not None
+                and qualified_preflight[0]["version"] == claude.PINNED_CLAUDE_VERSION
+                and qualified_preflight[0]["request_retries"] == 0
+                and all(qualified_preflight[0]["doctor_checks"].values())
+                and rejected_managed_preflight[0] is None
+                and rejected_managed_file_preflight[0] is None
+                and all(call.kwargs["env"] == claude.claude_environment() for call in preflight_calls.call_args_list),
                 "direct argv uses no persistence": "--no-session-persistence" in captured["command"],
                 "direct launch inherits environment": captured["kwargs"]["env"].get("PATH") == os.environ.get("PATH"),
+                "direct launch freezes settings and retries": launch_evidence["launch_contract"] == {
+                    "config_isolated": True,
+                    "retries_disabled": True,
+                    "requested_model": "claude-sonnet-test",
+                    "model_provider": "anthropic-claude-code",
+                    "model_identity_evidence": "native-init-and-assistant-events",
+                },
                 "direct launch is confined to disposable root": Path(captured["kwargs"]["cwd"]).resolve()
                 == plugin_root.resolve()
                 and plugin_root.resolve() != Path.cwd().resolve()
@@ -1448,7 +1589,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                         mock.patch.object(
                             claude,
                             "run_claude_query",
-                            side_effect=supervised_results(trial_results),
+                            side_effect=supervised_results(trial_results, "claude-sonnet-test"),
                         ),
                         contextlib.redirect_stdout(output),
                     ):
@@ -1529,13 +1670,11 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             with mock.patch.dict(os.environ, {"UNRELATED_TOKEN": "never-inherit"}, clear=False):
                 self.assertNotIn("UNRELATED_TOKEN", engine.codex_environment())
 
-        marker = "CODEX_SKILL_FIRED:demo-eval"
-        base = [
-            {"type": "thread.started", "thread_id": "thread-1"},
-            {"type": "turn.started"},
-            {"type": "item.completed", "item": {"type": "agent_message", "text": marker}},
-            {"type": "turn.completed"},
-        ]
+        marker = "CODEX_SKILL_SELECTED:demo-eval-fixed"
+        witnesses = codex_witness("demo-eval", marker)
+        base = [json.loads(line) for line in codex_stream(
+            witnesses, selected_skill="demo-eval",
+        ).splitlines()]
         for phase, item_type in (
             ("item.started", "mcp_tool_call"),
             ("item.completed", "mcp_tool_call"),
@@ -1546,18 +1685,30 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             with self.subTest(phase=phase, item_type=item_type):
                 event = {"type": phase, "item": {"type": item_type, "status": "failed", "result": None,
                          "error": {"message": "approval policy never denied this call"}}}
-                parsed = engine.inspect_codex_jsonl("\n".join(map(json.dumps, [*base[:2], event, *base[2:]])), marker)
+                parsed = engine.inspect_codex_jsonl(
+                    "\n".join(map(json.dumps, [*base[:2], event, *base[2:]])),
+                    "demo-eval", witnesses,
+                )
                 self.assertFalse(parsed["valid"])
                 self.assertTrue(parsed["isolation_stop"])
         unavailable = {"type": "item.completed", "item": {"type": "error", "message": "tool unavailable"}}
-        denied = engine.inspect_codex_jsonl("\n".join(map(json.dumps, [*base[:2], unavailable, *base[2:]])), marker)
+        denied = engine.inspect_codex_jsonl(
+            "\n".join(map(json.dumps, [*base[:2], unavailable, *base[2:]])),
+            "demo-eval", witnesses,
+        )
         self.assertFalse(denied["valid"])
         self.assertFalse(denied.get("isolation_stop", False))
-        local = {"type": "item.completed", "item": {"type": "command_execution", "status": "completed", "exit_code": 0}}
-        self.assertTrue(engine.inspect_codex_jsonl("\n".join(map(json.dumps, [*base[:2], local, *base[2:]])), marker)["valid"])
+        local = {"type": "item.completed", "item": {
+            "id": "arbitrary", "type": "command_execution", "command": "pwd",
+            "status": "completed", "exit_code": 0, "aggregated_output": "/tmp\n",
+        }}
+        self.assertFalse(engine.inspect_codex_jsonl(
+            "\n".join(map(json.dumps, [*base[:2], local, *base[2:]])),
+            "demo-eval", witnesses,
+        )["valid"])
         for malformed in ({"type": []}, {"type": "item.started", "item": {"type": []}}):
             with self.subTest(malformed=malformed):
-                parsed = engine.inspect_codex_jsonl(json.dumps(malformed), marker)
+                parsed = engine.inspect_codex_jsonl(json.dumps(malformed), "demo-eval", witnesses)
                 self.assertFalse(parsed["valid"])
                 self.assertTrue(parsed["isolation_stop"])
 
@@ -1590,6 +1741,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     mock.patch.object(engine, "enumerate_non_target_skills", return_value=()),
                     mock.patch.object(engine, "enumerate_mcp_servers", return_value=()),
                     mock.patch.object(engine, "offline_catalog_preflight", return_value=({}, "ok")),
+                    mock.patch.object(engine, "cli_preflight", return_value=({}, "ok")),
                     mock.patch.object(engine, "run_codex_query", return_value=(0, raw, b"", False)) as provider,
                     mock.patch.object(sys, "argv", [str(CODEX_ENGINE), "demo", "--runs", "1", "--evidence-dir", str(evidence)]),
                     contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()),
@@ -1613,13 +1765,27 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             auth_home.mkdir()
             auth_file = auth_home / "auth.json"
             auth_file.write_text("credential sentinel\n", encoding="utf-8")
-            marker = "CODEX_SKILL_FIRED:demo-eval"
+            marker = "CODEX_SKILL_SELECTED:demo-eval-fixed"
             with mock.patch.object(engine.shutil, "copy2") as credential_copy:
                 staged = engine.stage_repository_skill(source, workspace, "demo-eval", marker)
+            witnesses = engine.skill_witnesses(workspace, {"demo-eval": marker})
+            read_command = f"cat {witnesses['demo-eval']['path']}"
             valid = "\n".join(
                 [
                     json.dumps({"type": "thread.started", "thread_id": "thread-1"}),
                     json.dumps({"type": "turn.started"}),
+                    json.dumps({
+                        "type": "item.started",
+                        "item": {"id": "read-skill", "type": "command_execution", "command": read_command},
+                    }),
+                    json.dumps({
+                        "type": "item.completed",
+                        "item": {
+                            "id": "read-skill", "type": "command_execution", "command": read_command,
+                            "status": "completed", "exit_code": 0,
+                            "aggregated_output": witnesses["demo-eval"]["body"],
+                        },
+                    }),
                     json.dumps(
                         {
                             "type": "item.started",
@@ -1647,17 +1813,19 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     json.dumps({"type": "turn.completed"}),
                 ]
             ).encode("utf-8")
-            parsed = engine.inspect_codex_jsonl(valid, marker, requested_model="gpt-5.6-sol")
+            parsed = engine.inspect_codex_jsonl(
+                valid, "demo-eval", witnesses, requested_model="gpt-5.6-sol",
+            )
             competing = engine.inspect_codex_jsonl(
-                valid.replace(b"Done.", b"CODEX_SKILL_FIRED:other"),
-                marker,
+                valid.replace(b"Done.", b"CODEX_SKILL_SELECTED:other-fixed"),
+                "demo-eval", witnesses,
             )
             marker_not_first = engine.inspect_codex_jsonl(
                 valid.replace(
                     f"{marker}\\nDone.".encode(),
                     f"Progress\\n{marker}".encode(),
                 ),
-                marker,
+                "demo-eval", witnesses,
             )
             missing_lifecycle = engine.inspect_codex_jsonl(
                 json.dumps(
@@ -1666,7 +1834,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                         "item": {"type": "agent_message", "text": marker},
                     }
                 ),
-                marker,
+                "demo-eval", witnesses,
             )
             wrong_order = engine.inspect_codex_jsonl(
                 "\n".join(
@@ -1676,7 +1844,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                         json.dumps({"type": "turn.started"}),
                     ]
                 ),
-                marker,
+                "demo-eval", witnesses,
             )
             no_response = engine.inspect_codex_jsonl(
                 "\n".join(
@@ -1686,21 +1854,21 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                         json.dumps({"type": "turn.completed"}),
                     ]
                 ),
-                marker,
+                "demo-eval", witnesses,
             )
             top_error = engine.inspect_codex_jsonl(
                 valid.replace(
                     b'{"type": "turn.completed"}',
                     b'{"type": "error"}\n{"type": "turn.completed"}',
                 ),
-                marker,
+                "demo-eval", witnesses,
             )
             item_error = engine.inspect_codex_jsonl(
                 valid.replace(
                     b'{"type": "item.completed", "item": {"type": "agent_message", "text": "Preparing to answer."}}',
                     b'{"type": "item.completed", "item": {"type": "error", "message": "failed"}}',
                 ),
-                marker,
+                "demo-eval", witnesses,
             )
             completed_error_items = [
                 engine.inspect_codex_jsonl(
@@ -1713,7 +1881,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                             }
                         ).encode("utf-8"),
                     ),
-                    marker,
+                    "demo-eval", witnesses,
                 )
                 for field, value in (
                     ("message", "failed"),
@@ -1726,7 +1894,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     b'"text": "Preparing to answer."',
                     b'"text": "Preparing to answer.", "error": {"kind": "domain-data"}',
                 ),
-                marker,
+                "demo-eval", witnesses,
             )
             evidence_dir = root / "evidence"
             evidence_dir.mkdir()
@@ -1741,7 +1909,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 invalid_utf8,
                 b"stderr\xff",
             )
-            invalid_utf8_result = engine.inspect_codex_jsonl(invalid_utf8, marker)
+            invalid_utf8_result = engine.inspect_codex_jsonl(invalid_utf8, "demo-eval", witnesses)
 
             residue = root / "residue"
             residue.mkdir()
@@ -1975,6 +2143,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 captured["kwargs"] = kwargs
                 return FakePopen(valid)
 
+            launch_evidence: dict[str, object] = {}
             with (
                 mock.patch.dict(os.environ, {"CODEX_HOME": str(auth_home)}, clear=False),
                 mock.patch.object(engine.subprocess, "Popen", side_effect=fake_run),
@@ -1987,6 +2156,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     "gpt-5.6-sol",
                     30,
                     isolation_args,
+                    process_evidence=launch_evidence,
                 )
 
             timeout_stdout = b"partial-jsonl\r\n"
@@ -2072,6 +2242,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                         "offline_catalog_preflight",
                         return_value=preflight_result,
                     ) as main_preflight,
+                    mock.patch.object(engine, "cli_preflight", return_value=({}, "ok")),
                     mock.patch.object(engine, "run_codex_query") as rejected_provider,
                     mock.patch.object(
                         engine.uuid,
@@ -2130,6 +2301,21 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 codex.main(["demo", "--run", "--profile", "fast", "--run", "tail"])
             delegated_executable, delegated_argv = execv.call_args.args
 
+            with mock.patch.object(
+                engine.subprocess,
+                "run",
+                return_value=subprocess.CompletedProcess(
+                    [], 0, f"{engine.PINNED_CODEX_VERSION}\n".encode("utf-8"), b"",
+                ),
+            ):
+                qualified_codex_preflight = engine.cli_preflight()
+            with mock.patch.object(
+                engine.subprocess,
+                "run",
+                return_value=subprocess.CompletedProcess([], 0, b"codex-cli 0.0.0\n", b""),
+            ):
+                rejected_codex_preflight = engine.cli_preflight()
+
             checks = {
                 "imports Codex wrapper": codex is not None,
                 "all runners avoid shell execution": not any(
@@ -2147,6 +2333,11 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 and delegated_argv[2:] == ["demo", "--profile", "fast", "tail"],
                 "Codex default effort remains low": engine.DEFAULT_REASONING_EFFORT == "low",
                 "Codex default model remains approved": engine.DEFAULT_MODEL == "gpt-5.6-sol",
+                "Codex preflight pins the qualified CLI build": qualified_codex_preflight[0] is not None
+                and qualified_codex_preflight[0]["version"] == engine.PINNED_CODEX_VERSION
+                and qualified_codex_preflight[0]["request_max_retries"] == 0
+                and qualified_codex_preflight[0]["stream_max_retries"] == 0
+                and rejected_codex_preflight[0] is None,
                 "Codex skill remains repository scoped": staged == workspace / ".agents" / "skills" / "demo-eval",
                 "Codex source description parser preserves the staged routing description": engine.source_skill_description(
                     staged / "SKILL.md"
@@ -2254,6 +2445,15 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     -len(isolation_args) - 1 :
                 ]
                 == [*isolation_args, "query"],
+                "Codex launch freezes provider retries and identity scope": launch_evidence["launch_contract"]
+                == {
+                    "config_isolated": True,
+                    "retries_disabled": True,
+                    "requested_model": "gpt-5.6-sol",
+                    "reasoning_effort": "low",
+                    "model_provider": engine.MODEL_PROVIDER_ID,
+                    "model_identity_evidence": "request-only",
+                },
                 "Codex timeout retains partial raw streams and hashes": timeout_rc == -1
                 and timeout_timed_out
                 and retained_timeout_stdout == timeout_stdout
@@ -2290,7 +2490,10 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 and captured["command"][captured["command"].index("--disable") + 1] == "plugins"
                 and "skills.bundled.enabled=false" in captured["command"]
                 and captured["command"][captured["command"].index("-m") + 1] == "gpt-5.6-sol"
-                and 'model_reasoning_effort="low"' in captured["command"],
+                and 'model_reasoning_effort="low"' in captured["command"]
+                and f"model_providers.{engine.MODEL_PROVIDER_ID}.request_max_retries=0" in captured["command"]
+                and f"model_providers.{engine.MODEL_PROVIDER_ID}.stream_max_retries=0" in captured["command"]
+                and "unbounded_connection_retries" in captured["command"],
                 "Codex keeps rules and approval boundaries enabled": "--ignore-rules" not in captured["command"]
                 and "--dangerously-bypass-approvals-and-sandbox" not in captured["command"]
                 and "--full-auto" not in captured["command"],
@@ -2380,6 +2583,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
 
             sibling = json.loads(json.dumps(events))
             sibling[1]["message"]["content"][0]["input"]["skill"] = f"{plugin}:other"
+            sibling[3]["message"]["content"][0]["text"] = "Selected the other sibling."
             sibling_selected = parse(sibling)
             self.assertTrue(sibling_selected["valid"])
             self.assertFalse(sibling_selected["selected"])
@@ -2388,6 +2592,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
 
             no_speckit = json.loads(json.dumps(events))
             no_speckit[1]["message"]["content"][0]["input"]["skill"] = f"{plugin}:no-speckit-skill"
+            no_speckit[3]["message"]["content"][0]["text"] = "No SpecKit skill applies."
             no_speckit_selected = parse(no_speckit)
             self.assertTrue(no_speckit_selected["valid"])
             self.assertFalse(no_speckit_selected["selected"])
@@ -2400,6 +2605,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             self.assertTrue(bare_selected["valid"] and bare_selected["selected"], "the host resolves the bare name to the staged skill")
             bare_sibling = json.loads(json.dumps(events))
             bare_sibling[1]["message"]["content"][0]["input"]["skill"] = "other"
+            bare_sibling[3]["message"]["content"][0]["text"] = "Selected the other sibling."
             self.assertEqual(parse(bare_sibling)["sibling_selections"], [f"{plugin}:other"])
             foreign = json.loads(json.dumps(events))
             foreign[1]["message"]["content"][0]["input"]["skill"] = "demo"
@@ -2486,9 +2692,11 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             (skills / "notes.md").write_text("not a skill\n", encoding="utf-8")
             workspace = root / "workspace"
             workspace.mkdir()
-            marker = "CODEX_SKILL_FIRED:demo-eval"
+            marker = engine.selection_marker("demo-eval", "fixed")
             staged = engine.stage_repository_skill(skills / "demo" / "SKILL.md", workspace, "demo-eval", marker)
-            siblings = engine.stage_sibling_skills(skills / "demo" / "SKILL.md", workspace)
+            siblings, sibling_markers = engine.stage_sibling_skills(
+                skills / "demo" / "SKILL.md", workspace, "fixed",
+            )
             self.assertEqual(siblings, {
                 "other": "Other sibling.",
                 "third": "Third sibling.",
@@ -2497,30 +2705,74 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             for name in siblings:
                 sibling_text = (workspace / ".agents" / "skills" / name / "SKILL.md").read_text(encoding="utf-8")
                 self.assertTrue(sibling_text.startswith(f"---\nname: {name}\ndescription: "), "exact frontmatter kept")
-                self.assertNotIn("CODEX_SKILL_FIRED", sibling_text, "siblings carry no marker")
+                self.assertEqual(sibling_text.count(sibling_markers[name]), 1, "every sibling is attested")
                 self.assertNotIn(f"Body of {name}.", sibling_text, "sibling workflow body is not staged")
-                self.assertIn("do not run any command", sibling_text, "sibling body stops the trial")
-            self.assertFalse((workspace / ".agents" / "skills" / "demo").exists(), "the unmarked target is never staged")
+                self.assertIn("do not run another command", sibling_text, "sibling body stops the trial")
+            self.assertFalse((workspace / ".agents" / "skills" / "demo").exists(), "the source target is never staged")
             staged_text = (staged / "SKILL.md").read_text(encoding="utf-8")
             self.assertTrue(
                 staged_text.split("\n---\n", 1)[1].lstrip().startswith(engine.MEASUREMENT_STUB_SENTENCE)
             )
             self.assertIn("reply with a chat message whose first line is exactly", staged_text)
-            self.assertIn("do not run any command", staged_text)
+            self.assertIn("do not run another command", staged_text)
 
+            witnesses = engine.skill_witnesses(
+                workspace, {"demo-eval": marker, **sibling_markers},
+            )
             no_speckit_selection = engine.inspect_codex_jsonl(
-                "\n".join(map(json.dumps, [
-                    {"type": "thread.started", "thread_id": "thread-1"},
-                    {"type": "turn.started"},
-                    {"type": "item.completed", "item": {
-                        "type": "agent_message", "text": "No SpecKit skill applies."
-                    }},
-                    {"type": "turn.completed"},
-                ])),
-                marker,
+                codex_stream(witnesses, selected_skill="no-speckit-skill"),
+                "demo-eval", witnesses,
             )
             self.assertTrue(no_speckit_selection["valid"])
             self.assertFalse(no_speckit_selection["selected"])
+            self.assertEqual(no_speckit_selection["selected_skill"], "no-speckit-skill")
+
+            consultation = engine.inspect_codex_jsonl(
+                codex_stream(witnesses, consulted_skill="demo-eval"),
+                "demo-eval", witnesses,
+            )
+            self.assertTrue(consultation["valid"])
+            self.assertFalse(consultation["selected"])
+            self.assertEqual(consultation["consulted_skills"], ["demo-eval"])
+            self.assertEqual(consultation["reason"], "consultation without selection")
+
+            uncorroborated = engine.inspect_codex_jsonl(
+                codex_stream(witnesses, message=marker),
+                "demo-eval", witnesses,
+            )
+            self.assertFalse(uncorroborated["valid"])
+            self.assertIn("not corroborated", uncorroborated["reason"])
+
+            sibling_selection = engine.inspect_codex_jsonl(
+                codex_stream(witnesses, selected_skill="other"),
+                "demo-eval", witnesses,
+            )
+            self.assertTrue(sibling_selection["valid"])
+            self.assertFalse(sibling_selection["selected"])
+            self.assertEqual(sibling_selection["selected_skill_set"], ["other"])
+
+            ambiguous = engine.inspect_codex_jsonl(
+                codex_stream(
+                    witnesses,
+                    selected_skill="demo-eval",
+                    message=f"{marker}\n{sibling_markers['other']}",
+                ),
+                "demo-eval", witnesses,
+            )
+            self.assertFalse(ambiguous["valid"])
+            self.assertIn("ambiguous", ambiguous["reason"])
+
+            incomplete_events = [
+                json.loads(line)
+                for line in codex_stream(witnesses, selected_skill="demo-eval").splitlines()
+            ]
+            del incomplete_events[3]
+            incomplete = engine.inspect_codex_jsonl(
+                "\n".join(json.dumps(event) for event in incomplete_events),
+                "demo-eval", witnesses,
+            )
+            self.assertFalse(incomplete["valid"])
+            self.assertTrue(incomplete["isolation_stop"])
 
             def catalog(entries: list[str]) -> bytes:
                 text = "\n".join(["## Skills", "### Available skills", *entries, "### How to use skills", "- Follow it."])

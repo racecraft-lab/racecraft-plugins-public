@@ -65,23 +65,27 @@ def fixture_plugin(root: Path, skill: str) -> Path:
     return plugin_root
 
 
-def write_blocking_claude(binary_dir: Path) -> Path:
+def write_blocking_claude(binary_dir: Path, child_state: Path, child_stopped: Path) -> Path:
     binary_dir.mkdir(parents=True)
     script = binary_dir / "claude-stub.py"
     script.write_text(
         "import json, os, signal, sys, time\n"
         "from pathlib import Path\n"
         "if '--version' in sys.argv:\n"
-        "    print('2.1.261')\n"
+        "    print('2.1.268 (Claude Code)')\n"
         "elif '--help' in sys.argv:\n"
-        "    print('--restricted --plugin-dir --strict-mcp-config --mcp-config --tools --allowedTools --settings --permission-mode --permission-prompts --output-format --verbose --no-session-persistence')\n"
+        "    print('--restricted --setting-sources --plugin-dir --strict-mcp-config --mcp-config --tools --allowedTools --settings --permission-mode --permission-prompts --output-format --verbose --no-session-persistence')\n"
+        "elif 'doctor' in sys.argv:\n"
+        "    print('Running: native (2.1.268)')\n"
+        "    print('Managed settings (remote): not fetched — requires an Enterprise or Team subscription')\n"
+        "    print('Organization policy: not applicable to Pro and Max accounts')\n"
         "else:\n"
         "    root = sys.argv[sys.argv.index('--plugin-dir') + 1]\n"
         "    sys.stdout.buffer.write(b'partial stdout\\r\\n'); sys.stdout.buffer.flush()\n"
         "    sys.stderr.buffer.write(b'partial stderr\\xff'); sys.stderr.buffer.flush()\n"
-        "    Path(os.environ['L2_CHILD_STATE']).write_text(json.dumps({'pid': os.getpid(), 'plugin_root': root}), encoding='utf-8')\n"
+        f"    Path({str(child_state)!r}).write_text(json.dumps({{'pid': os.getpid(), 'plugin_root': root}}), encoding='utf-8')\n"
         "    def stop(_signum, _frame):\n"
-        "        Path(os.environ['L2_CHILD_STOPPED']).write_text('stopped\\n', encoding='utf-8')\n"
+        f"        Path({str(child_stopped)!r}).write_text('stopped\\n', encoding='utf-8')\n"
         "        raise SystemExit(143)\n"
         "    signal.signal(signal.SIGTERM, stop)\n"
         "    time.sleep(60)\n",
@@ -189,9 +193,9 @@ class Layer2SignalRestorationTests(unittest.TestCase):
             if os.name != "nt":
                 external_root = root / "external"
                 binary_dir = external_root / "bin"
-                write_blocking_claude(binary_dir)
                 child_state = external_root / "child-state.json"
                 child_stopped = external_root / "child-stopped"
+                write_blocking_claude(binary_dir, child_state, child_stopped)
                 external_home = external_root / "home"
                 external_sentinel = external_home / ".claude" / "sentinel"
                 external_sentinel.parent.mkdir(parents=True)
@@ -202,8 +206,6 @@ class Layer2SignalRestorationTests(unittest.TestCase):
                     {
                         "HOME": str(external_home),
                         "PATH": f"{binary_dir}{os.pathsep}{env.get('PATH', '')}",
-                        "L2_CHILD_STATE": str(child_state),
-                        "L2_CHILD_STOPPED": str(child_stopped),
                         "PYTHONDONTWRITEBYTECODE": "1",
                     }
                 )
