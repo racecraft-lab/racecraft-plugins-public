@@ -10,8 +10,8 @@ import runpy
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
-from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "speckit-pro"))
@@ -249,7 +249,7 @@ class ArtifactReviewTests(unittest.TestCase):
             artifact_review.review_handoff(example, self.root, trusted_bytes)
 
     def test_coverage_gate_accepts_pending_and_rejects_false_verification(self) -> None:
-        with mock.patch.dict(self.coverage["artifact_review_errors"].__globals__, _repository_root=mock.Mock(return_value=self.root)):
+        with unittest.mock.patch.dict(self.coverage["artifact_review_errors"].__globals__, _repository_root=unittest.mock.Mock(return_value=self.root)):
             errors = self.coverage["artifact_review_errors"](self.root / "workflow.md", self.workflow(self.record))
             self.assertEqual(errors, {"artifact_review_errors": []})
             self.record["pages"][0]["preview"]["status"] = "verified"
@@ -258,7 +258,7 @@ class ArtifactReviewTests(unittest.TestCase):
         self.assertIn("artifact_review_errors", self.coverage["RULE_PROBLEM_KEYS"]["status-evidence"])
 
     def test_coverage_gate_does_not_require_record_in_legacy_workflows(self) -> None:
-        with mock.patch.dict(self.coverage["artifact_review_errors"].__globals__, _repository_root=mock.Mock(side_effect=AssertionError("No new legacy prerequisite"))):
+        with unittest.mock.patch.dict(self.coverage["artifact_review_errors"].__globals__, _repository_root=unittest.mock.Mock(side_effect=AssertionError("No new legacy prerequisite"))):
             self.assertEqual(self.coverage["artifact_review_errors"](self.root / "workflow.md", self.workflow()), {"artifact_review_errors": []})
 
     def test_both_parents_reference_the_shared_delivery_and_resume_contract(self) -> None:
