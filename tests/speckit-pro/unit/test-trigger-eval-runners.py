@@ -1989,14 +1989,15 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 with self.subTest(msg=name):
                     self.assertTrue(condition)
 
-    def test_no_speckit_description_and_install_case_remain_cross_host_contracts(self) -> None:
+    def test_no_speckit_description_and_negative_cases_remain_cross_host_contracts(self) -> None:
         claude = import_script(CLAUDE_RUNNER, "layer2_claude_no_speckit_contract")
         engine = import_script(CODEX_ENGINE, "layer2_codex_no_speckit_contract")
         expected_description = (
             "Use when no available SpecKit skill covers the request, including ordinary coding, testing, tooling, or "
             "repository work and host-specific SpecKit operations whose matching skill is absent from the current "
-            "catalog, such as installing Codex subagents when no agent-install skill is available. Reply that no "
-            "available SpecKit skill applies and stop."
+            "catalog, such as installing Codex subagents when no agent-install skill is available or running the plan "
+            "stage for an already-existing spec or populated workflow when no planning skill is available. Reply that "
+            "no available SpecKit skill applies and stop."
         )
         self.assertEqual(claude.NO_SPECKIT_SKILL_DESCRIPTION, expected_description)
         self.assertEqual(engine.NO_SPECKIT_SKILL_DESCRIPTION, expected_description)
@@ -2012,6 +2013,27 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             with self.subTest(corpus=corpus.relative_to(REPO_ROOT)):
                 cases = json.loads(corpus.read_text(encoding="utf-8"))
                 self.assertEqual(cases[12], expected_case)
+
+        expected_scaffold_cases = [
+            {
+                "query": (
+                    "SPEC-016 already has a committed workflow file with every prompt filled in, so resume it at the "
+                    "planning phase and run the plan stage against that existing file"
+                ),
+                "should_trigger": False,
+            },
+            {
+                "query": "draft the implementation plan for SPEC-016; the spec already exists",
+                "should_trigger": False,
+            },
+        ]
+        for corpus in (
+            LAYER2 / "evals" / "speckit-scaffold-spec-trigger.json",
+            LAYER2 / "codex-evals" / "speckit-scaffold-spec-trigger.json",
+        ):
+            with self.subTest(corpus=corpus.relative_to(REPO_ROOT)):
+                cases = json.loads(corpus.read_text(encoding="utf-8"))
+                self.assertEqual(cases[18:20], expected_scaffold_cases)
 
     def test_claude_sibling_catalog_scores_sibling_selection_as_non_selection(self) -> None:
         claude = import_script(CLAUDE_RUNNER, "layer2_claude_siblings")
