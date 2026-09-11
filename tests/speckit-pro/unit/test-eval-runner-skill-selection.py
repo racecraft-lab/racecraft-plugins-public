@@ -608,8 +608,8 @@ def write_fake_claude(root: Path) -> Path:
         "    print('--restricted --setting-sources --plugin-dir --strict-mcp-config --mcp-config --tools --allowedTools --settings --permission-mode --permission-prompts --output-format --verbose --no-session-persistence')\n"
         "elif 'doctor' in sys.argv:\n"
         "    print('Running: native (2.1.269)')\n"
-        "    print('Managed settings (remote): not fetched — no usable credentials for the settings fetch')\n"
-        "    print('Organization policy: not fetched: no API key or claude.ai sign-in for the policy lookup (apiKeyHelper keys are not used for it)')\n"
+        "    print('Managed settings (remote): not fetched — requires an Enterprise or Team subscription')\n"
+        "    print('Organization policy: not applicable to Pro and Max accounts')\n"
         "else:\n"
         "    raise SystemExit(97)\n",
         encoding="utf-8",
