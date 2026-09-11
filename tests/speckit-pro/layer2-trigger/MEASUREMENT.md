@@ -39,24 +39,32 @@ JSON. The qualified Codex scope therefore uses a behavioral attestation and
 names that limitation rather than claiming native observation.
 
 Every staged target and sibling retains its exact source description and gets a
-minimal body containing a unique randomized marker. A selection requires both:
+minimal body containing a unique randomized 128-bit marker. A selection
+requires both:
 
-1. one started and successfully completed command that proves a read of the
-   exact staged `SKILL.md` body, either as the command's complete output or as
-   the leading output of a shell command whose first segment is the qualified
-   `sed -n '1,240p' <exact-path>` read; and
+1. one command that proves access to the exact staged `SKILL.md` body, either
+   through completed exact output, completed leading output from the qualified
+   `sed -n '1,240p' <exact-path>` first shell segment, or the private marker in
+   a later completed agent message after that exact leading command starts; and
 2. that skill's marker as the first nonblank line of one completed agent message.
 
 For the leading compound form, the parser requires the body at byte zero and
 rejects a tail that names another staged skill path or emits any staged body or
-selection marker. Each accepted witness records `read_mode` as `exact-output`
-or `leading-compound-output`. An exact body read without a marker is a valid
-consultation/nonselection. A marker without its matching read, an unknown or
-repeated marker, multiple body reads, a command without one of those proofs, a
-failed/unfinished command, or connected-tool activity is invalid. A sibling's
-read-plus-marker is a valid target nonselection. This makes the behaviorally
-selected staged-skill set observable within the declared scope, while
-preserving the distinction from a native activation event.
+selection marker. The post-start form also rejects a command that contains any
+marker or a second staged path; it is valid only when the marker appears after
+the command start. This accounts for the official `codex exec --json` sample,
+which shows a command start followed by an agent message and completed turn
+without a matching command-completion event. Outer exit, error, isolation, and
+cleanup checks still apply at the trial layer.
+
+Each accepted witness records `read_mode` as `exact-output`,
+`leading-compound-output`, or `post-start-marker`. An exact body read without a
+marker is a valid consultation/nonselection. A marker without its matching
+read, an unknown or repeated marker, multiple body reads, a command without one
+of those proofs, a reported failed command, or connected-tool activity is
+invalid. A sibling's read-plus-marker is a valid target nonselection. This
+makes the behaviorally selected staged-skill set observable within the declared
+scope, while preserving the distinction from a native activation event.
 
 The runner pins Codex 0.153.3, `gpt-5.6-sol`, and low reasoning. It uses strict
 configuration isolation, disables unrelated features, and installs a dedicated

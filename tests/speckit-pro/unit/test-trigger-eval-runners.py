@@ -214,6 +214,18 @@ def codex_stream(
     return ("\n".join(json.dumps(event) for event in events) + "\n").encode("utf-8")
 
 
+def inspect_codex_events(
+    engine: ModuleType,
+    events: list[dict[str, object]],
+    target_skill: str,
+    witnesses: dict[str, dict[str, str]],
+) -> dict[str, object]:
+    payload = "\n".join(json.dumps(event) for event in events).encode("utf-8")
+    return engine.inspect_codex_jsonl(
+        payload, target_skill, witnesses,
+    )
+
+
 class FakePopen:
     def __init__(self, stdout: bytes, stderr: bytes = b"", returncode: int = 0) -> None:
         self.stdout_value = stdout
@@ -1764,7 +1776,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
         )
         self.assertEqual(exact["read_witnesses"][0]["read_mode"], "exact-output")
 
-        def parse_case(command: str, output: str) -> dict[str, object]:
+        def with_command(command: str, output: str) -> list[dict[str, object]]:
             events = [dict(event) for event in base]
             for index in (2, 3):
                 events[index] = {
@@ -1772,11 +1784,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     "item": {**events[index]["item"], "command": command},
                 }
             events[3]["item"]["aggregated_output"] = output
-            return engine.inspect_codex_jsonl(
-                "\n".join(json.dumps(event) for event in events),
-                "demo-eval",
-                witnesses,
-            )
+            return events
 
         target = witnesses["demo-eval"]
         other = witnesses["other"]
@@ -1785,7 +1793,9 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             "&& pwd && rg --files -g '!node_modules*' | head -200\""
         )
         body_then_metadata = target["body"] + "/tmp/fixture-workspace\n"
-        accepted = parse_case(leading_read, body_then_metadata)
+        accepted = inspect_codex_events(
+            engine, with_command(leading_read, body_then_metadata), "demo-eval", witnesses,
+        )
         self.assertTrue(accepted["valid"], accepted)
         self.assertTrue(accepted["selected"])
         self.assertEqual(accepted["consulted_skills"], ["demo-eval"])
@@ -1818,9 +1828,74 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
         }
         for label, (command, output) in invalid_cases.items():
             with self.subTest(label=label):
-                parsed = parse_case(command, output)
+                parsed = inspect_codex_events(
+                    engine, with_command(command, output), "demo-eval", witnesses,
+                )
                 self.assertFalse(parsed["valid"], parsed)
                 self.assertIn("exact staged skill-body read", str(parsed["reason"]))
+    def test_codex_started_body_read_requires_a_post_start_private_marker(self) -> None:
+        engine = import_script(CODEX_ENGINE, "layer2_codex_started_body_read")
+        marker = "CODEX_SKILL_SELECTED:demo-eval-0123456789abcdef0123456789abcdef"
+        witnesses = codex_witness("demo-eval", marker)
+        relative_path = witnesses["demo-eval"]["relative_path"]
+        command = (
+            f'/bin/zsh -c "sed -n \'1,240p\' {relative_path} '
+            "&& printf '\\nFILES\\n' && ripwire . --for='find brief'\""
+        )
+        started = {"type": "item.started", "item": {
+            "id": "read", "type": "command_execution", "command": command,
+            "aggregated_output": "", "exit_code": None, "status": "in_progress",
+        }}
+        selected = {"type": "item.completed", "item": {
+            "id": "message", "type": "agent_message", "text": marker,
+        }}
+        events = [
+            {"type": "thread.started", "thread_id": "thread-1"},
+            {"type": "turn.started"},
+            {"type": "item.completed", "item": {
+                "id": "progress", "type": "agent_message", "text": "Loading the matching skill.",
+            }},
+            started,
+            selected,
+            {"type": "turn.completed"},
+        ]
+
+        accepted = inspect_codex_events(engine, events, "demo-eval", witnesses)
+        self.assertTrue(accepted["valid"], accepted)
+        self.assertTrue(accepted["selected"])
+        self.assertEqual(accepted["read_witnesses"][0]["read_mode"], "post-start-marker")
+        self.assertIn("test_uuid = uuid.uuid4().hex\n", CODEX_ENGINE.read_text(encoding="utf-8"))
+
+        invalid_cases = {
+            "marker precedes read": [*events[:2], selected, started, events[-1]],
+            "marker is absent": [*events[:4], {**selected, "item": {**selected["item"], "text": "No skill."}}, events[-1]],
+            "command exposes marker": [*events[:3], {**started, "item": {**started["item"], "command": command[:-1] + f" && printf {marker}\\\""}}, *events[4:]],
+            "read is not first": [*events[:3], {**started, "item": {**started["item"], "command": command.replace("sed -n", "pwd && sed -n")}}, *events[4:]],
+            "two commands remain open": [*events[:4], {**started, "item": {**started["item"], "id": "second"}}, *events[4:]],
+        }
+        for label, malformed in invalid_cases.items():
+            with self.subTest(label=label):
+                self.assertFalse(
+                    inspect_codex_events(engine, malformed, "demo-eval", witnesses)["valid"]
+                )
+
+    def test_codex_rejects_multiple_staged_body_reads(self) -> None:
+        engine = import_script(CODEX_ENGINE, "layer2_codex_multiple_body_reads")
+        witnesses = {
+            **codex_witness("demo-eval", "CODEX_SKILL_SELECTED:demo-eval-fixed"),
+            **codex_witness("other", "CODEX_SKILL_SELECTED:other-fixed"),
+        }
+        target = [json.loads(line) for line in codex_stream(
+            witnesses, selected_skill="demo-eval",
+        ).splitlines()]
+        other = [json.loads(line) for line in codex_stream(
+            witnesses, consulted_skill="other",
+        ).splitlines()]
+        parsed = inspect_codex_events(
+            engine, [*target[:2], *other[2:4], *target[2:]], "demo-eval", witnesses,
+        )
+        self.assertFalse(parsed["valid"])
+        self.assertIn("multiple staged skill bodies", str(parsed["reason"]))
 
     def test_codex_isolation_violation_retains_evidence_and_stops(self) -> None:
         engine = import_script(CODEX_ENGINE, "layer2_codex_isolation_stop")

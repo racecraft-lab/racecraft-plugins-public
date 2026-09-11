@@ -773,12 +773,11 @@ def _codex_isolation_error(events: list[dict[str, object]]) -> str | None:
     return None
 
 
-def _leading_compound_codex_body_read(
+def _leading_compound_codex_body_skill(
     command: str,
-    command_output: str,
     witnesses: dict[str, dict[str, str]],
 ) -> str | None:
-    """Recognize a full staged-body read at the start of a compound shell command."""
+    """Recognize an exact staged-body read at the start of a compound shell command."""
     try:
         wrapper = shlex.split(command)
         if (
@@ -797,12 +796,9 @@ def _leading_compound_codex_body_read(
         name
         for name, witness in witnesses.items()
         if read_path in {witness["path"], witness["relative_path"]}
-        and command_output.startswith(witness["body"])
-        and command_output != witness["body"]
     ]
     if len(matches) != 1:
         return None
-    suffix = command_output[len(witnesses[matches[0]]["body"]):]
     tail_tokens = tokens[5:]
     if any(
         location in token
@@ -811,12 +807,91 @@ def _leading_compound_codex_body_read(
         for token in tail_tokens
     ):
         return None
+    if any(witness["marker"] in command for witness in witnesses.values()):
+        return None
+    return matches[0]
+
+
+def _leading_compound_codex_body_read(
+    command: str,
+    command_output: str,
+    witnesses: dict[str, dict[str, str]],
+) -> str | None:
+    skill_name = _leading_compound_codex_body_skill(command, witnesses)
+    if skill_name is None:
+        return None
+    body = witnesses[skill_name]["body"]
+    if not command_output.startswith(body) or command_output == body:
+        return None
+    suffix = command_output[len(body):]
     if any(
         witness["body"] in suffix or witness["marker"] in suffix
         for witness in witnesses.values()
     ):
         return None
-    return matches[0]
+    return skill_name
+
+
+def _post_start_marker_codex_body_read(
+    events: list[dict[str, object]],
+    command_start: int,
+    turn_complete: int,
+    command: str,
+    witnesses: dict[str, dict[str, str]],
+) -> str | None:
+    skill_name = _leading_compound_codex_body_skill(command, witnesses)
+    if skill_name is None:
+        return None
+    marker = witnesses[skill_name]["marker"]
+    for event in events[command_start + 1:turn_complete]:
+        item = event.get("item")
+        if (
+            event.get("type") == "item.completed"
+            and isinstance(item, dict)
+            and item.get("type") == "agent_message"
+            and isinstance(item.get("text"), str)
+            and marker in MARKER_PATTERN.findall(item["text"])
+        ):
+            return skill_name
+    return None
+
+
+def _append_post_start_codex_body_read(
+    events: list[dict[str, object]],
+    turn_complete: int,
+    command_starts: dict[str, tuple[str, int]],
+    reads: list[dict[str, str]],
+    witnesses: dict[str, dict[str, str]],
+) -> list[dict[str, str]]:
+    read_ids = {read["command_item_id"] for read in reads}
+    pending_ids = set(command_starts) - read_ids
+    if len(pending_ids) != 1:
+        return reads
+    item_id = pending_ids.pop()
+    command, command_start = command_starts[item_id]
+    skill_name = _post_start_marker_codex_body_read(
+        events, command_start, turn_complete, command, witnesses,
+    )
+    if skill_name is None or skill_name in {read["skill"] for read in reads}:
+        return reads
+    return [*reads, {
+        "skill": skill_name,
+        "path": witnesses[skill_name]["path"],
+        "sha256": witnesses[skill_name]["sha256"],
+        "command_item_id": item_id,
+        "read_mode": "post-start-marker",
+    }]
+
+
+def _codex_body_read_error(
+    command_starts: dict[str, tuple[str, int]],
+    reads: list[dict[str, str]],
+) -> str | None:
+    if set(command_starts) != {read["command_item_id"] for read in reads}:
+        return "command execution lacked a completed or post-start marker body-read attestation"
+    if len({read["skill"] for read in reads}) > 1:
+        return "multiple staged skill bodies were read"
+    return None
 
 
 def _codex_body_read_match(
@@ -844,7 +919,7 @@ def _codex_body_reads(
     turn_complete: int,
     witnesses: dict[str, dict[str, str]],
 ) -> tuple[list[str], list[dict[str, str]], str | None]:
-    command_starts: dict[str, str] = {}
+    command_starts: dict[str, tuple[str, int]] = {}
     consulted: list[str] = []
     reads: list[dict[str, str]] = []
     for index, event in enumerate(events):
@@ -860,13 +935,13 @@ def _codex_body_reads(
         if event.get("type") == "item.started":
             if item_id in command_starts:
                 return [], [], "command execution started more than once"
-            command_starts[item_id] = command
+            command_starts[item_id] = (command, index)
             continue
         if event.get("type") == "item.updated":
-            if command_starts.get(item_id) != command:
+            if command_starts.get(item_id, ("", -1))[0] != command:
                 return [], [], "command execution update was not bound to its start"
             continue
-        if event.get("type") != "item.completed" or command_starts.get(item_id) != command:
+        if event.get("type") != "item.completed" or command_starts.get(item_id, ("", -1))[0] != command:
             return [], [], "command execution completion was not bound to its start"
         command_output = item.get("aggregated_output")
         if not isinstance(command_output, str):
@@ -885,8 +960,12 @@ def _codex_body_reads(
             "command_item_id": item_id,
             "read_mode": read_mode,
         })
-    if set(command_starts) != {read["command_item_id"] for read in reads}:
-        return [], [], "command execution did not complete exactly once"
+    reads = _append_post_start_codex_body_read(
+        events, turn_complete, command_starts, reads, witnesses,
+    )
+    consulted = [read["skill"] for read in reads]
+    if read_error := _codex_body_read_error(command_starts, reads):
+        return [], [], read_error
     return consulted, reads, None
 
 
@@ -1203,7 +1282,7 @@ def main() -> int:
     if shutil.which("codex") is None:
         sys.exit("ERROR: codex CLI not on PATH")
 
-    test_uuid = uuid.uuid4().hex[:8]
+    test_uuid = uuid.uuid4().hex
     test_skill_name = f"{args.skill}-eval-{test_uuid}"
     marker = selection_marker(test_skill_name, test_uuid)
 
