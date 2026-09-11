@@ -152,6 +152,7 @@ def restore_termination_handlers(previous: dict[int, object]) -> None:
         try:
             signal.signal(signum, handler)
         except (OSError, ValueError):
+            # Handler restoration is best effort; preserve the primary result on failure.
             pass
 
 
