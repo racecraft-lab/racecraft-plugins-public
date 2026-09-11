@@ -1,0 +1,81 @@
+{
+  "schema_version": "trigger-capabilities/v1",
+  "checked_on": "2026-09-10",
+  "qualification_status": "blocked",
+  "provider_trial_invocations": 0,
+  "scope": "Documentation, pinned public schemas, synthetic streams, and owned local process stubs; no provider inference",
+  "hosts": {
+    "claude": {
+      "cli_version": "2.1.268",
+      "interface": "claude --restricted -p --output-format stream-json --verbose",
+      "selection_observation": "Completed, linked model-initiated Skill calls",
+      "authoritative_fields": [
+        "system/init skills, tools, plugins, mcp_servers, model",
+        "assistant message.model and message.content tool_use",
+        "user message.content tool_result tool_use_id and is_error",
+        "terminal result subtype, is_error, permission_denials",
+        "system/api_retry when reported"
+      ],
+      "native_invocation": {
+        "documented_interface": "UserPromptExpansion hook",
+        "fields": ["expansion_type", "command_name", "command_args", "command_source", "prompt"],
+        "qualified_in_isolated_runner": false
+      },
+      "unqualified_requirements": [
+        "Bind native commands to the staged identifier and qualify the expansion observer",
+        "Freeze and validate effective managed settings plus explicit settings",
+        "Qualify supported provider retry controls and their observable coverage"
+      ],
+      "model_contract": "Conflicting reported identities are invalid; aliases identify a family and do not attest an immutable snapshot",
+      "sources": [
+        "https://code.claude.com/docs/en/hooks#userpromptexpansion",
+        "https://code.claude.com/docs/en/cli-reference",
+        "https://code.claude.com/docs/en/model-config#model-aliases",
+        "https://platform.claude.com/docs/en/agents-and-tools/tool-use/handle-tool-calls"
+      ]
+    },
+    "codex": {
+      "cli_version": "0.153.3",
+      "interface": "codex exec --json",
+      "selection_observation": "Exact emitted marker proxy; exclusive skill activation is unqualified",
+      "authoritative_fields": [
+        "thread.started thread_id",
+        "turn.started, turn.completed, turn.failed, error",
+        "item.started, item.updated, item.completed",
+        "command_execution status and exit_code",
+        "agent_message text"
+      ],
+      "unavailable_public_fields": [
+        "Native or implicit skill-activation event",
+        "Complete selected-skill identity set",
+        "Reported backend model identity in thread.started or turn.started",
+        "Complete underlying provider retry count",
+        "Outer codex process exit status"
+      ],
+      "outer_exit_source": "Python supervisor Popen.returncode; never inferred from a turn event",
+      "unqualified_requirements": [
+        "Distinguish target-plus-sibling activation, consultation without a marker, and an uncorroborated marker",
+        "Bind and qualify native invocation under the existing isolation contract",
+        "Qualify supported provider retry controls and their observable coverage"
+      ],
+      "model_contract": "Requested gpt-5.6-sol/low remains explicit; backend identity is unavailable in the pinned public JSON schema",
+      "sources": [
+        "https://raw.githubusercontent.com/openai/codex/rust-v0.153.3/codex-rs/exec/src/exec_events.rs",
+        "https://learn.chatgpt.com/docs/non-interactive-mode#make-output-machine-readable",
+        "https://learn.chatgpt.com/docs/build-skills#how-chatgpt-and-codex-use-skills",
+        "https://learn.chatgpt.com/docs/hooks#tool-coverage"
+      ]
+    }
+  },
+  "retry_contract": {
+    "harness": "No automatic relaunch; stop after the first invalid trial",
+    "reported_provider_retries": "Reported retry or error events invalidate the stream",
+    "unreported_provider_retries": "Not established; one CLI launch is not proof of zero transport retries"
+  },
+  "cleanup_contract": {
+    "posix": "Bounded termination and absence check of the original owned process group",
+    "windows": "Direct-child cleanup only; insufficient for the required descendant scope",
+    "outside_owned_scope": "Not observed or claimed",
+    "workspace": "Separate post-run cleanup receipt and runner exit"
+  }
+}

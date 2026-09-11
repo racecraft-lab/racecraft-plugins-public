@@ -52,6 +52,7 @@
         { "path": "tests/speckit-pro/unit/test-eval-runner-skill-selection.py", "label": "test-eval-runner-skill-selection" },
         { "path": "tests/speckit-pro/unit/test-functional-headless-runner.py", "label": "test-functional-headless-runner" },
         { "path": "tests/speckit-pro/unit/test-trigger-eval-runners.py", "label": "test-trigger-eval-runners" },
+        { "path": "tests/speckit-pro/unit/test-trigger-trial-records.py", "label": "test-trigger-trial-records" },
         { "path": "tests/speckit-pro/unit/test-trigger-signal-restoration.py", "label": "test-trigger-signal-restoration" },
         { "path": "tests/speckit-pro/unit/test-trigger-eval-coverage.py", "label": "test-trigger-eval-coverage" },
         { "path": "tests/speckit-pro/unit/test-refresh-local-plugin.py", "label": "test-refresh-local-plugin" },

@@ -6,7 +6,7 @@ disposable repository with a marker injected into the body, runs each query
 through `codex` non-interactively, validates the JSONL lifecycle and exact
 marker, then scores trigger/no-trigger correctness against the eval fixture.
 
-Subprocess invocations use `subprocess.run` with a list argument (no shell
+Subprocess invocations use argument lists and an owned process scope (no shell
 involvement), so query strings are passed directly as argv entries and
 cannot be interpreted as shell metacharacters.
 
@@ -31,6 +31,7 @@ import os
 import pathlib
 import re
 import shutil
+import signal
 import stat
 import subprocess
 import sys
@@ -40,6 +41,12 @@ import uuid
 
 # Tests live at <repo>/tests/speckit-pro/; the plugin is the sibling <repo>/speckit-pro/.
 TESTS_ROOT = pathlib.Path(__file__).resolve().parents[1]      # <repo>/tests/speckit-pro
+SHARED_LIB = TESTS_ROOT / "lib"
+if str(SHARED_LIB) not in sys.path:
+    sys.path.insert(0, str(SHARED_LIB))
+import trigger_process as processes  # noqa: E402
+import trigger_evidence as evidence_records  # noqa: E402
+
 PLUGIN_ROOT = TESTS_ROOT.parents[1] / "speckit-pro"           # <repo>/speckit-pro
 DEFAULT_REASONING_EFFORT = "low"
 DEFAULT_MODEL = "gpt-5.6-sol"
@@ -588,7 +595,16 @@ def _reported_failure(event: dict[str, object]) -> bool:
     if event.get("type") in {"error", "turn.failed"}:
         return True
     item = event.get("item")
-    return isinstance(item, dict) and item.get("type") == "error"
+    if not isinstance(item, dict):
+        return False
+    if item.get("type") == "error":
+        return True
+    if item.get("type") == "command_execution":
+        if item.get("status") in {"failed", "declined"}:
+            return True
+        if event.get("type") == "item.completed":
+            return item.get("status") != "completed" or type(item.get("exit_code")) is not int or item["exit_code"] != 0
+    return False
 
 
 def inspect_codex_jsonl(
@@ -641,7 +657,7 @@ def inspect_codex_jsonl(
             "reason": "missing or ambiguous thread/turn lifecycle",
         }
     lifecycle_positions = tuple(event_types.index(event_type) for event_type in lifecycle)
-    if lifecycle_positions != tuple(sorted(lifecycle_positions)):
+    if lifecycle_positions != (0, 1, len(events) - 1):
         return {
             "valid": False,
             "selected": False,
@@ -744,8 +760,10 @@ def retain_run_evidence(
     stem = f"case-{case_number:03d}-trial-{run_number:02d}"
     jsonl_path = evidence_dir / f"{stem}.jsonl"
     stderr_path = evidence_dir / f"{stem}.stderr.log"
-    jsonl_path.write_bytes(output)
-    stderr_path.write_bytes(error_output)
+    with jsonl_path.open("xb") as stream:
+        stream.write(output)
+    with stderr_path.open("xb") as stream:
+        stream.write(error_output)
     return {
         "jsonl_path": str(jsonl_path.resolve()),
         "jsonl_sha256": hashlib.sha256(output).hexdigest(),
@@ -785,6 +803,7 @@ def run_codex_query(
     model: str,
     timeout: int,
     isolation_args: list[str],
+    *, process_evidence: dict[str, object] | None = None,
 ) -> tuple[int, bytes, bytes, bool]:
     cmd = [
         codex_executable(), "exec", "--strict-config",
@@ -799,24 +818,30 @@ def run_codex_query(
     cmd.extend(isolation_args)
     cmd.append(query)
     env = codex_environment()
-    try:
-        proc = subprocess.run(
-            cmd,
-            executable=shutil.which("codex", path=str(pathlib.Path(cmd[0]).parent)),
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=False,
-            timeout=timeout,
-            env=env,
-            shell=False,
-            check=False,
-        )
-        return proc.returncode, proc.stdout, proc.stderr, False
-    except subprocess.TimeoutExpired as e:
-        stdout = e.stdout if isinstance(e.stdout, bytes) else b""
-        stderr = e.stderr if isinstance(e.stderr, bytes) else b""
-        return -1, stdout, stderr, True
+    child = subprocess.Popen(
+        cmd,
+        executable=shutil.which("codex", path=str(pathlib.Path(cmd[0]).parent)),
+        cwd=workspace,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=env,
+        shell=False,
+        start_new_session=os.name != "nt",
+    )
+    return processes.supervise_child(child, timeout, cleanup=processes.cleanup_child, evidence=process_evidence)
+
+
+def print_case_result(case_number: int, case_count: int, result: dict[str, object]) -> None:
+    if result["status"] == "not_run":
+        print(f"  [{case_number:2d}/{case_count}] NOT RUN  {result['query'][:70]}", file=sys.stderr)
+        return
+    expect = "TRIG" if result["should_trigger"] else "NOOP"
+    mark = "PASS" if result["pass"] else "FAIL"
+    print(
+        f"  [{case_number:2d}/{case_count}] expect={expect} trig={result['triggers']}/{result['runs']} "
+        f"invalid={result['invalid_runs']} {mark}  {result['query'][:70]}", file=sys.stderr,
+    )
 
 
 def main() -> int:
@@ -843,10 +868,14 @@ def main() -> int:
         sys.exit(f"ERROR: {corpus_reason}")
     if args.runs <= 0 or not 0.0 <= args.threshold <= 1.0:
         sys.exit("ERROR: --runs must be positive and --threshold must be between 0 and 1")
+    if args.timeout <= 0:
+        sys.exit("ERROR: --timeout must be positive")
     if args.limit is not None and args.limit <= 0:
         sys.exit("ERROR: --limit must be positive")
     if args.limit is not None:
         eval_data = eval_data[: args.limit]
+    if args.out and pathlib.Path(args.out).exists():
+        sys.exit("ERROR: --out already exists; previous reports are immutable")
 
     if shutil.which("codex") is None:
         sys.exit("ERROR: codex CLI not on PATH")
@@ -862,6 +891,7 @@ def main() -> int:
         evidence_dir = pathlib.Path(tempfile.mkdtemp(prefix=f"codex-eval-evidence-{args.skill}-"))
     workspace = pathlib.Path(tempfile.mkdtemp(prefix=f"codex-eval-{args.skill}-"))
     exit_code = 1
+    previous_handlers = processes.install_termination_handlers()
     try:
         initialized = subprocess.run(
             ["git", "init", "--quiet"],
@@ -874,7 +904,7 @@ def main() -> int:
             check=False,
         )
         if initialized.returncode != 0:
-            sys.exit(f"ERROR: could not initialize disposable eval repository: {initialized.stderr.strip()}")
+            raise ValueError(f"could not initialize disposable eval repository: {initialized.stderr.strip()}")
         skill_dir = stage_repository_skill(skill_src, workspace, test_skill_name, marker)
         target_skill = skill_dir / "SKILL.md"
         target_description = source_skill_description(skill_src)
@@ -914,78 +944,27 @@ def main() -> int:
         )
         print("", file=sys.stderr)
 
-        results = []
-        passed = failed = 0
-        for idx, entry in enumerate(eval_data, start=1):
-            query = entry["query"]
-            should_trigger = bool(entry["should_trigger"])
-            triggers = 0
-            invalid_runs = 0
-            run_evidence = []
-            for run in range(1, args.runs + 1):
-                if enumerate_non_target_skills(target_skill) != disabled_skills:
-                    raise ValueError("Codex skill roots changed after catalog preflight")
-                if enumerate_mcp_servers(workspace, args.timeout) != disabled_mcp_servers:
-                    raise ValueError("Codex MCP inventory changed after catalog preflight")
-                rc, output, error_output, timed_out = run_codex_query(
-                    workspace,
-                    query,
-                    args.reasoning,
-                    args.model,
-                    args.timeout,
-                    isolation_args,
-                )
-                raw_evidence = retain_run_evidence(evidence_dir, idx, run, output, error_output)
-                evidence = inspect_codex_jsonl(output, marker, requested_model=args.model)
-                evidence = {**evidence, **raw_evidence, "timed_out": timed_out}
-                if evidence.get("isolation_stop"):
-                    (evidence_dir / "isolation-stop.json").write_text(
-                        json.dumps({"case": idx, "trial": run, "evidence": evidence}, indent=2),
-                        encoding="utf-8",
-                    )
-                    raise ValueError("Codex isolation violation; retained invalid trial and stopped future queries")
-                run_valid = not timed_out and rc == 0 and bool(evidence["valid"])
-                if not run_valid:
-                    invalid_runs += 1
-                    evidence = {
-                        **evidence,
-                        "reason": (
-                            f"timed_out={timed_out}; exit={rc}; {evidence['reason']}; stderr="
-                            f"{error_output.decode('utf-8', errors='replace').strip()[:200]}"
-                        ),
-                    }
-                if run_valid and evidence["selected"]:
-                    triggers += 1
-                run_evidence.append(evidence)
-            trigger_rate = triggers / args.runs
-            is_pass = case_passes(
-                should_trigger,
-                triggers,
-                args.runs,
-                args.threshold,
-                invalid_runs,
+        def launch(query: str, execution: dict[str, object]):
+            if enumerate_non_target_skills(target_skill) != disabled_skills:
+                raise ValueError("Codex skill roots changed after catalog preflight")
+            if enumerate_mcp_servers(workspace, args.timeout) != disabled_mcp_servers:
+                raise ValueError("Codex MCP inventory changed after catalog preflight")
+            return run_codex_query(
+                workspace, query, args.reasoning, args.model, args.timeout, isolation_args,
+                process_evidence=execution,
             )
-            if is_pass:
-                passed += 1
-            else:
-                failed += 1
-            mark = "PASS" if is_pass else "FAIL"
-            expect = "TRIG" if should_trigger else "NOOP"
-            print(
-                f"  [{idx:2d}/{len(eval_data)}] expect={expect} trig={triggers}/{args.runs} "
-                f"invalid={invalid_runs} {mark}  {query[:70]}",
-                file=sys.stderr,
-            )
-            results.append({
-                "query": query,
-                "should_trigger": should_trigger,
-                "triggers": triggers,
-                "runs": args.runs,
-                "trigger_rate": round(trigger_rate, 3),
-                "invalid_runs": invalid_runs,
-                "selection_evidence": run_evidence,
-                "pass": is_pass,
-            })
+
+        batch = evidence_records.TrialBatch("codex", args.skill, evidence_dir, args.runs, args.threshold)
+        results, stop_exit = evidence_records.run_trials(
+            batch, eval_data, launch,
+            lambda stdout: inspect_codex_jsonl(stdout, marker, requested_model=args.model),
+            lambda case, trial, stdout, stderr: retain_run_evidence(evidence_dir, case, trial, stdout, stderr),
+            progress=lambda case, result: print_case_result(case, len(eval_data), result),
+        )
+        passed = sum(result["pass"] is True for result in results)
+        failed = sum(result["pass"] is False for result in results)
+        if stop_exit is not None and stop_exit >= 128:
+            print(f"Termination requested by signal {stop_exit - 128}; terminating owned child and cleaning temporary workspace.", file=sys.stderr)
 
         resolved_models = [
             evidence.get("resolved_model")
@@ -1003,10 +982,13 @@ def main() -> int:
             "total": len(eval_data),
             "passed": passed,
             "failed": failed,
+            "complete": all(result["status"] == "complete" for result in results),
+            "not_run": sum(result["status"] == "not_run" for result in results),
             "pass_rate": round(passed / len(eval_data), 3) if eval_data else 0.0,
             "runs_per_query": args.runs,
             "reasoning": args.reasoning,
             "requested_model": args.model,
+            "qualification_eligible": False,
             "resolved_model": resolved_model,
         }
 
@@ -1019,11 +1001,15 @@ def main() -> int:
         print("===========================", file=sys.stderr)
 
         if args.out:
-            pathlib.Path(args.out).write_text(json.dumps(report, indent=2))
+            evidence_records.write_json_once(pathlib.Path(args.out), report)
             print(f"Wrote detailed results to: {args.out}", file=sys.stderr)
 
         print(json.dumps(report, indent=2))
-        exit_code = 0 if failed == 0 else 1
+        exit_code = stop_exit if stop_exit is not None else 0 if failed == 0 else 1
+    except (processes.TerminationRequested, KeyboardInterrupt) as exc:
+        signum = exc.signum if isinstance(exc, processes.TerminationRequested) else signal.SIGINT
+        exit_code = 128 + signum
+        print(f"Termination requested by signal {signum}; cleaning owned workspace.", file=sys.stderr)
     except (OSError, UnicodeError, ValueError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         exit_code = 1
@@ -1031,6 +1017,12 @@ def main() -> int:
         cleanup_error = remove_workspace(workspace)
         if cleanup_error is not None:
             print(f"ERROR: {cleanup_error}", file=sys.stderr)
+            exit_code = 2
+        processes.restore_termination_handlers(previous_handlers)
+        try:
+            evidence_records.retain_cleanup_receipt(evidence_dir, workspace, exit_code, cleanup_error)
+        except OSError as exc:
+            print(f"ERROR: cannot retain workspace cleanup receipt: {exc}", file=sys.stderr)
             exit_code = 2
     return exit_code
 
