@@ -20,6 +20,12 @@ import uuid
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+SHARED_LIB = SCRIPT_DIR.parent / "lib"
+if str(SHARED_LIB) not in sys.path:
+    sys.path.insert(0, str(SHARED_LIB))
+import trigger_process as processes  # noqa: E402
+import trigger_evidence as evidence_records  # noqa: E402
+
 PLUGIN_ROOT = (SCRIPT_DIR / "../../../speckit-pro").resolve()
 DEFAULT_MODEL = "sonnet"
 RUNS_PER_QUERY = 3
@@ -53,37 +59,10 @@ CLEANUP_TIMEOUT = 5
 DESCENDANT_EXIT_GRACE = 0.2
 
 
-class ClaudeQueryError(OSError):
-    """Stop the evaluation without discarding a failed child's raw evidence."""
-
-    def __init__(self, reason: str) -> None:
-        super().__init__(reason)
-        self.stdout = b""
-        self.stderr = b""
-        self.exit_code: int | None = None
-        self.timed_out = False
-        self.cleanup_error: str | None = None
-        self.unexpected_descendants = False
-        self.child_pid: int | None = None
-        self.child_pgid: int | None = None
-        self.cleanup_observations: list[dict[str, object]] = []
+ClaudeQueryError = processes.QueryError
 
 
-class TerminationRequested(Exception):
-    """Raised after terminating the owned child so local cleanup can run."""
-
-    def __init__(self, signum: int) -> None:
-        super().__init__(f"termination requested by signal {signum}")
-        self.signum = signum
-        self.stdout = b""
-        self.stderr = b""
-        self.exit_code: int | None = None
-        self.timed_out = False
-        self.cleanup_error: str | None = None
-        self.unexpected_descendants = False
-        self.child_pid: int | None = None
-        self.child_pgid: int | None = None
-        self.cleanup_observations: list[dict[str, object]] = []
+TerminationRequested = processes.TerminationRequested
 
 
 def eprint(message: str = "") -> None:
@@ -266,6 +245,57 @@ def stream_content(event: dict[str, object]) -> list[dict[str, object]]:
     return [block for block in content if isinstance(block, dict)]
 
 
+def skill_results_error(
+    events: list[dict[str, object]], uses: list[tuple[int, dict[str, object]]],
+    init_index: int, result_index: int,
+) -> str | None:
+    """Require each observed Skill call to finish successfully in the same run."""
+    results: dict[str, list[tuple[int, dict[str, object]]]] = {}
+    for index, event in enumerate(events[:result_index]):
+        if event.get("type") == "user":
+            for block in stream_content(event):
+                if block.get("type") == "tool_result":
+                    identifier = block.get("tool_use_id")
+                    if not isinstance(identifier, str) or not identifier:
+                        return "malformed Skill tool result"
+                    results.setdefault(identifier, []).append((index, block))
+    identifiers = [use.get("id") for _, use in uses]
+    if any(not isinstance(identifier, str) or not identifier for identifier in identifiers):
+        return "malformed Skill tool use identity"
+    if len(set(identifiers)) != len(identifiers) or set(results) != set(identifiers):
+        return "missing, orphaned, or duplicate Skill result identity"
+    for use_index, use in uses:
+        if use_index <= init_index:
+            return "Skill selection preceded system init"
+        matching = results[str(use["id"])]
+        if len(matching) != 1:
+            return "Skill omitted its single successful tool result"
+        result_position, result = matching[0]
+        if result_position <= use_index or (result.get("is_error") is not None and result.get("is_error") is not False):
+            return "Skill result was out of order or unsuccessful"
+    return None
+
+
+def claude_model_evidence(events: list[dict[str, object]], init: dict[str, object], requested: str) -> dict[str, object]:
+    """Check reported identities; aliases remain explicitly weaker than exact pins."""
+    models = [init.get("model")]
+    for event in events:
+        message = event.get("message")
+        if event.get("type") == "assistant" and isinstance(message, dict) and "model" in message:
+            models.append(message["model"])
+    known = {model for model in models if isinstance(model, str) and model}
+    resolved = init.get("model") if isinstance(init.get("model"), str) and init["model"] else None
+    conflict = len(known) > 1 or any(model is not None and (not isinstance(model, str) or not model) for model in models)
+    alias = requested in {"sonnet", "opus", "haiku"}
+    if resolved is not None:
+        conflict |= not (resolved.startswith(f"claude-{requested}-") if alias else resolved == requested)
+    return {
+        "requested_model": requested,
+        "resolved_model": resolved,
+        "model_identity_check": "conflict" if conflict else "unavailable" if resolved is None else "alias" if alias else "exact",
+    }
+
+
 def inspect_claude_stream(
     output: bytes | str,
     plugin_name: str,
@@ -371,6 +401,8 @@ def inspect_claude_stream(
     nonce_locations: list[dict[str, object]] = []
     for event_index, event in assistant_events:
         for block_index, block in enumerate(stream_content(event)):
+            if block.get("type") == "tool_use" and block.get("name") not in tools:
+                return {"valid": False, "selected": False, "reason": "undeclared tool activity was observed"}
             if block.get("type") == "tool_use" and block.get("name") == "Skill":
                 if event.get("parent_tool_use_id") is not None:
                     return {"valid": False, "selected": False, "reason": "nested Skill execution was observed"}
@@ -407,29 +439,14 @@ def inspect_claude_stream(
             "nonce_locations": nonce_locations,
         }
 
+    completion_error = skill_results_error(events, skill_uses, init_index, result_index)
+    if completion_error:
+        return {"valid": False, "selected": False, "reason": completion_error, "nonce_locations": nonce_locations}
+    model_evidence = claude_model_evidence(events, init, requested_model)
+    if model_evidence["model_identity_check"] == "conflict":
+        return {"valid": False, "selected": False, "reason": "Claude reported a conflicting model identity", **model_evidence}
     selected = len(intended) == 1
-    selected_id: str | None = None
-    if selected:
-        use_index, use = intended[0]
-        if use_index <= init_index:
-            return {"valid": False, "selected": False, "reason": "Skill selection preceded system init"}
-        selected_id = str(use["id"])
-        results_for_use: list[dict[str, object]] = []
-        for event in events[use_index + 1 : result_index]:
-            if event.get("type") != "user":
-                continue
-            for block in stream_content(event):
-                if block.get("type") == "tool_result" and block.get("tool_use_id") == selected_id:
-                    results_for_use.append(block)
-        if len(results_for_use) != 1 or results_for_use[0].get("is_error") is True:
-            return {
-                "valid": False,
-                "selected": False,
-                "reason": "selected Skill omitted its single successful tool result",
-                "nonce_locations": nonce_locations,
-            }
-
-    resolved_model = init.get("model") if isinstance(init.get("model"), str) and init.get("model") else None
+    selected_id = str(intended[0][1]["id"]) if selected else None
     return {
         "valid": True,
         "selected": selected,
@@ -437,8 +454,7 @@ def inspect_claude_stream(
         "selected_tool_use_id": selected_id,
         "nonce_locations": nonce_locations,
         "sibling_selections": sibling_selections,
-        "requested_model": requested_model,
-        "resolved_model": resolved_model,
+        **model_evidence,
         "reason": (
             "exact completed Skill selection" if selected
             else "sibling Skill selection" if sibling_selections
@@ -457,8 +473,10 @@ def retain_trial_evidence(
     stem = f"case-{case_number:03d}-trial-{trial_number:02d}"
     stdout_path = evidence_dir / f"{stem}.jsonl"
     stderr_path = evidence_dir / f"{stem}.stderr.log"
-    stdout_path.write_bytes(stdout)
-    stderr_path.write_bytes(stderr)
+    with stdout_path.open("xb") as stream:
+        stream.write(stdout)
+    with stderr_path.open("xb") as stream:
+        stream.write(stderr)
     return {
         "stdout_path": str(stdout_path.resolve()),
         "stdout_sha256": hashlib.sha256(stdout).hexdigest(),
@@ -468,98 +486,19 @@ def retain_trial_evidence(
 
 
 def terminate_child(child: subprocess.Popen[bytes] | None, signum: int = signal.SIGTERM) -> bool:
-    if child is None:
-        return False
-    try:
-        if os.name != "nt":
-            if child.pid <= 0 or child.pid == os.getpgrp():
-                raise OSError("refusing to signal an unowned process group")
-            os.killpg(child.pid, signum)
-        elif child.poll() is None:
-            child.terminate()
-        else:
-            return False
-    except ProcessLookupError:
-        return False
-    return True
+    return processes.terminate_child(child, signum)
 
 
 def cleanup_child(
     child: subprocess.Popen[bytes], *, observations: list[dict[str, object]] | None = None,
 ) -> bool:
-    """Drain the original owned group; report whether signaling was required."""
-    started = time.monotonic()
-    kill_sent = False
-    last_probe_error: PermissionError | None = None
-
-    def running() -> bool:
-        nonlocal last_probe_error
-        child.poll()
-        if os.name == "nt":
-            return child.returncode is None
-        if child.pid <= 0 or child.pid == os.getpgrp():
-            raise OSError("refusing to inspect an unowned process group")
-        try:
-            os.killpg(child.pid, 0)
-        except ProcessLookupError:
-            if observations is not None:
-                observations.append({"pgid": child.pid, "errno": errno.ESRCH, "elapsed_seconds": time.monotonic() - started})
-            return False
-        except PermissionError as exc:
-            if observations is not None:
-                observations.append({"pgid": child.pid, "errno": exc.errno, "elapsed_seconds": time.monotonic() - started})
-            if not kill_sent or exc.errno != errno.EPERM:
-                raise
-            # A post-KILL permission error is unresolved, never proof of absence.
-            last_probe_error = exc
-        return True
-
-    if child.poll() is not None:
-        deadline = time.monotonic() + DESCENDANT_EXIT_GRACE
-        while running() and time.monotonic() < deadline:
-            time.sleep(0.01)
-    signaled = False
-    for signum in (signal.SIGTERM, signal.SIGKILL):
-        if not running():
-            return signaled
-        signaled = True
-        sent = terminate_child(child, signum)
-        if signum == signal.SIGKILL and sent:
-            kill_sent = True
-        deadline = time.monotonic() + CLEANUP_TIMEOUT
-        while running() and time.monotonic() < deadline:
-            time.sleep(0.05)
-    if running():
-        detail = f"; last unresolved probe: {last_probe_error}" if last_probe_error else ""
-        raise OSError(f"owned process group {child.pid} remained after bounded cleanup{detail}")
-    return signaled
+    return processes.cleanup_child(child, observations=observations, timeout=CLEANUP_TIMEOUT,
+                                   grace=DESCENDANT_EXIT_GRACE, terminate=terminate_child)
 
 
-def handle_termination(signum: int, _frame: object) -> None:
-    # The query's finally block owns bounded signaling, draining, and evidence.
-    raise TerminationRequested(signum)
-
-
-def install_termination_handlers() -> dict[int, object]:
-    previous: dict[int, object] = {}
-    for name in ("SIGHUP", "SIGTERM"):
-        signum = getattr(signal, name, None)
-        if not isinstance(signum, int):
-            continue
-        try:
-            previous[signum] = signal.getsignal(signum)
-            signal.signal(signum, handle_termination)
-        except (OSError, ValueError):
-            previous.pop(signum, None)
-    return previous
-
-
-def restore_termination_handlers(previous: dict[int, object]) -> None:
-    for signum, handler in previous.items():
-        try:
-            signal.signal(signum, handler)
-        except (OSError, ValueError):
-            pass
+handle_termination = processes.handle_termination
+install_termination_handlers = processes.install_termination_handlers
+restore_termination_handlers = processes.restore_termination_handlers
 
 
 def run_claude_query(
@@ -572,6 +511,7 @@ def run_claude_query(
     *,
     expected_skill: str,
     sibling_skills: tuple[str, ...] = (),
+    process_evidence: dict[str, object] | None = None,
 ) -> tuple[int, bytes, bytes, bool]:
     global ACTIVE_CHILD
     candidate = shutil.which("claude")
@@ -623,72 +563,11 @@ def run_claude_query(
         start_new_session=os.name != "nt",
     )
     ACTIVE_CHILD = child
-    stdout = stderr = b""
-    timed_out = completed = False
-    failure: Exception | None = None
-    cleanup_error: str | None = None
-    unexpected_descendants = False
-    cleanup_observations: list[dict[str, object]] = []
     try:
-        try:
-            stdout, stderr = child.communicate(timeout=timeout)
-            completed = True
-        except subprocess.TimeoutExpired as exc:
-            timed_out = True
-            if isinstance(exc.output, bytes):
-                stdout = exc.output
-            if isinstance(exc.stderr, bytes):
-                stderr = exc.stderr
-        except KeyboardInterrupt:
-            failure = TerminationRequested(signal.SIGINT)
-        except Exception as exc:
-            failure = exc
+        return processes.supervise_child(child, timeout, cleanup=cleanup_child,
+                                         cleanup_timeout=CLEANUP_TIMEOUT, evidence=process_evidence)
     finally:
-        try:
-            try:
-                unexpected_descendants = cleanup_child(child, observations=cleanup_observations) is True and completed
-            except (TerminationRequested, KeyboardInterrupt) as exc:
-                if not isinstance(failure, TerminationRequested):
-                    failure = exc if isinstance(exc, TerminationRequested) else TerminationRequested(signal.SIGINT)
-                cleanup_error = "owned process cleanup interrupted before absence was verified"
-            except (OSError, ValueError) as exc:
-                cleanup_error = f"{type(exc).__name__}: {exc}"
-            if not completed:
-                try:
-                    drained_stdout, drained_stderr = child.communicate(timeout=CLEANUP_TIMEOUT)
-                    stdout = drained_stdout or stdout
-                    stderr = drained_stderr or stderr
-                except (TerminationRequested, KeyboardInterrupt) as exc:
-                    if not isinstance(failure, TerminationRequested):
-                        failure = exc if isinstance(exc, TerminationRequested) else TerminationRequested(signal.SIGINT)
-                    cleanup_error = f"{cleanup_error + '; ' if cleanup_error else ''}owned stream drain interrupted"
-                except subprocess.TimeoutExpired as exc:
-                    if isinstance(exc.output, bytes):
-                        stdout = exc.output
-                    if isinstance(exc.stderr, bytes):
-                        stderr = exc.stderr
-                    cleanup_error = f"{cleanup_error + '; ' if cleanup_error else ''}owned stream drain exceeded cleanup bound"
-                except (OSError, ValueError) as exc:
-                    cleanup_error = f"{cleanup_error + '; ' if cleanup_error else ''}stream drain failed: {exc}"
-        finally:
-            ACTIVE_CHILD = None
-
-    if failure is not None or cleanup_error is not None or unexpected_descendants:
-        error = failure if isinstance(failure, TerminationRequested) else ClaudeQueryError(
-            str(failure) if failure is not None else (
-                f"Claude child cleanup failed: {cleanup_error}" if cleanup_error else
-                "Claude child exited with lingering owned descendants"
-            )
-        )
-        error.stdout, error.stderr = stdout, stderr
-        error.exit_code, error.timed_out = child.returncode, timed_out
-        error.cleanup_error = cleanup_error
-        error.unexpected_descendants = unexpected_descendants
-        error.child_pid = child.pid
-        error.child_pgid = child.pid if os.name != "nt" else None
-        error.cleanup_observations = cleanup_observations
-        raise error
-    return -1 if timed_out else int(child.returncode), stdout, stderr, timed_out
+        ACTIVE_CHILD = None
 
 
 def remove_plugin_root(plugin_root: Path) -> str | None:
@@ -760,6 +639,8 @@ def main(argv: list[str]) -> int:
         if eval_data is None:
             raise ValueError(corpus_reason)
         description_lines = source_description_lines(skill_source)
+        if args.out and Path(args.out).exists():
+            raise ValueError("--out already exists; previous reports are immutable")
     except (OSError, UnicodeError, ValueError) as exc:
         eprint(f"ERROR: {exc}")
         return 1
@@ -778,6 +659,7 @@ def main(argv: list[str]) -> int:
     plugin_root = Path(tempfile.mkdtemp(prefix=f"claude-trigger-{args.skill}-"))
     sibling_sources = {sibling.name: sibling / "SKILL.md" for sibling in sibling_skill_dirs(skill_source)}
     exit_code = 1
+    evidence_dir = None
     previous_handlers = install_termination_handlers()
     try:
         _skill_dir, expected_skill = stage_measurement_plugin(
@@ -814,6 +696,7 @@ def main(argv: list[str]) -> int:
             "runs_per_query": RUNS_PER_QUERY,
             "trigger_threshold": TRIGGER_THRESHOLD,
             "requested_model": args.model,
+            "qualification_eligible": False,
             "preflight": preflight,
         }
         if args.preflight:
@@ -821,74 +704,28 @@ def main(argv: list[str]) -> int:
             exit_code = 0
         else:
             if args.evidence_dir:
-                evidence_dir = Path(args.evidence_dir).resolve()
-                evidence_dir.mkdir(parents=True, exist_ok=False)
+                requested_dir = Path(args.evidence_dir).resolve()
+                requested_dir.mkdir(parents=True, exist_ok=False)
+                evidence_dir = requested_dir
             else:
                 evidence_dir = Path(tempfile.mkdtemp(prefix=f"claude-trigger-evidence-{args.skill}-"))
 
-            results: list[dict[str, object]] = []
-            passed = failed = 0
-            for case_number, entry in enumerate(eval_data, start=1):
-                selected = invalid = 0
-                trial_evidence: list[dict[str, object]] = []
-                for trial_number in range(1, RUNS_PER_QUERY + 1):
-                    try:
-                        rc, stdout, stderr, timed_out = run_claude_query(
-                            executable,
-                            plugin_root,
-                            mcp_config,
-                            str(entry["query"]),
-                            args.model,
-                            args.timeout,
-                            expected_skill=expected_skill,
-                            sibling_skills=sibling_skills,
-                        )
-                    except (ClaudeQueryError, TerminationRequested) as exc:
-                        raw = retain_trial_evidence(evidence_dir, case_number, trial_number, exc.stdout, exc.stderr)
-                        failure = {
-                            **raw, "valid": False, "selected": False, "reason": str(exc),
-                            "exit_code": exc.exit_code, "timed_out": exc.timed_out,
-                            "interrupted_by_signal": exc.signum if isinstance(exc, TerminationRequested) else None,
-                            "cleanup_verified": exc.cleanup_error is None, "cleanup_error": exc.cleanup_error,
-                            "unexpected_descendants": exc.unexpected_descendants,
-                            "child_pid": exc.child_pid, "child_pgid": exc.child_pgid,
-                            "cleanup_observations": exc.cleanup_observations,
-                        }
-                        failure_path = evidence_dir / f"case-{case_number:03d}-trial-{trial_number:02d}.failure.json"
-                        failure_path.write_text(json.dumps(failure, indent=2) + "\n", encoding="utf-8")
-                        raise
-                    raw = retain_trial_evidence(evidence_dir, case_number, trial_number, stdout, stderr)
-                    parsed = inspect_claude_stream(
-                        stdout,
-                        plugin_name,
-                        plugin_root,
-                        expected_skill,
-                        nonce,
-                        args.model,
-                        frozenset(sibling_skills),
-                    )
-                    valid = rc == 0 and not timed_out and bool(parsed.get("valid"))
-                    if not valid:
-                        invalid += 1
-                    elif parsed.get("selected") is True:
-                        selected += 1
-                    trial_evidence.append({**parsed, **raw, "exit_code": rc, "timed_out": timed_out})
-                should_trigger = bool(entry["should_trigger"])
-                passed_case = case_passes(should_trigger, selected, invalid)
-                passed += int(passed_case)
-                failed += int(not passed_case)
-                results.append(
-                    {
-                        "query": entry["query"],
-                        "should_trigger": should_trigger,
-                        "selected": selected,
-                        "runs": RUNS_PER_QUERY,
-                        "trigger_rate": round(selected / RUNS_PER_QUERY, 3),
-                        "invalid_runs": invalid,
-                        "pass": passed_case,
-                        "selection_evidence": trial_evidence,
-                    }
-                )
+            batch = evidence_records.TrialBatch("claude", args.skill, evidence_dir, RUNS_PER_QUERY, TRIGGER_THRESHOLD)
+            results, stop_exit = evidence_records.run_trials(
+                batch, eval_data,
+                lambda query, execution: run_claude_query(
+                    executable, plugin_root, mcp_config, query, args.model, args.timeout,
+                    expected_skill=expected_skill, sibling_skills=sibling_skills, process_evidence=execution,
+                ),
+                lambda stdout: inspect_claude_stream(
+                    stdout, plugin_name, plugin_root, expected_skill, nonce, args.model, frozenset(sibling_skills),
+                ),
+                lambda case, trial, stdout, stderr: retain_trial_evidence(evidence_dir, case, trial, stdout, stderr),
+            )
+            passed = sum(result["pass"] is True for result in results)
+            failed = sum(result["pass"] is False for result in results)
+            if stop_exit is not None and stop_exit >= 128:
+                eprint(f"Termination requested by signal {stop_exit - 128}; terminating owned child and cleaning temporary plugin.")
 
             resolved = [
                 trial.get("resolved_model")
@@ -901,6 +738,8 @@ def main(argv: list[str]) -> int:
                     "total": len(eval_data),
                     "passed": passed,
                     "failed": failed,
+                    "complete": all(result["status"] == "complete" for result in results),
+                    "not_run": sum(result["status"] == "not_run" for result in results),
                     "requested_model": args.model,
                     "resolved_model": resolved[0]
                     if resolved
@@ -910,12 +749,13 @@ def main(argv: list[str]) -> int:
                 "results": results,
             }
             if args.out:
-                Path(args.out).write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+                evidence_records.write_json_once(Path(args.out), report)
             print(json.dumps(report, indent=2))
-            exit_code = 0 if failed == 0 else 1
-    except TerminationRequested as exc:
-        exit_code = 128 + exc.signum
-        eprint(f"Termination requested by signal {exc.signum}; terminating owned child and cleaning temporary plugin.")
+            exit_code = stop_exit if stop_exit is not None else 0 if failed == 0 else 1
+    except (TerminationRequested, KeyboardInterrupt) as exc:
+        signum = exc.signum if isinstance(exc, TerminationRequested) else signal.SIGINT
+        exit_code = 128 + signum
+        eprint(f"Termination requested by signal {signum}; terminating owned child and cleaning temporary plugin.")
     except (OSError, ValueError) as exc:
         eprint(f"ERROR: {exc}")
         exit_code = 1
@@ -925,6 +765,12 @@ def main(argv: list[str]) -> int:
             eprint(f"ERROR: {cleanup_error}")
             exit_code = 2
         restore_termination_handlers(previous_handlers)
+        if evidence_dir is not None:
+            try:
+                evidence_records.retain_cleanup_receipt(evidence_dir, plugin_root, exit_code, cleanup_error)
+            except OSError as exc:
+                eprint(f"ERROR: cannot retain workspace cleanup receipt: {exc}")
+                exit_code = 2
     return exit_code
 
 

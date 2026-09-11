@@ -162,7 +162,303 @@ class FakePopen:
         return self.returncode
 
 
+def successful_process_evidence() -> dict[str, object]:
+    """Explicit synthetic supervisor receipt; never used for provider execution."""
+    return {
+        "provider_exit_code": 0, "timed_out": False, "interrupted_by_signal": None,
+        "cleanup_verified": True, "cleanup_error": None, "cleanup_scope": "owned-process-group",
+        "unexpected_descendants": False, "child_pid": 43210, "child_pgid": 43210,
+        "cleanup_observations": [{"pgid": 43210, "errno": 3, "elapsed_seconds": 0.01}],
+        "process_error": None,
+    }
+
+
+def supervised_results(results: list[tuple[int, bytes, bytes, bool]]):
+    remaining = iter(results)
+
+    def provider(*_args: object, **kwargs: object) -> tuple[int, bytes, bytes, bool]:
+        result = next(remaining)
+        kwargs["process_evidence"].update(successful_process_evidence())
+        return result
+
+    return provider
+
+
 class Layer2TriggerRunnerTests(unittest.TestCase):
+    def test_preflight_keyboard_interrupt_preserves_runner_exit_and_cleanup(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                engine = import_script(CLAUDE_RUNNER if host == "claude" else CODEX_ENGINE, f"preflight_interrupt_{host}")
+                source = root / "SKILL.md"
+                source.write_text("---\nname: demo\ndescription: Demo.\n---\nBody.\n", encoding="utf-8")
+                corpus = root / "corpus.json"
+                corpus.write_text('[{"query":"q","should_trigger":false}]', encoding="utf-8")
+                workspace, evidence = root / "workspace", root / "evidence"
+                workspace.mkdir()
+                argv = ["demo", "--evidence-dir", str(evidence)]
+                with contextlib.ExitStack() as stack:
+                    stack.enter_context(mock.patch.object(engine, "find_eval_file", return_value=corpus))
+                    stack.enter_context(mock.patch.object(engine, "find_skill_source", return_value=source))
+                    stack.enter_context(mock.patch.object(engine.shutil, "which", return_value=f"/stub/{host}"))
+                    stack.enter_context(mock.patch.object(engine.tempfile, "mkdtemp", return_value=str(workspace)))
+                    provider = stack.enter_context(mock.patch.object(engine, f"run_{host}_query"))
+                    if host == "claude":
+                        stack.enter_context(mock.patch.object(engine, "cli_preflight", side_effect=KeyboardInterrupt))
+                    else:
+                        stack.enter_context(mock.patch.object(engine.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, b"", b"")))
+                        stack.enter_context(mock.patch.object(engine, "enumerate_non_target_skills", return_value=()))
+                        stack.enter_context(mock.patch.object(engine, "enumerate_mcp_servers", return_value=()))
+                        stack.enter_context(mock.patch.object(engine, "offline_catalog_preflight", side_effect=KeyboardInterrupt))
+                        stack.enter_context(mock.patch.object(sys, "argv", [str(CODEX_ENGINE), *argv]))
+                    stack.enter_context(contextlib.redirect_stdout(io.StringIO()))
+                    stack.enter_context(contextlib.redirect_stderr(io.StringIO()))
+                    code = engine.main(argv) if host == "claude" else engine.main()
+                self.assertEqual(code, 130)
+                self.assertFalse(workspace.exists())
+                provider.assert_not_called()
+                if host == "codex":
+                    receipt = json.loads((evidence / "arm-cleanup.json").read_text())
+                    self.assertEqual(receipt["runner_exit_code"], 130)
+                    self.assertTrue(receipt["workspace_removed"])
+
+    def test_main_retains_canonical_trial_before_next_launch_and_stops_invalid(self) -> None:
+        for host in ("claude", "codex"):
+            for scenario in ("good", "nonzero", "timeout", "missing-receipt", "interrupted", "cleanup-failed"):
+                with self.subTest(host=host, scenario=scenario), tempfile.TemporaryDirectory() as temporary:
+                    root = Path(temporary)
+                    engine = import_script(CLAUDE_RUNNER if host == "claude" else CODEX_ENGINE, f"canonical_{host}_{scenario}")
+                    source = root / "SKILL.md"
+                    source.write_text("---\nname: demo\ndescription: Demo.\n---\nBody.\n", encoding="utf-8")
+                    corpus = root / "corpus.json"
+                    corpus.write_text(json.dumps([{"query": "first", "should_trigger": False},
+                                                  {"query": "second", "should_trigger": False}]), encoding="utf-8")
+                    workspace, evidence = root / "workspace", root / "evidence"
+                    workspace.mkdir()
+                    fixed_id = "123456789012"
+                    plugin_name = f"skill-catalog-eval-{fixed_id}"
+                    raw = claude_stream(workspace, plugin_name, f"{plugin_name}:demo-eval-{fixed_id}", "nonce", selected=False)
+                    if host == "codex":
+                        raw = "\n".join(map(json.dumps, [
+                            {"type": "thread.started", "thread_id": "thread-1"}, {"type": "turn.started"},
+                            {"type": "item.completed", "item": {"type": "agent_message", "text": "No skill needed."}},
+                            {"type": "turn.completed"},
+                        ])).encode()
+                    calls = []
+
+                    def provider(*_args: object, **kwargs: object) -> tuple[int, bytes, bytes, bool]:
+                        if calls:
+                            self.assertEqual(len(list(evidence.glob("*.trial.json"))), len(calls))
+                        calls.append(True)
+                        receipt = successful_process_evidence()
+                        receipt.update(provider_exit_code=7 if scenario == "nonzero" else -15 if scenario == "timeout" else 0,
+                                       timed_out=scenario == "timeout")
+                        if scenario == "cleanup-failed":
+                            receipt.update(cleanup_verified=False, cleanup_error="owned scope probe failed")
+                        if scenario != "missing-receipt":
+                            kwargs["process_evidence"].update(receipt)
+                        if scenario == "interrupted":
+                            error = engine.processes.TerminationRequested(signal.SIGTERM)
+                            error.process_evidence = receipt
+                            error.stdout, error.stderr = raw, b"stderr\xff"
+                            raise error
+                        return (-1 if scenario == "timeout" else receipt["provider_exit_code"], raw, b"stderr\xff", scenario == "timeout")
+
+                    output = io.StringIO()
+                    diagnostics = io.StringIO()
+                    argv = ["demo", "--evidence-dir", str(evidence), "--model", "claude-sonnet-test" if host == "claude" else "gpt-5.6-sol"]
+                    with contextlib.ExitStack() as stack:
+                        for name, replacement in (
+                            ("find_eval_file", corpus), ("find_skill_source", source),
+                        ):
+                            stack.enter_context(mock.patch.object(engine, name, return_value=replacement))
+                        stack.enter_context(mock.patch.object(engine.shutil, "which", return_value=f"/stub/{host}"))
+                        stack.enter_context(mock.patch.object(engine.tempfile, "mkdtemp", return_value=str(workspace)))
+                        stack.enter_context(mock.patch.object(engine.uuid, "uuid4", return_value=SimpleNamespace(hex=fixed_id)))
+                        stack.enter_context(mock.patch.object(engine, f"run_{host}_query", side_effect=provider))
+                        if host == "claude":
+                            stack.enter_context(mock.patch.object(engine, "cli_preflight", return_value=({}, "ok")))
+                        else:
+                            stack.enter_context(mock.patch.object(engine.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, b"", b"")))
+                            stack.enter_context(mock.patch.object(engine, "enumerate_non_target_skills", return_value=()))
+                            stack.enter_context(mock.patch.object(engine, "enumerate_mcp_servers", return_value=()))
+                            stack.enter_context(mock.patch.object(engine, "offline_catalog_preflight", return_value=({}, "ok")))
+                            stack.enter_context(mock.patch.object(sys, "argv", [str(CODEX_ENGINE), *argv]))
+                        stack.enter_context(contextlib.redirect_stdout(output))
+                        stack.enter_context(contextlib.redirect_stderr(diagnostics))
+                        code = engine.main(argv) if host == "claude" else engine.main()
+                    self.assertEqual(code, 0 if scenario == "good" else 143 if scenario == "interrupted" else 1)
+                    self.assertEqual(len(calls), 6 if scenario == "good" else 1)
+                    report = json.loads(output.getvalue())
+                    trial = report["results"][0]["selection_evidence"][0]
+                    self.assertIs(trial["stream_valid"], True)
+                    self.assertIs(trial["trial_valid"], scenario == "good")
+                    self.assertIs(trial["valid"], trial["trial_valid"])
+                    self.assertEqual(trial["provider_exit_code"], None if scenario == "missing-receipt" else 7 if scenario == "nonzero" else -15 if scenario == "timeout" else 0)
+                    self.assertEqual(trial["exit_code"], trial["provider_exit_code"])
+                    self.assertIs(report["summary"]["complete"], scenario == "good")
+                    if scenario != "good":
+                        self.assertEqual(report["results"][1]["status"], "not_run")
+                        self.assertIsNone(report["results"][1]["selected" if host == "claude" else "triggers"])
+                        self.assertIsNone(report["results"][0]["trigger_rate"])
+                    receipt = json.loads((evidence / "arm-cleanup.json").read_text())
+                    self.assertTrue(receipt["workspace_removed"])
+                    self.assertEqual(receipt["runner_exit_code"], code)
+                    self.assertFalse(workspace.exists())
+                    if host == "codex":
+                        self.assertIn("[ 1/2] expect=NOOP trig=", diagnostics.getvalue())
+
+    @unittest.skipIf(os.name == "nt", "POSIX owned process-group contract")
+    def test_codex_timeout_drains_inherited_pipes_and_removes_owned_descendant(self) -> None:
+        engine = import_script(CODEX_ENGINE, "layer2_codex_inherited_pipes")
+        original_popen = subprocess.Popen
+        owned = []
+        descendant = "import time; print('child ready', flush=True); time.sleep(30)"
+        leader = (
+            "import subprocess,sys\n"
+            f"subprocess.Popen([sys.executable,'-u','-c',{descendant!r}])\n"
+            "print('leader finished', flush=True)\n"
+        )
+
+        def launch(_command: object, **kwargs: object) -> subprocess.Popen:
+            kwargs.pop("executable", None)
+            child = original_popen([sys.executable, "-u", "-c", leader], **kwargs)
+            owned.append(child)
+            return child
+
+        execution = {}
+        with tempfile.TemporaryDirectory() as temporary:
+            try:
+                with mock.patch.object(engine, "codex_executable", return_value=sys.executable), mock.patch.object(
+                    engine.subprocess, "Popen", side_effect=launch,
+                ):
+                    rc, stdout, _stderr, timed_out = engine.run_codex_query(
+                        Path(temporary), "q", "low", "gpt-test", 1, [], process_evidence=execution,
+                    )
+                self.assertTrue(timed_out)
+                self.assertEqual(rc, -1, "the legacy helper sentinel is not the observed provider exit")
+                self.assertEqual(execution["provider_exit_code"], 0)
+                self.assertTrue(execution["cleanup_verified"])
+                self.assertEqual(execution["cleanup_observations"][-1]["errno"], 3)
+                self.assertIn(b"child ready", stdout)
+                self.assertIn(b"leader finished", stdout)
+                with self.assertRaises(ProcessLookupError):
+                    os.killpg(owned[0].pid, 0)
+            finally:
+                for child in owned:
+                    try:
+                        os.killpg(child.pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        # The runner already removed the owned process group.
+                        pass
+                    child.wait(timeout=5)
+
+    @unittest.skipIf(os.name == "nt", "POSIX owned process-group contract")
+    def test_codex_completed_leader_cannot_leave_an_owned_descendant(self) -> None:
+        engine = import_script(CODEX_ENGINE, "layer2_codex_owned_descendant")
+        original_popen = subprocess.Popen
+        owned = []
+        descendant = "import time; print('ready', flush=True); time.sleep(30)"
+        leader = (
+            "import subprocess,sys\n"
+            f"child=subprocess.Popen([sys.executable,'-u','-c',{descendant!r}], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)\n"
+            "assert child.stdout.readline() == b'ready\\n'\n"
+            "child.stdout.close()\n"
+            "print('leader finished', flush=True)\n"
+        )
+
+        def launch(_command: object, **kwargs: object) -> subprocess.Popen:
+            kwargs.pop("executable", None)
+            kwargs["start_new_session"] = True
+            child = original_popen([sys.executable, "-u", "-c", leader], **kwargs)
+            owned.append(child)
+            return child
+
+        with tempfile.TemporaryDirectory() as temporary:
+            try:
+                with mock.patch.object(engine, "codex_executable", return_value=sys.executable), mock.patch.object(
+                    engine.subprocess, "Popen", side_effect=launch,
+                ):
+                    with self.assertRaises(OSError):
+                        engine.run_codex_query(Path(temporary), "q", "low", "gpt-test", 5, [])
+                with self.assertRaises(ProcessLookupError):
+                    os.killpg(owned[0].pid, 0)
+            finally:
+                for child in owned:
+                    try:
+                        os.killpg(child.pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        # The runner already removed the owned process group.
+                        pass
+                    child.wait(timeout=5)
+
+    def test_claude_rejects_invalid_sibling_completion_and_observed_contract_conflicts(self) -> None:
+        claude = import_script(CLAUDE_RUNNER, "layer2_claude_evidence_contract")
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            plugin, target, nonce = "catalog", "catalog:demo", "target-nonce"
+            original = [json.loads(line) for line in claude_stream(root, plugin, target, nonce).splitlines()]
+            scenarios = {}
+            for label in ("errored", "missing", "before-init", "duplicate-result", "orphan-result"):
+                events = json.loads(json.dumps(original))
+                events[1]["message"]["content"][0]["input"]["skill"] = "catalog:no-speckit-skill"
+                if label == "errored":
+                    events[2]["message"]["content"][0]["is_error"] = True
+                elif label == "missing":
+                    del events[2]
+                elif label == "before-init":
+                    events[0], events[1] = events[1], events[0]
+                elif label == "duplicate-result":
+                    events.insert(3, events[2])
+                else:
+                    events[2]["message"]["content"][0]["tool_use_id"] = "unknown"
+                scenarios[label] = events
+            events = json.loads(json.dumps(original))
+            events[1]["message"]["content"][0].update(name="Bash", input={"command": "true"})
+            scenarios["undeclared-tool"] = events
+            events = json.loads(json.dumps(original))
+            events[0]["model"] = "claude-opus-test"
+            scenarios["wrong-init-model"] = events
+            events = json.loads(json.dumps(original))
+            events[1]["message"]["model"] = "claude-opus-test"
+            scenarios["wrong-message-model"] = events
+            for label, events in scenarios.items():
+                with self.subTest(scenario=label):
+                    parsed = claude.inspect_claude_stream(
+                        "\n".join(map(json.dumps, events)), plugin, root, target, nonce, "claude-sonnet-test",
+                    )
+                    self.assertFalse(parsed["valid"], parsed)
+
+    def test_codex_rejects_failed_commands_and_events_outside_the_turn(self) -> None:
+        engine = import_script(CODEX_ENGINE, "layer2_codex_evidence_contract")
+        marker = "CODEX_SKILL_FIRED:demo"
+        original = [
+            {"type": "thread.started", "thread_id": "fixture"},
+            {"type": "turn.started"},
+            {"type": "item.completed", "item": {"id": "message", "type": "agent_message", "text": "Done."}},
+            {"type": "turn.completed"},
+        ]
+        scenarios = {}
+        for label, status, exit_code in (("failed", "failed", 1), ("declined", "declined", None),
+                                         ("nonzero", "completed", 2), ("unfinished", "in_progress", None),
+                                         ("missing-exit", "completed", None)):
+            events = json.loads(json.dumps(original))
+            events.insert(2, {"type": "item.completed", "item": {
+                "id": "read", "type": "command_execution", "command": "cat .agents/skills/demo/SKILL.md",
+                "status": status, "exit_code": exit_code, "aggregated_output": "unavailable",
+            }})
+            scenarios[label] = events
+        events = json.loads(json.dumps(original))
+        events.append({"type": "item.completed", "item": {"id": "late", "type": "agent_message", "text": marker}})
+        scenarios["trailing-marker"] = events
+        events = json.loads(json.dumps(original))
+        events.insert(1, {"type": "item.completed", "item": {"id": "early", "type": "agent_message", "text": marker}})
+        scenarios["before-turn"] = events
+        for label, events in scenarios.items():
+            with self.subTest(scenario=label):
+                parsed = engine.inspect_codex_jsonl("\n".join(map(json.dumps, events)), marker)
+                self.assertFalse(parsed["valid"], parsed)
+
     def test_claude_child_environment_controls(self) -> None:
         claude = import_script(CLAUDE_RUNNER, "layer2_claude_child_environment")
         with (
@@ -236,7 +532,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                         code = claude.main(["demo", "--evidence-dir", str(evidence)])
                     self.assertEqual(code, 143 if interrupted else 1)
                     self.assertEqual(launch.call_count, 1, "cleanup failure launched another trial")
-                    inspect.assert_not_called()
+                    inspect.assert_called_once()
                     self.assertEqual((evidence / "case-001-trial-01.jsonl").read_bytes(), raw)
                     self.assertEqual((evidence / "case-001-trial-01.stderr.log").read_bytes(), error)
                     failure = json.loads((evidence / "case-001-trial-01.failure.json").read_text(encoding="utf-8"))
@@ -436,6 +732,21 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             "\n".join(json.dumps(event) for event in argument_events), plugin, root, target, nonce, "sonnet"
         )
         self.assertTrue(argument_result["valid"] and argument_result["selected"])
+        for identifier in ({"bad": "id"}, ["bad"], 1, 1.5, True, None, ""):
+            with self.subTest(tool_use_id=identifier):
+                events = [json.loads(line) for line in raw.splitlines()]
+                use = events[1]["message"]["content"][0]
+                use["id"] = identifier
+                self.assertEqual(
+                    claude.skill_results_error(events, [(1, use)], 0, len(events) - 1),
+                    "malformed Skill tool use identity",
+                )
+                parsed = claude.inspect_claude_stream(
+                    "\n".join(json.dumps(event) for event in events), plugin, root, target, nonce, "sonnet"
+                )
+                self.assertFalse(parsed["valid"])
+                self.assertFalse(parsed["selected"])
+                self.assertIn("malformed", parsed["reason"])
         for label, mutate in {
             "missing skill catalog": lambda events: events[0].pop("skills"),
             "empty skill catalog": lambda events: events[0].update(skills=[]),
@@ -843,7 +1154,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 mock.patch.object(
                     claude,
                     "run_claude_query",
-                    return_value=(0, main_stream, b"", False),
+                    side_effect=supervised_results([(0, main_stream, b"", False)] * 3),
                 ) as main_run,
                 contextlib.redirect_stdout(main_stdout),
             ):
@@ -1002,7 +1313,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     and popen_calls == 0
                     and retain_calls == 0
                     and not staged_exists
-                    and evidence_files == []
+                    and [path.name for path in evidence_files] == ["arm-cleanup.json"]
                     for (
                         exit_code,
                         stdout,
@@ -1105,13 +1416,13 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                         mock.patch.object(
                             claude,
                             "run_claude_query",
-                            side_effect=trial_results,
+                            side_effect=supervised_results(trial_results),
                         ),
                         contextlib.redirect_stdout(output),
                     ):
                         exit_code = claude.main(["demo", "--model", "claude-sonnet-test"])
                     report = json.loads(output.getvalue())
-                    self.assertEqual(exit_code, 0)
+                    self.assertEqual(exit_code, 0 if label == "all-known-same" else 1)
                     self.assertEqual(report["summary"]["resolved_model"], expected)
 
     def test_codex_symlink_path_uses_canonical_executable_without_environment_mutation(self) -> None:
@@ -1127,13 +1438,16 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             alias.symlink_to(native)
             with mock.patch.dict(os.environ, {"PATH": str(alias.parent)}), mock.patch.object(
                 engine.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, b"[]", b""),
-            ) as execute, mock.patch.object(engine, "inspect_catalog_prompt", return_value=({}, "fixture")):
+            ) as execute, mock.patch.object(engine, "inspect_catalog_prompt", return_value=({}, "fixture")), mock.patch.object(
+                engine.subprocess, "Popen", return_value=FakePopen(b"[]"),
+            ) as launch, mock.patch.object(engine.processes, "cleanup_child"):
                 self.assertEqual(shutil.which("codex"), str(alias))
                 engine.enumerate_mcp_servers(root, 10)
                 engine.offline_catalog_preflight(root, "demo", "Demo.", root / "SKILL.md", [], 10)
                 engine.run_codex_query(root, "synthetic query", "low", "gpt-5.6-sol", 10, [])
-                self.assertEqual(execute.call_count, 3)
-                for call in execute.call_args_list:
+                self.assertEqual(execute.call_count, 2)
+                self.assertEqual(launch.call_count, 1)
+                for call in [*execute.call_args_list, *launch.call_args_list]:
                     self.assertEqual(call.args[0][0], str(native))
                     self.assertEqual(call.kwargs["executable"], str(native))
                     self.assertEqual(call.kwargs["env"]["PATH"], str(alias.parent))
@@ -1217,7 +1531,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
 
     def test_codex_isolation_violation_retains_evidence_and_stops(self) -> None:
         engine = import_script(CODEX_ENGINE, "layer2_codex_isolation_stop")
-        for item_type, expected_calls in (("mcp_tool_call", 1), ("error", 2)):
+        for item_type, expected_calls in (("mcp_tool_call", 1), ("error", 1)):
             with self.subTest(item_type=item_type), tempfile.TemporaryDirectory() as temporary:
                 root = Path(temporary)
                 source = root / "SKILL.md"
@@ -1624,14 +1938,15 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
 
             captured: dict[str, object] = {}
 
-            def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[bytes]:
+            def fake_run(command: list[str], **kwargs: object) -> FakePopen:
                 captured["command"] = command
                 captured["kwargs"] = kwargs
-                return subprocess.CompletedProcess(command, 0, valid, b"")
+                return FakePopen(valid)
 
             with (
                 mock.patch.dict(os.environ, {"CODEX_HOME": str(auth_home)}, clear=False),
-                mock.patch.object(engine.subprocess, "run", side_effect=fake_run),
+                mock.patch.object(engine.subprocess, "Popen", side_effect=fake_run),
+                mock.patch.object(engine.processes, "cleanup_child"),
             ):
                 rc, stdout, stderr, timed_out = engine.run_codex_query(
                     workspace,
@@ -1646,16 +1961,12 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             timeout_stderr = b"partial-stderr\r\n"
             timeout_evidence_dir = root / "timeout-evidence"
             timeout_evidence_dir.mkdir()
+            timeout_child = FakePopen(timeout_stdout, timeout_stderr)
+            timeout_child.timeout = True
             with mock.patch.object(
                 engine.subprocess,
-                "run",
-                side_effect=subprocess.TimeoutExpired(
-                    ["codex"],
-                    7,
-                    output=timeout_stdout,
-                    stderr=timeout_stderr,
-                ),
-            ):
+                "Popen", return_value=timeout_child,
+            ), mock.patch.object(engine.processes, "cleanup_child"):
                 timeout_rc, retained_timeout_stdout, retained_timeout_stderr, timeout_timed_out = (
                     engine.run_codex_query(
                         workspace,
@@ -1675,14 +1986,8 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             )
             with mock.patch.object(
                 engine.subprocess,
-                "run",
-                return_value=subprocess.CompletedProcess(
-                    [],
-                    -1,
-                    b"signal-output",
-                    b"signal-stderr",
-                ),
-            ):
+                "Popen", return_value=FakePopen(b"signal-output", b"signal-stderr", -1),
+            ), mock.patch.object(engine.processes, "cleanup_child"):
                 signal_rc, signal_stdout, signal_stderr, signal_timed_out = (
                     engine.run_codex_query(
                         workspace,
@@ -1965,7 +2270,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     and stdout == ""
                     and "ERROR:" in stderr
                     and not workspace_exists
-                    and evidence_files == []
+                    and [path.name for path in evidence_files] == ["arm-cleanup.json"]
                     and provider_calls == 0
                     and preflight_call is not None
                     and preflight_call.args[3] == expected_target_skill
