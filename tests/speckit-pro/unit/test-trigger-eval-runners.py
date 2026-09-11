@@ -349,6 +349,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     try:
                         os.killpg(child.pid, signal.SIGKILL)
                     except ProcessLookupError:
+                        # The runner already removed the owned process group.
                         pass
                     child.wait(timeout=5)
 
@@ -387,6 +388,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     try:
                         os.killpg(child.pid, signal.SIGKILL)
                     except ProcessLookupError:
+                        # The runner already removed the owned process group.
                         pass
                     child.wait(timeout=5)
 
