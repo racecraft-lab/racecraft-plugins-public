@@ -255,7 +255,7 @@ def review_handoff(text: str, root: Path, read_file: FileReader) -> dict[str, An
     _selection(record, read_file)
     pages, gaps, fresh = _page_results(record, root, read_file)
     verified = sum(page["status"] == "verified" for page in pages)
-    status = "pending" if not fresh or verified != len(pages) else "verified" if pages else "not_applicable"
+    status = "not_applicable" if not pages else "pending" if not fresh or verified != len(pages) else "verified"
     return {
         "status": status, "resume_action": "generate" if not fresh else "preview" if status == "pending" else "none",
         "reuse_artifacts": fresh, "feature_dir": record["feature_dir"], "generated": len(pages),

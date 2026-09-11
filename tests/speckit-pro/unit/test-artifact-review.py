@@ -208,9 +208,21 @@ class ArtifactReviewTests(unittest.TestCase):
 
     def test_whole_set_generation_failure_requires_no_previews(self) -> None:
         self.record.update(pages=[], template_hashes={}, generation_error="Author returned no complete result")
-        result = self.review()
-        self.assertEqual(result["status"], "not_applicable")
-        self.assertEqual(result["generation_error"], "Author returned no complete result")
+        original = copy.deepcopy(self.record)
+        for stale in (None, "planning", "gallery"):
+            with self.subTest(stale=stale):
+                self.record = copy.deepcopy(original)
+                if stale == "planning":
+                    self.record["input_hashes"][f"{self.feature}/spec.md"] = "0" * 64
+                elif stale == "gallery":
+                    self.record["manifest_sha256"] = "0" * 64
+                result = self.review()
+                self.assertEqual(result["status"], "not_applicable")
+                self.assertEqual(result["generated"], 0)
+                self.assertEqual(result["verified"], 0)
+                self.assertEqual(result["resume_action"], "generate" if stale else "none")
+                self.assertEqual(result["reuse_artifacts"], stale is None)
+                self.assertEqual(result["generation_error"], "Author returned no complete result")
 
     def test_duplicate_pages_bad_hashes_and_path_escape_are_rejected(self) -> None:
         invalid = copy.deepcopy(self.record)
