@@ -773,11 +773,7 @@ def _codex_isolation_error(events: list[dict[str, object]]) -> str | None:
     return None
 
 
-def _leading_compound_codex_body_skill(
-    command: str,
-    witnesses: dict[str, dict[str, str]],
-) -> str | None:
-    """Recognize an exact staged-body read at the start of a compound shell command."""
+def _shell_command_tokens(command: str) -> list[str] | None:
     try:
         wrapper = shlex.split(command)
         if (
@@ -786,8 +782,40 @@ def _leading_compound_codex_body_skill(
             or wrapper[1] != "-c"
         ):
             return None
-        tokens = shlex.split(wrapper[2])
+        return shlex.split(wrapper[2])
     except ValueError:
+        return None
+
+
+def _exact_codex_body_read_skill(
+    command: str,
+    command_output: str,
+    witnesses: dict[str, dict[str, str]],
+) -> str | None:
+    body_matches = [
+        name for name, witness in witnesses.items()
+        if command_output == witness["body"]
+    ]
+    if len(body_matches) != 1:
+        return None
+    skill_name = body_matches[0]
+    named_skills = {
+        name for name, witness in witnesses.items()
+        if witness["path"] in command or witness["relative_path"] in command
+    }
+    if any(witness["marker"] in command for witness in witnesses.values()):
+        return None
+    bare_read = _shell_command_tokens(command) == ["sed", "-n", "1,240p", "SKILL.md"]
+    return skill_name if named_skills == {skill_name} or not named_skills and bare_read else None
+
+
+def _leading_compound_codex_body_skill(
+    command: str,
+    witnesses: dict[str, dict[str, str]],
+) -> str | None:
+    """Recognize an exact staged-body read at the start of a compound shell command."""
+    tokens = _shell_command_tokens(command)
+    if tokens is None:
         return None
     if len(tokens) < 6 or tokens[:3] != ["sed", "-n", "1,240p"] or tokens[4] != "&&":
         return None
@@ -899,14 +927,9 @@ def _codex_body_read_match(
     command_output: str,
     witnesses: dict[str, dict[str, str]],
 ) -> tuple[str, str] | None:
-    matches = [
-        name
-        for name, witness in witnesses.items()
-        if command_output == witness["body"]
-        and (witness["path"] in command or witness["relative_path"] in command)
-    ]
-    if len(matches) == 1:
-        return matches[0], "exact-output"
+    exact_match = _exact_codex_body_read_skill(command, command_output, witnesses)
+    if exact_match is not None:
+        return exact_match, "exact-output"
     compound_match = _leading_compound_codex_body_read(command, command_output, witnesses)
     if compound_match is None:
         return None

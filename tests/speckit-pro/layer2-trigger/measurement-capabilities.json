@@ -72,8 +72,9 @@
         "agent_message text"
       ],
       "selection_contract": [
-        "One command start bound by item id names the exact staged target or sibling SKILL.md path",
-        "Command output equals the exact complete staged body, or a qualified shell command begins with sed -n 1,240p of the exact path and its output begins with that complete body",
+        "One command start bound by item id reads exactly one staged target or sibling SKILL.md body",
+        "Exact complete body output requires either its staged path in the command or the exact sed -n 1,240p SKILL.md form whose execution cwd is omitted from public exec JSON",
+        "A qualified compound shell command begins with sed -n 1,240p of the exact staged path and its output begins with that complete body",
         "A leading compound read tail cannot name another staged path or emit any staged body or marker",
         "When public JSON omits command completion or completed retained output omits the leading body, the exact leading read is accepted only if its private marker appears in a later completed agent message and the command text contains no marker or second staged path",
         "Completed post-start-marker evidence is rejected if retained output contains any displaced staged body or marker",

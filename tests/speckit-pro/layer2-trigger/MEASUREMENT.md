@@ -45,10 +45,18 @@ minimal body containing a unique randomized 128-bit marker. A selection
 requires both:
 
 1. one command that proves access to the exact staged `SKILL.md` body, either
-   through completed exact output, completed leading output from the qualified
-   `sed -n '1,240p' <exact-path>` first shell segment, or the private marker in
-   a later completed agent message after that exact leading command starts; and
+   through completed exact output from a qualified path-bound or bare read,
+   completed leading output from the qualified `sed -n '1,240p' <exact-path>`
+   first shell segment, or the private marker in a later completed agent message
+   after that exact leading command starts; and
 2. that skill's marker as the first nonblank line of one completed agent message.
+
+The pinned public exec JSON omits the internal command working directory even
+though Codex uses it while executing a skill read. The observer therefore also
+accepts the exact bare command `sed -n '1,240p' SKILL.md`, but only when its
+completed output byte-for-byte matches exactly one staged body and the command
+contains no staged path or marker. Other bare commands, different ranges, and
+additional shell segments remain invalid.
 
 For the leading compound form, the parser requires the body at byte zero and
 rejects a tail that names another staged skill path or emits any staged body or

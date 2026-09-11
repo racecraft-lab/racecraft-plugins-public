@@ -1788,6 +1788,15 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
 
         target = witnesses["demo-eval"]
         other = witnesses["other"]
+        bare_read = "/bin/zsh -c \"sed -n '1,240p' SKILL.md\""
+        bare = inspect_codex_events(
+            engine, with_command(bare_read, target["body"]), "demo-eval", witnesses,
+        )
+        self.assertTrue(bare["valid"], bare)
+        self.assertTrue(bare["selected"])
+        self.assertEqual(bare["consulted_skills"], ["demo-eval"])
+        self.assertEqual(bare["read_witnesses"][0]["read_mode"], "exact-output")
+
         leading_read = (
             f'/bin/zsh -c "sed -n \'1,240p\' {target["path"]} '
             "&& pwd && rg --files -g '!node_modules*' | head -200\""
@@ -1808,6 +1817,22 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             "fabricated body with a path mention": (
                 f'printf ignored {target["path"]}',
                 body_then_metadata,
+            ),
+            "bare body read uses a different command": (
+                "/bin/zsh -c \"cat SKILL.md\"",
+                target["body"],
+            ),
+            "bare body read uses a different range": (
+                bare_read.replace("1,240p", "1,239p"),
+                target["body"],
+            ),
+            "bare body read adds another shell segment": (
+                bare_read[:-1] + " && pwd\"",
+                target["body"],
+            ),
+            "bare body output is fabricated from its marker": (
+                f"printf {target_marker}",
+                target["body"],
             ),
             "body read is not the first shell segment": (
                 f'/bin/zsh -c "pwd && sed -n \'1,240p\' {target["path"]}"',
