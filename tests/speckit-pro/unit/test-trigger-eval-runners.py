@@ -1865,6 +1865,19 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
         self.assertTrue(alias["selected"])
         self.assertEqual(alias["consulted_skills"], ["demo-eval"])
 
+        wider_absolute_read = (
+            f'/bin/zsh -c "sed -n \'1,260p\' {target["path"]}"'
+        )
+        wider_absolute = inspect_codex_events(
+            engine,
+            with_command(wider_absolute_read, target["body"]),
+            "demo-eval",
+            witnesses,
+        )
+        self.assertTrue(wider_absolute["valid"], wider_absolute)
+        self.assertTrue(wider_absolute["selected"])
+        self.assertEqual(wider_absolute["consulted_skills"], ["demo-eval"])
+
         alias_leading_read = alias_read[:-1] + " && pwd\""
         alias_leading = inspect_codex_events(
             engine,
@@ -1920,8 +1933,12 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 "/bin/zsh -c \"cat SKILL.md\"",
                 target["body"],
             ),
-            "bare body read uses a different range": (
-                bare_read.replace("1,240p", "1,239p"),
+            "bare body read range does not cover the complete body": (
+                bare_read.replace("1,240p", "1,1p"),
+                target["body"],
+            ),
+            "bare body read range is not canonical": (
+                bare_read.replace("1,240p", "1,0260p"),
                 target["body"],
             ),
             "bare body read adds another shell segment": (
@@ -1936,8 +1953,8 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 f'/bin/zsh -c "pwd && sed -n \'1,240p\' {target["path"]}"',
                 "/tmp/fixture-workspace\n" + target["body"],
             ),
-            "sed range is not the qualified form": (
-                leading_read.replace("1,240p", "1,239p"),
+            "leading sed range does not cover the complete body": (
+                leading_read.replace("1,240p", "1,1p"),
                 body_then_metadata,
             ),
             "output does not begin with the exact body": (

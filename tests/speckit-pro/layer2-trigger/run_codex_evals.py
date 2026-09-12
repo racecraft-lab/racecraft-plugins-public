@@ -987,6 +987,18 @@ def _shell_command_tokens(command: str) -> list[str] | None:
         return None
 
 
+def _sed_range_covers_body(tokens: list[str], body: str) -> bool:
+    """Accept only a canonical first-line range that includes the complete body."""
+    if len(tokens) != 4 or tokens[:2] != ["sed", "-n"]:
+        return False
+    matched = re.fullmatch(r"1,([1-9][0-9]*)p", tokens[2])
+    if matched is None:
+        return False
+    endpoint = matched.group(1)
+    final_body_line = str(len(body.splitlines()))
+    return (len(endpoint), endpoint) >= (len(final_body_line), final_body_line)
+
+
 def _exact_codex_body_read_skill(
     command: str,
     command_output: str,
@@ -1007,7 +1019,7 @@ def _exact_codex_body_read_skill(
             tokens = shlex.split(command)
         except ValueError:
             return None
-    if len(tokens) == 4 and tokens[:3] == ["sed", "-n", "1,240p"]:
+    if _sed_range_covers_body(tokens, witnesses[skill_name]["body"]):
         read_path = tokens[3]
     elif len(tokens) == 2 and tokens[0] == "cat":
         read_path = tokens[1]
@@ -1035,7 +1047,7 @@ def _leading_compound_codex_body_skill(
     tokens = _shell_command_tokens(command)
     if tokens is None:
         return None
-    if len(tokens) < 6 or tokens[:3] != ["sed", "-n", "1,240p"] or tokens[4] != "&&":
+    if len(tokens) < 6 or tokens[:2] != ["sed", "-n"] or tokens[4] != "&&":
         return None
     read_path = tokens[3]
     matches = [
@@ -1050,6 +1062,8 @@ def _leading_compound_codex_body_skill(
         }
     ]
     if len(matches) != 1:
+        return None
+    if not _sed_range_covers_body(tokens[:4], witnesses[matches[0]]["body"]):
         return None
     tail_tokens = tokens[5:]
     if any(
