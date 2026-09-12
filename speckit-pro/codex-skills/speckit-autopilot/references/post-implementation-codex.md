@@ -2,7 +2,10 @@
 
 Run these items only after all seven SDD phases complete and G7 passes. They
 remain part of the same durable plan and must be mirrored in
-`autopilot-state.json`.
+`autopilot-state.json`. Read [Bounded Execution and Verification](../../../skills/speckit-autopilot/references/execution-efficiency.md)
+first: Post shares the same durable budget, never independent retry loops.
+Code Review is the single final integration review; parent-validated native
+proof allows G7 and Post to consume one unchanged final-snapshot result.
 
 For enabled formal selection, run `checkpoint: post` after the Integration
 Suite's producing tests, including `state_file`, before marking it complete.
@@ -107,7 +110,8 @@ have Agent Teams primitives — Codex always uses the parallel
   `phase-executor`) subagent to independently review the diff
   `origin/main...HEAD` and report findings by severity (no extension)
 - **Track C:** Verify-chain (items 11 → 12 → 14) — single subagent that
-  runs the 3 commands sequentially in its own context (shared test fixtures)
+  reconciles the three results sequentially (shared test fixtures); the parent
+  validates native proof and executes only checks without reusable evidence
 
 Dispatch the 3 tracks via `spawn_agent`, then loop bounded `wait_agent` calls
 until each track's actual result is consumed. A terminal status corroborates
@@ -140,18 +144,19 @@ background subagents as the fallback path. The 3-track structure
   explicitly logged as skipped.
 - **Pre-final completion audit:** Before any final user-facing response,
   re-read `autopilot-state.json`, reconcile it with `update_plan`, and verify
-  the canonical Post list. You MUST NOT send a final response while any `Post:`
-  item is `pending`, `in_progress`, or missing; equivalently, while any Post
-  item is pending, in_progress, or missing. Continue with the first
-  incomplete item instead. `Post: Retrospective` remains the final Post item and
+  the canonical Post list. A completion response is forbidden while any `Post:` item is pending,
+  in_progress, or missing. `execution_control.disposition=checkpoint_required`
+  permits a checkpoint explicitly saying the run is not complete, retaining
+  all pending work, consumed budget and unknown effects. Otherwise continue
+  with the first incomplete item. `Post: Retrospective` remains the final Post item and
   must be completed or explicitly skipped before completion can be reported.
 - **Agent-thread sweep before completion:** as part of the same pre-final audit,
   call `list_agents` when exposed; otherwise audit tracked dispatch IDs and
   consumed results. Every required dispatch must have a real result. When
   `close_agent` is exposed, close remaining current-run threads best-effort.
   A single wait timeout never authorizes interruption; interrupt only a
-  confirmed stuck turn, then re-spawn that required item and consume its result
-  before completion. Hosted completed threads remain inspectable and are
+  confirmed stuck turn, then reconcile read-only and checkpoint unknown effects.
+  No interruption authorizes a replacement launch. Hosted completed threads remain inspectable and are
   managed by the host; their absence of explicit closure is not a failure.
 
 ## PR Packet Validation Workflow
@@ -269,7 +274,7 @@ Codex parent-session responsibilities:
 
 1. Keep every canonical `Post:` item in `update_plan` and
    `autopilot-state.json` until it is completed or explicitly skipped.
-2. Run full verification once for the completed implementation and capture the
+2. Validate/reuse eligible final-snapshot proof; execute ineligible checks and capture the
    evidence path under `specs/<feature>/.process/emission/`.
 3. Read the persisted layer plan from `autopilot-state.json` or the
    workflow evidence. It must be the exact `plan-layers` envelope with
@@ -356,6 +361,10 @@ same-manager recovery evidence or block; do not mix managers.
 
 ## Self-Review Before Finalizing
 
+Reconcile the final independent Code Review and requirement/test mapping, not
+another review of unchanged code. Required defects block regardless of severity;
+style suggestions are separate and do not consume corrective cycles.
+
 After G7 passes and before opening the PR (between `Post: Integration Suite`
 and `Post: PR Body Generation`), the orchestrator runs a four-question
 self-review and records the answers in the workflow log under a `Self-Review`
@@ -368,7 +377,7 @@ Questions (Codex orchestrator answers each in order):
 
 1. **Tests executed?** Did `BUILD`, `TYPECHECK`, `LINT`, `UNIT_TEST`, and
    `INTEGRATION_TEST`, plus every populated quality-gate slot, each actually
-   run this session and exit zero — or did
+   have current validated native execution evidence and exit zero — or did
    the autopilot infer "no errors reported" from a phase that never invoked
    them? Cite the most recent test run with timestamp from the workflow log.
 
@@ -404,7 +413,8 @@ Block format in the workflow log mirrors
 [post-implementation.md §Self-Review Before Finalizing](../../skills/speckit-autopilot/references/post-implementation.md#self-review-before-finalizing)
 so a single review template serves both runtimes.
 
-**The self-review does not gate PR creation.** Gaps it surfaces
+**Advisory self-review gaps do not gate PR creation.** Required behavioral or
+security defects remain blocking. Advisory gaps it surfaces
 (`[edge-case-gap]`, orphan FR, silent TODO) are written to the workflow log. If
 the already-existing packet-owned body declares an editable
 `## Self-Review Findings` region, mirror the findings there without changing

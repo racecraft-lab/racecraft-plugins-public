@@ -96,7 +96,7 @@ class ValidateSkills(unittest.TestCase):
                 ):
                     self.assertIn(f'`{provenance_class}`', gate)
                 self.assertIn('None can upgrade a constraint', gate)
-                self.assertIn('at most 2 repairs', phase)
+                self.assertIn('shared corrective reservation', phase)
                 self.assertIn('Plan Repair Context', phase)
                 self.assertIn('run `validate-gate` for G3 again', gate)
                 self.assertIn('acknowledgement time is not interchangeable with actual UI-delivery timing', gate)
@@ -398,10 +398,13 @@ class ValidateCodexSkills(unittest.TestCase):
                 and 'resume at the first incomplete Post\n   item. Do not summarize completion from a `Phase 7: Implement Complete`\n   state.' in error_recovery,
                 'expected the Post entrypoint and recovery reference to continue from the first incomplete Post item without a premature completion summary',
             )
-        with self.subTest(msg='speckit-autopilot: blocks final answers while Post items remain incomplete'):
+        with self.subTest(msg='speckit-autopilot: blocks completion but allows honest budget checkpoints'):
             self.assertTrue(
                 '### 3.4 Pre-final completion audit' in body
-                and 'You MUST NOT send a\nfinal response if any `Post:` item is `pending`, `in_progress`, or missing.' in body
+                and 'A completion response is\nforbidden if any `Post:` item is `pending`, `in_progress`, or missing.' in body
+                and 'execution_control.disposition=checkpoint_required' in body
+                and 'run is **not complete**' in body
+                and 'never mark them completed to stop' in body
                 and 'set the first\nincomplete item to `in_progress` in both state stores and continue the\nautopilot loop instead of summarizing.' in body
                 and '`Post: Retrospective` is the final\nPost item; it must be completed or explicitly skipped before the\nautopilot can report completion.' in body,
                 'expected the direct final audit to forbid completion, continue the first incomplete Post item, and require Retrospective',

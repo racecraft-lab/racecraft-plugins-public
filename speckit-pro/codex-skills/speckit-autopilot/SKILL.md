@@ -20,6 +20,11 @@ description: >
 
 # SpecKit Autopilot — Autonomous Execution Engine
 
+At kickoff/resume, read [Bounded Execution and Verification](../../skills/speckit-autopilot/references/execution-efficiency.md).
+Initialize/recover its execution-control ledger before dispatch. Its metadata,
+native batching, proof-reuse, shared repair/time ceilings, and honest checkpoint
+rules govern every phase and Post step; agent replacement never resets budgets.
+
 ## Installed Runtime Contract
 
 Installed Claude and Codex surfaces resolve Python 3.11 or newer, invoke
@@ -86,7 +91,8 @@ Bind the workflow to actual Codex primitives:
   sender/task and keep waiting until its `FINAL_ANSWER` or equivalent summary
   is consumed. A terminal status is corroboration or recovery evidence only;
   it never replaces the required result. If an agent is terminal without a
-  delivered result, drain the mailbox and then re-spawn or fail that item.
+  delivered result, use its one read-only reconciliation to drain the mailbox
+  and inspect effects; checkpoint if unknown, never automatically re-spawn.
 - When `close_agent` is exposed, call it promptly after consuming the result.
   Cleanup policy is best-effort: if the surface reports the agent already gone,
   log it and continue without retry-looping. When `close_agent` is absent,
@@ -96,7 +102,8 @@ Bind the workflow to actual Codex primitives:
   available, match returned current-tree entries to the workflow target and
   current incomplete plan item's canonical task name/prompt; manage or reuse
   only agents confirmed present and owned by this autopilot run. Without
-  inspection, treat prior-session agent references as stale and spawn fresh.
+  inspection, treat prior-session effects as unknown and checkpoint; never
+  treat a stale reference as permission to spawn fresh.
   Apply explicit closure only to run-owned agents confirmed present, including
   a reconciled agent that was spawned before the interruption.
 - Derive `subagent_slots` from the current session without mixing surface
@@ -112,8 +119,8 @@ Bind the workflow to actual Codex primitives:
   stuck. Continue bounded waits and inspect status/progress when possible. Use
   `interrupt_agent` only after a separate execution deadline or confirmed
   no-progress condition, and only to cancel a still-running turn; it preserves
-  context and is not closure. Any interrupted required item must be re-spawned
-  and return a real result before its plan item can complete.
+  context and is not closure. Reconcile the interrupted item's retained result
+  and effects; unknown outcomes checkpoint, never authorize replacement work.
 - Before reporting the run complete, use `list_agents` when exposed; otherwise
   audit the tracked dispatch IDs and consumed results. Every required dispatch
   must have a consumed result. Close remaining current-run threads best-effort
@@ -241,8 +248,8 @@ Each phase type has its own specialized executor agent:
 | Specify, Plan, Tasks | `phase-executor` | Heavy reasoning (Specify, Plan); mechanical for Tasks. Single skill invocation, single summary. |
 | Clarify | `clarify-executor` | Read-only question set; parent answers and edits |
 | Checklist | `checklist-executor` | Must run checklist AND remediate gaps with research |
-| Analyze | `analyze-executor` | Must run analysis AND remediate ALL findings with research |
-| Implement | `implement-executor` | Task-level dispatch with strict TDD. **Honor `[P]` markers within derived `subagent_slots`** — dispatch consecutive `[P]`-tagged tasks of the same agent type in cap-bounded waves. As each actual result arrives through the bounded `wait_agent` loop, record it, call `close_agent` only when exposed, and start the next `[P]` task. Do NOT spawn every `[P]` task in ONE turn when the run is wider than the cap. Non-`[P]` tasks dispatch one at a time. After each wave, run TYPECHECK + UNIT_TEST in the lead; on regression, fall back to serial re-run. |
+| Analyze | `analyze-executor` | Resolve required defects at every severity using relevant evidence and the shared repair reservation |
+| Implement | `implement-executor` | Strict TDD with validated capability batches of up to four sequential tasks; parallel waves must respect metadata ownership/dependencies and derived `subagent_slots`. Consume each actual per-task result before marking completion. Legacy workflows use singleton execution. |
 | Read-only consensus | analyst agents | Read-heavy code/spec/domain analysis |
 
 Concrete Codex mapping:
@@ -605,8 +612,8 @@ Before each corresponding dispatch, read the mandatory
 workflow prompt plus `WORKFLOW_ROOT`, `PRESET_CONVENTIONS`, and
 `PROJECT_COMMANDS` already resolved above. When already on the feature branch,
 tell Specify to use that branch and existing spec directory rather than create
-another. The reference owns agent routing, per-prompt result handling, `[P]`
-waves, TDD injection, and regression fallback; do not reconstruct those
+another. The reference owns agent routing, per-prompt result handling,
+metadata-aware batches, TDD injection, and localized repair; do not reconstruct those
 algorithms from this entrypoint.
 
 ## Step 3: Post-Implementation
@@ -625,8 +632,12 @@ or canonical Post work remains incomplete.
 
 Before sending any final user-facing response, re-read
 `autopilot-state.json` and the workflow file, reconcile them with
-`update_plan`, and audit the canonical Post list. You MUST NOT send a
-final response if any `Post:` item is `pending`, `in_progress`, or missing.
+`update_plan`, and audit the canonical Post list. A completion response is
+forbidden if any `Post:` item is `pending`, `in_progress`, or missing.
+Exception: `execution_control.disposition=checkpoint_required` permits an
+honest checkpoint response stating the run is **not complete**, remaining Post
+work, consumed budget, unknown effects, and the operator decision required.
+Keep pending rows and current status; never mark them completed to stop.
 If the audit finds incomplete Post work, set the first
 incomplete item to `in_progress` in both state stores and continue the
 autopilot loop instead of summarizing. `Post: Retrospective` is the final

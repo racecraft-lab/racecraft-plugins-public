@@ -1,6 +1,10 @@
 # Gate Validation Reference
 
-Programmatic gate checks performed after each SDD phase. The autopilot validates each gate automatically and attempts auto-fix if validation fails (max 2 attempts before escalating to human).
+Programmatic gate checks performed after each SDD phase. Before every repair,
+use [Bounded Execution and Verification](./execution-efficiency.md): one corrective
+cycle per stable failure family and two across the spec, including nested work.
+No gate has an independent retry allowance. Time/budget exhaustion checkpoints
+remaining work; a failed requirement or security gate never becomes a pass.
 
 ## Contents
 
@@ -58,7 +62,7 @@ This is a routing decision, not a pass/fail gate. The presence of markers is exp
 
 **Auto-Fix:** Re-run clarify focused on remaining markers. Spawn consensus agents for each unresolved question.
 
-**Failure Escalation:** If markers remain after 2 clarify attempts, STOP. Present remaining ambiguities to human with all 3 agent perspectives.
+**Failure Escalation:** If markers remain when the shared reservation ends, STOP. Present remaining ambiguities to human with all 3 agent perspectives.
 
 ### G3 — After Plan
 
@@ -80,7 +84,7 @@ This is a routing decision, not a pass/fail gate. The presence of markers is exp
 **Auto-Fix:** Re-run Plan with the gate failure as additional context, then
 re-run G3. If a required artifact is missing or a specific constitutional gate
 failed, include the missing artifact or principle text and ask the planner to
-address it. Use at most 2 repair attempts.
+address it. Use the parent's shared corrective reservation.
 
 #### Plan ambiguity provenance repair
 
@@ -135,12 +139,12 @@ acknowledgement time is not interchangeable with actual UI-delivery timing.
 Never delete or disguise an unresolved marker merely to make G3 pass.
 
 After every completed Plan repair, run `validate-gate` for G3 again and append
-the returned result to the log. Stop retrying when G3 passes, after 2 failed
-repair attempts, or when `unresolved-provenance` makes a safe repair
+the returned result to the log. Stop when G3 passes, its shared corrective
+reservation ends, or when `unresolved-provenance` makes a safe repair
 impossible. A skipped repair records the applicable reason rather than
 fabricating an attempt.
 
-**Failure Escalation:** If any G3 condition still fails after 2 repair attempts,
+**Failure Escalation:** If any G3 condition still fails after its reserved cycle,
 or provenance cannot be established well enough to repair safely, apply the
 configured `gate-failure` behavior. The default `stop` path presents the exact
 gate output, disputed wording, source evidence, provenance class, repairs made,
@@ -165,7 +169,8 @@ SKILL.md Rule 6).
 ```text
 For EACH [Gap] marker found after a domain subagent:
 
-Step 1: Research the gap using multiple tools:
+Step 1: Resolve concrete evidence gaps; reuse current sources. Select relevant
+sources below, not a mandatory code/web/history checklist:
   a. Codebase context — use capability-first discovery per
      `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`
      ([capability-discovery.md](./capability-discovery.md)) to select
@@ -193,11 +198,11 @@ Step 3: Apply the fix to the relevant artifact(s)
 
 Step 4: Re-run the domain checklist to verify the gap
   is closed
-  - If new gaps appear → remediate (max 2 total loops
-    per domain)
+  - If new gaps appear → reserve by stable invariant in the same ledger;
+    no per-domain reset or independent nested allowance
   - If 0 gaps → domain complete, proceed to next domain
 
-Step 5: If gaps remain after 2 loops → STOP, present
+Step 5: If gaps remain when the shared reservation ends → STOP, present
   to human with the gap description, research findings,
   and attempted fixes
 ```
@@ -211,6 +216,12 @@ sources produces higher-quality fixes than guessing.
 time) to prevent conflicting spec edits.
 
 ### G5 — After Tasks
+
+For a Tasks prompt that requests execution metadata, validate the sidecar with
+`validate-task-execution` and `task_execution_required=true` after production.
+Also validate existing sidecars in legacy runs. Reconcile definitions added by
+review/Converge before partitioning; checkbox-only completion is not definition
+drift. See [the producer contract](./execution-efficiency.md).
 
 For enabled formal selection, require the current `planning` checkpoint and
 pass `workflow_file` to `validate-gate`. Tasks must include the selected model's
@@ -241,7 +252,7 @@ implementation obligations and any requested trace work; follow [the shared cont
 - Place it in the appropriate user story phase
 - Ensure it has the correct FR reference marker
 
-**Failure Escalation:** If coverage gaps persist after 2 attempts, STOP. Present the unmapped FRs with the relevant spec sections.
+**Failure Escalation:** If coverage gaps persist after the reserved cycle, STOP. Present the unmapped FRs with the relevant spec sections.
 
 #### Post-G5 Reviewability Capture Matrix
 
@@ -286,12 +297,13 @@ After remediation, reconcile selected formal models and renew `planning`
 evidence before proceeding. Pass `workflow_file` to `validate-gate`; current
 evidence and the state mirror are required at the planning boundary.
 
-**Check:** All findings remediated at every severity level.
+**Check:** All requirement-linked defects and safety findings resolved at every
+severity. Keep optional style/naming suggestions distinct from blocking defects.
 
 ```
 1. Run /speckit-analyze and capture output
 2. Count findings by severity (CRITICAL, HIGH, MEDIUM, LOW)
-3. ALL findings must be remediated — none left unresolved
+3. All required defects must be resolved; record optional suggestions separately
 ```
 
 **Auto-Fix:** This is the **Analyze Remediation Loop**. Uses
@@ -304,7 +316,8 @@ Step 2: Parse ALL findings by severity
 
 Step 3: For EACH finding (CRITICAL, HIGH, MEDIUM, LOW):
 
-  a. Research the finding using multiple tools:
+  a. Resolve concrete evidence gaps; reuse current sources. Select relevant
+     sources below, not a mandatory code/web/history pass:
      - Codebase context — use capability-first discovery per
        `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`
        ([capability-discovery.md](./capability-discovery.md)) to select
@@ -332,19 +345,16 @@ Step 3: For EACH finding (CRITICAL, HIGH, MEDIUM, LOW):
   c. Apply the fix to the relevant artifact(s)
 
 Step 4: Re-run analyze to verify all findings resolved
-  - If new findings appear → remediate (max 2 total loops)
+  - If new required findings appear → reserve by stable invariant in the same ledger
   - If 0 findings → G6 PASS
 
-Step 5: If findings remain after 2 loops → STOP, present
+Step 5: If required findings remain when the reservation ends → STOP, present
   to human with all remaining findings, research results,
   and attempted fixes
 ```
 
-**Why remediate everything:** The autopilot runs unattended.
-Leaving MEDIUM/LOW issues for "post-hoc review" means they
-never get fixed. Fixing all findings produces cleaner
-artifacts and prevents issues from compounding during
-implementation.
+Severity alone cannot dismiss a behavioral defect. Required MEDIUM/LOW defects
+remain blocking; optional style changes do not justify expanding the spec.
 
 ### G6.5 — Pre-Implement Confidence Gate (between Analyze and Implement)
 
@@ -396,8 +406,8 @@ disagreement is named in `reason`.
           the lowest-scoring criterion, proceed to Phase 7
         - strict mode: STOP and surface to the operator
 
-3. Iteration loop (both modes, max 3 iterations):
-   - If exit 2 AND iteration_count < 3:
+3. Corrective loop (both modes, shared execution-control reservation):
+   - If exit 2 AND the same failure-family/spec budget permits repair:
      - If deductions_applied is true, remediate the
        unresolved CRITICAL and HIGH rows in the workflow
        file's Analysis Results table first, and record each
@@ -442,9 +452,10 @@ and no placeholder tests exist.
    Many projects exclude integration tests from the default
    test command — you MUST run both.
 (use PROJECT_COMMANDS discovered in Step 0.11)
-6. Verify spec-specific integration tests exist:
-   Glob("tests/integration/*<spec-name>*") → must find files
-7. Verify test count increased from G0 baseline
+6. Verify the requirement-to-test mapping names real integration coverage:
+   inspect existing or new test files and assertions, not spec-ID filenames
+7. Verify requirement-linked behavioral coverage; preserve G0 count as diagnostic,
+   not a test-count growth requirement
 8. Verify NO placeholder tests in new files:
    Search for placeholder test markers
         path: "specs/<number>-<name>/") → must be 0
@@ -460,19 +471,22 @@ during GREEN. If ANY are found in spec-related files, G7
 FAILS. The implement-executor must replace them with real
 assertions.
 
-**TDD Verification:** Each implementation agent's summary
-includes RED→GREEN evidence for its task. G7 validates the
-AGGREGATE — all task results must show RED phase verification
-(real assertion failures, not "skipped" or "todo"). If any
-task lacks TDD evidence, the gate FAILS.
+**TDD Verification:** Each changed behavior has real RED→GREEN→refactor
+evidence, with a separate result for every task and shared `tdd_unit` references
+for related test/implementation checkboxes. G7 validates the aggregate commands
+and effects, not a worker's GREEN label. Existing behavior may cite verified
+existing coverage without fabricated RED; new behavior without meaningful
+RED evidence fails. Test-only work never claims an independent GREEN cycle.
 
-**Note:** G7 runs AFTER all Phase 7 task groups complete, not
-after each individual task. Per-group verification (build +
-typecheck + lint + unit tests) happens within the task-level
-dispatch loop. G7 is the final aggregate check.
+**Note:** G7 runs AFTER all Phase 7 task groups complete. Focused tests and one
+independent review validate each capability group. Execute required full-suite
+and artifact checks once on the final snapshot; G7 and Post consume that same
+result only through `validate-execution-record` with genuine native producer
+observation. Missing provenance, changed inputs, or `reusable=false` requires
+rerunning affected checks; a worker summary or hash alone is insufficient.
 
-**Integration Test Requirement:** Spec-specific integration
-tests MUST exist with real assertions. If missing or all
+**Integration Test Requirement:** Required integration coverage
+MUST exist with real assertions, whether existing or new. If missing or all
 placeholders, spawn implement-executor to create/fix them
 before G7 can pass.
 
@@ -483,7 +497,7 @@ before G7 can pass.
 - Test failures: Fix failing tests or implementation bugs
 - Missing integration tests: Spawn implement-executor
 
-**After G7 passes:** Run full integration suite (Step 3.1), then apply the
+**After G7 passes:** Validate/reuse the integration proof for Step 3.1, then apply the
 final reviewability boundary before PR body generation, any `gh pr create`
 variant, or `multi-pr-emission`. The runner helper
 `final-reviewability-backstop` is registered as deferred for installed
@@ -494,20 +508,20 @@ Only `pass`, `warn`, or an honored typed-exception outcome may continue. An
 unexcepted block or gate error stops PR preparation and records the
 `final_reviewability_gate` state plus re-slicing packet when applicable.
 
-**Failure Escalation:** If verification suite fails after 2 fix attempts, STOP. Present the specific failures to human.
+**Failure Escalation:** If verification suite fails after its shared corrective cycle, STOP. Present the specific failures to human.
 
 ## Gate Summary Table
 
-| Gate | After | Check | Auto-Fix Strategy | Max Attempts |
+| Gate | After | Check | Auto-Fix Strategy | Repair allowance |
 |------|-------|-------|-------------------|--------------|
 | G1 | Specify | NEEDS CLARIFICATION markers | N/A (routing) | N/A |
-| G2 | Clarify | 0 markers remain | Re-run clarify | 2 |
-| G3 | Plan | Artifacts exist, gates pass | Re-run plan | 2 |
-| G4 | Checklist | 0 [Gap] markers | Research + consensus remediation | 2 |
-| G5 | Tasks | All FRs mapped to tasks | Generate missing tasks | 2 |
-| G6 | Analyze | 0 findings (all severities) | Research + consensus remediation | 2 |
-| G6.5 | (between Analyze and Implement) | Pre-Implement confidence ≥ 0.90 (advisory default; strict opt-in via `.claude/speckit-pro.local.md`) | Re-route consensus on lowest-scoring criterion, re-emit confidence | 3 |
-| G7 | Implement | Build+type+lint+test pass, integration tests exist, 0 placeholders, TDD evidence | Fix errors, replace placeholders, create real tests | 2 |
+| G2 | Clarify | 0 markers remain | Re-run clarify | Shared |
+| G3 | Plan | Artifacts exist, gates pass | Re-run plan | Shared |
+| G4 | Checklist | 0 [Gap] markers | Research + consensus remediation | Shared |
+| G5 | Tasks | FR coverage and valid required execution metadata | Generate missing tasks | Shared |
+| G6 | Analyze | 0 required defects (all severities) | Research + consensus remediation | Shared |
+| G6.5 | (between Analyze and Implement) | Pre-Implement confidence ≥ 0.90 (advisory default; strict opt-in via `.claude/speckit-pro.local.md`) | Re-route consensus on lowest-scoring criterion, re-emit confidence | Shared |
+| G7 | Implement | Build+type+lint+test pass, integration tests exist, 0 placeholders, TDD evidence | Fix errors, replace placeholders, create real tests | Shared |
 
 ## Additional Verification (Extension Commands)
 
@@ -528,7 +542,7 @@ skip the check and log a recommendation to install it.
 
 ## Failure Escalation Protocol
 
-When auto-fix fails after max attempts:
+When the shared corrective reservation or time budget is exhausted:
 
 1. **STOP** execution — do not proceed to the next phase
 2. **Present context** to human:
