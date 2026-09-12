@@ -46,3 +46,9 @@ returned exit code 0 with `planning_complete: true`,
 `stage: plan`, `artifact_review.status: pending`,
 `artifact_review.resume_action: preview`, `generated: 4`,
 `verified: 0`, and `generation_gaps: ["architecture-viewer"]`.
+
+A second negative check copied the feature to a temporary fixture, removed the
+required `implementation-plan.html`, and reran `review_handoff` against that
+copy. It passed by classifying that required page as pending, setting
+`reuse_artifacts: false`, and changing the resume action to `generate`; this is
+distinct from the intentional `architecture-viewer` gap.
