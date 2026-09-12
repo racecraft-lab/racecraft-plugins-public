@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "speckit-pro"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 from test_result import run_counted
 from speckit_pro_runner.execution_control import durable_json, execution_control
-from speckit_pro_runner.verification_records import execute_verification, validate_execution_record
+from speckit_pro_runner.verification_records import execute_verification, project_command, run_snapshot_command, validate_execution_record
 
 
 class ExecutionControlTests(unittest.TestCase):
@@ -309,6 +309,62 @@ class VerificationTests(unittest.TestCase):
         self.assertEqual((self.root / "fixture.txt").read_text(), "dirty untracked fixture")
         with self.assertRaises(ValueError):
             execute_verification(self.root, {**self.inputs, "command_id": "LINT_FIX"}, "apply")
+
+    def test_verification_source_has_no_dynamic_or_shell_executable_findings(self):
+        from speckit_pro_runner.gates.active_path_guard import repo_bash_python_findings
+
+        source = Path(__file__).resolve().parents[3] / "speckit-pro/speckit_pro_runner/verification_records.py"
+        self.assertEqual(repo_bash_python_findings("speckit-pro/speckit_pro_runner/verification_records.py", source.read_text()), [])
+
+    def test_workflow_shell_jq_and_unsupported_executables_are_rejected(self):
+        for command in ("bash -c true", "sh -c true", "jq . fixture.json", "env python3 check.py", "unqualified-tool check.py"):
+            with self.subTest(command=command):
+                (self.root / "feature/workflow.md").write_text("## PROJECT_COMMANDS\n```json\n" + json.dumps({"UNIT_TEST": command}) + "\n```\n")
+                with self.assertRaisesRegex(ValueError, "ordinary native verification"):
+                    project_command(self.root / "feature/workflow.md", "UNIT_TEST")
+
+    def test_supported_tools_keep_literal_executable_arguments_and_environment(self):
+        programs = ("python", "python3", "node", "npm", "npx", "pnpm", "yarn", "bun", "cargo", "go", "make", "pytest", "lint-imports", "uv", "ruff", "mypy")
+        for program in programs:
+            with self.subTest(program=program), patch("speckit_pro_runner.verification_records.shutil.which", side_effect=lambda name, **kwargs: f"/qualified-tools/{name}"), patch("speckit_pro_runner.verification_records.subprocess.Popen") as popen:
+                process = popen.return_value.__enter__.return_value
+                process.communicate.return_value = (b"ok", b"")
+                process.returncode = 0
+                environment = {"PATH": "/qualified-tools"}
+                result = run_snapshot_command([program, "check", "one argument"], self.root, environment, 1)
+                self.assertEqual(result, (0, b"ok", b"", True))
+                self.assertEqual(popen.call_args.args[0], [f"/qualified-tools/{program}", "check", "one argument"])
+                self.assertEqual(popen.call_args.kwargs["env"], environment)
+                self.assertIs(popen.call_args.kwargs["shell"], False)
+                self.assertNotIn("executable", popen.call_args.kwargs)
+
+    def test_path_python_is_not_replaced_with_the_runner_interpreter(self):
+        requested = "/qualified-tools/python3.11"
+        with patch("speckit_pro_runner.verification_records.shutil.which", return_value=requested), patch("speckit_pro_runner.verification_records.subprocess.Popen") as popen:
+            process = popen.return_value.__enter__.return_value
+            process.communicate.return_value = (b"ok", b"")
+            process.returncode = 0
+            run_snapshot_command(["python3", "check.py"], self.root, {"PATH": "/qualified-tools"}, 1, expected_executable=requested)
+            self.assertEqual(popen.call_args.args[0], [requested, "check.py"])
+            self.assertNotIn("executable", popen.call_args.kwargs)
+
+    def test_changed_or_relative_executable_resolution_cannot_launch(self):
+        for resolved, expected in (("/different-tools/python3", "/qualified-tools/python3"), ("relative/python3", None)):
+            with self.subTest(resolved=resolved), patch("speckit_pro_runner.verification_records.shutil.which", return_value=resolved), patch("speckit_pro_runner.verification_records.subprocess.Popen") as popen:
+                with self.assertRaisesRegex(ValueError, "ordinary native verification"):
+                    run_snapshot_command(["python3", "check.py"], self.root, {"PATH": "relative"}, 1, expected_executable=expected)
+                popen.assert_not_called()
+
+    def test_virtualenv_invocation_is_preserved_even_when_binary_target_is_shared(self):
+        interpreter = self.root / "venv/bin/python3"
+        interpreter.parent.mkdir(parents=True)
+        interpreter.symlink_to(sys.executable)
+        with patch("speckit_pro_runner.verification_records.shutil.which", return_value=str(interpreter)), patch("speckit_pro_runner.verification_records.subprocess.Popen") as popen:
+            process = popen.return_value.__enter__.return_value
+            process.communicate.return_value = (b"ok", b"")
+            process.returncode = 0
+            run_snapshot_command(["python3", "check.py"], self.root, {"PATH": str(interpreter.parent)}, 1, expected_executable=str(interpreter))
+            self.assertEqual(popen.call_args.args[0], [str(interpreter), "check.py"])
 
 
 class RunnerDispatchTests(unittest.TestCase):
