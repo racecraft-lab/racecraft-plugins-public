@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Deterministic checks for the paired native execution policy boundaries."""
 from pathlib import Path
+import importlib.util
 import sys
+import tempfile
 import tomllib
 import unittest
 
@@ -13,6 +15,9 @@ LIB_DIR = ROOT / "tests/speckit-pro/lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
 from test_result import run_counted  # noqa: E402
+if str(PLUGIN) not in sys.path:
+    sys.path.insert(0, str(PLUGIN))
+from speckit_pro_runner.execution_control import execution_control  # noqa: E402
 
 
 class ExecutionContractTests(unittest.TestCase):
@@ -73,9 +78,78 @@ class ExecutionContractTests(unittest.TestCase):
         self.assertIn("checkpoint_required", audit)
         self.assertIn("not complete", audit)
 
+class ExecutionMirrorTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        spec = importlib.util.spec_from_file_location(
+            "execution_contract_status_validator",
+            SHARED / "scripts/validate-autopilot-phase-coverage.py",
+        )
+        cls.validator = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = cls.validator
+        spec.loader.exec_module(cls.validator)
+
+    def test_state_mirror_accepts_actual_ledger_result_without_new_status(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "docs").mkdir()
+            (root / "feature").mkdir()
+            (root / "docs/workflow.md").write_text("# Workflow\n", encoding="utf-8")
+            (root / "feature/spec.md").write_text("FR-101 Preserve behavior\n", encoding="utf-8")
+            result = execution_control(root, {
+                "workflow_file": "docs/workflow.md", "spec_file": "feature/spec.md",
+                "action": "start",
+            }, "apply")
+        mirror = {key: result[key] for key in (
+            "ledger_path", "disposition", "reasons", "elapsed_seconds", "checkpoint_due",
+        )}
+        mirror["run_id"] = result["ledger"]["run_id"]
+        self.assertEqual([], self.validator.validate_state_status({
+            "status": "in_progress", "execution_control": mirror,
+        })["state_status_errors"])
+        checkpoint = dict(mirror, disposition="checkpoint_required", reasons=["slice_deadline"])
+        self.assertEqual([], self.validator.validate_state_status({
+            "status": "awaiting_review", "execution_control": checkpoint,
+        })["state_status_errors"])
+        self.assertTrue(self.validator.validate_state_status({
+            "status": "checkpoint_required", "execution_control": checkpoint,
+        })["state_status_errors"])
+
+    def test_state_mirror_rejects_invalid_fields_and_preserves_legacy_absence(self):
+        baseline = {
+            "ledger_path": "docs/.process/execution-control.json", "run_id": "run-123",
+            "disposition": "continue", "reasons": [], "elapsed_seconds": 0.1,
+            "checkpoint_due": False,
+        }
+        self.assertEqual([], self.validator.validate_state_status({})["state_status_errors"])
+        invalid = (
+            {"ledger_path": "../escape.json"}, {"ledger_path": "/tmp/ledger.json"},
+            {"run_id": ""}, {"disposition": "completed"}, {"reasons": [1]},
+            {"elapsed_seconds": True}, {"elapsed_seconds": -1}, {"checkpoint_due": "false"},
+            {"reservation_id": "worker-added"},
+        )
+        for replacement in invalid:
+            with self.subTest(replacement=replacement):
+                self.assertTrue(self.validator.validate_state_status({
+                    "execution_control": dict(baseline, **replacement),
+                })["state_status_errors"])
+        for field in baseline:
+            with self.subTest(missing=field):
+                mirror = {key: value for key, value in baseline.items() if key != field}
+                self.assertTrue(self.validator.validate_state_status({
+                    "execution_control": mirror,
+                })["state_status_errors"])
+
+    def test_parent_mirror_contract_names_actual_envelope_and_spec_path(self):
+        policy = (SHARED / "references/execution-efficiency.md").read_text()
+        for term in ("inputs.spec_file", "result.data.ledger.run_id", "ledger_path",
+                     "not independent proof", "native orchestrator"):
+            self.assertIn(term, policy)
+
 
 if __name__ == "__main__":
     raise SystemExit(run_counted(
-        unittest.defaultTestLoader.loadTestsFromTestCase(ExecutionContractTests),
+        unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
+                           for case in (ExecutionContractTests, ExecutionMirrorTests)),
         label="test-autopilot-execution-contract",
     ))

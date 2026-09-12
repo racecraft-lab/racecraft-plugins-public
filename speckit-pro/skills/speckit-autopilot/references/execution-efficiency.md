@@ -11,6 +11,10 @@ Invoke runner helper `execution-control`, operation `execution-control`, with
 (`dry_run` previews); `action=status` is `mode=read_only`.
 
 - `start`: open or recover the same workflow's ledger before the first phase.
+  Pass `inputs.spec_file` as the resolved repo-relative feature spec path when
+  available; the workflow can live elsewhere. If omitted, only an existing
+  adjacent spec can supply requirement IDs, otherwise failures use `unresolved`.
+  The registry freezes at start; later paths or contents never reset counters.
   Agent replacement, compaction, stage changes, a reclaimed state mirror, and
   resume never reset it. Preserve another workflow's ledger when reclaiming
   the one-run `autopilot-state.json` mirror.
@@ -31,6 +35,17 @@ Invoke runner helper `execution-control`, operation `execution-control`, with
   external-approval waits with independent parent `native_observation` carrying
   `native_event_id`, `run_id`, `kind=human_uat|external_approval`, and
   `action=wait_started|wait_ended`. A worker's assertion is insufficient.
+
+After a successful or `expected_failure` ledger response, the native orchestrator
+mirrors `result.data` fields `ledger_path`, `disposition`, `reasons`,
+`elapsed_seconds`, and `checkpoint_due`, plus `result.data.ledger.run_id`, into
+the optional `autopilot-state.json.execution_control` object. These fields are
+directly in `data`, not `data.stdout_json`. The helper writes its durable ledger,
+not the one-run status file; workers do not own this mirror. Preserve the existing
+top-level status and pending plan rows. An input error has diagnostics, not a
+new mirror. On resume, read the live helper result before refreshing the mirror;
+a stale mirror never initializes, overwrites, or resets a ledger. This record
+is for user visibility, not independent proof of authority or completed work.
 
 One corrective cycle per failure family and two corrective cycles per spec
 are the shared ceilings. Reserve before repairs in G3 provenance, G4/G6
@@ -105,7 +120,10 @@ evidence, not a second independent review of unchanged code.
 After all producing changes and artifact regeneration, execute the complete
 required suite and artifact checks on the final immutable input snapshot.
 Use `execute-verification`, operation `execute-verification`, `mode=apply`, with
-`workflow_file` and `command_id` selecting an existing PROJECT_COMMANDS slot.
+`workflow_file`, `command_id` selecting an existing PROJECT_COMMANDS slot, and
+`dispatch_id` from an existing execution-control `kind=verification` reservation.
+After the actual execution result, record its completion in the same ledger;
+unknown outcomes retain no-relaunch accounting. Dry-run need not reserve work.
 Persist discovered commands once in the workflow's unique `## PROJECT_COMMANDS`
 section as a fenced JSON command object. Do not supply arbitrary caller argv
 or convert unsupported compound shell commands into a different check.
