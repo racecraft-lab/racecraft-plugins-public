@@ -1,5 +1,45 @@
 # Changelog
 
+## [2.32.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.31.0...speckit-pro-v2.32.0) (2026-09-12)
+
+
+### Features
+
+* **formal:** add Apalache checks to scaffold and autopilot ([61a2469](https://github.com/racecraft-lab/racecraft-plugins-public/commit/61a24697799ed7481645aa714f2af0b4ca2022f4))
+* **formal:** add finite and temporal TLC checks ([21cfeff](https://github.com/racecraft-lab/racecraft-plugins-public/commit/21cfeffd49870985133d9bed2af7e8b0761afb6e))
+* **formal:** add finite and temporal TLC checks ([81bce77](https://github.com/racecraft-lab/racecraft-plugins-public/commit/81bce774e96b545192b4d9eb5e02482c444bbd35))
+* **formal:** add selective formal methods coaching and selection ([05a2b2a](https://github.com/racecraft-lab/racecraft-plugins-public/commit/05a2b2a32cbcbd3bc645d94ac98851cb2990dbe8))
+* **formal:** add selective formal methods coaching and selection ([f460da1](https://github.com/racecraft-lab/racecraft-plugins-public/commit/f460da1f9a8a6ccbcd3bb5880a0337132d189c87))
+* **formal:** add selective formal methods coaching and selection ([353c7b4](https://github.com/racecraft-lab/racecraft-plugins-public/commit/353c7b4766fd1d942cd8f5253e327ce50ae5d2f2))
+* **formal:** check observed implementation traces and optional Quint models ([584fac5](https://github.com/racecraft-lab/racecraft-plugins-public/commit/584fac5b347d91e4ff5f484429f0c9997ed62059))
+* **formal:** check observed implementation traces and optional Quint models ([59801e2](https://github.com/racecraft-lab/racecraft-plugins-public/commit/59801e2c81423e4e7e085608bdf1e4bffeb13aa1))
+* **formal:** enforce lifecycle evidence and optional stack management ([61092e2](https://github.com/racecraft-lab/racecraft-plugins-public/commit/61092e2cd6019b46fabd0f8b802ff59dd0ee79ad))
+* **formal:** enforce lifecycle evidence and optional stack management ([a93a2ad](https://github.com/racecraft-lab/racecraft-plugins-public/commit/a93a2ad3a27ec0fdd5c22d9c3204c66d26d29b66))
+* **formal:** integrate Apalache checks with scaffold and resume ([086229b](https://github.com/racecraft-lab/racecraft-plugins-public/commit/086229b3802015db2f856f38f340d8d34e02b301))
+* **formal:** qualify setup, consumer CI, and plugin integration ([1b2a960](https://github.com/racecraft-lab/racecraft-plugins-public/commit/1b2a9603ec5c61072af0f064e42af6edf17fdba9))
+* **formal:** qualify setup, consumer CI, and plugin integration ([f258325](https://github.com/racecraft-lab/racecraft-plugins-public/commit/f25832538882045df1b9170ea34ac25a880e02cf))
+
+
+### Bug Fixes
+
+* **formal:** accept indented JSON fences ([af2c15b](https://github.com/racecraft-lab/racecraft-plugins-public/commit/af2c15b77b5de40307961da36edcc2859ed28511))
+* **formal:** accept indented JSON fences ([d08b7d4](https://github.com/racecraft-lab/racecraft-plugins-public/commit/d08b7d421ce90017e5d72127418dcb0462f87236))
+* **formal:** align Quint catalog schema and diagnostics ([2c4cb30](https://github.com/racecraft-lab/racecraft-plugins-public/commit/2c4cb3018b9ca2b9a9f1eefe1937dad8ea5e84f9))
+* **formal:** clarify workflow trace selection ([1cb7fa8](https://github.com/racecraft-lab/racecraft-plugins-public/commit/1cb7fa804e63f57e7363b7b9e169853bfa72358c))
+* **formal:** constrain checker runtime and ground authoring guidance ([f9075ae](https://github.com/racecraft-lab/racecraft-plugins-public/commit/f9075aedf7a342d315b4de5138384cb9b8f57d56))
+* **formal:** distinguish bounded checks in beginner coaching ([1302cae](https://github.com/racecraft-lab/racecraft-plugins-public/commit/1302cae99984465a37996fae0918705f7ee1f8f5))
+* **formal:** distinguish bounded checks in beginner coaching ([d6acb0b](https://github.com/racecraft-lab/racecraft-plugins-public/commit/d6acb0bb799942f02d257fdefd5511a6f77f8827))
+* **formal:** follow installed runtime and workflow conventions ([44f7032](https://github.com/racecraft-lab/racecraft-plugins-public/commit/44f7032955e2f29b04b0dc4019e11dc115923427))
+* **formal:** launch the installed runner from its plugin root ([96e8e44](https://github.com/racecraft-lab/racecraft-plugins-public/commit/96e8e444bced862c347f5ebc3c61581b8d83fa40))
+* **formal:** reject empty declared implementation scope ([fa83285](https://github.com/racecraft-lab/racecraft-plugins-public/commit/fa832856a13857f6e2d3fe14667504e375c0ac98))
+* **formal:** treat invalid evidence timestamps as stale ([5734fd9](https://github.com/racecraft-lab/racecraft-plugins-public/commit/5734fd9ba69a150577d134a4ca69347a605939d4))
+* **formal:** validate checker identity and report checkpoint writes ([8a581bd](https://github.com/racecraft-lab/racecraft-plugins-public/commit/8a581bda246a6f52e561cd6681b62281194e24ad))
+* **spec-index:** honor Git ignore rules in generated backlinks ([#568](https://github.com/racecraft-lab/racecraft-plugins-public/issues/568)) ([0cfe88b](https://github.com/racecraft-lab/racecraft-plugins-public/commit/0cfe88bd9a185ceea4de47efbd000efa311c8932))
+* **speckit-pro:** omit empty spec index separators ([#567](https://github.com/racecraft-lab/racecraft-plugins-public/issues/567)) ([29c13b8](https://github.com/racecraft-lab/racecraft-plugins-public/commit/29c13b801d1d17aa5e5028fd56b41ff271988fd4))
+* **speckit-pro:** preflight autopilot execution boundaries ([#576](https://github.com/racecraft-lab/racecraft-plugins-public/issues/576)) ([42f4afe](https://github.com/racecraft-lab/racecraft-plugins-public/commit/42f4afe5bd2a319f81ea4b28799ec13bfa8e6107))
+* **speckit-pro:** preserve requirement provenance during Plan repair ([#569](https://github.com/racecraft-lab/racecraft-plugins-public/issues/569)) ([f0d94ca](https://github.com/racecraft-lab/racecraft-plugins-public/commit/f0d94ca70db732f6cda12bd6f9f35682c29db0f2))
+* **speckit-pro:** verify artifact preview handoffs ([#574](https://github.com/racecraft-lab/racecraft-plugins-public/issues/574)) ([e8b770a](https://github.com/racecraft-lab/racecraft-plugins-public/commit/e8b770af062b739550d2ae0e38545a3488fb67b7))
+
 ## [2.31.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.30.1...speckit-pro-v2.31.0) (2026-09-09)
 
 
