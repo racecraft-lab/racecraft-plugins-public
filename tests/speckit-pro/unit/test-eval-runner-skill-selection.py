@@ -14,6 +14,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -315,6 +316,7 @@ def runtime_contract_violations() -> list[str]:
         "do not claim",
         "must not",
     )
+    read_only_packet = r"\bvalidate-pr-packet(?:-read-only)?(?![\w-])"
 
     for path in runtime_contract_files():
         relative = path.relative_to(REPO_ROOT).as_posix()
@@ -340,8 +342,8 @@ def runtime_contract_violations() -> list[str]:
 
             persistence_claim = any(
                 term in lowered for term in ("validation.json", "validation_result_path", "validation file")
-            ) or re.search(r"validate-pr-packet.{0,100}\b(?:writes|persists|persisted|written)\b", lowered)
-            if "validate-pr-packet" in lowered and persistence_claim:
+            ) or re.search(rf"{read_only_packet}.{{0,100}}\b(?:writes|persists|persisted|written)\b", lowered)
+            if re.search(read_only_packet, lowered) and persistence_claim:
                 if not any(marker in lowered for marker in persistence_safe):
                     violations.append(f"{relative}: claims read-only packet validation persists state")
     return sorted(set(violations))
@@ -760,6 +762,20 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
         for name, mutated in canaries.items():
             with self.subTest(msg=name):
                 self.assertTrue(post_implementation_outcome_violations({"Claude": mutated, "Codex": codex}))
+
+    def test_packet_persistence_claims_distinguish_read_only_and_write_helpers(self) -> None:
+        cases = (
+            ("validate-pr-packet-write persists validation_result_path.", False),
+            ("validate-pr-packet persists validation_result_path.", True),
+            ("validate-pr-packet-read-only writes validation.json.", True),
+            ("validate-pr-packet-read-only persists its result.", True),
+            ("validate-pr-packet-read-only does not persist a validation file.", False),
+        )
+        for prose, rejected in cases:
+            with self.subTest(prose=prose), patch(
+                f"{__name__}.runtime_contract_files", return_value=[REPO_ROOT / "fixture.md"]
+            ), patch(f"{__name__}.contract_units", return_value=[prose]):
+                self.assertEqual(bool(runtime_contract_violations()), rejected)
 
     def test_eval_runner_skill_selection_contract(self) -> None:
         self.assertEqual(retired_contract_violations(), [])
