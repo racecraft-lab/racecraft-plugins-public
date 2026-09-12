@@ -231,6 +231,35 @@ class BatchedTaskResultsTests(unittest.TestCase):
             self.assertEqual(raw, self.path.read_bytes())
         self.path.write_bytes(original)
 
+    def test_stored_journal_shape_and_metadata_identity_are_validated_on_inspect(self):
+        journal = self.call()["journal"]
+        variants = []
+        for key in ("task_units", "batches", "reports"):
+            variant = copy.deepcopy(journal)
+            del variant[key]
+            variants.append(variant)
+        variant = copy.deepcopy(journal)
+        del variant["batches"][0]["tasks"]
+        variants.append(variant)
+        variant = copy.deepcopy(journal)
+        variant["batches"][1]["id"] = "B001"
+        variants.append(variant)
+        variant = copy.deepcopy(journal)
+        variant["batches"][0]["tasks"].append("T999")
+        variants.append(variant)
+        variant = copy.deepcopy(journal)
+        variant["task_units"]["T001"] = "other"
+        variants.append(variant)
+        variant = copy.deepcopy(journal)
+        variant["batches"][1]["tasks"].append("T001")
+        variants.append(variant)
+        for variant in variants:
+            self.path.write_text(json.dumps(variant))
+            before = self.path.read_bytes()
+            with self.assertRaises(ValueError):
+                self.call("inspect", mode="read_only")
+            self.assertEqual(before, self.path.read_bytes())
+
     def test_feature_lock_rejects_concurrent_writer(self):
         self.call()
         lock = self.path.parent / "journal-writer.lock"
@@ -317,6 +346,9 @@ class BatchedTaskResultsTests(unittest.TestCase):
         code, result = self.runner("record", **report)
         self.assertEqual(code, 1, result)
         self.assertEqual(result["status"], "expected_failure")
+        code, inspected = self.runner("inspect", mode="read_only")
+        self.assertEqual(code, 0, inspected)
+        self.assertEqual(inspected["data"]["disposition"], "checkpoint_required")
         report["results"].append(copy.deepcopy(report["results"][0]))
         code, result = self.runner("record", **report)
         self.assertEqual(code, 2, result)

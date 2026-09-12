@@ -187,6 +187,36 @@ def append_report(root: Path, journal: dict[str, Any], inputs: dict[str, Any]) -
     return True
 
 
+def validate_journal(root: Path, journal: dict[str, Any], metadata: dict[str, Any]) -> None:
+    required = {"schema_version", "tasks_file", "fingerprints", "metadata_sha256", "batches", "task_units", "reports"}
+    lineage = {"prior_journal_file", "prior_journal_sha256", "reconciliation_event_id", "reconciliation_reason"}
+    if not required <= journal.keys() or journal.keys() - required not in (set(), lineage):
+        raise ValueError("journal fields are incomplete or unknown")
+    if not isinstance(journal["batches"], list) or not isinstance(journal["reports"], list) or not isinstance(journal["task_units"], dict):
+        raise ValueError("journal batches, reports, or task_units malformed")
+    seen = []
+    for ordinal, batch in enumerate(journal["batches"], 1):
+        tasks = batch.get("tasks")
+        if batch.get("id") != f"B{ordinal:03d}" or not isinstance(tasks, list) or not tasks or any(not isinstance(t, str) for t in tasks):
+            raise ValueError("frozen batch IDs or tasks malformed")
+        seen.extend(tasks)
+        if any(t not in metadata["tasks"] or journal["task_units"].get(t) != metadata["tasks"][t]["tdd_unit"] for t in tasks):
+            raise ValueError("frozen task identity does not match approved metadata")
+        if batch.get("tdd_units") != list(dict.fromkeys(journal["task_units"][t] for t in tasks)):
+            raise ValueError("frozen batch TDD units do not match task identity")
+        text_field(batch["agent"], "frozen agent route")
+        if batch.get("tdd_not_applicable_reason") != non_tdd_reason(batch):
+            raise ValueError("TDD exception must match the frozen native route")
+    if len(seen) != len(set(seen)) or set(seen) != set(journal["task_units"]):
+        raise ValueError("frozen tasks must appear exactly once with complete unit mapping")
+    replay = {**journal, "reports": []}
+    for report in journal["reports"]:
+        if not isinstance(report, dict) or set(report) != {"batch_id", "results", "native_observations"}:
+            raise ValueError("invalid persisted report fields")
+        if not append_report(root, replay, report):
+            raise ValueError("duplicate persisted report")
+
+
 def task_results(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, Any]:
     """Validate supplied evidence; never execute workers or authenticate the caller.
 
@@ -218,13 +248,7 @@ def task_results(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, Any
                 if (journal.get("schema_version") != SCHEMA or journal.get("tasks_file") != inputs["tasks_file"]
                         or any(journal.get(k) != v for k, v in binding.items())):
                     raise ValueError("stale task result binding; explicit parent reconciliation and successor journal required")
-                if not isinstance(journal.get("batches"), list) or not isinstance(journal.get("reports"), list):
-                    raise ValueError("malformed task result journal")
-                for batch in journal["batches"]:
-                    if batch.get("tdd_not_applicable_reason") != non_tdd_reason(batch):
-                        raise ValueError("TDD exception must match the frozen native route")
-                for report in journal["reports"]:
-                    validate_report(root, journal, report)
+                validate_journal(root, journal, metadata)
             elif action == "start":
                 journal = start_journal(root, inputs, tasks, path, binding, metadata)
                 changed = True
