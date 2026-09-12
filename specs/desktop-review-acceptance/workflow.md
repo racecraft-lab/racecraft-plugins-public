@@ -64,7 +64,7 @@ gap. They do not prove browser rendering, human approval, or manual UAT.
       "sha256": "83991a628c386343f7881f002145e8c9458c10f0c193c885a45b9f179ae913c0",
       "expected_title": "Implementation Plan — Desktop Artifact Review Acceptance",
       "expected_content": "Four rendered pages share one durable handoff",
-      "preview": {"status": "pending", "blocker": "Not observed yet", "observation": null}
+      "preview": {"status": "verified", "blocker": null, "observation": {"kind": "rendered", "title": "Implementation Plan — Desktop Artifact Review Acceptance", "body_text": "Four rendered pages share one durable handoff so reviewers can resume artifact delivery without mistaking planning for UAT.", "route": "http://127.0.0.1:8765/implementation-plan.html", "reference": "codex-task:01a0963e-207b-70c1-b138-51853cee8573/observation/571-plan-1", "observed_at": "2026-09-12T17:03:19.263Z"}}
     },
     {
       "id": "spec-explainer",
@@ -73,7 +73,7 @@ gap. They do not prove browser rendering, human approval, or manual UAT.
       "sha256": "cc2b4092fab312f2d65cfb6e1a02f550ffd1800882454402d3944a80a6d7557b",
       "expected_title": "Spec Explainer — Desktop Artifact Review Acceptance",
       "expected_content": "A disposable evidence fixture that separates generated gallery pages",
-      "preview": {"status": "pending", "blocker": "Not observed yet", "observation": null}
+      "preview": {"status": "verified", "blocker": null, "observation": {"kind": "rendered", "title": "Spec Explainer — Desktop Artifact Review Acceptance", "body_text": "A disposable evidence fixture that separates generated gallery pages from rendered observation, approval, and UAT.", "route": "http://127.0.0.1:8765/spec-explainer.html", "reference": "codex-task:01a0963e-207b-70c1-b138-51853cee8573/observation/571-spec-1", "observed_at": "2026-09-12T17:03:31.998Z"}}
     },
     {
       "id": "code-approaches",
