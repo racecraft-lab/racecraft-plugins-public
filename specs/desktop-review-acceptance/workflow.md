@@ -82,7 +82,7 @@ gap. They do not prove browser rendering, human approval, or manual UAT.
       "sha256": "dd09107edfb98f6cbc7af32b405189aa0e436af91c0ad5dbba94d50e5649e5bc",
       "expected_title": "Code Approaches — Desktop Artifact Review Acceptance",
       "expected_content": "Two ways to carry artifact evidence",
-      "preview": {"status": "pending", "blocker": "Not observed yet", "observation": null}
+      "preview": {"status": "verified", "blocker": null, "observation": {"kind": "rendered", "title": "Code Approaches — Desktop Artifact Review Acceptance", "body_text": "Two ways to carry artifact evidence: a report-only snapshot or one durable workflow handoff that the resolver can resume.", "route": "http://127.0.0.1:8765/code-approaches.html", "reference": "codex-task:01a0963e-207b-70c1-b138-51853cee8573/observation/571-approaches-1", "observed_at": "2026-09-12T17:05:23.661Z"}}
     },
     {
       "id": "module-map",
@@ -91,7 +91,7 @@ gap. They do not prove browser rendering, human approval, or manual UAT.
       "sha256": "e5e761e930c072a7cf82cab2e67c55adeee9dd00cd68b69fca461e87a5821949",
       "expected_title": "Module Map — Desktop Artifact Review Acceptance",
       "expected_content": "The existing resolver and artifact-review module meet at one workflow handoff",
-      "preview": {"status": "pending", "blocker": "Not observed yet", "observation": null}
+      "preview": {"status": "verified", "blocker": null, "observation": {"kind": "rendered", "title": "Module Map — Desktop Artifact Review Acceptance", "body_text": "The existing resolver and artifact-review module meet at one workflow handoff; this fixture reads those boundaries without modifying production code.", "route": "http://127.0.0.1:8765/module-map.html", "reference": "codex-task:01a0963e-207b-70c1-b138-51853cee8573/observation/571-module-1", "observed_at": "2026-09-12T17:05:35.470Z"}}
     },
     {
       "id": "architecture-viewer",
