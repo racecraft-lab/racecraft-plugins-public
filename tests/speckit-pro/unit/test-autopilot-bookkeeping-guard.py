@@ -519,6 +519,28 @@ class AutonomyBoundaryFreshnessTests(unittest.TestCase):
                 errors = _autonomy_errors(state, root)
                 self.assertTrue(any(expected in error for error in errors), errors)
 
+    def test_non_serializable_execution_boundary_does_not_cascade_digest_errors(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            state = _autonomy_boundary_state(root)
+            state["autonomy_boundary"]["execution_boundary"]["execution_environment"] = object()
+
+            errors = _autonomy_errors(state, root)
+
+        self.assertEqual(
+            [error for error in errors if "execution_boundary sha256" in error],
+            ["autonomy boundary execution_boundary sha256 does not match its current scope"],
+            errors,
+        )
+        self.assertFalse(
+            any("current execution boundary does not match" in error for error in errors),
+            errors,
+        )
+        self.assertFalse(
+            any("execution_boundary_sha256 is stale" in error for error in errors),
+            errors,
+        )
+
     def test_changed_scope_and_stale_planning_bytes_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

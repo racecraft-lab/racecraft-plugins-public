@@ -4458,7 +4458,7 @@ def _autonomy_execution_errors(
     ):
         errors.append("autonomy boundary writable_roots must contain absolute paths")
     execution_sha = _canonical_json_sha256(_autonomy_scope(execution, AUTONOMY_EXECUTION_FIELDS))
-    if execution.get("sha256") != execution_sha:
+    if execution_sha is None or execution.get("sha256") != execution_sha:
         errors.append("autonomy boundary execution_boundary sha256 does not match its current scope")
     return errors, execution_sha
 
@@ -4558,7 +4558,7 @@ def _autonomy_actions_errors(
     errors: list[str] = []
     records = [action for action in actions if isinstance(action, dict)]
     for index, action in enumerate(actions):
-        if isinstance(action, dict):
+        if isinstance(action, dict) and execution_sha is not None:
             errors.extend(_autonomy_action_errors(action, index, execution_sha))
     action_ids = [action.get("action_id") for action in records]
     comparable = [action_id for action_id in action_ids if isinstance(action_id, str)]
@@ -4599,13 +4599,14 @@ def validate_autonomy_boundary(
     errors.extend(_autonomy_planning_errors(boundary, repo_root))
     execution_errors, execution_sha = _autonomy_execution_errors(boundary)
     errors.extend(execution_errors)
-    errors.extend(
-        _autonomy_current_execution_errors(
-            current_execution_boundary,
-            execution_sha,
-            boundary_required,
+    if execution_sha is not None:
+        errors.extend(
+            _autonomy_current_execution_errors(
+                current_execution_boundary,
+                execution_sha,
+                boundary_required,
+            )
         )
-    )
     errors.extend(_autonomy_actions_errors(boundary, execution_sha))
     return {"autonomy_boundary_errors": errors}
 
