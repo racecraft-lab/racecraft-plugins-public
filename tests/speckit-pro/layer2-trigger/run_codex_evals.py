@@ -49,6 +49,7 @@ import trigger_process as processes  # noqa: E402
 import trigger_evidence as evidence_records  # noqa: E402
 
 PLUGIN_ROOT = TESTS_ROOT.parents[1] / "speckit-pro"           # <repo>/speckit-pro
+CODEX_WORKSPACE_FIXTURE_ROOT = TESTS_ROOT / "layer2-trigger/fixtures/codex-workspace"
 DEFAULT_REASONING_EFFORT = "low"
 DEFAULT_MODEL = "gpt-5.6-sol"
 PINNED_CODEX_VERSION = "codex-cli 0.153.3"
@@ -123,6 +124,13 @@ def load_eval_corpus(path: pathlib.Path) -> tuple[list[dict[str, object]] | None
             return None, f"eval case {index} duplicates query {query!r}"
         seen_queries.add(query)
     return value, "valid eval corpus"
+
+
+def stage_workspace_fixture(workspace: pathlib.Path) -> None:
+    """Populate file-backed eval requests without exposing the source checkout."""
+    if not CODEX_WORKSPACE_FIXTURE_ROOT.is_dir():
+        raise ValueError(f"Codex workspace fixture is unavailable: {CODEX_WORKSPACE_FIXTURE_ROOT}")
+    shutil.copytree(CODEX_WORKSPACE_FIXTURE_ROOT, workspace, dirs_exist_ok=True)
 
 
 def find_eval_file(skill: str) -> pathlib.Path:
@@ -1608,6 +1616,7 @@ def main() -> int:
         )
         if initialized.returncode != 0:
             raise ValueError(f"could not initialize disposable eval repository: {initialized.stderr.strip()}")
+        stage_workspace_fixture(workspace)
         skill_dir = stage_repository_skill(skill_src, workspace, test_skill_name, marker)
         target_skill = skill_dir / "SKILL.md"
         target_description = source_skill_description(skill_src)

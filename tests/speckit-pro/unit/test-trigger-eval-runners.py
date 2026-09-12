@@ -297,6 +297,25 @@ def supervised_results(results: list[tuple[int, bytes, bytes, bool]], requested_
 
 
 class Layer2TriggerRunnerTests(unittest.TestCase):
+    def test_codex_stages_file_backed_query_fixtures(self) -> None:
+        engine = import_script(CODEX_ENGINE, "layer2_codex_workspace_fixture")
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            fixture_root = root / "fixture"
+            workspace = root / "workspace"
+            (fixture_root / "docs").mkdir(parents=True)
+            workspace.mkdir()
+            (fixture_root / "docs" / "idea.md").write_text("client brief\n", encoding="utf-8")
+
+            with mock.patch.object(engine, "CODEX_WORKSPACE_FIXTURE_ROOT", fixture_root):
+                engine.stage_workspace_fixture(workspace)
+
+            self.assertEqual((workspace / "docs" / "idea.md").read_text(), "client brief\n")
+
+            with mock.patch.object(engine, "CODEX_WORKSPACE_FIXTURE_ROOT", root / "missing"):
+                with self.assertRaisesRegex(ValueError, "workspace fixture is unavailable"):
+                    engine.stage_workspace_fixture(workspace)
+
     def test_preflight_keyboard_interrupt_preserves_runner_exit_and_cleanup(self) -> None:
         for host in ("claude", "codex"):
             with self.subTest(host=host), tempfile.TemporaryDirectory() as temporary:

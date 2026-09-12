@@ -98,7 +98,11 @@ root remains available to the CLI through the public
 and `TMPDIR` inside the fixture. The named permission profile keeps the staged
 repository read-only and grants write access only to that scratch directory, so
 routine inspection has a writable cache location without exposing the real home
-or granting shared temporary-directory writes. Network access remains disabled.
+or granting shared temporary-directory writes. Before provider launch, the
+runner copies a repository-owned fixture containing the local input files named
+by file-backed eval queries into that disposable repository. This keeps those
+queries realistic without exposing the source checkout or weakening failed-command
+rejection. Network access remains disabled.
 The per-trial launch contract attests each of these environment boundaries. On
 qualified POSIX hosts, fd 0 is a fresh pseudo-terminal so the positional query
 is the only prompt input. This bypasses Codex's documented non-terminal stdin
