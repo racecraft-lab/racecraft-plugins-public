@@ -1123,12 +1123,20 @@ After Tasks and before dispatch following any changed task definitions, validate
 metadata-producing workflows. Follow the shared [batch contract](../../../skills/speckit-autopilot/references/execution-efficiency.md):
 `partition-phase7-tasks` owns existing phase/agent routing and dependency/ownership
 waves. Supply `task_execution_required` and parent-verified `completed_tasks`.
+Call `task-results` `action=start` before dispatch to freeze the original
+partition in the feature's named journal. On resume, use `action=inspect` and
+reconcile retained complete/unfinished results rather than renumbering batches.
 Dispatch one `spawn_agent` per implementation or research batch; verification
 routes stay orchestrator-direct with no agent. Supply TDD only to implementation
 and project agents, up to four adjacent assigned tasks sequentially, with shared
 context/reservation once. Never exceed derived
 `subagent_slots`. Consume every real per-task result, update both state stores,
-and append separate implementation-notes entries; no compound task IDs. Legacy
+and call `task-results` `action=record` with every frozen task's full result
+block plus independently captured parent `native_observations` before marking
+completion. Follow the shared journal inputs; invalid evidence blocks recording
+and unfinished results require a checkpoint, not replay. Use `action=inspect`
+again before group completion; native authorization qualification stays pending.
+Append separate implementation-notes entries; no compound task IDs. Legacy
 runs use singletons. Repartition before dispatch if inputs/ownership changed.
 Run focused tests and one independent review per capability group; reserve only
 localized failed-closure repairs. Do not serially replay a whole wave.

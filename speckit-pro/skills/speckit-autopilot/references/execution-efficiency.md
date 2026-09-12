@@ -126,6 +126,54 @@ effects require the read-only reconciliation/checkpoint path, not a replay of
 the entire batch. Existing legacy partition output is consumed one task at a
 time even if its old `[P]` runs contain several tasks.
 
+### Persist per-task evidence
+
+For metadata-aware execution, invoke runner helper/operation `task-results`:
+
+- `action=start`, `mode=apply`: before dispatch, pass `tasks_file`,
+  `journal_file=<feature>/.process/task-results/<run-id>.json`, and the same
+  partition routing/concurrency/completed-task inputs. This freezes the original
+  partition and `batches[].id`; reuse that journal after checkbox changes rather
+  than inventing fresh batch IDs. Dry-run previews do not persist it.
+- `action=record`, `mode=apply`: on each native batch result, supply that
+  `batch_id`, all frozen task IDs in order as `results`, and independent parent
+  `native_observations`. Each result has `task_id`, `tdd_unit`,
+  `status=complete|unfinished`, the full original Task Result `block`, and
+  `evidence_event_ids`. Do not store just counters or `passed: true`.
+- `action=inspect`, `mode=read_only`: before resume and group completion, read
+  the same `tasks_file`/`journal_file` and reconcile retained reports with actual
+  effects. Only independently established complete tasks enter `completed_tasks`;
+  preserve unfinished results and resume only their uncompleted work.
+
+Each implementation parent-supplied native observation carries `event_id`, `tdd_unit`,
+`stage=red|green|refactor`, actual `argv`, integer `exit_code`,
+`classification=assertion_failure|test_pass|infrastructure`, contained
+`output_path`, `output_sha256`, and `snapshot_sha256`. Complete implementation
+units require distinct ordered RED/GREEN/refactor events for the same focused
+command: assertion-failure/nonzero RED, test-pass/zero GREEN and refactor.
+Shared TDD-unit tasks share status and evidence references; no test-only GREEN.
+For research or orchestrator-direct tasks, the frozen route derives
+`tdd_not_applicable_reason`; workers cannot supply that reason or change the
+route. Their independent native observation instead has `event_id`, `tdd_unit`,
+`stage=task_result`, `task_id`, `outcome=completed`, `output_path`, and
+`output_sha256`. Retain the full result block and never fabricate RED/GREEN/refactor
+for non-TDD work. This event cannot complete an implementation task.
+Workers supply their result blocks, never the independent native observations.
+
+Missing, duplicate, reordered, stale, or invalid evidence blocks recording;
+never discard earlier reports to make a record pass. An unfinished report is
+persisted with `helper_exit_code=1` and `disposition=checkpoint_required`.
+On a partial batch's later report, carry every previously complete task's block
+and evidence references unchanged; identical native observations may be carried
+only for those completed tasks. Resume unfinished work without replaying them.
+Changed definitions require explicit parent reconciliation: a successor journal
+names `prior_journal_file`, `reconciliation_event_id`, and
+`reconciliation_reason`, preserving the old journal unchanged. Its new reports
+start empty; prior evidence is linked, not manufactured as new completion.
+The journal always reports `native_qualification=pending` and
+`authorization_granted=false`: JSON validation and synthetic fixture success
+cannot authenticate native events or authorize continuation on their own.
+
 ## Required proof once per unchanged snapshot
 
 Use focused tests per behavior and one independent review per completed

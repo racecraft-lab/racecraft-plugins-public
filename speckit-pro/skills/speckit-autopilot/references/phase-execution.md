@@ -2435,6 +2435,10 @@ reconstruct either routing or scheduling from prose.
 
 ```text
 Recover COMPLETED_TASKS from consumed results and verified effects.
+Call task-results action=start before dispatch to freeze the original partition
+in the feature's named result journal; follow the shared exact input contract.
+On resume call task-results action=inspect and reconcile retained complete and
+unfinished results before selecting work; never reset batch IDs from checkboxes.
 For each dependency-ready wave from the helper:
   Check execution-control status and reserve each batch before dispatch.
   For implementation/project-agent batches, dispatch one native Agent with TDD.
@@ -2447,6 +2451,9 @@ For each dependency-ready wave from the helper:
   Each worker executes its at-most-four task IDs sequentially.
   Consume actual per-task results, not idle/liveness signals.
   Teammates MUST send each complete Task Result block to the lead.
+  Call task-results action=record with every frozen task's full result block
+  and independently captured parent native_observations before marking tasks
+  complete. A journal checkpoint or invalid record does not authorize replay.
   Append each task's implementation-notes entry on result arrival.
   For a team, request graceful shutdown after every report is received and
   confirm owned cleanup before starting another team. Idle is not a result.
@@ -2455,6 +2462,7 @@ For each dependency-ready wave from the helper:
   Record execution-control completion for each dispatch.
 
 At each completed capability group:
+  Call task-results action=inspect and reconcile every required task result.
   Run its focused behavioral tests and one independent requirements review.
   Reserve any localized corrective work by stable failure invariant.
   Do not replay an entire wave or rerun every full-suite command.

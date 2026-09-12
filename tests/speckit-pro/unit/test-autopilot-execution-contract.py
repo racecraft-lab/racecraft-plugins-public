@@ -28,7 +28,7 @@ class ExecutionContractTests(unittest.TestCase):
         policy = (SHARED / "references/execution-efficiency.md").read_text()
         for helper in ("validate-task-execution", "partition-phase7-tasks",
                        "execution-control", "execute-verification",
-                       "validate-execution-record"):
+                       "validate-execution-record", "task-results"):
             self.assertIn(helper, policy)
         for field in ("checkpoint_required", "failure_invariant", "reservation_id",
                       "task_execution_required", "completed_tasks", "reusable=false"):
@@ -141,6 +141,26 @@ class ExecutionMirrorTests(unittest.TestCase):
                 })["state_status_errors"])
 
 class NativeRequestContractTests(unittest.TestCase):
+    def test_journal_evidence_follows_frozen_route_and_preserves_partial_results(self):
+        policy = " ".join((SHARED / "references/execution-efficiency.md").read_text().split())
+        for boundary in ("`stage=task_result`", "`outcome=completed`",
+                         "`tdd_not_applicable_reason`", "frozen route",
+                         "previously complete task's block and evidence references unchanged",
+                         "never fabricate RED/GREEN/refactor"):
+            with self.subTest(boundary=boundary):
+                self.assertIn(boundary, policy)
+
+    def test_both_native_dispatches_use_persisted_task_results(self):
+        for path in (SHARED / "references/phase-execution.md",
+                     CODEX / "references/phase-execution-codex.md"):
+            phase = " ".join(path.read_text().split())
+            with self.subTest(path=path):
+                for call in ("task-results", "action=start", "action=record", "action=inspect"):
+                    self.assertIn(call, phase)
+                self.assertIn("before dispatch", phase)
+                self.assertIn("native_observations", phase)
+                self.assertIn("unfinished", phase)
+
     def test_parent_mirror_contract_names_actual_envelope_and_spec_path(self):
         policy = (SHARED / "references/execution-efficiency.md").read_text()
         for term in ("inputs.spec_file", "result.data.ledger.run_id", "ledger_path",
