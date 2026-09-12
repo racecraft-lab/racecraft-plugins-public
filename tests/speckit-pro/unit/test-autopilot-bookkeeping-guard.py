@@ -519,44 +519,6 @@ class AutonomyBoundaryFreshnessTests(unittest.TestCase):
                 errors = _autonomy_errors(state, root)
                 self.assertTrue(any(expected in error for error in errors), errors)
 
-    def test_non_serializable_execution_boundary_does_not_cascade_digest_errors(self) -> None:
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            state = _autonomy_boundary_state(root)
-            boundary = state["autonomy_boundary"]
-            boundary["execution_boundary"]["execution_environment"] = object()
-            action = boundary["actions"][0]
-            action["target"] = "/opt/other"
-
-            errors = _autonomy_errors(state, root)
-
-        self.assertEqual(
-            [error for error in errors if "execution_boundary sha256" in error],
-            [],
-            errors,
-        )
-        self.assertEqual(
-            [
-                error
-                for error in errors
-                if "execution_boundary scope cannot be canonicalized/serialized for sha256" in error
-            ],
-            [
-                "autonomy boundary execution_boundary scope cannot be canonicalized/serialized for sha256"
-            ],
-            errors,
-        )
-        self.assertFalse(
-            any("current execution boundary does not match" in error for error in errors),
-            errors,
-        )
-        self.assertFalse(
-            any("execution_boundary_sha256 is stale" in error for error in errors),
-            errors,
-        )
-        self.assertTrue(any("scope_sha256 does not match its action scope" in error for error in errors), errors)
-        self.assertTrue(any("authorization.scope_sha256 does not match its action scope" in error for error in errors), errors)
-
     def test_changed_scope_and_stale_planning_bytes_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
@@ -628,6 +590,47 @@ class AutonomyBoundaryFreshnessTests(unittest.TestCase):
                 require_boundary=True,
             )["autonomy_boundary_errors"]
             self.assertTrue(any("current execution boundary" in error for error in errors), errors)
+
+
+class AutonomyBoundaryMalformedExecutionTests(unittest.TestCase):
+    def test_non_serializable_execution_boundary_does_not_cascade_digest_errors(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            state = _autonomy_boundary_state(root)
+            boundary = state["autonomy_boundary"]
+            boundary["execution_boundary"]["execution_environment"] = object()
+            action = boundary["actions"][0]
+            action["target"] = "/opt/other"
+
+            errors = _autonomy_errors(state, root)
+
+        self.assertEqual(
+            [error for error in errors if "execution_boundary sha256" in error],
+            [],
+            errors,
+        )
+        self.assertEqual(
+            [
+                error
+                for error in errors
+                if "execution_boundary scope cannot be canonicalized/serialized for sha256" in error
+            ],
+            [
+                "autonomy boundary execution_boundary scope cannot be canonicalized/serialized for sha256"
+            ],
+            errors,
+        )
+        self.assertFalse(
+            any("current execution boundary does not match" in error for error in errors),
+            errors,
+        )
+        self.assertFalse(
+            any("execution_boundary_sha256 is stale" in error for error in errors),
+            errors,
+        )
+        self.assertTrue(any("scope_sha256 does not match its action scope" in error for error in errors), errors)
+        self.assertTrue(any("authorization.scope_sha256 does not match its action scope" in error for error in errors), errors)
+
 
 class AutonomyBoundaryNegativeAuthorizationTests(unittest.TestCase):
     def test_automatic_review_and_prior_execution_are_not_authorization(self) -> None:
@@ -1516,6 +1519,7 @@ def build_suite() -> unittest.TestSuite:
         AutonomyBoundarySourceContractTests,
         AutonomyBoundaryAuthorizationTests,
         AutonomyBoundaryFreshnessTests,
+        AutonomyBoundaryMalformedExecutionTests,
         AutonomyBoundaryNegativeAuthorizationTests,
         AutonomyBoundaryStageTests,
         RuleScopingTests,
