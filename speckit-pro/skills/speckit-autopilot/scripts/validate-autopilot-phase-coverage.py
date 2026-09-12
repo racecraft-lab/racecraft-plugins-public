@@ -4458,7 +4458,11 @@ def _autonomy_execution_errors(
     ):
         errors.append("autonomy boundary writable_roots must contain absolute paths")
     execution_sha = _canonical_json_sha256(_autonomy_scope(execution, AUTONOMY_EXECUTION_FIELDS))
-    if execution_sha is None or execution.get("sha256") != execution_sha:
+    if execution_sha is None:
+        errors.append(
+            "autonomy boundary execution_boundary scope cannot be canonicalized/serialized for sha256"
+        )
+    elif execution.get("sha256") != execution_sha:
         errors.append("autonomy boundary execution_boundary sha256 does not match its current scope")
     return errors, execution_sha
 
@@ -4532,7 +4536,7 @@ def _autonomy_action_errors(
 ) -> list[str]:
     prefix = f"autopilot_state.autonomy_boundary.actions[{index}]"
     errors: list[str] = []
-    if action.get("execution_boundary_sha256") != execution_sha:
+    if execution_sha is not None and action.get("execution_boundary_sha256") != execution_sha:
         errors.append(f"{prefix}.execution_boundary_sha256 is stale")
     scope_sha = _canonical_json_sha256(_autonomy_scope(action, AUTONOMY_ACTION_FIELDS))
     if action.get("scope_sha256") != scope_sha:
@@ -4558,7 +4562,7 @@ def _autonomy_actions_errors(
     errors: list[str] = []
     records = [action for action in actions if isinstance(action, dict)]
     for index, action in enumerate(actions):
-        if isinstance(action, dict) and execution_sha is not None:
+        if isinstance(action, dict):
             errors.extend(_autonomy_action_errors(action, index, execution_sha))
     action_ids = [action.get("action_id") for action in records]
     comparable = [action_id for action_id in action_ids if isinstance(action_id, str)]

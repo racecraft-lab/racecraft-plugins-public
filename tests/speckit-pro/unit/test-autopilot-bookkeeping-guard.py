@@ -523,13 +523,27 @@ class AutonomyBoundaryFreshnessTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             state = _autonomy_boundary_state(root)
-            state["autonomy_boundary"]["execution_boundary"]["execution_environment"] = object()
+            boundary = state["autonomy_boundary"]
+            boundary["execution_boundary"]["execution_environment"] = object()
+            action = boundary["actions"][0]
+            action["target"] = "/opt/other"
 
             errors = _autonomy_errors(state, root)
 
         self.assertEqual(
             [error for error in errors if "execution_boundary sha256" in error],
-            ["autonomy boundary execution_boundary sha256 does not match its current scope"],
+            [],
+            errors,
+        )
+        self.assertEqual(
+            [
+                error
+                for error in errors
+                if "execution_boundary scope cannot be canonicalized/serialized for sha256" in error
+            ],
+            [
+                "autonomy boundary execution_boundary scope cannot be canonicalized/serialized for sha256"
+            ],
             errors,
         )
         self.assertFalse(
@@ -540,6 +554,8 @@ class AutonomyBoundaryFreshnessTests(unittest.TestCase):
             any("execution_boundary_sha256 is stale" in error for error in errors),
             errors,
         )
+        self.assertTrue(any("scope_sha256 does not match its action scope" in error for error in errors), errors)
+        self.assertTrue(any("authorization.scope_sha256 does not match its action scope" in error for error in errors), errors)
 
     def test_changed_scope_and_stale_planning_bytes_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
