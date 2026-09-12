@@ -1,0 +1,18 @@
+{
+  "schema_version": "trigger-controlled-description/v1",
+  "baseline_ref": "01dc73d40305109e81dff0c9c21a3d4b5e9b1fcd",
+  "candidate_ref": "42f4afe5bd2a319f81ea4b28799ec13bfa8e6107",
+  "symbol": "NO_SPECKIT_SKILL_DESCRIPTION",
+  "files": {
+    "baseline": {"path": "controlled-descriptions/baseline.txt", "sha256": "49efb809edca1849750ecffdc59ae78c64f0b3f23c469b2e38f7572c74bd1844"},
+    "candidate": {"path": "controlled-descriptions/candidate.txt", "sha256": "a4572888c5e2ccbc1d052be89ec4dde453ab3d09c3630006523a07aba43c21e8"}
+  },
+  "source_paths": [
+    "tests/speckit-pro/layer2-trigger/run-trigger-evals.py",
+    "tests/speckit-pro/layer2-trigger/run_codex_evals.py"
+  ],
+  "baseline": "Use when the request is ordinary coding, testing, tooling, or repository work that no SpecKit skill covers, such as writing a unit test, configuring a linter, installing packages, or editing application code. Reply that no SpecKit skill applies and stop.",
+  "candidate": "Use when no available SpecKit skill covers the request, including ordinary coding, testing, tooling, or repository work and host-specific SpecKit operations whose matching skill is absent from the current catalog, such as installing Codex subagents when no agent-install skill is available or running the plan stage for an already-existing spec or populated workflow when no planning skill is available. Reply that no available SpecKit skill applies and stop.",
+  "native_qualification": "pending",
+  "launch_authorized": false
+}
