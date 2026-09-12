@@ -33,19 +33,21 @@ $speckit-autopilot workflow.md --from-phase <next-pending-phase>
    `list_agents` is exposed, match current-tree entries to the workflow target
    and current incomplete plan item's canonical task name/prompt. Manage or
    reuse only agents confirmed present and owned by this autopilot run. Without
-   inspection, treat prior-session references as stale and spawn fresh. In
-   either case, loop bounded `wait_agent` calls until each required result is
+   inspection, treat prior-session effects as unknown; do not spawn fresh. Use
+   the shared execution-control ledger's one read-only reconciliation. Loop
+   bounded `wait_agent` calls while time budget remains until each required result is
    actually consumed; use `close_agent` only when exposed and only for
    run-owned agents confirmed present, including reconciled agents.
 
 ## Common Issues
 
-- **Subagent returns empty/incomplete summary:** Re-spawn with the
-  same prompt via `spawn_agent`. If it fails again, run the command
-  directly via shell and parse the output.
-- **Gate fails after 2 auto-fix attempts:** If `gate-failure`
-  setting is `stop`, STOP and report. Show the gate script output
-  so the user can diagnose.
+- **Subagent returns empty/incomplete summary:** Use one read-only reconciliation
+  through `execution-control action=reconcile` to inspect retained output and
+  owned effects. Unknown effects require a checkpoint, not a replacement agent
+  or direct shell retry. Retain verified partial task results; reserve only
+  unfinished work after reconciliation proves it is safe.
+- **Gate needs repair:** Reserve against the same durable failure-family/spec
+  budget used by every nested worker; checkpoint with exact output on exhaustion.
 - **Consensus agents all disagree:** Flag `[HUMAN REVIEW NEEDED]`
   and STOP. Present all 3 perspectives to the user.
 - **MCP tool unavailable:** Skip research that depends on it. Use
@@ -58,7 +60,8 @@ $speckit-autopilot workflow.md --from-phase <next-pending-phase>
   and inspect `list_agents` when possible. Use `interrupt_agent` only when
   exposed and a separate deadline or repeated no-progress check confirms the
   turn is stuck. Interruption preserves context and is not closure or a result;
-  re-spawn the required item and consume its real result before completion.
+  reconcile its effects and checkpoint if unknown. Interruption never grants
+  a replacement launch or resets the same workflow's execution-control budget.
 
 ## Context Window Management
 

@@ -3,6 +3,13 @@
   "mode": "mutation",
   "helpers": [
     {
+      "helper_id": "task-results",
+      "operation": "task-results",
+      "modes": ["read_only", "dry_run", "apply"],
+      "failure_classes": ["invalid_execution_request", "checkpoint_required"],
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/mutation-helpers/requests/task-results.json"
+    },
+    {
       "helper_id": "execution-control",
       "operation": "execution-control",
       "modes": ["read_only", "dry_run", "apply"],

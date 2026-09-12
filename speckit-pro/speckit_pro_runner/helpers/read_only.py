@@ -310,6 +310,7 @@ def canonicalize_inputs(helper_id: str, inputs: dict[str, Any], repo_root: Path)
         "validate-execution-record": {"workflow_file", "record_path"},
         "execution-control": {"workflow_file", "spec_file", "ledger_path"},
         "execute-verification": {"workflow_file", "ledger_path"},
+        "task-results": {"tasks_file", "journal_file", "prior_journal_file"},
         "validate-pr-workflow-contract": {"repo_root", "changed_files"},
         "validate-pr-packet-read-only": {"packet_path"},
     }

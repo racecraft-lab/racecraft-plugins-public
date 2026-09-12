@@ -726,6 +726,10 @@ Consensus uses `codebase-analyst`, `spec-context-analyst`, and
 
 ## Main Execution Loop
 
+Read [Bounded Execution and Verification](execution-efficiency.md).
+Recover the same workflow ledger, check status before advancing, reserve every
+dispatch, and feed the parent's corrective reservation into nested executors.
+
 For each pending phase, spawn a subagent, collect the result, validate the
 gate, and advance.
 
@@ -786,8 +790,8 @@ for phase in PHASES starting from first_pending:
        evidence is checked. Parse the script output for PASS/FAIL status.
     8. If gate fails:
        a. If G3 reports unresolved requirement wording, run the Plan ambiguity
-          provenance repair below (max 2 attempts, with G3 after each)
-       b. Otherwise attempt the gate's ordinary auto-fix (max 2 attempts)
+          provenance repair below using the shared corrective reservation
+       b. Otherwise reserve the gate's localized repair in the same ledger
        c. If still failing and gate-failure == "stop": STOP. A selected formal
           failure always stops and names the Plan resume point.
        d. If gate-failure == "skip-and-log" and the failure is not a selected
@@ -818,7 +822,7 @@ The parent orchestrator, not the Plan executor or consensus agents, classifies
 the disputed wording before retrying. Follow
 [`gate-validation.md`](gate-validation.md)
 §Plan ambiguity provenance repair exactly. Give the same `phase-executor` the
-original Plan prompt for at most 2 repairs, plus a `Plan Repair Context`
+original Plan prompt within that same corrective reservation, plus a `Plan Repair Context`
 containing the exact G3 JSON, disputed wording, direct source evidence,
 provenance class, prior repair result, and attempt number. Append every attempt
 and revalidation result to the workflow's Plan Ambiguity Repair Log. If
@@ -1113,6 +1117,31 @@ G6.5 task `Confidence gate (pre-Implement)`. Transition through
 (strict only differs in whether Phase 7 runs).
 
 ## Phase 7: Implement
+
+After Tasks and before dispatch following any changed task definitions, validate
+`.process/task-execution.json` through `validate-task-execution`; require it for
+metadata-producing workflows. Follow the shared [batch contract](execution-efficiency.md):
+`partition-phase7-tasks` owns existing phase/agent routing and dependency/ownership
+waves. Supply `task_execution_required` and parent-verified `completed_tasks`.
+Call `task-results` `action=start` before dispatch to freeze the original
+partition in the feature's named journal. On resume, use `action=inspect` and
+reconcile retained complete/unfinished results rather than renumbering batches.
+Dispatch one `spawn_agent` per implementation or research batch; verification
+routes stay orchestrator-direct with no agent. Supply TDD only to implementation
+and project agents, up to four adjacent assigned tasks sequentially, with shared
+context/reservation once. Never exceed derived
+`subagent_slots`. Consume every real per-task result, update both state stores,
+and call `task-results` `action=record` with every frozen task's full result
+block plus independently captured parent `native_observations` before marking
+completion. Follow the shared journal inputs; invalid evidence blocks recording
+and unfinished results require a checkpoint, not replay. Use `action=inspect`
+again before group completion; native authorization qualification stays pending.
+Append separate implementation-notes entries; no compound task IDs. Legacy
+runs use singletons. Repartition before dispatch if inputs/ownership changed.
+Run focused tests and one independent review per capability group; reserve only
+localized failed-closure repairs. Do not serially replay a whole wave.
+Final required tests and artifact checks run once on the final snapshot; G7 and
+Post reuse only validated native producer evidence, not worker summaries.
 
 Before `tasks.md` exists, the plan contains:
 
@@ -2162,9 +2191,8 @@ that attempt's own result reaches the parent session, before dispatching further
 work. The bounded `wait_agent` loop already delivers each worker's summary
 individually, so a member of a cap-bounded `[P]` wave does not wait for the rest
 of its wave: its entry is written when that summary is consumed, not when the
-wave reaches its TYPECHECK and UNIT_TEST safety net (which also runs the
-populated `COMPLEXITY` and `DEPENDENCY_RULES` slots on the files the wave
-changed; a populated slot that fails blocks like a red test). Never batched to phase end,
+wave reaches its focused verification boundary. Required populated quality-gate
+slots remain blocking on the final snapshot. Never batched to phase end,
 and never deferred to a wave boundary. Where several summaries are consumed on
 the same turn, each still gets its own entry on that turn, in the order they are
 presented.
@@ -2177,7 +2205,7 @@ double-counts the attempt once that worker's real summary arrives.
 
 **Additive only.** No entry already written is rewritten, reordered, or removed,
 and the record is never read back to update a counter or to find a previous
-entry. The serial re-run after a regression appends a further entry under the
+entry. A budget-authorized localized repair appends a further entry under the
 same task ID and leaves the earlier one exactly as written; two entries sharing
 a task ID are correct history, not a defect. Document order is append order, so
 position is the record's only ordering signal, and where two entries share a

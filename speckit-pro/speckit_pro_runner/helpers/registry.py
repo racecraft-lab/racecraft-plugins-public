@@ -343,6 +343,11 @@ HELPERS: dict[str, HelperEntry] = {
 
 
 MUTATION_HELPERS: dict[str, MutationEntry] = {
+    "task-results": MutationEntry(
+        "task-results", "task-results", ("read_only", "dry_run", "apply"), None,
+        "golden_only", "fixture_semantic", mutation_authoritative_request("task-results"),
+        ("frozen-batch-identities", "per-task-results", "native-tdd-observations", "partial-resume"),
+    ),
     "execution-control": MutationEntry(
         "execution-control", "execution-control", ("read_only", "dry_run", "apply"), None,
         "golden_only", "fixture_semantic", mutation_authoritative_request("execution-control"),
@@ -670,7 +675,7 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
     if entry.helper_id == "mutation-registry-dispatch":
         return response("ok", request_id=request.request_id, data=mutation_registry_report())
 
-    if entry.helper_id in {"execution-control", "execute-verification"}:
+    if entry.helper_id in {"execution-control", "execute-verification", "task-results"}:
         return run_execution_helper(entry, request)
 
     if entry.helper_id == "formal-check":

@@ -31,7 +31,8 @@ workflow file; by default a passing score records `not needed` and skips.
    discover it.
 2. **Changed files**: `git diff --name-only origin/main...HEAD`, source and
    tests, listed in full.
-3. **Thresholds**: the floor, the current score, and the iteration cap.
+3. **Thresholds and reservation**: the floor, current score, and parent's
+   execution-control `reservation_id` with remaining shared budget.
 
 ## Allowed writes: tests only
 
@@ -44,11 +45,13 @@ the list.
 
 ## Stop rule
 
-The loop ends when the re-run mutation score reaches the floor, or after the
-iteration cap, three by default, whichever comes first. Each iteration is one
-delegation with the report from the previous re-run. A cap exit is not a
-failure of the hardener; it hands the still-failing MUTATION result back to
-Step 4, which then blocks as it would have.
+Reserve the stable mutation-coverage failure invariant through execution-control
+before corrective work. One cycle per failure family and two cycles per spec
+are shared with every enclosing gate/repair loop; this hardener has no separate
+three-iteration allowance. Nested execution carries the parent's reservation_id.
+Stop when the score reaches the floor or that reservation/time budget ends.
+On exhaustion retain the failing MUTATION result and checkpoint; never count
+fallback, rejection, or a renamed error as a fresh repair family.
 
 ## Delegated path (Qwen)
 
@@ -98,12 +101,12 @@ Then:
 
 1. Poll `qwen_status` until the state is terminal and `cleanupCompletedAt`
    is set. A paused task gets at most one `qwen_reply` with `approveOnce:
-   true`; a second pause is a cancel and a fallback.
+   true` only within existing authorization; a second pause requires a checkpoint.
 2. `qwen_candidate` with the returned candidate id. Inspect the patch before
    any apply decision: every changed path is in `allowedPaths`; no source
    path; no deleted or weakened assertion; the validation digests match the
-   commands sent. Reject anything else, record why, and either delegate again
-   with the objection in the task or fall back.
+   commands sent. Reject anything else and record why. A rejection consumes the
+   same reserved cycle; it does not authorize a new delegation or fallback.
 3. `qwen_apply` with the candidate id and the one-time review nonce.
 4. Re-run `UNIT_TEST`, then `MUTATION` with the same `{paths}`. Record the
    new score. Apply the stop rule.
@@ -113,12 +116,15 @@ inputs contain repository source and the mutation report.
 
 ## Fallback path (primary model)
 
-When any precondition fails, the orchestrator runs the same loop itself by
+When a precondition fails before any delegation/effects, the orchestrator uses
+the same reservation by
 dispatching the implement-executor once per iteration with the same three
 inputs, the same test-only write rule stated in the prompt, and the same
 acceptance criteria; the executor's TDD protocol already forbids weakening
 tests. Inspect the diff before the re-run exactly as the candidate is
-inspected: any source change is reverted and counted as a failed iteration.
+inspected: any source change blocks apply and is counted against that cycle.
+Never revert another worker's or the user's changes. After an ambiguous remote
+outcome, reconcile read-only and checkpoint; do not use fallback to retry it.
 
 ## Record
 

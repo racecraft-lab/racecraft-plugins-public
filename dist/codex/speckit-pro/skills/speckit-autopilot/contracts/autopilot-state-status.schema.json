@@ -23,6 +23,48 @@
         "full"
       ]
     },
+    "execution_control": {
+      "description": "Optional native-orchestrator mirror of the last execution-control result for this workflow. The durable ledger remains authoritative; this visibility record is not permission, completion evidence, or independent proof and never resets counters.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ledger_path",
+        "run_id",
+        "disposition",
+        "reasons",
+        "elapsed_seconds",
+        "checkpoint_due"
+      ],
+      "properties": {
+        "ledger_path": {
+          "description": "Repository-relative lookup hint returned by the helper, not authority to read outside the execution root.",
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\\\\\u0000-\\u001f]+$"
+        },
+        "run_id": {
+          "description": "Copied from result.data.ledger.run_id, never minted by a worker or recovered from a stale state mirror.",
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "disposition": {
+          "type": "string",
+          "enum": ["continue", "checkpoint_required"]
+        },
+        "reasons": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "elapsed_seconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "checkpoint_due": {
+          "type": "boolean"
+        }
+      }
+    },
     "prior_run_note": {
       "description": "Verbatim record of the status carried by the predecessor run whose single state slot this run reclaimed. Reclaiming a foreign slot is normal operation, not an error; the note is what separates reclaiming a finished run from one still recorded in_progress.",
       "type": "string"

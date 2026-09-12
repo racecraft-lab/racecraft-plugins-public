@@ -245,7 +245,7 @@ Claude Code plugin agents and Codex custom-agent templates with runtime-specific
 
 ### Implement Executor
 
-- **Purpose:** Implementation-focused executor for a single SpecKit task.
+- **Purpose:** Implementation-focused executor for one task or a bounded batch of up to four SpecKit tasks.
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro implement-executor agent
 - **Claude Code:** implement-executor.md plugin agent source

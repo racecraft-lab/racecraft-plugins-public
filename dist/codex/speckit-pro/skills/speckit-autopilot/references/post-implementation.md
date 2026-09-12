@@ -2,6 +2,13 @@
 
 Detailed procedures for Steps 3.0-3.3 of the autopilot workflow.
 
+Read [Bounded Execution and Verification](./execution-efficiency.md) before
+Post dispatch: all tracks share the same reservations and time budget. Post
+Code Review is the single final integration review. Verify-chain consumes
+validated final snapshot evidence rather than running unchanged checks again.
+The parent validates genuine native producer observations; a worker's claimed
+pass or receipt alone cannot satisfy a gate.
+
 For enabled formal selection, run the `post` checkpoint after the Integration
 Suite's producing tests and before that item completes, with `state_file` and
 the declared implementation scope. Follow [Selected formal checkpoints](formal-methods.md#later-planning-implementation-and-closeout).
@@ -137,13 +144,14 @@ a regression:
 ```
 
 Exit code 2 sends feedback to the teammate and prevents the task from
-being marked complete. The teammate must re-run the integration suite
-or surface the regression to the lead.
+being marked complete. Surface the regression to the lead for a localized
+repair reservation; the hook does not grant another execution.
 
 **Path A failure modes:**
 
-- **A teammate stops on error:** message it once to recover. If unrecoverable,
-  request shutdown and fall through to Path B; log the failure.
+- **A teammate stops on error:** allow one read-only result/effect reconciliation.
+  If effects remain unknown, checkpoint; never fall through to a replacement
+  Path B launch. Record known results and owned cleanup.
 - **Lead shuts down team early:** tell the lead "wait for your
   teammates to complete their tasks before proceeding."
 - **Task status lags**: if a teammate
@@ -209,11 +217,10 @@ synthesizing.
 
 **Path B failure modes:**
 
-- **A track subagent errors:** the other two tracks still complete.
-  Re-spawn the failed track (sequential retry, not in background).
-  If it fails again, mark the task `failed: <reason>` in the
-  Post-Implementation Checklist and surface to the user — do NOT
-  block PR creation on a non-fatal post-impl failure.
+- **A track subagent errors:** independent tracks may finish within the remaining
+  time budget. Reconcile missing results read-only once; unknown effects require
+  a checkpoint, never automatic re-spawn. Record failed/unfinished work honestly.
+  Required verification or security failures block PR preparation.
 - **Verify chain stops mid-chain (e.g., verify-tasks fails):** the
   subagent reports which step failed. Mark the chain `failed at
   step N` and skip step N+1 (don't run Integration Suite if
@@ -239,7 +246,9 @@ Users do not need to know about a setting; the autopilot adapts.
 
 Integration tests for the spec are created DURING the Implement
 phase (the `speckit-pro:implement-executor` agent creates them as part of TDD).
-This step runs the FULL suite to catch regressions from other specs.
+This step requires FULL-suite proof to catch regressions from other specs.
+Validate the final snapshot's existing result before executing; unchanged G7
+proof is reusable only under the shared native-observation contract.
 
 **Step 1 — Verify spec-specific tests exist:**
 
@@ -272,14 +281,15 @@ Agent(
 )
 ```
 
-**Step 2 — Run the FULL suite:** Run ALL integration tests,
-not just the new ones:
+**Step 2 — Validate or execute the FULL suite:** Use `validate-execution-record`
+with actual native observation. On `reusable=false`, execute ALL integration
+tests through `execute-verification`, not just the new ones:
 
 ```text
 Command("<INTEGRATION_TEST command>")     <- TOOL CALL
 ```
 
-If any fail -> fix and re-run (max 2 attempts). Commit fixes
+If any fail -> reserve localized corrective work in the same ledger. Commit fixes
 before proceeding.
 
 **Step 3 — Record results** in the workflow file: integration
@@ -298,7 +308,7 @@ one slice. A one-slice plan still goes through the same emission contract and
 opens one slice PR.
 
 ```text
-1. Run final verification once for the completed implementation:
+1. Validate existing final-snapshot evidence; execute only ineligible checks:
    <BUILD> && <TYPECHECK> && <LINT> && <UNIT_TEST> && <INTEGRATION_TEST>
    then <COMPLEXITY> && <MUTATION> && <DEPENDENCY_RULES> for every
    populated slot, with {paths} = changed source files; when
@@ -616,6 +626,10 @@ running in the background via `/loop`.
 
 ## Self-Review Before Finalizing
 
+Reconcile the final independent Code Review and requirement-to-test evidence;
+do not commission another review of unchanged code. Required defects remain
+blocking; optional style/reporting gaps remain advisory.
+
 Immediately after G7 passes and before opening the PR (between
 `Post: Integration Suite` and `Post: PR Body Generation`), the
 orchestrator answers four short questions and records the answers
@@ -629,7 +643,7 @@ The four questions, in order, plus one advisory report:
 
 1. **Tests executed?** Did each of `BUILD`, `TYPECHECK`, `LINT`,
    `UNIT_TEST`, and `INTEGRATION_TEST`, plus every populated
-   quality-gate slot, actually run in this session and exit zero, or did the autopilot infer "no errors
+   quality-gate slot, have current validated native execution evidence and exit zero, or did the autopilot infer "no errors
    reported" from a phase that never invoked them? Cite the most
    recent test run with timestamp from the workflow log.
 
@@ -693,7 +707,8 @@ scope. No silent deferrals. No leftover scaffolding or debug code in
 the diff — no `[tidiness]` flags.
 ```
 
-**On gap detection:** the self-review **does not gate PR creation.** Any gaps it
+**On advisory gap detection:** the self-review does not add a style-only gate.
+Required behavioral/security defects still block. Advisory gaps it
 surfaces (`[edge-case-gap]`, orphan FR, silent TODO) are recorded in the
 workflow log. If the already-existing packet-owned body declares an editable
 `## Self-Review Findings` region, mirror the findings there without changing

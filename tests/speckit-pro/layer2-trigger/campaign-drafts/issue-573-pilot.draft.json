@@ -1,0 +1,95 @@
+{
+  "schema_version": "trigger-experiment/v1",
+  "experiment_id": "issue-573-pilot-2026-09-12",
+  "trials": 3,
+  "threshold": 0.5,
+  "qualification_scope": "pilot",
+  "roster": [
+    {
+      "case_id": "l2-deac4e90fde05648eb16cc2b",
+      "host": "claude",
+      "skill": "speckit-autopilot",
+      "query": "ok so I've got the workflow file populated for SPEC-013 at docs/ai/specs/SPEC-013-workflow.md and all the prompts look good. can you kick off the autonomous execution? I want all 7 phases with auto-commits",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-af00346e565cc52ea9ce040d",
+      "host": "claude",
+      "skill": "speckit-autopilot",
+      "query": "write a unit test for the createTask primitive. it should mock executeOmniJS and verify the script template is correct",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-1b43ca2d753dec02b20c5e17",
+      "host": "claude",
+      "skill": "speckit-install",
+      "query": "install the bundled SpecKit Pro Codex subagents into ~/.codex/agents",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-305e6c2f18cd2d68ce6ca795",
+      "host": "claude",
+      "skill": "speckit-scaffold-spec",
+      "query": "SPEC-016 already has a committed workflow file with every prompt filled in, so resume it at the planning phase and run the plan stage against that existing file",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-665006a449adc9210a19664f",
+      "host": "codex",
+      "skill": "speckit-autopilot",
+      "query": "ok so I've got the workflow file populated for SPEC-013 at docs/ai/specs/SPEC-013-workflow.md and all the prompts look good. can you kick off the autonomous execution? I want all 7 phases with auto-commits",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-f714040c928fadaabb26eab2",
+      "host": "codex",
+      "skill": "speckit-autopilot",
+      "query": "write a unit test for the createTask primitive. it should mock executeOmniJS and verify the script template is correct",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-1b79461d58e7889e96bae039",
+      "host": "codex",
+      "skill": "speckit-install",
+      "query": "install the bundled SpecKit Pro Codex subagents into ~/.codex/agents",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-c4cccbbe481c35505ced5a55",
+      "host": "codex",
+      "skill": "speckit-scaffold-spec",
+      "query": "SPEC-016 already has a committed workflow file with every prompt filled in, so resume it at the planning phase and run the plan stage against that existing file",
+      "should_trigger": false
+    }
+  ],
+  "corpus_sha256": "70a809f4c92e7d00e7b0b9810d5535cfcdfaa8eb45deff5ff25f4bfcfad21f5b",
+  "inventory_sha256": "0dfbf5670912e7806c7b588394c7ffd25d1ab8dc01acca1a9263f9df2151bdf1",
+  "pins": {
+    "claude": {
+      "model": "claude-sonnet-5",
+      "cli_version": "2.1.269 (Claude Code)"
+    },
+    "codex": {
+      "model": "gpt-5.6-sol",
+      "cli_version": "codex-cli 0.153.3"
+    }
+  },
+  "identities": {
+    "observer": "40b7965bb6c723f288a9c3cd47aa1d1c9b7b27b07a7f8463fef40e48a50939aa",
+    "catalog": "1122d2fd60a0991c70559bae36a1af49993533afc14d598b9603f03994a85e01",
+    "fixture": "1253f805565b41bd894bbed3ee202d2c476ef8537584aa043f794ccea4ce07ba"
+  },
+  "controlled_difference": {
+    "path": "NO_SPECKIT_SKILL_DESCRIPTION",
+    "baseline_sha256": "49efb809edca1849750ecffdc59ae78c64f0b3f23c469b2e38f7572c74bd1844",
+    "candidate_sha256": "a4572888c5e2ccbc1d052be89ec4dde453ab3d09c3630006523a07aba43c21e8"
+  },
+  "arms": [
+    "candidate"
+  ],
+  "output_directory": null,
+  "draft_status": "pending-output-selection-and-separate-user-budget-approval",
+  "launch_budget_requested": 48,
+  "launch_authorized": false,
+  "qualification_established": false
+}
