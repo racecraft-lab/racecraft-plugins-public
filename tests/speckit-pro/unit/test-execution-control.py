@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "speckit-pro"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 from test_result import run_counted
 from speckit_pro_runner.execution_control import durable_json, execution_control
-from speckit_pro_runner.verification_records import execute_verification, project_command, run_snapshot_command, validate_execution_record
+from speckit_pro_runner.verification_records import digest, execute_verification, project_command, run_snapshot_command, validate_execution_record
 
 
 class ExecutionControlTests(unittest.TestCase):
@@ -240,6 +240,14 @@ class VerificationTests(unittest.TestCase):
         self.assertFalse(self.validate(result, observed)["reusable"])
         self.assertFalse(self.validate(result)["reusable"])
 
+    def test_produced_record_fields_match_published_schema(self):
+        result, _ = self.produce()
+        schema_path = Path(__file__).resolve().parents[3] / "speckit-pro/speckit_pro_runner/contracts/verification-record.schema.json"
+        schema = json.loads(schema_path.read_text())
+        self.assertLessEqual(set(result["record"]), set(schema["properties"]))
+        self.assertLessEqual(set(schema["required"]), set(result["record"]))
+        self.assertIn("output_directory", schema["required"])
+
     def test_synthetic_qualified_host_event_not_portable_runtime_qualification(self):
         result, observed = self.produce()
         path = self.root / result["record_path"]
@@ -251,11 +259,14 @@ class VerificationTests(unittest.TestCase):
         observed["isolation_mode"] = "qualified_readonly_snapshot"
         observed["qualified_isolation"] = {
             "schema_version": "native-isolation/v1",
-            **{key: record[key] for key in ("execution_id", "snapshot_sha256", "environment_sha256", "toolchain")},
+            **{key: record[key] for key in ("execution_id", "snapshot_sha256", "environment_sha256", "toolchain", "output_directory")},
             "readonly_snapshot_identity": "fixture-readonly-mount", "isolated_output_identity": "fixture-output-mount",
             "qualification_id": "synthetic-test-only", "external_input_sha256": "a" * 64,
             "current_external_input_sha256": "a" * 64}
         self.assertTrue(self.validate(result, observed)["reusable"])
+        observed["qualified_isolation"]["output_directory"] = str(self.root / "wrong-output")
+        self.assertIn("isolation_event_binding_mismatch", self.validate(result, observed)["reasons"])
+        observed["qualified_isolation"]["output_directory"] = record["output_directory"]
         observed["qualified_isolation"]["current_external_input_sha256"] = "b" * 64
         self.assertFalse(self.validate(result, observed)["reusable"])
         observed["qualified_isolation"]["current_external_input_sha256"] = "a" * 64
@@ -294,6 +305,56 @@ class VerificationTests(unittest.TestCase):
         self.assertFalse(self.validate(result, observed)["reusable"])
         (self.root / result["record_path"]).unlink()
         self.assertFalse(self.validate(result, observed)["reusable"])
+
+    def test_file_and_directory_modes_invalidate_snapshot_identity(self):
+        for name in ("fixture.txt", "feature"):
+            with self.subTest(name=name):
+                result, observed = self.produce()
+                path = self.root / name
+                original_mode = path.stat().st_mode & 0o777
+                try:
+                    path.chmod(original_mode ^ 0o010)
+                    self.assertIn("input_snapshot_changed", self.validate(result, observed)["reasons"])
+                finally:
+                    path.chmod(original_mode)
+
+    def test_empty_directory_changes_invalidate_snapshot_identity(self):
+        result, observed = self.produce()
+        (self.root / "new-empty-directory").mkdir()
+        self.assertIn("input_snapshot_changed", self.validate(result, observed)["reasons"])
+
+    def test_materialized_snapshot_preserves_empty_directories_and_executable_bits(self):
+        (self.root / "empty-directory").mkdir(mode=0o750)
+        (self.root / "fixture.txt").chmod(0o754)
+        (self.root / "check.py").write_text(
+            "from pathlib import Path\n"
+            "assert Path('empty-directory').is_dir()\n"
+            "assert Path('empty-directory').stat().st_mode & 0o777 == 0o750\n"
+            "assert Path('fixture.txt').stat().st_mode & 0o777 == 0o754\n"
+        )
+        result, _ = self.produce()
+        self.assertEqual(result["record"]["exit_code"], 0)
+        self.assertTrue(result["record"]["snapshot_unchanged"])
+
+    def test_snapshot_directory_mode_mutation_is_detected(self):
+        (self.root / "check.py").write_text("from pathlib import Path\nPath('feature').chmod(0o700)\n")
+        result, _ = self.produce()
+        self.assertFalse(result["record"]["snapshot_unchanged"])
+
+    def test_record_binds_effective_child_environment_after_output_relocation(self):
+        with patch("speckit_pro_runner.verification_records.run_snapshot_command", wraps=run_snapshot_command) as launched:
+            result, _ = self.produce()
+        environment = launched.call_args.args[2]
+        self.assertEqual(result["record"]["environment_sha256"], digest(environment))
+        self.assertEqual(result["record"]["output_directory"], environment["SPECKIT_VERIFICATION_OUTPUT_DIR"])
+
+    def test_output_relocation_is_bound_to_independent_observation(self):
+        result, observed = self.produce()
+        path = self.root / result["record_path"]
+        record = json.loads(path.read_text())
+        record["output_directory"] = str(self.root / "forged-output")
+        path.write_text(json.dumps(record))
+        self.assertIn("native_event_disagrees_with_receipt", self.validate(result, observed)["reasons"])
 
     def test_reserved_verification_cannot_launch_twice(self):
         result, _ = self.produce()

@@ -5,9 +5,10 @@ the actual native tool event, never reconstructed from a worker or receipt. The
 runner cannot authenticate its CLI caller. Absent a recovered native event,
 reuse is denied. Digests establish equality, not authority.
 
-The wrapper copies the entire bounded local input tree (including ignored and
-dirty files), rejects symlinks, and runs direct PROJECT_COMMANDS in that sealed
-copy. Unsupported closures/commands require ordinary verification, not reuse.
+The wrapper copies the bounded local input tree (including ignored and dirty
+files, directory structure, and modes), rejects symlinks, and runs direct
+PROJECT_COMMANDS in that copy. A copy is not immutable isolation. Unsupported
+closures/commands require ordinary verification, not reuse.
 """
 
 from __future__ import annotations
@@ -94,13 +95,17 @@ def evidence_directory(workflow_name: str) -> str:
     return (Path(workflow_name).parent / ".process/verification").as_posix()
 
 
-def tree_bytes(root: Path, workflow_name: str) -> dict[str, bytes]:
+def tree_bytes(root: Path, workflow_name: str) -> dict[str, tuple[int, bytes | None]]:
     excluded = {evidence_directory(workflow_name),
                 (Path(workflow_name).parent / ".process/execution-control").as_posix()}
-    files: dict[str, bytes] = {}
+    files: dict[str, tuple[int, bytes | None]] = {}
+    walk_errors: list[OSError] = []
     total = 0
-    for directory, names, filenames in os.walk(root, followlinks=False):
+    for directory, names, filenames in os.walk(root, followlinks=False, onerror=walk_errors.append):
         base = Path(directory)
+        files[base.relative_to(root).as_posix()] = (base.stat().st_mode & 0o7777, None)
+        if len(files) > MAX_FILES:
+            raise ValueError("input closure exceeds bounded snapshot; use ordinary verification")
         for name in list(names):
             path = base / name
             relative = path.relative_to(root).as_posix()
@@ -116,20 +121,24 @@ def tree_bytes(root: Path, workflow_name: str) -> dict[str, bytes]:
             if path.is_symlink() or not path.is_file():
                 raise ValueError("non-regular input closure requires ordinary verification")
             data = path.read_bytes()
-            files[relative] = data
+            files[relative] = (path.stat().st_mode & 0o7777, data)
             total += len(data)
             if len(files) > MAX_FILES or total > MAX_BYTES:
                 raise ValueError("input closure exceeds bounded snapshot; use ordinary verification")
+    if walk_errors:
+        raise ValueError("unreadable input closure requires ordinary verification") from walk_errors[0]
     return files
 
 
-def tree_digest(files: dict[str, bytes]) -> str:
-    return digest({name: sha(data) for name, data in sorted(files.items())})
+def tree_digest(files: dict[str, tuple[int, bytes | None]]) -> str:
+    return digest({name: {"mode": mode, "sha256": sha(data) if data is not None else None}
+                   for name, (mode, data) in sorted(files.items())})
 
 
-def environment_binding() -> tuple[dict[str, str], str]:
+def environment_binding(outputs: Path) -> tuple[dict[str, str], str]:
     environment = dict(os.environ)
-    environment.update(PYTHONDONTWRITEBYTECODE="1", PYTHONNOUSERSITE="1")
+    environment.update(PYTHONDONTWRITEBYTECODE="1", PYTHONNOUSERSITE="1", TMPDIR=str(outputs), TMP=str(outputs),
+                       TEMP=str(outputs), XDG_CACHE_HOME=str(outputs), SPECKIT_VERIFICATION_OUTPUT_DIR=str(outputs))
     # Do not persist values: credentials may be inherited by an authorized check.
     return environment, digest(environment)
 
@@ -144,18 +153,25 @@ def toolchain_binding(argv: list[str]) -> tuple[str, dict[str, str]]:
                        "runner_sha256": digest(runner_files)}
 
 
-def materialize(root: Path, files: dict[str, bytes]) -> None:
-    for name, content in files.items():
+def materialize(root: Path, files: dict[str, tuple[int, bytes | None]]) -> None:
+    for name, (mode, content) in files.items():
         path = root / name
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(content)
-        path.chmod(0o444)
+        if content is None:
+            path.mkdir(parents=True, exist_ok=True)
+        else:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(content)
+            path.chmod(mode)
+    # Apply directory modes last so a read-only parent does not block copying.
+    for name, (mode, content) in sorted(files.items(), key=lambda item: len(Path(item[0]).parts), reverse=True):
+        if content is None:
+            (root / name).chmod(mode)
 
 
 def observation_material(record: dict[str, Any]) -> dict[str, Any]:
     keys = ("execution_id", "dispatch_id", "command_id", "argv", "workflow_file", "snapshot_sha256", "environment_sha256",
             "toolchain", "exit_code", "stdout_sha256", "stderr_sha256", "inputs_unchanged", "snapshot_unchanged",
-            "producer", "completed", "elapsed_seconds", "isolation_mode")
+            "producer", "completed", "elapsed_seconds", "isolation_mode", "output_directory")
     return {key: record[key] for key in keys}
 
 
@@ -238,7 +254,6 @@ def execute_verification(root: Path, inputs: dict[str, Any], mode: str) -> dict[
     workflow = confined_path(root, workflow_name)
     argv = project_command(workflow, command_id)
     executable, toolchain = toolchain_binding(argv)
-    environment, environment_sha = environment_binding()
     before = tree_bytes(root, workflow_name)
     snapshot_sha = tree_digest(before)
     if mode == "dry_run":
@@ -260,8 +275,7 @@ def execute_verification(root: Path, inputs: dict[str, Any], mode: str) -> dict[
         snapshot.mkdir()
         outputs.mkdir()
         materialize(snapshot, before)
-        environment.update(TMPDIR=str(outputs), TMP=str(outputs), TEMP=str(outputs),
-                           XDG_CACHE_HOME=str(outputs), SPECKIT_VERIFICATION_OUTPUT_DIR=str(outputs))
+        environment, environment_sha = environment_binding(outputs)
         now = time.time()
         ledger = begun["ledger"]
         remaining = min(7200 - elapsed(ledger, now, ledger["started_at"]),
@@ -273,7 +287,7 @@ def execute_verification(root: Path, inputs: dict[str, Any], mode: str) -> dict[
     unchanged = tree_digest(tree_bytes(root, workflow_name)) == snapshot_sha
     record = {"schema_version": SCHEMA, "execution_id": execution_id, "dispatch_id": dispatch_id, "command_id": command_id,
               "argv": argv, "workflow_file": workflow_name, "snapshot_sha256": snapshot_sha,
-              "environment_sha256": environment_sha, "toolchain": toolchain, "exit_code": exit_code,
+              "environment_sha256": environment_sha, "output_directory": str(outputs), "toolchain": toolchain, "exit_code": exit_code,
               "stdout_sha256": sha(stdout), "stderr_sha256": sha(stderr), "inputs_unchanged": unchanged,
               "snapshot_unchanged": snapshot_unchanged, "producer": "runner-isolated-project-command/v1",
               "completed": completed, "elapsed_seconds": time.monotonic() - started,
@@ -297,7 +311,7 @@ def isolation_reasons(record: dict[str, Any], observation: Any) -> list[str]:
     isolation = observation.get("qualified_isolation") if isinstance(observation, dict) else None
     if not isinstance(isolation, dict) or isolation.get("schema_version") != "native-isolation/v1":
         return ["missing_qualified_isolation_event"]
-    for key in ("execution_id", "snapshot_sha256", "environment_sha256", "toolchain"):
+    for key in ("execution_id", "snapshot_sha256", "environment_sha256", "toolchain", "output_directory"):
         if isolation.get(key) != record.get(key):
             return ["isolation_event_binding_mismatch"]
     for key in ("readonly_snapshot_identity", "isolated_output_identity", "qualification_id"):
@@ -331,7 +345,10 @@ def validate_execution_record(root: Path, inputs: dict[str, Any]) -> dict[str, A
         reasons.extend(isolation_reasons(record, observation))
         argv = project_command(confined_path(root, workflow_name), command_id)
         _, toolchain = toolchain_binding(argv)
-        _, environment_sha = environment_binding()
+        output_directory = Path(require_text(record.get("output_directory"), "output_directory"))
+        if not output_directory.is_absolute():
+            raise ValueError("output_directory must be the absolute executed output path")
+        _, environment_sha = environment_binding(output_directory)
         if record.get("workflow_file") != workflow_name or record.get("command_id") != command_id or record.get("argv") != argv:
             reasons.append("command_binding_changed")
         if record.get("toolchain") != toolchain or record.get("environment_sha256") != environment_sha:
