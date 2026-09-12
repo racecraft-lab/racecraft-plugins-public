@@ -31,7 +31,7 @@ invocation may run:
 
 | Stage | Phase range | Terminal step |
 | --- | --- | --- |
-| `plan` | Specify, Clarify, Plan, Checklist, Tasks, Analyze | G6.5 confidence gate, then the stage-boundary commit |
+| `plan` | Specify, Clarify, Plan, Checklist, Tasks, Analyze | Autonomy Boundary Preflight, G6.5 confidence gate, then the stage-boundary commit |
 | `implement` | Implement, then the post-implementation steps | `Post: Retrospective` |
 | `full` | All seven phases end to end | `Post: Retrospective` |
 
@@ -73,14 +73,15 @@ Two consequences follow directly:
 range; a value outside an explicitly named stage's range is rejected at Step
 0.6c before any phase work begins.
 
-### Plan Stage: G6.5 Is The Terminal Step
+### Plan Stage: Phase 6.5 Is The Terminal Step
 
-G6.5 runs *after Phase 6 commits and before Phase 7 begins*, so on a
-`--stage plan` run it is the last work the stage does. The run takes the
-stage-boundary commit below and then **STOPs** — it does not advance to Phase 7,
-in any mode. In advisory mode the gate passes or warns and the stage still ends
-here; in strict mode the STOP **is** the gate resolving, and the boundary commit
-is still taken so the failing verdict reaches version history.
+Phase 6.5 runs the Autonomy Boundary Preflight and then G6.5 *after Phase 6
+commits and before Phase 7 begins*, so on a `--stage plan` run it is the last
+work the stage does. The run takes the stage-boundary commit below and then
+**STOPs** — it does not advance to Phase 7, in any mode. In advisory mode the
+confidence gate passes or warns and the stage still ends here; a blocked
+autonomy preflight or strict confidence stop is still committed so the verdict
+reaches version history.
 
 On a strict-mode stop, write the `Confidence Gate` row to a **non-terminal**
 blocked status — never to a terminal one. The row must advance off its pending
@@ -815,7 +816,7 @@ group (see [post-implementation-codex.md](./post-implementation-codex.md)).
 
 The parent orchestrator, not the Plan executor or consensus agents, classifies
 the disputed wording before retrying. Follow
-[`gate-validation.md`](../../skills/speckit-autopilot/references/gate-validation.md)
+[`gate-validation.md`](../../../skills/speckit-autopilot/references/gate-validation.md)
 §Plan ambiguity provenance repair exactly. Give the same `phase-executor` the
 original Plan prompt for at most 2 repairs, plus a `Plan Repair Context`
 containing the exact G3 JSON, disputed wording, direct source evidence,
@@ -962,11 +963,102 @@ map-affecting boundary, and none on a no-op boundary.
 
 ## Phase 6.5: Pre-Implement Confidence Gate
 
-After Phase 6 (Analyze) commits and before Phase 7 begins, run the optional
-Pre-Implement Confidence Gate (G6.5). The synthesizer's final emit on the
-workflow file (see [consensus-protocol.md §Pre-Implement Confidence Emit](../../skills/speckit-autopilot/references/consensus-protocol.md#pre-implement-confidence-emit-end-of-phase-6-analyze))
+After Phase 6 (Analyze) commits and before Phase 7 begins, first run the
+mandatory Autonomy Boundary Preflight, then run the optional Pre-Implement
+Confidence Gate (G6.5). The synthesizer's final emit on the
+workflow file (see [consensus-protocol.md §Pre-Implement Confidence Emit](../../../skills/speckit-autopilot/references/consensus-protocol.md#pre-implement-confidence-emit-end-of-phase-6-analyze))
 provides the data; the gate script reads it and decides whether to proceed,
 surface a remediation hint, or stop.
+
+### Autonomy Boundary Preflight
+
+Run this preflight before scoring confidence or taking the plan-stage boundary
+commit. Read the current workflow, `plan.md`, `tasks.md`, canonical Post list,
+resolved project commands, current execution-surface permissions, and explicit
+authorization already present in the active conversation. Inventory every
+planned action in any of these categories:
+
+- a write outside the current writable roots;
+- a privileged or administrator command, including `sudo` and system-wide
+  installation;
+- interactive authentication, credential provisioning, or an account change;
+- an externally visible side effect such as a provider request, deployment,
+  message, publication, or remote mutation.
+
+For each action, record its category, exact command or tool when known, target,
+durability or data effect, required execution boundary, existing authorization
+evidence, and one disposition:
+
+- `ready`: the conversation supplies exact bounded authorization and the
+  platform exposes an execution route that requires no further operator
+  interaction;
+- `rerouted`: a contract-preserving reroute keeps the action inside an
+  available boundary. Update the affected planning artifacts and rerun their
+  downstream gates before recording this disposition; never weaken a
+  requirement or substitute synthetic evidence;
+- `operator_action_required`: no proven non-interactive route exists, or the
+  action needs authorization the conversation does not contain.
+
+Codex's documented model is load-bearing here: ordinary `workspace-write`
+automation can edit the workspace, while writes beyond it require approval.
+**Auto-review is a reviewer swap, not a permission grant**; it does not expand
+writable roots or make an interactive login non-interactive. See the official
+[Agent approvals & security](https://learn.chatgpt.com/docs/agent-approvals-security)
+and [Auto-review](https://learn.chatgpt.com/docs/sandboxing/auto-review)
+documentation. Auto-review availability by itself cannot classify an action as
+`ready`; the record still needs exact authorization evidence for any action
+that requires it. The word "autonomous" alone is also not authorization for a
+persistent system mutation, account change, or external effect that the active
+conversation has not already authorized.
+
+Persist one `autonomy_boundary` object in `autopilot-state.json` and a matching
+Phase 6.5 result in the workflow file. Its canonical versioned shape is
+[autonomy-boundary.schema.json](../../../skills/speckit-autopilot/contracts/autonomy-boundary.schema.json), and
+the reference state shows the complete field set. Each planning fingerprint
+records the normalized repository-relative path, byte length, and lowercase
+`sha256:` digest for `plan.md` or `tasks.md`.
+
+Compute `execution_boundary.sha256` over canonical UTF-8 JSON containing only
+`execution_environment`, `sandbox_mode`, `approval_reviewer`, and sorted
+`writable_roots`. Compute each action's `scope_sha256` over canonical UTF-8 JSON
+containing only `category`, `command_or_tool`, `target`, `effect`, and
+`execution_boundary_sha256`. Canonical JSON sorts keys, uses `,` and `:` without
+extra whitespace, preserves Unicode, and rejects non-finite numbers. Prefix the
+lowercase hexadecimal SHA-256 with `sha256:`. The authorization
+`scope_sha256` must equal its action's scope digest.
+
+Only `authorization.status=explicit_user` can make an inventoried boundary
+action `ready`. Exact explicit user authorization persists across turns,
+compaction, and resume while the recorded action scope and execution-boundary
+digest still match and no later user instruction revokes or narrows it. When a
+later instruction does so, record `authorization.status=revoked`, add non-secret
+`revocation_evidence`, and change the disposition and object status to
+`operator_action_required`. `auto_review`, `prior_execution`, and a previously
+crossed boundary are intentionally absent from the authorization vocabulary.
+Never persist credentials, tokens, cookies, or session material.
+
+When any action is `operator_action_required`, set the object status to that
+exact value and make the Phase 6.5 row non-terminal and blocked. Present one
+consolidated request that names every exact target, lasting or external effect,
+why the requirement needs it, the smallest required operator action, and the
+resume command. Commit the blocked record through the current stage's bounded
+bookkeeping path; for a plan-stage run, use the normal stage-boundary commit.
+Then **STOP before Phase 7**. A denial routes back to planning for a
+contract-preserving alternative; it never triggers a workaround.
+
+When every action is `ready` or `rerouted`, set status to `ready` and continue
+with the confidence steps below. A `plan` run takes its boundary commit and
+stops at the plan terminal step even when the record is `ready`; it never
+dispatches Phase 7. An `implement` or `full` run validates the record before its
+first Phase 7 dispatch. Before every later Phase 7 task dispatch, revalidate the
+planning digests, current execution boundary, authorization scope, and later
+conversation instructions. Run the shipped phase-coverage validator with
+`--rule status-evidence`; its `autonomy_boundary_errors` check fails closed on a
+missing, malformed, or stale record. A new or changed action reruns this
+preflight. If a worker discovers a predictable boundary that the record
+omitted, do not let the worker attempt it or ask from inside the task: record
+that the late discovery is an autopilot defect, return control to the parent,
+update the preflight, and resolve it there.
 
 ```text
 1. Read mode from `CONFIDENCE_GATE_MODE` (set at Step 0.6b in
@@ -2209,13 +2301,16 @@ Post:
 Then run the deterministic guard against the workflow/state pair:
 
 ```text
-resolved_python "<plugin-root>/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py" --workflow "$WORKFLOW_FILE" --state "$WORKFLOW_DIR/autopilot-state.json" --rule status-evidence
+resolved_python "<plugin-root>/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py" --workflow "$WORKFLOW_FILE" --state "$WORKFLOW_DIR/autopilot-state.json" --require-autonomy-boundary --current-execution-environment "<live-execution-environment>" --current-sandbox-mode "<live-sandbox-mode>" --current-approval-reviewer "<live-approval-reviewer>" --current-writable-root "<live-writable-root>" --rule status-evidence
 ```
 
 `resolved_python` is the Python 3.11+ interpreter resolved by the installed
 runtime contract, not a hardcoded interpreter name; `<plugin-root>` is the
 directory that owns `skills/speckit-autopilot/`. `--rule status-evidence`
 scopes the exit code to the bookkeeping rule, matching the Claude variant.
+Replace every `<live-...>` value from the current system/developer execution
+context, never from the workflow, state, repository, or a prior run. Repeat
+`--current-writable-root` for each current writable root.
 
 For `pr-marker-plan.v2` state with a changed-file manifest, append
 `--expected-base-commit <live-baseRefOid> --expected-head-commit <live-headRefOid>`

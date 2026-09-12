@@ -45,6 +45,7 @@ BLOCKING_STATE_INVARIANT_KEYS = (
 BLOCKING_STATUS_EVIDENCE_KEYS = (
     "workflow_status_evidence_errors",
     "state_status_errors",
+    "autonomy_boundary_errors",
     "stage_mirror_errors",
     "workflow_authority_errors",
 )
@@ -97,6 +98,103 @@ def _clean_state_plan() -> list[dict[str, str]]:
         for post in validator.POST_STEPS
     )
     return steps
+
+
+def _planning_fingerprints(root: Path) -> dict:
+    feature = root / "specs" / "demo"
+    feature.mkdir(parents=True)
+    planning_fingerprints = {}
+    for label, content in (("plan_md", b"# Plan\n"), ("tasks_md", b"# Tasks\n")):
+        path = feature / ("plan.md" if label == "plan_md" else "tasks.md")
+        path.write_bytes(content)
+        planning_fingerprints[label] = {
+            "path": path.relative_to(root).as_posix(),
+            "sha256": validator._sha256_bytes(content),
+            "size_bytes": len(content),
+        }
+    return planning_fingerprints
+
+
+def _current_execution_boundary(root: Path) -> dict:
+    return {
+        "execution_environment": "local",
+        "sandbox_mode": "workspace-write",
+        "approval_reviewer": "auto_review",
+        "writable_roots": [str(root)],
+    }
+
+
+def _execution_boundary(root: Path) -> dict:
+    execution_scope = _current_execution_boundary(root)
+    execution_boundary = {
+        **execution_scope,
+        "summary": "Repository writes are direct; system writes require approval.",
+        "sha256": validator._canonical_json_sha256(execution_scope),
+    }
+    return execution_boundary
+
+
+def _autonomy_action(execution_sha256: str) -> dict:
+    action_scope = {
+        "category": "privileged_command",
+        "command_or_tool": "sudo install reviewed payload",
+        "target": "/opt/redline",
+        "effect": "persistent system-wide runtime installation",
+        "execution_boundary_sha256": execution_sha256,
+    }
+    scope_sha256 = validator._canonical_json_sha256(action_scope)
+    return {
+        "action_id": "install-runtime",
+        **action_scope,
+        "scope_sha256": scope_sha256,
+        "disposition": "ready",
+        "authorization": {
+            "status": "explicit_user",
+            "evidence": "user approved the exact target and lasting effect",
+            "scope_sha256": scope_sha256,
+        },
+    }
+
+
+def _autonomy_boundary_state(root: Path) -> dict:
+    execution_boundary = _execution_boundary(root)
+    return {
+        "status": "in_progress",
+        "stage": "implement",
+        "plan": [
+            {"step": "Phase 6.5: Confidence Gate", "status": "completed"},
+            {"step": "Phase 7: Implement", "status": "pending"},
+        ],
+        "autonomy_boundary": {
+            "schema_version": "autonomy-boundary.v1",
+            "status": "ready",
+            "planning_fingerprints": _planning_fingerprints(root),
+            "execution_boundary": execution_boundary,
+            "actions": [_autonomy_action(execution_boundary["sha256"])],
+        },
+    }
+
+
+def _refresh_action_scope(action: dict) -> None:
+    action["scope_sha256"] = validator._canonical_json_sha256({
+        key: action[key]
+        for key in (
+            "category",
+            "command_or_tool",
+            "target",
+            "effect",
+            "execution_boundary_sha256",
+        )
+    })
+
+
+def _autonomy_errors(state: dict, root: Path) -> list[str]:
+    return validator.validate_autonomy_boundary(
+        state,
+        root,
+        current_execution_boundary=_current_execution_boundary(root),
+        require_boundary=True,
+    )["autonomy_boundary_errors"]
 
 
 def _clean_workflow() -> str:
@@ -343,23 +441,274 @@ class StateStatusSchemaTests(unittest.TestCase):
         self.assertEqual(validator.validate_state_status({})["state_status_errors"], [])
 
 
+class AutonomyBoundarySourceContractTests(unittest.TestCase):
+    def test_source_contract_places_preflight_before_every_phase_seven_entry(self) -> None:
+        skill = CODEX_AUTOPILOT_SKILL.read_text(encoding="utf-8")
+        prerequisites = (
+            CODEX_AUTOPILOT_SKILL.parent / "references" / "prerequisites-codex.md"
+        ).read_text(encoding="utf-8")
+        phase_execution = (
+            CODEX_AUTOPILOT_SKILL.parent / "references" / "phase-execution-codex.md"
+        ).read_text(encoding="utf-8")
+        normalized = " ".join(phase_execution.split())
+
+        boundary = phase_execution.index("### Autonomy Boundary Preflight")
+        confidence = phase_execution.index("1. Read mode from `CONFIDENCE_GATE_MODE`", boundary)
+        phase_seven = phase_execution.index("## Phase 7: Implement")
+        self.assertLess(boundary, confidence)
+        self.assertLess(confidence, phase_seven)
+        self.assertIn("Autonomy Boundary Preflight, G6.5 confidence gate", normalized)
+        self.assertIn("A `plan` run", phase_execution)
+        self.assertIn("An `implement` or `full` run", phase_execution)
+        self.assertIn("before its first Phase 7 dispatch", normalized)
+        self.assertIn("Exact explicit user authorization persists", phase_execution)
+        self.assertIn("no later user instruction revokes or narrows it", normalized)
+        self.assertIn("Prior execution", prerequisites)
+        self.assertIn("automatic review", prerequisites)
+        self.assertIn("older task crossed the boundary", " ".join(prerequisites.split()))
+        self.assertIn("`autonomy_boundary` record", skill)
+        for flag in (
+            "--require-autonomy-boundary",
+            "--current-execution-environment",
+            "--current-sandbox-mode",
+            "--current-approval-reviewer",
+            "--current-writable-root",
+        ):
+            self.assertIn(flag, skill)
+            self.assertIn(flag, phase_execution)
+
+    def test_canonical_schema_excludes_automatic_and_prior_execution_authorization(self) -> None:
+        schema = json.loads(
+            validator.AUTONOMY_BOUNDARY_SCHEMA_PATH.read_text(
+                encoding="utf-8"
+            )
+        )
+        statuses = schema["$defs"]["authorization"]["properties"]["status"]["enum"]
+        self.assertIn("explicit_user", statuses)
+        self.assertIn("revoked", statuses)
+        self.assertNotIn("auto_review", statuses)
+        self.assertNotIn("prior_execution", statuses)
+
+class AutonomyBoundaryAuthorizationTests(unittest.TestCase):
+    def test_matching_explicit_authorization_remains_valid_on_resume(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            state = _autonomy_boundary_state(root)
+
+            self.assertEqual(
+                _autonomy_errors(state, root),
+                [],
+            )
+            resumed = json.loads(json.dumps(state))
+            self.assertEqual(
+                _autonomy_errors(resumed, root),
+                [],
+            )
+
+class AutonomyBoundaryFreshnessTests(unittest.TestCase):
+    def test_writable_roots_are_sorted_strings_and_malformed_input_never_crashes(self) -> None:
+        for roots, expected in (
+            (["/z", "/a"], "deterministic sorted order"),
+            (["/a", 1], "must contain absolute paths"),
+        ):
+            with self.subTest(roots=roots), tempfile.TemporaryDirectory() as raw:
+                root = Path(raw)
+                state = _autonomy_boundary_state(root)
+                execution = state["autonomy_boundary"]["execution_boundary"]
+                execution["writable_roots"] = roots
+                errors = _autonomy_errors(state, root)
+                self.assertTrue(any(expected in error for error in errors), errors)
+
+    def test_changed_scope_and_stale_planning_bytes_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            state = _autonomy_boundary_state(root)
+            action = state["autonomy_boundary"]["actions"][0]
+            action["target"] = "/opt/other"
+            _refresh_action_scope(action)
+            errors = _autonomy_errors(state, root)
+            self.assertTrue(any("authorization.scope_sha256" in error for error in errors), errors)
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            state = _autonomy_boundary_state(root)
+            boundary = state["autonomy_boundary"]
+            execution = boundary["execution_boundary"]
+            execution["writable_roots"] = ["/different/root"]
+            execution["sha256"] = validator._canonical_json_sha256({
+                key: execution[key]
+                for key in (
+                    "execution_environment",
+                    "sandbox_mode",
+                    "approval_reviewer",
+                    "writable_roots",
+                )
+            })
+            action = boundary["actions"][0]
+            action["execution_boundary_sha256"] = execution["sha256"]
+            _refresh_action_scope(action)
+            errors = _autonomy_errors(state, root)
+            self.assertTrue(any("authorization.scope_sha256" in error for error in errors), errors)
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            state = _autonomy_boundary_state(root)
+            (root / "specs/demo/plan.md").write_text("# Changed plan\n", encoding="utf-8")
+            errors = _autonomy_errors(state, root)
+            self.assertTrue(any("plan_md" in error for error in errors), errors)
+
+    def test_unchanged_record_is_stale_under_a_different_current_execution_boundary(self) -> None:
+        for field, value in (
+            ("sandbox_mode", "read-only"),
+            ("approval_reviewer", "user"),
+            ("writable_roots", ["/different/root"]),
+        ):
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as raw:
+                root = Path(raw)
+                state = _autonomy_boundary_state(root)
+                current = _current_execution_boundary(root)
+                current[field] = value
+                errors = validator.validate_autonomy_boundary(
+                    state,
+                    root,
+                    current_execution_boundary=current,
+                    require_boundary=True,
+                )["autonomy_boundary_errors"]
+                self.assertTrue(
+                    any("current execution boundary" in error for error in errors),
+                    errors,
+                )
+
+    def test_required_boundary_fails_closed_when_current_surface_is_unavailable(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            state = _autonomy_boundary_state(root)
+            errors = validator.validate_autonomy_boundary(
+                state,
+                root,
+                current_execution_boundary=None,
+                require_boundary=True,
+            )["autonomy_boundary_errors"]
+            self.assertTrue(any("current execution boundary" in error for error in errors), errors)
+
+
+class AutonomyBoundaryMalformedExecutionTests(unittest.TestCase):
+    def test_non_serializable_execution_boundary_does_not_cascade_digest_errors(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            state = _autonomy_boundary_state(root)
+            boundary = state["autonomy_boundary"]
+            boundary["execution_boundary"]["execution_environment"] = object()
+            action = boundary["actions"][0]
+            action["target"] = "/opt/other"
+
+            errors = _autonomy_errors(state, root)
+
+        self.assertEqual(
+            [error for error in errors if "execution_boundary sha256" in error],
+            [],
+            errors,
+        )
+        self.assertEqual(
+            [
+                error
+                for error in errors
+                if "execution_boundary scope cannot be canonicalized/serialized for sha256" in error
+            ],
+            [
+                "autonomy boundary execution_boundary scope cannot be canonicalized/serialized for sha256"
+            ],
+            errors,
+        )
+        self.assertFalse(
+            any("current execution boundary does not match" in error for error in errors),
+            errors,
+        )
+        self.assertFalse(
+            any("execution_boundary_sha256 is stale" in error for error in errors),
+            errors,
+        )
+        self.assertTrue(any("scope_sha256 does not match its action scope" in error for error in errors), errors)
+        self.assertTrue(any("authorization.scope_sha256 does not match its action scope" in error for error in errors), errors)
+
+
+class AutonomyBoundaryNegativeAuthorizationTests(unittest.TestCase):
+    def test_automatic_review_and_prior_execution_are_not_authorization(self) -> None:
+        for status in ("auto_review", "prior_execution", "not_required"):
+            with self.subTest(status=status), tempfile.TemporaryDirectory() as raw:
+                root = Path(raw)
+                state = _autonomy_boundary_state(root)
+                state["autonomy_boundary"]["actions"][0]["authorization"]["status"] = status
+                errors = _autonomy_errors(state, root)
+                self.assertTrue(any("authorization" in error for error in errors), errors)
+
+    def test_revocation_forces_operator_action_required(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            state = _autonomy_boundary_state(root)
+            boundary = state["autonomy_boundary"]
+            action = boundary["actions"][0]
+            boundary["status"] = "operator_action_required"
+            action["disposition"] = "operator_action_required"
+            authorization = action["authorization"]
+            authorization["status"] = "revoked"
+            authorization["revocation_evidence"] = "a later user instruction revoked authorization"
+            self.assertEqual(
+                _autonomy_errors(state, root),
+                [],
+            )
+
+            state["autonomy_boundary"]["status"] = "ready"
+            errors = _autonomy_errors(state, root)
+            self.assertTrue(any("status" in error for error in errors), errors)
+
+class AutonomyBoundaryStageTests(unittest.TestCase):
+    def test_reachability_requires_boundary_independent_of_optional_run_status(self) -> None:
+        cases = (
+            ("plan", "pending", "in_progress", False),
+            ("plan", "in_progress", "in_progress", True),
+            ("implement", "completed", None, True),
+            ("implement", "completed", "completed", True),
+            ("full", "pending", "in_progress", False),
+            ("full", "completed", "in_progress", True),
+        )
+        for stage, phase_65_status, run_status, required in cases:
+            with self.subTest(stage=stage, phase_65_status=phase_65_status, run_status=run_status):
+                state = {
+                    "stage": stage,
+                    "plan": [
+                        {"step": "Phase 6.5: Confidence Gate", "status": phase_65_status},
+                        {"step": "Phase 7: Implement", "status": "pending"},
+                    ],
+                }
+                if run_status is not None:
+                    state["status"] = run_status
+                errors = validator.validate_autonomy_boundary(
+                    state,
+                    Path("."),
+                    current_execution_boundary=_current_execution_boundary(Path(".")),
+                    require_boundary=True,
+                )["autonomy_boundary_errors"]
+                self.assertEqual(bool(errors), required, errors)
+
+
 class RuleScopingTests(unittest.TestCase):
     """`--rule` must scope the exit code without hiding anything from the report."""
 
-    def _run(self, extra: list[str]) -> tuple[int, dict]:
+    def _run(self, extra: list[str], state_overrides: dict | None = None) -> tuple[int, dict]:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             wf = root / "workflow.md"
             # Fails coverage (no Post items / sections) but passes status-evidence.
             wf.write_text(workflow(("Specify", "✅ Complete"), body="G1 gate: PASS"), encoding="utf-8")
             state = root / "autopilot-state.json"
-            state.write_text(
-                json.dumps({
-                    "workflow_file": str(wf),
-                    "plan": [{"step": s, "status": "pending"} for s in PLAN_STEPS],
-                }),
-                encoding="utf-8",
-            )
+            state_data = {
+                "workflow_file": str(wf),
+                "plan": [{"step": s, "status": "pending"} for s in PLAN_STEPS],
+            }
+            if state_overrides:
+                state_data.update(state_overrides)
+            state.write_text(json.dumps(state_data), encoding="utf-8")
             completed = subprocess.run(
                 [sys.executable, str(VALIDATOR), "--workflow", str(wf), "--state", str(state), *extra],
                 text=True, capture_output=True, check=False,
@@ -376,10 +725,63 @@ class RuleScopingTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(report["workflow_status_evidence_errors"], [])
 
+    def test_status_evidence_rule_blocks_implement_without_boundary_record(self) -> None:
+        code, report = self._run(
+            [
+                "--rule", "status-evidence",
+                "--require-autonomy-boundary",
+                "--current-execution-environment", "local",
+                "--current-sandbox-mode", "workspace-write",
+                "--current-approval-reviewer", "auto_review",
+                "--current-writable-root", "/",
+            ],
+            state_overrides={"status": "in_progress", "stage": "implement"},
+        )
+        self.assertEqual(code, 1, report)
+        self.assertTrue(report["autonomy_boundary_errors"], report)
+
     def test_scoped_run_still_reports_every_list(self) -> None:
         """Scoping the exit code must not hide the debt from the report."""
         _code, report = self._run(["--rule", "status-evidence"])
         self.assertTrue(report["missing_workflow_post_items"])
+
+
+class AutonomyBoundaryCliTests(unittest.TestCase):
+    def test_cli_rejects_a_valid_record_under_a_different_current_boundary(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            workflow_path = root / "workflow.md"
+            workflow_path.write_text(
+                workflow(("Specify", "✅ Complete"), body="G1 gate: PASS"),
+                encoding="utf-8",
+            )
+            state_path = root / "autopilot-state.json"
+            state = _autonomy_boundary_state(root)
+            state["workflow_file"] = str(workflow_path)
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            completed = subprocess.run(
+                [
+                    sys.executable, str(VALIDATOR),
+                    "--workflow", str(workflow_path), "--state", str(state_path),
+                    "--require-autonomy-boundary",
+                    "--current-execution-environment", "local",
+                    "--current-sandbox-mode", "workspace-write",
+                    "--current-approval-reviewer", "auto_review",
+                    "--current-writable-root", "/different/root",
+                    "--rule", "status-evidence",
+                ],
+                text=True, capture_output=True, check=False,
+            )
+            report = json.loads(completed.stdout)
+
+        self.assertEqual(completed.returncode, 1, report)
+        self.assertTrue(
+            any(
+                "current execution boundary" in error
+                for error in report["autonomy_boundary_errors"]
+            ),
+            report,
+        )
 
 
 class CleanStatusEvidenceControlTests(StatusEvidenceReportAssertions, unittest.TestCase):
@@ -1114,7 +1516,14 @@ def build_suite() -> unittest.TestSuite:
     for case in (
         WorkflowStatusEvidenceTests,
         StateStatusSchemaTests,
+        AutonomyBoundarySourceContractTests,
+        AutonomyBoundaryAuthorizationTests,
+        AutonomyBoundaryFreshnessTests,
+        AutonomyBoundaryMalformedExecutionTests,
+        AutonomyBoundaryNegativeAuthorizationTests,
+        AutonomyBoundaryStageTests,
         RuleScopingTests,
+        AutonomyBoundaryCliTests,
         CleanStatusEvidenceControlTests,
         LegacyCoverageAdvisoryTests,
         StatusEvidenceSourceGuidanceTests,

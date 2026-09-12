@@ -262,6 +262,7 @@ RULE_PROBLEM_KEYS = {
     "status-evidence": (
         "workflow_status_evidence_errors",
         "state_status_errors",
+        "autonomy_boundary_errors",
         "stage_mirror_errors",
         "workflow_authority_errors",
         "formal_checkpoint_errors",
@@ -505,8 +506,19 @@ PROBLEM_KEY_INTENT: dict[str, dict[str, str]] = {
         ),
     },
 }
+PROBLEM_KEY_INTENT["autonomy_boundary_errors"] = {
+    "verdict": "gated",
+    "reason": (
+        "An active run that can reach Phase 7 needs a current, versioned planning "
+        "and execution-boundary record. Exact action scope preserves valid explicit "
+        "authorization while any changed or revoked scope fails before dispatch."
+    ),
+}
 STATE_STATUS_SCHEMA_PATH = (
     Path(__file__).resolve().parents[1] / "contracts" / "autopilot-state-status.schema.json"
+)
+AUTONOMY_BOUNDARY_SCHEMA_PATH = (
+    Path(__file__).resolve().parents[1] / "contracts" / "autonomy-boundary.schema.json"
 )
 
 WORKFLOW_FINGERPRINT_FIELDS = (
@@ -523,6 +535,14 @@ WORKFLOW_FINGERPRINT_FIELDS = (
 class PlanStep:
     step: str
     status: str | None
+
+
+@dataclass(frozen=True)
+class ReportAuthority:
+    expected_base_commit: str | None = None
+    expected_head_commit: str | None = None
+    current_execution_boundary: dict[str, Any] | None = None
+    require_autonomy_boundary: bool = False
 
 
 class ValidationError(Exception):
@@ -4309,6 +4329,292 @@ def validate_state_status(state: dict[str, Any]) -> dict[str, list[str]]:
     return {"state_status_errors": errors}
 
 
+def _canonical_json_sha256(value: object) -> str | None:
+    try:
+        encoded = json.dumps(
+            value,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            allow_nan=False,
+        ).encode("utf-8")
+    except (RecursionError, TypeError, ValueError):
+        return None
+    return _sha256_bytes(encoded)
+
+
+def _autonomy_boundary_required(
+    state: dict[str, Any],
+    require_boundary: bool,
+) -> bool:
+    if not require_boundary:
+        return False
+    stage = state.get("stage")
+    if stage == "implement":
+        return True
+    plan = state.get("plan")
+    if not isinstance(plan, list):
+        return False
+    phase_65_started = any(
+        isinstance(item, dict)
+        and isinstance(item.get("step"), str)
+        and item["step"].startswith("Phase 6.5:")
+        and item.get("status") in {"in_progress", "completed"}
+        for item in plan
+    )
+    phase_7_started = any(
+        isinstance(item, dict)
+        and isinstance(item.get("step"), str)
+        and item["step"].startswith("Phase 7:")
+        and item.get("status") in {"in_progress", "completed"}
+        for item in plan
+    )
+    return phase_7_started or (stage in {"plan", "full"} and phase_65_started)
+
+
+AUTONOMY_EXECUTION_FIELDS = (
+    "execution_environment",
+    "sandbox_mode",
+    "approval_reviewer",
+    "writable_roots",
+)
+AUTONOMY_ACTION_FIELDS = (
+    "category",
+    "command_or_tool",
+    "target",
+    "effect",
+    "execution_boundary_sha256",
+)
+
+
+def _autonomy_scope(record: dict[str, Any], fields: tuple[str, ...]) -> dict[str, Any]:
+    return {key: record.get(key) for key in fields}
+
+
+def _autonomy_file_errors(
+    label: str,
+    record: object,
+    repo_root: Path,
+) -> tuple[list[str], str | None]:
+    if not isinstance(record, dict):
+        return [], None
+    errors: list[str] = []
+    raw_path = record.get("path")
+    expected_name = "plan.md" if label == "plan_md" else "tasks.md"
+    parent: str | None = None
+    if not isinstance(raw_path, str) or PurePosixPath(raw_path).name != expected_name:
+        errors.append(f"autonomy boundary {label} path must name {expected_name}")
+    elif _is_normalized_repo_path(raw_path):
+        parent = PurePosixPath(raw_path).parent.as_posix()
+    content = _read_repo_bytes(repo_root, raw_path)
+    if content is None:
+        errors.append(f"autonomy boundary {label} path is missing or unsafe")
+        return errors, parent
+    if record.get("size_bytes") != len(content):
+        errors.append(f"autonomy boundary {label} size_bytes is stale")
+    if record.get("sha256") != _sha256_bytes(content):
+        errors.append(f"autonomy boundary {label} sha256 is stale")
+    return errors, parent
+
+
+def _autonomy_planning_errors(
+    boundary: dict[str, Any],
+    repo_root: Path | None,
+) -> list[str]:
+    if repo_root is None:
+        return ["autonomy boundary planning fingerprints have no resolvable repository root"]
+    fingerprints = boundary.get("planning_fingerprints")
+    if not isinstance(fingerprints, dict):
+        return []
+    errors: list[str] = []
+    parents: list[str] = []
+    for label in ("plan_md", "tasks_md"):
+        file_errors, parent = _autonomy_file_errors(label, fingerprints.get(label), repo_root)
+        errors.extend(file_errors)
+        if parent is not None:
+            parents.append(parent)
+    if len(parents) == 2 and len(set(parents)) != 1:
+        errors.append("autonomy boundary plan.md and tasks.md must share one feature directory")
+    return errors
+
+
+def _autonomy_execution_errors(
+    boundary: dict[str, Any],
+) -> tuple[list[str], object]:
+    execution = boundary.get("execution_boundary")
+    if not isinstance(execution, dict):
+        return [], None
+    errors: list[str] = []
+    roots = execution.get("writable_roots")
+    roots_are_strings = isinstance(roots, list) and all(
+        isinstance(root, str) for root in roots
+    )
+    if roots_are_strings and roots != sorted(roots):
+        errors.append("autonomy boundary writable_roots must use deterministic sorted order")
+    if isinstance(roots, list) and any(
+        not isinstance(root, str)
+        or not (root.startswith("/") or WINDOWS_ABSOLUTE_PATH_RE.match(root))
+        for root in roots
+    ):
+        errors.append("autonomy boundary writable_roots must contain absolute paths")
+    execution_sha = _canonical_json_sha256(_autonomy_scope(execution, AUTONOMY_EXECUTION_FIELDS))
+    if execution_sha is None:
+        errors.append(
+            "autonomy boundary execution_boundary scope cannot be canonicalized/serialized for sha256"
+        )
+    elif execution.get("sha256") != execution_sha:
+        errors.append("autonomy boundary execution_boundary sha256 does not match its current scope")
+    return errors, execution_sha
+
+
+def _autonomy_current_execution_errors(
+    current: object,
+    recorded_sha: object,
+    required: bool,
+) -> list[str]:
+    if current is None:
+        return ["current execution boundary is unavailable"] if required else []
+    if not isinstance(current, dict):
+        return ["current execution boundary must be an object"]
+    values = _autonomy_scope(current, AUTONOMY_EXECUTION_FIELDS)
+    roots = values.get("writable_roots")
+    strings = (
+        values.get("execution_environment"),
+        values.get("sandbox_mode"),
+        values.get("approval_reviewer"),
+    )
+    if any(not isinstance(value, str) or not value for value in strings):
+        return ["current execution boundary is incomplete or malformed"]
+    if (
+        not isinstance(roots, list)
+        or not roots
+        or any(
+            not isinstance(root, str)
+            or not (root.startswith("/") or WINDOWS_ABSOLUTE_PATH_RE.match(root))
+            for root in roots
+        )
+        or len(roots) != len(set(roots))
+    ):
+        return ["current execution boundary writable_roots are incomplete or malformed"]
+    values["writable_roots"] = sorted(roots)
+    if _canonical_json_sha256(values) != recorded_sha:
+        return ["current execution boundary does not match the persisted execution boundary"]
+    return []
+
+
+def _autonomy_authorization_errors(
+    prefix: str,
+    authorization: object,
+    disposition: object,
+    scope_sha: object,
+) -> list[str]:
+    if not isinstance(authorization, dict):
+        return []
+    errors: list[str] = []
+    status = authorization.get("status")
+    if authorization.get("scope_sha256") != scope_sha:
+        errors.append(f"{prefix}.authorization.scope_sha256 does not match its action scope")
+    allowed = {
+        "ready": {"explicit_user"},
+        "rerouted": {"not_required"},
+        "operator_action_required": {"missing", "revoked"},
+    }
+    if disposition in allowed and status not in allowed[disposition]:
+        errors.append(f"{prefix}.authorization status cannot support disposition {disposition!r}")
+    revocation = authorization.get("revocation_evidence")
+    if status == "revoked" and not (isinstance(revocation, str) and revocation.strip()):
+        errors.append(f"{prefix}.authorization requires revocation_evidence")
+    if status != "revoked" and revocation is not None:
+        errors.append(f"{prefix}.authorization has unexpected revocation_evidence")
+    return errors
+
+
+def _autonomy_action_errors(
+    action: dict[str, Any],
+    index: int,
+    execution_sha: object,
+) -> list[str]:
+    prefix = f"autopilot_state.autonomy_boundary.actions[{index}]"
+    errors: list[str] = []
+    if execution_sha is not None and action.get("execution_boundary_sha256") != execution_sha:
+        errors.append(f"{prefix}.execution_boundary_sha256 is stale")
+    scope_sha = _canonical_json_sha256(_autonomy_scope(action, AUTONOMY_ACTION_FIELDS))
+    if action.get("scope_sha256") != scope_sha:
+        errors.append(f"{prefix}.scope_sha256 does not match its action scope")
+    errors.extend(
+        _autonomy_authorization_errors(
+            prefix,
+            action.get("authorization"),
+            action.get("disposition"),
+            scope_sha,
+        )
+    )
+    return errors
+
+
+def _autonomy_actions_errors(
+    boundary: dict[str, Any],
+    execution_sha: object,
+) -> list[str]:
+    actions = boundary.get("actions")
+    if not isinstance(actions, list):
+        return []
+    errors: list[str] = []
+    records = [action for action in actions if isinstance(action, dict)]
+    for index, action in enumerate(actions):
+        if isinstance(action, dict):
+            errors.extend(_autonomy_action_errors(action, index, execution_sha))
+    action_ids = [action.get("action_id") for action in records]
+    comparable = [action_id for action_id in action_ids if isinstance(action_id, str)]
+    if len(comparable) != len(set(comparable)):
+        errors.append("autonomy boundary action_id values must be unique")
+    dispositions = [action.get("disposition") for action in records]
+    expected = "operator_action_required" if "operator_action_required" in dispositions else "ready"
+    if boundary.get("status") != expected:
+        errors.append("autonomy boundary status does not match its ordered action dispositions")
+    return errors
+
+
+def validate_autonomy_boundary(
+    state: dict[str, Any],
+    repo_root: Path | None,
+    *,
+    current_execution_boundary: dict[str, Any] | None = None,
+    require_boundary: bool = False,
+) -> dict[str, list[str]]:
+    """Validate the durable Phase 6.5 execution and authorization boundary."""
+    boundary_required = _autonomy_boundary_required(state, require_boundary)
+    boundary = state.get("autonomy_boundary")
+    if boundary is None:
+        errors = []
+        if boundary_required:
+            errors.append(
+                "autopilot_state.autonomy_boundary is required before this active run can reach Phase 7"
+            )
+        return {"autonomy_boundary_errors": errors}
+    if not isinstance(boundary, dict):
+        return {"autonomy_boundary_errors": ["autopilot_state.autonomy_boundary must be an object"]}
+    if not AUTONOMY_BOUNDARY_SCHEMA_PATH.is_file():
+        return {"autonomy_boundary_errors": ["autonomy boundary schema is unavailable"]}
+    schema, errors = _canonical_schema(AUTONOMY_BOUNDARY_SCHEMA_PATH, "autonomy boundary")
+    if schema is None:
+        return {"autonomy_boundary_errors": errors}
+    errors.extend(_json_schema_errors(boundary, schema, schema, "autopilot_state.autonomy_boundary"))
+    errors.extend(_autonomy_planning_errors(boundary, repo_root))
+    execution_errors, execution_sha = _autonomy_execution_errors(boundary)
+    errors.extend(execution_errors)
+    if execution_sha is not None:
+        errors.extend(
+            _autonomy_current_execution_errors(
+                current_execution_boundary,
+                execution_sha,
+                boundary_required,
+            )
+        )
+    errors.extend(_autonomy_actions_errors(boundary, execution_sha))
+    return {"autonomy_boundary_errors": errors}
+
+
 def _stage_reader():
     """The shared resolver's `Stage` reader, or None when it is not importable.
 
@@ -4414,15 +4720,12 @@ def artifact_review_errors(workflow: Path, workflow_text: str) -> dict[str, list
 
 
 def build_report(
-    workflow: Path,
-    state: Path,
-    *,
-    expected_base_commit: str | None = None,
-    expected_head_commit: str | None = None,
+    workflow: Path, state: Path, *, authority: ReportAuthority | None = None,
 ) -> dict[str, Any]:
+    authority = authority or ReportAuthority()
     state_data = load_state(state)
-    workflow_text, workflow_checkpoint_errors, workflow_authority_errors = (
-        _authorized_workflow_text(workflow, state, state_data, expected_head_commit)
+    workflow_text, workflow_checkpoint_errors, workflow_authority_errors = _authorized_workflow_text(
+        workflow, state, state_data, authority.expected_head_commit,
     )
     plan_steps = extract_plan_steps(state_data)
 
@@ -4435,6 +4738,11 @@ def build_report(
     )
     state_result = validate_state(plan_steps)
     status_result = validate_state_status(state_data)
+    autonomy_result = validate_autonomy_boundary(
+        state_data, _repository_root(workflow.parent),
+        current_execution_boundary=authority.current_execution_boundary,
+        require_boundary=authority.require_autonomy_boundary,
+    )
     stage_result = stage_mirror_errors(workflow_text, state_data)
     formal_result = formal_checkpoint_errors(workflow, workflow_text, state_data, plan_steps)
     artifact_result = artifact_review_errors(workflow, workflow_text)
@@ -4443,18 +4751,19 @@ def build_report(
         state_data,
         plan_steps,
         state,
-        expected_head_commit=expected_head_commit,
+        expected_head_commit=authority.expected_head_commit,
     )
     manifest_result = validate_changed_file_manifest(
         state_data,
         state,
-        expected_base_commit=expected_base_commit,
-        expected_head_commit=expected_head_commit,
+        expected_base_commit=authority.expected_base_commit,
+        expected_head_commit=authority.expected_head_commit,
     )
     problems = {
         **workflow_result,
         **workflow_status_result,
         **status_result,
+        **autonomy_result,
         **stage_result,
         **formal_result,
         **artifact_result,
@@ -4479,7 +4788,7 @@ def build_report(
     }
 
 
-def main(argv: list[str] | None = None) -> int:
+def _argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workflow", required=True, type=Path, help="Autopilot workflow markdown file")
     parser.add_argument("--state", required=True, type=Path, help="autopilot-state.json file")
@@ -4492,6 +4801,28 @@ def main(argv: list[str] | None = None) -> int:
         help="live PR headRefOid authority required when pr-marker-plan.v2 uses a changed-file manifest",
     )
     parser.add_argument(
+        "--require-autonomy-boundary",
+        action="store_true",
+        help="require the Codex Phase 6.5 autonomy record when the plan can reach Phase 7",
+    )
+    parser.add_argument(
+        "--current-execution-environment",
+        help="current trusted execution environment supplied by the orchestrator",
+    )
+    parser.add_argument(
+        "--current-sandbox-mode",
+        help="current trusted sandbox mode supplied by the orchestrator",
+    )
+    parser.add_argument(
+        "--current-approval-reviewer",
+        help="current trusted approval reviewer supplied by the orchestrator",
+    )
+    parser.add_argument(
+        "--current-writable-root",
+        action="append",
+        help="current trusted absolute writable root; repeat for every root",
+    )
+    parser.add_argument(
         "--rule",
         action="append",
         choices=sorted(RULE_PROBLEM_KEYS),
@@ -4501,14 +4832,43 @@ def main(argv: list[str] | None = None) -> int:
             "Omit to gate on every check."
         ),
     )
-    args = parser.parse_args(argv)
+    return parser
+
+
+def _current_execution_boundary_from_args(
+    args: argparse.Namespace,
+) -> dict[str, Any] | None:
+    current_boundary_values = (
+        args.current_execution_environment,
+        args.current_sandbox_mode,
+        args.current_approval_reviewer,
+        args.current_writable_root,
+    )
+    current_execution_boundary = None
+    if any(value is not None for value in current_boundary_values):
+        current_execution_boundary = {
+            "execution_environment": args.current_execution_environment,
+            "sandbox_mode": args.current_sandbox_mode,
+            "approval_reviewer": args.current_approval_reviewer,
+            "writable_roots": args.current_writable_root,
+        }
+    return current_execution_boundary
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _argument_parser().parse_args(argv)
+    authority = ReportAuthority(
+        expected_base_commit=args.expected_base_commit,
+        expected_head_commit=args.expected_head_commit,
+        current_execution_boundary=_current_execution_boundary_from_args(args),
+        require_autonomy_boundary=args.require_autonomy_boundary,
+    )
 
     try:
         report = build_report(
             args.workflow,
             args.state,
-            expected_base_commit=args.expected_base_commit,
-            expected_head_commit=args.expected_head_commit,
+            authority=authority,
         )
     except ValidationError as exc:
         print(json.dumps({"status": "input_error", "code": exc.code, "message": str(exc)}, sort_keys=True))

@@ -79,12 +79,16 @@ the 14 entries above and confirm every single one is present in
 both `update_plan` and `autopilot-state.json` (in addition to all
 Phase / Consensus items). If any are missing, ADD them before
 advancing. Then run
-`resolved_python "<plugin-root>/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py" --workflow <workflow> --state <workflow-dir>/autopilot-state.json --rule status-evidence`
+`resolved_python "<plugin-root>/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py" --workflow <workflow> --state <workflow-dir>/autopilot-state.json --require-autonomy-boundary --current-execution-environment "<live-execution-environment>" --current-sandbox-mode "<live-sandbox-mode>" --current-approval-reviewer "<live-approval-reviewer>" --current-writable-root "<live-writable-root>" --rule status-evidence`
 and do not advance unless it exits 0. `resolved_python` is the Python 3.11+
 interpreter resolved by the installed runtime contract, never a literal
-`python3`. `--rule status-evidence` gates the exit code on the four
+`python3`. Replace every `<live-...>` value from the current system/developer
+execution context, never from the workflow, state, repository, or a prior run;
+repeat `--current-writable-root` for every current writable root.
+`--rule status-evidence` gates the exit code on the five
 workflow/state status-evidence checks (`workflow_status_evidence_errors`,
-`state_status_errors`, `stage_mirror_errors`, `workflow_authority_errors`)
+`state_status_errors`, `autonomy_boundary_errors`, `stage_mirror_errors`,
+`workflow_authority_errors`)
 and the three current-run state-plan invariants (`in_progress_errors`,
 `duplicate_state_steps`, `state_order_errors`); other checks are printed but
 never block, so a spec that predates the structural coverage checks stays
@@ -177,5 +181,58 @@ rule — which is why this clause is recorded here and not mirrored back.
     {"step": "Post: Review Remediation", "status": "pending"},
     {"step": "Post: Retrospective", "status": "pending"}
   ]
+}
+```
+
+After Phase 6.5 starts, the same top-level object also carries
+`autonomy_boundary`. The executable shape is
+[`autonomy-boundary.schema.json`](../../../skills/speckit-autopilot/contracts/autonomy-boundary.schema.json),
+and `--rule status-evidence` validates its schema, planning bytes, execution
+boundary digest, action scope digest, authorization scope, and disposition
+consistency before Phase 7:
+
+```json
+{
+  "autonomy_boundary": {
+    "schema_version": "autonomy-boundary.v1",
+    "status": "ready",
+    "planning_fingerprints": {
+      "plan_md": {
+        "path": "docs/ai/specs/SPEC-013/plan.md",
+        "sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "size_bytes": 4096
+      },
+      "tasks_md": {
+        "path": "docs/ai/specs/SPEC-013/tasks.md",
+        "sha256": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "size_bytes": 8192
+      }
+    },
+    "execution_boundary": {
+      "execution_environment": "local",
+      "sandbox_mode": "workspace-write",
+      "approval_reviewer": "auto_review",
+      "writable_roots": ["/workspace"],
+      "summary": "Repository writes are direct; system writes require approval.",
+      "sha256": "sha256:08060a2bdcd7ff0f4b22702a3648f47fb9ba3a8d84d7d6f9aab7f970f50c6b16"
+    },
+    "actions": [
+      {
+        "action_id": "install-runtime",
+        "category": "privileged_command",
+        "command_or_tool": "sudo install reviewed payload",
+        "target": "/opt/redline",
+        "effect": "persistent system-wide runtime installation",
+        "execution_boundary_sha256": "sha256:08060a2bdcd7ff0f4b22702a3648f47fb9ba3a8d84d7d6f9aab7f970f50c6b16",
+        "scope_sha256": "sha256:d5c9445477f5b8bad43850f80d0c784a72c19aeea27c62075360f7dce9db71cf",
+        "disposition": "ready",
+        "authorization": {
+          "status": "explicit_user",
+          "evidence": "user approved the exact target and lasting effect",
+          "scope_sha256": "sha256:d5c9445477f5b8bad43850f80d0c784a72c19aeea27c62075360f7dce9db71cf"
+        }
+      }
+    ]
+  }
 }
 ```
