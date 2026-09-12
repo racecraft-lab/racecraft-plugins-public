@@ -9,6 +9,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import plistlib
 import re
 import shutil
 import signal
@@ -27,14 +28,24 @@ import trigger_process as processes  # noqa: E402
 import trigger_evidence as evidence_records  # noqa: E402
 
 PLUGIN_ROOT = (SCRIPT_DIR / "../../../speckit-pro").resolve()
-DEFAULT_MODEL = "sonnet"
+DEFAULT_MODEL = "claude-sonnet-5"
+PINNED_CLAUDE_VERSION = "2.1.269 (Claude Code)"
+PINNED_DOCTOR_RUNNING = "Running: native (2.1.269)"
+PINNED_MANAGED_SETTINGS = (
+    "Managed settings (remote): not fetched — requires an Enterprise or Team subscription"
+)
+PINNED_ORGANIZATION_POLICY = "Organization policy: not applicable to Pro and Max accounts"
+MACOS_MANAGED_ROOT = Path("/Library/Application Support/ClaudeCode")
+LINUX_MANAGED_ROOT = Path("/etc/claude-code")
 RUNS_PER_QUERY = 3
 TRIGGER_THRESHOLD = 0.5
 NO_SPECKIT_SKILL_NAME = "no-speckit-skill"
 NO_SPECKIT_SKILL_DESCRIPTION = (
-    "Use when the request is ordinary coding, testing, tooling, or repository work that no SpecKit skill covers, "
-    "such as writing a unit test, configuring a linter, installing packages, or editing application code. Reply "
-    "that no SpecKit skill applies and stop."
+    "Use when no available SpecKit skill covers the request, including ordinary coding, testing, tooling, or "
+    "repository work and host-specific SpecKit operations whose matching skill is absent from the current catalog, "
+    "such as installing Codex subagents when no agent-install skill is available or running the plan stage for an "
+    "already-existing spec or populated workflow when no planning skill is available. Reply that no available "
+    "SpecKit skill applies and stop."
 )
 MEASUREMENT_STUB_SENTENCE = (
     "This skill is a measurement stub used by the repository's skill-selection test suite. It is not a real "
@@ -42,6 +53,7 @@ MEASUREMENT_STUB_SENTENCE = (
 )
 REQUIRED_FLAGS = (
     "--restricted",
+    "--setting-sources",
     "--plugin-dir",
     "--strict-mcp-config",
     "--mcp-config",
@@ -296,6 +308,27 @@ def claude_model_evidence(events: list[dict[str, object]], init: dict[str, objec
     }
 
 
+def _claude_nonce_error(
+    assistant_events: list[tuple[int, dict[str, object]]],
+    intended: list[tuple[int, dict[str, object]]],
+    nonce_locations: list[dict[str, object]],
+    nonce: str,
+) -> str | None:
+    if not intended:
+        return "target nonce appeared without its native Skill selection" if nonce_locations else None
+    if not nonce_locations:
+        return None
+    if len(nonce_locations) != 1:
+        return "selected target emitted multiple nonce attestations"
+    location = nonce_locations[0]
+    nonce_event = next(event for index, event in assistant_events if index == location["event"])
+    nonce_block = stream_content(nonce_event)[int(location["block"])]
+    first_lines = [line.strip() for line in str(nonce_block["text"]).splitlines() if line.strip()]
+    if location["event"] <= intended[0][0] or not first_lines or first_lines[0] != nonce:
+        return "target nonce was not first in a post-selection assistant message"
+    return None
+
+
 def inspect_claude_stream(
     output: bytes | str,
     plugin_name: str,
@@ -431,7 +464,13 @@ def inspect_claude_stream(
             sibling_selections.append(skill_value)
         else:
             competing.append(skill_value)
-    if malformed or competing or len(intended) > 1 or (intended and sibling_selections):
+    if (
+        malformed
+        or competing
+        or len(intended) > 1
+        or len(sibling_selections) > 1
+        or (intended and sibling_selections)
+    ):
         return {
             "valid": False,
             "selected": False,
@@ -447,14 +486,27 @@ def inspect_claude_stream(
         return {"valid": False, "selected": False, "reason": "Claude reported a conflicting model identity", **model_evidence}
     selected = len(intended) == 1
     selected_id = str(intended[0][1]["id"]) if selected else None
+    nonce_error = _claude_nonce_error(assistant_events, intended, nonce_locations, nonce)
+    if nonce_error:
+        return {
+            "valid": False,
+            "selected": False,
+            "reason": nonce_error,
+            "nonce_locations": nonce_locations,
+            **model_evidence,
+        }
+    selected_skill = expected_skill if selected else sibling_selections[0] if sibling_selections else None
     return {
         "valid": True,
         "selected": selected,
-        "selected_skill": expected_skill if selected else None,
+        "selected_skill": selected_skill,
+        "selected_skill_set": [selected_skill] if selected_skill is not None else [],
         "selected_tool_use_id": selected_id,
         "nonce_locations": nonce_locations,
         "sibling_selections": sibling_selections,
         **model_evidence,
+        "qualification_observed": True,
+        "observation_scope": "claude-native-skill-tool",
         "reason": (
             "exact completed Skill selection" if selected
             else "sibling Skill selection" if sibling_selections
@@ -501,6 +553,40 @@ install_termination_handlers = processes.install_termination_handlers
 restore_termination_handlers = processes.restore_termination_handlers
 
 
+def claude_environment() -> dict[str, str]:
+    """Keep login location and locale while excluding inherited Claude controls."""
+    environment = {
+        key: os.environ[key]
+        for key in ("PATH", "HOME", "TMPDIR", "LANG", "LC_ALL", "LC_CTYPE", "USER")
+        if key in os.environ
+    }
+    environment.update({
+        "DISABLE_AUTOUPDATER": "1",
+        "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+        "CLAUDE_CODE_MAX_RETRIES": "0",
+    })
+    return environment
+
+
+def _claude_launch_contract(command: list[str], environment: dict[str, str], model: str) -> dict[str, object]:
+    settings_sources = [
+        command[index + 1]
+        for index, argument in enumerate(command[:-1])
+        if argument == "--setting-sources"
+    ]
+    return {
+        "config_isolated": (
+            "--restricted" in command
+            and "--strict-mcp-config" in command
+            and settings_sources == [""]
+        ),
+        "retries_disabled": environment.get("CLAUDE_CODE_MAX_RETRIES") == "0",
+        "requested_model": model,
+        "model_provider": "anthropic-claude-code",
+        "model_identity_evidence": "native-init-and-assistant-events",
+    }
+
+
 def run_claude_query(
     executable: str,
     plugin_root: Path,
@@ -527,6 +613,7 @@ def run_claude_query(
     command = [
         candidate,
         "--restricted",
+        "--setting-sources", "",
         "--plugin-dir", str(plugin_root),
         "--strict-mcp-config",
         "--mcp-config", str(mcp_config),
@@ -548,10 +635,9 @@ def run_claude_query(
         "--verbose",
         "--no-session-persistence",
     ]
-    environment = os.environ.copy()
-    environment["DISABLE_AUTOUPDATER"] = "1"
-    environment["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] = "1"
-    environment.pop("FORCE_AUTOUPDATE_PLUGINS", None)
+    environment = claude_environment()
+    if process_evidence is not None:
+        process_evidence["launch_contract"] = _claude_launch_contract(command, environment, model)
     child = subprocess.Popen(
         command,
         cwd=plugin_root,
@@ -586,37 +672,116 @@ def case_passes(should_trigger: bool, selected: int, invalid: int) -> bool:
     return ((selected / RUNS_PER_QUERY) >= TRIGGER_THRESHOLD) == should_trigger
 
 
+def _claude_managed_policy_checks(environment: dict[str, str]) -> tuple[dict[str, bool] | None, str | None]:
+    try:
+        managed_root = MACOS_MANAGED_ROOT if sys.platform == "darwin" else LINUX_MANAGED_ROOT
+        managed_paths = [
+            managed_root / "managed-settings.json",
+            managed_root / "managed-mcp.json",
+            managed_root / "CLAUDE.md",
+        ]
+        drop_in_root = managed_root / "managed-settings.d"
+        if drop_in_root.exists():
+            if not drop_in_root.is_dir():
+                return None, "Claude managed-settings drop-in path is not a directory"
+            managed_paths.extend(sorted(drop_in_root.glob("*.json")))
+        preference_check = True
+        if sys.platform == "darwin":
+            exported = subprocess.run(
+                ["/usr/bin/defaults", "export", "com.anthropic.claudecode", "-"],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=10,
+                env=environment,
+                shell=False,
+                check=False,
+            )
+            preferences = plistlib.loads(exported.stdout)
+            preference_check = exported.returncode == 0 and isinstance(preferences, dict) and not preferences
+    except (OSError, subprocess.TimeoutExpired, plistlib.InvalidFileException) as exc:
+        return None, f"Claude managed-settings preflight could not inspect local policy: {exc}"
+    return {
+        "system_files_absent": not any(path.exists() for path in managed_paths),
+        "managed_preferences_empty": preference_check,
+    }, None
+
+
 def cli_preflight(executable: str) -> tuple[dict[str, object] | None, str]:
     candidate = shutil.which("claude")
     if candidate is None:
         return None, "Claude CLI disappeared before preflight"
     if candidate != executable:
         return None, "Claude runtime changed before preflight"
-    version = subprocess.run(
-        [candidate, "--version"],
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        shell=False,
-        check=False,
-    )
-    help_result = subprocess.run(
-        [candidate, "--help"],
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        shell=False,
-        check=False,
-    )
+    if sys.platform not in {"darwin", "linux"}:
+        return None, "Claude qualification requires the audited POSIX managed-settings surface"
+    environment = claude_environment()
+    try:
+        version = subprocess.run(
+            [candidate, "--version"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=environment,
+            shell=False,
+            check=False,
+        )
+        help_result = subprocess.run(
+            [candidate, "--help"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=environment,
+            shell=False,
+            check=False,
+        )
+        doctor = subprocess.run(
+            [candidate, "doctor"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=30,
+            env=environment,
+            shell=False,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return None, f"Claude preflight could not run: {exc}"
     try:
         version_text = version.stdout.decode("utf-8", errors="strict").strip()
         help_text = help_result.stdout.decode("utf-8", errors="strict")
+        doctor_text = doctor.stdout.decode("utf-8", errors="strict")
     except UnicodeDecodeError as exc:
         return None, f"Claude preflight output is not UTF-8: {exc}"
     missing = [flag for flag in REQUIRED_FLAGS if flag not in help_text]
-    if version.returncode != 0 or help_result.returncode != 0 or missing:
+    doctor_checks = {
+        "running": PINNED_DOCTOR_RUNNING in doctor_text,
+        "managed_settings_absent": PINNED_MANAGED_SETTINGS in doctor_text,
+        "organization_policy_absent": PINNED_ORGANIZATION_POLICY in doctor_text,
+    }
+    managed_checks, managed_error = _claude_managed_policy_checks(environment)
+    if managed_checks is None:
+        return None, str(managed_error)
+    if (
+        version.returncode != 0
+        or help_result.returncode != 0
+        or doctor.returncode != 0
+        or version_text != PINNED_CLAUDE_VERSION
+        or missing
+        or not all(doctor_checks.values())
+        or not all(managed_checks.values())
+    ):
         return None, f"Claude preflight failed; unsupported flags: {', '.join(missing) or 'none'}"
-    return {"version": version_text, "supported_flags": list(REQUIRED_FLAGS)}, "Claude CLI preflight passed"
+    return {
+        "version": version_text,
+        "supported_flags": list(REQUIRED_FLAGS),
+        "settings_sources": [],
+        "managed_settings": "absent",
+        "organization_policy": "not-applicable",
+        "request_retries": 0,
+        "doctor_checks": doctor_checks,
+        "managed_checks": managed_checks,
+    }, "Claude CLI preflight passed"
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
@@ -696,7 +861,7 @@ def main(argv: list[str]) -> int:
             "runs_per_query": RUNS_PER_QUERY,
             "trigger_threshold": TRIGGER_THRESHOLD,
             "requested_model": args.model,
-            "qualification_eligible": False,
+            "qualification_eligible": args.model == DEFAULT_MODEL,
             "preflight": preflight,
         }
         if args.preflight:
@@ -710,7 +875,10 @@ def main(argv: list[str]) -> int:
             else:
                 evidence_dir = Path(tempfile.mkdtemp(prefix=f"claude-trigger-evidence-{args.skill}-"))
 
-            batch = evidence_records.TrialBatch("claude", args.skill, evidence_dir, RUNS_PER_QUERY, TRIGGER_THRESHOLD)
+            batch = evidence_records.TrialBatch(
+                "claude", args.skill, evidence_dir, RUNS_PER_QUERY, TRIGGER_THRESHOLD,
+                qualification_eligible=args.model == DEFAULT_MODEL,
+            )
             results, stop_exit = evidence_records.run_trials(
                 batch, eval_data,
                 lambda query, execution: run_claude_query(
@@ -732,6 +900,15 @@ def main(argv: list[str]) -> int:
                 for result in results
                 for trial in result["selection_evidence"]
             ]
+            qualification_eligible = (
+                args.model == DEFAULT_MODEL
+                and all(result["status"] == "complete" for result in results)
+                and all(
+                    trial["qualification_eligible"] is True
+                    for result in results
+                    for trial in result["selection_evidence"]
+                )
+            )
             report = {
                 "metadata": metadata,
                 "summary": {
@@ -741,6 +918,7 @@ def main(argv: list[str]) -> int:
                     "complete": all(result["status"] == "complete" for result in results),
                     "not_run": sum(result["status"] == "not_run" for result in results),
                     "requested_model": args.model,
+                    "qualification_eligible": qualification_eligible,
                     "resolved_model": resolved[0]
                     if resolved
                     and all(isinstance(model, str) and model and model == resolved[0] for model in resolved)

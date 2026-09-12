@@ -29,6 +29,25 @@ CLAUDE_RUNNER = LAYER2 / "run-trigger-evals.py"
 CODEX_RUNNER = LAYER2 / "run-trigger-evals-codex.py"
 CODEX_ENGINE = LAYER2 / "run_codex_evals.py"
 SHARED_LIB = TESTS_ROOT / "lib"
+_NO_SPECKIT_DESCRIPTION = (
+    "Use when no available SpecKit skill covers the request, including ordinary coding, testing, tooling, or "
+    "repository work and host-specific SpecKit operations whose matching skill is absent from the current catalog, "
+    "such as installing Codex subagents when no agent-install skill is available or running the plan stage for an "
+    "already-existing spec or populated workflow when no planning skill is available. Reply that no available "
+    "SpecKit skill applies and stop."
+)
+_INSTALL_NEGATIVE = {
+    "query": "install the bundled SpecKit Pro Codex subagents into ~/.codex/agents",
+    "should_trigger": False,
+}
+_SCAFFOLD_NEGATIVES = [
+    {
+        "query": "SPEC-016 already has a committed workflow file with every prompt filled in, so resume it at the "
+        "planning phase and run the plan stage against that existing file",
+        "should_trigger": False,
+    },
+    {"query": "draft the implementation plan for SPEC-016; the spec already exists", "should_trigger": False},
+]
 if str(SHARED_LIB) not in sys.path:
     sys.path.insert(0, str(SHARED_LIB))
 
@@ -43,6 +62,19 @@ def import_script(path: Path, name: str) -> ModuleType:
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
+
+
+def assert_no_speckit_contracts(test: unittest.TestCase, claude: ModuleType, staged_text: str) -> None:
+    engine = import_script(CODEX_ENGINE, "layer2_codex_no_speckit_contract")
+    test.assertEqual(claude.NO_SPECKIT_SKILL_DESCRIPTION, _NO_SPECKIT_DESCRIPTION)
+    test.assertEqual(engine.NO_SPECKIT_SKILL_DESCRIPTION, _NO_SPECKIT_DESCRIPTION)
+    test.assertTrue(staged_text.startswith(f"---\nname: no-speckit-skill\ndescription: {_NO_SPECKIT_DESCRIPTION}\n---\n"))
+    for eval_dir in ("evals", "codex-evals"):
+        with test.subTest(eval_dir=eval_dir):
+            install_cases = json.loads((LAYER2 / eval_dir / "speckit-install-trigger.json").read_text())
+            scaffold_cases = json.loads((LAYER2 / eval_dir / "speckit-scaffold-spec-trigger.json").read_text())
+            test.assertEqual(install_cases[12], _INSTALL_NEGATIVE)
+            test.assertEqual(scaffold_cases[18:20], _SCAFFOLD_NEGATIVES)
 
 
 def calls_forbidden_process_api(path: Path) -> bool:
@@ -125,11 +157,74 @@ def claude_stream(
         )
     events.extend(
         [
-            {"type": "assistant", "message": {"content": [{"type": "text", "text": nonce}]}},
+            {
+                "type": "assistant",
+                "message": {"content": [{
+                    "type": "text",
+                    "text": nonce if selected else "No skill selected.",
+                }]},
+            },
             {"type": "result", "subtype": "success", "is_error": False, "model": "untrusted-result-model"},
         ]
     )
     return ("\r\n".join(json.dumps(event) for event in events) + "\r\n").encode("utf-8")
+
+
+def codex_witness(skill_name: str, marker: str) -> dict[str, dict[str, str]]:
+    path = Path("/tmp/layer2-codex-fixture") / skill_name / "SKILL.md"
+    body = f"---\nname: {skill_name}\ndescription: Fixture.\n---\n\n{marker}\n"
+    return {skill_name: {
+        "marker": marker,
+        "path": str(path),
+        "relative_path": f".agents/skills/{skill_name}/SKILL.md",
+        "source_locator": f"r0/{skill_name}/SKILL.md",
+        "sha256": hashlib.sha256(body.encode("utf-8")).hexdigest(),
+        "body": body,
+    }}
+
+
+def codex_stream(
+    witnesses: dict[str, dict[str, str]],
+    *,
+    selected_skill: str | None = None,
+    consulted_skill: str | None = None,
+    message: str | None = None,
+) -> bytes:
+    skill_read = selected_skill or consulted_skill
+    events: list[dict[str, object]] = [
+        {"type": "thread.started", "thread_id": "thread-1"},
+        {"type": "turn.started"},
+    ]
+    if skill_read is not None:
+        witness = witnesses[skill_read]
+        command = f"cat {witness['path']}"
+        item = {"id": f"read-{skill_read}", "type": "command_execution", "command": command}
+        events.append({"type": "item.started", "item": item})
+        events.append({"type": "item.completed", "item": {
+            **item,
+            "status": "completed",
+            "exit_code": 0,
+            "aggregated_output": witness["body"],
+        }})
+    if message is None:
+        message = witnesses[selected_skill]["marker"] if selected_skill is not None else "No skill selected."
+    events.extend([
+        {"type": "item.completed", "item": {"id": "message", "type": "agent_message", "text": message}},
+        {"type": "turn.completed"},
+    ])
+    return ("\n".join(json.dumps(event) for event in events) + "\n").encode("utf-8")
+
+
+def inspect_codex_events(
+    engine: ModuleType,
+    events: list[dict[str, object]],
+    target_skill: str,
+    witnesses: dict[str, dict[str, str]],
+) -> dict[str, object]:
+    payload = "\n".join(json.dumps(event) for event in events).encode("utf-8")
+    return engine.inspect_codex_jsonl(
+        payload, target_skill, witnesses,
+    )
 
 
 class FakePopen:
@@ -162,7 +257,9 @@ class FakePopen:
         return self.returncode
 
 
-def successful_process_evidence() -> dict[str, object]:
+def successful_process_evidence(
+    requested_model: str, *, host: str = "claude",
+) -> dict[str, object]:
     """Explicit synthetic supervisor receipt; never used for provider execution."""
     return {
         "provider_exit_code": 0, "timed_out": False, "interrupted_by_signal": None,
@@ -170,21 +267,55 @@ def successful_process_evidence() -> dict[str, object]:
         "unexpected_descendants": False, "child_pid": 43210, "child_pgid": 43210,
         "cleanup_observations": [{"pgid": 43210, "errno": 3, "elapsed_seconds": 0.01}],
         "process_error": None,
+        "launch_contract": {
+            "config_isolated": True,
+            "retries_disabled": True,
+            "requested_model": requested_model,
+            **(
+                {
+                    "stdin_prompt_isolated": True,
+                    "login_state_source": "CODEX_HOME",
+                    "shell_home_isolated": True,
+                    "scratch_directory_isolated": True,
+                }
+                if host == "codex"
+                else {}
+            ),
+        },
     }
 
 
-def supervised_results(results: list[tuple[int, bytes, bytes, bool]]):
+def supervised_results(results: list[tuple[int, bytes, bytes, bool]], requested_model: str):
     remaining = iter(results)
 
     def provider(*_args: object, **kwargs: object) -> tuple[int, bytes, bytes, bool]:
         result = next(remaining)
-        kwargs["process_evidence"].update(successful_process_evidence())
+        kwargs["process_evidence"].update(successful_process_evidence(requested_model))
         return result
 
     return provider
 
 
 class Layer2TriggerRunnerTests(unittest.TestCase):
+    def test_codex_stages_file_backed_query_fixtures(self) -> None:
+        engine = import_script(CODEX_ENGINE, "layer2_codex_workspace_fixture")
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            fixture_root = root / "fixture"
+            workspace = root / "workspace"
+            (fixture_root / "docs").mkdir(parents=True)
+            workspace.mkdir()
+            (fixture_root / "docs" / "idea.md").write_text("client brief\n", encoding="utf-8")
+
+            with mock.patch.object(engine, "CODEX_WORKSPACE_FIXTURE_ROOT", fixture_root):
+                engine.stage_workspace_fixture(workspace)
+
+            self.assertEqual((workspace / "docs" / "idea.md").read_text(), "client brief\n")
+
+            with mock.patch.object(engine, "CODEX_WORKSPACE_FIXTURE_ROOT", root / "missing"):
+                with self.assertRaisesRegex(ValueError, "workspace fixture is unavailable"):
+                    engine.stage_workspace_fixture(workspace)
+
     def test_preflight_keyboard_interrupt_preserves_runner_exit_and_cleanup(self) -> None:
         for host in ("claude", "codex"):
             with self.subTest(host=host), tempfile.TemporaryDirectory() as temporary:
@@ -250,7 +381,8 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                         if calls:
                             self.assertEqual(len(list(evidence.glob("*.trial.json"))), len(calls))
                         calls.append(True)
-                        receipt = successful_process_evidence()
+                        requested_model = "claude-sonnet-test" if host == "claude" else "gpt-5.6-sol"
+                        receipt = successful_process_evidence(requested_model, host=host)
                         receipt.update(provider_exit_code=7 if scenario == "nonzero" else -15 if scenario == "timeout" else 0,
                                        timed_out=scenario == "timeout")
                         if scenario == "cleanup-failed":
@@ -282,7 +414,20 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                             stack.enter_context(mock.patch.object(engine.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, b"", b"")))
                             stack.enter_context(mock.patch.object(engine, "enumerate_non_target_skills", return_value=()))
                             stack.enter_context(mock.patch.object(engine, "enumerate_mcp_servers", return_value=()))
-                            stack.enter_context(mock.patch.object(engine, "offline_catalog_preflight", return_value=({}, "ok")))
+                            stack.enter_context(mock.patch.object(
+                                engine,
+                                "offline_catalog_preflight",
+                                side_effect=lambda workspace_arg, target_name, _description,
+                                _skill, _args, _timeout, siblings=None: ({
+                                    "skill_source_locators": {
+                                        name: str(
+                                            (workspace_arg / ".agents" / "skills" / name / "SKILL.md").resolve()
+                                        )
+                                        for name in (target_name, *(siblings or {}))
+                                    }
+                                }, "ok"),
+                            ))
+                            stack.enter_context(mock.patch.object(engine, "cli_preflight", return_value=({}, "ok")))
                             stack.enter_context(mock.patch.object(sys, "argv", [str(CODEX_ENGINE), *argv]))
                         stack.enter_context(contextlib.redirect_stdout(output))
                         stack.enter_context(contextlib.redirect_stderr(diagnostics))
@@ -294,6 +439,10 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     self.assertIs(trial["stream_valid"], True)
                     self.assertIs(trial["trial_valid"], scenario == "good")
                     self.assertIs(trial["valid"], trial["trial_valid"])
+                    self.assertIs(
+                        trial["qualification_eligible"],
+                        scenario == "good" and host == "codex",
+                    )
                     self.assertEqual(trial["provider_exit_code"], None if scenario == "missing-receipt" else 7 if scenario == "nonzero" else -15 if scenario == "timeout" else 0)
                     self.assertEqual(trial["exit_code"], trial["provider_exit_code"])
                     self.assertIs(report["summary"]["complete"], scenario == "good")
@@ -431,7 +580,8 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
 
     def test_codex_rejects_failed_commands_and_events_outside_the_turn(self) -> None:
         engine = import_script(CODEX_ENGINE, "layer2_codex_evidence_contract")
-        marker = "CODEX_SKILL_FIRED:demo"
+        marker = "CODEX_SKILL_SELECTED:demo-fixed"
+        witnesses = codex_witness("demo", marker)
         original = [
             {"type": "thread.started", "thread_id": "fixture"},
             {"type": "turn.started"},
@@ -456,7 +606,9 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
         scenarios["before-turn"] = events
         for label, events in scenarios.items():
             with self.subTest(scenario=label):
-                parsed = engine.inspect_codex_jsonl("\n".join(map(json.dumps, events)), marker)
+                parsed = engine.inspect_codex_jsonl(
+                    "\n".join(map(json.dumps, events)), "demo", witnesses,
+                )
                 self.assertFalse(parsed["valid"], parsed)
 
     def test_claude_child_environment_controls(self) -> None:
@@ -475,10 +627,10 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             environment = launch.call_args.kwargs["env"]
             self.assertEqual(environment.get("DISABLE_AUTOUPDATER"), "1")
             self.assertEqual(environment.get("CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"), "1")
+            self.assertEqual(environment.get("CLAUDE_CODE_MAX_RETRIES"), "0")
             self.assertNotIn("FORCE_AUTOUPDATE_PLUGINS", environment)
-            expected = {**original, "DISABLE_AUTOUPDATER": "1", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1"}
-            expected.pop("FORCE_AUTOUPDATE_PLUGINS")
-            self.assertTrue(environment == expected, "child environment changed outside the three approved controls")
+            self.assertNotIn("L2_ENV_SENTINEL", environment)
+            self.assertEqual(environment, claude.claude_environment())
             self.assertTrue(dict(os.environ) == original, "parent environment changed")
 
     @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
@@ -790,15 +942,14 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             )
             self.assertEqual(command[command.index("--permission-mode") + 1], "dontAsk")
             self.assertEqual(command[command.index("--permission-prompts") + 1], "none")
+            self.assertEqual(command[command.index("--setting-sources") + 1], "")
             self.assertEqual(json.loads(command[command.index("--settings") + 1]), {
                 "disableBundledSkills": True, "skillOverrides": {"doctor": "off"},
                 "permissions": {"deny": [
                     "Skill(init)", "Skill(init *)", "Skill(security-review)", "Skill(security-review *)"
                 ]},
             })
-            environment = os.environ.copy()
-            environment.update({"DISABLE_AUTOUPDATER": "1", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1"})
-            environment.pop("FORCE_AUTOUPDATE_PLUGINS", None)
+            environment = claude.claude_environment()
             self.assertTrue(kwargs["env"] == environment, "launch environment differs from the approved child controls")
             prepared.append((command.copy(), kwargs))
             attempted.append(target)
@@ -846,7 +997,6 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 plugin_root / "skills" / "no-speckit-skill" / "SKILL.md"
             ).read_text(encoding="utf-8")
             stream = claude_stream(plugin_root, plugin_name, expected_skill, nonce)
-            stream = stream.replace(nonce.encode("utf-8"), f"{nonce} café".encode("utf-8"))
             selected = claude.inspect_claude_stream(
                 stream,
                 plugin_name,
@@ -947,7 +1097,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             mutation_results = {name: inspect_mutation(transform) for name, transform in mutations.items()}
 
             nonce_only = claude.inspect_claude_stream(
-                nonselected_stream,
+                nonselected_stream.replace(b"No skill selected.", nonce.encode("utf-8")),
                 plugin_name,
                 plugin_root,
                 expected_skill,
@@ -955,7 +1105,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 "claude-sonnet-test",
             )
             no_nonce = claude.inspect_claude_stream(
-                stream.replace(nonce.encode("utf-8"), b"ordinary response"),
+                stream.replace(nonce.encode("utf-8"), b"The selected skill was treated as a test stub."),
                 plugin_name,
                 plugin_root,
                 expected_skill,
@@ -992,6 +1142,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 captured["kwargs"] = kwargs
                 return fake
 
+            launch_evidence: dict[str, object] = {}
             with (
                 mock.patch.object(claude.shutil, "which", return_value="/usr/local/bin/claude"),
                 mock.patch.object(claude.subprocess, "Popen", side_effect=fake_popen),
@@ -1005,25 +1156,87 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     "claude-sonnet-test",
                     30,
                     expected_skill=expected_skill,
+                    process_evidence=launch_evidence,
                 )
 
             missing_tool_preflights = []
-            for omitted_flag in ("--tools", "--allowedTools", "--settings", "--permission-mode", "--permission-prompts"):
+            doctor_output = (
+                f"{claude.PINNED_DOCTOR_RUNNING}\n"
+                f"{claude.PINNED_MANAGED_SETTINGS}\n"
+                f"{claude.PINNED_ORGANIZATION_POLICY}\n"
+            ).encode("utf-8")
+            managed_preferences_output = claude.plistlib.dumps({})
+            for omitted_flag in (
+                "--tools", "--allowedTools", "--settings", "--setting-sources",
+                "--permission-mode", "--permission-prompts",
+            ):
                 supported_help = " ".join(
                     flag for flag in claude.REQUIRED_FLAGS if flag != omitted_flag
                 ).encode("utf-8")
                 with (
                     mock.patch.object(claude.shutil, "which", return_value="/usr/local/bin/claude"),
+                    mock.patch.object(claude.sys, "platform", "darwin"),
+                    mock.patch.object(claude, "MACOS_MANAGED_ROOT", root / "managed"),
                     mock.patch.object(
                         claude.subprocess,
                         "run",
                         side_effect=[
-                            SimpleNamespace(returncode=0, stdout=b"2.1.261\n", stderr=b""),
+                            SimpleNamespace(
+                                returncode=0,
+                                stdout=f"{claude.PINNED_CLAUDE_VERSION}\n".encode("utf-8"),
+                                stderr=b"",
+                            ),
                             SimpleNamespace(returncode=0, stdout=supported_help, stderr=b""),
+                            SimpleNamespace(returncode=0, stdout=doctor_output, stderr=b""),
+                            SimpleNamespace(returncode=0, stdout=managed_preferences_output, stderr=b""),
                         ],
                     ),
                 ):
                     missing_tool_preflights.append(claude.cli_preflight("/usr/local/bin/claude"))
+
+            supported_help = " ".join(claude.REQUIRED_FLAGS).encode("utf-8")
+            qualified_outputs = [
+                SimpleNamespace(
+                    returncode=0,
+                    stdout=f"{claude.PINNED_CLAUDE_VERSION}\n".encode("utf-8"),
+                    stderr=b"",
+                ),
+                SimpleNamespace(returncode=0, stdout=supported_help, stderr=b""),
+                SimpleNamespace(returncode=0, stdout=doctor_output, stderr=b""),
+                SimpleNamespace(returncode=0, stdout=managed_preferences_output, stderr=b""),
+            ]
+            with (
+                mock.patch.object(claude.shutil, "which", return_value="/usr/local/bin/claude"),
+                mock.patch.object(claude.sys, "platform", "darwin"),
+                mock.patch.object(claude, "MACOS_MANAGED_ROOT", root / "managed"),
+                mock.patch.object(claude.subprocess, "run", side_effect=qualified_outputs) as preflight_calls,
+            ):
+                qualified_preflight = claude.cli_preflight("/usr/local/bin/claude")
+            unqualified_doctor = doctor_output.replace(
+                claude.PINNED_MANAGED_SETTINGS.encode("utf-8"),
+                b"Managed settings (remote): active",
+            )
+            with (
+                mock.patch.object(claude.shutil, "which", return_value="/usr/local/bin/claude"),
+                mock.patch.object(claude.sys, "platform", "darwin"),
+                mock.patch.object(claude, "MACOS_MANAGED_ROOT", root / "managed"),
+                mock.patch.object(claude.subprocess, "run", side_effect=[
+                    *qualified_outputs[:2],
+                    SimpleNamespace(returncode=0, stdout=unqualified_doctor, stderr=b""),
+                    SimpleNamespace(returncode=0, stdout=managed_preferences_output, stderr=b""),
+                ]),
+            ):
+                rejected_managed_preflight = claude.cli_preflight("/usr/local/bin/claude")
+            managed_root = root / "managed-present"
+            managed_root.mkdir()
+            (managed_root / "CLAUDE.md").write_text("managed instruction\n", encoding="utf-8")
+            with (
+                mock.patch.object(claude.shutil, "which", return_value="/usr/local/bin/claude"),
+                mock.patch.object(claude.sys, "platform", "darwin"),
+                mock.patch.object(claude, "MACOS_MANAGED_ROOT", managed_root),
+                mock.patch.object(claude.subprocess, "run", side_effect=qualified_outputs),
+            ):
+                rejected_managed_file_preflight = claude.cli_preflight("/usr/local/bin/claude")
 
             preflight_identity_rejections = []
             for discovered, expected_reason in (
@@ -1154,7 +1367,9 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 mock.patch.object(
                     claude,
                     "run_claude_query",
-                    side_effect=supervised_results([(0, main_stream, b"", False)] * 3),
+                    side_effect=supervised_results(
+                        [(0, main_stream, b"", False)] * 3, "claude-sonnet-test",
+                    ),
                 ) as main_run,
                 contextlib.redirect_stdout(main_stdout),
             ):
@@ -1237,8 +1452,8 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 "result model is not resolution evidence": nonselected["resolved_model"] is None,
                 "completed response without Skill is valid": nonselected["valid"] and not nonselected["selected"],
                 "empty completed assistant body is invalid": not empty_response["valid"],
-                "nonce alone does not select": nonce_only["valid"] and not nonce_only["selected"],
-                "nonce absence does not suppress selection": no_nonce["valid"] and no_nonce["selected"],
+                "nonce without native selection is invalid": not nonce_only["valid"],
+                "native target selection does not require text attestation": no_nonce["valid"],
                 "every malformed or competing selection fails": all(
                     not result["valid"] for result in mutation_results.values()
                 ),
@@ -1247,8 +1462,8 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 "raw non-UTF8 stderr retained byte-for-byte": Path(raw_evidence["stderr_path"]).read_bytes()
                 == b"stderr\r\n\xff",
                 "raw hashes cover actual bytes": raw_evidence["stdout_sha256"] == hashlib.sha256(stream).hexdigest(),
-                "direct argv uses restricted session plugin": captured["command"][:3]
-                == ["/usr/local/bin/claude", "--restricted", "--plugin-dir"],
+                "direct argv uses restricted session plugin": captured["command"][:5]
+                == ["/usr/local/bin/claude", "--restricted", "--setting-sources", "", "--plugin-dir"],
                 "direct argv and preflight pin Skill-only tools": all(
                     flag in captured["command"]
                     for flag in ("--strict-mcp-config", "--mcp-config", "--model", "--output-format")
@@ -1259,8 +1474,22 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 and captured["command"][captured["command"].index("--allowedTools") + 1] == f"Skill({expected_skill})"
                 and f"Skill({plugin_name}:no-speckit-skill)" in captured["command"]
                 and all(result is None for result, _reason in missing_tool_preflights),
+                "preflight pins build and proves managed controls absent": qualified_preflight[0] is not None
+                and qualified_preflight[0]["version"] == claude.PINNED_CLAUDE_VERSION
+                and qualified_preflight[0]["request_retries"] == 0
+                and all(qualified_preflight[0]["doctor_checks"].values())
+                and rejected_managed_preflight[0] is None
+                and rejected_managed_file_preflight[0] is None
+                and all(call.kwargs["env"] == claude.claude_environment() for call in preflight_calls.call_args_list),
                 "direct argv uses no persistence": "--no-session-persistence" in captured["command"],
                 "direct launch inherits environment": captured["kwargs"]["env"].get("PATH") == os.environ.get("PATH"),
+                "direct launch freezes settings and retries": launch_evidence["launch_contract"] == {
+                    "config_isolated": True,
+                    "retries_disabled": True,
+                    "requested_model": "claude-sonnet-test",
+                    "model_provider": "anthropic-claude-code",
+                    "model_identity_evidence": "native-init-and-assistant-events",
+                },
                 "direct launch is confined to disposable root": Path(captured["kwargs"]["cwd"]).resolve()
                 == plugin_root.resolve()
                 and plugin_root.resolve() != Path.cwd().resolve()
@@ -1416,7 +1645,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                         mock.patch.object(
                             claude,
                             "run_claude_query",
-                            side_effect=supervised_results(trial_results),
+                            side_effect=supervised_results(trial_results, "claude-sonnet-test"),
                         ),
                         contextlib.redirect_stdout(output),
                     ):
@@ -1424,6 +1653,36 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     report = json.loads(output.getvalue())
                     self.assertEqual(exit_code, 0 if label == "all-known-same" else 1)
                     self.assertEqual(report["summary"]["resolved_model"], expected)
+
+    def test_codex_process_stdin_isolated_from_positional_prompt(self) -> None:
+        engine = import_script(CODEX_ENGINE, "layer2_codex_stdin_isolation")
+        captured: dict[str, object] = {}
+
+        def launch(_command: list[str], **kwargs: object) -> FakePopen:
+            stdin = kwargs["stdin"]
+            captured["stdin"] = stdin
+            captured["stdin_is_terminal_at_launch"] = (
+                isinstance(stdin, int) and stdin >= 0 and os.isatty(stdin)
+            )
+            return FakePopen(b"")
+
+        launch_evidence: dict[str, object] = {}
+        with tempfile.TemporaryDirectory() as temporary, mock.patch.object(
+            engine.subprocess, "Popen", side_effect=launch,
+        ), mock.patch.object(engine.processes, "cleanup_child"):
+            result = engine.run_codex_query(
+                Path(temporary), "query", "low", "gpt-5.6-sol", 30, [],
+                process_evidence=launch_evidence,
+            )
+
+        self.assertEqual(result, (0, b"", b"", False))
+        self.assertTrue(launch_evidence["launch_contract"]["stdin_prompt_isolated"])
+        if os.name == "nt":
+            self.assertEqual(captured["stdin"], subprocess.DEVNULL)
+        else:
+            self.assertTrue(captured["stdin_is_terminal_at_launch"])
+            with self.assertRaises(OSError):
+                os.fstat(captured["stdin"])
 
     def test_codex_symlink_path_uses_canonical_executable_without_environment_mutation(self) -> None:
         engine = import_script(CODEX_ENGINE, "layer2_codex_symlink_executable")
@@ -1487,23 +1746,59 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             self.assertIn('approval_policy="never"', policy)
             self.assertIn(
                 'permissions.trigger-fixture.filesystem={":root"="deny",":minimal"="read",'
-                + json.dumps(str(workspace)) + '="read"}', policy,
+                + json.dumps(str(workspace)) + '="read",'
+                + json.dumps(str(workspace / ".codex-trigger-runtime")) + '="write"}', policy,
             )
             for payload in (b"not-json", b"{}", b"[{}]", b'[{"name":""}]', b'[{"name":"duplicate"},{"name":"duplicate"}]'):
                 with self.subTest(payload=payload), mock.patch.object(
                     engine.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, payload, b""),
                 ), self.assertRaises(ValueError):
                     engine.enumerate_mcp_servers(workspace, 10)
-            with mock.patch.dict(os.environ, {"UNRELATED_TOKEN": "never-inherit"}, clear=False):
-                self.assertNotIn("UNRELATED_TOKEN", engine.codex_environment())
+            auth_home = workspace / "codex-home"
+            auth_home.mkdir()
+            with mock.patch.dict(
+                os.environ,
+                {"CODEX_HOME": str(auth_home), "UNRELATED_TOKEN": "never-inherit"},
+                clear=False,
+            ):
+                environment = engine.codex_environment(workspace)
+            runtime_home = workspace / ".codex-trigger-runtime"
+            self.assertNotIn("UNRELATED_TOKEN", environment)
+            self.assertEqual(environment["CODEX_HOME"], str(auth_home))
+            self.assertEqual(environment["HOME"], str(workspace))
+            self.assertEqual(environment["TMPDIR"], str(runtime_home / "tmp"))
+            self.assertTrue((runtime_home / "tmp").is_dir())
 
-        marker = "CODEX_SKILL_FIRED:demo-eval"
-        base = [
-            {"type": "thread.started", "thread_id": "thread-1"},
-            {"type": "turn.started"},
-            {"type": "item.completed", "item": {"type": "agent_message", "text": marker}},
-            {"type": "turn.completed"},
-        ]
+            skill_file = workspace / ".agents" / "skills" / "demo" / "SKILL.md"
+            skill_file.parent.mkdir(parents=True)
+            marker = "CODEX_SKILL_SELECTED:demo-fixed"
+            skill_file.write_text(f"fixture\n{marker}\n", encoding="utf-8")
+            alias_witnesses = engine.skill_witnesses(workspace, {"demo": marker})
+            engine._bind_catalog_skill_root_alias(
+                workspace, alias_witnesses, {"demo": "r0/demo/SKILL.md"},
+            )
+            self.assertEqual(os.readlink(workspace / "r0"), ".agents/skills")
+            self.assertEqual((workspace / "r0").resolve(strict=True), skill_file.parent.parent)
+            self.assertEqual(alias_witnesses["demo"]["source_locator"], "r0/demo/SKILL.md")
+            with self.assertRaises(ValueError):
+                engine._bind_catalog_skill_root_alias(
+                    workspace, alias_witnesses, {"demo": "../escape/demo/SKILL.md"},
+                )
+            with self.assertRaisesRegex(ValueError, "already exists"):
+                engine._bind_catalog_skill_root_alias(
+                    workspace, alias_witnesses, {"demo": "r0/demo/SKILL.md"},
+                )
+            engine._attest_catalog_skill_root_alias(workspace, alias_witnesses)
+            (workspace / "r0").unlink()
+            (workspace / "r0").symlink_to(".", target_is_directory=True)
+            with self.assertRaisesRegex(ValueError, "changed after catalog preflight"):
+                engine._attest_catalog_skill_root_alias(workspace, alias_witnesses)
+
+        marker = "CODEX_SKILL_SELECTED:demo-eval-fixed"
+        witnesses = codex_witness("demo-eval", marker)
+        base = [json.loads(line) for line in codex_stream(
+            witnesses, selected_skill="demo-eval",
+        ).splitlines()]
         for phase, item_type in (
             ("item.started", "mcp_tool_call"),
             ("item.completed", "mcp_tool_call"),
@@ -1514,20 +1809,340 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             with self.subTest(phase=phase, item_type=item_type):
                 event = {"type": phase, "item": {"type": item_type, "status": "failed", "result": None,
                          "error": {"message": "approval policy never denied this call"}}}
-                parsed = engine.inspect_codex_jsonl("\n".join(map(json.dumps, [*base[:2], event, *base[2:]])), marker)
+                parsed = engine.inspect_codex_jsonl(
+                    "\n".join(map(json.dumps, [*base[:2], event, *base[2:]])),
+                    "demo-eval", witnesses,
+                )
                 self.assertFalse(parsed["valid"])
                 self.assertTrue(parsed["isolation_stop"])
         unavailable = {"type": "item.completed", "item": {"type": "error", "message": "tool unavailable"}}
-        denied = engine.inspect_codex_jsonl("\n".join(map(json.dumps, [*base[:2], unavailable, *base[2:]])), marker)
+        denied = engine.inspect_codex_jsonl(
+            "\n".join(map(json.dumps, [*base[:2], unavailable, *base[2:]])),
+            "demo-eval", witnesses,
+        )
         self.assertFalse(denied["valid"])
         self.assertFalse(denied.get("isolation_stop", False))
-        local = {"type": "item.completed", "item": {"type": "command_execution", "status": "completed", "exit_code": 0}}
-        self.assertTrue(engine.inspect_codex_jsonl("\n".join(map(json.dumps, [*base[:2], local, *base[2:]])), marker)["valid"])
+        local = {"type": "item.completed", "item": {
+            "id": "arbitrary", "type": "command_execution", "command": "pwd",
+            "status": "completed", "exit_code": 0, "aggregated_output": "/tmp\n",
+        }}
+        self.assertFalse(engine.inspect_codex_jsonl(
+            "\n".join(map(json.dumps, [*base[:2], local, *base[2:]])),
+            "demo-eval", witnesses,
+        )["valid"])
         for malformed in ({"type": []}, {"type": "item.started", "item": {"type": []}}):
             with self.subTest(malformed=malformed):
-                parsed = engine.inspect_codex_jsonl(json.dumps(malformed), marker)
+                parsed = engine.inspect_codex_jsonl(json.dumps(malformed), "demo-eval", witnesses)
                 self.assertFalse(parsed["valid"])
                 self.assertTrue(parsed["isolation_stop"])
+
+    def test_codex_compound_body_read_requires_an_exact_leading_witness(self) -> None:
+        engine = import_script(CODEX_ENGINE, "layer2_codex_compound_body_read")
+        target_marker = "CODEX_SKILL_SELECTED:demo-eval-fixed"
+        other_marker = "CODEX_SKILL_SELECTED:other-fixed"
+        witnesses = {
+            **codex_witness("demo-eval", target_marker),
+            **codex_witness("other", other_marker),
+        }
+        base = [
+            json.loads(line)
+            for line in codex_stream(witnesses, selected_skill="demo-eval").splitlines()
+        ]
+        exact = engine.inspect_codex_jsonl(
+            "\n".join(json.dumps(event) for event in base),
+            "demo-eval",
+            witnesses,
+        )
+        self.assertEqual(exact["read_witnesses"][0]["read_mode"], "exact-output")
+
+        def with_command(command: str, output: str) -> list[dict[str, object]]:
+            events = [dict(event) for event in base]
+            for index in (2, 3):
+                events[index] = {
+                    **events[index],
+                    "item": {**events[index]["item"], "command": command},
+                }
+            events[3]["item"]["aggregated_output"] = output
+            return events
+
+        target = witnesses["demo-eval"]
+        other = witnesses["other"]
+        bare_read = "/bin/zsh -c \"sed -n '1,240p' SKILL.md\""
+        bare = inspect_codex_events(
+            engine, with_command(bare_read, target["body"]), "demo-eval", witnesses,
+        )
+        self.assertTrue(bare["valid"], bare)
+        self.assertTrue(bare["selected"])
+        self.assertEqual(bare["consulted_skills"], ["demo-eval"])
+        self.assertEqual(bare["read_witnesses"][0]["read_mode"], "exact-output")
+
+        alias_read = f'/bin/zsh -c "sed -n \'1,240p\' {target["source_locator"]}"'
+        alias = inspect_codex_events(
+            engine, with_command(alias_read, target["body"]), "demo-eval", witnesses,
+        )
+        self.assertTrue(alias["valid"], alias)
+        self.assertTrue(alias["selected"])
+        self.assertEqual(alias["consulted_skills"], ["demo-eval"])
+
+        wider_absolute_read = (
+            f'/bin/zsh -c "sed -n \'1,260p\' {target["path"]}"'
+        )
+        wider_absolute = inspect_codex_events(
+            engine,
+            with_command(wider_absolute_read, target["body"]),
+            "demo-eval",
+            witnesses,
+        )
+        self.assertTrue(wider_absolute["valid"], wider_absolute)
+        self.assertTrue(wider_absolute["selected"])
+        self.assertEqual(wider_absolute["consulted_skills"], ["demo-eval"])
+
+        alias_leading_read = alias_read[:-1] + " && pwd\""
+        alias_leading = inspect_codex_events(
+            engine,
+            with_command(alias_leading_read, target["body"] + "/tmp/fixture-workspace\n"),
+            "demo-eval",
+            witnesses,
+        )
+        self.assertTrue(alias_leading["valid"], alias_leading)
+        self.assertEqual(
+            alias_leading["read_witnesses"][0]["read_mode"],
+            "leading-compound-output",
+        )
+
+        silent_tail_read = alias_read[:-1] + " && find . -maxdepth 1 -type f\""
+        silent_tail = inspect_codex_events(
+            engine,
+            with_command(silent_tail_read, target["body"]),
+            "demo-eval",
+            witnesses,
+        )
+        self.assertTrue(silent_tail["valid"], silent_tail)
+        self.assertEqual(
+            silent_tail["read_witnesses"][0]["read_mode"],
+            "leading-compound-output",
+        )
+
+        leading_read = (
+            f'/bin/zsh -c "sed -n \'1,240p\' {target["path"]} '
+            "&& pwd && rg --files -g '!node_modules*' | head -200\""
+        )
+        body_then_metadata = target["body"] + "/tmp/fixture-workspace\n"
+        accepted = inspect_codex_events(
+            engine, with_command(leading_read, body_then_metadata), "demo-eval", witnesses,
+        )
+        self.assertTrue(accepted["valid"], accepted)
+        self.assertTrue(accepted["selected"])
+        self.assertEqual(accepted["consulted_skills"], ["demo-eval"])
+        self.assertEqual(
+            accepted["read_witnesses"][0]["read_mode"],
+            "leading-compound-output",
+        )
+
+        invalid_cases = {
+            "fabricated body with a path mention": (
+                f'printf ignored {target["path"]}',
+                body_then_metadata,
+            ),
+            "alias is only a substring in another operand": (
+                f'/bin/zsh -c "sed -n \'1,240p\' prefix-{target["source_locator"]}"',
+                target["body"],
+            ),
+            "bare body read uses a different command": (
+                "/bin/zsh -c \"cat SKILL.md\"",
+                target["body"],
+            ),
+            "bare body read range does not cover the complete body": (
+                bare_read.replace("1,240p", "1,1p"),
+                target["body"],
+            ),
+            "bare body read range is not canonical": (
+                bare_read.replace("1,240p", "1,0260p"),
+                target["body"],
+            ),
+            "bare body read adds another shell segment": (
+                bare_read[:-1] + " && pwd\"",
+                target["body"],
+            ),
+            "bare body output is fabricated from its marker": (
+                f"printf {target_marker}",
+                target["body"],
+            ),
+            "body read is not the first shell segment": (
+                f'/bin/zsh -c "pwd && sed -n \'1,240p\' {target["path"]}"',
+                "/tmp/fixture-workspace\n" + target["body"],
+            ),
+            "leading sed range does not cover the complete body": (
+                leading_read.replace("1,240p", "1,1p"),
+                body_then_metadata,
+            ),
+            "output does not begin with the exact body": (
+                leading_read,
+                "prefix\n" + target["body"],
+            ),
+            "compound command reads a second staged body": (
+                leading_read[:-1] + f' && cat {other["path"]}"',
+                body_then_metadata + other["body"],
+            ),
+        }
+        for label, (command, output) in invalid_cases.items():
+            with self.subTest(label=label):
+                parsed = inspect_codex_events(
+                    engine, with_command(command, output), "demo-eval", witnesses,
+                )
+                self.assertFalse(parsed["valid"], parsed)
+                self.assertIn("exact staged skill-body read", str(parsed["reason"]))
+    def test_codex_started_body_read_requires_a_post_start_private_marker(self) -> None:
+        engine = import_script(CODEX_ENGINE, "layer2_codex_started_body_read")
+        marker = "CODEX_SKILL_SELECTED:demo-eval-0123456789abcdef0123456789abcdef"
+        witnesses = codex_witness("demo-eval", marker)
+        relative_path = witnesses["demo-eval"]["source_locator"]
+        command = (
+            f'/bin/zsh -c "sed -n \'1,240p\' {relative_path} '
+            "&& printf '\\nFILES\\n' && ripwire . --for='find brief'\""
+        )
+        started = {"type": "item.started", "item": {
+            "id": "read", "type": "command_execution", "command": command,
+            "aggregated_output": "", "exit_code": None, "status": "in_progress",
+        }}
+        selected = {"type": "item.completed", "item": {
+            "id": "message", "type": "agent_message", "text": marker,
+        }}
+        events = [
+            {"type": "thread.started", "thread_id": "thread-1"},
+            {"type": "turn.started"},
+            {"type": "item.completed", "item": {
+                "id": "progress", "type": "agent_message", "text": "Loading the matching skill.",
+            }},
+            started,
+            selected,
+            {"type": "turn.completed"},
+        ]
+
+        accepted = inspect_codex_events(engine, events, "demo-eval", witnesses)
+        self.assertTrue(accepted["valid"], accepted)
+        self.assertTrue(accepted["selected"])
+        self.assertEqual(accepted["read_witnesses"][0]["read_mode"], "post-start-marker")
+        self.assertIn("test_uuid = uuid.uuid4().hex\n", CODEX_ENGINE.read_text(encoding="utf-8"))
+
+        completed = {"type": "item.completed", "item": {**started["item"],
+            "status": "completed", "exit_code": 0, "aggregated_output": "later output"}}
+        completed_accepted = inspect_codex_events(
+            engine, [*events[:4], completed, *events[4:]], "demo-eval", witnesses)
+        self.assertEqual(
+            (completed_accepted["valid"], completed_accepted["selected"],
+             completed_accepted["read_witnesses"][0]["read_mode"]),
+            (True, True, "post-start-marker"),
+        )
+
+        invalid_cases = {
+            "marker precedes read": [*events[:2], selected, started, events[-1]],
+            "marker is absent": [*events[:4], {**selected, "item": {**selected["item"], "text": "No skill."}}, events[-1]],
+            "command exposes marker": [*events[:3], {**started, "item": {**started["item"], "command": command[:-1] + f" && printf {marker}\\\""}}, *events[4:]],
+            "read is not first": [*events[:3], {**started, "item": {**started["item"], "command": command.replace("sed -n", "pwd && sed -n")}}, *events[4:]],
+            "two commands remain open": [*events[:4], {**started, "item": {**started["item"], "id": "second"}}, *events[4:]],
+            "completed output contains a staged body": [
+                *events[:4], {**completed, "item": {**completed["item"],
+                    "aggregated_output": "prefix\n" + witnesses["demo-eval"]["body"]}},
+                *events[4:]
+            ],
+        }
+        for label, malformed in invalid_cases.items():
+            with self.subTest(label=label):
+                self.assertFalse(
+                    inspect_codex_events(engine, malformed, "demo-eval", witnesses)["valid"]
+                )
+
+    def test_codex_rejects_multiple_staged_body_reads(self) -> None:
+        engine = import_script(CODEX_ENGINE, "layer2_codex_multiple_body_reads")
+        witnesses = {
+            **codex_witness("demo-eval", "CODEX_SKILL_SELECTED:demo-eval-fixed"),
+            **codex_witness("other", "CODEX_SKILL_SELECTED:other-fixed"),
+        }
+        target = [json.loads(line) for line in codex_stream(
+            witnesses, selected_skill="demo-eval",
+        ).splitlines()]
+        other = [json.loads(line) for line in codex_stream(
+            witnesses, consulted_skill="other",
+        ).splitlines()]
+        parsed = inspect_codex_events(
+            engine, [*target[:2], *other[2:4], *target[2:]], "demo-eval", witnesses,
+        )
+        self.assertFalse(parsed["valid"])
+        self.assertIn("multiple staged skill bodies", str(parsed["reason"]))
+
+    def test_codex_catalog_proves_every_source_locator(self) -> None:
+        engine = import_script(CODEX_ENGINE, "layer2_codex_catalog_locators")
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            skill_root = workspace / ".agents" / "skills"
+            for name in ("demo-eval", "sibling"):
+                skill_file = skill_root / name / "SKILL.md"
+                skill_file.parent.mkdir(parents=True)
+                skill_file.write_text(
+                    f"---\nname: {name}\ndescription: {name}.\n---\n",
+                    encoding="utf-8",
+                )
+            root_line = f"- `r0` = `{skill_root}`"
+            catalog = "\n".join(
+                (
+                    "## Skills",
+                    "### Skill roots",
+                    root_line,
+                    "### Available skills",
+                    "- demo-eval: Demo. (file: r0/demo-eval/SKILL.md)",
+                    "- sibling: Sibling. (file: r0/sibling/SKILL.md)",
+                    "### How to use skills",
+                )
+            )
+
+            def inspect(text: str) -> tuple[dict[str, object] | None, str]:
+                return engine.inspect_catalog_prompt(
+                    json.dumps([{"text": text}]).encode("utf-8"),
+                    "demo-eval",
+                    "Demo.",
+                    skill_root / "demo-eval" / "SKILL.md",
+                    workspace,
+                    {"sibling": "Sibling."},
+                )
+
+            readiness, reason = inspect(catalog)
+            self.assertEqual(reason, "Codex catalog preflight passed")
+            self.assertEqual(
+                readiness["skill_source_locators"],
+                {
+                    "demo-eval": "r0/demo-eval/SKILL.md",
+                    "sibling": "r0/sibling/SKILL.md",
+                },
+            )
+            for label, malformed in {
+                "sibling has no source identity": catalog.replace(
+                    " (file: r0/sibling/SKILL.md)", "",
+                ),
+                "sibling has a noncanonical traversal": catalog.replace(
+                    "r0/sibling/SKILL.md", "r0/../skills/sibling/SKILL.md",
+                ),
+                "sibling has a redundant dot segment": catalog.replace(
+                    "r0/sibling/SKILL.md", "r0/./sibling/SKILL.md",
+                ),
+                "sibling has a repeated separator": catalog.replace(
+                    "r0/sibling/SKILL.md", "r0//sibling/SKILL.md",
+                ),
+                "sibling names a different staged skill": catalog.replace(
+                    "r0/sibling/SKILL.md", "r0/demo-eval/SKILL.md",
+                ),
+                "sibling uses an unproved root": catalog.replace(
+                    "r0/sibling/SKILL.md", "r1/sibling/SKILL.md",
+                ),
+                "catalog mixes absolute and aliased locators": catalog.replace(
+                    "r0/demo-eval/SKILL.md",
+                    str((skill_root / "demo-eval" / "SKILL.md").resolve()),
+                ),
+            }.items():
+                with self.subTest(label=label):
+                    rejected, rejected_reason = inspect(malformed)
+                    self.assertIsNone(rejected)
+                    self.assertIn("source_locators_exact", rejected_reason)
 
     def test_codex_isolation_violation_retains_evidence_and_stops(self) -> None:
         engine = import_script(CODEX_ENGINE, "layer2_codex_isolation_stop")
@@ -1557,7 +2172,20 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     mock.patch.object(engine.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, b"", b"")),
                     mock.patch.object(engine, "enumerate_non_target_skills", return_value=()),
                     mock.patch.object(engine, "enumerate_mcp_servers", return_value=()),
-                    mock.patch.object(engine, "offline_catalog_preflight", return_value=({}, "ok")),
+                    mock.patch.object(
+                        engine,
+                        "offline_catalog_preflight",
+                        side_effect=lambda workspace_arg, target_name, _description,
+                        _skill, _args, _timeout, siblings=None: ({
+                            "skill_source_locators": {
+                                name: str(
+                                    (workspace_arg / ".agents" / "skills" / name / "SKILL.md").resolve()
+                                )
+                                for name in (target_name, *(siblings or {}))
+                            }
+                        }, "ok"),
+                    ),
+                    mock.patch.object(engine, "cli_preflight", return_value=({}, "ok")),
                     mock.patch.object(engine, "run_codex_query", return_value=(0, raw, b"", False)) as provider,
                     mock.patch.object(sys, "argv", [str(CODEX_ENGINE), "demo", "--runs", "1", "--evidence-dir", str(evidence)]),
                     contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()),
@@ -1581,13 +2209,27 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             auth_home.mkdir()
             auth_file = auth_home / "auth.json"
             auth_file.write_text("credential sentinel\n", encoding="utf-8")
-            marker = "CODEX_SKILL_FIRED:demo-eval"
+            marker = "CODEX_SKILL_SELECTED:demo-eval-fixed"
             with mock.patch.object(engine.shutil, "copy2") as credential_copy:
                 staged = engine.stage_repository_skill(source, workspace, "demo-eval", marker)
+            witnesses = engine.skill_witnesses(workspace, {"demo-eval": marker})
+            read_command = f"cat {witnesses['demo-eval']['path']}"
             valid = "\n".join(
                 [
                     json.dumps({"type": "thread.started", "thread_id": "thread-1"}),
                     json.dumps({"type": "turn.started"}),
+                    json.dumps({
+                        "type": "item.started",
+                        "item": {"id": "read-skill", "type": "command_execution", "command": read_command},
+                    }),
+                    json.dumps({
+                        "type": "item.completed",
+                        "item": {
+                            "id": "read-skill", "type": "command_execution", "command": read_command,
+                            "status": "completed", "exit_code": 0,
+                            "aggregated_output": witnesses["demo-eval"]["body"],
+                        },
+                    }),
                     json.dumps(
                         {
                             "type": "item.started",
@@ -1615,17 +2257,19 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     json.dumps({"type": "turn.completed"}),
                 ]
             ).encode("utf-8")
-            parsed = engine.inspect_codex_jsonl(valid, marker, requested_model="gpt-5.6-sol")
+            parsed = engine.inspect_codex_jsonl(
+                valid, "demo-eval", witnesses, requested_model="gpt-5.6-sol",
+            )
             competing = engine.inspect_codex_jsonl(
-                valid.replace(b"Done.", b"CODEX_SKILL_FIRED:other"),
-                marker,
+                valid.replace(b"Done.", b"CODEX_SKILL_SELECTED:other-fixed"),
+                "demo-eval", witnesses,
             )
             marker_not_first = engine.inspect_codex_jsonl(
                 valid.replace(
                     f"{marker}\\nDone.".encode(),
                     f"Progress\\n{marker}".encode(),
                 ),
-                marker,
+                "demo-eval", witnesses,
             )
             missing_lifecycle = engine.inspect_codex_jsonl(
                 json.dumps(
@@ -1634,7 +2278,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                         "item": {"type": "agent_message", "text": marker},
                     }
                 ),
-                marker,
+                "demo-eval", witnesses,
             )
             wrong_order = engine.inspect_codex_jsonl(
                 "\n".join(
@@ -1644,7 +2288,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                         json.dumps({"type": "turn.started"}),
                     ]
                 ),
-                marker,
+                "demo-eval", witnesses,
             )
             no_response = engine.inspect_codex_jsonl(
                 "\n".join(
@@ -1654,21 +2298,21 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                         json.dumps({"type": "turn.completed"}),
                     ]
                 ),
-                marker,
+                "demo-eval", witnesses,
             )
             top_error = engine.inspect_codex_jsonl(
                 valid.replace(
                     b'{"type": "turn.completed"}',
                     b'{"type": "error"}\n{"type": "turn.completed"}',
                 ),
-                marker,
+                "demo-eval", witnesses,
             )
             item_error = engine.inspect_codex_jsonl(
                 valid.replace(
                     b'{"type": "item.completed", "item": {"type": "agent_message", "text": "Preparing to answer."}}',
                     b'{"type": "item.completed", "item": {"type": "error", "message": "failed"}}',
                 ),
-                marker,
+                "demo-eval", witnesses,
             )
             completed_error_items = [
                 engine.inspect_codex_jsonl(
@@ -1681,7 +2325,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                             }
                         ).encode("utf-8"),
                     ),
-                    marker,
+                    "demo-eval", witnesses,
                 )
                 for field, value in (
                     ("message", "failed"),
@@ -1694,7 +2338,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     b'"text": "Preparing to answer."',
                     b'"text": "Preparing to answer.", "error": {"kind": "domain-data"}',
                 ),
-                marker,
+                "demo-eval", witnesses,
             )
             evidence_dir = root / "evidence"
             evidence_dir.mkdir()
@@ -1709,7 +2353,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 invalid_utf8,
                 b"stderr\xff",
             )
-            invalid_utf8_result = engine.inspect_codex_jsonl(invalid_utf8, marker)
+            invalid_utf8_result = engine.inspect_codex_jsonl(invalid_utf8, "demo-eval", witnesses)
 
             residue = root / "residue"
             residue.mkdir()
@@ -1943,6 +2587,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 captured["kwargs"] = kwargs
                 return FakePopen(valid)
 
+            launch_evidence: dict[str, object] = {}
             with (
                 mock.patch.dict(os.environ, {"CODEX_HOME": str(auth_home)}, clear=False),
                 mock.patch.object(engine.subprocess, "Popen", side_effect=fake_run),
@@ -1955,6 +2600,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     "gpt-5.6-sol",
                     30,
                     isolation_args,
+                    process_evidence=launch_evidence,
                 )
 
             timeout_stdout = b"partial-jsonl\r\n"
@@ -2005,7 +2651,9 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 encoding="utf-8",
             )
             main_isolation_failures = []
-            for case_index, failure_kind in enumerate(("preflight", "roots-changed"), start=1):
+            for case_index, failure_kind in enumerate(
+                ("preflight", "roots-changed", "alias-changed"), start=1,
+            ):
                 main_workspace = root / f"main-workspace-{case_index}"
                 main_evidence = root / f"main-codex-evidence-{case_index}"
                 main_stdout = io.StringIO()
@@ -2015,11 +2663,36 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     if failure_kind == "preflight"
                     else [disabled_skills, (*disabled_skills, root / "new-skill" / "SKILL.md")]
                 )
-                preflight_result = (
-                    (None, "catalog proof rejected")
-                    if failure_kind == "preflight"
-                    else (catalog_readiness, "Codex catalog preflight passed")
-                )
+                def main_catalog_preflight(
+                    workspace_arg: Path,
+                    target_name: str,
+                    _description: str,
+                    _skill: Path,
+                    _args: list[str],
+                    _timeout: int,
+                    siblings: dict[str, str] | None = None,
+                ) -> tuple[dict[str, object] | None, str]:
+                    if failure_kind == "preflight":
+                        return None, "catalog proof rejected"
+                    names = (target_name, *(siblings or {}))
+                    return {
+                        "skill_source_locators": {
+                            name: (
+                                f"r0/{name}/SKILL.md"
+                                if failure_kind == "alias-changed"
+                                else str(
+                                    (workspace_arg / ".agents" / "skills" / name / "SKILL.md").resolve()
+                                )
+                            )
+                            for name in names
+                        }
+                    }, "Codex catalog preflight passed"
+
+                def main_cli_preflight() -> tuple[dict[str, object], str]:
+                    if failure_kind == "alias-changed":
+                        (main_workspace / "r0").unlink()
+                        (main_workspace / "r0").symlink_to(".", target_is_directory=True)
+                    return {}, "ok"
                 with (
                     mock.patch.object(engine, "find_eval_file", return_value=main_corpus),
                     mock.patch.object(engine, "find_skill_source", return_value=source),
@@ -2038,8 +2711,9 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     mock.patch.object(
                         engine,
                         "offline_catalog_preflight",
-                        return_value=preflight_result,
+                        side_effect=main_catalog_preflight,
                     ) as main_preflight,
+                    mock.patch.object(engine, "cli_preflight", side_effect=main_cli_preflight),
                     mock.patch.object(engine, "run_codex_query") as rejected_provider,
                     mock.patch.object(
                         engine.uuid,
@@ -2098,6 +2772,21 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 codex.main(["demo", "--run", "--profile", "fast", "--run", "tail"])
             delegated_executable, delegated_argv = execv.call_args.args
 
+            with mock.patch.object(
+                engine.subprocess,
+                "run",
+                return_value=subprocess.CompletedProcess(
+                    [], 0, f"{engine.PINNED_CODEX_VERSION}\n".encode("utf-8"), b"",
+                ),
+            ):
+                qualified_codex_preflight = engine.cli_preflight()
+            with mock.patch.object(
+                engine.subprocess,
+                "run",
+                return_value=subprocess.CompletedProcess([], 0, b"codex-cli 0.0.0\n", b""),
+            ):
+                rejected_codex_preflight = engine.cli_preflight()
+
             checks = {
                 "imports Codex wrapper": codex is not None,
                 "all runners avoid shell execution": not any(
@@ -2115,6 +2804,11 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 and delegated_argv[2:] == ["demo", "--profile", "fast", "tail"],
                 "Codex default effort remains low": engine.DEFAULT_REASONING_EFFORT == "low",
                 "Codex default model remains approved": engine.DEFAULT_MODEL == "gpt-5.6-sol",
+                "Codex preflight pins the qualified CLI build": qualified_codex_preflight[0] is not None
+                and qualified_codex_preflight[0]["version"] == engine.PINNED_CODEX_VERSION
+                and qualified_codex_preflight[0]["request_max_retries"] == 0
+                and qualified_codex_preflight[0]["stream_max_retries"] == 0
+                and rejected_codex_preflight[0] is None,
                 "Codex skill remains repository scoped": staged == workspace / ".agents" / "skills" / "demo-eval",
                 "Codex source description parser preserves the staged routing description": engine.source_skill_description(
                     staged / "SKILL.md"
@@ -2172,6 +2866,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 is not None
                 and relative_catalog_reason == "Codex catalog preflight passed"
                 and relative_catalog_readiness["root_alias_valid"] is True
+                and relative_catalog_readiness["skill_root_alias"] == "r0"
                 and relative_catalog_readiness["target_file_exact"] is True,
                 "Codex catalog proof rejects shortening warnings and extra entries": shortened_readiness is None
                 and "warning_present" in shortened_reason
@@ -2222,6 +2917,20 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     -len(isolation_args) - 1 :
                 ]
                 == [*isolation_args, "query"],
+                "Codex launch freezes provider retries and identity scope": launch_evidence["launch_contract"]
+                == {
+                    "config_isolated": True,
+                    "retries_disabled": True,
+                    "requested_model": "gpt-5.6-sol",
+                    "reasoning_effort": "low",
+                    "model_provider": engine.MODEL_PROVIDER_ID,
+                    "model_identity_evidence": "request-only",
+                    "stdin_prompt_isolated": True,
+                    "stdin_mode": "pseudo-terminal" if os.name != "nt" else "null-device",
+                    "login_state_source": "CODEX_HOME",
+                    "shell_home_isolated": True,
+                    "scratch_directory_isolated": True,
+                },
                 "Codex timeout retains partial raw streams and hashes": timeout_rc == -1
                 and timeout_timed_out
                 and retained_timeout_stdout == timeout_stdout
@@ -2241,9 +2950,15 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 and not signal_timed_out
                 and signal_stdout == b"signal-output"
                 and signal_stderr == b"signal-stderr",
-                "Codex retains existing login environment": captured["kwargs"]["env"].get("CODEX_HOME")
+                "Codex retains login state while pinning shell home to the workspace": captured["kwargs"]["env"].get(
+                    "CODEX_HOME"
+                )
                 == str(auth_home)
-                and captured["kwargs"]["env"].get("HOME") == os.environ.get("HOME"),
+                and captured["kwargs"]["env"].get("HOME")
+                == str(workspace.resolve())
+                and captured["kwargs"]["env"].get("TMPDIR")
+                == str(workspace.resolve() / ".codex-trigger-runtime" / "tmp")
+                and (workspace.resolve() / ".codex-trigger-runtime" / "tmp").is_dir(),
                 "Codex executable override retains statically verified provenance": captured["kwargs"]["executable"]
                 == shutil.which("codex", path=str(Path(captured["command"][0]).parent)),
                 "Codex keeps least privilege flags": "--sandbox" not in captured["command"]
@@ -2258,7 +2973,10 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 and captured["command"][captured["command"].index("--disable") + 1] == "plugins"
                 and "skills.bundled.enabled=false" in captured["command"]
                 and captured["command"][captured["command"].index("-m") + 1] == "gpt-5.6-sol"
-                and 'model_reasoning_effort="low"' in captured["command"],
+                and 'model_reasoning_effort="low"' in captured["command"]
+                and f"model_providers.{engine.MODEL_PROVIDER_ID}.request_max_retries=0" in captured["command"]
+                and f"model_providers.{engine.MODEL_PROVIDER_ID}.stream_max_retries=0" in captured["command"]
+                and "unbounded_connection_retries" in captured["command"],
                 "Codex keeps rules and approval boundaries enabled": "--ignore-rules" not in captured["command"]
                 and "--dangerously-bypass-approvals-and-sandbox" not in captured["command"]
                 and "--full-auto" not in captured["command"],
@@ -2275,7 +2993,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     and preflight_call is not None
                     and preflight_call.args[3] == expected_target_skill
                     and preflight_call.args[4] == engine.skill_isolation_args(disabled_skills)
-                    and enumerate_calls == (1 if failure_kind == "preflight" else 2)
+                    and enumerate_calls == (2 if failure_kind == "roots-changed" else 1)
                     for (
                         failure_kind,
                         exit_code,
@@ -2320,7 +3038,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             self.assertIn("description: Other sibling.", other_text)
             self.assertNotIn(nonce, other_text)
             self.assertNotIn("must not copy", other_text)
-            self.assertIn(claude.NO_SPECKIT_SKILL_DESCRIPTION, no_speckit_text)
+            assert_no_speckit_contracts(self, claude, no_speckit_text)
             self.assertIn("say so in one line and stop.", no_speckit_text)
             self.assertIn(claude.MEASUREMENT_STUB_SENTENCE, target_text)
             with self.assertRaisesRegex(ValueError, "collides"):
@@ -2348,6 +3066,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
 
             sibling = json.loads(json.dumps(events))
             sibling[1]["message"]["content"][0]["input"]["skill"] = f"{plugin}:other"
+            sibling[3]["message"]["content"][0]["text"] = "Selected the other sibling."
             sibling_selected = parse(sibling)
             self.assertTrue(sibling_selected["valid"])
             self.assertFalse(sibling_selected["selected"])
@@ -2356,6 +3075,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
 
             no_speckit = json.loads(json.dumps(events))
             no_speckit[1]["message"]["content"][0]["input"]["skill"] = f"{plugin}:no-speckit-skill"
+            no_speckit[3]["message"]["content"][0]["text"] = "No SpecKit skill applies."
             no_speckit_selected = parse(no_speckit)
             self.assertTrue(no_speckit_selected["valid"])
             self.assertFalse(no_speckit_selected["selected"])
@@ -2368,6 +3088,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             self.assertTrue(bare_selected["valid"] and bare_selected["selected"], "the host resolves the bare name to the staged skill")
             bare_sibling = json.loads(json.dumps(events))
             bare_sibling[1]["message"]["content"][0]["input"]["skill"] = "other"
+            bare_sibling[3]["message"]["content"][0]["text"] = "Selected the other sibling."
             self.assertEqual(parse(bare_sibling)["sibling_selections"], [f"{plugin}:other"])
             foreign = json.loads(json.dumps(events))
             foreign[1]["message"]["content"][0]["input"]["skill"] = "demo"
@@ -2454,9 +3175,11 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             (skills / "notes.md").write_text("not a skill\n", encoding="utf-8")
             workspace = root / "workspace"
             workspace.mkdir()
-            marker = "CODEX_SKILL_FIRED:demo-eval"
+            marker = engine.selection_marker("demo-eval", "fixed")
             staged = engine.stage_repository_skill(skills / "demo" / "SKILL.md", workspace, "demo-eval", marker)
-            siblings = engine.stage_sibling_skills(skills / "demo" / "SKILL.md", workspace)
+            siblings, sibling_markers = engine.stage_sibling_skills(
+                skills / "demo" / "SKILL.md", workspace, "fixed",
+            )
             self.assertEqual(siblings, {
                 "other": "Other sibling.",
                 "third": "Third sibling.",
@@ -2465,30 +3188,74 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             for name in siblings:
                 sibling_text = (workspace / ".agents" / "skills" / name / "SKILL.md").read_text(encoding="utf-8")
                 self.assertTrue(sibling_text.startswith(f"---\nname: {name}\ndescription: "), "exact frontmatter kept")
-                self.assertNotIn("CODEX_SKILL_FIRED", sibling_text, "siblings carry no marker")
+                self.assertEqual(sibling_text.count(sibling_markers[name]), 1, "every sibling is attested")
                 self.assertNotIn(f"Body of {name}.", sibling_text, "sibling workflow body is not staged")
-                self.assertIn("do not run any command", sibling_text, "sibling body stops the trial")
-            self.assertFalse((workspace / ".agents" / "skills" / "demo").exists(), "the unmarked target is never staged")
+                self.assertIn("do not run another command", sibling_text, "sibling body stops the trial")
+            self.assertFalse((workspace / ".agents" / "skills" / "demo").exists(), "the source target is never staged")
             staged_text = (staged / "SKILL.md").read_text(encoding="utf-8")
             self.assertTrue(
                 staged_text.split("\n---\n", 1)[1].lstrip().startswith(engine.MEASUREMENT_STUB_SENTENCE)
             )
             self.assertIn("reply with a chat message whose first line is exactly", staged_text)
-            self.assertIn("do not run any command", staged_text)
+            self.assertIn("do not run another command", staged_text)
 
+            witnesses = engine.skill_witnesses(
+                workspace, {"demo-eval": marker, **sibling_markers},
+            )
             no_speckit_selection = engine.inspect_codex_jsonl(
-                "\n".join(map(json.dumps, [
-                    {"type": "thread.started", "thread_id": "thread-1"},
-                    {"type": "turn.started"},
-                    {"type": "item.completed", "item": {
-                        "type": "agent_message", "text": "No SpecKit skill applies."
-                    }},
-                    {"type": "turn.completed"},
-                ])),
-                marker,
+                codex_stream(witnesses, selected_skill="no-speckit-skill"),
+                "demo-eval", witnesses,
             )
             self.assertTrue(no_speckit_selection["valid"])
             self.assertFalse(no_speckit_selection["selected"])
+            self.assertEqual(no_speckit_selection["selected_skill"], "no-speckit-skill")
+
+            consultation = engine.inspect_codex_jsonl(
+                codex_stream(witnesses, consulted_skill="demo-eval"),
+                "demo-eval", witnesses,
+            )
+            self.assertTrue(consultation["valid"])
+            self.assertFalse(consultation["selected"])
+            self.assertEqual(consultation["consulted_skills"], ["demo-eval"])
+            self.assertEqual(consultation["reason"], "consultation without selection")
+
+            uncorroborated = engine.inspect_codex_jsonl(
+                codex_stream(witnesses, message=marker),
+                "demo-eval", witnesses,
+            )
+            self.assertFalse(uncorroborated["valid"])
+            self.assertIn("not corroborated", uncorroborated["reason"])
+
+            sibling_selection = engine.inspect_codex_jsonl(
+                codex_stream(witnesses, selected_skill="other"),
+                "demo-eval", witnesses,
+            )
+            self.assertTrue(sibling_selection["valid"])
+            self.assertFalse(sibling_selection["selected"])
+            self.assertEqual(sibling_selection["selected_skill_set"], ["other"])
+
+            ambiguous = engine.inspect_codex_jsonl(
+                codex_stream(
+                    witnesses,
+                    selected_skill="demo-eval",
+                    message=f"{marker}\n{sibling_markers['other']}",
+                ),
+                "demo-eval", witnesses,
+            )
+            self.assertFalse(ambiguous["valid"])
+            self.assertIn("ambiguous", ambiguous["reason"])
+
+            incomplete_events = [
+                json.loads(line)
+                for line in codex_stream(witnesses, selected_skill="demo-eval").splitlines()
+            ]
+            del incomplete_events[3]
+            incomplete = engine.inspect_codex_jsonl(
+                "\n".join(json.dumps(event) for event in incomplete_events),
+                "demo-eval", witnesses,
+            )
+            self.assertFalse(incomplete["valid"])
+            self.assertTrue(incomplete["isolation_stop"])
 
             def catalog(entries: list[str]) -> bytes:
                 text = "\n".join(["## Skills", "### Available skills", *entries, "### How to use skills", "- Follow it."])

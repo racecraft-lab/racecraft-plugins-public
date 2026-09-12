@@ -1,14 +1,28 @@
 {
-  "schema_version": "trigger-capabilities/v1",
-  "checked_on": "2026-09-10",
-  "qualification_status": "blocked",
-  "provider_trial_invocations": 0,
-  "scope": "Documentation, pinned public schemas, synthetic streams, and owned local process stubs; no provider inference",
+  "schema_version": "trigger-capabilities/v2",
+  "checked_on": "2026-09-11",
+  "qualification_status": "qualified",
+  "provider_trial_invocations": 3,
+  "scope": "Pinned live host interfaces, canonical launch contracts, qualified selection observations, and owned POSIX process/workspace cleanup",
+  "canonical_parameters": {
+    "runs_per_query": 3,
+    "trigger_threshold": 0.5,
+    "claude": {
+      "model": "claude-sonnet-5"
+    },
+    "codex": {
+      "model": "gpt-5.6-sol",
+      "reasoning_effort": "low"
+    }
+  },
+  "qualification_rule": "Every requested case and trial must complete, remain canonically valid, and carry a qualified observation under the pinned preflight and launch contract",
   "hosts": {
     "claude": {
-      "cli_version": "2.1.268",
-      "interface": "claude --restricted -p --output-format stream-json --verbose",
-      "selection_observation": "Completed, linked model-initiated Skill calls",
+      "cli_version": "2.1.269",
+      "platforms": ["darwin", "linux"],
+      "interface": "claude --restricted --setting-sources '' -p --output-format stream-json --verbose",
+      "observation_scope": "claude-native-skill-tool",
+      "selection_observation": "Completed linked model-initiated Skill call; an exact post-selection nonce is optional corroboration and is validated when emitted",
       "authoritative_fields": [
         "system/init skills, tools, plugins, mcp_servers, model",
         "assistant message.model and message.content tool_use",
@@ -16,65 +30,104 @@
         "terminal result subtype, is_error, permission_denials",
         "system/api_retry when reported"
       ],
-      "native_invocation": {
-        "documented_interface": "UserPromptExpansion hook",
-        "fields": ["expansion_type", "command_name", "command_args", "command_source", "prompt"],
-        "qualified_in_isolated_runner": false
-      },
-      "unqualified_requirements": [
-        "Bind native commands to the staged identifier and qualify the expansion observer",
-        "Freeze and validate effective managed settings plus explicit settings",
-        "Qualify supported provider retry controls and their observable coverage"
+      "selection_contract": [
+        "Exact staged target or sibling Skill identifier",
+        "One linked successful tool result",
+        "No malformed, unknown, multiple, or competing selection",
+        "Any emitted target nonce appears in exactly one assistant text block as the first nonblank line after target selection"
       ],
-      "model_contract": "Conflicting reported identities are invalid; aliases identify a family and do not attest an immutable snapshot",
+      "configuration_contract": [
+        "Pinned CLI version and required flags",
+        "Empty user, project, and local setting sources",
+        "Strict empty MCP configuration",
+        "Curated environment",
+        "No remote or filesystem managed settings, MCP, or instructions",
+        "No macOS managed preference payload when running on macOS",
+        "Pinned doctor account-policy state"
+      ],
+      "retry_contract": "CLAUDE_CODE_MAX_RETRIES=0 and any reported api_retry invalidates the stream",
+      "model_contract": "Exact claude-sonnet-5 request; conflicting native init or assistant model identities are invalid",
+      "direct_invocation": "UserPromptExpansion is outside the implicit-selection measurement scope and is not qualified by this record",
       "sources": [
         "https://code.claude.com/docs/en/hooks#userpromptexpansion",
+        "https://code.claude.com/docs/en/tools-reference",
         "https://code.claude.com/docs/en/cli-reference",
+        "https://code.claude.com/docs/en/settings",
         "https://code.claude.com/docs/en/model-config#model-aliases",
         "https://platform.claude.com/docs/en/agents-and-tools/tool-use/handle-tool-calls"
       ]
     },
     "codex": {
       "cli_version": "0.153.3",
-      "interface": "codex exec --json",
-      "selection_observation": "Exact emitted marker proxy; exclusive skill activation is unqualified",
+      "platforms": ["darwin", "linux"],
+      "interface": "codex exec --json with pseudo-terminal-isolated positional input, strict isolated config, and a dedicated no-retry ChatGPT-auth provider",
+      "observation_scope": "codex-body-read-attestation",
+      "selection_observation": "Proven staged SKILL.md access plus that skill's private 128-bit first-line marker",
+      "selection_marker_entropy_bits": 128,
       "authoritative_fields": [
         "thread.started thread_id",
         "turn.started, turn.completed, turn.failed, error",
         "item.started, item.updated, item.completed",
-        "command_execution status and exit_code",
+        "command_execution command, status, aggregated_output, and exit_code",
         "agent_message text"
       ],
+      "selection_contract": [
+        "One command start bound by item id reads exactly one staged target or sibling SKILL.md body",
+        "Exact complete body output requires either its staged path in the command or a canonical sed -n 1,<N>p SKILL.md form whose numeric endpoint covers the complete body and whose execution cwd is omitted from public exec JSON",
+        "A qualified compound shell command begins with canonical sed -n 1,<N>p of the exact staged path, its numeric endpoint covers the complete body, and its output begins with that body",
+        "A leading compound read tail cannot name another staged path or emit any staged body or marker",
+        "When public JSON omits command completion or completed retained output omits the leading body, the exact leading read is accepted only if its private marker appears in a later completed agent message and the command text contains no marker or second staged path",
+        "Completed post-start-marker evidence is rejected if retained output contains any displaced staged body or marker",
+        "At most one known marker, first in its completed agent message",
+        "A marker is valid only when corroborated by its matching body read"
+      ],
+      "configuration_contract": [
+        "Pinned CLI version and required flags",
+        "Strict config and ignored user config",
+        "Unrelated skills, MCP servers, and features disabled",
+        "Catalog readiness and exact target/sibling descriptions",
+        "Dedicated provider using ChatGPT authentication",
+        "Existing Codex login state retained through CODEX_HOME while shell HOME and TMPDIR use one disposable fixture directory",
+        "Repository-owned local input fixtures named by file-backed eval queries copied into the disposable repository before launch",
+        "Staged repository read-only, with write access limited to the disposable shell scratch directory",
+        "Per-trial launch receipt requires the Codex login, shell home, and scratch isolation attestations",
+        "Fresh pseudo-terminal on fd 0 prevents non-terminal stdin prompt appends"
+      ],
+      "retry_contract": "request_max_retries=0, stream_max_retries=0, supports_websockets=false, and unbounded_connection_retries disabled",
       "unavailable_public_fields": [
         "Native or implicit skill-activation event",
-        "Complete selected-skill identity set",
         "Reported backend model identity in thread.started or turn.started",
-        "Complete underlying provider retry count",
-        "Outer codex process exit status"
+        "Provider behavior invisible to the configured public client interface"
       ],
       "outer_exit_source": "Python supervisor Popen.returncode; never inferred from a turn event",
-      "unqualified_requirements": [
-        "Distinguish target-plus-sibling activation, consultation without a marker, and an uncorroborated marker",
-        "Bind and qualify native invocation under the existing isolation contract",
-        "Qualify supported provider retry controls and their observable coverage"
-      ],
-      "model_contract": "Requested gpt-5.6-sol/low remains explicit; backend identity is unavailable in the pinned public JSON schema",
+      "model_contract": "Exact gpt-5.6-sol/low request; public exec JSON provides request-only rather than resolved backend identity evidence",
+      "direct_invocation": "Forced direct invocation is outside the implicit-selection measurement scope and is not qualified by this record",
       "sources": [
+        "https://raw.githubusercontent.com/openai/codex/rust-v0.153.3/codex-rs/exec/src/lib.rs",
         "https://raw.githubusercontent.com/openai/codex/rust-v0.153.3/codex-rs/exec/src/exec_events.rs",
         "https://learn.chatgpt.com/docs/non-interactive-mode#make-output-machine-readable",
+        "https://learn.chatgpt.com/docs/config-file/config-reference",
+        "https://learn.chatgpt.com/docs/config-file/environment-variables",
         "https://learn.chatgpt.com/docs/build-skills#how-chatgpt-and-codex-use-skills",
         "https://learn.chatgpt.com/docs/hooks#tool-coverage"
       ]
     }
   },
+  "validity_contract": {
+    "schema_version": "trigger-trial/v2",
+    "invalid_stops_batch": true,
+    "noncanonical_is_diagnostic_only": true,
+    "report_qualification_requires_complete_eligible_trials": true
+  },
   "retry_contract": {
     "harness": "No automatic relaunch; stop after the first invalid trial",
     "reported_provider_retries": "Reported retry or error events invalidate the stream",
-    "unreported_provider_retries": "Not established; one CLI launch is not proof of zero transport retries"
+    "configured_provider_retries": "Disabled through each pinned host's supported controls",
+    "invisible_provider_behavior": "Not reconstructed or claimed beyond the configured public interface"
   },
   "cleanup_contract": {
     "posix": "Bounded termination and absence check of the original owned process group",
-    "windows": "Direct-child cleanup only; insufficient for the required descendant scope",
+    "windows": "Not qualified because direct-child cleanup is insufficient for the required descendant scope",
     "outside_owned_scope": "Not observed or claimed",
     "workspace": "Separate post-run cleanup receipt and runner exit"
   }
