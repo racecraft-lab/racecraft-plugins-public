@@ -1,0 +1,211 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SpecKit autopilot autonomy boundary",
+  "description": "Versioned execution-boundary and scoped-authorization record persisted in autopilot-state.json before Phase 7.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "planning_fingerprints",
+    "execution_boundary",
+    "actions"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "autonomy-boundary.v1"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ready",
+        "operator_action_required"
+      ]
+    },
+    "planning_fingerprints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "plan_md",
+        "tasks_md"
+      ],
+      "properties": {
+        "plan_md": {
+          "$ref": "#/$defs/file_fingerprint"
+        },
+        "tasks_md": {
+          "$ref": "#/$defs/file_fingerprint"
+        }
+      }
+    },
+    "execution_boundary": {
+      "$ref": "#/$defs/execution_boundary"
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/action"
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "file_fingerprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "size_bytes"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "execution_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "execution_environment",
+        "sandbox_mode",
+        "approval_reviewer",
+        "writable_roots",
+        "summary",
+        "sha256"
+      ],
+      "properties": {
+        "execution_environment": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sandbox_mode": {
+          "type": "string",
+          "minLength": 1
+        },
+        "approval_reviewer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "writable_roots": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "evidence",
+        "scope_sha256"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "not_required",
+            "explicit_user",
+            "missing",
+            "revoked"
+          ]
+        },
+        "evidence": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scope_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "revocation_evidence": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "action_id",
+        "category",
+        "command_or_tool",
+        "target",
+        "effect",
+        "execution_boundary_sha256",
+        "scope_sha256",
+        "disposition",
+        "authorization"
+      ],
+      "properties": {
+        "action_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "outside_writable_roots",
+            "privileged_command",
+            "interactive_authentication",
+            "external_side_effect"
+          ]
+        },
+        "command_or_tool": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1
+        },
+        "effect": {
+          "type": "string",
+          "minLength": 1
+        },
+        "execution_boundary_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "scope_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "disposition": {
+          "type": "string",
+          "enum": [
+            "ready",
+            "rerouted",
+            "operator_action_required"
+          ]
+        },
+        "authorization": {
+          "$ref": "#/$defs/authorization"
+        }
+      }
+    }
+  }
+}

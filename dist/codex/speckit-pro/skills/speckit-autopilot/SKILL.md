@@ -427,6 +427,13 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
     [phase-execution-codex.md](./references/phase-execution-codex.md).
 - **Step 0.8: Capability Coverage Check** — informational research/context advisory (agents have fallbacks)
 - **Step 0.8b: Capability Enumeration, Grounding & Feed-down** — you are the only component that discovers openly. Enumerate the tools and installed skills this session actually exposes and select best-fit per the capability-discovery directive (speckit-pro/skills/speckit-autopilot/references/capability-discovery.md); assume no fixed set — the user may have installed anything. Most subagents inherit that surface and follow the directive; read-only roles select read/research only, and the two untrusted-input consumers pin closed allowlists. Still pass the discovered evidence a subagent needs directly in each prompt: shared context beats re-discovery. Ground your OWN output (gate decisions, consensus synthesis, PR bodies) per the grounding contract (speckit-pro/skills/speckit-autopilot/references/grounding.md): cite a real tool/skill/file result for every external fact, and abstain when none grounds it.
+- **Step 0.8c: Resumed Autonomy Boundary Preflight** — when `plan.md` and
+  `tasks.md` already exist and the resolved stage can enter Implement, validate
+  the durable `autonomy_boundary` record before the first Phase 7 dispatch.
+  Missing or stale evidence re-enters the full Phase 6.5 Autonomy Boundary
+  Preflight. Exact explicit user authorization remains valid while its recorded
+  action scope and execution boundary still match and no later instruction
+  revokes or narrows it; an older run outcome alone grants nothing.
 - **Step 0.9: Constitution Validation** — principle checks against current codebase
 - **Step 0.10: Codex Agent Availability Check** — Run the promoted
   `install-codex-agents` helper in `dry_run` mode against the selected project or
@@ -491,19 +498,24 @@ After writing or repairing `autopilot-state.json`, run the deterministic
 coverage guard and STOP on nonzero exit:
 
 ```text
-resolved_python "<plugin-root>/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py" --workflow "$WORKFLOW_FILE" --state "$WORKFLOW_DIR/autopilot-state.json" --rule status-evidence
+resolved_python "<plugin-root>/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py" --workflow "$WORKFLOW_FILE" --state "$WORKFLOW_DIR/autopilot-state.json" --require-autonomy-boundary --current-execution-environment "<live-execution-environment>" --current-sandbox-mode "<live-sandbox-mode>" --current-approval-reviewer "<live-approval-reviewer>" --current-writable-root "<live-writable-root>" --rule status-evidence
 ```
 
 `resolved_python` is the Python 3.11+ interpreter resolved by the installed
 runtime contract, not a hardcoded interpreter name; `<plugin-root>` is the
 directory that owns `skills/speckit-autopilot/`. `--rule status-evidence`
-gates the exit code on the four workflow/state status-evidence checks
+gates the exit code on the five workflow/state status-evidence checks
 (`workflow_status_evidence_errors`, `state_status_errors`,
-`stage_mirror_errors`, `workflow_authority_errors`) and the three current-run
+`autonomy_boundary_errors`, `stage_mirror_errors`,
+`workflow_authority_errors`) and the three current-run
 state-plan invariants (`in_progress_errors`, `duplicate_state_steps`,
 `state_order_errors`), the same scoping the Claude variant uses. The full
 report still prints; structural coverage checks and every advisory key are
 visible but never block. Drop `--rule` to gate on every check.
+Replace every `<live-...>` value from the current system/developer execution
+context, never from the workflow, state, repository, or a prior run. Repeat
+`--current-writable-root` once for each current writable root; the validator
+sorts this live set before comparing it with the persisted boundary digest.
 
 When `pr-marker-plan.v2` declares a changed-file manifest, append
 `--expected-base-commit <live-baseRefOid> --expected-head-commit <live-headRefOid>`.
@@ -569,6 +581,14 @@ Before performing it, read
 [`phase-execution-codex.md`](./references/phase-execution-codex.md)
 §Phase 7: Implement for the authoritative placeholder, reviewability, marker
 state, and no-side-effect boundaries.
+
+Before the confidence gate, stage-boundary commit, or first Phase 7 dispatch,
+run the same reference's **Autonomy Boundary Preflight**. It inventories
+predictable writes beyond current writable roots, privileged commands,
+interactive authentication, and externally visible side effects; proves each
+is runnable or already authorized; and records the result durably. A blocked
+result stops before Phase 7 with one consolidated operator action instead of
+surprising the operator from inside an implementation task.
 
 The marker planning step must preserve correctness stops for malformed or stale state,
 failed verification, invalid packets, unsafe output, unusable gate evidence,

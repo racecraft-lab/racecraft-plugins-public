@@ -233,6 +233,26 @@ fallback evidence notes. It does not fail setup by itself. Escalate only when
 no acceptable evidence path exists after fallback attempts or when a true
 prerequisite/gate fails.
 
+### 0.8c Resumed Autonomy Boundary Preflight
+
+When an existing `plan.md` and `tasks.md` are present and the resolved stage
+can enter Implement, inspect the durable `autonomy_boundary` record described
+in [Phase Execution](./phase-execution-codex.md#autonomy-boundary-preflight).
+Do this before the first Phase 7 dispatch, including for a resumed workflow
+whose implementation is already marked in progress.
+
+Recompute the recorded planning fingerprint from the current files and compare
+the recorded execution boundary with the current surface. A missing record, a
+digest mismatch, a changed writable-root or approval boundary, or a planned
+action absent from the record makes it stale. Re-enter the complete Phase 6.5
+preflight and persist a current result before dispatching any implementation
+worker. Exact explicit user authorization persists across turns, compaction,
+and resume when the recorded action category, command or tool, target, lasting
+or external effect, and execution-boundary fingerprint all still match and no
+later user instruction revokes or narrows it. Prior execution, an earlier
+automatic review, or the fact that an older task crossed the boundary is never
+authorization by itself.
+
 ### 0.9 Constitution Validation
 
 Read the workflow file's Prerequisites table. If already

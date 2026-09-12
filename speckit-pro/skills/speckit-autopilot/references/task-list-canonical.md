@@ -97,9 +97,10 @@ items. Never omit consensus tasks from the task list at creation time.
   `<resolved_python> '<plugin-root>/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py' --workflow <workflow> --state <workflow-dir>/autopilot-state.json --rule status-evidence`
   and do not advance unless it exits 0. `<resolved_python>` is the Python 3.11+
   interpreter resolved by the Installed Runtime Contract, never a literal
-  `python3`. `--rule status-evidence` gates the exit code on the four
+  `python3`. `--rule status-evidence` gates the exit code on the five
   workflow/state status-evidence checks (`workflow_status_evidence_errors`,
-  `state_status_errors`, `stage_mirror_errors`, `workflow_authority_errors`)
+  `state_status_errors`, `autonomy_boundary_errors`, `stage_mirror_errors`,
+  `workflow_authority_errors`)
   and the three current-run state-plan invariants (`in_progress_errors`,
   `duplicate_state_steps`, `state_order_errors`); other checks are printed but
   never block, so a spec that predates the structural coverage checks stays
