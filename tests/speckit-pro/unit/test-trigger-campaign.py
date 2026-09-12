@@ -47,6 +47,36 @@ class CampaignTests(unittest.TestCase):
             self.assertEqual(resumed.snapshot()["reserved_launches"], 6)
             self.assertEqual(resumed.snapshot()["unknown_launches"], 3)
 
+    def test_natural_language_authorization_retains_source_and_exact_grant(self):
+        record = approval()
+        record["schema_version"] = "trigger-campaign-approval/v2"
+        record["source"]["content"] = "Yes, proceed with the campaign we reviewed."
+        record["binding"] = {
+            "schema_version": "orchestrator-approval-binding/v1", "issuer": "orchestrator",
+            "decision": "approve", "manifest_sha256": "a" * 64, "launch_budget": 6,
+            "source_sha256": campaign.json_digest(record["source"]),
+            "scope_context": "The user was asked to approve this exact six-launch manifest.",
+        }
+        campaign.validate_approval(record, "a" * 64, 6)
+        for field, value in (("issuer", "worker"), ("decision", "deny"),
+                             ("manifest_sha256", "b" * 64), ("launch_budget", True),
+                             ("source_sha256", "c" * 64), ("scope_context", "")):
+            with self.subTest(field=field):
+                changed = json.loads(json.dumps(record))
+                changed["binding"][field] = value
+                with self.assertRaises(ValueError):
+                    campaign.validate_approval(changed, "a" * 64, 6)
+        record["source"]["content"] = "No, do not run the campaign."
+        with self.assertRaises(ValueError):
+            campaign.validate_approval(record, "a" * 64, 6)
+
+    def test_natural_language_without_bound_orchestrator_decision_is_rejected(self):
+        record = approval()
+        record["schema_version"] = "trigger-campaign-approval/v2"
+        record["source"]["content"] = "Proceed."
+        with self.assertRaises(ValueError):
+            campaign.validate_approval(record, "a" * 64, 6)
+
     def test_concurrent_reservation_cannot_overspend(self):
         with tempfile.TemporaryDirectory() as temp:
             ledger = campaign.CampaignLedger(Path(temp) / "ledger.sqlite3", "a" * 64, approval(budget=3), 3)
