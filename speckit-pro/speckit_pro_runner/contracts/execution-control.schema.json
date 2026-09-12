@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "execution-control/v1",
+  "title": "Durable execution accounting, not authorization",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "run_id", "started_at", "slice_started_at", "last_observed_at", "checkpoint_at", "approved_invariants", "corrective_cycles", "reservations", "dispatches", "excluded_intervals", "active_wait", "authorization_granted"],
+  "properties": {
+    "schema_version": {"const": "execution-control/v1"},
+    "run_id": {"type": "string", "minLength": 1},
+    "started_at": {"type": "number", "minimum": 0},
+    "slice_started_at": {"type": "number", "minimum": 0},
+    "last_observed_at": {"type": "number", "minimum": 0},
+    "checkpoint_at": {"type": "number", "minimum": 0},
+    "approved_invariants": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "corrective_cycles": {"type": "integer", "minimum": 0, "maximum": 2},
+    "reservations": {"type": "object", "maxProperties": 2, "additionalProperties": {"type": "object", "additionalProperties": false, "required": ["family", "dispatch_id", "reserved_at"], "properties": {"family": {"type": "string"}, "dispatch_id": {"type": "string"}, "reserved_at": {"type": "number", "minimum": 0}}}},
+    "dispatches": {"type": "object", "additionalProperties": {"type": "object", "additionalProperties": false, "required": ["kind", "outcome", "reserved_at", "reservation_id", "reconciliations"], "properties": {"kind": {"enum": ["implementation", "corrective", "verification", "infrastructure"]}, "outcome": {"enum": ["reserved", "running", "completed", "failed", "unknown", "expected_tdd_red"]}, "reserved_at": {"type": "number", "minimum": 0}, "completed_at": {"type": "number", "minimum": 0}, "reservation_id": {"type": ["string", "null"]}, "resolution_event_id": {"type": "string", "minLength": 1}, "reconciliations": {"type": "integer", "minimum": 0, "maximum": 1}}}},
+    "excluded_intervals": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["start", "end", "kind", "start_event", "end_event"], "properties": {"start": {"type": "number", "minimum": 0}, "end": {"type": "number", "minimum": 0}, "kind": {"enum": ["human_uat", "external_approval"]}, "start_event": {"type": "string", "minLength": 1}, "end_event": {"type": "string", "minLength": 1}}}},
+    "active_wait": {"type": ["object", "null"], "required": ["start", "kind", "start_event"], "additionalProperties": false, "properties": {"start": {"type": "number", "minimum": 0}, "kind": {"enum": ["human_uat", "external_approval"]}, "start_event": {"type": "string", "minLength": 1}}},
+    "authorization_granted": {"const": false}
+  }
+}

@@ -3,6 +3,20 @@
   "mode": "mutation",
   "helpers": [
     {
+      "helper_id": "execution-control",
+      "operation": "execution-control",
+      "modes": ["read_only", "dry_run", "apply"],
+      "failure_classes": ["invalid_execution_request", "checkpoint_required"],
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/mutation-helpers/requests/execution-control.json"
+    },
+    {
+      "helper_id": "execute-verification",
+      "operation": "execute-verification",
+      "modes": ["dry_run", "apply"],
+      "failure_classes": ["invalid_execution_request", "copy_only_is_not_qualified_immutable_isolation"],
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/mutation-helpers/requests/execute-verification.json"
+    },
+    {
       "helper_id": "mutation-registry-dispatch",
       "operation": "mutation-registry-dispatch",
       "modes": ["read_only"],

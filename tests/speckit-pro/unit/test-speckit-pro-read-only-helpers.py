@@ -86,6 +86,8 @@ EXPECTED_HELPERS = [
     "sweep-isolation-session",
     "check-artifact-freshness",
     "partition-phase7-tasks",
+    "validate-task-execution",
+    "validate-execution-record",
     "parse-consensus-categories",
     "aggregate-crl",
 ]
@@ -121,6 +123,9 @@ HELPER_CASES: dict[str, dict[str, object]] = {
     "atomicity-route": {"feature_dir": FEATURE_DIR},
     "plan-layers-feature-dir": {"feature_dir": FEATURE_DIR},
     "partition-phase7-tasks": {"tasks_file": f"{FEATURE_DIR}/tasks.md", "wave_size": 4},
+    "validate-task-execution": {"tasks_file": f"{FEATURE_DIR}/tasks.md", "action": "fingerprints"},
+    "validate-execution-record": {"workflow_file": WORKFLOW_FILE, "command_id": "UNIT_TEST",
+                                  "record_path": "tests/speckit-pro/unit/fixtures/autopilot-stage/.process/verification/missing.json"},
     "parse-consensus-categories": {"line": "[codebase, domain] Q1: bcrypt or argon2?"},
     "aggregate-crl": {"workflow_file": AUTOPILOT_STAGE_WORKFLOW_FILE},
     "validate-pr-workflow-contract": {"title": "feat(FEATURE-001): Validate helper contract"},

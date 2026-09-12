@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from ..envelope import diagnostic, response
+from ..execution_control import run_execution_helper
 from ..formal.helper import run_formal_helper
 from .install import CODEX_OPTIONAL_HELPER_NAME, CODEX_REQUIRED_AGENT_NAMES, run_install_helper
 from .mutation import empty_mutation, run_mutation_helper, run_spec_index_write, run_sweep_apply_result
@@ -247,6 +248,14 @@ HELPERS: dict[str, HelperEntry] = {
         "python_only",
         authoritative_request("partition-phase7-tasks"),
     ),
+    "validate-task-execution": HelperEntry(
+        "validate-task-execution", "validate-task-execution", None, "python_authoritative", "python_contract",
+        authoritative_request("validate-task-execution"),
+    ),
+    "validate-execution-record": HelperEntry(
+        "validate-execution-record", "validate-execution-record", None, "python_authoritative", "python_contract",
+        authoritative_request("validate-execution-record"),
+    ),
     "parse-consensus-categories": HelperEntry(
         "parse-consensus-categories",
         "parse-consensus-categories",
@@ -334,6 +343,16 @@ HELPERS: dict[str, HelperEntry] = {
 
 
 MUTATION_HELPERS: dict[str, MutationEntry] = {
+    "execution-control": MutationEntry(
+        "execution-control", "execution-control", ("read_only", "dry_run", "apply"), None,
+        "golden_only", "fixture_semantic", mutation_authoritative_request("execution-control"),
+        ("durable-budget", "nested-reservation", "native-wait", "unknown-outcome"),
+    ),
+    "execute-verification": MutationEntry(
+        "execute-verification", "execute-verification", ("dry_run", "apply"), None,
+        "golden_only", "fixture_semantic", mutation_authoritative_request("execute-verification"),
+        ("copy-only-no-reuse", "isolated-command", "native-observation-required"),
+    ),
     "formal-check": MutationEntry(
         "formal-check", "formal-check", ("dry_run", "apply"), None, "golden_only", "fixture_semantic",
         mutation_authoritative_request("formal-check"), ("explicit-selection", "preview-no-writes", "checkpoint-resume"),
@@ -650,6 +669,9 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
 
     if entry.helper_id == "mutation-registry-dispatch":
         return response("ok", request_id=request.request_id, data=mutation_registry_report())
+
+    if entry.helper_id in {"execution-control", "execute-verification"}:
+        return run_execution_helper(entry, request)
 
     if entry.helper_id == "formal-check":
         return run_formal_helper(entry, request)

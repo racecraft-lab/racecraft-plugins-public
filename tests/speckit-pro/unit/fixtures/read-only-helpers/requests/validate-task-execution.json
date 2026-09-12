@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0",
+  "helper_id": "validate-task-execution",
+  "operation": "validate-task-execution",
+  "mode": "read_only",
+  "inputs": {
+    "tasks_file": "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature/tasks.md",
+    "action": "fingerprints"
+  }
+}

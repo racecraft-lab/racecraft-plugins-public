@@ -55,6 +55,9 @@ PATH_KEYS = {
     "feature_dir",
     "packet_path",
     "plan_file",
+    "spec_file",
+    "record_path",
+    "ledger_path",
     "tasks_file",
     "repo_root",
     "target",
@@ -303,6 +306,10 @@ def canonicalize_inputs(helper_id: str, inputs: dict[str, Any], repo_root: Path)
         "atomicity-route": {"feature_dir"},
         "plan-layers-feature-dir": {"feature_dir"},
         "partition-phase7-tasks": {"tasks_file"},
+        "validate-task-execution": {"tasks_file"},
+        "validate-execution-record": {"workflow_file", "record_path"},
+        "execution-control": {"workflow_file", "spec_file", "ledger_path"},
+        "execute-verification": {"workflow_file", "ledger_path"},
         "validate-pr-workflow-contract": {"repo_root", "changed_files"},
         "validate-pr-packet-read-only": {"packet_path"},
     }
@@ -454,7 +461,7 @@ def explicit_or_derived_args(helper_id: str, inputs: dict[str, Any], repo_root: 
         return required_args(inputs, [path_key], helper_id, repo_root, path_keys={path_key})
     if helper_id == "plan-layers-feature-dir":
         return required_args(inputs, ["feature_dir"], helper_id, repo_root, path_keys={"feature_dir"})
-    if helper_id == "partition-phase7-tasks":
+    if helper_id in {"partition-phase7-tasks", "validate-task-execution"}:
         wave_size = inputs.get("wave_size")
         if wave_size is not None and (isinstance(wave_size, bool) or not isinstance(wave_size, int) or wave_size < 1):
             return invalid_args(helper_id, "wave_size must be a positive integer")
@@ -467,6 +474,9 @@ def explicit_or_derived_args(helper_id: str, inputs: dict[str, Any], repo_root: 
         if agent_name is not None and (not isinstance(agent_name, str) or not agent_name.strip()):
             return invalid_args(helper_id, "project_agent_name must be a non-empty string")
         return required_args(inputs, ["tasks_file"], helper_id, repo_root, path_keys={"tasks_file"})
+    if helper_id == "validate-execution-record":
+        return required_args(inputs, ["workflow_file", "record_path", "command_id"], helper_id, repo_root,
+                             path_keys={"workflow_file", "record_path"})
     if helper_id == "validate-pr-workflow-contract":
         title = inputs.get("title")
         if not isinstance(title, str) or not title:
@@ -5391,6 +5401,8 @@ def partition_phase7_tasks(inputs: dict[str, Any], repo_root: Path) -> dict[str,
     project_keywords = [word for word in keywords_raw if word.strip()]
 
     lines = trusted_lines(tasks_file, repo_root)
+    records: list[dict[str, Any]] = []
+    phase_instance = 0
     task_sources: dict[str, dict[str, Any]] = {}
     warnings: list[dict[str, Any]] = []
     errors: list[dict[str, Any]] = []
@@ -5405,6 +5417,7 @@ def partition_phase7_tasks(inputs: dict[str, Any], repo_root: Path) -> dict[str,
             # closes one task entry per group, so no run may straddle two.
             phase7_flush(pending, wave_size, runs)
             group = line[3:].strip()
+            phase_instance += 1
             continue
         task = parse_task_line(
             line,
@@ -5421,6 +5434,7 @@ def partition_phase7_tasks(inputs: dict[str, Any], repo_root: Path) -> dict[str,
             continue
         task_count += 1
         agent = phase7_route(task["title"], project_agent, project_keywords)
+        records.append({**task, "agent": agent, "group": group, "phase_instance": phase_instance})
         record = {"id": task["id"], "agent": agent, "group": group}
         if task["parallel"] and pending and pending[0]["agent"] == agent:
             pending.append(record)
@@ -5447,7 +5461,68 @@ def partition_phase7_tasks(inputs: dict[str, Any], repo_root: Path) -> dict[str,
             f"partition-phase7-tasks: invalid_tasks: {len(errors)} error(s)\n",
             1,
         )
+    required = inputs.get("task_execution_required", False)
+    if not isinstance(required, bool):
+        return phase7_error("task_execution_required must be a Boolean")
+    metadata_path = tasks_file.parent / ".process" / "task-execution.json"
+    action = inputs.get("_task_execution_action")
+    if required or action or metadata_path.exists() or metadata_path.is_symlink():
+        return phase7_metadata_partition(inputs, repo_root, tasks_file, records, payload)
     return make_result(json_text(payload))
+
+
+def phase7_metadata_partition(inputs: dict[str, Any], repo_root: Path, tasks_file: Path,
+                              records: list[dict[str, Any]], payload: dict[str, Any]) -> dict[str, Any]:
+    """Validate the sidecar before handing native orchestration a batch plan."""
+    from ..task_execution import TaskExecutionError, batch_waves, fingerprints, make_batches, validate_metadata
+
+    texts = [trusted_text(path, repo_root) for path in (
+        tasks_file.parent / "spec.md", tasks_file.parent / "plan.md", tasks_file
+    )]
+    if any(text is None for text in texts):
+        return phase7_error("metadata requires readable, contained spec.md, plan.md, and tasks.md")
+    expected = fingerprints(*texts)
+    if inputs.get("_task_execution_action") == "fingerprints":
+        return make_result(json_text({"tool": "validate-task-execution", "contract_version": 1,
+                                      "fingerprints": expected, "task_ids": [r["id"] for r in records]}))
+    metadata_text = trusted_text(tasks_file.parent / ".process" / "task-execution.json", repo_root)
+    if metadata_text is None:
+        return phase7_error("task-execution metadata missing or unreadable; parent reconciliation required")
+    try:
+        entries = validate_metadata(metadata_text, records, repo_root, expected, inputs.get("completed_tasks", []))
+        batches = make_batches(records, entries)
+    except TaskExecutionError as exc:
+        return phase7_error(str(exc))
+    result = {key: value for key, value in payload.items() if key != "runs"}
+    result.update({"contract_version": 2, "fingerprints": expected, "batches": batches,
+                   "waves": batch_waves(batches, payload["wave_size"]), "dispatch_count": len(batches),
+                   "completed_tasks": [r["id"] for r in records if r["status"] == "done"]})
+    for batch in batches:
+        batch.pop("_filesystem_ids")
+    return make_result(json_text(result))
+
+
+def validate_task_execution(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+    """Inspect authoritative fingerprints or validate executable Tasks metadata."""
+    action = inputs.get("action", "validate")
+    if not isinstance(action, str) or action not in {"validate", "fingerprints"}:
+        return make_result("", "validate-task-execution: action must be validate or fingerprints\n", 2)
+    result = partition_phase7_tasks({**inputs, "_task_execution_action": action,
+                                    "task_execution_required": True}, repo_root)
+    payload = json.loads(result["stdout"])
+    payload["tool"] = "validate-task-execution"
+    if result["exit_code"] == 0 and action == "validate":
+        payload["valid"] = True
+    result["stdout"] = json_text(payload)
+    return result
+
+
+def validate_execution_record(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+    from ..verification_records import validate_execution_record as validate_record
+
+    payload = validate_record(repo_root, inputs)
+    return make_result(json_text(payload), "" if payload["reusable"] else "execution evidence requires rerun\n",
+                       0 if payload["reusable"] else 1)
 
 def validate_pr_workflow_contract(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     title = str(inputs.get("title") or "")
@@ -7534,6 +7609,8 @@ PY_HELPERS: dict[str, Callable[[dict[str, Any], Path], dict[str, Any]]] = {
     "atomicity-route": atomicity_route,
     "plan-layers-feature-dir": plan_layers_feature_dir,
     "partition-phase7-tasks": partition_phase7_tasks,
+    "validate-task-execution": validate_task_execution,
+    "validate-execution-record": validate_execution_record,
     "validate-pr-workflow-contract": validate_pr_workflow_contract,
     "validate-pr-packet-read-only": validate_pr_packet_read_only,
 }
