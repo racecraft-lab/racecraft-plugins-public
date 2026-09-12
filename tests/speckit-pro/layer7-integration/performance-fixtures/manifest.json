@@ -1,5 +1,10 @@
 {
   "schema_version": "autopilot-performance-fixtures/v1",
+  "preparation": {
+    "status": "prepared-inputs-not-native-qualified",
+    "common_tasks_input": "COMMON-TASKS-INPUT.md",
+    "dependency_inventory": "DEPENDENCY-PINS.json"
+  },
   "qualification": {
     "status": "pending-native-qualification",
     "launch_authorized": false,
@@ -646,11 +651,19 @@
   "authored_files": [
     {
       "file": "PROTOCOL.md",
-      "sha256": "c703c1d2d196170e147d8c9efde8930a0f75a112a8311efb749089b13d73361e"
+      "sha256": "97d20055be54924e3508b55ce714735013049e2ababdc1b65f672ec48649e0d5"
+    },
+    {
+      "file": "COMMON-TASKS-INPUT.md",
+      "sha256": "15b2386a086b3151e972d93ae1e855cc8dae55d0113861bc9e0fda8637fb7a6e"
+    },
+    {
+      "file": "DEPENDENCY-PINS.json",
+      "sha256": "5d4d8dcd5e6dd25cf8677fc59a288f303c51bed2ef4f6a2581cb6db53550b7f4"
     },
     {
       "file": "implementation-notes/kickoff.md",
-      "sha256": "6378cf3b5102f4430debba84fc88883c6fc229b021594b80dfce66c49be182cc"
+      "sha256": "fa78fbdd0f9f7ba3184a35be13fb19816d093161ca6ea03f4c1220f3ef84518c"
     },
     {
       "file": "implementation-notes/prepared-tasks.md",
@@ -658,7 +671,7 @@
     },
     {
       "file": "draft-pr-emission/kickoff.md",
-      "sha256": "d0f940c4f5fb21d16ec214afc037d6f672d6fe5f811693fc6c4bed728a53c07a"
+      "sha256": "adac833d70406072470556f28bc3b88523958f5e6aca5c0b22d4f20c85be2b35"
     },
     {
       "file": "draft-pr-emission/prepared-tasks.md",
@@ -666,7 +679,7 @@
     },
     {
       "file": "troubleshooting-security/kickoff.md",
-      "sha256": "ebbe3df1fd2f185cfd11913639594b10648135bb30b7640423e70da69e58cd3e"
+      "sha256": "795dac3f08230198fde124a4e61048ee9ff15419643a1c4f99f7b1bc0c13ff9a"
     },
     {
       "file": "troubleshooting-security/prepared-tasks.md",

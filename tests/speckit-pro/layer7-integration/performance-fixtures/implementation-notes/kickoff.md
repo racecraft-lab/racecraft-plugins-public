@@ -1,5 +1,8 @@
 # Implementation-notes workload kickoff
 
+Apply the identical `../COMMON-TASKS-INPUT.md` supplement to the actual Tasks
+production prompt in both arms; preserve the original workflow bytes separately.
+
 Run the full prepared ART-012 workflow through the installed native autopilot,
 under the separately approved performance campaign. Workload source is the
 scaffold commit in the manifest, not the installed harness and not current

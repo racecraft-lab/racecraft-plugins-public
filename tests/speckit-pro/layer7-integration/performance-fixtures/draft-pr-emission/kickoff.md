@@ -1,5 +1,8 @@
 # Draft-PR workload kickoff
 
+Apply the identical `../COMMON-TASKS-INPUT.md` supplement to the actual Tasks
+production prompt in both arms; preserve the original workflow bytes separately.
+
 Run the full prepared ART-007 workflow through the installed native autopilot,
 under the separately approved performance campaign. Use the manifest's scaffold
 workload source. The final frozen approved specification governs scope,

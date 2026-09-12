@@ -1,5 +1,8 @@
 # Troubleshooting/security workload kickoff
 
+Apply the identical `../COMMON-TASKS-INPUT.md` supplement to the actual Tasks
+production prompt in both arms; preserve the original workflow bytes separately.
+
 Run the full prepared DOC-008 workflow through the installed native autopilot,
 under the separately approved performance campaign. Use the scaffold workload
 commit, whose troubleshooting/security pages are still route shells and whose

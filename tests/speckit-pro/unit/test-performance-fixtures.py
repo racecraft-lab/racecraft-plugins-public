@@ -108,5 +108,48 @@ class PerformanceFixtureTests(unittest.TestCase):
             self.assertEqual(hashlib.sha256(content).hexdigest(), file["sha256"])
 
 
+class PreparationInputTests(unittest.TestCase):
+    def test_common_tasks_input_is_identical_and_does_not_seed_outputs(self):
+        manifest = json.loads((FIXTURES / "manifest.json").read_text())
+        preparation = manifest["preparation"]
+        self.assertEqual(preparation["status"], "prepared-inputs-not-native-qualified")
+        self.assertEqual(preparation["common_tasks_input"], "COMMON-TASKS-INPUT.md")
+        authored = {entry["file"] for entry in manifest["authored_files"]}
+        self.assertTrue({preparation["common_tasks_input"], preparation["dependency_inventory"]} <= authored)
+        supplement = (FIXTURES / preparation["common_tasks_input"]).read_text()
+        for token in ("actual Tasks phase", "never seed", "schema_version", "task-execution.v1", "fingerprints", "spec_sha256", "plan_sha256", "tasks_sha256", "capability_group", "depends_on", "owns", "tdd_unit", "candidate-only helper", "task_execution_required=true"):
+            self.assertIn(token, supplement)
+        for scenario in manifest["scenarios"]:
+            kickoff = (FIXTURES / scenario["kickoff"]).read_text()
+            self.assertIn("Apply the identical `../COMMON-TASKS-INPUT.md` supplement to the actual Tasks", kickoff)
+        self.assertFalse(list(FIXTURES.rglob("task-execution.json")))
+
+    def test_dependency_inventory_binds_each_historical_workload(self):
+        manifest = json.loads((FIXTURES / "manifest.json").read_text())
+        inventory = json.loads((FIXTURES / manifest["preparation"]["dependency_inventory"]).read_text())
+        self.assertEqual(inventory["status"], "source-pins-only-not-environment-qualified")
+        self.assertEqual(set(inventory["scenarios"]), set(EXPECTED))
+        for scenario in manifest["scenarios"]:
+            entry = inventory["scenarios"][scenario["id"]]
+            self.assertEqual(entry["workload_commit"], scenario["workload"]["commit"])
+            self.assertEqual(entry["package_manager_declaration"], "pnpm@10.25.0")
+            self.assertEqual(entry["astro_node_engine_declaration"], ">=22.12.0")
+            self.assertEqual(set(entry["files"]), {"docs-site/package.json", "docs-site/pnpm-lock.yaml"})
+            for pin in entry["files"].values():
+                self.assertRegex(pin["git_blob"], r"^[0-9a-f]{40}$")
+                self.assertRegex(pin["sha256"], r"^[0-9a-f]{64}$")
+                self.assertGreater(pin["bytes"], 0)
+            for pending in ("resolved_runtime_pins", "installation_evidence", "automated_check_evidence"):
+                self.assertIsNone(entry[pending])
+        self.assertEqual(inventory["scenarios"]["ART-012"]["files"], inventory["scenarios"]["ART-007"]["files"])
+        self.assertEqual(inventory["scenarios"]["DOC-008"]["files"]["docs-site/pnpm-lock.yaml"]["git_blob"], "257094f1d5d637695663b8d275393dd777b9752b")
+
+    def test_preflight_separates_source_pins_from_native_evidence(self):
+        protocol = " ".join((FIXTURES / "PROTOCOL.md").read_text().split())
+        for token in ("DEPENDENCY-PINS.json", "COMMON-TASKS-INPUT.md", "package-manager declaration", "not an environment qualification", "both arms", "prepared-workflow hash", "no candidate-only helper"):
+            self.assertIn(token, protocol)
+
+
 if __name__ == "__main__":
-    raise SystemExit(run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(PerformanceFixtureTests), label="test-performance-fixtures"))
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PerformanceFixtureTests, PreparationInputTests))
+    raise SystemExit(run_counted(suite, label="test-performance-fixtures"))

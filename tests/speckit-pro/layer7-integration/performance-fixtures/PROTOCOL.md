@@ -46,6 +46,41 @@ The manifest records the complete changed-path inventory and representative
 absent implementation files. Reconfirm the pinned tree and absent files when
 materializing a campaign; these observations do not qualify the environment.
 
+## Provider-free preparation and campaign preflight
+
+`COMMON-TASKS-INPUT.md` supplies one self-contained Tasks-production supplement
+for both arms. It requires no candidate-only helper to calculate fingerprints.
+Append its exact bytes to each original Tasks prompt in a separate prepared
+workflow copy; do not modify the frozen original or seed generated artifacts.
+Record the original workflow, scenario kickoff, common supplement, and resulting
+prepared-workflow hash in the campaign manifest. Compare prepared copies across
+matched arms before launch. The common input is prepared, not native-qualified:
+actual baseline producer compatibility and candidate required-metadata validation
+remain unproven until exercised through the installed native workflows.
+
+`DEPENDENCY-PINS.json` binds each scaffold's exact docs-site package manifest and
+complete lockfile using Git blob IDs, SHA-256, and byte counts. These are locally
+verified source pins, **not an environment qualification**. The package-manager
+declaration is `pnpm@10.25.0`; the lockfiles declare Astro's Node engine as
+`>=22.12.0`, not an exact installed Node pin. ART-012 and ART-007 share identical
+dependency input bytes; DOC-008 has an older, different dependency graph. Do not
+replace either graph with today's package files or infer a missing dependency
+from a newer scenario.
+
+Before an authorized campaign, check out the exact manifest commit/tree and
+compare both dependency files against all three recorded byte identities on
+both arms. Independently record exact Python/Node/package-manager executables
+and versions, OS/architecture, package installation and applicable browser
+availability, and the outputs of every required automated prerequisite check.
+The declared version constraints are only a lower bound; the complete locked
+dependency graph and installed-arm checks may impose additional constraints.
+Use each workload's frozen dependency inputs without updates, substitutions, or
+skipped checks. Dependency installation is a separate authorized operation;
+this provider-free preparation performs none. Missing Git objects, pin drift,
+incompatible runtimes, unavailable locked packages, missing browsers, or an
+unqualified historical command block the matched pair before launch. Attach
+evidence to the campaign, not a success flag to these frozen reference files.
+
 ## Qualification before any native run
 
 1. Review a separate campaign manifest and explicit launch budget. The paired
@@ -85,8 +120,9 @@ materializing a campaign; these observations do not qualify the environment.
    with `task_execution_required=true`. Preserve the original bytes and record
    every common input normalization and hash in the reviewed campaign. Never
    preseed metadata or silently benchmark candidate legacy dispatches as the
-   optimized path. This producer/input compatibility qualification is currently
-   pending; this fixture does not invent an untested normalization.
+   optimized path. The shared supplement above is the explicit common input
+   normalization; its producer/input compatibility qualification is currently
+   pending. Preparing its bytes does not establish native qualification.
 
 ## Run and record through the existing native autopilot
 
