@@ -445,6 +445,109 @@ def skill_witnesses(
     return witnesses
 
 
+def _catalog_locator_alias(locator: str, skill_name: str) -> str | None:
+    """Return the alias from one canonical catalog-relative skill locator."""
+    parts = pathlib.PurePosixPath(locator).parts
+    if (
+        len(parts) == 3
+        and re.fullmatch(r"r[0-9]+", parts[0]) is not None
+        and parts[1:] == (skill_name, "SKILL.md")
+        and locator == f"{parts[0]}/{skill_name}/SKILL.md"
+    ):
+        return parts[0]
+    return None
+
+
+def _proved_catalog_aliases(
+    workspace: pathlib.Path,
+    witnesses: dict[str, dict[str, str]],
+    source_locators: dict[str, str],
+) -> set[str]:
+    """Validate catalog locators against every frozen staged witness."""
+    if set(source_locators) != set(witnesses):
+        raise ValueError("Codex catalog source locators do not match staged witnesses")
+    skill_root = (workspace.resolve(strict=True) / ".agents" / "skills").resolve(strict=True)
+    aliases: set[str] = set()
+    absolute_count = 0
+    for skill_name, witness in witnesses.items():
+        if not skill_name or skill_name in {".", ".."} or "/" in skill_name or "\\" in skill_name:
+            raise ValueError("Codex catalog skill name cannot form a confined locator")
+        locator = source_locators[skill_name]
+        if not isinstance(locator, str):
+            raise ValueError("Codex catalog source locator is not text")
+        witness_path = pathlib.Path(witness["path"]).resolve(strict=True)
+        if witness_path != (skill_root / skill_name / "SKILL.md").resolve(strict=True):
+            raise ValueError("Codex catalog alias would not resolve to the witnessed skill")
+        if pathlib.Path(locator).is_absolute():
+            absolute_count += 1
+            if pathlib.Path(locator) != witness_path:
+                raise ValueError("Codex catalog absolute locator differs from its witness")
+            continue
+        alias = _catalog_locator_alias(locator, skill_name)
+        if alias is None:
+            raise ValueError("Codex catalog skill-root locator is malformed")
+        aliases.add(alias)
+    if aliases and (len(aliases) != 1 or absolute_count):
+        raise ValueError("Codex catalog source locators do not share one relative root alias")
+    return aliases
+
+
+def _bind_catalog_skill_root_alias(
+    workspace: pathlib.Path,
+    witnesses: dict[str, dict[str, str]],
+    source_locators: dict[str, str],
+) -> None:
+    """Make the catalog's proved root alias resolve inside the disposable workspace."""
+    workspace_root = workspace.resolve(strict=True)
+    skill_root = (workspace_root / ".agents" / "skills").resolve(strict=True)
+    aliases = _proved_catalog_aliases(workspace, witnesses, source_locators)
+    if not aliases:
+        return
+    alias = next(iter(aliases))
+    alias_path = workspace_root / alias
+    if alias_path.exists() or alias_path.is_symlink():
+        raise ValueError("Codex catalog skill-root alias path already exists")
+    alias_path.symlink_to(".agents/skills", target_is_directory=True)
+    if alias_path.resolve(strict=True) != skill_root:
+        raise ValueError("Codex catalog skill-root alias escaped its staged root")
+    for skill_name, locator in source_locators.items():
+        witnesses[skill_name]["source_locator"] = locator
+
+
+def _attest_catalog_skill_root_alias(
+    workspace: pathlib.Path,
+    witnesses: dict[str, dict[str, str]],
+) -> None:
+    """Fail closed if the catalog-derived alias changed after preflight."""
+    locators = {
+        name: witness.get("source_locator")
+        for name, witness in witnesses.items()
+        if witness.get("source_locator") is not None
+    }
+    if not locators:
+        return
+    try:
+        aliases = {
+            _catalog_locator_alias(locator, name)
+            for name, locator in locators.items()
+            if isinstance(locator, str)
+        }
+        aliases.discard(None)
+        if len(locators) != len(witnesses) or len(aliases) != 1:
+            raise ValueError
+        alias_path = workspace.resolve(strict=True) / next(iter(aliases))
+        skill_root = (workspace / ".agents" / "skills").resolve(strict=True)
+        if not alias_path.is_symlink() or os.readlink(alias_path) != ".agents/skills":
+            raise ValueError
+        if alias_path.resolve(strict=True) != skill_root:
+            raise ValueError
+        for name, locator in locators.items():
+            if (workspace / locator).resolve(strict=True) != pathlib.Path(witnesses[name]["path"]):
+                raise ValueError
+    except (OSError, RuntimeError, TypeError, ValueError):
+        raise ValueError("Codex catalog skill-root alias changed after catalog preflight") from None
+
+
 def fixture_permission_args(workspace: pathlib.Path) -> list[str]:
     """Use the reviewed native fixture-only policy, without legacy sandbox flags."""
     resolved_workspace = workspace.resolve()
@@ -530,6 +633,72 @@ def _prompt_strings(value: object) -> list[str]:
     return []
 
 
+def _catalog_entry_identity(
+    payload: str,
+    expected: tuple[str, str, pathlib.Path | None],
+    repository_skill_root: pathlib.Path | None,
+    catalog_roots: dict[str, str],
+) -> dict[str, object]:
+    """Validate one catalog entry's description and canonical source locator."""
+    name, description, expected_file = expected
+    result: dict[str, object] = {
+        "description_exact": False,
+        "alias_valid": False,
+        "file_valid": False,
+        "file_exact": False,
+        "locator": None,
+        "alias": None,
+    }
+    if not payload.endswith(")") or " (file: " not in payload or expected_file is None:
+        return result
+    rendered_description, locator = payload[:-1].rsplit(" (file: ", 1)
+    result["description_exact"] = rendered_description == description
+    locator_path = pathlib.Path(locator)
+    candidate: pathlib.Path | None = None
+    try:
+        if locator_path.is_absolute():
+            result["alias_valid"] = locator_path == expected_file
+            candidate = locator_path if result["alias_valid"] else None
+        else:
+            alias = _catalog_locator_alias(locator, name)
+            root_text = catalog_roots.get(alias) if alias is not None else None
+            root_path = pathlib.Path(root_text) if root_text is not None else None
+            if (
+                root_path is not None
+                and root_path.is_absolute()
+                and root_path.resolve(strict=True) == repository_skill_root
+            ):
+                result["alias_valid"] = True
+                result["alias"] = alias
+                candidate = root_path / name / "SKILL.md"
+        if candidate is not None:
+            rendered_file = candidate.resolve(strict=True)
+            result["file_valid"] = rendered_file.is_file()
+            result["file_exact"] = result["file_valid"] and rendered_file == expected_file
+        if all(result[key] for key in ("description_exact", "alias_valid", "file_exact")):
+            result["locator"] = locator
+    except (OSError, RuntimeError, TypeError, ValueError):
+        pass
+    return result
+
+
+def _catalog_root_map(catalog: str) -> tuple[dict[str, str], bool]:
+    """Parse unique Codex catalog root aliases without accepting partial lines."""
+    roots: dict[str, str] = {}
+    valid = True
+    if "### Skill roots" not in catalog:
+        return roots, valid
+    section = catalog.split("### Skill roots", 1)[1].split("### Available skills", 1)[0]
+    for line in section.splitlines():
+        match = re.fullmatch(r"- `(r[0-9]+)` = `(.+)`", line)
+        if match is None:
+            continue
+        alias, root_text = match.groups()
+        valid = valid and alias not in roots
+        roots[alias] = root_text
+    return roots, valid
+
+
 def inspect_catalog_prompt(
     output: bytes,
     target_name: str,
@@ -558,18 +727,7 @@ def inspect_catalog_prompt(
     if len(catalogs) != 1:
         return None, f"Codex catalog preflight found {len(catalogs)} rendered catalogs"
     catalog = catalogs[0]
-    catalog_roots: dict[str, str] = {}
-    catalog_roots_valid = True
-    if "### Skill roots" in catalog:
-        roots_section = catalog.split("### Skill roots", 1)[1].split("### Available skills", 1)[0]
-        for line in roots_section.splitlines():
-            match = re.fullmatch(r"- `(r[0-9]+)` = `(.+)`", line)
-            if match is None:
-                continue
-            alias, root_text = match.groups()
-            if alias in catalog_roots:
-                catalog_roots_valid = False
-            catalog_roots[alias] = root_text
+    catalog_roots, catalog_roots_valid = _catalog_root_map(catalog)
     available = catalog.split("### Available skills", 1)[1]
     available = available.split("### How to use skills", 1)[0]
     entries = [line for line in available.splitlines() if line.startswith("- ")]
@@ -579,6 +737,9 @@ def inspect_catalog_prompt(
     rendered_file_valid = False
     target_file_exact = False
     root_alias_valid = False
+    skill_root_alias: str | None = None
+    skill_source_locators: dict[str, str] = {}
+    source_locators_exact = True
     try:
         repository_skill_root = (workspace / ".agents" / "skills").resolve(strict=True)
         target_file = target_skill.resolve(strict=True)
@@ -590,43 +751,50 @@ def inspect_catalog_prompt(
         repository_skill_root = None
         target_file = None
         target_file_valid = False
-    entry_payload = target_entries[0][len(target_prefix) :] if len(target_entries) == 1 else ""
-    if entry_payload.endswith(")") and " (file: " in entry_payload:
-        rendered_description, rendered_file_text = entry_payload[:-1].rsplit(" (file: ", 1)
-        target_description_exact = rendered_description == target_description
-        rendered_file_path = pathlib.Path(rendered_file_text)
-        rendered_candidate: pathlib.Path | None = None
-        if rendered_file_path.is_absolute():
-            rendered_candidate = rendered_file_path
-            root_alias_valid = True
-        elif len(rendered_file_path.parts) >= 2 and catalog_roots_valid:
-            root_text = catalog_roots.get(rendered_file_path.parts[0])
-            if root_text is not None and pathlib.Path(root_text).is_absolute():
-                rendered_candidate = pathlib.Path(root_text).joinpath(*rendered_file_path.parts[1:])
-                root_alias_valid = True
-        if rendered_file_text and rendered_candidate is not None:
-            try:
-                rendered_file = rendered_candidate.resolve(strict=True)
-                rendered_file_valid = rendered_file.is_file()
-                target_file_exact = (
-                    rendered_file_valid
-                    and target_file_valid
-                    and rendered_file == target_file
-                )
-            except (OSError, RuntimeError, ValueError):
-                pass
+    expected_descriptions = {target_name: target_description, **siblings}
     sibling_entries = 0
     sibling_entries_exact = True
-    for name, description in siblings.items():
+    relative_aliases: set[str] = set()
+    relative_locator_count = 0
+    for name, description in expected_descriptions.items():
         prefix = f"- {name}: "
         matching = [entry[len(prefix):] for entry in entries if entry.startswith(prefix)]
-        sibling_entries += len(matching)
-        if len(matching) != 1 or not (
-            matching[0] == description
-            or (matching[0].endswith(")") and " (file: " in matching[0]
-                and matching[0][:-1].rsplit(" (file: ", 1)[0] == description)
-        ):
-            sibling_entries_exact = False
+        if name != target_name:
+            sibling_entries += len(matching)
+        try:
+            expected_file = (
+                (target_file if target_file_valid else None)
+                if name == target_name
+                else (repository_skill_root / name / "SKILL.md").resolve(strict=True)
+            )
+        except (OSError, RuntimeError, TypeError, ValueError):
+            expected_file = None
+        identity = _catalog_entry_identity(
+            matching[0] if len(matching) == 1 else "",
+            (name, description, expected_file),
+            repository_skill_root,
+            catalog_roots if catalog_roots_valid else {},
+        )
+        entry_exact = identity["locator"] is not None
+        locator = identity["locator"]
+        alias = identity["alias"]
+        if isinstance(locator, str):
+            skill_source_locators[name] = locator
+        if isinstance(alias, str):
+            relative_aliases.add(alias)
+            relative_locator_count += 1
+        source_locators_exact = source_locators_exact and entry_exact
+        if name == target_name:
+            target_description_exact = bool(identity["description_exact"])
+            rendered_file_valid = bool(identity["file_valid"])
+            target_file_exact = bool(identity["file_exact"])
+            root_alias_valid = bool(identity["alias_valid"])
+        else:
+            sibling_entries_exact = sibling_entries_exact and entry_exact
+    if len(relative_aliases) == 1 and relative_locator_count == len(expected_descriptions):
+        skill_root_alias = next(iter(relative_aliases))
+    elif relative_aliases:
+        source_locators_exact = False
     readiness = {
         "catalog_skill_entries": len(entries),
         "target_entries": len(target_entries),
@@ -636,6 +804,9 @@ def inspect_catalog_prompt(
         "root_alias_valid": root_alias_valid,
         "rendered_file_valid": rendered_file_valid,
         "target_file_exact": target_file_exact,
+        "skill_root_alias": skill_root_alias,
+        "skill_source_locators": skill_source_locators,
+        "source_locators_exact": source_locators_exact,
         "target_description_chars": len(target_description),
         "warning_present": warning_present,
         "other_skill_entries": len(entries) - len(target_entries),
@@ -648,6 +819,7 @@ def inspect_catalog_prompt(
         and sibling_entries_exact
         and target_description_exact
         and target_file_exact
+        and source_locators_exact
         and not warning_present
     ):
         return None, f"Codex catalog preflight failed: {json.dumps(readiness, sort_keys=True)}"
@@ -729,6 +901,13 @@ def _invalid_codex_observation(reason: str, *, isolation_stop: bool = False) -> 
     }
 
 
+def _valid_witness_source_locator(value: object, skill_name: str) -> bool:
+    return value is None or (
+        isinstance(value, str)
+        and _catalog_locator_alias(value, skill_name) is not None
+    )
+
+
 def _validated_marker_map(
     target_skill: str,
     witnesses: dict[str, dict[str, str]],
@@ -740,6 +919,7 @@ def _validated_marker_map(
         marker = witness.get("marker") if isinstance(witness, dict) else None
         path = witness.get("path") if isinstance(witness, dict) else None
         relative_path = witness.get("relative_path") if isinstance(witness, dict) else None
+        source_locator = witness.get("source_locator") if isinstance(witness, dict) else None
         digest = witness.get("sha256") if isinstance(witness, dict) else None
         body = witness.get("body") if isinstance(witness, dict) else None
         if (
@@ -750,6 +930,7 @@ def _validated_marker_map(
             or not pathlib.Path(path).is_absolute()
             or not isinstance(relative_path, str)
             or not relative_path
+            or not _valid_witness_source_locator(source_locator, skill_name)
             or not isinstance(digest, str)
             or not isinstance(body, str)
             or hashlib.sha256(body.encode("utf-8")).hexdigest() != digest
@@ -818,14 +999,32 @@ def _exact_codex_body_read_skill(
     if len(body_matches) != 1:
         return None
     skill_name = body_matches[0]
-    named_skills = {
-        name for name, witness in witnesses.items()
-        if witness["path"] in command or witness["relative_path"] in command
-    }
     if any(witness["marker"] in command for witness in witnesses.values()):
         return None
-    bare_read = _shell_command_tokens(command) == ["sed", "-n", "1,240p", "SKILL.md"]
-    return skill_name if named_skills == {skill_name} or not named_skills and bare_read else None
+    tokens = _shell_command_tokens(command)
+    if tokens is None:
+        try:
+            tokens = shlex.split(command)
+        except ValueError:
+            return None
+    if len(tokens) == 4 and tokens[:3] == ["sed", "-n", "1,240p"]:
+        read_path = tokens[3]
+    elif len(tokens) == 2 and tokens[0] == "cat":
+        read_path = tokens[1]
+    else:
+        return None
+    if read_path == "SKILL.md":
+        return skill_name if tokens[0] == "sed" else None
+    exact_locations = {
+        location
+        for location in (
+            witnesses[skill_name]["path"],
+            witnesses[skill_name]["relative_path"],
+            witnesses[skill_name].get("source_locator"),
+        )
+        if isinstance(location, str)
+    }
+    return skill_name if read_path in exact_locations else None
 
 
 def _leading_compound_codex_body_skill(
@@ -842,7 +1041,13 @@ def _leading_compound_codex_body_skill(
     matches = [
         name
         for name, witness in witnesses.items()
-        if read_path in {witness["path"], witness["relative_path"]}
+        if read_path in {
+            location
+            for location in (
+                witness["path"], witness["relative_path"], witness.get("source_locator"),
+            )
+            if isinstance(location, str)
+        }
     ]
     if len(matches) != 1:
         return None
@@ -850,7 +1055,10 @@ def _leading_compound_codex_body_skill(
     if any(
         location in token
         for witness in witnesses.values()
-        for location in (witness["path"], witness["relative_path"])
+        for location in (
+            witness["path"], witness["relative_path"], witness.get("source_locator"),
+        )
+        if isinstance(location, str)
         for token in tail_tokens
     ):
         return None
@@ -868,7 +1076,7 @@ def _leading_compound_codex_body_read(
     if skill_name is None:
         return None
     body = witnesses[skill_name]["body"]
-    if not command_output.startswith(body) or command_output == body:
+    if not command_output.startswith(body):
         return None
     suffix = command_output[len(body):]
     if any(
@@ -1411,6 +1619,10 @@ def main() -> int:
         )
         if readiness is None:
             raise ValueError(readiness_reason)
+        source_locators = readiness.get("skill_source_locators")
+        if not isinstance(source_locators, dict):
+            raise ValueError("Codex catalog preflight omitted proved source locators")
+        _bind_catalog_skill_root_alias(workspace, witnesses, source_locators)
         preflight, preflight_reason = cli_preflight()
         if preflight is None:
             raise ValueError(preflight_reason)
@@ -1439,6 +1651,7 @@ def main() -> int:
         print("", file=sys.stderr)
 
         def launch(query: str, execution: dict[str, object]):
+            _attest_catalog_skill_root_alias(workspace, witnesses)
             if enumerate_non_target_skills(target_skill) != disabled_skills:
                 raise ValueError("Codex skill roots changed after catalog preflight")
             if enumerate_mcp_servers(workspace, args.timeout) != disabled_mcp_servers:

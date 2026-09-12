@@ -51,6 +51,13 @@ requires both:
    after that exact leading command starts; and
 2. that skill's marker as the first nonblank line of one completed agent message.
 
+The catalog preflight proves the exact source locator for every staged target
+and sibling. When the pinned CLI renders an `rN/<skill>/SKILL.md` locator, the
+harness derives that alias from the catalog, binds it inside the disposable
+workspace to the relative `.agents/skills` root, and re-attests the link and
+every resolved witness immediately before each trial. A collision, malformed
+locator, different skill path, or changed link fails closed before launch.
+
 The pinned public exec JSON omits the internal command working directory even
 though Codex uses it while executing a skill read. The observer therefore also
 accepts the exact bare command `sed -n '1,240p' SKILL.md`, but only when its
@@ -60,9 +67,9 @@ additional shell segments remain invalid.
 
 For the leading compound form, the parser requires the body at byte zero and
 rejects a tail that names another staged skill path or emits any staged body or
-selection marker. The post-start form also rejects a command that contains any
-marker or a second staged path; it is valid only when the marker appears after
-the command start. It applies both when the JSON stream omits command completion
+selection marker; a successful tail may be silent. The post-start form also
+rejects a command that contains any marker or a second staged path; it is valid
+only when the marker appears after the command start. It applies both when the JSON stream omits command completion
 and when a successful completion's retained output omits the leading body. When
 retained output exists, any displaced staged body or marker still makes that
 form invalid. This accounts for the official `codex exec --json` sample, which

@@ -177,6 +177,7 @@ def codex_witness(skill_name: str, marker: str) -> dict[str, dict[str, str]]:
         "marker": marker,
         "path": str(path),
         "relative_path": f".agents/skills/{skill_name}/SKILL.md",
+        "source_locator": f"r0/{skill_name}/SKILL.md",
         "sha256": hashlib.sha256(body.encode("utf-8")).hexdigest(),
         "body": body,
     }}
@@ -394,7 +395,19 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                             stack.enter_context(mock.patch.object(engine.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, b"", b"")))
                             stack.enter_context(mock.patch.object(engine, "enumerate_non_target_skills", return_value=()))
                             stack.enter_context(mock.patch.object(engine, "enumerate_mcp_servers", return_value=()))
-                            stack.enter_context(mock.patch.object(engine, "offline_catalog_preflight", return_value=({}, "ok")))
+                            stack.enter_context(mock.patch.object(
+                                engine,
+                                "offline_catalog_preflight",
+                                side_effect=lambda workspace_arg, target_name, _description,
+                                _skill, _args, _timeout, siblings=None: ({
+                                    "skill_source_locators": {
+                                        name: str(
+                                            (workspace_arg / ".agents" / "skills" / name / "SKILL.md").resolve()
+                                        )
+                                        for name in (target_name, *(siblings or {}))
+                                    }
+                                }, "ok"),
+                            ))
                             stack.enter_context(mock.patch.object(engine, "cli_preflight", return_value=({}, "ok")))
                             stack.enter_context(mock.patch.object(sys, "argv", [str(CODEX_ENGINE), *argv]))
                         stack.enter_context(contextlib.redirect_stdout(output))
@@ -1737,6 +1750,31 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             self.assertEqual(environment["TMPDIR"], str(runtime_home / "tmp"))
             self.assertTrue((runtime_home / "tmp").is_dir())
 
+            skill_file = workspace / ".agents" / "skills" / "demo" / "SKILL.md"
+            skill_file.parent.mkdir(parents=True)
+            marker = "CODEX_SKILL_SELECTED:demo-fixed"
+            skill_file.write_text(f"fixture\n{marker}\n", encoding="utf-8")
+            alias_witnesses = engine.skill_witnesses(workspace, {"demo": marker})
+            engine._bind_catalog_skill_root_alias(
+                workspace, alias_witnesses, {"demo": "r0/demo/SKILL.md"},
+            )
+            self.assertEqual(os.readlink(workspace / "r0"), ".agents/skills")
+            self.assertEqual((workspace / "r0").resolve(strict=True), skill_file.parent.parent)
+            self.assertEqual(alias_witnesses["demo"]["source_locator"], "r0/demo/SKILL.md")
+            with self.assertRaises(ValueError):
+                engine._bind_catalog_skill_root_alias(
+                    workspace, alias_witnesses, {"demo": "../escape/demo/SKILL.md"},
+                )
+            with self.assertRaisesRegex(ValueError, "already exists"):
+                engine._bind_catalog_skill_root_alias(
+                    workspace, alias_witnesses, {"demo": "r0/demo/SKILL.md"},
+                )
+            engine._attest_catalog_skill_root_alias(workspace, alias_witnesses)
+            (workspace / "r0").unlink()
+            (workspace / "r0").symlink_to(".", target_is_directory=True)
+            with self.assertRaisesRegex(ValueError, "changed after catalog preflight"):
+                engine._attest_catalog_skill_root_alias(workspace, alias_witnesses)
+
         marker = "CODEX_SKILL_SELECTED:demo-eval-fixed"
         witnesses = codex_witness("demo-eval", marker)
         base = [json.loads(line) for line in codex_stream(
@@ -1819,6 +1857,40 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
         self.assertEqual(bare["consulted_skills"], ["demo-eval"])
         self.assertEqual(bare["read_witnesses"][0]["read_mode"], "exact-output")
 
+        alias_read = f'/bin/zsh -c "sed -n \'1,240p\' {target["source_locator"]}"'
+        alias = inspect_codex_events(
+            engine, with_command(alias_read, target["body"]), "demo-eval", witnesses,
+        )
+        self.assertTrue(alias["valid"], alias)
+        self.assertTrue(alias["selected"])
+        self.assertEqual(alias["consulted_skills"], ["demo-eval"])
+
+        alias_leading_read = alias_read[:-1] + " && pwd\""
+        alias_leading = inspect_codex_events(
+            engine,
+            with_command(alias_leading_read, target["body"] + "/tmp/fixture-workspace\n"),
+            "demo-eval",
+            witnesses,
+        )
+        self.assertTrue(alias_leading["valid"], alias_leading)
+        self.assertEqual(
+            alias_leading["read_witnesses"][0]["read_mode"],
+            "leading-compound-output",
+        )
+
+        silent_tail_read = alias_read[:-1] + " && find . -maxdepth 1 -type f\""
+        silent_tail = inspect_codex_events(
+            engine,
+            with_command(silent_tail_read, target["body"]),
+            "demo-eval",
+            witnesses,
+        )
+        self.assertTrue(silent_tail["valid"], silent_tail)
+        self.assertEqual(
+            silent_tail["read_witnesses"][0]["read_mode"],
+            "leading-compound-output",
+        )
+
         leading_read = (
             f'/bin/zsh -c "sed -n \'1,240p\' {target["path"]} '
             "&& pwd && rg --files -g '!node_modules*' | head -200\""
@@ -1839,6 +1911,10 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             "fabricated body with a path mention": (
                 f'printf ignored {target["path"]}',
                 body_then_metadata,
+            ),
+            "alias is only a substring in another operand": (
+                f'/bin/zsh -c "sed -n \'1,240p\' prefix-{target["source_locator"]}"',
+                target["body"],
             ),
             "bare body read uses a different command": (
                 "/bin/zsh -c \"cat SKILL.md\"",
@@ -1884,7 +1960,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
         engine = import_script(CODEX_ENGINE, "layer2_codex_started_body_read")
         marker = "CODEX_SKILL_SELECTED:demo-eval-0123456789abcdef0123456789abcdef"
         witnesses = codex_witness("demo-eval", marker)
-        relative_path = witnesses["demo-eval"]["relative_path"]
+        relative_path = witnesses["demo-eval"]["source_locator"]
         command = (
             f'/bin/zsh -c "sed -n \'1,240p\' {relative_path} '
             "&& printf '\\nFILES\\n' && ripwire . --for='find brief'\""
@@ -1959,6 +2035,79 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
         self.assertFalse(parsed["valid"])
         self.assertIn("multiple staged skill bodies", str(parsed["reason"]))
 
+    def test_codex_catalog_proves_every_source_locator(self) -> None:
+        engine = import_script(CODEX_ENGINE, "layer2_codex_catalog_locators")
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            skill_root = workspace / ".agents" / "skills"
+            for name in ("demo-eval", "sibling"):
+                skill_file = skill_root / name / "SKILL.md"
+                skill_file.parent.mkdir(parents=True)
+                skill_file.write_text(
+                    f"---\nname: {name}\ndescription: {name}.\n---\n",
+                    encoding="utf-8",
+                )
+            root_line = f"- `r0` = `{skill_root}`"
+            catalog = "\n".join(
+                (
+                    "## Skills",
+                    "### Skill roots",
+                    root_line,
+                    "### Available skills",
+                    "- demo-eval: Demo. (file: r0/demo-eval/SKILL.md)",
+                    "- sibling: Sibling. (file: r0/sibling/SKILL.md)",
+                    "### How to use skills",
+                )
+            )
+
+            def inspect(text: str) -> tuple[dict[str, object] | None, str]:
+                return engine.inspect_catalog_prompt(
+                    json.dumps([{"text": text}]).encode("utf-8"),
+                    "demo-eval",
+                    "Demo.",
+                    skill_root / "demo-eval" / "SKILL.md",
+                    workspace,
+                    {"sibling": "Sibling."},
+                )
+
+            readiness, reason = inspect(catalog)
+            self.assertEqual(reason, "Codex catalog preflight passed")
+            self.assertEqual(
+                readiness["skill_source_locators"],
+                {
+                    "demo-eval": "r0/demo-eval/SKILL.md",
+                    "sibling": "r0/sibling/SKILL.md",
+                },
+            )
+            for label, malformed in {
+                "sibling has no source identity": catalog.replace(
+                    " (file: r0/sibling/SKILL.md)", "",
+                ),
+                "sibling has a noncanonical traversal": catalog.replace(
+                    "r0/sibling/SKILL.md", "r0/../skills/sibling/SKILL.md",
+                ),
+                "sibling has a redundant dot segment": catalog.replace(
+                    "r0/sibling/SKILL.md", "r0/./sibling/SKILL.md",
+                ),
+                "sibling has a repeated separator": catalog.replace(
+                    "r0/sibling/SKILL.md", "r0//sibling/SKILL.md",
+                ),
+                "sibling names a different staged skill": catalog.replace(
+                    "r0/sibling/SKILL.md", "r0/demo-eval/SKILL.md",
+                ),
+                "sibling uses an unproved root": catalog.replace(
+                    "r0/sibling/SKILL.md", "r1/sibling/SKILL.md",
+                ),
+                "catalog mixes absolute and aliased locators": catalog.replace(
+                    "r0/demo-eval/SKILL.md",
+                    str((skill_root / "demo-eval" / "SKILL.md").resolve()),
+                ),
+            }.items():
+                with self.subTest(label=label):
+                    rejected, rejected_reason = inspect(malformed)
+                    self.assertIsNone(rejected)
+                    self.assertIn("source_locators_exact", rejected_reason)
+
     def test_codex_isolation_violation_retains_evidence_and_stops(self) -> None:
         engine = import_script(CODEX_ENGINE, "layer2_codex_isolation_stop")
         for item_type, expected_calls in (("mcp_tool_call", 1), ("error", 1)):
@@ -1987,7 +2136,19 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     mock.patch.object(engine.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, b"", b"")),
                     mock.patch.object(engine, "enumerate_non_target_skills", return_value=()),
                     mock.patch.object(engine, "enumerate_mcp_servers", return_value=()),
-                    mock.patch.object(engine, "offline_catalog_preflight", return_value=({}, "ok")),
+                    mock.patch.object(
+                        engine,
+                        "offline_catalog_preflight",
+                        side_effect=lambda workspace_arg, target_name, _description,
+                        _skill, _args, _timeout, siblings=None: ({
+                            "skill_source_locators": {
+                                name: str(
+                                    (workspace_arg / ".agents" / "skills" / name / "SKILL.md").resolve()
+                                )
+                                for name in (target_name, *(siblings or {}))
+                            }
+                        }, "ok"),
+                    ),
                     mock.patch.object(engine, "cli_preflight", return_value=({}, "ok")),
                     mock.patch.object(engine, "run_codex_query", return_value=(0, raw, b"", False)) as provider,
                     mock.patch.object(sys, "argv", [str(CODEX_ENGINE), "demo", "--runs", "1", "--evidence-dir", str(evidence)]),
@@ -2454,7 +2615,9 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 encoding="utf-8",
             )
             main_isolation_failures = []
-            for case_index, failure_kind in enumerate(("preflight", "roots-changed"), start=1):
+            for case_index, failure_kind in enumerate(
+                ("preflight", "roots-changed", "alias-changed"), start=1,
+            ):
                 main_workspace = root / f"main-workspace-{case_index}"
                 main_evidence = root / f"main-codex-evidence-{case_index}"
                 main_stdout = io.StringIO()
@@ -2464,11 +2627,36 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     if failure_kind == "preflight"
                     else [disabled_skills, (*disabled_skills, root / "new-skill" / "SKILL.md")]
                 )
-                preflight_result = (
-                    (None, "catalog proof rejected")
-                    if failure_kind == "preflight"
-                    else (catalog_readiness, "Codex catalog preflight passed")
-                )
+                def main_catalog_preflight(
+                    workspace_arg: Path,
+                    target_name: str,
+                    _description: str,
+                    _skill: Path,
+                    _args: list[str],
+                    _timeout: int,
+                    siblings: dict[str, str] | None = None,
+                ) -> tuple[dict[str, object] | None, str]:
+                    if failure_kind == "preflight":
+                        return None, "catalog proof rejected"
+                    names = (target_name, *(siblings or {}))
+                    return {
+                        "skill_source_locators": {
+                            name: (
+                                f"r0/{name}/SKILL.md"
+                                if failure_kind == "alias-changed"
+                                else str(
+                                    (workspace_arg / ".agents" / "skills" / name / "SKILL.md").resolve()
+                                )
+                            )
+                            for name in names
+                        }
+                    }, "Codex catalog preflight passed"
+
+                def main_cli_preflight() -> tuple[dict[str, object], str]:
+                    if failure_kind == "alias-changed":
+                        (main_workspace / "r0").unlink()
+                        (main_workspace / "r0").symlink_to(".", target_is_directory=True)
+                    return {}, "ok"
                 with (
                     mock.patch.object(engine, "find_eval_file", return_value=main_corpus),
                     mock.patch.object(engine, "find_skill_source", return_value=source),
@@ -2487,9 +2675,9 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     mock.patch.object(
                         engine,
                         "offline_catalog_preflight",
-                        return_value=preflight_result,
+                        side_effect=main_catalog_preflight,
                     ) as main_preflight,
-                    mock.patch.object(engine, "cli_preflight", return_value=({}, "ok")),
+                    mock.patch.object(engine, "cli_preflight", side_effect=main_cli_preflight),
                     mock.patch.object(engine, "run_codex_query") as rejected_provider,
                     mock.patch.object(
                         engine.uuid,
@@ -2642,6 +2830,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 is not None
                 and relative_catalog_reason == "Codex catalog preflight passed"
                 and relative_catalog_readiness["root_alias_valid"] is True
+                and relative_catalog_readiness["skill_root_alias"] == "r0"
                 and relative_catalog_readiness["target_file_exact"] is True,
                 "Codex catalog proof rejects shortening warnings and extra entries": shortened_readiness is None
                 and "warning_present" in shortened_reason
@@ -2768,7 +2957,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     and preflight_call is not None
                     and preflight_call.args[3] == expected_target_skill
                     and preflight_call.args[4] == engine.skill_isolation_args(disabled_skills)
-                    and enumerate_calls == (1 if failure_kind == "preflight" else 2)
+                    and enumerate_calls == (2 if failure_kind == "roots-changed" else 1)
                     for (
                         failure_kind,
                         exit_code,
