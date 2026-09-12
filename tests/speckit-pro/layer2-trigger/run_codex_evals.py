@@ -349,7 +349,7 @@ def enumerate_non_target_skills(target_skill: pathlib.Path) -> tuple[pathlib.Pat
 
 
 def codex_environment(workspace: pathlib.Path | None = None) -> dict[str, str]:
-    """Keep the existing login location, not unrelated service credentials."""
+    """Keep login in CODEX_HOME and shell HOME on the staged workspace."""
     environment = {
         key: os.environ[key]
         for key in ("PATH", "HOME", "TMPDIR", "LANG", "LC_ALL", "LC_CTYPE", "USER", "CODEX_HOME")
@@ -368,7 +368,7 @@ def codex_environment(workspace: pathlib.Path | None = None) -> dict[str, str]:
     runtime_tmp.mkdir(parents=True, exist_ok=True)
     environment.update(
         CODEX_HOME=codex_home,
-        HOME=str(runtime_home),
+        HOME=str(workspace.resolve()),
         TMPDIR=str(runtime_tmp),
     )
     return environment
@@ -1244,7 +1244,7 @@ def _codex_launch_contract(
         "stdin_prompt_isolated": True,
         "stdin_mode": "pseudo-terminal" if os.name != "nt" else "null-device",
         "login_state_source": "CODEX_HOME" if environment.get("CODEX_HOME") else None,
-        "shell_home_isolated": environment.get("HOME") == str(runtime_home),
+        "shell_home_isolated": environment.get("HOME") == str(workspace.resolve()),
         "scratch_directory_isolated": environment.get("TMPDIR") == str(runtime_home / "tmp")
         and (runtime_home / "tmp").is_dir(),
     }

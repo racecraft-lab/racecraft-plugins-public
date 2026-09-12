@@ -1733,7 +1733,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             runtime_home = workspace / ".codex-trigger-runtime"
             self.assertNotIn("UNRELATED_TOKEN", environment)
             self.assertEqual(environment["CODEX_HOME"], str(auth_home))
-            self.assertEqual(environment["HOME"], str(runtime_home))
+            self.assertEqual(environment["HOME"], str(workspace))
             self.assertEqual(environment["TMPDIR"], str(runtime_home / "tmp"))
             self.assertTrue((runtime_home / "tmp").is_dir())
 
@@ -2725,12 +2725,12 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 and not signal_timed_out
                 and signal_stdout == b"signal-output"
                 and signal_stderr == b"signal-stderr",
-                "Codex retains login state while isolating shell home and scratch": captured["kwargs"]["env"].get(
+                "Codex retains login state while pinning shell home to the workspace": captured["kwargs"]["env"].get(
                     "CODEX_HOME"
                 )
                 == str(auth_home)
                 and captured["kwargs"]["env"].get("HOME")
-                == str(workspace.resolve() / ".codex-trigger-runtime")
+                == str(workspace.resolve())
                 and captured["kwargs"]["env"].get("TMPDIR")
                 == str(workspace.resolve() / ".codex-trigger-runtime" / "tmp")
                 and (workspace.resolve() / ".codex-trigger-runtime" / "tmp").is_dir(),
