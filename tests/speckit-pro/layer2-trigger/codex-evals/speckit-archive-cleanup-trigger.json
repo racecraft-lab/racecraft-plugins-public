@@ -1,18 +1,10 @@
 [
   {
+    "query": "$speckit-archive-cleanup — use this skill for its documented purpose in this repository.",
+    "should_trigger": true
+  },
+  {
     "query": "SPEC-014 merged yesterday, do the post-merge archive hygiene and take it out of active specs",
-    "should_trigger": true
-  },
-  {
-    "query": "PR #482 is merged, archive that spec and clean up the active workflow residue it left behind",
-    "should_trigger": true
-  },
-  {
-    "query": "clean up the completed specs that are still sitting under specs/ after their pull requests merged",
-    "should_trigger": true
-  },
-  {
-    "query": "archive SPEC-707 now that its implementation PR landed, and record the merge provenance",
     "should_trigger": true
   },
   {
@@ -20,23 +12,7 @@
     "should_trigger": true
   },
   {
-    "query": "remove the merged spec folder from active specs and refresh the roadmap and traceability indexes",
-    "should_trigger": true
-  },
-  {
-    "query": "the implementation PR merged, please run SpecKit cleanup hygiene for that spec",
-    "should_trigger": true
-  },
-  {
-    "query": "archive the merged spec and append the records to project memory before removing the folder",
-    "should_trigger": true
-  },
-  {
     "query": "prepare the cleanup branch and cleanup PR that archives SPEC-022 after merge",
-    "should_trigger": true
-  },
-  {
-    "query": "our active specs list still shows work that shipped weeks ago, archive those merged specs",
     "should_trigger": true
   },
   {
@@ -44,15 +20,7 @@
     "should_trigger": false
   },
   {
-    "query": "show me the roadmap dashboard with every spec, its phase, and the next recommendation",
-    "should_trigger": false
-  },
-  {
     "query": "set up SPEC-020 from the technical roadmap with a worktree and a workflow file",
-    "should_trigger": false
-  },
-  {
-    "query": "scaffold a new spec folder for the caching work and give it the next SPEC-ID",
     "should_trigger": false
   },
   {
@@ -60,19 +28,7 @@
     "should_trigger": false
   },
   {
-    "query": "execute all seven phases of the workflow at docs/ai/specs/.process/SPEC-018-workflow.md",
-    "should_trigger": false
-  },
-  {
     "query": "prune the local git branches that have already been merged into main",
-    "should_trigger": false
-  },
-  {
-    "query": "delete the stale git worktrees I left behind last month",
-    "should_trigger": false
-  },
-  {
-    "query": "run git gc and clear the untracked build output out of the repository",
     "should_trigger": false
   },
   {

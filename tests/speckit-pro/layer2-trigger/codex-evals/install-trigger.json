@@ -1,5 +1,9 @@
 [
   {
+    "query": "$install — use this skill for its documented purpose in this repository.",
+    "should_trigger": true
+  },
+  {
     "query": "install the bundled SpecKit Pro Codex subagents into my user-scope Codex config and tell me if I need to restart",
     "should_trigger": true
   },
