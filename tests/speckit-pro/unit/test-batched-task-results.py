@@ -359,4 +359,4 @@ class BatchedTaskResultsTests(unittest.TestCase):
 
 if __name__ == "__main__":
     raise SystemExit(run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(BatchedTaskResultsTests),
-                                label="batched-task-results"))
+                                label="test-batched-task-results"))

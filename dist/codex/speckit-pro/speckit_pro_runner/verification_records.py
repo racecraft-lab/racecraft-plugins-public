@@ -20,6 +20,7 @@ import shlex
 import shutil
 import signal
 import subprocess
+import sys
 import tempfile
 import time
 import uuid
@@ -34,6 +35,8 @@ COMMAND_IDS = {"BUILD", "TYPECHECK", "LINT", "UNIT_TEST", "INTEGRATION_TEST", "F
                "COMPLEXITY", "MUTATION", "DEPENDENCY_RULES"}
 MAX_FILES = 50000
 MAX_BYTES = 512 * 1024 * 1024
+PROJECT_PROGRAMS = {"python", "python3", "node", "npm", "npx", "pnpm", "yarn", "bun", "cargo", "go",
+                    "make", "pytest", "lint-imports", "uv", "ruff", "mypy"}
 
 
 def digest(value: Any) -> str:
@@ -42,6 +45,25 @@ def digest(value: Any) -> str:
 
 def sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def project_program(raw: str, search_path: str | None = None) -> tuple[str, str]:
+    """Bind supported direct tools; never reinterpret a requested executable."""
+    name = Path(raw).name.removesuffix(".exe")
+    if name.casefold() in {"bash", "sh", "zsh", "fish", "csh", "ksh", "pwsh", "powershell", "cmd", "jq", "env"}:
+        raise ValueError("shell/JQ wrappers require ordinary native verification")
+    found = shutil.which(raw, path=search_path)
+    if found is None or not Path(found).is_absolute():
+        raise ValueError("missing or relative executable resolution requires ordinary native verification")
+    invocation = os.path.abspath(found)
+    if invocation == os.path.abspath(sys.executable):
+        return "current_python", invocation
+    if name not in PROJECT_PROGRAMS or Path(found).suffix.casefold() in {".bat", ".cmd"}:
+        raise ValueError("unsupported executable requires ordinary native verification")
+    named = shutil.which(name, path=search_path)
+    if named is None or not Path(named).is_absolute() or os.path.abspath(named) != invocation:
+        raise ValueError("custom executable resolution requires ordinary native verification")
+    return name, invocation
 
 
 def project_command(workflow: Path, command_id: str) -> list[str]:
@@ -64,6 +86,7 @@ def project_command(workflow: Path, command_id: str) -> list[str]:
         raise ValueError("absolute command inputs escape the isolated snapshot")
     if any(".." in Path(arg).parts for arg in argv[1:]):
         raise ValueError("parent-relative command inputs escape the isolated snapshot")
+    project_program(argv[0])
     return argv
 
 
@@ -112,10 +135,8 @@ def environment_binding() -> tuple[dict[str, str], str]:
 
 
 def toolchain_binding(argv: list[str]) -> tuple[str, dict[str, str]]:
-    executable = shutil.which(argv[0])
-    if executable is None:
-        raise ValueError("verification executable unavailable")
-    path = Path(executable).resolve()
+    _, executable = project_program(argv[0])
+    path = Path(executable)
     runner_root = Path(__file__).parent
     runner_files = {source.relative_to(runner_root).as_posix(): sha(source.read_bytes())
                     for source in runner_root.rglob("*") if source.is_file() and source.suffix in {".py", ".json"}}
@@ -138,10 +159,61 @@ def observation_material(record: dict[str, Any]) -> dict[str, Any]:
     return {key: record[key] for key in keys}
 
 
-def run_snapshot_command(argv: list[str], snapshot: Path, environment: dict[str, str], timeout: float) -> tuple[int | None, bytes, bytes, bool]:
+def open_snapshot_process(argv: list[str], snapshot: Path, environment: dict[str, str],
+                          expected_executable: str | None) -> subprocess.Popen[bytes]:
+    """Launch one finite, path-bound direct project tool without a shell."""
+    program, resolved = project_program(argv[0], environment.get("PATH"))
+    if expected_executable is not None and resolved != expected_executable:
+        raise ValueError("toolchain executable changed; ordinary native verification is required")
+    # Each executable prefix is visible to the repository's static confinement
+    # gate. Keep the finite dispatch here: a caller-supplied executable or a
+    # generic subprocess wrapper would erase the command boundary.
+    if program == "current_python":
+        executable = sys.executable
+    elif program == "python":
+        executable = shutil.which("python", path=environment.get("PATH"))
+    elif program == "python3":
+        executable = shutil.which("python3", path=environment.get("PATH"))
+    elif program == "node":
+        executable = shutil.which("node", path=environment.get("PATH"))
+    elif program == "npm":
+        executable = shutil.which("npm", path=environment.get("PATH"))
+    elif program == "npx":
+        executable = shutil.which("npx", path=environment.get("PATH"))
+    elif program == "pnpm":
+        executable = shutil.which("pnpm", path=environment.get("PATH"))
+    elif program == "yarn":
+        executable = shutil.which("yarn", path=environment.get("PATH"))
+    elif program == "bun":
+        executable = shutil.which("bun", path=environment.get("PATH"))
+    elif program == "cargo":
+        executable = shutil.which("cargo", path=environment.get("PATH"))
+    elif program == "go":
+        executable = shutil.which("go", path=environment.get("PATH"))
+    elif program == "make":
+        executable = shutil.which("make", path=environment.get("PATH"))
+    elif program == "pytest":
+        executable = shutil.which("pytest", path=environment.get("PATH"))
+    elif program == "lint-imports":
+        executable = shutil.which("lint-imports", path=environment.get("PATH"))
+    elif program == "uv":
+        executable = shutil.which("uv", path=environment.get("PATH"))
+    elif program == "ruff":
+        executable = shutil.which("ruff", path=environment.get("PATH"))
+    elif program == "mypy":
+        executable = shutil.which("mypy", path=environment.get("PATH"))
+    else:
+        raise ValueError("unsupported executable requires ordinary native verification")
+    if executable is None or not Path(executable).is_absolute() or os.path.abspath(executable) != resolved:
+        raise ValueError("toolchain resolution changed; ordinary native verification is required")
+    return subprocess.Popen([executable, *argv[1:]], cwd=snapshot, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False,
+                            start_new_session=os.name == "posix")
+
+
+def run_snapshot_command(argv: list[str], snapshot: Path, environment: dict[str, str], timeout: float,
+                         *, expected_executable: str | None = None) -> tuple[int | None, bytes, bytes, bool]:
     """Own the process group, including timeout cleanup; never retry a launch."""
-    with subprocess.Popen(argv, cwd=snapshot, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                          start_new_session=os.name == "posix") as process:
+    with open_snapshot_process(argv, snapshot, environment, expected_executable) as process:
         try:
             stdout, stderr = process.communicate(timeout=timeout)
             return process.returncode, stdout, stderr, True
@@ -196,7 +268,7 @@ def execute_verification(root: Path, inputs: dict[str, Any], mode: str) -> dict[
                         5400 - elapsed(ledger, now, ledger["slice_started_at"]))
         if remaining <= 0:
             raise ValueError("verification budget exhausted while preparing isolated inputs")
-        exit_code, stdout, stderr, completed = run_snapshot_command([executable, *argv[1:]], snapshot, environment, remaining)
+        exit_code, stdout, stderr, completed = run_snapshot_command(argv, snapshot, environment, remaining, expected_executable=executable)
         snapshot_unchanged = tree_digest(tree_bytes(snapshot, workflow_name)) == snapshot_sha
     unchanged = tree_digest(tree_bytes(root, workflow_name)) == snapshot_sha
     record = {"schema_version": SCHEMA, "execution_id": execution_id, "dispatch_id": dispatch_id, "command_id": command_id,

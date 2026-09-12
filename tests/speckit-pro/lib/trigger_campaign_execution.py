@@ -101,7 +101,7 @@ def execute_case(case: dict, request: CampaignRequest, arm: str, directory: Path
     directory.mkdir(parents=True, exist_ok=False)
     command = native_command(case, request, arm, directory)
     started = time.monotonic()
-    child = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    child = subprocess.Popen([sys.executable, *command[1:]], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                              shell=False, start_new_session=True)
     try:
         write_json_once(directory / "launch.json", {"pid": child.pid, "command": command, "started_at": time.time()})
