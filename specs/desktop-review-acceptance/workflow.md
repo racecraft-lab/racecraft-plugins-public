@@ -27,6 +27,7 @@ phases ran.
 | **Feature** | Desktop Artifact Review Acceptance |
 | **Branch** | `codex/issue-571-desktop-acceptance` |
 | **Stage** | plan |
+| **Draft PR** | [#577](https://github.com/racecraft-lab/racecraft-plugins-public/pull/577) |
 | **Purpose** | Disposable evidence fixture — DO NOT MERGE |
 
 ## Generation Boundary
