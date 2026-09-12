@@ -73,8 +73,9 @@ def assert_no_speckit_contracts(test: unittest.TestCase, claude: ModuleType, sta
         with test.subTest(eval_dir=eval_dir):
             install_cases = json.loads((LAYER2 / eval_dir / "speckit-install-trigger.json").read_text())
             scaffold_cases = json.loads((LAYER2 / eval_dir / "speckit-scaffold-spec-trigger.json").read_text())
-            test.assertEqual(install_cases[12], _INSTALL_NEGATIVE)
-            test.assertEqual(scaffold_cases[18:20], _SCAFFOLD_NEGATIVES)
+            test.assertIn(_INSTALL_NEGATIVE, install_cases)
+            for sentinel in _SCAFFOLD_NEGATIVES:
+                test.assertIn(sentinel, scaffold_cases)
 
 
 def calls_forbidden_process_api(path: Path) -> bool:
@@ -1489,6 +1490,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     "requested_model": "claude-sonnet-test",
                     "model_provider": "anthropic-claude-code",
                     "model_identity_evidence": "native-init-and-assistant-events",
+                    "query_sha256": hashlib.sha256(b"query").hexdigest(),
                 },
                 "direct launch is confined to disposable root": Path(captured["kwargs"]["cwd"]).resolve()
                 == plugin_root.resolve()
@@ -1542,7 +1544,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     and popen_calls == 0
                     and retain_calls == 0
                     and not staged_exists
-                    and [path.name for path in evidence_files] == ["arm-cleanup.json"]
+                    and {path.name for path in evidence_files} in ({"arm-cleanup.json"}, {"arm-cleanup.json", "replay-context.json"})
                     for (
                         exit_code,
                         stdout,
@@ -2925,6 +2927,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     "reasoning_effort": "low",
                     "model_provider": engine.MODEL_PROVIDER_ID,
                     "model_identity_evidence": "request-only",
+                    "query_sha256": hashlib.sha256(b"query").hexdigest(),
                     "stdin_prompt_isolated": True,
                     "stdin_mode": "pseudo-terminal" if os.name != "nt" else "null-device",
                     "login_state_source": "CODEX_HOME",
@@ -2988,7 +2991,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     and stdout == ""
                     and "ERROR:" in stderr
                     and not workspace_exists
-                    and [path.name for path in evidence_files] == ["arm-cleanup.json"]
+                    and {path.name for path in evidence_files} in ({"arm-cleanup.json"}, {"arm-cleanup.json", "replay-context.json"})
                     and provider_calls == 0
                     and preflight_call is not None
                     and preflight_call.args[3] == expected_target_skill

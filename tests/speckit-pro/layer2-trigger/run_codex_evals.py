@@ -47,6 +47,7 @@ if str(SHARED_LIB) not in sys.path:
     sys.path.insert(0, str(SHARED_LIB))
 import trigger_process as processes  # noqa: E402
 import trigger_evidence as evidence_records  # noqa: E402
+import trigger_comparison as experiment_evidence  # noqa: E402
 
 PLUGIN_ROOT = TESTS_ROOT.parents[1] / "speckit-pro"           # <repo>/speckit-pro
 CODEX_WORKSPACE_FIXTURE_ROOT = TESTS_ROOT / "layer2-trigger/fixtures/codex-workspace"
@@ -1518,6 +1519,7 @@ def run_codex_query(
         process_evidence["launch_contract"] = _codex_launch_contract(
             cmd, model, reasoning, env, workspace,
         )
+        process_evidence["launch_contract"]["query_sha256"] = hashlib.sha256(query.encode()).hexdigest()
     stdin_source, terminal_master, terminal_slave = _codex_stdin_source()
     try:
         child = subprocess.Popen(
@@ -1556,6 +1558,7 @@ def print_case_result(case_number: int, case_count: int, result: dict[str, objec
 
 
 def main() -> int:
+    global NO_SPECKIT_SKILL_DESCRIPTION
     ap = argparse.ArgumentParser()
     ap.add_argument("skill", help="Codex skill name (looked up under codex-skills/)")
     ap.add_argument("--runs", type=int, default=3, help="Trials per query (default 3)")
@@ -1570,6 +1573,8 @@ def main() -> int:
     ap.add_argument("--timeout", type=int, default=180, help="Per-query timeout seconds (default 180)")
     ap.add_argument("--out", help="Write detailed JSON results to this file")
     ap.add_argument("--evidence-dir", help="Directory for exact per-trial JSONL and stderr evidence")
+    ap.add_argument("--case-id", help="Run exactly this stable case identity; keeps all three trials")
+    ap.add_argument("--no-op-description-file", help="Frozen single-line controlled experiment description")
     args = ap.parse_args()
 
     eval_file = find_eval_file(args.skill)
@@ -1577,6 +1582,11 @@ def main() -> int:
     eval_data, corpus_reason = load_eval_corpus(eval_file)
     if eval_data is None:
         sys.exit(f"ERROR: {corpus_reason}")
+    try:
+        eval_data = evidence_records.select_case("codex", args.skill, eval_data, args.case_id)
+        no_op_description = evidence_records.description_override(args.no_op_description_file, NO_SPECKIT_SKILL_DESCRIPTION)
+    except (OSError, ValueError) as exc:
+        sys.exit(f"ERROR: {exc}")
     if args.runs <= 0 or not 0.0 <= args.threshold <= 1.0:
         sys.exit("ERROR: --runs must be positive and --threshold must be between 0 and 1")
     if args.timeout <= 0:
@@ -1594,6 +1604,8 @@ def main() -> int:
     test_uuid = uuid.uuid4().hex
     test_skill_name = f"{args.skill}-eval-{test_uuid}"
     marker = selection_marker(test_skill_name, test_uuid)
+    original_no_op_description = NO_SPECKIT_SKILL_DESCRIPTION
+    NO_SPECKIT_SKILL_DESCRIPTION = no_op_description
 
     if args.evidence_dir:
         evidence_dir = pathlib.Path(args.evidence_dir).resolve()
@@ -1688,6 +1700,11 @@ def main() -> int:
             "codex", args.skill, evidence_dir, args.runs, args.threshold,
             qualification_eligible=canonical_parameters,
         )
+        replay_context = {"host": "codex", "target_skill": test_skill_name, "witnesses": witnesses,
+                          "requested_model": args.model, "workspace": str(workspace.resolve()),
+                          "source_skill": args.skill, "no_op_description": no_op_description}
+        input_snapshot = experiment_evidence.measurement_snapshot()
+        evidence_records.write_json_once(evidence_dir / "replay-context.json", replay_context)
         results, stop_exit = evidence_records.run_trials(
             batch, eval_data, launch,
             lambda stdout: inspect_codex_jsonl(
@@ -1696,6 +1713,8 @@ def main() -> int:
             lambda case, trial, stdout, stderr: retain_run_evidence(evidence_dir, case, trial, stdout, stderr),
             progress=lambda case, result: print_case_result(case, len(eval_data), result),
         )
+        if experiment_evidence.measurement_snapshot() != input_snapshot:
+            raise ValueError("public measurement inputs changed during native execution")
         passed = sum(result["pass"] is True for result in results)
         failed = sum(result["pass"] is False for result in results)
         if stop_exit is not None and stop_exit >= 128:
@@ -1735,13 +1754,13 @@ def main() -> int:
 
         report = {
             "metadata": {
+                "input_snapshot": input_snapshot,
+                "replay_context": replay_context,
+                "no_op_description_sha256": hashlib.sha256(no_op_description.encode()).hexdigest(),
                 "preflight": preflight,
                 "catalog_preflight": readiness,
                 "selection_observation": "codex-body-read-attestation",
-                "selection_witnesses": {
-                    name: {key: value for key, value in witness.items() if key != "body"}
-                    for name, witness in witnesses.items()
-                },
+                "selection_witnesses": witnesses,
             },
             "summary": summary,
             "results": results,
@@ -1767,6 +1786,7 @@ def main() -> int:
         print(f"ERROR: {exc}", file=sys.stderr)
         exit_code = 1
     finally:
+        NO_SPECKIT_SKILL_DESCRIPTION = original_no_op_description
         cleanup_error = remove_workspace(workspace)
         if cleanup_error is not None:
             print(f"ERROR: {cleanup_error}", file=sys.stderr)

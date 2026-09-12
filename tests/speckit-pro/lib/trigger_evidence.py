@@ -24,6 +24,26 @@ def case_id(host: str, skill: str, entry: dict[str, object]) -> str:
     return f"l2-{digest[:24]}"
 
 
+def select_case(host: str, skill: str, corpus: list[dict], requested: str | None) -> list[dict]:
+    """Select an exact stable identity without altering corpus format or trial count."""
+    if requested is None:
+        return corpus
+    selected = [entry for entry in corpus if case_id(host, skill, entry) == requested]
+    if len(selected) != 1:
+        raise ValueError("--case-id must resolve exactly one case in the selected corpus")
+    return selected
+
+
+def description_override(path: str | None, default: str) -> str:
+    """Only the controlled single-line no-op description may vary between arms."""
+    if path is None:
+        return default
+    description = Path(path).read_bytes().decode("utf-8").removesuffix("\n")
+    if not description.strip() or "\n" in description or "\r" in description:
+        raise ValueError("no-op description must be one nonempty line with at most one terminal LF")
+    return description
+
+
 def trial_checks(record: dict[str, object]) -> dict[str, bool]:
     """Derive validity from typed observations, never from the aggregate pass flag."""
     observations = record.get("cleanup_observations")
