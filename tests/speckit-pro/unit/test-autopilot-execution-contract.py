@@ -140,16 +140,37 @@ class ExecutionMirrorTests(unittest.TestCase):
                     "execution_control": mirror,
                 })["state_status_errors"])
 
+class NativeRequestContractTests(unittest.TestCase):
     def test_parent_mirror_contract_names_actual_envelope_and_spec_path(self):
         policy = (SHARED / "references/execution-efficiency.md").read_text()
         for term in ("inputs.spec_file", "result.data.ledger.run_id", "ledger_path",
                      "not independent proof", "native orchestrator"):
             self.assertIn(term, policy)
 
+    def test_resume_requests_bind_run_and_independent_events(self):
+        policy = " ".join((SHARED / "references/execution-efficiency.md").read_text().split())
+        for boundary in (
+            "Every non-start action requires `inputs.expected_run_id`",
+            "known resume also passes `expected_run_id`",
+            "missing ledger is a recovery failure, never a new kickoff",
+            "`ledger_path` returned by the helper",
+            "`reconciliation_allowed=true`",
+            "`action=dispatch_result`",
+            "`wait_start_event_id`",
+            "do not pre-call `begin-verification`",
+        ):
+            with self.subTest(boundary=boundary):
+                self.assertIn(boundary, policy)
+        verification = policy.split("Use `execute-verification`", 1)[1].split(
+            "Persist discovered commands", 1)[0]
+        for required in ("`expected_run_id`", "`dispatch_id`", "`ledger_path`"):
+            self.assertIn(required, verification)
+
 
 if __name__ == "__main__":
     raise SystemExit(run_counted(
         unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                           for case in (ExecutionContractTests, ExecutionMirrorTests)),
+                           for case in (ExecutionContractTests, ExecutionMirrorTests,
+                                        NativeRequestContractTests)),
         label="test-autopilot-execution-contract",
     ))

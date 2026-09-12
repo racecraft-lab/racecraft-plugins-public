@@ -10,6 +10,14 @@ Invoke runner helper `execution-control`, operation `execution-control`, with
 `inputs.workflow_file` and `inputs.action`. Use `mode=apply` for ledger changes
 (`dry_run` previews); `action=status` is `mode=read_only`.
 
+Every non-start action requires `inputs.expected_run_id` from the last genuine
+`result.data.ledger.run_id`. First-ever kickoff may omit it; a known resume
+also passes `expected_run_id`, so a missing ledger is a recovery failure, never
+a new kickoff. Preserve the `ledger_path` returned by the helper and pass it
+when resuming or relocating the workflow; never construct a filename or use a
+new workflow path to reset counters. Ledger names are workflow-keyed, not a
+shared fixed file for every workflow in a directory.
+
 - `start`: open or recover the same workflow's ledger before the first phase.
   Pass `inputs.spec_file` as the resolved repo-relative feature spec path when
   available; the workflow can live elsewhere. If omitted, only an existing
@@ -29,12 +37,22 @@ Invoke runner helper `execution-control`, operation `execution-control`, with
   distinct from failed required verification; neither authorizes blind retry.
 - `reconcile`: permit one read-only inspection of a missing native result for
   its `dispatch_id`. Inspect owned effects and retained output, not just agent
-  liveness. It does not authorize continuing writes or a replacement launch.
+  liveness. This records an unknown outcome and `checkpoint_required`, even
+  when `reconciliation_allowed=true` permits that one inspection. It does not
+  authorize continuing writes, a new dispatch ID, or a replacement launch.
+  Resolve a recovered result only with `action=complete` and independently
+  recovered parent `native_observation` containing `native_event_id`, `run_id`,
+  `dispatch_id`, `action=dispatch_result`, and matching
+  `outcome=completed|failed|expected_tdd_red`. Without that genuine event,
+  unknown remains a checkpoint; worker text or a receipt cannot clear it.
 - `checkpoint`: persist the 45-minute completed-work marker without resetting
   the slice, run, or repair budget. `pause`/`resume` excludes only human-UAT or
   external-approval waits with independent parent `native_observation` carrying
   `native_event_id`, `run_id`, `kind=human_uat|external_approval`, and
-  `action=wait_started|wait_ended`. A worker's assertion is insufficient.
+  `action=wait_started|wait_ended`. Resume additionally requires
+  `wait_start_event_id` matching the active start and a new, unconsumed
+  `native_event_id`; replayed events cannot exclude time twice. A worker's
+  assertion is insufficient.
 
 After a successful or `expected_failure` ledger response, the native orchestrator
 mirrors `result.data` fields `ledger_path`, `disposition`, `reasons`,
@@ -121,7 +139,10 @@ After all producing changes and artifact regeneration, execute the complete
 required suite and artifact checks on the final immutable input snapshot.
 Use `execute-verification`, operation `execute-verification`, `mode=apply`, with
 `workflow_file`, `command_id` selecting an existing PROJECT_COMMANDS slot, and
-`dispatch_id` from an existing execution-control `kind=verification` reservation.
+`expected_run_id` plus `dispatch_id` from an existing execution-control
+`kind=verification` reservation; also pass the returned `ledger_path` when
+needed for resume/relocation. The wrapper begins its reserved dispatch
+atomically; do not pre-call `begin-verification` or invoke the wrapper twice.
 After the actual execution result, record its completion in the same ledger;
 unknown outcomes retain no-relaunch accounting. Dry-run need not reserve work.
 Persist discovered commands once in the workflow's unique `## PROJECT_COMMANDS`
