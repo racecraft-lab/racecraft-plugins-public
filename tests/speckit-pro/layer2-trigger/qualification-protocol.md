@@ -53,18 +53,6 @@ budget. Reserve identities before launching; unknown outcomes consume budget.
 There are no automatic retries. Recover owned processes and artifacts before
 requesting subsequent authorization. Keep credential material outside evidence.
 
-Approval records retain the original user message and its native message identity.
-The v1 form accepts the prescribed exact-manifest sentence. The v2 form also
-supports a real conversational approval: the trusted orchestrator must interpret
-the message in the retained scope context and record a separately labeled grant
-binding the exact manifest, integer budget, and original source digest. Never
-rewrite a user's words into the prescribed sentence. A user's explicit standing
-approval for the remaining goal can authorize multiple separately bound campaigns
-within that stated scope; it does not remove their individual caps or permit retries.
-Both forms are documentary records, not caller authentication. Only the trusted
-orchestrator that observed and checked the actual user approval may issue a v2
-binding; accepting an arbitrary worker-authored binding is not an authorization path.
-
 First run the 48-launch pilot: four reviewed cases per host, three trials, one
 fixed behavior arm, under serial and two-worker schedules. Keep trials within a
 case sequential. Both schedules must have valid complete evidence, unchanged

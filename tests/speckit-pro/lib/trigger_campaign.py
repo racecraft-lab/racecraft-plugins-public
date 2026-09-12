@@ -16,29 +16,13 @@ def validate_approval(record: dict, manifest_digest: str, budget: int) -> None:
 
     This records documentary provenance, not a cryptographic user authentication.
     The caller must obtain the source message from the user-facing approval channel.
-    For v2, the trusted orchestrator interprets that real message in its retained
-    scope context and binds an exact grant. A worker-created binding is not authority;
-    neither version authenticates the caller or decides natural-language intent.
     """
     _require(type(budget) is int and budget > 0, "launch budget must be a positive integer")
-    _require(isinstance(record, dict) and record.get("schema_version") in {"trigger-campaign-approval/v1", "trigger-campaign-approval/v2"}, "missing retained campaign approval")
+    _require(isinstance(record, dict) and record.get("schema_version") == "trigger-campaign-approval/v1", "missing retained campaign approval")
     _require(record.get("manifest_sha256") == manifest_digest and type(record.get("launch_budget")) is int and record["launch_budget"] == budget, "approval does not bind exact manifest and budget")
     source = record.get("source")
     _require(isinstance(source, dict) and source.get("role") == "user", "campaign requires user-origin approval")
     _require(isinstance(source.get("message_id"), str) and bool(source["message_id"].strip()), "approval lacks source message identity")
-    _require(isinstance(source.get("content"), str) and bool(source["content"].strip()), "approval lacks original user content")
-    if record["schema_version"] == "trigger-campaign-approval/v2":
-        binding = record.get("binding")
-        _require(isinstance(binding, dict) and binding.get("schema_version") == "orchestrator-approval-binding/v1",
-                 "natural-language approval requires a retained orchestrator binding")
-        _require(binding.get("issuer") == "orchestrator" and binding.get("decision") == "approve",
-                 "missing orchestrator approval decision")
-        _require(binding.get("manifest_sha256") == manifest_digest and type(binding.get("launch_budget")) is int
-                 and binding["launch_budget"] == budget, "orchestrator grant does not bind manifest and budget")
-        _require(binding.get("source_sha256") == json_digest(source), "original approval source changed")
-        _require(isinstance(binding.get("scope_context"), str) and bool(binding["scope_context"].strip()),
-                 "approval interpretation lacks retained scope context")
-        return
     text = f"Approve trigger campaign {manifest_digest} with launch budget {budget}."
     _require(isinstance(source.get("content"), str) and text in source["content"].splitlines(), "source message does not explicitly approve this manifest and launch budget")
 
