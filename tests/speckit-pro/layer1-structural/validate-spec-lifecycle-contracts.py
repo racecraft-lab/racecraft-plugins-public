@@ -10,9 +10,11 @@ import io
 import json
 import os
 import re
+import shutil
 import stat
 import subprocess
 import sys
+import tempfile
 import unittest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -532,39 +534,33 @@ def validate_moc_stale_index_scan_root(root: Path, *, emit: bool=False) -> list[
             print(violation)
     return violations
 
-def _with_broken_symlink() -> None:
-    broken_link = FIXTURES / 'stale/stale-broken-symlink/broken-link.md'
-    try:
-        if broken_link.exists() or broken_link.is_symlink():
-            broken_link.unlink()
-        broken_link.symlink_to('this-target-does-not-exist.md')
-    except (NotImplementedError, OSError):
-        if broken_link.exists() or broken_link.is_symlink():
-            broken_link.unlink(missing_ok=True)
-
-def _cleanup_broken_symlink() -> None:
-    broken_link = FIXTURES / 'stale/stale-broken-symlink/broken-link.md'
-    if broken_link.exists() or broken_link.is_symlink():
-        broken_link.unlink()
-
 class ValidateMocStaleIndex(unittest.TestCase):
+
+    def setUp(self) -> None:
+        temporary = tempfile.TemporaryDirectory(prefix='moc-stale-fixtures-')
+        self.addCleanup(temporary.cleanup)
+        self.fixtures = Path(temporary.name) / 'moc'
+        shutil.copytree(FIXTURES, self.fixtures, symlinks=True)
+        (self.fixtures / 'stale/stale-broken-symlink/broken-link.md').symlink_to('this-target-does-not-exist.md')
 
     def test_stale_index_lint(self) -> None:
         with self.subTest(msg='all relative targets resolve (up: + body link) -> PASS'):
-            self.assertTrue(moc_links_resolve(FIXTURES / 'stale/stale-valid/SPEC-MOC.md'))
+            self.assertTrue(moc_links_resolve(self.fixtures / 'stale/stale-valid/SPEC-MOC.md'))
         with self.subTest(msg='an absent relative body-link target -> VIOLATION'):
-            self.assertFalse(moc_links_resolve(FIXTURES / 'stale/stale-absent-link/SPEC-MOC.md'))
+            self.assertFalse(moc_links_resolve(self.fixtures / 'stale/stale-absent-link/SPEC-MOC.md'))
         with self.subTest(msg='a relative target that is a DIRECTORY (not a regular file) -> VIOLATION'):
-            self.assertFalse(moc_links_resolve(FIXTURES / 'stale/stale-dir-target/SPEC-MOC.md'))
+            self.assertFalse(moc_links_resolve(self.fixtures / 'stale/stale-dir-target/SPEC-MOC.md'))
         with self.subTest(msg='a relative target that is a BROKEN SYMLINK -> VIOLATION (distinct from absent)'):
-            self.assertFalse(moc_links_resolve(FIXTURES / 'stale/stale-broken-symlink/SPEC-MOC.md'))
+            self.assertFalse(self.fixtures.is_relative_to(REPO_ROOT))
+            self.assertTrue((self.fixtures / 'stale/stale-broken-symlink/broken-link.md').is_symlink())
+            self.assertFalse(moc_links_resolve(self.fixtures / 'stale/stale-broken-symlink/SPEC-MOC.md'))
         with self.subTest(msg='a [[wikilink]] anywhere in a gated MOC -> VIOLATION'):
-            self.assertFalse(moc_links_resolve(FIXTURES / 'stale/stale-wikilink/SPEC-MOC.md'))
+            self.assertFalse(moc_links_resolve(self.fixtures / 'stale/stale-wikilink/SPEC-MOC.md'))
         with self.subTest(msg='a non-gated marker with a dangling link is skipped (exempt-before-content)'):
-            self.assertEqual(0, len(validate_moc_stale_index_scan_root(FIXTURES / 'stale-exempt')))
+            self.assertEqual(0, len(validate_moc_stale_index_scan_root(self.fixtures / 'stale-exempt')))
         with self.subTest(msg='scan of the stale fixture tree counts the negative cases as violations'):
-            self.assertEqual(4, len(validate_moc_stale_index_scan_root(FIXTURES / 'stale')))
-        dogfood_marker = FIXTURES / 'stale/stale-valid/SPEC-MOC.md'
+            self.assertEqual(4, len(validate_moc_stale_index_scan_root(self.fixtures / 'stale')))
+        dogfood_marker = self.fixtures / 'stale/stale-valid/SPEC-MOC.md'
         with self.subTest(msg='Dogfood MOC marker is version-gated (observable, not inferred)'):
             self.assertTrue(validate_moc_stale_index_moc_is_gated(dogfood_marker))
         with self.subTest(msg='Dogfood MOC marker links all resolve (up: and body links)'):
@@ -753,15 +749,11 @@ def run_moc_stale(argv: list[str]) -> int:
             print(f"ERROR: validate-spec-lifecycle-contracts.py --moc-stale: internal failure ({exc})", file=sys.stderr)
             return 2
         return 1 if violations else 0
-    _with_broken_symlink()
     try:
-        try:
-            return run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(ValidateMocStaleIndex), label="validate-spec-lifecycle-contracts", allow_live_specs=True)
-        except Exception as exc:
-            print(f"ERROR: validate-spec-lifecycle-contracts.py --moc-stale: internal failure ({exc})", file=sys.stderr)
-            return 2
-    finally:
-        _cleanup_broken_symlink()
+        return run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(ValidateMocStaleIndex), label="validate-spec-lifecycle-contracts", allow_live_specs=True)
+    except Exception as exc:
+        print(f"ERROR: validate-spec-lifecycle-contracts.py --moc-stale: internal failure ({exc})", file=sys.stderr)
+        return 2
 
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
@@ -772,12 +764,8 @@ def main(argv: list[str] | None = None) -> int:
     if args:
         print(f"ERROR: unknown lifecycle mode: {args[0]}", file=sys.stderr)
         return 2
-    _with_broken_symlink()
-    try:
-        suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])
-        return run_counted(suite, label="validate-spec-lifecycle-contracts", allow_live_specs=True)
-    finally:
-        _cleanup_broken_symlink()
+    suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])
+    return run_counted(suite, label="validate-spec-lifecycle-contracts", allow_live_specs=True)
 
 if __name__ == "__main__":
     raise SystemExit(main())
