@@ -24,19 +24,15 @@ from .verification_docker import container_options, container_reasons, validate_
 CONTAINER_ID = re.compile(r"[0-9a-f]{64}")
 
 
-def capture_command(argv: list[str], cwd: Path, environment: dict[str, str], timeout: float,
+def capture_process(process: subprocess.Popen[bytes], timeout: float,
                     output_bytes: int = 8 * 1024 * 1024) -> dict[str, Any]:
-    """Capture separate streams without unbounded communicate() allocations."""
-    if os.name != "posix":
-        raise ValueError("Docker capture backend requires a POSIX host")
-    if (type(timeout) not in (int, float) or not math.isfinite(timeout) or timeout <= 0
-            or type(output_bytes) is not int or output_bytes <= 0):
-        raise ValueError("positive finite process limits are required")
-    deadline = time.monotonic() + timeout
+    """Own and capture an already started process; this function cannot launch one."""
     result = {"stdout": bytearray(), "stderr": bytearray(), "timed_out": False, "output_limited": False}
-    process = subprocess.Popen(argv, cwd=cwd, env=environment, stdin=subprocess.DEVNULL,
-                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
     try:
+        if (type(timeout) not in (int, float) or not math.isfinite(timeout) or timeout <= 0
+                or type(output_bytes) is not int or output_bytes <= 0):
+            raise ValueError("positive finite process limits are required")
+        deadline = time.monotonic() + timeout
         with selectors.DefaultSelector() as selector:
             selector.register(process.stdout, selectors.EVENT_READ, "stdout")
             selector.register(process.stderr, selectors.EVENT_READ, "stderr")
@@ -84,19 +80,27 @@ class DockerClient:
         _, socket_name = validate_location("validation@sha256:" + "0" * 64, endpoint)
         resolved = executable.resolve(strict=True)
         mode = resolved.stat().st_mode
-        if not executable.is_absolute() or not stat.S_ISREG(mode) or mode & 0o022 or not os.access(resolved, os.X_OK):
+        if (not executable.is_absolute() or resolved.name != "docker" or not stat.S_ISREG(mode)
+                or mode & 0o022 or not os.access(resolved, os.X_OK)):
             raise ValueError("Docker executable is not a trusted absolute executable")
         if not stat.S_ISSOCK(Path(socket_name).stat().st_mode):
             raise ValueError("Docker endpoint is not a local Unix socket")
         directory.mkdir(mode=0o700)
         self.directory = directory
-        self.prefix = [str(resolved), "--host", endpoint, "--config", str(directory)]
+        self.prefix = ["--host", endpoint, "--config", str(directory)]
         self.environment = {"HOME": str(directory), "DOCKER_CONFIG": str(directory),
-                            "PATH": "/usr/local/bin:/usr/bin:/bin", "LANG": "C.UTF-8"}
+                            "PATH": str(resolved.parent), "LANG": "C.UTF-8"}
         self.events: list[dict[str, Any]] = []
 
     def call(self, args: list[str], timeout: float, check: bool = True) -> dict[str, Any]:
-        result = capture_command([*self.prefix, *args], self.directory, self.environment, timeout)
+        if type(timeout) not in (int, float) or not math.isfinite(timeout) or timeout <= 0:
+            raise ValueError("positive finite Docker timeout is required")
+        # PATH contains only the validated Docker binary's directory. No caller
+        # can substitute another program; the capture helper only reads pipes.
+        process = subprocess.Popen(["docker", *self.prefix, *args], cwd=self.directory, env=self.environment,
+                                   stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                   start_new_session=True)
+        result = capture_process(process, timeout)
         self.events.append({"argv": args, **result})
         if check and (result["exit_code"] != 0 or result["timed_out"] or result["output_limited"]):
             raise ValueError(f"Docker {args[0]} did not complete successfully")

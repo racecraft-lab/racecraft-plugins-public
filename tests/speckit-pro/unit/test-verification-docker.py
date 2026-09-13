@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import stat
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -23,7 +24,7 @@ from speckit_pro_runner.verification_docker import (
     archive_snapshot, build_context, container_options, container_reasons, validate_base_image, validate_location,
 )
 from speckit_pro_runner import verification_docker_entrypoint as entrypoint
-from speckit_pro_runner.verification_docker_runtime import DockerClient, capture_command, cleanup_container, execute_container
+from speckit_pro_runner.verification_docker_runtime import DockerClient, capture_process, cleanup_container, execute_container
 
 REFERENCE = "python@sha256:" + "a" * 64
 IMAGE_ID = "sha256:" + "b" * 64
@@ -256,34 +257,49 @@ class DockerRuntimeTests(unittest.TestCase):
         original_stat = Path.stat
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
+            executable = root / "docker"
+            executable.write_bytes(b"constructor-only fixture")
+            executable.chmod(0o755)
             def observed_stat(path, *args, **kwargs):
                 if path == root / "daemon.sock":
                     return SimpleNamespace(st_mode=stat.S_IFSOCK | 0o600)
                 return original_stat(path, *args, **kwargs)
             # Pure constructor test; no live socket or daemon is required by the suite.
             with patch.object(Path, "stat", observed_stat):
-                client = DockerClient(Path(sys.executable), f"unix://{root}/daemon.sock", root / "config")
-            self.assertEqual(client.prefix, [str(Path(sys.executable).resolve()), "--host", f"unix://{root}/daemon.sock",
+                client = DockerClient(executable, f"unix://{root}/daemon.sock", root / "config")
+            self.assertEqual(client.prefix, ["--host", f"unix://{root}/daemon.sock",
                                              "--config", str(root / "config")])
+            self.assertEqual(client.environment["PATH"], str(root.resolve()))
             self.assertEqual(set(client.environment), {"HOME", "DOCKER_CONFIG", "PATH", "LANG"})
             self.assertEqual(list((root / "config").iterdir()), [])
             self.assertEqual((root / "config").stat().st_mode & 0o777, 0o700)
             with patch.object(Path, "stat", observed_stat), self.assertRaises(FileExistsError):
-                DockerClient(Path(sys.executable), f"unix://{root}/daemon.sock", root / "config")
+                DockerClient(executable, f"unix://{root}/daemon.sock", root / "config")
 
     def test_transport_non_socket_is_rejected_before_creating_config(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
+            executable = root / "docker"
+            executable.write_bytes(b"constructor-only fixture")
+            executable.chmod(0o755)
             fake = root / "not-a-socket"
             fake.touch()
             with self.assertRaises(ValueError):
-                DockerClient(Path(sys.executable), f"unix://{fake}", root / "config")
+                DockerClient(executable, f"unix://{fake}", root / "config")
             self.assertFalse((root / "config").exists())
+
+    def test_transport_rejects_non_docker_executables(self):
+        with tempfile.TemporaryDirectory() as directory:
+            config = Path(directory) / "config"
+            with self.assertRaises(ValueError):
+                DockerClient(Path(sys.executable), "unix:///tmp/unused.sock", config)
+            self.assertFalse(config.exists())
 
     @unittest.skipUnless(os.name == "posix", "Docker capture backend requires a POSIX host")
     def test_capture_preserves_both_streams_and_real_exit_code(self):
-        result = capture_command([sys.executable, "-c", "import sys; print('out'); print('err', file=sys.stderr); sys.exit(7)"],
-                                 Path.cwd(), {}, 5, 1024)
+        process = subprocess.Popen([sys.executable, "-c", "import sys; print('out'); print('err', file=sys.stderr); sys.exit(7)"],
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
+        result = capture_process(process, 5, 1024)
         self.assertEqual((result["exit_code"], result["stdout"], result["stderr"]), (7, b"out\n", b"err\n"))
         self.assertFalse(result["timed_out"] or result["output_limited"])
 
@@ -292,7 +308,9 @@ class DockerRuntimeTests(unittest.TestCase):
         for source, timeout, flag in (("import time; time.sleep(10)", 0.1, "timed_out"),
                                       ("import os; os.write(1, b'x' * 100000)", 5, "output_limited")):
             with self.subTest(flag=flag):
-                result = capture_command([sys.executable, "-c", source], Path.cwd(), {}, timeout, 1024)
+                process = subprocess.Popen([sys.executable, "-c", source], stdout=subprocess.PIPE,
+                                           stderr=subprocess.PIPE, start_new_session=True)
+                result = capture_process(process, timeout, 1024)
                 self.assertTrue(result[flag])
                 self.assertLessEqual(len(result["stdout"]) + len(result["stderr"]), 1024)
 
