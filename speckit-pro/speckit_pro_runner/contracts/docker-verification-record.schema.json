@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "docker-verification-record/v1",
+  "title": "Unqualified image-native verification evidence; never authorizes reuse",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "execution_id", "dispatch_id", "workflow_file", "command_id", "argv", "snapshot_sha256", "inputs_unchanged", "environment_sha256", "toolchain", "completed", "exit_code", "elapsed_seconds", "stdout_sha256", "stderr_sha256", "evidence_sha256", "output_directory", "output_contract", "isolation_mode", "producer"],
+  "properties": {
+    "schema_version": {"const": "docker-verification-record/v1"},
+    "execution_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+    "dispatch_id": {"type": "string", "minLength": 1},
+    "workflow_file": {"type": "string", "minLength": 1},
+    "command_id": {"enum": ["BUILD", "TYPECHECK", "LINT", "UNIT_TEST", "INTEGRATION_TEST", "FULL_VERIFY", "COMPLEXITY", "MUTATION", "DEPENDENCY_RULES"]},
+    "argv": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "snapshot_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "inputs_unchanged": {"type": "boolean"},
+    "environment_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "toolchain": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "base_reference", "base_image_id", "image_id", "runner_sha256"],
+      "properties": {
+        "kind": {"const": "docker-image"},
+        "base_reference": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._/:-]{0,240}@sha256:[0-9a-f]{64}$"},
+        "base_image_id": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
+        "image_id": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
+        "runner_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "completed": {"type": "boolean"},
+    "exit_code": {"type": ["integer", "null"]},
+    "elapsed_seconds": {"type": "number", "minimum": 0},
+    "stdout_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "stderr_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "evidence_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "output_directory": {"type": "string", "minLength": 1},
+    "output_contract": {"const": "streams_only"},
+    "isolation_mode": {"const": "docker_readonly_unqualified"},
+    "producer": {"const": "runner-docker-project-command/v1"}
+  }
+}

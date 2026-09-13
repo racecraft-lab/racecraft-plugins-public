@@ -474,7 +474,86 @@ class RunnerDispatchTests(unittest.TestCase):
         self.assertEqual(code, 2, result)
 
 
+class DockerVerificationTests(VerificationTests):
+    """Only these Docker-specific methods run; host methods have their own class."""
+
+    def setUp(self):
+        super().setUp()
+        (self.root / "feature/workflow.md").write_text('## PROJECT_COMMANDS\n```json\n{"UNIT_TEST":"python3 check.py"}\n```\n')
+        self.inputs["docker"] = {"executable": "/usr/local/bin/docker", "endpoint": "unix:///tmp/docker.sock",
+                                 "base_image": "python@sha256:" + "a" * 64, "output_contract": "streams_only"}
+
+    def test_docker_dry_run_does_not_resolve_host_tools_or_contact_daemon(self):
+        with patch("speckit_pro_runner.verification_records.project_program", side_effect=AssertionError("host tool used")):
+            result = execute_verification(self.root, self.inputs, "dry_run")
+        self.assertEqual(result["argv"], ["python3", "check.py"])
+        self.assertFalse(result["authorization_granted"] or result["writes_state"] or result["reusable"])
+
+    def test_docker_requires_explicit_supported_configuration(self):
+        for change in ({"output_contract": "files"}, {"extra": True}, {"base_image": "python:latest"},
+                       {"endpoint": "tcp://remote:2375"}, {"executable": "docker"}):
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                execute_verification(self.root, {**self.inputs, "docker": {**self.inputs["docker"], **change}}, "dry_run")
+
+    def test_docker_requires_ledger_reservation_before_daemon_access(self):
+        from speckit_pro_runner import verification_docker_workflow as workflow_backend
+        with patch.object(workflow_backend, "DockerClient") as client, self.assertRaises(ValueError):
+            execute_verification(self.root, {**self.inputs, "dispatch_id": "not-reserved"}, "apply")
+        client.assert_not_called()
+
+    def test_docker_receipt_is_image_bound_and_cannot_authorize_reuse_or_relaunch(self):
+        from speckit_pro_runner import verification_docker_workflow as workflow_backend
+        image_id = "sha256:" + "b" * 64
+        backend = {"completed": True, "exit_code": 0, "stdout": b"verified\n", "stderr": b"",
+                   "image_id": image_id, "base_image": {"Id": "sha256:" + "c" * 64},
+                   "cleanup_confirmed": True, "image_tag_cleanup_confirmed": True, "reusable": False}
+        with patch.object(workflow_backend, "DockerClient") as client, \
+             patch.object(workflow_backend, "execute_image", return_value=backend) as launch:
+            client.return_value.events = []
+            result, observation = self.produce()
+            record = result["record"]
+            self.assertEqual(record["schema_version"], "docker-verification-record/v1")
+            self.assertEqual(record["toolchain"]["image_id"], image_id)
+            self.assertNotIn("executable_sha256", record["toolchain"])
+            self.assertTrue(record["completed"] and record["inputs_unchanged"])
+            self.assertFalse(self.validate(result, observation)["reusable"])
+            evidence = self.root / result["evidence_path"]
+            self.assertTrue(evidence.is_file())
+            self.assertEqual((evidence.parent / "stdout").read_bytes(), b"verified\n")
+            self.assertEqual(record["evidence_sha256"], workflow_backend.sha(evidence.read_bytes()))
+            schema = json.loads((Path(workflow_backend.__file__).parent / "contracts/docker-verification-record.schema.json").read_text())
+            self.assertEqual(set(record), set(schema["required"]))
+            self.assertEqual(set(record), set(schema["properties"]))
+            started = execution_control(self.root, {"workflow_file": "feature/workflow.md", "action": "start"}, "apply")
+            with self.assertRaisesRegex(ValueError, "dispatch_already_started_no_relaunch"):
+                execute_verification(self.root, {**self.inputs, "dispatch_id": record["dispatch_id"],
+                                                "expected_run_id": started["ledger"]["run_id"]}, "apply")
+            client.assert_called_once()
+            launch.assert_called_once()
+
+    def test_docker_failed_preparation_retains_evidence_and_consumes_reservation(self):
+        from speckit_pro_runner import verification_docker_workflow as workflow_backend
+        with patch.object(workflow_backend, "DockerClient", side_effect=ValueError("daemon unavailable")):
+            result, _ = self.produce()
+        self.assertFalse(result["record"]["completed"] or result["reusable"])
+        self.assertIsNone(result["record"]["toolchain"]["image_id"])
+        self.assertTrue((self.root / result["evidence_path"]).is_file())
+        started = execution_control(self.root, {"workflow_file": "feature/workflow.md", "action": "start"}, "apply")
+        with patch.object(workflow_backend, "DockerClient") as client, \
+             self.assertRaisesRegex(ValueError, "dispatch_already_started_no_relaunch"):
+            execute_verification(self.root, {**self.inputs, "dispatch_id": result["record"]["dispatch_id"],
+                                            "expected_run_id": started["ledger"]["run_id"]}, "apply")
+        client.assert_not_called()
+
+    def test_docker_command_cannot_silently_rewrite_a_host_executable(self):
+        for command in (f"{sys.executable} check.py", "sh -c true", "python3 ../outside.py", "python3 check.py\u0000bad"):
+            with self.subTest(command=command), self.assertRaises(ValueError):
+                (self.root / "feature/workflow.md").write_text("## PROJECT_COMMANDS\n```json\n" + json.dumps({"UNIT_TEST": command}) + "\n```\n")
+                execute_verification(self.root, self.inputs, "dry_run")
+
+
 if __name__ == "__main__":
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                                for case in (ExecutionControlTests, VerificationTests, RunnerDispatchTests))
+    suite.addTests(DockerVerificationTests(name) for name in DockerVerificationTests.__dict__ if name.startswith("test_docker_"))
     raise SystemExit(run_counted(suite, label="test-execution-control"))

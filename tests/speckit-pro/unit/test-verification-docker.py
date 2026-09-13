@@ -25,6 +25,7 @@ from speckit_pro_runner.verification_docker import (
 )
 from speckit_pro_runner import verification_docker_entrypoint as entrypoint
 from speckit_pro_runner.verification_docker_runtime import DockerClient, capture_process, cleanup_container, execute_container
+from speckit_pro_runner.verification_docker_image import cleanup_image, execute_image, validate_built_image
 
 REFERENCE = "python@sha256:" + "a" * 64
 IMAGE_ID = "sha256:" + "b" * 64
@@ -384,7 +385,122 @@ class DockerRuntimeTests(unittest.TestCase):
                 self.assertFalse(any(item.args[0][0] == "rm" for item in client.call.call_args_list))
 
 
+class DockerImageTests(unittest.TestCase):
+    def setUp(self):
+        self.tag = f"speckit-verifier:{EXECUTION_ID}"
+        self.built_id = "sha256:" + "d" * 64
+        self.base = {"Id": IMAGE_ID, "RepoDigests": [REFERENCE], "Os": "linux", "Architecture": "arm64",
+                     "Config": {"OnBuild": None, "Volumes": None},
+                     "RootFS": {"Type": "layers", "Layers": ["sha256:" + "e" * 64]}}
+        self.built = {**copy.deepcopy(self.base), "Id": self.built_id, "RepoTags": [self.tag]}
+        self.built["Config"]["Labels"] = {"org.racecraft.verification": EXECUTION_ID}
+        self.built["RootFS"]["Layers"].append("sha256:" + "f" * 64)
+
+    def test_built_image_binds_exact_id_owner_platform_and_base_layers(self):
+        validate_built_image(self.built, self.base, self.built_id, EXECUTION_ID)
+        for key, value in (("Id", IMAGE_ID), ("RepoTags", []), ("Os", "windows"),
+                           ("Architecture", "amd64"), ("RootFS", None),
+                           ("RootFS", {"Type": "layers", "Layers": ["sha256:" + "f" * 64]}),
+                           ("Config", {"OnBuild": ["RUN false"]}),
+                           ("Config", {"Volumes": {"/inputs": {}}, "Labels": self.built["Config"]["Labels"]}),
+                           ("Config", {"Labels": {"org.racecraft.verification": "wrong"}})):
+            with self.subTest(key=key, value=value), self.assertRaises(ValueError):
+                validate_built_image({**self.built, key: value}, self.base, self.built_id, EXECUTION_ID)
+
+    def test_build_run_and_cleanup_preserve_nonzero_result_and_private_context(self):
+        calls, exists = [], False
+        def call(args, timeout, check=True):
+            nonlocal exists
+            calls.append(args)
+            self.assertGreater(timeout, 0)
+            output = b""
+            if args[:2] == ["image", "inspect"]:
+                output = json.dumps([self.base if args[2] == REFERENCE else self.built]).encode()
+            elif args[:2] == ["image", "ls"] and exists:
+                output = self.built_id.encode()
+            elif args[0] == "build":
+                exists = True
+                Path(args[args.index("--iidfile") + 1]).write_text(self.built_id)
+            elif args[:2] == ["image", "rm"]:
+                exists = False
+            return {"stdout": output, "stderr": b"", "exit_code": 0, "timed_out": False, "output_limited": False}
+        with tempfile.TemporaryDirectory() as directory:
+            evidence = Path(directory) / "evidence"
+            with patch("speckit_pro_runner.verification_docker_image.execute_container",
+                       return_value={"completed": True, "exit_code": 23, "stdout": b"out", "stderr": b"err",
+                                     "cleanup_confirmed": True, "reusable": False}) as launch:
+                result = execute_image(SimpleNamespace(call=call), {".": (0o755, None)}, REFERENCE,
+                                       ["python3", "check.py"], EXECUTION_ID, evidence, 30)
+            self.assertTrue(result["completed"] and result["image_tag_cleanup_confirmed"])
+            self.assertEqual(result["exit_code"], 23)
+            self.assertFalse(result["reusable"])
+            self.assertTrue(result["build_cache_may_retain_inputs"])
+            self.assertEqual(evidence.stat().st_mode & 0o777, 0o700)
+            self.assertEqual(result["base_image"]["Id"], IMAGE_ID)
+            self.assertEqual(result["built_image"]["Id"], self.built_id)
+            self.assertIn("snapshot.tar", result["context_binding"])
+            launch.assert_called_once()
+            build = next(args for args in calls if args[0] == "build")
+            for option in ("--pull=false", "--network=none", "--platform=linux/arm64",
+                           f"--label=org.racecraft.verification={EXECUTION_ID}"):
+                self.assertIn(option, build)
+            self.assertEqual(sum(args[0] == "build" for args in calls), 1)
+            self.assertIn(["image", "rm", "--no-prune", self.tag], calls)
+
+    def test_existing_tag_and_invalid_base_never_build_or_remove(self):
+        for existing, base in ((True, self.base), (False, {**self.base, "Architecture": "amd64"})):
+            def call(args, timeout, check=True):
+                if args[:2] == ["image", "inspect"]:
+                    return {"stdout": json.dumps([base]).encode()}
+                return {"stdout": self.built_id.encode() if existing else b""}
+            client = SimpleNamespace(call=Mock(side_effect=call))
+            with tempfile.TemporaryDirectory() as directory, self.assertRaises(ValueError):
+                execute_image(client, {".": (0o755, None)}, REFERENCE, ["python3"], EXECUTION_ID,
+                              Path(directory) / "evidence", 30)
+            self.assertFalse(any(item.args[0][0] == "build" or item.args[0][:2] == ["image", "rm"]
+                                 for item in client.call.call_args_list))
+
+    def test_failed_build_is_not_retried_or_launched_and_cleanup_is_uncertain(self):
+        def call(args, timeout, check=True):
+            if args[:2] == ["image", "inspect"]:
+                return {"stdout": json.dumps([self.base]).encode()}
+            if args[0] == "build":
+                raise ValueError("build transport timed out")
+            return {"stdout": b""}
+        client = SimpleNamespace(call=Mock(side_effect=call))
+        with tempfile.TemporaryDirectory() as directory, \
+             patch("speckit_pro_runner.verification_docker_image.execute_container") as launch:
+            result = execute_image(client, {".": (0o755, None)}, REFERENCE, ["python3"], EXECUTION_ID,
+                                   Path(directory) / "evidence", 30)
+        launch.assert_not_called()
+        self.assertFalse(result["completed"] or result["image_tag_cleanup_confirmed"])
+        self.assertEqual(sum(item.args[0][0] == "build" for item in client.call.call_args_list), 1)
+        self.assertIn("failure", result)
+
+    def test_image_cleanup_refuses_unknown_identity_owner_or_daemon_errors(self):
+        for info in ({**self.built, "Id": IMAGE_ID}, {**self.built, "Config": None},
+                     {**self.built, "RepoTags": []}):
+            client = SimpleNamespace(call=Mock(side_effect=[{"stdout": self.built_id.encode()},
+                                                           {"stdout": json.dumps([info]).encode()}]))
+            self.assertFalse(cleanup_image(client, self.built_id, EXECUTION_ID))
+            self.assertFalse(any(item.args[0][:2] == ["image", "rm"] for item in client.call.call_args_list))
+        client = SimpleNamespace(call=Mock(side_effect=ValueError("daemon unavailable")))
+        self.assertFalse(cleanup_image(client, self.built_id, EXECUTION_ID))
+        self.assertFalse(cleanup_image(client, None, EXECUTION_ID))
+
+    def test_invalid_build_request_is_rejected_before_daemon_access(self):
+        client = SimpleNamespace(call=Mock())
+        for reference, argv, timeout in (("python:latest", ["python3"], 30),
+                                          (REFERENCE, ["python3", "bad\u0000arg"], 30),
+                                          (REFERENCE, ["python3"], float("inf")),
+                                          (REFERENCE, ["python3"], 0)):
+            with self.subTest(reference=reference, timeout=timeout), tempfile.TemporaryDirectory() as directory, self.assertRaises(ValueError):
+                execute_image(client, {".": (0o755, None)}, reference, argv, EXECUTION_ID,
+                              Path(directory) / "evidence", timeout)
+        client.call.assert_not_called()
+
+
 if __name__ == "__main__":
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                               for case in (DockerInputTests, DockerPolicyTests, DockerEntrypointTests, DockerRuntimeTests))
+                               for case in (DockerInputTests, DockerPolicyTests, DockerEntrypointTests, DockerRuntimeTests, DockerImageTests))
     raise SystemExit(run_counted(suite, label="test-verification-docker"))

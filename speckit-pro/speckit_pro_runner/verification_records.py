@@ -67,7 +67,8 @@ def project_program(raw: str, search_path: str | None = None) -> tuple[str, str]
     return name, invocation
 
 
-def project_command(workflow: Path, command_id: str) -> list[str]:
+def workflow_argv(workflow: Path, command_id: str) -> list[str]:
+    """Parse direct workflow arguments without resolving a host toolchain."""
     if command_id not in COMMAND_IDS:
         raise ValueError("command_id must select a non-mutating PROJECT_COMMANDS slot")
     text = workflow.read_text(encoding="utf-8")
@@ -87,6 +88,11 @@ def project_command(workflow: Path, command_id: str) -> list[str]:
         raise ValueError("absolute command inputs escape the isolated snapshot")
     if any(".." in Path(arg).parts for arg in argv[1:]):
         raise ValueError("parent-relative command inputs escape the isolated snapshot")
+    return argv
+
+
+def project_command(workflow: Path, command_id: str) -> list[str]:
+    argv = workflow_argv(workflow, command_id)
     project_program(argv[0])
     return argv
 
@@ -143,14 +149,18 @@ def environment_binding(outputs: Path) -> tuple[dict[str, str], str]:
     return environment, digest(environment)
 
 
-def toolchain_binding(argv: list[str]) -> tuple[str, dict[str, str]]:
-    _, executable = project_program(argv[0])
-    path = Path(executable)
+def runner_binding() -> str:
     runner_root = Path(__file__).parent
     runner_files = {source.relative_to(runner_root).as_posix(): sha(source.read_bytes())
                     for source in runner_root.rglob("*") if source.is_file() and source.suffix in {".py", ".json"}}
+    return digest(runner_files)
+
+
+def toolchain_binding(argv: list[str]) -> tuple[str, dict[str, str]]:
+    _, executable = project_program(argv[0])
+    path = Path(executable)
     return str(path), {"executable": str(path), "executable_sha256": sha(path.read_bytes()),
-                       "runner_sha256": digest(runner_files)}
+                       "runner_sha256": runner_binding()}
 
 
 def materialize(root: Path, files: dict[str, tuple[int, bytes | None]]) -> None:
@@ -247,6 +257,10 @@ def run_snapshot_command(argv: list[str], snapshot: Path, environment: dict[str,
 
 def execute_verification(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, Any]:
     """Invoke only the workflow command selected by an authorized parent request."""
+    if "docker" in inputs:
+        from .verification_docker_workflow import execute_docker_verification
+
+        return execute_docker_verification(root, inputs, mode)
     if mode not in {"dry_run", "apply"}:
         raise ValueError("verification execution requires dry_run or apply")
     workflow_name = require_text(inputs.get("workflow_file"), "workflow_file")
