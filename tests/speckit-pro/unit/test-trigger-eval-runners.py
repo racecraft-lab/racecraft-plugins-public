@@ -1690,10 +1690,10 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
         engine = import_script(CODEX_ENGINE, "layer2_codex_symlink_executable")
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()
-            native = root / "native" / "codex"
-            native.parent.mkdir()
-            native.write_text("synthetic executable fixture\n")
-            native.chmod(0o700)
+            # Discovery needs an executable input even when all subprocesses are mocked.
+            native = Path(__file__).resolve().parent / "fixtures" / "trigger-runners" / "codex"
+            self.assertFalse(native.resolve().is_relative_to(root))
+            self.assertEqual(native.read_bytes(), b"synthetic executable fixture\n")
             alias = root / "aliases" / "codex"
             alias.parent.mkdir()
             alias.symlink_to(native)
