@@ -79,6 +79,7 @@ def run_runner(
     request: object,
     *,
     extra_env: dict[str, str] | None = None,
+    cwd: Path = REPO_ROOT,
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any], list[dict[str, Any]]]:
     env = runner_env()
     if extra_env:
@@ -88,7 +89,7 @@ def run_runner(
         input=json.dumps(request) if not isinstance(request, str) else request,
         text=True,
         capture_output=True,
-        cwd=REPO_ROOT,
+        cwd=cwd,
         env=env,
         shell=False,
         check=False,
@@ -1648,8 +1649,11 @@ class GateFoundationTests(unittest.TestCase):
         self.assertTrue(active_path_guard.command_argv_contains_forbidden(["/bin/zsh", "-o", "pipefail", "-c", "python -m speckit_pro_runner"]))
         self.assertTrue(active_path_guard.command_argv_contains_forbidden(["/usr/bin/env", "-S", "sh -c python -m speckit_pro_runner"]))
         self.assertTrue(active_path_guard.command_argv_contains_forbidden(["/usr/bin/env", "-S sh -c python -m speckit_pro_runner"]))
-        with tempfile.TemporaryDirectory(prefix=".plugin-bash-confinement-large-script-", dir=PLUGIN_ROOT) as tmp:
-            temp_root = Path(tmp)
+        with tempfile.TemporaryDirectory(prefix="plugin-bash-confinement-large-script-") as tmp:
+            consumer_root = Path(tmp).resolve()
+            temp_root = consumer_root / "speckit-pro" / "scan"
+            temp_root.mkdir(parents=True)
+            self.assertFalse(temp_root.resolve().is_relative_to(REPO_ROOT.resolve()))
             large_suffix_script = temp_root / "install.sh"
             large_suffix_script.write_text("#!/usr/bin/env bash\n" + ("#" * (active_path_guard.MAX_SCAN_BYTES + 1)), encoding="utf-8")
             large_extensionless_script = temp_root / "install"
@@ -1658,30 +1662,34 @@ class GateFoundationTests(unittest.TestCase):
                 encoding="utf-8",
             )
             sources = active_path_guard.scan_repo_sources(
-                REPO_ROOT,
-                roots=(temp_root.relative_to(REPO_ROOT).as_posix(),),
+                consumer_root,
+                roots=(temp_root.relative_to(consumer_root).as_posix(),),
             )
             findings = active_path_guard.zero_bash_source_findings(sources, [])
             script_paths = {finding.path for finding in findings if finding.category == "script_file"}
             self.assertLessEqual(
                 {
-                    large_suffix_script.relative_to(REPO_ROOT).as_posix(),
-                    large_extensionless_script.relative_to(REPO_ROOT).as_posix(),
+                    large_suffix_script.relative_to(consumer_root).as_posix(),
+                    large_extensionless_script.relative_to(consumer_root).as_posix(),
                 },
                 script_paths,
             )
-        with tempfile.TemporaryDirectory(prefix=".plugin-bash-confinement-symlink-", dir=PLUGIN_ROOT) as tmp:
-            temp_root = Path(tmp)
+        with tempfile.TemporaryDirectory(prefix="plugin-bash-confinement-symlink-") as tmp:
+            consumer_root = Path(tmp).resolve()
+            temp_root = consumer_root / "speckit-pro" / "scan"
+            temp_root.mkdir(parents=True)
+            self.assertFalse(consumer_root.is_relative_to(REPO_ROOT.resolve()))
             with tempfile.TemporaryDirectory() as outside:
                 outside_script = Path(outside) / "install"
                 outside_script.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
                 symlink = temp_root / "install"
                 symlink.symlink_to(outside_script)
+                self.assertTrue(symlink.is_symlink())
                 sources = active_path_guard.scan_repo_sources(
-                    REPO_ROOT,
-                    roots=(temp_root.relative_to(REPO_ROOT).as_posix(),),
+                    consumer_root,
+                    roots=(temp_root.relative_to(consumer_root).as_posix(),),
                 )
-            self.assertFalse([source for source in sources if source.path == symlink.relative_to(REPO_ROOT).as_posix()])
+            self.assertFalse([source for source in sources if source.path == symlink.relative_to(consumer_root).as_posix()])
         with tempfile.TemporaryDirectory() as tmp:
             completed, response, stderr_records = run_runner(
                 gate_request(
@@ -1872,8 +1880,14 @@ class GateFoundationTests(unittest.TestCase):
         self.assert_plugin_bash_confinement_contracts_match_fixtures(clean_response)
 
     def test_plugin_bash_confinement_zero_bash_guard_blocks_physical_uppercase_script_files(self) -> None:
-        with tempfile.TemporaryDirectory(prefix=".plugin-bash-confinement-uppercase-", dir=REPO_ROOT) as scan_root:
-            scan_dir = Path(scan_root)
+        with tempfile.TemporaryDirectory(prefix="plugin-bash-confinement-uppercase-") as scan_root:
+            consumer_root = Path(scan_root).resolve()
+            (consumer_root / "speckit-pro" / "speckit_pro_runner").mkdir(parents=True)
+            (consumer_root / "tests" / "speckit-pro").mkdir(parents=True)
+            scan_dir = consumer_root / "scan"
+            scan_dir.mkdir()
+            shutil.copyfile(PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR / "allowlist.json", consumer_root / "allowlist.json")
+            self.assertFalse(scan_dir.resolve().is_relative_to(REPO_ROOT.resolve()))
             (scan_dir / "RUN.SH").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
             case_file = scan_dir / "zero-bash-uppercase-case.json"
             case_file.write_text(
@@ -1884,8 +1898,8 @@ class GateFoundationTests(unittest.TestCase):
                         "cases": [
                             {
                                 "case_id": "physical-uppercase-script",
-                                "scan_roots": [scan_dir.relative_to(REPO_ROOT).as_posix()],
-                                "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
+                                "scan_roots": [scan_dir.relative_to(consumer_root).as_posix()],
+                                "allowlist_file": "allowlist.json",
                             }
                         ],
                     },
@@ -1900,10 +1914,11 @@ class GateFoundationTests(unittest.TestCase):
                     "active-path-guard",
                     "zero-bash-guard",
                     inputs={
-                        "case_file": case_file.relative_to(REPO_ROOT).as_posix(),
+                        "case_file": case_file.relative_to(consumer_root).as_posix(),
                         "case_id": "physical-uppercase-script",
                     },
-                )
+                ),
+                cwd=consumer_root,
             )
 
         self.assertEqual(completed.returncode, 1)
@@ -2512,14 +2527,16 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(response["data"]["gate"]["gate_status"], "fail")
 
     def test_run_layer_missing_dispatcher_reports_missing_prerequisite(self) -> None:
-        with tempfile.TemporaryDirectory(dir=REPO_ROOT) as tmp:
+        with tempfile.TemporaryDirectory(prefix="missing-dispatcher-consumer-") as tmp:
+            self.assertFalse(Path(tmp).resolve().is_relative_to(REPO_ROOT.resolve()))
             (Path(tmp) / "speckit-pro" / "speckit_pro_runner").mkdir(parents=True)
+            (Path(tmp) / "tests" / "speckit-pro").mkdir(parents=True)
             request = gate_request(
                 "suite-gate",
                 "run-layer",
                 inputs={"layer": "1", "repo_root": tmp},
             )
-            completed, response, stderr_records = run_runner(request)
+            completed, response, stderr_records = run_runner(request, cwd=Path(tmp).resolve())
         self.assert_stdout_json(completed)
         self.assert_response(response, "missing_prerequisite")
         self.assert_status_exit_mapping(completed, response)
@@ -2614,8 +2631,14 @@ class GateFoundationTests(unittest.TestCase):
             self.assertTrue(item["files"])
             self.assertTrue(item["output_root"].startswith("tests/speckit-pro/unit/fixtures/runner-gates/"))
 
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as tmp:
-            output_root = self.repo_rel(Path(tmp) / "payload-output")
+        with tempfile.TemporaryDirectory(prefix="payload-evidence-output-") as tmp:
+            consumer_root = Path(tmp).resolve()
+            self.assertFalse(consumer_root.is_relative_to(REPO_ROOT.resolve()))
+            (consumer_root / "speckit-pro" / "speckit_pro_runner").mkdir(parents=True)
+            fixture_dir = consumer_root / FIXTURE_DIR.relative_to(REPO_ROOT)
+            fixture_dir.mkdir(parents=True)
+            shutil.copyfile(FIXTURE_DIR / "payload-evidence-cases.json", fixture_dir / "payload-evidence-cases.json")
+            output_root = fixture_dir / "payload-output"
             dry_run_request = gate_request(
                 "payload-gate",
                 "build-test-payload-evidence",
@@ -2623,23 +2646,23 @@ class GateFoundationTests(unittest.TestCase):
                 inputs={
                     "case_file": "tests/speckit-pro/unit/fixtures/runner-gates/payload-evidence-cases.json",
                     "case_id": "claude-codex-test-payloads",
-                    "output_root": output_root,
+                    "output_root": output_root.relative_to(consumer_root).as_posix(),
                 },
             )
-            completed, response, stderr_records = run_runner(dry_run_request)
+            completed, response, stderr_records = run_runner(dry_run_request, cwd=consumer_root)
             self.assertEqual(completed.returncode, 0)
             self.assert_response(response, "ok")
             self.assertEqual(stderr_records, [])
-            self.assertFalse((REPO_ROOT / output_root).exists())
+            self.assertFalse(output_root.exists())
 
             apply_request = dict(dry_run_request)
             apply_request["request_id"] = "test-build-test-payload-evidence-apply"
             apply_request["mode"] = "apply"
-            completed, response, stderr_records = run_runner(apply_request)
+            completed, response, stderr_records = run_runner(apply_request, cwd=consumer_root)
             self.assertEqual(completed.returncode, 0)
             self.assert_response(response, "ok")
             self.assertEqual(stderr_records, [])
-            written = sorted(path.name for path in (REPO_ROOT / output_root).glob("*.json"))
+            written = sorted(path.name for path in output_root.glob("*.json"))
             self.assertEqual(written, ["claude-test-payload-evidence.json", "codex-test-payload-evidence.json"])
             for item in response["data"]["payload_evidence"]:
                 self.assertEqual(item["mode"], "apply")
