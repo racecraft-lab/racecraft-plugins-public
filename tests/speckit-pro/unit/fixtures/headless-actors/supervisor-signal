@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+import json,os,signal,sys,time
+from pathlib import Path
+signal.signal(signal.SIGTERM, signal.SIG_IGN)
+print('before supervisor signal', flush=True)
+ready=Path(sys.argv[1])
+ready.with_suffix('.tmp').write_text(json.dumps({'pid':os.getpid(),'pgid':os.getpgrp()}))
+ready.with_suffix('.tmp').replace(ready)
+time.sleep(30)
