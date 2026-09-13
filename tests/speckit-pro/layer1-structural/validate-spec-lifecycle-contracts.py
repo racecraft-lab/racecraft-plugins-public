@@ -575,14 +575,14 @@ FIXTURE_ROOT = REPO_ROOT / 'tests' / 'speckit-pro' / 'layer1-structural' / 'fixt
 TEMPLATE = REPO_ROOT / 'speckit-pro' / 'skills' / 'speckit-coach' / 'templates' / 'roadmap-moc-template.md'
 REGISTRY_REQ = {'schema_version': '1.0', 'request_id': 'l1-helper-registry', 'helper_id': 'helper-registry-dispatch', 'operation': 'helper-registry-dispatch', 'mode': 'read_only', 'inputs': {}}
 MUTATION_REGISTRY_REQ = {'schema_version': '1.0', 'request_id': 'l1-mutation-registry', 'helper_id': 'mutation-registry-dispatch', 'operation': 'mutation-registry-dispatch', 'mode': 'read_only', 'inputs': {}}
-CHECK_REQ = {'schema_version': '1.0', 'request_id': 'l1-generate-spec-index-check', 'helper_id': 'generate-spec-index-check', 'operation': 'generate-spec-index-check', 'mode': 'read_only', 'inputs': {'repo_root': 'tests/speckit-pro/layer1-structural/fixtures/spec-index/determinism'}}
+CHECK_REQ = {'schema_version': '1.0', 'request_id': 'l1-generate-spec-index-check', 'helper_id': 'generate-spec-index-check', 'operation': 'generate-spec-index-check', 'mode': 'read_only', 'inputs': {'repo_root': '.'}}
 
-def _runner_request(payload: dict[str, object]) -> str:
-    env = os.environ.copy()
+def _runner_request(payload: dict[str, object], *, root: Path = REPO_ROOT, environment: dict[str, str] | None = None) -> str:
+    env = dict(os.environ if environment is None else environment)
     plugin_root = REPO_ROOT / 'speckit-pro'
     existing = env.get('PYTHONPATH')
     env['PYTHONPATH'] = plugin_root.as_posix() if not existing else f'{plugin_root.as_posix()}{os.pathsep}{existing}'
-    completed = subprocess.run([sys.executable, '-m', 'speckit_pro_runner'], input=json.dumps(payload), text=True, capture_output=True, cwd=REPO_ROOT, env=env, shell=False, check=False)
+    completed = subprocess.run([sys.executable, '-m', 'speckit_pro_runner'], input=json.dumps(payload), text=True, capture_output=True, cwd=root, env=env, shell=False, check=False)
     return completed.stdout
 
 def _snapshot(root: Path) -> list[tuple[str, str]]:
@@ -601,6 +601,23 @@ def _first_line_containing(path: Path, needle: str) -> str:
     return ''
 
 class ValidateSpecIndexDeterminism(unittest.TestCase):
+
+    def setUp(self) -> None:
+        temporary = tempfile.TemporaryDirectory(prefix='spec-index-fixtures-')
+        self.addCleanup(temporary.cleanup)
+        self.fixture_root = Path(temporary.name) / 'repo'
+        template = Path(temporary.name) / 'empty-template'
+        template.mkdir()
+        shutil.copytree(FIXTURE_ROOT, self.fixture_root)
+        (self.fixture_root / '.specify').mkdir()
+        self.environment = {key: value for key, value in os.environ.items() if not key.startswith('GIT_')}
+        self.environment.update(GIT_CONFIG_NOSYSTEM='1', GIT_CONFIG_GLOBAL=os.devnull, GIT_OPTIONAL_LOCKS='0')
+        # The committed fixture's files are tracked; preserve that distinction
+        # without borrowing the enclosing checkout's index or user configuration.
+        for arguments in (['init', '--quiet', '--initial-branch=fixture', f'--template={template}'],
+                          ['add', '--force', '--', '.']):
+            subprocess.run(['git', *arguments], cwd=self.fixture_root, env=self.environment,
+                           capture_output=True, check=True, timeout=30)
 
     def test_spec_index_helper_contract(self) -> None:
         with self.subTest(msg='runner package exists at the contracted path'):
@@ -622,9 +639,15 @@ class ValidateSpecIndexDeterminism(unittest.TestCase):
         with self.subTest(msg='generate-spec-index-write is promoted with an authoritative request'):
             self.assertEqual(write_entry['promotion_status'], 'golden_only')
             self.assertTrue(write_entry['authoritative_command'])
-        snap_before = _snapshot(FIXTURE_ROOT)
-        check_json = _runner_request(CHECK_REQ)
-        snap_after = _snapshot(FIXTURE_ROOT)
+        with self.subTest(msg='determinism fixture owns a real Git index'):
+            self.assertFalse(self.fixture_root.is_relative_to(REPO_ROOT))
+            self.assertTrue((self.fixture_root / '.git' / 'index').is_file())
+            tracked = subprocess.run(['git', 'ls-files', '-z'], cwd=self.fixture_root, env=self.environment,
+                                     capture_output=True, check=True, timeout=30).stdout.decode().split('\0')
+            self.assertEqual(sorted(name for name, _ in _snapshot(FIXTURE_ROOT)), sorted(name for name in tracked if name))
+        snap_before = _snapshot(self.fixture_root)
+        check_json = _runner_request(CHECK_REQ, root=self.fixture_root, environment=self.environment)
+        snap_after = _snapshot(self.fixture_root)
         with self.subTest(msg='generate-spec-index-check detects stale rendered output with exit 1'):
             self.assertIn('"status":"expected_failure"', check_json)
             self.assertIn('"exit_code":1', check_json)
