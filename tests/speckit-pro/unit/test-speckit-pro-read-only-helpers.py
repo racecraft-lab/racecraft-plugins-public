@@ -12,8 +12,10 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import contextmanager
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Iterator
 from unittest.mock import patch
 
 
@@ -202,6 +204,15 @@ def helper_request(helper_id: str, inputs: dict[str, object] | None = None) -> d
     }
 
 
+@contextmanager
+def helper_project() -> Iterator[Path]:
+    """Keep mutable consumer fixtures separate from the immutable plugin source."""
+    with tempfile.TemporaryDirectory(prefix="read-only-helper-consumer-") as directory:
+        root = Path(directory).resolve()
+        (root / ".specify").mkdir()
+        yield root
+
+
 def run_runner(
     request: object,
     env_override: dict[str, str] | None = None,
@@ -246,6 +257,53 @@ def command_stdin_fixture(command: str) -> Path:
 
 class ReadOnlyHelperTests(unittest.TestCase):
     helper_filter: str | None = None
+
+    @property
+    def packet_root(self) -> Path:
+        """Own packet inputs without making the shipped plugin writable."""
+        if not hasattr(self, "_packet_root"):
+            temporary = tempfile.TemporaryDirectory(prefix="pr-packet-consumer-")
+            self.addCleanup(temporary.cleanup)
+            root = Path(temporary.name).resolve()
+            (root / ".specify").mkdir()
+            (root / "scratch").mkdir()
+            shutil.copytree(PR_PACKET_FIXTURE_DIR, root / PR_PACKET_FIXTURE_DIR.relative_to(REPO_ROOT))
+            self._packet_root = root
+        return self._packet_root
+
+    @property
+    def packet_fixture_dir(self) -> Path:
+        return self.packet_root / PR_PACKET_FIXTURE_DIR.relative_to(REPO_ROOT)
+
+    def run_packet_runner(
+        self, request: object, *, cwd: Path | None = None
+    ) -> tuple[subprocess.CompletedProcess[str], dict[str, object], list[dict[str, object]]]:
+        return run_runner(request, cwd=self.packet_root if cwd is None else cwd)
+
+    def test_packet_consumer_copies_exact_fixtures_and_cleans_up(self) -> None:
+        consumer = ReadOnlyHelperTests()
+        try:
+            root = consumer.packet_root
+            self.assertFalse(root.is_relative_to(REPO_ROOT))
+            expected = {path.relative_to(PR_PACKET_FIXTURE_DIR): path.read_bytes()
+                        for path in PR_PACKET_FIXTURE_DIR.rglob("*") if path.is_file()}
+            observed = {path.relative_to(consumer.packet_fixture_dir): path.read_bytes()
+                        for path in consumer.packet_fixture_dir.rglob("*") if path.is_file()}
+            self.assertEqual(observed, expected)
+            self.assertFalse((root / "speckit-pro").exists())
+        finally:
+            consumer.doCleanups()
+        self.assertFalse(root.exists())
+
+    def test_helper_project_is_isolated_and_cleans_up_on_failure(self) -> None:
+        with helper_project() as root:
+            self.assertFalse(root.is_relative_to(REPO_ROOT))
+            self.assertTrue((root / ".specify").is_dir())
+        self.assertFalse(root.exists())
+        with self.assertRaisesRegex(RuntimeError, "consumer cleanup probe"):
+            with helper_project() as failed_root:
+                raise RuntimeError("consumer cleanup probe")
+        self.assertFalse(failed_root.exists())
 
     def build_binding_worktrees(self, base: Path) -> tuple[Path, Path, Path]:
         task_root = base / "repo"
@@ -403,8 +461,10 @@ class ReadOnlyHelperTests(unittest.TestCase):
             return [self.helper_filter]
         return EXPECTED_HELPERS
 
-    def assert_helper_matches_bash_reference(self, helper_id: str, inputs: dict[str, object]) -> dict[str, object]:
-        completed, response, stderr_records = run_runner(helper_request(helper_id, inputs))
+    def assert_helper_matches_bash_reference(
+        self, helper_id: str, inputs: dict[str, object], *, cwd: Path = REPO_ROOT
+    ) -> dict[str, object]:
+        completed, response, stderr_records = run_runner(helper_request(helper_id, inputs), cwd=cwd)
         data = response["data"]
         self.assertEqual(data["shell"], False)
         self.assertEqual(data["argv"][-2:], ["-m", "speckit_pro_runner"])
@@ -610,27 +670,23 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_path_boundary_rejects_traversal_and_symlink_escape(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
             self.skipTest("path-boundary cases use check-prerequisites")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as inside, tempfile.TemporaryDirectory() as outside:
+        with helper_project() as inside, tempfile.TemporaryDirectory() as outside:
             outside_file = Path(outside) / "outside-workflow.md"
             outside_file.write_text("# outside\n", encoding="utf-8")
-            symlink_path = Path(inside) / "escape.md"
+            symlink_path = inside / "escape.md"
             try:
                 symlink_path.symlink_to(outside_file)
             except OSError:
-                symlink_path = Path(inside) / "not-a-symlink.md"
-                symlink_path.write_text("# fallback\n", encoding="utf-8")
+                self.skipTest("symlink creation is unavailable")
             cases = [
                 "../outside.md",
-                symlink_path.relative_to(REPO_ROOT).as_posix(),
+                symlink_path.relative_to(inside).as_posix(),
             ]
             for workflow_file in cases:
                 with self.subTest(workflow_file=workflow_file):
                     completed, response, stderr_records = run_runner(
-                        helper_request("check-prerequisites", {"workflow_file": workflow_file})
+                        helper_request("check-prerequisites", {"workflow_file": workflow_file}), cwd=inside
                     )
-                    if workflow_file == cases[1] and not symlink_path.is_symlink():
-                        self.assertIn(response["status"], {"ok", "expected_failure"})
-                        continue
                     self.assertEqual(completed.returncode, 2)
                     self.assert_response(response, "input_error", 2)
                     self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["unsupported_path"])
@@ -1125,8 +1181,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_repo_root_symlink_escape_is_rejected(self) -> None:
         if self.helper_filter and self.helper_filter != "detect-commands":
             self.skipTest("repo_root symlink-boundary case uses detect-commands")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project, tempfile.TemporaryDirectory() as outside:
-            project_path = Path(project)
+        with helper_project() as project_path, tempfile.TemporaryDirectory() as outside:
             outside_root = Path(outside)
             (outside_root / "speckit-pro" / "speckit_pro_runner").mkdir(parents=True)
             link = project_path / "external"
@@ -1135,7 +1190,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
             except OSError:
                 self.skipTest("symlink creation is unavailable")
             completed, response, stderr_records = run_runner(
-                helper_request("detect-commands", {"repo_root": link.relative_to(REPO_ROOT).as_posix()})
+                helper_request("detect-commands", {"repo_root": link.relative_to(project_path).as_posix()}),
+                cwd=project_path,
             )
         self.assertEqual(completed.returncode, 2)
         self.assert_response(response, "input_error", 2)
@@ -1224,8 +1280,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_helper_argv_uses_runner_even_when_registered_script_is_symlinked(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
             self.skipTest("helper argv script-boundary case uses check-prerequisites")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project, tempfile.TemporaryDirectory() as outside:
-            project_path = Path(project)
+        with helper_project() as project_path, tempfile.TemporaryDirectory() as outside:
             outside_script = Path(outside) / "helper.sh"
             outside_script.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
             try:
@@ -1283,12 +1338,13 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_detect_commands_rejects_file_repo_root_and_reports_directory_cwd(self) -> None:
         if self.helper_filter and self.helper_filter != "detect-commands":
             self.skipTest("detect-commands repo_root validation case")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
-            project_path = Path(project)
+        with helper_project() as root:
+            project_path = root / "nested"
+            project_path.mkdir()
             file_root = project_path / "not-a-directory"
             file_root.write_text("", encoding="utf-8")
             completed, response, stderr_records = run_runner(
-                helper_request("detect-commands", {"repo_root": file_root.relative_to(REPO_ROOT).as_posix()})
+                helper_request("detect-commands", {"repo_root": file_root.relative_to(root).as_posix()}), cwd=root
             )
             self.assertEqual(completed.returncode, 2)
             self.assert_response(response, "input_error", 2)
@@ -1298,22 +1354,21 @@ class ReadOnlyHelperTests(unittest.TestCase):
             (project_path / "pnpm-lock.yaml").write_text("", encoding="utf-8")
             (project_path / "package.json").write_text('{"scripts":{"test":"vitest"}}\n', encoding="utf-8")
             completed, response, stderr_records = run_runner(
-                helper_request("detect-commands", {"repo_root": project_path.relative_to(REPO_ROOT).as_posix()})
+                helper_request("detect-commands", {"repo_root": project_path.relative_to(root).as_posix()}), cwd=root
             )
         self.assertEqual(completed.returncode, 0)
         self.assert_response(response, "ok", 0)
         self.assertEqual(response["data"]["cwd"]["value"], ".")
-        self.assertEqual(response["data"]["effective_cwd"]["value"], project_path.relative_to(REPO_ROOT).as_posix())
+        self.assertEqual(response["data"]["effective_cwd"]["value"], project_path.relative_to(root).as_posix())
         self.assertEqual(stderr_records, [])
 
     def test_detect_commands_defaults_package_json_only_node_to_npm(self) -> None:
         if self.helper_filter and self.helper_filter != "detect-commands":
             self.skipTest("detect-commands package-json-only case")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
-            project_path = Path(project)
+        with helper_project() as project_path:
             (project_path / "package.json").write_text('{"scripts":{"build":"vite","test":"vitest"}}\n', encoding="utf-8")
             completed, response, stderr_records = run_runner(
-                helper_request("detect-commands", {"repo_root": project_path.relative_to(REPO_ROOT).as_posix()})
+                helper_request("detect-commands", {"repo_root": "."}), cwd=project_path
             )
         self.assertEqual(completed.returncode, 0)
         self.assert_response(response, "ok", 0)
@@ -1327,8 +1382,9 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_detect_commands_subdir_matches_bash_reference_from_effective_cwd(self) -> None:
         if self.helper_filter and self.helper_filter != "detect-commands":
             self.skipTest("detect-commands effective-cwd parity case")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
-            project_path = Path(project)
+        with helper_project() as root:
+            project_path = root / "nested"
+            project_path.mkdir()
             (project_path / "package-lock.json").write_text("{}\n", encoding="utf-8")
             (project_path / "package.json").write_text(
                 '{"scripts":{"build":"vite","typecheck":"tsc --noEmit","lint":"eslint .","test":"vitest","test:e2e":"playwright test"}}\n',
@@ -1336,7 +1392,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
             )
             response = self.assert_helper_matches_bash_reference(
                 "detect-commands",
-                {"repo_root": project_path.relative_to(REPO_ROOT).as_posix()},
+                {"repo_root": project_path.relative_to(root).as_posix()},
+                cwd=root,
             )
         self.assertEqual(response["data"]["cwd"]["value"], ".")
         self.assertNotEqual(response["data"]["effective_cwd"]["value"], ".")
@@ -1666,8 +1723,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_generate_spec_index_ignores_symlinked_spec_children(self) -> None:
         if self.helper_filter and self.helper_filter != "generate-spec-index-check":
             self.skipTest("generate-spec-index path-boundary case")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project, tempfile.TemporaryDirectory() as outside:
-            root = Path(project)
+        with helper_project() as root, tempfile.TemporaryDirectory() as outside:
             specs = root / "specs"
             specs.mkdir()
             outside_spec = Path(outside) / "escaped"
@@ -1678,7 +1734,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
             except OSError:
                 self.skipTest("symlink creation is unavailable")
             completed, response, stderr_records = run_runner(
-                helper_request("generate-spec-index-check", {"repo_root": root.relative_to(REPO_ROOT).as_posix()})
+                helper_request("generate-spec-index-check", {"repo_root": "."}), cwd=root
             )
         self.assertEqual(completed.returncode, 0)
         self.assert_response(response, "ok", 0)
@@ -1688,14 +1744,14 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_o5_topology_reports_bad_child_shapes_without_crashing(self) -> None:
         if self.helper_filter and self.helper_filter != "o5-topology":
             self.skipTest("o5-topology shape case")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
-            manifest = Path(project) / "o5-parent-manifest.json"
+        with helper_project() as project:
+            manifest = project / "o5-parent-manifest.json"
             manifest.write_text(
                 json.dumps({"schemaVersion": 1, "kind": "o5_parent_manifest", "parent": {}, "children": ["bad", {"id": "c", "path": "specs/c", "dependsOn": "bad"}]}),
                 encoding="utf-8",
             )
             completed, response, stderr_records = run_runner(
-                helper_request("o5-topology", {"target": manifest.relative_to(REPO_ROOT).as_posix()})
+                helper_request("o5-topology", {"target": manifest.name}), cwd=project
             )
         self.assertEqual(completed.returncode, 0)
         self.assert_response(response, "ok", 0)
@@ -1707,11 +1763,11 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_validate_pr_packet_rejects_non_object_and_bad_nested_shapes(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
             self.skipTest("validate-pr-packet shape case")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+        with tempfile.TemporaryDirectory(dir=self.packet_root / "scratch") as project:
             packet = Path(project) / "packet.json"
             packet.write_text('{"broken":\n', encoding="utf-8")
-            completed, response, stderr_records = run_runner(
-                helper_request("validate-pr-packet-read-only", {"packet_path": packet.relative_to(REPO_ROOT).as_posix()})
+            completed, response, stderr_records = self.run_packet_runner(
+                helper_request("validate-pr-packet-read-only", {"packet_path": packet.relative_to(self.packet_root).as_posix()})
             )
             self.assertEqual(completed.returncode, 2)
             self.assert_response(response, "input_error", 2)
@@ -1719,8 +1775,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
             self.assertEqual(stderr_records, response["diagnostics"])
 
             packet.write_bytes(b'{"schema_version":"1.0.0","packet_id":"bad-\xff"}\n')
-            completed, response, stderr_records = run_runner(
-                helper_request("validate-pr-packet-read-only", {"packet_path": packet.relative_to(REPO_ROOT).as_posix()})
+            completed, response, stderr_records = self.run_packet_runner(
+                helper_request("validate-pr-packet-read-only", {"packet_path": packet.relative_to(self.packet_root).as_posix()})
             )
             self.assertEqual(completed.returncode, 2)
             self.assert_response(response, "input_error", 2)
@@ -1728,8 +1784,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
             self.assertEqual(stderr_records, response["diagnostics"])
 
             packet.write_text("[]\n", encoding="utf-8")
-            completed, response, stderr_records = run_runner(
-                helper_request("validate-pr-packet-read-only", {"packet_path": packet.relative_to(REPO_ROOT).as_posix()})
+            completed, response, stderr_records = self.run_packet_runner(
+                helper_request("validate-pr-packet-read-only", {"packet_path": packet.relative_to(self.packet_root).as_posix()})
             )
             self.assertEqual(completed.returncode, 2)
             self.assert_response(response, "input_error", 2)
@@ -1739,8 +1795,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 json.dumps({"verification_evidence": ["ok"], "scope_evidence": [], "generated_title": [], "target": [], "validation_result_path": "../outside.json", "body_file": []}),
                 encoding="utf-8",
             )
-            completed, response, stderr_records = run_runner(
-                helper_request("validate-pr-packet-read-only", {"packet_path": packet.relative_to(REPO_ROOT).as_posix()})
+            completed, response, stderr_records = self.run_packet_runner(
+                helper_request("validate-pr-packet-read-only", {"packet_path": packet.relative_to(self.packet_root).as_posix()})
             )
         self.assertEqual(completed.returncode, 1)
         self.assert_response(response, "expected_failure", 1)
@@ -1756,7 +1812,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
         max_digits = getattr(sys, "get_int_max_str_digits", lambda: 0)()
         if max_digits <= 0:
             self.skipTest("Python JSON integer digit limit is disabled")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+        with tempfile.TemporaryDirectory(dir=self.packet_root / "scratch") as project:
             packet = Path(project) / "packet.json"
             packet.write_text(
                 '{"packet_id": "oversized-integer", "oversized": '
@@ -1764,10 +1820,10 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 + "}\n",
                 encoding="utf-8",
             )
-            completed, response, stderr_records = run_runner(
+            completed, response, stderr_records = self.run_packet_runner(
                 helper_request(
                     "validate-pr-packet-read-only",
-                    {"packet_path": packet.relative_to(REPO_ROOT).as_posix()},
+                    {"packet_path": packet.relative_to(self.packet_root).as_posix()},
                 )
             )
 
@@ -1780,7 +1836,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_validate_pr_packet_rejects_schema_minimal_false_pass(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
             self.skipTest("validate-pr-packet schema case")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+        with tempfile.TemporaryDirectory(dir=self.packet_root / "scratch") as project:
             packet = Path(project) / "minimal-packet.json"
             packet.write_text(
                 json.dumps(
@@ -1794,10 +1850,10 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            completed, response, stderr_records = run_runner(
+            completed, response, stderr_records = self.run_packet_runner(
                 helper_request(
                     "validate-pr-packet-read-only",
-                    {"packet_path": packet.relative_to(REPO_ROOT).as_posix()},
+                    {"packet_path": packet.relative_to(self.packet_root).as_posix()},
                 )
             )
         self.assertEqual(completed.returncode, 1)
@@ -1811,17 +1867,17 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_validate_pr_packet_enforces_validation_result_source_fingerprint_schema(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
             self.skipTest("validate-pr-packet schema source fingerprint case")
-        valid_packet_path = PR_PACKET_FIXTURE_DIR / "valid-single.json"
-        completed, response, _stderr_records = run_runner(
+        valid_packet_path = self.packet_fixture_dir / "valid-single.json"
+        completed, response, _stderr_records = self.run_packet_runner(
             helper_request(
                 "validate-pr-packet-read-only",
-                {"packet_path": valid_packet_path.relative_to(REPO_ROOT).as_posix()},
+                {"packet_path": valid_packet_path.relative_to(self.packet_root).as_posix()},
             )
         )
         self.assertEqual(completed.returncode, 0)
         validation_result = response["data"]["stdout_json"]
         valid_packet = json.loads(valid_packet_path.read_text(encoding="utf-8"))
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+        with tempfile.TemporaryDirectory(dir=self.packet_root / "scratch") as project:
             packet = Path(project) / "source-fingerprints.json"
             for name, source_fingerprints, expected_rule in (
                 ("empty", {}, "packet.schema.min_properties"),
@@ -1845,10 +1901,10 @@ class ReadOnlyHelperTests(unittest.TestCase):
                         ),
                         encoding="utf-8",
                     )
-                    completed, response, stderr_records = run_runner(
+                    completed, response, stderr_records = self.run_packet_runner(
                         helper_request(
                             "validate-pr-packet-read-only",
-                            {"packet_path": packet.relative_to(REPO_ROOT).as_posix()},
+                            {"packet_path": packet.relative_to(self.packet_root).as_posix()},
                         )
                     )
                     self.assertEqual(completed.returncode, 1)
@@ -1885,14 +1941,14 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_validate_pr_packet_rejects_unsafe_missing_and_unreadable_body(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
             self.skipTest("validate-pr-packet body path case")
-        valid_packet = json.loads((PR_PACKET_FIXTURE_DIR / "valid-single.json").read_text(encoding="utf-8"))
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+        valid_packet = json.loads((self.packet_fixture_dir / "valid-single.json").read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory(dir=self.packet_root / "scratch") as project:
             project_path = Path(project)
             packet = project_path / "packet.json"
             cases = {
                 "unsafe": ("../outside.md", "input.path.body_file"),
                 "missing": (
-                    (project_path / "missing.md").relative_to(REPO_ROOT).as_posix(),
+                    (project_path / "missing.md").relative_to(self.packet_root).as_posix(),
                     "body.path",
                 ),
             }
@@ -1902,10 +1958,10 @@ class ReadOnlyHelperTests(unittest.TestCase):
                         json.dumps({**valid_packet, "body_file": body_file}),
                         encoding="utf-8",
                     )
-                    completed, response, stderr_records = run_runner(
+                    completed, response, stderr_records = self.run_packet_runner(
                         helper_request(
                             "validate-pr-packet-read-only",
-                            {"packet_path": packet.relative_to(REPO_ROOT).as_posix()},
+                            {"packet_path": packet.relative_to(self.packet_root).as_posix()},
                         )
                     )
                     self.assertEqual(completed.returncode, 1)
@@ -1919,14 +1975,14 @@ class ReadOnlyHelperTests(unittest.TestCase):
 
             body = project_path / "unreadable.md"
             body.write_text(
-                (PR_PACKET_FIXTURE_DIR / "bodies" / "valid-single.md").read_text(encoding="utf-8"),
+                (self.packet_fixture_dir / "bodies" / "valid-single.md").read_text(encoding="utf-8"),
                 encoding="utf-8",
             )
             packet.write_text(
                 json.dumps(
                     {
                         **valid_packet,
-                        "body_file": body.relative_to(REPO_ROOT).as_posix(),
+                        "body_file": body.relative_to(self.packet_root).as_posix(),
                     }
                 ),
                 encoding="utf-8",
@@ -1942,24 +1998,24 @@ class ReadOnlyHelperTests(unittest.TestCase):
 
             with patch.object(read_only, "trusted_bytes", side_effect=unreadable_body):
                 result = read_only.validate_pr_packet_read_only(
-                    {"packet_path": packet.relative_to(REPO_ROOT).as_posix()},
-                    REPO_ROOT,
+                    {"packet_path": packet.relative_to(self.packet_root).as_posix()},
+                    self.packet_root,
                 )
         self.assertEqual(result["exit_code"], 1)
         failures = json.loads(result["stdout"])["failures"]
         self.assertIn("body.readable", {failure["rule"] for failure in failures})
 
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+        with tempfile.TemporaryDirectory(dir=self.packet_root / "scratch") as project:
             project_path = Path(project)
             body = project_path / "invalid-utf8.md"
-            body.write_bytes((PR_PACKET_FIXTURE_DIR / "bodies" / "valid-single.md").read_bytes() + b"\xff")
+            body.write_bytes((self.packet_fixture_dir / "bodies" / "valid-single.md").read_bytes() + b"\xff")
             packet = project_path / "invalid-body-utf8.json"
             packet.write_text(
                 json.dumps(
                     {
                         **valid_packet,
                         "packet_id": "invalid-body-utf8",
-                        "body_file": body.relative_to(REPO_ROOT).as_posix(),
+                        "body_file": body.relative_to(self.packet_root).as_posix(),
                         "validation_result_path": (
                             "specs/fixture-pr-packet/.process/"
                             "pr-packets/invalid-body-utf8/validation.json"
@@ -1968,10 +2024,10 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            completed, response, stderr_records = run_runner(
+            completed, response, stderr_records = self.run_packet_runner(
                 helper_request(
                     "validate-pr-packet-read-only",
-                    {"packet_path": packet.relative_to(REPO_ROOT).as_posix()},
+                    {"packet_path": packet.relative_to(self.packet_root).as_posix()},
                 )
             )
         self.assertEqual(completed.returncode, 1)
@@ -1983,8 +2039,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_validate_pr_packet_rejects_validation_result_path_not_owned_by_packet(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
             self.skipTest("validate-pr-packet validation ownership case")
-        valid_packet = json.loads((PR_PACKET_FIXTURE_DIR / "valid-single.json").read_text(encoding="utf-8"))
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+        valid_packet = json.loads((self.packet_fixture_dir / "valid-single.json").read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory(dir=self.packet_root / "scratch") as project:
             packet = Path(project) / "valid-single.json"
             packet.write_text(
                 json.dumps(
@@ -1995,10 +2051,10 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            completed, response, stderr_records = run_runner(
+            completed, response, stderr_records = self.run_packet_runner(
                 helper_request(
                     "validate-pr-packet-read-only",
-                    {"packet_path": packet.relative_to(REPO_ROOT).as_posix()},
+                    {"packet_path": packet.relative_to(self.packet_root).as_posix()},
                 )
             )
         self.assertEqual(completed.returncode, 1)
@@ -2010,7 +2066,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_validate_pr_packet_enforces_canonical_packet_owned_paths(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
             self.skipTest("validate-pr-packet canonical ownership case")
-        valid_packet = json.loads((PR_PACKET_FIXTURE_DIR / "valid-single.json").read_text(encoding="utf-8"))
+        valid_packet = json.loads((self.packet_fixture_dir / "valid-single.json").read_text(encoding="utf-8"))
         with tempfile.TemporaryDirectory(prefix="packet-identity-") as project:
             repo_root = Path(project)
             subprocess.run(
@@ -2028,7 +2084,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
             body_path = packet_root / packet_id / "body.md"
             body_path.parent.mkdir(parents=True)
             body_path.write_text(
-                (PR_PACKET_FIXTURE_DIR / "bodies" / "valid-single.md").read_text(encoding="utf-8"),
+                (self.packet_fixture_dir / "bodies" / "valid-single.md").read_text(encoding="utf-8"),
                 encoding="utf-8",
             )
             packet_path = packet_root / f"{packet_id}.json"
@@ -2040,7 +2096,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 "validation_result_path": f"{source_feature_dir}/.process/pr-packets/{packet_id}/validation.json",
             }
             packet_path.write_text(json.dumps(canonical_packet), encoding="utf-8")
-            completed, response, stderr_records = run_runner(
+            completed, response, stderr_records = self.run_packet_runner(
                 helper_request(
                     "validate-pr-packet-read-only",
                     {"packet_path": packet_path.relative_to(repo_root).as_posix()},
@@ -2071,7 +2127,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
                         json.dumps({**canonical_packet, **overrides}),
                         encoding="utf-8",
                     )
-                    completed, response, stderr_records = run_runner(
+                    completed, response, stderr_records = self.run_packet_runner(
                         helper_request(
                             "validate-pr-packet-read-only",
                             {"packet_path": packet_path.relative_to(repo_root).as_posix()},
@@ -2092,11 +2148,11 @@ class ReadOnlyHelperTests(unittest.TestCase):
             self.skipTest("validate-pr-packet currentness case")
         for packet_name in ("valid-single.json", "valid-split.json"):
             with self.subTest(packet_name=packet_name):
-                valid_packet_path = PR_PACKET_FIXTURE_DIR / packet_name
-                completed, response, stderr_records = run_runner(
+                valid_packet_path = self.packet_fixture_dir / packet_name
+                completed, response, stderr_records = self.run_packet_runner(
                     helper_request(
                         "validate-pr-packet-read-only",
-                        {"packet_path": valid_packet_path.relative_to(REPO_ROOT).as_posix()},
+                        {"packet_path": valid_packet_path.relative_to(self.packet_root).as_posix()},
                     )
                 )
                 self.assertEqual(completed.returncode, 0)
@@ -2107,11 +2163,11 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 self.assertEqual(response["data"]["promotion_status"], "python_authoritative")
                 self.assertEqual(stderr_records, [])
 
-        stale_packet = PR_PACKET_FIXTURE_DIR / "invalid-protected-edit.json"
-        completed, response, stderr_records = run_runner(
+        stale_packet = self.packet_fixture_dir / "invalid-protected-edit.json"
+        completed, response, stderr_records = self.run_packet_runner(
             helper_request(
                 "validate-pr-packet-read-only",
-                {"packet_path": stale_packet.relative_to(REPO_ROOT).as_posix()},
+                {"packet_path": stale_packet.relative_to(self.packet_root).as_posix()},
             )
         )
         self.assertEqual(completed.returncode, 1)
@@ -2124,8 +2180,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
         self.assertEqual(response["data"]["promotion_status"], "python_authoritative")
         self.assertEqual(stderr_records, response["diagnostics"])
 
-        valid_packet = json.loads((PR_PACKET_FIXTURE_DIR / "valid-single.json").read_text(encoding="utf-8"))
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+        valid_packet = json.loads((self.packet_fixture_dir / "valid-single.json").read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory(dir=self.packet_root / "scratch") as project:
             packet = Path(project) / "current-editable-packet.json"
             packet.write_text(
                 json.dumps(
@@ -2133,8 +2189,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
                         **valid_packet,
                         "packet_id": "current-editable-packet",
                         "body_file": (
-                            PR_PACKET_FIXTURE_DIR / "bodies" / "valid-single-edited.md"
-                        ).relative_to(REPO_ROOT).as_posix(),
+                            self.packet_fixture_dir / "bodies" / "valid-single-edited.md"
+                        ).relative_to(self.packet_root).as_posix(),
                         "validation_result_path": (
                             "specs/fixture-pr-packet/.process/"
                             "pr-packets/current-editable-packet/validation.json"
@@ -2143,10 +2199,10 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            completed, response, stderr_records = run_runner(
+            completed, response, stderr_records = self.run_packet_runner(
                 helper_request(
                     "validate-pr-packet-read-only",
-                    {"packet_path": packet.relative_to(REPO_ROOT).as_posix()},
+                    {"packet_path": packet.relative_to(self.packet_root).as_posix()},
                 )
             )
         self.assertEqual(completed.returncode, 0)
@@ -2162,11 +2218,11 @@ class ReadOnlyHelperTests(unittest.TestCase):
             self.skipTest("validate-pr-packet unsupported-platform case")
         from speckit_pro_runner.helpers import read_only
 
-        valid_packet_path = PR_PACKET_FIXTURE_DIR / "valid-single.json"
+        valid_packet_path = self.packet_fixture_dir / "valid-single.json"
         with patch.object(read_only, "descriptor_read_supported", return_value=False):
             result = read_only.validate_pr_packet_read_only(
-                {"packet_path": valid_packet_path.relative_to(REPO_ROOT).as_posix()},
-                REPO_ROOT,
+                {"packet_path": valid_packet_path.relative_to(self.packet_root).as_posix()},
+                self.packet_root,
             )
         payload = json.loads(result["stdout"])
         self.assertEqual(result["exit_code"], 2)
@@ -2181,8 +2237,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_validate_pr_packet_rejects_packet_id_that_disagrees_with_filename(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
             self.skipTest("validate-pr-packet identity case")
-        valid_packet = json.loads((PR_PACKET_FIXTURE_DIR / "valid-single.json").read_text(encoding="utf-8"))
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+        valid_packet = json.loads((self.packet_fixture_dir / "valid-single.json").read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory(dir=self.packet_root / "scratch") as project:
             packet = Path(project) / "expected-id.json"
             packet.write_text(
                 json.dumps(
@@ -2197,10 +2253,10 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            completed, response, stderr_records = run_runner(
+            completed, response, stderr_records = self.run_packet_runner(
                 helper_request(
                     "validate-pr-packet-read-only",
-                    {"packet_path": packet.relative_to(REPO_ROOT).as_posix()},
+                    {"packet_path": packet.relative_to(self.packet_root).as_posix()},
                 )
             )
         self.assertEqual(completed.returncode, 1)
@@ -2215,12 +2271,12 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_validate_pr_packet_fingerprint_covers_pre_h1_trailing_and_crossed_markers(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
             self.skipTest("validate-pr-packet protected body coverage case")
-        valid_packet = json.loads((PR_PACKET_FIXTURE_DIR / "valid-single.json").read_text(encoding="utf-8"))
-        body_text = (PR_PACKET_FIXTURE_DIR / "bodies" / "valid-single.md").read_text(encoding="utf-8")
+        valid_packet = json.loads((self.packet_fixture_dir / "valid-single.json").read_text(encoding="utf-8"))
+        body_text = (self.packet_fixture_dir / "bodies" / "valid-single.md").read_text(encoding="utf-8")
         body_lines = body_text.splitlines()
         h1_index = next(index for index, line in enumerate(body_lines) if line.startswith("# "))
         late_h1_body = "\n".join(body_lines[:h1_index] + body_lines[h1_index + 1 :] + [body_lines[h1_index]]) + "\n"
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+        with tempfile.TemporaryDirectory(dir=self.packet_root / "scratch") as project:
             project_path = Path(project)
             cases = {
                 "pre_h1": (
@@ -2258,7 +2314,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
                             {
                                 **valid_packet,
                                 "packet_id": f"{name}-packet",
-                                "body_file": body.relative_to(REPO_ROOT).as_posix(),
+                                "body_file": body.relative_to(self.packet_root).as_posix(),
                                 "validation_result_path": (
                                     "specs/fixture-pr-packet/.process/"
                                     f"pr-packets/{name}-packet/validation.json"
@@ -2267,10 +2323,10 @@ class ReadOnlyHelperTests(unittest.TestCase):
                         ),
                         encoding="utf-8",
                     )
-                    completed, response, stderr_records = run_runner(
+                    completed, response, stderr_records = self.run_packet_runner(
                         helper_request(
                             "validate-pr-packet-read-only",
-                            {"packet_path": packet.relative_to(REPO_ROOT).as_posix()},
+                            {"packet_path": packet.relative_to(self.packet_root).as_posix()},
                         )
                     )
                     self.assertEqual(completed.returncode, 1)
@@ -2283,7 +2339,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
                     self.assertEqual(stderr_records, response["diagnostics"])
 
     def draft_packet_fixture(self) -> dict[str, object]:
-        return json.loads((PR_PACKET_FIXTURE_DIR / "valid-draft.json").read_text(encoding="utf-8"))
+        return json.loads((self.packet_fixture_dir / "valid-draft.json").read_text(encoding="utf-8"))
 
     def draft_packet_variant(self, packet_id: str, **overrides: object) -> dict[str, object]:
         """Re-own a draft packet copy so identity checks stay quiet on the variant."""
@@ -2295,10 +2351,10 @@ class ReadOnlyHelperTests(unittest.TestCase):
         }
 
     def packet_failure_rules(self, packet: Path) -> set[str]:
-        completed, response, stderr_records = run_runner(
+        completed, response, stderr_records = self.run_packet_runner(
             helper_request(
                 "validate-pr-packet-read-only",
-                {"packet_path": packet.relative_to(REPO_ROOT).as_posix()},
+                {"packet_path": packet.relative_to(self.packet_root).as_posix()},
             )
         )
         self.assertEqual(completed.returncode, 1)
@@ -2323,12 +2379,12 @@ class ReadOnlyHelperTests(unittest.TestCase):
         self.assertEqual(draft_packet["protected_body_fingerprint"]["elided_fields"], [])
         self.assertNotIn("split_slice", draft_packet)
 
-        completed, response, stderr_records = run_runner(
+        completed, response, stderr_records = self.run_packet_runner(
             helper_request(
                 "validate-pr-packet-read-only",
                 {
-                    "packet_path": (PR_PACKET_FIXTURE_DIR / "valid-draft.json")
-                    .relative_to(REPO_ROOT)
+                    "packet_path": (self.packet_fixture_dir / "valid-draft.json")
+                    .relative_to(self.packet_root)
                     .as_posix()
                 },
             )
@@ -2361,9 +2417,9 @@ class ReadOnlyHelperTests(unittest.TestCase):
         if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
             self.skipTest("validate-pr-packet draft split_slice case")
         split_packet = json.loads(
-            (PR_PACKET_FIXTURE_DIR / "valid-split.json").read_text(encoding="utf-8")
+            (self.packet_fixture_dir / "valid-split.json").read_text(encoding="utf-8")
         )
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+        with tempfile.TemporaryDirectory(dir=self.packet_root / "scratch") as project:
             packet = Path(project) / "draft-with-slice.json"
             packet.write_text(
                 json.dumps(
@@ -2384,8 +2440,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
             self.skipTest("validate-pr-packet draft heading case")
         from speckit_pro_runner.helpers import read_only
 
-        body_text = (PR_PACKET_FIXTURE_DIR / "bodies" / "valid-draft.md").read_text(encoding="utf-8")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+        body_text = (self.packet_fixture_dir / "bodies" / "valid-draft.md").read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory(dir=self.packet_root / "scratch") as project:
             project_path = Path(project)
             for heading in ("## Artifacts", "## Resume"):
                 packet_id = f"draft-missing-{heading[3:].lower()}"
@@ -2400,7 +2456,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
                         json.dumps(
                             self.draft_packet_variant(
                                 packet_id,
-                                body_file=body.relative_to(REPO_ROOT).as_posix(),
+                                body_file=body.relative_to(self.packet_root).as_posix(),
                                 protected_body_fingerprint={
                                     **self.draft_packet_fixture()["protected_body_fingerprint"],
                                     "value": read_only.protected_body_sha256(mutated),
@@ -2436,7 +2492,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
             "Stage: plan, stopped at the plan-stage boundary for review.\n"
             "Resume with: `/speckit-pro:speckit-autopilot <workflow-file> --stage implement`\n"
         )
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+        with tempfile.TemporaryDirectory(dir=self.packet_root / "scratch") as project:
             project_path = Path(project)
             body = project_path / "draft-gap-rows.md"
             body.write_text(gap_body, encoding="utf-8")
@@ -2445,7 +2501,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 json.dumps(
                     self.draft_packet_variant(
                         "draft-gap-rows",
-                        body_file=body.relative_to(REPO_ROOT).as_posix(),
+                        body_file=body.relative_to(self.packet_root).as_posix(),
                         protected_body_fingerprint={
                             **draft_packet["protected_body_fingerprint"],
                             "value": read_only.protected_body_sha256(gap_body),
@@ -2454,10 +2510,10 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            completed, response, stderr_records = run_runner(
+            completed, response, stderr_records = self.run_packet_runner(
                 helper_request(
                     "validate-pr-packet-read-only",
-                    {"packet_path": packet.relative_to(REPO_ROOT).as_posix()},
+                    {"packet_path": packet.relative_to(self.packet_root).as_posix()},
                 )
             )
         # A run that generated no artifact still opens a valid draft.
@@ -2471,9 +2527,9 @@ class ReadOnlyHelperTests(unittest.TestCase):
         if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
             self.skipTest("validate-pr-packet unknown mode case")
         valid_packet = json.loads(
-            (PR_PACKET_FIXTURE_DIR / "valid-single.json").read_text(encoding="utf-8")
+            (self.packet_fixture_dir / "valid-single.json").read_text(encoding="utf-8")
         )
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+        with tempfile.TemporaryDirectory(dir=self.packet_root / "scratch") as project:
             packet = Path(project) / "unknown-mode.json"
             for mode in ("sketch", "DRAFT", ""):
                 with self.subTest(mode=mode):
@@ -2511,7 +2567,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 {"packet.schema.max_items", "body.required_headings"},
             ),
         }
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+        with tempfile.TemporaryDirectory(dir=self.packet_root / "scratch") as project:
             project_path = Path(project)
             for name, (required_headings, expected_rules) in cases.items():
                 with self.subTest(name=name):
@@ -2531,9 +2587,9 @@ class ReadOnlyHelperTests(unittest.TestCase):
         if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
             self.skipTest("validate-pr-packet draft editable-fields case")
         valid_packet = json.loads(
-            (PR_PACKET_FIXTURE_DIR / "valid-single.json").read_text(encoding="utf-8")
+            (self.packet_fixture_dir / "valid-single.json").read_text(encoding="utf-8")
         )
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+        with tempfile.TemporaryDirectory(dir=self.packet_root / "scratch") as project:
             packet = Path(project) / "draft-editable-fields.json"
             packet.write_text(
                 json.dumps(
@@ -2555,9 +2611,9 @@ class ReadOnlyHelperTests(unittest.TestCase):
         if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
             self.skipTest("validate-pr-packet single required-headings regression case")
         valid_packet = json.loads(
-            (PR_PACKET_FIXTURE_DIR / "valid-single.json").read_text(encoding="utf-8")
+            (self.packet_fixture_dir / "valid-single.json").read_text(encoding="utf-8")
         )
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+        with tempfile.TemporaryDirectory(dir=self.packet_root / "scratch") as project:
             packet = Path(project) / "single-draft-headings.json"
             packet.write_text(
                 json.dumps(
@@ -2585,11 +2641,12 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_validate_pr_workflow_contract_changed_files_is_canonicalized_and_evaluated(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-pr-workflow-contract":
             self.skipTest("validate-pr-workflow-contract changed-files case")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
-            project_path = Path(project)
+        with helper_project() as root:
+            project_path = root / "scratch"
+            project_path.mkdir()
             changed_files = project_path / "changed-files.txt"
             changed_files.write_text(f"{ARCHIVED_FEATURE_DIR}/plan.md\n", encoding="utf-8")
-            redundant_changed_files = f"{project_path.relative_to(REPO_ROOT).as_posix()}/../{project_path.name}/changed-files.txt"
+            redundant_changed_files = f"{project_path.relative_to(root).as_posix()}/../{project_path.name}/changed-files.txt"
             response = self.assert_helper_matches_bash_reference(
                 "validate-pr-workflow-contract",
                 {
@@ -2597,6 +2654,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
                     "repo_root": ".",
                     "changed_files": redundant_changed_files,
                 },
+                cwd=root,
             )
         self.assertEqual(response["data"]["argv"][-2:], ["-m", "speckit_pro_runner"])
         failures = response["data"]["stdout_json"]["failures"]
@@ -2605,8 +2663,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_validate_pr_workflow_contract_unreadable_changed_files_is_input_error(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-pr-workflow-contract":
             self.skipTest("validate-pr-workflow-contract changed-files read-error case")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
-            changed_files = Path(project) / "changed-files.txt"
+        with helper_project() as project:
+            changed_files = project / "changed-files.txt"
             changed_files.write_text(f"{FEATURE_DIR}/plan.md\n", encoding="utf-8")
             from speckit_pro_runner.helpers import read_only
 
@@ -2615,9 +2673,9 @@ class ReadOnlyHelperTests(unittest.TestCase):
                     {
                         "title": "feat(FEATURE-001): Scope check",
                         "repo_root": ".",
-                        "changed_files": changed_files.relative_to(REPO_ROOT).as_posix(),
+                        "changed_files": changed_files.name,
                     },
-                    REPO_ROOT,
+                    project,
                 )
         self.assertEqual(result["exit_code"], 2)
         self.assertEqual(result["stdout"], "")
@@ -2643,8 +2701,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_git_branch_rejects_untrusted_gitdir_pointer(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
             self.skipTest("git branch pointer case uses check-prerequisites")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project, tempfile.TemporaryDirectory() as outside:
-            project_path = Path(project)
+        with tempfile.TemporaryDirectory(prefix="helper-worktree-") as project, tempfile.TemporaryDirectory() as outside:
+            project_path = Path(project).resolve()
             (project_path / ".git").write_text(f"gitdir: {outside}\n", encoding="utf-8")
             from speckit_pro_runner.helpers.read_only import git_branch
 
@@ -2691,10 +2749,10 @@ class ReadOnlyHelperTests(unittest.TestCase):
         """
         if self.helper_filter and self.helper_filter != "check-prerequisites":
             self.skipTest("git branch worktree metadata case uses check-prerequisites")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as workspace, tempfile.TemporaryDirectory() as checkout_parent:
+        with tempfile.TemporaryDirectory(prefix="helper-worktree-") as workspace, tempfile.TemporaryDirectory() as checkout_parent:
             project_path = self._build_linked_worktree(
-                Path(workspace),
-                Path(checkout_parent),
+                Path(workspace).resolve(),
+                Path(checkout_parent).resolve(),
                 worktree_relpath=".worktrees/fixture-archive-cleanup",
                 branch="codex/fixture-archive-cleanup",
             )
@@ -2705,10 +2763,10 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_git_branch_accepts_same_repo_worktree_metadata_name(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
             self.skipTest("git branch worktree metadata case uses check-prerequisites")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as workspace, tempfile.TemporaryDirectory() as checkout_parent:
+        with tempfile.TemporaryDirectory(prefix="helper-worktree-") as workspace, tempfile.TemporaryDirectory() as checkout_parent:
             project_path = self._build_linked_worktree(
-                Path(workspace),
-                Path(checkout_parent),
+                Path(workspace).resolve(),
+                Path(checkout_parent).resolve(),
                 worktree_relpath=REPO_ROOT.name,
                 branch="codex/fixture-archive-cleanup",
                 admin_name=f"{REPO_ROOT.name}1",
@@ -2726,10 +2784,10 @@ class ReadOnlyHelperTests(unittest.TestCase):
         """
         if self.helper_filter and self.helper_filter != "check-prerequisites":
             self.skipTest("git branch worktree metadata case uses check-prerequisites")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as workspace, tempfile.TemporaryDirectory() as checkout_parent:
+        with tempfile.TemporaryDirectory(prefix="helper-worktree-") as workspace, tempfile.TemporaryDirectory() as checkout_parent:
             project_path = self._build_linked_worktree(
-                Path(workspace),
-                Path(checkout_parent),
+                Path(workspace).resolve(),
+                Path(checkout_parent).resolve(),
                 worktree_relpath=REPO_ROOT.name,
                 branch="codex/fixture-archive-cleanup",
                 backpointer=None,
@@ -2741,10 +2799,10 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_git_branch_rejects_worktree_metadata_pointing_elsewhere(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
             self.skipTest("git branch worktree metadata case uses check-prerequisites")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as workspace, tempfile.TemporaryDirectory() as checkout_parent, tempfile.TemporaryDirectory() as other:
+        with tempfile.TemporaryDirectory(prefix="helper-worktree-") as workspace, tempfile.TemporaryDirectory() as checkout_parent, tempfile.TemporaryDirectory() as other:
             project_path = self._build_linked_worktree(
-                Path(workspace),
-                Path(checkout_parent),
+                Path(workspace).resolve(),
+                Path(checkout_parent).resolve(),
                 worktree_relpath=REPO_ROOT.name,
                 branch="codex/fixture-archive-cleanup",
                 backpointer=f"{Path(other) / '.git'}",
@@ -3162,16 +3220,16 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_promoted_helper_runs_without_bash_on_path(self) -> None:
         if self.helper_filter and self.helper_filter != "detect-commands":
             self.skipTest("no-Bash smoke is scoped to detect-commands")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
-            project_path = Path(project)
+        with helper_project() as project_path:
             (project_path / "pnpm-lock.yaml").write_text("", encoding="utf-8")
             (project_path / "package.json").write_text(
                 '{"scripts":{"build":"tsup","test":"vitest run"}}\n',
                 encoding="utf-8",
             )
             completed, response, stderr_records = run_runner(
-                helper_request("detect-commands", {"repo_root": project}),
+                helper_request("detect-commands", {"repo_root": "."}),
                 env_override={"PATH": "/nonexistent"},
+                cwd=project_path,
             )
         self.assertEqual(completed.returncode, 0)
         self.assert_response(response, "ok", 0)
