@@ -415,7 +415,15 @@
         "value": "speckit_pro_runner/verification_docker_workflow.py",
         "display": "speckit_pro_runner/verification_docker_workflow.py"
       },
-      "sha256": "0e5bee45297c78f499a66e805da62343a479570e1af337672adc19a38888c066"
+      "sha256": "9f1a77a00f43f2a3cc8959402f67519e51b30da4f0bda3dcbbd902e1854fcbe4"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/verification_git.py",
+        "display": "speckit_pro_runner/verification_git.py"
+      },
+      "sha256": "9db4e58a0fca46bb97abd2e98ccc8dce75af00ebc060bed97b78dff512d9a6bb"
     },
     {
       "path": {

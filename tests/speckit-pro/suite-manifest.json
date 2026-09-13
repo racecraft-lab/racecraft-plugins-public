@@ -84,6 +84,7 @@
         { "path": "tests/speckit-pro/unit/test-batched-task-results.py", "label": "test-batched-task-results" },
         { "path": "tests/speckit-pro/unit/test-execution-control.py", "label": "test-execution-control" },
         { "path": "tests/speckit-pro/unit/test-verification-docker.py", "label": "test-verification-docker" },
+        { "path": "tests/speckit-pro/unit/test-verification-git.py", "label": "test-verification-git" },
         { "path": "tests/speckit-pro/unit/test-autopilot-execution-contract.py", "label": "test-autopilot-execution-contract" },
         { "path": "tests/speckit-pro/unit/test-performance-fixtures.py", "label": "test-performance-fixtures" },
         { "path": "tests/speckit-pro/unit/test-consensus-routing-helpers.py", "label": "test-consensus-routing-helpers" },

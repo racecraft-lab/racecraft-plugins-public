@@ -208,6 +208,30 @@ successful copied check is `reusable=false`. Preserve ordinary required checks
 until an independently qualified native mode exists, and report this reuse
 qualification gap rather than claiming the performance acceptance target.
 
+The opt-in Docker backend is also unqualified and always returns
+`reusable=false`. Supply `docker` with explicit `executable`, local Unix
+`endpoint`, digest-pinned `base_image`, and `output_contract="streams_only"`.
+It retains stdout/stderr, not generated file artifacts. It does not provide a
+macOS guest or replace native Claude/Codex qualification.
+
+For Git-dependent checks, additionally supply `git_snapshot` with canonical
+absolute `common_directory` and `worktree_directory` paths. These must match
+the source repository's actual Git layout; no implicit directory discovery or
+host global configuration inheritance is authorized. The
+`git-readonly-metadata/v1` profile copies original objects, refs, config, HEAD,
+and index bytes into the isolated image, binding their source locations and
+modes in the evidence. Source and Git inputs share one size/entry limit;
+changes detected at the post-run recapture invalidate `inputs_unchanged`.
+Dry-run reports the selected profile without contacting Docker.
+
+This is a limited relocation profile, not a complete Git environment: hooks,
+external tools, reflogs, linked-worktree topology, and nested repositories are
+not captured. Known unsupported inputs (including alternates, shallow/split
+indexes, per-worktree refs, includes, and credential-bearing configuration)
+are refused. A caller requiring omitted behavior must use ordinary native
+verification. Private contexts and Docker build caches may retain supplied
+source and Git history; only owned containers and image tags are cleaned up.
+
 Reuse binds exact command, toolchain, environment, all source/test/config
 inputs, isolated build outputs, and orchestrator-issued producer evidence.
 A content hash or worker `passed: true` is insufficient. Missing input coverage,
