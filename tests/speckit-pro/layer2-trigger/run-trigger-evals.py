@@ -26,6 +26,7 @@ if str(SHARED_LIB) not in sys.path:
     sys.path.insert(0, str(SHARED_LIB))
 import trigger_process as processes  # noqa: E402
 import trigger_evidence as evidence_records  # noqa: E402
+import trigger_comparison as experiment_evidence  # noqa: E402
 
 PLUGIN_ROOT = (SCRIPT_DIR / "../../../speckit-pro").resolve()
 DEFAULT_MODEL = "claude-sonnet-5"
@@ -638,6 +639,7 @@ def run_claude_query(
     environment = claude_environment()
     if process_evidence is not None:
         process_evidence["launch_contract"] = _claude_launch_contract(command, environment, model)
+        process_evidence["launch_contract"]["query_sha256"] = hashlib.sha256(query.encode()).hexdigest()
     child = subprocess.Popen(
         command,
         cwd=plugin_root,
@@ -792,10 +794,13 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--preflight", action="store_true", help="Validate one selected corpus and CLI without inference")
     parser.add_argument("--timeout", type=int, default=180, help="Per-trial timeout in seconds")
     parser.add_argument("--out", help="Write the opaque result report to this path")
+    parser.add_argument("--case-id", help="Run exactly this stable case identity; keeps all three trials")
+    parser.add_argument("--no-op-description-file", help="Frozen single-line controlled experiment description")
     return parser.parse_args(argv)
 
 
 def main(argv: list[str]) -> int:
+    global NO_SPECKIT_SKILL_DESCRIPTION
     args = parse_args(argv)
     try:
         eval_file = find_eval_file(args.skill)
@@ -803,6 +808,8 @@ def main(argv: list[str]) -> int:
         eval_data, corpus_reason = load_eval_corpus(eval_file)
         if eval_data is None:
             raise ValueError(corpus_reason)
+        eval_data = evidence_records.select_case("claude", args.skill, eval_data, args.case_id)
+        no_op_description = evidence_records.description_override(args.no_op_description_file, NO_SPECKIT_SKILL_DESCRIPTION)
         description_lines = source_description_lines(skill_source)
         if args.out and Path(args.out).exists():
             raise ValueError("--out already exists; previous reports are immutable")
@@ -821,6 +828,8 @@ def main(argv: list[str]) -> int:
     plugin_name = f"skill-catalog-eval-{test_id}"
     skill_name = f"{args.skill}-eval-{test_id}"
     nonce = f"CLAUDE_SKILL_SELECTED_{test_id}"
+    original_no_op_description = NO_SPECKIT_SKILL_DESCRIPTION
+    NO_SPECKIT_SKILL_DESCRIPTION = no_op_description
     plugin_root = Path(tempfile.mkdtemp(prefix=f"claude-trigger-{args.skill}-"))
     sibling_sources = {sibling.name: sibling / "SKILL.md" for sibling in sibling_skill_dirs(skill_source)}
     exit_code = 1
@@ -845,6 +854,15 @@ def main(argv: list[str]) -> int:
         if preflight is None:
             raise ValueError(preflight_reason)
         metadata = {
+            "trial_timeout_seconds": args.timeout,
+            "input_snapshot": experiment_evidence.measurement_snapshot(),
+            "replay_context": {"host": "claude", "plugin_name": plugin_name, "plugin_root": str(plugin_root.resolve()),
+                               "expected_skill": expected_skill, "nonce": nonce, "requested_model": args.model,
+                               "sibling_skills": list(sibling_skills), "source_skill": args.skill,
+                               "no_op_description": no_op_description,
+                               "staged_skill_bodies": {path.parent.name: path.read_text(encoding="utf-8")
+                                   for path in sorted((plugin_root / "skills").glob("*/SKILL.md"))}},
+            "no_op_description_sha256": hashlib.sha256(no_op_description.encode()).hexdigest(),
             "skill": args.skill,
             "expected_skill": expected_skill,
             "skill_source": str(skill_source),
@@ -879,6 +897,7 @@ def main(argv: list[str]) -> int:
                 "claude", args.skill, evidence_dir, RUNS_PER_QUERY, TRIGGER_THRESHOLD,
                 qualification_eligible=args.model == DEFAULT_MODEL,
             )
+            evidence_records.write_json_once(evidence_dir / "replay-context.json", metadata["replay_context"])
             results, stop_exit = evidence_records.run_trials(
                 batch, eval_data,
                 lambda query, execution: run_claude_query(
@@ -890,6 +909,8 @@ def main(argv: list[str]) -> int:
                 ),
                 lambda case, trial, stdout, stderr: retain_trial_evidence(evidence_dir, case, trial, stdout, stderr),
             )
+            if experiment_evidence.measurement_snapshot() != metadata["input_snapshot"]:
+                raise ValueError("public measurement inputs changed during native execution")
             passed = sum(result["pass"] is True for result in results)
             failed = sum(result["pass"] is False for result in results)
             if stop_exit is not None and stop_exit >= 128:
@@ -938,6 +959,7 @@ def main(argv: list[str]) -> int:
         eprint(f"ERROR: {exc}")
         exit_code = 1
     finally:
+        NO_SPECKIT_SKILL_DESCRIPTION = original_no_op_description
         cleanup_error = remove_plugin_root(plugin_root)
         if cleanup_error:
             eprint(f"ERROR: {cleanup_error}")

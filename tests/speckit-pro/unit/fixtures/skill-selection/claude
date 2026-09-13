@@ -1,0 +1,13 @@
+#!/usr/bin/env python3
+import sys
+
+if '--version' in sys.argv:
+    print('2.1.269 (Claude Code)')
+elif '--help' in sys.argv:
+    print('--restricted --setting-sources --plugin-dir --strict-mcp-config --mcp-config --tools --allowedTools --settings --permission-mode --permission-prompts --output-format --verbose --no-session-persistence')
+elif 'doctor' in sys.argv:
+    print('Running: native (2.1.269)')
+    print('Managed settings (remote): not fetched — requires an Enterprise or Team subscription')
+    print('Organization policy: not applicable to Pro and Max accounts')
+else:
+    raise SystemExit(97)

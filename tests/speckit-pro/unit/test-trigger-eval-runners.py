@@ -73,8 +73,9 @@ def assert_no_speckit_contracts(test: unittest.TestCase, claude: ModuleType, sta
         with test.subTest(eval_dir=eval_dir):
             install_cases = json.loads((LAYER2 / eval_dir / "speckit-install-trigger.json").read_text())
             scaffold_cases = json.loads((LAYER2 / eval_dir / "speckit-scaffold-spec-trigger.json").read_text())
-            test.assertEqual(install_cases[12], _INSTALL_NEGATIVE)
-            test.assertEqual(scaffold_cases[18:20], _SCAFFOLD_NEGATIVES)
+            test.assertIn(_INSTALL_NEGATIVE, install_cases)
+            for sentinel in _SCAFFOLD_NEGATIVES:
+                test.assertIn(sentinel, scaffold_cases)
 
 
 def calls_forbidden_process_api(path: Path) -> bool:
@@ -398,7 +399,8 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
 
                     output = io.StringIO()
                     diagnostics = io.StringIO()
-                    argv = ["demo", "--evidence-dir", str(evidence), "--model", "claude-sonnet-test" if host == "claude" else "gpt-5.6-sol"]
+                    argv = ["demo", "--evidence-dir", str(evidence), "--timeout", "37",
+                            "--model", "claude-sonnet-test" if host == "claude" else "gpt-5.6-sol"]
                     with contextlib.ExitStack() as stack:
                         for name, replacement in (
                             ("find_eval_file", corpus), ("find_skill_source", source),
@@ -435,6 +437,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     self.assertEqual(code, 0 if scenario == "good" else 143 if scenario == "interrupted" else 1)
                     self.assertEqual(len(calls), 6 if scenario == "good" else 1)
                     report = json.loads(output.getvalue())
+                    self.assertEqual(report["metadata"]["trial_timeout_seconds"], 37)
                     trial = report["results"][0]["selection_evidence"][0]
                     self.assertIs(trial["stream_valid"], True)
                     self.assertIs(trial["trial_valid"], scenario == "good")
@@ -1489,6 +1492,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     "requested_model": "claude-sonnet-test",
                     "model_provider": "anthropic-claude-code",
                     "model_identity_evidence": "native-init-and-assistant-events",
+                    "query_sha256": hashlib.sha256(b"query").hexdigest(),
                 },
                 "direct launch is confined to disposable root": Path(captured["kwargs"]["cwd"]).resolve()
                 == plugin_root.resolve()
@@ -1542,7 +1546,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     and popen_calls == 0
                     and retain_calls == 0
                     and not staged_exists
-                    and [path.name for path in evidence_files] == ["arm-cleanup.json"]
+                    and {path.name for path in evidence_files} in ({"arm-cleanup.json"}, {"arm-cleanup.json", "replay-context.json"})
                     for (
                         exit_code,
                         stdout,
@@ -1688,10 +1692,10 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
         engine = import_script(CODEX_ENGINE, "layer2_codex_symlink_executable")
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()
-            native = root / "native" / "codex"
-            native.parent.mkdir()
-            native.write_text("synthetic executable fixture\n")
-            native.chmod(0o700)
+            # Discovery needs an executable input even when all subprocesses are mocked.
+            native = Path(__file__).resolve().parent / "fixtures" / "trigger-runners" / "codex"
+            self.assertFalse(native.resolve().is_relative_to(root))
+            self.assertEqual(native.read_bytes(), b"synthetic executable fixture\n")
             alias = root / "aliases" / "codex"
             alias.parent.mkdir()
             alias.symlink_to(native)
@@ -2925,6 +2929,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     "reasoning_effort": "low",
                     "model_provider": engine.MODEL_PROVIDER_ID,
                     "model_identity_evidence": "request-only",
+                    "query_sha256": hashlib.sha256(b"query").hexdigest(),
                     "stdin_prompt_isolated": True,
                     "stdin_mode": "pseudo-terminal" if os.name != "nt" else "null-device",
                     "login_state_source": "CODEX_HOME",
@@ -2988,7 +2993,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     and stdout == ""
                     and "ERROR:" in stderr
                     and not workspace_exists
-                    and [path.name for path in evidence_files] == ["arm-cleanup.json"]
+                    and {path.name for path in evidence_files} in ({"arm-cleanup.json"}, {"arm-cleanup.json", "replay-context.json"})
                     and provider_calls == 0
                     and preflight_call is not None
                     and preflight_call.args[3] == expected_target_skill

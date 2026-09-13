@@ -323,6 +323,30 @@
       "rollback": "Remove the partition registry entry and dispatch every Phase 7 task as its own singleton run."
     },
     {
+      "helper_id": "validate-task-execution",
+      "operation": "validate-task-execution",
+      "promotion_status": "python_authoritative",
+      "failure_classes": ["invalid_input", "unsupported_path", "validation_failure"],
+      "rejected_stdout_schema": {"tool": "string", "error": "string"},
+      "deterministic_remediation": {"summary": "Reconcile metadata against current task definitions.", "actions": ["Regenerate metadata fingerprints after task definitions change."]},
+      "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
+      "path_boundary_policy": {"boundary": "repo_or_plugin", "rejects": ["traversal", "symlink_escape", "external_absolute_path"]},
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/read-only-helpers/requests/validate-task-execution.json",
+      "rollback": "Keep legacy workflows on singleton task execution."
+    },
+    {
+      "helper_id": "validate-execution-record",
+      "operation": "validate-execution-record",
+      "promotion_status": "python_authoritative",
+      "failure_classes": ["invalid_input", "unsupported_path", "validation_failure"],
+      "rejected_stdout_schema": {"reusable": "boolean", "reasons": "array"},
+      "deterministic_remediation": {"summary": "Run required verification when receipt reuse is unqualified.", "actions": ["Recover independent native evidence or rerun the required checks."]},
+      "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
+      "path_boundary_policy": {"boundary": "repo_or_plugin", "rejects": ["traversal", "symlink_escape", "external_absolute_path"]},
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/read-only-helpers/requests/validate-execution-record.json",
+      "rollback": "Disable receipt reuse and run every required verification command."
+    },
+    {
       "helper_id": "parse-consensus-categories",
       "operation": "parse-consensus-categories",
       "promotion_status": "python_authoritative",

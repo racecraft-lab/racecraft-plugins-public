@@ -1,0 +1,3 @@
+#!/usr/bin/env python3
+"""Fails if a dry-run unexpectedly executes a fake provider."""
+raise SystemExit(99)

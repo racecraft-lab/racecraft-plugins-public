@@ -9,15 +9,17 @@ import stat
 import subprocess
 import sys
 import tempfile
-import textwrap
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SCRIPT = REPO_ROOT / "scripts" / "refresh-local-plugin.py"
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
+STUB_FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "refresh-local-plugin"
+STUB_NAMES = ("success-claude", "success-codex", "failure-claude", "failure-codex", "reject-execution")
 for path in (PLUGIN_ROOT, LIB_DIR):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
@@ -26,8 +28,22 @@ from test_result import run_counted  # noqa: E402
 
 def run_helper(*args: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
     child_env = os.environ.copy()
+    child_env["PATH"] = ""
+    for name in ("CALL_LOG", "STUB_REPO_ROOT", "MKT_NAME", "MKT_MODE", "UNINSTALL_MSG", "UNINSTALL_RC", "REMOVE_MSG", "REMOVE_RC"):
+        child_env.pop(name, None)
+    child_env["STUB_REPO_ROOT"] = str(REPO_ROOT)
     if env:
         child_env.update(env)
+    allowed = {STUB_FIXTURE_DIR / name for name in STUB_NAMES}
+    for tool in ("claude", "codex"):
+        selected = shutil.which(tool, path=child_env["PATH"])
+        if selected is not None:
+            executable = Path(selected).resolve()
+            owned = executable in allowed
+            if os.name == "nt" and executable.is_file():
+                owned = executable.read_bytes() in {fixture.read_bytes() for fixture in allowed}
+            if not owned:
+                raise AssertionError(f"unowned provider selected for {tool}")
     child_env["PYTHONDONTWRITEBYTECODE"] = "1"
     return subprocess.run(
         [sys.executable, str(SCRIPT), *args],
@@ -44,9 +60,15 @@ def merged(result: subprocess.CompletedProcess[str]) -> str:
     return result.stdout + result.stderr
 
 
-def make_executable(path: Path, content: str) -> None:
-    path.write_text(content, encoding="utf-8")
-    path.chmod(stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH)
+def make_executable(path: Path, fixture_name: str) -> None:
+    if fixture_name not in STUB_NAMES:
+        raise ValueError("unknown provider fixture")
+    source = STUB_FIXTURE_DIR / fixture_name
+    if os.name == "nt":
+        shutil.copyfile(source, path)
+        path.chmod(stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH)
+    else:
+        path.symlink_to(source)
 
 
 class RefreshLocalPluginTests(unittest.TestCase):
@@ -58,6 +80,26 @@ class RefreshLocalPluginTests(unittest.TestCase):
 
     def tearDown(self) -> None:
         self._tmp.cleanup()
+
+    @unittest.skipIf(os.name == "nt", "POSIX noexec fixture contract")
+    def test_provider_stubs_execute_from_tracked_inputs(self) -> None:
+        for mode in ("success", "failure"):
+            stub_bin = self.make_stubs(mode)
+            for tool in ("claude", "codex"):
+                stub = stub_bin / tool
+                self.assertTrue(stub.is_symlink())
+                self.assertEqual(stub.resolve(), STUB_FIXTURE_DIR / f"{mode}-{tool}")
+                self.assertFalse(stub.resolve().is_relative_to(self.work.resolve()))
+                self.assertTrue(os.access(stub, os.X_OK))
+
+    def test_provider_lookup_cannot_fall_back_to_real_tools(self) -> None:
+        with patch.object(shutil, "which", return_value="/unowned/provider"), patch.object(subprocess, "run") as launch:
+            with self.assertRaisesRegex(AssertionError, "unowned provider"):
+                run_helper("--no-build", "--no-validate", "--codex", env={"PATH": "/owned-test-bin"})
+            launch.assert_not_called()
+        with patch.dict(os.environ, {"PATH": "/unowned-bin"}), patch.object(shutil, "which", return_value=None), patch.object(subprocess, "run") as launch:
+            run_helper("--help")
+            self.assertEqual(launch.call_args.kwargs["env"]["PATH"], "")
 
     def test_refresh_local_plugin_contract(self) -> None:
         with self.subTest(msg="refresh helper exists"):
@@ -95,8 +137,8 @@ class RefreshLocalPluginTests(unittest.TestCase):
 
         fail_bin = self.work / "fail-bin"
         fail_bin.mkdir()
-        make_executable(fail_bin / "claude", "#!/usr/bin/env python3\nraise SystemExit(99)\n")
-        make_executable(fail_bin / "codex", "#!/usr/bin/env python3\nraise SystemExit(99)\n")
+        make_executable(fail_bin / "claude", "reject-execution")
+        make_executable(fail_bin / "codex", "reject-execution")
         with self.subTest(msg="dry-run all prints refresh commands without requiring real CLI state"):
             result = run_helper("--dry-run", "--all", env={"PATH": f"{fail_bin}{os.pathsep}{os.environ['PATH']}"})
             self.assertEqual(result.returncode, 0, merged(result))
@@ -105,7 +147,7 @@ class RefreshLocalPluginTests(unittest.TestCase):
             self.assertIn("claude plugin install", merged(result))
             self.assertIn("codex plugin add", merged(result))
 
-        stub_bin = self.make_success_stubs()
+        stub_bin = self.make_stubs("success")
         env = {"PATH": f"{stub_bin}{os.pathsep}{os.environ['PATH']}", "CALL_LOG": str(self.call_log)}
 
         with self.subTest(msg="Codex refresh removes and adds installed plugin"):
@@ -135,7 +177,7 @@ class RefreshLocalPluginTests(unittest.TestCase):
             calls = self.call_log.read_text(encoding="utf-8")
             self.assertIn(f"claude --plugin-dir {REPO_ROOT}/dist/claude/speckit-pro", calls)
 
-        failure_bin = self.make_failure_stubs()
+        failure_bin = self.make_stubs("failure")
         failure_env = {
             "PATH": f"{failure_bin}{os.pathsep}{os.environ['PATH']}",
             "CALL_LOG": str(self.call_log),
@@ -216,7 +258,7 @@ class RefreshLocalPluginTests(unittest.TestCase):
         with self.subTest(msg="missing claude skips validation instead of aborting a Codex-only run"):
             codex_only = self.work / "codex-only"
             codex_only.mkdir()
-            shutil.copy(failure_bin / "codex", codex_only / "codex")
+            make_executable(codex_only / "codex", "failure-codex")
             result = run_helper(
                 "--no-build",
                 "--codex",
@@ -237,128 +279,11 @@ class RefreshLocalPluginTests(unittest.TestCase):
             self.assertEqual(result.returncode, 2, merged(result))
             self.assertIn("unknown option", merged(result))
 
-    def make_success_stubs(self) -> Path:
-        stub_bin = self.work / "bin"
+    def make_stubs(self, mode: str) -> Path:
+        stub_bin = self.work / f"{mode}-bin"
         stub_bin.mkdir()
-        make_executable(
-            stub_bin / "claude",
-            textwrap.dedent(
-                f"""\
-                #!/usr/bin/env python3
-                import os
-                import sys
-
-                with open(os.environ["CALL_LOG"], "a", encoding="utf-8") as call_log:
-                    call_log.write("claude " + " ".join(sys.argv[1:]) + "\\n")
-                if sys.argv[1:4] == ["plugin", "marketplace", "list"]:
-                    sys.stdout.write(
-                        "Configured marketplaces:\\n\\n"
-                        "  > racecraft-plugins-public\\n"
-                        "    Source: Directory ({REPO_ROOT})\\n"
-                    )
-                raise SystemExit(0)
-                """
-            ),
-        )
-        make_executable(
-            stub_bin / "codex",
-            textwrap.dedent(
-                f"""\
-                #!/usr/bin/env python3
-                import os
-                import sys
-
-                with open(os.environ["CALL_LOG"], "a", encoding="utf-8") as call_log:
-                    call_log.write("codex " + " ".join(sys.argv[1:]) + "\\n")
-                if sys.argv[1:4] == ["plugin", "marketplace", "list"]:
-                    sys.stdout.write(
-                        "MARKETPLACE               ROOT\\n"
-                        "racecraft-plugins-public  {REPO_ROOT}\\n"
-                    )
-                raise SystemExit(0)
-                """
-            ),
-        )
-        return stub_bin
-
-    def make_failure_stubs(self) -> Path:
-        stub_bin = self.work / "fail-stub"
-        stub_bin.mkdir()
-        make_executable(
-            stub_bin / "claude",
-            textwrap.dedent(
-                """\
-                #!/usr/bin/env python3
-                import os
-                import sys
-
-                with open(os.environ["CALL_LOG"], "a", encoding="utf-8") as call_log:
-                    call_log.write("claude " + " ".join(sys.argv[1:]) + "\\n")
-
-                if sys.argv[1:4] == ["plugin", "marketplace", "list"]:
-                    name = os.environ.get("MKT_NAME") or "racecraft-plugins-public"
-                    mode = os.environ.get("MKT_MODE") or "local"
-                    if mode == "local":
-                        sys.stdout.write(
-                            f"Configured marketplaces:\\n\\n  > {name}\\n"
-                            f"    Source: Directory ({os.environ['STUB_REPO_ROOT']})\\n"
-                        )
-                    elif mode == "github":
-                        sys.stdout.write(
-                            f"Configured marketplaces:\\n\\n  > {name}\\n"
-                            f"    Source: GitHub (racecraft-lab/{name})\\n"
-                        )
-                    elif mode == "elsewhere":
-                        sys.stdout.write(
-                            f"Configured marketplaces:\\n\\n  > {name}\\n"
-                            "    Source: Directory (/some/other/checkout)\\n"
-                        )
-                    elif mode == "absent":
-                        sys.stdout.write(
-                            "Configured marketplaces:\\n\\n  > other-marketplace\\n"
-                            "    Source: GitHub (a/b)\\n"
-                        )
-                    elif mode == "listfail":
-                        sys.stderr.write("boom\\n")
-                        raise SystemExit(7)
-                    raise SystemExit(0)
-
-                if sys.argv[1:3] == ["plugin", "uninstall"]:
-                    message = os.environ.get("UNINSTALL_MSG") or ""
-                    if message:
-                        sys.stderr.write(message + "\\n")
-                    raise SystemExit(int(os.environ.get("UNINSTALL_RC") or "0"))
-                raise SystemExit(0)
-                """
-            ),
-        )
-        make_executable(
-            stub_bin / "codex",
-            textwrap.dedent(
-                """\
-                #!/usr/bin/env python3
-                import os
-                import sys
-
-                with open(os.environ["CALL_LOG"], "a", encoding="utf-8") as call_log:
-                    call_log.write("codex " + " ".join(sys.argv[1:]) + "\\n")
-
-                if sys.argv[1:4] == ["plugin", "marketplace", "list"]:
-                    sys.stdout.write(
-                        "MARKETPLACE               ROOT\\n"
-                        f"racecraft-plugins-public  {os.environ['STUB_REPO_ROOT']}\\n"
-                    )
-                    raise SystemExit(0)
-
-                if sys.argv[1:3] == ["plugin", "remove"]:
-                    message = os.environ.get("REMOVE_MSG") or ""
-                    if message:
-                        sys.stderr.write(message + "\\n")
-                    raise SystemExit(int(os.environ.get("REMOVE_RC") or "0"))
-                raise SystemExit(0)
-                """
-            ),
-        )
+        for tool in ("claude", "codex"):
+            make_executable(stub_bin / tool, f"{mode}-{tool}")
         return stub_bin
 
 

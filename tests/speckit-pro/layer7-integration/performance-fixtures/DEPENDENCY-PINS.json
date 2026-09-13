@@ -1,0 +1,77 @@
+{
+  "schema_version": "autopilot-performance-dependency-pins/v1",
+  "status": "source-pins-only-not-environment-qualified",
+  "provenance": "Git blobs read from each exact scaffold commit; declarations are not observed runtime or installation versions.",
+  "scope": "docs-site package manifest and complete lockfile pins; native CLI/model, Python, Node, browser, OS, extension, and installed dependency qualification remain campaign prerequisites.",
+  "scenarios": {
+    "ART-012": {
+      "workload_commit": "ba22a0938b37743029142b8763b23be693193966",
+      "files": {
+        "docs-site/package.json": {
+          "git_blob": "79c21d14764be02a232708b9f7bf0f7a8533da88",
+          "sha256": "49ae91bb609a5622914f9696f1a27d205ca2d8153d16bbb12c2392a3ae56a008",
+          "bytes": 1327
+        },
+        "docs-site/pnpm-lock.yaml": {
+          "git_blob": "4075857e764757be9ebe2efd4a86ef813e6d43fa",
+          "sha256": "7441e49603738a033674c633fba5e38bfd9146b4a11f18aec4dbd2ee6f100016",
+          "bytes": 185437
+        }
+      },
+      "package_manager_declaration": "pnpm@10.25.0",
+      "astro_declaration": "7.1.0",
+      "astro_node_engine_declaration": ">=22.12.0",
+      "engine_source": "docs-site/pnpm-lock.yaml packages astro@7.1.0 engines.node",
+      "playwright_declaration": "1.61.0",
+      "resolved_runtime_pins": null,
+      "installation_evidence": null,
+      "automated_check_evidence": null
+    },
+    "ART-007": {
+      "workload_commit": "2c4edf01b6f84068bd311de81212fc3d4f2384b9",
+      "files": {
+        "docs-site/package.json": {
+          "git_blob": "79c21d14764be02a232708b9f7bf0f7a8533da88",
+          "sha256": "49ae91bb609a5622914f9696f1a27d205ca2d8153d16bbb12c2392a3ae56a008",
+          "bytes": 1327
+        },
+        "docs-site/pnpm-lock.yaml": {
+          "git_blob": "4075857e764757be9ebe2efd4a86ef813e6d43fa",
+          "sha256": "7441e49603738a033674c633fba5e38bfd9146b4a11f18aec4dbd2ee6f100016",
+          "bytes": 185437
+        }
+      },
+      "package_manager_declaration": "pnpm@10.25.0",
+      "astro_declaration": "7.1.0",
+      "astro_node_engine_declaration": ">=22.12.0",
+      "engine_source": "docs-site/pnpm-lock.yaml packages astro@7.1.0 engines.node",
+      "playwright_declaration": "1.61.0",
+      "resolved_runtime_pins": null,
+      "installation_evidence": null,
+      "automated_check_evidence": null
+    },
+    "DOC-008": {
+      "workload_commit": "6d4c194015382182284b76402e33d9164c88b7d6",
+      "files": {
+        "docs-site/package.json": {
+          "git_blob": "74ee21e78f1e3f0e0d63ce9cda6e288cfafcea04",
+          "sha256": "19c7780b57ddfea9fac1fc6b3421fe8551ee8711e4049bb2c7620ff3647dfe89",
+          "bytes": 804
+        },
+        "docs-site/pnpm-lock.yaml": {
+          "git_blob": "257094f1d5d637695663b8d275393dd777b9752b",
+          "sha256": "54c3f3d5bb35ace18aa9728890e901752fc612ac383eedaaa8b177f2a46aefb4",
+          "bytes": 154695
+        }
+      },
+      "package_manager_declaration": "pnpm@10.25.0",
+      "astro_declaration": "6.4.6",
+      "astro_node_engine_declaration": ">=22.12.0",
+      "engine_source": "docs-site/pnpm-lock.yaml packages astro@6.4.6 engines.node",
+      "playwright_declaration": null,
+      "resolved_runtime_pins": null,
+      "installation_evidence": null,
+      "automated_check_evidence": null
+    }
+  }
+}

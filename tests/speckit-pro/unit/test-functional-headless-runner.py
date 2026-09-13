@@ -23,6 +23,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 TESTS_ROOT = REPO_ROOT / "tests" / "speckit-pro"
 RUNNER_PATH = TESTS_ROOT / "layer3-functional" / "run-headless-evals.py"
 SHARED_LIB = TESTS_ROOT / "lib"
+ACTORS = Path(__file__).resolve().parent / "fixtures" / "headless-actors"
 if str(SHARED_LIB) not in sys.path:
     sys.path.insert(0, str(SHARED_LIB))
 
@@ -39,6 +40,18 @@ def import_runner():
     return module
 
 
+def actor_environment(root: Path) -> dict[str, str]:
+    binary_dir = root / "actor-bin"
+    binary_dir.mkdir()
+    interpreter = binary_dir / "python3"
+    interpreter.symlink_to(Path(sys.executable).resolve(strict=True))
+    if not os.access(interpreter, os.X_OK):
+        raise RuntimeError("test actor interpreter is not executable")
+    env = os.environ.copy()
+    env["PATH"] = str(binary_dir) + (os.pathsep + env["PATH"] if env.get("PATH") else "")
+    return env
+
+
 class FunctionalHeadlessRunnerTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -47,6 +60,25 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
 
     def case(self, host: str, skill: str, eval_id: int):
         return self.runner.find_case(self.catalog, host, skill, eval_id)
+
+    def test_actor_environment_pins_python_without_mutating_parent(self) -> None:
+        for incoming_path in ("", "/original/bin"):
+            with self.subTest(path=incoming_path), tempfile.TemporaryDirectory() as temporary:
+                with mock.patch.dict(os.environ, {"PATH": incoming_path}):
+                    before = dict(os.environ)
+                    env = actor_environment(Path(temporary))
+                    binary_dir = Path(temporary) / "actor-bin"
+                    self.assertEqual((binary_dir / "python3").resolve(), Path(sys.executable).resolve())
+                    self.assertTrue(os.access(binary_dir / "python3", os.X_OK))
+                    expected = str(binary_dir) + (os.pathsep + incoming_path if incoming_path else "")
+                    self.assertEqual(env, {**before, "PATH": expected})
+                    self.assertEqual(dict(os.environ), before)
+
+    def test_actor_environment_refuses_unexecutable_interpreter(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            with mock.patch.object(os, "access", return_value=False):
+                with self.assertRaisesRegex(RuntimeError, "interpreter is not executable"):
+                    actor_environment(Path(temporary))
 
     def test_catalog_is_the_bounded_h0_roster_without_rubrics(self) -> None:
         identities = {
@@ -859,16 +891,12 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
 
     def test_process_capture_writes_exact_bytes_before_strict_decode_failure(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            cli = Path(temporary) / "claude"
-            cli.write_text(
-                f"#!{sys.executable}\nimport sys\nsys.stdout.buffer.write(b'\\xff')\n",
-                encoding="utf-8",
-            )
-            cli.chmod(0o755)
+            cli = ACTORS / "invalid-utf8"
             evidence = Path(temporary) / "evidence"
+            self.assertFalse(cli.resolve().is_relative_to(Path(temporary).resolve()))
             with mock.patch.object(self.runner.shutil, "which", return_value=str(cli)):
                 result = self.runner.capture_process(
-                    "claude", [str(cli)], b"prompt", evidence, Path(temporary), os.environ.copy(), 5
+                    "claude", [str(cli)], b"prompt", evidence, Path(temporary), actor_environment(Path(temporary)), 5
                 )
             self.assertEqual((evidence / "stdout.bin").read_bytes(), b"\xff")
             self.assertEqual(result["status"], "output_decode_error")
@@ -953,20 +981,10 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
     @unittest.skipUnless(os.name == "posix", "POSIX process-group witness")
     def test_real_exited_leader_leaves_term_ignoring_child_that_is_drained(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            cli = Path(temporary) / "claude"
-            cli.write_text(
-                f"#!{sys.executable}\n"
-                "import subprocess, sys\n"
-                "child = subprocess.Popen([sys.executable, '-c', "
-                "\"import signal,time; signal.signal(signal.SIGTERM, signal.SIG_IGN); print('ready', flush=True); time.sleep(30)\"], "
-                "stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)\n"
-                "assert child.stdout.readline() == b'ready\\n'\n"
-                "print('child=' + str(child.pid), flush=True)\n",
-                encoding="utf-8",
-            )
-            cli.chmod(0o755)
+            cli = ACTORS / "orphaned-child"
+            self.assertFalse(cli.resolve().is_relative_to(Path(temporary).resolve()))
             with mock.patch.object(self.runner.shutil, "which", return_value=str(cli)):
-                result = self.runner.capture_process("claude", [str(cli)], b"", Path(temporary) / "evidence", Path(temporary), os.environ.copy(), 5)
+                result = self.runner.capture_process("claude", [str(cli)], b"", Path(temporary) / "evidence", Path(temporary), actor_environment(Path(temporary)), 5)
             cleanup = result["process_group_cleanup"]
             try:
                 self.assertEqual(result["status"], "unexpected_descendants")
@@ -1047,19 +1065,8 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                 root = Path(temporary)
                 ready = root / "ready.json"
                 result_path = root / "result.json"
-                cli = root / "claude"
-                cli.write_text(
-                    f"#!{sys.executable}\n"
-                    "import json,os,signal,time\nfrom pathlib import Path\n"
-                    "signal.signal(signal.SIGTERM, signal.SIG_IGN)\n"
-                    "print('before supervisor signal', flush=True)\n"
-                    f"ready=Path({str(ready)!r})\n"
-                    "ready.with_suffix('.tmp').write_text(json.dumps({'pid':os.getpid(),'pgid':os.getpgrp()}))\n"
-                    "ready.with_suffix('.tmp').replace(ready)\n"
-                    "time.sleep(30)\n",
-                    encoding="utf-8",
-                )
-                cli.chmod(0o755)
+                cli = ACTORS / "supervisor-signal"
+                self.assertFalse(cli.resolve().is_relative_to(root.resolve()))
                 supervisor = root / "supervisor.py"
                 supervisor.write_text(
                     "import importlib.util,json,os,signal,sys\nfrom pathlib import Path\n"
@@ -1067,12 +1074,12 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                     "runner=importlib.util.module_from_spec(spec)\nsys.modules[spec.name]=runner\nspec.loader.exec_module(runner)\n"
                     f"runner.shutil.which=lambda host:{str(cli)!r}\n"
                     "before={s:signal.getsignal(s) for s in (signal.SIGTERM,signal.SIGHUP)}\n"
-                    f"result=runner.capture_process('claude',[{str(cli)!r}],b'',Path({str(root / 'evidence')!r}),Path({str(root)!r}),os.environ.copy(),30)\n"
+                    f"result=runner.capture_process('claude',[{str(cli)!r},{str(ready)!r}],b'',Path({str(root / 'evidence')!r}),Path({str(root)!r}),os.environ.copy(),30)\n"
                     "result['handlers_restored']=all(signal.getsignal(s)==h for s,h in before.items())\n"
                     f"Path({str(result_path)!r}).write_text(json.dumps(result))\n",
                     encoding="utf-8",
                 )
-                process = subprocess.Popen([sys.executable, str(supervisor)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
+                process = subprocess.Popen([sys.executable, str(supervisor)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True, env=actor_environment(root))
                 actor_group = None
                 try:
                     deadline = time.monotonic() + 5
@@ -1289,13 +1296,12 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
     def test_codex_symlink_path_executes_canonical_binary_without_changing_path(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()
-            native = root / "native" / "codex"
-            native.parent.mkdir()
-            native.write_text(f"#!{sys.executable}\nimport os, sys\nprint(sys.argv[0])\nprint(os.environ['PATH'])\n")
-            native.chmod(0o700)
+            native = ACTORS / "codex"
+            self.assertFalse(native.resolve().is_relative_to(root))
             alias = root / "aliases" / "codex"
             alias.parent.mkdir()
             alias.symlink_to(native)
+            (alias.parent / "python3").symlink_to(Path(sys.executable).resolve(strict=True))
             with mock.patch.dict(os.environ, {"PATH": str(alias.parent)}):
                 result = self.runner.capture_process(
                     "codex", [str(native)], b"", root / "evidence", root,
@@ -1314,11 +1320,10 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
         with mock.patch.object(self.runner.shutil, "which", return_value=sys.executable):
             self.assertTrue(self.runner.probe_cli_version("claude", Path(sys.executable)).startswith("Python "))
         with tempfile.TemporaryDirectory() as temporary:
-            empty = Path(temporary) / "empty-version"
-            empty.write_text(f"#!{sys.executable}\n", encoding="utf-8")
-            empty.chmod(0o755)
-            with mock.patch.object(self.runner.shutil, "which", return_value=str(empty)):
-                with self.assertRaises(self.runner.EvidenceError):
+            empty = ACTORS / "empty-version"
+            self.assertFalse(empty.resolve().is_relative_to(Path(temporary).resolve()))
+            with mock.patch.object(self.runner.shutil, "which", return_value=str(empty)), mock.patch.dict(os.environ, actor_environment(Path(temporary))):
+                with self.assertRaisesRegex(self.runner.EvidenceError, "returned no version"):
                     self.runner.probe_cli_version("claude", empty)
 
     def test_host_cli_must_still_match_the_fixed_host_executable(self) -> None:

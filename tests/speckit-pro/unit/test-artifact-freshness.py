@@ -10,8 +10,8 @@ verbatim. A case whose inputs carry no `named_surface` exercises the `verdict`
 surface; a case carrying `removal_diff` or `corroborate_refresh` exercises that
 one. A case may also carry `workflow_content`, which is written where its
 `workflow_file` points for the length of the case, because the helper resolves
-that path inside the repository and a system temporary directory is out of
-reach.
+that path inside a disposable consumer repository. The source fixture tree is
+never used as writable scratch space.
 
 `fixtures/artifact-freshness/expected-envelopes.json` holds the expected result
 for each case under the same name. Two shapes, and they are not
@@ -48,12 +48,13 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
 import subprocess
 import sys
+import tempfile
 import unittest
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 LIB_DIR = Path(__file__).resolve().parent.parent / "lib"
@@ -168,13 +169,13 @@ def helper_request(name: str, inputs: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def run_runner(request: dict[str, Any]) -> dict[str, Any]:
+def run_runner(request: dict[str, Any], *, root: Path = REPO_ROOT) -> dict[str, Any]:
     completed = subprocess.run(
         [sys.executable, "-m", "speckit_pro_runner"],
         input=json.dumps(request),
         text=True,
         capture_output=True,
-        cwd=REPO_ROOT,
+        cwd=root,
         env=runner_env(),
         shell=False,
         check=False,
@@ -186,40 +187,22 @@ def run_runner(request: dict[str, Any]) -> dict[str, Any]:
     return json.loads(completed.stdout)
 
 
-class materialized_workflow:
-    """Write a case's `workflow_content` where its `workflow_file` points.
-
-    The write target is confined to `WORKFLOW_SCRATCH`, and a case pointing
-    anywhere else is a hard failure rather than a write. Cleanup removes that
-    directory and nothing else, so an unconfined write would overwrite a real
-    repository file, leave the worktree dirty, and — because the runner reads
-    the file the case names — do it while the case still passed.
-    """
-
-    def __init__(self, case: dict[str, Any]) -> None:
-        self.content = case.get("workflow_content")
+@contextmanager
+def materialized_workflow(case: dict[str, Any]) -> Iterator[Path]:
+    """Materialize unchanged case paths inside an owned temporary consumer root."""
+    with tempfile.TemporaryDirectory(prefix="artifact-freshness-fixture-") as directory:
+        root = Path(directory)
+        (root / ".specify").mkdir()
+        content = case.get("workflow_content")
         target = case.get("inputs", {}).get("workflow_file")
-        self.target = (
-            None if self.content is None or not isinstance(target, str) else REPO_ROOT / target
-        )
-
-    def __enter__(self) -> None:
-        if self.target is None or self.content is None:
-            return
-        resolved = self.target.resolve()
-        if not resolved.is_relative_to(WORKFLOW_SCRATCH.resolve()):
-            raise AssertionError(
-                f"a case carrying workflow_content must point workflow_file inside "
-                f"{WORKFLOW_SCRATCH.relative_to(REPO_ROOT)}; this one points at "
-                f"{self.target.relative_to(REPO_ROOT)}, which cleanup would not remove"
-            )
-        self.target.parent.mkdir(parents=True, exist_ok=True)
-        self.target.write_text(self.content, encoding="utf-8")
-
-    def __exit__(self, *_exc: object) -> None:
-        if self.content is None:
-            return
-        shutil.rmtree(WORKFLOW_SCRATCH, ignore_errors=True)
+        if content is not None and isinstance(target, str):
+            destination = root / target
+            scratch = root / WORKFLOW_SCRATCH.relative_to(REPO_ROOT)
+            if not destination.resolve().is_relative_to(scratch.resolve()):
+                raise AssertionError("workflow_content target must remain inside the fixture scratch path")
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(content, encoding="utf-8")
+        yield root
 
 
 _RESPONSE_CACHE: dict[str, dict[str, Any]] = {}
@@ -236,8 +219,8 @@ def run_case(name: str) -> dict[str, Any]:
     if cached is not None:
         return cached
     case = cases()[name]
-    with materialized_workflow(case):
-        response = run_runner(helper_request(name, case["inputs"]))
+    with materialized_workflow(case) as root:
+        response = run_runner(helper_request(name, case["inputs"]), root=root)
     _RESPONSE_CACHE[name] = response
     return response
 
@@ -252,6 +235,27 @@ def stderr_text(response: dict[str, Any]) -> str:
 
 class FreshnessEnvelopeTest(unittest.TestCase):
     """Every case, run through the runner and compared against its expectation."""
+
+    def test_workflow_materialization_never_writes_the_source_tree(self) -> None:
+        relative = (WORKFLOW_SCRATCH / 'isolation-proof.md').relative_to(REPO_ROOT)
+        case = {'inputs': {'workflow_file': relative.as_posix()}, 'workflow_content': '# isolated\n'}
+        with materialized_workflow(case) as root:
+            self.assertFalse((REPO_ROOT / relative).exists())
+            self.assertFalse(root.is_relative_to(REPO_ROOT))
+            self.assertEqual((root / relative).read_text(), case['workflow_content'])
+        self.assertFalse(root.exists())
+
+    def test_workflow_materialization_rejects_escape_and_cleans_up_on_failure(self) -> None:
+        relative = WORKFLOW_SCRATCH.relative_to(REPO_ROOT)
+        with self.assertRaises(AssertionError), materialized_workflow({
+            'inputs': {'workflow_file': (relative / '..' / 'escape.md').as_posix()},
+            'workflow_content': '# must not be written\n',
+        }):
+            pass
+        with self.assertRaisesRegex(ValueError, 'fixture failure'):
+            with materialized_workflow({}) as root:
+                raise ValueError('fixture failure')
+        self.assertFalse(root.exists())
 
     def test_corpus_and_expectations_name_the_same_cases(self) -> None:
         # Both directions. A case with no expectation would run and assert
@@ -361,8 +365,8 @@ class FreshnessEnvelopeTest(unittest.TestCase):
             },
         }
         case = {"inputs": inputs, "workflow_content": "# oversize\n"}
-        with materialized_workflow(case):
-            response = run_runner(helper_request("oversize-envelope", inputs))
+        with materialized_workflow(case) as root:
+            response = run_runner(helper_request("oversize-envelope", inputs), root=root)
         self.assertEqual(response.get("status"), "input_error")
         self.assertEqual(response.get("exit_code"), 2)
         self.assertIn("exceeds the runner's stdout capture", stderr_text(response))
@@ -370,19 +374,15 @@ class FreshnessEnvelopeTest(unittest.TestCase):
 
 
 def main(argv: list[str]) -> int:
-    shutil.rmtree(WORKFLOW_SCRATCH, ignore_errors=True)
     if argv:
         # A named class or method: plain unittest, for iterating on one test.
         result = unittest.main(argv=[sys.argv[0]] + argv, exit=False, verbosity=2).result
-        shutil.rmtree(WORKFLOW_SCRATCH, ignore_errors=True)
         return 0 if result.wasSuccessful() else 1
     # The whole file, through the house counter. Without this the runner reports
     # "PASS test-artifact-freshness (no summary)" and counts zero units, so every
     # assertion in this file is invisible to the suite total.
     suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])
-    code = run_counted(suite, label="test-artifact-freshness")
-    shutil.rmtree(WORKFLOW_SCRATCH, ignore_errors=True)
-    return code
+    return run_counted(suite, label="test-artifact-freshness")
 
 
 if __name__ == "__main__":

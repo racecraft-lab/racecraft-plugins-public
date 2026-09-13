@@ -6,7 +6,7 @@ project-supplied implementation agent.
 
 ## RED-GREEN-REFACTOR Cycle
 
-For your assigned task:
+For each assigned closed `tdd_unit`, executing tasks sequentially:
 
 1. **RED** — Write tests FIRST:
    - Contract tests for input/output schemas
@@ -25,6 +25,13 @@ For your assigned task:
    - Run tests — they MUST STAY GREEN
 
 Use the **single-file command** for per-task RED/GREEN verification:
+
+In a batch, load this protocol once. Related test/implementation checkboxes
+share one RED→GREEN→refactor cycle and its concrete commands/output, while
+each task retains a separate result. Never mark a test-only task GREEN before
+the unit's implementation passes. Report completed and unfinished task IDs
+on partial return. Expected TDD RED consumes ordinary implementation time, not
+a repair cycle; unexpected failures use the parent's shared reservation.
 
 ```text
 CORRECT (unit/contract test):
@@ -98,7 +105,8 @@ WRONG output after RED phase:
 If tests pass or skip before you write implementation code:
 - The tests are placeholders (rewrite with assertions)
 - The tests are wrong (not testing what they should)
-- The implementation already exists (skip the task)
+- The implementation already exists (verify it satisfies the requirement and
+  report existing coverage; do not invent RED or silently skip obligations)
 
 In all cases, investigate before proceeding.
 

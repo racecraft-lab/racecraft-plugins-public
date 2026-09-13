@@ -20,6 +20,7 @@ from unittest import mock
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TESTS_ROOT = REPO_ROOT / "tests" / "speckit-pro"
 RUNNER_PATH = TESTS_ROOT / "layer2-trigger" / "run-trigger-evals.py"
+BLOCKING_CLAUDE = Path(__file__).resolve().parent / "fixtures" / "signal-restoration" / "claude"
 SHARED_LIB = TESTS_ROOT / "lib"
 if str(SHARED_LIB) not in sys.path:
     sys.path.insert(0, str(SHARED_LIB))
@@ -65,42 +66,25 @@ def fixture_plugin(root: Path, skill: str) -> Path:
     return plugin_root
 
 
-def write_blocking_claude(binary_dir: Path, child_state: Path, child_stopped: Path) -> Path:
+def write_blocking_claude(binary_dir: Path) -> Path:
+    if not os.access(BLOCKING_CLAUDE, os.X_OK):
+        raise RuntimeError("blocking Claude test actor is not executable")
     binary_dir.mkdir(parents=True)
-    script = binary_dir / "claude-stub.py"
-    script.write_text(
-        "import json, os, signal, sys, time\n"
-        "from pathlib import Path\n"
-        "if '--version' in sys.argv:\n"
-        "    print('2.1.269 (Claude Code)')\n"
-        "elif '--help' in sys.argv:\n"
-        "    print('--restricted --setting-sources --plugin-dir --strict-mcp-config --mcp-config --tools --allowedTools --settings --permission-mode --permission-prompts --output-format --verbose --no-session-persistence')\n"
-        "elif 'doctor' in sys.argv:\n"
-        "    print('Running: native (2.1.269)')\n"
-        "    print('Managed settings (remote): not fetched — requires an Enterprise or Team subscription')\n"
-        "    print('Organization policy: not applicable to Pro and Max accounts')\n"
-        "else:\n"
-        "    root = sys.argv[sys.argv.index('--plugin-dir') + 1]\n"
-        "    sys.stdout.buffer.write(b'partial stdout\\r\\n'); sys.stdout.buffer.flush()\n"
-        "    sys.stderr.buffer.write(b'partial stderr\\xff'); sys.stderr.buffer.flush()\n"
-        f"    Path({str(child_state)!r}).write_text(json.dumps({{'pid': os.getpid(), 'plugin_root': root}}), encoding='utf-8')\n"
-        "    def stop(_signum, _frame):\n"
-        f"        Path({str(child_stopped)!r}).write_text('stopped\\n', encoding='utf-8')\n"
-        "        raise SystemExit(143)\n"
-        "    signal.signal(signal.SIGTERM, stop)\n"
-        "    time.sleep(60)\n",
-        encoding="utf-8",
-    )
+    (binary_dir / "python3").symlink_to(Path(sys.executable).resolve(strict=True))
     launcher = binary_dir / "claude"
-    launcher.write_text(
-        f"#!{sys.executable}\nimport runpy\nrunpy.run_path({str(script)!r}, run_name='__main__')\n",
-        encoding="utf-8",
-    )
-    launcher.chmod(0o755)
+    launcher.symlink_to(BLOCKING_CLAUDE)
     return launcher
 
 
 class Layer2SignalRestorationTests(unittest.TestCase):
+    def test_unexecutable_actor_is_rejected_before_creating_aliases(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            binary_dir = Path(temporary) / "bin"
+            with mock.patch.object(os, "access", return_value=False):
+                with self.assertRaisesRegex(RuntimeError, "test actor is not executable"):
+                    write_blocking_claude(binary_dir)
+            self.assertFalse(binary_dir.exists())
+
     @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
     def test_completed_leaders_lingering_descendant_is_cleaned_but_invalid(self) -> None:
         runner = import_runner()
@@ -195,7 +179,9 @@ class Layer2SignalRestorationTests(unittest.TestCase):
                 binary_dir = external_root / "bin"
                 child_state = external_root / "child-state.json"
                 child_stopped = external_root / "child-stopped"
-                write_blocking_claude(binary_dir, child_state, child_stopped)
+                launcher = write_blocking_claude(binary_dir)
+                self.assertFalse(launcher.resolve().is_relative_to(root.resolve()))
+                self.assertEqual((binary_dir / "python3").resolve(), Path(sys.executable).resolve())
                 external_home = external_root / "home"
                 external_sentinel = external_home / ".claude" / "sentinel"
                 external_sentinel.parent.mkdir(parents=True)

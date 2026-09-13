@@ -10,9 +10,11 @@ import io
 import json
 import os
 import re
+import shutil
 import stat
 import subprocess
 import sys
+import tempfile
 import unittest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -532,39 +534,33 @@ def validate_moc_stale_index_scan_root(root: Path, *, emit: bool=False) -> list[
             print(violation)
     return violations
 
-def _with_broken_symlink() -> None:
-    broken_link = FIXTURES / 'stale/stale-broken-symlink/broken-link.md'
-    try:
-        if broken_link.exists() or broken_link.is_symlink():
-            broken_link.unlink()
-        broken_link.symlink_to('this-target-does-not-exist.md')
-    except (NotImplementedError, OSError):
-        if broken_link.exists() or broken_link.is_symlink():
-            broken_link.unlink(missing_ok=True)
-
-def _cleanup_broken_symlink() -> None:
-    broken_link = FIXTURES / 'stale/stale-broken-symlink/broken-link.md'
-    if broken_link.exists() or broken_link.is_symlink():
-        broken_link.unlink()
-
 class ValidateMocStaleIndex(unittest.TestCase):
+
+    def setUp(self) -> None:
+        temporary = tempfile.TemporaryDirectory(prefix='moc-stale-fixtures-')
+        self.addCleanup(temporary.cleanup)
+        self.fixtures = Path(temporary.name) / 'moc'
+        shutil.copytree(FIXTURES, self.fixtures, symlinks=True)
+        (self.fixtures / 'stale/stale-broken-symlink/broken-link.md').symlink_to('this-target-does-not-exist.md')
 
     def test_stale_index_lint(self) -> None:
         with self.subTest(msg='all relative targets resolve (up: + body link) -> PASS'):
-            self.assertTrue(moc_links_resolve(FIXTURES / 'stale/stale-valid/SPEC-MOC.md'))
+            self.assertTrue(moc_links_resolve(self.fixtures / 'stale/stale-valid/SPEC-MOC.md'))
         with self.subTest(msg='an absent relative body-link target -> VIOLATION'):
-            self.assertFalse(moc_links_resolve(FIXTURES / 'stale/stale-absent-link/SPEC-MOC.md'))
+            self.assertFalse(moc_links_resolve(self.fixtures / 'stale/stale-absent-link/SPEC-MOC.md'))
         with self.subTest(msg='a relative target that is a DIRECTORY (not a regular file) -> VIOLATION'):
-            self.assertFalse(moc_links_resolve(FIXTURES / 'stale/stale-dir-target/SPEC-MOC.md'))
+            self.assertFalse(moc_links_resolve(self.fixtures / 'stale/stale-dir-target/SPEC-MOC.md'))
         with self.subTest(msg='a relative target that is a BROKEN SYMLINK -> VIOLATION (distinct from absent)'):
-            self.assertFalse(moc_links_resolve(FIXTURES / 'stale/stale-broken-symlink/SPEC-MOC.md'))
+            self.assertFalse(self.fixtures.is_relative_to(REPO_ROOT))
+            self.assertTrue((self.fixtures / 'stale/stale-broken-symlink/broken-link.md').is_symlink())
+            self.assertFalse(moc_links_resolve(self.fixtures / 'stale/stale-broken-symlink/SPEC-MOC.md'))
         with self.subTest(msg='a [[wikilink]] anywhere in a gated MOC -> VIOLATION'):
-            self.assertFalse(moc_links_resolve(FIXTURES / 'stale/stale-wikilink/SPEC-MOC.md'))
+            self.assertFalse(moc_links_resolve(self.fixtures / 'stale/stale-wikilink/SPEC-MOC.md'))
         with self.subTest(msg='a non-gated marker with a dangling link is skipped (exempt-before-content)'):
-            self.assertEqual(0, len(validate_moc_stale_index_scan_root(FIXTURES / 'stale-exempt')))
+            self.assertEqual(0, len(validate_moc_stale_index_scan_root(self.fixtures / 'stale-exempt')))
         with self.subTest(msg='scan of the stale fixture tree counts the negative cases as violations'):
-            self.assertEqual(4, len(validate_moc_stale_index_scan_root(FIXTURES / 'stale')))
-        dogfood_marker = FIXTURES / 'stale/stale-valid/SPEC-MOC.md'
+            self.assertEqual(4, len(validate_moc_stale_index_scan_root(self.fixtures / 'stale')))
+        dogfood_marker = self.fixtures / 'stale/stale-valid/SPEC-MOC.md'
         with self.subTest(msg='Dogfood MOC marker is version-gated (observable, not inferred)'):
             self.assertTrue(validate_moc_stale_index_moc_is_gated(dogfood_marker))
         with self.subTest(msg='Dogfood MOC marker links all resolve (up: and body links)'):
@@ -579,14 +575,14 @@ FIXTURE_ROOT = REPO_ROOT / 'tests' / 'speckit-pro' / 'layer1-structural' / 'fixt
 TEMPLATE = REPO_ROOT / 'speckit-pro' / 'skills' / 'speckit-coach' / 'templates' / 'roadmap-moc-template.md'
 REGISTRY_REQ = {'schema_version': '1.0', 'request_id': 'l1-helper-registry', 'helper_id': 'helper-registry-dispatch', 'operation': 'helper-registry-dispatch', 'mode': 'read_only', 'inputs': {}}
 MUTATION_REGISTRY_REQ = {'schema_version': '1.0', 'request_id': 'l1-mutation-registry', 'helper_id': 'mutation-registry-dispatch', 'operation': 'mutation-registry-dispatch', 'mode': 'read_only', 'inputs': {}}
-CHECK_REQ = {'schema_version': '1.0', 'request_id': 'l1-generate-spec-index-check', 'helper_id': 'generate-spec-index-check', 'operation': 'generate-spec-index-check', 'mode': 'read_only', 'inputs': {'repo_root': 'tests/speckit-pro/layer1-structural/fixtures/spec-index/determinism'}}
+CHECK_REQ = {'schema_version': '1.0', 'request_id': 'l1-generate-spec-index-check', 'helper_id': 'generate-spec-index-check', 'operation': 'generate-spec-index-check', 'mode': 'read_only', 'inputs': {'repo_root': '.'}}
 
-def _runner_request(payload: dict[str, object]) -> str:
-    env = os.environ.copy()
+def _runner_request(payload: dict[str, object], *, root: Path = REPO_ROOT, environment: dict[str, str] | None = None) -> str:
+    env = dict(os.environ if environment is None else environment)
     plugin_root = REPO_ROOT / 'speckit-pro'
     existing = env.get('PYTHONPATH')
     env['PYTHONPATH'] = plugin_root.as_posix() if not existing else f'{plugin_root.as_posix()}{os.pathsep}{existing}'
-    completed = subprocess.run([sys.executable, '-m', 'speckit_pro_runner'], input=json.dumps(payload), text=True, capture_output=True, cwd=REPO_ROOT, env=env, shell=False, check=False)
+    completed = subprocess.run([sys.executable, '-m', 'speckit_pro_runner'], input=json.dumps(payload), text=True, capture_output=True, cwd=root, env=env, shell=False, check=False)
     return completed.stdout
 
 def _snapshot(root: Path) -> list[tuple[str, str]]:
@@ -605,6 +601,23 @@ def _first_line_containing(path: Path, needle: str) -> str:
     return ''
 
 class ValidateSpecIndexDeterminism(unittest.TestCase):
+
+    def setUp(self) -> None:
+        temporary = tempfile.TemporaryDirectory(prefix='spec-index-fixtures-')
+        self.addCleanup(temporary.cleanup)
+        self.fixture_root = Path(temporary.name) / 'repo'
+        template = Path(temporary.name) / 'empty-template'
+        template.mkdir()
+        shutil.copytree(FIXTURE_ROOT, self.fixture_root)
+        (self.fixture_root / '.specify').mkdir()
+        self.environment = {key: value for key, value in os.environ.items() if not key.startswith('GIT_')}
+        self.environment.update(GIT_CONFIG_NOSYSTEM='1', GIT_CONFIG_GLOBAL=os.devnull, GIT_OPTIONAL_LOCKS='0')
+        # The committed fixture's files are tracked; preserve that distinction
+        # without borrowing the enclosing checkout's index or user configuration.
+        for arguments in (['init', '--quiet', '--initial-branch=fixture', f'--template={template}'],
+                          ['add', '--force', '--', '.']):
+            subprocess.run(['git', *arguments], cwd=self.fixture_root, env=self.environment,
+                           capture_output=True, check=True, timeout=30)
 
     def test_spec_index_helper_contract(self) -> None:
         with self.subTest(msg='runner package exists at the contracted path'):
@@ -626,9 +639,15 @@ class ValidateSpecIndexDeterminism(unittest.TestCase):
         with self.subTest(msg='generate-spec-index-write is promoted with an authoritative request'):
             self.assertEqual(write_entry['promotion_status'], 'golden_only')
             self.assertTrue(write_entry['authoritative_command'])
-        snap_before = _snapshot(FIXTURE_ROOT)
-        check_json = _runner_request(CHECK_REQ)
-        snap_after = _snapshot(FIXTURE_ROOT)
+        with self.subTest(msg='determinism fixture owns a real Git index'):
+            self.assertFalse(self.fixture_root.is_relative_to(REPO_ROOT))
+            self.assertTrue((self.fixture_root / '.git' / 'index').is_file())
+            tracked = subprocess.run(['git', 'ls-files', '-z'], cwd=self.fixture_root, env=self.environment,
+                                     capture_output=True, check=True, timeout=30).stdout.decode().split('\0')
+            self.assertEqual(sorted(name for name, _ in _snapshot(FIXTURE_ROOT)), sorted(name for name in tracked if name))
+        snap_before = _snapshot(self.fixture_root)
+        check_json = _runner_request(CHECK_REQ, root=self.fixture_root, environment=self.environment)
+        snap_after = _snapshot(self.fixture_root)
         with self.subTest(msg='generate-spec-index-check detects stale rendered output with exit 1'):
             self.assertIn('"status":"expected_failure"', check_json)
             self.assertIn('"exit_code":1', check_json)
@@ -753,15 +772,11 @@ def run_moc_stale(argv: list[str]) -> int:
             print(f"ERROR: validate-spec-lifecycle-contracts.py --moc-stale: internal failure ({exc})", file=sys.stderr)
             return 2
         return 1 if violations else 0
-    _with_broken_symlink()
     try:
-        try:
-            return run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(ValidateMocStaleIndex), label="validate-spec-lifecycle-contracts", allow_live_specs=True)
-        except Exception as exc:
-            print(f"ERROR: validate-spec-lifecycle-contracts.py --moc-stale: internal failure ({exc})", file=sys.stderr)
-            return 2
-    finally:
-        _cleanup_broken_symlink()
+        return run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(ValidateMocStaleIndex), label="validate-spec-lifecycle-contracts", allow_live_specs=True)
+    except Exception as exc:
+        print(f"ERROR: validate-spec-lifecycle-contracts.py --moc-stale: internal failure ({exc})", file=sys.stderr)
+        return 2
 
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
@@ -772,12 +787,8 @@ def main(argv: list[str] | None = None) -> int:
     if args:
         print(f"ERROR: unknown lifecycle mode: {args[0]}", file=sys.stderr)
         return 2
-    _with_broken_symlink()
-    try:
-        suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])
-        return run_counted(suite, label="validate-spec-lifecycle-contracts", allow_live_specs=True)
-    finally:
-        _cleanup_broken_symlink()
+    suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])
+    return run_counted(suite, label="validate-spec-lifecycle-contracts", allow_live_specs=True)
 
 if __name__ == "__main__":
     raise SystemExit(main())

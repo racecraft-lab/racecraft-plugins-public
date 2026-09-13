@@ -1,0 +1,1560 @@
+{
+  "schema_version": "trigger-experiment/v1",
+  "experiment_id": "issue-573-full-2026-09-12",
+  "trials": 3,
+  "trial_timeout_seconds": 180,
+  "threshold": 0.5,
+  "qualification_scope": "full",
+  "roster": [
+    {
+      "case_id": "l2-8859711d19e33d53b8019bd4",
+      "host": "claude",
+      "skill": "grill-me",
+      "query": "/speckit-pro:grill-me — use this skill for its documented purpose in this repository.",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-9b22b8dcb3f8ceb696259334",
+      "host": "claude",
+      "skill": "grill-me",
+      "query": "grill me on this client brief at docs/idea.md before /speckit-specify — produce a Design Concept doc with the full design tree walked",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-f1ffa5c23fc9213d95381e49",
+      "host": "claude",
+      "skill": "grill-me",
+      "query": "run grill-me on this raw idea: a leaderboard for the learning platform. produce a Design Concept doc before /speckit-specify, recommended answer first",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-742c3950e60d8c302470d15f",
+      "host": "claude",
+      "skill": "grill-me",
+      "query": "play the role of a relentless interviewer for the billing rewrite SpecKit spec — walk every branch of the design tree, produce a Design Concept doc before /speckit-specify",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-9b4e683836adee31dda13f87",
+      "host": "claude",
+      "skill": "grill-me",
+      "query": "run autopilot on the SPEC-027 workflow. the file is at docs/ai/specs/027-calendar-sync/SPEC-027-workflow.md. I already filled in all the phase prompts and the constitution is set up",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-32d3234c40682bd1973fa102",
+      "host": "claude",
+      "skill": "grill-me",
+      "query": "which checklist domains should I pick for SPEC-012? it's a REST API that handles webhook delivery with retry logic",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-c1beb8ee156c98997c512253",
+      "host": "claude",
+      "skill": "grill-me",
+      "query": "set up SPEC-018 for me — read the technical roadmap, create a worktree, populate the workflow file. you know the drill",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-96aeddba6f917945d7668095",
+      "host": "claude",
+      "skill": "grill-me",
+      "query": "fix the TypeScript build error in src/tools/primitives/tasks.ts. the Zod schema is failing because I'm using z.union instead of z.discriminatedUnion",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-4c3456ed58130b980002c768",
+      "host": "claude",
+      "skill": "speckit-archive-cleanup",
+      "query": "/speckit-pro:speckit-archive-cleanup — use this skill for its documented purpose in this repository.",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-312d9d1633cc770c10c4e416",
+      "host": "claude",
+      "skill": "speckit-archive-cleanup",
+      "query": "SPEC-014 merged yesterday, do the post-merge archive hygiene and take it out of active specs",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-0c40c659068bddbb0b69a314",
+      "host": "claude",
+      "skill": "speckit-archive-cleanup",
+      "query": "write the archive report for SPEC-914 with the merge commit, merged-at timestamp, and recovery commands",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-63436076e87c62fd3fbb048e",
+      "host": "claude",
+      "skill": "speckit-archive-cleanup",
+      "query": "prepare the cleanup branch and cleanup PR that archives SPEC-022 after merge",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-d9081866474fe660e42b806f",
+      "host": "claude",
+      "skill": "speckit-archive-cleanup",
+      "query": "which specs are blocked and what phase is SPEC-013 on right now?",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-52b8592c37420e6b103b4e40",
+      "host": "claude",
+      "skill": "speckit-archive-cleanup",
+      "query": "set up SPEC-020 from the technical roadmap with a worktree and a workflow file",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-9e5a1c796896e34f2bb511b5",
+      "host": "claude",
+      "skill": "speckit-archive-cleanup",
+      "query": "run autopilot for SPEC-018 and let its startup sweep handle whatever it finds",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-4a0f08dc0df2120532be7aab",
+      "host": "claude",
+      "skill": "speckit-archive-cleanup",
+      "query": "prune the local git branches that have already been merged into main",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-aef99016cc6f188150546516",
+      "host": "claude",
+      "skill": "speckit-archive-cleanup",
+      "query": "fix the review comments on PR #42 and resolve the open threads",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-5a7aecfae471b42d10040af7",
+      "host": "claude",
+      "skill": "speckit-autopilot",
+      "query": "/speckit-pro:speckit-autopilot — use this skill for its documented purpose in this repository.",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-deac4e90fde05648eb16cc2b",
+      "host": "claude",
+      "skill": "speckit-autopilot",
+      "query": "ok so I've got the workflow file populated for SPEC-013 at docs/ai/specs/SPEC-013-workflow.md and all the prompts look good. can you kick off the autonomous execution? I want all 7 phases with auto-commits",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-39fc68a2eb3012f182f728f1",
+      "host": "claude",
+      "skill": "speckit-autopilot",
+      "query": "run autopilot on the SPEC-027 workflow. the file is at docs/ai/specs/027-calendar-sync/SPEC-027-workflow.md. I already filled in all the phase prompts and the constitution is set up",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-7e52036a70518ffd85719a02",
+      "host": "claude",
+      "skill": "speckit-autopilot",
+      "query": "I need you to execute the full speckit workflow autonomously. here's the workflow file: /path/to/project/docs/ai/specs/SPEC-004-workflow.md — go through specify, clarify, plan, checklist, tasks, analyze, and implement with gate validation between each phase",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-a0ce776ede5aa77b00b1e2f5",
+      "host": "claude",
+      "skill": "speckit-autopilot",
+      "query": "I'm confused about how the consensus protocol works. when does it trigger during a phase and how many agents need to agree? can you explain the voting mechanism?",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-8f8733dcb32a547941b2c8e5",
+      "host": "claude",
+      "skill": "speckit-autopilot",
+      "query": "help me set up speckit for a new project. I need to run specify init and configure the constitution for our team's coding standards",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-1414e8a72877471f5f8662bc",
+      "host": "claude",
+      "skill": "speckit-autopilot",
+      "query": "what's the status of SPEC-014? I want to see which phases have passed their gates and which are still pending",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-1ae87ba8e1fb8f4665f3598f",
+      "host": "claude",
+      "skill": "speckit-autopilot",
+      "query": "can you review the PR for SPEC-008 and resolve the review threads? the PR number is #42 on the racecraft/omnifocus-mcp repo",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-af00346e565cc52ea9ce040d",
+      "host": "claude",
+      "skill": "speckit-autopilot",
+      "query": "write a unit test for the createTask primitive. it should mock executeOmniJS and verify the script template is correct",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-942ec5e6b8b77d42daab8f9f",
+      "host": "claude",
+      "skill": "speckit-autopilot",
+      "query": "interview me about the spec for SPEC-009. ask one question at a time with your recommended answer so I can agree or push back",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-935a5b8792ea3b0eca671f1c",
+      "host": "claude",
+      "skill": "speckit-coach",
+      "query": "/speckit-pro:speckit-coach — use this skill for its documented purpose in this repository.",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-baff0f64e306ae33f07aebff",
+      "host": "claude",
+      "skill": "speckit-coach",
+      "query": "I'm starting a new project and want to use SDD. can you walk me through the methodology from scratch? I've never used speckit before but I installed the CLI already",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-affe83e821f3124596f7dc53",
+      "host": "claude",
+      "skill": "speckit-coach",
+      "query": "can you run the coach and fix up this existing speckit-pro project so our template customizations survive specify cli upgrades?",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-963d9e2d42352a31a6ab6f6f",
+      "host": "claude",
+      "skill": "speckit-coach",
+      "query": "I want to install the archive extension and wire it up so it runs automatically after every implement phase. can you walk me through the install command and the hook configuration?",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-54153abe183c78292b6899e4",
+      "host": "claude",
+      "skill": "speckit-coach",
+      "query": "how is the roadmap home note / Map of Content structured? I want to understand the curated epics zone vs the generated INDEX zone and whether I can edit the INDEX by hand",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-2f76b857a02b52d10a584dde",
+      "host": "claude",
+      "skill": "speckit-coach",
+      "query": "Should we use a focused formal model for lease ownership, or do ordinary tests cover it? Explain Apalache, TLC and optional Quint in SpecKit.",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-33894900cf23527d5473b114",
+      "host": "claude",
+      "skill": "speckit-coach",
+      "query": "interview me about this raw client brief and walk every branch of the design tree before I commit to a spec. ask one question at a time with your recommended answer first",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-ad1d95c2e404fc99786372b2",
+      "host": "claude",
+      "skill": "speckit-coach",
+      "query": "Run the selected formal checks and resume the autopilot workflow from its planning checkpoint now.",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-e7f990454c5db6aa817152fa",
+      "host": "claude",
+      "skill": "speckit-coach",
+      "query": "set up biome linting for the project. I need to configure the rules for TypeScript strict mode and add a pre-commit hook",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-4bac3330ea06c209d0d9acb3",
+      "host": "claude",
+      "skill": "speckit-coach",
+      "query": "review PR #42 on the omnifocus-mcp repo and leave inline comments on any issues you find. focus on the OmniJS script correctness",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-9205270bf43c3a9380062e33",
+      "host": "claude",
+      "skill": "speckit-coach",
+      "query": "can you resolve the review threads on PR #38? the reviewer approved but the threads are still open and I can't merge",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-00a8bbb6f3f79441fa70ac4c",
+      "host": "claude",
+      "skill": "speckit-install",
+      "query": "/speckit-pro:speckit-install — use this skill for its documented purpose in this repository.",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-900dbdddad794aa7df8e962e",
+      "host": "claude",
+      "skill": "speckit-install",
+      "query": "set up the SpecKit CLI and initialize this project for Claude Code integration",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-c5896af637d360c2d0d29fbf",
+      "host": "claude",
+      "skill": "speckit-install",
+      "query": "I want to add speckit to this project with both claude and codex integrations side-by-side",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-a4469ad953b9dd67e4f576f5",
+      "host": "claude",
+      "skill": "speckit-install",
+      "query": "initialize this repo for spec-kit, codex integration only with skills mode",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-30b5179c2365bad417354829",
+      "host": "claude",
+      "skill": "speckit-install",
+      "query": "upgrade my existing speckit installation from 0.6.1 to the latest 0.8.13",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-0a1fc6035097d93abfdc713f",
+      "host": "claude",
+      "skill": "speckit-install",
+      "query": "scaffold spec SPEC-009 from the technical roadmap so it's ready for autopilot",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-1b43ca2d753dec02b20c5e17",
+      "host": "claude",
+      "skill": "speckit-install",
+      "query": "install the bundled SpecKit Pro Codex subagents into ~/.codex/agents",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-b7bc1bf1232593bcbd509086",
+      "host": "claude",
+      "skill": "speckit-install",
+      "query": "walk me through SDD methodology from the beginning — I'm new to spec-driven development",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-af442b449f2a5464a8c2bd92",
+      "host": "claude",
+      "skill": "speckit-install",
+      "query": "run autopilot on the populated workflow at docs/ai/specs/SPEC-013-workflow.md, all 7 phases with gate validation",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-df67d528746171539e327666",
+      "host": "claude",
+      "skill": "speckit-install",
+      "query": "fix the TypeScript build error in src/tools/primitives/tasks.ts — Zod schema discriminated-union issue",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-570730fce95ef16c144e84d9",
+      "host": "claude",
+      "skill": "speckit-prd",
+      "query": "/speckit-pro:speckit-prd — use this skill for its documented purpose in this repository.",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-4915f774bc8a859f2e734b89",
+      "host": "claude",
+      "skill": "speckit-prd",
+      "query": "write a PRD for adding saved searches with email alerts to our app, and the technical roadmap to build it",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-5454be96cf5aae55a8a0e754",
+      "host": "claude",
+      "skill": "speckit-prd",
+      "query": "create a product requirements document for a referral program, then decompose it into a SPEC catalog I can scaffold from",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-d296681cfbdd724b554429f6",
+      "host": "claude",
+      "skill": "speckit-prd",
+      "query": "shape this brief into a PRD and decompose it into a SPEC catalog: a team workspace with shared dashboards and role-based access",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-455a508685648795f9f32b25",
+      "host": "claude",
+      "skill": "speckit-prd",
+      "query": "grill me on SPEC-012 before /speckit-specify — produce a design concept doc by walking the design tree, recommended answer first",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-128250e86eb1da7d5dda584a",
+      "host": "claude",
+      "skill": "speckit-prd",
+      "query": "I already have a PRD at docs/prd.md — help me decompose it into a technical roadmap and track dependencies between specs",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-7249dfe045878b493906b5ff",
+      "host": "claude",
+      "skill": "speckit-prd",
+      "query": "set up SPEC-018 for me — read the technical roadmap, create a worktree, populate the workflow file",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-dbd346d2aa33919dbe697e4b",
+      "host": "claude",
+      "skill": "speckit-prd",
+      "query": "run autopilot on the SPEC-027 workflow at docs/ai/specs/SPEC-027-workflow.md — all phase prompts are filled in",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-a9dc0ca3e065197d44eebe9a",
+      "host": "claude",
+      "skill": "speckit-prd",
+      "query": "where am I in the workflow and what's the next pending spec I should work on?",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-80c2c690ece16af5a59c42d4",
+      "host": "claude",
+      "skill": "speckit-prd",
+      "query": "fix the TypeScript build error in src/tools/primitives/tasks.ts — the Zod schema is using z.union instead of z.discriminatedUnion",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-b9d6d87334d3a0a3a8d9eefe",
+      "host": "claude",
+      "skill": "speckit-resolve-pr",
+      "query": "/speckit-pro:speckit-resolve-pr — use this skill for its documented purpose in this repository.",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-a32fd171b86e37cc8f216dab",
+      "host": "claude",
+      "skill": "speckit-resolve-pr",
+      "query": "resolve the review comments on PR #42, push the fixes, and close the open threads",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-7f5ef95781eb41dfa1db939c",
+      "host": "claude",
+      "skill": "speckit-resolve-pr",
+      "query": "address all unresolved feedback on https://github.com/owner/repo/pull/46 and mark the review threads resolved after verification",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-859dc0c6738e8c654ee107c8",
+      "host": "claude",
+      "skill": "speckit-resolve-pr",
+      "query": "I need you to fix the code review comments on the current pull request branch and reply to each thread with what changed",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-4ac6cd0ab215d6cde6dd3b7c",
+      "host": "claude",
+      "skill": "speckit-resolve-pr",
+      "query": "show me the current roadmap progress and tell me which spec to start next",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-996e4dda8f9ad105447b7fa1",
+      "host": "claude",
+      "skill": "speckit-resolve-pr",
+      "query": "set up SPEC-009 so it's ready for autopilot",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-9294e4271f55015b3612ab45",
+      "host": "claude",
+      "skill": "speckit-resolve-pr",
+      "query": "run the autopilot workflow at docs/ai/specs/SPEC-009-workflow.md",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-204dad69b45b20b6dde6c1c3",
+      "host": "claude",
+      "skill": "speckit-resolve-pr",
+      "query": "walk me through how SpecKit clarify works",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-4740bfa4ac61e841dc957af9",
+      "host": "claude",
+      "skill": "speckit-scaffold-spec",
+      "query": "/speckit-pro:speckit-scaffold-spec — use this skill for its documented purpose in this repository.",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-f9b778d66e73a37edc74e401",
+      "host": "claude",
+      "skill": "speckit-scaffold-spec",
+      "query": "set up SPEC-009 from the technical roadmap so it's ready for autopilot. I need the worktree, branch, and workflow file created",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-de6659f46cfce476486433df",
+      "host": "claude",
+      "skill": "speckit-scaffold-spec",
+      "query": "I need a workflow file generated for SPEC-031 and pushed on its own worktree branch before I run the autopilot",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-d16cdf4dc3cb5d1e7257e77e",
+      "host": "claude",
+      "skill": "speckit-scaffold-spec",
+      "query": "scaffold SPEC-027 from the roadmap and open with a blind spot pass first, so I see the hidden coupling and unstated assumptions the roadmap author missed before the interview starts",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-343fa4a245154eceb6439a30",
+      "host": "claude",
+      "skill": "speckit-scaffold-spec",
+      "query": "set up SPEC-033 on its own branch and then chain straight into planning once I confirm, so it is one invocation instead of two",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-3180fd546a4cbe98225a8c07",
+      "host": "claude",
+      "skill": "speckit-scaffold-spec",
+      "query": "show me the current roadmap status and which spec is unblocked next",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-9a47fff73fc662c9084b3406",
+      "host": "claude",
+      "skill": "speckit-scaffold-spec",
+      "query": "run the fully populated workflow at docs/ai/specs/SPEC-009-workflow.md through all 7 phases",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-ed0fb7ddd5c6c304ff8a2b66",
+      "host": "claude",
+      "skill": "speckit-scaffold-spec",
+      "query": "resolve the review comments on PR #42 and push the fixes",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-21bba56ea72d2e3cdd830723",
+      "host": "claude",
+      "skill": "speckit-scaffold-spec",
+      "query": "walk me through Spec-Driven Development from scratch",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-305e6c2f18cd2d68ce6ca795",
+      "host": "claude",
+      "skill": "speckit-scaffold-spec",
+      "query": "SPEC-016 already has a committed workflow file with every prompt filled in, so resume it at the planning phase and run the plan stage against that existing file",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-d714c484e5bbf90475418772",
+      "host": "claude",
+      "skill": "speckit-scaffold-spec",
+      "query": "draft the implementation plan for SPEC-016; the spec already exists",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-09a699966be8b41d819c8c5d",
+      "host": "claude",
+      "skill": "speckit-status",
+      "query": "/speckit-pro:speckit-status — use this skill for its documented purpose in this repository.",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-0577cdd5b238a263dd1a9582",
+      "host": "claude",
+      "skill": "speckit-status",
+      "query": "show roadmap status for the project and tell me which spec is unblocked next",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-5ef0a3f38bf2edec9de8e886",
+      "host": "claude",
+      "skill": "speckit-status",
+      "query": "status of SPEC-013 please. I need to know which phases are complete and what the next phase is",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-2ff57a86cbe887aa50d95a88",
+      "host": "claude",
+      "skill": "speckit-status",
+      "query": "list all active worktrees and which specs they belong to",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-dd79f823901ee4a40b3e5c0c",
+      "host": "claude",
+      "skill": "speckit-status",
+      "query": "set up SPEC-009 from the technical roadmap for autopilot",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-83e2dd130e6878386fe6474b",
+      "host": "claude",
+      "skill": "speckit-status",
+      "query": "run the workflow at docs/ai/specs/SPEC-013-workflow.md through all 7 phases",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-845c85015ecd7e7185c94b34",
+      "host": "claude",
+      "skill": "speckit-status",
+      "query": "fix the review comments on PR #42 and resolve the threads",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-eb3cf1e6f26f8f274b8c1001",
+      "host": "claude",
+      "skill": "speckit-status",
+      "query": "explain the consensus protocol and how the voting works",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-d5a62e8d525c6057082fa220",
+      "host": "claude",
+      "skill": "speckit-upgrade",
+      "query": "/speckit-pro:speckit-upgrade — use this skill for its documented purpose in this repository.",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-d8ec3f8d78d8af7428b77e6d",
+      "host": "claude",
+      "skill": "speckit-upgrade",
+      "query": "run specify integration upgrade for both claude and codex — preserve my customizations",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-1985e2823a623ce75edb4722",
+      "host": "claude",
+      "skill": "speckit-upgrade",
+      "query": "upgrade speckit and migrate this repo from slash-commands mode to skills mode",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-f1b4e1f49201ab7a96bf966c",
+      "host": "claude",
+      "skill": "speckit-upgrade",
+      "query": "the spec-kit upgrade is blocked because of modified files — help me upgrade safely with my constitution intact",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-c18fcc37030d2dd029c6b293",
+      "host": "claude",
+      "skill": "speckit-upgrade",
+      "query": "install speckit in this empty repo — there is no .specify/ directory yet",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-6a43f8d405b95ee268945440",
+      "host": "claude",
+      "skill": "speckit-upgrade",
+      "query": "scaffold spec SPEC-007 for autopilot execution from the technical roadmap",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-e76897ec42591baaf72a123b",
+      "host": "claude",
+      "skill": "speckit-upgrade",
+      "query": "install the bundled SpecKit Pro Codex subagents into ~/.codex/agents",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-2cc91a9c020da6ffa0e79401",
+      "host": "claude",
+      "skill": "speckit-upgrade",
+      "query": "walk me through SDD methodology — I want to understand spec-driven development",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-96f13ba82f3e21e2028a4d8f",
+      "host": "claude",
+      "skill": "speckit-upgrade",
+      "query": "run autopilot on the populated workflow at docs/ai/specs/SPEC-013-workflow.md",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-394ae629fb36413dd460776e",
+      "host": "claude",
+      "skill": "speckit-upgrade",
+      "query": "fix the TypeScript build error in src/tools/primitives/tasks.ts",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-eaaeee07556a1b42a64a3e32",
+      "host": "claude",
+      "skill": "ubiquitous-language",
+      "query": "/speckit-pro:ubiquitous-language — use this skill for its documented purpose in this repository.",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-25291e60ffad5482c1ddb978",
+      "host": "claude",
+      "skill": "ubiquitous-language",
+      "query": "define the domain terms for this repo in a glossary the agents can read before designing",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-22775a4987fcc9018971ac9d",
+      "host": "claude",
+      "skill": "ubiquitous-language",
+      "query": "our spec says 'account' but the code says 'tenant'; pin the terms and reconcile the names",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-022b2fb2413679d3b84f1e2f",
+      "host": "claude",
+      "skill": "ubiquitous-language",
+      "query": "run the ubiquitous-language lint on my branch and tell me which new identifiers map to no term",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-3c0af3ed67b3bfb98c99419d",
+      "host": "claude",
+      "skill": "ubiquitous-language",
+      "query": "grill me on SPEC-012 before /speckit-specify and produce a design concept doc",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-964bfd3fb0e315e88acd2bfb",
+      "host": "claude",
+      "skill": "ubiquitous-language",
+      "query": "write a PRD for adding saved searches with email alerts and the technical roadmap to build it",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-3503ea3deadb6824a0c4ad29",
+      "host": "claude",
+      "skill": "ubiquitous-language",
+      "query": "walk me through spec-driven development and explain the gates",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-b6039a4672c439fd1a4f990e",
+      "host": "claude",
+      "skill": "ubiquitous-language",
+      "query": "scaffold SPEC-004 from the technical roadmap into a worktree",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-706dfcf9ffa8f4c4b52ed617",
+      "host": "claude",
+      "skill": "ubiquitous-language",
+      "query": "translate this README into Spanish",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-b593bfa6a302a758db814c9b",
+      "host": "claude",
+      "skill": "ubiquitous-language",
+      "query": "rename the variable foo to bar across the codebase",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-a99a20f3ddc9de6aca2d8339",
+      "host": "codex",
+      "skill": "grill-me",
+      "query": "$grill-me — use this skill for its documented purpose in this repository.",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-99fd0e6d34cc1835dec179d0",
+      "host": "codex",
+      "skill": "grill-me",
+      "query": "grill me on this client brief at docs/idea.md before /speckit-specify — produce a Design Concept doc with the full design tree walked",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-90ac903af1c695c70759fbf9",
+      "host": "codex",
+      "skill": "grill-me",
+      "query": "run grill-me on this raw idea: a leaderboard for the learning platform. produce a Design Concept doc before /speckit-specify, recommended answer first",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-8d4e1d88a73800f5a859a870",
+      "host": "codex",
+      "skill": "grill-me",
+      "query": "play the role of a relentless interviewer for the billing rewrite SpecKit spec — walk every branch of the design tree, produce a Design Concept doc before /speckit-specify",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-d15790b321fa6253739d851f",
+      "host": "codex",
+      "skill": "grill-me",
+      "query": "run autopilot on the SPEC-027 workflow. the file is at docs/ai/specs/027-calendar-sync/SPEC-027-workflow.md. I already filled in all the phase prompts and the constitution is set up",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-b8b0390a30a88611ee7b91e7",
+      "host": "codex",
+      "skill": "grill-me",
+      "query": "which checklist domains should I pick for SPEC-012? it's a REST API that handles webhook delivery with retry logic",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-aa3d1ee50d96b898f58d7825",
+      "host": "codex",
+      "skill": "grill-me",
+      "query": "set up SPEC-018 for me — read the technical roadmap, create a worktree, populate the workflow file. you know the drill",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-cbcd7ac81aae69f1400415c6",
+      "host": "codex",
+      "skill": "grill-me",
+      "query": "fix the TypeScript build error in src/tools/primitives/tasks.ts. the Zod schema is failing because I'm using z.union instead of z.discriminatedUnion",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-b66a469a22c85b01c92198e6",
+      "host": "codex",
+      "skill": "install",
+      "query": "$install — use this skill for its documented purpose in this repository.",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-e6d7dd4396cbae9b4152e502",
+      "host": "codex",
+      "skill": "install",
+      "query": "install the bundled SpecKit Pro Codex subagents into my user-scope Codex config and tell me if I need to restart",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-a22017765ee84d8405ead810",
+      "host": "codex",
+      "skill": "install",
+      "query": "refresh the SpecKit custom agents in ~/.codex/agents because autopilot says the subagents are missing",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-be010e07dcad628021134fd7",
+      "host": "codex",
+      "skill": "install",
+      "query": "copy the plugin's Codex TOML subagents into ~/.codex/agents and verify what got installed",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-3fc2ca229ae8afa5c3e42c69",
+      "host": "codex",
+      "skill": "install",
+      "query": "show the current SpecKit roadmap status and recommend the next unblocked spec",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-96b9371f287bc51e055188b9",
+      "host": "codex",
+      "skill": "install",
+      "query": "set up SPEC-009 in a worktree and populate the workflow template",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-7cc53b28d037b0d8ae31e8b0",
+      "host": "codex",
+      "skill": "install",
+      "query": "run the autopilot workflow at docs/ai/specs/SPEC-013-workflow.md",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-3c266c520021686cdf5a0387",
+      "host": "codex",
+      "skill": "speckit-archive-cleanup",
+      "query": "$speckit-archive-cleanup — use this skill for its documented purpose in this repository.",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-9e471625d79fc14bee1b80b0",
+      "host": "codex",
+      "skill": "speckit-archive-cleanup",
+      "query": "SPEC-014 merged yesterday, do the post-merge archive hygiene and take it out of active specs",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-2b1d01a1c11861992cee1556",
+      "host": "codex",
+      "skill": "speckit-archive-cleanup",
+      "query": "write the archive report for SPEC-914 with the merge commit, merged-at timestamp, and recovery commands",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-958e6801d124c42c55d2a215",
+      "host": "codex",
+      "skill": "speckit-archive-cleanup",
+      "query": "prepare the cleanup branch and cleanup PR that archives SPEC-022 after merge",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-dc37d91e7ca32b4709aa1e57",
+      "host": "codex",
+      "skill": "speckit-archive-cleanup",
+      "query": "which specs are blocked and what phase is SPEC-013 on right now?",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-08103839ebaee58c4c65b566",
+      "host": "codex",
+      "skill": "speckit-archive-cleanup",
+      "query": "set up SPEC-020 from the technical roadmap with a worktree and a workflow file",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-1670d8dad9a06fb37ac71295",
+      "host": "codex",
+      "skill": "speckit-archive-cleanup",
+      "query": "run autopilot for SPEC-018 and let its startup sweep handle whatever it finds",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-ff16a427ff3b7012ad270b08",
+      "host": "codex",
+      "skill": "speckit-archive-cleanup",
+      "query": "prune the local git branches that have already been merged into main",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-bd3e11028db5388aeed59227",
+      "host": "codex",
+      "skill": "speckit-archive-cleanup",
+      "query": "fix the review comments on PR #42 and resolve the open threads",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-9805362f4b65da729e36873d",
+      "host": "codex",
+      "skill": "speckit-autopilot",
+      "query": "$speckit-autopilot — use this skill for its documented purpose in this repository.",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-665006a449adc9210a19664f",
+      "host": "codex",
+      "skill": "speckit-autopilot",
+      "query": "ok so I've got the workflow file populated for SPEC-013 at docs/ai/specs/SPEC-013-workflow.md and all the prompts look good. can you kick off the autonomous execution? I want all 7 phases with auto-commits",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-c0ab0ac893d7515042e07330",
+      "host": "codex",
+      "skill": "speckit-autopilot",
+      "query": "run autopilot on the SPEC-027 workflow. the file is at docs/ai/specs/027-calendar-sync/SPEC-027-workflow.md. I already filled in all the phase prompts and the constitution is set up",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-c44ef84d0fda5f2579fe88b8",
+      "host": "codex",
+      "skill": "speckit-autopilot",
+      "query": "I need you to execute the full speckit workflow autonomously. here's the workflow file: docs/ai/specs/SPEC-004-workflow.md — go through specify, clarify, plan, checklist, tasks, analyze, and implement with gate validation between each phase",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-49ee1454a6e301cb0f365c42",
+      "host": "codex",
+      "skill": "speckit-autopilot",
+      "query": "I'm confused about how the consensus protocol works. when does it trigger during a phase and how many agents need to agree? can you explain the voting mechanism?",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-90d5eb1d0a95870dc25ab2b1",
+      "host": "codex",
+      "skill": "speckit-autopilot",
+      "query": "help me set up speckit for a new project. I need to run specify init and configure the constitution for our team's coding standards",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-81889cea4170331cb68f30d6",
+      "host": "codex",
+      "skill": "speckit-autopilot",
+      "query": "what's the status of SPEC-014? I want to see which phases have passed their gates and which are still pending",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-b4153617efea0595682c3823",
+      "host": "codex",
+      "skill": "speckit-autopilot",
+      "query": "can you review the PR for SPEC-008 and resolve the review threads? the PR number is #42 on the racecraft/omnifocus-mcp repo",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-f714040c928fadaabb26eab2",
+      "host": "codex",
+      "skill": "speckit-autopilot",
+      "query": "write a unit test for the createTask primitive. it should mock executeOmniJS and verify the script template is correct",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-b77a90eb7cda6924e3f79b02",
+      "host": "codex",
+      "skill": "speckit-autopilot",
+      "query": "interview me about the spec for SPEC-009 — I want to walk every branch of the design tree before we run autopilot",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-f726b00e7bb74f2fdcf00dfd",
+      "host": "codex",
+      "skill": "speckit-coach",
+      "query": "$speckit-coach — use this skill for its documented purpose in this repository.",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-c69bffdb11501c3400d9e94a",
+      "host": "codex",
+      "skill": "speckit-coach",
+      "query": "I'm starting a new project and want to use SDD. can you walk me through the methodology from scratch? I've never used speckit before but I installed the CLI already",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-d5c5adeb37f861408bef8df5",
+      "host": "codex",
+      "skill": "speckit-coach",
+      "query": "can you run the coach and fix up this existing speckit-pro project so our template customizations survive specify cli upgrades?",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-ac3d5448153065c9d041e106",
+      "host": "codex",
+      "skill": "speckit-coach",
+      "query": "I want to install the archive extension and wire it up so it runs automatically after every implement phase. can you walk me through the install command and the hook configuration?",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-081bc9106d8ac988226669e8",
+      "host": "codex",
+      "skill": "speckit-coach",
+      "query": "how is the roadmap home note / Map of Content structured? I want to understand the curated epics zone vs the generated INDEX zone and whether I can edit the INDEX by hand",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-f5cf17edc0e8db71d14cbbd4",
+      "host": "codex",
+      "skill": "speckit-coach",
+      "query": "Should we use a focused formal model for lease ownership, or do ordinary tests cover it? Explain Apalache, TLC and optional Quint in SpecKit.",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-10f06301e7f49540f8ffa382",
+      "host": "codex",
+      "skill": "speckit-coach",
+      "query": "interview me about the new search feature one question at a time with your recommended answer for each",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-f59147c3988760c18cf94ba0",
+      "host": "codex",
+      "skill": "speckit-coach",
+      "query": "Run the selected formal checks and resume the autopilot workflow from its planning checkpoint now.",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-ab33d6130982a0642d5e9c4d",
+      "host": "codex",
+      "skill": "speckit-coach",
+      "query": "what's the current git status? I want to see if there are any uncommitted changes before I start the next feature",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-b628ec78f72d568948ac964b",
+      "host": "codex",
+      "skill": "speckit-coach",
+      "query": "review PR #42 on the omnifocus-mcp repo and leave inline comments on any issues you find. focus on the OmniJS script correctness",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-6678b0e0e63de4c6383b1094",
+      "host": "codex",
+      "skill": "speckit-coach",
+      "query": "can you resolve the review threads on PR #38? the reviewer approved but the threads are still open and I can't merge",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-81aeb7578dda769ffbe338a2",
+      "host": "codex",
+      "skill": "speckit-install",
+      "query": "$speckit-install — use this skill for its documented purpose in this repository.",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-932a81115e8b0e7910e74106",
+      "host": "codex",
+      "skill": "speckit-install",
+      "query": "set up the SpecKit CLI and initialize this project for Claude Code integration",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-52c8092ced2ece3f969e98b7",
+      "host": "codex",
+      "skill": "speckit-install",
+      "query": "I want to add speckit to this project with both claude and codex integrations side-by-side",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-29c9a70d81736021cd3e3fc2",
+      "host": "codex",
+      "skill": "speckit-install",
+      "query": "initialize this repo for spec-kit, codex integration only with skills mode",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-8263daf18f853a7e21b5fa9b",
+      "host": "codex",
+      "skill": "speckit-install",
+      "query": "upgrade my existing speckit installation from 0.6.1 to the latest 0.8.13",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-c8c663381af2a110e0e5b211",
+      "host": "codex",
+      "skill": "speckit-install",
+      "query": "scaffold spec SPEC-009 from the technical roadmap so it's ready for autopilot",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-1b79461d58e7889e96bae039",
+      "host": "codex",
+      "skill": "speckit-install",
+      "query": "install the bundled SpecKit Pro Codex subagents into ~/.codex/agents",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-edbe91195d94b96acbc97062",
+      "host": "codex",
+      "skill": "speckit-install",
+      "query": "walk me through SDD methodology from the beginning — I'm new to spec-driven development",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-18e4bfad8b0542a6fbaf6fb9",
+      "host": "codex",
+      "skill": "speckit-install",
+      "query": "run autopilot on the populated workflow at docs/ai/specs/SPEC-013-workflow.md, all 7 phases with gate validation",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-1e8538a2a71dbd8a2b65b3bd",
+      "host": "codex",
+      "skill": "speckit-install",
+      "query": "fix the TypeScript build error in src/tools/primitives/tasks.ts — Zod schema discriminated-union issue",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-9169748857cdde9f8a8736ce",
+      "host": "codex",
+      "skill": "speckit-prd",
+      "query": "$speckit-prd — use this skill for its documented purpose in this repository.",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-792b7d9befee78f86169d7af",
+      "host": "codex",
+      "skill": "speckit-prd",
+      "query": "write a PRD for adding saved searches with email alerts to our app, and the technical roadmap to build it",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-2134062a79a778106d45f817",
+      "host": "codex",
+      "skill": "speckit-prd",
+      "query": "create a product requirements document for a referral program, then decompose it into a SPEC catalog I can scaffold from",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-532856b341322193305258e8",
+      "host": "codex",
+      "skill": "speckit-prd",
+      "query": "shape this brief into a PRD and decompose it into a SPEC catalog: a team workspace with shared dashboards and role-based access",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-9571304897a20e7b32fcc9f6",
+      "host": "codex",
+      "skill": "speckit-prd",
+      "query": "grill me on SPEC-012 before /speckit-specify — produce a design concept doc by walking the design tree, recommended answer first",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-bdf6d15b9b9caa15c16ee7fa",
+      "host": "codex",
+      "skill": "speckit-prd",
+      "query": "I already have a PRD at docs/prd.md — help me decompose it into a technical roadmap and track dependencies between specs",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-144291b4af4d5fe2bd29cd6e",
+      "host": "codex",
+      "skill": "speckit-prd",
+      "query": "set up SPEC-018 for me — read the technical roadmap, create a worktree, populate the workflow file",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-a0abe09f1e81cdb4084353dd",
+      "host": "codex",
+      "skill": "speckit-prd",
+      "query": "run autopilot on the SPEC-027 workflow at docs/ai/specs/SPEC-027-workflow.md — all phase prompts are filled in",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-15920842a9ff5c1f0746c60d",
+      "host": "codex",
+      "skill": "speckit-prd",
+      "query": "where am I in the workflow and what's the next pending spec I should work on?",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-6188ff37a582290b933c94a1",
+      "host": "codex",
+      "skill": "speckit-prd",
+      "query": "fix the TypeScript build error in src/tools/primitives/tasks.ts — the Zod schema is using z.union instead of z.discriminatedUnion",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-6e4681297ca5f345f08f7675",
+      "host": "codex",
+      "skill": "speckit-resolve-pr",
+      "query": "$speckit-resolve-pr — use this skill for its documented purpose in this repository.",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-0cec199292fa7972b59d69ce",
+      "host": "codex",
+      "skill": "speckit-resolve-pr",
+      "query": "resolve the review comments on PR #42, push the fixes, and close the open threads",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-7251c588e50d605c4d5da1b7",
+      "host": "codex",
+      "skill": "speckit-resolve-pr",
+      "query": "address all unresolved feedback on https://github.com/owner/repo/pull/46 and mark the review threads resolved after verification",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-fdda5f764e2af5119a70b96b",
+      "host": "codex",
+      "skill": "speckit-resolve-pr",
+      "query": "I need you to fix the code review comments on the current pull request branch and reply to each thread with what changed",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-503830fbb7e0d5388a54bdcf",
+      "host": "codex",
+      "skill": "speckit-resolve-pr",
+      "query": "show me the current roadmap progress and tell me which spec to start next",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-6042e8c29601a158147140ed",
+      "host": "codex",
+      "skill": "speckit-resolve-pr",
+      "query": "set up SPEC-009 so it's ready for autopilot",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-84908096a4acaa4ee60d162e",
+      "host": "codex",
+      "skill": "speckit-resolve-pr",
+      "query": "run the autopilot workflow at docs/ai/specs/SPEC-009-workflow.md",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-2f389b4626016123fac45fa0",
+      "host": "codex",
+      "skill": "speckit-resolve-pr",
+      "query": "walk me through how SpecKit clarify works",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-2e963b14632c7bfd9a74d521",
+      "host": "codex",
+      "skill": "speckit-scaffold-spec",
+      "query": "$speckit-scaffold-spec — use this skill for its documented purpose in this repository.",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-c65e31ca89497545993faa3a",
+      "host": "codex",
+      "skill": "speckit-scaffold-spec",
+      "query": "set up SPEC-009 from the technical roadmap so it's ready for autopilot. I need the worktree, branch, and workflow file created",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-be67b597dabc59aa27e1ea35",
+      "host": "codex",
+      "skill": "speckit-scaffold-spec",
+      "query": "I need a workflow file generated for SPEC-031 and pushed on its own worktree branch before I run the autopilot",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-fb2ccc188771f641da8f4d8c",
+      "host": "codex",
+      "skill": "speckit-scaffold-spec",
+      "query": "scaffold SPEC-027 from the roadmap and open with a blind spot pass first, so I see the hidden coupling and unstated assumptions the roadmap author missed before the interview starts",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-69b0af81d718aa91a09142da",
+      "host": "codex",
+      "skill": "speckit-scaffold-spec",
+      "query": "set up SPEC-033 on its own branch and then chain straight into planning once I confirm, so it is one invocation instead of two",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-67b13af62eddf0b9c34d5ac7",
+      "host": "codex",
+      "skill": "speckit-scaffold-spec",
+      "query": "show me the current roadmap status and which spec is unblocked next",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-3089e8c2ac8e7ad72b47e08b",
+      "host": "codex",
+      "skill": "speckit-scaffold-spec",
+      "query": "run the fully populated workflow at docs/ai/specs/SPEC-009-workflow.md through all 7 phases",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-8db2a5446314ffe2980dbb40",
+      "host": "codex",
+      "skill": "speckit-scaffold-spec",
+      "query": "resolve the review comments on PR #42 and push the fixes",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-ad09a631ff8f30136bf51201",
+      "host": "codex",
+      "skill": "speckit-scaffold-spec",
+      "query": "walk me through Spec-Driven Development from scratch",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-c4cccbbe481c35505ced5a55",
+      "host": "codex",
+      "skill": "speckit-scaffold-spec",
+      "query": "SPEC-016 already has a committed workflow file with every prompt filled in, so resume it at the planning phase and run the plan stage against that existing file",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-1e585e86e80f3f115cce92d3",
+      "host": "codex",
+      "skill": "speckit-scaffold-spec",
+      "query": "draft the implementation plan for SPEC-016; the spec already exists",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-2c65e376b7a21d0a7e586d0a",
+      "host": "codex",
+      "skill": "speckit-status",
+      "query": "$speckit-status — use this skill for its documented purpose in this repository.",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-4ae3419a8370afafc55a1d23",
+      "host": "codex",
+      "skill": "speckit-status",
+      "query": "show roadmap status for the project and tell me which spec is unblocked next",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-34cd372564fd862738e0a297",
+      "host": "codex",
+      "skill": "speckit-status",
+      "query": "status of SPEC-013 please. I need to know which phases are complete and what the next phase is",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-7ccff2b4273a86f2318f8176",
+      "host": "codex",
+      "skill": "speckit-status",
+      "query": "list all active worktrees and which specs they belong to",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-512f21d3ca610513814a0558",
+      "host": "codex",
+      "skill": "speckit-status",
+      "query": "set up SPEC-009 from the technical roadmap for autopilot",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-a3226468c307a07e8fbd7421",
+      "host": "codex",
+      "skill": "speckit-status",
+      "query": "run the workflow at docs/ai/specs/SPEC-013-workflow.md through all 7 phases",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-e3905d147fc5d5994cc34ed6",
+      "host": "codex",
+      "skill": "speckit-status",
+      "query": "fix the review comments on PR #42 and resolve the threads",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-357e73414598ec9d926fb601",
+      "host": "codex",
+      "skill": "speckit-status",
+      "query": "explain the consensus protocol and how the voting works",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-ae7f5640f7f40f5d88e59483",
+      "host": "codex",
+      "skill": "speckit-upgrade",
+      "query": "$speckit-upgrade — use this skill for its documented purpose in this repository.",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-66b3c5127dd316e340669bf7",
+      "host": "codex",
+      "skill": "speckit-upgrade",
+      "query": "run specify integration upgrade for both claude and codex — preserve my customizations",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-acc1cc17015857e89b4f8cab",
+      "host": "codex",
+      "skill": "speckit-upgrade",
+      "query": "upgrade speckit and migrate this repo from slash-commands mode to skills mode",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-9e6ecd969eb83a5cc6c613ac",
+      "host": "codex",
+      "skill": "speckit-upgrade",
+      "query": "the spec-kit upgrade is blocked because of modified files — help me upgrade safely with my constitution intact",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-a8a4a26530c498ecdc764026",
+      "host": "codex",
+      "skill": "speckit-upgrade",
+      "query": "install speckit in this empty repo — there is no .specify/ directory yet",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-338e4fe360ff09302791d438",
+      "host": "codex",
+      "skill": "speckit-upgrade",
+      "query": "scaffold spec SPEC-007 for autopilot execution from the technical roadmap",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-16c455c0a4f2da6c3070aaee",
+      "host": "codex",
+      "skill": "speckit-upgrade",
+      "query": "install the bundled SpecKit Pro Codex subagents into ~/.codex/agents",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-1bee9a3d36b9fef8f6afa03b",
+      "host": "codex",
+      "skill": "speckit-upgrade",
+      "query": "walk me through SDD methodology — I want to understand spec-driven development",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-62c5b811d554de270aa40101",
+      "host": "codex",
+      "skill": "speckit-upgrade",
+      "query": "run autopilot on the populated workflow at docs/ai/specs/SPEC-013-workflow.md",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-f533d4d365c59d56f3153fac",
+      "host": "codex",
+      "skill": "speckit-upgrade",
+      "query": "fix the TypeScript build error in src/tools/primitives/tasks.ts",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-395a113fccccba23a8db46a6",
+      "host": "codex",
+      "skill": "ubiquitous-language",
+      "query": "$ubiquitous-language — use this skill for its documented purpose in this repository.",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-abf679658f467ef1a95c52e6",
+      "host": "codex",
+      "skill": "ubiquitous-language",
+      "query": "define the domain terms for this repo in a glossary the agents can read before designing",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-c8052075dd354dd01ea39350",
+      "host": "codex",
+      "skill": "ubiquitous-language",
+      "query": "our spec says 'account' but the code says 'tenant'; pin the terms and reconcile the names",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-f551d23b00317af59450a974",
+      "host": "codex",
+      "skill": "ubiquitous-language",
+      "query": "run the ubiquitous-language lint on my branch and tell me which new identifiers map to no term",
+      "should_trigger": true
+    },
+    {
+      "case_id": "l2-44dbf53c5bab671cae8c2054",
+      "host": "codex",
+      "skill": "ubiquitous-language",
+      "query": "grill me on SPEC-012 before /speckit-specify and produce a design concept doc",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-3669862b5d846a38792614ae",
+      "host": "codex",
+      "skill": "ubiquitous-language",
+      "query": "write a PRD for adding saved searches with email alerts and the technical roadmap to build it",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-d255cd42f0891be98e7a9b7f",
+      "host": "codex",
+      "skill": "ubiquitous-language",
+      "query": "walk me through spec-driven development and explain the gates",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-e984b7b2364a596c91b4c1df",
+      "host": "codex",
+      "skill": "ubiquitous-language",
+      "query": "scaffold SPEC-004 from the technical roadmap into a worktree",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-dee9bf029d72ae98cf8e9692",
+      "host": "codex",
+      "skill": "ubiquitous-language",
+      "query": "translate this README into Spanish",
+      "should_trigger": false
+    },
+    {
+      "case_id": "l2-ccb4548c7d8d04cf30fe37bf",
+      "host": "codex",
+      "skill": "ubiquitous-language",
+      "query": "rename the variable foo to bar across the codebase",
+      "should_trigger": false
+    }
+  ],
+  "corpus_sha256": "cf8012f5ace4c78ba52a106d57e0063868e714d023ebb840b1e9661ca9ab925e",
+  "inventory_sha256": "0dfbf5670912e7806c7b588394c7ffd25d1ab8dc01acca1a9263f9df2151bdf1",
+  "pins": {
+    "claude": {
+      "model": "claude-sonnet-5",
+      "cli_version": "2.1.269 (Claude Code)"
+    },
+    "codex": {
+      "model": "gpt-5.6-sol",
+      "cli_version": "codex-cli 0.153.3"
+    }
+  },
+  "identities": {
+    "observer": "bbd2c580f316452ee3fb5b67d464aa397c8c0b20e4fe6f6e3622c69599539674",
+    "catalog": "1122d2fd60a0991c70559bae36a1af49993533afc14d598b9603f03994a85e01",
+    "fixture": "1253f805565b41bd894bbed3ee202d2c476ef8537584aa043f794ccea4ce07ba"
+  },
+  "controlled_difference": {
+    "path": "NO_SPECKIT_SKILL_DESCRIPTION",
+    "baseline_sha256": "49efb809edca1849750ecffdc59ae78c64f0b3f23c469b2e38f7572c74bd1844",
+    "candidate_sha256": "a4572888c5e2ccbc1d052be89ec4dde453ab3d09c3630006523a07aba43c21e8"
+  },
+  "arms": [
+    "baseline",
+    "candidate"
+  ],
+  "output_directory": null,
+  "draft_status": "pending-output-selection-and-separate-user-budget-approval",
+  "launch_budget_requested": 1302,
+  "launch_authorized": false,
+  "qualification_established": false
+}

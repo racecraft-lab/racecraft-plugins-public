@@ -21,6 +21,8 @@ from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+# Fake file only: run_actionlint's subprocess is mocked in these tests.
+ACTIONLINT_FIXTURE = Path(__file__).resolve().parent / "fixtures" / "pr-checks" / "actionlint"
 LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
@@ -138,10 +140,10 @@ class ActionlintHelperTests(unittest.TestCase):
     def test_run_uses_deterministically_sorted_workflow_argv(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
-            executable = root / "bin" / "actionlint"
-            executable.parent.mkdir()
-            executable.write_bytes(b"binary\n")
-            executable.chmod(0o755)
+            executable = ACTIONLINT_FIXTURE
+            self.assertFalse(executable.resolve().is_relative_to(root.resolve()))
+            self.assertEqual(executable.read_bytes(), b"binary\n")
+            self.assertTrue(os.access(executable, os.X_OK))
             workflows = root / ".github" / "workflows"
             workflows.mkdir(parents=True)
             (workflows / "z-last.yml").write_text("name: Z\n", encoding="utf-8")
@@ -171,9 +173,8 @@ class ActionlintHelperTests(unittest.TestCase):
     def test_run_reports_subprocess_failure(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
-            executable = root / "actionlint"
-            executable.write_bytes(b"binary\n")
-            executable.chmod(0o755)
+            executable = ACTIONLINT_FIXTURE
+            self.assertFalse(executable.resolve().is_relative_to(root.resolve()))
             workflows = root / "workflows"
             workflows.mkdir()
             (workflows / "pr-checks.yml").write_text("name: PR Checks\n", encoding="utf-8")
@@ -187,6 +188,18 @@ class ActionlintHelperTests(unittest.TestCase):
             ):
                 with mock.patch.object(ACTIONLINT.subprocess, "run", runner):
                     ACTIONLINT.run_actionlint(executable, workflows)
+
+    @unittest.skipIf(os.name == "nt", "POSIX executable permission check")
+    def test_run_rejects_nonexecutable_file_before_subprocess(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            executable = root / "actionlint"
+            executable.write_bytes(ACTIONLINT_FIXTURE.read_bytes())
+            executable.chmod(0o644)
+            with mock.patch.object(ACTIONLINT.subprocess, "run") as runner:
+                with self.assertRaisesRegex(ACTIONLINT.ActionlintError, "is not executable"):
+                    ACTIONLINT.run_actionlint(executable, root)
+                runner.assert_not_called()
 
 
 class DocsClassificationHelperTests(unittest.TestCase):

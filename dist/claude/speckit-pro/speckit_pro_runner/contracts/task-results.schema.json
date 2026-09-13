@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Native-parent task result journal",
+  "description": "Append-only full TaskResult reports bound to frozen task batches. Supplied native events are contract-validated, not authenticated; deterministic acceptance is not native TDD qualification.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "tasks_file", "fingerprints", "metadata_sha256", "batches", "task_units", "reports"],
+  "properties": {
+    "schema_version": {"const": "task-results.v1"},
+    "tasks_file": {"type": "string", "minLength": 1},
+    "fingerprints": {
+      "type": "object", "additionalProperties": false,
+      "required": ["spec_sha256", "plan_sha256", "tasks_sha256"],
+      "properties": {"spec_sha256": {"$ref": "#/$defs/digest"}, "plan_sha256": {"$ref": "#/$defs/digest"}, "tasks_sha256": {"$ref": "#/$defs/digest"}}
+    },
+    "metadata_sha256": {"$ref": "#/$defs/digest"},
+    "batches": {"type": "array", "items": {"type": "object", "required": ["id", "tasks", "tdd_units"], "properties": {"id": {"type": "string"}, "tasks": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}}, "tdd_units": {"type": "array", "items": {"type": "string"}}}}},
+    "task_units": {"type": "object", "additionalProperties": {"type": "string", "minLength": 1}},
+    "reports": {"type": "array", "items": {"$ref": "#/$defs/report"}},
+    "prior_journal_file": {"type": "string", "minLength": 1},
+    "prior_journal_sha256": {"$ref": "#/$defs/digest"},
+    "reconciliation_event_id": {"type": "string", "minLength": 1},
+    "reconciliation_reason": {"type": "string", "minLength": 1}
+  },
+  "dependentRequired": {
+    "prior_journal_file": ["prior_journal_sha256", "reconciliation_event_id", "reconciliation_reason"],
+    "prior_journal_sha256": ["prior_journal_file"],
+    "reconciliation_event_id": ["prior_journal_file"],
+    "reconciliation_reason": ["prior_journal_file"]
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "result": {
+      "type": "object", "additionalProperties": false,
+      "required": ["task_id", "tdd_unit", "status", "block", "evidence_event_ids"],
+      "properties": {
+        "task_id": {"type": "string", "pattern": "^T[0-9]{3,}$"},
+        "tdd_unit": {"type": "string", "minLength": 1},
+        "status": {"enum": ["complete", "unfinished"]},
+        "block": {"type": "string", "minLength": 1},
+        "evidence_event_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "command_observation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["event_id", "tdd_unit", "stage", "argv", "exit_code", "classification", "output_path", "output_sha256", "snapshot_sha256"],
+      "properties": {
+        "event_id": {"type": "string", "minLength": 1},
+        "tdd_unit": {"type": "string", "minLength": 1},
+        "stage": {"enum": ["red", "green", "refactor"]},
+        "argv": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "exit_code": {"type": "integer"},
+        "classification": {"enum": ["assertion_failure", "test_pass", "infrastructure"]},
+        "output_path": {"type": "string", "minLength": 1},
+        "output_sha256": {"$ref": "#/$defs/digest"},
+        "snapshot_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "task_observation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["event_id", "tdd_unit", "stage", "task_id", "outcome", "output_path", "output_sha256"],
+      "properties": {
+        "event_id": {"type": "string", "minLength": 1},
+        "tdd_unit": {"type": "string", "minLength": 1},
+        "stage": {"const": "task_result"},
+        "task_id": {"type": "string", "pattern": "^T[0-9]{3,}$"},
+        "outcome": {"const": "completed"},
+        "output_path": {"type": "string", "minLength": 1},
+        "output_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "observation": {"oneOf": [{"$ref": "#/$defs/command_observation"}, {"$ref": "#/$defs/task_observation"}]},
+    "report": {
+      "type": "object", "additionalProperties": false,
+      "required": ["batch_id", "results", "native_observations"],
+      "properties": {
+        "batch_id": {"type": "string", "pattern": "^B[0-9]{3,}$"},
+        "results": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/result"}},
+        "native_observations": {"type": "array", "items": {"$ref": "#/$defs/observation"}}
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "helper_id": "validate-execution-record",
+  "operation": "validate-execution-record",
+  "mode": "read_only",
+  "inputs": {
+    "workflow_file": "tests/speckit-pro/unit/fixtures/autopilot-stage/workflow.md",
+    "command_id": "UNIT_TEST",
+    "record_path": "tests/speckit-pro/unit/fixtures/autopilot-stage/.process/verification/missing.json"
+  }
+}
