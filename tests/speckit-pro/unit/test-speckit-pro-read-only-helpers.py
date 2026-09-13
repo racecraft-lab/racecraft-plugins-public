@@ -1386,16 +1386,36 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def write_confidence_workflow(self, directory: str, body: str) -> str:
         workflow = Path(directory) / "confidence-workflow.md"
         workflow.write_text(body, encoding="utf-8")
-        return workflow.resolve().relative_to(REPO_ROOT).as_posix()
+        return workflow.name
 
     def run_confidence_gate(self, body: str, **inputs: object) -> dict[str, object]:
         from speckit_pro_runner.helpers.read_only import confidence_gate
 
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as directory:
+        with tempfile.TemporaryDirectory(prefix="confidence-workflow-") as directory:
             request = {"workflow_file": self.write_confidence_workflow(directory, body), "mode_name": "advisory"}
             request.update(inputs)
-            result = confidence_gate(request, REPO_ROOT)
+            result = confidence_gate(request, Path(directory).resolve())
         return {"exit_code": result["exit_code"], "stderr": result["stderr"], "json": json.loads(result["stdout"])}
+
+    def test_confidence_workflow_is_isolated_and_cleaned_after_failure(self) -> None:
+        from speckit_pro_runner.helpers.read_only import confidence_gate
+
+        roots: list[Path] = []
+
+        def inspect_fixture(request: dict[str, object], root: Path) -> dict[str, object]:
+            roots.append(root)
+            self.assertFalse(root.resolve().is_relative_to(REPO_ROOT.resolve()))
+            self.assertEqual((root / str(request["workflow_file"])).read_text(encoding="utf-8"), "# Workflow\n")
+            if len(roots) == 2:
+                raise RuntimeError("fixture cleanup probe")
+            return confidence_gate(request, root)
+
+        with patch("speckit_pro_runner.helpers.read_only.confidence_gate", side_effect=inspect_fixture):
+            self.run_confidence_gate("# Workflow\n")
+            with self.assertRaisesRegex(RuntimeError, "fixture cleanup probe"):
+                self.run_confidence_gate("# Workflow\n")
+        self.assertEqual(len(roots), 2)
+        self.assertTrue(all(not root.exists() for root in roots))
 
     ANALYSIS_HEADER = ("| ID | Severity | Issue | Resolution |", "|----|----------|-------|------------|")
     SEVERITY_LEGEND = "\n".join(
@@ -2750,8 +2770,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
         """
         if self.helper_filter and self.helper_filter != "check-prerequisites":
             self.skipTest("feature-state precedence case uses check-prerequisites")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
-            project_path = Path(project)
+        with tempfile.TemporaryDirectory(prefix="read-only-helper-project-") as project:
+            project_path = Path(project).resolve()
             (project_path / ".specify").mkdir()
             (project_path / ".specify" / "feature.json").write_text(
                 '{"feature_directory":"specs/fixture-autopilot-staging"}\n', encoding="utf-8"
@@ -2762,8 +2782,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_check_prerequisites_honors_specify_feature_directory_env(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
             self.skipTest("feature-state precedence case uses check-prerequisites")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
-            project_path = Path(project)
+        with tempfile.TemporaryDirectory(prefix="read-only-helper-project-") as project:
+            project_path = Path(project).resolve()
             (project_path / ".specify").mkdir()
             with patch.dict(
                 os.environ, {"SPECIFY_FEATURE_DIRECTORY": "specs/fixture-availability"}, clear=False
@@ -2774,8 +2794,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_check_prerequisites_reports_no_feature_without_state_or_branch(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
             self.skipTest("feature-state precedence case uses check-prerequisites")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
-            project_path = Path(project)
+        with tempfile.TemporaryDirectory(prefix="read-only-helper-project-") as project:
+            project_path = Path(project).resolve()
             (project_path / ".specify").mkdir()
             environment = {
                 key: value
@@ -2789,8 +2809,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_check_prerequisites_ignores_blank_feature_directory(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
             self.skipTest("feature-state precedence case uses check-prerequisites")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
-            project_path = Path(project)
+        with tempfile.TemporaryDirectory(prefix="read-only-helper-project-") as project:
+            project_path = Path(project).resolve()
             (project_path / ".specify").mkdir()
             (project_path / ".specify" / "feature.json").write_text(
                 '{"feature_directory":"   "}\n', encoding="utf-8"
@@ -2819,8 +2839,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
         """
         if self.helper_filter and self.helper_filter != "detect-commands":
             self.skipTest("test-runner discovery case uses detect-commands")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
-            project_path = Path(project)
+        with tempfile.TemporaryDirectory(prefix="read-only-helper-project-") as project:
+            project_path = Path(project).resolve()
             (project_path / "tests" / "suite").mkdir(parents=True)
             (project_path / "tests" / "suite" / "run-all.py").write_text("", encoding="utf-8")
             payload = self._detected(project_path)
@@ -2835,8 +2855,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
             self.skipTest("python marker case uses detect-commands")
         for marker in ("requirements.txt", "setup.py", "setup.cfg", "tox.ini", "pytest.ini", "Pipfile"):
             with self.subTest(marker=marker):
-                with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
-                    project_path = Path(project)
+                with tempfile.TemporaryDirectory(prefix="read-only-helper-project-") as project:
+                    project_path = Path(project).resolve()
                     (project_path / marker).write_text("", encoding="utf-8")
                     payload = self._detected(project_path)
                     self.assertEqual("python", payload["stack"])
@@ -2846,8 +2866,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_detect_commands_prefers_root_marker_over_runner_script(self) -> None:
         if self.helper_filter and self.helper_filter != "detect-commands":
             self.skipTest("precedence case uses detect-commands")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
-            project_path = Path(project)
+        with tempfile.TemporaryDirectory(prefix="read-only-helper-project-") as project:
+            project_path = Path(project).resolve()
             (project_path / "pyproject.toml").write_text("", encoding="utf-8")
             (project_path / "tests" / "suite").mkdir(parents=True)
             (project_path / "tests" / "suite" / "run-all.py").write_text("", encoding="utf-8")
@@ -2859,8 +2879,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
         """The three quality-gate slots come from the shipped table, keyed on signal files."""
         if self.helper_filter and self.helper_filter != "detect-commands":
             self.skipTest("gate slot case uses detect-commands")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
-            project_path = Path(project)
+        with tempfile.TemporaryDirectory(prefix="read-only-helper-project-") as project:
+            project_path = Path(project).resolve()
             (project_path / "pyproject.toml").write_text("", encoding="utf-8")
             (project_path / ".importlinter").write_text("", encoding="utf-8")
             payload = self._detected(project_path)
@@ -2891,15 +2911,15 @@ class ReadOnlyHelperTests(unittest.TestCase):
             self.assertEqual("invalid", payload["quality_gates"]["status"])
             self.assertTrue(payload["quality_gates"]["problems"])
             self.assertIn("--ceiling 30 --complexity-ceiling 8", payload["commands"]["COMPLEXITY"])
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
-            payload = self._detected(Path(project))
+        with tempfile.TemporaryDirectory(prefix="read-only-helper-project-") as project:
+            payload = self._detected(Path(project).resolve())
             self.assertEqual({"N/A"}, {payload["commands"][slot] for slot in ("COMPLEXITY", "MUTATION", "DEPENDENCY_RULES")})
 
     def test_detect_commands_runner_discovery_is_deterministic(self) -> None:
         if self.helper_filter and self.helper_filter != "detect-commands":
             self.skipTest("determinism case uses detect-commands")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
-            project_path = Path(project)
+        with tempfile.TemporaryDirectory(prefix="read-only-helper-project-") as project:
+            project_path = Path(project).resolve()
             for sub in ("zeta", "alpha"):
                 (project_path / "tests" / sub).mkdir(parents=True)
                 (project_path / "tests" / sub / "run-all.py").write_text("", encoding="utf-8")
@@ -2912,8 +2932,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
         """An empty result must say it looked, not just return a wall of N/A."""
         if self.helper_filter and self.helper_filter != "detect-commands":
             self.skipTest("no-detection case uses detect-commands")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
-            payload = self._detected(Path(project))
+        with tempfile.TemporaryDirectory(prefix="read-only-helper-project-") as project:
+            payload = self._detected(Path(project).resolve())
             self.assertEqual("unknown", payload["stack"])
             self.assertEqual("none", payload["detection"]["source"])
             self.assertEqual("", payload["detection"]["evidence"])
@@ -2925,20 +2945,21 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_trusted_text_returns_none_on_read_error(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
             self.skipTest("trusted text read-error case uses shared helper behavior")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
-            path = Path(project) / "unreadable.md"
+        with tempfile.TemporaryDirectory(prefix="read-only-helper-project-") as project:
+            path = Path(project).resolve() / "unreadable.md"
             path.write_text("secret\n", encoding="utf-8")
             from speckit_pro_runner.helpers import read_only
 
-            with patch.object(read_only.os, "open", side_effect=PermissionError("denied")):
-                self.assertIsNone(read_only.trusted_text(path, REPO_ROOT))
+            with patch.object(read_only.os, "open", side_effect=PermissionError("denied")) as denied_open:
+                self.assertIsNone(read_only.trusted_text(path, path.parent))
+                denied_open.assert_called_once()
 
     @unittest.skipIf(os.name == "nt", "POSIX no-follow descriptor behavior is not portable to Windows")
     def test_trusted_bytes_rejects_symlink_replacement_between_check_and_open(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
             self.skipTest("trusted bytes race case uses shared helper behavior")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project, tempfile.TemporaryDirectory() as outside:
-            project_path = Path(project)
+        with tempfile.TemporaryDirectory(prefix="read-only-helper-project-") as project, tempfile.TemporaryDirectory() as outside:
+            project_path = Path(project).resolve()
             target = project_path / "packet.json"
             target.write_text('{"packet": true}\n', encoding="utf-8")
             outside_file = Path(outside) / "outside.json"
@@ -2958,12 +2979,13 @@ class ReadOnlyHelperTests(unittest.TestCase):
 
             with patch.object(read_only.os, "open", side_effect=swap_before_leaf_open):
                 self.assertIsNone(read_only.trusted_bytes(target, project_path))
+            self.assertTrue(swapped)
 
     def test_git_branch_rejects_symlinked_git_paths(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
             self.skipTest("git branch symlink case uses check-prerequisites")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project, tempfile.TemporaryDirectory() as outside:
-            project_path = Path(project)
+        with tempfile.TemporaryDirectory(prefix="read-only-helper-project-") as project, tempfile.TemporaryDirectory() as outside:
+            project_path = Path(project).resolve()
             outside_git = Path(outside) / "gitfile"
             outside_git.write_text("gitdir: /tmp/outside\n", encoding="utf-8")
             try:
@@ -2977,8 +2999,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_git_branch_reports_head_for_detached_checkout(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
             self.skipTest("git branch detached-HEAD case uses check-prerequisites")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
-            project_path = Path(project)
+        with tempfile.TemporaryDirectory(prefix="read-only-helper-project-") as project:
+            project_path = Path(project).resolve()
             git_dir = project_path / ".git"
             git_dir.mkdir()
             (git_dir / "HEAD").write_text("2d7388cc96f81cb805948bc19a8ccdd1cf896222\n", encoding="utf-8")
@@ -2989,8 +3011,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_git_branch_rejects_symlinked_head_escape(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
             self.skipTest("git HEAD symlink case uses check-prerequisites")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project, tempfile.TemporaryDirectory() as outside:
-            project_path = Path(project)
+        with tempfile.TemporaryDirectory(prefix="read-only-helper-project-") as project, tempfile.TemporaryDirectory() as outside:
+            project_path = Path(project).resolve()
             git_dir = project_path / ".git"
             git_dir.mkdir()
             outside_head = Path(outside) / "HEAD"
@@ -3006,8 +3028,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def test_repo_root_for_specs_path_uses_rightmost_specs_segment(self) -> None:
         if self.helper_filter and self.helper_filter != "o5-topology":
             self.skipTest("spec root inference case uses o5-topology")
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
-            project_path = Path(project)
+        with tempfile.TemporaryDirectory(prefix="read-only-helper-project-") as project:
+            project_path = Path(project).resolve()
             target = project_path / "outer" / "specs" / "container" / "repo" / "specs" / "feature"
             expected = project_path / "outer" / "specs" / "container" / "repo"
             from speckit_pro_runner.helpers.read_only import repo_root_for_specs_path
