@@ -10,10 +10,13 @@ from __future__ import annotations
 
 import hashlib
 import io
+import json
 import re
 import tarfile
 from pathlib import Path, PurePosixPath
 from typing import Any
+
+from .verification_docker_entrypoint import validate_argv
 
 IMAGE_REFERENCE = re.compile(r"[a-z0-9][a-z0-9._/:-]{0,240}@sha256:[0-9a-f]{64}")
 IMAGE_ID = re.compile(r"sha256:[0-9a-f]{64}")
@@ -29,6 +32,7 @@ HOST_POLICY = {
     "PidsLimit": 32, "IpcMode": "none", "PublishAllPorts": False, "PidMode": "",
     "CapDrop": ["ALL"], "SecurityOpt": ["no-new-privileges=true"],
     "Tmpfs": {"/outputs": OUTPUT_TMPFS},
+    "LogConfig": {"Type": "none", "Config": {}},
 }
 
 
@@ -112,7 +116,7 @@ def container_options(image_id: str, execution_id: str) -> list[str]:
             f"--label=org.racecraft.verification={execution_id}", "--read-only", "--network=none",
             "--cap-drop=ALL", "--security-opt=no-new-privileges=true", "--user=65532:65532",
             "--cpus=1", "--memory=256m", "--memory-swap=256m", "--pids-limit=32", "--ipc=none",
-            "--no-healthcheck", "--restart=no", "--stop-timeout=1", f"--tmpfs=/outputs:{OUTPUT_TMPFS}",
+            "--no-healthcheck", "--restart=no", "--stop-timeout=1", "--log-driver=none", f"--tmpfs=/outputs:{OUTPUT_TMPFS}",
             "--env=HOME=/outputs", "--env=TMPDIR=/outputs", "--env=PYTHONDONTWRITEBYTECODE=1",
             "--workdir=/inputs", "--entrypoint=/usr/local/bin/python3", image_id, *COMMAND]
 
@@ -137,3 +141,35 @@ def container_reasons(info: dict[str, Any], image_id: str, execution_id: str) ->
     if not isinstance(restart, dict) or restart.get("Name") != "no":
         reasons.append("restart_policy_changed")
     return reasons
+
+
+def build_context(destination: Path, files: dict[str, tuple[int, bytes | None]],
+                  reference: str, argv: list[str]) -> dict[str, str]:
+    """Create a private build context from captured bytes; never execute a build step.
+
+    The caller must first inspect/validate the local base image. A local ADD tar
+    extracts our validated archive; COPY places trusted launcher bytes outside
+    the workload root. No supplied Dockerfile, RUN, mounts, or credentials enter.
+    Source: https://docs.docker.com/reference/dockerfile/#add
+    """
+    if not isinstance(reference, str) or IMAGE_REFERENCE.fullmatch(reference) is None:
+        raise ValueError("base image reference must be digest-pinned")
+    validate_argv(argv)
+    request = json.dumps({"argv": argv}, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    if len(request) > 131072:
+        raise ValueError("serialized verification request byte limit exceeded")
+    launcher = Path(__file__).with_name("verification_docker_entrypoint.py").read_bytes()
+    destination.mkdir(mode=0o700)
+    archive_snapshot(destination / "snapshot.tar", files)
+    payloads = {"request.json": request, "entrypoint.py": launcher,
+                ".dockerignore": b"*\n!Dockerfile\n!snapshot.tar\n!entrypoint.py\n!request.json\n",
+                "Dockerfile": (f"FROM {reference}\nADD snapshot.tar /inputs/\n"
+                               "COPY entrypoint.py request.json /__speckit/\n").encode("ascii")}
+    for name, body in payloads.items():
+        with (destination / name).open("xb") as handle:
+            handle.write(body)
+    bindings = {}
+    for path in destination.iterdir():
+        with path.open("rb") as handle:
+            bindings[path.name] = hashlib.file_digest(handle, "sha256").hexdigest()
+    return bindings

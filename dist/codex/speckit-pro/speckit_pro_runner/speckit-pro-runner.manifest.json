@@ -375,7 +375,23 @@
         "value": "speckit_pro_runner/verification_docker.py",
         "display": "speckit_pro_runner/verification_docker.py"
       },
-      "sha256": "33543813c651dc959ee6696139033461ae529777254fa1bf56507d720b8ddcf0"
+      "sha256": "11eae1cc1db01c65379994c24eae7b9b3b2d96f66c10862c1b80a2777fe0fa21"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/verification_docker_entrypoint.py",
+        "display": "speckit_pro_runner/verification_docker_entrypoint.py"
+      },
+      "sha256": "cca72df9f719c196c02a251dd17259b029322f22cfe460763d71b30db5870027"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/verification_docker_runtime.py",
+        "display": "speckit_pro_runner/verification_docker_runtime.py"
+      },
+      "sha256": "5f87e920989fc43ae30c89a22c87bc6e00b8af7344a43d6279318b8d9a48e7f8"
     },
     {
       "path": {
