@@ -17,6 +17,7 @@ from typing import Any
 
 from .verification_docker import EXECUTION_ID, IMAGE_ID, IMAGE_REFERENCE, build_context, validate_base_image
 from .verification_docker_entrypoint import validate_argv
+from .verification_docker_readback import SnapshotReadback
 from .verification_docker_runtime import DockerClient, execute_container
 
 
@@ -130,7 +131,8 @@ def execute_image(client: DockerClient, files: dict[str, tuple[int, bytes | None
         image_id = identity
         result["built_image"] = inspect_image(client, tag, image_timeout(deadline))
         validate_built_image(result["built_image"], base, image_id, execution_id)
-        result.update(execute_container(client, image_id, execution_id, image_timeout(deadline, timeout)))
+        result.update(execute_container(client, image_id, execution_id, image_timeout(deadline, timeout),
+                                        SnapshotReadback(files, directory / "input-readback.tar")))
     except (OSError, ValueError, TypeError, KeyError, subprocess.TimeoutExpired) as exc:
         result.update(completed=False, exit_code=None, failure=str(exc)[:240])
     finally:

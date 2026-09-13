@@ -102,6 +102,7 @@ def execute_docker_verification(root: Path, inputs: dict[str, Any], mode: str) -
     record = {"schema_version": "docker-verification-record/v1", "execution_id": execution_id, "dispatch_id": dispatch_id,
               "workflow_file": workflow_name, "command_id": command_id, "argv": argv, "snapshot_sha256": snapshot_sha,
               "inputs_unchanged": result["inputs_unchanged"], "environment_sha256": digest(ENVIRONMENT),
+              "input_snapshot_verified": result.get("input_readback", {}).get("verified") is True,
               "toolchain": {"kind": "docker-image", "base_reference": config["base_image"],
                             "base_image_id": result.get("base_image", {}).get("Id"), "image_id": result.get("image_id"),
                             "runner_sha256": source_binding},
@@ -114,5 +115,5 @@ def execute_docker_verification(root: Path, inputs: dict[str, Any], mode: str) -
     return {"record_path": record_name, "record": record, "observation_material": dict(record),
             "evidence_path": f"{directory_name}/docker-evidence.json", "writes_state": True, "reusable": False,
             "authorization_granted": False, "requires_independent_native_event": True, "rerun_required": True,
-            "limitations": ["docker_isolation_not_independently_qualified", "input_image_bytes_not_independently_verified",
+            "limitations": ["docker_isolation_not_independently_qualified", "independent_producer_qualification_pending",
                             "only_stdout_stderr_retained", "private_context_and_build_cache_may_retain_inputs"]}

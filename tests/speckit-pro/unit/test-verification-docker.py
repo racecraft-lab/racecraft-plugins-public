@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import io
 import json
 import os
 import stat
@@ -26,6 +27,7 @@ from speckit_pro_runner.verification_docker import (
 from speckit_pro_runner import verification_docker_entrypoint as entrypoint
 from speckit_pro_runner.verification_docker_runtime import DockerClient, capture_process, cleanup_container, execute_container
 from speckit_pro_runner.verification_docker_image import cleanup_image, execute_image, validate_built_image
+from speckit_pro_runner.verification_docker_readback import SnapshotReadback, verify_snapshot_archive
 
 REFERENCE = "python@sha256:" + "a" * 64
 IMAGE_ID = "sha256:" + "b" * 64
@@ -172,7 +174,7 @@ class DockerEntrypointTests(unittest.TestCase):
             self.assertEqual(json.loads((context / "request.json").read_bytes()), {"argv": ["python3", "check.py"]})
             dockerfile = (context / "Dockerfile").read_text()
             self.assertTrue(dockerfile.startswith(f"FROM {REFERENCE}\n"))
-            self.assertIn("ADD snapshot.tar /inputs/\n", dockerfile)
+            self.assertIn("ADD snapshot.tar /\n", dockerfile)
             self.assertFalse(any(line.startswith(("RUN", "VOLUME", "ONBUILD")) for line in dockerfile.splitlines()))
             self.assertEqual(binding, {path.name: hashlib.sha256(path.read_bytes()).hexdigest()
                                        for path in context.iterdir()})
@@ -187,6 +189,16 @@ class DockerEntrypointTests(unittest.TestCase):
                 with self.subTest(argv_type=type(argv).__name__), self.assertRaises(ValueError):
                     build_context(context, {".": (0o755, None)}, REFERENCE, argv)
                 self.assertFalse(context.exists())
+
+    def test_image_archive_preserves_the_source_root_as_an_explicit_directory(self):
+        files = {".": (0o751, None), "check.py": (0o640, b"check")}
+        with tempfile.TemporaryDirectory() as directory:
+            context = Path(directory) / "context"
+            build_context(context, files, REFERENCE, ["python3", "check.py"])
+            with tarfile.open(context / "snapshot.tar") as archive:
+                self.assertEqual(archive.getnames(), ["inputs", "inputs/check.py"])
+                root = archive.getmember("inputs")
+                self.assertEqual((root.mode, root.uid, root.gid), (0o751, 65532, 65532))
 
     def test_filter_rejects_other_abis_and_all_socket_and_io_uring_syscalls(self):
         instructions = entrypoint.filter_instructions()
@@ -253,6 +265,20 @@ class DockerEntrypointTests(unittest.TestCase):
 
 
 class DockerRuntimeTests(unittest.TestCase):
+    @unittest.skipUnless(os.name == "posix", "Docker capture backend requires a POSIX host")
+    def test_capture_streams_archive_stdout_to_owned_file_with_the_same_byte_limit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "archive"
+            process = subprocess.Popen([sys.executable, "-c", "import os; os.write(1, b'x' * 100000)"],
+                                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
+            with output.open("xb") as sink:
+                result = capture_process(process, 5, 1024, stdout_file=sink)
+            self.assertTrue(result["output_limited"])
+            self.assertEqual(result["stdout"], b"")
+            self.assertEqual(output.read_bytes(), b"x" * 1024)
+            self.assertEqual(result["stdout_size"], 1024)
+            self.assertEqual(result["stdout_sha256"], hashlib.sha256(b"x" * 1024).hexdigest())
+
     @unittest.skipUnless(os.name == "posix", "Docker transport requires a POSIX host")
     def test_transport_uses_explicit_socket_and_private_empty_config(self):
         original_stat = Path.stat
@@ -374,6 +400,32 @@ class DockerRuntimeTests(unittest.TestCase):
         self.assertFalse(result["completed"])
         self.assertFalse(any(item.args[0][0] == "start" for item in client.call.call_args_list))
 
+    def test_input_readback_mismatch_prevents_workload_start_and_still_cleans_up(self):
+        cid, calls = "d" * 64, []
+        info = {"Id": cid, "Name": f"/speckit-verifier-{EXECUTION_ID}",
+                "State": {"Status": "created", "Running": False, "Pid": 0}}
+        def call(args, timeout, check=True, **kwargs):
+            calls.append(args)
+            output = b""
+            if args[0] == "create":
+                output = cid.encode()
+            elif args[0] == "inspect":
+                output = json.dumps([info]).encode()
+            elif args[0] == "cp":
+                archive_snapshot(kwargs["archive"], {".": (0o755, None)})
+                return {"stdout_sha256": hashlib.sha256(kwargs["archive"].read_bytes()).hexdigest()}
+            return {"stdout": output}
+        with tempfile.TemporaryDirectory() as directory, \
+             patch("speckit_pro_runner.verification_docker_runtime.container_reasons", return_value=[]), \
+             patch("speckit_pro_runner.verification_docker_runtime.cleanup_container", return_value=True) as cleanup:
+            result = execute_container(SimpleNamespace(call=call), IMAGE_ID, EXECUTION_ID, 5,
+                                       SnapshotReadback({".": (0o751, None)}, Path(directory) / "archive"))
+        self.assertFalse(result["completed"])
+        self.assertNotIn("input_readback", result)
+        self.assertFalse(any(args[0] == "start" for args in calls))
+        self.assertTrue(any(args[0] == "cp" for args in calls))
+        cleanup.assert_called_once()
+
     def test_cleanup_refuses_wrong_owner_and_does_not_treat_daemon_errors_as_absence(self):
         info = {"Id": "d" * 64, "Image": IMAGE_ID, "Name": f"/speckit-verifier-{EXECUTION_ID}",
                 "Config": {"Labels": {"org.racecraft.verification": "someone-else"}}}
@@ -383,6 +435,73 @@ class DockerRuntimeTests(unittest.TestCase):
             with self.subTest(responses=len(responses)):
                 self.assertFalse(cleanup_container(client, f"speckit-verifier-{EXECUTION_ID}", IMAGE_ID, EXECUTION_ID))
                 self.assertFalse(any(item.args[0][0] == "rm" for item in client.call.call_args_list))
+
+
+class DockerReadbackTests(unittest.TestCase):
+    def setUp(self):
+        self.files = {".": (0o751, None), "empty": (0o705, None), "file": (0o640, b"unchanged\x00bytes")}
+
+    def archive(self, path, *, change=None, extra=None):
+        with tarfile.open(path, "w", format=tarfile.PAX_FORMAT) as archive:
+            for name, (mode, body) in self.files.items():
+                member = tarfile.TarInfo("." if name == "." else f"./{name}")
+                member.mode, member.uid, member.gid = mode, 65532, 65532
+                member.type = tarfile.DIRTYPE if body is None else tarfile.REGTYPE
+                member.size = len(body) if body is not None else 0
+                if change:
+                    change(member)
+                archive.addfile(member, io.BytesIO(body) if body is not None and member.isfile() else None)
+            if extra:
+                archive.addfile(extra)
+
+    def test_readback_compares_every_entry_byte_mode_and_owner_without_extraction(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "readback.tar"
+            self.archive(path)
+            result = verify_snapshot_archive(path, self.files)
+            self.assertTrue(result["verified"])
+            self.assertEqual(result["entries"], len(self.files))
+            self.assertEqual(result["archive_sha256"], hashlib.sha256(path.read_bytes()).hexdigest())
+            self.assertEqual(list(Path(directory).iterdir()), [path])
+
+    def test_root_mode_byte_and_missing_entry_mismatches_are_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "readback.tar"
+            self.archive(path)
+            for expected in ({**self.files, ".": (0o755, None)},
+                             {**self.files, "file": (0o640, b"x" * len(self.files["file"][1]))},
+                             {**self.files, "missing": (0o644, b"")},
+                             {name: value for name, value in self.files.items() if name != "empty"}):
+                with self.subTest(expected=expected), self.assertRaises(ValueError):
+                    verify_snapshot_archive(path, expected)
+
+    def test_unsafe_members_duplicates_and_unbound_metadata_are_rejected(self):
+        def mutate(member, key, value):
+            if member.name == "./file":
+                setattr(member, key, value)
+        cases = (("name", "../escape"), ("name", "/absolute"), ("name", "./empty"),
+                 ("name", "./a/../file"), ("name", "././file"), ("uid", 0), ("gid", 0),
+                 ("type", tarfile.SYMTYPE), ("type", tarfile.LNKTYPE), ("type", tarfile.FIFOTYPE),
+                 ("pax_headers", {"SCHILY.xattr.user.hidden": "unbound"}))
+        with tempfile.TemporaryDirectory() as directory:
+            for index, (key, value) in enumerate(cases):
+                path = Path(directory) / f"{index}.tar"
+                self.archive(path, change=lambda member: mutate(member, key, value))
+                with self.subTest(key=key, value=value), self.assertRaises(ValueError):
+                    verify_snapshot_archive(path, self.files)
+
+    def test_truncation_trailing_payload_and_archive_limit_fail_closed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "readback.tar"
+            self.archive(path)
+            original = path.read_bytes()
+            for data in (original[:100], original[:2048], original + b"unexpected archive payload"):
+                path.write_bytes(data)
+                with self.subTest(size=len(data)), self.assertRaises(ValueError):
+                    verify_snapshot_archive(path, self.files)
+            path.write_bytes(original)
+            with patch("speckit_pro_runner.verification_docker_readback.MAX_ARCHIVE_BYTES", 1), self.assertRaises(ValueError):
+                verify_snapshot_archive(path, self.files)
 
 
 class DockerImageTests(unittest.TestCase):
@@ -502,5 +621,5 @@ class DockerImageTests(unittest.TestCase):
 
 if __name__ == "__main__":
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                               for case in (DockerInputTests, DockerPolicyTests, DockerEntrypointTests, DockerRuntimeTests, DockerImageTests))
+                               for case in (DockerInputTests, DockerPolicyTests, DockerEntrypointTests, DockerRuntimeTests, DockerReadbackTests, DockerImageTests))
     raise SystemExit(run_counted(suite, label="test-verification-docker"))

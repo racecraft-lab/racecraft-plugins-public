@@ -7,6 +7,8 @@ observation remain required at the integration boundary.
 
 from __future__ import annotations
 
+from contextlib import nullcontext
+import hashlib
 import json
 import math
 import os
@@ -17,21 +19,52 @@ import signal
 import stat
 import subprocess
 import time
-from typing import Any
+from typing import Any, BinaryIO
 
 from .verification_docker import container_options, container_reasons, validate_location
+from .verification_docker_readback import MAX_ARCHIVE_BYTES, SnapshotReadback
 
 CONTAINER_ID = re.compile(r"[0-9a-f]{64}")
 
 
+class CapturedOutput:
+    """One byte budget for memory or archive output, with separately bounded stderr."""
+
+    def __init__(self, limit: int, stdout_file: BinaryIO | None):
+        self.limit, self.stdout_file = limit, stdout_file
+        self.buffers = {"stdout": bytearray(), "stderr": bytearray()}
+        self.counts = {"stdout": 0, "stderr": 0}
+        self.stdout_digest = hashlib.sha256()
+
+    def append(self, channel: str, chunk: bytes) -> bool:
+        capacity = self.limit - self.counts["stdout"] - self.counts["stderr"]
+        if channel == "stderr":
+            capacity = min(capacity, 8 * 1024 * 1024 - self.counts["stderr"])
+        accepted = chunk[:capacity]
+        if self.stdout_file is not None and channel == "stdout":
+            self.stdout_file.write(accepted)
+            self.stdout_digest.update(accepted)
+        else:
+            self.buffers[channel].extend(accepted)
+        self.counts[channel] += len(accepted)
+        return len(chunk) > capacity
+
+    def result(self) -> dict[str, Any]:
+        result = {key: bytes(value) for key, value in self.buffers.items()}
+        if self.stdout_file is not None:
+            result.update(stdout_size=self.counts["stdout"], stdout_sha256=self.stdout_digest.hexdigest())
+        return result
+
+
 def capture_process(process: subprocess.Popen[bytes], timeout: float,
-                    output_bytes: int = 8 * 1024 * 1024) -> dict[str, Any]:
+                    output_bytes: int = 8 * 1024 * 1024, *, stdout_file: BinaryIO | None = None) -> dict[str, Any]:
     """Own and capture an already started process; this function cannot launch one."""
-    result = {"stdout": bytearray(), "stderr": bytearray(), "timed_out": False, "output_limited": False}
+    result = {"timed_out": False, "output_limited": False}
     try:
         if (type(timeout) not in (int, float) or not math.isfinite(timeout) or timeout <= 0
                 or type(output_bytes) is not int or output_bytes <= 0):
             raise ValueError("positive finite process limits are required")
+        output = CapturedOutput(output_bytes, stdout_file)
         deadline = time.monotonic() + timeout
         with selectors.DefaultSelector() as selector:
             selector.register(process.stdout, selectors.EVENT_READ, "stdout")
@@ -46,9 +79,7 @@ def capture_process(process: subprocess.Popen[bytes], timeout: float,
                     if not chunk:
                         selector.unregister(key.fileobj)
                         continue
-                    capacity = output_bytes - len(result["stdout"]) - len(result["stderr"])
-                    result[key.data].extend(chunk[:capacity])
-                    if len(chunk) > capacity:
+                    if output.append(key.data, chunk):
                         result["output_limited"] = True
                         break
                 if result["output_limited"]:
@@ -67,8 +98,7 @@ def capture_process(process: subprocess.Popen[bytes], timeout: float,
         process.wait(timeout=5)
         process.stdout.close()
         process.stderr.close()
-    return {**result, "stdout": bytes(result["stdout"]), "stderr": bytes(result["stderr"]),
-            "exit_code": process.returncode}
+    return {**result, **output.result(), "exit_code": process.returncode}
 
 
 class DockerClient:
@@ -92,15 +122,18 @@ class DockerClient:
                             "PATH": str(resolved.parent), "LANG": "C.UTF-8"}
         self.events: list[dict[str, Any]] = []
 
-    def call(self, args: list[str], timeout: float, check: bool = True) -> dict[str, Any]:
+    def call(self, args: list[str], timeout: float, check: bool = True, archive: Path | None = None) -> dict[str, Any]:
         if type(timeout) not in (int, float) or not math.isfinite(timeout) or timeout <= 0:
             raise ValueError("positive finite Docker timeout is required")
         # PATH contains only the validated Docker binary's directory. No caller
         # can substitute another program; the capture helper only reads pipes.
-        process = subprocess.Popen(["docker", *self.prefix, *args], cwd=self.directory, env=self.environment,
-                                   stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                   start_new_session=True)
-        result = capture_process(process, timeout)
+        with archive.open("xb") if archive is not None else nullcontext() as sink:
+            process = subprocess.Popen(["docker", *self.prefix, *args], cwd=self.directory, env=self.environment,
+                                       stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                       start_new_session=True)
+            result = capture_process(process, timeout, MAX_ARCHIVE_BYTES if archive is not None else 8 * 1024 * 1024, stdout_file=sink)
+        if archive is not None:
+            result["stdout_path"] = str(archive)
         self.events.append({"argv": args, **result})
         if check and (result["exit_code"] != 0 or result["timed_out"] or result["output_limited"]):
             raise ValueError(f"Docker {args[0]} did not complete successfully")
@@ -133,7 +166,8 @@ def cleanup_container(client: DockerClient, name: str, image_id: str, execution_
         return False
 
 
-def execute_container(client: DockerClient, image_id: str, execution_id: str, timeout: float) -> dict[str, Any]:
+def execute_container(client: DockerClient, image_id: str, execution_id: str, timeout: float,
+                      input_readback: SnapshotReadback | None = None) -> dict[str, Any]:
     """Start once, retain raw output, compare daemon exit state, always reconcile."""
     options = container_options(image_id, execution_id)
     if type(timeout) not in (int, float) or not math.isfinite(timeout) or timeout <= 0:
@@ -157,6 +191,8 @@ def execute_container(client: DockerClient, image_id: str, execution_id: str, ti
         reasons = container_reasons(result["before"], image_id, execution_id)
         if reasons:
             raise ValueError("container policy rejected: " + ", ".join(reasons))
+        if input_readback is not None:
+            result["input_readback"] = input_readback.verify(client, cid, result["before"], deadline)
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             raise ValueError("verification deadline exhausted before start")

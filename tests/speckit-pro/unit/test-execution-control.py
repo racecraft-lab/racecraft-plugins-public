@@ -505,6 +505,7 @@ class DockerVerificationTests(VerificationTests):
         from speckit_pro_runner import verification_docker_workflow as workflow_backend
         image_id = "sha256:" + "b" * 64
         backend = {"completed": True, "exit_code": 0, "stdout": b"verified\n", "stderr": b"",
+                   "input_readback": {"verified": True},
                    "image_id": image_id, "base_image": {"Id": "sha256:" + "c" * 64},
                    "cleanup_confirmed": True, "image_tag_cleanup_confirmed": True, "reusable": False}
         with patch.object(workflow_backend, "DockerClient") as client, \
@@ -516,6 +517,7 @@ class DockerVerificationTests(VerificationTests):
             self.assertEqual(record["toolchain"]["image_id"], image_id)
             self.assertNotIn("executable_sha256", record["toolchain"])
             self.assertTrue(record["completed"] and record["inputs_unchanged"])
+            self.assertTrue(record["input_snapshot_verified"])
             self.assertFalse(self.validate(result, observation)["reusable"])
             evidence = self.root / result["evidence_path"]
             self.assertTrue(evidence.is_file())

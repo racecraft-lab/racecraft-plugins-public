@@ -86,8 +86,8 @@ def _snapshot_member(name: str, value: tuple[int, bytes | None]) -> tarfile.TarI
     return member
 
 
-def archive_snapshot(destination: Path, files: dict[str, tuple[int, bytes | None]]) -> str:
-    """Archive captured bytes, not a second traversal of the mutable source tree."""
+def snapshot_members(files: dict[str, tuple[int, bytes | None]]) -> list[tarfile.TarInfo]:
+    """One input validation contract for archive production and daemon readback."""
     if not isinstance(files, dict) or not files or len(files) > MAX_SNAPSHOT_ENTRIES:
         raise ValueError("snapshot entry limit exceeded or snapshot missing")
     # Validate everything before creating the output, including parent structure.
@@ -98,9 +98,17 @@ def archive_snapshot(destination: Path, files: dict[str, tuple[int, bytes | None
         parent = PurePosixPath(member.name).parent.as_posix()
         if parent not in files or files[parent][1] is not None:
             raise ValueError("snapshot parent directory is missing or is a file")
+    return members
+
+
+def archive_snapshot(destination: Path, files: dict[str, tuple[int, bytes | None]], *, image_root: bool = False) -> str:
+    """Archive captured bytes, not a second traversal of the mutable source tree."""
+    members = snapshot_members(files)
     with tarfile.open(destination, mode="x", format=tarfile.PAX_FORMAT) as archive:
         for member in sorted(members, key=lambda item: item.name):
             body = files[member.name][1]
+            if image_root:
+                member.name = "inputs" if member.name == "." else f"inputs/{member.name}"
             archive.addfile(member, io.BytesIO(body) if body is not None else None)
     with destination.open("rb") as handle:
         return hashlib.file_digest(handle, "sha256").hexdigest()
@@ -160,10 +168,12 @@ def build_context(destination: Path, files: dict[str, tuple[int, bytes | None]],
         raise ValueError("serialized verification request byte limit exceeded")
     launcher = Path(__file__).with_name("verification_docker_entrypoint.py").read_bytes()
     destination.mkdir(mode=0o700)
-    archive_snapshot(destination / "snapshot.tar", files)
+    # ADD merges archive contents into its destination but does not preserve the
+    # archive's '.' root metadata. Name /inputs explicitly to retain its mode.
+    archive_snapshot(destination / "snapshot.tar", files, image_root=True)
     payloads = {"request.json": request, "entrypoint.py": launcher,
                 ".dockerignore": b"*\n!Dockerfile\n!snapshot.tar\n!entrypoint.py\n!request.json\n",
-                "Dockerfile": (f"FROM {reference}\nADD snapshot.tar /inputs/\n"
+                "Dockerfile": (f"FROM {reference}\nADD snapshot.tar /\n"
                                "COPY entrypoint.py request.json /__speckit/\n").encode("ascii")}
     for name, body in payloads.items():
         with (destination / name).open("xb") as handle:

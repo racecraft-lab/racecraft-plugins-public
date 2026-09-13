@@ -4,7 +4,7 @@
   "title": "Unqualified image-native verification evidence; never authorizes reuse",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "execution_id", "dispatch_id", "workflow_file", "command_id", "argv", "snapshot_sha256", "inputs_unchanged", "environment_sha256", "toolchain", "completed", "exit_code", "elapsed_seconds", "stdout_sha256", "stderr_sha256", "evidence_sha256", "output_directory", "output_contract", "isolation_mode", "producer"],
+  "required": ["schema_version", "execution_id", "dispatch_id", "workflow_file", "command_id", "argv", "snapshot_sha256", "inputs_unchanged", "input_snapshot_verified", "environment_sha256", "toolchain", "completed", "exit_code", "elapsed_seconds", "stdout_sha256", "stderr_sha256", "evidence_sha256", "output_directory", "output_contract", "isolation_mode", "producer"],
   "properties": {
     "schema_version": {"const": "docker-verification-record/v1"},
     "execution_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
@@ -14,6 +14,7 @@
     "argv": {"type": "array", "minItems": 1, "items": {"type": "string"}},
     "snapshot_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "inputs_unchanged": {"type": "boolean"},
+    "input_snapshot_verified": {"type": "boolean"},
     "environment_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "toolchain": {
       "type": "object", "additionalProperties": false,
