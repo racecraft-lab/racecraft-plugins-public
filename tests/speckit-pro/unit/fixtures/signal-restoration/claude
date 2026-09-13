@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+import json, os, signal, sys, time
+from pathlib import Path
+if '--version' in sys.argv:
+    print('2.1.269 (Claude Code)')
+elif '--help' in sys.argv:
+    print('--restricted --setting-sources --plugin-dir --strict-mcp-config --mcp-config --tools --allowedTools --settings --permission-mode --permission-prompts --output-format --verbose --no-session-persistence')
+elif 'doctor' in sys.argv:
+    print('Running: native (2.1.269)')
+    print('Managed settings (remote): not fetched — requires an Enterprise or Team subscription')
+    print('Organization policy: not applicable to Pro and Max accounts')
+else:
+    root = sys.argv[sys.argv.index('--plugin-dir') + 1]
+    sys.stdout.buffer.write(b'partial stdout\r\n'); sys.stdout.buffer.flush()
+    sys.stderr.buffer.write(b'partial stderr\xff'); sys.stderr.buffer.flush()
+    (Path(os.environ['HOME']).parent / 'child-state.json').write_text(json.dumps({'pid': os.getpid(), 'plugin_root': root}), encoding='utf-8')
+    def stop(_signum, _frame):
+        (Path(os.environ['HOME']).parent / 'child-stopped').write_text('stopped\n', encoding='utf-8')
+        raise SystemExit(143)
+    signal.signal(signal.SIGTERM, stop)
+    time.sleep(60)
