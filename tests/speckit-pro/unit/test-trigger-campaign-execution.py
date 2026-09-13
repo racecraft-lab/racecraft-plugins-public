@@ -144,6 +144,21 @@ class ExecutionTests(unittest.TestCase):
             native.assert_not_called()
             self.assertFalse(moved.output.exists())
 
+    def test_timeout_override_refused_before_ledger_or_native_launch(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            request = replace(request_fixture(root), timeout=181)
+            self.assertNotEqual(execution.concurrency_binding(request.manifest),
+                                execution.concurrency_binding({**request.manifest, "trial_timeout_seconds": 181}))
+            before = sorted(path.relative_to(root) for path in root.rglob("*"))
+            with mock.patch.object(execution, "execute_case") as native, \
+                 mock.patch.object(execution, "_global_lease", side_effect=AssertionError("lease reached")) as lease, \
+                 self.assertRaisesRegex(ValueError, "timeout"):
+                execution.run_campaign(request)
+            native.assert_not_called()
+            lease.assert_not_called()
+            self.assertEqual(sorted(path.relative_to(root) for path in root.rglob("*")), before)
+
     def test_partial_resume_replays_prior_evidence_before_any_new_launch(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

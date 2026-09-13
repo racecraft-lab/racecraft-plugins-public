@@ -1754,6 +1754,7 @@ def main() -> int:
 
         report = {
             "metadata": {
+                "trial_timeout_seconds": args.timeout,
                 "input_snapshot": input_snapshot,
                 "replay_context": replay_context,
                 "no_op_description_sha256": hashlib.sha256(no_op_description.encode()).hexdigest(),

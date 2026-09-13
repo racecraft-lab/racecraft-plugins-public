@@ -37,7 +37,8 @@ class CampaignRequest:
 
 
 def concurrency_binding(manifest: dict) -> str:
-    return comparison.json_digest({"pins": manifest["pins"], "identities": manifest["identities"]})
+    return comparison.json_digest({"pins": manifest["pins"], "identities": manifest["identities"],
+                                   "trial_timeout_seconds": manifest["trial_timeout_seconds"]})
 
 
 def qualify_pilot(root: Path) -> QualifiedConcurrency:
@@ -172,7 +173,8 @@ def _validate_request(request: CampaignRequest) -> list[tuple[str, int]]:
     comparison._require(isinstance(destination, str) and Path(destination).is_absolute()
         and destination == str(Path(destination).resolve()) and request.output.resolve() == Path(destination),
         "approved manifest must bind this exact canonical output directory; changing it cannot reset the campaign budget")
-    comparison._require(type(request.timeout) is int and request.timeout > 0, "invalid per-trial timeout")
+    comparison._require(type(request.timeout) is int and request.timeout == manifest["trial_timeout_seconds"],
+                        "per-trial timeout differs from approved manifest")
     comparison._require(comparison.snapshot_identities(comparison.measurement_snapshot()) == manifest["identities"], "frozen public inputs changed before launch")
     comparison._require(hashlib.sha256(request.inventory.read_bytes()).hexdigest() == manifest["inventory_sha256"], "frozen inventory changed before launch")
     comparison.validate_inventory_binding(manifest, comparison.read_json(request.inventory))

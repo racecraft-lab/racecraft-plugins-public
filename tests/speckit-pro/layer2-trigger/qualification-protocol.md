@@ -32,6 +32,11 @@ uses the unchanged installed harness at the latter full commit.
 Freeze a `trigger-experiment/v1` only after integration and artifact generation.
 Review its exact roster, raw inventory digest, parser/catalog/fixture identities,
 model and CLI versions, trial settings, scope, and controlled description digests.
+The manifest must include positive integer `trial_timeout_seconds`. The campaign
+call's `--timeout` must equal that value; both native runners retain it in report
+metadata and independent replay rejects a missing or different value. Changing
+the timeout requires a newly reviewed manifest and invalidates prior concurrency
+qualification. Historical reports without this evidence remain diagnostic.
 Do not substitute a current runner with the historical runner: that would vary
 more than the approved behavior difference. Do not treat placeholder pins or an
 approval-shaped JSON object as a user's authorization.

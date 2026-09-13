@@ -854,6 +854,7 @@ def main(argv: list[str]) -> int:
         if preflight is None:
             raise ValueError(preflight_reason)
         metadata = {
+            "trial_timeout_seconds": args.timeout,
             "input_snapshot": experiment_evidence.measurement_snapshot(),
             "replay_context": {"host": "claude", "plugin_name": plugin_name, "plugin_root": str(plugin_root.resolve()),
                                "expected_skill": expected_skill, "nonce": nonce, "requested_model": args.model,

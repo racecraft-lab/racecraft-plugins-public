@@ -2,6 +2,7 @@
   "schema_version": "trigger-experiment/v1",
   "experiment_id": "issue-573-full-2026-09-12",
   "trials": 3,
+  "trial_timeout_seconds": 180,
   "threshold": 0.5,
   "qualification_scope": "full",
   "roster": [

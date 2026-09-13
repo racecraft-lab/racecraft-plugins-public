@@ -75,6 +75,8 @@ def validate_experiment(manifest: dict) -> dict[str, dict]:
     _require(isinstance(manifest, dict) and manifest.get("schema_version") == "trigger-experiment/v1", "unsupported experiment schema")
     _require(isinstance(manifest.get("experiment_id"), str) and bool(manifest["experiment_id"]), "missing experiment identity")
     _require(type(manifest.get("trials")) is int and manifest["trials"] == 3, "exactly three integer trials required")
+    _require(type(manifest.get("trial_timeout_seconds")) is int and manifest["trial_timeout_seconds"] > 0,
+             "positive integer trial timeout required")
     _require(type(manifest.get("threshold")) is float and manifest["threshold"] == 0.5, "threshold must remain 0.5")
     _require(manifest.get("qualification_scope") in {"full", "pr-core", "pilot"}, "unknown qualification scope")
     _require(manifest.get("arms") in (["baseline", "candidate"], ["candidate"]), "unknown experiment arms")
@@ -264,6 +266,8 @@ def _read_arm(manifest: dict, root: Path, index: dict, arm: str, cases: dict) ->
         _require(metadata.get("replay_context") == item["replay_context"], "report replay context mismatch")
         _require(snapshot_identities(metadata["input_snapshot"]) == manifest["identities"], "runtime inputs differ from frozen experiment")
         _require(metadata.get("preflight", {}).get("version") == manifest["pins"][cases[identity[0]]["host"]]["cli_version"], "observed CLI pin mismatch")
+        _require(type(metadata.get("trial_timeout_seconds")) is int and metadata["trial_timeout_seconds"] == manifest["trial_timeout_seconds"],
+                 "runtime trial timeout differs from frozen experiment")
         _require(metadata.get("no_op_description_sha256") == hashlib.sha256(applied_description.encode()).hexdigest(), "runtime controlled description mismatch")
         _require(item["replay_context"].get("no_op_description") == applied_description, "staged no-op description differs from controlled arm")
         report_results = [row for row in report["results"] if row.get("case_id") == identity[0]]

@@ -25,13 +25,38 @@ class ComparisonTests(unittest.TestCase):
     def test_manifest_rejects_boolean_numbers_and_identity_drift(self):
         manifest = minimal_manifest()
         comparison.validate_experiment(manifest)
-        for key, value in (("trials", True), ("threshold", True), ("trials", 2)):
+        for key, value in (("trials", True), ("threshold", True), ("trials", 2),
+                           ("trial_timeout_seconds", True), ("trial_timeout_seconds", 0),
+                           ("trial_timeout_seconds", -1), ("trial_timeout_seconds", 180.0),
+                           ("trial_timeout_seconds", None)):
             with self.subTest(key=key, value=value), self.assertRaises(ValueError):
                 comparison.validate_experiment({**manifest, key: value})
         bad = copy.deepcopy(manifest)
         bad["roster"][0]["query"] = "changed"
         with self.assertRaises(ValueError):
             comparison.validate_experiment(bad)
+
+    def test_missing_timeout_is_not_an_approved_trial_policy(self):
+        manifest = minimal_manifest()
+        del manifest["trial_timeout_seconds"]
+        with self.assertRaisesRegex(ValueError, "timeout"):
+            comparison.validate_experiment(manifest)
+
+    def test_replay_refuses_changed_or_missing_native_timeout(self):
+        for host in ("claude", "codex"):
+            with self.subTest(host=host), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                manifest, indexes = evidence_fixture(root, host=host)
+                report_path = root / "candidate/report.json"
+                original = json.loads(report_path.read_text())
+                for timeout in (181, True, None):
+                    with self.subTest(timeout=timeout):
+                        report = copy.deepcopy(original)
+                        report["metadata"]["trial_timeout_seconds"] = timeout
+                        report_path.write_text(json.dumps(report))
+                        for item in indexes[1]["trials"]:
+                            item["report"] = comparison.artifact_reference(root, report_path)
+                        self.assertEqual(comparison.compare_evidence(manifest, root, *indexes)["exit_code"], 2)
 
     def test_raw_hit_regressions_are_not_hidden_by_boolean_grade(self):
         for polarity, before, after in ((True, 3, 2), (False, 0, 1)):
@@ -111,7 +136,7 @@ def minimal_manifest():
     roster = [{"case_id": evidence.case_id("claude", "demo", entry), "host": "claude", "skill": "demo", **entry}]
     return {
         "schema_version": "trigger-experiment/v1", "experiment_id": "test", "trials": 3,
-        "threshold": 0.5, "qualification_scope": "pr-core", "roster": roster,
+        "threshold": 0.5, "trial_timeout_seconds": 180, "qualification_scope": "pr-core", "roster": roster,
         "corpus_sha256": comparison.json_digest(roster), "inventory_sha256": "1" * 64,
         "pins": {"claude": {"model": "claude-sonnet-test", "cli_version": "test"}},
         "identities": {"observer": comparison.observer_digest(), "catalog": "2" * 64, "fixture": "3" * 64},
@@ -178,7 +203,7 @@ def evidence_fixture(root, host="claude", entry_override=None, selected_pattern=
         report = directory / "report.json"
         passed = (sum(selected_pattern) / 3 >= 0.5) == entry["should_trigger"]
         report.write_text(json.dumps({"metadata": {"replay_context": context, "input_snapshot": snapshot,
-            "preflight": preflight, "catalog_preflight": catalog,
+            "preflight": preflight, "catalog_preflight": catalog, "trial_timeout_seconds": manifest["trial_timeout_seconds"],
             "no_op_description_sha256": manifest["controlled_difference"][f"{arm}_sha256"]},
             "summary": {"total": 1, "passed": int(passed), "failed": int(not passed), "complete": True, "not_run": 0,
                         "requested_model": model, "qualification_eligible": True},

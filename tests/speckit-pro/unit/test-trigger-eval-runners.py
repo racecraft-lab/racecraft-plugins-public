@@ -399,7 +399,8 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
 
                     output = io.StringIO()
                     diagnostics = io.StringIO()
-                    argv = ["demo", "--evidence-dir", str(evidence), "--model", "claude-sonnet-test" if host == "claude" else "gpt-5.6-sol"]
+                    argv = ["demo", "--evidence-dir", str(evidence), "--timeout", "37",
+                            "--model", "claude-sonnet-test" if host == "claude" else "gpt-5.6-sol"]
                     with contextlib.ExitStack() as stack:
                         for name, replacement in (
                             ("find_eval_file", corpus), ("find_skill_source", source),
@@ -436,6 +437,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     self.assertEqual(code, 0 if scenario == "good" else 143 if scenario == "interrupted" else 1)
                     self.assertEqual(len(calls), 6 if scenario == "good" else 1)
                     report = json.loads(output.getvalue())
+                    self.assertEqual(report["metadata"]["trial_timeout_seconds"], 37)
                     trial = report["results"][0]["selection_evidence"][0]
                     self.assertIs(trial["stream_valid"], True)
                     self.assertIs(trial["trial_valid"], scenario == "good")
