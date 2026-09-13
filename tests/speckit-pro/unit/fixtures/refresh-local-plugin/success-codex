@@ -1,0 +1,13 @@
+#!/usr/bin/env python3
+"""Deterministic test actor; never invokes a provider."""
+import os
+import sys
+
+with open(os.environ["CALL_LOG"], "a", encoding="utf-8") as call_log:
+    call_log.write("codex " + " ".join(sys.argv[1:]) + "\n")
+if sys.argv[1:4] == ["plugin", "marketplace", "list"]:
+    sys.stdout.write(
+        "MARKETPLACE               ROOT\n"
+        f"racecraft-plugins-public  {os.environ['STUB_REPO_ROOT']}\n"
+    )
+raise SystemExit(0)
