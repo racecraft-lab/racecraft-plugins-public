@@ -284,9 +284,8 @@ class DockerRuntimeTests(unittest.TestCase):
         original_stat = Path.stat
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            executable = root / "docker"
-            executable.write_bytes(b"constructor-only fixture")
-            executable.chmod(0o755)
+            # Input-side fixture: writable temporary storage may be noexec.
+            executable = Path(__file__).resolve().parent / "fixtures" / "verification-docker" / "docker"
             def observed_stat(path, *args, **kwargs):
                 if path == root / "daemon.sock":
                     return SimpleNamespace(st_mode=stat.S_IFSOCK | 0o600)
@@ -296,7 +295,7 @@ class DockerRuntimeTests(unittest.TestCase):
                 client = DockerClient(executable, f"unix://{root}/daemon.sock", root / "config")
             self.assertEqual(client.prefix, ["--host", f"unix://{root}/daemon.sock",
                                              "--config", str(root / "config")])
-            self.assertEqual(client.environment["PATH"], str(root.resolve()))
+            self.assertEqual(client.environment["PATH"], str(executable.parent))
             self.assertEqual(set(client.environment), {"HOME", "DOCKER_CONFIG", "PATH", "LANG"})
             self.assertEqual(list((root / "config").iterdir()), [])
             self.assertEqual((root / "config").stat().st_mode & 0o777, 0o700)

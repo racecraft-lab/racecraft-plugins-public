@@ -82,8 +82,12 @@ def merged_output(result: subprocess.CompletedProcess[str]) -> str:
 def write_git_marker(path_fixture: Path) -> None:
     path_fixture.mkdir(parents=True, exist_ok=True)
     marker = path_fixture / ("git.exe" if os.name == "nt" else "git")
-    marker.write_bytes(b"")
-    marker.chmod(0o755)
+    if os.name == "posix":
+        # Discovery-only stand-in on an executable input mount, even with noexec temp storage.
+        marker.symlink_to(CHECKER)
+    else:
+        marker.write_bytes(b"")
+        marker.chmod(0o755)
 
 
 def forbidden_command_resolution(path: Path) -> list[str]:
