@@ -114,7 +114,7 @@ class DockerInputTests(unittest.TestCase):
 class DockerPolicyTests(unittest.TestCase):
     def test_options_preserve_the_tested_restrictions_without_host_mounts(self):
         options = container_options(IMAGE_ID, EXECUTION_ID)
-        for option in ("--pull=never", "--platform=linux/arm64", "--read-only", "--network=none",
+        for option in ("--pull=never", "--platform=linux/arm64", "--init", "--read-only", "--network=none",
                        "--cap-drop=ALL", "--security-opt=no-new-privileges=true", "--user=65532:65532",
             "--pids-limit=32", "--memory=256m", "--memory-swap=256m", "--cpus=1", "--ipc=none"):
             self.assertIn(option, options)
@@ -134,7 +134,7 @@ class DockerPolicyTests(unittest.TestCase):
             "Config": {"User": "65532:65532", "WorkingDir": "/inputs",
                        "Entrypoint": ["/usr/local/bin/python3"],
                        "Cmd": ["-I", "-S", "/__speckit/entrypoint.py"], "Labels": {"org.racecraft.verification": EXECUTION_ID}},
-            "HostConfig": {"ReadonlyRootfs": True, "NetworkMode": "none", "Privileged": False,
+            "HostConfig": {"Init": True, "ReadonlyRootfs": True, "NetworkMode": "none", "Privileged": False,
                            "Memory": 268435456, "MemorySwap": 268435456, "NanoCpus": 1000000000,
                            "PidsLimit": 32, "IpcMode": "none", "PublishAllPorts": False,
                            "CapDrop": ["ALL"], "CapAdd": None, "Binds": None,
@@ -144,7 +144,8 @@ class DockerPolicyTests(unittest.TestCase):
                            "Tmpfs": {"/outputs": "rw,nosuid,nodev,noexec,size=16777216,uid=65532,gid=65532,mode=0700"}},
         }
         self.assertEqual(container_reasons(config, IMAGE_ID, EXECUTION_ID), [])
-        changes = (("ReadonlyRootfs", False), ("ReadonlyRootfs", 1), ("NetworkMode", "bridge"),
+        changes = (("Init", False), ("Init", None), ("Init", 1),
+                   ("ReadonlyRootfs", False), ("ReadonlyRootfs", 1), ("NetworkMode", "bridge"),
                    ("Privileged", True), ("Binds", ["/:/host:ro"]), ("CapAdd", ["SYS_ADMIN"]),
                    ("SecurityOpt", ["no-new-privileges=true", "seccomp=unconfined"]),
                    ("Tmpfs", {}), ("PidMode", "host"), ("Memory", 0), ("PidsLimit", -1))
@@ -153,6 +154,10 @@ class DockerPolicyTests(unittest.TestCase):
             changed["HostConfig"][key] = value
             with self.subTest(key=key, value=value):
                 self.assertTrue(container_reasons(changed, IMAGE_ID, EXECUTION_ID))
+        missing_init = copy.deepcopy(config)
+        del missing_init["HostConfig"]["Init"]
+        with self.subTest(init="missing"):
+            self.assertIn("Init", container_reasons(missing_init, IMAGE_ID, EXECUTION_ID))
         for key, value in (("Image", "sha256:" + "d" * 64), ("Mounts", [{"Source": "/host"}])):
             with self.subTest(key=key):
                 self.assertTrue(container_reasons({**config, key: value}, IMAGE_ID, EXECUTION_ID))

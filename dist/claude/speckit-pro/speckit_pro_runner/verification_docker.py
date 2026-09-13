@@ -27,6 +27,7 @@ OUTPUT_TMPFS = "rw,nosuid,nodev,noexec,size=16777216,uid=65532,gid=65532,mode=07
 ENTRYPOINT = ["/usr/local/bin/python3"]
 COMMAND = ["-I", "-S", "/__speckit/entrypoint.py"]
 HOST_POLICY = {
+    "Init": True,
     "ReadonlyRootfs": True, "NetworkMode": "none", "Privileged": False,
     "Memory": 268435456, "MemorySwap": 268435456, "NanoCpus": 1000000000,
     "PidsLimit": 32, "IpcMode": "none", "PublishAllPorts": False, "PidMode": "",
@@ -120,7 +121,9 @@ def container_options(image_id: str, execution_id: str) -> list[str]:
         raise ValueError("a local content-addressed image ID is required")
     if not isinstance(execution_id, str) or EXECUTION_ID.fullmatch(execution_id) is None:
         raise ValueError("invalid verification execution identity")
-    return ["create", "--pull=never", "--platform=linux/arm64", f"--name=speckit-verifier-{execution_id}",
+    # Reap orphaned descendants without asking the checked workload to act as PID 1.
+    # https://docs.docker.com/reference/cli/docker/container/run/#specify-an-init-process
+    return ["create", "--pull=never", "--platform=linux/arm64", "--init", f"--name=speckit-verifier-{execution_id}",
             f"--label=org.racecraft.verification={execution_id}", "--read-only", "--network=none",
             "--cap-drop=ALL", "--security-opt=no-new-privileges=true", "--user=65532:65532",
             "--cpus=1", "--memory=256m", "--memory-swap=256m", "--pids-limit=32", "--ipc=none",
