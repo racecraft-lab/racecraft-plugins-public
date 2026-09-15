@@ -9,9 +9,13 @@ import hashlib
 import json
 import os
 import re
+import shutil
+import stat
 import subprocess
 import sys
+import tempfile
 import unittest
+from unittest.mock import patch
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
@@ -24,12 +28,10 @@ from test_result import run_counted
 
 SOURCE_ROOT = REPO_ROOT / 'speckit-pro'
 BUILDER = REPO_ROOT / 'scripts' / 'build-plugin-payloads.py'
-CLAUDE_PAYLOAD = REPO_ROOT / 'dist' / 'claude' / 'speckit-pro'
-CODEX_PAYLOAD = REPO_ROOT / 'dist' / 'codex' / 'speckit-pro'
 PATH_ESCAPE_RE = re.compile('\\.\\./\\.\\./(?:skills|codex-skills)/|\\.\\./\\.\\./\\.\\./(?:skills|codex-skills)/')
 
-def run_builder() -> subprocess.CompletedProcess[str]:
-    return subprocess.run([sys.executable, str(BUILDER)], cwd=REPO_ROOT, text=True, capture_output=True, shell=False, check=False)
+def run_builder(repo_root: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run([sys.executable, '-B', str(repo_root / 'scripts' / BUILDER.name)], cwd=repo_root, text=True, capture_output=True, shell=False, check=False)
 
 def _display_path(path: Path) -> str:
     try:
@@ -60,30 +62,90 @@ def skill_entrypoint_set(root: Path) -> str:
     entries = [f'./{p.relative_to(root).as_posix()}' for p in root.glob('*/SKILL.md') if p.is_file()]
     return '\n'.join(sorted(entries))
 
-def payload_fingerprint() -> str:
-    """Mirror the sorted `shasum -a 256` fingerprint over both payload trees."""
+def payload_fingerprint(repo_root: Path = REPO_ROOT) -> str:
+    """Compare payload paths, bytes, and modes independently of the build root."""
     files: list[Path] = []
-    for base in (CLAUDE_PAYLOAD, CODEX_PAYLOAD):
+    for base in (repo_root / 'dist' / 'claude' / 'speckit-pro', repo_root / 'dist' / 'codex' / 'speckit-pro'):
         if base.is_dir():
-            files.extend((p for p in base.rglob('*') if p.is_file()))
+            files.extend((p for p in base.rglob('*') if p.is_file() and '__pycache__' not in p.parts and not p.name.endswith('.pyc')))
     lines = []
     for path in sorted(files, key=lambda p: p.as_posix()):
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
-        lines.append(f'{digest}  {path.as_posix()}')
+        lines.append(f'{digest} {stat.S_IMODE(path.stat().st_mode):04o} {path.relative_to(repo_root).as_posix()}')
     return '\n'.join(lines)
+
+class PayloadFixtureTests(unittest.TestCase):
+
+    def test_fingerprint_detects_bytes_paths_and_modes(self) -> None:
+        with tempfile.TemporaryDirectory(prefix='payload-fingerprint-') as tmp:
+            left, right = Path(tmp) / 'left', Path(tmp) / 'right'
+            for root in (left, right):
+                for surface in ('claude', 'codex'):
+                    target = root / 'dist' / surface / 'speckit-pro' / 'fixture.txt'
+                    target.parent.mkdir(parents=True)
+                    target.write_bytes(b'fixture\n')
+                    target.chmod(0o644)
+            baseline = payload_fingerprint(left)
+            self.assertEqual(len(baseline.splitlines()), 2)
+            self.assertEqual(baseline, payload_fingerprint(right))
+            target = right / 'dist' / 'codex' / 'speckit-pro' / 'fixture.txt'
+            target.write_bytes(b'changed\n')
+            self.assertNotEqual(baseline, payload_fingerprint(right))
+            target.write_bytes(b'fixture\n')
+            renamed = target.with_name('renamed.txt')
+            target.rename(renamed)
+            self.assertNotEqual(baseline, payload_fingerprint(right))
+            renamed.rename(target)
+            if os.name != 'nt':
+                target.chmod(0o755)
+                self.assertNotEqual(baseline, payload_fingerprint(right))
+                target.chmod(0o644)
+            cache = target.parent / '__pycache__' / 'fixture.pyc'
+            cache.parent.mkdir()
+            cache.write_bytes(b'ignored interpreter cache')
+            self.assertEqual(baseline, payload_fingerprint(right))
+            target.unlink()
+            self.assertNotEqual(baseline, payload_fingerprint(right))
+
+    def test_failed_fixture_setup_removes_owned_files(self) -> None:
+        nested = ValidatePluginPayload('test_payload')
+        try:
+            with patch.object(shutil, 'copytree', side_effect=OSError('fixture setup probe')):
+                with self.assertRaisesRegex(OSError, 'fixture setup probe'):
+                    nested.setUp()
+            self.assertFalse(nested.work.is_relative_to(REPO_ROOT))
+        finally:
+            nested.doCleanups()
+        self.assertFalse(nested.work.exists())
 
 class ValidatePluginPayload(unittest.TestCase):
 
+    def setUp(self) -> None:
+        temporary = tempfile.TemporaryDirectory(prefix='payload-builder-consumer-')
+        self.addCleanup(temporary.cleanup)
+        self.work = Path(temporary.name).resolve()
+        (self.work / 'scripts').mkdir()
+        shutil.copy2(BUILDER, self.work / 'scripts' / BUILDER.name)
+        shutil.copy2(REPO_ROOT / 'LICENSE', self.work / 'LICENSE')
+        shutil.copytree(SOURCE_ROOT, self.work / 'speckit-pro', ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
+
     def test_payload(self) -> None:
+        claude_payload = self.work / 'dist' / 'claude' / 'speckit-pro'
+        codex_payload = self.work / 'dist' / 'codex' / 'speckit-pro'
+        self.assertFalse(claude_payload.resolve().is_relative_to(REPO_ROOT.resolve()))
+        self.assertFalse(codex_payload.resolve().is_relative_to(REPO_ROOT.resolve()))
+        self.assertFalse((self.work / 'dist').exists())
+        self.assertEqual(BUILDER.read_bytes(), (self.work / 'scripts' / BUILDER.name).read_bytes())
         with self.subTest(msg='payload builder exists'):
             self.assertTrue(BUILDER.is_file(), f'file not found: {BUILDER}')
         with self.subTest(msg='payload builder rebuilds from scratch'):
-            completed = run_builder()
+            completed = run_builder(self.work)
             self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+            self.assertFalse(any((self.work / 'speckit-pro').rglob('__pycache__')))
         with self.subTest(msg='Claude payload directory exists'):
-            self.assertTrue(CLAUDE_PAYLOAD.is_dir(), f'missing {CLAUDE_PAYLOAD}')
+            self.assertTrue(claude_payload.is_dir(), f'missing {claude_payload}')
         with self.subTest(msg='Codex payload directory exists'):
-            self.assertTrue(CODEX_PAYLOAD.is_dir(), f'missing {CODEX_PAYLOAD}')
+            self.assertTrue(codex_payload.is_dir(), f'missing {codex_payload}')
         claude_source = ''
         with self.subTest(msg='Claude marketplace installs the Claude dist payload'):
             claude_market = load_json_file(REPO_ROOT / '.claude-plugin' / 'marketplace.json')
@@ -102,26 +164,26 @@ class ValidatePluginPayload(unittest.TestCase):
             self.assertTrue(bool(codex_rel) and (REPO_ROOT / codex_rel).is_dir(), f'missing {_display_path(REPO_ROOT / codex_rel)}')
         for forbidden in ('.codex-plugin', 'codex-skills', 'codex-agents', 'codex-hooks.json'):
             with self.subTest(msg=f'Claude payload excludes {forbidden}'):
-                self.assertFalse((CLAUDE_PAYLOAD / forbidden).exists(), f'{forbidden} exists in the Claude payload')
+                self.assertFalse((claude_payload / forbidden).exists(), f'{forbidden} exists in the Claude payload')
         for forbidden in ('.claude-plugin', 'codex-skills', 'agents'):
             with self.subTest(msg=f'Codex payload excludes {forbidden}'):
-                self.assertFalse((CODEX_PAYLOAD / forbidden).exists(), f'{forbidden} exists in the Codex payload')
+                self.assertFalse((codex_payload / forbidden).exists(), f'{forbidden} exists in the Codex payload')
         with self.subTest(msg='Claude payload keeps the Claude skill set'):
-            self.assertEqual(count_skill_entrypoints(SOURCE_ROOT / 'skills'), count_skill_entrypoints(CLAUDE_PAYLOAD / 'skills'), 'Claude skill count')
+            self.assertEqual(count_skill_entrypoints(SOURCE_ROOT / 'skills'), count_skill_entrypoints(claude_payload / 'skills'), 'Claude skill count')
         with self.subTest(msg='Codex payload keeps exactly the Codex skill set'):
-            self.assertEqual(skill_entrypoint_set(SOURCE_ROOT / 'codex-skills'), skill_entrypoint_set(CODEX_PAYLOAD / 'skills'), 'Codex skill entrypoints')
+            self.assertEqual(skill_entrypoint_set(SOURCE_ROOT / 'codex-skills'), skill_entrypoint_set(codex_payload / 'skills'), 'Codex skill entrypoints')
         with self.subTest(msg='Codex payload manifest exposes skills at ./skills/'):
-            codex_manifest = load_json_file(CODEX_PAYLOAD / '.codex-plugin' / 'plugin.json')
+            codex_manifest = load_json_file(codex_payload / '.codex-plugin' / 'plugin.json')
             self.assertEqual('./skills/', codex_manifest['skills'], 'Codex manifest skills')
         with self.subTest(msg='Codex payload has no duplicate nested skill entrypoints'):
-            skills_dir = CODEX_PAYLOAD / 'skills'
+            skills_dir = codex_payload / 'skills'
             nested = 0
             if skills_dir.is_dir():
                 nested = sum((1 for p in skills_dir.rglob('SKILL.md') if p.is_file() and len(p.relative_to(skills_dir).parts) >= 3))
             self.assertEqual(0, nested, 'nested Codex SKILL.md count')
         with self.subTest(msg='Payload files do not reference source-tree skill paths'):
             matches: list[str] = []
-            for base in (CLAUDE_PAYLOAD, CODEX_PAYLOAD):
+            for base in (claude_payload, codex_payload):
                 if not base.is_dir():
                     continue
                 for path in base.rglob('*'):
@@ -132,11 +194,13 @@ class ValidatePluginPayload(unittest.TestCase):
                         matches.append(path.as_posix())
             self.assertEqual([], matches, 'source-tree path references')
         with self.subTest(msg='Payload rebuild is deterministic'):
-            first_fingerprint = payload_fingerprint()
-            completed = run_builder()
+            first_fingerprint = payload_fingerprint(self.work)
+            completed = run_builder(self.work)
             self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
-            second_fingerprint = payload_fingerprint()
+            second_fingerprint = payload_fingerprint(self.work)
             self.assertEqual(first_fingerprint, second_fingerprint, 'payload fingerprint')
+        with self.subTest(msg='isolated rebuild matches committed payload paths, bytes, and modes'):
+            self.assertEqual(payload_fingerprint(), payload_fingerprint(self.work))
         with self.subTest(msg='release-please extra-files stay inside package paths'):
             config = load_json_file(REPO_ROOT / 'release-please-config.json')
             bad: list[str] = []

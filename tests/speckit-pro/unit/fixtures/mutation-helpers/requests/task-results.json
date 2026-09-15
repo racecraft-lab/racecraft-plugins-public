@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0",
+  "helper_id": "task-results",
+  "operation": "task-results",
+  "mode": "dry_run",
+  "inputs": {
+    "tasks_file": "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature/tasks.md",
+    "action": "start"
+  }
+}

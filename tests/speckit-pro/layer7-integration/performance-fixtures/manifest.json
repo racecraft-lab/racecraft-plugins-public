@@ -1,0 +1,689 @@
+{
+  "schema_version": "autopilot-performance-fixtures/v1",
+  "preparation": {
+    "status": "prepared-inputs-not-native-qualified",
+    "common_tasks_input": "COMMON-TASKS-INPUT.md",
+    "dependency_inventory": "DEPENDENCY-PINS.json"
+  },
+  "qualification": {
+    "status": "pending-native-qualification",
+    "launch_authorized": false,
+    "prerequisites_verified": false,
+    "native_workflow_runs_completed": 0,
+    "native_workflow_runs_planned": 12,
+    "baseline_harness_commit": "42f4afe5bd2a319f81ea4b28799ec13bfa8e6107",
+    "candidate_harness_commit": null,
+    "model_cli_pins": null,
+    "provider_launch_budget": null,
+    "dependency_qualification": null,
+    "metadata_input_qualification": null
+  },
+  "acceptance_targets": {
+    "candidate_automated_elapsed_seconds_exclusive_max": 7200,
+    "candidate_to_baseline_median_ratio_max": 0.5,
+    "hosts_measured_separately": [
+      "claude",
+      "codex"
+    ],
+    "routine_pr_feedback_seconds_exclusive_max": 900,
+    "routine_pr_feedback_requires_separate_scope_qualification": true,
+    "full_trigger_qualification_is_separate": true
+  },
+  "scenarios": [
+    {
+      "id": "ART-012",
+      "scenario_class": "shared-file-small",
+      "fixture_directory": "implementation-notes",
+      "workload": {
+        "commit": "ba22a0938b37743029142b8763b23be693193966",
+        "tree": "0a1f472815661d8df0c5d8759f782e66b906188c",
+        "feature_directory": "specs/art-012-implementation-notes-capture",
+        "workflow_original_path": "docs/ai/specs/.process/ART-012-workflow.md",
+        "representative_absent_implementation_paths": [
+          "tests/speckit-pro/unit/test-implementation-notes-record.py"
+        ]
+      },
+      "planning_commit": "3a0e49b6c6b49c855e23c4663ae407b7f34fd8a7",
+      "scaffold_to_planning_changed_paths": [
+        "docs/ai/specs/.process/ART-012-design-concept.md",
+        "docs/ai/specs/.process/ART-012-workflow.md",
+        "docs/ai/specs/.process/autopilot-state.json",
+        "docs/ai/specs/html-artifacts-roadmap-MOC.md",
+        "docs/ai/specs/html-artifacts-technical-roadmap.md",
+        "specs/art-012-implementation-notes-capture/.process/implementation-notes.md",
+        "specs/art-012-implementation-notes-capture/SPEC-MOC.md",
+        "specs/art-012-implementation-notes-capture/checklists/error-handling.md",
+        "specs/art-012-implementation-notes-capture/checklists/requirements.md",
+        "specs/art-012-implementation-notes-capture/checklists/state-management.md",
+        "specs/art-012-implementation-notes-capture/contracts/implementation-notes-record.md",
+        "specs/art-012-implementation-notes-capture/contracts/task-result-reporting-field.md",
+        "specs/art-012-implementation-notes-capture/data-model.md",
+        "specs/art-012-implementation-notes-capture/plan.md",
+        "specs/art-012-implementation-notes-capture/quickstart.md",
+        "specs/art-012-implementation-notes-capture/research.md",
+        "specs/art-012-implementation-notes-capture/spec.md",
+        "specs/art-012-implementation-notes-capture/tasks.md"
+      ],
+      "reference_task_count": 14,
+      "reference_task_ids": [
+        "T001",
+        "T002",
+        "T003",
+        "T004",
+        "T005",
+        "T014",
+        "T006",
+        "T007",
+        "T008",
+        "T009",
+        "T010",
+        "T011",
+        "T012",
+        "T013"
+      ],
+      "automated_reference_task_ids": [
+        "T001",
+        "T002",
+        "T003",
+        "T004",
+        "T005",
+        "T014",
+        "T006",
+        "T007",
+        "T008",
+        "T009",
+        "T010",
+        "T011",
+        "T012",
+        "T013"
+      ],
+      "operator_only_reference_task_ids": [],
+      "workflow": "implementation-notes/source/workflow.md",
+      "kickoff": "implementation-notes/kickoff.md",
+      "reference_tasks": "implementation-notes/source/tasks.md",
+      "prepared_tasks": {
+        "file": "implementation-notes/prepared-tasks.md",
+        "transformation": "reset-only-task-checkbox-completion",
+        "reset_task_ids": [],
+        "role": "acceptance-reference-not-generation-input"
+      },
+      "sources": [
+        {
+          "file": "implementation-notes/source/workflow.md",
+          "original_path": "docs/ai/specs/.process/ART-012-workflow.md",
+          "commit": "ba22a0938b37743029142b8763b23be693193966",
+          "git_blob": "9f6515442c6e00967c21666f1032769dd71bacc0",
+          "sha256": "9cfc61056a29264f80e65b30831263fd5d96e524c7af95b43c6ad013b8fafd08",
+          "bytes": 28307
+        },
+        {
+          "file": "implementation-notes/source/design-concept.md",
+          "original_path": "docs/ai/specs/.process/ART-012-design-concept.md",
+          "commit": "3a0e49b6c6b49c855e23c4663ae407b7f34fd8a7",
+          "git_blob": "eeaa76b824aeebb7c982f6df34df05d3c20c4553",
+          "sha256": "8c0351606a93724144a6bbef57e7368711e6915becf960a3650c3d81f54fb73e",
+          "bytes": 15205
+        },
+        {
+          "file": "implementation-notes/source/spec.md",
+          "original_path": "specs/art-012-implementation-notes-capture/spec.md",
+          "commit": "3a0e49b6c6b49c855e23c4663ae407b7f34fd8a7",
+          "git_blob": "73df69f7c35636dd444ab9cea5a4e95480832325",
+          "sha256": "ac7fde70549f58979efb6685b83cca3c64ba61864a7772b0b4424ccb27be0e12",
+          "bytes": 27390
+        },
+        {
+          "file": "implementation-notes/source/plan.md",
+          "original_path": "specs/art-012-implementation-notes-capture/plan.md",
+          "commit": "3a0e49b6c6b49c855e23c4663ae407b7f34fd8a7",
+          "git_blob": "e7ea5ec452cc770825a802b510103908b002cbd7",
+          "sha256": "d075bf1a0fafc81539aecdc603d885d95f66295880f6ebdfa37430a1815bf168",
+          "bytes": 21146
+        },
+        {
+          "file": "implementation-notes/source/tasks.md",
+          "original_path": "specs/art-012-implementation-notes-capture/tasks.md",
+          "commit": "3a0e49b6c6b49c855e23c4663ae407b7f34fd8a7",
+          "git_blob": "17d6728bd3bdd10fb2bdaa49c4dcebac78893494",
+          "sha256": "60979ac03c7d98e8f15770a8121d03c4f124b51259834d0a17202475f4fa34d1",
+          "bytes": 39646
+        },
+        {
+          "file": "implementation-notes/source/quickstart.md",
+          "original_path": "specs/art-012-implementation-notes-capture/quickstart.md",
+          "commit": "3a0e49b6c6b49c855e23c4663ae407b7f34fd8a7",
+          "git_blob": "482918d93bed28c2737894367a4d5e369c99c4ef",
+          "sha256": "1edf3b5b6fedc20c3326e0404ca965e92a49472bb2d93f5168db09d6fdc5938c",
+          "bytes": 7622
+        },
+        {
+          "file": "implementation-notes/source/data-model.md",
+          "original_path": "specs/art-012-implementation-notes-capture/data-model.md",
+          "commit": "3a0e49b6c6b49c855e23c4663ae407b7f34fd8a7",
+          "git_blob": "d0958e1bfe8e5934b1c47c51fa365cb439616a58",
+          "sha256": "b14013eb6635bf82cfd751aef54f2dfdc0e77d6c45f2d7c44bda346ad01f0436",
+          "bytes": 5968
+        },
+        {
+          "file": "implementation-notes/source/research.md",
+          "original_path": "specs/art-012-implementation-notes-capture/research.md",
+          "commit": "3a0e49b6c6b49c855e23c4663ae407b7f34fd8a7",
+          "git_blob": "d7b1e3ffe0d92ab7f3c8ddd4f08090c7fe78ecb8",
+          "sha256": "8cae21805123359494bfce6005584b8b1794894a7cd6b9d6db14210336b019c4",
+          "bytes": 17871
+        },
+        {
+          "file": "implementation-notes/source/contracts/implementation-notes-record.md",
+          "original_path": "specs/art-012-implementation-notes-capture/contracts/implementation-notes-record.md",
+          "commit": "3a0e49b6c6b49c855e23c4663ae407b7f34fd8a7",
+          "git_blob": "1045fc71fdee3348e026f71a0e089d6cdaca970d",
+          "sha256": "99ac28b712910d716567061c2afb3e4e9c2df1e5efc7fa00e5d76b733538d2c3",
+          "bytes": 7891
+        },
+        {
+          "file": "implementation-notes/source/contracts/task-result-reporting-field.md",
+          "original_path": "specs/art-012-implementation-notes-capture/contracts/task-result-reporting-field.md",
+          "commit": "3a0e49b6c6b49c855e23c4663ae407b7f34fd8a7",
+          "git_blob": "172c2d052c619c60a5676773ad144c4b67ccea08",
+          "sha256": "bc4fcd1113ca3a0e006eb02bddb333aa0b5eb1f1927e707240502af0244aeee3",
+          "bytes": 4596
+        }
+      ]
+    },
+    {
+      "id": "ART-007",
+      "scenario_class": "dependent-multi-group",
+      "fixture_directory": "draft-pr-emission",
+      "workload": {
+        "commit": "2c4edf01b6f84068bd311de81212fc3d4f2384b9",
+        "tree": "87b01cc77e4c442d127a72ce8c35f724b8db5f26",
+        "feature_directory": "specs/art-007-draft-pr-emission",
+        "workflow_original_path": "docs/ai/specs/.process/ART-007-workflow.md",
+        "representative_absent_implementation_paths": [
+          "speckit-pro/agents/artifact-author.md",
+          "speckit-pro/codex-agents/artifact-author.toml",
+          "tests/speckit-pro/unit/fixtures/pr-packet/valid-draft.json"
+        ]
+      },
+      "planning_commit": "d30876bb498a009b24a26df9f2371505722b45ef",
+      "scaffold_to_planning_changed_paths": [
+        "docs/ai/specs/.process/ART-007-workflow.md",
+        "docs/ai/specs/.process/autopilot-state.json",
+        "docs/ai/specs/html-artifacts-roadmap-MOC.md",
+        "docs/ai/specs/html-artifacts-technical-roadmap.md",
+        "specs/art-007-draft-pr-emission/.process/implementation-notes.md",
+        "specs/art-007-draft-pr-emission/checklists/error-handling.md",
+        "specs/art-007-draft-pr-emission/checklists/requirements.md",
+        "specs/art-007-draft-pr-emission/checklists/state-management.md",
+        "specs/art-007-draft-pr-emission/contracts/artifact-author-agent.md",
+        "specs/art-007-draft-pr-emission/contracts/draft-packet-mode.md",
+        "specs/art-007-draft-pr-emission/contracts/draft-pr-row.md",
+        "specs/art-007-draft-pr-emission/contracts/stage-corroboration.md",
+        "specs/art-007-draft-pr-emission/data-model.md",
+        "specs/art-007-draft-pr-emission/plan.md",
+        "specs/art-007-draft-pr-emission/quickstart.md",
+        "specs/art-007-draft-pr-emission/research.md",
+        "specs/art-007-draft-pr-emission/spec.md",
+        "specs/art-007-draft-pr-emission/tasks.md"
+      ],
+      "reference_task_count": 54,
+      "reference_task_ids": [
+        "T001",
+        "T002",
+        "T003",
+        "T004",
+        "T005",
+        "T006",
+        "T007",
+        "T008",
+        "T009",
+        "T010",
+        "T011",
+        "T012",
+        "T013",
+        "T014",
+        "T015",
+        "T016",
+        "T017",
+        "T018",
+        "T019",
+        "T020",
+        "T021",
+        "T022",
+        "T023",
+        "T024",
+        "T025",
+        "T026",
+        "T027",
+        "T028",
+        "T029",
+        "T030",
+        "T031",
+        "T032",
+        "T033",
+        "T034",
+        "T035",
+        "T036",
+        "T037",
+        "T038",
+        "T039",
+        "T040",
+        "T041",
+        "T042",
+        "T043",
+        "T044",
+        "T045",
+        "T046",
+        "T047",
+        "T048",
+        "T049",
+        "T050",
+        "T051",
+        "T052",
+        "T053",
+        "T054"
+      ],
+      "automated_reference_task_ids": [
+        "T001",
+        "T002",
+        "T003",
+        "T004",
+        "T005",
+        "T006",
+        "T007",
+        "T008",
+        "T009",
+        "T010",
+        "T011",
+        "T012",
+        "T013",
+        "T014",
+        "T015",
+        "T016",
+        "T017",
+        "T018",
+        "T019",
+        "T020",
+        "T021",
+        "T022",
+        "T023",
+        "T024",
+        "T025",
+        "T026",
+        "T027",
+        "T028",
+        "T029",
+        "T030",
+        "T031",
+        "T032",
+        "T033",
+        "T034",
+        "T035",
+        "T036",
+        "T037",
+        "T038",
+        "T039",
+        "T040",
+        "T041",
+        "T042",
+        "T043",
+        "T044",
+        "T045",
+        "T046",
+        "T047",
+        "T048",
+        "T049",
+        "T050",
+        "T051",
+        "T053",
+        "T054"
+      ],
+      "operator_only_reference_task_ids": [
+        "T052"
+      ],
+      "workflow": "draft-pr-emission/source/workflow.md",
+      "kickoff": "draft-pr-emission/kickoff.md",
+      "reference_tasks": "draft-pr-emission/source/tasks.md",
+      "prepared_tasks": {
+        "file": "draft-pr-emission/prepared-tasks.md",
+        "transformation": "reset-only-task-checkbox-completion",
+        "reset_task_ids": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005"
+        ],
+        "role": "acceptance-reference-not-generation-input"
+      },
+      "sources": [
+        {
+          "file": "draft-pr-emission/source/workflow.md",
+          "original_path": "docs/ai/specs/.process/ART-007-workflow.md",
+          "commit": "2c4edf01b6f84068bd311de81212fc3d4f2384b9",
+          "git_blob": "aa1c105734be10c2d65cc8506b8b39f31379de75",
+          "sha256": "8975ab6f60c92ba2a6868a59249b64b3f06e43c928a2770311657cce80f70aad",
+          "bytes": 36499
+        },
+        {
+          "file": "draft-pr-emission/source/design-concept.md",
+          "original_path": "docs/ai/specs/.process/ART-007-design-concept.md",
+          "commit": "d30876bb498a009b24a26df9f2371505722b45ef",
+          "git_blob": "852d88b45ca749186e8c918cd76de73522e99a5f",
+          "sha256": "b2f105d1f8ff30473c1210dd8b0950e50fa8aaf3fd4fa04b44cd60db37977bac",
+          "bytes": 16364
+        },
+        {
+          "file": "draft-pr-emission/source/spec.md",
+          "original_path": "specs/art-007-draft-pr-emission/spec.md",
+          "commit": "d30876bb498a009b24a26df9f2371505722b45ef",
+          "git_blob": "fc737e3eb5a8988d8bfa20630c9bd196fd6db30c",
+          "sha256": "8277def116d1c7048f947c8df3c743ce60111c8ebf7690b2922814b4457bbcec",
+          "bytes": 39084
+        },
+        {
+          "file": "draft-pr-emission/source/plan.md",
+          "original_path": "specs/art-007-draft-pr-emission/plan.md",
+          "commit": "d30876bb498a009b24a26df9f2371505722b45ef",
+          "git_blob": "3282851e78e3fe43b8bbfc376827d9551beaa725",
+          "sha256": "fb062ec65d8b18978bd6e3cc2ecfc0fe2febfd408c7fec33a1dfae60c557d5dc",
+          "bytes": 19855
+        },
+        {
+          "file": "draft-pr-emission/source/tasks.md",
+          "original_path": "specs/art-007-draft-pr-emission/tasks.md",
+          "commit": "d30876bb498a009b24a26df9f2371505722b45ef",
+          "git_blob": "3e3f75e3dd09fc2225707d6a441a70ba399b1ea8",
+          "sha256": "6401a37c553eb64f48f86d1ff1b6b45e8ebbd125615bc416dba231ae20a83f48",
+          "bytes": 45963
+        },
+        {
+          "file": "draft-pr-emission/source/quickstart.md",
+          "original_path": "specs/art-007-draft-pr-emission/quickstart.md",
+          "commit": "d30876bb498a009b24a26df9f2371505722b45ef",
+          "git_blob": "aea3a8d9a9d7cdab489bfc6c1958a98faf93b980",
+          "sha256": "df1f4e87cf380dbc5314b6cb68773b1ca9d08e22197aacc0c46b9bf39e2560c4",
+          "bytes": 12529
+        },
+        {
+          "file": "draft-pr-emission/source/data-model.md",
+          "original_path": "specs/art-007-draft-pr-emission/data-model.md",
+          "commit": "d30876bb498a009b24a26df9f2371505722b45ef",
+          "git_blob": "36d81365d17b1e5c0b94c559b2fdd186a98de6d5",
+          "sha256": "1ab597cb7bfaae13363c7a41e767ec6200d7a09f7fc7426faec20c92103cb6c6",
+          "bytes": 9425
+        },
+        {
+          "file": "draft-pr-emission/source/research.md",
+          "original_path": "specs/art-007-draft-pr-emission/research.md",
+          "commit": "d30876bb498a009b24a26df9f2371505722b45ef",
+          "git_blob": "1c4e647d4e0c5ccbad7cab36ba50caf34b2f9636",
+          "sha256": "52e9b6ccdd8c9f56cd94d74626eb5d02eb5202764c7a70438fe81b6476eec54a",
+          "bytes": 25791
+        },
+        {
+          "file": "draft-pr-emission/source/contracts/artifact-author-agent.md",
+          "original_path": "specs/art-007-draft-pr-emission/contracts/artifact-author-agent.md",
+          "commit": "d30876bb498a009b24a26df9f2371505722b45ef",
+          "git_blob": "9b966e550e89199a86e58c22753f90673137a58c",
+          "sha256": "0f92523ca8f90e01870d61f6eec26e4cc9a542cbaa997bc21e0c4887423cafdf",
+          "bytes": 6799
+        },
+        {
+          "file": "draft-pr-emission/source/contracts/draft-packet-mode.md",
+          "original_path": "specs/art-007-draft-pr-emission/contracts/draft-packet-mode.md",
+          "commit": "d30876bb498a009b24a26df9f2371505722b45ef",
+          "git_blob": "979ad50a0c43fb8e83086fe34b1d5f1030a62ea0",
+          "sha256": "ed3cfbabc02d66ea62d69c9a92c18c955ac40babad686b72fa33fd5c55e598ed",
+          "bytes": 12984
+        },
+        {
+          "file": "draft-pr-emission/source/contracts/draft-pr-row.md",
+          "original_path": "specs/art-007-draft-pr-emission/contracts/draft-pr-row.md",
+          "commit": "d30876bb498a009b24a26df9f2371505722b45ef",
+          "git_blob": "c7871dc50f30e9e1929ce62ea9ae4d99fa3e7d64",
+          "sha256": "9e54cb459e10290665f228b459ce7d8b6104a11a3587ce7ea6e064a906b0c010",
+          "bytes": 5090
+        },
+        {
+          "file": "draft-pr-emission/source/contracts/stage-corroboration.md",
+          "original_path": "specs/art-007-draft-pr-emission/contracts/stage-corroboration.md",
+          "commit": "d30876bb498a009b24a26df9f2371505722b45ef",
+          "git_blob": "260ab4c5458b81de0946172c3d466552ff4ca7b1",
+          "sha256": "42ab5f8651e07401ae172c82764a03c8fcc67af034bc634785150d4e53b305a4",
+          "bytes": 9468
+        }
+      ]
+    },
+    {
+      "id": "DOC-008",
+      "scenario_class": "independent-story-branches",
+      "fixture_directory": "troubleshooting-security",
+      "workload": {
+        "commit": "6d4c194015382182284b76402e33d9164c88b7d6",
+        "tree": "d1c3f083ab344bac86f0578024f21bc222e5d974",
+        "feature_directory": "specs/doc-008-troubleshooting-security-trust-update-rollback",
+        "workflow_original_path": "docs/ai/specs/.process/DOC-008-workflow.md",
+        "representative_absent_implementation_paths": [
+          "docs-site/src/content/docs/update-and-rollback.md"
+        ]
+      },
+      "planning_commit": "5dcb604aed3cd1a850fdfd5881e7515943e191f8",
+      "scaffold_to_planning_changed_paths": [
+        "CLAUDE.md",
+        "docs/ai/specs/.process/DOC-008-workflow.md",
+        "docs/ai/specs/.process/autopilot-state.json",
+        "specs/doc-008-troubleshooting-security-trust-update-rollback/SPEC-MOC.md",
+        "specs/doc-008-troubleshooting-security-trust-update-rollback/checklists/accessibility.md",
+        "specs/doc-008-troubleshooting-security-trust-update-rollback/checklists/error-handling.md",
+        "specs/doc-008-troubleshooting-security-trust-update-rollback/checklists/security.md",
+        "specs/doc-008-troubleshooting-security-trust-update-rollback/checklists/ux.md",
+        "specs/doc-008-troubleshooting-security-trust-update-rollback/data-model.md",
+        "specs/doc-008-troubleshooting-security-trust-update-rollback/plan.md",
+        "specs/doc-008-troubleshooting-security-trust-update-rollback/quickstart.md",
+        "specs/doc-008-troubleshooting-security-trust-update-rollback/research.md",
+        "specs/doc-008-troubleshooting-security-trust-update-rollback/spec.md",
+        "specs/doc-008-troubleshooting-security-trust-update-rollback/tasks.md"
+      ],
+      "reference_task_count": 40,
+      "reference_task_ids": [
+        "T001",
+        "T002",
+        "T003",
+        "T004",
+        "T005",
+        "T006",
+        "T007",
+        "T008",
+        "T009",
+        "T010",
+        "T011",
+        "T012",
+        "T013",
+        "T014",
+        "T015",
+        "T016",
+        "T017",
+        "T018",
+        "T019",
+        "T020",
+        "T021",
+        "T022",
+        "T023",
+        "T024",
+        "T025",
+        "T026",
+        "T027",
+        "T028",
+        "T029",
+        "T030",
+        "T031",
+        "T032",
+        "T033",
+        "T034",
+        "T035",
+        "T036",
+        "T037",
+        "T038",
+        "T039",
+        "T040"
+      ],
+      "automated_reference_task_ids": [
+        "T001",
+        "T002",
+        "T003",
+        "T004",
+        "T005",
+        "T006",
+        "T007",
+        "T008",
+        "T009",
+        "T010",
+        "T011",
+        "T012",
+        "T013",
+        "T014",
+        "T015",
+        "T016",
+        "T017",
+        "T018",
+        "T019",
+        "T020",
+        "T021",
+        "T022",
+        "T023",
+        "T024",
+        "T025",
+        "T026",
+        "T027",
+        "T028",
+        "T029",
+        "T030",
+        "T031",
+        "T032",
+        "T033",
+        "T034",
+        "T035",
+        "T036",
+        "T037",
+        "T038",
+        "T039",
+        "T040"
+      ],
+      "operator_only_reference_task_ids": [],
+      "workflow": "troubleshooting-security/source/workflow.md",
+      "kickoff": "troubleshooting-security/kickoff.md",
+      "reference_tasks": "troubleshooting-security/source/tasks.md",
+      "prepared_tasks": {
+        "file": "troubleshooting-security/prepared-tasks.md",
+        "transformation": "reset-only-task-checkbox-completion",
+        "reset_task_ids": [],
+        "role": "acceptance-reference-not-generation-input"
+      },
+      "sources": [
+        {
+          "file": "troubleshooting-security/source/workflow.md",
+          "original_path": "docs/ai/specs/.process/DOC-008-workflow.md",
+          "commit": "6d4c194015382182284b76402e33d9164c88b7d6",
+          "git_blob": "991fa94948d6bddef1d6f7fb76d10db8d772abc6",
+          "sha256": "82ba88d33232f9eb06255549688616d39d3e698c04c9de8913f4422be5ec12fc",
+          "bytes": 29375
+        },
+        {
+          "file": "troubleshooting-security/source/design-concept.md",
+          "original_path": "docs/ai/specs/.process/DOC-008-design-concept.md",
+          "commit": "5dcb604aed3cd1a850fdfd5881e7515943e191f8",
+          "git_blob": "8b07f237356a8414a53ef9ee1c22c46215503992",
+          "sha256": "bee03b032e6cda65bd8e1112a6492f783540622f34a3508e0ce00e339dc5f9e1",
+          "bytes": 8622
+        },
+        {
+          "file": "troubleshooting-security/source/spec.md",
+          "original_path": "specs/doc-008-troubleshooting-security-trust-update-rollback/spec.md",
+          "commit": "5dcb604aed3cd1a850fdfd5881e7515943e191f8",
+          "git_blob": "2433a4a22d7ff730294e94fe1059157d0f4d187b",
+          "sha256": "17c39131d1fb64624aab9f758642202aa71c8ea2d1b01e325b91581911a1d2c5",
+          "bytes": 24338
+        },
+        {
+          "file": "troubleshooting-security/source/plan.md",
+          "original_path": "specs/doc-008-troubleshooting-security-trust-update-rollback/plan.md",
+          "commit": "5dcb604aed3cd1a850fdfd5881e7515943e191f8",
+          "git_blob": "6bbe97fcc8c931a9f1ca836d2e38cfae7c0dcb09",
+          "sha256": "165b94bb443bb3223ff58e2d06e296559afcb3c4c33e57443e16049eac4842d3",
+          "bytes": 11358
+        },
+        {
+          "file": "troubleshooting-security/source/tasks.md",
+          "original_path": "specs/doc-008-troubleshooting-security-trust-update-rollback/tasks.md",
+          "commit": "5dcb604aed3cd1a850fdfd5881e7515943e191f8",
+          "git_blob": "a1f2a8bb0eea58b963afa84984af9486cd6d1c0e",
+          "sha256": "b6dc21d28f70e4251e4bd84591bba653acd9fed51b7882afad6d7986276c7b6b",
+          "bytes": 18631
+        },
+        {
+          "file": "troubleshooting-security/source/quickstart.md",
+          "original_path": "specs/doc-008-troubleshooting-security-trust-update-rollback/quickstart.md",
+          "commit": "5dcb604aed3cd1a850fdfd5881e7515943e191f8",
+          "git_blob": "8e11ac2c141083b80b0a64752dee9c147d34e997",
+          "sha256": "4129ce0b4a1c9aa41f2539cae0dab709c73cdc9cb0dc98894ec9df69fb9aad06",
+          "bytes": 2849
+        },
+        {
+          "file": "troubleshooting-security/source/data-model.md",
+          "original_path": "specs/doc-008-troubleshooting-security-trust-update-rollback/data-model.md",
+          "commit": "5dcb604aed3cd1a850fdfd5881e7515943e191f8",
+          "git_blob": "8083c4b122f7be7d1d503f96b767ef3074d7b060",
+          "sha256": "aa1498db810c0d43c3f7a051999b2c8cda330f010ad55decf2c0915ad8626c1c",
+          "bytes": 5229
+        },
+        {
+          "file": "troubleshooting-security/source/research.md",
+          "original_path": "specs/doc-008-troubleshooting-security-trust-update-rollback/research.md",
+          "commit": "5dcb604aed3cd1a850fdfd5881e7515943e191f8",
+          "git_blob": "91ef587bbea197688441ac3707283f594bfb11a3",
+          "sha256": "ece220a6efa2a61610be988b1fc73e9f963d38f994bc8fadc9a381ed79ad61a6",
+          "bytes": 7538
+        }
+      ]
+    }
+  ],
+  "authored_files": [
+    {
+      "file": "PROTOCOL.md",
+      "sha256": "97d20055be54924e3508b55ce714735013049e2ababdc1b65f672ec48649e0d5"
+    },
+    {
+      "file": "COMMON-TASKS-INPUT.md",
+      "sha256": "15b2386a086b3151e972d93ae1e855cc8dae55d0113861bc9e0fda8637fb7a6e"
+    },
+    {
+      "file": "DEPENDENCY-PINS.json",
+      "sha256": "5d4d8dcd5e6dd25cf8677fc59a288f303c51bed2ef4f6a2581cb6db53550b7f4"
+    },
+    {
+      "file": "implementation-notes/kickoff.md",
+      "sha256": "fa78fbdd0f9f7ba3184a35be13fb19816d093161ca6ea03f4c1220f3ef84518c"
+    },
+    {
+      "file": "implementation-notes/prepared-tasks.md",
+      "sha256": "60979ac03c7d98e8f15770a8121d03c4f124b51259834d0a17202475f4fa34d1"
+    },
+    {
+      "file": "draft-pr-emission/kickoff.md",
+      "sha256": "adac833d70406072470556f28bc3b88523958f5e6aca5c0b22d4f20c85be2b35"
+    },
+    {
+      "file": "draft-pr-emission/prepared-tasks.md",
+      "sha256": "40f095234273dc9391559ccb16b0db08d74bf4832e6722eb06c0ee52699fef59"
+    },
+    {
+      "file": "troubleshooting-security/kickoff.md",
+      "sha256": "795dac3f08230198fde124a4e61048ee9ff15419643a1c4f99f7b1bc0c13ff9a"
+    },
+    {
+      "file": "troubleshooting-security/prepared-tasks.md",
+      "sha256": "b6dc21d28f70e4251e4bd84591bba653acd9fed51b7882afad6d7986276c7b6b"
+    }
+  ]
+}

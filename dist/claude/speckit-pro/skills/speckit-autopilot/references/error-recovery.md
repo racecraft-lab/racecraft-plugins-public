@@ -14,27 +14,24 @@ The workflow file persists all state. To resume:
 /speckit-pro:speckit-autopilot workflow.md --from-phase <next-pending-phase>
 ```
 
-The autopilot reads prior artifacts from disk and continues from
-the specified phase.
+The autopilot reads prior artifacts and recovers the same execution-control
+ledger per [Bounded Execution](./execution-efficiency.md), then continues only
+when its disposition permits. Resume and agent replacement never reset budget.
 
 ## Common Issues
 
-- **Subagent returns an empty/incomplete summary:** Follow the persisted
-  `partial_resume` strategy from `resolve-claude-subagent-runtime`. When the
-  runtime supports partial results and the result includes an agent ID, send
-  exactly one `SendMessage` continuation to that same agent and record
-  `partial_resume_used=true`. That continuation consumes the reserved
-  concurrency slot. If the resumed result is still partial, STOP and report
-  the incomplete result; do not loop or silently replace it. On clients older
-  than 2.1.246, make one fresh retry with the same prompt and then STOP on a
-  second partial result.
+- **Subagent returns an empty/incomplete summary:** Reserve the one read-only
+  reconciliation with `execution-control action=reconcile`. Inspect retained
+  output and owned effects; a supported `SendMessage` may request only the
+  already-produced result, not continuing writes. Unknown effects require an
+  honest checkpoint, never a fresh retry or direct-command fallback. Proven
+  partial results retain completed tasks; only unfinished work may be reserved.
 - **A parallel wave exceeds capacity:** Dispatch deterministic waves of at most
   `SUBAGENT_WAVE_SIZE`, preserving task order in the final result regardless of
   completion order. The resolver reserves one slot for recovery. An invalid
   concurrency override forces wave size 1 and emits a warning.
-- **Gate fails after 2 auto-fix attempts:** If `gate-failure`
-  setting is `stop`, STOP and report. Show the gate script
-  output so the user can diagnose.
+- **Gate needs repair:** Use the shared one-cycle-per-family/two-cycle-per-spec
+  reservation limits. On exhaustion, checkpoint and show the gate output.
 - **Consensus agents all disagree:** Flag `[HUMAN REVIEW NEEDED]`
   and STOP. Present all 3 perspectives to the user.
 - **MCP tool unavailable:** Skip research that depends on it.

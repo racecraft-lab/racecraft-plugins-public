@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import chdir
 from pathlib import Path
 from unittest.mock import patch
 
@@ -32,6 +33,8 @@ def runner_request(
     operation: str,
     mode: str,
     inputs: dict[str, object],
+    *,
+    cwd: Path = REPO_ROOT,
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, object]]:
     payload = {
         "schema_version": "1.0",
@@ -49,7 +52,7 @@ def runner_request(
         input=json.dumps(payload),
         text=True,
         capture_output=True,
-        cwd=REPO_ROOT,
+        cwd=cwd,
         env=env,
         shell=False,
         check=False,
@@ -63,7 +66,8 @@ def check_request(root: Path) -> tuple[subprocess.CompletedProcess[str], dict[st
         "generate-spec-index-check",
         "generate-spec-index-check",
         "read_only",
-        {"repo_root": root.relative_to(REPO_ROOT).as_posix()},
+        {"repo_root": root.name},
+        cwd=root.parent,
     )
 
 
@@ -75,7 +79,8 @@ def write_request(
         "generate-spec-index-write",
         "generate-spec-index-write",
         mode,
-        {"repo_root": root.relative_to(REPO_ROOT).as_posix()},
+        {"repo_root": root.name},
+        cwd=root.parent,
     )
 
 
@@ -171,8 +176,8 @@ def _assert_git_ignore_failure(
 
     with patch.object(read_only.subprocess, "run", **patch_kwargs):
         check_result = read_only.generate_spec_index_check(
-            {"repo_root": root.relative_to(REPO_ROOT).as_posix()},
-            REPO_ROOT,
+            {"repo_root": root.name},
+            work,
         )
     test_case.assertEqual(check_result["exit_code"], 2)
     test_case.assertIn("could not evaluate Git ignore rules", check_result["stderr"])
@@ -183,9 +188,9 @@ def _assert_git_ignore_failure(
         "generate-spec-index-write",
         "generate-spec-index-write",
         "apply",
-        {"repo_root": root.relative_to(REPO_ROOT).as_posix()},
+        {"repo_root": root.name},
     )
-    with patch.object(read_only.subprocess, "run", **patch_kwargs):
+    with chdir(work), patch.object(read_only.subprocess, "run", **patch_kwargs):
         write_result = mutation.run_spec_index_write(
             registry.MUTATION_HELPERS["generate-spec-index-write"],
             request,
@@ -201,8 +206,7 @@ def _assert_git_ignore_failure(
 
 class _SpecIndexGitIgnoreTests:
     def test_backlinks_honor_git_ignores_without_hiding_tracked_or_intentional_files(self) -> None:
-        with tempfile.TemporaryDirectory(prefix=".spec-index-test-", dir=REPO_ROOT) as temp_dir:
-            _assert_git_ignore_behavior(self, Path(temp_dir))
+        _assert_git_ignore_behavior(self, self.work)
 
     def test_git_ignore_failures_abort_check_and_write_without_writes(self) -> None:
         failures = (
@@ -218,24 +222,53 @@ class _SpecIndexGitIgnoreTests:
             ("missing", OSError("git is unavailable")),
             ("timeout", subprocess.TimeoutExpired(["git", "check-ignore"], 30)),
         )
-        with tempfile.TemporaryDirectory(prefix=".spec-index-test-", dir=REPO_ROOT) as temp_dir:
-            work = Path(temp_dir)
-            for label, failure in failures:
-                with self.subTest(label=label):
-                    _assert_git_ignore_failure(self, work, label, failure)
+        for label, failure in failures:
+            with self.subTest(label=label):
+                _assert_git_ignore_failure(self, self.work, label, failure)
 
 
 class GenerateSpecIndexTests(_SpecIndexGitIgnoreTests, unittest.TestCase):
     def setUp(self) -> None:
-        self.temp_dir = tempfile.TemporaryDirectory(prefix=".spec-index-test-", dir=REPO_ROOT)
-        self.work = Path(self.temp_dir.name)
+        self.temp_dir = tempfile.TemporaryDirectory(prefix="spec-index-consumer-")
+        self.addCleanup(self.temp_dir.cleanup)
+        self.work = Path(self.temp_dir.name).resolve()
+        (self.work / ".specify").mkdir()
+        template = self.work / "empty-template"
+        template.mkdir()
+        environment = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
+        environment.update(GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL=os.devnull,
+                           GIT_TEMPLATE_DIR=str(template), GIT_OPTIONAL_LOCKS="0")
+        environment_patch = patch.dict(os.environ, environment, clear=True)
+        environment_patch.start()
+        self.addCleanup(environment_patch.stop)
+        subprocess.run(["git", "init", "--quiet", "--initial-branch=fixture"], cwd=self.work,
+                       check=True, capture_output=True, timeout=30)
 
-    def tearDown(self) -> None:
-        self.temp_dir.cleanup()
+    def test_fixture_git_state_is_owned_outside_the_source_tree(self) -> None:
+        self.assertFalse(self.work.resolve().is_relative_to(REPO_ROOT))
+        root = self.copy_fixture("stale-fill")
+        tracked = subprocess.check_output(["git", "ls-files", "-z", "--", root.name], cwd=self.work)
+        expected = {f"{root.name}/{path}" for path in snapshot(FIXTURES / "stale-fill")}
+        self.assertEqual({path.decode() for path in tracked.split(b"\0") if path}, expected)
+        self.assertTrue((self.work / ".git" / "index").is_file())
+
+    def test_failed_fixture_setup_cleans_owned_files_and_restores_git_environment(self) -> None:
+        fixture = GenerateSpecIndexTests()
+        original_template = os.environ.get("GIT_TEMPLATE_DIR")
+        try:
+            with patch.object(subprocess, "run", side_effect=RuntimeError("fixture initialization probe")):
+                with self.assertRaisesRegex(RuntimeError, "fixture initialization probe"):
+                    fixture.setUp()
+        finally:
+            fixture.doCleanups()
+        self.assertFalse(fixture.work.exists())
+        self.assertEqual(os.environ.get("GIT_TEMPLATE_DIR"), original_template)
 
     def copy_fixture(self, name: str) -> Path:
         target = self.work / name
         shutil.copytree(FIXTURES / name, target)
+        subprocess.run(["git", "add", "--force", "--", name], cwd=self.work,
+                       check=True, capture_output=True, timeout=30)
         return target
 
     def _spec_index_write_fixture(self):
@@ -252,7 +285,7 @@ class GenerateSpecIndexTests(_SpecIndexGitIgnoreTests, unittest.TestCase):
         )
         for fixture, expected_exit, expected_status in cases:
             with self.subTest(fixture=fixture):
-                root = FIXTURES / fixture
+                root = self.copy_fixture(fixture)
                 before = snapshot(root)
                 completed, body = check_request(root)
                 self.assertEqual(completed.returncode, expected_exit, completed.stderr)
@@ -260,12 +293,12 @@ class GenerateSpecIndexTests(_SpecIndexGitIgnoreTests, unittest.TestCase):
                 self.assertEqual(body["status"], expected_status)
                 self.assertEqual(snapshot(root), before)
 
-        stale_completed, stale_body = check_request(FIXTURES / "stale-fill")
+        stale_completed, stale_body = check_request(self.work / "stale-fill")
         self.assertIn("STALE", stale_body["data"]["stdout"]["text"])
         self.assertIn("prsg-901-stale", stale_body["data"]["stdout"]["text"])
         self.assertEqual(stale_completed.stderr.count("\n"), 1)
 
-        error_completed, error_body = check_request(FIXTURES / "prs-malformed")
+        error_completed, error_body = check_request(self.work / "prs-malformed")
         self.assertIn("prs.json", error_body["data"]["stderr"]["text"])
         self.assertEqual(error_completed.stderr.count("\n"), 1)
 
@@ -307,8 +340,8 @@ class GenerateSpecIndexTests(_SpecIndexGitIgnoreTests, unittest.TestCase):
         root = self.copy_fixture("stale-fill")
         with patch.object(read_only, "descriptor_read_supported", return_value=False):
             result = read_only.generate_spec_index_check(
-                {"repo_root": root.relative_to(REPO_ROOT).as_posix()},
-                REPO_ROOT,
+                {"repo_root": root.name},
+                self.work,
             )
 
         self.assertEqual(result["exit_code"], 2)
@@ -374,10 +407,10 @@ class GenerateSpecIndexTests(_SpecIndexGitIgnoreTests, unittest.TestCase):
             "generate-spec-index-write",
             "generate-spec-index-write",
             "apply",
-            {"repo_root": root.relative_to(REPO_ROOT).as_posix()},
+            {"repo_root": root.name},
         )
         old_cwd = Path.cwd()
-        os.chdir(REPO_ROOT)
+        os.chdir(self.work)
         try:
             with patch.object(mutation, "ensure_safe_write_target_fd", side_effect=swap_before_final_guard):
                 body = mutation.run_spec_index_write(registry.MUTATION_HELPERS["generate-spec-index-write"], request)
@@ -411,10 +444,10 @@ class GenerateSpecIndexTests(_SpecIndexGitIgnoreTests, unittest.TestCase):
             "generate-spec-index-write",
             "generate-spec-index-write",
             "apply",
-            {"repo_root": root.relative_to(REPO_ROOT).as_posix()},
+            {"repo_root": root.name},
         )
         old_cwd = Path.cwd()
-        os.chdir(REPO_ROOT)
+        os.chdir(self.work)
         try:
             with (
                 patch.object(mutation, "acquire_mutation_lock", side_effect=tracking_acquire),
@@ -450,10 +483,10 @@ class GenerateSpecIndexTests(_SpecIndexGitIgnoreTests, unittest.TestCase):
             "generate-spec-index-write",
             "generate-spec-index-write",
             "apply",
-            {"repo_root": root.relative_to(REPO_ROOT).as_posix()},
+            {"repo_root": root.name},
         )
         old_cwd = Path.cwd()
-        os.chdir(REPO_ROOT)
+        os.chdir(self.work)
         try:
             with patch.object(mutation, "render_spec_index", side_effect=mutate_prs_after_initial_render):
                 body = mutation.run_spec_index_write(registry.MUTATION_HELPERS["generate-spec-index-write"], request)
@@ -487,10 +520,10 @@ class GenerateSpecIndexTests(_SpecIndexGitIgnoreTests, unittest.TestCase):
             "generate-spec-index-write",
             "generate-spec-index-write",
             "apply",
-            {"repo_root": root.relative_to(REPO_ROOT).as_posix()},
+            {"repo_root": root.name},
         )
         old_cwd = Path.cwd()
-        os.chdir(REPO_ROOT)
+        os.chdir(self.work)
         try:
             with patch.object(mutation, "write_file_atomic", side_effect=mutate_prs_before_replace):
                 body = mutation.run_spec_index_write(registry.MUTATION_HELPERS["generate-spec-index-write"], request)
@@ -520,10 +553,10 @@ class GenerateSpecIndexTests(_SpecIndexGitIgnoreTests, unittest.TestCase):
             "generate-spec-index-write",
             "generate-spec-index-write",
             "apply",
-            {"repo_root": root.relative_to(REPO_ROOT).as_posix()},
+            {"repo_root": root.name},
         )
         old_cwd = Path.cwd()
-        os.chdir(REPO_ROOT)
+        os.chdir(self.work)
         try:
             with patch.object(mutation, "snapshot_changed_diagnostic_after_write", side_effect=mutate_after_applied_snapshot):
                 body = mutation.run_spec_index_write(registry.MUTATION_HELPERS["generate-spec-index-write"], request)

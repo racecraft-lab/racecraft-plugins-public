@@ -26,11 +26,13 @@ if str(SHARED_LIB) not in sys.path:
     sys.path.insert(0, str(SHARED_LIB))
 import trigger_process as processes  # noqa: E402
 import trigger_evidence as evidence_records  # noqa: E402
+import trigger_comparison as experiment_evidence  # noqa: E402
+import trigger_first_selection_guard as first_selection_guard  # noqa: E402
 
 PLUGIN_ROOT = (SCRIPT_DIR / "../../../speckit-pro").resolve()
 DEFAULT_MODEL = "claude-sonnet-5"
-PINNED_CLAUDE_VERSION = "2.1.269 (Claude Code)"
-PINNED_DOCTOR_RUNNING = "Running: native (2.1.269)"
+PINNED_CLAUDE_VERSION = "2.1.270 (Claude Code)"
+PINNED_DOCTOR_RUNNING = "Running: native (2.1.270)"
 PINNED_MANAGED_SETTINGS = (
     "Managed settings (remote): not fetched — requires an Enterprise or Team subscription"
 )
@@ -63,6 +65,7 @@ REQUIRED_FLAGS = (
     "--permission-mode",
     "--permission-prompts",
     "--output-format",
+    "--include-hook-events",
     "--verbose",
     "--no-session-persistence",
 )
@@ -171,6 +174,36 @@ def sibling_skill_dirs(source: Path) -> list[Path]:
     return siblings
 
 
+def _stage_first_selection_guard(plugin_root: Path) -> None:
+    """Install the native PostToolUse stop guard into one staged plugin."""
+    guard_name = "trigger_first_selection_guard.py"
+    scripts_dir = plugin_root / "scripts"
+    scripts_dir.mkdir()
+    shutil.copy2(Path(str(first_selection_guard.__file__)), scripts_dir / guard_name)
+    hooks_dir = plugin_root / "hooks"
+    hooks_dir.mkdir()
+    (hooks_dir / "hooks.json").write_text(
+        json.dumps(
+            {
+                "description": "Stop a Layer 2 trial after its first successful Skill call",
+                "hooks": {
+                    first_selection_guard.HOOK_EVENT: [{
+                        "matcher": "Skill",
+                        "hooks": [{
+                            "type": "command",
+                            "command": sys.executable,
+                            "args": [f"${{CLAUDE_PLUGIN_ROOT}}/scripts/{guard_name}"],
+                            "timeout": 5,
+                        }],
+                    }]
+                },
+            },
+            indent=2,
+        ) + "\n",
+        encoding="utf-8",
+    )
+
+
 def stage_measurement_plugin(
     source: Path,
     plugin_root: Path,
@@ -240,6 +273,7 @@ def stage_measurement_plugin(
         json.dumps({"name": plugin_name, "version": "0.0.0"}, indent=2) + "\n",
         encoding="utf-8",
     )
+    _stage_first_selection_guard(plugin_root)
     return skill_dir, f"{plugin_name}:{skill_name}"
 
 
@@ -286,6 +320,110 @@ def skill_results_error(
         if result_position <= use_index or (result.get("is_error") is not None and result.get("is_error") is not False):
             return "Skill result was out of order or unsuccessful"
     return None
+
+
+def first_selection_guard_evidence(
+    events: list[dict[str, object]],
+    uses: list[tuple[int, dict[str, object]]],
+    result_index: int,
+    terminal: dict[str, object],
+) -> tuple[dict[str, object] | None, str | None]:
+    """Validate the native hook receipt that stops a completed Skill selection."""
+    hook_events = [
+        (index, event)
+        for index, event in enumerate(events[:result_index])
+        if isinstance(event.get("subtype"), str)
+        and str(event["subtype"]).startswith("hook_")
+    ]
+    if not uses:
+        if hook_events or terminal.get("terminal_reason") == "hook_stopped":
+            return None, "first-selection guard stop appeared without a Skill selection"
+        return {"observed": False}, None
+    if len(uses) != 1:
+        return None, "first-selection guard requires exactly one Skill selection"
+
+    use_index, use = uses[0]
+    tool_use_id = use.get("id")
+    if not isinstance(tool_use_id, str) or not tool_use_id:
+        return None, "first-selection guard received malformed Skill identity"
+    started = [item for item in hook_events if item[1].get("subtype") == "hook_started"]
+    responses = [item for item in hook_events if item[1].get("subtype") == "hook_response"]
+    progress = [item for item in hook_events if item[1].get("subtype") == "hook_progress"]
+    if len(hook_events) != 2 + len(progress) or len(started) != 1 or len(responses) != 1:
+        return None, "missing or ambiguous first-selection guard receipt"
+    started_index, started_event = started[0]
+    response_index, response = responses[0]
+    tool_result_index = next(
+        index
+        for index, event in enumerate(events[:result_index])
+        if event.get("type") == "user"
+        and any(
+            block.get("type") == "tool_result"
+            and block.get("tool_use_id") == tool_use_id
+            for block in stream_content(event)
+        )
+    )
+    if (
+        not use_index < started_index < response_index < tool_result_index < result_index
+        or any(not started_index < index < response_index for index, _event in progress)
+    ):
+        return None, "first-selection guard receipt was out of order"
+    if any(
+        not isinstance(event.get("stdout"), str)
+        or not isinstance(event.get("stderr"), str)
+        for _index, event in progress
+    ):
+        return None, "first-selection guard progress was malformed"
+    if any(
+        index > use_index and event.get("type") == "assistant"
+        for index, event in enumerate(events[:result_index])
+    ):
+        return None, "assistant activity continued after the Skill selection"
+
+    hook_id = started_event.get("hook_id")
+    if (
+        started_event.get("type") != "system"
+        or response.get("type") != "system"
+        or not isinstance(hook_id, str)
+        or not hook_id
+        or any(
+            event.get("type") != "system"
+            or event.get("hook_id") != hook_id
+            or event.get("hook_name") != first_selection_guard.HOOK_NAME
+            or event.get("hook_event") != first_selection_guard.HOOK_EVENT
+            for _index, event in hook_events
+        )
+    ):
+        return None, "first-selection guard identity did not match"
+
+    expected_output = json.dumps(
+        {
+            "continue": False,
+            "stopReason": f"{first_selection_guard.RECEIPT_PREFIX}:{tool_use_id}",
+        },
+        ensure_ascii=True,
+        separators=(",", ":"),
+    ) + "\n"
+    if (
+        response.get("outcome") != "success"
+        or type(response.get("exit_code")) is not int
+        or response.get("exit_code") != 0
+        or response.get("stdout") != expected_output
+        or response.get("output") != expected_output
+        or response.get("stderr") != ""
+    ):
+        return None, "first-selection guard did not return its exact successful receipt"
+    if terminal.get("terminal_reason") != "hook_stopped":
+        return None, "Skill selection did not terminate through the first-selection guard"
+    return {
+        "observed": True,
+        "hook_id": hook_id,
+        "hook_name": first_selection_guard.HOOK_NAME,
+        "hook_event": first_selection_guard.HOOK_EVENT,
+        "tool_use_id": tool_use_id,
+        "progress_events": len(progress),
+        "receipt": expected_output.rstrip("\n"),
+    }, None
 
 
 def claude_model_evidence(events: list[dict[str, object]], init: dict[str, object], requested: str) -> dict[str, object]:
@@ -481,6 +619,16 @@ def inspect_claude_stream(
     completion_error = skill_results_error(events, skill_uses, init_index, result_index)
     if completion_error:
         return {"valid": False, "selected": False, "reason": completion_error, "nonce_locations": nonce_locations}
+    guard_evidence, guard_error = first_selection_guard_evidence(
+        events, skill_uses, result_index, result
+    )
+    if guard_error:
+        return {
+            "valid": False,
+            "selected": False,
+            "reason": guard_error,
+            "nonce_locations": nonce_locations,
+        }
     model_evidence = claude_model_evidence(events, init, requested_model)
     if model_evidence["model_identity_check"] == "conflict":
         return {"valid": False, "selected": False, "reason": "Claude reported a conflicting model identity", **model_evidence}
@@ -504,6 +652,7 @@ def inspect_claude_stream(
         "selected_tool_use_id": selected_id,
         "nonce_locations": nonce_locations,
         "sibling_selections": sibling_selections,
+        "first_selection_guard": guard_evidence,
         **model_evidence,
         "qualification_observed": True,
         "observation_scope": "claude-native-skill-tool",
@@ -632,12 +781,14 @@ def run_claude_query(
         "-p", query,
         "--model", model,
         "--output-format", "stream-json",
+        "--include-hook-events",
         "--verbose",
         "--no-session-persistence",
     ]
     environment = claude_environment()
     if process_evidence is not None:
         process_evidence["launch_contract"] = _claude_launch_contract(command, environment, model)
+        process_evidence["launch_contract"]["query_sha256"] = hashlib.sha256(query.encode()).hexdigest()
     child = subprocess.Popen(
         command,
         cwd=plugin_root,
@@ -792,10 +943,13 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--preflight", action="store_true", help="Validate one selected corpus and CLI without inference")
     parser.add_argument("--timeout", type=int, default=180, help="Per-trial timeout in seconds")
     parser.add_argument("--out", help="Write the opaque result report to this path")
+    parser.add_argument("--case-id", help="Run exactly this stable case identity; keeps all three trials")
+    parser.add_argument("--no-op-description-file", help="Frozen single-line controlled experiment description")
     return parser.parse_args(argv)
 
 
 def main(argv: list[str]) -> int:
+    global NO_SPECKIT_SKILL_DESCRIPTION
     args = parse_args(argv)
     try:
         eval_file = find_eval_file(args.skill)
@@ -803,6 +957,8 @@ def main(argv: list[str]) -> int:
         eval_data, corpus_reason = load_eval_corpus(eval_file)
         if eval_data is None:
             raise ValueError(corpus_reason)
+        eval_data = evidence_records.select_case("claude", args.skill, eval_data, args.case_id)
+        no_op_description = evidence_records.description_override(args.no_op_description_file, NO_SPECKIT_SKILL_DESCRIPTION)
         description_lines = source_description_lines(skill_source)
         if args.out and Path(args.out).exists():
             raise ValueError("--out already exists; previous reports are immutable")
@@ -821,12 +977,14 @@ def main(argv: list[str]) -> int:
     plugin_name = f"skill-catalog-eval-{test_id}"
     skill_name = f"{args.skill}-eval-{test_id}"
     nonce = f"CLAUDE_SKILL_SELECTED_{test_id}"
+    original_no_op_description = NO_SPECKIT_SKILL_DESCRIPTION
     plugin_root = Path(tempfile.mkdtemp(prefix=f"claude-trigger-{args.skill}-"))
     sibling_sources = {sibling.name: sibling / "SKILL.md" for sibling in sibling_skill_dirs(skill_source)}
     exit_code = 1
     evidence_dir = None
     previous_handlers = install_termination_handlers()
     try:
+        NO_SPECKIT_SKILL_DESCRIPTION = no_op_description
         _skill_dir, expected_skill = stage_measurement_plugin(
             skill_source,
             plugin_root,
@@ -845,6 +1003,15 @@ def main(argv: list[str]) -> int:
         if preflight is None:
             raise ValueError(preflight_reason)
         metadata = {
+            "trial_timeout_seconds": args.timeout,
+            "input_snapshot": experiment_evidence.measurement_snapshot(),
+            "replay_context": {"host": "claude", "plugin_name": plugin_name, "plugin_root": str(plugin_root.resolve()),
+                               "expected_skill": expected_skill, "nonce": nonce, "requested_model": args.model,
+                               "sibling_skills": list(sibling_skills), "source_skill": args.skill,
+                               "no_op_description": no_op_description,
+                               "staged_skill_bodies": {path.parent.name: path.read_text(encoding="utf-8")
+                                   for path in sorted((plugin_root / "skills").glob("*/SKILL.md"))}},
+            "no_op_description_sha256": hashlib.sha256(no_op_description.encode()).hexdigest(),
             "skill": args.skill,
             "expected_skill": expected_skill,
             "skill_source": str(skill_source),
@@ -879,6 +1046,7 @@ def main(argv: list[str]) -> int:
                 "claude", args.skill, evidence_dir, RUNS_PER_QUERY, TRIGGER_THRESHOLD,
                 qualification_eligible=args.model == DEFAULT_MODEL,
             )
+            evidence_records.write_json_once(evidence_dir / "replay-context.json", metadata["replay_context"])
             results, stop_exit = evidence_records.run_trials(
                 batch, eval_data,
                 lambda query, execution: run_claude_query(
@@ -890,6 +1058,8 @@ def main(argv: list[str]) -> int:
                 ),
                 lambda case, trial, stdout, stderr: retain_trial_evidence(evidence_dir, case, trial, stdout, stderr),
             )
+            if experiment_evidence.measurement_snapshot() != metadata["input_snapshot"]:
+                raise ValueError("public measurement inputs changed during native execution")
             passed = sum(result["pass"] is True for result in results)
             failed = sum(result["pass"] is False for result in results)
             if stop_exit is not None and stop_exit >= 128:
@@ -938,6 +1108,7 @@ def main(argv: list[str]) -> int:
         eprint(f"ERROR: {exc}")
         exit_code = 1
     finally:
+        NO_SPECKIT_SKILL_DESCRIPTION = original_no_op_description
         cleanup_error = remove_plugin_root(plugin_root)
         if cleanup_error:
             eprint(f"ERROR: {cleanup_error}")

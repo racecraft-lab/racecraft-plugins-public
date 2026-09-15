@@ -667,9 +667,12 @@ class MutationHelperTests(unittest.TestCase):
                 self.assertIs(mocked_run.call_args.kwargs["shell"], False)
 
     def temp_repo_path(self, name: str) -> tuple[tempfile.TemporaryDirectory[str], Path, str]:
-        tmp = tempfile.TemporaryDirectory(dir=FIXTURE_DIR)
-        path = Path(tmp.name) / name
-        return tmp, path, path.relative_to(REPO_ROOT).as_posix()
+        tmp = tempfile.TemporaryDirectory(prefix="mutation-consumer-")
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name).resolve()
+        (root / ".specify").mkdir()
+        path = root / name
+        return tmp, path, path.relative_to(root).as_posix()
 
     def temp_clean_git_repo(self) -> tuple[tempfile.TemporaryDirectory[str], Path]:
         tmp = tempfile.TemporaryDirectory()
@@ -7578,6 +7581,7 @@ This line must not be copied.
     def test_dry_run_reports_planned_write_without_mutating(self) -> None:
         tmp, target, rel = self.temp_repo_path("dry-run-output.json")
         with tmp:
+            self.assertFalse(target.resolve().is_relative_to(REPO_ROOT.resolve()))
             completed, response, stderr_records = run_runner(
                 helper_request(
                     "mutation-foundation",
@@ -7591,7 +7595,8 @@ This line must not be copied.
                             }
                         ]
                     },
-                )
+                ),
+                cwd=target.parent,
             )
             self.assertEqual(completed.returncode, 0)
             self.assertEqual(stderr_records, [])
@@ -7820,21 +7825,24 @@ This line must not be copied.
             self.assertFalse(mutation["dirty_worktree"])
 
     def test_path_escape_and_symlink_targets_are_rejected(self) -> None:
-        with tempfile.TemporaryDirectory() as outside, tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as inside:
-            outside_path = Path(outside) / "outside.md"
+        tmp, link, rel = self.temp_repo_path("escape.md")
+        with tempfile.TemporaryDirectory() as outside, tmp:
+            outside_path = Path(outside).resolve() / "outside.md"
             outside_path.write_text("outside\n", encoding="utf-8")
-            link = Path(inside) / "escape.md"
+            self.assertFalse(link.parent.is_relative_to(REPO_ROOT.resolve()))
+            self.assertFalse(outside_path.is_relative_to(link.parent))
             try:
                 link.symlink_to(outside_path)
             except OSError:
                 self.skipTest("symlink creation is unavailable")
-            rel = link.relative_to(REPO_ROOT).as_posix()
+            self.assertTrue(link.is_symlink())
             completed, response, stderr_records = run_runner(
                 helper_request(
                     "mutation-foundation",
                     mode="apply",
                     inputs={"operations": [{"operation_id": "escape", "kind": "write_file", "target": rel, "content": "x\n"}]},
-                )
+                ),
+                cwd=link.parent,
             )
             self.assertEqual(completed.returncode, 2)
             self.assert_response(response, "input_error", 2)
@@ -7854,11 +7862,14 @@ This line must not be copied.
                             }
                         ]
                     },
-                )
+                ),
+                cwd=link.parent,
             )
             self.assertEqual(completed.returncode, 2)
             self.assert_response(response, "input_error", 2)
             self.assertEqual([diag["code"] for diag in stderr_records], ["unsupported_path"])
+            self.assertTrue(link.is_symlink())
+            self.assertEqual(outside_path.read_text(encoding="utf-8"), "outside\n")
 
     def test_preflight_rejects_parent_file_before_apply_writes(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
