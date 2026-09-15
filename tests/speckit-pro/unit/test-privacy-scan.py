@@ -69,12 +69,14 @@ GENERIC_LOCAL_TERMS = {
     "downloads",
     "github",
     "home",
+    "inputs",
     "integration",
     "layer4",
     "layer7",
     "local",
     "main",
     "openai",
+    "outputs",
     "plugins",
     "private",
     "probe",
@@ -274,6 +276,12 @@ class PrivacyScanTests(unittest.TestCase):
             self.assertIn("qwertyuiopas", fragments)
             self.assertFalse(is_sensitive_local_term("probe"))
             self.assertTrue(is_sensitive_local_term("qwertyuiopas"))
+            for directory in ("/inputs", "/outputs"):
+                self.assertEqual(emit_sensitive_terms_from_value(directory), [])
+                self.assertIn(
+                    "qwertyuiopas",
+                    emit_sensitive_terms_from_value(f"{directory}/qwertyuiopasdfgh"),
+                )
 
         def non_allowlisted_emails() -> None:
             assert_no_hits(self, scan_for_non_allowlisted_email(paths), CURRENT_INVENTORY[1])

@@ -5,6 +5,13 @@ Committed fixture spec trees consumed by
 `tests/speckit-pro/unit/test-generate-spec-index.py`. These are **test inputs
 only** — no production code lives here.
 
+The lifecycle determinism self-test copies `determinism/` into its own temporary
+Git repository and adds the fixture files to that repository's index. It does
+not borrow the enclosing checkout's Git metadata or user/system configuration.
+The read-only check must preserve both fixture and Git metadata bytes; temporary
+state is removed afterward. This test-owned repository does not qualify copying
+or synthesizing Git state for verification of a user's existing worktree.
+
 The generated zones use this exact byte framing: one blank line before
 `GENERATED:INDEX:START`, one blank line between each zone, an empty zone is its
 `START`/`END` lines on consecutive lines with no body between them, and the file

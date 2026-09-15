@@ -13,6 +13,16 @@ and isolation preflights; records the no-retry launch contract; completes every
 requested trial; and produces only valid observations in the declared scope.
 A passing noncanonical or diagnostic run remains ineligible.
 
+Carry-forward is an explicit prospective accounting path, not a qualification
+shortcut. Its `trigger-case-carry-forward/v1` request must bind a terminal,
+read-only predecessor and the exact complete 137-case/411-trial cohort,
+including behavior failures, under the approved observer transition. The new
+serial campaign launches exactly 891 fresh trials from the 1,302-trial logical
+matrix; historical 414 charged attempts and 411 carried trials are reported
+separately. The comparator still revalidates contained digests, parser replay,
+cleanup, eligibility, and the exact disjoint union before any result can qualify.
+Carry-forward campaigns are not eligible for pilot timing or concurrency claims.
+
 ## Qualified observation scopes
 
 ### Claude: `claude-native-skill-tool`
@@ -61,11 +71,12 @@ locator, different skill path, or changed link fails closed before launch.
 
 The pinned public exec JSON omits the internal command working directory even
 though Codex uses it while executing a skill read. The observer therefore also
-accepts a bare `sed -n '1,<N>p' SKILL.md` command with a canonical numeric
-endpoint that covers the complete staged body, but only when its completed
-output byte-for-byte matches exactly one staged body and the command contains
-no staged path or marker. Other bare commands, malformed or undersized ranges,
-and additional shell segments remain invalid.
+accepts either a canonical `sed -n '1,<N>p' SKILL.md` command with no staged
+path, or `sed -n '1,<N>p' <matched-skill>/SKILL.md` with the sole directory
+component equal to the matched witness. Both forms require a numeric endpoint
+that covers the complete staged body, completed output byte-for-byte matching
+exactly one staged body, and no selection marker. Other bare commands,
+malformed or undersized ranges, and additional shell segments remain invalid.
 
 For the leading compound form, the parser requires the body at byte zero and
 rejects a tail that names another staged skill path or emits any staged body or
@@ -167,6 +178,10 @@ Layer 2 measures implicit model selection, not forced slash-command expansion.
 Claude's documented `UserPromptExpansion` hook and Codex direct invocation are
 therefore outside this qualification scope. They must be separately specified
 and qualified before evidence from those paths is accepted.
+
+Within this scope, category `explicit` means an ordinary-language request that
+clearly names the source skill. It does not use Claude `/` commands or Codex `$`
+mentions, because those native direct-invocation paths are outside this scope.
 
 The owned POSIX process group and staged workspace are the cleanup proof scope;
 unrelated processes are not observed or claimed. Windows descendant cleanup is
