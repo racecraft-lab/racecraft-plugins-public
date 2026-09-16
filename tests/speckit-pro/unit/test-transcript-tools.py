@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Focused CLI contracts for the Layer-7 transcript tools."""
+"""Focused CLI contracts for the Layer-6 transcript tools."""
 
 from __future__ import annotations
 
@@ -15,10 +15,10 @@ from typing import Callable
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TESTS_ROOT = REPO_ROOT / "tests" / "speckit-pro"
-LAYER7 = TESTS_ROOT / "layer7-integration"
-SCRUB = LAYER7 / "scrub-transcript.py"
-REDUCE = LAYER7 / "reduce-transcript-fixture.py"
-HELPERS = LAYER7 / "lib" / "transcript_helpers.py"
+LAYER6 = TESTS_ROOT / "layer6-integration"
+SCRUB = LAYER6 / "scrub-transcript.py"
+REDUCE = LAYER6 / "reduce-transcript-fixture.py"
+HELPERS = LAYER6 / "lib" / "transcript_helpers.py"
 SHARED_LIB = TESTS_ROOT / "lib"
 if str(SHARED_LIB) not in sys.path:
     sys.path.insert(0, str(SHARED_LIB))
@@ -236,7 +236,7 @@ class TranscriptToolTests(unittest.TestCase):
             reduce_missing = run_script(REDUCE, str(root / "missing.jsonl"), str(expected))
             checks.append(("reduce missing transcript exits 1", lambda: self.assertEqual(reduce_missing.returncode, 1)))
 
-            fixture = LAYER7 / "test-fixtures" / "single-dispatch.jsonl"
+            fixture = LAYER6 / "test-fixtures" / "single-dispatch.jsonl"
             helper_extract = run_script(HELPERS, "extract-orchestrator-dispatches", str(fixture))
             checks.append(("transcript CLI extract exits 0", lambda: self.assertEqual(helper_extract.returncode, 0, helper_extract.stderr)))
             checks.append(("transcript CLI emits JSON dispatches", lambda: self.assertEqual(len(helper_dispatches()), 1)))

@@ -160,6 +160,8 @@ Extract:
 
 If the SPEC-ID is not found, STOP: "SPEC-ID not found in
 technical roadmap. Available specs: <list pending specs>."
+Offer to help the user add or correct the roadmap entry with
+`/speckit-pro:speckit-coach`; do not invent the entry or continue scaffolding.
 
 Run the reviewability setup gate before creating the worktree:
 

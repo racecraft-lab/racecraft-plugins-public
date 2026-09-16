@@ -26,7 +26,10 @@ GEMINI_WRAPPER = '@./AGENTS.md\n'
 COPILOT_POINTER = '# Copilot Instructions\n\nFollow the repository agent contract in `AGENTS.md`. Do not maintain separate\nCopilot-specific project rules here.\n'
 AGENT_CONTEXT_BUDGET_BYTES = 32768
 SKIP_DIR_NAMES = {'.git', '.mypy_cache', '.pytest_cache', '.specify', '.worktrees', 'dist', 'node_modules'}
-SKIP_PREFIXES = (Path('docs-site/src/content/docs/reference'),)
+SKIP_PREFIXES = (
+    Path('.native-eval-output'),
+    Path('docs-site/src/content/docs/reference'),
+)
 INSTRUCTION_NAMES = {'AGENTS.md', 'CLAUDE.md', 'GEMINI.md'}
 FORBIDDEN_AGENT_PHRASES = ('<!-- SPECKIT START -->', '<!-- SPECKIT END -->', 'Auto-generated from feature plans', '## Active Technologies', '## Recent Changes', '### Test Layers')
 
@@ -189,7 +192,21 @@ class ValidateAgents(unittest.TestCase):
                     self.assertIn('Never store secrets', body)
 CODEX_AGENTS_DIR = PLUGIN_ROOT / 'codex-agents'
 CC_AGENTS_DIR = PLUGIN_ROOT / 'agents'
-validate_codex_agents_AGENTS = ('autopilot-fast-helper', 'clarify-executor', 'checklist-executor', 'analyze-executor', 'implement-executor', 'phase-executor', 'formal-model-author', 'codebase-analyst', 'spec-context-analyst', 'domain-researcher')
+CODEX_AGENT_PROFILES = {
+    'analyze-executor': ('gpt-5.6-sol', 'xhigh', 'workspace-write'),
+    'artifact-author': ('gpt-5.6-sol', 'xhigh', 'workspace-write'),
+    'autopilot-fast-helper': ('gpt-5.6-luna', 'low', 'read-only'),
+    'checklist-executor': ('gpt-5.6-sol', 'xhigh', 'workspace-write'),
+    'clarify-executor': ('gpt-5.6-sol', 'xhigh', 'read-only'),
+    'codebase-analyst': ('gpt-5.6-sol', 'low', 'read-only'),
+    'domain-researcher': ('gpt-5.6-sol', 'xhigh', 'read-only'),
+    'formal-model-author': ('gpt-5.6-sol', 'xhigh', 'workspace-write'),
+    'implement-executor': ('gpt-5.6-sol', 'xhigh', 'workspace-write'),
+    'phase-executor': ('gpt-5.6-sol', 'xhigh', 'workspace-write'),
+    'spec-context-analyst': ('gpt-5.6-sol', 'low', 'read-only'),
+    'uat-runbook-author': ('gpt-5.6-sol', 'xhigh', 'workspace-write'),
+}
+validate_codex_agents_AGENTS = tuple(CODEX_AGENT_PROFILES)
 LOW_EFFORT_ANALYST_ROLES = frozenset({'codebase-analyst', 'spec-context-analyst'})
 CC_ONLY_FIELDS = ('tools', 'disallowedTools', 'permissionMode', 'color', 'maxTurns', 'background', 'effort')
 validate_codex_agents_MODEL_RE = re.compile('^(gpt-5\\.6-sol|gpt-5\\.6-terra|gpt-5\\.6-luna|gpt-5\\.5|gpt-5\\.4|gpt-5\\.4-mini|gpt-5\\.3-codex|gpt-5\\.3-codex-spark)$')
@@ -224,7 +241,16 @@ def _has_field_line(text: str, field: str) -> bool:
 class ValidateCodexAgents(unittest.TestCase):
 
     def test_codex_agents(self) -> None:
-        for agent in validate_codex_agents_AGENTS:
+        with self.subTest(msg='codex-agents directory exists (fail closed)'):
+            self.assertTrue(CODEX_AGENTS_DIR.is_dir(), f'directory not found: {CODEX_AGENTS_DIR}')
+        if not CODEX_AGENTS_DIR.is_dir():
+            return
+
+        discovered = tuple(sorted(path.stem for path in CODEX_AGENTS_DIR.glob('*.toml') if path.is_file()))
+        with self.subTest(msg='codex-agents TOML roster exactly matches the policy matrix'):
+            self.assertEqual(tuple(sorted(CODEX_AGENT_PROFILES)), discovered, 'missing or unknown Codex agent TOML files')
+
+        for agent, expected_profile in CODEX_AGENT_PROFILES.items():
             agent_file = CODEX_AGENTS_DIR / f'{agent}.toml'
             with self.subTest(msg=f'{agent}: TOML file exists'):
                 self.assertTrue(agent_file.is_file(), f'file not found: {agent_file}')
@@ -264,6 +290,8 @@ class ValidateCodexAgents(unittest.TestCase):
             sandbox_val = _extract_toml_string(content, 'sandbox_mode')
             with self.subTest(msg=f'{agent}: sandbox_mode uses supported values'):
                 self.assertRegex(sandbox_val, SANDBOX_RE)
+            with self.subTest(msg=f'{agent}: model, effort, and sandbox match the exact role policy'):
+                self.assertEqual(expected_profile, (model_val, effort_val, sandbox_val))
             with self.subTest(msg=f'{agent}: has developer_instructions block'):
                 self.assertIn('developer_instructions = """', content)
             instructions = _extract_developer_instructions(content)

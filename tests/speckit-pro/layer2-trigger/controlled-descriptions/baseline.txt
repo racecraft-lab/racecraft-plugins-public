@@ -1,0 +1,1 @@
+Use when the request is ordinary coding, testing, tooling, or repository work that no SpecKit skill covers, such as writing a unit test, configuring a linter, installing packages, or editing application code. Reply that no SpecKit skill applies and stop.

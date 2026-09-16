@@ -1,0 +1,4 @@
+#!/usr/bin/env python3
+import os, sys
+print(sys.argv[0])
+print(os.environ['PATH'])

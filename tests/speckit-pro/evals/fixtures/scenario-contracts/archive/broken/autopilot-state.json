@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "current_phase": "startup",
+  "plan": [
+    {
+      "name": "Archive Sweep: previously merged specs archived",
+      "status": "pending"
+    },
+    {
+      "name": "Phase 0",
+      "status": "pending"
+    }
+  ]
+}

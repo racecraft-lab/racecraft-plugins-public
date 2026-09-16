@@ -4,7 +4,7 @@
 ``codebase-analyst``, ``spec-context-analyst``, and ``domain-researcher`` are
 three definitions on purpose: ``effort`` and ``memory`` are per-definition
 frontmatter, the Codex mirrors carry per-role reasoning effort, and the
-consensus protocol, the synthesizer input contract, and the Layer 7 dispatch
+consensus protocol, the synthesizer input contract, and the Layer 6 dispatch
 fixtures are all keyed by agent name. This file fails when a shared block is
 edited in one body and not the other two.
 

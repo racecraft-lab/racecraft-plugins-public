@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import shutil
 import sys
 import tempfile
 import unittest
@@ -32,6 +33,17 @@ def load_module(name: str, filename: str):
 ci_release = load_module("validate_ci_release_contracts", "validate-ci-release-contracts.py")
 payloads = load_module("validate_payload_contracts", "validate-payload-contracts.py")
 agents = load_module("validate_agent_contracts", "validate-agent-contracts.py")
+
+
+def run_codex_agent_validator(codex_agents_dir: Path) -> unittest.TestResult:
+    original = agents.CODEX_AGENTS_DIR
+    agents.CODEX_AGENTS_DIR = codex_agents_dir
+    try:
+        result = unittest.TestResult()
+        agents.ValidateCodexAgents("test_codex_agents").run(result)
+        return result
+    finally:
+        agents.CODEX_AGENTS_DIR = original
 
 
 def write_valid_agent_instruction_tree(root: Path) -> None:
@@ -88,9 +100,62 @@ class StructuralRegressionTests(unittest.TestCase):
             errors = agents.collect_agent_instruction_errors(root)
             self.assertIn("docs/AGENTS.md", "\n".join(errors))
 
+    def test_agent_instruction_validator_ignores_only_root_native_eval_output(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            write_valid_agent_instruction_tree(root)
+            retained = root / ".native-eval-output" / "attempts" / "staging" / "plugin"
+            retained.mkdir(parents=True)
+            for name in agents.INSTRUCTION_NAMES:
+                (retained / name).write_text("retained native evidence\n", encoding="utf-8")
+            self.assertEqual([], agents.collect_agent_instruction_errors(root))
+
+            authored = root / "authored" / ".native-eval-output" / "AGENTS.md"
+            authored.parent.mkdir(parents=True)
+            authored.write_text("# Unexpected authored scope\n", encoding="utf-8")
+            errors = agents.collect_agent_instruction_errors(root)
+            self.assertIn("authored/.native-eval-output/AGENTS.md", "\n".join(errors))
+
+
+class CodexAgentRegressionTests(unittest.TestCase):
+    def test_codex_agent_validator_rejects_newly_covered_role_corruption(self) -> None:
+        mutations = (
+            ("artifact-author", 'sandbox_mode = "workspace-write"', 'sandbox_mode = "read-only"'),
+            ("uat-runbook-author", 'name = "uat-runbook-author"', 'name = "wrong-role"'),
+        )
+        for role, original, replacement in mutations:
+            with self.subTest(role=role), tempfile.TemporaryDirectory() as temporary:
+                target = Path(temporary) / "codex-agents"
+                shutil.copytree(agents.CODEX_AGENTS_DIR, target)
+                path = target / f"{role}.toml"
+                path.write_text(path.read_text(encoding="utf-8").replace(original, replacement), encoding="utf-8")
+
+                result = run_codex_agent_validator(target)
+                self.assertFalse(result.wasSuccessful(), f"{role} corruption passed validation")
+                self.assertEqual([], result.errors, f"{role} corruption raised instead of producing an assertion failure")
+                failures = "\n".join(f"{test}\n{traceback}" for test, traceback in result.failures)
+                self.assertIn(role, failures)
+
+    def test_codex_agent_validator_rejects_missing_directory_and_unknown_role(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            missing = Path(temporary) / "missing-codex-agents"
+            result = run_codex_agent_validator(missing)
+            self.assertFalse(result.wasSuccessful())
+            self.assertEqual([], result.errors, "missing directory must fail closed without an unhandled error")
+
+        with tempfile.TemporaryDirectory() as temporary:
+            target = Path(temporary) / "codex-agents"
+            shutil.copytree(agents.CODEX_AGENTS_DIR, target)
+            (target / "unknown-role.toml").write_text('name = "unknown-role"\n', encoding="utf-8")
+            result = run_codex_agent_validator(target)
+            self.assertFalse(result.wasSuccessful(), "unknown Codex role passed exact-roster validation")
+            self.assertEqual([], result.errors)
+
 
 def main() -> int:
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(StructuralRegressionTests)
+    suite = unittest.TestSuite()
+    suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(StructuralRegressionTests))
+    suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(CodexAgentRegressionTests))
     return run_counted(suite, label="test-structural-regressions")
 
 

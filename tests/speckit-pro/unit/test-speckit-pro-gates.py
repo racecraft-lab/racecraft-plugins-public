@@ -79,6 +79,7 @@ def run_runner(
     request: object,
     *,
     extra_env: dict[str, str] | None = None,
+    cwd: Path = REPO_ROOT,
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any], list[dict[str, Any]]]:
     env = runner_env()
     if extra_env:
@@ -88,7 +89,7 @@ def run_runner(
         input=json.dumps(request) if not isinstance(request, str) else request,
         text=True,
         capture_output=True,
-        cwd=REPO_ROOT,
+        cwd=cwd,
         env=env,
         shell=False,
         check=False,
@@ -493,7 +494,10 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(default_request["helper_id"], "suite-gate")
         self.assertEqual(default_request["operation"], "run-default-suite")
         self.assertEqual(default_request["mode"], "read_only")
-        self.assertEqual(default_request["inputs"]["suite"], ["toolchain", "1", "4", "5", "7", "8"])
+        self.assertEqual(
+            default_request["inputs"]["suite"],
+            ["toolchain", "structural", "unit", "tool-scoping", "integration", "parity"],
+        )
 
         for name in [
             "run-default-suite",
@@ -1648,8 +1652,11 @@ class GateFoundationTests(unittest.TestCase):
         self.assertTrue(active_path_guard.command_argv_contains_forbidden(["/bin/zsh", "-o", "pipefail", "-c", "python -m speckit_pro_runner"]))
         self.assertTrue(active_path_guard.command_argv_contains_forbidden(["/usr/bin/env", "-S", "sh -c python -m speckit_pro_runner"]))
         self.assertTrue(active_path_guard.command_argv_contains_forbidden(["/usr/bin/env", "-S sh -c python -m speckit_pro_runner"]))
-        with tempfile.TemporaryDirectory(prefix=".plugin-bash-confinement-large-script-", dir=PLUGIN_ROOT) as tmp:
-            temp_root = Path(tmp)
+        with tempfile.TemporaryDirectory(prefix="plugin-bash-confinement-large-script-") as tmp:
+            consumer_root = Path(tmp).resolve()
+            temp_root = consumer_root / "speckit-pro" / "scan"
+            temp_root.mkdir(parents=True)
+            self.assertFalse(temp_root.resolve().is_relative_to(REPO_ROOT.resolve()))
             large_suffix_script = temp_root / "install.sh"
             large_suffix_script.write_text("#!/usr/bin/env bash\n" + ("#" * (active_path_guard.MAX_SCAN_BYTES + 1)), encoding="utf-8")
             large_extensionless_script = temp_root / "install"
@@ -1658,30 +1665,34 @@ class GateFoundationTests(unittest.TestCase):
                 encoding="utf-8",
             )
             sources = active_path_guard.scan_repo_sources(
-                REPO_ROOT,
-                roots=(temp_root.relative_to(REPO_ROOT).as_posix(),),
+                consumer_root,
+                roots=(temp_root.relative_to(consumer_root).as_posix(),),
             )
             findings = active_path_guard.zero_bash_source_findings(sources, [])
             script_paths = {finding.path for finding in findings if finding.category == "script_file"}
             self.assertLessEqual(
                 {
-                    large_suffix_script.relative_to(REPO_ROOT).as_posix(),
-                    large_extensionless_script.relative_to(REPO_ROOT).as_posix(),
+                    large_suffix_script.relative_to(consumer_root).as_posix(),
+                    large_extensionless_script.relative_to(consumer_root).as_posix(),
                 },
                 script_paths,
             )
-        with tempfile.TemporaryDirectory(prefix=".plugin-bash-confinement-symlink-", dir=PLUGIN_ROOT) as tmp:
-            temp_root = Path(tmp)
+        with tempfile.TemporaryDirectory(prefix="plugin-bash-confinement-symlink-") as tmp:
+            consumer_root = Path(tmp).resolve()
+            temp_root = consumer_root / "speckit-pro" / "scan"
+            temp_root.mkdir(parents=True)
+            self.assertFalse(consumer_root.is_relative_to(REPO_ROOT.resolve()))
             with tempfile.TemporaryDirectory() as outside:
                 outside_script = Path(outside) / "install"
                 outside_script.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
                 symlink = temp_root / "install"
                 symlink.symlink_to(outside_script)
+                self.assertTrue(symlink.is_symlink())
                 sources = active_path_guard.scan_repo_sources(
-                    REPO_ROOT,
-                    roots=(temp_root.relative_to(REPO_ROOT).as_posix(),),
+                    consumer_root,
+                    roots=(temp_root.relative_to(consumer_root).as_posix(),),
                 )
-            self.assertFalse([source for source in sources if source.path == symlink.relative_to(REPO_ROOT).as_posix()])
+            self.assertFalse([source for source in sources if source.path == symlink.relative_to(consumer_root).as_posix()])
         with tempfile.TemporaryDirectory() as tmp:
             completed, response, stderr_records = run_runner(
                 gate_request(
@@ -1872,8 +1883,14 @@ class GateFoundationTests(unittest.TestCase):
         self.assert_plugin_bash_confinement_contracts_match_fixtures(clean_response)
 
     def test_plugin_bash_confinement_zero_bash_guard_blocks_physical_uppercase_script_files(self) -> None:
-        with tempfile.TemporaryDirectory(prefix=".plugin-bash-confinement-uppercase-", dir=REPO_ROOT) as scan_root:
-            scan_dir = Path(scan_root)
+        with tempfile.TemporaryDirectory(prefix="plugin-bash-confinement-uppercase-") as scan_root:
+            consumer_root = Path(scan_root).resolve()
+            (consumer_root / "speckit-pro" / "speckit_pro_runner").mkdir(parents=True)
+            (consumer_root / "tests" / "speckit-pro").mkdir(parents=True)
+            scan_dir = consumer_root / "scan"
+            scan_dir.mkdir()
+            shutil.copyfile(PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR / "allowlist.json", consumer_root / "allowlist.json")
+            self.assertFalse(scan_dir.resolve().is_relative_to(REPO_ROOT.resolve()))
             (scan_dir / "RUN.SH").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
             case_file = scan_dir / "zero-bash-uppercase-case.json"
             case_file.write_text(
@@ -1884,8 +1901,8 @@ class GateFoundationTests(unittest.TestCase):
                         "cases": [
                             {
                                 "case_id": "physical-uppercase-script",
-                                "scan_roots": [scan_dir.relative_to(REPO_ROOT).as_posix()],
-                                "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
+                                "scan_roots": [scan_dir.relative_to(consumer_root).as_posix()],
+                                "allowlist_file": "allowlist.json",
                             }
                         ],
                     },
@@ -1900,10 +1917,11 @@ class GateFoundationTests(unittest.TestCase):
                     "active-path-guard",
                     "zero-bash-guard",
                     inputs={
-                        "case_file": case_file.relative_to(REPO_ROOT).as_posix(),
+                        "case_file": case_file.relative_to(consumer_root).as_posix(),
                         "case_id": "physical-uppercase-script",
                     },
-                )
+                ),
+                cwd=consumer_root,
             )
 
         self.assertEqual(completed.returncode, 1)
@@ -2204,14 +2222,14 @@ class GateFoundationTests(unittest.TestCase):
             "suite-gate",
             "run-default-suite",
             inputs={
-                "suite": ["toolchain", "1", "4", "5", "7", "8"],
+                "suite": ["toolchain", "1", "4", "5", "6", "7"],
                 "test_commands": {
                     "toolchain": successful_command("toolchain"),
                     "layer-1": successful_command("layer1"),
                     "layer-4": successful_command("layer4"),
                     "layer-5": successful_command("layer5"),
+                    "layer-6": successful_command("layer6"),
                     "layer-7": successful_command("layer7"),
-                    "layer-8": successful_command("layer8"),
                 },
             },
         )
@@ -2227,11 +2245,11 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(gate["gate_status"], "pass")
         self.assertTrue(gate["promoted"])
         self.assertFalse(gate["blocking"])
-        self.assertEqual(gate["comparison_ids"], ["default-suite-toolchain-l1-l4-l5-l7-l8"])
+        self.assertEqual(gate["comparison_ids"], ["default-suite-toolchain-l1-l4-l5-l6-l7"])
         summary = response["data"]["suite"]["summary"]
         self.assertEqual(summary, {"total": 6, "passed": 6, "failed": 0, "skipped": 0})
         results = response["data"]["suite"]["results"]
-        self.assertEqual([result["command_id"] for result in results], ["toolchain", "layer-1", "layer-4", "layer-5", "layer-7", "layer-8"])
+        self.assertEqual([result["command_id"] for result in results], ["toolchain", "layer-1", "layer-4", "layer-5", "layer-6", "layer-7"])
         for result in results:
             self.assertEqual(result["status"], "ok")
             self.assertEqual(result["exit_code"], 0)
@@ -2246,21 +2264,23 @@ class GateFoundationTests(unittest.TestCase):
         from speckit_pro_runner.gates import suite as suite_gate
 
         request = fixture_request("run-default-suite")
+        suite_items = suite_gate.requested_suite(request["inputs"])
+        self.assertEqual(suite_items, ("toolchain", "1", "4", "5", "6", "7"))
         results = [
             suite_gate.command_spec(suite_gate.suite_item_to_command_id(item), request["inputs"], REPO_ROOT)
-            for item in request["inputs"]["suite"]
+            for item in suite_items
         ]
         self.assertEqual(
             [result.command_id for result in results],
-            ["toolchain", "layer-1", "layer-4", "layer-5", "layer-7", "layer-8"],
+            ["toolchain", "layer-1", "layer-4", "layer-5", "layer-6", "layer-7"],
         )
         external_layer_argv = {
             "toolchain": [sys.executable, "tests/speckit-pro/check-toolchain.py", "--mode", "tests"],
             "layer-1": [sys.executable, "tests/speckit-pro/run-layer-scripts.py", "--layer", "1"],
             "layer-4": [sys.executable, "tests/speckit-pro/run-layer-scripts.py", "--layer", "4"],
             "layer-5": [sys.executable, "tests/speckit-pro/run-layer-scripts.py", "--layer", "5"],
+            "layer-6": [sys.executable, "tests/speckit-pro/run-layer-scripts.py", "--layer", "6"],
             "layer-7": [sys.executable, "tests/speckit-pro/run-layer-scripts.py", "--layer", "7"],
-            "layer-8": [sys.executable, "tests/speckit-pro/run-layer-scripts.py", "--layer", "8"],
         }
         for result in results:
             argv = list(result.argv)
@@ -2305,6 +2325,8 @@ class GateFoundationTests(unittest.TestCase):
         dispatcher = load_layer_script_dispatcher()
         layer1_scripts = [self.repo_rel(path) for path in dispatcher.canonical_test_scripts(REPO_ROOT, "1")]
         layer4_scripts = [self.repo_rel(path) for path in dispatcher.canonical_test_scripts(REPO_ROOT, "4")]
+        integration_by_id = [self.repo_rel(path) for path in dispatcher.canonical_test_scripts(REPO_ROOT, "6")]
+        integration_by_key = [self.repo_rel(path) for path in dispatcher.canonical_test_scripts(REPO_ROOT, "integration")]
         expected_layer1_scripts = {
             "tests/speckit-pro/layer1-structural/validate-plugin-metadata.py",
             "tests/speckit-pro/layer1-structural/validate-hook-contracts.py",
@@ -2322,6 +2344,8 @@ class GateFoundationTests(unittest.TestCase):
         manifest_layer4 = next(layer for layer in manifest["layers"] if layer["id"] == "4")
         self.assertEqual(layer4_scripts, [script["path"] for script in manifest_layer4["scripts"]])
         self.assertTrue(all(path.endswith(".py") for path in layer4_scripts))
+        self.assertEqual(integration_by_key, integration_by_id)
+        self.assertEqual(integration_by_id, ["tests/speckit-pro/layer6-integration/run-all-fixtures.py"])
 
     def test_default_suite_without_explicit_suite_uses_python_authoritative_default(self) -> None:
         from speckit_pro_runner.gates import suite as suite_gate
@@ -2341,6 +2365,21 @@ class GateFoundationTests(unittest.TestCase):
         manifest = json.loads((REPO_ROOT / "tests/speckit-pro/suite-manifest.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["schema_version"], "1.0")
         layers = manifest["layers"]
+
+        keyed_layers = [layer for layer in layers if layer["id"] != "toolchain"]
+        expected_ids_by_key = {
+            "structural": "1",
+            "trigger": "2",
+            "functional": "3",
+            "unit": "4",
+            "tool-scoping": "5",
+            "integration": "6",
+            "parity": "7",
+        }
+        self.assertEqual({layer["key"]: layer["id"] for layer in keyed_layers}, expected_ids_by_key)
+        self.assertEqual(suite_gate.LAYER_IDS_BY_KEY, expected_ids_by_key)
+        self.assertEqual(suite_gate.manifest_layer_ids_by_key(manifest), expected_ids_by_key)
+        self.assertNotIn("key", next(layer for layer in layers if layer["id"] == "toolchain"))
 
         default_suite = tuple(layer["id"] for layer in layers if layer["default"])
         extended_suite = tuple(layer["id"] for layer in layers if not layer["live_only"])
@@ -2418,24 +2457,24 @@ class GateFoundationTests(unittest.TestCase):
         self.assertIn(summary, completed.stdout)
         self.assertIn(f"PASS {expected_script['path']}", completed.stdout)
 
-    def test_layer7_replay_runners_use_ported_python_module_only(self) -> None:
+    def test_layer6_replay_runners_use_ported_python_module_only(self) -> None:
+        self.assert_ported_python_layer(
+            "6",
+            {
+                "path": "tests/speckit-pro/layer6-integration/run-all-fixtures.py",
+                "label": "run-all-fixtures",
+            },
+            "layer-6 integration fixtures",
+        )
+
+    def test_layer7_parity_runner_uses_ported_python_module_only(self) -> None:
         self.assert_ported_python_layer(
             "7",
             {
-                "path": "tests/speckit-pro/layer7-integration/run-all-fixtures.py",
-                "label": "run-all-fixtures",
-            },
-            "layer-7 integration fixtures",
-        )
-
-    def test_layer8_parity_runner_uses_ported_python_module_only(self) -> None:
-        self.assert_ported_python_layer(
-            "8",
-            {
-                "path": "tests/speckit-pro/layer8-parity/run-parity-fixtures.py",
+                "path": "tests/speckit-pro/layer7-parity/run-parity-fixtures.py",
                 "label": "run-parity-fixtures",
             },
-            "layer-8 parity fixtures",
+            "layer-7 parity fixtures",
         )
 
     def test_suite_manifest_loader_fails_closed_when_absent_or_malformed(self) -> None:
@@ -2451,6 +2490,26 @@ class GateFoundationTests(unittest.TestCase):
             (target / "suite-manifest.json").write_text("{ not valid json", encoding="utf-8")
             with self.assertRaises(suite_gate.SuiteManifestError):
                 suite_gate.load_suite_manifest(Path(tmp))
+
+        manifest = json.loads((REPO_ROOT / "tests/speckit-pro/suite-manifest.json").read_text(encoding="utf-8"))
+        malformed_manifests = []
+        missing_key = copy.deepcopy(manifest)
+        missing_key["layers"][1].pop("key")
+        malformed_manifests.append(missing_key)
+        duplicate_key = copy.deepcopy(manifest)
+        duplicate_key["layers"][2]["key"] = duplicate_key["layers"][1]["key"]
+        malformed_manifests.append(duplicate_key)
+        colliding_key = copy.deepcopy(manifest)
+        colliding_key["layers"][1]["key"] = "4"
+        malformed_manifests.append(colliding_key)
+        for malformed in malformed_manifests:
+            with self.subTest(malformed=malformed):
+                with tempfile.TemporaryDirectory() as tmp:
+                    target = Path(tmp) / "tests" / "speckit-pro"
+                    target.mkdir(parents=True)
+                    (target / "suite-manifest.json").write_text(json.dumps(malformed), encoding="utf-8")
+                    with self.assertRaises(suite_gate.SuiteManifestError):
+                        suite_gate.load_suite_manifest(Path(tmp))
 
     def test_run_suite_gate_fails_closed_when_manifest_unavailable(self) -> None:
         from speckit_pro_runner.gates import suite as suite_gate
@@ -2511,15 +2570,36 @@ class GateFoundationTests(unittest.TestCase):
         self.assertIn("layer4 stderr", result["stderr"]["text"])
         self.assertEqual(response["data"]["gate"]["gate_status"], "fail")
 
+    def test_run_layer_resolves_exact_semantic_key_without_old_aliases(self) -> None:
+        request = gate_request(
+            "suite-gate",
+            "run-layer",
+            inputs={
+                "layer": "integration",
+                "test_commands": {"layer-6": successful_command("layer6")},
+            },
+        )
+        completed, response, _stderr_records = run_runner(request)
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(response["data"]["suite"]["results"][0]["command_id"], "layer-6")
+
+        old_layer_eight = self.assert_input_error_code(
+            gate_request("suite-gate", "run-layer", inputs={"layer": "8"}),
+            "invalid_layer",
+        )
+        self.assertNotIn("8", old_layer_eight["diagnostics"][0]["details"]["supported_layers"])
+
     def test_run_layer_missing_dispatcher_reports_missing_prerequisite(self) -> None:
-        with tempfile.TemporaryDirectory(dir=REPO_ROOT) as tmp:
+        with tempfile.TemporaryDirectory(prefix="missing-dispatcher-consumer-") as tmp:
+            self.assertFalse(Path(tmp).resolve().is_relative_to(REPO_ROOT.resolve()))
             (Path(tmp) / "speckit-pro" / "speckit_pro_runner").mkdir(parents=True)
+            (Path(tmp) / "tests" / "speckit-pro").mkdir(parents=True)
             request = gate_request(
                 "suite-gate",
                 "run-layer",
                 inputs={"layer": "1", "repo_root": tmp},
             )
-            completed, response, stderr_records = run_runner(request)
+            completed, response, stderr_records = run_runner(request, cwd=Path(tmp).resolve())
         self.assert_stdout_json(completed)
         self.assert_response(response, "missing_prerequisite")
         self.assert_status_exit_mapping(completed, response)
@@ -2533,8 +2613,8 @@ class GateFoundationTests(unittest.TestCase):
     def test_toolchain_integration_and_parity_suite_dispatch(self) -> None:
         cases = [
             ("run-toolchain-preflight", "toolchain"),
-            ("run-integration-suite", "layer-7"),
-            ("run-parity-suite", "layer-8"),
+            ("run-integration-suite", "layer-6"),
+            ("run-parity-suite", "layer-7"),
         ]
         for operation, command_id in cases:
             with self.subTest(operation=operation):
@@ -2614,8 +2694,14 @@ class GateFoundationTests(unittest.TestCase):
             self.assertTrue(item["files"])
             self.assertTrue(item["output_root"].startswith("tests/speckit-pro/unit/fixtures/runner-gates/"))
 
-        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as tmp:
-            output_root = self.repo_rel(Path(tmp) / "payload-output")
+        with tempfile.TemporaryDirectory(prefix="payload-evidence-output-") as tmp:
+            consumer_root = Path(tmp).resolve()
+            self.assertFalse(consumer_root.is_relative_to(REPO_ROOT.resolve()))
+            (consumer_root / "speckit-pro" / "speckit_pro_runner").mkdir(parents=True)
+            fixture_dir = consumer_root / FIXTURE_DIR.relative_to(REPO_ROOT)
+            fixture_dir.mkdir(parents=True)
+            shutil.copyfile(FIXTURE_DIR / "payload-evidence-cases.json", fixture_dir / "payload-evidence-cases.json")
+            output_root = fixture_dir / "payload-output"
             dry_run_request = gate_request(
                 "payload-gate",
                 "build-test-payload-evidence",
@@ -2623,23 +2709,23 @@ class GateFoundationTests(unittest.TestCase):
                 inputs={
                     "case_file": "tests/speckit-pro/unit/fixtures/runner-gates/payload-evidence-cases.json",
                     "case_id": "claude-codex-test-payloads",
-                    "output_root": output_root,
+                    "output_root": output_root.relative_to(consumer_root).as_posix(),
                 },
             )
-            completed, response, stderr_records = run_runner(dry_run_request)
+            completed, response, stderr_records = run_runner(dry_run_request, cwd=consumer_root)
             self.assertEqual(completed.returncode, 0)
             self.assert_response(response, "ok")
             self.assertEqual(stderr_records, [])
-            self.assertFalse((REPO_ROOT / output_root).exists())
+            self.assertFalse(output_root.exists())
 
             apply_request = dict(dry_run_request)
             apply_request["request_id"] = "test-build-test-payload-evidence-apply"
             apply_request["mode"] = "apply"
-            completed, response, stderr_records = run_runner(apply_request)
+            completed, response, stderr_records = run_runner(apply_request, cwd=consumer_root)
             self.assertEqual(completed.returncode, 0)
             self.assert_response(response, "ok")
             self.assertEqual(stderr_records, [])
-            written = sorted(path.name for path in (REPO_ROOT / output_root).glob("*.json"))
+            written = sorted(path.name for path in output_root.glob("*.json"))
             self.assertEqual(written, ["claude-test-payload-evidence.json", "codex-test-payload-evidence.json"])
             for item in response["data"]["payload_evidence"]:
                 self.assertEqual(item["mode"], "apply")

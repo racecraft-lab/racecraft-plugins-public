@@ -1,0 +1,4 @@
+# SPEC-912 legacy candidate
+
+This candidate is active because .specify/feature.json names SPEC-912.
+

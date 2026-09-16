@@ -16,8 +16,8 @@ docs-site/node_modules/
 docs-site/.astro/
 docs-site/dist/
 
-# Layer 7 live captures are transient; commit reduced parser-fixture.jsonl only.
-tests/speckit-pro/layer7-integration/**/transcript.jsonl
+# Layer 6 live captures are transient; commit reduced parser-fixture.jsonl only.
+tests/speckit-pro/layer6-integration/**/transcript.jsonl
 
 # Transient per-agent scratch memory (subagent learnings; not a deliverable)
 .claude/agent-memory/
@@ -33,3 +33,6 @@ specs/*/.process/pr-packets/
 
 # Browser-automation scratch output (UAT screenshots, traces)
 .playwright-mcp/
+
+# Private native-evaluation captures, prepared inputs, and grading receipts.
+/.native-eval-output/

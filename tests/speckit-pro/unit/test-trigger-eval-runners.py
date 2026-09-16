@@ -73,8 +73,9 @@ def assert_no_speckit_contracts(test: unittest.TestCase, claude: ModuleType, sta
         with test.subTest(eval_dir=eval_dir):
             install_cases = json.loads((LAYER2 / eval_dir / "speckit-install-trigger.json").read_text())
             scaffold_cases = json.loads((LAYER2 / eval_dir / "speckit-scaffold-spec-trigger.json").read_text())
-            test.assertEqual(install_cases[12], _INSTALL_NEGATIVE)
-            test.assertEqual(scaffold_cases[18:20], _SCAFFOLD_NEGATIVES)
+            test.assertIn(_INSTALL_NEGATIVE, install_cases)
+            for sentinel in _SCAFFOLD_NEGATIVES:
+                test.assertIn(sentinel, scaffold_cases)
 
 
 def calls_forbidden_process_api(path: Path) -> bool:
@@ -102,6 +103,56 @@ def has_hardcoded_python3_command(path: Path) -> bool:
     )
 
 
+def _claude_selection_events(
+    expected_skill: str, model: str | None
+) -> list[dict[str, object]]:
+    """Return the portable form of the qualified native hook event sequence."""
+    receipt = json.dumps(
+        {
+            "continue": False,
+            "stopReason": "L2_FIRST_SELECTION_GUARD/v1:toolu-skill",
+        },
+        separators=(",", ":"),
+    ) + "\n"
+    assistant_message: dict[str, object] = {
+        "content": [{
+            "type": "tool_use",
+            "name": "Skill",
+            "id": "toolu-skill",
+            "input": {"skill": expected_skill},
+        }]
+    }
+    if model is not None:
+        assistant_message["model"] = model
+    hook_identity = {
+        "type": "system",
+        "hook_id": "hook-fixed",
+        "hook_name": "PostToolUse:Skill",
+        "hook_event": "PostToolUse",
+    }
+    return [
+        {"type": "assistant", "message": assistant_message},
+        {**hook_identity, "subtype": "hook_started"},
+        {
+            **hook_identity,
+            "subtype": "hook_response",
+            "outcome": "success",
+            "exit_code": 0,
+            "stdout": receipt,
+            "stderr": "",
+            "output": receipt,
+        },
+        {
+            "type": "user",
+            "message": {"content": [{
+                "type": "tool_result",
+                "tool_use_id": "toolu-skill",
+                "content": "loaded",
+            }]},
+        },
+    ]
+
+
 def claude_stream(
     plugin_root: Path,
     plugin_name: str,
@@ -125,48 +176,24 @@ def claude_stream(
         init["model"] = model
     events: list[dict[str, object]] = [init]
     if selected:
-        events.extend(
-            [
-                {
-                    "type": "assistant",
-                    "message": {
-                        "content": [
-                            {
-                                "type": "tool_use",
-                                "name": "Skill",
-                                "id": "toolu-skill",
-                                "input": {"skill": expected_skill},
-                            }
-                        ]
-                    },
-                },
-                {
-                    "type": "user",
-                    "message": {
-                        "content": [
-                            {
-                                "type": "tool_result",
-                                "tool_use_id": "toolu-skill",
-                                "is_error": False,
-                                "content": "loaded",
-                            }
-                        ]
-                    },
-                },
-            ]
-        )
-    events.extend(
-        [
-            {
-                "type": "assistant",
-                "message": {"content": [{
-                    "type": "text",
-                    "text": nonce if selected else "No skill selected.",
-                }]},
-            },
-            {"type": "result", "subtype": "success", "is_error": False, "model": "untrusted-result-model"},
-        ]
-    )
+        events.extend(_claude_selection_events(expected_skill, model))
+    else:
+        message: dict[str, object] = {
+            "content": [{"type": "text", "text": "No skill selected."}]
+        }
+        if model is not None:
+            message["model"] = model
+        events.append({"type": "assistant", "message": message})
+    result: dict[str, object] = {
+        "type": "result",
+        "subtype": "success",
+        "is_error": False,
+        "model": "untrusted-result-model",
+        "permission_denials": [],
+    }
+    if selected:
+        result.update(stop_reason="tool_use", terminal_reason="hook_stopped")
+    events.append(result)
     return ("\r\n".join(json.dumps(event) for event in events) + "\r\n").encode("utf-8")
 
 
@@ -225,6 +252,19 @@ def inspect_codex_events(
     return engine.inspect_codex_jsonl(
         payload, target_skill, witnesses,
     )
+
+
+def codex_events_with_command(
+    base: list[dict[str, object]], command: str, output: str,
+) -> list[dict[str, object]]:
+    events = [dict(event) for event in base]
+    for index in (2, 3):
+        events[index] = {
+            **events[index],
+            "item": {**events[index]["item"], "command": command},
+        }
+    events[3]["item"]["aggregated_output"] = output
+    return events
 
 
 class FakePopen:
@@ -398,7 +438,8 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
 
                     output = io.StringIO()
                     diagnostics = io.StringIO()
-                    argv = ["demo", "--evidence-dir", str(evidence), "--model", "claude-sonnet-test" if host == "claude" else "gpt-5.6-sol"]
+                    argv = ["demo", "--evidence-dir", str(evidence), "--timeout", "37",
+                            "--model", "claude-sonnet-test" if host == "claude" else "gpt-5.6-sol"]
                     with contextlib.ExitStack() as stack:
                         for name, replacement in (
                             ("find_eval_file", corpus), ("find_skill_source", source),
@@ -435,6 +476,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     self.assertEqual(code, 0 if scenario == "good" else 143 if scenario == "interrupted" else 1)
                     self.assertEqual(len(calls), 6 if scenario == "good" else 1)
                     report = json.loads(output.getvalue())
+                    self.assertEqual(report["metadata"]["trial_timeout_seconds"], 37)
                     trial = report["results"][0]["selection_evidence"][0]
                     self.assertIs(trial["stream_valid"], True)
                     self.assertIs(trial["trial_valid"], scenario == "good")
@@ -552,15 +594,15 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 events = json.loads(json.dumps(original))
                 events[1]["message"]["content"][0]["input"]["skill"] = "catalog:no-speckit-skill"
                 if label == "errored":
-                    events[2]["message"]["content"][0]["is_error"] = True
+                    events[4]["message"]["content"][0]["is_error"] = True
                 elif label == "missing":
-                    del events[2]
+                    del events[4]
                 elif label == "before-init":
                     events[0], events[1] = events[1], events[0]
                 elif label == "duplicate-result":
-                    events.insert(3, events[2])
+                    events.insert(5, events[4])
                 else:
-                    events[2]["message"]["content"][0]["tool_use_id"] = "unknown"
+                    events[4]["message"]["content"][0]["tool_use_id"] = "unknown"
                 scenarios[label] = events
             events = json.loads(json.dumps(original))
             events[1]["message"]["content"][0].update(name="Bash", input={"command": "true"})
@@ -705,16 +747,23 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     self.assertEqual(signal.getsignal(signal.SIGTERM), previous_handler)
 
     @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
-    def test_claude_cleanup_rejects_probe_failure_and_supervisor_group(self) -> None:
+    def test_claude_cleanup_rejects_persistent_initial_eperm_without_signals(self) -> None:
         claude = import_script(CLAUDE_RUNNER, "layer2_claude_cleanup_guards")
         child = FakePopen(b"", returncode=0)
+        observations = []
         with (
             mock.patch.object(claude.os, "getpgrp", return_value=child.pid + 1),
-            mock.patch.object(claude.os, "killpg", side_effect=PermissionError("probe denied")) as killpg,
+            mock.patch.object(claude.os, "killpg", side_effect=PermissionError(1, "probe denied")) as killpg,
+            mock.patch.object(claude, "DESCENDANT_EXIT_GRACE", 0.05),
+            mock.patch.object(claude.time, "monotonic", side_effect=[i / 100 for i in range(100)]),
+            mock.patch.object(claude.time, "sleep"),
         ):
-            with self.assertRaises(PermissionError):
-                claude.cleanup_child(child)
-            killpg.assert_called_once_with(child.pid, 0)
+            with self.assertRaises(PermissionError) as caught:
+                claude.cleanup_child(child, observations=observations)
+            self.assertEqual(caught.exception.errno, 1)
+            self.assertGreaterEqual(killpg.call_count, 2)
+            self.assertTrue(all(call.args == (child.pid, 0) for call in killpg.call_args_list))
+            self.assertTrue(all(item["errno"] == 1 for item in observations))
         with (
             mock.patch.object(claude.os, "getpgrp", return_value=child.pid),
             mock.patch.object(claude.os, "killpg") as killpg,
@@ -724,6 +773,52 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             with self.assertRaisesRegex(OSError, "unowned process group"):
                 claude.terminate_child(child)
             killpg.assert_not_called()
+
+    @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
+    def test_claude_completed_group_transient_eperm_requires_later_esrch(self) -> None:
+        claude = import_script(CLAUDE_RUNNER, "layer2_claude_transient_initial_eperm")
+        child = FakePopen(b"", returncode=0)
+        observations = []
+        with (
+            mock.patch.object(claude.os, "getpgrp", return_value=child.pid + 1),
+            mock.patch.object(claude.os, "killpg", side_effect=[
+                PermissionError(1, "zombie-only group"),
+                ProcessLookupError(3, "group absent"),
+                ProcessLookupError(3, "group absent"),
+            ]) as killpg,
+            mock.patch.object(claude, "DESCENDANT_EXIT_GRACE", 0.2),
+            mock.patch.object(claude.time, "monotonic", side_effect=[i / 100 for i in range(100)]),
+            mock.patch.object(claude.time, "sleep"),
+        ):
+            self.assertFalse(claude.cleanup_child(child, observations=observations))
+        self.assertEqual(killpg.call_args_list, [mock.call(child.pid, 0)] * 3)
+        self.assertEqual([item["errno"] for item in observations], [1, 3, 3])
+
+    @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
+    def test_claude_initial_eperm_then_presence_uses_existing_cleanup(self) -> None:
+        claude = import_script(CLAUDE_RUNNER, "layer2_claude_eperm_then_presence")
+        child = FakePopen(b"", returncode=0)
+        observations, sent = [], []
+
+        def probe(_pgid: int, signum: int) -> None:
+            if signum:
+                sent.append(signum)
+            elif sent:
+                raise ProcessLookupError(3, "group absent")
+            elif not observations:
+                raise PermissionError(1, "transient probe denial")
+
+        with (
+            mock.patch.object(claude.os, "getpgrp", return_value=child.pid + 1),
+            mock.patch.object(claude.os, "killpg", side_effect=probe),
+            mock.patch.object(claude, "DESCENDANT_EXIT_GRACE", 0.05),
+            mock.patch.object(claude.time, "monotonic", side_effect=[i / 100 for i in range(100)]),
+            mock.patch.object(claude.time, "sleep"),
+        ):
+            self.assertTrue(claude.cleanup_child(child, observations=observations))
+        self.assertEqual(sent, [signal.SIGTERM])
+        self.assertEqual(observations[0]["errno"], 1)
+        self.assertEqual(observations[-1]["errno"], 3)
 
     @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
     def test_claude_completed_group_may_exit_during_grace_without_signals(self) -> None:
@@ -971,6 +1066,273 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             guarded_launch(unsafe_command, **launch_kwargs)
         self.assertEqual(attempted, [target], "unsafe argv reached the mock executor")
 
+    def test_claude_first_selection_guard_contract(self) -> None:
+        claude = import_script(CLAUDE_RUNNER, "layer2_claude_first_selection_guard")
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            skills = root / "skills"
+            for name in ("demo", "other"):
+                skill_file = skills / name / "SKILL.md"
+                skill_file.parent.mkdir(parents=True)
+                skill_file.write_text(
+                    f"---\nname: {name}\ndescription: {name.title()} fixture.\n---\n\nBody.\n",
+                    encoding="utf-8",
+                )
+            plugin_root = root / "staged-plugin"
+            plugin = "skill-catalog-eval-fixed"
+            target = f"{plugin}:demo-eval-fixed"
+            sibling = f"{plugin}:other"
+            nonce = "CLAUDE_SKILL_SELECTED_fixed"
+            claude.stage_measurement_plugin(
+                skills / "demo" / "SKILL.md",
+                plugin_root,
+                plugin,
+                "demo-eval-fixed",
+                nonce,
+                {"other": skills / "other" / "SKILL.md"},
+            )
+            original = [
+                json.loads(line) for line in claude_stream(plugin_root, plugin, target, nonce).splitlines()
+            ]
+            original[0]["skills"] = [target, f"{plugin}:no-speckit-skill", sibling]
+
+            def parse(events: list[dict[str, object]]) -> dict[str, object]:
+                return claude.inspect_claude_stream(
+                    "\n".join(json.dumps(event) for event in events),
+                    plugin,
+                    plugin_root,
+                    target,
+                    nonce,
+                    "claude-sonnet-test",
+                    frozenset({sibling}),
+                )
+
+            target_result = parse(original)
+            self.assertTrue(target_result["valid"] and target_result["selected"], target_result)
+            self.assertEqual(
+                target_result["first_selection_guard"],
+                {
+                    "observed": True,
+                    "hook_id": "hook-fixed",
+                    "hook_name": "PostToolUse:Skill",
+                    "hook_event": "PostToolUse",
+                    "tool_use_id": "toolu-skill",
+                    "progress_events": 0,
+                    "receipt": (
+                        '{"continue":false,"stopReason":'
+                        '"L2_FIRST_SELECTION_GUARD/v1:toolu-skill"}'
+                    ),
+                },
+            )
+            self.assertLess(
+                next(index for index, event in enumerate(original) if event.get("subtype") == "hook_response"),
+                next(
+                    index
+                    for index, event in enumerate(original)
+                    if event.get("type") == "user"
+                ),
+                "the portable fixture must retain the observed hook-before-result serialization",
+            )
+            with self.subTest(msg="hook lifecycle after tool result"):
+                hook_after_result = json.loads(json.dumps(original))
+                hook_response_event = hook_after_result.pop(3)
+                hook_after_result.insert(4, hook_response_event)
+                self.assertFalse(parse(hook_after_result)["valid"])
+            sibling_events = json.loads(json.dumps(original))
+            sibling_events[1]["message"]["content"][0]["input"]["skill"] = sibling
+            sibling_result = parse(sibling_events)
+            self.assertTrue(sibling_result["valid"] and not sibling_result["selected"], sibling_result)
+            self.assertEqual(sibling_result["selected_skill"], sibling)
+            no_op_events = json.loads(json.dumps(original))
+            no_op_events[1]["message"]["content"][0]["input"]["skill"] = (
+                f"{plugin}:no-speckit-skill"
+            )
+            no_op_result = parse(no_op_events)
+            self.assertTrue(no_op_result["valid"] and not no_op_result["selected"], no_op_result)
+
+            zero_events = [
+                json.loads(line)
+                for line in claude_stream(
+                    plugin_root, plugin, target, nonce, selected=False
+                ).splitlines()
+            ]
+            zero_events[0]["skills"] = original[0]["skills"]
+            zero_result = parse(zero_events)
+            self.assertTrue(zero_result["valid"] and not zero_result["selected"], zero_result)
+            self.assertEqual(zero_result["first_selection_guard"], {"observed": False})
+
+            with self.subTest(msg="hook-stopped terminal without selection"):
+                contradictory_zero = json.loads(json.dumps(zero_events))
+                contradictory_zero[-1]["terminal_reason"] = "hook_stopped"
+                self.assertFalse(parse(contradictory_zero)["valid"])
+
+            with self.subTest(msg="optional attributable hook progress"):
+                progress_events = json.loads(json.dumps(original))
+                progress_events.insert(3, {
+                    "type": "system",
+                    "subtype": "hook_progress",
+                    "hook_id": "hook-fixed",
+                    "hook_name": "PostToolUse:Skill",
+                    "hook_event": "PostToolUse",
+                    "stdout": "",
+                    "stderr": "",
+                })
+                self.assertTrue(parse(progress_events)["valid"])
+                mismatched_progress = json.loads(json.dumps(progress_events))
+                mismatched_progress[3]["hook_id"] = "hook-other"
+                self.assertFalse(parse(mismatched_progress)["valid"])
+                malformed_progress = json.loads(json.dumps(progress_events))
+                del malformed_progress[3]["stdout"]
+                self.assertFalse(parse(malformed_progress)["valid"])
+                out_of_order_progress = json.loads(json.dumps(progress_events))
+                progress = out_of_order_progress.pop(3)
+                out_of_order_progress.insert(4, progress)
+                self.assertFalse(parse(out_of_order_progress)["valid"])
+
+            hook_started = 2
+            hook_response = 3
+            failures = {
+                "missing hook start": lambda events: events.pop(hook_started),
+                "missing hook response": lambda events: events.pop(hook_response),
+                "mismatched receipt": lambda events: events[hook_response].update(
+                    stdout='{"continue":false,"stopReason":"L2_FIRST_SELECTION_GUARD/v1:other"}\n',
+                    output='{"continue":false,"stopReason":"L2_FIRST_SELECTION_GUARD/v1:other"}\n',
+                ),
+                "malformed guard receipt": lambda events: events[hook_response].update(
+                    stdout='{"continue":false,"stopReason":"L2_FIRST_SELECTION_GUARD/v1:invalid-input"}\n',
+                    output='{"continue":false,"stopReason":"L2_FIRST_SELECTION_GUARD/v1:invalid-input"}\n',
+                ),
+                "failed hook response": lambda events: events[hook_response].update(
+                    outcome="error", exit_code=1, stderr="failed"
+                ),
+                "duplicate hook response": lambda events: events.insert(
+                    hook_response + 1, json.loads(json.dumps(events[hook_response]))
+                ),
+                "unknown hook subtype": lambda events: events[hook_started].update(
+                    subtype="hook_unknown"
+                ),
+                "wrong hook name": lambda events: events[hook_response].update(
+                    hook_name="PostToolUse:Bash"
+                ),
+                "wrong hook event": lambda events: events[hook_started].update(
+                    hook_event="PreToolUse"
+                ),
+                "mismatched hook id": lambda events: events[hook_response].update(
+                    hook_id="hook-other"
+                ),
+                "terminal not hook stopped": lambda events: events[-1].update(
+                    terminal_reason="end_turn"
+                ),
+                "later model activity": lambda events: events.insert(
+                    -1,
+                    {
+                        "type": "assistant",
+                        "message": {
+                            "model": "claude-sonnet-test",
+                            "content": [{"type": "text", "text": "continued"}],
+                        },
+                    },
+                ),
+                "unknown tool": lambda events: events[1]["message"]["content"][0].update(
+                    name="Bash"
+                ),
+                "API retry": lambda events: events.insert(
+                    -1, {"type": "system", "subtype": "api_retry"}
+                ),
+            }
+            for label, mutate in failures.items():
+                with self.subTest(failure=label):
+                    events = json.loads(json.dumps(original))
+                    mutate(events)
+                    self.assertFalse(parse(events)["valid"])
+
+            stray_hook = json.loads(json.dumps(zero_events))
+            stray_hook[-1:-1] = json.loads(json.dumps(original[hook_started:hook_response + 1]))
+            self.assertFalse(parse(stray_hook)["valid"], "zero selection cannot carry a guard receipt")
+
+            with self.subTest(msg="guard staging"):
+                hooks_path = plugin_root / "hooks" / "hooks.json"
+                guard_path = plugin_root / "scripts" / "trigger_first_selection_guard.py"
+                self.assertTrue(hooks_path.is_file() and guard_path.is_file())
+                hooks = json.loads(hooks_path.read_text(encoding="utf-8"))
+                registration = hooks["hooks"]["PostToolUse"][0]
+                handler = registration["hooks"][0]
+                self.assertEqual(registration["matcher"], "Skill")
+                self.assertEqual(handler["type"], "command")
+                self.assertEqual(handler["command"], sys.executable)
+                self.assertEqual(
+                    handler["args"],
+                    ["${CLAUDE_PLUGIN_ROOT}/scripts/trigger_first_selection_guard.py"],
+                )
+                self.assertEqual(
+                    guard_path.read_bytes(),
+                    (SHARED_LIB / "trigger_first_selection_guard.py").read_bytes(),
+                )
+                guard_run = subprocess.run(
+                    [sys.executable, str(guard_path)],
+                    input=json.dumps({
+                        "hook_event_name": "PostToolUse",
+                        "tool_name": "Skill",
+                        "tool_use_id": "toolu-skill",
+                        "tool_input": {"skill": target},
+                        "tool_response": {},
+                    }).encode(),
+                    capture_output=True,
+                    check=False,
+                )
+                self.assertEqual(guard_run.returncode, 0, guard_run.stderr)
+                self.assertEqual(
+                    guard_run.stdout,
+                    (
+                        '{"continue":false,"stopReason":'
+                        '"L2_FIRST_SELECTION_GUARD/v1:toolu-skill"}\n'
+                    ).encode(),
+                )
+                self.assertEqual(guard_run.stderr, b"")
+
+            with self.subTest(msg="guard input validation"):
+                guard = claude.first_selection_guard
+                self.assertEqual(
+                    guard.guard_response(
+                        json.dumps(
+                            {
+                                "hook_event_name": "PostToolUse",
+                                "tool_name": "Skill",
+                                "tool_use_id": "toolu-skill",
+                                "tool_input": {"skill": target},
+                                "tool_response": {},
+                            }
+                        ).encode()
+                    ),
+                    {
+                        "continue": False,
+                        "stopReason": "L2_FIRST_SELECTION_GUARD/v1:toolu-skill",
+                    },
+                )
+                for raw in (
+                    b"not-json",
+                    b"{}",
+                    json.dumps(
+                        {
+                            "hook_event_name": "PreToolUse",
+                            "tool_name": "Skill",
+                            "tool_use_id": "toolu-skill",
+                            "tool_input": {"skill": target},
+                            "tool_response": {},
+                        }
+                    ).encode(),
+                ):
+                    self.assertEqual(
+                        guard.guard_response(raw),
+                        {
+                            "continue": False,
+                            "stopReason": "L2_FIRST_SELECTION_GUARD/v1:invalid-input",
+                        },
+                    )
+
+            self.assertIsNone(claude.remove_plugin_root(plugin_root))
+            self.assertFalse(plugin_root.exists(), "guard staging must remain disposable")
+
     def test_claude_direct_runner_contracts(self) -> None:
         claude = import_script(CLAUDE_RUNNER, "layer2_claude_direct")
         with tempfile.TemporaryDirectory() as temporary:
@@ -1062,7 +1424,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
 
             def blocks(events: list[dict[str, object]]) -> tuple[dict[str, object], dict[str, object]]:
                 tool_use = events[1]["message"]["content"][0]
-                tool_result = events[2]["message"]["content"][0]
+                tool_result = events[4]["message"]["content"][0]
                 assert isinstance(tool_use, dict) and isinstance(tool_result, dict)
                 return tool_use, tool_result
 
@@ -1081,7 +1443,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 "broader tools": lambda events: events[0].update(tools=["Skill", "Grep"]),
                 "malformed skill input": lambda events: blocks(events)[0].update(input={}),
                 "competing skill": lambda events: blocks(events)[0].update(input={"skill": "other:skill"}),
-                "missing tool result": lambda events: events.pop(2),
+                "missing tool result": lambda events: events.pop(4),
                 "errored tool result": lambda events: blocks(events)[1].update(is_error=True),
                 "terminal error": lambda events: events[-1].update(subtype="error", is_error=True),
                 "permission denial": lambda events: events.insert(
@@ -1159,16 +1521,16 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     process_evidence=launch_evidence,
                 )
 
-            missing_tool_preflights = []
+            missing_flag_preflights = {}
             doctor_output = (
-                f"{claude.PINNED_DOCTOR_RUNNING}\n"
+                "Running: native (2.1.270)\n"
                 f"{claude.PINNED_MANAGED_SETTINGS}\n"
                 f"{claude.PINNED_ORGANIZATION_POLICY}\n"
             ).encode("utf-8")
             managed_preferences_output = claude.plistlib.dumps({})
             for omitted_flag in (
                 "--tools", "--allowedTools", "--settings", "--setting-sources",
-                "--permission-mode", "--permission-prompts",
+                "--permission-mode", "--permission-prompts", "--include-hook-events",
             ):
                 supported_help = " ".join(
                     flag for flag in claude.REQUIRED_FLAGS if flag != omitted_flag
@@ -1192,7 +1554,9 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                         ],
                     ),
                 ):
-                    missing_tool_preflights.append(claude.cli_preflight("/usr/local/bin/claude"))
+                    missing_flag_preflights[omitted_flag] = claude.cli_preflight(
+                        "/usr/local/bin/claude"
+                    )
 
             supported_help = " ".join(claude.REQUIRED_FLAGS).encode("utf-8")
             qualified_outputs = [
@@ -1212,6 +1576,53 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 mock.patch.object(claude.subprocess, "run", side_effect=qualified_outputs) as preflight_calls,
             ):
                 qualified_preflight = claude.cli_preflight("/usr/local/bin/claude")
+            rejected_pin_preflights = {}
+            for name, rejected_version, rejected_doctor in (
+                (
+                    "old version",
+                    b"2.1.269 (Claude Code)\n",
+                    doctor_output,
+                ),
+                (
+                    "old running line",
+                    b"2.1.270 (Claude Code)\n",
+                    doctor_output.replace(
+                        b"Running: native (2.1.270)",
+                        b"Running: native (2.1.269)",
+                    ),
+                ),
+                (
+                    "unavailable remote policy credentials",
+                    b"2.1.270 (Claude Code)\n",
+                    doctor_output.replace(
+                        claude.PINNED_MANAGED_SETTINGS.encode("utf-8"),
+                        b"Managed settings (remote): not fetched \xe2\x80\x94 no usable credentials for the settings fetch",
+                    ),
+                ),
+                (
+                    "unavailable organization policy credentials",
+                    b"2.1.270 (Claude Code)\n",
+                    doctor_output.replace(
+                        claude.PINNED_ORGANIZATION_POLICY.encode("utf-8"),
+                        (
+                            b"Organization policy: not fetched: no API key or claude.ai sign-in for the policy "
+                            b"lookup (apiKeyHelper keys are not used for it)"
+                        ),
+                    ),
+                ),
+            ):
+                with (
+                    mock.patch.object(claude.shutil, "which", return_value="/usr/local/bin/claude"),
+                    mock.patch.object(claude.sys, "platform", "darwin"),
+                    mock.patch.object(claude, "MACOS_MANAGED_ROOT", root / "managed"),
+                    mock.patch.object(claude.subprocess, "run", side_effect=[
+                        SimpleNamespace(returncode=0, stdout=rejected_version, stderr=b""),
+                        SimpleNamespace(returncode=0, stdout=supported_help, stderr=b""),
+                        SimpleNamespace(returncode=0, stdout=rejected_doctor, stderr=b""),
+                        SimpleNamespace(returncode=0, stdout=managed_preferences_output, stderr=b""),
+                    ]),
+                ):
+                    rejected_pin_preflights[name] = claude.cli_preflight("/usr/local/bin/claude")
             unqualified_doctor = doctor_output.replace(
                 claude.PINNED_MANAGED_SETTINGS.encode("utf-8"),
                 b"Managed settings (remote): active",
@@ -1473,8 +1884,19 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 and captured["command"].count("--allowedTools") == 1
                 and captured["command"][captured["command"].index("--allowedTools") + 1] == f"Skill({expected_skill})"
                 and f"Skill({plugin_name}:no-speckit-skill)" in captured["command"]
-                and all(result is None for result, _reason in missing_tool_preflights),
-                "preflight pins build and proves managed controls absent": qualified_preflight[0] is not None
+                and all(
+                    result is None for result, _reason in missing_flag_preflights.values()
+                ),
+                "direct argv requests exact hook event reporting":
+                captured["command"].count("--include-hook-events") == 1
+                and captured["command"][captured["command"].index("--output-format") + 1] == "stream-json",
+                "preflight rejects missing hook event reporting support":
+                missing_flag_preflights["--include-hook-events"][0] is None
+                and "--include-hook-events" in missing_flag_preflights["--include-hook-events"][1],
+                "preflight pins exact 2.1.270 build and proves managed controls absent": claude.PINNED_CLAUDE_VERSION
+                == "2.1.270 (Claude Code)"
+                and claude.PINNED_DOCTOR_RUNNING == "Running: native (2.1.270)"
+                and qualified_preflight[0] is not None
                 and qualified_preflight[0]["version"] == claude.PINNED_CLAUDE_VERSION
                 and qualified_preflight[0]["request_retries"] == 0
                 and all(qualified_preflight[0]["doctor_checks"].values())
@@ -1489,6 +1911,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     "requested_model": "claude-sonnet-test",
                     "model_provider": "anthropic-claude-code",
                     "model_identity_evidence": "native-init-and-assistant-events",
+                    "query_sha256": hashlib.sha256(b"query").hexdigest(),
                 },
                 "direct launch is confined to disposable root": Path(captured["kwargs"]["cwd"]).resolve()
                 == plugin_root.resolve()
@@ -1542,7 +1965,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     and popen_calls == 0
                     and retain_calls == 0
                     and not staged_exists
-                    and [path.name for path in evidence_files] == ["arm-cleanup.json"]
+                    and {path.name for path in evidence_files} in ({"arm-cleanup.json"}, {"arm-cleanup.json", "replay-context.json"})
                     for (
                         exit_code,
                         stdout,
@@ -1559,6 +1982,10 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 and ".claude/" not in CLAUDE_RUNNER.read_text(encoding="utf-8")
                 and "auth.json" not in CLAUDE_RUNNER.read_text(encoding="utf-8"),
             }
+            checks.update({
+                f"preflight rejects {name}": result[0] is None
+                for name, result in rejected_pin_preflights.items()
+            })
             for name, condition in checks.items():
                 with self.subTest(msg=name):
                     self.assertTrue(condition)
@@ -1688,10 +2115,10 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
         engine = import_script(CODEX_ENGINE, "layer2_codex_symlink_executable")
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()
-            native = root / "native" / "codex"
-            native.parent.mkdir()
-            native.write_text("synthetic executable fixture\n")
-            native.chmod(0o700)
+            # Discovery needs an executable input even when all subprocesses are mocked.
+            native = Path(__file__).resolve().parent / "fixtures" / "trigger-runners" / "codex"
+            self.assertFalse(native.resolve().is_relative_to(root))
+            self.assertEqual(native.read_bytes(), b"synthetic executable fixture\n")
             alias = root / "aliases" / "codex"
             alias.parent.mkdir()
             alias.symlink_to(native)
@@ -1855,21 +2282,11 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
         )
         self.assertEqual(exact["read_witnesses"][0]["read_mode"], "exact-output")
 
-        def with_command(command: str, output: str) -> list[dict[str, object]]:
-            events = [dict(event) for event in base]
-            for index in (2, 3):
-                events[index] = {
-                    **events[index],
-                    "item": {**events[index]["item"], "command": command},
-                }
-            events[3]["item"]["aggregated_output"] = output
-            return events
-
         target = witnesses["demo-eval"]
         other = witnesses["other"]
         bare_read = "/bin/zsh -c \"sed -n '1,240p' SKILL.md\""
         bare = inspect_codex_events(
-            engine, with_command(bare_read, target["body"]), "demo-eval", witnesses,
+            engine, codex_events_with_command(base, bare_read, target["body"]), "demo-eval", witnesses,
         )
         self.assertTrue(bare["valid"], bare)
         self.assertTrue(bare["selected"])
@@ -1878,7 +2295,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
 
         alias_read = f'/bin/zsh -c "sed -n \'1,240p\' {target["source_locator"]}"'
         alias = inspect_codex_events(
-            engine, with_command(alias_read, target["body"]), "demo-eval", witnesses,
+            engine, codex_events_with_command(base, alias_read, target["body"]), "demo-eval", witnesses,
         )
         self.assertTrue(alias["valid"], alias)
         self.assertTrue(alias["selected"])
@@ -1889,7 +2306,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
         )
         wider_absolute = inspect_codex_events(
             engine,
-            with_command(wider_absolute_read, target["body"]),
+            codex_events_with_command(base, wider_absolute_read, target["body"]),
             "demo-eval",
             witnesses,
         )
@@ -1900,7 +2317,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
         alias_leading_read = alias_read[:-1] + " && pwd\""
         alias_leading = inspect_codex_events(
             engine,
-            with_command(alias_leading_read, target["body"] + "/tmp/fixture-workspace\n"),
+            codex_events_with_command(base, alias_leading_read, target["body"] + "/tmp/fixture-workspace\n"),
             "demo-eval",
             witnesses,
         )
@@ -1913,7 +2330,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
         silent_tail_read = alias_read[:-1] + " && find . -maxdepth 1 -type f\""
         silent_tail = inspect_codex_events(
             engine,
-            with_command(silent_tail_read, target["body"]),
+            codex_events_with_command(base, silent_tail_read, target["body"]),
             "demo-eval",
             witnesses,
         )
@@ -1929,7 +2346,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
         )
         body_then_metadata = target["body"] + "/tmp/fixture-workspace\n"
         accepted = inspect_codex_events(
-            engine, with_command(leading_read, body_then_metadata), "demo-eval", witnesses,
+            engine, codex_events_with_command(base, leading_read, body_then_metadata), "demo-eval", witnesses,
         )
         self.assertTrue(accepted["valid"], accepted)
         self.assertTrue(accepted["selected"])
@@ -1988,7 +2405,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
         for label, (command, output) in invalid_cases.items():
             with self.subTest(label=label):
                 parsed = inspect_codex_events(
-                    engine, with_command(command, output), "demo-eval", witnesses,
+                    engine, codex_events_with_command(base, command, output), "demo-eval", witnesses,
                 )
                 self.assertFalse(parsed["valid"], parsed)
                 self.assertIn("exact staged skill-body read", str(parsed["reason"]))
@@ -2587,6 +3004,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 captured["kwargs"] = kwargs
                 return FakePopen(valid)
 
+            explicit_query = "Please use the grill-me skill for its documented purpose in this repository."
             launch_evidence: dict[str, object] = {}
             with (
                 mock.patch.dict(os.environ, {"CODEX_HOME": str(auth_home)}, clear=False),
@@ -2595,7 +3013,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             ):
                 rc, stdout, stderr, timed_out = engine.run_codex_query(
                     workspace,
-                    "query",
+                    explicit_query,
                     "low",
                     "gpt-5.6-sol",
                     30,
@@ -2916,7 +3334,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 "Codex execution receives the exact proved isolation overrides": captured["command"][
                     -len(isolation_args) - 1 :
                 ]
-                == [*isolation_args, "query"],
+                == [*isolation_args, explicit_query],
                 "Codex launch freezes provider retries and identity scope": launch_evidence["launch_contract"]
                 == {
                     "config_isolated": True,
@@ -2925,6 +3343,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     "reasoning_effort": "low",
                     "model_provider": engine.MODEL_PROVIDER_ID,
                     "model_identity_evidence": "request-only",
+                    "query_sha256": hashlib.sha256(explicit_query.encode()).hexdigest(),
                     "stdin_prompt_isolated": True,
                     "stdin_mode": "pseudo-terminal" if os.name != "nt" else "null-device",
                     "login_state_source": "CODEX_HOME",
@@ -2988,7 +3407,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     and stdout == ""
                     and "ERROR:" in stderr
                     and not workspace_exists
-                    and [path.name for path in evidence_files] == ["arm-cleanup.json"]
+                    and {path.name for path in evidence_files} in ({"arm-cleanup.json"}, {"arm-cleanup.json", "replay-context.json"})
                     and provider_calls == 0
                     and preflight_call is not None
                     and preflight_call.args[3] == expected_target_skill
@@ -3066,7 +3485,6 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
 
             sibling = json.loads(json.dumps(events))
             sibling[1]["message"]["content"][0]["input"]["skill"] = f"{plugin}:other"
-            sibling[3]["message"]["content"][0]["text"] = "Selected the other sibling."
             sibling_selected = parse(sibling)
             self.assertTrue(sibling_selected["valid"])
             self.assertFalse(sibling_selected["selected"])
@@ -3075,7 +3493,6 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
 
             no_speckit = json.loads(json.dumps(events))
             no_speckit[1]["message"]["content"][0]["input"]["skill"] = f"{plugin}:no-speckit-skill"
-            no_speckit[3]["message"]["content"][0]["text"] = "No SpecKit skill applies."
             no_speckit_selected = parse(no_speckit)
             self.assertTrue(no_speckit_selected["valid"])
             self.assertFalse(no_speckit_selected["selected"])
@@ -3088,14 +3505,13 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             self.assertTrue(bare_selected["valid"] and bare_selected["selected"], "the host resolves the bare name to the staged skill")
             bare_sibling = json.loads(json.dumps(events))
             bare_sibling[1]["message"]["content"][0]["input"]["skill"] = "other"
-            bare_sibling[3]["message"]["content"][0]["text"] = "Selected the other sibling."
             self.assertEqual(parse(bare_sibling)["sibling_selections"], [f"{plugin}:other"])
             foreign = json.loads(json.dumps(events))
             foreign[1]["message"]["content"][0]["input"]["skill"] = "demo"
             self.assertFalse(parse(foreign)["valid"], "a name outside the staged catalog stays competing")
             both = json.loads(json.dumps(events))
-            both.insert(3, json.loads(json.dumps(no_speckit[1])))
-            both.insert(4, json.loads(json.dumps(no_speckit[2])))
+            both.insert(2, json.loads(json.dumps(no_speckit[1])))
+            both.insert(-1, json.loads(json.dumps(no_speckit[4])))
             self.assertFalse(parse(both)["valid"], "target plus no-op sibling is ambiguous")
             missing = json.loads(json.dumps(events))
             missing[0]["skills"] = [target, f"{plugin}:other"]
@@ -3299,8 +3715,76 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             self.assertIsNone(duplicate_readiness, "a duplicated sibling entry fails")
 
 
+class CodexRelativeSkillBodyReadTests(unittest.TestCase):
+    def test_relative_skill_body_read_requires_the_matched_skill_path(self) -> None:
+        engine = import_script(CODEX_ENGINE, "layer2_codex_relative_skill_body_read")
+        target_skill = "no-speckit-skill"
+        witnesses = {
+            **codex_witness(target_skill, "CODEX_SKILL_SELECTED:no-speckit-skill-fixed"),
+            **codex_witness("other", "CODEX_SKILL_SELECTED:other-fixed"),
+        }
+        base = [
+            json.loads(line)
+            for line in codex_stream(witnesses, selected_skill=target_skill).splitlines()
+        ]
+
+        valid = inspect_codex_events(
+            engine,
+            codex_events_with_command(
+                base,
+                f'/bin/zsh -c "sed -n \'1,240p\' {target_skill}/SKILL.md"',
+                witnesses[target_skill]["body"],
+            ),
+            target_skill,
+            witnesses,
+        )
+        self.assertTrue(valid["valid"], valid)
+        self.assertTrue(valid["selected"])
+        self.assertEqual(valid["consulted_skills"], [target_skill])
+        self.assertEqual(valid["read_witnesses"][0]["read_mode"], "exact-output")
+
+        invalid_cases = {
+            "sibling skill path": "other/SKILL.md",
+            "current-directory prefix": f"./{target_skill}/SKILL.md",
+            "parent-directory prefix": f"../{target_skill}/SKILL.md",
+            "arbitrary prefix": f"prefix/{target_skill}/SKILL.md",
+            "doubled separator": f"{target_skill}//SKILL.md",
+            "backslash separator": f"{target_skill}\\SKILL.md",
+        }
+        for label, read_path in invalid_cases.items():
+            with self.subTest(label=label):
+                parsed = inspect_codex_events(
+                    engine,
+                    codex_events_with_command(
+                        base,
+                        f'/bin/zsh -c "sed -n \'1,240p\' {read_path}"',
+                        witnesses[target_skill]["body"],
+                    ),
+                    target_skill,
+                    witnesses,
+                )
+                self.assertFalse(parsed["valid"], parsed)
+                self.assertIn("exact staged skill-body read", str(parsed["reason"]))
+
+        cat = inspect_codex_events(
+            engine,
+            codex_events_with_command(
+                base,
+                f'/bin/zsh -c "cat {target_skill}/SKILL.md"',
+                witnesses[target_skill]["body"],
+            ),
+            target_skill,
+            witnesses,
+        )
+        self.assertFalse(cat["valid"], cat)
+        self.assertIn("exact staged skill-body read", str(cat["reason"]))
+
+
 def main() -> int:
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(Layer2TriggerRunnerTests)
+    suite = unittest.TestSuite([
+        unittest.defaultTestLoader.loadTestsFromTestCase(Layer2TriggerRunnerTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(CodexRelativeSkillBodyReadTests),
+    ])
     return run_counted(suite, label="test-trigger-eval-runners")
 
 

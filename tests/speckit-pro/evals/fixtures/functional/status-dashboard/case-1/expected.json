@@ -1,0 +1,77 @@
+{
+  "schema_version": "native-status-dashboard-expected/v1",
+  "case_id": "functional.speckit-status.case-1",
+  "staged_for_subject": false,
+  "response_json": {
+    "dashboard": {
+      "total": 4,
+      "states_by_spec": {
+        "SPEC-020": "complete",
+        "SPEC-021": "active",
+        "SPEC-022": "pending",
+        "SPEC-023": "blocked"
+      },
+      "active_phase_by_spec": {
+        "SPEC-021": "Phase 2: Clarify"
+      },
+      "next_active_spec": "SPEC-021",
+      "next_unstarted_spec": "SPEC-022"
+    },
+    "explanation": "The technical roadmap and SPEC-021 workflow show that active P1 SPEC-021 should be finished first. SPEC-022 is the next unstarted candidate because its SPEC-020 dependency is complete. SPEC-023 remains blocked by incomplete external approval."
+  },
+  "facts": {
+    "roadmap_path": "docs/ai/current-technical-roadmap.md",
+    "workflow_path": "docs/ai/specs/SPEC-021-workflow.md",
+    "total_specs": 4,
+    "complete_specs": ["SPEC-020"],
+    "active_specs": ["SPEC-021"],
+    "ready_pending_specs": ["SPEC-022"],
+    "blocked_specs": {
+      "SPEC-023": "external approval"
+    },
+    "current_phase": "Phase 2: Clarify",
+    "recommended_active_work": "SPEC-021",
+    "next_unstarted_candidate": "SPEC-022",
+    "registered_worktrees": [
+      {
+        "path": ".worktrees/spec-021",
+        "branch": "scenario/spec-021",
+        "revision": "feature"
+      }
+    ]
+  },
+  "negative_controls": [
+    {
+      "id": "wrong-total",
+      "field_path": ["dashboard", "total"],
+      "corrupt_value": 3
+    },
+    {
+      "id": "wrong-states",
+      "field_path": ["dashboard", "states_by_spec"],
+      "corrupt_value": {
+        "SPEC-020": "complete",
+        "SPEC-021": "active",
+        "SPEC-022": "blocked",
+        "SPEC-023": "blocked"
+      }
+    },
+    {
+      "id": "wrong-active-phase",
+      "field_path": ["dashboard", "active_phase_by_spec"],
+      "corrupt_value": {
+        "SPEC-021": "Phase 3: Plan"
+      }
+    },
+    {
+      "id": "wrong-next-active",
+      "field_path": ["dashboard", "next_active_spec"],
+      "corrupt_value": "SPEC-022"
+    },
+    {
+      "id": "wrong-next-unstarted",
+      "field_path": ["dashboard", "next_unstarted_spec"],
+      "corrupt_value": "SPEC-023"
+    }
+  ]
+}

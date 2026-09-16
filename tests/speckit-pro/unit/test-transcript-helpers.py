@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Layer-4 parity tests for the Layer-7 transcript parser."""
+"""Layer-4 parity tests for the Layer-6 transcript parser."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TESTS_ROOT = REPO_ROOT / "tests" / "speckit-pro"
-FIXTURES = TESTS_ROOT / "layer7-integration" / "test-fixtures"
-TRANSCRIPT_LIB = TESTS_ROOT / "layer7-integration" / "lib"
+FIXTURES = TESTS_ROOT / "layer6-integration" / "test-fixtures"
+TRANSCRIPT_LIB = TESTS_ROOT / "layer6-integration" / "lib"
 SHARED_LIB = TESTS_ROOT / "lib"
 for value in (TRANSCRIPT_LIB, SHARED_LIB):
     if str(value) not in sys.path:

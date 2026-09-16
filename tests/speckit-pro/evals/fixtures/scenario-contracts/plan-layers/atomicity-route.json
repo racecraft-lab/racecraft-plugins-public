@@ -1,0 +1,6 @@
+{
+  "route": "split-PR",
+  "releasable": true,
+  "signals": ["reviewability:operator-ratified-split"],
+  "warnings": []
+}

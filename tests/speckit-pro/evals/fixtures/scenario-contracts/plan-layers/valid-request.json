@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0",
+  "request_id": "scenario-layer-plan-valid",
+  "helper_id": "plan-layers-feature-dir",
+  "operation": "plan-layers-feature-dir",
+  "mode": "read_only",
+  "inputs": {
+    "feature_dir": "specs/spec-908-layer-planner"
+  }
+}

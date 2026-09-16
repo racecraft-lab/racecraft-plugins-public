@@ -90,6 +90,16 @@ jobs:
         env:
           PLUGIN: ${{ matrix.plugin }}
           SPECKIT_SKIP_TOOLCHAIN_CHECK: "1"
+          # The privacy scan derives sensitive terms from the ambient Git
+          # identity so it can catch an operator's machine leaking into the
+          # tree. A hosted runner is not an operator, and its image identity
+          # (for example a github-actions bot address) collides with the
+          # repository's own legitimate references to that bot. Run the suite
+          # with no ambient identity so the check tests the intended condition
+          # and its result does not depend on the runner image.
+          GIT_CONFIG_GLOBAL: /dev/null
+          GIT_CONFIG_SYSTEM: /dev/null
+          GIT_CONFIG_NOSYSTEM: "1"
         run: PYTHONPATH="${PLUGIN}" python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json
 
   # ───────────────────────────────────────────────────────────────────

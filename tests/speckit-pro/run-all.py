@@ -5,15 +5,15 @@ Reproduces the ``run-all.sh`` developer UX with no Bash or ``jq`` dependency of
 its own:
 
   run-all.py               # Layers 1, 4, 5 + toolchain preflight (default)
-  run-all.py --live        # default deterministic layers; no live Layer 7 selected
+  run-all.py --live        # default deterministic layers; no live Layer 6 selected
   run-all.py --layer 4     # a single layer
-  run-all.py --integration # Layer 7 (integration fixtures)
+  run-all.py --integration # Layer 6 (integration fixtures)
   run-all.py --all         # every layer that has a runner block + live
   run-all.py --verbose     # per-test VERBOSE output in the children
 
 The layer roster, per-layer scripts, execution mode (execute vs print-commands),
 and counting flags all come from ``tests/speckit-pro/suite-manifest.json`` — the
-single source of truth the shipped suite gate also reads. Layer 8 is a gate-only
+single source of truth the shipped suite gate also reads. Layer 7 is a gate-only
 parity layer with no run-all block, matching ``run-all.sh``.
 
 Headline: ``speckit-pro test suite: X/Y passed`` (``X/Y passed (Z failed)`` on
@@ -42,10 +42,10 @@ from test_result import classify_counted_child  # noqa: E402
 SUITE_MANIFEST = "tests/speckit-pro/suite-manifest.json"
 RULE = "────────────────────────────────────────"
 HEADER_RULE = "════════════════════════════════════════"
-# Layer 7 owns the executable live mode. Layer 4 is deterministic unit coverage;
+# The integration layer owns the executable live mode. Unit is deterministic coverage;
 # forwarding --live to unittest modules would corrupt their argument parsing.
-LIVE_AWARE_LAYERS = {"7"}
-TOOLCHAIN_TRIGGER_LAYERS = ("1", "4", "5", "7")
+LIVE_AWARE_LAYER_KEYS = {"integration"}
+TOOLCHAIN_TRIGGER_LAYER_KEYS = ("structural", "unit", "tool-scoping", "integration")
 
 
 class UsageError(Exception):
@@ -74,7 +74,7 @@ def parse_args(argv: list[str]) -> Config:
             config.run_layer = argv[index + 1]
             index += 2
         elif arg == "--integration":
-            config.run_layer = "7"
+            config.run_layer = "integration"
             index += 1
         elif arg == "--all":
             config.run_all = True
@@ -100,28 +100,28 @@ def layer_should_run(layer: dict, config: Config) -> bool:
     layer_id = layer["id"]
     if layer_id == "toolchain":
         return False
-    # Layer 8 is gate-only: no default, not live, not integration -> no run-all block.
+    # Parity is gate-only: no default, not live, not integration -> no run-all block.
     has_block = layer["default"] or layer["live_only"] or layer["integration"]
     if not has_block:
         return False
     if config.run_layer is not None:
-        return config.run_layer == layer_id
+        return config.run_layer in {layer_id, layer.get("key")}
     if config.run_all:
         return True
     return bool(layer["default"])
 
 
 def execution_layers(manifest: dict) -> list[dict]:
-    """Return numeric layers in the predecessor's 1..8 presentation order."""
+    """Return numeric layers in seven-layer presentation order."""
     layers = [layer for layer in manifest["layers"] if layer["id"] != "toolchain"]
     return sorted(layers, key=lambda layer: int(layer["id"]))
 
 
 def toolchain_should_run(manifest: dict, config: Config) -> bool:
-    by_id = {layer["id"]: layer for layer in manifest["layers"]}
+    by_key = {layer.get("key"): layer for layer in manifest["layers"] if layer.get("key")}
     return any(
-        layer_id in by_id and layer_should_run(by_id[layer_id], config)
-        for layer_id in TOOLCHAIN_TRIGGER_LAYERS
+        layer_key in by_key and layer_should_run(by_key[layer_key], config)
+        for layer_key in TOOLCHAIN_TRIGGER_LAYER_KEYS
     )
 
 
@@ -153,7 +153,7 @@ def dispatch_script(
     root: Path,
 ) -> tuple[str, int]:
     """Run one Python child test and fail closed on a non-Python manifest entry."""
-    pass_live = config.live and layer["id"] in LIVE_AWARE_LAYERS
+    pass_live = config.live and layer.get("key") in LIVE_AWARE_LAYER_KEYS
     if path.suffix != ".py":
         return (
             f"{path.stem}: 0/1 passed\n"
@@ -219,13 +219,13 @@ def print_layer_commands(layer: dict, root: Path) -> None:
     print(RULE)
     print("  Run manually (requires claude -p / codex):")
     for script in layer["scripts"]:
-        argument_hint = " <skill>" if layer["id"] in {"2", "3"} else ""
+        argument_hint = " <skill>" if layer.get("key") in {"trigger", "functional"} else ""
         print(f"    python3 {script['path']}{argument_hint}")
 
 
 def run_toolchain_preflight(root: Path, config: Config, manifest: dict) -> bool:
-    by_id = {layer["id"]: layer for layer in manifest["layers"]}
-    mode = "tests" if ("1" in by_id and layer_should_run(by_id["1"], config)) else "shell"
+    by_key = {layer.get("key"): layer for layer in manifest["layers"] if layer.get("key")}
+    mode = "tests" if ("structural" in by_key and layer_should_run(by_key["structural"], config)) else "shell"
     request = {
         "schema_version": "1.0",
         "request_id": "run-all-py-toolchain",

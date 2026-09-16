@@ -1,0 +1,6 @@
+# Technical Roadmap
+
+## SPEC-007 — In Progress
+
+Status: In Progress. Reuse the registered worktree; do not duplicate it.
+

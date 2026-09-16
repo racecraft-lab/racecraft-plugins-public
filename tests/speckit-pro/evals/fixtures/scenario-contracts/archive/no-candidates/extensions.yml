@@ -1,0 +1,4 @@
+extensions:
+  archive:
+    enabled: true
+    path: .specify/extensions/archive

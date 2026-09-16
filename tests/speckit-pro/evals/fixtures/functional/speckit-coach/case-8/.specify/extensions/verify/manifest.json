@@ -1,0 +1,7 @@
+{
+  "id": "verify",
+  "kind": "extension",
+  "description": "Compares implementation evidence with specification requirements and reports mismatches.",
+  "commands": [],
+  "hooks": []
+}

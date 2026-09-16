@@ -1,0 +1,10 @@
+# SPEC_NAME workflow
+
+## Specify
+
+Use the Design Concept scope and non-goals.
+
+## Implement
+
+Use the Design Concept Q&A log for decisions.
+

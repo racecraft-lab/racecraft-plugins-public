@@ -1,0 +1,8 @@
+name: archive
+enabled: true
+provides:
+  commands:
+    speckit.archive.run: commands/archive.md
+requires:
+  claude:
+    command: speckit-archive-prerequisite

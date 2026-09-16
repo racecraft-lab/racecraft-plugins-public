@@ -1,0 +1,47 @@
+{
+  "schema": "speckit.layer7.tolerance.v1",
+  "fixture_id": "parity-02-scaffold-relocation-guidance",
+  "description": "Exact tolerances for scaffold relocation guidance after independent correctness grading.",
+  "fields": {
+    "capability.operation": {
+      "tolerance": "exact",
+      "rationale": "Both clients must name the same deferred operation."
+    },
+    "capability.promotion_status": {
+      "tolerance": "exact",
+      "rationale": "The registry-backed status is closed and shared."
+    },
+    "capability.authoritative_request": {
+      "tolerance": "exact",
+      "rationale": "No authoritative request exists on either client."
+    },
+    "capability.runner_modes": {
+      "tolerance": "exact",
+      "rationale": "Neither client may advertise dry_run, apply, or a replacement mode."
+    },
+    "capability.action": {
+      "tolerance": "exact",
+      "rationale": "Both clients report the gap and preserve the repository."
+    },
+    "classification.spec": {
+      "tolerance": "exact",
+      "rationale": "Both clients inspect the same complete fixture set in the same canonical order."
+    },
+    "classification.decision": {
+      "tolerance": "exact",
+      "rationale": "Candidate and suppression outcomes are contract values, not prose."
+    },
+    "classification.reason": {
+      "tolerance": "exact",
+      "rationale": "The exact suppression reason distinguishes active, current, empty, and namespace cases."
+    },
+    "guard.surface": {
+      "tolerance": "exact",
+      "rationale": "This pair compares the native scaffold surface on each client."
+    },
+    "guard.status": {
+      "tolerance": "exact",
+      "rationale": "Neither client may attempt a relocation operation."
+    }
+  }
+}

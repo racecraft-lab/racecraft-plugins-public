@@ -39,8 +39,8 @@ SPEC_ID_PREFIX_NAME = re.compile(
 PURPOSE_NAMED_ROOTS = (
     FIXTURE_ROOT,
     TEST_ROOT / "parity",
-    TEST_ROOT / "layer7-integration" / "dispatch-fixtures",
-    TEST_ROOT / "layer8-parity",
+    TEST_ROOT / "layer6-integration" / "dispatch-fixtures",
+    TEST_ROOT / "layer7-parity",
 )
 SCRIPT_SUFFIXES = frozenset(
     {

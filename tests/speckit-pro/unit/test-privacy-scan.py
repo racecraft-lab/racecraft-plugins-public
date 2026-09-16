@@ -10,6 +10,7 @@ import sys
 import unittest
 from collections.abc import Callable, Iterable
 from pathlib import Path
+from unittest.mock import patch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -24,7 +25,7 @@ from test_result import run_counted  # noqa: E402
 SCHEMA_PATH = REPO_ROOT / "docs-site" / "src" / "lib" / "schema.ts"
 TOOLING_SOURCE_PATHS = (
     Path("tests/speckit-pro/unit/test-privacy-scan.py"),
-    Path("tests/speckit-pro/layer7-integration/scrub-transcript.py"),
+    Path("tests/speckit-pro/layer6-integration/scrub-transcript.py"),
 )
 PUBLIC_IDENTITY_PATHS = {
     Path("docs-site/src/lib/schema.ts"),
@@ -43,7 +44,8 @@ UUID_PATTERN = re.compile(
     r"[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}",
     re.IGNORECASE,
 )
-ALLOWED_EMAILS = {"support@openai.com", "git@github.com"}
+# Controller-owned, no-network Git identity used only by native-eval fixtures.
+ALLOWED_EMAILS = {"support@openai.com", "git@github.com", "native-eval@example.invalid"}
 
 CURRENT_INVENTORY = [
     "all-alpha identities still emit sliding-window fragments",
@@ -55,7 +57,7 @@ CURRENT_INVENTORY = [
     "raw UUIDs absent",
     "dynamic local identity and workspace terms absent",
     "privacy tooling does not encode local identity fragments",
-    "Layer 7 replay fixtures do not commit captured raw transcript files",
+    "Layer 6 replay fixtures do not commit captured raw transcript files",
 ]
 
 GENERIC_LOCAL_TERMS = {
@@ -69,12 +71,14 @@ GENERIC_LOCAL_TERMS = {
     "downloads",
     "github",
     "home",
+    "inputs",
     "integration",
     "layer4",
     "layer7",
     "local",
     "main",
     "openai",
+    "outputs",
     "plugins",
     "private",
     "probe",
@@ -252,7 +256,7 @@ def dynamic_local_hits(pattern: re.Pattern[str], paths: Iterable[Path]) -> list[
 
 
 def committed_transcript_fixtures() -> list[str]:
-    result = git_output("ls-files", "tests/speckit-pro/layer7-integration/**/transcript.jsonl")
+    result = git_output("ls-files", "tests/speckit-pro/layer6-integration/**/transcript.jsonl")
     if result.returncode != 0:
         message = result.stderr.decode("utf-8", errors="replace").strip()
         raise RuntimeError(f"git ls-files failed: {message}")
@@ -274,8 +278,28 @@ class PrivacyScanTests(unittest.TestCase):
             self.assertIn("qwertyuiopas", fragments)
             self.assertFalse(is_sensitive_local_term("probe"))
             self.assertTrue(is_sensitive_local_term("qwertyuiopas"))
+            for directory in ("/inputs", "/outputs"):
+                self.assertEqual(emit_sensitive_terms_from_value(directory), [])
+                self.assertIn(
+                    "qwertyuiopas",
+                    emit_sensitive_terms_from_value(f"{directory}/qwertyuiopasdfgh"),
+                )
 
         def non_allowlisted_emails() -> None:
+            synthetic_fixture = "native-eval" + "@" + "example.invalid"
+            unrelated_invalid = "arbitrary" + "@" + "example.invalid"
+            with patch(
+                f"{__name__}.read_lines",
+                return_value=[(1, synthetic_fixture)],
+            ):
+                self.assertEqual([], scan_for_non_allowlisted_email([Path("synthetic")]))
+            with patch(
+                f"{__name__}.read_lines",
+                return_value=[(1, unrelated_invalid)],
+            ):
+                hits = scan_for_non_allowlisted_email([Path("synthetic")])
+            self.assertEqual(1, len(hits))
+            self.assertIn(unrelated_invalid, hits[0])
             assert_no_hits(self, scan_for_non_allowlisted_email(paths), CURRENT_INVENTORY[1])
 
         def no_pattern(pattern: re.Pattern[str], label: str) -> Callable[[], None]:

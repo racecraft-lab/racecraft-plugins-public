@@ -88,9 +88,9 @@ What each command proves:
 | `pnpm --dir docs-site validate` | Any `docs-site/**` file changed | Runs `reference:check`, `astro check`, and `astro build` through the docs-site script chain. |
 
 The runner's `--all` flag is not a larger deterministic release gate. It
-implies live mode, executes Layers 1, 4, 5, and live Layer 7, prints manual
+implies live mode, executes Layers 1, 4, 5, and live Layer 6, prints manual
 command plans for live-only Layers 2 and 3, and does not select gate-only
-Layer 8. Use the no-flag command above for deterministic release readiness.
+Layer 7. Use the no-flag command above for deterministic release readiness.
 
 `pnpm --dir docs-site validate` is required for changes under `docs-site/**`.
 Non-site Markdown changes do not automatically require docs-site validation, but

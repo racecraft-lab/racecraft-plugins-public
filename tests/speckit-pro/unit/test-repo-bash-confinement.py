@@ -185,6 +185,49 @@ class RepoBashConfinementTests(unittest.TestCase):
         self.assertEqual(sum(data["classified_counts"].values()), len(data["findings"]))
 
     def test_fixture_matrix_and_result_contract(self) -> None:
+        expected_case_ids = (
+            "clean-tree",
+            "stray-shell-script",
+            "nonallowlisted-specify-script",
+            "prose-mentions-pass",
+            "hooks-command-fails",
+            "package-script-fails",
+            "nested-package-script-fails",
+            "nested-os-system-fails",
+            "windows-cmd-payload-fails",
+            "dynamic-python-command-fails",
+            "list-argv-concatenation-fails",
+            "tuple-argv-concatenation-fails",
+            "starred-argv-fails",
+            "subprocess-executable-override-fails",
+            "dynamic-executable-boundaries-fail-closed",
+            "subscript-argv-assignment-fails",
+            "list-augassign-argv-fails",
+            "string-augassign-argv-fails",
+            "insert-argv-mutation-fails",
+            "append-argv-mutation-fails",
+            "extend-argv-mutation-fails",
+            "safe-argv-mutations-pass",
+            "from-sys-executable-passes",
+            "from-sys-executable-rebound-import-fails",
+            "sys-module-rebound-import-fails",
+            "dynamic-sys-import-fails-closed",
+            "known-safe-executable-with-dynamic-tail-passes",
+            "workflow-thin-python-dispatch-passes",
+            "workflow-package-manager-dispatch-passes",
+            "workflow-runner-redirection-passes",
+            "workflow-python-shell-dispatch-passes",
+            "workflow-multiline-control-logic-fails",
+            "workflow-jq-and-shell-script-fail",
+            "workflow-inline-python-heredoc-fails",
+            "workflow-sentinel-shell-logic-fails",
+            "workflow-untracked-runner-input-fails",
+        )
+        self.assertEqual(
+            expected_case_ids,
+            tuple(case["case_id"] for case in CASES),
+            "canonical Bash-confinement fixture roster",
+        )
         for case in CASES:
             with self.subTest(case_id=case["case_id"]):
                 with temporary_repo(case.get("files")) as root:
@@ -198,6 +241,14 @@ class RepoBashConfinementTests(unittest.TestCase):
                     self.assertEqual(result["status"], "expected_failure")
                     self.assertGreater(result["data"]["blocking_count"], 0)
                     self.assertIn(case["expected_category"], {item["category"] for item in result["data"]["findings"]})
+
+    def test_fixture_matrix_rejects_empty_roster(self) -> None:
+        with patch.dict(globals(), {"CASES": []}):
+            with self.assertRaisesRegex(
+                AssertionError,
+                "canonical Bash-confinement fixture roster",
+            ):
+                self.test_fixture_matrix_and_result_contract()
 
     def test_allowlisted_entries_are_excluded_negative_controls(self) -> None:
         with temporary_repo() as root:
@@ -642,6 +693,70 @@ def check():
         self.assertEqual(
             active_path_guard.repo_bash_python_findings("tools/unrelated-shadow.py", unrelated_shadow),
             [],
+        )
+
+    def test_native_execution_exemption_is_scoped_to_unresolved_eval_harness_launches(self) -> None:
+        dynamic_executable = """
+import subprocess
+
+def probe(executable):
+    subprocess.run([executable, '--version'], shell=False, check=False)
+"""
+
+        def classify(path: str) -> list[str]:
+            return [
+                active_path_guard.repo_bash_classify_native_execution(finding).classification
+                for finding in active_path_guard.repo_bash_python_findings(path, dynamic_executable)
+            ]
+
+        # Unresolved executables inside the native eval harness are classified,
+        # not blocked: the harness resolves them from a validated receipt.
+        for harness_path in (
+            "tests/speckit-pro/lib/native_eval_adapters.py",
+            "tests/speckit-pro/unit/test-native-eval-adapters.py",
+        ):
+            with self.subTest(harness_path=harness_path):
+                self.assertEqual(classify(harness_path), ["eval_harness_native_execution"])
+
+        # The exemption is namespace-bound: an identical launch outside the
+        # harness prefixes stays blocking.
+        for outside_path in (
+            "tools/probe.py",
+            "tests/speckit-pro/lib/other_helper.py",
+            "tests/speckit-pro/unit/test-other.py",
+        ):
+            with self.subTest(outside_path=outside_path):
+                self.assertEqual(classify(outside_path), ["blocking_repo_bash"])
+
+        # The exemption cannot hide a real Bash dependency inside the harness.
+        for shell_source in (
+            "import subprocess\nsubprocess.run(['bash', '-c', 'echo hi'], shell=False)\n",
+            "import subprocess\nsubprocess.run(['bash.exe', '-c', 'echo hi'], shell=False)\n",
+            "import subprocess\nsubprocess.run(['jq', '.'], shell=False)\n",
+        ):
+            with self.subTest(shell_source=shell_source):
+                findings = active_path_guard.repo_bash_python_findings(
+                    "tests/speckit-pro/lib/native_eval_adapters.py", shell_source
+                )
+                self.assertTrue(findings)
+                self.assertEqual(
+                    {active_path_guard.repo_bash_classify_native_execution(f).classification for f in findings},
+                    {"blocking_repo_bash"},
+                )
+
+        # A shell command string is a different category and is never exempted.
+        shell_string = "import subprocess\nsubprocess.run('sh -c \"jq . result.json\"', shell=True)\n"
+        string_findings = active_path_guard.repo_bash_python_findings(
+            "tests/speckit-pro/lib/native_eval_adapters.py", shell_string
+        )
+        self.assertTrue(string_findings)
+        self.assertEqual(
+            {f.category for f in string_findings} - {"command_argv_subprocess"},
+            {f.category for f in string_findings},
+        )
+        self.assertEqual(
+            {active_path_guard.repo_bash_classify_native_execution(f).classification for f in string_findings},
+            {"blocking_repo_bash"},
         )
 
     def test_argv_mutations_preserve_static_bash_detection(self) -> None:

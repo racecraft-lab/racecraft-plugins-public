@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "current_phase": "tasks",
+  "gates": {
+    "G5": "passed"
+  },
+  "atomicity_route": {
+    "route": "split-PR"
+  }
+}

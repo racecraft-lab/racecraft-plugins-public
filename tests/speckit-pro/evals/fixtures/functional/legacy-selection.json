@@ -1,0 +1,6240 @@
+{
+  "schema_version": "functional-legacy-selection/v1",
+  "cross_layer_reuse": [
+    {
+      "canonical_case_id": "functional.speckit-scaffold-spec.case-8",
+      "case_id": "parity.02-scaffold-relocation-guidance",
+      "disposition": "merge",
+      "reason": "The paired parity case executes the same shared relocation-guidance behavior with real file reads, unchanged-artifact and Git checks, complete suppressions, capability availability, continuation guidance and forbidden-command controls. Reuse avoids duplicating two subject launches; native qualification remains pending.",
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-scaffold-spec-evals.json",
+          "eval_id": 1,
+          "legacy_expectations": [
+            "Suggests Tier-2 relocation only for specs/spec-911-legacy",
+            "Names relocate-process-artifacts as promotion_status=deferred with no authoritative runner request",
+            "States no dry_run, apply, or replacement runner command is available for relocation",
+            "Leaves the candidate's PROCESS artifacts unchanged while allowing the remaining scaffold workflow to continue",
+            "Reports specs/spec-912-active as frozen/in-flight from .specify/feature.json and does not suggest relocation for it",
+            "Reports specs/spec-913-current as already current or already normalized and does not suggest relocation for it",
+            "Reports specs/spec-914-empty as no Tier-2 action needed because no relocatable PROCESS artifacts exist",
+            "Suppresses suggestions for specs/team-123-legacy with reason non_speckit_namespace and specs/2026-06-legacy with reason date_named_legacy_namespace",
+            "States that /speckit-pro:speckit-scaffold-spec does not invoke the retired relocate-process-artifacts.sh path, the deferred operation, or an invented replacement"
+          ],
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "classification"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "capability-status"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "capability-status"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "preservation",
+                "capability-status"
+              ]
+            },
+            {
+              "expectation_index": 4,
+              "requirement_ids": [
+                "classification"
+              ]
+            },
+            {
+              "expectation_index": 5,
+              "requirement_ids": [
+                "classification"
+              ]
+            },
+            {
+              "expectation_index": 6,
+              "requirement_ids": [
+                "classification"
+              ]
+            },
+            {
+              "expectation_index": 7,
+              "requirement_ids": [
+                "classification"
+              ]
+            },
+            {
+              "expectation_index": 8,
+              "requirement_ids": [
+                "forbidden-invocation"
+              ]
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-scaffold-spec-evals.json",
+          "eval_id": 8,
+          "legacy_expectations": [
+            "Suggests Tier-2 relocation only for specs/spec-911-legacy",
+            "Names relocate-process-artifacts as promotion_status=deferred with no authoritative runner request",
+            "States no dry_run, apply, or replacement runner command is available for relocation",
+            "Leaves the candidate's PROCESS artifacts unchanged while allowing the remaining scaffold workflow to continue",
+            "Reports specs/spec-912-active as frozen/in-flight from .specify/feature.json and does not suggest relocation for it",
+            "Reports specs/spec-913-current as already current or already normalized and does not suggest relocation for it",
+            "Reports specs/spec-914-empty as no Tier-2 action needed because no relocatable PROCESS artifacts exist",
+            "Suppresses suggestions for specs/team-123-legacy with reason non_speckit_namespace and specs/2026-06-legacy with reason date_named_legacy_namespace",
+            "States that $speckit-scaffold-spec does not invoke the retired relocate-process-artifacts.sh path, the deferred operation, or an invented replacement"
+          ],
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "classification"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "capability-status"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "capability-status"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "preservation",
+                "capability-status"
+              ]
+            },
+            {
+              "expectation_index": 4,
+              "requirement_ids": [
+                "classification"
+              ]
+            },
+            {
+              "expectation_index": 5,
+              "requirement_ids": [
+                "classification"
+              ]
+            },
+            {
+              "expectation_index": 6,
+              "requirement_ids": [
+                "classification"
+              ]
+            },
+            {
+              "expectation_index": 7,
+              "requirement_ids": [
+                "classification"
+              ]
+            },
+            {
+              "expectation_index": 8,
+              "requirement_ids": [
+                "forbidden-invocation"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "text_check_audit": {
+    "prior_text_checks": 197,
+    "literal_or_format_checks_after_audit": 13,
+    "reclassified_as_semantic": 184,
+    "literal_checks_in_adapter_gap_cases": 3,
+    "literal_checks_in_selected_cases": 10
+  },
+  "read_search_adapter_gap_audit": {
+    "affected_cases": 8,
+    "affected_checks": 17,
+    "claude": {
+      "Read": "read_file",
+      "Glob": "list_files"
+    },
+    "codex": {
+      "command_execution": "unmapped pending precise command, path, and success classification"
+    }
+  },
+  "selected": [
+    {
+      "case_id": "functional.speckit-coach.case-7",
+      "legacy_ids": [
+        "claude:speckit-coach:7",
+        "codex:speckit-coach:7"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-coach-evals.json",
+          "eval_id": 7,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-coach-evals.json",
+          "eval_id": 7,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 1,
+      "semantic_checks": 4
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-2",
+      "legacy_ids": [
+        "claude:speckit-autopilot:2",
+        "codex:speckit-autopilot:2"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 2,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 2,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 1,
+      "semantic_checks": 3
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-3",
+      "legacy_ids": [
+        "claude:speckit-autopilot:3",
+        "codex:speckit-autopilot:3"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 3,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 3,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 5
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-4",
+      "legacy_ids": [
+        "claude:speckit-autopilot:4",
+        "codex:speckit-autopilot:4"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 4,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 4,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 5
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-5",
+      "legacy_ids": [
+        "claude:speckit-autopilot:5",
+        "codex:speckit-autopilot:5"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 5,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 5,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-06"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-07"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-08"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-09"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-10"
+            },
+            {
+              "expectation_index": 5,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 6,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 7,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 8,
+              "requirement_id": "legacy-11"
+            },
+            {
+              "expectation_index": 9,
+              "requirement_id": "legacy-12"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 12
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-6",
+      "legacy_ids": [
+        "claude:speckit-autopilot:6",
+        "codex:speckit-autopilot:6"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 6,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 6,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 5
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-8",
+      "legacy_ids": [
+        "claude:speckit-autopilot:8",
+        "codex:speckit-autopilot:8"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 8,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 8,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 5
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-9",
+      "legacy_ids": [
+        "claude:speckit-autopilot:9",
+        "codex:speckit-autopilot:9"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 9,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 9,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 5
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-10",
+      "legacy_ids": [
+        "claude:speckit-autopilot:10",
+        "codex:speckit-autopilot:10"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 10,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 10,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 4
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-11",
+      "legacy_ids": [
+        "codex:speckit-autopilot:11"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 11,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            },
+            {
+              "expectation_index": 5,
+              "requirement_id": "legacy-06"
+            },
+            {
+              "expectation_index": 6,
+              "requirement_id": "legacy-07"
+            },
+            {
+              "expectation_index": 7,
+              "requirement_id": "legacy-08"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 1,
+      "semantic_checks": 7
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-12",
+      "legacy_ids": [
+        "codex:speckit-autopilot:12"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 12,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            },
+            {
+              "expectation_index": 5,
+              "requirement_id": "legacy-06"
+            },
+            {
+              "expectation_index": 6,
+              "requirement_id": "legacy-07"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 7
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-13",
+      "legacy_ids": [
+        "codex:speckit-autopilot:13"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 13,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            },
+            {
+              "expectation_index": 5,
+              "requirement_id": "legacy-06"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 6
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-14",
+      "legacy_ids": [
+        "codex:speckit-autopilot:14"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 14,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 5
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-15",
+      "legacy_ids": [
+        "claude:speckit-autopilot:11",
+        "codex:speckit-autopilot:15"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 11,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            },
+            {
+              "expectation_index": 5,
+              "requirement_id": "legacy-06"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 15,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-07"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-08"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-09"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-10"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-11"
+            },
+            {
+              "expectation_index": 5,
+              "requirement_id": "legacy-12"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 1,
+      "semantic_checks": 12
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-17",
+      "legacy_ids": [
+        "claude:speckit-autopilot:13",
+        "codex:speckit-autopilot:17"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 13,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            },
+            {
+              "expectation_index": 5,
+              "requirement_id": "legacy-06"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 17,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-07"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            },
+            {
+              "expectation_index": 5,
+              "requirement_id": "legacy-08"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 8
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-18",
+      "legacy_ids": [
+        "claude:speckit-autopilot:14",
+        "codex:speckit-autopilot:18"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 14,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 18,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-06"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 6
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-19",
+      "legacy_ids": [
+        "claude:speckit-autopilot:15",
+        "codex:speckit-autopilot:19"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 15,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 19,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 5
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-20",
+      "legacy_ids": [
+        "claude:speckit-autopilot:16",
+        "codex:speckit-autopilot:20"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 16,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 20,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 5
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-21",
+      "legacy_ids": [
+        "claude:speckit-autopilot:17",
+        "codex:speckit-autopilot:21"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 17,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            },
+            {
+              "expectation_index": 5,
+              "requirement_id": "legacy-06"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 21,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-07"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            },
+            {
+              "expectation_index": 5,
+              "requirement_id": "legacy-06"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 7
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-22",
+      "legacy_ids": [
+        "claude:speckit-autopilot:18",
+        "codex:speckit-autopilot:22"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 18,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            },
+            {
+              "expectation_index": 5,
+              "requirement_id": "legacy-06"
+            },
+            {
+              "expectation_index": 6,
+              "requirement_id": "legacy-07"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 22,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-08"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            },
+            {
+              "expectation_index": 5,
+              "requirement_id": "legacy-06"
+            },
+            {
+              "expectation_index": 6,
+              "requirement_id": "legacy-07"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 8
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-23",
+      "legacy_ids": [
+        "claude:speckit-autopilot:19",
+        "codex:speckit-autopilot:23"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 19,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 23,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 5
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-24",
+      "legacy_ids": [
+        "claude:speckit-autopilot:20",
+        "codex:speckit-autopilot:24"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 20,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            },
+            {
+              "expectation_index": 5,
+              "requirement_id": "legacy-06"
+            },
+            {
+              "expectation_index": 6,
+              "requirement_id": "legacy-07"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 24,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-08"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-09"
+            },
+            {
+              "expectation_index": 5,
+              "requirement_id": "legacy-06"
+            },
+            {
+              "expectation_index": 6,
+              "requirement_id": "legacy-07"
+            },
+            {
+              "expectation_index": 7,
+              "requirement_id": "legacy-10"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 2,
+      "semantic_checks": 10
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-26",
+      "legacy_ids": [
+        "codex:speckit-autopilot:26"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 26,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            },
+            {
+              "expectation_index": 5,
+              "requirement_id": "legacy-06"
+            },
+            {
+              "expectation_index": 6,
+              "requirement_id": "legacy-07"
+            },
+            {
+              "expectation_index": 7,
+              "requirement_id": "legacy-08"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 1,
+      "semantic_checks": 7
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-28",
+      "legacy_ids": [
+        "codex:speckit-autopilot:28"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 28,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            },
+            {
+              "expectation_index": 5,
+              "requirement_id": "legacy-06"
+            },
+            {
+              "expectation_index": 6,
+              "requirement_id": "legacy-07"
+            },
+            {
+              "expectation_index": 7,
+              "requirement_id": "legacy-08"
+            },
+            {
+              "expectation_index": 8,
+              "requirement_id": "legacy-09"
+            },
+            {
+              "expectation_index": 9,
+              "requirement_id": "legacy-10"
+            },
+            {
+              "expectation_index": 10,
+              "requirement_id": "legacy-11"
+            },
+            {
+              "expectation_index": 11,
+              "requirement_id": "legacy-12"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 12
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-101",
+      "legacy_ids": [
+        "claude:speckit-autopilot:101",
+        "codex:speckit-autopilot:101"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 101,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 101,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 4
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-102",
+      "legacy_ids": [
+        "claude:speckit-autopilot:102",
+        "codex:speckit-autopilot:102"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 102,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 102,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 4
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-103",
+      "legacy_ids": [
+        "claude:speckit-autopilot:103",
+        "codex:speckit-autopilot:103"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 103,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 103,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 1,
+      "semantic_checks": 3
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-104",
+      "legacy_ids": [
+        "claude:speckit-autopilot:104",
+        "codex:speckit-autopilot:104"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 104,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 104,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 4
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-105",
+      "legacy_ids": [
+        "claude:speckit-autopilot:105",
+        "codex:speckit-autopilot:105"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 105,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 105,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 4
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-110",
+      "legacy_ids": [
+        "claude:speckit-autopilot:110",
+        "codex:speckit-autopilot:110"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 110,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            },
+            {
+              "expectation_index": 5,
+              "requirement_id": "legacy-06"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 110,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            },
+            {
+              "expectation_index": 5,
+              "requirement_id": "legacy-06"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 6
+    },
+    {
+      "case_id": "functional.speckit-coach.case-1",
+      "legacy_ids": [
+        "claude:speckit-coach:1",
+        "codex:speckit-coach:1"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-coach-evals.json",
+          "eval_id": 1,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-coach-evals.json",
+          "eval_id": 1,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 1,
+      "semantic_checks": 4
+    },
+    {
+      "case_id": "functional.speckit-coach.case-3",
+      "legacy_ids": [
+        "claude:speckit-coach:3",
+        "codex:speckit-coach:3"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-coach-evals.json",
+          "eval_id": 3,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-coach-evals.json",
+          "eval_id": 3,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 4
+    },
+    {
+      "case_id": "functional.speckit-coach.case-4",
+      "legacy_ids": [
+        "claude:speckit-coach:4",
+        "codex:speckit-coach:4"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-coach-evals.json",
+          "eval_id": 4,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-coach-evals.json",
+          "eval_id": 4,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 4
+    },
+    {
+      "case_id": "functional.speckit-coach.case-5",
+      "legacy_ids": [
+        "claude:speckit-coach:5",
+        "codex:speckit-coach:5"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-coach-evals.json",
+          "eval_id": 5,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-coach-evals.json",
+          "eval_id": 5,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 5
+    },
+    {
+      "case_id": "functional.speckit-coach.case-6",
+      "legacy_ids": [
+        "claude:speckit-coach:6",
+        "codex:speckit-coach:6"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-coach-evals.json",
+          "eval_id": 6,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-coach-evals.json",
+          "eval_id": 6,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 4
+    },
+    {
+      "case_id": "functional.speckit-coach.case-9",
+      "legacy_ids": [
+        "claude:speckit-coach:9",
+        "codex:speckit-coach:9"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-coach-evals.json",
+          "eval_id": 9,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-coach-evals.json",
+          "eval_id": 9,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 2,
+      "semantic_checks": 3
+    },
+    {
+      "case_id": "functional.speckit-coach.case-10",
+      "legacy_ids": [
+        "codex:speckit-coach:10"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-coach-evals.json",
+          "eval_id": 10,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 4
+    },
+    {
+      "case_id": "functional.speckit-coach.case-11",
+      "legacy_ids": [
+        "codex:speckit-coach:11"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-coach-evals.json",
+          "eval_id": 11,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 4
+    },
+    {
+      "case_id": "functional.speckit-coach.case-12",
+      "legacy_ids": [
+        "claude:speckit-coach:10",
+        "codex:speckit-coach:12"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-coach-evals.json",
+          "eval_id": 10,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-coach-evals.json",
+          "eval_id": 12,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-06"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-07"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-08"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-09"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-10"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 10
+    },
+    {
+      "case_id": "functional.speckit-coach.case-101",
+      "legacy_ids": [
+        "claude:speckit-coach:101",
+        "codex:speckit-coach:101"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-coach-evals.json",
+          "eval_id": 101,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-coach-evals.json",
+          "eval_id": 101,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 4
+    },
+    {
+      "case_id": "functional.speckit-coach.case-102",
+      "legacy_ids": [
+        "claude:speckit-coach:102",
+        "codex:speckit-coach:102"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-coach-evals.json",
+          "eval_id": 102,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-coach-evals.json",
+          "eval_id": 102,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 4
+    },
+    {
+      "case_id": "functional.speckit-coach.case-103",
+      "legacy_ids": [
+        "claude:speckit-coach:103",
+        "codex:speckit-coach:103"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-coach-evals.json",
+          "eval_id": 103,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-coach-evals.json",
+          "eval_id": 103,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 1,
+      "semantic_checks": 3
+    },
+    {
+      "case_id": "functional.speckit-coach.case-104",
+      "legacy_ids": [
+        "claude:speckit-coach:104",
+        "codex:speckit-coach:104"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-coach-evals.json",
+          "eval_id": 104,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-coach-evals.json",
+          "eval_id": 104,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 4
+    },
+    {
+      "case_id": "functional.speckit-coach.case-105",
+      "legacy_ids": [
+        "claude:speckit-coach:105",
+        "codex:speckit-coach:105"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-coach-evals.json",
+          "eval_id": 105,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-coach-evals.json",
+          "eval_id": 105,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 4
+    },
+    {
+      "case_id": "functional.speckit-coach.case-201",
+      "legacy_ids": [
+        "claude:speckit-coach:201",
+        "codex:speckit-coach:201"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-coach-evals.json",
+          "eval_id": 201,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-coach-evals.json",
+          "eval_id": 201,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 3
+    },
+    {
+      "case_id": "functional.speckit-coach.case-202",
+      "legacy_ids": [
+        "claude:speckit-coach:202",
+        "codex:speckit-coach:202"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-coach-evals.json",
+          "eval_id": 202,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-coach-evals.json",
+          "eval_id": 202,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 5
+    },
+    {
+      "case_id": "functional.speckit-coach.case-203",
+      "legacy_ids": [
+        "claude:speckit-coach:203",
+        "codex:speckit-coach:203"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-coach-evals.json",
+          "eval_id": 203,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-coach-evals.json",
+          "eval_id": 203,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 5
+    },
+    {
+      "case_id": "functional.speckit-coach.case-204",
+      "legacy_ids": [
+        "claude:speckit-coach:204",
+        "codex:speckit-coach:204"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-coach-evals.json",
+          "eval_id": 204,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-coach-evals.json",
+          "eval_id": 204,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 5
+    },
+    {
+      "case_id": "functional.speckit-resolve-pr.case-2",
+      "legacy_ids": [
+        "codex:speckit-resolve-pr:2"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-resolve-pr-evals.json",
+          "eval_id": 2,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 3
+    },
+    {
+      "case_id": "functional.speckit-resolve-pr.case-3",
+      "legacy_ids": [
+        "codex:speckit-resolve-pr:3"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-resolve-pr-evals.json",
+          "eval_id": 3,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 3
+    },
+    {
+      "case_id": "functional.speckit-resolve-pr.case-4",
+      "legacy_ids": [
+        "codex:speckit-resolve-pr:4"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-resolve-pr-evals.json",
+          "eval_id": 4,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 3
+    },
+    {
+      "case_id": "functional.speckit-resolve-pr.case-5",
+      "legacy_ids": [
+        "codex:speckit-resolve-pr:5"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-resolve-pr-evals.json",
+          "eval_id": 5,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 3
+    },
+    {
+      "case_id": "functional.speckit-resolve-pr.case-6",
+      "legacy_ids": [
+        "codex:speckit-resolve-pr:6"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-resolve-pr-evals.json",
+          "eval_id": 6,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 3
+    },
+    {
+      "case_id": "functional.speckit-upgrade.case-5",
+      "legacy_ids": [
+        "claude:speckit-upgrade:1",
+        "codex:speckit-upgrade:5"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-upgrade-evals.json",
+          "eval_id": 1,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-upgrade-evals.json",
+          "eval_id": 5,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 5
+    },
+    {
+      "case_id": "functional.speckit-scaffold-spec.case-3",
+      "legacy_ids": [
+        "codex:speckit-scaffold-spec:3"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-scaffold-spec-evals.json",
+          "eval_id": 3,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 3
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-29",
+      "legacy_ids": [
+        "claude:speckit-autopilot:23",
+        "codex:speckit-autopilot:29"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 23,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            },
+            {
+              "expectation_index": 5,
+              "requirement_id": "legacy-06"
+            },
+            {
+              "expectation_index": 6,
+              "requirement_id": "legacy-07"
+            },
+            {
+              "expectation_index": 7,
+              "requirement_id": "legacy-08"
+            },
+            {
+              "expectation_index": 8,
+              "requirement_id": "legacy-09"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 29,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            },
+            {
+              "expectation_index": 5,
+              "requirement_id": "legacy-06"
+            },
+            {
+              "expectation_index": 6,
+              "requirement_id": "legacy-07"
+            },
+            {
+              "expectation_index": 7,
+              "requirement_id": "legacy-08"
+            },
+            {
+              "expectation_index": 8,
+              "requirement_id": "legacy-09"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 2,
+      "semantic_checks": 9
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-30",
+      "legacy_ids": [
+        "codex:speckit-autopilot:30"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 30,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            },
+            {
+              "expectation_index": 5,
+              "requirement_id": "legacy-06"
+            },
+            {
+              "expectation_index": 6,
+              "requirement_id": "legacy-07"
+            },
+            {
+              "expectation_index": 7,
+              "requirement_id": "legacy-08"
+            },
+            {
+              "expectation_index": 8,
+              "requirement_id": "legacy-09"
+            },
+            {
+              "expectation_index": 9,
+              "requirement_id": "legacy-10"
+            },
+            {
+              "expectation_index": 10,
+              "requirement_id": "legacy-11"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 1,
+      "semantic_checks": 9
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-36",
+      "legacy_ids": [
+        "codex:speckit-autopilot:36"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 36,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            },
+            {
+              "expectation_index": 5,
+              "requirement_id": "legacy-06"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 1,
+      "semantic_checks": 4
+    },
+    {
+      "case_id": "functional.ubiquitous-language.case-3",
+      "legacy_ids": [
+        "claude:ubiquitous-language:3",
+        "codex:ubiquitous-language:3"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/ubiquitous-language-evals.json",
+          "eval_id": 3,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/ubiquitous-language-evals.json",
+          "eval_id": 3,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 3
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-111",
+      "legacy_ids": [
+        "claude:speckit-autopilot:111",
+        "codex:speckit-autopilot:111"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 111,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            },
+            {
+              "expectation_index": 5,
+              "requirement_id": "legacy-06"
+            },
+            {
+              "expectation_index": 6,
+              "requirement_id": "legacy-07"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 111,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            },
+            {
+              "expectation_index": 5,
+              "requirement_id": "legacy-06"
+            },
+            {
+              "expectation_index": 6,
+              "requirement_id": "legacy-07"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 4,
+      "semantic_checks": 4
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-112",
+      "legacy_ids": [
+        "claude:speckit-autopilot:112",
+        "codex:speckit-autopilot:112"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 112,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            },
+            {
+              "expectation_index": 5,
+              "requirement_id": "legacy-06"
+            },
+            {
+              "expectation_index": 6,
+              "requirement_id": "legacy-07"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 112,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "legacy-01"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "legacy-02"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "legacy-03"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "legacy-04"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "legacy-05"
+            },
+            {
+              "expectation_index": 5,
+              "requirement_id": "legacy-06"
+            },
+            {
+              "expectation_index": 6,
+              "requirement_id": "legacy-07"
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 2,
+      "semantic_checks": 4
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-107",
+      "legacy_ids": [
+        "codex:speckit-autopilot:107"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 107,
+          "legacy_expectations": [
+            "Treats binding_status=ambiguous as a hard pre-flight stop",
+            "Lists both canonical candidate worktree roots",
+            "Does not prefer TASK_ROOT or the first git worktree entry",
+            "Requests an absolute workflow path to disambiguate",
+            "Performs no Archive Sweep, phase dispatch, state update, or Git mutation"
+          ],
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "binding"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "binding"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "binding"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "binding"
+              ]
+            },
+            {
+              "expectation_index": 4,
+              "requirement_ids": [
+                "binding",
+                "preservation"
+              ]
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 1
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-106",
+      "legacy_ids": [
+        "codex:speckit-autopilot:106"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 106,
+          "legacy_expectations": [
+            "Stops before Archive Sweep, Phase 0, and any repository mutation",
+            "Treats relation=external as non-executable in the original Codex task",
+            "Tells the operator to open a new Codex task rooted at /external/spec and preserves the exact absolute workflow command plus original stage flags",
+            "Does not promise that Codex Handoff can select an arbitrary external path",
+            "Does not copy, reconstruct, or search revisions for the workflow",
+            "Does not dispatch a write-capable agent into the external worktree"
+          ],
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "safety"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "binding"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "safety"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "safety"
+              ]
+            },
+            {
+              "expectation_index": 4,
+              "requirement_ids": [
+                "safety"
+              ]
+            },
+            {
+              "expectation_index": 5,
+              "requirement_ids": [
+                "safety"
+              ]
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 6
+    },
+    {
+      "case_id": "functional.speckit-scaffold-spec.case-2",
+      "legacy_ids": [
+        "codex:speckit-scaffold-spec:2"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-scaffold-spec-evals.json",
+          "eval_id": 2,
+          "legacy_expectations": [
+            "Mentions checking whether the branch already exists locally or remotely",
+            "Mentions reusing an existing worktree if it is already present",
+            "Mentions verifying the active branch inside the worktree",
+            "States that setup must never commit or push main"
+          ],
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "legacy-01"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "legacy-02"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "legacy-03"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "legacy-04"
+              ]
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 4
+    },
+    {
+      "case_id": "functional.speckit-scaffold-spec.case-4",
+      "legacy_ids": [
+        "codex:speckit-scaffold-spec:4"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-scaffold-spec-evals.json",
+          "eval_id": 4,
+          "legacy_expectations": [
+            "Mentions detecting that the spec is already in progress",
+            "States that the existing worktree or branch should be reused",
+            "Does not create a duplicate branch or worktree",
+            "Warns the user about the existing in-progress state"
+          ],
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "legacy-01"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "legacy-02"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "legacy-03"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "legacy-04"
+              ]
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 4
+    },
+    {
+      "case_id": "functional.speckit-scaffold-spec.case-9",
+      "legacy_ids": [
+        "codex:speckit-scaffold-spec:9"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-scaffold-spec-evals.json",
+          "eval_id": 9,
+          "legacy_expectations": [
+            "Reports /repo/.worktrees/spec-701-candidate-route-baseline as the absolute worktree root",
+            "Prints $speckit-autopilot with the absolute workflow file and literal --stage plan",
+            "States that the operator sends the printed command explicitly in the same Codex task",
+            "Does not invoke autopilot from scaffold itself",
+            "Does not hand off only the relative workflow path from the parent checkout",
+            "Uses a new Codex task rooted at the canonical worktree as the fail-closed fallback and does not promise arbitrary-path Handoff"
+          ],
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "legacy-01"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "legacy-02"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "legacy-03"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "legacy-04"
+              ]
+            },
+            {
+              "expectation_index": 4,
+              "requirement_ids": [
+                "legacy-05"
+              ]
+            },
+            {
+              "expectation_index": 5,
+              "requirement_ids": [
+                "legacy-06"
+              ]
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 6
+    },
+    {
+      "case_id": "functional.speckit-scaffold-spec.case-7",
+      "legacy_ids": [
+        "codex:speckit-scaffold-spec:7"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-scaffold-spec-evals.json",
+          "eval_id": 7,
+          "legacy_expectations": [
+            "States that grill-me requires an interactive runtime and aborts when none is detected",
+            "States that setup is HITL-gated by design and must not synthesize design-concept content itself",
+            "Reports exactly what was created locally (e.g., worktree, branch) before the abort, so the user can resume",
+            "Suggests re-running setup in an interactive Codex session rather than `codex exec`"
+          ],
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "diagnosis"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "diagnosis"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "diagnosis"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "diagnosis"
+              ]
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 1
+    },
+    {
+      "case_id": "functional.speckit-status.case-3",
+      "legacy_ids": [
+        "codex:speckit-status:3"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-status-evals.json",
+          "eval_id": 3,
+          "legacy_expectations": [
+            "States that the roadmap is missing",
+            "Explains that workflow files can still provide phase detail",
+            "Notes that the full backlog or recommendation quality is limited without the roadmap"
+          ],
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "behavior"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "behavior"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "behavior"
+              ]
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 1
+    },
+    {
+      "case_id": "functional.speckit-status.case-7",
+      "legacy_ids": [
+        "codex:speckit-status:7"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-status-evals.json",
+          "eval_id": 7,
+          "legacy_expectations": [
+            "States that no roadmap or workflow files were found",
+            "Does not fabricate a dashboard from nonexistent data",
+            "Recommends $speckit-coach or creating a technical roadmap as the next step"
+          ],
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "behavior"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "behavior"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "behavior"
+              ]
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 1
+    },
+    {
+      "case_id": "functional.grill-me.case-7",
+      "legacy_ids": [
+        "claude:grill-me:7",
+        "codex:grill-me:7"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/grill-me-evals.json",
+          "eval_id": 7,
+          "legacy_expectations": [
+            "Refuses to start the interview — does NOT call AskUserQuestion even once",
+            "Emits a message containing the phrase 'human-in-the-loop only' and 'autopilot' (the canonical refusal text)",
+            "Mentions the Clarify Question Set and consensus protocol as the correct mechanism for autopilot clarification",
+            "Writes NO files to disk — no design concept doc, no scratch artifacts",
+            "Does not partially execute — the refusal is the entire output"
+          ],
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "refusal"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "refusal"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "mechanism"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "no-artifacts"
+              ]
+            },
+            {
+              "expectation_index": 4,
+              "requirement_ids": [
+                "refusal"
+              ]
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/grill-me-evals.json",
+          "eval_id": 7,
+          "legacy_expectations": [
+            "Aborts before asking the first question — does NOT call request_user_input or start a free-text Q&A loop",
+            "Emits a message containing the phrase 'human-in-the-loop only' and references autopilot",
+            "Mentions the Clarify Question Set and consensus protocol as the correct mechanism for autopilot clarification",
+            "Writes NO files to disk — no design concept doc, no scratch artifacts",
+            "Does not partially execute — the refusal is the entire output"
+          ],
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "refusal"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "refusal"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "mechanism"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "no-artifacts"
+              ]
+            },
+            {
+              "expectation_index": 4,
+              "requirement_ids": [
+                "refusal"
+              ]
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 2
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-34",
+      "legacy_ids": [
+        "codex:speckit-autopilot:34"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 34,
+          "legacy_expectations": [
+            "Accepts resolved relation=descendant as eligible for same-task execution",
+            "Binds WORKFLOW_ROOT to /repo/.worktrees/spec-701 and WORKFLOW_FILE to the canonical absolute file",
+            "Verifies the live workflow branch is not main, detached, release, or protected before Archive Sweep",
+            "Sets every shell workdir and helper invocation to WORKFLOW_ROOT",
+            "Passes the exact WORKFLOW_ROOT to phase, consensus, implementation, Post, and write-capable agent prompts",
+            "Validates returned paths against WORKFLOW_ROOT before editing, state updates, staging, or commits"
+          ],
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "binding"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "binding"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "planning"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "binding"
+              ]
+            },
+            {
+              "expectation_index": 4,
+              "requirement_ids": [
+                "binding"
+              ]
+            },
+            {
+              "expectation_index": 5,
+              "requirement_ids": [
+                "binding"
+              ]
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 1
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-35",
+      "legacy_ids": [
+        "codex:speckit-autopilot:35"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 35,
+          "legacy_expectations": [
+            "Does not require a generated $speckit-archive-run skill, slash command, or .claude skill",
+            "Reads the speckit.archive.run command file from the extension manifest relative to the archive extension directory",
+            "Does not resolve or execute integration-specific prerequisite metadata from the Codex plugin",
+            "Derives absolute paths from the already-bound worktree and current target",
+            "Records execution_path=extension_contract and both invocation_available=true and prerequisite_available=true",
+            "Records prerequisite_mode=codex_native_worktree_binding and status=no_candidates",
+            "Records the excluded current target, no eligible previous specs, and safeToApplyCleanup=false",
+            "Completes the Archive Sweep plan item only after this executed no-op, then may advance Phase 0"
+          ],
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "contract"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "contract"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "contract"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "contract"
+              ]
+            },
+            {
+              "expectation_index": 4,
+              "requirement_ids": [
+                "recording"
+              ]
+            },
+            {
+              "expectation_index": 5,
+              "requirement_ids": [
+                "recording"
+              ]
+            },
+            {
+              "expectation_index": 6,
+              "requirement_ids": [
+                "recording"
+              ]
+            },
+            {
+              "expectation_index": 7,
+              "requirement_ids": [
+                "continuation"
+              ]
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 1
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-106",
+      "legacy_ids": [
+        "codex:speckit-autopilot:106"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 106,
+          "legacy_expectations": [
+            "Stops before Archive Sweep, Phase 0, and any repository mutation",
+            "Treats relation=external as non-executable in the original Codex task",
+            "Tells the operator to open a new Codex task rooted at /external/spec and preserves the exact absolute workflow command plus original stage flags",
+            "Does not promise that Codex Handoff can select an arbitrary external path",
+            "Does not copy, reconstruct, or search revisions for the workflow",
+            "Does not dispatch a write-capable agent into the external worktree"
+          ],
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "safety"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "binding"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "safety"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "safety"
+              ]
+            },
+            {
+              "expectation_index": 4,
+              "requirement_ids": [
+                "safety"
+              ]
+            },
+            {
+              "expectation_index": 5,
+              "requirement_ids": [
+                "safety"
+              ]
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 1
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-108",
+      "legacy_ids": [
+        "codex:speckit-autopilot:108"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 108,
+          "legacy_expectations": [
+            "Re-runs resolve-workflow-binding immediately before artifact-author dispatch",
+            "Invokes the helper from WORKFLOW_ROOT and requires returned task_root and workflow_root to equal the established WORKFLOW_ROOT",
+            "Requires the same canonical WORKFLOW_FILE with relation same",
+            "Stops on worktree-registration drift, path drift, ambiguity, external reclassification, or sandbox denial",
+            "Does not downgrade binding failure to an artifact-content gap",
+            "Does not dispatch artifact-author, refresh the PR, commit, or push"
+          ],
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "revalidation"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "revalidation"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "revalidation"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "safety"
+              ]
+            },
+            {
+              "expectation_index": 4,
+              "requirement_ids": [
+                "safety"
+              ]
+            },
+            {
+              "expectation_index": 5,
+              "requirement_ids": [
+                "safety"
+              ]
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 1
+    },
+    {
+      "case_id": "functional.speckit-coach.case-8",
+      "legacy_ids": [
+        "claude:speckit-coach:8",
+        "codex:speckit-coach:8"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-coach-evals.json",
+          "eval_id": 8,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "behavior"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "observation"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "behavior"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "observation"
+              ]
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-coach-evals.json",
+          "eval_id": 8,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "behavior"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "observation"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "behavior"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "observation"
+              ]
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 1
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-1",
+      "legacy_ids": [
+        "claude:speckit-autopilot:1",
+        "codex:speckit-autopilot:1"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 1,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "helper"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "helper"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "reporting"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "reporting"
+              ]
+            },
+            {
+              "expectation_index": 4,
+              "requirement_ids": [
+                "reporting"
+              ]
+            },
+            {
+              "expectation_index": 5,
+              "requirement_ids": [
+                "reporting"
+              ]
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 1,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "helper"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "helper"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "reporting"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "reporting"
+              ]
+            },
+            {
+              "expectation_index": 4,
+              "requirement_ids": [
+                "reporting"
+              ]
+            },
+            {
+              "expectation_index": 5,
+              "requirement_ids": [
+                "reporting"
+              ]
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 1
+    },
+    {
+      "case_id": "functional.speckit-status.case-4",
+      "legacy_ids": [
+        "codex:speckit-status:4"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-status-evals.json",
+          "eval_id": 4,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "discovery"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "discovery"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "reporting"
+              ]
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 1
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-27",
+      "legacy_ids": [
+        "claude:speckit-autopilot:22",
+        "codex:speckit-autopilot:27"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 22,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "legacy-01"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "legacy-02"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "legacy-03"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "legacy-04"
+              ]
+            },
+            {
+              "expectation_index": 4,
+              "requirement_ids": [
+                "legacy-05"
+              ]
+            },
+            {
+              "expectation_index": 5,
+              "requirement_ids": [
+                "legacy-06"
+              ]
+            },
+            {
+              "expectation_index": 6,
+              "requirement_ids": [
+                "legacy-07"
+              ]
+            },
+            {
+              "expectation_index": 7,
+              "requirement_ids": [
+                "legacy-08"
+              ]
+            },
+            {
+              "expectation_index": 8,
+              "requirement_ids": [
+                "legacy-09"
+              ]
+            },
+            {
+              "expectation_index": 9,
+              "requirement_ids": [
+                "legacy-10"
+              ]
+            },
+            {
+              "expectation_index": 10,
+              "requirement_ids": [
+                "legacy-11"
+              ]
+            },
+            {
+              "expectation_index": 11,
+              "requirement_ids": [
+                "legacy-12"
+              ]
+            },
+            {
+              "expectation_index": 12,
+              "requirement_ids": [
+                "legacy-13"
+              ]
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 27,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "legacy-01"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "legacy-02"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "legacy-03"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "legacy-04"
+              ]
+            },
+            {
+              "expectation_index": 4,
+              "requirement_ids": [
+                "legacy-05"
+              ]
+            },
+            {
+              "expectation_index": 5,
+              "requirement_ids": [
+                "legacy-06"
+              ]
+            },
+            {
+              "expectation_index": 6,
+              "requirement_ids": [
+                "legacy-07"
+              ]
+            },
+            {
+              "expectation_index": 7,
+              "requirement_ids": [
+                "legacy-08"
+              ]
+            },
+            {
+              "expectation_index": 8,
+              "requirement_ids": [
+                "legacy-09"
+              ]
+            },
+            {
+              "expectation_index": 9,
+              "requirement_ids": [
+                "legacy-10"
+              ]
+            },
+            {
+              "expectation_index": 10,
+              "requirement_ids": [
+                "legacy-11"
+              ]
+            },
+            {
+              "expectation_index": 11,
+              "requirement_ids": [
+                "legacy-12"
+              ]
+            },
+            {
+              "expectation_index": 12,
+              "requirement_ids": [
+                "legacy-13"
+              ]
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 13
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-31",
+      "legacy_ids": [
+        "claude:speckit-autopilot:24",
+        "codex:speckit-autopilot:31"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 24,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "legacy-01"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "legacy-02"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "legacy-03"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "legacy-04"
+              ]
+            },
+            {
+              "expectation_index": 4,
+              "requirement_ids": [
+                "legacy-05"
+              ]
+            },
+            {
+              "expectation_index": 5,
+              "requirement_ids": [
+                "legacy-06"
+              ]
+            },
+            {
+              "expectation_index": 6,
+              "requirement_ids": [
+                "legacy-07"
+              ]
+            },
+            {
+              "expectation_index": 7,
+              "requirement_ids": [
+                "legacy-08"
+              ]
+            },
+            {
+              "expectation_index": 8,
+              "requirement_ids": [
+                "legacy-09"
+              ]
+            },
+            {
+              "expectation_index": 9,
+              "requirement_ids": [
+                "legacy-10"
+              ]
+            },
+            {
+              "expectation_index": 10,
+              "requirement_ids": [
+                "legacy-11"
+              ]
+            },
+            {
+              "expectation_index": 11,
+              "requirement_ids": [
+                "legacy-12"
+              ]
+            },
+            {
+              "expectation_index": 12,
+              "requirement_ids": [
+                "legacy-13"
+              ]
+            },
+            {
+              "expectation_index": 13,
+              "requirement_ids": [
+                "legacy-14"
+              ]
+            },
+            {
+              "expectation_index": 14,
+              "requirement_ids": [
+                "legacy-15"
+              ]
+            },
+            {
+              "expectation_index": 15,
+              "requirement_ids": [
+                "legacy-16"
+              ]
+            },
+            {
+              "expectation_index": 16,
+              "requirement_ids": [
+                "legacy-17"
+              ]
+            },
+            {
+              "expectation_index": 17,
+              "requirement_ids": [
+                "legacy-18"
+              ]
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 31,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "legacy-01"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "legacy-02"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "legacy-03"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "legacy-04"
+              ]
+            },
+            {
+              "expectation_index": 4,
+              "requirement_ids": [
+                "legacy-05"
+              ]
+            },
+            {
+              "expectation_index": 5,
+              "requirement_ids": [
+                "legacy-06"
+              ]
+            },
+            {
+              "expectation_index": 6,
+              "requirement_ids": [
+                "legacy-07"
+              ]
+            },
+            {
+              "expectation_index": 7,
+              "requirement_ids": [
+                "legacy-08"
+              ]
+            },
+            {
+              "expectation_index": 8,
+              "requirement_ids": [
+                "legacy-09"
+              ]
+            },
+            {
+              "expectation_index": 9,
+              "requirement_ids": [
+                "legacy-10"
+              ]
+            },
+            {
+              "expectation_index": 10,
+              "requirement_ids": [
+                "legacy-11"
+              ]
+            },
+            {
+              "expectation_index": 11,
+              "requirement_ids": [
+                "legacy-12"
+              ]
+            },
+            {
+              "expectation_index": 12,
+              "requirement_ids": [
+                "legacy-13"
+              ]
+            },
+            {
+              "expectation_index": 13,
+              "requirement_ids": [
+                "legacy-14"
+              ]
+            },
+            {
+              "expectation_index": 14,
+              "requirement_ids": [
+                "legacy-15"
+              ]
+            },
+            {
+              "expectation_index": 15,
+              "requirement_ids": [
+                "legacy-16"
+              ]
+            },
+            {
+              "expectation_index": 16,
+              "requirement_ids": [
+                "legacy-17"
+              ]
+            },
+            {
+              "expectation_index": 17,
+              "requirement_ids": [
+                "legacy-18"
+              ]
+            },
+            {
+              "expectation_index": 18,
+              "requirement_ids": [
+                "legacy-19"
+              ]
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 19
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-32",
+      "legacy_ids": [
+        "claude:speckit-autopilot:25",
+        "codex:speckit-autopilot:32"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 25,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "legacy-01"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "legacy-02"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "legacy-03"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "legacy-04"
+              ]
+            },
+            {
+              "expectation_index": 4,
+              "requirement_ids": [
+                "legacy-05"
+              ]
+            },
+            {
+              "expectation_index": 5,
+              "requirement_ids": [
+                "legacy-06"
+              ]
+            },
+            {
+              "expectation_index": 6,
+              "requirement_ids": [
+                "legacy-07"
+              ]
+            },
+            {
+              "expectation_index": 7,
+              "requirement_ids": [
+                "legacy-08"
+              ]
+            },
+            {
+              "expectation_index": 8,
+              "requirement_ids": [
+                "legacy-09"
+              ]
+            },
+            {
+              "expectation_index": 9,
+              "requirement_ids": [
+                "legacy-10"
+              ]
+            },
+            {
+              "expectation_index": 10,
+              "requirement_ids": [
+                "legacy-11"
+              ]
+            },
+            {
+              "expectation_index": 11,
+              "requirement_ids": [
+                "legacy-12"
+              ]
+            },
+            {
+              "expectation_index": 12,
+              "requirement_ids": [
+                "legacy-13"
+              ]
+            },
+            {
+              "expectation_index": 13,
+              "requirement_ids": [
+                "legacy-14"
+              ]
+            },
+            {
+              "expectation_index": 14,
+              "requirement_ids": [
+                "legacy-15"
+              ]
+            },
+            {
+              "expectation_index": 15,
+              "requirement_ids": [
+                "legacy-16"
+              ]
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 32,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "legacy-01"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "legacy-02"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "legacy-03"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "legacy-04"
+              ]
+            },
+            {
+              "expectation_index": 4,
+              "requirement_ids": [
+                "legacy-05"
+              ]
+            },
+            {
+              "expectation_index": 5,
+              "requirement_ids": [
+                "legacy-06"
+              ]
+            },
+            {
+              "expectation_index": 6,
+              "requirement_ids": [
+                "legacy-07"
+              ]
+            },
+            {
+              "expectation_index": 7,
+              "requirement_ids": [
+                "legacy-08"
+              ]
+            },
+            {
+              "expectation_index": 8,
+              "requirement_ids": [
+                "legacy-09"
+              ]
+            },
+            {
+              "expectation_index": 9,
+              "requirement_ids": [
+                "legacy-10"
+              ]
+            },
+            {
+              "expectation_index": 10,
+              "requirement_ids": [
+                "legacy-11"
+              ]
+            },
+            {
+              "expectation_index": 11,
+              "requirement_ids": [
+                "legacy-12"
+              ]
+            },
+            {
+              "expectation_index": 12,
+              "requirement_ids": [
+                "legacy-13"
+              ]
+            },
+            {
+              "expectation_index": 13,
+              "requirement_ids": [
+                "legacy-14"
+              ]
+            },
+            {
+              "expectation_index": 14,
+              "requirement_ids": [
+                "legacy-15"
+              ]
+            },
+            {
+              "expectation_index": 15,
+              "requirement_ids": [
+                "legacy-16"
+              ]
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 16
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-33",
+      "legacy_ids": [
+        "claude:speckit-autopilot:26",
+        "codex:speckit-autopilot:33"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 26,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "legacy-01"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "legacy-02"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "legacy-03"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "legacy-04"
+              ]
+            },
+            {
+              "expectation_index": 4,
+              "requirement_ids": [
+                "legacy-05"
+              ]
+            },
+            {
+              "expectation_index": 5,
+              "requirement_ids": [
+                "legacy-06"
+              ]
+            },
+            {
+              "expectation_index": 6,
+              "requirement_ids": [
+                "legacy-07"
+              ]
+            },
+            {
+              "expectation_index": 7,
+              "requirement_ids": [
+                "legacy-08"
+              ]
+            },
+            {
+              "expectation_index": 8,
+              "requirement_ids": [
+                "legacy-09"
+              ]
+            },
+            {
+              "expectation_index": 9,
+              "requirement_ids": [
+                "legacy-10"
+              ]
+            },
+            {
+              "expectation_index": 10,
+              "requirement_ids": [
+                "legacy-11"
+              ]
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 33,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "legacy-01"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "legacy-02"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "legacy-03"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "legacy-04"
+              ]
+            },
+            {
+              "expectation_index": 4,
+              "requirement_ids": [
+                "legacy-05"
+              ]
+            },
+            {
+              "expectation_index": 5,
+              "requirement_ids": [
+                "legacy-06"
+              ]
+            },
+            {
+              "expectation_index": 6,
+              "requirement_ids": [
+                "legacy-07"
+              ]
+            },
+            {
+              "expectation_index": 7,
+              "requirement_ids": [
+                "legacy-08"
+              ]
+            },
+            {
+              "expectation_index": 8,
+              "requirement_ids": [
+                "legacy-09"
+              ]
+            },
+            {
+              "expectation_index": 9,
+              "requirement_ids": [
+                "legacy-10"
+              ]
+            },
+            {
+              "expectation_index": 10,
+              "requirement_ids": [
+                "legacy-11"
+              ]
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 11
+    },
+    {
+      "case_id": "functional.speckit-scaffold-spec.case-5",
+      "legacy_ids": [
+        "codex:speckit-scaffold-spec:5"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-scaffold-spec-evals.json",
+          "eval_id": 5,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "legacy-01"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "legacy-02"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "legacy-03"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "legacy-04"
+              ]
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 4
+    },
+    {
+      "case_id": "functional.speckit-scaffold-spec.case-6",
+      "legacy_ids": [
+        "codex:speckit-scaffold-spec:6"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-scaffold-spec-evals.json",
+          "eval_id": 6,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "legacy-01"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "legacy-02"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "legacy-03"
+              ]
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 3
+    },
+    {
+      "case_id": "functional.speckit-scaffold-spec.case-10",
+      "legacy_ids": [
+        "codex:speckit-scaffold-spec:10"
+      ],
+      "sources": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-scaffold-spec-evals.json",
+          "eval_id": 10,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "legacy-01"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "legacy-02"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "legacy-03"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "legacy-04"
+              ]
+            },
+            {
+              "expectation_index": 4,
+              "requirement_ids": [
+                "legacy-05"
+              ]
+            },
+            {
+              "expectation_index": 5,
+              "requirement_ids": [
+                "legacy-06"
+              ]
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 6
+    },
+    {
+      "case_id": "functional.speckit-scaffold-spec.case-2-handoff",
+      "legacy_ids": [
+        "claude:speckit-scaffold-spec:2"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-scaffold-spec-evals.json",
+          "eval_id": 2,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "legacy-01"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "legacy-02"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "legacy-03"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "legacy-04"
+              ]
+            },
+            {
+              "expectation_index": 4,
+              "requirement_ids": [
+                "legacy-05"
+              ]
+            },
+            {
+              "expectation_index": 5,
+              "requirement_ids": [
+                "legacy-06"
+              ]
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 6
+    },
+    {
+      "case_id": "functional.speckit-coach.case-14",
+      "legacy_ids": [
+        "claude:speckit-coach:12",
+        "codex:speckit-coach:14"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-coach-evals.json",
+          "eval_id": 12,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "inspection"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "proposal"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "hook-claims"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "hook-claims"
+              ]
+            },
+            {
+              "expectation_index": 4,
+              "requirement_ids": [
+                "inspection"
+              ]
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-coach-evals.json",
+          "eval_id": 14,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "inspection"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "proposal"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "hook-claims"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "hook-claims"
+              ]
+            },
+            {
+              "expectation_index": 4,
+              "requirement_ids": [
+                "inspection"
+              ]
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 1
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-106-claude",
+      "legacy_ids": [
+        "claude:speckit-autopilot:106"
+      ],
+      "sources": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 106,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_ids": [
+                "legacy-01"
+              ]
+            },
+            {
+              "expectation_index": 1,
+              "requirement_ids": [
+                "legacy-02"
+              ]
+            },
+            {
+              "expectation_index": 2,
+              "requirement_ids": [
+                "legacy-03"
+              ]
+            },
+            {
+              "expectation_index": 3,
+              "requirement_ids": [
+                "legacy-04"
+              ]
+            },
+            {
+              "expectation_index": 4,
+              "requirement_ids": [
+                "legacy-05"
+              ]
+            }
+          ]
+        }
+      ],
+      "deterministic_text_checks": 0,
+      "semantic_checks": 5
+    }
+  ],
+  "excluded": [],
+  "resolved_exclusions": [
+    {
+      "case_id": "functional.speckit-autopilot.case-7",
+      "legacy_ids": [
+        "claude:speckit-autopilot:7",
+        "codex:speckit-autopilot:7"
+      ],
+      "gap_code": "host-divergent-canonical-sequence",
+      "reason": "The legacy Claude requirement has 12 canonical Post rows while Codex has 14. One shared host-blind check cannot enforce both exact sequences.",
+      "required_replacement": "Add host-scoped expected values or first reconcile the shipped Post-plan contract.",
+      "legacy_boundaries": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 7,
+          "expectations": [
+            "Lists all 12 canonical Post items from Doctor Extension Check through Retrospective without collapsing or omitting an item",
+            "Identifies Doctor, Verify Implementation, Verify Tasks Phantom Check, and Retrospective as extension-backed items and keeps Code Review plus Integration Suite built in",
+            "Lists Self-Review (4-question audit) as an always-required built-in step before PR body generation",
+            "Lists UAT Runbook Generation as mandatory and fail-open, runs generate-uat-skeleton in dry_run then apply mode, and dispatches uat-runbook-author after the skeleton is written",
+            "Lists the feature-local packet path specs/<feature>/.process/pr-packets/<packet-id>.json and states pr-packet-output emits the packet JSON and body file while declaring the validation-result path",
+            "Describes generate-pr-body only as a golden_only one-Markdown-body writer accepting output_path, title, and sections, not as packet emission",
+            "Lists pre-create validation via runner helper validate-pr-packet-read-only, consumes current data.stdout_json with writes_state=false, and persists that current result with validate-pr-packet-write",
+            "Lists pre-create PR workflow contract validation via runner helper validate-pr-workflow-contract with packet title and changed-file evidence",
+            "Lists PR creation with gh pr create --base --head --title --body-file using packet target/title/body values",
+            "Lists review remediation loop using /loop command",
+            "States final-reviewability-backstop is deferred, so current committed reviewability evidence is required before PR side effects",
+            "States packet emission or validation failures block before PR creation; no post-create auto-repair fallback is used"
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 7,
+          "expectations": [
+            "Lists all 14 canonical Codex Post items from Doctor Extension Check through Retrospective without collapsing supporting rows",
+            "Identifies Doctor, Verify Implementation, Verify Tasks Phantom Check, and Retrospective as extension-backed items and keeps Code Review plus Integration Suite built in",
+            "Lists Self-Review (4-question audit) as an always-required built-in step before PR body generation",
+            "Lists UAT Runbook Generation as mandatory and fail-open, runs generate-uat-skeleton in dry_run then apply mode, and dispatches uat-runbook-author after the skeleton is written",
+            "Lists both Final Reviewability Backstop and PR Packet/Body Generation supporting rows in update_plan and autopilot-state.json",
+            "Lists the feature-local packet path specs/<feature>/.process/pr-packets/<packet-id>.json and states pr-packet-output emits the packet JSON and body file while declaring the validation-result path",
+            "Describes generate-pr-body only as a golden_only one-Markdown-body writer accepting output_path, title, and sections, not as packet emission",
+            "Lists pre-create validation via runner helper validate-pr-packet-read-only, consumes current data.stdout_json with writes_state=false, and persists that current result with validate-pr-packet-write",
+            "Lists pre-create PR workflow contract validation via runner helper validate-pr-workflow-contract with packet title and changed-file evidence",
+            "Lists PR creation with gh pr create --base --head --title --body-file using packet target/title/body values",
+            "Lists the parent-session review remediation loop",
+            "States final-reviewability-backstop and detect-stack-manager-plan are not active installed helper calls, so current evidence and explicit gh fallback behavior apply",
+            "States packet emission or validation failures block before PR creation; no post-create auto-repair fallback is used"
+          ]
+        }
+      ],
+      "resolution": "Resolved by exact trusted-host response JSON fields and shared semantic requirements. Original expectations are retained below; authored coverage only, not a native qualification pass.",
+      "requirement_coverage": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 7,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "sequence"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "extensions"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "self-review"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "uat"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "packet"
+            },
+            {
+              "expectation_index": 5,
+              "requirement_id": "body"
+            },
+            {
+              "expectation_index": 6,
+              "requirement_id": "packet-validation"
+            },
+            {
+              "expectation_index": 7,
+              "requirement_id": "workflow-validation"
+            },
+            {
+              "expectation_index": 8,
+              "requirement_id": "creation"
+            },
+            {
+              "expectation_index": 9,
+              "requirement_id": "review-loop"
+            },
+            {
+              "expectation_index": 10,
+              "requirement_id": "inactive"
+            },
+            {
+              "expectation_index": 11,
+              "requirement_id": "failure"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 7,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "sequence"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "extensions"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "self-review"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "uat"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "sequence"
+            },
+            {
+              "expectation_index": 5,
+              "requirement_id": "packet"
+            },
+            {
+              "expectation_index": 6,
+              "requirement_id": "body"
+            },
+            {
+              "expectation_index": 7,
+              "requirement_id": "packet-validation"
+            },
+            {
+              "expectation_index": 8,
+              "requirement_id": "workflow-validation"
+            },
+            {
+              "expectation_index": 9,
+              "requirement_id": "creation"
+            },
+            {
+              "expectation_index": 10,
+              "requirement_id": "review-loop"
+            },
+            {
+              "expectation_index": 11,
+              "requirement_id": "inactive"
+            },
+            {
+              "expectation_index": 12,
+              "requirement_id": "failure"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "functional.speckit-autopilot.case-25",
+      "legacy_ids": [
+        "claude:speckit-autopilot:21",
+        "codex:speckit-autopilot:25"
+      ],
+      "gap_code": "host-divergent-canonical-position",
+      "reason": "The legacy Self-Review requirement is position 7 of 12 for Claude and position 7 of 14 for Codex, so a single shared count assertion would weaken one boundary.",
+      "required_replacement": "Add host-scoped expected values or reconcile the canonical Post-plan length.",
+      "legacy_boundaries": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 21,
+          "expectations": [
+            "Lists all 4 questions in order: Tests executed? / Edge cases? / Requirements matched? / Follow-up?",
+            "Tests executed? — requires citing the test run timestamp from the workflow log and confirming BUILD/TYPECHECK/LINT/UNIT_TEST/INTEGRATION_TEST each actually ran and exited zero",
+            "Edge cases? — requires naming the test (file:line) for each acceptance criterion's non-happy path; flags criteria with only happy-path tests as [edge-case-gap]",
+            "Requirements matched? — requires cross-walking spec.md FR-XXX list against tasks.md, with each FR tracing to at least one [X] task and each [X] task having implementation evidence (commit hash + passing test)",
+            "Follow-up? — requires every [TODO], [DEFERRED], or [OUT-OF-SCOPE] marker to have an explicit landing place (roadmap entry, tracked issue, PR-body section)",
+            "States the answers remain canonical in the workflow log and are mirrored only when the existing packet-owned body declares an editable ## Self-Review Findings region",
+            "States explicitly that self-review is a reporting step, NOT a gate, while packet availability and validation still fail closed",
+            "Mentions that Post: Self-Review appears in the canonical post-implementation task list (12 entries total), immediately after Post: Reviewability Diff Gate and before Post: UAT Runbook Generation"
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 25,
+          "expectations": [
+            "Lists all 4 questions in order: Tests executed? / Edge cases? / Requirements matched? / Follow-up?",
+            "Tests executed? — requires citing the test run timestamp from the workflow log and confirming BUILD/TYPECHECK/LINT/UNIT_TEST/INTEGRATION_TEST each actually ran and exited zero",
+            "Edge cases? — requires naming the test (file:line) for each acceptance criterion's non-happy path; flags criteria with only happy-path tests as [edge-case-gap]",
+            "Requirements matched? — requires cross-walking spec.md FR-XXX list against tasks.md, with each FR tracing to at least one [X] task and each [X] task having implementation evidence (commit hash + passing test)",
+            "Follow-up? — requires every [TODO], [DEFERRED], or [OUT-OF-SCOPE] marker to have an explicit landing place (roadmap entry, tracked issue, PR-body section)",
+            "States the answers remain canonical in the workflow log and are mirrored only when the existing packet-owned body declares an editable ## Self-Review Findings region",
+            "States explicitly that self-review is a reporting step, NOT a gate, while packet availability and validation still fail closed",
+            "Mentions that Post: Self-Review is item position #7 in the canonical 14-entry Codex post-implementation list, between Post: Reviewability Diff Gate and Post: UAT Runbook Generation",
+            "Notes that the step transitions through update_plan + autopilot-state.json in pending → in_progress → completed states like every other canonical step"
+          ]
+        }
+      ],
+      "resolution": "Resolved by exact trusted-host response JSON fields and shared semantic requirements. Original expectations are retained below; authored coverage only, not a native qualification pass.",
+      "requirement_coverage": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "eval_id": 21,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "questions"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "tests"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "edges"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "traceability"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "followup"
+            },
+            {
+              "expectation_index": 5,
+              "requirement_id": "canonical-log"
+            },
+            {
+              "expectation_index": 6,
+              "requirement_id": "reporting"
+            },
+            {
+              "expectation_index": 7,
+              "requirement_id": "position"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "eval_id": 25,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "questions"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "tests"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "edges"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "traceability"
+            },
+            {
+              "expectation_index": 4,
+              "requirement_id": "followup"
+            },
+            {
+              "expectation_index": 5,
+              "requirement_id": "canonical-log"
+            },
+            {
+              "expectation_index": 6,
+              "requirement_id": "reporting"
+            },
+            {
+              "expectation_index": 7,
+              "requirement_id": "position"
+            },
+            {
+              "expectation_index": 8,
+              "requirement_id": "tracking"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "functional.speckit-coach.case-2",
+      "legacy_ids": [
+        "claude:speckit-coach:2",
+        "codex:speckit-coach:2"
+      ],
+      "gap_code": "codex-read-capture-not-normalized",
+      "reason": "Claude exposes the two successful fixture reads as Read calls that can be precisely aliased to read_file. Codex exposes file inspection as command_execution with input.command, and the capture contract intentionally does not alias that ambiguous event to read_file.",
+      "required_replacement": "Add a fail-closed Codex command classifier that proves the exact fixture path and successful read semantics before normalizing the call to read_file.",
+      "legacy_boundaries": [
+        {
+          "host": "claude",
+          "source": "tests/speckit-pro/layer3-functional/evals/speckit-coach-evals.json",
+          "eval_id": 2,
+          "expectations": [
+            "Recommends at least 2 and no more than 4 checklist domains",
+            "Includes 'api' or 'http' related domain for the REST API surface",
+            "Includes 'resilience', 'reliability', or 'error-handling' domain for retry logic",
+            "Includes 'security' domain for signature verification",
+            "Explains why each recommended domain is relevant to the webhook delivery feature"
+          ]
+        },
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-coach-evals.json",
+          "eval_id": 2,
+          "expectations": [
+            "Recommends at least 2 and no more than 4 checklist domains",
+            "Includes 'api' or 'http' related domain for the REST API surface",
+            "Includes 'resilience', 'reliability', or 'error-handling' domain for retry logic",
+            "Includes 'security' domain for signature verification",
+            "Explains why each recommended domain is relevant to the webhook delivery feature"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "functional.speckit-status.case-2",
+      "legacy_ids": [
+        "codex:speckit-status:2"
+      ],
+      "gap_code": "codex-read-capture-not-normalized",
+      "reason": "Claude exposes the two successful fixture reads as Read calls that can be precisely aliased to read_file. Codex exposes file inspection as command_execution with input.command, and the capture contract intentionally does not alias that ambiguous event to read_file.",
+      "required_replacement": "Add a fail-closed Codex command classifier that proves the exact fixture path and successful read semantics before normalizing the call to read_file.",
+      "legacy_boundaries": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-status-evals.json",
+          "eval_id": 2,
+          "expectations": [
+            "Mentions the spec-specific view for the requested SPEC-ID",
+            "Mentions current phase or workflow phase detail if a workflow exists",
+            "Mentions blockers or dependency state",
+            "Includes the next concrete action"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "functional.speckit-status.case-5",
+      "legacy_ids": [
+        "codex:speckit-status:5"
+      ],
+      "gap_code": "codex-read-capture-not-normalized",
+      "reason": "Claude exposes the two successful fixture reads as Read calls that can be precisely aliased to read_file. Codex exposes file inspection as command_execution with input.command, and the capture contract intentionally does not alias that ambiguous event to read_file.",
+      "required_replacement": "Add a fail-closed Codex command classifier that proves the exact fixture path and successful read semantics before normalizing the call to read_file.",
+      "legacy_boundaries": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-status-evals.json",
+          "eval_id": 5,
+          "expectations": [
+            "Acknowledges that multiple roadmap files were found",
+            "Selects the most current or relevant one",
+            "States which roadmap file it used for the dashboard",
+            "Does not silently merge data from unrelated roadmaps"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "functional.speckit-status.case-6",
+      "legacy_ids": [
+        "codex:speckit-status:6"
+      ],
+      "gap_code": "codex-read-capture-not-normalized",
+      "reason": "Claude exposes the successful fixture read as a Read call that can be precisely aliased to read_file. Codex exposes file inspection as command_execution with input.command, and the capture contract intentionally does not alias that ambiguous event to read_file.",
+      "required_replacement": "Add a fail-closed Codex command classifier that proves the exact fixture path and successful read semantics before normalizing the call to read_file.",
+      "legacy_boundaries": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-status-evals.json",
+          "eval_id": 6,
+          "expectations": [
+            "Reports that no unblocked specs are available",
+            "Does not recommend a blocked spec as the next candidate",
+            "Lists the specific blockers preventing progress"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "functional.speckit-status.case-1",
+      "legacy_ids": [
+        "codex:speckit-status:1"
+      ],
+      "gap_code": "codex-read-capture-not-normalized",
+      "reason": "Claude exposes the two successful fixture reads as Read calls that can be precisely aliased to read_file. Codex exposes file inspection as command_execution with input.command, and the capture contract intentionally does not alias that ambiguous event to read_file.",
+      "required_replacement": "Add a fail-closed Codex command classifier that proves the exact fixture path and successful read semantics before normalizing the call to read_file.",
+      "legacy_boundaries": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-status-evals.json",
+          "eval_id": 1,
+          "expectations": [
+            "Mentions both technical roadmaps and workflow files as data sources",
+            "Summarizes complete, active, pending, or blocked work",
+            "Mentions phase-level detail for active workflows",
+            "Includes a recommended next spec based on blockers and priority"
+          ]
+        }
+      ],
+      "resolution": "Real registered Git worktree fixture, exact source reads, five deterministic dashboard facts, and one shared explanation rubric; native qualification pending.",
+      "requirement_coverage": [
+        {
+          "host": "codex",
+          "source": "tests/speckit-pro/layer3-functional/codex-evals/speckit-status-evals.json",
+          "eval_id": 1,
+          "expectations": [
+            {
+              "expectation_index": 0,
+              "requirement_id": "behavior"
+            },
+            {
+              "expectation_index": 1,
+              "requirement_id": "behavior"
+            },
+            {
+              "expectation_index": 2,
+              "requirement_id": "behavior"
+            },
+            {
+              "expectation_index": 3,
+              "requirement_id": "behavior"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

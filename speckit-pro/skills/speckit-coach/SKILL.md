@@ -1,6 +1,6 @@
 ---
 name: speckit-coach
-description: Coach developers through Spec-Driven Development and SpecKit Pro. Use for SDD methodology, SpecKit command and gate guidance, technical-roadmap and workflow design, roadmap-MOC guidance, checklist selection, SpecKit project repair, or SpecKit preset and extension discovery and configuration. Not for running autopilot, conducting grill-me, or unrelated coding (including MCP tool implementation).
+description: Coach developers through Spec-Driven Development and SpecKit Pro. Use for SDD methodology, SpecKit command and gate guidance, technical-roadmap and workflow design, roadmap-MOC guidance, checklist selection, SpecKit project repair, selective formal-methods guidance and model/checker selection, SpecKit consensus protocol and voting rules, or SpecKit preset and extension discovery and configuration. Not for running autopilot, conducting grill-me, or unrelated coding (including MCP tool implementation). Formal-check execution and autopilot resume belong to speckit-autopilot.
 argument-hint: "e.g. 'walk me through SDD', 'which checklist domains fit this spec?', 'repair this speckit-pro project', 'create a technical roadmap'"
 user-invocable: true
 license: MIT

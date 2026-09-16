@@ -384,11 +384,24 @@ When checklist identifies `[Gap]` items:
 /speckit-tasks
 
 ## Task Structure
-- Small, testable chunks (1-2 hours each)
+- Small, complete behavioral units sized for the whole automated spec's
+  two-hour budget, including startup, implementation, repairs and final checks
 - Clear acceptance criteria referencing FR-xxx
 - Dependency ordering: foundation → components → integration → validation
 - Mark parallel-safe tasks explicitly with [P]
 - Organize by user story, not by technical layer
+- Keep related test and implementation checkboxes in one closed TDD unit;
+  each unit must fit an adjacent batch of at most four tasks
+
+## Execution Metadata
+Produce `specs/{{BRANCH_NAME}}/.process/task-execution.json` alongside tasks.md.
+Use `schema_version: task-execution.v1`, `fingerprints` from runner helper
+`validate-task-execution` (`action: fingerprints`, `tasks_file: <tasks.md>`),
+and `tasks` keyed by every task ID. Each entry contains `capability_group`,
+`depends_on` (task IDs), `owns` (repo-relative paths including shared fixtures
+and generated inputs), and `tdd_unit`. Fingerprints bind spec, plan and task
+definitions, excluding checkbox completion. Validate the completed sidecar.
+Do not guess fingerprints or omit ownership to force parallel execution.
 
 ## Implementation Phases
 1. Foundation (types, shared infrastructure)

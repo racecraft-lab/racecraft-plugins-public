@@ -46,7 +46,7 @@ ALL_THREE = [CODEBASE, SPEC, DOMAIN]
 KNOWN_ANALYSTS = frozenset(ALL_THREE)
 
 REFERENCE_DOC = PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "consensus-protocol.md"
-DISPATCH_FIXTURES = REPO_ROOT / "tests" / "speckit-pro" / "layer7-integration" / "dispatch-fixtures"
+DISPATCH_FIXTURES = REPO_ROOT / "tests" / "speckit-pro" / "layer6-integration" / "dispatch-fixtures"
 
 # The five worked-example rows from consensus-protocol.md §Logging, trimmed in
 # the free-text cells only. Rounds are 1, 1, 2, 1→2, 1 and one outcome is
@@ -375,9 +375,9 @@ class AggregationTests(unittest.TestCase):
 
 
 class DispatchFixtureAgreementTests(unittest.TestCase):
-    """The Layer 7 dispatch fixtures and the helper must want the same thing.
+    """The Layer 6 dispatch fixtures and the helper must want the same thing.
 
-    A live Layer 7 run follows the reference, which mandates dispatching exactly
+    A live Layer 6 run follows the reference, which mandates dispatching exactly
     what `parse-consensus-categories` returns. Replay mode reads the recorded
     transcripts and never opens `prompt.txt`, so a fixture whose item text routes
     somewhere its `expected.json` forbids stays green until the first `--live`

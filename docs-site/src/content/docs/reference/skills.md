@@ -385,7 +385,7 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 ### Speckit Upgrade
 
-- **Purpose:** Upgrade an existing SpecKit installation safely.
+- **Purpose:** Upgrade or migrate an existing SpecKit installation safely.
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro speckit-upgrade skill
 - **Claude Code:** /speckit-pro:speckit-upgrade
@@ -396,7 +396,7 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 - **Claude Code invocation:** `/speckit-pro:speckit-upgrade`
 - **Codex invocation:** `$speckit-upgrade`
-- **Purpose:** Upgrade an existing SpecKit installation safely.
+- **Purpose:** Upgrade or migrate an existing SpecKit installation safely.
 - **Expected output artifact:** Upgrade guidance and local plugin refresh evidence.
 
 **Prerequisites**
